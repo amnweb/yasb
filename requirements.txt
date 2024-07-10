@@ -1,0 +1,16 @@
+PyQt6>=6.7.0
+PyQt6_sip>=13.6.0
+BlurWindow
+Cerberus
+cssutils
+humanize
+psutil
+pytz
+pywin32
+PyYAML
+tzlocal
+watchdog
+winsdk
+pyquery
+pycaw
+winshell
