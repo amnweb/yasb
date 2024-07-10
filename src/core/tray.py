@@ -1,7 +1,6 @@
 import logging
 import webbrowser
 import os 
-import psutil
 import shutil
 import sys
 from pathlib import Path
@@ -73,12 +72,10 @@ class TrayIcon(QSystemTrayIcon):
         menu.addSeparator()
         
         if self.is_komorebi_installed():
-            if self.is_komorebi_running():
-                stop_komorebi = menu.addAction("Stop Komorebi")
-                stop_komorebi.triggered.connect(self._stop_komorebi)
-            else:
-                start_komorebi = menu.addAction("Start Komorebi")
-                start_komorebi.triggered.connect(self._start_komorebi)
+            start_komorebi = menu.addAction("Start Komorebi")
+            start_komorebi.triggered.connect(self._start_komorebi)
+            stop_komorebi = menu.addAction("Stop Komorebi")
+            stop_komorebi.triggered.connect(self._stop_komorebi)
             menu.addSeparator()
         
         if self.is_autostart_enabled():
@@ -104,15 +101,6 @@ class TrayIcon(QSystemTrayIcon):
         except Exception as e:
             logging.error(f"Error checking komorebi installation: {e}")
             return False
-
-    def is_komorebi_running(self):
-        for proc in psutil.process_iter():
-            try:
-                if 'komorebi.exe' == proc.name():
-                    return True
-            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
-                pass
-        return False
 
     def _enable_startup(self):
         shortcut_path = os.path.join(OS_STARTUP_FOLDER, SHORTCUT_FILENAME)
@@ -146,14 +134,12 @@ class TrayIcon(QSystemTrayIcon):
     def _start_komorebi(self):
         try:
             subprocess.run("komorebic start --whkd", stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True)
-            self._load_context_menu()  # Reload context menu
         except Exception as e:
             logging.error(f"Failed to start komorebi: {e}")
 
     def _stop_komorebi(self):
         try:
             subprocess.run("komorebic stop --whkd", stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True)
-            self._load_context_menu()  # Reload context menu
         except Exception as e:
             logging.error(f"Failed to stop komorebi: {e}")
 
