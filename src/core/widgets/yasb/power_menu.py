@@ -7,6 +7,9 @@ from BlurWindow.blurWindow import GlobalBlur
 from core.widgets.base import BaseWidget
 from core.validation.widgets.yasb.power_menu import VALIDATION_SCHEMA
 from core.config import get_stylesheet_path
+import win32api
+import win32security
+import ctypes
 
 class ClickableLabel(QLabel):
     clicked = pyqtSignal()
@@ -167,7 +170,14 @@ class MainWindow(QWidget):
 
     def sleep(self):
         self.hide()
-        subprocess.Popen("rundll32.exe powrprof.dll,SetSuspendState Sleep", stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True)
+        access = (win32security.TOKEN_ADJUST_PRIVILEGES | win32security.TOKEN_QUERY)
+        htoken = win32security.OpenProcessToken(win32api.GetCurrentProcess(), access)
+        if htoken:
+            priv_id = win32security.LookupPrivilegeValue(None, win32security.SE_SHUTDOWN_NAME)
+            win32security.AdjustTokenPrivileges(htoken, 0,
+                [(priv_id, win32security.SE_PRIVILEGE_ENABLED)])
+            ctypes.windll.powrprof.SetSuspendState(False, True, False)
+            win32api.CloseHandle(htoken)
 
     def restart(self):
         self.hide()
@@ -178,15 +188,7 @@ class MainWindow(QWidget):
         self.hide()
         QCoreApplication.exit(0)
         subprocess.Popen("shutdown /s /t 0", stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True)
-        # try:
-        #     self.hide()
-        #     QCoreApplication.exit(0)
-        #     process = subprocess.run(["shutdown", "/s", "/t", "0"])
-        # except subprocess.CalledProcessError as e:
-        #     print(f"An error occurred: {e}")          
-        # subprocess.Popen("shutdown /s /t 60", stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True)
-        # self.hide()
-        # sys.exit()
+
 
     def cancel(self):
         self.fade_out()
