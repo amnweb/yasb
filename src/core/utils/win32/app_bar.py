@@ -1,6 +1,7 @@
 import ctypes
 from ctypes import wintypes, Structure, POINTER, sizeof, windll, c_ulong
 from PyQt6.QtGui import QScreen
+import win32con
 
 shell32 = windll.shell32
 user32 = windll.user32
@@ -80,6 +81,9 @@ class Win32AppBar:
         self.register_new()
         self.position_bar(app_bar_height, screen, scale_screen)
         self.set_position()
+
+        exStyle = windll.user32.GetWindowLongPtrW(hwnd, win32con.GWL_EXSTYLE)
+        windll.user32.SetWindowLongPtrW(hwnd, win32con.GWL_EXSTYLE, exStyle | win32con.WS_EX_NOACTIVATE | win32con.WS_EX_TOPMOST)
 
     def position_bar(self, app_bar_height: int, screen: QScreen, scale_screen: bool = False) -> None:
         geometry = screen.geometry()
