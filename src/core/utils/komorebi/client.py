@@ -81,9 +81,10 @@ class KomorebiClient:
                     if managed_window['hwnd'] == window_hwnd:
                         return add_index(workspace, i)
 
-    def activate_workspace(self, ws_idx: int) -> None:
-        subprocess.Popen([self._komorebic_path, "focus-workspace", str(ws_idx)], shell=True)
-
+    def activate_workspace(self, ws_idx: int, wait: bool = False) -> None:
+        p = subprocess.Popen([self._komorebic_path, "focus-workspace", str(ws_idx)], shell=True)
+        if wait:
+            p.wait()
     def next_workspace(self) -> None:
         try:
             subprocess.Popen([self._komorebic_path, "cycle-workspace", "next"], shell=True)
@@ -119,9 +120,12 @@ class KomorebiClient:
         except subprocess.SubprocessError:
             pass
 
-    def toggle(self, toggle_type: str):
+    def toggle(self, toggle_type: str, wait: bool = False):
         try:
-            subprocess.Popen([self._komorebic_path, f"toggle-{toggle_type}"], shell=True)
+            p = subprocess.Popen([self._komorebic_path, f"toggle-{toggle_type}"], shell=True)
+
+            if wait:
+                p.wait()
         except subprocess.SubprocessError:
             logging.exception(f"Failed to toggle {toggle_type} for currently active workspace")
 

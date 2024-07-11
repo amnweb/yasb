@@ -60,10 +60,10 @@ class ActiveLayoutWidget(BaseWidget):
 
         self._active_layout_text = QLabel()
         self._active_layout_text.setProperty("class", "label")
-        
-        
+        self._active_layout_text.hide()
+
         self.widget_layout.addWidget(self._active_layout_text)
-  
+
         self.callback_left = callbacks['on_left']
         self.callback_right = callbacks['on_right']
         self.callback_middle = callbacks['on_middle']
@@ -78,7 +78,7 @@ class ActiveLayoutWidget(BaseWidget):
         self.register_callback("toggle_pause", lambda: self._komorebic.toggle("pause"))
 
         self._register_signals_and_events()
-        self.hide()
+
     def _next_layout(self):
         if self._is_shift_layout_allowed():
             self._layouts.rotate(1)
@@ -118,9 +118,7 @@ class ActiveLayoutWidget(BaseWidget):
 
     def _on_komorebi_connect_event(self, state: dict) -> None:
         self._update_active_layout(state, is_connect_event=True)
-        if self.isHidden():
-            self.show()
- 
+
     def _on_komorebi_layout_change_event(self, _event: dict, state: dict) -> None:
         self._update_active_layout(state)
 

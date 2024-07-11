@@ -1,15 +1,12 @@
 import sys
-import subprocess
 from PyQt6.QtWidgets import QApplication, QWidget, QPushButton, QVBoxLayout, QHBoxLayout, QLabel, QStyleOption, QStyle
 from PyQt6 import QtCore, QtGui
-from PyQt6.QtCore import Qt, QPropertyAnimation, pyqtSignal, QCoreApplication
+from PyQt6.QtCore import Qt, QPropertyAnimation, pyqtSignal
 from BlurWindow.blurWindow import GlobalBlur
 from core.widgets.base import BaseWidget
 from core.validation.widgets.yasb.power_menu import VALIDATION_SCHEMA
 from core.config import get_stylesheet_path
-import win32api
-import win32security
-import ctypes
+from core.utils.win32.power import PowerOperations
 
 class ClickableLabel(QLabel):
     clicked = pyqtSignal()
@@ -21,6 +18,32 @@ class ClickableLabel(QLabel):
         if event.button() == Qt.MouseButton.LeftButton:
             self.clicked.emit()
         super().mouseReleaseEvent(event)
+
+class OverlayWidget(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.Tool)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        GlobalBlur(self.winId())
+        self.setStyleSheet("background-color: rgba(0, 0, 0, 80)")
+
+    def update_geometry(self, screen_geometry):
+        self.setGeometry(screen_geometry)
+
+    def fade_in(self):
+        self.animation = QPropertyAnimation(self, b"windowOpacity")
+        self.animation.setDuration(200)
+        self.animation.setStartValue(0)
+        self.animation.setEndValue(1)
+        self.animation.start()
+
+    def fade_out(self):
+        self.animation = QPropertyAnimation(self, b"windowOpacity")
+        self.animation.setDuration(200)
+        self.animation.setStartValue(1)
+        self.animation.setEndValue(0)
+        self.animation.finished.connect(self.hide)
+        self.animation.start()
 
 class PowerMenuWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
@@ -42,12 +65,16 @@ class PowerMenuWidget(BaseWidget):
             self.main_window.fade_out()
         else:
             self.main_window = MainWindow(self._button, self.icons, self.blur)
+            self.main_window.overlay.show()  # Ensure the overlay is shown
             self.main_window.show()
+            self.main_window.overlay.fade_in()
 
 class MainWindow(QWidget):
     def __init__(self, parent_button, icons, blur):
         super(MainWindow, self).__init__()
 
+        self.overlay = OverlayWidget()
+        self.parent_button = parent_button
         self.blur = blur
         self.icon_signout = icons['signout']
         self.icon_lock = icons['lock']
@@ -66,17 +93,19 @@ class MainWindow(QWidget):
         button_layout2 = QHBoxLayout()
 
         if self.blur:
-            GlobalBlur(self.winId(),Dark=True)
+            GlobalBlur(self.winId(), Dark=True)
 
+        # Create an instance of PowerOperations
+        self.power_operations = PowerOperations(self, self.overlay)
 
         # Button labels and icons with their corresponding actions
         buttons_info = [
-            (self.icon_signout, 'Sign out', self.signout, "signout"),
-            (self.icon_lock, 'Lock', self.lock, "lock"),
-            (self.icon_sleep, 'Sleep', self.sleep, "sleep"),
-            (self.icon_restart, 'Restart', self.restart, "restart"),
-            (self.icon_shutdown, 'Shut Down', self.shutdown, "shutdown"),
-            (self.icon_cancel, 'Cancel', self.cancel, "cancel")
+            (self.icon_signout, 'Sign out', self.signout_action, "signout"),
+            (self.icon_lock, 'Lock', self.lock_action, "lock"),
+            (self.icon_sleep, 'Sleep', self.sleep_action, "sleep"),
+            (self.icon_restart, 'Restart', self.restart_action, "restart"),
+            (self.icon_shutdown, 'Shut Down', self.shutdown_action, "shutdown"),
+            (self.icon_cancel, 'Cancel', self.cancel_action, "cancel")
         ]
         # Create buttons with icons and text
         for i, (icon, label, action, class_name) in enumerate(buttons_info):
@@ -110,17 +139,21 @@ class MainWindow(QWidget):
         self.apply_stylesheet(self, get_stylesheet_path())
         # Adjust size to fit the contents
         self.adjustSize()
-        # Center the window on the screen
+        # Center the window on the screen where the parent button is located
         self.center_on_screen()
         # Start fade-in animation
         self.fade_in()
 
     def center_on_screen(self):
-        screen_geometry = QApplication.primaryScreen().geometry()
+        screen = QApplication.screenAt(self.parent_button.mapToGlobal(QtCore.QPoint(0, 0)))
+        if screen is None:
+            screen = QApplication.primaryScreen()
+        screen_geometry = screen.geometry()
         window_geometry = self.geometry()
-        x = (screen_geometry.width() - window_geometry.width()) // 2
-        y = (screen_geometry.height() - window_geometry.height()) // 2
+        x = (screen_geometry.width() - window_geometry.width()) // 2 + screen_geometry.x()
+        y = (screen_geometry.height() - window_geometry.height()) // 2 + screen_geometry.y()
         self.move(x, y)
+        self.overlay.update_geometry(screen_geometry)  # Update overlay geometry to match screen
 
     def fade_in(self):
         self.animation = QPropertyAnimation(self, b"windowOpacity")
@@ -158,37 +191,21 @@ class MainWindow(QWidget):
             source.style().unpolish(source)
             source.style().polish(source)
         return super(MainWindow, self).eventFilter(source, event)
-    
-    def signout(self):
-        self.hide()
-        QCoreApplication.exit(0)
-        subprocess.Popen("shutdown /l", stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True)
 
-    def lock(self):
-        self.hide()
-        subprocess.Popen("rundll32.exe user32.dll,LockWorkStation", stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True)
+    def signout_action(self):
+        self.power_operations.signout()
 
-    def sleep(self):
-        self.hide()
-        access = (win32security.TOKEN_ADJUST_PRIVILEGES | win32security.TOKEN_QUERY)
-        htoken = win32security.OpenProcessToken(win32api.GetCurrentProcess(), access)
-        if htoken:
-            priv_id = win32security.LookupPrivilegeValue(None, win32security.SE_SHUTDOWN_NAME)
-            win32security.AdjustTokenPrivileges(htoken, 0,
-                [(priv_id, win32security.SE_PRIVILEGE_ENABLED)])
-            ctypes.windll.powrprof.SetSuspendState(False, True, False)
-            win32api.CloseHandle(htoken)
+    def lock_action(self):
+        self.power_operations.lock()
 
-    def restart(self):
-        self.hide()
-        QCoreApplication.exit(0)
-        subprocess.Popen("shutdown /r /f /t 0", stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True)
+    def sleep_action(self):
+        self.power_operations.sleep()
 
-    def shutdown(self):
-        self.hide()
-        QCoreApplication.exit(0)
-        subprocess.Popen("shutdown /s /t 0", stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True)
+    def restart_action(self):
+        self.power_operations.restart()
 
+    def shutdown_action(self):
+        self.power_operations.shutdown()
 
-    def cancel(self):
-        self.fade_out()
+    def cancel_action(self):
+        self.power_operations.cancel()

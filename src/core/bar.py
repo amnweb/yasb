@@ -4,6 +4,7 @@ from PyQt6.QtWidgets import QApplication, QWidget, QHBoxLayout, QGridLayout, QFr
 from PyQt6.QtGui import QScreen
 from PyQt6.QtCore import Qt, QRect
 from core.utils.utilities import is_valid_percentage_str, percent_to_float
+from core.utils.win32.utilities import get_monitor_hwnd
 from core.validation.bar import BAR_DEFAULTS
 from BlurWindow.blurWindow import GlobalBlur
 from ctypes import windll
@@ -63,10 +64,10 @@ class Bar(QWidget):
 
         self._bar_frame = QFrame(self)
         self._bar_frame.setProperty("class", f"bar {class_name}")
-        self._add_widgets(widgets)
-        self.position_bar(init)
 
-        
+        self.position_bar(init)
+        self.monitor_hwnd = get_monitor_hwnd(int(self.winId()))
+        self._add_widgets(widgets)
         
         if blur_effect['enabled']:
             GlobalBlur(
@@ -169,6 +170,7 @@ class Bar(QWidget):
                
                 widget.parent_layout_type = layout_type
                 widget.bar_id = self.bar_id
+                widget.monitor_hwnd = self.monitor_hwnd
                 layout.addWidget(widget, 0)
 
             if layout_type in ["left", "center"]:
