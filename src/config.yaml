@@ -6,7 +6,7 @@ bars:
     enabled: true
     #screens: ['DELL P2419H (1)','DELL P2419H (2)'] 
     screens: ['*'] 
-    class_name: "bar"
+    class_name: "yasb-bar"
     alignment:
       position: "top"
       center: false
@@ -17,7 +17,6 @@ bars:
     window_flags:
       always_on_top: false
       windows_app_bar: true
-      hide_taskbar: false
     dimensions:
       width: "100%"
       height: 32
@@ -36,7 +35,7 @@ bars:
         ]
       right:
         [
-          #"weather",
+          "weather",
           "applications",
           "volume",
           "power_menu",
@@ -48,8 +47,8 @@ widgets:
     options:
       label: "{win[title]}"
       label_alt: "[class_name='{win[class_name]}' exe='{win[process][name]}' hwnd={win[hwnd]}]"
-      label_no_window: "Desktop"
-      max_length: 86
+      label_no_window: ""
+      max_length: 66
       max_length_ellipsis: "..."
       monitor_exclusive: true
 
@@ -66,7 +65,8 @@ widgets:
       #label: "{%H:%M}"
       label: "{%a %d, %b %H:%M}"
       label_alt: "{%A %d %B %Y, %H:%M}"
-      timezones: ["Europe/Belgrade"]
+      timezones: [] #Looking up time zone info from registry
+      #timezones: ["America/Montreal"]
 
   cpu:
     type: "yasb.cpu.CpuWidget"
@@ -149,8 +149,8 @@ widgets:
   traffic:
     type: "yasb.traffic.TrafficWidget"
     options:
-      label: "\ueab4 {download_speed} \ue621 \ueab7 {upload_speed}"
-      label_alt: "Download {download_speed} \ue621 Upload {upload_speed}"
+      label: "\ueab4 {download_speed}\ue621\ueab7 {upload_speed}"
+      label_alt: "Download {download_speed}\ue621Upload {upload_speed}"
       update_interval: 2000 # Update interval should be a multiple of 1000
       callbacks:
         on_left: "toggle_label"
@@ -177,7 +177,7 @@ widgets:
       label: "{icon} {temp}" #{icon} {temp} {humidity}
       label_alt: "{temp_alt}"
       class_name: "weather-widget"
-      update_interval: 600000
+      update_interval: 1800 #Update interval in seconds, Min 600
       temp_format: 'celsius'
       location_id: 'aac619af0e4a1f0ffbab44e0cd35501d61e2c5d4337767432f5cbac90957d7a1'
       callbacks:

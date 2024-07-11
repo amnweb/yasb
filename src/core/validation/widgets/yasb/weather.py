@@ -1,7 +1,7 @@
 DEFAULTS = {
     'label': "0",
     'label_alt': "0",
-    'update_interval': 600000,
+    'update_interval': 3600,
     'temp_format': 'celsius',
     'location_id': 'c3e96d6cc4965fc54f88296b54449571c4107c73b9638c16aafc83575b4ddf2e',
     'callbacks': {
@@ -39,7 +39,7 @@ VALIDATION_SCHEMA = {
     'update_interval': {
         'type': 'integer',
         'default': DEFAULTS['update_interval'],
-        'min': 10000,
+        'min': 600,
         'max': 36000000
     },
     'location_id': {

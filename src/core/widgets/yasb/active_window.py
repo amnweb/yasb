@@ -80,6 +80,7 @@ class ActiveWindowWidget(BaseWidget):
         self.foreground_change.connect(self._on_focus_change_event)
         self._event_service.register_event(WinEvent.EventSystemForeground, self.foreground_change)
 
+
         self.window_name_change.connect(self._on_window_name_change_event)
         self._event_service.register_event(WinEvent.EventObjectNameChange, self.window_name_change)
 
@@ -94,7 +95,6 @@ class ActiveWindowWidget(BaseWidget):
                 not win_info['title'] or
                 win_info['title'] in IGNORED_YASB_TITLES or
                 win_info['class_name'] in IGNORED_YASB_CLASSES):
-            self.hide()
             return
 
         monitor_name = win_info['monitor_info'].get('device', None)
@@ -105,6 +105,10 @@ class ActiveWindowWidget(BaseWidget):
             self.show()
             self._update_window_title(hwnd, win_info, event)
 
+        # Check if the window title is in the list of ignored titles
+        if(win_info['title'] in IGNORED_TITLES):
+            self.hide()
+
     def _on_window_name_change_event(self, hwnd: int, event: WinEvent) -> None:
         if self._win_info and hwnd == self._win_info["hwnd"]:
             self._on_focus_change_event(hwnd, event)
@@ -112,7 +116,7 @@ class ActiveWindowWidget(BaseWidget):
     def _update_window_title(self, hwnd: int, win_info: dict, event: WinEvent) -> None:
         try:
             title = win_info['title']
-            process = win_info['process']['name']
+            process = win_info['process']
             class_name = win_info['class_name']
 
             if (title.strip() in self._ignore_window['titles'] or

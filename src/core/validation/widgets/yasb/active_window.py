@@ -29,6 +29,7 @@ VALIDATION_SCHEMA = {
     'label_no_window': {
         'type': 'string',
         'nullable': True,
+        'required': False,
         'default': DEFAULTS['label_no_window']
     },
     'max_length': {
