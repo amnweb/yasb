@@ -14,12 +14,13 @@ class KomorebiClient:
     def __init__(
             self,
             komorebic_path: str = "komorebic.exe",
-            timeout_secs: int = 0.5
+            timeout_secs: float = 0.5
     ):
         super().__init__()
         self._timeout_secs = timeout_secs
         self._komorebic_path = komorebic_path
         self._previous_poll_offline = False
+        self._previous_mouse_follows_focus = False
 
     def query_state(self) -> Optional[dict]:
         with suppress(json.JSONDecodeError, subprocess.CalledProcessError, subprocess.TimeoutExpired):
@@ -83,6 +84,7 @@ class KomorebiClient:
 
     def activate_workspace(self, ws_idx: int, wait: bool = False) -> None:
         p = subprocess.Popen([self._komorebic_path, "focus-workspace", str(ws_idx)], shell=True)
+
         if wait:
             p.wait()
     def next_workspace(self) -> None:
@@ -109,10 +111,10 @@ class KomorebiClient:
         except subprocess.SubprocessError:
             logging.exception(f"Failed to change layout of currently active workspace to {layout}")
 
-    def flip_layout(self) -> None:
+    def flip_layout(self, direction: str) -> None:
         try:
             subprocess.Popen(
-                [self._komorebic_path, "flip-layout"],
+                [self._komorebic_path, "flip-layout", direction],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
                 shell=True
@@ -120,7 +122,16 @@ class KomorebiClient:
         except subprocess.SubprocessError:
             pass
 
-    def toggle(self, toggle_type: str, wait: bool = False):
+    def flip_layout_horizontal(self) -> None:
+        self.flip_layout("horizontal")
+
+    def flip_layout_vertical(self) -> None:
+        self.flip_layout("vertical")
+
+    def flip_layout_horizontal_and_vertical(self) -> None:
+        self.flip_layout("horizontal-and-vertical")
+
+    def toggle(self, toggle_type: str, wait: bool = False) -> None:
         try:
             p = subprocess.Popen([self._komorebic_path, f"toggle-{toggle_type}"], shell=True)
 

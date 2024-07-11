@@ -1,5 +1,5 @@
-PyQt6>=6.7.0
-PyQt6_sip>=13.6.0
+PyQt6
+PyQt6_sip
 BlurWindow
 Cerberus
 cssutils

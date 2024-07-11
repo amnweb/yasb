@@ -1,6 +1,7 @@
 DEFAULTS = {
     'hide_if_offline': False,
     "label": "{icon}",
+    'layouts': ['bsp', 'columns', 'rows', 'grid', 'vertical_stack', 'horizontal_stack', 'ultrawide_vertical_stack', 'right-main-vertical-stack'],
     'layout_icons': {
         "bsp": "[\\\\]",
         "columns": "[||]",
@@ -9,6 +10,7 @@ DEFAULTS = {
         "vertical_stack": "[V]=",
         "horizontal_stack": "[H]=",
         "ultrawide_vertical_stack": "||=",
+        "right_main_vertical_stack": "=||",
         "monocle": "[M]",
         "maximised": "[X]",
         "floating": "><>",
@@ -25,6 +27,10 @@ ALLOWED_CALLBACKS = [
     "next_layout",
     "prev_layout",
     "flip_layout",
+    "flip_layout_horizontal",
+    "flip_layout_vertical",
+    "flip_layout_horizontal_and_vertical",
+    "first_layout",
     "toggle_tiling",
     "toggle_float",
     "toggle_monocle",
@@ -40,6 +46,14 @@ VALIDATION_SCHEMA = {
     'label': {
         'type': 'string',
         'default': DEFAULTS['label']
+    },
+    'layouts': {
+        'type': 'list',
+        'schema': {
+            'type': 'string',
+            'required': False
+        },
+        'default': DEFAULTS['layouts']
     },
     'layout_icons': {
         'type': 'dict',
@@ -71,6 +85,10 @@ VALIDATION_SCHEMA = {
             "ultrawide_vertical_stack": {
                 'type': 'string',
                 'default': DEFAULTS['layout_icons']['ultrawide_vertical_stack']
+            },
+            "right_main_vertical_stack": {
+                'type': 'string',
+                'default': DEFAULTS['layout_icons']['right_main_vertical_stack']
             },
             "monocle": {
                 'type': 'string',

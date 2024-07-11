@@ -1,14 +1,9 @@
 DEFAULTS = {
     'label': "power",
-    'blur': True,
-    "icons": {
-        "lock": "\uea75",
-        "signout": "\udb80\udf43",
-        "sleep": "\u23fe",
-        "restart": "\uead2",
-        "shutdown": "\uf011",
-        "cancel": "\udb81\udf3a",
-    },
+    'blur': False,
+    'blur_background': True,
+    'animation_duration': 200,
+    'button_row': 3
 }
 
 VALIDATION_SCHEMA = {
@@ -20,34 +15,61 @@ VALIDATION_SCHEMA = {
         'type': 'boolean',
         'default': DEFAULTS['blur']
     },
-    "icons": {
-        "type": "dict",
-        "schema": {
-            "lock": {
-                "type": "string",
-                "default": DEFAULTS["icons"]["lock"],
-            },
-            "signout": {
-                "type": "string",
-                "default": DEFAULTS["icons"]["signout"],
-            },
-            "sleep": {
-                "type": "string",
-                "default": DEFAULTS["icons"]["sleep"],
-            },
-            "restart": {
-                "type": "string",
-                "default": DEFAULTS["icons"]["restart"],
-            },
-            "shutdown": {
-                "type": "string",
-                "default": DEFAULTS["icons"]["shutdown"],
-            },
-            "cancel": {
-                "type": "string",
-                "default": DEFAULTS["icons"]["cancel"],
-            }
-        },
-        "default": DEFAULTS["icons"],
+    'blur_background': {
+        'type': 'boolean',
+        'default': DEFAULTS['blur_background']
     },
+    'animation_duration': {
+        'type': 'integer',
+        'default': DEFAULTS['animation_duration'],
+        'min': 0,
+        'max': 2000
+    },
+    'button_row': {
+        'type': 'integer',
+        'default': DEFAULTS['button_row'],
+        'min': 1,
+        'max': 5
+    },
+    'buttons': {
+        'type': 'dict',
+        'schema': {
+            'lock': {
+                'type': 'list',
+                'required': False
+            },
+            'signout': {
+                'type': 'list',
+                'required': False
+            },
+            'sleep': {
+                'type': 'list',
+                'required': False
+            },
+            'restart': {
+                'type': 'list',
+                'required': True
+            },
+            'shutdown': {
+                'type': 'list',
+                'required': True
+            },
+            'cancel': {
+                'type': 'list',
+                'required': True
+            },
+            'hibernate': {
+                'type': 'list',
+                'required': False
+            },
+            'force_shutdown': {
+                'type': 'list',
+                'required': False
+            },
+            'force_restart': {
+                'type': 'list',
+                'required': False
+            }
+        }
+    }
 }

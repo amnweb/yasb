@@ -79,7 +79,7 @@ class ActiveWindowWidget(BaseWidget):
 
         self.foreground_change.connect(self._on_focus_change_event)
         self._event_service.register_event(WinEvent.EventSystemForeground, self.foreground_change)
-
+        self._event_service.register_event(WinEvent.EventSystemMoveSizeEnd, self.foreground_change)
 
         self.window_name_change.connect(self._on_window_name_change_event)
         self._event_service.register_event(WinEvent.EventObjectNameChange, self.window_name_change)

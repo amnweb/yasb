@@ -159,3 +159,18 @@
 .shutdown-buttons.shutdown .shutdown-label {
     color:rgba(137, 180, 250, 0.95);
 }
+
+/* 
+EXAMPLE:
+.shutdown-buttons.force_shutdown,
+.shutdown-buttons.force_restart,
+.shutdown-buttons.hibernate   {
+    height: 40px;
+    background-color: rgba(255, 148, 178, 0.204);
+}
+.shutdown-buttons.force_shutdown .shutdown-label,
+.shutdown-buttons.force_restart .shutdown-label,
+.shutdown-buttons.hibernate .shutdown-label  {
+    margin-bottom:0px;
+    font-size: 14px;
+} */

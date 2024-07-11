@@ -36,13 +36,31 @@ class PowerOperations:
         self.main_window.hide()
         self.overlay.hide()
         QCoreApplication.exit(0)
-        subprocess.Popen("shutdown /r /f /t 0", stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True)
+        subprocess.Popen("shutdown /r /t 0", stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True)
 
     def shutdown(self):
         self.main_window.hide()
         self.overlay.hide()
         QCoreApplication.exit(0)
         subprocess.Popen("shutdown /s /t 0", stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True)
+
+    def force_shutdown(self):
+        self.main_window.hide()
+        self.overlay.hide()
+        QCoreApplication.exit(0)
+        subprocess.Popen("shutdown /s /f /t 0", stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True)
+
+    def force_restart(self):
+        self.main_window.hide()
+        self.overlay.hide()
+        QCoreApplication.exit(0)
+        subprocess.Popen("shutdown /r /f /t 0", stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True)
+    
+    def hibernate(self):
+        self.main_window.hide()
+        self.overlay.hide()
+        QCoreApplication.exit(0)
+        subprocess.Popen("shutdown /h", stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True)
 
     def cancel(self):
         self.main_window.fade_out()

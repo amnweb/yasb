@@ -30,8 +30,10 @@ bars:
         [
           "active_window"
         ] 
-      center: [
-         "komorebi_workspaces"
+      center: 
+        [
+         "komorebi_workspaces",
+         "komorebi_active_layout"
         ]
       right:
         [
@@ -112,6 +114,7 @@ widgets:
     options:
       hide_if_offline: true
       label: "{icon}"
+      layouts: ['bsp', 'columns', 'rows', 'grid', 'vertical_stack', 'horizontal_stack', 'ultrawide_vertical_stack']
       layout_icons:
         bsp: "BSP"
         columns: "COLS"
@@ -125,9 +128,9 @@ widgets:
         floating: "FLOATING"
         paused: "PAUSED"
       callbacks:
-        on_left: 'prev_layout'
+        on_left: 'next_layout'
         on_middle: 'toggle_monocle'
-        on_right: 'next_layout'
+        on_right: 'prev_layout'
 
   wifi:
     type: "yasb.wifi.WifiWidget"
@@ -241,13 +244,21 @@ widgets:
     options:
       label: "\uf011"
       blur: False
-      icons:
-        lock: "\uea75"
-        signout: "\udb80\udf43"
-        sleep: "\u23fe"
-        restart: "\uead2"
-        shutdown: "\uf011"
-        cancel: "\udb81\udf3a"
+      blur_background: True
+      animation_duration: 200 # Milisecond 
+      button_row: 4 # Number of buttons in row, min 1 max 5
+      buttons:
+        lock: ["\uea75","Lock"]
+        signout: ["\udb80\udf43","Sign out"]
+        cancel: ["\udb81\udf3a","Cancel"]
+        shutdown: ["\uf011","Shut Down"]
+        restart: ["\uead2","Restart"]
+        sleep: ["\u23fe","Sleep"]
+        hibernate: ["\uf28e","Hibernate"]
+        force_shutdown: ["\uf011","Force Shut Down"]
+        force_restart: ["\uead2","Force Restart"]
+        # cancel, restart and shutdown buttons are required. You can access the specific button in style.css, for example:
+        #.shutdown-buttons.force_shutdown or .shutdown-buttons.force_shutdown .shutdown-label or .shutdown-icons
 
   applications:
     type: "yasb.applications.ApplicationsWidget"
