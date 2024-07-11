@@ -22,4 +22,5 @@
 
 
 ## Demo YASB + Komorebi
-  ![Theme Catppuccin Mocha](demo/demo.png)
+![Theme Catppuccin Mocha](demo/demo.png)
+![Theme Catppuccin Mocha](demo/demo2.png)
