@@ -16,3 +16,10 @@
   - Configure [styles.css](src/styles.css) and [config.yaml](src/config.yaml) to your liking.
 - Start the application:
   - run `python src/main.py` in your terminal (or click [yasb.vbs](src/yasb.vbs))
+
+
+
+
+
+## Demo YASB + Komorebi
+  ![Theme Catppuccin Mocha](demo/demo.png)
