@@ -59,7 +59,6 @@ class PowerOperations:
     def hibernate(self):
         self.main_window.hide()
         self.overlay.hide()
-        QCoreApplication.exit(0)
         subprocess.Popen("shutdown /h", stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True)
 
     def cancel(self):
