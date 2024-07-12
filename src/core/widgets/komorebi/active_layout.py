@@ -43,6 +43,7 @@ class ActiveLayoutWidget(BaseWidget):
     k_signal_connect = pyqtSignal(dict)
     k_signal_disconnect = pyqtSignal()
     k_signal_layout_change = pyqtSignal(dict, dict)
+    k_signal_update = pyqtSignal(dict, dict)
 
     validation_schema = VALIDATION_SCHEMA
     event_listener = KomorebiEventListener
@@ -125,10 +126,12 @@ class ActiveLayoutWidget(BaseWidget):
         self.k_signal_connect.connect(self._on_komorebi_connect_event)
         self.k_signal_disconnect.connect(self._on_komorebi_disconnect_event)
         self.k_signal_layout_change.connect(self._on_komorebi_layout_change_event)
+        self.k_signal_update.connect(self._on_komorebi_layout_change_event)
 
         self._event_service.register_event(KomorebiEvent.KomorebiConnect,  self.k_signal_connect)
         self._event_service.register_event(KomorebiEvent.KomorebiDisconnect, self.k_signal_disconnect)
-
+        self._event_service.register_event(KomorebiEvent.KomorebiUpdate, self.k_signal_update)
+        
         for event_type in active_layout_change_event_watchlist:
             self._event_service.register_event(event_type, self.k_signal_layout_change)
 

@@ -42,7 +42,7 @@ class PowerOperations:
         self.main_window.hide()
         self.overlay.hide()
         QCoreApplication.exit(0)
-        subprocess.Popen("shutdown /s /t 0", stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True)
+        subprocess.Popen("shutdown /s /hybrid /t 0", stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True)
 
     def force_shutdown(self):
         self.main_window.hide()
