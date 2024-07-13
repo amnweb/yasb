@@ -1,0 +1,303 @@
+watch_stylesheet: true
+watch_config: true
+
+bars:
+  status-bar:
+    enabled: true
+    #screens: ['DELL P2419H (1)'] 
+    screens: ['*'] 
+    class_name: "yasb-bar"
+    alignment:
+      position: "top"
+      center: false
+    blur_effect:
+      enabled: false
+      acrylic: false
+      dark: false
+    window_flags:
+      always_on_top: false
+      windows_app_bar: true
+    dimensions:
+      width: "100%"
+      height: 32
+    padding:
+      top: 6
+      left: 6
+      bottom: 0
+      right: 6
+    widgets:
+      left:
+        [
+          "active_window"
+        ] 
+      center: [
+         "komorebi_workspaces",
+         "komorebi_active_layout"
+        ]
+      right:
+        [
+          "app_border",
+          #"weather",
+          "applications",
+          "volume",
+          "power_menu",
+          "clock_border",
+          "clock"
+        ]
+widgets:
+  active_window:
+    type: "yasb.active_window.ActiveWindowWidget"
+    options:
+      label: "{win[title]}"
+      label_alt: "[class_name='{win[class_name]}' exe='{win[process][name]}' hwnd={win[hwnd]}]"
+      label_no_window: ""
+      max_length: 86
+      max_length_ellipsis: "..."
+      monitor_exclusive: true
+
+  battery:
+    type: "yasb.battery.BatteryWidget"
+    options:
+      label: "{icon}  {percent}%"
+      label_alt: "{icon}  {percent}% | time: {time_remaining}"
+      time_remaining_natural: false
+
+  clock:
+    type: "yasb.clock.ClockWidget"
+    options:
+      label: "{%a %d, %b %H:%M}"
+      label_alt: "{%A %d %B %Y, %H:%M}"
+      timezones: [] #Looking up time zone info from registry
+      #timezones: ["America/Montreal"]
+
+  cpu:
+    type: "yasb.cpu.CpuWidget"
+    options:
+      label: "\uf4bc {info[percent][total]}%"
+      label_alt: "\uf4bc {info[histograms][cpu_percent]}"
+      update_interval: 2000
+      histogram_icons:
+        - '\u2581' # 0%
+        - '\u2581' # 10%
+        - '\u2582' # 20%
+        - '\u2583' # 30%
+        - '\u2584' # 40%
+        - '\u2585' # 50%
+        - '\u2586' # 60%
+        - '\u2587' # 70%
+        - '\u2588' # 80%+
+      histogram_num_columns: 8
+      callbacks:
+        on_right: "exec cmd /c Taskmgr"
+
+  memory:
+    type: "yasb.memory.MemoryWidget"
+    options:
+      label: "\uf4bc {virtual_mem_free}"
+      label_alt: "\uf4bc {virtual_mem_percent}%"
+      update_interval: 5000
+      callbacks:
+        on_right: "exec cmd /c Taskmgr"
+
+  komorebi_workspaces:
+    type: "komorebi.workspaces.WorkspaceWidget"
+    options:
+        label_offline: "Komorebi Offline"
+        label_workspace_btn: "\uf4c3"
+        label_default_name: "{index}"
+        label_zero_index: false
+        hide_empty_workspaces: false
+
+  komorebi_active_layout:
+    type: "komorebi.active_layout.ActiveLayoutWidget"
+    options:
+      hide_if_offline: true
+      label: "{icon}"
+      layouts: ['bsp', 'columns', 'rows', 'grid', 'vertical_stack', 'horizontal_stack', 'ultrawide_vertical_stack']
+      layout_icons:
+        bsp: "BSP"
+        columns: "COLS"
+        rows: "ROWS"
+        grid: "GRID"
+        vertical_stack: "V-STACK"
+        horizontal_stack: "H-STACK"
+        ultrawide_vertical_stack: "W-STACK"
+        monocle: "MONOCLE"
+        maximised: "MAX"
+        floating: "FLOATING"
+        paused: "PAUSED"
+      callbacks:
+        on_left: 'next_layout'
+        on_middle: 'toggle_monocle'
+        on_right: 'prev_layout'
+
+  wifi:
+    type: "yasb.wifi.WifiWidget"
+    options:
+      label: "{wifi_icon}"
+      label_alt: "{wifi_icon}  {wifi_name}"
+      update_interval: 5000
+      wifi_icons:
+        - "\udb82\udd2e" # 0% strength (no wifi)
+        - "\udb82\udd1f" # 1-25% strength
+        - "\udb82\udd22" # 26-50% strength
+        - "\udb82\udd25" # 51-75% strength
+        - "\udb82\udd28" # 76-100% strength. Alternate theming: \uf1eb
+      callbacks:
+        on_left: "exec cmd.exe /c start ms-settings:network"
+        on_middle: "do_nothing"
+        on_right: "do_nothing"
+
+  traffic:
+    type: "yasb.traffic.TrafficWidget"
+    options:
+      label: "\ueab4 {download_speed}\ue621\ueab7 {upload_speed}"
+      label_alt: "Download {download_speed}\ue621Upload {upload_speed}"
+      update_interval: 1000 # Update interval should be a multiple of 1000
+      callbacks:
+        on_left: "toggle_label"
+        on_right: "exec cmd /c Taskmgr"
+
+  ip_info:
+    type: "yasb.custom.CustomWidget"
+    options:
+      label: "\udb81\udd9f {data[ip]}"
+      label_alt: "\uf450 {data[city]} {data[region]}, {data[country]}"
+      class_name: "ip-info-widget"
+      exec_options:
+        run_cmd: "curl.exe https://ipinfo.io"
+        run_interval: 120000  # every 5 minutes
+        return_format: "json"
+      callbacks:
+        on_left: "toggle_label"
+        on_middle: "exec cmd /c ncpa.cpl" # open network settings
+        on_right: "exec cmd /c start https://ipinfo.io/{data[ip]} " # open ipinfo in browser
+
+  weather:
+    type: "yasb.weather.WeatherWidget"
+    options:
+      label: "{icon} {temp}" #{icon} {temp} {humidity}
+      label_alt: "{temp_alt}"
+      class_name: "weather-widget"
+      update_interval: 1800 #Update interval in seconds, Min 600
+      temp_format: 'celsius'
+      location_id: '308120183d3346c60e5a9339baa6c9baa8a8ed9ccaa0da9c3c5797b8caa72b71'
+      callbacks:
+        on_right: "toggle_label"
+      icons: 
+        sunnyDay: "\ue30d"
+        clearNight: "\ue32b"
+        cloudyFoggyDay: "\ue312"
+        cloudyFoggyNight: "\ue311"
+        rainyDay: "\udb81\ude7e"
+        rainyNight: "\udb81\ude7e"
+        snowyIcyDay: "\udb81\udd98"
+        snowyIcyNight: "\udb81\udd98"
+        severe: "\uebaa"
+        default: "\uebaa"
+      # to get your own location_id, go to https://weather.com & search your location.
+      # once you choose your location, you can see the location_id in the URL(64 chars long hex string)
+      # like this: https://weather.com/weather/today/l/c3e96d6cc4965fc54f88296b54449571c4107c73b9638c16aafc83575b4ddf2e
+
+  lang:
+    type: "yasb.custom.CustomWidget"
+    options:
+      label: "{data}"
+      label_alt: "{data}"
+      class_name: "lang-widget"
+      exec_options:
+        run_cmd: "powershell Add-Type -AssemblyName System.Windows.Forms;([System.Windows.Forms.InputLanguage]::CurrentInputLanguage).Culture.Name"
+        # run every 10 sec
+        run_interval: 10000
+        return_format: "string"
+
+  volume:
+    type: "yasb.volume.VolumeWidget"
+    options:
+      label: "{volume}"
+      label_alt: "{volume}"
+      class_name: "system-widget volume"
+      volume_icons:
+        - "\ueee8"  # Icon for muted
+        - "\uf026"  # Icon for 0-10% volume
+        - "\uf027"  # Icon for 11-30% volume
+        - "\uf027"  # Icon for 31-60% volume
+        - "\uf028"  # Icon for 61-100% volume
+      callbacks:
+        on_right: "exec cmd.exe /c start ms-settings:sound"
+
+ 
+  power_menu_native:
+    type: "yasb.custom.CustomWidget"
+    options:
+      class_name: "system-widget power"
+      label: "\uf011"
+      label_alt: "\uf011"
+      exec_options:
+        run_once: true
+      callbacks:
+        on_left: "exec powershell (New-Object -ComObject Shell.Application).ShutdownWindows()"
+
+  power_menu:
+    type: "yasb.power_menu.PowerMenuWidget"
+    options:
+      label: "\uf011"
+      blur: false
+      blur_background: true
+      animation_duration: 200 # Milisecond 
+      button_row: 4 # Number of buttons in row, min 1 max 5
+      buttons:
+        lock: ["\uea75","Lock"]
+        signout: ["\udb80\udf43","Sign out"]
+        sleep: ["\u23fe","Sleep"]
+        cancel: ["\udb81\udf3a","Cancel"]
+        shutdown: ["\uf011","Shut Down"]
+        restart: ["\uead2","Restart"]
+        hibernate: ["\uf28e","Hibernate"]
+        #force_shutdown: ["\uf011","Force Shut Down"]
+        #force_restart: ["\uead2","Force Restart"]
+ 
+
+  applications:
+    type: "yasb.applications.ApplicationsWidget"
+    options:
+      label: "{data}"
+      class_name: "system-widget"
+      apps:
+        app1: ["\uf489","wt"]
+        app2: ["\udb82\ude1e","C:\\Users\\amn\\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe"]
+        app3: ["\udb80\ude39","C:\\Program Files\\Mozilla Firefox\\firefox.exe"]
+        app4: ["\uf1ff","C:\\Users\\amn\\AppData\\Local\\Discord\\Update.exe --processStart Discord.exe"]
+        app5: ["\ue217","C:\\Users\\amn\\AppData\\Roaming\\Telegram Desktop\\Telegram.exe"]
+        app6: ["\uf413","explorer c:\\Users\\amn"]
+        app7: ["\uf42f","C:\\Program Files\\Microsoft Office\\root\\Office16\\OUTLOOK.EXE"]
+        app8: ["\uf0a2","notification_center"]
+        app9: ["\ueb51","quick_settings"]
+        #app9: ["\uf46a","cmd.exe /c start ms-settings:windowsupdate"]
+        app10: ["\uf422","search"]
+        # Currently available to use quick_settings, notification_center, search
+  app_border:
+    type: "yasb.custom.CustomWidget"
+    options:
+      label: "\ue0b6"
+      label_alt: "\ue0b6"
+      class_name: "app_border"
+
+  clock_border:
+    type: "yasb.custom.CustomWidget"
+    options:
+      label: "\ue0b6"
+      label_alt: "\ue0b6"
+      class_name: "clock_border"
+   
+  nvidia_temp:
+    type: "yasb.custom.CustomWidget"
+    options:
+      label: "{data}\udb81\udd04"
+      label_alt: "{data}"
+      class_name: "system-widget"
+      exec_options:
+        run_cmd: "powershell nvidia-smi --query-gpu=temperature.gpu --format=csv,noheader"
+        # run every 10 sec
+        run_interval: 10000
+        return_format: "string"
