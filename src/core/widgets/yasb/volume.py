@@ -23,11 +23,10 @@ class VolumeWidget(BaseWidget):
         self,
         label: str,
         label_alt: str,
-        class_name: str,
         volume_icons: list[str],
         callbacks: dict[str, str]
     ):
-        super().__init__(UPDATE_INTERVAL, class_name=f"{class_name}")
+        super().__init__(UPDATE_INTERVAL, class_name="volume-widget")
         self._show_alt_label = False
         self._label_content = label
         self._label_alt_content = label_alt

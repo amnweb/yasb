@@ -23,10 +23,6 @@ VALIDATION_SCHEMA = {
         'type': 'string',
         'default': DEFAULTS['label_alt']
     },
-    'class_name': {
-        'type': 'string',
-        'required': False,
-    },
     'volume_icons': {
         'type': 'list',
         'default': DEFAULTS['volume_icons'],

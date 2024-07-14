@@ -16,13 +16,12 @@ class WeatherWidget(BaseWidget):
         label: str,
         label_alt: str,
         update_interval: int,
-        class_name: str,
         location_id: str,
         temp_format: str,
         callbacks: dict[str, str],
         icons: dict[str, str],
     ):
-        super().__init__((update_interval * 1000), class_name=f"system-widget {class_name}")
+        super().__init__((update_interval * 1000), class_name="weather-widget")
 
         self.location_id = location_id
         self.temp_format = temp_format

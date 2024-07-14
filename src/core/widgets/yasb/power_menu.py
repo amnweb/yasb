@@ -53,7 +53,7 @@ class PowerMenuWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
 
     def __init__(self, label: str, blur: bool, blur_background: bool, animation_duration: int, button_row: int, buttons: dict[str, list[str]]):
-        super().__init__(0, class_name="system-widget")
+        super().__init__(0, class_name="power-menu-widget")
         
         self.buttons = buttons
         self.blur = blur
@@ -85,7 +85,7 @@ class MainWindow(AnimatedWidget):
         self.overlay = OverlayWidget(animation_duration)
         self.parent_button = parent_button
 
-        self.setProperty("class", "power-button-widget")
+        self.setProperty("class", "power-menu-popup")
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.Tool)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
 
@@ -110,19 +110,19 @@ class MainWindow(AnimatedWidget):
 
         for i, (icon, label, action, class_name) in enumerate(self.buttons_info):
             button = QPushButton(self)
-            button.setProperty("class", f"shutdown-buttons {class_name}")
+            button.setProperty("class", f"button {class_name}")
             button_layout = QVBoxLayout(button)
 
             # Only add icon label if icon is not empty or None
             if icon:
                 icon_label = QLabel(f'{icon}', self)
-                icon_label.setProperty("class", "shutdown-icons")
+                icon_label.setProperty("class", "icon")
                 icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
                 icon_label.setTextFormat(Qt.TextFormat.RichText)
                 button_layout.addWidget(icon_label)
 
             text_label = QLabel(label, self)
-            text_label.setProperty("class", "shutdown-label")
+            text_label.setProperty("class", "label")
             text_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             button_layout.addWidget(text_label)
 
@@ -175,11 +175,11 @@ class MainWindow(AnimatedWidget):
 
     def eventFilter(self, source, event):
         if event.type() == QtCore.QEvent.Type.Enter and isinstance(source, QPushButton):
-            source.setProperty("class", f"shutdown-buttons {source.property('class').split()[1]} hover")
+            source.setProperty("class", f"button {source.property('class').split()[1]} hover")
             source.style().unpolish(source)
             source.style().polish(source)
         elif event.type() == QtCore.QEvent.Type.Leave and isinstance(source, QPushButton):
-            source.setProperty("class", f"shutdown-buttons {source.property('class').split()[1]}")
+            source.setProperty("class", f"button {source.property('class').split()[1]}")
             source.style().unpolish(source)
             source.style().polish(source)
         return super(MainWindow, self).eventFilter(source, event)

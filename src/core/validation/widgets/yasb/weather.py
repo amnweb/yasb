@@ -32,10 +32,6 @@ VALIDATION_SCHEMA = {
         'type': 'string',
         'default': DEFAULTS['label_alt']
     },
-    'class_name': {
-        'type': 'string',
-        'required': False,
-    },
     'update_interval': {
         'type': 'integer',
         'default': DEFAULTS['update_interval'],

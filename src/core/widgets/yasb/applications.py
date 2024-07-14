@@ -10,8 +10,8 @@ from core.utils.win32.system_function import function_map
 class ApplicationsWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
 
-    def __init__(self, label: str, class_name: str, apps: dict[str, list[str]]):
-        super().__init__(class_name=f"{class_name}")
+    def __init__(self, label: str, apps: dict[str, list[str]]):
+        super().__init__(class_name="apps-widget")
         self._apps = apps
         self._label = ClickableLabel()
         self._update_label()

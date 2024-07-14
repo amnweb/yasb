@@ -2,10 +2,6 @@ VALIDATION_SCHEMA = {
     'label': {
         'type': 'string'
     },
-    'class_name': {
-        'type': 'string',
-        'required': False,
-    },
     'apps': {
         'type': 'dict',
         'schema': {
