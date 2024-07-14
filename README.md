@@ -25,7 +25,7 @@
 
 ## How to style
 ```
-.widget .label {} -> Global lable for all
+.widget .label {} -> Global label for all
 .active-window-widget {} -> Styles specific to the active window widget
 .clock-widget {} -> Styles specific to the clock widget
 .cpu-widget {} -> Styles specific to the CPU widget
