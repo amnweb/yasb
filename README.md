@@ -23,6 +23,9 @@
 ![Theme Catppuccin Mocha](demo/demo.png)
 ![Theme Catppuccin Mocha](demo/demo2.png)
 
+> [!NOTE]  
+> This repository is updated on a regular basis; when you update files, always check [styles.css](src/styles.css) and [config.yaml](src/config.yaml) for new features and changes; otherwise, your config can be broken.
+
 ## How to style
 ```
 .widget .label {} -> Global label for all

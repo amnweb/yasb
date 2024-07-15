@@ -1,20 +1,20 @@
 import logging
+from logging.handlers import RotatingFileHandler
 from os.path import join
 from settings import DEFAULT_LOG_FILENAME, APP_NAME, APP_NAME_FULL
 from core.config import get_config_dir
 
 LOG_PATH = join(get_config_dir(), DEFAULT_LOG_FILENAME)
-LOG_FORMAT = "%(asctime)s %(levelname)s %(filename)s: %(message)s"
+LOG_FORMAT = "%(asctime)s %(levelname)s %(filename)s:%(lineno)d: %(message)s"
 LOG_DATETIME = "%Y-%m-%d %H:%M:%S"
 
 
 def init_logger():
     logging.basicConfig(
+        handlers=[RotatingFileHandler(join(get_config_dir(), DEFAULT_LOG_FILENAME), maxBytes=1024*1024, backupCount=5)],
         level=logging.DEBUG,
-        filename=join(get_config_dir(), DEFAULT_LOG_FILENAME),
         format=LOG_FORMAT,
         datefmt=LOG_DATETIME,
-        filemode="w",
     )
 
     logging.getLogger().addHandler(logging.StreamHandler())

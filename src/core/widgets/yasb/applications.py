@@ -2,7 +2,6 @@ from core.widgets.base import BaseWidget
 from core.validation.widgets.yasb.applications import VALIDATION_SCHEMA
 from PyQt6.QtWidgets import QLabel, QApplication, QVBoxLayout
 from PyQt6.QtCore import Qt
-import os
 import subprocess
 import logging
 from core.utils.win32.system_function import function_map
@@ -10,21 +9,24 @@ from core.utils.win32.system_function import function_map
 class ApplicationsWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
 
-    def __init__(self, label: str, apps: dict[str, list[str]]):
+    def __init__(self, label: str, app_list:  list[str, dict[str]]):
         super().__init__(class_name="apps-widget")
-        self._apps = apps
+        self._label = label
+        self._apps = app_list
         self._label = ClickableLabel()
         self._update_label()
 
     def _update_label(self):
-        for app_name, app_data in self._apps.items():
-            if len(app_data) > 1:
-                label = ClickableLabel(self)
-                label.setProperty("class", f"label {app_name}")
-                label.setText(app_data[0])
-                label.data = app_data[1]  # Store the data to be executed
-                self.widget_layout.addWidget(label)
-                
+        if isinstance(self._apps, list):
+            for app_data in self._apps:
+                if 'icon' in app_data and 'launch' in app_data:
+                    label = ClickableLabel(self)
+                    label.setProperty("class", "label")
+                    label.setText(app_data['icon'])
+                    label.data = app_data['launch']
+                    self.widget_layout.addWidget(label)
+        else:
+            logging.error(f"Expected _apps to be a list but got {type(self._apps)}")
 
     def execute_code(self, data):
         try:

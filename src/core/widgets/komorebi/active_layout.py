@@ -117,6 +117,8 @@ class ActiveLayoutWidget(BaseWidget):
     def _register_signals_and_events(self):
         active_layout_change_event_watchlist = [
             KomorebiEvent.ChangeLayout,
+            KomorebiEvent.FocusWorkspaceNumber,
+            KomorebiEvent.FocusMonitorWorkspaceNumber,
             KomorebiEvent.TogglePause,
             KomorebiEvent.ToggleTiling,
             KomorebiEvent.ToggleMonocle,

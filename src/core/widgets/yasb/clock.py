@@ -15,11 +15,13 @@ class ClockWidget(BaseWidget):
             self,
             label: str,
             label_alt: str,
+            locale: str,
             update_interval: int,
             timezones: list[str],
             callbacks: dict[str, str],
     ):
         super().__init__(update_interval, class_name="clock-widget")
+        self._locale = locale
         self._active_tz = None
         self._timezones = cycle(timezones if timezones else [get_localzone_name()])
         self._active_datetime_format_str = ''
@@ -28,6 +30,10 @@ class ClockWidget(BaseWidget):
         self._label_content = label
         self._label_alt_content = label_alt
 
+        if self._locale:
+            import locale
+            print(locale.locale_alias)
+            locale.setlocale(locale.LC_TIME, self._locale)
         self._label = QLabel()
         self._label_alt = QLabel()
         self._label.setProperty("class", "label")

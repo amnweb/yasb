@@ -105,6 +105,7 @@ class MainWindow(AnimatedWidget):
         button_layout1 = QHBoxLayout()
         button_layout2 = QHBoxLayout()
         button_layout3 = QHBoxLayout()
+        button_layout4 = QHBoxLayout()
 
         self.power_operations = PowerOperations(self, self.overlay)
 
@@ -130,8 +131,10 @@ class MainWindow(AnimatedWidget):
                 button_layout1.addWidget(button)
             elif i < (button_row * 2):
                 button_layout2.addWidget(button)
-            else:
+            elif i < (button_row * 3):
                 button_layout3.addWidget(button)
+            else:
+                button_layout4.addWidget(button)
             
             button.clicked.connect(action)
             button.installEventFilter(self)
@@ -139,6 +142,7 @@ class MainWindow(AnimatedWidget):
         main_layout.addLayout(button_layout1)
         main_layout.addLayout(button_layout2)
         main_layout.addLayout(button_layout3)
+        main_layout.addLayout(button_layout4)
         self.setLayout(main_layout)
         self.apply_stylesheet(self, get_stylesheet_path())
         self.adjustSize()

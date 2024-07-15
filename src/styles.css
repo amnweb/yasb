@@ -22,10 +22,10 @@
     font-family: 'Segoe UI','JetBrainsMono NFP';
 }
 .yasb-bar {
-    background-color:rgb(24, 24, 37);
+    background-color:rgb(23, 23, 34);
     border:1px solid rgb(41, 42, 58);
     padding: 0 8px;
-    border-radius: 16px;
+    border-radius: 10px;
 }
 .container-left,
 .container-center,
@@ -38,7 +38,7 @@
     padding: 0 2px;    
 }
 .widget .label {
-    padding: 0 2px 2px 2px; 
+    padding: 0 2px 1px 2px; 
 }
  
 .ws-btn {
@@ -61,15 +61,20 @@
 .clock-widget .label {
     padding-bottom: 3px;
     background: none;
-    font-size: 13px;
+    font-size: 12px;
     padding-bottom: 2px;
     font-weight: 600;
+    color: #a9aec2;
 }
 .active-window-widget .label {
     text-transform: capitalize;
     font-size: 13px;
     padding-bottom:2px;
     font-weight: 600;
+    color: #a9aec2;
+}
+.active-window-widget .label.icon {
+    padding-bottom:0px;
 }
 .komorebi-active-layout .label {
     padding-bottom: 1px;
@@ -78,13 +83,14 @@
     padding: 0 2px
 }
 .komorebi-workspaces .ws-btn {
-    border-radius: 7px;
+    border-radius: 6px;
     font-size: 26px;
     width: 14px;
     height: 14px;
-    padding: 0 2px;
+    padding:-1px 2px 0 2px;
     color:  rgb(88, 91, 112);
-    background-color: rgba(0, 0, 0, 0)
+    background-color: rgba(0, 0, 0, 0);
+    text-align: center;
 }
 .komorebi-workspaces .ws-btn:hover {
     color:  rgba(218, 231, 255, 0.5);
@@ -105,16 +111,18 @@
 .fake-widget-left .label{
     color: rgb(41, 42, 58);
     background-color: rgb(24, 24, 37);
-    font-size: 26px;
+    font-size: 25px;
     padding: 0;
-    margin-right:-10px;
+    margin-right:-16px;
+    padding-bottom: 1px;
 }
 .fake-widget-right .label{
     color: rgb(24, 24, 37);
     background-color: rgb(41, 42, 58);
-    font-size: 26px;
+    font-size: 25px;
     padding: 0;
-    margin-right:-10px;
+    margin-right:-16px;
+    padding-bottom: 1px;
 } 
 .weather-widget .label {
     font-weight: 600;

@@ -51,6 +51,8 @@ widgets:
       label: "{win[title]}"
       label_alt: "[class_name='{win[class_name]}' exe='{win[process][name]}' hwnd={win[hwnd]}]"
       label_no_window: ""
+      label_icon: true
+      label_icon_size: 16
       max_length: 86
       max_length_ellipsis: "..."
       monitor_exclusive: true
@@ -67,6 +69,7 @@ widgets:
     options:
       label: "{%a %d, %b %H:%M}"
       label_alt: "{%A %d %B %Y, %H:%M}"
+      #locale: 'en_EN' # Langugae for date, you can set your own, example fr_FR
       timezones: [] #Looking up time zone info from registry
       #timezones: ["America/Montreal"]
 
@@ -103,7 +106,7 @@ widgets:
     type: "komorebi.workspaces.WorkspaceWidget"
     options:
         label_offline: "Komorebi Offline"
-        label_workspace_btn: "\uf4c3"
+        label_workspace_btn: "\ueabc"
         label_default_name: "{index}"
         label_zero_index: false
         hide_empty_workspaces: false
@@ -188,10 +191,10 @@ widgets:
         clearNight: "\ue32b"
         cloudyFoggyDay: "\ue312"
         cloudyFoggyNight: "\ue311"
-        rainyDay: "\udb81\ude7e"
-        rainyNight: "\udb81\ude7e"
-        snowyIcyDay: "\udb81\udd98"
-        snowyIcyNight: "\udb81\udd98"
+        rainyDay: "\udb81\ude7e "
+        rainyNight: "\udb81\ude7e "
+        snowyIcyDay: "\udb81\udd98 "
+        snowyIcyNight: "\udb81\udd98 "
         severe: "\uebaa"
         default: "\uebaa"
       # to get your own location_id, go to https://weather.com & search your location.
@@ -242,15 +245,15 @@ widgets:
       blur: false
       blur_background: true
       animation_duration: 200 # Milisecond 
-      button_row: 4 # Number of buttons in row, min 1 max 5
+      button_row: 3 # Number of buttons in row, min 1 max 5
       buttons:
         lock: ["\uea75","Lock"]
         signout: ["\udb80\udf43","Sign out"]
-        sleep: ["\u23fe","Sleep"]
-        cancel: ["\udb81\udf3a","Cancel"]
+        #sleep: ["\u23fe","Sleep"]
         shutdown: ["\uf011","Shut Down"]
         restart: ["\uead2","Restart"]
         hibernate: ["\uf28e","Hibernate"]
+        cancel: ["\udb81\udf3a","Cancel"]
         #force_shutdown: ["\uf011","Force Shut Down"]
         #force_restart: ["\uead2","Force Restart"]
  
@@ -259,19 +262,20 @@ widgets:
     type: "yasb.applications.ApplicationsWidget"
     options:
       label: "{data}"
-      apps:
-        app1: ["\uf489","wt"]
-        app2: ["\udb82\ude1e","C:\\Users\\amn\\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe"]
-        app3: ["\udb80\ude39","C:\\Program Files\\Mozilla Firefox\\firefox.exe"]
-        app4: ["\uf1ff","C:\\Users\\amn\\AppData\\Local\\Discord\\Update.exe --processStart Discord.exe"]
-        app5: ["\ue217","C:\\Users\\amn\\AppData\\Roaming\\Telegram Desktop\\Telegram.exe"]
-        app6: ["\uf413","explorer c:\\Users\\amn"]
-        app7: ["\uf42f","C:\\Program Files\\Microsoft Office\\root\\Office16\\OUTLOOK.EXE"]
-        app8: ["\uf0a2","notification_center"]
-        app9: ["\ueb51","quick_settings"]
-        #app9: ["\uf46a","cmd.exe /c start ms-settings:windowsupdate"]
-        app10: ["\uf422","search"]
-        # Currently available to use quick_settings, notification_center, search
+      app_list:
+        - {icon: "\uf489", launch: "wt"}
+        - {icon: "\uf413", launch: "explorer c:\\Users\\amn"}
+        - {icon: "\udb82\ude1e", launch: "C:\\Users\\amn\\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe"}
+        - {icon: "\udb80\ude39", launch: "C:\\Program Files\\Mozilla Firefox\\firefox.exe"}
+        - {icon: "\uf1ff", launch: "C:\\Users\\amn\\AppData\\Local\\Discord\\Update.exe --processStart Discord.exe"}
+        - {icon: "\ue217", launch: "C:\\Users\\amn\\AppData\\Roaming\\Telegram Desktop\\Telegram.exe"}
+        - {icon: "\uf0a2", launch: "notification_center"}
+        - {icon: "\ueb51", launch: "quick_settings"}
+        - {icon: "\uf46a", launch: "cmd.exe /c start ms-settings:windowsupdate"}
+        - {icon: "\uf422", launch: "search"}
+        - {icon: "\udb84\udf55", launch: "widget"}
+        # Currently available to use quick_settings, notification_center, search, widget, launcher (launcher will trigger ALT+A)
+
   fake_widget_left:
     type: "yasb.custom.CustomWidget"
     options:
@@ -294,6 +298,5 @@ widgets:
       class_name: "system-widget"
       exec_options:
         run_cmd: "powershell nvidia-smi --query-gpu=temperature.gpu --format=csv,noheader"
-        # run every 10 sec
-        run_interval: 10000
+        run_interval: 10000 # run every 10 sec
         return_format: "string"

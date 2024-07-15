@@ -2,6 +2,7 @@ DEFAULTS = {
     'label': '\uf017 {%H:%M:%S}',
     'label_alt': '\uf017 {%d-%m-%y %H:%M:%S}',
     'update_interval': 1000,
+    'locale':"",
     'timezones': [],
     'callbacks': {
         'on_left': 'toggle_label',
@@ -18,6 +19,11 @@ VALIDATION_SCHEMA = {
     'label_alt': {
         'type': 'string',
         'default': DEFAULTS['label_alt']
+    },
+    'locale': {
+        'required': False,
+        'type': 'string',
+        'default': DEFAULTS['locale']
     },
     'update_interval': {
         'type': 'integer',

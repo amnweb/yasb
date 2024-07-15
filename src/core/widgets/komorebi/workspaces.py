@@ -236,13 +236,13 @@ class WorkspaceWidget(BaseWidget):
             except IndexError:
                 button = self._try_add_workspace_button(workspace_index)
                 buttons_added = True
-
+            self._update_button(button)
         if buttons_added:
             self._workspace_buttons.sort(key=lambda btn: btn.workspace_index)
             self._clear_container_layout()
             for workspace_btn in self._workspace_buttons:
                 self._workspace_container_layout.addWidget(workspace_btn)
-                self._update_button(workspace_btn)
+                #self._update_button(workspace_btn)
                 # Set the cursor to be a pointer when hovering over the button
                 workspace_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
                 

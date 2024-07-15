@@ -2,6 +2,8 @@ DEFAULTS = {
     'label': "{win[title]}",
     'label_alt': "[class_name='{win[class_name]}' exe='{win[process][name]}' hwnd={win[hwnd]}]",
     'label_no_window': None,
+    'label_icon': True,
+    'label_icon_size': 16,
     'max_length': None,
     'max_length_ellipsis': '...',
     'monitor_exclusive': True,
@@ -31,6 +33,16 @@ VALIDATION_SCHEMA = {
         'nullable': True,
         'required': False,
         'default': DEFAULTS['label_no_window']
+    },
+    'label_icon': {
+        'type': 'boolean',
+        'default': DEFAULTS['label_icon']
+    },
+    'label_icon_size': {
+        'type': 'integer',
+        'default': DEFAULTS['label_icon_size'],
+        'min': 12,
+        'max': 24,
     },
     'max_length': {
         'type': 'integer',
