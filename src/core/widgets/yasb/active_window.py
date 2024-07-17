@@ -317,7 +317,8 @@ class ActiveWindowWidget(BaseWidget):
                     truncated_title = f"{win_info['title'][:self._max_length]}{self._max_length_ellipsis}"
                     win_info['title'] = truncated_title
                     self._window_title_text.setText(self._label_no_window)
-                    self._window_icon_label.setText(self._label_no_window)
+                    if self._label_icon:
+                        self._window_icon_label.setText(self._label_no_window)
                     
                 self._win_info = win_info
                 self._update_text()
