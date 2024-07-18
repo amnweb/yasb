@@ -42,31 +42,84 @@ except ImportError:
     logging.warning("Failed to load Win32 System Event Listener")
 
 
-def get_window_icon(hwnd):
+def get_window_icon(hwnd, dpi):
     """Fetch the icon of the window."""
     try:
-        hicon = win32gui.SendMessage(hwnd, win32con.WM_GETICON, win32con.ICON_SMALL, 0)
+        hicon = win32gui.SendMessage(hwnd, win32con.WM_GETICON, win32con.ICON_BIG, 0)
         if hicon == 0:
-            hicon = win32gui.SendMessage(hwnd, win32con.WM_GETICON, win32con.ICON_BIG, 0)
+            # If big icon is not available, try to get the small icon
+            hicon = win32gui.SendMessage(hwnd, win32con.WM_GETICON, win32con.ICON_SMALL, 0)
         if hicon == 0:
-            hicon = win32gui.GetClassLong(hwnd, win32con.GCL_HICON)
+            # If both small and big icons are not available, get the class icon
+            if hasattr(win32gui, 'GetClassLongPtr'):
+                hicon = win32gui.GetClassLongPtr(hwnd, win32con.GCLP_HICON)
+            else:
+                hicon = win32gui.GetClassLong(hwnd, win32con.GCL_HICON)
 
         if hicon:
-            hdc = win32ui.CreateDCFromHandle(win32gui.GetDC(0))
-            hbmp = win32ui.CreateBitmap()
-            hbmp.CreateCompatibleBitmap(hdc, 32, 32)
-            hdc = hdc.CreateCompatibleDC()
-            hdc.SelectObject(hbmp)
-            hdc.DrawIcon((0, 0), hicon)
-
-            bmpinfo = hbmp.GetInfo()
-            bmpstr = hbmp.GetBitmapBits(True)
-            img = Image.frombuffer(
-                'RGBA',
-                (bmpinfo['bmWidth'], bmpinfo['bmHeight']),
-                bmpstr, 'raw', 'BGRA', 0, 1
-            )
-            return img
+            hdc_handle = win32gui.GetDC(0)
+            if not hdc_handle:
+                raise Exception("Failed to get DC handle")
+            try:
+                hdc = win32ui.CreateDCFromHandle(hdc_handle)
+                hbmp = win32ui.CreateBitmap()
+                bitmap_size = int(32 * dpi)
+                hbmp.CreateCompatibleBitmap(hdc, bitmap_size, bitmap_size)
+                memdc = hdc.CreateCompatibleDC()
+                # Select the bitmap into the memory device context
+                memdc.SelectObject(hbmp)
+                # Get icon information to determine its size
+                icon_info = win32gui.GetIconInfo(hicon)
+                hbm_color = icon_info[3]  # Handle to the color bitmap
+                 
+                # Get bitmap information
+                bmpinfo = win32gui.GetObject(hbm_color)
+                icon_width = bmpinfo.bmWidth
+                icon_height = bmpinfo.bmHeight
+                # Calculate the coordinates to center the icon
+                x = (bitmap_size - icon_width) // 2
+                y = (bitmap_size - icon_height) // 2
+                
+                # Draw the icon at the calculated coordinates
+                memdc.DrawIcon((x, y), hicon)
+ 
+                bmpinfo = hbmp.GetInfo()
+                bmpstr = hbmp.GetBitmapBits(True)
+ 
+                img = Image.frombuffer(
+                    'RGBA',
+                    (bmpinfo['bmWidth'], bmpinfo['bmHeight']),
+                    bmpstr, 'raw', 'BGRA', 0, 1
+                )
+                return img
+            finally:
+                logging.debug("Cleaning up resources...")
+                try:
+                    win32gui.DestroyIcon(hicon)
+                    #logging.debug("Destroyed hicon")
+                except Exception as e:
+                    logging.debug(f"Error destroying hicon: {e}")
+                try:
+                    memdc.DeleteDC()
+                    #logging.debug("Deleted memory device context.")
+                except Exception as e:
+                    logging.debug(f"Error deleting memory device context: {e}")
+                try:
+                    hdc.DeleteDC()
+                    #logging.debug("Deleted device context.")
+                except Exception as e:
+                    logging.debug(f"Error deleting device context: {e}")
+                try:
+                    win32gui.DeleteObject(hbmp.GetHandle())
+                    #logging.debug("Deleted bitmap object.")
+                except Exception as e:
+                    logging.debug(f"Error deleting bitmap object: {e}")
+                try:
+                    win32gui.ReleaseDC(0, hdc_handle)
+                    #logging.debug("Released device context handle.")
+                except Exception as e:
+                    logging.debug(f"Error releasing device context handle: {e}")                
+    
         else:
             import win32api
             import ctypes
@@ -279,15 +332,16 @@ class ActiveWindowWidget(BaseWidget):
             pid = process["pid"]
             class_name = win_info['class_name']
 
-            if self._label_icon: 
+            if self._label_icon:
+                dpi = self.screen().devicePixelRatio() 
                 if event != WinEvent.WinEventOutOfContext:
                     self._update_retry_count = 0
                 if (hwnd, title, pid) in self._icon_cache:
                     icon_img = self._icon_cache[(hwnd, title, pid)]
                 else:
-                    icon_img = get_window_icon(hwnd)
+                    icon_img = get_window_icon(hwnd, dpi)
                     if icon_img:
-                        icon_img = icon_img.resize((self._label_icon_size, self._label_icon_size), Image.LANCZOS).convert("RGBA")
+                        icon_img = icon_img.resize((int(self._label_icon_size * dpi), int(self._label_icon_size * dpi)), Image.LANCZOS).convert("RGBA")
                     else:
                         # UWP apps might need a moment to start under ApplicationFrameHost
                         # So we delay the detection, but only do it once.
