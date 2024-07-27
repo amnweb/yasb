@@ -185,7 +185,6 @@ class MediaWidget(BaseWidget):
         return label
 
     def _create_media_buttons(self):
-        self.widget_layout.addWidget(QLabel(' '))
         return self._create_media_button(self._media_button_icons['prev_track'],
                                          MediaOperations.prev), self._create_media_button(
             self._media_button_icons['play'], MediaOperations.play_pause), self._create_media_button(
