@@ -1,6 +1,9 @@
+import asyncio
 import logging
 import sys
 from sys import argv, exit
+
+import qasync
 from PyQt6.QtWidgets import QApplication
 from core.bar_manager import BarManager
 from core.config import get_config_and_stylesheet
@@ -9,11 +12,15 @@ from core.tray import TrayIcon
 from core.watcher import create_observer
 from core.event_service import EventService
 
+
 def main():
     config, stylesheet = get_config_and_stylesheet()
-
     app = QApplication(argv)
     app.setQuitOnLastWindowClosed(False)
+
+    # Need qasync event loop to make async calls work properly with PyQt6
+    loop = qasync.QEventLoop(app)
+    asyncio.set_event_loop(loop)
 
     # Initialise bars and background event listeners
     manager = BarManager(config, stylesheet)
@@ -30,14 +37,16 @@ def main():
     else:
         observer = None
 
-    # Start Application
-    exit_status = app.exec()
+    # Stop observer upon quit
+    def stop_observer():
+        if observer:
+            observer.stop()
+            observer.join()
+    app.aboutToQuit.connect(stop_observer)
 
-    # Before Application Exit
-    if observer:
-        observer.stop()
-        observer.join()
-    exit(exit_status)
+    with loop:
+        loop.run_forever()
+
 
 if __name__ == "__main__":
     init_logger()
