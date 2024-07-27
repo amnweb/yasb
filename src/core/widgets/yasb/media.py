@@ -58,7 +58,6 @@ class MediaWidget(BaseWidget):
         self.thumbnail_box.addWidget(self._label, 0, 0)
         self.thumbnail_box.addWidget(self._label_alt, 0, 0)
 
-        self.register_callback("toggle_label", self._toggle_label)
         self.register_callback("update_label", self._update_label)
 
         self.callback_left = callbacks['on_left']
@@ -66,7 +65,10 @@ class MediaWidget(BaseWidget):
         self.callback_middle = callbacks['on_middle']
         self.callback_timer = "update_label"
 
-        self._label.show()
+        if not self._controls_only:
+            self.register_callback("toggle_label", self._toggle_label)
+            self._label.show()
+
         self._label_alt.hide()
         self._show_alt_label = False
 
@@ -126,15 +128,15 @@ class MediaWidget(BaseWidget):
             active_label.setText('')
             return
 
-        # If we are playing, make sure the label field is showing
-        active_label.show()
-
         # Change icon based on if song is playing
         self._play_label.setText(self._media_button_icons['pause' if media_info['playing'] else 'play'])
 
         # If we only have controls, stop update here
         if self._controls_only:
             return
+
+        # If we are playing, make sure the label field is showing
+        active_label.show()
 
         # Shorten fields if necessary with ...
         media_info = {k: self._format_max_field_size(v) if isinstance(v, str) else v for k, v in
