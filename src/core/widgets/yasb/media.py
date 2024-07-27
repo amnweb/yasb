@@ -78,7 +78,7 @@ class MediaWidget(BaseWidget):
     def start_timer(self):
         if self.timer_interval and self.timer_interval > 0:
             self.timer.timeout.connect(self._timer_callback)
-            self.timer.start(self.timer_interval)  # self._timer_callback()
+            self.timer.start(self.timer_interval)
 
     def _toggle_label(self):
         self._show_alt_label = not self._show_alt_label
