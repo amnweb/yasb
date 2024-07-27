@@ -59,8 +59,6 @@ class MediaWidget(BaseWidget):
         self.thumbnail_box.addWidget(self._label_alt, 0, 0)
 
         self.register_callback("toggle_label", self._toggle_label)
-
-        self.register_callback("toggle_label", self._toggle_label)
         self.register_callback("update_label", self._update_label)
 
         self.callback_left = callbacks['on_left']
