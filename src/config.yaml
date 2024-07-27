@@ -32,11 +32,12 @@ bars:
         ] 
       center: [
          "komorebi_workspaces",
-         "komorebi_active_layout"
+         "komorebi_active_layout",
         ]
       right:
         [
           "fake_widget_left",
+          "media",
           "weather",
           "apps",
           "volume",
@@ -300,3 +301,23 @@ widgets:
         run_cmd: "powershell nvidia-smi --query-gpu=temperature.gpu --format=csv,noheader"
         run_interval: 10000 # run every 10 sec
         return_format: "string"
+
+  media:
+    type: "yasb.media.MediaWidget"
+    options:
+      label: "{title} - {artist}"
+      label_alt: "{title}"
+      update_interval: 1000
+      max_field_size:
+        label: 15
+        label_alt: 30
+      show_thumbnail: true
+      controls_only: false
+      controls_left: true
+      thumbnail_alpha: 255
+      thumbnail_padding: 4
+      icons:
+        prev_track: "\uf048"
+        next_track: "\uf051"
+        play: "\uf04b"
+        pause: "\uf04c"

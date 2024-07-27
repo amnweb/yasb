@@ -14,6 +14,7 @@
 .power-menu-popup > .button {} -> Styles for power buttons inside the popup 
 .power-menu-popup > .button > .icon,
 .power-menu-popup > .button > .label {} -> Styles for power buttons icons and labels inside the popup 
+.media-widget {} -> Styles specific to the media widget
 */
 * {
     font-size: 14px;
@@ -105,7 +106,7 @@
 
 .fake-widget-left,
 .fake-widget-right  {
-    padding: 0; 
+    padding: 0;
 }
 .fake-widget-left .label{
     color: rgb(41, 42, 58);
@@ -126,6 +127,7 @@
 .weather-widget .label {
     font-weight: 600;
 }
+.media-widget,
 .apps-widget,
 .weather-widget,
 .volume-widget,
@@ -134,7 +136,7 @@
     padding-right: 0;
     background-color: rgb(41, 42, 58)
 }
-
+.media-widget,
 .apps-widget .label,
 .weather-widget .label,
 .volume-widget .label,
@@ -143,6 +145,7 @@
     padding-right: 6px;
     
 }
+.media-widget .btn:hover,
 .apps-widget .label:hover,
 .weather-widget .label:hover,
 .volume-widget .label:hover,
@@ -199,4 +202,25 @@
 }
 .power-menu-popup .button.shutdown .label {
     color:rgba(137, 180, 250, 0.95);
+}
+
+.media-widget {
+    padding-left: 0;
+    background-color: rgb(41, 42, 58);
+}
+
+.media-widget .label {
+    color: #BAC2DB;
+    background-color: rgba(24, 24, 37, 0.7);
+}
+.media-widget .btn {
+    color: #8c91a7;
+    padding-left:6px;
+    padding-right:6px;
+}
+
+.media-widget .btn.disabled:hover,
+.media-widget .btn.disabled {
+    color: #474A54;
+    background-color: rgb(41, 42, 58);
 }
