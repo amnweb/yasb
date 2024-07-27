@@ -106,10 +106,14 @@ class MediaWidget(BaseWidget):
         media_info = await MediaOperations.get_media_properties()
 
         # If no media is playing, set disable class on all buttons
-        property = "btn" + (" disabled" if media_info is None else "")
-        self._prev_label.setProperty("class", property)
-        self._play_label.setProperty("class", property)
-        self._next_label.setProperty("class", property)
+        # Give next/previous buttons a different css class based on whether they are available
+
+        disabled_if = lambda disabled: "disabled" if disabled else ""
+        self._prev_label.setProperty("class", f'btn prev {disabled_if(media_info is None or
+                                                                      not media_info['prev_available'])}')
+        self._play_label.setProperty("class", f'btn play {disabled_if(media_info is None)}')
+        self._next_label.setProperty("class", f'btn next {disabled_if(media_info is None or 
+                                                                      not media_info['next_available'])}')
         self._refresh_css(self._prev_label)
         self._refresh_css(self._play_label)
         self._refresh_css(self._next_label)
@@ -124,12 +128,6 @@ class MediaWidget(BaseWidget):
 
         # If we are playing, make sure the label field is showing
         active_label.show()
-
-        # Give next/previous buttons a different css class based on whether they are available
-        self._prev_label.setProperty("class", "btn" + (" disabled" if not media_info['prev_available'] else ""))
-        self._next_label.setProperty("class", "btn" + (" disabled" if not media_info['next_available'] else ""))
-        self._refresh_css(self._prev_label)
-        self._refresh_css(self._next_label)
 
         # Change icon based on if song is playing
         self._play_label.setText(self._media_button_icons['pause' if media_info['playing'] else 'play'])
