@@ -1,4 +1,5 @@
 import time
+import logging
 
 from PIL.ImageQt import QPixmap
 from PyQt6.QtCore import Qt
@@ -105,7 +106,11 @@ class MediaWidget(BaseWidget):
         active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
 
         # Get media info
-        media_info = await MediaOperations.get_media_properties()
+        try:
+            media_info = await MediaOperations.get_media_properties()
+        except Exception as e:
+            logging.error(f"Error fetching media properties: {e}")
+            return  # Exit early if there's an error
 
         # If no media is playing, set disable class on all buttons
         # Give next/previous buttons a different css class based on whether they are available
