@@ -1,6 +1,8 @@
+import re
 from core.widgets.base import BaseWidget
 from core.validation.widgets.yasb.volume import VALIDATION_SCHEMA
-from PyQt6.QtWidgets import QLabel
+from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget
+from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QWheelEvent
 from comtypes import CLSCTX_ALL
 from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
@@ -11,7 +13,7 @@ VK_VOLUME_UP = 0xAF
 VK_VOLUME_DOWN = 0xAE
 KEYEVENTF_KEYUP = 0x0002
 
-UPDATE_INTERVAL = 3000
+UPDATE_INTERVAL = 1000
 devices = AudioUtilities.GetSpeakers()
 interface = devices.Activate(IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
 volume = interface.QueryInterface(IAudioEndpointVolume)
@@ -30,14 +32,21 @@ class VolumeWidget(BaseWidget):
         self._show_alt_label = False
         self._label_content = label
         self._label_alt_content = label_alt
+ 
+        self.volume = None
+        self._volume_icons = volume_icons
+        # Construct container
+        self._widget_container_layout: QHBoxLayout = QHBoxLayout()
+        self._widget_container_layout.setSpacing(0)
+        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
+        # Initialize container
+        self._widget_container: QWidget = QWidget()
+        self._widget_container.setLayout(self._widget_container_layout)
+        self._widget_container.setProperty("class", "widget-container")
+        # Add the container to the main widget layout
+        self.widget_layout.addWidget(self._widget_container)
 
-        self._label = QLabel()
-        self._label_alt = QLabel()
-        self._label.setProperty("class", "label")
-        self._label_alt.setProperty("class", "label alt")
-        self._volume_icons = volume_icons 
-        self.widget_layout.addWidget(self._label)
-        self.widget_layout.addWidget(self._label_alt)
+        self._create_dynamically_label(self._label_content, self._label_alt_content)
 
         self.register_callback("toggle_label", self._toggle_label)
         self.register_callback("update_label", self._update_label)
@@ -47,35 +56,85 @@ class VolumeWidget(BaseWidget):
         self.callback_right = callbacks["on_right"]
         self.callback_middle = callbacks["on_middle"]
         self.callback_timer = "update_label"
-
-        self._label.show()
-        self._label_alt.hide()
         
         self.start_timer()
 
     def _toggle_label(self):
         self._show_alt_label = not self._show_alt_label
-
-        if self._show_alt_label:
-            self._label.hide()
-            self._label_alt.show()
-        else:
-            self._label.show()
-            self._label_alt.hide()
-        
+        for widget in self._widgets:
+            widget.setVisible(not self._show_alt_label)
+        for widget in self._widgets_alt:
+            widget.setVisible(self._show_alt_label)
         self._update_label()
+        
+    def _create_dynamically_label(self, content: str, content_alt: str):
+        def process_content(content, is_alt=False):
+            label_parts = re.split('(<span.*?>.*?</span>)', content)
+            label_parts = [part for part in label_parts if part]
+            widgets = []
+            for part in label_parts:
+                part = part.strip()  # Remove any leading/trailing whitespace
+                if not part:
+                    continue
+                if '<span' in part and '</span>' in part:
+                    class_name = re.search(r'class=(["\'])([^"\']+?)\1', part)
+                    class_result = class_name.group(2) if class_name else 'icon'
+                    icon = re.sub(r'<span.*?>|</span>', '', part).strip()
+                    label = QLabel(icon)
+                    label.setProperty("class", class_result)
+                else:
+                    label = QLabel(part)
+                    label.setProperty("class", "label")
+                label.setAlignment(Qt.AlignmentFlag.AlignCenter)    
+                self._widget_container_layout.addWidget(label)
+                widgets.append(label)
+                if is_alt:
+                    label.hide()
+                else:
+                    label.show()
+            return widgets
+        self._widgets = process_content(content)
+        self._widgets_alt = process_content(content_alt, is_alt=True)
+
+
 
     def _update_label(self):
-        active_label = self._label_alt if self._show_alt_label else self._label
+        active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
         active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
-        active_label.setText(active_label_content)
+        label_parts = re.split('(<span.*?>.*?</span>)', active_label_content)
+        label_parts = [part for part in label_parts if part]
+        widget_index = 0
         
         try:
-            volume_icon = self._get_volume_icon()
-            active_label.setText(active_label_content.format(volume=volume_icon))
-            
+            mute_status = volume.GetMute()
+            icon_volume = self._get_volume_icon()
+            level_volume = "mute" if mute_status == 1 else f'{round(volume.GetMasterVolumeLevelScalar() * 100)}%'
         except Exception:
-            active_label.setText(active_label_content)
+            icon_volume, level_volume = "N/A", "N/A"
+        
+        label_options = {
+            "{icon}": icon_volume,
+            "{level}": level_volume
+        }
+        
+        for part in label_parts:
+            part = part.strip()
+            if part:
+                formatted_text = part
+                for option, value in label_options.items():
+                    formatted_text = formatted_text.replace(option, str(value))
+
+                if '<span' in part and '</span>' in part:
+                    # Update icon QLabel
+                    if widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
+                        active_widgets[widget_index].setText(formatted_text)
+                else:
+                    # Update normal QLabel
+                    if widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
+                        active_widgets[widget_index].setText(formatted_text)
+                widget_index += 1
+
+ 
 
     def _get_volume_icon(self):
         current_mute_status = volume.GetMute()
@@ -93,7 +152,7 @@ class VolumeWidget(BaseWidget):
         elif (current_volume_level >= 60):
             volume_icon = self._volume_icons[4]
 
-        return volume_icon
+        return  volume_icon
     
     def _simulate_key_press(self, vk_code):
         # Simulate key press
@@ -102,12 +161,12 @@ class VolumeWidget(BaseWidget):
         ctypes.windll.user32.keybd_event(vk_code, 0, KEYEVENTF_KEYUP, 0)
 
     def _increase_volume(self):
-        self._update_label()
         self._simulate_key_press(VK_VOLUME_UP)
+        self._update_label()
 
     def _decrease_volume(self):
-        self._update_label()
         self._simulate_key_press(VK_VOLUME_DOWN)
+        self._update_label()
 
     def wheelEvent(self, event: QWheelEvent):
         if event.angleDelta().y() > 0:

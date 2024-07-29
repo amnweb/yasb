@@ -1,9 +1,11 @@
 import logging
+import re
 import psutil
 from humanize import naturalsize
 from core.widgets.base import BaseWidget
 from core.validation.widgets.yasb.memory import VALIDATION_SCHEMA
-from PyQt6.QtWidgets import QLabel
+from PyQt6.QtWidgets import QLabel,QHBoxLayout,QWidget
+from PyQt6.QtCore import Qt
 
 
 class MemoryWidget(BaseWidget):
@@ -19,18 +21,23 @@ class MemoryWidget(BaseWidget):
     ):
         super().__init__(update_interval, class_name="memory-widget")
         self._memory_thresholds = memory_thresholds
-
         self._show_alt_label = False
         self._label_content = label
         self._label_alt_content = label_alt
-
-        self._label = QLabel()
-        self._label_alt = QLabel()
-        self._label.setProperty("class", "label")
-        self._label_alt.setProperty("class", "label alt")
-        self.widget_layout.addWidget(self._label)
-        self.widget_layout.addWidget(self._label_alt)
-
+ 
+        # Construct container
+        self._widget_container_layout: QHBoxLayout = QHBoxLayout()
+        self._widget_container_layout.setSpacing(0)
+        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
+        # Initialize container
+        self._widget_container: QWidget = QWidget()
+        self._widget_container.setLayout(self._widget_container_layout)
+        self._widget_container.setProperty("class", "widget-container")
+        # Add the container to the main widget layout
+        self.widget_layout.addWidget(self._widget_container)
+       
+        self._create_dynamically_label(self._label_content,self._label_alt_content)
+        
         self.register_callback("toggle_label", self._toggle_label)
         self.register_callback("update_label", self._update_label)
 
@@ -39,52 +46,84 @@ class MemoryWidget(BaseWidget):
         self.callback_middle = callbacks['on_middle']
         self.callback_timer = "update_label"
 
-        self._label.show()
-        self._label_alt.hide()
         self.start_timer()
-
+        
     def _toggle_label(self):
         self._show_alt_label = not self._show_alt_label
-
-        if self._show_alt_label:
-            self._label.hide()
-            self._label_alt.show()
-        else:
-            self._label.show()
-            self._label_alt.hide()
-
+        for widget in self._widgets:
+            widget.setVisible(not self._show_alt_label)
+        for widget in self._widgets_alt:
+            widget.setVisible(self._show_alt_label)
         self._update_label()
 
+    def _create_dynamically_label(self, content: str, content_alt: str):
+        def process_content(content, is_alt=False):
+            label_parts = re.split('(<span.*?>.*?</span>)', content)
+            label_parts = [part for part in label_parts if part]
+            widgets = []
+            for part in label_parts:
+                part = part.strip()  # Remove any leading/trailing whitespace
+                if not part:
+                    continue
+                if '<span' in part and '</span>' in part:
+                    class_name = re.search(r'class=(["\'])([^"\']+?)\1', part)
+                    class_result = class_name.group(2) if class_name else 'icon'
+                    icon = re.sub(r'<span.*?>|</span>', '', part).strip()
+                    label = QLabel(icon)
+                    label.setProperty("class", class_result)
+                else:
+                    label = QLabel(part)
+                    label.setProperty("class", "label")
+                label.setAlignment(Qt.AlignmentFlag.AlignCenter)    
+                self._widget_container_layout.addWidget(label)
+                widgets.append(label)
+                if is_alt:
+                    label.hide()
+                else:
+                    label.show()
+            return widgets
+        self._widgets = process_content(content)
+        self._widgets_alt = process_content(content_alt, is_alt=True)
+            
+            
+            
     def _update_label(self):
-        active_label = self._label_alt if self._show_alt_label else self._label
+        active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
         active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
-        active_label_formatted = active_label_content
+        label_parts = re.split('(<span.*?>.*?</span>)', active_label_content)
+        label_parts = [part for part in label_parts if part]
+        widget_index = 0
 
         try:
             virtual_mem = psutil.virtual_memory()
             swap_mem = psutil.swap_memory()
+            label_options = {
+                "{virtual_mem_free}": naturalsize(virtual_mem.free),
+                "{virtual_mem_percent}": virtual_mem.percent,
+                "{virtual_mem_total}": naturalsize(virtual_mem.total),
+                "{virtual_mem_avail}": naturalsize(virtual_mem.available),
+                "{swap_mem_free}": naturalsize(swap_mem.free),
+                "{swap_mem_percent}": swap_mem.percent,
+                "{swap_mem_total}": naturalsize(swap_mem.total),
+            }
+            for part in label_parts:
+                part = part.strip()
+                for fmt_str, value in label_options.items():
+                    part = part.replace(fmt_str, str(value))
 
-            threshold = self._get_virtual_memory_threshold(virtual_mem.percent)
-            label_options = [
-                ("{virtual_mem_free}", naturalsize(virtual_mem.free)),
-                ("{virtual_mem_percent}", virtual_mem.percent),
-                ("{virtual_mem_total}", naturalsize(virtual_mem.total)),
-                ("{virtual_mem_avail}", naturalsize(virtual_mem.available)),
-                ("{swap_mem_free}", naturalsize(swap_mem.free)),
-                ("{swap_mem_percent}", swap_mem.percent),
-                ("{swap_mem_total}", naturalsize(swap_mem.total)),
-            ]
+                if part and widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
+                    if '<span' in part and '</span>' in part:
+                        icon = re.sub(r'<span.*?>|</span>', '', part).strip()
+                        active_widgets[widget_index].setText(icon)
+                    else:
+                        active_widgets[widget_index].setText(part)
+                    widget_index += 1
 
-            for fmt_str, value in label_options:
-                active_label_formatted = active_label_formatted.replace(fmt_str, str(value))
-
-            alt_class = "alt" if self._show_alt_label else ""
-            active_label.setText(active_label_formatted)
-            active_label.setProperty("class", f"label {alt_class} status-{threshold}")
-            active_label.setStyleSheet('')
         except Exception:
-            active_label.setText(active_label_content)
             logging.exception("Failed to retrieve updated memory info")
+            if widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
+                active_widgets[widget_index].setText(active_label_content)
+                widget_index += 1
 
     def _get_virtual_memory_threshold(self, virtual_memory_percent) -> str:
         if virtual_memory_percent <= self._memory_thresholds['low']:

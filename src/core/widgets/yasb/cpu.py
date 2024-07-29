@@ -1,9 +1,10 @@
+import re
 import psutil
 from collections import deque
 from core.widgets.base import BaseWidget
 from core.validation.widgets.yasb.cpu import VALIDATION_SCHEMA
-from PyQt6.QtWidgets import QLabel
-
+from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget
+from PyQt6.QtCore import Qt
 
 class CpuWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
@@ -21,54 +22,94 @@ class CpuWidget(BaseWidget):
         self._histogram_icons = histogram_icons
         self._cpu_freq_history = deque([0] * histogram_num_columns, maxlen=histogram_num_columns)
         self._cpu_perc_history = deque([0] * histogram_num_columns, maxlen=histogram_num_columns)
-
         self._show_alt_label = False
         self._label_content = label
         self._label_alt_content = label_alt
 
-        self._label = QLabel()
-        self._label_alt = QLabel()
-        self._label.setProperty("class", "label")
-        self._label_alt.setProperty("class", "label alt")
-        self.widget_layout.addWidget(self._label)
-        self.widget_layout.addWidget(self._label_alt)
+        # Construct container
+        self._widget_container_layout: QHBoxLayout = QHBoxLayout()
+        self._widget_container_layout.setSpacing(0)
+        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
+        # Initialize container
+        self._widget_container: QWidget = QWidget()
+        self._widget_container.setLayout(self._widget_container_layout)
+        self._widget_container.setProperty("class", "widget-container")
+        # Add the container to the main widget layout
+        self.widget_layout.addWidget(self._widget_container)
+
+        self._create_dynamically_label(self._label_content, self._label_alt_content)
 
         self.register_callback("toggle_label", self._toggle_label)
         self.register_callback("update_label", self._update_label)
-
         self.callback_left = callbacks['on_left']
         self.callback_right = callbacks['on_right']
         self.callback_middle = callbacks['on_middle']
         self.callback_timer = "update_label"
-
-        self._label.show()
-        self._label_alt.hide()
-
         self.start_timer()
 
     def _toggle_label(self):
         self._show_alt_label = not self._show_alt_label
-
-        if self._show_alt_label:
-            self._label.hide()
-            self._label_alt.show()
-        else:
-            self._label.show()
-            self._label_alt.hide()
-
+        for widget in self._widgets:
+            widget.setVisible(not self._show_alt_label)
+        for widget in self._widgets_alt:
+            widget.setVisible(self._show_alt_label)
         self._update_label()
 
+    def _create_dynamically_label(self, content: str, content_alt: str):
+        def process_content(content, is_alt=False):
+            label_parts = re.split('(<span.*?>.*?</span>)', content)
+            label_parts = [part for part in label_parts if part]
+            widgets = []
+            for part in label_parts:
+                part = part.strip()  # Remove any leading/trailing whitespace
+                if not part:
+                    continue
+                if '<span' in part and '</span>' in part:
+                    class_name = re.search(r'class=(["\'])([^"\']+?)\1', part)
+                    class_result = class_name.group(2) if class_name else 'icon'
+                    icon = re.sub(r'<span.*?>|</span>', '', part).strip()
+                    label = QLabel(icon)
+                    label.setProperty("class", class_result)
+                else:
+                    label = QLabel(part)
+                    label.setProperty("class", "label")
+                label.setAlignment(Qt.AlignmentFlag.AlignCenter)    
+                self._widget_container_layout.addWidget(label)
+                widgets.append(label)
+                if is_alt:
+                    label.hide()
+                else:
+                    label.show()
+            return widgets
+        self._widgets = process_content(content)
+        self._widgets_alt = process_content(content_alt, is_alt=True)
+
     def _update_label(self):
-        active_label = self._label_alt if self._show_alt_label else self._label
+        active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
         active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
-        active_label.setText(active_label_content)
+        label_parts = re.split('(<span.*?>.*?</span>)', active_label_content)
+        label_parts = [part for part in label_parts if part]
+        widget_index = 0
 
         try:
             info = self._get_cpu_info()
-            active_label.setText(active_label_content.format(info=info))
         except Exception:
-            active_label.setText(active_label_content)
+            info = None
 
+        for part in label_parts:
+            part = part.strip()
+            if part and widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
+                if '<span' in part and '</span>' in part:
+                    # Ensure the icon is correctly set
+                    icon = re.sub(r'<span.*?>|</span>', '', part).strip()
+                    active_widgets[widget_index].setText(icon)
+                else:
+                    # Update label with formatted content
+                    formatted_text = part.format(info=info) if info else part
+                    active_widgets[widget_index].setText(formatted_text)
+                widget_index += 1
+ 
+ 
     def _get_histogram_bar(self, num, num_min, num_max):
         bar_index = int((num - num_min) / (num_max - num_min) * 10)
         bar_index = 8 if bar_index > 8 else bar_index

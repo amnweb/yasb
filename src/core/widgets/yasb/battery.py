@@ -1,11 +1,12 @@
+import re
 import psutil
 import humanize
 from datetime import timedelta
 from core.widgets.base import BaseWidget
 from core.validation.widgets.yasb.battery import VALIDATION_SCHEMA
-from PyQt6.QtWidgets import QLabel
+from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget
+from PyQt6.QtCore import Qt
 from typing import Union
-
 
 class BatteryWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
@@ -36,14 +37,19 @@ class BatteryWidget(BaseWidget):
         self._show_alt_label = False
         self._label_content = label
         self._label_alt_content = label_alt
+        # Construct container
+        self._widget_container_layout: QHBoxLayout = QHBoxLayout()
+        self._widget_container_layout.setSpacing(0)
+        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
+        # Initialize container
+        self._widget_container: QWidget = QWidget()
+        self._widget_container.setLayout(self._widget_container_layout)
+        self._widget_container.setProperty("class", "widget-container")
+        # Add the container to the main widget layout
+        self.widget_layout.addWidget(self._widget_container)
 
-        self._label = QLabel()
-        self._label_alt = QLabel()
-        self._label.setProperty("class", "label")
-        self._label_alt.setProperty("class", "label alt")
-        self.widget_layout.addWidget(self._label)
-        self.widget_layout.addWidget(self._label_alt)
-
+        self._create_dynamically_label(self._label_content, self._label_alt_content)
+  
         self.register_callback("update_label", self._update_label)
         self.register_callback("toggle_label", self._toggle_label)
 
@@ -52,26 +58,48 @@ class BatteryWidget(BaseWidget):
         self.callback_middle = callbacks['on_middle']
         self.callback_timer = "update_label"
 
-        self._label.show()
-        self._label_alt.hide()
-
         self.start_timer()
 
     def _toggle_label(self):
         self._show_alt_label = not self._show_alt_label
-
-        if self._show_alt_label:
-            self._label.hide()
-            self._label_alt.show()
-        else:
-            self._label.show()
-            self._label_alt.hide()
-
+        for widget in self._widgets:
+            widget.setVisible(not self._show_alt_label)
+        for widget in self._widgets_alt:
+            widget.setVisible(self._show_alt_label)
         self._update_label()
 
+
+    def _create_dynamically_label(self, content: str, content_alt: str):
+        def process_content(content, is_alt=False):
+            label_parts = re.split('(<span.*?>.*?</span>)', content)
+            label_parts = [part for part in label_parts if part]
+            widgets = []
+            for part in label_parts:
+                part = part.strip()  # Remove any leading/trailing whitespace
+                if not part:
+                    continue
+                if '<span' in part and '</span>' in part:
+                    class_name = re.search(r'class=(["\'])([^"\']+?)\1', part)
+                    class_result = class_name.group(2) if class_name else 'icon'
+                    icon = re.sub(r'<span.*?>|</span>', '', part).strip()
+                    label = QLabel(icon)
+                    label.setProperty("class", class_result)
+                else:
+                    label = QLabel(part)
+                    label.setProperty("class", "label")
+                label.setAlignment(Qt.AlignmentFlag.AlignCenter)    
+                self._widget_container_layout.addWidget(label)
+                widgets.append(label)
+                if is_alt:
+                    label.hide()
+                else:
+                    label.show()
+            return widgets
+        self._widgets = process_content(content)
+        self._widgets_alt = process_content(content_alt, is_alt=True)
+        
     def _get_time_remaining(self) -> str:
         secs_left = self._battery_state.secsleft
-
         if secs_left == psutil.POWER_TIME_UNLIMITED:
             time_left = "unlimited"
         elif type(secs_left) == int:
@@ -79,7 +107,6 @@ class BatteryWidget(BaseWidget):
             time_left = humanize.naturaldelta(time_left) if self._time_remaining_natural else str(time_left)
         else:
             time_left = "unknown"
-
         return time_left
 
     def _get_battery_threshold(self):
@@ -108,32 +135,51 @@ class BatteryWidget(BaseWidget):
                 icon_str = self._icon_charging_format\
                     .replace("{charging_icon}", self._status_icons["icon_charging"])\
                     .replace("{icon}", self._status_icons[f"icon_{threshold}"])
-
             return icon_str
         else:
             return self._status_icons[f"icon_{threshold}"]
 
     def _update_label(self):
-        active_label = self._label_alt if self._show_alt_label else self._label
+        active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
         active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
-        active_label.setText(active_label_content)
-
-        self._battery_state = psutil.sensors_battery()
-
-        threshold = self._get_battery_threshold()
-        time_remaining = self._get_time_remaining()
-        is_charging_str = "yes" if self._battery_state.power_plugged else "no"
-        charging_icon = self._get_charging_icon(threshold)
-        battery_status = active_label_content\
-            .replace("{percent}", str(self._battery_state.percent)) \
-            .replace("{time_remaining}", time_remaining) \
-            .replace("{is_charging}", is_charging_str) \
-            .replace("{icon}", charging_icon)
-
+        label_parts = re.split('(<span.*?>.*?</span>)', active_label_content)
+        label_parts = [part for part in label_parts if part]
+        widget_index = 0         
+        self._battery_state = psutil.sensors_battery()  
+        # Check battery state
+        if self._battery_state is None:
+            for part in label_parts:
+                part = part.strip()
+                if widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
+                    if '<span' in part and '</span>' in part:
+                        active_widgets[widget_index].hide()
+                    active_widgets[widget_index].setText("Battery info not available")          
+                    widget_index += 1
+            return
+        
         if self._battery_state.power_plugged:
-            threshold = "charging"
+            threshold = "charging"       
 
-        alt_class = "alt" if self._show_alt_label else ""
-        active_label.setText(battery_status)
-        active_label.setProperty("class", f"label {alt_class} status-{threshold}")
-        active_label.setStyleSheet('')
+        for part in label_parts:
+            part = part.strip()
+            if part and widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
+                threshold = self._get_battery_threshold()
+                time_remaining = self._get_time_remaining()
+                is_charging_str = "yes" if self._battery_state.power_plugged else "no"
+                charging_icon = self._get_charging_icon(threshold)
+                battery_status = part\
+                    .replace("{percent}", str(self._battery_state.percent)) \
+                    .replace("{time_remaining}", time_remaining) \
+                    .replace("{is_charging}", is_charging_str) \
+                    .replace("{icon}", charging_icon)
+                if '<span' in battery_status and '</span>' in battery_status:
+                    # Ensure the icon is correctly set
+                    icon = re.sub(r'<span.*?>|</span>', '', battery_status).strip()
+                    active_widgets[widget_index].setText(icon)
+                else:
+                    alt_class = "alt" if self._show_alt_label else ""
+                    formatted_text = battery_status.format(battery_status) 
+                    active_widgets[widget_index].setText(formatted_text)
+                    active_widgets[widget_index].setProperty("class", f"label {alt_class} status-{threshold}")
+                    active_widgets[widget_index].setStyleSheet('')
+                widget_index += 1

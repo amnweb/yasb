@@ -1,7 +1,7 @@
 import logging
 from collections import deque
 from PyQt6.QtGui import QCursor
-from PyQt6.QtWidgets import QWidget, QLabel
+from PyQt6.QtWidgets import QWidget, QLabel, QHBoxLayout
 from PyQt6.QtCore import Qt, pyqtSignal
 from core.utils.win32.utilities import get_monitor_hwnd
 from core.event_service import EventService
@@ -65,8 +65,18 @@ class ActiveLayoutWidget(BaseWidget):
         self._active_layout_text = QLabel()
         self._active_layout_text.setProperty("class", "label")
         
+        # Construct container
+        self._widget_container_layout: QHBoxLayout = QHBoxLayout()
+        self._widget_container_layout.setSpacing(0)
+        #self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
+        # Initialize container
+        self._widget_container: QWidget = QWidget()
+        self._widget_container.setLayout(self._widget_container_layout)
+        self._widget_container.setProperty("class", "widget-container")
+        # Add the container to the main widget layout
+        self.widget_layout.addWidget(self._widget_container)
         
-        self.widget_layout.addWidget(self._active_layout_text)
+        self._widget_container_layout.addWidget(self._active_layout_text)
   
         self.callback_left = callbacks['on_left']
         self.callback_right = callbacks['on_right']

@@ -1,27 +1,17 @@
-import os
 import logging
 from settings import APP_BAR_TITLE, DEBUG
 from core.utils.win32.windows import WinEvent
 from core.widgets.base import BaseWidget
 from core.event_service import EventService
-from PyQt6.QtCore import pyqtSignal, QTimer
-from PyQt6.QtWidgets import QLabel
+from PyQt6.QtCore import pyqtSignal, QTimer, Qt
 from PyQt6.QtGui import QPixmap, QImage
+from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget
+from PyQt6.QtCore import Qt
 from core.validation.widgets.yasb.active_window import VALIDATION_SCHEMA
 from core.utils.win32.utilities import get_hwnd_info
 from PIL import Image
 import win32gui
-import win32ui
-import win32con
-from core.utils.win32.uwp import get_package
-import xml.etree.ElementTree as ET
-from pathlib import Path
-from glob import glob
-import locale
-import re
-
-pil_logger = logging.getLogger('PIL')
-pil_logger.setLevel(logging.INFO)
+from core.utils.win32.app_icons import get_window_icon
 
 IGNORED_TITLES = ['', ' ', 'FolderView', 'Program Manager', 'python3', 'pythonw3', 'YasbBar', 'Search', 'Start']
 IGNORED_CLASSES = ['WorkerW', 'TopLevelWindowForOverflowXamlIsland', 'Shell_TrayWnd', 'Shell_SecondaryTrayWnd']
@@ -33,193 +23,12 @@ IGNORED_YASB_CLASSES = [
     'Qt662QWindowToolSaveBits',
     'Qt662QWindowToolSaveBits'
 ]
-TARGETSIZE_REGEX = re.compile(r'targetsize-([0-9]+)')
 
 try:
     from core.utils.win32.event_listener import SystemEventListener
 except ImportError:
     SystemEventListener = None
     logging.warning("Failed to load Win32 System Event Listener")
-
-
-def get_window_icon(hwnd, dpi):
-    """Fetch the icon of the window."""
-    try:
-        hicon = win32gui.SendMessage(hwnd, win32con.WM_GETICON, win32con.ICON_BIG, 0)
-        if hicon == 0:
-            # If big icon is not available, try to get the small icon
-            hicon = win32gui.SendMessage(hwnd, win32con.WM_GETICON, win32con.ICON_SMALL, 0)
-        if hicon == 0:
-            # If both small and big icons are not available, get the class icon
-            if hasattr(win32gui, 'GetClassLongPtr'):
-                hicon = win32gui.GetClassLongPtr(hwnd, win32con.GCLP_HICON)
-            else:
-                hicon = win32gui.GetClassLong(hwnd, win32con.GCL_HICON)
-
-        if hicon:
-            hdc_handle = win32gui.GetDC(0)
-            if not hdc_handle:
-                raise Exception("Failed to get DC handle")
-            try:
-                hdc = win32ui.CreateDCFromHandle(hdc_handle)
-                hbmp = win32ui.CreateBitmap()
-                bitmap_size = int(32 * dpi)
-                hbmp.CreateCompatibleBitmap(hdc, bitmap_size, bitmap_size)
-                memdc = hdc.CreateCompatibleDC()
-                # Select the bitmap into the memory device context
-                memdc.SelectObject(hbmp)
-                # Get icon information to determine its size
-                icon_info = win32gui.GetIconInfo(hicon)
-                hbm_color = icon_info[3]  # Handle to the color bitmap
-                 
-                # Get bitmap information
-                bmpinfo = win32gui.GetObject(hbm_color)
-                icon_width = bmpinfo.bmWidth
-                icon_height = bmpinfo.bmHeight
-                # Calculate the coordinates to center the icon
-                x = (bitmap_size - icon_width) // 2
-                y = (bitmap_size - icon_height) // 2
-                
-                # Draw the icon at the calculated coordinates
-                memdc.DrawIcon((x, y), hicon)
- 
-                bmpinfo = hbmp.GetInfo()
-                bmpstr = hbmp.GetBitmapBits(True)
- 
-                img = Image.frombuffer(
-                    'RGBA',
-                    (bmpinfo['bmWidth'], bmpinfo['bmHeight']),
-                    bmpstr, 'raw', 'BGRA', 0, 1
-                )
-                return img
-            finally:
-                logging.debug("Cleaning up resources...")
-                try:
-                    win32gui.DestroyIcon(hicon)
-                    #logging.debug("Destroyed hicon")
-                except Exception as e:
-                    logging.debug(f"Error destroying hicon: {e}")
-                try:
-                    memdc.DeleteDC()
-                    #logging.debug("Deleted memory device context.")
-                except Exception as e:
-                    logging.debug(f"Error deleting memory device context: {e}")
-                try:
-                    hdc.DeleteDC()
-                    #logging.debug("Deleted device context.")
-                except Exception as e:
-                    logging.debug(f"Error deleting device context: {e}")
-                try:
-                    win32gui.DeleteObject(hbmp.GetHandle())
-                    #logging.debug("Deleted bitmap object.")
-                except Exception as e:
-                    logging.debug(f"Error deleting bitmap object: {e}")
-                try:
-                    win32gui.ReleaseDC(0, hdc_handle)
-                    #logging.debug("Released device context handle.")
-                except Exception as e:
-                    logging.debug(f"Error releasing device context handle: {e}")                
-    
-        else:
-            import win32api
-            import ctypes
-            import ctypes.wintypes
-            import win32process
-            try:
-                class_name = win32gui.GetClassName(hwnd)
-            except:
-                return None
-            actual_hwnd = 1
-
-            def cb(hwnd, b):
-                nonlocal actual_hwnd
-                try:
-                    class_name = win32gui.GetClassName(hwnd)
-                except:
-                    class_name = ""
-                if "ApplicationFrame" in class_name:
-                    return True
-                actual_hwnd = hwnd
-                return False
-
-            if class_name == "ApplicationFrameWindow":
-                win32gui.EnumChildWindows(hwnd, cb, False)
-            else:
-                actual_hwnd = hwnd
-
-            package = get_package(actual_hwnd)
-            if package is None:
-                return None
-            if package.package_path is None:
-                return None
-            manifest_path = os.path.join(package.package_path, "AppXManifest.xml")
-            if not os.path.exists(manifest_path):
-                if DEBUG:
-                    print(f"manifest not found {manifest_path}")
-                return None
-            root = ET.parse(manifest_path)
-            velement = root.find(".//VisualElements")
-            if velement is None:
-                velement = root.find(".//{http://schemas.microsoft.com/appx/manifest/uap/windows10}VisualElements")
-            if not velement:
-                return None
-            if "Square44x44Logo" not in velement.attrib:
-                return None
-            package_path = Path(package.package_path)
-            # logopath = Path(package.package_path) / (velement.attrib["Square44x44Logo"])
-            logofile = Path(velement.attrib["Square44x44Logo"])
-            logopattern = str(logofile.parent / '**') + '\\' + str(logofile.stem) + '*' + str(logofile.suffix)
-            logofiles = glob(logopattern, recursive=True, root_dir=package_path)
-            logofiles = [x.lower() for x in logofiles]
-            if len(logofiles) == 0:
-                return None
-            def filter_logos(logofiles, qualifiers, values):
-                for qualifier in qualifiers:
-                    for value in values:
-                        filtered_files = list(filter(lambda x: (qualifier + "-" + value in x), logofiles))
-                        if len(filtered_files) > 0:
-                            return filtered_files
-                return logofiles
-
-            langs = []
-            current_lang_code = ctypes.windll.kernel32.GetUserDefaultUILanguage()
-            if current_lang_code in locale.windows_locale:
-                current_lang = locale.windows_locale[current_lang_code].lower().replace('_', '-')
-                current_lang_short = current_lang.split('-', 1)[0]
-                langs += [current_lang, current_lang_short]
-            if "en" not in langs:
-                langs += ["en", "en-us"]
-
-            # filter_logos will try to select only the files matching the qualifier values
-            # if nothing matches, the list is unchanged
-            if langs:
-                logofiles = filter_logos(logofiles, ["lang", "language"], langs)
-            logofiles = filter_logos(logofiles, ["contrast"], ["standard"])
-            logofiles = filter_logos(logofiles, ["alternateform", "altform"], ["unplated"])
-            logofiles = filter_logos(logofiles, ["contrast"], ["standard"])
-            logofiles = filter_logos(logofiles, ["scale"], ["100", "150", "200"])
-
-            # find the one closest to 48, but bigger
-            def target_size_sort(s):
-                m = TARGETSIZE_REGEX.search(s)
-                if m:
-                    size = int(m.group(1))
-                    if size < 48:
-                        return 5000-size
-                    return size - 48
-                return 10000
-
-            logofiles.sort(key=target_size_sort)
-
-            img = Image.open(package_path / logofiles[0])
-            if not img:
-                return None
-            return img
-    except Exception as e:
-        logging.exception("")
-        print(f"Error fetching icon: {e}")
-        return None
-
 
 
 class ActiveWindowWidget(BaseWidget):
@@ -257,10 +66,22 @@ class ActiveWindowWidget(BaseWidget):
         self._event_service = EventService()
         self._update_retry_count = 0
  
+         # Construct container
+        self._widget_container_layout: QHBoxLayout = QHBoxLayout()
+        self._widget_container_layout.setSpacing(0)
+        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
+        # Initialize container
+        self._widget_container: QWidget = QWidget()
+        self._widget_container.setLayout(self._widget_container_layout)
+        self._widget_container.setProperty("class", "widget-container")
+        # Add the container to the main widget layout
+        self.widget_layout.addWidget(self._widget_container)
+        
+        
         self._window_title_text = QLabel()
         self._window_title_text.setProperty("class", "label")
         self._window_title_text.setText(self._label_no_window)
-
+       
         if self._label_icon:
             self._window_icon_label = QLabel()
             self._window_icon_label.setProperty("class", "label icon")
@@ -272,8 +93,8 @@ class ActiveWindowWidget(BaseWidget):
         self._ignore_window['titles'] += IGNORED_TITLES
         self._icon_cache = dict()
         if self._label_icon:
-            self.widget_layout.addWidget(self._window_icon_label)
-        self.widget_layout.addWidget(self._window_title_text)
+            self._widget_container_layout.addWidget(self._window_icon_label)
+        self._widget_container_layout.addWidget(self._window_title_text)
         self.register_callback("toggle_label", self._toggle_title_text)
         if not callbacks:
             callbacks = {

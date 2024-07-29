@@ -37,11 +37,11 @@
 .komorebi-workspaces {} -> Styles specific to komorebi workspaces
 .komorebi-active-layout {} -> Styles specific to komorebi active layout
 .volume-widget {} -> Styles specific to the volume widget 
-.weather-widget {} -> Styles for power buttons and labels inside the popup 
 .apps-widget {} -> Styles specific to the apps widget
 .power-menu-widget {} -> Styles for the power menu button widget
 .power-menu-popup {} -> Styles for the power menu popup widget
 .power-menu-popup > .button {} -> Styles for power buttons inside the popup 
 .power-menu-popup > .button > .icon,
 .power-menu-popup > .button > .label {} -> Styles for power buttons icons and labels inside the popup
+.media-widget {} -> Styles specific to the media widget
 ```

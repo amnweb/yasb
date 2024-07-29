@@ -15,3 +15,4 @@ pyquery
 pycaw
 winshell
 pillow
+qasync
