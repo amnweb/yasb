@@ -62,29 +62,32 @@ class MediaOperations:
         if current_session is None:
             return None
 
-        media_properties = await current_session.try_get_media_properties_async()
-        playback_info = current_session.get_playback_info()
-        timeline_properties = current_session.get_timeline_properties()
-
-        media_info = {
-            "album_artist": media_properties.album_artist,
-            "album_title": media_properties.album_title,
-            "album_track_count": media_properties.album_track_count,
-            "artist": media_properties.artist,
-            "title": media_properties.title,
-            "playback_type": str(media_properties.playback_type),
-            "subtitle": media_properties.subtitle,
-            "album": media_properties.album_title,
-            "track_number": media_properties.track_number,
-            "thumbnail": media_properties.thumbnail,
-            "playing": playback_info.playback_status == 4,
-            "prev_available": playback_info.controls.is_previous_enabled,
-            "next_available": playback_info.controls.is_next_enabled,
-            "total_time": timeline_properties.end_time.total_seconds(),
-            "current_time": timeline_properties.position.total_seconds()
-            # genres
-        }
-        return media_info
+        try:
+            media_properties = await current_session.try_get_media_properties_async()
+            playback_info = current_session.get_playback_info()
+            timeline_properties = current_session.get_timeline_properties()
+            media_info = {
+                "album_artist": media_properties.album_artist,
+                "album_title": media_properties.album_title,
+                "album_track_count": media_properties.album_track_count,
+                "artist": media_properties.artist,
+                "title": media_properties.title,
+                "playback_type": str(media_properties.playback_type),
+                "subtitle": media_properties.subtitle,
+                "album": media_properties.album_title,
+                "track_number": media_properties.track_number,
+                "thumbnail": media_properties.thumbnail,
+                "playing": playback_info.playback_status == 4,
+                "prev_available": playback_info.controls.is_previous_enabled,
+                "next_available": playback_info.controls.is_next_enabled,
+                "total_time": timeline_properties.end_time.total_seconds(),
+                "current_time": timeline_properties.position.total_seconds()
+                # genres
+            }
+            return media_info
+        except Exception as e:
+            logging.error(f'Error occurred when getting media properties: {e}')
+            return None
 
     @staticmethod
     def play_pause():
