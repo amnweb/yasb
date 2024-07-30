@@ -56,10 +56,18 @@ class OverlayWidget(BaseStyledWidget,AnimatedWidget):
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         if uptime:
             self.boot_time(get_stylesheet_path())
-
+            
+ 
     def update_geometry(self, screen_geometry):
         self.setGeometry(screen_geometry)
-
+        
+    def paintEvent(self, event):
+        painter = QtGui.QPainter(self)
+        painter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing)
+        # Disable clicks behind overlay
+        overlay_color = QtGui.QColor(0, 0, 0, 50)
+        painter.fillRect(self.rect(), overlay_color)
+        
     def boot_time(self, stylesheet_path):
         self.label_boot = QLabel(self)
         self.label_boot.setProperty("class", "uptime")
@@ -138,6 +146,7 @@ class MainWindow(BaseStyledWidget,AnimatedWidget):
         self.setProperty("class", "power-menu-popup")
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.Tool)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        self.setWindowModality(Qt.WindowModality.ApplicationModal)
 
         self.buttons_info = []
         for button_name, button_info in buttons.items():
