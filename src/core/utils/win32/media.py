@@ -22,30 +22,34 @@ pil_logger.setLevel(logging.INFO)
 class MediaOperations:
 
     @staticmethod
-    async def read_stream_into_buffer(stream_ref, buffer):
-        readable_stream = await stream_ref.open_read_async()
-        await readable_stream.read_async(buffer, buffer.capacity, InputStreamOptions.READ_AHEAD)
-
-    @staticmethod
     async def get_thumbnail(thumbnail_stream_reference: IRandomAccessStreamReference) -> ImageFile:
         """
         Read the thumbnail for the IRandomAccessStreamReference and return it as PIL ImageFile
         :param thumbnail_stream_reference: Thumbnail stream reference
         :return: Loaded thumbnail
         """
-        # Open the stream and create buffer with its size
-        readable_stream = await thumbnail_stream_reference.open_read_async()
-        thumb_read_buffer = Buffer(readable_stream.size)
-
         # Read the stream into the buffer
-        await MediaOperations.read_stream_into_buffer(thumbnail_stream_reference, thumb_read_buffer)
+        readable_stream = await thumbnail_stream_reference.open_read_async()
+        try:
+            # Create buffer of stream size
+            thumb_read_buffer = Buffer(readable_stream.size)
 
-        # Convert bytearray to pillow image
-        pillow_image = Image.open(io.BytesIO(thumb_read_buffer))
+            # Read stream into buffer
+            await readable_stream.read_async(thumb_read_buffer, thumb_read_buffer.capacity, InputStreamOptions.READ_AHEAD)
 
-        del thumb_read_buffer
+            # Convert bytearray to pillow image
+            pillow_image = Image.open(io.BytesIO(thumb_read_buffer))
 
-        return pillow_image
+            # Remove buffer
+            del thumb_read_buffer
+
+            return pillow_image
+        except Exception as e:
+            logging.error(f'Error occurred when loading the thumbnail: {e}')
+            return None
+        finally:
+            # Close the stream
+            readable_stream.close()
 
     @staticmethod
     async def get_media_properties() -> Optional[Dict[str, Union[str, int, IRandomAccessStreamReference]]]:
