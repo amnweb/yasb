@@ -52,14 +52,14 @@ class MediaOperations:
         """
         Get media properties and the currently running media file
         """
-        session_manager = await winsdk.windows.media.control.GlobalSystemMediaTransportControlsSessionManager.request_async()
-        current_session = session_manager.get_current_session()
-
-        # If no music is playing, return None
-        if current_session is None:
-            return None
-
         try:
+            session_manager = await winsdk.windows.media.control.GlobalSystemMediaTransportControlsSessionManager.request_async()
+            current_session = session_manager.get_current_session()
+
+            # If no music is playing, return None
+            if current_session is None:
+                return None
+
             media_properties = await current_session.try_get_media_properties_async()
             playback_info = current_session.get_playback_info()
             timeline_properties = current_session.get_timeline_properties()
