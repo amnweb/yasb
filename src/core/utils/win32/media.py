@@ -32,9 +32,11 @@ class MediaOperations:
         :param thumbnail_stream_reference: Thumbnail stream reference
         :return: Loaded thumbnail
         """
-        thumb_read_buffer = Buffer(5000000)
+        # Open the stream and create buffer with its size
+        readable_stream = await thumbnail_stream_reference.open_read_async()
+        thumb_read_buffer = Buffer(readable_stream.size)
 
-        # copies data from data stream reference into buffer created above
+        # Read the stream into the buffer
         await MediaOperations.read_stream_into_buffer(thumbnail_stream_reference, thumb_read_buffer)
 
         # Convert bytearray to pillow image
