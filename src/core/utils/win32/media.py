@@ -1,5 +1,6 @@
 # media.py
 import ctypes
+import logging
 from typing import Dict, Union, Optional
 
 import winsdk.windows.media.control
@@ -13,6 +14,9 @@ VK_MEDIA_PLAY_PAUSE = 0xB3
 VK_MEDIA_PREV_TRACK = 0xB1
 VK_MEDIA_NEXT_TRACK = 0xB0
 
+# Make PIL logger not pollute logs
+pil_logger = logging.getLogger('PIL')
+pil_logger.setLevel(logging.INFO)
 
 # Buffer is set to 5 MB, which is a bit overkill. Haven't found a way yet to find the size of the stream up front.
 BUFFER_SIZE = 5 * 1024 * 1024
