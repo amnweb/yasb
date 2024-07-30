@@ -1,5 +1,6 @@
 # media.py
 import ctypes
+import logging
 from typing import Dict, Union, Optional
 
 import winsdk.windows.media.control
@@ -13,9 +14,9 @@ VK_MEDIA_PLAY_PAUSE = 0xB3
 VK_MEDIA_PREV_TRACK = 0xB1
 VK_MEDIA_NEXT_TRACK = 0xB0
 
-
-# Buffer is set to 5 MB, which is a bit overkill. Haven't found a way yet to find the size of the stream up front.
-BUFFER_SIZE = 5 * 1024 * 1024
+# Make PIL logger not pollute logs
+pil_logger = logging.getLogger('PIL')
+pil_logger.setLevel(logging.INFO)
 
 
 class MediaOperations:
@@ -32,9 +33,11 @@ class MediaOperations:
         :param thumbnail_stream_reference: Thumbnail stream reference
         :return: Loaded thumbnail
         """
-        thumb_read_buffer = Buffer(5000000)
+        # Open the stream and create buffer with its size
+        readable_stream = await thumbnail_stream_reference.open_read_async()
+        thumb_read_buffer = Buffer(readable_stream.size)
 
-        # copies data from data stream reference into buffer created above
+        # Read the stream into the buffer
         await MediaOperations.read_stream_into_buffer(thumbnail_stream_reference, thumb_read_buffer)
 
         # Convert bytearray to pillow image
@@ -49,36 +52,39 @@ class MediaOperations:
         """
         Get media properties and the currently running media file
         """
-        session_manager = await winsdk.windows.media.control.GlobalSystemMediaTransportControlsSessionManager.request_async()
-        current_session = session_manager.get_current_session()
+        try:
+            session_manager = await winsdk.windows.media.control.GlobalSystemMediaTransportControlsSessionManager.request_async()
+            current_session = session_manager.get_current_session()
 
-        # If no music is playing, return None
-        if current_session is None:
+            # If no music is playing, return None
+            if current_session is None:
+                return None
+
+            media_properties = await current_session.try_get_media_properties_async()
+            playback_info = current_session.get_playback_info()
+            timeline_properties = current_session.get_timeline_properties()
+            media_info = {
+                "album_artist": media_properties.album_artist,
+                "album_title": media_properties.album_title,
+                "album_track_count": media_properties.album_track_count,
+                "artist": media_properties.artist,
+                "title": media_properties.title,
+                "playback_type": str(media_properties.playback_type),
+                "subtitle": media_properties.subtitle,
+                "album": media_properties.album_title,
+                "track_number": media_properties.track_number,
+                "thumbnail": media_properties.thumbnail,
+                "playing": playback_info.playback_status == 4,
+                "prev_available": playback_info.controls.is_previous_enabled,
+                "next_available": playback_info.controls.is_next_enabled,
+                "total_time": timeline_properties.end_time.total_seconds(),
+                "current_time": timeline_properties.position.total_seconds()
+                # genres
+            }
+            return media_info
+        except Exception as e:
+            logging.error(f'Error occurred when getting media properties: {e}')
             return None
-
-        media_properties = await current_session.try_get_media_properties_async()
-        playback_info = current_session.get_playback_info()
-        timeline_properties = current_session.get_timeline_properties()
-
-        media_info = {
-            "album_artist": media_properties.album_artist,
-            "album_title": media_properties.album_title,
-            "album_track_count": media_properties.album_track_count,
-            "artist": media_properties.artist,
-            "title": media_properties.title,
-            "playback_type": str(media_properties.playback_type),
-            "subtitle": media_properties.subtitle,
-            "album": media_properties.album_title,
-            "track_number": media_properties.track_number,
-            "thumbnail": media_properties.thumbnail,
-            "playing": playback_info.playback_status == 4,
-            "prev_available": playback_info.controls.is_previous_enabled,
-            "next_available": playback_info.controls.is_next_enabled,
-            "total_time": timeline_properties.end_time.total_seconds(),
-            "current_time": timeline_properties.position.total_seconds()
-            # genres
-        }
-        return media_info
 
     @staticmethod
     def play_pause():

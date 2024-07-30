@@ -175,9 +175,10 @@ class MediaWidget(BaseWidget):
                 thumbnail = await MediaOperations.get_thumbnail(media_info['thumbnail'])
                 thumbnail.putalpha(self._thumbnail_alpha)
 
-                size = active_label.sizeHint().width() + self._thumbnail_padding
+                new_width = active_label.sizeHint().width() + self._thumbnail_padding
+                new_height = round(thumbnail.height * (new_width / thumbnail.width))
 
-                thumbnail = thumbnail.resize((size, size))
+                thumbnail = thumbnail.resize((new_width, new_height))
                 qim = ImageQt(thumbnail)
                 pixmap = QPixmap.fromImage(qim)
                 self._thumbnail_label.setPixmap(pixmap)
