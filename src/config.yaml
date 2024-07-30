@@ -31,7 +31,7 @@ bars:
         [
           "win_button",
           "komorebi_workspaces",
-          #"komorebi_active_layout",
+          "komorebi_active_layout",
           #"active_window"
         ] 
       center: [
@@ -47,9 +47,8 @@ bars:
           #"ip_info",
           #"traffic",
           "cpu",
-          "weatherapi",
+          "weather",
           "memory",
-          #"weather",
           "volume",
           "power_menu"
         ]
@@ -210,31 +209,6 @@ widgets:
 
   weather:
     type: "yasb.weather.WeatherWidget"
-    options:
-      label: "<span>{icon}</span>{temp}" 
-      label_alt: "{temp_alt}"
-      update_interval: 1800 #Update interval in seconds, Min 600
-      temp_format: 'celsius'
-      location_id: 'aac619af0e4a1f0ffbab44e0cd35501d61e2c5d4337767432f5cbac90957d7a1'
-      callbacks:
-        on_right: "toggle_label"
-      icons: 
-        sunnyDay: "\ue30d"
-        clearNight: "\ue32b"
-        cloudyFoggyDay: "\udb81\udd99"
-        cloudyFoggyNight: "\ue311"
-        rainyDay: "\udb81\ude7e "
-        rainyNight: "\udb81\ude7e "
-        snowyIcyDay: "\udb81\udd98 "
-        snowyIcyNight: "\udb81\udd98 "
-        severe: "\uebaa"
-        default: "\uebaa"
-      # to get your own location_id, go to https://weather.com & search your location.
-      # once you choose your location, you can see the location_id in the URL(64 chars long hex string)
-      # like this: https://weather.com/weather/today/l/aac619af0e4a1f0ffbab44e0cd35501d61e2c5d4337767432f5cbac90957d7a1
-
-  weatherapi:
-    type: "yasb.weather_api.WeatherApiWidget"
     options:
       label: "<span>{icon}</span> {temp_c}"
       label_alt: "{location}: Min {min_temp_c}, Max {max_temp_c}, Humidity {humidity}"

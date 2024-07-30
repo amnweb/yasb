@@ -16,222 +16,239 @@
 .power-menu-popup > .button > .label {} -> Styles for power buttons icons and labels inside the popup 
 .media-widget {} -> Styles specific to the media widget
 */
-
 * {
-    font-size: 12px;
-    color: #cdd6f4;
-    font-weight: 500;
-    font-family: 'JetBrainsMono NFP';
+	font-size: 12px;
+	color: #cdd6f4;
+	font-weight: 500;
+	font-family: "JetBrainsMono NFP";
+	margin: 0;
+	padding: 0;
 }
-
+.yasb-bar {
+	padding: 0;
+	margin: 0;
+}
+.widget {
+	background-color: #1e1e2e;
+	padding: 0 8px;
+	margin: 0;
+}
+.widget .label {
+	padding: 1px 2px 1px 2px;
+}
+.widget .label.alt {
+	padding: 1px 8px 1px 8px;
+}
 .active-window-widget {
-    border-radius: 16px;
-    margin-left: 8px;
+	border-radius: 16px;
+	margin-left: 8px;
+	padding: 0;
 }
 .container-left,
 .container-center,
 .container-right {
-    margin: 0;
-    padding: 0
-}
-
-.widget {
-    background-color: #1e1e2e;
-    padding: 0 8px;
-}
-.widget .label {
-    padding: 2px 2px 1px 2px;
-}
-.widget .label.alt {
-    padding: 1px 8px 1px 8px;
+	margin: 0;
+	padding: 0;
 }
 
 .clock-widget {
-    border-top-left-radius: 16px;
-    border-bottom-left-radius: 16px;
+	border-top-left-radius: 16px;
+	border-bottom-left-radius: 16px;
 }
-
 
 .apps-widget {
-    padding: 0 2px;
-    border-top-right-radius: 16px;
-    border-bottom-right-radius: 16px;
+	padding: 0 2px;
+	border-top-right-radius: 16px;
+	border-bottom-right-radius: 16px;
 }
-.komorebi-active-layout .widget-container {
-    background-color: #313244;
-    margin: 4px 0 4px 0;
-    border-radius: 14px;
+.komorebi-active-layout {
+	border-top-right-radius: 16px;
+	border-bottom-right-radius: 16px;
+	padding: 0 4px 0 0;
+}
 
-}
 .komorebi-active-layout .label {
-    font-weight: 600;
-    padding: 2px 0 0 0;
+	font-weight: 600;
+	padding: 2px 0 0 0;
 }
 .wifi-widget {
-    padding: 0 4px 0 2px;
-    border-top-left-radius: 16px;
-    border-bottom-left-radius: 16px;
+	padding: 0 4px 0 4px;
+	border-top-left-radius: 16px;
+	border-bottom-left-radius: 16px;
 }
 
 .apps-widget .widget-container,
 .komorebi-workspaces .widget-container,
-.wifi-widget .widget-container {
-    background-color: #313244;
-    margin: 4px 0 4px 0;
-    border-radius: 14px;
+.wifi-widget .widget-container,
+.komorebi-active-layout .widget-container {
+	background-color: #313244;
+	margin: 4px 0 4px 0;
+	border-radius: 14px;
 }
-.komorebi-workspaces {
-    border-top-right-radius: 16px;
-    border-bottom-right-radius: 16px;
-}
+
 .komorebi-workspaces .ws-btn {
-    border-radius: 5px;
-    font-size: 10px;
-    width: 10px;
-    height: 10px;
-    margin: 0 4px 0 4px;
-    color: rgba(255, 255, 255, 0);
-    background-color: #9399b2;
+	border-radius: 5px;
+	font-size: 10px;
+	width: 10px;
+	height: 10px;
+	margin: 0 4px 0 4px;
+	color: rgba(255, 255, 255, 0);
+	background-color: #9399b2;
 }
 .komorebi-workspaces .ws-btn:hover,
 .komorebi-workspaces .ws-btn.populated:hover {
-    background-color: #fff
+	background-color: #fff;
 }
 .komorebi-workspaces .ws-btn.populated {
-    background-color: #89b4fa;
+	background-color: #89b4fa;
 }
 .komorebi-workspaces .ws-btn.active {
-    background-color: #89b4fa;
-    color: rgba(0, 0, 0, 0);
-    width: 26px;
+	background-color: #89b4fa;
+	color: rgba(0, 0, 0, 0);
+	width: 26px;
 }
 .apps-widget .label {
-    font-size: 14px;
-    padding: 0 2px;
+	font-size: 14px;
+	padding: 0 2px;
 }
 .apps-widget .label:hover {
-    color: #fff;
+	color: #fff;
 }
 
 /*POWER MENU WIDGET*/
+/* Uptime text */
 .uptime {
-    font-size: 14px;
-    margin-bottom: 10px;
-    color: #ffffff;
-    font-weight: 600;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+	font-size: 14px;
+	margin-bottom: 10px;
+	color: #ffffff;
+	font-weight: 600;
+	font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
 }
 .power-menu-widget .label {
-    color: #f38ba8;
-    font-size: 13px;
+	color: #f38ba8;
+	font-size: 13px;
 }
 .power-menu-popup {
-    background-color: rgba(24, 24, 37, 0.9);
-    border-radius: 12px;
-    border: 4px solid rgb(41, 42, 58);
+	background-color: rgba(24, 24, 37, 0.9);
+	border-radius: 12px;
+	border: 4px solid rgb(41, 42, 58);
 }
 .power-menu-popup .button {
-    padding: 0;
-    width: 240px;
-    height: 120px;
-    border-radius: 8px;
-    background-color: rgb(41, 42, 58);
-    font-family: "SegoeUI";
-    color: white;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    margin: 8px;
+	padding: 0;
+	width: 240px;
+	height: 120px;
+	border-radius: 8px;
+	background-color: rgb(41, 42, 58);
+	font-family: "SegoeUI";
+	color: white;
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	margin: 8px;
 }
 .power-menu-popup .button.hover {
-    background-color: rgb(55, 56, 75);
-    border: 1px solid rgb(55, 56, 75);
-
+	background-color: rgb(55, 56, 75);
+	border: 1px solid rgb(55, 56, 75);
 }
 .power-menu-popup .button .label {
-    margin-bottom: 8px;
-    font-size: 16px;
-    font-weight: 600;
-    color: rgba(255, 255, 255, 0.95);
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+	margin-bottom: 8px;
+	font-size: 16px;
+	font-weight: 600;
+	color: rgba(255, 255, 255, 0.95);
+	font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
 }
 .power-menu-popup .button .icon {
-    font-size: 48px;
-    padding-top: 8px;
-    color: rgba(255, 255, 255, 0.25);
+	font-size: 48px;
+	padding-top: 8px;
+	color: rgba(255, 255, 255, 0.25);
 }
 .power-menu-popup .button.cancel .icon {
-    color: rgba(243, 139, 168, 0.55);
+	color: rgba(243, 139, 168, 0.55);
 }
 .power-menu-popup .button.cancel .label {
-    color: rgba(243, 139, 168, 0.95);
+	color: rgba(243, 139, 168, 0.95);
 }
 .power-menu-popup .button.shutdown .icon {
-    color: rgba(137, 180, 250, 0.55);
+	color: rgba(137, 180, 250, 0.55);
 }
 .power-menu-popup .button.shutdown .label {
-    color: rgba(137, 180, 250, 0.95);
+	color: rgba(137, 180, 250, 0.95);
 }
 
 /* ICONS */
 .icon {
-    font-size: 16px;
+	font-size: 16px;
 }
 .volume-widget .icon {
-    color: #89b4fa;
-    margin: 1px 2px 0 0;
+	color: #89b4fa;
+	margin: 1px 2px 0 0;
 }
 .cpu-widget .icon,
 .memory-widget .icon {
-    font-size: 14px;
-    color: #cba6f7;
-    margin: 0 2px 0px 0;
+	font-size: 14px;
+	color: #cba6f7;
+	margin: 0 2px 1px 0;
 }
 .memory-widget .icon {
-    color: #a6c9f7;
+	color: #a6c9f7;
 }
 .wifi-widget .icon {
-    color: #43d8d8;
-    padding: 0 6px;
-    margin: 0px 0px 0px 0
+	color: #43d8d8;
+	padding: 0 6px;
+	margin: 0;
 }
 
 
-/* NEW WEATHER WIDGET */
-.weatherapi-widget .icon {
-    font-size: 18px;
-    margin: 0 2px 1px 0;
+
+/* WEATHER WIDGET */
+.weather-widget .icon {
+	font-size: 16px;
+	margin: 0 2px 1px 0;
 }
-.weatherapi-widget .icon.sunny {
-    color: rgb(221, 210, 107);
+.weather-widget .icon.sunnyDay {
+	color: rgb(221, 210, 107);
 }
-.weatherapi-widget .icon.clear {
-    color: rgb(107, 189, 221);
-    font-size: 22px;
-    margin: 1px 2px 0px 0;
+.weather-widget .icon.clearNight {
+	color: rgb(107, 189, 221);
+	font-size: 22px;
+	margin: 1px 2px 0px 0;
 }
+/* 
+.weather-widget .icon.cloudyDay {}
+.weather-widget .icon.cloudyNight {} 
+.weather-widget .icon.rainyDay {} 
+.weather-widget .icon.rainyNight {} 
+.weather-widget .icon.snowyIcyDay {} 
+.weather-widget .icon.snowyIcyNight {} 
+.weather-widget .icon.blizzard {} 
+.weather-widget .icon.default {}
+*/
+
 
 /* NEW MEDIA WIDGET */
 .media-widget {
-    padding: 0;
+	padding: 0;
+	margin: 0;
 }
 .media-widget .label {
-    color: #BAC2DB;
-    background-color: rgba(24, 24, 37, 0.7);
+	color: #bac2db;
+	background-color: rgba(24, 24, 37, 0.7);
 }
 .media-widget .btn {
-    color: #acb2c9;
-    padding: 0 3px;
-    margin: 4px 0;
-    font-family: Segoe Fluent Icons
+	color: #acb2c9;
+	padding: 0 3px;
+	margin: 4px 0;
+	font-family: Segoe Fluent Icons;
+}
+.media-widget .btn:hover {
+	color: #babfd3;
 }
 .media-widget .btn.play {
-    background-color: #313244;
-    border-radius: 14px;
-    font-size: 16px
+	background-color: #313244;
+	border-radius: 14px;
+	font-size: 16px;
 }
 .media-widget .btn.disabled:hover,
 .media-widget .btn.disabled {
-    color: #4e525c;
-    font-size: 12px;
-    background-color: rgba(0, 0, 0, 0);
-
+	color: #4e525c;
+	font-size: 12px;
+	background-color: rgba(0, 0, 0, 0);
 }

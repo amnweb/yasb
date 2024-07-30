@@ -64,6 +64,7 @@ class ActiveLayoutWidget(BaseWidget):
         self.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self._active_layout_text = QLabel()
         self._active_layout_text.setProperty("class", "label")
+        self._active_layout_text.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
         # Construct container
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()

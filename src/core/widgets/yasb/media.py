@@ -125,14 +125,10 @@ class MediaWidget(BaseWidget):
         # If no media is playing, set disable class on all buttons
         # Give next/previous buttons a different css class based on whether they are available
         disabled_if = lambda disabled: "disabled" if disabled else ""
-        if self._prev_label is not None:
-            self._prev_label.setProperty("class", f"btn prev {disabled_if(media_info is None or not media_info['prev_available'])}")
-        if self._play_label is not None:
-            self._play_label.setProperty("class", f"btn play {disabled_if(media_info is None)}")
-        if self._next_label is not None:
-            self._next_label.setProperty("class", f"btn next {disabled_if(media_info is None or not media_info['next_available'])}")
-
-        
+        self._prev_label.setProperty("class", f"btn prev {disabled_if(media_info is None or not media_info['prev_available'])}")
+        self._play_label.setProperty("class", f"btn play {disabled_if(media_info is None)}")
+        self._next_label.setProperty("class", f"btn next {disabled_if(media_info is None or not media_info['next_available'])}")
+            
         self._refresh_css(self._prev_label)
         self._refresh_css(self._play_label)
         self._refresh_css(self._next_label)
@@ -145,7 +141,6 @@ class MediaWidget(BaseWidget):
             active_label.setText('')
             if self._hide_empty:
                 self._widget_container.hide()
-
             return
         
         # Change icon based on if song is playing
@@ -156,10 +151,8 @@ class MediaWidget(BaseWidget):
             return
 
         # If we are playing, make sure the label field is showing
-        active_label.show()
         self._widget_container.show()
-        
-
+        active_label.show()
         # Shorten fields if necessary with ...
         media_info = {k: self._format_max_field_size(v) if isinstance(v, str) else v for k, v in
                       media_info.items()}
@@ -203,7 +196,6 @@ class MediaWidget(BaseWidget):
         label.data = action
         self._widget_container_layout.addWidget(label)
         return label
- 
     
     def _create_media_buttons(self):
         return self._create_media_button(self._media_button_icons['prev_track'],
@@ -212,6 +204,9 @@ class MediaWidget(BaseWidget):
             self._media_button_icons['next_track'], MediaOperations.next)
 
     def execute_code(self, func):
-        func()
-        time.sleep(0.1)
-        self._update_label()
+        try:
+            func()
+            time.sleep(0.1)
+            self._update_label()
+        except Exception as e:
+            logging.error(f"Error executing code: {e}")
