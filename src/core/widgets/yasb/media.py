@@ -10,6 +10,7 @@ from core.validation.widgets.yasb.media import VALIDATION_SCHEMA
 from PyQt6.QtWidgets import QLabel, QGridLayout, QHBoxLayout, QWidget
 from core.widgets.yasb.applications import ClickableLabel
 
+
 class MediaWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
 
@@ -53,8 +54,6 @@ class MediaWidget(BaseWidget):
                 self._widget_container_layout.addLayout(self.thumbnail_box)
             self._prev_label, self._play_label, self._next_label = self._create_media_buttons()
 
-
-        
         self._label = QLabel()
         self._label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._label_alt = QLabel()
@@ -141,6 +140,9 @@ class MediaWidget(BaseWidget):
             active_label.setText('')
             if self._hide_empty:
                 self._widget_container.hide()
+
+            self._last_title = None
+            self._last_artist = None
             return
         
         # Change icon based on if song is playing
