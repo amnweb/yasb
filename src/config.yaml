@@ -147,7 +147,7 @@ widgets:
     options:
       hide_if_offline: true
       label: "{icon}"
-      layouts: ['bsp', 'columns', 'rows', 'grid', 'vertical_stack', 'horizontal_stack', 'ultrawide_vertical_stack']
+      layouts: ['bsp', 'columns', 'rows', 'grid', 'vertical_stack', 'horizontal_stack', 'ultrawide_vertical_stack','right_main_vertical_stack']
       layout_icons:
         bsp: "BSP"
         columns: "COLS"
@@ -156,6 +156,7 @@ widgets:
         vertical_stack: "V-STACK"
         horizontal_stack: "H-STACK"
         ultrawide_vertical_stack: "W-STACK"
+        right_main_vertical_stack: "RMV-STACK"
         monocle: "MONOCLE"
         maximised: "MAX"
         floating: "FLOATING"
