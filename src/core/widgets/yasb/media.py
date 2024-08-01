@@ -18,6 +18,7 @@ class MediaWidget(BaseWidget):
                  max_field_size: dict[str, int], show_thumbnail: bool, controls_only: bool, controls_left: bool,
                  thumbnail_alpha: int,
                  thumbnail_padding: int,
+                 thumbnail_corner_radius: int,
                  icons: dict[str, str]):
         super().__init__(update_interval, class_name="media-widget")
         self._label_content = label
@@ -28,8 +29,11 @@ class MediaWidget(BaseWidget):
         self._thumbnail_alpha = thumbnail_alpha
         self._media_button_icons = icons
         self._controls_only = controls_only
+        self._controls_left = controls_left
         self._thumbnail_padding = thumbnail_padding
+        self._thumbnail_corner_radius = thumbnail_corner_radius
         self._hide_empty = hide_empty
+
         # Construct container
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
@@ -45,7 +49,7 @@ class MediaWidget(BaseWidget):
         # Make a grid box to overlay the text and thumbnail
         self.thumbnail_box = QGridLayout()
 
-        if controls_left:
+        if self._controls_left:
             self._prev_label, self._play_label, self._next_label = self._create_media_buttons()
             if not controls_only:
                 self._widget_container_layout.addLayout(self.thumbnail_box)
@@ -178,15 +182,36 @@ class MediaWidget(BaseWidget):
                 self._last_artist = media_info['artist']
 
                 thumbnail = await MediaOperations.get_thumbnail(media_info['thumbnail'])
-                thumbnail.putalpha(self._thumbnail_alpha)
+                thumbnail = self._crop_thumbnail(thumbnail, active_label.sizeHint().width())
+                pixmap = QPixmap.fromImage(ImageQt(thumbnail))
 
-                new_width = active_label.sizeHint().width() + self._thumbnail_padding
-                new_height = round(thumbnail.height * (new_width / thumbnail.width))
-
-                thumbnail = thumbnail.resize((new_width, new_height))
-                qim = ImageQt(thumbnail)
-                pixmap = QPixmap.fromImage(qim)
                 self._thumbnail_label.setPixmap(pixmap)
+
+    def _crop_thumbnail(self, thumbnail: Image, active_label_width: int) -> Image:
+        # Scale image with 1:1 ratio to fit width of widget
+        new_width = active_label_width + self._thumbnail_padding
+        new_height = round(thumbnail.height * (new_width / thumbnail.width))
+        thumbnail = thumbnail.resize((new_width, new_height))
+
+        # Center crop the image in height direction
+        new_h = self._widget_frame.size().height()
+        y1 = (thumbnail.height - new_h) // 2
+        thumbnail = thumbnail.crop((0, y1, thumbnail.width, y1 + new_h))
+
+        # If we want a rounded thumbnail, draw a rounded-corner mask and use it to make the image transparent
+        if self._thumbnail_corner_radius > 0:
+            corner_mask = Image.new('L', thumbnail.size, color=0)
+            painter = ImageDraw(corner_mask)
+
+            # If controls left, make right corners round and vice versa
+            corners = (False, True, True, False) if self._controls_left else (True, False, False, True)
+            painter.rounded_rectangle([0, 0, thumbnail.width - 1, thumbnail.height - 1], self._thumbnail_corner_radius,
+                                      self._thumbnail_alpha, None, 0, corners=corners)
+            thumbnail.putalpha(corner_mask)
+        else:
+            thumbnail.putalpha(self._thumbnail_alpha)
+
+        return thumbnail
 
     def _format_max_field_size(self, text: str):
         max_field_size = self._max_field_size['label_alt' if self._show_alt_label else 'label']
