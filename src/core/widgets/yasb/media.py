@@ -102,11 +102,15 @@ class MediaWidget(BaseWidget):
         else:
             self._label.show()
             self._label_alt.hide()
-        self._update_label(is_toggle=True)
 
+        # Clearing last title/artist field to make thumbnail update
+        self._last_title = None
+        self._last_artist = None
+
+        self._update_label()
 
     @asyncSlot()
-    async def _update_label(self, is_toggle=False):
+    async def _update_label(self):
         active_label = self._label_alt if self._show_alt_label else self._label
         active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
 
@@ -165,7 +169,7 @@ class MediaWidget(BaseWidget):
             return
 
         # Only update the thumbnail if the title/artist changes or if we did a toggle (resize)
-        if is_toggle or not (self._last_title == media_info['title'] and self._last_artist == media_info['artist']):
+        if not (self._last_title == media_info['title'] and self._last_artist == media_info['artist']):
             if media_info['thumbnail'] is not None:
                 self._thumbnail_label.show()
                 self._last_title = media_info['title']
