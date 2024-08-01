@@ -104,11 +104,6 @@ class MediaWidget(BaseWidget):
             self._label_alt.hide()
         self._update_label(is_toggle=True)
 
-    @staticmethod
-    def _refresh_css(label: QLabel):
-        label.style().unpolish(label)
-        label.style().polish(label)
-        label.update()
 
     @asyncSlot()
     async def _update_label(self, is_toggle=False):
@@ -127,10 +122,11 @@ class MediaWidget(BaseWidget):
         self._prev_label.setProperty("class", f"btn prev {disabled_if(media_info is None or not media_info['prev_available'])}")
         self._play_label.setProperty("class", f"btn play {disabled_if(media_info is None)}")
         self._next_label.setProperty("class", f"btn next {disabled_if(media_info is None or not media_info['next_available'])}")
-            
-        self._refresh_css(self._prev_label)
-        self._refresh_css(self._play_label)
-        self._refresh_css(self._next_label)
+
+        # Refresh style sheets
+        self._prev_label.setStyleSheet('')
+        self._play_label.setStyleSheet('')
+        self._next_label.setStyleSheet('')
 
         # If nothing playing, hide thumbnail and empty text, stop here
         if media_info is None:
