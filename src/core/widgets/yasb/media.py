@@ -41,7 +41,7 @@ class MediaWidget(BaseWidget):
         # Add the container to the main widget layout
         self.widget_layout.addWidget(self._widget_container)
         if self._hide_empty:
-            self._widget_container.hide()
+            self._widget_frame.hide()
         # Make a grid box to overlay the text and thumbnail
         self.thumbnail_box = QGridLayout()
 
@@ -135,7 +135,7 @@ class MediaWidget(BaseWidget):
             active_label.hide()
             active_label.setText('')
             if self._hide_empty:
-                self._widget_container.hide()
+                self._widget_frame.hide()
 
             self._last_title = None
             self._last_artist = None
@@ -149,8 +149,9 @@ class MediaWidget(BaseWidget):
             return
 
         # If we are playing, make sure the label field is showing
-        self._widget_container.show()
+        self._widget_frame.show()
         active_label.show()
+
         # Shorten fields if necessary with ...
         media_info = {k: self._format_max_field_size(v) if isinstance(v, str) else v for k, v in
                       media_info.items()}
