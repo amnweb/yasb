@@ -138,6 +138,8 @@ class MediaWidget(BaseWidget):
             self._thumbnail_label.hide()
             active_label.hide()
             active_label.setText('')
+            self._play_label.setText(self._media_button_icons['play'])
+
             if self._hide_empty:
                 self._widget_frame.hide()
 
