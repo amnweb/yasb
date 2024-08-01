@@ -1,5 +1,8 @@
 import logging
 import time
+
+from PIL import Image
+from PIL.ImageDraw import ImageDraw
 from PIL.ImageQt import QPixmap
 from PyQt6.QtCore import Qt
 from qasync import asyncSlot
@@ -123,7 +126,7 @@ class MediaWidget(BaseWidget):
         except Exception as e:
             logging.error(f"Error fetching media properties: {e}")
             return  # Exit early if there's an error
- 
+
         # If no media is playing, set disable class on all buttons
         # Give next/previous buttons a different css class based on whether they are available
         disabled_if = lambda disabled: "disabled" if disabled else ""
@@ -150,7 +153,7 @@ class MediaWidget(BaseWidget):
             self._last_title = None
             self._last_artist = None
             return
-        
+
         # Change icon based on if song is playing
         self._play_label.setText(self._media_button_icons['pause' if media_info['playing'] else 'play'])
 
@@ -227,7 +230,7 @@ class MediaWidget(BaseWidget):
         label.data = action
         self._widget_container_layout.addWidget(label)
         return label
-    
+
     def _create_media_buttons(self):
         return self._create_media_button(self._media_button_icons['prev_track'],
                                          MediaOperations.prev), self._create_media_button(
