@@ -212,7 +212,7 @@
 }
 */
 
-/* Battery widget usage colors. Uncomment if you want to color of the battery widget icon to change based on status */
+/* Battery widget value colors. Uncomment if you want to color of the battery widget icon to change based on status */
 
 /*
 .battery-widget.status-charging .icon {
