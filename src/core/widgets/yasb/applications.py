@@ -14,8 +14,6 @@ class ApplicationsWidget(BaseWidget):
         super().__init__(class_name=f"apps-widget {class_name}")
         self._label = label
         self._apps = app_list
-        
-        #self._label = ClickableLabel()
         # Construct container
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
@@ -27,8 +25,6 @@ class ApplicationsWidget(BaseWidget):
         # Add the container to the main widget layout
         self.widget_layout.addWidget(self._widget_container)
         self._update_label()
-
-
 
     def _update_label(self):
         if isinstance(self._apps, list):
@@ -49,7 +45,8 @@ class ApplicationsWidget(BaseWidget):
                 function_map[data]()
             else:    
                 try:
-                    subprocess.Popen(data, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                    command = data.split()
+                    subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, shell=False)
                 except Exception as e:
                     logging.error(f"Error starting app: {str(e)}")
         except Exception as e:
