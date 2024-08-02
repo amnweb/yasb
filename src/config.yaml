@@ -40,8 +40,8 @@ bars:
         ]
       right:
         [
-          "wifi",
           "media",
+          "wifi",
           #"battery",
           #"lang",
           #"ip_info",
@@ -66,8 +66,9 @@ widgets:
       controls_only: false
       controls_left: true
       hide_empty: true
-      thumbnail_alpha: 225
-      thumbnail_padding: 5
+      thumbnail_alpha: 80
+      thumbnail_padding: 8
+      thumbnail_corner_radius: 16 # Set to 0 for square corners
       icons:
         prev_track: "\ue892"
         next_track: "\ue893"

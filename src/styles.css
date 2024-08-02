@@ -263,11 +263,13 @@
 /* NEW MEDIA WIDGET */
 .media-widget {
 	padding: 0;
+	padding-left: 2px;
 	margin: 0;
+	border-radius: 16px;
+	margin-right: 8px;
 }
 .media-widget .label {
-	color: #bac2db;
-	background-color: rgba(24, 24, 37, 0.7);
+	background-color: rgba(0, 0, 0, 0.0);
 }
 .media-widget .btn {
 	color: #acb2c9;
@@ -276,7 +278,7 @@
 	font-family: Segoe Fluent Icons;
 }
 .media-widget .btn:hover {
-	color: #babfd3;
+	color: #89b4fa;
 }
 .media-widget .btn.play {
 	background-color: #313244;
