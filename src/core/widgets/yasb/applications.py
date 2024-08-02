@@ -48,7 +48,10 @@ class ApplicationsWidget(BaseWidget):
             if data in function_map:
                 function_map[data]()
             else:    
-                subprocess.Popen(data, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False)
+                try:
+                    subprocess.Popen(data, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                except Exception as e:
+                    logging.error(f"Error starting app: {str(e)}")
         except Exception as e:
             logging.error(f"Exception occurred: {str(e)} \"{data}\"")
  
