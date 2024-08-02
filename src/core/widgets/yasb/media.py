@@ -157,12 +157,14 @@ class MediaWidget(BaseWidget):
         # Change icon based on if song is playing
         self._play_label.setText(self._media_button_icons['pause' if media_info['playing'] else 'play'])
 
+        # If media is not None, we show the frame
+        self._widget_frame.show()
+
         # If we only have controls, stop update here
         if self._controls_only:
             return
 
         # If we are playing, make sure the label field is showing
-        self._widget_frame.show()
         active_label.show()
 
         # Shorten fields if necessary with ...
