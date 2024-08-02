@@ -1,2 +1,2 @@
 Set oShell = CreateObject ("WScript.Shell") 
-oShell.run "pythonw main.py"
+oShell.run "pythonw ../src/main.py"

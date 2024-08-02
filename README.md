@@ -47,4 +47,5 @@
 .power-menu-popup > .button > .icon,
 .power-menu-popup > .button > .label {} -> Styles for power buttons icons and labels inside the popup
 .media-widget {} -> Styles specific to the media widget
+.github-widget {} -> Styles specific to the github widget
 ```

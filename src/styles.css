@@ -15,6 +15,7 @@
 .power-menu-popup > .button > .icon,
 .power-menu-popup > .button > .label {} -> Styles for power buttons icons and labels inside the popup 
 .media-widget {} -> Styles specific to the media widget
+.github-widget {} -> Styles specific to the github widget
 */
 * {
 	font-size: 12px;
@@ -260,7 +261,7 @@
 */
 
 
-/* NEW MEDIA WIDGET */
+/* MEDIA WIDGET */
 .media-widget {
 	padding: 0;
 	padding-left: 2px;
@@ -290,4 +291,16 @@
 	color: #4e525c;
 	font-size: 12px;
 	background-color: rgba(0, 0, 0, 0);
+}
+
+/* GITHUB WIDGET */
+.github-widget {
+    padding:0 4px;
+}
+.github-widget .icon {
+    font-size: 14px;
+	color: #cdd6f4
+}
+.github-widget .icon.new-notification {
+    color: #f38ba8;
 }
