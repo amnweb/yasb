@@ -5,6 +5,7 @@ bars:
   status-bar:
     enabled: true
     #screens: ['DELL P2419H (1)'] 
+    #screens: ['DELL P2419H (2)'] 
     screens: ['*'] 
     class_name: "yasb-bar"
     alignment:
@@ -19,33 +20,62 @@ bars:
       windows_app_bar: true
     dimensions:
       width: "100%"
-      height: 32
+      height: 36
     padding:
-      top: 6
-      left: 6
-      bottom: 0
-      right: 6
+      top: 4
+      left: 0
+      bottom: 4
+      right: 0
     widgets:
       left:
         [
-          "active_window"
+          "win_button",
+          "komorebi_workspaces",
+          "komorebi_active_layout",
+          #"active_window"
         ] 
       center: [
-         "komorebi_workspaces",
-         "komorebi_active_layout",
+         "clock",
+         "apps"
         ]
       right:
         [
-          "fake_widget_left",
           "media",
+          "wifi",
+          #"battery",
+          #"lang",
+          #"ip_info",
+          #"traffic",
+          "cpu",
+          #"github",
           "weather",
-          "apps",
+          "memory",
           "volume",
-          "power_menu",
-          "fake_widget_right",
-          "clock"
+          "power_menu"
         ]
 widgets:
+  media:
+    type: "yasb.media.MediaWidget"
+    options:
+      label: "{title} - {artist}"
+      label_alt: "{title}"
+      update_interval: 1000
+      max_field_size:
+        label: 20
+        label_alt: 30
+      show_thumbnail: true
+      controls_only: false
+      controls_left: true
+      hide_empty: true
+      thumbnail_alpha: 80
+      thumbnail_padding: 8
+      thumbnail_corner_radius: 16 # Set to 0 for square corners
+      icons:
+        prev_track: "\ue892"
+        next_track: "\ue893"
+        play: "\ue768"
+        pause: "\ue769"
+
   active_window:
     type: "yasb.active_window.ActiveWindowWidget"
     options:
@@ -54,16 +84,17 @@ widgets:
       label_no_window: ""
       label_icon: true
       label_icon_size: 16
-      max_length: 86
+      max_length: 56
       max_length_ellipsis: "..."
       monitor_exclusive: true
 
   battery:
     type: "yasb.battery.BatteryWidget"
     options:
-      label: "{icon}  {percent}%"
-      label_alt: "{icon}  {percent}% | time: {time_remaining}"
-      time_remaining_natural: false
+      label: "<span>{icon}</span>{percent}%"
+      label_alt: "{icon} {percent}% | time: {time_remaining}"
+      charging_options:
+        icon_format: "{charging_icon}"
 
   clock:
     type: "yasb.clock.ClockWidget"
@@ -77,8 +108,8 @@ widgets:
   cpu:
     type: "yasb.cpu.CpuWidget"
     options:
-      label: "\uf4bc {info[percent][total]}%"
-      label_alt: "\uf4bc {info[histograms][cpu_percent]}"
+      label: "<span>\uf4bc</span> {info[percent][total]}%"
+      label_alt: "<span>\uf437</span> {info[histograms][cpu_percent]}"
       update_interval: 2000
       histogram_icons:
         - '\u2581' # 0%
@@ -97,9 +128,9 @@ widgets:
   memory:
     type: "yasb.memory.MemoryWidget"
     options:
-      label: "\uf4bc {virtual_mem_free}"
-      label_alt: "\uf4bc {virtual_mem_percent}%"
-      update_interval: 5000
+      label: "<span>\uf4bc</span> {virtual_mem_free}"
+      label_alt: "<span>\uf4bc</span> {virtual_mem_percent}%"
+      update_interval: 10000
       callbacks:
         on_right: "exec cmd /c Taskmgr"
 
@@ -107,17 +138,18 @@ widgets:
     type: "komorebi.workspaces.WorkspaceWidget"
     options:
         label_offline: "Komorebi Offline"
-        label_workspace_btn: "\ueabc"
+        label_workspace_btn: ""
         label_default_name: "{index}"
         label_zero_index: false
         hide_empty_workspaces: false
+        hide_if_offline: false
 
   komorebi_active_layout:
     type: "komorebi.active_layout.ActiveLayoutWidget"
     options:
       hide_if_offline: true
       label: "{icon}"
-      layouts: ['bsp', 'columns', 'rows', 'grid', 'vertical_stack', 'horizontal_stack', 'ultrawide_vertical_stack']
+      layouts: ['bsp', 'columns', 'rows', 'grid', 'vertical_stack', 'horizontal_stack', 'ultrawide_vertical_stack','right_main_vertical_stack']
       layout_icons:
         bsp: "BSP"
         columns: "COLS"
@@ -126,6 +158,7 @@ widgets:
         vertical_stack: "V-STACK"
         horizontal_stack: "H-STACK"
         ultrawide_vertical_stack: "W-STACK"
+        right_main_vertical_stack: "RMV-STACK"
         monocle: "MONOCLE"
         maximised: "MAX"
         floating: "FLOATING"
@@ -138,8 +171,8 @@ widgets:
   wifi:
     type: "yasb.wifi.WifiWidget"
     options:
-      label: "{wifi_icon}"
-      label_alt: "{wifi_icon}  {wifi_name}"
+      label: "<span>{wifi_icon}</span>"
+      label_alt: "{wifi_name} {wifi_strength}%"
       update_interval: 5000
       wifi_icons:
         - "\udb82\udd2e" # 0% strength (no wifi)
@@ -150,13 +183,13 @@ widgets:
       callbacks:
         on_left: "exec cmd.exe /c start ms-settings:network"
         on_middle: "do_nothing"
-        on_right: "do_nothing"
+        on_right: "toggle_label"
 
   traffic:
     type: "yasb.traffic.TrafficWidget"
     options:
-      label: "\ueab4 {download_speed}\ue621\ueab7 {upload_speed}"
-      label_alt: "Download {download_speed}\ue621Upload {upload_speed}"
+      label: "<span>\udb86\uddb3</span>{download_speed} | <span>\udb86\uddb2</span>{upload_speed}"
+      label_alt: "Download {download_speed} \ue621 Upload {upload_speed}"
       update_interval: 1000 # Update interval should be a multiple of 1000
       callbacks:
         on_left: "toggle_label"
@@ -165,8 +198,8 @@ widgets:
   ip_info:
     type: "yasb.custom.CustomWidget"
     options:
-      label: "\udb81\udd9f {data[ip]}"
-      label_alt: "\uf450 {data[city]} {data[region]}, {data[country]}"
+      label: "<span>\udb81\udd9f</span> {data[ip]}"
+      label_alt: "<span>\uf450</span> {data[city]} {data[region]}, {data[country]}"
       class_name: "ip-info-widget"
       exec_options:
         run_cmd: "curl.exe https://ipinfo.io"
@@ -180,32 +213,32 @@ widgets:
   weather:
     type: "yasb.weather.WeatherWidget"
     options:
-      label: "{icon} {temp}" #{icon} {temp} {humidity}
-      label_alt: "{temp_alt}"
-      update_interval: 1800 #Update interval in seconds, Min 600
-      temp_format: 'celsius'
-      location_id: 'aac619af0e4a1f0ffbab44e0cd35501d61e2c5d4337767432f5cbac90957d7a1'
+      label: "<span>{icon}</span> {temp_c}"
+      label_alt: "{location}: Min {min_temp_c}, Max {max_temp_c}, Humidity {humidity}"
+      api_key: '3bf4cf9a7c3f40d6b31174128242807'
+      update_interval: 600 #Update interval in seconds, Min 600
+      hide_decimal: true
+      location: 'Los Angeles, CA, USA' # You can use "USA Los Angeles 90006" {COUNTRY CITY ZIP_CODE}, or just city.
       callbacks:
-        on_right: "toggle_label"
+        on_left: "toggle_label"
       icons: 
         sunnyDay: "\ue30d"
         clearNight: "\ue32b"
-        cloudyFoggyDay: "\ue312"
-        cloudyFoggyNight: "\ue311"
-        rainyDay: "\udb81\ude7e "
-        rainyNight: "\udb81\ude7e "
-        snowyIcyDay: "\udb81\udd98 "
-        snowyIcyNight: "\udb81\udd98 "
-        severe: "\uebaa"
+        cloudyDay: "\udb81\udd99"
+        cloudyNight: "\ue311"
+        rainyDay: "\udb81\ude7e"
+        rainyNight: "\udb81\ude7e"
+        snowyIcyDay: "\udb81\udd98"
+        snowyIcyNight: "\udb81\udd98"
+        blizzard: "\uebaa"
         default: "\uebaa"
-      # to get your own location_id, go to https://weather.com & search your location.
-      # once you choose your location, you can see the location_id in the URL(64 chars long hex string)
-      # like this: https://weather.com/weather/today/l/aac619af0e4a1f0ffbab44e0cd35501d61e2c5d4337767432f5cbac90957d7a1
+        # https://www.weatherapi.com/docs/
+        # Usage {temp_c}, {min_temp_c}, {max_temp_c}, {temp_f}, {min_temp_f}, {max_temp_f}, {location}, {humidity}, {icon}, {conditions}
 
   lang:
     type: "yasb.custom.CustomWidget"
     options:
-      label: "{data}"
+      label: "<span>\uf1ab</span>{data}"
       label_alt: "{data}"
       class_name: "lang-widget"
       exec_options:
@@ -217,7 +250,7 @@ widgets:
   volume:
     type: "yasb.volume.VolumeWidget"
     options:
-      label: "{volume}"
+      label: "<span>{icon}</span> {level}"
       label_alt: "{volume}"
       volume_icons:
         - "\ueee8"  # Icon for muted
@@ -243,9 +276,10 @@ widgets:
     type: "yasb.power_menu.PowerMenuWidget"
     options:
       label: "\uf011"
-      blur: false
-      blur_background: true
-      animation_duration: 200 # Milisecond 
+      uptime: True
+      blur: False
+      blur_background: True
+      animation_duration: 300 # Milisecond 
       button_row: 3 # Number of buttons in row, min 1 max 5
       buttons:
         lock: ["\uea75","Lock"]
@@ -264,37 +298,38 @@ widgets:
     options:
       label: "{data}"
       app_list:
-        - {icon: "\uf489", launch: "wt"}
-        - {icon: "\uf413", launch: "explorer c:\\Users\\amn"}
-        - {icon: "\udb82\ude1e", launch: "C:\\Users\\amn\\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe"}
-        - {icon: "\udb80\ude39", launch: "C:\\Program Files\\Mozilla Firefox\\firefox.exe"}
-        - {icon: "\uf1ff", launch: "C:\\Users\\amn\\AppData\\Local\\Discord\\Update.exe --processStart Discord.exe"}
-        - {icon: "\ue217", launch: "C:\\Users\\amn\\AppData\\Roaming\\Telegram Desktop\\Telegram.exe"}
+        #- {icon: "\uf489", launch: "wt"}
+        #- {icon: "\uf413", launch: "explorer c:\\Users\\amn"}
+        #- {icon: "\udb82\ude1e", launch: "C:\\Users\\amn\\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe"}
+        #- {icon: "\udb80\ude39", launch: "C:\\Program Files\\Mozilla Firefox\\firefox.exe"}
+        #- {icon: "\uf1ff", launch: "C:\\Users\\amn\\AppData\\Local\\Discord\\Update.exe --processStart Discord.exe"}
+        #- {icon: "\ue217", launch: "C:\\Users\\amn\\AppData\\Roaming\\Telegram Desktop\\Telegram.exe"}
         - {icon: "\uf0a2", launch: "notification_center"}
         - {icon: "\ueb51", launch: "quick_settings"}
-        - {icon: "\uf46a", launch: "cmd.exe /c start ms-settings:windowsupdate"}
+        #- {icon: "\uf46a", launch: "cmd.exe /c start ms-settings:windowsupdate"}
         - {icon: "\uf422", launch: "search"}
-        - {icon: "\udb84\udf55", launch: "widget"}
+        #- {icon: "\udb84\udf55", launch: "widget"}
         # Currently available to use quick_settings, notification_center, search, widget, launcher (launcher will trigger ALT+A)
+ 
 
-  fake_widget_left:
-    type: "yasb.custom.CustomWidget"
+  github:
+    type: "yasb.github.GithubWidget"
     options:
-      label: "\ue0b6"
-      label_alt: "\ue0b6"
-      class_name: "fake-widget-left"
+      label: "<span>\ueba1</span>"
+      label_alt: "Notifications {data}" # {data} return number of unread notification
+      token: xxxxxxxxxxx # GitHub access token https://github.com/settings/tokens
+      max_notification: 20 # Max number of notification displaying in menu max: 50
+      only_unread: false # Show only unread or all notifications; if you set it to False, all new (unread) will have a white icon.
+      max_field_size: 54 # Max characters in title before truncation.
+      menu_width: 400
+      menu_height: 400
+      menu_offset: 240
+      update_interval: 300 # Check for new notification in seconds
 
-  fake_widget_right:
-    type: "yasb.custom.CustomWidget"
-    options:
-      label: "\ue0b6"
-      label_alt: "\ue0b6"
-      class_name: "fake-widget-right"
-   
   nvidia_temp:
     type: "yasb.custom.CustomWidget"
     options:
-      label: "{data}\udb81\udd04"
+      label: "{data}<span>\udb81\udd04</span>"
       label_alt: "{data}"
       class_name: "system-widget"
       exec_options:
@@ -302,22 +337,9 @@ widgets:
         run_interval: 10000 # run every 10 sec
         return_format: "string"
 
-  media:
-    type: "yasb.media.MediaWidget"
+  win_button:
+    type: "yasb.custom.CustomWidget"
     options:
-      label: "{title} - {artist}"
-      label_alt: "{title}"
-      update_interval: 1000
-      max_field_size:
-        label: 15
-        label_alt: 30
-      show_thumbnail: true
-      controls_only: false
-      controls_left: true
-      thumbnail_alpha: 255
-      thumbnail_padding: 4
-      icons:
-        prev_track: "\uf048"
-        next_track: "\uf051"
-        play: "\uf04b"
-        pause: "\uf04c"
+      label: "\ue62a"
+      label_alt: "\ue62a"
+      class_name: "system-widget"

@@ -9,6 +9,7 @@
 </p>
 
 ### How do you run it?
+- Install [Nerd Fonts](https://www.nerdfonts.com/font-downloads) (JetBrains recommended)
 - Install Python 3.12
 - Install required Python Modules:
   - pip install -r [requirements.txt](requirements.txt)
@@ -18,6 +19,8 @@
   - run `python src/main.py` in your terminal (or click [yasb.vbs](src/yasb.vbs))
 
 
+## Demo YASB
+![Reborn](demo/demo3.png)
 
 ## Demo YASB + Komorebi
 ![Theme Catppuccin Mocha](demo/demo.png)
@@ -43,4 +46,6 @@
 .power-menu-popup > .button {} -> Styles for power buttons inside the popup 
 .power-menu-popup > .button > .icon,
 .power-menu-popup > .button > .label {} -> Styles for power buttons icons and labels inside the popup
+.media-widget {} -> Styles specific to the media widget
+.github-widget {} -> Styles specific to the github widget
 ```

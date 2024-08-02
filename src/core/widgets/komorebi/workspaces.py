@@ -1,5 +1,4 @@
 import logging
-import time
 from PyQt6.QtWidgets import QPushButton, QWidget, QHBoxLayout, QLabel
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QCursor
@@ -62,6 +61,7 @@ class WorkspaceWidget(BaseWidget):
             label_offline: str,
             label_workspace_btn: str,
             label_default_name: str,
+            hide_if_offline: bool,
             label_zero_index: bool,
             hide_empty_workspaces: bool
     ):
@@ -72,6 +72,7 @@ class WorkspaceWidget(BaseWidget):
         self._label_workspace_btn = label_workspace_btn
         self._label_default_name = label_default_name
         self._label_zero_index = label_zero_index
+        self._hide_if_offline = hide_if_offline
         self._komorebi_screen = None
         self._komorebi_workspaces = []
         self._prev_workspace_index = None
@@ -102,7 +103,8 @@ class WorkspaceWidget(BaseWidget):
 
         # Disable default mouse event handling inherited from BaseWidget
         self.mousePressEvent = None
-
+        if self._hide_if_offline:
+            self.hide()
         # Status text shown when komorebi state can't be retrieved
         self._offline_text = QLabel()
         self._offline_text.setText(label_offline)
@@ -111,16 +113,17 @@ class WorkspaceWidget(BaseWidget):
         # Construct container which holds workspace buttons
         self._workspace_container_layout: QHBoxLayout = QHBoxLayout()
         self._workspace_container_layout.setSpacing(0)
-        self._workspace_container_layout.setContentsMargins(0, 0, 0, 0)
+        # self._workspace_container_layout.setContentsMargins(0, 0, 0, 0)
         self._workspace_container_layout.addWidget(self._offline_text)
         self._workspace_container: QWidget = QWidget()
         self._workspace_container.setLayout(self._workspace_container_layout)
-        self._workspace_container.setProperty("class", "komorebi-workspaces-container")
+        self._workspace_container.setProperty("class", "widget-container")
         self._workspace_container.hide()
 
         self.widget_layout.addWidget(self._offline_text)
         self.widget_layout.addWidget(self._workspace_container)
         self._register_signals_and_events()
+
 
     def _register_signals_and_events(self):
         self.k_signal_connect.connect(self._on_komorebi_connect_event)
@@ -143,12 +146,15 @@ class WorkspaceWidget(BaseWidget):
     def _on_komorebi_connect_event(self, state: dict) -> None:
         self._reset()
         self._hide_offline_status()
-
         if self._update_komorebi_state(state):
             self._add_or_update_buttons()
-
+        if self._hide_if_offline:
+            self.show()
+            
     def _on_komorebi_disconnect_event(self) -> None:
         self._show_offline_status()
+        if self._hide_if_offline:
+            self.hide()
 
     def _on_komorebi_update_event(self, event: dict, state: dict) -> None:
         if self._update_komorebi_state(state):

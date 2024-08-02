@@ -1,25 +1,26 @@
 DEFAULTS = {
-    'label': "0",
-    'label_alt': "0",
+    'label': '0',
+    'label_alt': '0',
     'update_interval': 3600,
-    'temp_format': 'celsius',
-    'location_id': 'c3e96d6cc4965fc54f88296b54449571c4107c73b9638c16aafc83575b4ddf2e',
-    'callbacks': {
-        'on_left': "do_nothing",
-        'on_middle': "do_nothing",
-        'on_right': "do_nothing"
+    'hide_decimal': False,
+    'location': 'London',
+    'api_key': '0',
+    'icons': {
+        'sunnyDay': '\ue30d',
+        'clearNight': '\ue32b',
+        'cloudyDay': '\ue312',
+        'cloudyNight': '\ue311',
+        'rainyDay': '\udb81\ude7e',
+        'rainyNight': '\udb81\ude7e',
+        'snowyIcyDay': '\udb81\udd98',
+        'snowyIcyNight': '\udb81\udd98',
+        'blizzard': '\uebaa',
+        'default': '\uebaa'
     },
-    "icons": {
-        "sunnyDay": "\ue30d",
-        "clearNight": "\ue32b",
-        "cloudyFoggyDay": "\ue312",
-        "cloudyFoggyNight": "\ue311",
-        "rainyDay": "\udb81\ude7e",
-        "rainyNight": "\udb81\ude7e",
-        "snowyIcyDay": "\udb81\udd98",
-        "snowyIcyNight": "\udb81\udd98",
-        "severe": "\uebaa",
-        "default": "\uebaa"
+    'callbacks': {
+        'on_left': 'do_nothing',
+        'on_middle': 'do_nothing',
+        'on_right': 'do_nothing'
     }
 }
 
@@ -35,62 +36,67 @@ VALIDATION_SCHEMA = {
     'update_interval': {
         'type': 'integer',
         'default': DEFAULTS['update_interval'],
-        'min': 600,
+        'min': 60,
         'max': 36000000
     },
-    'location_id': {
-        'type': 'string',
-        'default': DEFAULTS['location_id']
+    'hide_decimal': {
+        'type': 'boolean',
+        'default': DEFAULTS['hide_decimal']
     },
-    'temp_format': {
+    'location': {
         'type': 'string',
-        'default': DEFAULTS['temp_format']
+        'default': DEFAULTS['location']
     },
-    "icons": {
-        "type": "dict",
-        "schema": {
-            "sunnyDay": {
-                "type": "string",
-                "default": DEFAULTS["icons"]["sunnyDay"],
+    'api_key': {
+        'type': 'string',
+        'default': DEFAULTS['api_key']
+    },
+    'icons': {
+        'type': 'dict',
+        'required': False,
+        'schema': {
+            'sunnyDay': {
+                'type': 'string',
+                'default': DEFAULTS['icons']['sunnyDay']
             },
-            "clearNight": {
-                "type": "string",
-                "default": DEFAULTS["icons"]["clearNight"],
+            'clearNight': {
+                'type': 'string',
+                'default': DEFAULTS['icons']['clearNight'],
             },
-            "cloudyFoggyDay": {
-                "type": "string",
-                "default": DEFAULTS["icons"]["cloudyFoggyDay"],
+            'cloudyDay': {
+                'type': 'string',
+                'default': DEFAULTS['icons']['cloudyDay'],
             },
-            "cloudyFoggyNight": {
-                "type": "string",
-                "default": DEFAULTS["icons"]["cloudyFoggyNight"],
+            'cloudyNight': {
+                'type': 'string',
+                'default': DEFAULTS['icons']['cloudyNight'],
             },
-            "rainyDay": {
-                "type": "string",
-                "default": DEFAULTS["icons"]["rainyDay"],
+            'rainyDay': {
+                'type': 'string',
+                'default': DEFAULTS['icons']['rainyDay'],
             },
-            "rainyNight": {
-                "type": "string",
-                "default": DEFAULTS["icons"]["rainyNight"],
+            'rainyNight': {
+                'type': 'string',
+                'default': DEFAULTS['icons']['rainyNight'],
             },
-            "snowyIcyDay": {
-                "type": "string",
-                "default": DEFAULTS["icons"]["snowyIcyDay"],
+            'snowyIcyDay': {
+                'type': 'string',
+                'default': DEFAULTS['icons']['snowyIcyDay'],
             },
-            "snowyIcyNight": {
-                "type": "string",
-                "default": DEFAULTS["icons"]["snowyIcyNight"],
+            'snowyIcyNight': {
+                'type': 'string',
+                'default': DEFAULTS['icons']['snowyIcyNight'],
             },
-            "severe": {
-                "type": "string",
-                "default": DEFAULTS["icons"]["severe"],
+            'blizzard': {
+                'type': 'string',
+                'default': DEFAULTS['icons']['blizzard'],
             },
-            "default": {
-                "type": "string",
-                "default": DEFAULTS["icons"]["default"],
+            'default': {
+                'type': 'string',
+                'default': DEFAULTS['icons']['default'],
             }
         },
-        "default": DEFAULTS["icons"]
+        'default': DEFAULTS['icons']
     },
     'callbacks': {
         'type': 'dict',

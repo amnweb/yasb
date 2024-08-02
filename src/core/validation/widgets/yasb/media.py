@@ -18,6 +18,10 @@ VALIDATION_SCHEMA = {
         'type': 'string',
         'default': DEFAULTS['label_alt']
     },
+    'hide_empty': {
+        'type': 'boolean',
+        'default': False
+    },
     'update_interval': {
         'type': 'integer',
         'default': 1000,
@@ -77,11 +81,18 @@ VALIDATION_SCHEMA = {
         'min': 0,
         'max': 255
     },
-    'thumbnail_padding':
-        {'type': 'integer',
-         'default': 8,
-         'min': 0,
-         'max': 200},
+    'thumbnail_padding': {
+        'type': 'integer',
+        'default': 8,
+        'min': 0,
+        'max': 200
+    },
+    'thumbnail_corner_radius': {
+        'type': 'integer',
+        'default': 0,
+        'min': 0,
+        'max': 100
+    },
     'icons': {
         'type': 'dict',
         'schema': {

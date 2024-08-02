@@ -1,7 +1,7 @@
 DEFAULTS = {
     'hide_if_offline': False,
     "label": "{icon}",
-    'layouts': ['bsp', 'columns', 'rows', 'grid', 'vertical_stack', 'horizontal_stack', 'ultrawide_vertical_stack', 'right-main-vertical-stack'],
+    'layouts': ['bsp', 'columns', 'rows', 'grid', 'vertical_stack', 'horizontal_stack', 'ultrawide_vertical_stack', 'right_main_vertical_stack'],
     'layout_icons': {
         "bsp": "[\\\\]",
         "columns": "[||]",

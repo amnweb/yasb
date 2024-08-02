@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import uuid
 from contextlib import suppress
@@ -46,8 +47,11 @@ class BarManager(QObject):
 
     @pyqtSlot()
     def on_config_modified(self):
-        config = get_config(show_error_dialog=True)
-
+        try:
+            config = get_config(show_error_dialog=True)
+        except Exception as e:
+            logging.error(f"Error loading config: {e}")
+            return
         if config and (config != self.config):
 
             if config['bars'] != self.config['bars'] or config['widgets'] != self.config['widgets']:
@@ -84,6 +88,9 @@ class BarManager(QObject):
 
     def close_bars(self):
         self.stop_listener_threads()
+        tasks = asyncio.all_tasks()
+        for t in tasks:
+            t.cancel()
 
         for bar in self.bars:
             bar.close()

@@ -1,5 +1,6 @@
 DEFAULTS = {
     'label': "power",
+    'uptime': True,
     'blur': False,
     'blur_background': True,
     'animation_duration': 200,
@@ -10,6 +11,11 @@ VALIDATION_SCHEMA = {
     'label': {
         'type': 'string',
         'default': DEFAULTS['label']
+    },
+    'uptime': {
+        'type': 'boolean',
+        'default': DEFAULTS['uptime'],
+        'required': False
     },
     'blur': {
         'type': 'boolean',

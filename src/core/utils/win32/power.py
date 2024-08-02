@@ -62,5 +62,9 @@ class PowerOperations:
         subprocess.Popen("shutdown /h", stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True)
 
     def cancel(self):
+        if hasattr(self.overlay, 'timer'):
+            self.overlay.timer.stop()
+        if self.overlay:
+            self.overlay.fade_out()
         self.main_window.fade_out()
-        self.overlay.fade_out()
+

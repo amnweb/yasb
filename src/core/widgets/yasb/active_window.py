@@ -3,9 +3,10 @@ from settings import APP_BAR_TITLE, DEBUG
 from core.utils.win32.windows import WinEvent
 from core.widgets.base import BaseWidget
 from core.event_service import EventService
-from PyQt6.QtCore import pyqtSignal, QTimer
-from PyQt6.QtWidgets import QLabel
+from PyQt6.QtCore import pyqtSignal, QTimer, Qt
 from PyQt6.QtGui import QPixmap, QImage
+from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget
+from PyQt6.QtCore import Qt
 from core.validation.widgets.yasb.active_window import VALIDATION_SCHEMA
 from core.utils.win32.utilities import get_hwnd_info
 from PIL import Image
@@ -65,10 +66,22 @@ class ActiveWindowWidget(BaseWidget):
         self._event_service = EventService()
         self._update_retry_count = 0
  
+         # Construct container
+        self._widget_container_layout: QHBoxLayout = QHBoxLayout()
+        self._widget_container_layout.setSpacing(0)
+        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
+        # Initialize container
+        self._widget_container: QWidget = QWidget()
+        self._widget_container.setLayout(self._widget_container_layout)
+        self._widget_container.setProperty("class", "widget-container")
+        # Add the container to the main widget layout
+        self.widget_layout.addWidget(self._widget_container)
+        
+        
         self._window_title_text = QLabel()
         self._window_title_text.setProperty("class", "label")
         self._window_title_text.setText(self._label_no_window)
-
+       
         if self._label_icon:
             self._window_icon_label = QLabel()
             self._window_icon_label.setProperty("class", "label icon")
@@ -80,8 +93,8 @@ class ActiveWindowWidget(BaseWidget):
         self._ignore_window['titles'] += IGNORED_TITLES
         self._icon_cache = dict()
         if self._label_icon:
-            self.widget_layout.addWidget(self._window_icon_label)
-        self.widget_layout.addWidget(self._window_title_text)
+            self._widget_container_layout.addWidget(self._window_icon_label)
+        self._widget_container_layout.addWidget(self._window_title_text)
         self.register_callback("toggle_label", self._toggle_title_text)
         if not callbacks:
             callbacks = {

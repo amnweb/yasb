@@ -2,7 +2,6 @@ import asyncio
 import logging
 import sys
 from sys import argv, exit
-
 import qasync
 from PyQt6.QtWidgets import QApplication
 from core.bar_manager import BarManager
@@ -14,6 +13,9 @@ from core.event_service import EventService
 
 
 def main():
+    if sys.version_info < (3, 12):
+        logging.error("This application requires Python 3.12 or higher.")
+        sys.exit(1)
     config, stylesheet = get_config_and_stylesheet()
     app = QApplication(argv)
     app.setQuitOnLastWindowClosed(False)

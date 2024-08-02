@@ -15,212 +15,292 @@
 .power-menu-popup > .button > .icon,
 .power-menu-popup > .button > .label {} -> Styles for power buttons icons and labels inside the popup 
 .media-widget {} -> Styles specific to the media widget
+.github-widget {} -> Styles specific to the github widget
 */
 * {
-    font-size: 14px;
-    color: #8c91a7;  
-    font-family: 'Segoe UI','JetBrainsMono NFP';
+	font-size: 12px;
+	color: #cdd6f4;
+	font-weight: 500;
+	font-family: "JetBrainsMono NFP";
+	margin: 0;
+	padding: 0;
 }
 .yasb-bar {
-    background-color:rgb(23, 23, 34);
-    border:1px solid rgb(41, 42, 58);
-    padding: 0 8px;
-    border-radius: 10px;
+	padding: 0;
+	margin: 0;
+}
+.widget {
+	background-color: #1e1e2e;
+	padding: 0 8px;
+	margin: 0;
+}
+.widget .label {
+	padding: 1px 2px 1px 2px;
+}
+.widget .label.alt {
+	padding: 1px 8px 1px 8px;
+}
+.active-window-widget {
+	border-radius: 16px;
+	margin-left: 8px
 }
 .container-left,
 .container-center,
 .container-right {
-    margin: 0;
-    padding: 0
-}
- 
-.widget {
-    padding: 0 2px;    
-}
-.widget .label {
-    padding: 0 2px 1px 2px; 
-}
- 
-.ws-btn {
-    background: rgb(168, 167, 167);
-    color: rgb(0, 0 , 0);
-    margin: 4px 3px;
-    padding: 0 3px;
-    border-radius: 3px;
+	margin: 0;
+	padding: 0;
 }
 
-.ws-btn:hover {
-    background: rgb(194, 192, 214);
+.clock-widget {
+	border-top-left-radius: 16px;
+	border-bottom-left-radius: 16px;
 }
 
-.ws-btn.active {
-    background: rgb(224, 222, 244);
-    color: rgb(0, 0, 0);
-    font-weight: bold;
+.apps-widget {
+	padding: 0 2px;
+	border-top-right-radius: 16px;
+	border-bottom-right-radius: 16px;
 }
-.clock-widget .label {
-    padding-bottom: 3px;
-    background: none;
-    font-size: 12px;
-    padding-bottom: 2px;
-    font-weight: 600;
-    color: #a9aec2;
+.komorebi-active-layout {
+	border-top-right-radius: 16px;
+	border-bottom-right-radius: 16px;
+	padding: 0 4px 0 0;
 }
-.active-window-widget .label {
-    text-transform: capitalize;
-    font-size: 13px;
-    padding-bottom:2px;
-    font-weight: 600;
-    color: #a9aec2;
-}
-.active-window-widget .label.icon {
-    padding-bottom:0px;
-}
+
 .komorebi-active-layout .label {
-    padding-bottom: 1px;
+	font-weight: 600;
+	padding: 2px 0 0 0;
 }
-.komorebi-workspaces {
-    padding: 0 2px
+.wifi-widget {
+	padding: 0 4px 0 4px;
+	border-top-left-radius: 16px;
+	border-bottom-left-radius: 16px;
 }
+
+.apps-widget .widget-container,
+.komorebi-workspaces .widget-container,
+.wifi-widget .widget-container,
+.komorebi-active-layout .widget-container {
+	background-color: #313244;
+	margin: 4px 0 4px 0;
+	border-radius: 14px;
+}
+
 .komorebi-workspaces .ws-btn {
-    border-radius: 6px;
-    font-size: 26px;
-    width: 14px;
-    height: 14px;
-    padding:-1px 2px 0 2px;
-    color:  rgb(88, 91, 112);
-    background-color: rgba(0, 0, 0, 0);
-    text-align: center;
+	border-radius: 5px;
+	font-size: 10px;
+	width: 10px;
+	height: 10px;
+	margin: 0 4px 0 4px;
+	color: rgba(255, 255, 255, 0);
+	background-color: #9399b2;
 }
-.komorebi-workspaces .ws-btn:hover {
-    color:  rgba(218, 231, 255, 0.5);
+.komorebi-workspaces .ws-btn:hover,
+.komorebi-workspaces .ws-btn.populated:hover {
+	background-color: #fff;
 }
 .komorebi-workspaces .ws-btn.populated {
-    color:  rgb(127, 132, 156);
+	background-color: #89b4fa;
 }
 .komorebi-workspaces .ws-btn.active {
-    background-color: rgb(147, 153, 178);
-    color:  rgba(0,0,0,0);
-    width:32px;
+	background-color: #89b4fa;
+	color: rgba(0, 0, 0, 0);
+	width: 26px;
+}
+.apps-widget .label {
+	font-size: 14px;
+	padding: 0 2px;
+}
+.apps-widget .label:hover {
+	color: #fff;
 }
 
-.fake-widget-left,
-.fake-widget-right  {
-    padding: 0;
+/*POWER MENU WIDGET*/
+/* Uptime text */
+.uptime {
+	font-size: 14px;
+	margin-bottom: 10px;
+	color: #ffffff;
+	font-weight: 600;
+	font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
 }
-.fake-widget-left .label{
-    color: rgb(41, 42, 58);
-    background-color: rgb(24, 24, 37);
-    font-size: 25px;
-    padding: 0;
-    margin-right:-16px;
-    padding-bottom: 1px;
-}
-.fake-widget-right .label{
-    color: rgb(24, 24, 37);
-    background-color: rgb(41, 42, 58);
-    font-size: 25px;
-    padding: 0;
-    margin-right:-16px;
-    padding-bottom: 1px;
-} 
-.weather-widget .label {
-    font-weight: 600;
-}
-.media-widget,
-.apps-widget,
-.weather-widget,
-.volume-widget,
-.power-menu-widget {
-    padding-left:0;
-    padding-right: 0;
-    background-color: rgb(41, 42, 58)
-}
-.media-widget,
-.apps-widget .label,
-.weather-widget .label,
-.volume-widget .label,
 .power-menu-widget .label {
-    padding-left:6px;
-    padding-right: 6px;
-    
-}
-.media-widget .btn:hover,
-.apps-widget .label:hover,
-.weather-widget .label:hover,
-.volume-widget .label:hover,
-.power-menu-widget .label:hover {
-    background-color: rgb(64, 64, 87);
-    border-radius: 14px;
-    color: white;
-}
-  
-/*Power Buttons*/
-.power-menu-widget .label {
-    color: rgb(243, 139, 168)
+	color: #f38ba8;
+	font-size: 13px;
 }
 .power-menu-popup {
-    background-color: rgba(24, 24, 37, 0.9);
-    border-radius:32px;
-    border:4px solid rgb(41, 42, 58);
+	background-color: rgba(24, 24, 37, 0.9);
+	border-radius: 12px;
+	border: 4px solid rgb(41, 42, 58);
 }
 .power-menu-popup .button {
-    padding:0px;
-    width: 240px;
-    height: 120px;
-    border-radius: 16px;
-    background-color: rgb(41, 42, 58);
-    font-family: "SegoeUI";
-    color: white;
-    border: 1px solid rgba(255,255,255,0.1);
-    margin: 8px;
-} 
+	padding: 0;
+	width: 240px;
+	height: 120px;
+	border-radius: 8px;
+	background-color: rgb(41, 42, 58);
+	font-family: "SegoeUI";
+	color: white;
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	margin: 8px;
+}
 .power-menu-popup .button.hover {
-    background-color: rgb(55, 56, 75);
-    border: 1px solid rgb(55, 56, 75);
-
+	background-color: rgb(55, 56, 75);
+	border: 1px solid rgb(55, 56, 75);
 }
 .power-menu-popup .button .label {
-    margin-bottom: 8px;
-    font-size: 18px;
-    font-weight:600;
-    color: rgba(255, 255, 255, 0.95);  
+	margin-bottom: 8px;
+	font-size: 16px;
+	font-weight: 600;
+	color: rgba(255, 255, 255, 0.95);
+	font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
 }
 .power-menu-popup .button .icon {
-    font-size: 48px;
-    padding-top:8px;
-    color: rgba(255, 255, 255, 0.25);  
+	font-size: 48px;
+	padding-top: 8px;
+	color: rgba(255, 255, 255, 0.25);
 }
 .power-menu-popup .button.cancel .icon {
-    color:rgba(243, 139, 168, 0.55);
+	color: rgba(243, 139, 168, 0.55);
 }
 .power-menu-popup .button.cancel .label {
-    color:rgba(243, 139, 168, 0.95);
+	color: rgba(243, 139, 168, 0.95);
 }
 .power-menu-popup .button.shutdown .icon {
-    color:rgba(137, 180, 250, 0.55);
+	color: rgba(137, 180, 250, 0.55);
 }
 .power-menu-popup .button.shutdown .label {
-    color:rgba(137, 180, 250, 0.95);
+	color: rgba(137, 180, 250, 0.95);
 }
 
+/* ICONS */
+.icon {
+	font-size: 16px;
+}
+.volume-widget .icon {
+	color: #89b4fa;
+	margin: 1px 2px 0 0;
+}
+.cpu-widget .icon,
+.memory-widget .icon {
+	font-size: 14px;
+	color: #cba6f7;
+	margin: 0 2px 1px 0;
+}
+.memory-widget .icon {
+	color: #a6c9f7;
+}
+.wifi-widget .icon {
+	color: #43d8d8;
+	padding: 0 6px;
+	margin: 0;
+}
+
+/* Memory widget usage colors. Uncomment if you want to color of the battery widget icon to change based on status */
+
+/*
+.memory-widget.status-low .icon {
+  color: #a6e3a1;
+}
+.memory-widget.status-medium .icon {
+  color: #f9e2af;
+}
+.memory-widget.status-high .icon {
+  color: #fab387;
+}
+.memory-widget.status-critical .icon {
+  color: #f38ba8;
+}
+*/
+
+/* Battery widget value colors. Uncomment if you want to color of the battery widget icon to change based on status */
+
+/*
+.battery-widget.status-charging .icon {
+  color: #74c7ec;
+}
+.battery-widget.status-full .icon {
+  color: #94e2d5;
+}
+.battery-widget.status-high .icon {
+  color: #a6e3a1;
+}
+.battery-widget.status-medium .icon {
+  color: #f9e2af;
+}
+.battery-widget.status-low .icon {
+  color: #fab387;
+}
+.battery-widget.status-critical .icon {
+  color: #f38ba8;
+}
+*/
+
+/* WEATHER WIDGET */
+.weather-widget .icon {
+	font-size: 16px;
+	margin: 0 2px 1px 0;
+}
+.weather-widget .icon.sunnyDay {
+	color: rgb(221, 210, 107);
+}
+.weather-widget .icon.clearNight {
+	color: rgb(107, 189, 221);
+	font-size: 22px;
+	margin: 1px 2px 0px 0;
+}
+/* 
+.weather-widget .icon.cloudyDay {}
+.weather-widget .icon.cloudyNight {} 
+.weather-widget .icon.rainyDay {} 
+.weather-widget .icon.rainyNight {} 
+.weather-widget .icon.snowyIcyDay {} 
+.weather-widget .icon.snowyIcyNight {} 
+.weather-widget .icon.blizzard {} 
+.weather-widget .icon.default {}
+*/
+
+
+/* MEDIA WIDGET */
 .media-widget {
-    padding-left: 0;
-    background-color: rgb(41, 42, 58);
+	padding: 0;
+	padding-left: 2px;
+	margin: 0;
+	border-radius: 16px;
+	margin-right: 8px;
 }
-
 .media-widget .label {
-    color: #BAC2DB;
-    background-color: rgba(24, 24, 37, 0.7);
+	background-color: rgba(0, 0, 0, 0.0);
 }
 .media-widget .btn {
-    color: #8c91a7;
-    padding-left:6px;
-    padding-right:6px;
+	color: #acb2c9;
+	padding: 0 3px;
+	margin: 4px 0;
+	font-family: Segoe Fluent Icons;
 }
-
+.media-widget .btn:hover {
+	color: #89b4fa;
+}
+.media-widget .btn.play {
+	background-color: #313244;
+	border-radius: 14px;
+	font-size: 16px;
+}
 .media-widget .btn.disabled:hover,
 .media-widget .btn.disabled {
-    color: #474A54;
-    background-color: rgb(41, 42, 58);
+	color: #4e525c;
+	font-size: 12px;
+	background-color: rgba(0, 0, 0, 0);
+}
+
+/* GITHUB WIDGET */
+.github-widget {
+    padding:0 4px;
+}
+.github-widget .icon {
+    font-size: 14px;
+	color: #cdd6f4
+}
+.github-widget .icon.new-notification {
+    color: #f38ba8;
 }
