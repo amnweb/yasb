@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import uuid
 from contextlib import suppress
@@ -84,6 +85,9 @@ class BarManager(QObject):
 
     def close_bars(self):
         self.stop_listener_threads()
+        tasks = asyncio.all_tasks()
+        for t in tasks:
+            t.cancel()
 
         for bar in self.bars:
             bar.close()
