@@ -331,7 +331,7 @@ widgets:
     type: "yasb.wallpapers.WallpapersWidget"
     options:
       label: "<span>\udb83\ude09</span>"
-      image_path: "C:\\Users\\xxx\\Images" # Parh to folder with images
+      image_path: "C:\\Users\\xxx\\Images" # Path to folder with images
       change_automatically: false # Automatically change wallpaper
       update_interval: 10 # If change_automatically is true, update interval in seconds
 
