@@ -25,7 +25,8 @@ class WallpapersWidget(BaseWidget):
         self._label_content = label
         self._change_automatically = change_automatically
         self._image_path = image_path
-        
+        self._last_image = None  # Track the last selected image
+
         # Construct container
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
@@ -104,16 +105,26 @@ class WallpapersWidget(BaseWidget):
 
     def change_background(self):
         try:
-            # Get a list of all files in the images folder
-            images = [f for f in os.listdir(self._image_path) if os.path.isfile(os.path.join(self._image_path, f))]
-            # Select a random image
+            # Define valid image extensions
+            valid_extensions = ('.png', '.jpg', '.jpeg', '.bmp', '.gif')
+            # Get a list of all image files in the images folder
+            images = [f for f in os.listdir(self._image_path) if os.path.isfile(os.path.join(self._image_path, f)) and f.lower().endswith(valid_extensions)]
+            if not images:
+                return
+
+            # Select a random image that is different from the last one
             random_image = random.choice(images)
+            while random_image == self._last_image and len(images) > 1:
+                random_image = random.choice(images)
+
             # Full path to the selected image
             image_path = os.path.join(self._image_path, random_image)
             # Change the desktop background
             ctypes.windll.user32.SystemParametersInfoW(20, 0, image_path, 3)
+            # Update the last selected image
+            self._last_image = random_image
         except Exception as e:
-            logging.error("Error changing wallaper", str(e))
+            logging.error("Error changing wallpaper: %s", str(e))
     
 class ClickableLabel(QLabel):
     clicked = pyqtSignal()
