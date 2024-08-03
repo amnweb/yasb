@@ -333,7 +333,7 @@ widgets:
       label: "<span>\udb83\ude09</span>"
       image_path: "C:\\Users\\xxx\\Images" # Parh to folder with images
       change_automatically: false # Automatically change wallpaper
-      update_interval: 10 # If chnage_automatically is true, update interval in seconds
+      update_interval: 10 # If change_automatically is true, update interval in seconds
 
   nvidia_temp:
     type: "yasb.custom.CustomWidget"
