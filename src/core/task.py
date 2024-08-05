@@ -42,7 +42,7 @@ def create_logon_task(task_name, script_path, working_directory):
     principal = task_def.Principal
     principal.UserId = get_current_user_sid()
     principal.LogonType = 3
-    principal.RunLevel = 1
+    principal.RunLevel = 0
     settings = task_def.Settings
     settings.Enabled = True
     settings.StartWhenAvailable = True
