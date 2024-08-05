@@ -16,3 +16,4 @@ pycaw
 winshell
 pillow
 qasync
+requests
