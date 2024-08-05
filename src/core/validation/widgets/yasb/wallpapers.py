@@ -13,7 +13,7 @@ VALIDATION_SCHEMA = {
     'update_interval': {
         'type': 'integer',
         'default': DEFAULTS['update_interval'],
-        'min': 10,
+        'min': 60,
         'max': 86400
     },
     'change_automatically': {

@@ -6,28 +6,9 @@ from PyQt6.QtCore import QThread, QAbstractNativeEventFilter
 from PyQt6.QtWidgets import QWidget, QApplication
 import PyQt6.sip
 from win32gui import GetForegroundWindow
-from core.utils.win32.windows import WinEventProcType, WinEvent, ShellEvent, user32, ole32, msg
+from core.utils.win32.windows import WinEventProcType, WinEvent, user32, ole32, msg
 from core.event_service import EventService
 
-class ShellEventFilter(QAbstractNativeEventFilter):
-    def __init__(self):
-        QAbstractNativeEventFilter.__init__(self)
-        self._event_service = EventService()
-
-        # We create a hidden QWidget and make it a native window with winId.
-        # This is because shell events need an active windows message loop, and the
-        # easiest way to do this is to create a hwnd.
-        self._event_window = QWidget()
-        ctypes.windll.user32.RegisterShellHookWindow(self._event_window.winId().__int__())
-        self._message_num = ctypes.windll.user32.RegisterWindowMessageW("SHELLHOOK")
-
-    def nativeEventFilter(self, eventType, message) -> typing.Tuple[bool, typing.Optional[PyQt6.sip.voidptr]]:
-        if eventType == "windows_generic_MSG":
-            msg = ctypes.wintypes.MSG.from_address(message.__int__())
-            if msg.message == self._message_num and msg.wParam in ShellEvent:
-                event_type = ShellEvent._value2member_map_[msg.wParam]
-                self._event_service.emit_event(event_type, msg.lParam, event_type)
-        return (False, 0)
 
 class SystemEventListener(QThread):
 
@@ -36,9 +17,6 @@ class SystemEventListener(QThread):
         self._hook = None
         self._event_service = EventService()
         self._win_event_process = WinEventProcType(self._event_handler)
-        self._nativeEventFilter = None
-        self._nativeEventFilter = ShellEventFilter()
-        QApplication.instance().installNativeEventFilter(self._nativeEventFilter)
 
     def __str__(self):
         return "Win32 System Event Listener"
@@ -95,5 +73,3 @@ class SystemEventListener(QThread):
     def stop(self):
         user32.UnhookWinEvent(self._hook)
         ole32.CoUninitialize()
-        # removeNativeEventFilter should be thread-safe
-        QApplication.instance().removeNativeEventFilter(self._nativeEventFilter)

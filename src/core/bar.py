@@ -7,7 +7,6 @@ from core.utils.utilities import is_valid_percentage_str, percent_to_float
 from core.utils.win32.utilities import get_monitor_hwnd
 from core.validation.bar import BAR_DEFAULTS
 from BlurWindow.blurWindow import GlobalBlur
-from ctypes import windll
  
 try:
     from core.utils.win32 import app_bar

@@ -32,7 +32,7 @@ bars:
           "win_button",
           "komorebi_workspaces",
           "komorebi_active_layout",
-          #"active_window"
+          "active_window"
         ] 
       center: [
          "clock",
@@ -216,8 +216,8 @@ widgets:
     options:
       label: "<span>{icon}</span> {temp_c}"
       label_alt: "{location}: Min {min_temp_c}, Max {max_temp_c}, Humidity {humidity}"
-      api_key: '3bf4cf9a7c3f40d6b31174128242807'
-      update_interval: 600 #Update interval in seconds, Min 600
+      api_key: '3bf4cf9a7c3f40d6b31174128242807' # Get your free API key from https://www.weatherapi.com/
+      update_interval: 600 # Update interval in seconds, Min 600 seconds
       hide_decimal: true
       location: 'Los Angeles, CA, USA' # You can use "USA Los Angeles 90006" {COUNTRY CITY ZIP_CODE}, or just city.
       callbacks:
@@ -261,17 +261,6 @@ widgets:
         - "\uf028"  # Icon for 61-100% volume
       callbacks:
         on_right: "exec cmd.exe /c start ms-settings:sound"
-
- 
-  power_menu_native:
-    type: "yasb.custom.CustomWidget"
-    options:
-      label: "\uf011"
-      label_alt: "\uf011"
-      exec_options:
-        run_once: true
-      callbacks:
-        on_left: "exec powershell (New-Object -ComObject Shell.Application).ShutdownWindows()"
 
   power_menu:
     type: "yasb.power_menu.PowerMenuWidget"
@@ -333,7 +322,7 @@ widgets:
       label: "<span>\udb83\ude09</span>"
       image_path: "C:\\Users\\xxx\\Images" # Path to folder with images
       change_automatically: false # Automatically change wallpaper
-      update_interval: 10 # If change_automatically is true, update interval in seconds
+      update_interval: 60 # If change_automatically is true, update interval in seconds
 
   nvidia_temp:
     type: "yasb.custom.CustomWidget"
