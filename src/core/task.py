@@ -35,7 +35,7 @@ def create_logon_task(task_name, script_path, working_directory):
     root_folder = scheduler.GetFolder('\\')
     task_def = scheduler.NewTask(0)
     task_def.RegistrationInfo.Description = 'A highly configurable cross-platform (Windows) status bar written in Python.'
-    task_def.RegistrationInfo.Author = getpass.getuser()
+    task_def.RegistrationInfo.Author = "AmN"
     trigger = task_def.Triggers.Create(9)
     trigger.Enabled = True
     trigger.StartBoundary = datetime.datetime.now().isoformat()
