@@ -46,7 +46,7 @@ class ApplicationsWidget(BaseWidget):
             else:    
                 try:
                     command = data.split()
-                    subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, shell=False)
+                    subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, shell=True)
                 except Exception as e:
                     logging.error(f"Error starting app: {str(e)}")
         except Exception as e:
