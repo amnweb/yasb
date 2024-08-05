@@ -307,7 +307,7 @@ widgets:
     options:
       label: "<span>\ueba1</span>"
       label_alt: "Notifications {data}" # {data} return number of unread notification
-      token: xxxxxxxxxxx # GitHub access token https://github.com/settings/tokens
+      token: ghp_xxxxxxxxxxx # GitHub Personal access tokens (classic) https://github.com/settings/tokens
       max_notification: 20 # Max number of notification displaying in menu max: 50
       only_unread: false # Show only unread or all notifications; if you set it to False, all new (unread) will have a white icon.
       max_field_size: 54 # Max characters in title before truncation.

@@ -139,7 +139,25 @@ class GithubWidget(BaseWidget):
  
         
 
+    def mark_as_read(self, notification_id, text_label, icon_label):
+        for notification in self._github_data:
+            if notification['id'] == notification_id:
+                notification['unread'] = False
+                break
+        self._update_label()
+        text_label_stylesheet = text_label.styleSheet()
+        icon_label_stylesheet = icon_label.styleSheet()
+        if "color:" in text_label_stylesheet:
+            updated_stylesheet = re.sub(r"color:\s*#[0-9a-fA-F]+", f"color:#9399b2", text_label_stylesheet)
+        text_label.setStyleSheet(updated_stylesheet)
 
+        if "color:" in icon_label_stylesheet:
+            updated_stylesheet = re.sub(r"color:\s*#[0-9a-fA-F]+", f"color:#9399b2", icon_label_stylesheet)
+        icon_label.setStyleSheet(updated_stylesheet) 
+        text_label.repaint()
+        icon_label.repaint()
+    
+    
     def show_menu(self, button):
         if self._menu_open:  # Check if the menu is already open
             self._menu_open = False
@@ -199,7 +217,7 @@ class GithubWidget(BaseWidget):
                 icon_label.setStyleSheet(f"color:{unread_icon};font-size:16px;padding-right:0;padding-left:8px")
                 text_label = QLabel(
                     f"{repo_title}<br/>"
-                    f"<span style='color:{unread_text};font-family:Segoe UI;font-size:12px;font-weight:500'>{repo_description}</span>"
+                    f"<span style='font-family:Segoe UI;font-size:12px;font-weight:500'>{repo_description}</span>"
                 )
                 text_label.setStyleSheet(f"color:{unread_text};font-family:Segoe UI;font-weight:600;padding-left:0px;font-size:14px;padding-right:14px")
                 container_layout = QHBoxLayout(container)
@@ -221,7 +239,8 @@ class GithubWidget(BaseWidget):
                         border-top:1px solid rgba(255,255,255,0.05)
                     }
                 """)
-                button.clicked.connect(lambda checked, url=notification['url']: QDesktopServices.openUrl(QUrl(url)))
+ 
+                button.clicked.connect(lambda checked, nid=notification['id'], text_label=text_label, icon_label=icon_label, url=notification['url']: (self.mark_as_read(nid, text_label, icon_label), QDesktopServices.openUrl(QUrl(url))))
                 layout = QVBoxLayout(button)
                 layout.addWidget(container)
                 layout.setContentsMargins(0, 0, 0, 0)
@@ -259,7 +278,8 @@ class GithubWidget(BaseWidget):
         # Reset the menu state after the menu is closed
         QTimer.singleShot(0, reset_menu_open)
 
-
+ 
+        
     def get_github_data(self):
         threading.Thread(target=self._get_github_data).start()
 
@@ -303,6 +323,7 @@ class GithubWidget(BaseWidget):
                         github_url = notification['repository']['html_url']
 
                     result.append({
+                        'id': notification['id'],
                         'repository': repo_full_name,
                         'title': notification['subject']['title'],
                         'type': subject_type,
