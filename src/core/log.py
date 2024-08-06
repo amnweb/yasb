@@ -1,7 +1,7 @@
 import logging
 from logging.handlers import RotatingFileHandler
 from os.path import join
-from settings import DEFAULT_LOG_FILENAME, APP_NAME, APP_NAME_FULL
+from settings import DEFAULT_LOG_FILENAME, APP_NAME
 from core.config import get_config_dir
 
 LOG_PATH = join(get_config_dir(), DEFAULT_LOG_FILENAME)
@@ -18,4 +18,4 @@ def init_logger():
     )
 
     logging.getLogger().addHandler(logging.StreamHandler())
-    logging.info(f"{APP_NAME} - {APP_NAME_FULL}")
+    logging.info(f"\033[92m{APP_NAME} - Reborn\033[0m")

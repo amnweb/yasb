@@ -10,7 +10,7 @@ from PyQt6.QtWidgets import QSystemTrayIcon, QMenu
 from PyQt6.QtGui import QIcon
 from PyQt6.QtCore import QCoreApplication, QSize
 from core.bar_manager import BarManager
-from settings import GITHUB_URL, SCRIPT_PATH, APP_NAME, APP_NAME_FULL, DEFAULT_CONFIG_DIRECTORY
+from settings import GITHUB_URL, SCRIPT_PATH, APP_NAME, DEFAULT_CONFIG_DIRECTORY
 
 OS_STARTUP_FOLDER = os.path.join(os.environ['APPDATA'], r'Microsoft\Windows\Start Menu\Programs\Startup')
 AUTOSTART_FILE = os.path.join(SCRIPT_PATH, 'yasb.vbs')
@@ -25,7 +25,7 @@ class TrayIcon(QSystemTrayIcon):
         self._icon = QIcon()
         self._load_favicon()
         self._load_context_menu()
-        self.setToolTip(f"{APP_NAME} - {APP_NAME_FULL}")
+        self.setToolTip(f"{APP_NAME}")
 
     def _load_favicon(self):
         self._icon.addFile(os.path.join(SCRIPT_PATH, 'assets', 'favicon', 'launcher.png'), QSize(48, 48))
@@ -46,8 +46,8 @@ class TrayIcon(QSystemTrayIcon):
 
         QMenu::item {
             margin:0 4px;
-            padding: 8px 16px;
-            border-radius:6px
+            padding: 6px 16px;
+            border-radius:4px
         }
 
         QMenu::item:selected {
