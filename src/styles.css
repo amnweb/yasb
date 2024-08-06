@@ -277,13 +277,23 @@
 /* MEDIA WIDGET */
 .media-widget {
 	padding: 0;
-	padding-left: 2px;
 	margin: 0;
 	border-radius: 16px;
 	margin-right: 8px;
 }
 .media-widget .label {
 	background-color: rgba(0, 0, 0, 0.0);
+	padding: 0px;
+	padding-right: 4px;
+	font-size: 12px;
+}
+.media-widget .label.maintext {
+    padding-top: 4px;
+}
+.media-widget .label.subtext {
+    color: #bac2de;
+    font-size: 10px;
+    margin-top: -1px;
 }
 .media-widget .btn {
 	color: #acb2c9;

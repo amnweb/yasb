@@ -1,7 +1,7 @@
 import logging
 import time
 
-from PIL import Image
+from PIL import Image, ImageStat
 from PIL.ImageDraw import ImageDraw
 from PIL.ImageQt import QPixmap
 from PyQt6.QtCore import Qt
@@ -10,26 +10,28 @@ from PIL.ImageQt import ImageQt
 from core.utils.win32.media import MediaOperations
 from core.widgets.base import BaseWidget
 from core.validation.widgets.yasb.media import VALIDATION_SCHEMA
-from PyQt6.QtWidgets import QLabel, QGridLayout, QHBoxLayout, QWidget
+from PyQt6.QtWidgets import QLabel, QGridLayout, QHBoxLayout, QWidget, QVBoxLayout
 from core.widgets.yasb.applications import ClickableLabel
 
 
 class MediaWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
 
-    def __init__(self, label: str, label_alt: str, hide_empty:bool, update_interval: int, callbacks: dict[str, str],
+    def __init__(self, label_main: str, label_sub: str, hide_empty:bool, update_interval: int, callbacks: dict[str, str],
                  max_field_size: dict[str, int], show_thumbnail: bool, controls_only: bool, controls_left: bool,
-                 thumbnail_alpha: int,
+                 thumbnail_alpha_multiplier: float,
+                 thumbnail_alpha_range: float,
                  thumbnail_padding: int,
                  thumbnail_corner_radius: int,
                  icons: dict[str, str]):
         super().__init__(update_interval, class_name="media-widget")
-        self._label_content = label
-        self._label_alt_content = label_alt
+        self._label_main_content = label_main
+        self._label_sub_content = label_sub
 
         self._max_field_size = max_field_size
         self._show_thumbnail = show_thumbnail
-        self._thumbnail_alpha = thumbnail_alpha
+        self._thumbnail_alpha_multiplier = thumbnail_alpha_multiplier
+        self._thumbnail_alpha_range = thumbnail_alpha_range
         self._media_button_icons = icons
         self._controls_only = controls_only
         self._controls_left = controls_left
@@ -61,20 +63,25 @@ class MediaWidget(BaseWidget):
                 self._widget_container_layout.addLayout(self.thumbnail_box)
             self._prev_label, self._play_label, self._next_label = self._create_media_buttons()
 
-        self._label = QLabel()
-        self._label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._label_alt = QLabel()
-        self._label_alt.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._main_text_label = QLabel()
+        self._sub_text_label = QLabel()
+
+        self._main_text_label.setAlignment(Qt.AlignmentFlag.AlignRight)
+        self._sub_text_label.setAlignment(Qt.AlignmentFlag.AlignRight)
+
+        self._main_text_label.setProperty("class", "label maintext")
+        self._sub_text_label.setProperty("class", "label subtext")
+
+        self._text_layout = QVBoxLayout()
+        self._text_layout.addWidget(self._main_text_label)
+        self._text_layout.addWidget(self._sub_text_label)
+        self._text_layout.setAlignment(Qt.AlignmentFlag.AlignHCenter)
 
         self._thumbnail_label = QLabel()
         self._thumbnail_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        self._label.setProperty("class", "label")
-        self._label_alt.setProperty("class", "label alt")
-
         self.thumbnail_box.addWidget(self._thumbnail_label, 0, 0)
-        self.thumbnail_box.addWidget(self._label, 0, 0)
-        self.thumbnail_box.addWidget(self._label_alt, 0, 0)
+        self.thumbnail_box.addLayout(self._text_layout, 0, 0)
 
         self.register_callback("update_label", self._update_label)
 
@@ -84,42 +91,24 @@ class MediaWidget(BaseWidget):
         self.callback_timer = "update_label"
 
         if not self._controls_only:
-            self.register_callback("toggle_label", self._toggle_label)
-            self._label.show()
+            self._main_text_label.show()
 
-        self._label_alt.hide()
         self._show_alt_label = False
 
         self.start_timer()
 
         self._last_title = None
         self._last_artist = None
+        self._last_thumbnail = None
 
     def start_timer(self):
         if self.timer_interval and self.timer_interval > 0:
             self.timer.timeout.connect(self._timer_callback)
             self.timer.start(self.timer_interval)
 
-    def _toggle_label(self):
-        self._show_alt_label = not self._show_alt_label
-
-        if self._show_alt_label:
-            self._label.hide()
-            self._label_alt.show()
-        else:
-            self._label.show()
-            self._label_alt.hide()
-
-        # Clearing last title/artist field to make thumbnail update
-        self._last_title = None
-        self._last_artist = None
-
-        self._update_label()
-
     @asyncSlot()
     async def _update_label(self):
-        active_label = self._label_alt if self._show_alt_label else self._label
-        active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
+        text_labels = [self._main_text_label, self._sub_text_label]
 
         try:
             media_info = await MediaOperations.get_media_properties()
@@ -142,16 +131,13 @@ class MediaWidget(BaseWidget):
         # If nothing playing, hide thumbnail and empty text, stop here
         if media_info is None:
             # Hide thumbnail and label fields
-            self._thumbnail_label.hide()
-            active_label.hide()
-            active_label.setText('')
+            for label in text_labels:
+                label.hide()
+                label.setText('')
             self._play_label.setText(self._media_button_icons['play'])
 
             if self._hide_empty:
                 self._widget_frame.hide()
-
-            self._last_title = None
-            self._last_artist = None
             return
 
         # Change icon based on if song is playing
@@ -165,34 +151,53 @@ class MediaWidget(BaseWidget):
             return
 
         # If we are playing, make sure the label field is showing
-        active_label.show()
+        for label in text_labels:
+            label.show()
 
         # Shorten fields if necessary with ...
         media_info = {k: self._format_max_field_size(v) if isinstance(v, str) else v for k, v in
                       media_info.items()}
 
-        # Format the label
-        format_label_content = active_label_content.format(**media_info)
-        active_label.setText(format_label_content)
+        # Format the labels
+        self._main_text_label.setText(self._label_main_content.format(**media_info))
+        self._sub_text_label.setText(self._label_sub_content.format(**media_info))
 
         # If we don't want the thumbnail, stop here
         if not self._show_thumbnail:
             return
 
+        # Catches odd cases where media info is not None, but title and artist fields are
+        if media_info['title'] is None or media_info['artist'] is None:
+            return
+
         # Only update the thumbnail if the title/artist changes or if we did a toggle (resize)
-        if not (self._last_title == media_info['title'] and self._last_artist == media_info['artist']):
-            if media_info['thumbnail'] is not None:
-                self._thumbnail_label.show()
-                self._last_title = media_info['title']
-                self._last_artist = media_info['artist']
+        if self._last_title == media_info['title'] and self._last_artist == media_info['artist']:
+            return
 
-                thumbnail = await MediaOperations.get_thumbnail(media_info['thumbnail'])
-                thumbnail = self._crop_thumbnail(thumbnail, active_label.sizeHint().width())
-                pixmap = QPixmap.fromImage(ImageQt(thumbnail))
+        # If thumbnail reference is not there, stop here
+        if media_info['thumbnail'] is None:
+            return
 
-                self._thumbnail_label.setPixmap(pixmap)
+        # Get thumbnail
+        thumbnail = await MediaOperations.get_thumbnail(media_info['thumbnail'])
 
-    def _crop_thumbnail(self, thumbnail: Image, active_label_width: int) -> Image:
+        # If the thumbnail image is the same as our previous, the title and artist changed but the thumbnail didn't
+        # We return and wait until the thumbnail also changes before we do the update
+        if self._last_thumbnail == thumbnail:
+            return
+        else:
+            self._last_thumbnail = thumbnail
+            self._last_title = media_info['title']
+            self._last_artist = media_info['artist']
+
+        self._thumbnail_label.show()
+
+        thumbnail = self._process_thumbnail(thumbnail, self._text_layout.sizeHint().width())
+        pixmap = QPixmap.fromImage(ImageQt(thumbnail))
+
+        self._thumbnail_label.setPixmap(pixmap)
+
+    def _process_thumbnail(self, thumbnail: Image, active_label_width: int) -> Image:
         # Scale image with 1:1 ratio to fit width of widget
         new_width = active_label_width + self._thumbnail_padding
         new_height = round(thumbnail.height * (new_width / thumbnail.width))
@@ -203,6 +208,10 @@ class MediaWidget(BaseWidget):
         y1 = (thumbnail.height - new_h) // 2
         thumbnail = thumbnail.crop((0, y1, thumbnail.width, y1 + new_h))
 
+        # Calculate lightness to scale alpha
+        lightness_range = (1.0 - self._thumbnail_alpha_range) * 255 + self._thumbnail_alpha_range * self._avg_lightness(thumbnail)
+        thumbnail_alpha = round(self._thumbnail_alpha_multiplier * (255 - lightness_range))
+
         # If we want a rounded thumbnail, draw a rounded-corner mask and use it to make the image transparent
         if self._thumbnail_corner_radius > 0:
             corner_mask = Image.new('L', thumbnail.size, color=0)
@@ -210,13 +219,19 @@ class MediaWidget(BaseWidget):
 
             # If controls left, make right corners round and vice versa
             corners = (False, True, True, False) if self._controls_left else (True, False, False, True)
-            painter.rounded_rectangle([0, 0, thumbnail.width - 1, thumbnail.height - 1], self._thumbnail_corner_radius,
-                                      self._thumbnail_alpha, None, 0, corners=corners)
+
+            # Paint alpha
+            painter.rounded_rectangle([0, 0, thumbnail.width - 1, thumbnail.height - 1], self._thumbnail_corner_radius, thumbnail_alpha, None, 0, corners=corners)
             thumbnail.putalpha(corner_mask)
         else:
-            thumbnail.putalpha(self._thumbnail_alpha)
+            thumbnail.putalpha(thumbnail_alpha)
 
         return thumbnail
+
+    @staticmethod
+    def _avg_lightness(im):
+        im_l = im.convert('L')
+        return sum(im_l.getdata()) / ImageStat.Stat(im_l).count[0]
 
     def _format_max_field_size(self, text: str):
         max_field_size = self._max_field_size['label_alt' if self._show_alt_label else 'label']

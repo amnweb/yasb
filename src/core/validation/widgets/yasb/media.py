@@ -1,22 +1,11 @@
-DEFAULTS = {
-    'label': '\uf017 {%H:%M:%S}',
-    'label_alt': '\uf017 {%d-%m-%y %H:%M:%S}',
-    'update_interval': 1000,
-    'callbacks': {
-        'on_left': 'toggle_label',
-        'on_middle': 'do_nothing',
-        'on_right': 'do_nothing'
-    }
-}
-
 VALIDATION_SCHEMA = {
-    'label': {
+    'label_main': {
         'type': 'string',
-        'default': DEFAULTS['label']
+        'default': '{title}'
     },
-    'label_alt': {
+    'label_sub': {
         'type': 'string',
-        'default': DEFAULTS['label_alt']
+        'default': '{artist}'
     },
     'hide_empty': {
         'type': 'boolean',
@@ -33,18 +22,22 @@ VALIDATION_SCHEMA = {
         'schema': {
             'on_left': {
                 'type': 'string',
-                'default': DEFAULTS['callbacks']['on_left'],
+                'default': 'do_nothing',
             },
             'on_middle': {
                 'type': 'string',
-                'default': DEFAULTS['callbacks']['on_middle'],
+                'default': 'do_nothing',
             },
             'on_right': {
                 'type': 'string',
-                'default': DEFAULTS['callbacks']['on_right'],
+                'default': 'do_nothing',
             }
         },
-        'default': DEFAULTS['callbacks']
+        'default': {
+            'on_left': 'do_nothing',
+            'on_middle': 'do_nothing',
+            'on_right': 'do_nothing'
+        }
     },
     'max_field_size': {
         'type': 'dict',
@@ -75,12 +68,17 @@ VALIDATION_SCHEMA = {
         'type': 'boolean',
         'default': True
     },
-    'thumbnail_alpha': {
-        'type': 'integer',
-        'default': 50,
-        'min': 0,
-        'max': 255
+    'thumbnail_alpha_range': {
+        'type': 'float',
+        'default': 0.75,
+        'min': 0.0,
+        'max': 1.0
     },
+    'thumbnail_alpha_multiplier': {
+        'type': 'float',
+        'default': 0.8,
+        'min': 0.0,
+        'max': 1.0},
     'thumbnail_padding': {
         'type': 'integer',
         'default': 8,
