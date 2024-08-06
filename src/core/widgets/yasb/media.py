@@ -209,8 +209,8 @@ class MediaWidget(BaseWidget):
         thumbnail = thumbnail.crop((0, y1, thumbnail.width, y1 + new_h))
 
         # Calculate lightness to scale alpha
-        lightness_range = (1.0 - self._thumbnail_alpha_range) * 255 + self._thumbnail_alpha_range * self._avg_lightness(thumbnail)
-        thumbnail_alpha = round(self._thumbnail_alpha_multiplier * (255 - lightness_range))
+        thumbnail_alpha = (1.0 - self._thumbnail_alpha_range) * 255 + self._thumbnail_alpha_range * (255 - self._avg_lightness(thumbnail))
+        thumbnail_alpha = round(self._thumbnail_alpha_multiplier * thumbnail_alpha)
 
         # If we want a rounded thumbnail, draw a rounded-corner mask and use it to make the image transparent
         if self._thumbnail_corner_radius > 0:

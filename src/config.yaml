@@ -68,8 +68,8 @@ widgets:
       controls_only: false
       controls_left: false
       hide_empty: true
-      thumbnail_alpha_range: 0.75 # Range in which image lightness controls alpha. At 0, alpha fully controlled by multiplier
-      thumbnail_alpha_multiplier: 0.8 # Scales the thumbnail alpha as a whole (after lightness calculation)
+      thumbnail_alpha_range: 1.0 # How much of the alpha range depends on lightness. If 0, alpha fully determined by multiplier
+      thumbnail_alpha_multiplier: 0.6 # Scales the thumbnail alpha as a whole (after lightness calculation)
       thumbnail_padding: 8
       thumbnail_corner_radius: 16 # Set to 0 for square corners
       icons:

@@ -70,13 +70,13 @@ VALIDATION_SCHEMA = {
     },
     'thumbnail_alpha_range': {
         'type': 'float',
-        'default': 0.75,
+        'default': 1.0,
         'min': 0.0,
         'max': 1.0
     },
     'thumbnail_alpha_multiplier': {
         'type': 'float',
-        'default': 0.8,
+        'default': 0.6,
         'min': 0.0,
         'max': 1.0},
     'thumbnail_padding': {
