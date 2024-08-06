@@ -89,15 +89,15 @@
 	font-size: 16px;
     background-color: transparent;
 	margin: 0 4px 0 4px;
-	color: #afbbca;
+	color: #95a0ad;
 }
 .komorebi-workspaces .ws-btn.populated {
-	background-color: #b0c3da;
+	color: #a0c3ee;
 }
 .komorebi-workspaces .ws-btn:hover,
 .komorebi-workspaces .ws-btn.populated:hover,
 .komorebi-workspaces .ws-btn.active {
-	background-color: #fff;
+	color: #c2daf7;
 }
 /* .komorebi-workspaces .ws-btn {
 	border-radius: 5px;
