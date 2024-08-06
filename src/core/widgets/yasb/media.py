@@ -101,11 +101,6 @@ class MediaWidget(BaseWidget):
         self._last_artist = None
         self._last_thumbnail = None
 
-    def start_timer(self):
-        if self.timer_interval and self.timer_interval > 0:
-            self.timer.timeout.connect(self._timer_callback)
-            self.timer.start(self.timer_interval)
-
     @asyncSlot()
     async def _update_label(self):
         text_labels = [self._main_text_label, self._sub_text_label]
