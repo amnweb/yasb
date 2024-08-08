@@ -18,4 +18,4 @@ def init_logger():
     )
 
     logging.getLogger().addHandler(logging.StreamHandler())
-    logging.info(f"\033[92m{APP_NAME} - Reborn\033[0m")
+    logging.info(f"{APP_NAME}")
