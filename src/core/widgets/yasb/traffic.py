@@ -60,37 +60,6 @@ class TrafficWidget(BaseWidget):
             widget.setVisible(self._show_alt_label)
         self._update_label()
         
-    def _create_dynamically_label(self, content: str, content_alt: str):
-        def process_content(content, is_alt=False):
-            label_parts = re.split('(<span.*?>.*?</span>)', content)
-            label_parts = [part for part in label_parts if part]
-            widgets = []
-            for part in label_parts:
-                part = part.strip()  # Remove any leading/trailing whitespace
-                if not part:
-                    continue
-                if '<span' in part and '</span>' in part:
-                    class_name = re.search(r'class=(["\'])([^"\']+?)\1', part)
-                    class_result = class_name.group(2) if class_name else 'icon'
-                    icon = re.sub(r'<span.*?>|</span>', '', part).strip()
-                    label = QLabel(icon)
-                    label.setProperty("class", class_result)
-                else:
-                    label = QLabel(part)
-                    label.setProperty("class", "label")
-                    label.setText("Loading")
-                label.setAlignment(Qt.AlignmentFlag.AlignCenter)    
-                self._widget_container_layout.addWidget(label)
-                widgets.append(label)
-                if is_alt:
-                    label.hide()
-                else:
-                    label.show()
-            return widgets
-        self._widgets = process_content(content)
-        self._widgets_alt = process_content(content_alt, is_alt=True)
-               
-
     def _update_label(self):
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
         active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
@@ -119,11 +88,7 @@ class TrafficWidget(BaseWidget):
                     active_widgets[widget_index].setText(part)
                 widget_index += 1
         
-                            
 
-
-        
-        
     def _get_speed(self) -> list[str]:
         current_io = psutil.net_io_counters()
         upload_diff = current_io.bytes_sent - self.bytes_sent

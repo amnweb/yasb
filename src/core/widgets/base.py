@@ -1,7 +1,7 @@
 import logging
 import re
 import subprocess
-from PyQt6.QtWidgets import QWidget, QHBoxLayout, QFrame
+from PyQt6.QtWidgets import QWidget, QHBoxLayout, QFrame, QLabel
 from PyQt6.QtGui import QMouseEvent
 from PyQt6.QtCore import QTimer, QThread, Qt
 from typing import Union
@@ -62,7 +62,7 @@ class BaseWidget(QWidget):
             self.timer.timeout.connect(self._timer_callback)
             self.timer.start(self.timer_interval)
 
-        self.timer.singleShot(0, self._timer_callback)
+        self.timer.singleShot(5000, self._timer_callback)
 
     def _handle_mouse_events(self, event: QMouseEvent):
         if event.button() == Qt.MouseButton.LeftButton:
@@ -97,3 +97,35 @@ class BaseWidget(QWidget):
 
     def _cb_do_nothing(self):
         pass
+
+    def _create_dynamically_label(self, content: str, content_alt: str):
+        def process_content(content, is_alt=False):
+            label_parts = re.split('(<span.*?>.*?</span>)', content)
+            label_parts = [part for part in label_parts if part]
+            widgets = []
+            for part in label_parts:
+                part = part.strip()  # Remove any leading/trailing whitespace
+                if not part:
+                    continue
+                if '<span' in part and '</span>' in part:
+                    class_name = re.search(r'class=(["\'])([^"\']+?)\1', part)
+                    class_result = class_name.group(2) if class_name else 'icon'
+                    icon = re.sub(r'<span.*?>|</span>', '', part).strip()
+                    label = QLabel(icon)
+                    label.setProperty("class", class_result)
+                    label.hide()
+                else:
+                    label = QLabel(part)
+                    label.setProperty("class", "label")
+                label.setText("Loading")
+                label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                self._widget_container_layout.addWidget(label)
+                widgets.append(label)
+                if is_alt:
+                    label.hide()
+                else:
+                    label.show()
+            return widgets
+
+        self._widgets = process_content(content)
+        self._widgets_alt = process_content(content_alt, is_alt=True)
