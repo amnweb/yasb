@@ -8,13 +8,13 @@ DEFAULTS = {
         'on_right': 'do_nothing'
     },
     'wifi_icons': [
-        "\ueb5e",  # Icon for 0% strength
-        "\ue872",  # Icon for 1-25% strength
-        "\ue873",  # Icon for 26-50% strength
-        "\ue874",  # Icon for 51-75% strength
-        "\ue701"   # Icon for 76-100% strength
+        "\udb82\udd2e",  # Icon for 0% strength
+        "\udb82\udd1f",  # Icon for 1-25% strength
+        "\udb82\udd22",  # Icon for 26-50% strength
+        "\udb82\udd25",  # Icon for 51-75% strength
+        "\udb82\udd28"   # Icon for 76-100% strength
     ],
-    'ethernet_icon': "\ue839"
+    'ethernet_icon': "\uef44"
 }
 
 VALIDATION_SCHEMA = {
