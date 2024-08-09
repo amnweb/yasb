@@ -49,7 +49,8 @@ class WindowsMedia(metaclass=Singleton):
         self._timeline_info_lock = threading.RLock()
         self._timeline_info = None
 
-        self._subscription_channels = {channel: [] for channel in ['media_info', 'playback_info', 'timeline_info']}
+        self._subscription_channels = {channel: [] for channel in ['media_info', 'playback_info', 'timeline_info',
+                                                                   'session_status']}
         self._subscription_channels_lock = threading.RLock()
 
         self._run_setup()
@@ -78,22 +79,25 @@ class WindowsMedia(metaclass=Singleton):
         with self._current_session_lock:
             self._current_session = manager.get_current_session()
 
-            if self._current_session is None:
-                logging.debug('Current session is none')
-                # if not is_setup:
-                #     self._on_media_properties_changed(self._current_session, None)
-                return
+            if self._current_session is not None:
+                logging.debug('Current session is not none. Registering callbacks')
+                # If the current session is not None, register callbacks
+                self._current_session.add_playback_info_changed(self._on_playback_info_changed)
+                self._current_session.add_timeline_properties_changed(self._on_timeline_properties_changed)
+                self._current_session.add_media_properties_changed(self._on_media_properties_changed)
 
-            logging.debug('Current session is not none. Registering callbacks')
-            # If the current session is not None, register callbacks
-            self._current_session.add_playback_info_changed(self._on_playback_info_changed)
-            self._current_session.add_timeline_properties_changed(self._on_timeline_properties_changed)
-            self._current_session.add_media_properties_changed(self._on_media_properties_changed)
+                if not is_setup:
+                    self._on_playback_info_changed(self._current_session, None)
+                    self._on_timeline_properties_changed(self._current_session, None)
+                    self._on_media_properties_changed(self._current_session, None)
 
-            if not is_setup:
-                self._on_playback_info_changed(self._current_session, None)
-                self._on_timeline_properties_changed(self._current_session, None)
-                self._on_media_properties_changed(self._current_session, None)
+            # Get subscribers
+            with self._subscription_channels_lock:
+                callbacks = self._subscription_channels['session_status']
+
+            for callback in callbacks:
+                callback(self._current_session is not None)
+
             # TODO remove handlers when we quit the app
 
     def _on_playback_info_changed(self, session: Session, args: PlaybackInfoChangedEventArgs):
@@ -134,7 +138,8 @@ class WindowsMedia(metaclass=Singleton):
 
             media_info = self._properties_2_dict(media_info)
 
-            # Skip initial change calls where the thumbnail is None. This prevents processing multiple updates. Might prevent showing info for no-thumbnail media
+            # Skip initial change calls where the thumbnail is None. This prevents processing multiple updates.
+            # Might prevent showing info for no-thumbnail media
             if media_info['thumbnail'] is None:
                 logging.debug('Skipping media info update: no thumbnail')
                 return
