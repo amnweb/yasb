@@ -62,7 +62,7 @@ class BaseWidget(QWidget):
             self.timer.timeout.connect(self._timer_callback)
             self.timer.start(self.timer_interval)
 
-        self.timer.singleShot(5000, self._timer_callback)
+        self.timer.singleShot(0, self._timer_callback)
 
     def _handle_mouse_events(self, event: QMouseEvent):
         if event.button() == Qt.MouseButton.LeftButton:
