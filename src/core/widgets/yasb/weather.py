@@ -90,7 +90,7 @@ class WeatherWidget(BaseWidget):
                 else:
                     label = QLabel(part)
                     label.setProperty("class", "label")
-                    label.setText("weather update...")
+                    label.setText("Loading")
                 label.setAlignment(Qt.AlignmentFlag.AlignCenter)    
                 self._widget_container_layout.addWidget(label)
                 widgets.append(label)
