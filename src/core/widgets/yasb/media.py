@@ -104,11 +104,8 @@ class MediaWidget(BaseWidget):
         self._label_alt.hide()
         self._show_alt_label = False
 
-
-    def start_timer(self):
-        if self.timer_interval and self.timer_interval > 0:
-            self.timer.timeout.connect(self._timer_callback)
-            self.timer.start(self.timer_interval)
+        # Force media update to detect running session
+        self.timer.singleShot(0, self.media.force_update)
 
     def _toggle_label(self):
         self._show_alt_label = not self._show_alt_label
@@ -120,8 +117,8 @@ class MediaWidget(BaseWidget):
             self._label.show()
             self._label_alt.hide()
 
-        # TODO restore toggle?
-        # self._update_label()
+        # Force an update on the media info when toggling the label
+        self.media.force_update()
 
     @QtCore.pyqtSlot(bool)
     def _on_session_status_changed(self, has_session: bool):

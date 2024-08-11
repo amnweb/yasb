@@ -56,6 +56,9 @@ class WindowsMedia(metaclass=Singleton):
 
         self._run_setup()
 
+    def force_update(self):
+        self._on_current_session_changed(self._session_manager, None)
+
     def subscribe(self, callback: Callable, channel: str):
         with self._subscription_channels_lock:
             try:
@@ -141,7 +144,13 @@ class WindowsMedia(metaclass=Singleton):
 
     def _on_media_properties_changed(self, session: Session, args: MediaPropertiesChangedEventArgs):
         logging.debug('Callback: _on_media_properties_changed')
-        self._event_loop.run_until_complete(self._update_media_properties(session))
+        try:
+            asyncio.get_event_loop()
+        except RuntimeError:
+            self._event_loop.run_until_complete(self._update_media_properties(session))
+        else:
+            # Only for the initial timer based update, because it is called from an event loop
+            asyncio.create_task(self._update_media_properties(session))
 
     async def _update_media_properties(self, session: Session):
         logging.debug('Attempting media info update')
