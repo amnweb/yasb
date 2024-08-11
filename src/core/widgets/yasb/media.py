@@ -186,7 +186,7 @@ class MediaWidget(BaseWidget):
                 pixmap = QPixmap.fromImage(ImageQt(thumbnail))
                 self._thumbnail_label.setPixmap(pixmap)
         except Exception as e:
-            logging.error(f'Error setting thumbnail: {e}')
+            logging.error(f'MediaWidget: Error setting thumbnail: {e}')
             self._thumbnail_label.hide()
         else:
             self._thumbnail_label.show()

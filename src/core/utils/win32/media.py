@@ -82,14 +82,12 @@ class WindowsMedia(metaclass=Singleton):
             session.remove_playback_info_changed(self._registration_tokens['playback_info'])
 
     def _register_session_callbacks(self):
-        logging.debug('Registering callbacks')
         with self._current_session_lock:
             self._registration_tokens['playback_info'] = self._current_session.add_playback_info_changed(self._on_playback_info_changed)
             self._registration_tokens['timeline_info'] = self._current_session.add_timeline_properties_changed(self._on_timeline_properties_changed)
             self._registration_tokens['media_info'] = self._current_session.add_media_properties_changed(self._on_media_properties_changed)
 
     async def _get_session_manager(self):
-        self._log.debug('Get session manager')
         return await SessionManager.request_async()
 
     def _run_setup(self):
@@ -100,13 +98,12 @@ class WindowsMedia(metaclass=Singleton):
         self._on_current_session_changed(self._session_manager, None, is_setup=True)
 
     def _on_current_session_changed(self, manager: SessionManager, args: SessionsChangedEventArgs, is_setup=False):
-        logging.debug('Callback: _on_current_session_changed')
+        self._log.debug('MediaCallback: _on_current_session_changed')
 
         with self._current_session_lock:
             self._current_session = manager.get_current_session()
 
             if self._current_session is not None:
-                logging.debug('Current session is not none')
 
                 # If the current session is not None, register callbacks
                 self._register_session_callbacks()
@@ -124,7 +121,7 @@ class WindowsMedia(metaclass=Singleton):
                 callback(self._current_session is not None)
 
     def _on_playback_info_changed(self, session: Session, args: PlaybackInfoChangedEventArgs):
-        logging.info('Callback: _on_playback_info_changed')
+        self._log.info('MediaCallback: _on_playback_info_changed')
         with self._playback_info_lock:
             self._playback_info = session.get_playback_info()
 
@@ -137,7 +134,7 @@ class WindowsMedia(metaclass=Singleton):
                 callback(self._playback_info)
 
     def _on_timeline_properties_changed(self, session: Session, args: TimelinePropertiesChangedEventArgs):
-        logging.info('Callback: _on_timeline_properties_changed')
+        self._log.info('MediaCallback: _on_timeline_properties_changed')
         with self._timeline_info_lock:
             self._timeline_info = session.get_timeline_properties()
 
@@ -150,7 +147,7 @@ class WindowsMedia(metaclass=Singleton):
                 callback(self._timeline_info)
 
     def _on_media_properties_changed(self, session: Session, args: MediaPropertiesChangedEventArgs):
-        logging.debug('Callback: _on_media_properties_changed')
+        self._log.debug('MediaCallback: _on_media_properties_changed')
         try:
             asyncio.get_event_loop()
         except RuntimeError:
@@ -161,7 +158,7 @@ class WindowsMedia(metaclass=Singleton):
             asyncio.create_task(self._update_media_properties(session))
 
     async def _update_media_properties(self, session: Session):
-        logging.debug('Attempting media info update')
+        self._log.debug('MediaCallback: Attempting media info update')
 
         try:
             media_info = await session.try_get_media_properties_async()
@@ -171,12 +168,12 @@ class WindowsMedia(metaclass=Singleton):
             # Skip initial change calls where the thumbnail is None. This prevents processing multiple updates.
             # Might prevent showing info for no-thumbnail media
             if media_info['thumbnail'] is None:
-                logging.debug('Skipping media info update: no thumbnail')
+                self._log.debug('MediaCallback: Skipping media info update: no thumbnail')
                 return
 
             media_info['thumbnail'] = await self.get_thumbnail(media_info['thumbnail'])
         except Exception as e:
-            logging.error(f'Error occurred whilst fetching media properties and thumbnail: {e}')
+            self._log.error(f'MediaCallback: Error occurred whilst fetching media properties and thumbnail: {e}')
             return
 
         self._media_info = media_info
@@ -189,7 +186,7 @@ class WindowsMedia(metaclass=Singleton):
         for callback in callbacks:
             callback(self._media_info)
 
-        logging.debug('Media info update successful')
+        self._log.debug('MediaCallback: Media info update finished')
 
     @staticmethod
     def _properties_2_dict(obj) -> dict[str, Any]:
@@ -203,7 +200,6 @@ class WindowsMedia(metaclass=Singleton):
         :return: Loaded thumbnail
         """
         # Read the stream into the buffer
-        logging.debug('Open thumbnail stream')
         readable_stream = await thumbnail_stream_reference.open_read_async()
         try:
             # Create buffer of stream size
@@ -220,10 +216,9 @@ class WindowsMedia(metaclass=Singleton):
 
             return pillow_image
         except Exception as e:
-            logging.error(f'Error occurred when loading the thumbnail: {e}')
+            logging.error(f'get_thumbnail(): Error occurred when loading the thumbnail: {e}')
             return None
         finally:
-            logging.debug('Closing thumbnail stream')
             # Close the stream
             readable_stream.close()
 
