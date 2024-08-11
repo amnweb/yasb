@@ -180,11 +180,16 @@ class MediaWidget(BaseWidget):
             return
 
         # Only update the thumbnail if the title/artist changes or if we did a toggle (resize)
-        if media_info['thumbnail'] is not None:
+        try:
+            if media_info['thumbnail'] is not None:
+                thumbnail = self._crop_thumbnail(media_info['thumbnail'], active_label.sizeHint().width())
+                pixmap = QPixmap.fromImage(ImageQt(thumbnail))
+                self._thumbnail_label.setPixmap(pixmap)
+        except Exception as e:
+            logging.error(f'Error setting thumbnail: {e}')
+            self._thumbnail_label.hide()
+        else:
             self._thumbnail_label.show()
-            thumbnail = self._crop_thumbnail(media_info['thumbnail'], active_label.sizeHint().width())
-            pixmap = QPixmap.fromImage(ImageQt(thumbnail))
-            self._thumbnail_label.setPixmap(pixmap)
 
     def _crop_thumbnail(self, thumbnail: Image, active_label_width: int) -> Image:
         # Scale image with 1:1 ratio to fit width of widget

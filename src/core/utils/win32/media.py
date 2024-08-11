@@ -81,6 +81,13 @@ class WindowsMedia(metaclass=Singleton):
             session.remove_timeline_properties_changed(self._registration_tokens['timeline_info'])
             session.remove_playback_info_changed(self._registration_tokens['playback_info'])
 
+    def _register_session_callbacks(self):
+        logging.debug('Registering callbacks')
+        with self._current_session_lock:
+            self._registration_tokens['playback_info'] = self._current_session.add_playback_info_changed(self._on_playback_info_changed)
+            self._registration_tokens['timeline_info'] = self._current_session.add_timeline_properties_changed(self._on_timeline_properties_changed)
+            self._registration_tokens['media_info'] = self._current_session.add_media_properties_changed(self._on_media_properties_changed)
+
     async def _get_session_manager(self):
         self._log.debug('Get session manager')
         return await SessionManager.request_async()
@@ -94,15 +101,15 @@ class WindowsMedia(metaclass=Singleton):
 
     def _on_current_session_changed(self, manager: SessionManager, args: SessionsChangedEventArgs, is_setup=False):
         logging.debug('Callback: _on_current_session_changed')
+
         with self._current_session_lock:
             self._current_session = manager.get_current_session()
 
             if self._current_session is not None:
-                logging.debug('Current session is not none. Registering callbacks')
+                logging.debug('Current session is not none')
+
                 # If the current session is not None, register callbacks
-                self._registration_tokens['playback_info'] = self._current_session.add_playback_info_changed(self._on_playback_info_changed)
-                self._registration_tokens['timeline_info'] = self._current_session.add_timeline_properties_changed(self._on_timeline_properties_changed)
-                self._registration_tokens['media_info'] = self._current_session.add_media_properties_changed(self._on_media_properties_changed)
+                self._register_session_callbacks()
 
                 if not is_setup:
                     self._on_playback_info_changed(self._current_session, None)
@@ -147,7 +154,8 @@ class WindowsMedia(metaclass=Singleton):
         try:
             asyncio.get_event_loop()
         except RuntimeError:
-            self._event_loop.run_until_complete(self._update_media_properties(session))
+            with self._media_info_lock:
+                self._event_loop.run_until_complete(self._update_media_properties(session))
         else:
             # Only for the initial timer based update, because it is called from an event loop
             asyncio.create_task(self._update_media_properties(session))
@@ -171,18 +179,17 @@ class WindowsMedia(metaclass=Singleton):
             logging.error(f'Error occurred whilst fetching media properties and thumbnail: {e}')
             return
 
-        with self._media_info_lock:
-            self._media_info = media_info
+        self._media_info = media_info
 
-            # Get subscribers
-            with self._subscription_channels_lock:
-                callbacks = self._subscription_channels['media_info']
+        # Get subscribers
+        with self._subscription_channels_lock:
+            callbacks = self._subscription_channels['media_info']
 
-            # Perform callbacks
-            for callback in callbacks:
-                callback(self._media_info)
+        # Perform callbacks
+        for callback in callbacks:
+            callback(self._media_info)
 
-            logging.debug('Media info update successful')
+        logging.debug('Media info update successful')
 
     @staticmethod
     def _properties_2_dict(obj) -> dict[str, Any]:
