@@ -1,13 +1,15 @@
 import logging
-import time
+from typing import Any, Optional
 
 from PIL import Image
 from PIL.ImageDraw import ImageDraw
 from PIL.ImageQt import QPixmap
+from PyQt6 import QtCore
 from PyQt6.QtCore import Qt
-from qasync import asyncSlot
 from PIL.ImageQt import ImageQt
-from core.utils.win32.media import MediaOperations
+from winsdk.windows.media.control import GlobalSystemMediaTransportControlsSessionPlaybackInfo
+
+from core.utils.win32.media import WindowsMedia
 from core.widgets.base import BaseWidget
 from core.validation.widgets.yasb.media import VALIDATION_SCHEMA
 from PyQt6.QtWidgets import QLabel, QGridLayout, QHBoxLayout, QWidget
@@ -16,6 +18,10 @@ from core.widgets.yasb.applications import ClickableLabel
 
 class MediaWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
+
+    _playback_info_signal = QtCore.pyqtSignal(GlobalSystemMediaTransportControlsSessionPlaybackInfo)
+    _media_info_signal = QtCore.pyqtSignal(object)
+    _session_status_signal = QtCore.pyqtSignal(bool)
 
     def __init__(self, label: str, label_alt: str, hide_empty:bool, update_interval: int, callbacks: dict[str, str],
                  max_field_size: dict[str, int], show_thumbnail: bool, controls_only: bool, controls_left: bool,
@@ -76,12 +82,20 @@ class MediaWidget(BaseWidget):
         self.thumbnail_box.addWidget(self._label, 0, 0)
         self.thumbnail_box.addWidget(self._label_alt, 0, 0)
 
-        self.register_callback("update_label", self._update_label)
+        # Get media manager
+        self.media = WindowsMedia()
+
+        # Set configure signals and register them als callbacks
+        self._playback_info_signal.connect(self._on_playback_info_changed)
+        self.media.subscribe(lambda playback_info: self._playback_info_signal.emit(playback_info), 'playback_info')
+        self._media_info_signal.connect(self._on_media_properties_changed)
+        self.media.subscribe(lambda media_info: self._media_info_signal.emit(media_info), 'media_info')
+        self._session_status_signal.connect(self._on_session_status_changed)
+        self.media.subscribe(lambda session_status: self._session_status_signal.emit(session_status), 'session_status')
 
         self.callback_left = callbacks['on_left']
         self.callback_right = callbacks['on_right']
         self.callback_middle = callbacks['on_middle']
-        self.callback_timer = "update_label"
 
         if not self._controls_only:
             self.register_callback("toggle_label", self._toggle_label)
@@ -90,15 +104,8 @@ class MediaWidget(BaseWidget):
         self._label_alt.hide()
         self._show_alt_label = False
 
-        self.start_timer()
-
-        self._last_title = None
-        self._last_artist = None
-
-    def start_timer(self):
-        if self.timer_interval and self.timer_interval > 0:
-            self.timer.timeout.connect(self._timer_callback)
-            self.timer.start(self.timer_interval)
+        # Force media update to detect running session
+        self.timer.singleShot(0, self.media.force_update)
 
     def _toggle_label(self):
         self._show_alt_label = not self._show_alt_label
@@ -110,62 +117,55 @@ class MediaWidget(BaseWidget):
             self._label.show()
             self._label_alt.hide()
 
-        # Clearing last title/artist field to make thumbnail update
-        self._last_title = None
-        self._last_artist = None
+        # Force an update on the media info when toggling the label
+        self.media.force_update()
 
-        self._update_label()
-
-    @asyncSlot()
-    async def _update_label(self):
+    @QtCore.pyqtSlot(bool)
+    def _on_session_status_changed(self, has_session: bool):
         active_label = self._label_alt if self._show_alt_label else self._label
-        active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
 
-        try:
-            media_info = await MediaOperations.get_media_properties()
-        except Exception as e:
-            logging.error(f"Error fetching media properties: {e}")
-            return  # Exit early if there's an error
+        if has_session:
+            # If media is not None, we show the frame
+            self._widget_frame.show()
 
-        # If no media is playing, set disable class on all buttons
-        # Give next/previous buttons a different css class based on whether they are available
-        disabled_if = lambda disabled: "disabled" if disabled else ""
-        self._prev_label.setProperty("class", f"btn prev {disabled_if(media_info is None or not media_info['prev_available'])}")
-        self._play_label.setProperty("class", f"btn play {disabled_if(media_info is None)}")
-        self._next_label.setProperty("class", f"btn next {disabled_if(media_info is None or not media_info['next_available'])}")
+            # If we do not only have controls, make sure the label is shown
+            if not self._controls_only:
+                active_label.show()
 
-        # Refresh style sheets
-        self._prev_label.setStyleSheet('')
-        self._play_label.setStyleSheet('')
-        self._next_label.setStyleSheet('')
-
-        # If nothing playing, hide thumbnail and empty text, stop here
-        if media_info is None:
+        else:
             # Hide thumbnail and label fields
             self._thumbnail_label.hide()
             active_label.hide()
             active_label.setText('')
             self._play_label.setText(self._media_button_icons['play'])
 
+            # If we want to hide the widget when no music is playing, hide it!
             if self._hide_empty:
                 self._widget_frame.hide()
 
-            self._last_title = None
-            self._last_artist = None
-            return
+    @QtCore.pyqtSlot(GlobalSystemMediaTransportControlsSessionPlaybackInfo)
+    def _on_playback_info_changed(self, playback_info: GlobalSystemMediaTransportControlsSessionPlaybackInfo):
+        # Set play-pause state icon
+        self._play_label.setText(self._media_button_icons['pause' if playback_info.playback_status == 4 else 'play'])
 
-        # Change icon based on if song is playing
-        self._play_label.setText(self._media_button_icons['pause' if media_info['playing'] else 'play'])
+        enabled_if = lambda enabled: "disabled" if not enabled else ""
+        self._prev_label.setProperty("class", f"btn prev {enabled_if(playback_info.controls.is_previous_enabled)}")
+        self._play_label.setProperty("class", f"btn play {enabled_if(playback_info.controls.is_play_pause_toggle_enabled)}")
+        self._next_label.setProperty("class", f"btn next {enabled_if(playback_info.controls.is_next_enabled)}")
 
-        # If media is not None, we show the frame
-        self._widget_frame.show()
+        # Refresh style sheets
+        self._prev_label.setStyleSheet('')
+        self._play_label.setStyleSheet('')
+        self._next_label.setStyleSheet('')
+
+    @QtCore.pyqtSlot(object) # None or dict
+    def _on_media_properties_changed(self, media_info: Optional[dict[str, Any]]):
+        active_label = self._label_alt if self._show_alt_label else self._label
+        active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
 
         # If we only have controls, stop update here
         if self._controls_only:
             return
-
-        # If we are playing, make sure the label field is showing
-        active_label.show()
 
         # Shorten fields if necessary with ...
         media_info = {k: self._format_max_field_size(v) if isinstance(v, str) else v for k, v in
@@ -180,17 +180,16 @@ class MediaWidget(BaseWidget):
             return
 
         # Only update the thumbnail if the title/artist changes or if we did a toggle (resize)
-        if not (self._last_title == media_info['title'] and self._last_artist == media_info['artist']):
+        try:
             if media_info['thumbnail'] is not None:
-                self._thumbnail_label.show()
-                self._last_title = media_info['title']
-                self._last_artist = media_info['artist']
-
-                thumbnail = await MediaOperations.get_thumbnail(media_info['thumbnail'])
-                thumbnail = self._crop_thumbnail(thumbnail, active_label.sizeHint().width())
+                thumbnail = self._crop_thumbnail(media_info['thumbnail'], active_label.sizeHint().width())
                 pixmap = QPixmap.fromImage(ImageQt(thumbnail))
-
                 self._thumbnail_label.setPixmap(pixmap)
+        except Exception as e:
+            logging.error(f'MediaWidget: Error setting thumbnail: {e}')
+            self._thumbnail_label.hide()
+        else:
+            self._thumbnail_label.show()
 
     def _crop_thumbnail(self, thumbnail: Image, active_label_width: int) -> Image:
         # Scale image with 1:1 ratio to fit width of widget
@@ -234,15 +233,13 @@ class MediaWidget(BaseWidget):
         return label
 
     def _create_media_buttons(self):
-        return self._create_media_button(self._media_button_icons['prev_track'],
-                                         MediaOperations.prev), self._create_media_button(
-            self._media_button_icons['play'], MediaOperations.play_pause), self._create_media_button(
-            self._media_button_icons['next_track'], MediaOperations.next)
+        return (self._create_media_button(self._media_button_icons['prev_track'], WindowsMedia.prev),
+                self._create_media_button(
+            self._media_button_icons['play'], WindowsMedia.play_pause), self._create_media_button(
+            self._media_button_icons['next_track'], WindowsMedia.next))
 
     def execute_code(self, func):
         try:
             func()
-            time.sleep(0.1)
-            self._update_label()
         except Exception as e:
             logging.error(f"Error executing code: {e}")

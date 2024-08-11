@@ -12,6 +12,8 @@ from core.event_service import EventService
 from core.config import get_stylesheet, get_config
 from copy import deepcopy
 
+from core.utils.win32.media import WindowsMedia
+
 
 class BarManager(QObject):
     styles_modified = pyqtSignal()
@@ -91,6 +93,8 @@ class BarManager(QObject):
         tasks = asyncio.all_tasks()
         for t in tasks:
             t.cancel()
+
+        WindowsMedia().stop()
 
         for bar in self.bars:
             bar.close()

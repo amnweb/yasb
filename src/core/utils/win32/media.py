@@ -1,14 +1,21 @@
-# media.py
 import ctypes
 import logging
-from typing import Dict, Union, Optional
+from typing import Any, Callable
 
-import winsdk.windows.media.control
+import asyncio
+
+import threading
 from winsdk.windows.storage.streams import Buffer, InputStreamOptions, IRandomAccessStreamReference
 from PIL import Image, ImageFile
 import io
 
+from core.utils.utilities import Singleton
 from core.utils.win32.system_function import KEYEVENTF_EXTENDEDKEY, KEYEVENTF_KEYUP
+
+from winsdk.windows.media.control import (GlobalSystemMediaTransportControlsSessionManager as SessionManager,
+                                          GlobalSystemMediaTransportControlsSession as Session,
+                                          SessionsChangedEventArgs, MediaPropertiesChangedEventArgs,
+                                          TimelinePropertiesChangedEventArgs, PlaybackInfoChangedEventArgs)
 
 VK_MEDIA_PLAY_PAUSE = 0xB3
 VK_MEDIA_PREV_TRACK = 0xB1
@@ -19,7 +26,171 @@ pil_logger = logging.getLogger('PIL')
 pil_logger.setLevel(logging.INFO)
 
 
-class MediaOperations:
+class WindowsMedia(metaclass=Singleton):
+    """
+    Use double thread for media info because I expect subscribers to take some time, and I don't know if holding up the callback from windsdk is a problem.
+    To also not create and manage too many threads, I made the others direct callbacks
+    """
+
+    def __init__(self):
+        self._log = logging.getLogger(__name__)
+        self._session_manager: SessionManager = None
+        self._current_session: Session = None
+        self._current_session_lock = threading.RLock()
+
+        self._event_loop = asyncio.new_event_loop()
+
+        self._media_info_lock = threading.RLock()
+        self._media_info = None
+
+        self._playback_info_lock = threading.RLock()
+        self._playback_info = None
+
+        self._timeline_info_lock = threading.RLock()
+        self._timeline_info = None
+
+        self._subscription_channels = {channel: [] for channel in ['media_info', 'playback_info', 'timeline_info',
+                                                                   'session_status']}
+        self._subscription_channels_lock = threading.RLock()
+        self._registration_tokens = {}
+
+        self._run_setup()
+
+    def force_update(self):
+        self._on_current_session_changed(self._session_manager, None)
+
+    def subscribe(self, callback: Callable, channel: str):
+        with self._subscription_channels_lock:
+            try:
+                self._subscription_channels[channel].append(callback)
+            except KeyError:
+                raise ValueError(f'Incorrect channel subscription type provided ({channel}). '
+                                 f'Valid options are {list(self._subscription_channels.keys())}')
+
+    def stop(self):
+        # Clear subscriptions
+        with self._subscription_channels_lock:
+            self._subscription_channels = {k: [] for k in self._subscription_channels.keys()}
+
+        with self._current_session_lock:
+            session = self._current_session
+
+        # Remove all our subscriptions
+        if session is not None:
+            session.remove_media_properties_changed(self._registration_tokens['media_info'])
+            session.remove_timeline_properties_changed(self._registration_tokens['timeline_info'])
+            session.remove_playback_info_changed(self._registration_tokens['playback_info'])
+
+    def _register_session_callbacks(self):
+        with self._current_session_lock:
+            self._registration_tokens['playback_info'] = self._current_session.add_playback_info_changed(self._on_playback_info_changed)
+            self._registration_tokens['timeline_info'] = self._current_session.add_timeline_properties_changed(self._on_timeline_properties_changed)
+            self._registration_tokens['media_info'] = self._current_session.add_media_properties_changed(self._on_media_properties_changed)
+
+    async def _get_session_manager(self):
+        return await SessionManager.request_async()
+
+    def _run_setup(self):
+        self._session_manager = asyncio.run(self._get_session_manager())
+        self._session_manager.add_current_session_changed(self._on_current_session_changed)
+
+        # Manually trigger the callback on startup
+        self._on_current_session_changed(self._session_manager, None, is_setup=True)
+
+    def _on_current_session_changed(self, manager: SessionManager, args: SessionsChangedEventArgs, is_setup=False):
+        self._log.debug('MediaCallback: _on_current_session_changed')
+
+        with self._current_session_lock:
+            self._current_session = manager.get_current_session()
+
+            if self._current_session is not None:
+
+                # If the current session is not None, register callbacks
+                self._register_session_callbacks()
+
+                if not is_setup:
+                    self._on_playback_info_changed(self._current_session, None)
+                    self._on_timeline_properties_changed(self._current_session, None)
+                    self._on_media_properties_changed(self._current_session, None)
+
+            # Get subscribers
+            with self._subscription_channels_lock:
+                callbacks = self._subscription_channels['session_status']
+
+            for callback in callbacks:
+                callback(self._current_session is not None)
+
+    def _on_playback_info_changed(self, session: Session, args: PlaybackInfoChangedEventArgs):
+        self._log.info('MediaCallback: _on_playback_info_changed')
+        with self._playback_info_lock:
+            self._playback_info = session.get_playback_info()
+
+            # Get subscribers
+            with self._subscription_channels_lock:
+                callbacks = self._subscription_channels['playback_info']
+
+            # Perform callbacks
+            for callback in callbacks:
+                callback(self._playback_info)
+
+    def _on_timeline_properties_changed(self, session: Session, args: TimelinePropertiesChangedEventArgs):
+        self._log.info('MediaCallback: _on_timeline_properties_changed')
+        with self._timeline_info_lock:
+            self._timeline_info = session.get_timeline_properties()
+
+            # Get subscribers
+            with self._subscription_channels_lock:
+                callbacks = self._subscription_channels['timeline_info']
+
+            # Perform callbacks
+            for callback in callbacks:
+                callback(self._timeline_info)
+
+    def _on_media_properties_changed(self, session: Session, args: MediaPropertiesChangedEventArgs):
+        self._log.debug('MediaCallback: _on_media_properties_changed')
+        try:
+            asyncio.get_event_loop()
+        except RuntimeError:
+            with self._media_info_lock:
+                self._event_loop.run_until_complete(self._update_media_properties(session))
+        else:
+            # Only for the initial timer based update, because it is called from an event loop
+            asyncio.create_task(self._update_media_properties(session))
+
+    async def _update_media_properties(self, session: Session):
+        self._log.debug('MediaCallback: Attempting media info update')
+
+        try:
+            media_info = await session.try_get_media_properties_async()
+
+            media_info = self._properties_2_dict(media_info)
+
+            # Skip initial change calls where the thumbnail is None. This prevents processing multiple updates.
+            # Might prevent showing info for no-thumbnail media
+            if media_info['thumbnail'] is None:
+                self._log.debug('MediaCallback: Skipping media info update: no thumbnail')
+                return
+
+            media_info['thumbnail'] = await self.get_thumbnail(media_info['thumbnail'])
+        except Exception as e:
+            self._log.error(f'MediaCallback: Error occurred whilst fetching media properties and thumbnail: {e}')
+            return
+
+        self._media_info = media_info
+
+        # Get subscribers
+        with self._subscription_channels_lock:
+            callbacks = self._subscription_channels['media_info']
+
+        # Perform callbacks
+        for callback in callbacks:
+            callback(self._media_info)
+
+        self._log.debug('MediaCallback: Media info update finished')
+
+    @staticmethod
+    def _properties_2_dict(obj) -> dict[str, Any]:
+        return {name: getattr(obj, name) for name in dir(obj) if not name.startswith('_')}
 
     @staticmethod
     async def get_thumbnail(thumbnail_stream_reference: IRandomAccessStreamReference) -> ImageFile:
@@ -45,50 +216,11 @@ class MediaOperations:
 
             return pillow_image
         except Exception as e:
-            logging.error(f'Error occurred when loading the thumbnail: {e}')
+            logging.error(f'get_thumbnail(): Error occurred when loading the thumbnail: {e}')
             return None
         finally:
             # Close the stream
             readable_stream.close()
-
-    @staticmethod
-    async def get_media_properties() -> Optional[Dict[str, Union[str, int, IRandomAccessStreamReference]]]:
-        """
-        Get media properties and the currently running media file
-        """
-        try:
-            session_manager = await winsdk.windows.media.control.GlobalSystemMediaTransportControlsSessionManager.request_async()
-            current_session = session_manager.get_current_session()
-
-            # If no music is playing, return None
-            if current_session is None:
-                return None
-
-            media_properties = await current_session.try_get_media_properties_async()
-            playback_info = current_session.get_playback_info()
-            timeline_properties = current_session.get_timeline_properties()
-            media_info = {
-                "album_artist": media_properties.album_artist,
-                "album_title": media_properties.album_title,
-                "album_track_count": media_properties.album_track_count,
-                "artist": media_properties.artist,
-                "title": media_properties.title,
-                "playback_type": str(media_properties.playback_type),
-                "subtitle": media_properties.subtitle,
-                "album": media_properties.album_title,
-                "track_number": media_properties.track_number,
-                "thumbnail": media_properties.thumbnail,
-                "playing": playback_info.playback_status == 4,
-                "prev_available": playback_info.controls.is_previous_enabled,
-                "next_available": playback_info.controls.is_next_enabled,
-                "total_time": timeline_properties.end_time.total_seconds(),
-                "current_time": timeline_properties.position.total_seconds()
-                # genres
-            }
-            return media_info
-        except Exception as e:
-            logging.error(f'Error occurred when getting media properties: {e}')
-            return None
 
     @staticmethod
     def play_pause():
