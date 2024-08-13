@@ -1,14 +1,15 @@
 import re
+import ctypes
+import logging
 from core.widgets.base import BaseWidget
 from core.validation.widgets.yasb.volume import VALIDATION_SCHEMA
 from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QWheelEvent
-from comtypes import CLSCTX_ALL, CoInitialize, CoUninitialize
-from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
-import ctypes
-import logging
-
+from comtypes import CLSCTX_ALL, CoInitialize, CoUninitialize, COMObject
+from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume, IAudioEndpointVolumeCallback
+from pycaw.callbacks import MMNotificationClient
+ 
 # Disable comtypes logging
 logging.getLogger('comtypes').setLevel(logging.CRITICAL)
 
@@ -16,10 +17,27 @@ logging.getLogger('comtypes').setLevel(logging.CRITICAL)
 VK_VOLUME_UP = 0xAF
 VK_VOLUME_DOWN = 0xAE
 KEYEVENTF_KEYUP = 0x0002
-UPDATE_INTERVAL = 1000
-
+ 
+class AudioEndpointChangeCallback(MMNotificationClient):
+    def __init__(self,parent):
+        super().__init__()
+        self.parent = parent
+ 
+    def on_property_value_changed(self, device_id, property_struct, fmtid, pid):        
+        self.parent.update_label_signal.emit()
+        
+class AudioEndpointVolumeCallback(COMObject):
+    _com_interfaces_ = [IAudioEndpointVolumeCallback]
+    def __init__(self, parent):
+        super().__init__()
+        self.parent = parent
+    def OnNotify(self, pNotify):
+        self.parent.update_label_signal.emit()
+ 
+          
 class VolumeWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
+    update_label_signal = pyqtSignal()
 
     def __init__(
         self,
@@ -28,7 +46,7 @@ class VolumeWidget(BaseWidget):
         volume_icons: list[str],
         callbacks: dict[str, str]
     ):
-        super().__init__(UPDATE_INTERVAL, class_name="volume-widget")
+        super().__init__(class_name="volume-widget")
         self._show_alt_label = False
         self._label_content = label
         self._label_alt_content = label_alt
@@ -49,10 +67,17 @@ class VolumeWidget(BaseWidget):
         self.callback_left = "toggle_mute"
         self.callback_right = callbacks["on_right"]
         self.callback_middle = callbacks["on_middle"]
-        self.callback_timer = "update_label"
+        
+        self.cb = AudioEndpointChangeCallback(self)
+        self.enumerator = AudioUtilities.GetDeviceEnumerator()
+        self.enumerator.RegisterEndpointNotificationCallback(self.cb)
+        
+        self._initialize_volume_interface()
+        self.update_label_signal.connect(self._update_label)
+        
+        self._update_label()
 
-        self.start_timer()
-
+        
     def _toggle_label(self):
         self._show_alt_label = not self._show_alt_label
         for widget in self._widgets:
@@ -96,7 +121,6 @@ class VolumeWidget(BaseWidget):
         label_parts = re.split('(<span.*?>.*?</span>)', active_label_content)
         label_parts = [part for part in label_parts if part]
         widget_index = 0
-
         try:
             self._initialize_volume_interface()
             mute_status = self.volume.GetMute()
@@ -130,13 +154,13 @@ class VolumeWidget(BaseWidget):
         self.setToolTip(f'Volume {current_volume_level}')
         if current_mute_status == 1:
             volume_icon = self._volume_icons[0]
-        elif (current_volume_level >= 0 and current_volume_level < 11):
+        elif 0 <= current_volume_level < 11:
             volume_icon = self._volume_icons[1]
-        elif (current_volume_level >= 11 and current_volume_level < 30):
+        elif 11 <= current_volume_level < 30:
             volume_icon = self._volume_icons[2]
-        elif (current_volume_level >= 30 and current_volume_level < 60):
+        elif 30 <= current_volume_level < 60:
             volume_icon = self._volume_icons[3]
-        elif (current_volume_level >= 60):
+        else:
             volume_icon = self._volume_icons[4]
         return volume_icon
 
@@ -158,16 +182,20 @@ class VolumeWidget(BaseWidget):
         elif event.angleDelta().y() < 0:
             self._decrease_volume()
 
+
     def toggle_mute(self):
         current_mute_status = self.volume.GetMute()
         self.volume.SetMute(not current_mute_status, None)
         self._update_label()
-
+   
+   
     def _initialize_volume_interface(self):
         CoInitialize()
         try:
             devices = AudioUtilities.GetSpeakers()
             interface = devices.Activate(IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
             self.volume = interface.QueryInterface(IAudioEndpointVolume)
+            self.callback = AudioEndpointVolumeCallback(self)
+            self.volume.RegisterControlChangeNotify(self.callback)
         finally:
-            CoUninitialize()
+            CoUninitialize()         

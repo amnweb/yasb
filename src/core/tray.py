@@ -13,9 +13,21 @@ from core.bar_manager import BarManager
 from settings import GITHUB_URL, SCRIPT_PATH, APP_NAME, DEFAULT_CONFIG_DIRECTORY
 
 OS_STARTUP_FOLDER = os.path.join(os.environ['APPDATA'], r'Microsoft\Windows\Start Menu\Programs\Startup')
-AUTOSTART_FILE = os.path.join(SCRIPT_PATH, 'yasb.vbs')
-SHORTCUT_FILENAME = "yasb.lnk"
+yasb_vbs_path = os.path.join(SCRIPT_PATH, 'yasb.vbs')
 
+# Check if exe file exists, if exists
+yasb_exe_path = os.path.join(os.path.dirname(SCRIPT_PATH), 'yasb.exe')
+if os.path.exists(yasb_exe_path):
+    print("yasb.exe exists in the directory.")
+    SHORTCUT_FILENAME = "yasb.lnk"
+    AUTOSTART_FILE = yasb_exe_path
+    WORKING_DIRECTORY = os.path.dirname(SCRIPT_PATH)
+else:
+    print("yasb.exe does not exist in the directory.")
+    SHORTCUT_FILENAME = "yasb.lnk"
+    AUTOSTART_FILE = yasb_vbs_path
+    WORKING_DIRECTORY = SCRIPT_PATH
+    
 class TrayIcon(QSystemTrayIcon):
 
     def __init__(self, bar_manager: BarManager):
@@ -107,7 +119,7 @@ class TrayIcon(QSystemTrayIcon):
         try:
             with winshell.shortcut(shortcut_path) as shortcut:
                 shortcut.path = AUTOSTART_FILE
-                shortcut.working_directory = SCRIPT_PATH
+                shortcut.working_directory = WORKING_DIRECTORY
                 shortcut.description = "Shortcut to yasb.vbs"
             logging.info(f"Created shortcut at {shortcut_path}")
         except Exception as e:

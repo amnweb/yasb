@@ -1,0 +1,37 @@
+# UTF-8
+#
+# More details about fixed file info 'ffi':
+# http://msdn.microsoft.com/en-us/library/ms646997.aspx
+#
+VSVersionInfo(
+    ffi=FixedFileInfo(
+        filevers=(1, 0, 0, 0),
+        prodvers=(1, 0, 0, 0),
+        mask=0x3f,
+        flags=0x0,
+        OS=0x4,
+        fileType=0x1,
+        subtype=0x0,
+        date=(0, 0)
+    ),
+    kids=[
+        StringFileInfo(
+            [
+                StringTable(
+                    '040904B0',
+                    [
+                        StringStruct('CompanyName', 'amnweb'),
+                        StringStruct('FileDescription', 'Yet Another Status Bar'),
+                        StringStruct('FileVersion', '1.0.0.0'),
+                        StringStruct('InternalName', 'yasb'),
+                        StringStruct('LegalCopyright', '© AmN. All rights reserved.'),
+                        StringStruct('OriginalFilename', 'yasb.exe'),
+                        StringStruct('ProductName', 'yasb'),
+                        StringStruct('ProductVersion', '1.0.0.0')
+                    ]
+                )
+            ]
+        ),
+        VarFileInfo([VarStruct('Translation', [1033, 1200])])
+    ]
+)
