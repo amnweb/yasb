@@ -1,0 +1,101 @@
+name: Windows
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        cache: 'pip'
+        python-version: '3.12'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip && pip install -r requirements.txt && pip install --upgrade cx_Freeze
+      shell: pwsh
+
+    - name: Build MSI
+      run: |
+        cd src && python build.py bdist_msi
+      shell: pwsh
+
+    - name: Create App Version
+      id: get_version
+      run: |
+        $version = (Get-Content src/build.py | Select-String -Pattern 'version\s*=\s*"([^"]+)"').Matches.Groups[1].Value
+        echo "VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+      shell: pwsh
+      
+    - name: Create Tag
+      id: create_tag
+      run: |
+        $tagExists = git tag -l $env:VERSION
+        if ($tagExists -eq "") {
+          git tag $env:VERSION
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "Failed to create tag $env:VERSION"
+            exit 1
+          }
+          git push origin $env:VERSION
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "Failed to push tag $env:VERSION"
+            exit 1
+          }
+        } else {
+          Write-Host "Tag $env:VERSION already exists, skipping tag creation"
+        }
+      shell: pwsh
+
+    - name: Create Changelog
+      id: changelog
+      uses: loopwerk/tag-changelog@v1
+      with:
+        token: ${{ secrets.PAT }}
+
+    - name: Generate Checksum
+      run: |
+        $checksum = Get-FileHash src/dist/out/*.msi -Algorithm SHA256
+        $filename = [System.IO.Path]::GetFileName($checksum.Path)
+        "$($checksum.Hash) $filename" > src/dist/out/checksums.txt
+      shell: pwsh
+
+    - name: Upload YASB Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: msi-artifact
+        path: src/dist/out/*.msi
+
+    - name: Upload Checksum Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: checksum-artifact
+        path: src/dist/out/checksums.txt
+
+    - name: Create and Upload Release
+      id: create_release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ env.VERSION }}
+        name: Release ${{ env.VERSION }}
+        body: | 
+              ![GitHub Downloads (specific asset, specific tag)](https://img.shields.io/github/downloads/amnweb/yasb/v${{ env.VERSION }}/*.msi)
+              ${{ steps.changelog.outputs.changes }}
+        append_body: true
+        files: |
+          src/dist/out/*.msi
+          src/dist/out/checksums.txt
+        prerelease: false
+        generate_release_notes: true
+        draft: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.PAT }}
