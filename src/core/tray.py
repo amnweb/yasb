@@ -13,20 +13,14 @@ from core.bar_manager import BarManager
 from settings import GITHUB_URL, SCRIPT_PATH, APP_NAME, DEFAULT_CONFIG_DIRECTORY
 
 OS_STARTUP_FOLDER = os.path.join(os.environ['APPDATA'], r'Microsoft\Windows\Start Menu\Programs\Startup')
-yasb_vbs_path = os.path.join(SCRIPT_PATH, 'yasb.vbs')
-
-# Check if exe file exists, if exists
-yasb_exe_path = os.path.join(os.path.dirname(SCRIPT_PATH), 'yasb.exe')
-if os.path.exists(yasb_exe_path):
-    print("yasb.exe exists in the directory.")
-    SHORTCUT_FILENAME = "yasb.lnk"
-    AUTOSTART_FILE = yasb_exe_path
-    WORKING_DIRECTORY = os.path.dirname(SCRIPT_PATH)
-else:
-    print("yasb.exe does not exist in the directory.")
-    SHORTCUT_FILENAME = "yasb.lnk"
-    AUTOSTART_FILE = yasb_vbs_path
-    WORKING_DIRECTORY = SCRIPT_PATH
+VBS_PATH = os.path.join(SCRIPT_PATH, 'yasb.vbs')
+ 
+# Check if exe file exists
+INSTALLATION_PATH = os.path.abspath(os.path.join(__file__, "../../.."))
+EXE_PATH = os.path.join(INSTALLATION_PATH, 'yasb.exe')
+SHORTCUT_FILENAME = "yasb.lnk"
+AUTOSTART_FILE = EXE_PATH if os.path.exists(EXE_PATH) else VBS_PATH
+WORKING_DIRECTORY = INSTALLATION_PATH if os.path.exists(EXE_PATH) else SCRIPT_PATH
     
 class TrayIcon(QSystemTrayIcon):
 
@@ -40,7 +34,9 @@ class TrayIcon(QSystemTrayIcon):
         self.setToolTip(f"{APP_NAME}")
 
     def _load_favicon(self):
-        self._icon.addFile(os.path.join(SCRIPT_PATH, 'assets', 'favicon', 'launcher.png'), QSize(48, 48))
+        # Get the current directory of the script
+        parent_directory = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        self._icon.addFile(os.path.join(parent_directory, 'assets', 'images', 'app_icon.png'), QSize(48, 48))
         self.setIcon(self._icon)
 
     def _load_context_menu(self):
