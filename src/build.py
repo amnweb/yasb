@@ -1,12 +1,11 @@
 import sys
 from cx_Freeze import setup, Executable
 
-version = "1.0.1"
+version = "1.0.2"
 #base = "console"
 base = "gui"
 build_options = {
     "packages": [
-        'core',
         'core.widgets.yasb.power_menu',
         'core.widgets.yasb.volume',
         'core.widgets.yasb.weather',
@@ -21,17 +20,63 @@ build_options = {
         'core.widgets.yasb.media',
         'core.widgets.yasb.wallpapers',
         'core.widgets.yasb.traffic',
+        'core.widgets.yasb.wifi',
         'core.widgets.komorebi.active_layout',
         'core.widgets.komorebi.workspaces',
-        'core.widgets.yasb.wifi'
+        'core',
+        'core.bar',
+        'core.bar_manager',
+        'core.config',
+        'core.event_enums',
+        'core.event_service',
+        'core.log',
+        'core.tray',
+        'core.utils.alert_dialog',
+        'core.utils.komorebi.client',
+        'core.utils.komorebi.event_listener',
+        'core.utils.utilities',
+        'core.utils.widget_builder',
+        'core.utils.win32',
+        'core.utils.win32.app_icons',
+        'core.utils.win32.app_uwp',
+        'core.utils.win32.event_listener',
+        'core.utils.win32.media',
+        'core.utils.win32.power',
+        'core.utils.win32.system_function',
+        'core.utils.win32.utilities',
+        'core.utils.win32.windows',
+        'core.validation.bar',
+        'core.validation.config',
+        'core.validation.widgets.example',
+        'core.validation.widgets.komorebi.active_layout',
+        'core.validation.widgets.komorebi.workspaces',
+        'core.validation.widgets.yasb.active_window',
+        'core.validation.widgets.yasb.applications',
+        'core.validation.widgets.yasb.battery',
+        'core.validation.widgets.yasb.clock',
+        'core.validation.widgets.yasb.cpu',
+        'core.validation.widgets.yasb.custom',
+        'core.validation.widgets.yasb.github',
+        'core.validation.widgets.yasb.media',
+        'core.validation.widgets.yasb.memory',
+        'core.validation.widgets.yasb.power_menu',
+        'core.validation.widgets.yasb.traffic',
+        'core.validation.widgets.yasb.volume',
+        'core.validation.widgets.yasb.wallpapers',
+        'core.validation.widgets.yasb.weather',
+        'core.validation.widgets.yasb.wifi',
+        'core.watcher',
+        'core.widgets.base',
     ],
     "silent_level": 1,
-    "excludes": ['PySide6'],
+    "excludes": ['PySide6','pydoc_data','email','colorama','tkinter'],
     "build_exe": "dist",
     "include_msvcr": True,
     "optimize": 1,
     "include_files": [
-            ("assets/images/app_icon.png","lib/assets/images/app_icon.png")
+            ("assets/images/app_icon.png","lib/assets/images/app_icon.png"),
+            ("config.yaml","config.yaml"),
+            ("styles.css","styles.css")
         ]
 }
 

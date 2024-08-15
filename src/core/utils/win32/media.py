@@ -1,5 +1,6 @@
 import ctypes
 import logging
+from settings import DEBUG 
 from typing import Any, Callable
 
 import asyncio
@@ -98,7 +99,8 @@ class WindowsMedia(metaclass=Singleton):
         self._on_current_session_changed(self._session_manager, None, is_setup=True)
 
     def _on_current_session_changed(self, manager: SessionManager, args: SessionsChangedEventArgs, is_setup=False):
-        self._log.debug('MediaCallback: _on_current_session_changed')
+        if DEBUG:
+            self._log.debug('MediaCallback: _on_current_session_changed')
 
         with self._current_session_lock:
             self._current_session = manager.get_current_session()
@@ -121,7 +123,8 @@ class WindowsMedia(metaclass=Singleton):
                 callback(self._current_session is not None)
 
     def _on_playback_info_changed(self, session: Session, args: PlaybackInfoChangedEventArgs):
-        self._log.info('MediaCallback: _on_playback_info_changed')
+        if DEBUG:
+            self._log.info('MediaCallback: _on_playback_info_changed')
         with self._playback_info_lock:
             self._playback_info = session.get_playback_info()
 
@@ -134,7 +137,8 @@ class WindowsMedia(metaclass=Singleton):
                 callback(self._playback_info)
 
     def _on_timeline_properties_changed(self, session: Session, args: TimelinePropertiesChangedEventArgs):
-        self._log.info('MediaCallback: _on_timeline_properties_changed')
+        if DEBUG:
+            self._log.info('MediaCallback: _on_timeline_properties_changed')
         with self._timeline_info_lock:
             self._timeline_info = session.get_timeline_properties()
 
@@ -147,7 +151,8 @@ class WindowsMedia(metaclass=Singleton):
                 callback(self._timeline_info)
 
     def _on_media_properties_changed(self, session: Session, args: MediaPropertiesChangedEventArgs):
-        self._log.debug('MediaCallback: _on_media_properties_changed')
+        if DEBUG:
+            self._log.debug('MediaCallback: _on_media_properties_changed')
         try:
             asyncio.get_event_loop()
         except RuntimeError:
@@ -158,7 +163,8 @@ class WindowsMedia(metaclass=Singleton):
             asyncio.create_task(self._update_media_properties(session))
 
     async def _update_media_properties(self, session: Session):
-        self._log.debug('MediaCallback: Attempting media info update')
+        if DEBUG:
+            self._log.debug('MediaCallback: Attempting media info update')
 
         try:
             media_info = await session.try_get_media_properties_async()
@@ -168,7 +174,8 @@ class WindowsMedia(metaclass=Singleton):
             # Skip initial change calls where the thumbnail is None. This prevents processing multiple updates.
             # Might prevent showing info for no-thumbnail media
             if media_info['thumbnail'] is None:
-                self._log.debug('MediaCallback: Skipping media info update: no thumbnail')
+                if DEBUG:
+                    self._log.debug('MediaCallback: Skipping media info update: no thumbnail')
                 return
 
             media_info['thumbnail'] = await self.get_thumbnail(media_info['thumbnail'])
@@ -185,8 +192,8 @@ class WindowsMedia(metaclass=Singleton):
         # Perform callbacks
         for callback in callbacks:
             callback(self._media_info)
-
-        self._log.debug('MediaCallback: Media info update finished')
+        if DEBUG:
+            self._log.debug('MediaCallback: Media info update finished')
 
     @staticmethod
     def _properties_2_dict(obj) -> dict[str, Any]:

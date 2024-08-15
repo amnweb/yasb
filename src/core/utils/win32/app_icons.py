@@ -42,8 +42,11 @@ def get_window_icon(hwnd, dpi):
                 hbmp.CreateCompatibleBitmap(hdc, bitmap_size, bitmap_size)
                 memdc = hdc.CreateCompatibleDC()
                 # Select the bitmap into the memory device context
-                memdc.SelectObject(hbmp)               
-                memdc.DrawIcon((0, 0), hicon)
+                memdc.SelectObject(hbmp)   
+                try:            
+                    memdc.DrawIcon((0, 0), hicon)
+                except Exception:
+                    return None
  
                 bmpinfo = hbmp.GetInfo()
                 bmpstr = hbmp.GetBitmapBits(True)
