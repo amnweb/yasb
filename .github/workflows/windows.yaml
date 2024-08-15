@@ -87,8 +87,8 @@ jobs:
       id: create_release
       uses: softprops/action-gh-release@v2
       with:
-        tag_name: ${{ env.VERSION }}
-        name: Release ${{ env.VERSION }}
+        tag_name: v${{ env.VERSION }}
+        name: Release v${{ env.VERSION }}
         body: | 
               ![GitHub Downloads (specific asset, specific tag)](https://img.shields.io/github/downloads/amnweb/yasb/v${{ env.VERSION }}/${{ env.FILENAME }})
               ${{ steps.changelog.outputs.changes }}
