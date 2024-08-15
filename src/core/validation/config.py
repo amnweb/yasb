@@ -9,6 +9,28 @@ CONFIG_SCHEMA = {
         'type': 'boolean',
         'default': True,
     },
+    'komorebi': {
+        'type': 'dict',
+        'schema': {
+            'start_command': {
+                'type': 'string',
+                'required': False,
+            },
+            'stop_command': {
+                'type': 'string',
+                'required': False,
+            },
+            'reload_command': {
+                'type': 'string',
+                'required': False,
+            }
+        },
+        'default': {
+            'start_command': 'komorebic start --whkd',
+            'stop_command': 'komorebic stop --whkd',
+            'reload_command': 'komorebic reload-configuration'
+        }
+    },
     'bars': {
         'type': 'dict',
         'keysrules': {

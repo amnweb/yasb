@@ -1,6 +1,6 @@
 import logging
 import webbrowser
-import os 
+import os
 import shutil
 import sys
 from pathlib import Path
@@ -8,22 +8,22 @@ import subprocess
 import winshell
 from PyQt6.QtWidgets import QSystemTrayIcon, QMenu
 from PyQt6.QtGui import QIcon
-from PyQt6.QtCore import QCoreApplication, QSize
+from PyQt6.QtCore import QCoreApplication, QSize, Qt
 from core.bar_manager import BarManager
 from settings import GITHUB_URL, SCRIPT_PATH, APP_NAME, DEFAULT_CONFIG_DIRECTORY
+from core.config import get_config
 
 OS_STARTUP_FOLDER = os.path.join(os.environ['APPDATA'], r'Microsoft\Windows\Start Menu\Programs\Startup')
 VBS_PATH = os.path.join(SCRIPT_PATH, 'yasb.vbs')
- 
+
 # Check if exe file exists
 INSTALLATION_PATH = os.path.abspath(os.path.join(__file__, "../../.."))
 EXE_PATH = os.path.join(INSTALLATION_PATH, 'yasb.exe')
 SHORTCUT_FILENAME = "yasb.lnk"
 AUTOSTART_FILE = EXE_PATH if os.path.exists(EXE_PATH) else VBS_PATH
 WORKING_DIRECTORY = INSTALLATION_PATH if os.path.exists(EXE_PATH) else SCRIPT_PATH
-    
-class TrayIcon(QSystemTrayIcon):
 
+class TrayIcon(QSystemTrayIcon):
     def __init__(self, bar_manager: BarManager):
         super().__init__()
         self._bar_manager = bar_manager
@@ -32,7 +32,16 @@ class TrayIcon(QSystemTrayIcon):
         self._load_favicon()
         self._load_context_menu()
         self.setToolTip(f"{APP_NAME}")
-
+        try:
+            config = get_config(show_error_dialog=True)
+        except Exception as e:
+            logging.error(f"Error loading config: {e}")
+            return
+        if config['komorebi']:
+            self.komorebi_start = config['komorebi']["start_command"]
+            self.komorebi_stop = config['komorebi']["stop_command"]
+            self.komorebi_reload = config['komorebi']["reload_command"]
+        
     def _load_favicon(self):
         # Get the current directory of the script
         parent_directory = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -41,7 +50,7 @@ class TrayIcon(QSystemTrayIcon):
 
     def _load_context_menu(self):
         menu = QMenu()
-
+        menu.setWindowModality(Qt.WindowModality.WindowModal)
         style_sheet = """
         QMenu {
             background-color: #26292b;
@@ -51,41 +60,52 @@ class TrayIcon(QSystemTrayIcon):
             margin:0;
             border-radius:6px
         }
-
         QMenu::item {
             margin:0 4px;
-            padding: 6px 16px;
-            border-radius:4px
+            padding: 8px 16px;
+            border-radius:4px;
+            font-size: 11px;
         }
-
         QMenu::item:selected {
             background-color: #373b3e;
         }
-
         QMenu::separator {
             height: 1px;
             background: #373b3e;
             margin:5px 0;
         }
+        QMenu::right-arrow {
+            width: 8px;
+            height: 8px;
+            padding-right: 18px;
+        }
         """
-
         menu.setStyleSheet(style_sheet)
-
+        
         github_action = menu.addAction("Visit GitHub")
         github_action.triggered.connect(self._open_docs_in_browser)
+        
         open_config_action = menu.addAction("Open Config")
         open_config_action.triggered.connect(self._open_config)
-        reload_action = menu.addAction("Reload App")
+        
+        reload_action = menu.addAction("Reload YASB")
         reload_action.triggered.connect(self._reload_application)
+        
         menu.addSeparator()
-        
+
         if self.is_komorebi_installed():
-            start_komorebi = menu.addAction("Start Komorebi")
+            komorebi_menu = menu.addMenu("Komorebi")
+            start_komorebi = komorebi_menu.addAction("Start Komorebi")
             start_komorebi.triggered.connect(self._start_komorebi)
-            stop_komorebi = menu.addAction("Stop Komorebi")
+            
+            stop_komorebi = komorebi_menu.addAction("Stop Komorebi")
             stop_komorebi.triggered.connect(self._stop_komorebi)
+            
+            reload_komorebi = komorebi_menu.addAction("Reload Komorebi")
+            reload_komorebi.triggered.connect(self._reload_komorebi)
+            
             menu.addSeparator()
-        
+
         if self.is_autostart_enabled():
             disable_startup_action = menu.addAction("Disable Autostart")
             disable_startup_action.triggered.connect(self._disable_startup)
@@ -94,9 +114,10 @@ class TrayIcon(QSystemTrayIcon):
             enable_startup_action.triggered.connect(self._enable_startup)
         
         menu.addSeparator()
+        
         exit_action = menu.addAction("Exit")
         exit_action.triggered.connect(self._exit_application)
-
+        
         self.setContextMenu(menu)
 
     def is_autostart_enabled(self):
@@ -141,15 +162,21 @@ class TrayIcon(QSystemTrayIcon):
 
     def _start_komorebi(self):
         try:
-            subprocess.run("komorebic start --whkd", stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True)
+            subprocess.run(self.komorebi_start, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True)
         except Exception as e:
             logging.error(f"Failed to start komorebi: {e}")
 
     def _stop_komorebi(self):
         try:
-            subprocess.run("komorebic stop --whkd", stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True)
+            subprocess.run(self.komorebi_stop, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True)
         except Exception as e:
             logging.error(f"Failed to stop komorebi: {e}")
+
+    def _reload_komorebi(self):
+        try:
+            subprocess.run(self.komorebi_reload, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True)
+        except Exception as e:
+            logging.error(f"Failed to reload komorebi: {e}")
 
     def _reload_application(self):
         logging.info("Reloading Application...")

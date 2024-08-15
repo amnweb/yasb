@@ -1,7 +1,7 @@
 import sys
 from cx_Freeze import setup, Executable
 
-version = "1.0.0"
+version = "1.0.1"
 #base = "console"
 base = "gui"
 build_options = {

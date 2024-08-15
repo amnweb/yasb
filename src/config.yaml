@@ -1,6 +1,14 @@
 watch_stylesheet: true
 watch_config: true
 
+
+# This komorebi setting will be used for tray context menu.
+komorebi:
+  start_command: "komorebic start --whkd"
+  stop_command: "komorebic stop --whkd"
+  reload_command: "komorebic reload-configuration"
+  
+# This is the main configuration file for Yet Another Status Bar (YASB)
 bars:
   status-bar:
     enabled: true
