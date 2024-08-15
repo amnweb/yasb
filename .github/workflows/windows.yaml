@@ -29,11 +29,13 @@ jobs:
         cd src && python build.py bdist_msi
       shell: pwsh
 
-    - name: Create App Version
+    - name: Get App Info
       id: get_version
       run: |
         $version = (Get-Content src/build.py | Select-String -Pattern 'version\s*=\s*"([^"]+)"').Matches.Groups[1].Value
         echo "VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        $filename = (Get-ChildItem -Path src/dist/out/*.msi).Name
+        echo "FILENAME=$filename" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
       shell: pwsh
       
     - name: Create Tag
@@ -88,7 +90,7 @@ jobs:
         tag_name: ${{ env.VERSION }}
         name: Release ${{ env.VERSION }}
         body: | 
-              ![GitHub Downloads (specific asset, specific tag)](https://img.shields.io/github/downloads/amnweb/yasb/v${{ env.VERSION }}/*.msi)
+              ![GitHub Downloads (specific asset, specific tag)](https://img.shields.io/github/downloads/amnweb/yasb/v${{ env.VERSION }}/${{ env.FILENAME }})
               ${{ steps.changelog.outputs.changes }}
         append_body: true
         files: |
