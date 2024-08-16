@@ -14,7 +14,7 @@ DEFAULTS = {
         "\udb82\udd25",  # Icon for 51-75% strength
         "\udb82\udd28"   # Icon for 76-100% strength
     ],
-    'ethernet_icon': "\uef44"
+    'ethernet_icon': "\ueba9"
 }
 
 VALIDATION_SCHEMA = {
