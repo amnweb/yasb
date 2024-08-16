@@ -1,7 +1,6 @@
 DEFAULTS = {
     'label': '\uf017 {%H:%M:%S}',
     'label_alt': '\uf017 {%d-%m-%y %H:%M:%S}',
-    'update_interval': 1000,
     'callbacks': {
         'on_left': 'toggle_label',
         'on_middle': 'do_nothing',
@@ -21,12 +20,6 @@ VALIDATION_SCHEMA = {
     'hide_empty': {
         'type': 'boolean',
         'default': False
-    },
-    'update_interval': {
-        'type': 'integer',
-        'default': 1000,
-        'min': 0,
-        'max': 60000
     },
     'callbacks': {
         'type': 'dict',
