@@ -16,6 +16,9 @@
 - Look for the latest release version, which will typically be listed at the top.
 - Under the "Assets" section of the release, you’ll find various files. Click on the installer file to download it.
 
+> [!NOTE]  
+> The installer is currently is unstable and crashes when config.yaml is changed. 
+
 ### Using Python
 - Install Python 3.12
 - Install required Python Modules:
