@@ -9,7 +9,14 @@
 </p>
 
 ### How do you run it?
-- Install [Nerd Fonts](https://www.nerdfonts.com/font-downloads) (JetBrains recommended)
+- Install [Nerd Fonts](https://www.nerdfonts.com/font-downloads) (JetBrainsMono recommended)
+
+### Installer
+- Visit the [releases page](https://github.com/amnweb/yasb/releases) on GitHub.
+- Look for the latest release version, which will typically be listed at the top.
+- Under the "Assets" section of the release, you’ll find various files. Click on the installer file to download it.
+
+### Using Python
 - Install Python 3.12
 - Install required Python Modules:
   - pip install -r [requirements.txt](requirements.txt)
