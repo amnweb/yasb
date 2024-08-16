@@ -5,7 +5,7 @@ from PyQt6.QtWidgets import QWidget, QHBoxLayout, QFrame
 from PyQt6.QtGui import QMouseEvent
 from PyQt6.QtCore import QTimer, QThread, Qt
 from typing import Union
-
+from core.utils.win32.system_function import function_map
 
 class BaseWidget(QWidget):
     validation_schema: dict = None
@@ -92,7 +92,10 @@ class BaseWidget(QWidget):
         self._run_callback(self.callback_timer)
 
     def _cb_execute_subprocess(self, cmd: str, *cmd_args: list[str]):
-        subprocess.Popen([cmd, *cmd_args] if cmd_args else [cmd], shell=True)
+        if cmd in function_map:
+            function_map[cmd]()
+        else:
+            subprocess.Popen([cmd, *cmd_args] if cmd_args else [cmd], shell=True)
 
     def _cb_do_nothing(self):
         pass
