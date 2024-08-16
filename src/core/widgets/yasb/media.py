@@ -23,13 +23,13 @@ class MediaWidget(BaseWidget):
     _media_info_signal = QtCore.pyqtSignal(object)
     _session_status_signal = QtCore.pyqtSignal(bool)
 
-    def __init__(self, label: str, label_alt: str, hide_empty:bool, update_interval: int, callbacks: dict[str, str],
+    def __init__(self, label: str, label_alt: str, hide_empty: bool, callbacks: dict[str, str],
                  max_field_size: dict[str, int], show_thumbnail: bool, controls_only: bool, controls_left: bool,
                  thumbnail_alpha: int,
                  thumbnail_padding: int,
                  thumbnail_corner_radius: int,
                  icons: dict[str, str]):
-        super().__init__(update_interval, class_name="media-widget")
+        super().__init__(class_name="media-widget")
         self._label_content = label
         self._label_alt_content = label_alt
 

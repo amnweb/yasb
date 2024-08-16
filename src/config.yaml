@@ -68,7 +68,6 @@ widgets:
     options:
       label: "{title} - {artist}"
       label_alt: "{title}"
-      update_interval: 1000
       max_field_size:
         label: 20
         label_alt: 30

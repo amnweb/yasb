@@ -96,7 +96,8 @@ class BarManager(QObject):
         for t in tasks:
             t.cancel()
 
-        WindowsMedia().stop()
+        if WindowsMedia.has_instance():
+            WindowsMedia().stop()
 
         for bar in self.bars:
             bar.close()
