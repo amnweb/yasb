@@ -13,7 +13,8 @@ DEFAULTS = {
         "\udb82\udd22",  # Icon for 26-50% strength
         "\udb82\udd25",  # Icon for 51-75% strength
         "\udb82\udd28"   # Icon for 76-100% strength
-    ]
+    ],
+    'ethernet_icon': "\ueba9"
 }
 
 VALIDATION_SCHEMA = {
@@ -38,6 +39,10 @@ VALIDATION_SCHEMA = {
             'type': 'string',
             'required': False
         }
+    },
+    'ethernet_icon': {
+        'type': 'string',
+        'default': DEFAULTS['ethernet_icon']
     },
     'callbacks': {
         'type': 'dict',

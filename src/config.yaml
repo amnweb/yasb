@@ -183,12 +183,6 @@ widgets:
       label: "<span>{wifi_icon}</span>"
       label_alt: "{wifi_name} {wifi_strength}%"
       update_interval: 5000
-      wifi_icons:
-        - "\udb82\udd2e" # 0% strength (no wifi)
-        - "\udb82\udd1f" # 1-25% strength
-        - "\udb82\udd22" # 26-50% strength
-        - "\udb82\udd25" # 51-75% strength
-        - "\udb82\udd28" # 76-100% strength. Alternate theming: \uf1eb
       callbacks:
         on_left: "exec cmd.exe /c start ms-settings:network"
         on_middle: "do_nothing"

@@ -1,4 +1,8 @@
+import logging
 import re
+
+from winsdk.windows.networking.connectivity import NetworkInformation
+
 from core.widgets.base import BaseWidget
 from core.validation.widgets.yasb.wifi import VALIDATION_SCHEMA
 from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget
@@ -15,10 +19,12 @@ class WifiWidget(BaseWidget):
         label_alt: str,
         update_interval: int,
         wifi_icons: list[str],
+        ethernet_icon: str,
         callbacks: dict[str, str],
     ):
         super().__init__(update_interval, class_name="wifi-widget")
         self._wifi_icons = wifi_icons
+        self._ethernet_icon = ethernet_icon
 
         self._show_alt_label = False
         self._label_content = label
@@ -94,11 +100,22 @@ class WifiWidget(BaseWidget):
         label_parts = [part for part in label_parts if part]
         widget_index = 0
         try:
-            # Retrieve WiFi information
-            wifi_icon, wifi_strength = self._get_wifi_icon()
-            wifi_name = self._get_wifi_name()
-        except Exception:
-            wifi_icon, wifi_name = "N/A", "N/A"
+            connection_info = NetworkInformation.get_internet_connection_profile()
+
+            # If no connection or WiFi connection, check WiFi connection
+            # (it will set the icon to the 0% icon (no connection) if no WiFi connection is found)
+            if connection_info is None or connection_info.is_wlan_connection_profile:
+                # Retrieve WiFi information
+                wifi_icon, wifi_strength = self._get_wifi_icon()
+                wifi_name = self._get_wifi_name()
+            else:
+                # Otherwise, there is a connection that is Ethernet.
+                wifi_icon = self._ethernet_icon
+                wifi_name = 'Ethernet'
+                wifi_strength = 'N/A'
+        except Exception as e:
+            logging.error(f'Error in wifi widget update: {e}')
+            wifi_icon = wifi_name = wifi_strength = "N/A"
         label_options = {
             "{wifi_icon}": wifi_icon,
             "{wifi_name}": wifi_name,
@@ -121,7 +138,6 @@ class WifiWidget(BaseWidget):
                         active_widgets[widget_index].setText(formatted_text)
                         
                 widget_index += 1
-
 
     def _get_wifi_strength(self):
         # Get the wifi strength from the system
