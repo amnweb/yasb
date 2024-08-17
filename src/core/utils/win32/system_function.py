@@ -52,6 +52,12 @@ def widget():
     # Release Win key
     user32.keybd_event(VK_WIN, 0, KEYEVENTF_KEYUP, 0)
 
+def start_menu():
+    user32 = ctypes.windll.user32
+    # Hold down Win key
+    user32.keybd_event(VK_WIN, 0, KEYEVENTF_EXTENDEDKEY, 0)
+    user32.keybd_event(VK_WIN, 0, KEYEVENTF_KEYUP, 0)
+    
 def launcher():
     user32 = ctypes.windll.user32
     # Press down ALT key
@@ -68,5 +74,6 @@ function_map = {
     'notification_center': notification_center,
     'search': search,
     'widget': widget,
+    'start_menu': start_menu,
     'launcher': launcher
 }

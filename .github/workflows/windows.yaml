@@ -31,7 +31,7 @@ jobs:
     - name: Get App Info
       id: get_version
       run: |
-        $version = (Get-Content src/build.py | Select-String -Pattern 'version\s*=\s*"([^"]+)"').Matches.Groups[1].Value
+        $version = (Get-Content src/settings.py | Select-String -Pattern 'BUILD_VERSION\s*=\s*"([^"]+)"').Matches.Groups[1].Value
         echo "VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
         $filename = (Get-ChildItem -Path src/dist/out/*.msi).Name
         echo "FILENAME=$filename" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append

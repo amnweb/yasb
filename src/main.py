@@ -11,6 +11,7 @@ from core.tray import TrayIcon
 from core.watcher import create_observer
 from core.event_service import EventService
 
+logging.getLogger('asyncio').setLevel(logging.WARNING)
 
 def main():
     if sys.version_info < (3, 12):

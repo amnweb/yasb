@@ -3,8 +3,6 @@ from PyQt6.QtGui import QScreen
 
 
 # General Utility Methods
-
-
 def percent_to_float(percent: str) -> float:
     return float(percent.strip('%')) / 100.0
 
@@ -24,6 +22,3 @@ class Singleton(type):
         if cls not in cls._instances:
             cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
         return cls._instances[cls]
-
-    def has_instance(cls):
-        return cls in cls._instances

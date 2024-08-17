@@ -3,6 +3,7 @@ watch_config: true
 
 
 # This komorebi setting will be used for tray context menu.
+# If you don't use komorebi, you can remove this section.
 komorebi:
   start_command: "komorebic start --whkd"
   stop_command: "komorebic stop --whkd"
@@ -311,11 +312,11 @@ widgets:
       label_alt: "Notifications {data}" # {data} return number of unread notification
       token: ghp_xxxxxxxxxxx # GitHub Personal access tokens (classic) https://github.com/settings/tokens
       max_notification: 20 # Max number of notification displaying in menu max: 50
-      only_unread: false # Show only unread or all notifications; if you set it to False, all new (unread) will have a white icon.
+      only_unread: false # Show only unread or all notifications; 
       max_field_size: 54 # Max characters in title before truncation.
-      menu_width: 400
-      menu_height: 400
-      menu_offset: 240
+      menu_width: 400 
+      menu_height: 400 
+      menu_offset: 240 
       update_interval: 300 # Check for new notification in seconds
 
   wallapers:
@@ -343,3 +344,5 @@ widgets:
       label: "\ue62a"
       label_alt: "\ue62a"
       class_name: "system-widget"
+      callbacks:
+        on_left: "exec start_menu"
