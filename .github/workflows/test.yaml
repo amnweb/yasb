@@ -21,11 +21,8 @@ jobs:
     - name: Get Previous Tag
       id: get_prev_tag
       run: |
-        $prev_tag = git describe --tags --abbrev=0 HEAD^ 2>$null
-        if (-not $prev_tag) {
-          echo "No previous tag found."
-          $prev_tag = ""
-        }
+        $prev_tag = 'v1.0.3'
+        
         echo "PREV_TAG=$prev_tag" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
       shell: pwsh
 
