@@ -5,6 +5,7 @@ from core.widgets.base import BaseWidget
 from core.validation.widgets.yasb.custom import VALIDATION_SCHEMA
 from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget
 from PyQt6.QtCore import Qt
+from core.utils.win32.system_function import function_map
 
 class CustomWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
@@ -144,4 +145,7 @@ class CustomWidget(BaseWidget):
                 except KeyError:
                     formatted_cmd_args.append(cmd_args)
             cmd_args = formatted_cmd_args
-        subprocess.Popen([cmd, *cmd_args] if cmd_args else [cmd], shell=True)
+        if cmd in function_map:
+            function_map[cmd]()
+        else:
+            subprocess.Popen([cmd, *cmd_args] if cmd_args else [cmd], shell=True)
