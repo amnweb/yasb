@@ -59,9 +59,10 @@ jobs:
 
     - name: Create Changelog
       id: changelog
-      uses: loopwerk/tag-changelog@v1
+      uses: TriPSs/conventional-changelog-action@v5
       with:
-        token: ${{ secrets.PAT }}
+        github-token: ${{ secrets.PAT }}
+        skip-version-file: true
 
     - name: Generate Checksum
       run: |
@@ -85,6 +86,7 @@ jobs:
     - name: Create and Upload Release
       id: create_release
       uses: softprops/action-gh-release@v2
+      if: ${{ steps.changelog.outputs.skipped == 'false' }}
       with:
         tag_name: v${{ env.VERSION }}
         name: Release v${{ env.VERSION }}
