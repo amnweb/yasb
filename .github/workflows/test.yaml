@@ -13,12 +13,10 @@ jobs:
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Fetch all history for all tags and branches
 
-    - name: Verify Git Status
-      run: |
-        git status
-        git log -1
-      shell: pwsh
+ 
 
     - name: Get Previous Tag
       id: get_prev_tag
