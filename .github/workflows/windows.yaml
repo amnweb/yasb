@@ -59,9 +59,9 @@ jobs:
 
     - name: Create Changelog
       id: changelog
-      uses: TriPSs/conventional-changelog-action@v5
+      uses: loopwerk/tag-changelog@v1
       with:
-        github-token: ${{ secrets.PAT }}
+        token: ${{ secrets.PAT }}
 
     - name: Generate Checksum
       run: |
@@ -90,7 +90,7 @@ jobs:
         name: Release v${{ env.VERSION }}
         body: | 
               ![GitHub Downloads (specific asset, specific tag)](https://img.shields.io/github/downloads/amnweb/yasb/v${{ env.VERSION }}/${{ env.FILENAME }})
-              ${{ steps.changelog.outputs.clean_changelog }}
+              ${{ steps.changelog.outputs.changes }}
         append_body: true
         files: |
           src/dist/out/*.msi
