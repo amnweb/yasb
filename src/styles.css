@@ -41,7 +41,7 @@
 	padding: 1px 8px 1px 8px;
 }
 .active-window-widget {
-	border-radius: 16px;
+	border-radius: 18px;
 	margin-left: 8px
 }
 .container-left,
@@ -52,18 +52,18 @@
 }
 
 .clock-widget {
-	border-top-left-radius: 16px;
-	border-bottom-left-radius: 16px;
+	border-top-left-radius: 18px;
+	border-bottom-left-radius: 18px;
 }
 
 .apps-widget {
 	padding: 0 2px;
-	border-top-right-radius: 16px;
-	border-bottom-right-radius: 16px;
+	border-top-right-radius: 18px;
+	border-bottom-right-radius: 18px;
 }
 .komorebi-active-layout {
-	border-top-right-radius: 16px;
-	border-bottom-right-radius: 16px;
+	border-top-right-radius: 18px;
+	border-bottom-right-radius: 18px;
 	padding: 0 4px 0 0;
 }
 
@@ -73,8 +73,8 @@
 }
 .wifi-widget {
 	padding: 0 4px 0 4px;
-	border-top-left-radius: 16px;
-	border-bottom-left-radius: 16px;
+	border-top-left-radius: 18px;
+	border-bottom-left-radius: 18px;
 }
 
 .apps-widget .widget-container,
@@ -82,8 +82,11 @@
 .wifi-widget .widget-container,
 .komorebi-active-layout .widget-container {
 	background-color: #313244;
-	margin: 4px 0 4px 0;
+	margin: 4px 0px 4px 0;
 	border-radius: 14px;
+}
+.apps-widget .widget-container {
+    margin-right: 2px;
 }
 .komorebi-workspaces .ws-btn {
 	font-size: 16px;

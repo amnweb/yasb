@@ -10,7 +10,7 @@ from PyQt6.QtWidgets import QSystemTrayIcon, QMenu, QMessageBox
 from PyQt6.QtGui import QIcon
 from PyQt6.QtCore import QCoreApplication, QSize, Qt
 from core.bar_manager import BarManager
-from settings import GITHUB_URL, SCRIPT_PATH, APP_NAME, APP_NAME_FULL, DEFAULT_CONFIG_DIRECTORY, VERSION
+from settings import GITHUB_URL, SCRIPT_PATH, APP_NAME, APP_NAME_FULL, DEFAULT_CONFIG_DIRECTORY, GITHUB_THEME_URL, BUILD_VERSION
 from core.config import get_config
 
 OS_STARTUP_FOLDER = os.path.join(os.environ['APPDATA'], r'Microsoft\Windows\Start Menu\Programs\Startup')
@@ -33,7 +33,7 @@ class TrayIcon(QSystemTrayIcon):
         self._load_context_menu()
         self.setToolTip(f"{APP_NAME}")
         self._load_config()
-        self._bar_manager.tray_reload.connect(self._reload_tray)
+ 
         
     def _load_config(self):
         try:
@@ -52,9 +52,7 @@ class TrayIcon(QSystemTrayIcon):
         self._icon.addFile(os.path.join(parent_directory, 'assets', 'images', 'app_icon.png'), QSize(48, 48))
         self.setIcon(self._icon)
         
-    def _reload_tray(self):
-        self._load_config()
-        self._load_context_menu()
+ 
         
     def _load_context_menu(self):
         menu = QMenu()
@@ -87,7 +85,7 @@ class TrayIcon(QSystemTrayIcon):
         QMenu::right-arrow {
             width: 8px;
             height: 8px;
-            padding-right: 18px;
+            padding-right:16px;
         }
         """
         menu.setStyleSheet(style_sheet)
@@ -196,22 +194,20 @@ class TrayIcon(QSystemTrayIcon):
         os.execl(sys.executable, sys.executable, *sys.argv)
 
     def _exit_application(self):
-        self._bar_manager.close_bars()
-        logging.info("Exiting Application...")
+        logging.info("Exiting Application from tray...")
         QCoreApplication.exit(0)
 
     def _open_docs_in_browser(self):
         webbrowser.open(self._docs_url)
 
-
-
     def _show_about_dialog(self):
         about_text = f"""
-        <div style="font-family:'Segoe UI',sans-serif;"> 
-        <div style="font-size:24px;font-weight:700;">{APP_NAME} REBORN</div>
+        <div style="font-family:'Segoe UI',sans-serif;">
+        <div style="font-size:20px;font-weight:700;">{APP_NAME} REBORN</div><br/>
         <div style="font-size:14px;font-weight:500">{APP_NAME_FULL}</div>
-        <div style="font-size:12px;">Version: {VERSION}</div><br>
-        <div><a href="{GITHUB_URL}" style="margin:0;padding:0;">{GITHUB_URL}</a></div>
+        <div style="font-size:12px;">Version: {BUILD_VERSION}</div><br>
+        <div><a href="{GITHUB_URL}">{GITHUB_URL}</a></div>
+        <div><a href="{GITHUB_THEME_URL}">{GITHUB_THEME_URL}</a></div>
         </div>
         """
         # Create a QMessageBox instance

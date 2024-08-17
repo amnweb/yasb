@@ -1,5 +1,6 @@
-import asyncio
 import logging
+import os
+import sys
 import uuid
 from contextlib import suppress
 from PyQt6.QtWidgets import QApplication
@@ -11,14 +12,12 @@ from core.utils.utilities import get_screen_by_name
 from core.event_service import EventService
 from core.config import get_stylesheet, get_config
 from copy import deepcopy
-
-from core.utils.win32.media import WindowsMedia
-
+from settings import DEBUG
 
 class BarManager(QObject):
     styles_modified = pyqtSignal()
     config_modified = pyqtSignal()
-    tray_reload = pyqtSignal()
+ 
     
     def __init__(self, config: dict, stylesheet: str):
         super().__init__()
@@ -58,10 +57,7 @@ class BarManager(QObject):
         if config and (config != self.config):
 
             if config['bars'] != self.config['bars'] or config['widgets'] != self.config['widgets'] or config['komorebi'] != self.config['komorebi']:
-                self.config = config
-                self.close_bars()
-                self.initialize_bars()
-                self.tray_reload.emit()
+                os.execl(sys.executable, sys.executable, *sys.argv)
             else:
                 self.config = config
 
@@ -70,12 +66,12 @@ class BarManager(QObject):
     @pyqtSlot(QScreen)
     def on_screens_update(self, _screen: QScreen) -> None:
         logging.info("Screens updated. Re-initialising all bars.")
-        self.close_bars()
-        self.initialize_bars()
+        os.execl(sys.executable, sys.executable, *sys.argv)
 
     def run_listeners_in_threads(self):
         for listener in self.widget_event_listeners:
-            logging.info(f"Starting {listener.__name__}...")
+            if DEBUG:
+                logging.info(f"Starting {listener.__name__}...")
             thread = listener()
             thread.start()
             self._threads[listener] = thread
@@ -89,21 +85,7 @@ class BarManager(QObject):
                 self._threads[listener].wait(500)
         self._threads.clear()
         self.widget_event_listeners.clear()
-
-    def close_bars(self):
-        self.stop_listener_threads()
-        tasks = asyncio.all_tasks()
-        for t in tasks:
-            t.cancel()
-
-        if WindowsMedia.has_instance():
-            WindowsMedia().stop()
-
-        for bar in self.bars:
-            bar.close()
-
-        self.event_service.clear()
-        self.bars.clear()
+ 
 
     def initialize_bars(self, init=False) -> None:
         self._widget_builder = WidgetBuilder(self.config['widgets'])

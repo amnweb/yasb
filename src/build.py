@@ -1,7 +1,7 @@
 import sys
 from cx_Freeze import setup, Executable
-
-version = "1.0.2"
+from settings import BUILD_VERSION
+ 
 #base = "console"
 base = "gui"
 build_options = {
@@ -123,7 +123,7 @@ executables = [
 ]
 setup(
     name="yasb",
-    version=version,
+    version=BUILD_VERSION,
     author="AmN",
     description="Yet Another Status Bar",
     executables=executables,
