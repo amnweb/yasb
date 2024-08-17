@@ -62,7 +62,6 @@ jobs:
       uses: TriPSs/conventional-changelog-action@v5
       with:
         github-token: ${{ secrets.PAT }}
-        skip-version-file: true
 
     - name: Generate Checksum
       run: |
