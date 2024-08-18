@@ -1,4 +1,4 @@
-name: test
+name: Windows
 
 on:
   workflow_dispatch:
@@ -15,7 +15,37 @@ jobs:
       uses: actions/checkout@v4
       with:
         fetch-depth: 0 # Fetch all history for tags
- 
+
+    - name: Verify Git Status
+      run: |
+        git status
+        git log -1
+        git tag
+      shell: pwsh
+      
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip && pip install -r requirements.txt && pip install --upgrade cx_Freeze
+      shell: pwsh
+
+    - name: Build MSI
+      run: |
+        cd src && python build.py bdist_msi
+      shell: pwsh
+
+    - name: Get App Info
+      id: get_version
+      run: |
+        $version = (Get-Content src/settings.py | Select-String -Pattern 'BUILD_VERSION\s*=\s*"([^"]+)"').Matches.Groups[1].Value
+        echo "VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        $filename = (Get-ChildItem -Path src/dist/out/*.msi).Name
+        echo "FILENAME=$filename" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+      shell: pwsh
 
     - name: Get Previous Tag
       id: get_prev_tag
@@ -24,6 +54,28 @@ jobs:
         echo "PREV_TAG=$prev_tag" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
         echo "Previous tag: $prev_tag"
       shell: pwsh
+
+
+    - name: Create New Tag
+      id: create_tag
+      run: |
+        $tagExists = git tag -l $env:VERSION
+        if ($tagExists -eq "") {
+          git tag $env:VERSION
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "Failed to create tag $env:VERSION"
+            exit 1
+          }
+          git push origin $env:VERSION
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "Failed to push tag $env:VERSION"
+            exit 1
+          }
+        } else {
+          Write-Host "Tag $env:VERSION already exists, skipping tag creation"
+        }
+      shell: pwsh
+
 
 
     - name: Create Changelog
@@ -47,7 +99,7 @@ jobs:
       run: |
         $changelogDecoded = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($env:CHANGELOG))
         if (-not [string]::IsNullOrEmpty($changelogDecoded)) {
-          $changelogWithHeader = "## Other's`n`n$changelogDecoded"
+          $changelogWithHeader = "## Others`n`n$changelogDecoded"
           echo "DECODED_CHANGELOG<<EOF" >> $env:GITHUB_ENV
           echo "$changelogWithHeader" >> $env:GITHUB_ENV
           echo "EOF" >> $env:GITHUB_ENV
@@ -56,8 +108,41 @@ jobs:
         }
       shell: pwsh
 
-    - name: Check Changelog
-      id: echo
+    - name: Generate Checksum
       run: |
-        echo "Changelog:  ${{ env.DECODED_CHANGELOG }}"
- 
+        $checksum = Get-FileHash src/dist/out/*.msi -Algorithm SHA256
+        $filename = [System.IO.Path]::GetFileName($checksum.Path)
+        "$($checksum.Hash) $filename" > src/dist/out/checksums.txt
+      shell: pwsh
+
+    - name: Upload YASB Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: msi-artifact
+        path: src/dist/out/*.msi
+
+    - name: Upload Checksum Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: checksum-artifact
+        path: src/dist/out/checksums.txt
+
+    - name: Create and Upload Release
+      id: create_release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: v${{ env.VERSION }}
+        name: Release v${{ env.VERSION }}
+        body: | 
+              ![GitHub Downloads (specific asset, specific tag)](https://img.shields.io/github/downloads/amnweb/yasb/v${{ env.VERSION }}/${{ env.FILENAME }})
+              ${{ steps.changelog.outputs.changes }}
+              ${{ env.DECODED_CHANGELOG }}
+        append_body: true
+        files: |
+          src/dist/out/*.msi
+          src/dist/out/checksums.txt
+        prerelease: false
+        generate_release_notes: true
+        draft: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.PAT }}
