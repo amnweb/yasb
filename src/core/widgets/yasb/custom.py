@@ -126,7 +126,7 @@ class CustomWidget(BaseWidget):
         self._exec_data = None
 
         if self._exec_cmd:
-            proc = subprocess.Popen(self._exec_cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=False)
+            proc = subprocess.Popen(self._exec_cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True)
             output = proc.stdout.read()
             if self._exec_return_type == "json":
                 self._exec_data = json.loads(output)
