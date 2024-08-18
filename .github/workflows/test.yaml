@@ -1,4 +1,4 @@
-name: Windows
+name: test
 
 on:
   workflow_dispatch:
