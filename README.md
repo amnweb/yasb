@@ -16,8 +16,6 @@
 - Look for the latest release version, which will typically be listed at the top.
 - Under the "Assets" section of the release, you’ll find various files. Click on the installer file to download it.
 
-> [!IMPORTANT]
-> **Currently unstable:** The installer may crash when reloading configuration. 
 
 ### Using Python
 - Install Python 3.12
@@ -58,4 +56,5 @@
 .power-menu-popup > .button > .label {} -> Styles for power buttons icons and labels inside the popup
 .media-widget {} -> Styles specific to the media widget
 .github-widget {} -> Styles specific to the github widget
+.language-widget {} -> Styles specific to the language widget
 ```

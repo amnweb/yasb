@@ -52,7 +52,7 @@ bars:
           "media",
           "wifi",
           #"battery",
-          #"lang",
+          "language",
           #"ip_info",
           #"traffic",
           "cpu",
@@ -142,6 +142,17 @@ widgets:
       update_interval: 10000
       callbacks:
         on_right: "exec cmd /c Taskmgr"
+
+
+  language:
+    type: "yasb.language.LanguageWidget"
+    options:
+      label: "<span>\uf1ab</span> {lang[short]}"
+      label_alt: " {lang[full]}"
+      update_interval: 5 # 5 seconds
+      callbacks:
+        on_left: "toggle_label"
+
 
   komorebi_workspaces:
     type: "komorebi.workspaces.WorkspaceWidget"
@@ -238,18 +249,6 @@ widgets:
         default: "\uebaa"
         # https://www.weatherapi.com/docs/
         # Usage {temp_c}, {min_temp_c}, {max_temp_c}, {temp_f}, {min_temp_f}, {max_temp_f}, {location}, {humidity}, {icon}, {conditions}
-
-  lang:
-    type: "yasb.custom.CustomWidget"
-    options:
-      label: "<span>\uf1ab</span>{data}"
-      label_alt: "{data}"
-      class_name: "lang-widget"
-      exec_options:
-        run_cmd: "powershell Add-Type -AssemblyName System.Windows.Forms;([System.Windows.Forms.InputLanguage]::CurrentInputLanguage).Culture.Name"
-        # run every 10 sec
-        run_interval: 10000
-        return_format: "string"
 
   volume:
     type: "yasb.volume.VolumeWidget"
