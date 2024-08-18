@@ -71,7 +71,7 @@ jobs:
     - name: Create Changelog
       id: changelog
       run: |
-        auto-changelog --commit-limit false --starting-version=${{ env.PREV_TAG }} --template .github/changelog-template.hbs --output src/dist/out/changelog.md
+        auto-changelog --commit-limit false --starting-version=v${{ env.VERSION }} --template .github/changelog-template.hbs --output src/dist/out/changelog.md
       shell: pwsh
 
     - name: Read Changelog Content
