@@ -13,6 +13,10 @@ jobs:
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        fetch-tags: true
+        
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
@@ -59,7 +63,7 @@ jobs:
 
     - name: Create Changelog
       id: changelog
-      uses: loopwerk/tag-changelog@v1
+      uses: loopwerk/tag-changelog@v1.3.0
       with:
         token: ${{ secrets.PAT }}
 
