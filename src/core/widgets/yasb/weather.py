@@ -155,7 +155,13 @@ class WeatherWidget(BaseWidget):
     def get_weather_data(self, api_url):
         logging.info(f"Fetched new weather data at {datetime.now()}")
         try:
-            with urllib.request.urlopen(api_url) as response:
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:129.0) Gecko/20100101 Firefox/129.0',
+                'Cache-Control': 'no-cache',
+                'Referer': 'http://google.com'
+            }
+            request = urllib.request.Request(api_url, headers=headers)
+            with urllib.request.urlopen(request) as response:
                 weather_data = json.loads(response.read())
                 current = weather_data['current']
                 forecast = weather_data['forecast']['forecastday'][0]['day']
