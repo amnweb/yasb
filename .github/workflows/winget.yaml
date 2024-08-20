@@ -1,0 +1,35 @@
+name: Publish to WinGet
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch: # Manually run the action
+
+jobs:
+  msix-to-winget:
+    name: Publish to WinGet
+    runs-on: windows-latest
+    steps:
+      - name: Get Latest Release
+        id: get-version
+        uses: actions/github-script@v7
+        with:
+          script: |-
+            const { owner, repo } = context.repo;
+            const latestRelease = await github.rest.repos.getLatestRelease({ owner, repo });
+            const tag = latestRelease.data.tag_name;
+            const version = tag.replace("v", "");
+            core.setOutput('version', version);
+            core.setOutput('release-tag', tag);
+            console.log("Release tag: ", tag, " Version: ", version);
+
+      - uses: vedantmgoyal9/winget-releaser@main
+        with:
+          identifier: AmN.yasb
+          version: ${{ steps.get-version.outputs.version }}
+          release-tag: ${{ steps.get-version.outputs.release-tag }}
+          installers-regex: '\.msi$'
+          max-versions-to-keep: 5
+          fork-user: amnweb
+          token: ${{ secrets.WINGET_TOKEN }}
