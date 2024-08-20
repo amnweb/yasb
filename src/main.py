@@ -10,7 +10,7 @@ from core.log import init_logger
 from core.tray import TrayIcon
 from core.watcher import create_observer
 from core.event_service import EventService
-
+import settings
 logging.getLogger('asyncio').setLevel(logging.WARNING)
 
 def main():
@@ -18,6 +18,10 @@ def main():
         logging.error("This application requires Python 3.12 or higher.")
         sys.exit(1)
     config, stylesheet = get_config_and_stylesheet()
+    if config['debug']:
+        settings.DEBUG = True
+        logging.info("Debug mode enabled.")
+
     app = QApplication(argv)
     app.setQuitOnLastWindowClosed(False)
 

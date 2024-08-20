@@ -9,6 +9,11 @@ CONFIG_SCHEMA = {
         'type': 'boolean',
         'default': True,
     },
+    'debug': {
+        'type': 'boolean',
+        'default': False,
+        'required': False,
+    },
     'komorebi': {
         'type': 'dict',
         'schema': {

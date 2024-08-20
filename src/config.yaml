@@ -1,6 +1,6 @@
 watch_stylesheet: true
 watch_config: true
-
+debug: false # Enable debug mode to see more logs
 
 # This komorebi setting will be used for tray context menu.
 # If you don't use komorebi, you can remove this section.

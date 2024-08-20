@@ -55,8 +55,7 @@ class BarManager(QObject):
             logging.error(f"Error loading config: {e}")
             return
         if config and (config != self.config):
-
-            if config['bars'] != self.config['bars'] or config['widgets'] != self.config['widgets'] or config['komorebi'] != self.config['komorebi']:
+            if config['bars'] != self.config['bars'] or config['widgets'] != self.config['widgets'] or config['komorebi'] != self.config['komorebi'] or config['debug'] != self.config['debug']:
                 os.execl(sys.executable, sys.executable, *sys.argv)
             else:
                 self.config = config
