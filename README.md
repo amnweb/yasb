@@ -8,14 +8,16 @@
   <a href="https://github.com/amnweb/yasb/issues"><img src="https://img.shields.io/github/issues/amnweb/yasb"></a>
 </p>
 
-### How do you run it?
-- Install [Nerd Fonts](https://www.nerdfonts.com/font-downloads) (JetBrainsMono recommended)
+### Requirements
+- Nerd Fonts. Install [Nerd Fonts](https://www.nerdfonts.com/font-downloads) (JetBrainsMono recommended)
+- Windows 10 & 11
 
 ### Installer
 - Visit the [releases page](https://github.com/amnweb/yasb/releases) on GitHub.
 - Look for the latest release version, which will typically be listed at the top.
 - Under the "Assets" section of the release, you’ll find various files. Click on the installer file to download it.
 
+***
 
 ### Using Python
 - Install Python 3.12
@@ -26,6 +28,14 @@
 - Start the application:
   - run `python src/main.py` in your terminal (or click [yasb.vbs](src/yasb.vbs))
 
+***
+
+### Winget
+Make sure you have installed the latest version of [winget](https://learn.microsoft.com/en-us/windows/package-manager/winget/) and verified that installed binaries are available in your `$PATH` before proceeding.
+Install the YASB using winget install
+```
+winget install --id AmN.yasb
+```
 
 ## Demo YASB
 ![Reborn](demo/demo3.png)
