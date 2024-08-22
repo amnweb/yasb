@@ -103,6 +103,8 @@ class MemoryWidget(BaseWidget):
                 "{virtual_mem_percent}": virtual_mem.percent,
                 "{virtual_mem_total}": naturalsize(virtual_mem.total),
                 "{virtual_mem_avail}": naturalsize(virtual_mem.available),
+                "{virtual_mem_used}": naturalsize(virtual_mem.used),
+                "{virtual_mem_outof}": f"{naturalsize(virtual_mem.used)} / {naturalsize(virtual_mem.total)}",
                 "{swap_mem_free}": naturalsize(swap_mem.free),
                 "{swap_mem_percent}": swap_mem.percent,
                 "{swap_mem_total}": naturalsize(swap_mem.total),
