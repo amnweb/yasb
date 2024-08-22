@@ -52,7 +52,7 @@ bars:
           "media",
           "wifi",
           #"battery",
-          "language",
+          #"language",
           #"ip_info",
           #"traffic",
           "cpu",
@@ -310,6 +310,7 @@ widgets:
       label: "<span>\ueba1</span>"
       label_alt: "Notifications {data}" # {data} return number of unread notification
       token: ghp_xxxxxxxxxxx # GitHub Personal access tokens (classic) https://github.com/settings/tokens
+      # You can set token: env, this means you have to set YASB_GITHUB_TOKEN in environment variable
       max_notification: 20 # Max number of notification displaying in menu max: 50
       only_unread: false # Show only unread or all notifications; 
       max_field_size: 54 # Max characters in title before truncation.

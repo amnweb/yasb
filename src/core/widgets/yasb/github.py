@@ -1,3 +1,4 @@
+import os
 import re
 import logging
 import threading
@@ -35,7 +36,7 @@ class GithubWidget(BaseWidget):
         self._show_alt_label = False
         self._label_content = label
         self._label_alt_content = label_alt
-        self._token = token
+        self._token = token if token != 'env' else os.getenv('YASB_GITHUB_TOKEN')
         self._menu_width = menu_width
         self._menu_height = menu_height
         self._menu_offset = menu_offset
@@ -43,7 +44,6 @@ class GithubWidget(BaseWidget):
         self._only_unread = only_unread
         self._max_field_size = max_field_size
         self._github_data = []
-        
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
         self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
