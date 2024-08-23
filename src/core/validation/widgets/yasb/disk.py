@@ -1,6 +1,6 @@
 DEFAULTS = {
-    'label': "{volume_label} {space[used][percent]:.1f}%",
-    'label_alt': "{volume_label} {space[used][gb]:.1f}GB / {space[total][gb]:.1f}GB",
+    'label': "{volume_label} {space[used][percent]}",
+    'label_alt': "{volume_label} {space[used][gb]} / {space[total][gb]}",
     'volume_label': "C",
     'update_interval': 60,
     'callbacks': {
