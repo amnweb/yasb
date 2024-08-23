@@ -1,6 +1,6 @@
 DEFAULTS = {
-    'label': "{lang[short]}",
-    'label_alt': "{lang[full]}",
+    'label': "{lang[language_code]}-{lang[country_code]}",
+    'label_alt': "{lang[full_name]}",
     'update_interval': 5,
     'callbacks': {
         'on_left': 'toggle_label',

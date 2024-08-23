@@ -52,7 +52,7 @@ bars:
           
           "media",
           "wifi",
-          "disk",
+          #"disk",
           #"battery",
           #"language",
           #"ip_info",
@@ -61,7 +61,7 @@ bars:
           #"github",
           "weather",
           "memory",
-          "wallapers",
+          #"wallapers",
           "volume",
           "power_menu"
         ]
@@ -161,8 +161,8 @@ widgets:
   language:
     type: "yasb.language.LanguageWidget"
     options:
-      label: "<span>\uf1ab</span> {lang[short]}"
-      label_alt: " {lang[full]}"
+      label: "<span>\uf1ab</span> {lang[language_code]}-{lang[country_code]}"
+      label_alt: " {lang[full_name]}"
       update_interval: 5 # 5 seconds
       callbacks:
         on_left: "toggle_label"

@@ -146,7 +146,8 @@ class LanguageWidget(BaseWidget):
         # Get the full country name
         kernel32.GetLocaleInfoW(lang_id, LOCALE_SCOUNTRY, full_country_name, LOCALE_NAME_MAX_LENGTH)
         
-        short_code = f"{lang_name.value}-{country_name.value}"
+        language_code = lang_name.value
+        country_code = country_name.value
         full_name = f"{full_lang_name.value}"
-        return  {'short': short_code, 'full': full_name}
+        return  {'language_code': language_code, 'country_code': country_code, 'full_name': full_name}
              
