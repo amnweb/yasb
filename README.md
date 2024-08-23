@@ -67,4 +67,5 @@ winget install --id AmN.yasb
 .media-widget {} -> Styles specific to the media widget
 .github-widget {} -> Styles specific to the github widget
 .language-widget {} -> Styles specific to the language widget
+.disk-widget {} -> Styles specific to the disk widget
 ```
