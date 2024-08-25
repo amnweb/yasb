@@ -100,6 +100,6 @@ jobs:
           src/dist/out/checksums.txt
         prerelease: false
         generate_release_notes: true
-        draft: true
+        draft: false
       env:
         GITHUB_TOKEN: ${{ secrets.PAT }}
