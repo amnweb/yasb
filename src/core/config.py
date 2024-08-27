@@ -1,6 +1,7 @@
 import logging
+import shutil
 import settings
-from os import path
+from os import path, makedirs
 from sys import argv, exit
 from pathlib import Path
 from typing import Union
@@ -12,7 +13,6 @@ from yaml.parser import ParserError
 from yaml import safe_load, dump
 from xml.dom import SyntaxErr
 
-
 SRC_CONFIGURATION_DIR = path.dirname(argv[0])
 HOME_CONFIGURATION_DIR = path.join(Path.home(), settings.DEFAULT_CONFIG_DIRECTORY)
 HOME_STYLES_PATH = path.normpath(path.join(HOME_CONFIGURATION_DIR, settings.DEFAULT_STYLES_FILENAME))
@@ -20,7 +20,6 @@ HOME_CONFIG_PATH = path.normpath(path.join(HOME_CONFIGURATION_DIR, settings.DEFA
 DEFAULT_STYLES_PATH = path.normpath(path.join(SRC_CONFIGURATION_DIR, settings.DEFAULT_STYLES_FILENAME))
 DEFAULT_CONFIG_PATH = path.normpath(path.join(SRC_CONFIGURATION_DIR, settings.DEFAULT_CONFIG_FILENAME))
 GITHUB_ISSUES_URL = f"{settings.GITHUB_URL}/issues"
-
 
 class ConfigValidationError(TypeError):
     def __init__(self, message: str, errors: str, filetype: str, filepath: str):
@@ -44,7 +43,14 @@ def get_config_dir() -> str:
 
 
 def get_config_path() -> str:
-    if path.isdir(HOME_CONFIGURATION_DIR) and path.isfile(HOME_CONFIG_PATH):
+    if path.isdir(HOME_CONFIGURATION_DIR) and path.isfile(HOME_CONFIG_PATH):       
+        return HOME_CONFIG_PATH
+    elif not path.isfile(HOME_CONFIG_PATH):
+        # Create default config file if it doesn't exist
+        if not path.isdir(HOME_CONFIGURATION_DIR):
+            makedirs(HOME_CONFIGURATION_DIR)
+        shutil.copy2(DEFAULT_CONFIG_PATH, HOME_CONFIG_PATH)
+        logging.info(f"Created default config file at {HOME_CONFIG_PATH}")
         return HOME_CONFIG_PATH
     else:
         return DEFAULT_CONFIG_PATH
@@ -52,6 +58,13 @@ def get_config_path() -> str:
 
 def get_stylesheet_path() -> str:
     if path.isdir(HOME_CONFIGURATION_DIR) and path.isfile(HOME_STYLES_PATH):
+        return HOME_STYLES_PATH
+    elif not path.isfile(HOME_STYLES_PATH):
+        # Create default stylesheet if it doesn't exist
+        if not path.isdir(HOME_CONFIGURATION_DIR):
+            makedirs(HOME_CONFIGURATION_DIR)
+        shutil.copy2(DEFAULT_STYLES_PATH, HOME_STYLES_PATH)
+        logging.info(f"Created default stylesheet at {HOME_STYLES_PATH}")
         return HOME_STYLES_PATH
     else:
         return DEFAULT_STYLES_PATH

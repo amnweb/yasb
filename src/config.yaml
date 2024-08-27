@@ -13,8 +13,7 @@ komorebi:
 bars:
   status-bar:
     enabled: true
-    #screens: ['DELL P2419H (1)'] 
-    #screens: ['DELL P2419H (2)'] 
+    #screens: ['DELL P2419H (1)'] # If you want to show on specific screen
     screens: ['*'] 
     class_name: "yasb-bar"
     alignment:
