@@ -172,7 +172,10 @@ class WeatherWidget(BaseWidget):
                  
                 if conditions_code in {1063,1180,1183,1186,1189,1192,1195,1198,1201,1240,1243,1246,1273,1276,1279}:
                     conditions_data = "rainy"
-
+                    
+                if conditions_code in {1003}:
+                    conditions_data = "cloudy"
+                    
                 if conditions_code in {1114,1210,1213,1219,1222,1225,1237,1255,1258,1261,1264,1246,1282}:
                     conditions_data = "snowyIcy"
                 icon_string = f"{conditions_data}{'Day' if current['is_day'] == 1 else 'Night'}".strip()
