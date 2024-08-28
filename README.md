@@ -13,10 +13,7 @@
 ***
 
 <h3 align="center">
-<a href="https://github.com/amnweb/yasb/wiki">Wiki</a> ・
-<a href="https://github.com/amnweb/yasb-themes">Share Your Theme</a> ・
-<a href="https://github.com/amnweb/yasb/discussions">Discussions</a> ・
-<a href="https://github.com/amnweb/yasb/issues">Report a bug</a>
+<a href="https://github.com/amnweb/yasb/wiki">Wiki</a>・<a href="https://github.com/amnweb/yasb-themes">Share Your Theme</a>・<a href="https://github.com/amnweb/yasb/discussions">Discussions</a>・<a href="https://github.com/amnweb/yasb/issues">Report a bug</a>
 </h3>
 
 
@@ -81,3 +78,9 @@ winget install --id AmN.yasb
 .language-widget {} -> Styles specific to the language widget
 .disk-widget {} -> Styles specific to the disk widget
 ```
+
+
+## 🏆 Contributors
+Thanks to our amazing contributors!
+
+[![YASB Contributors](https://contrib.rocks/image?repo=amnweb/yasb)](https://github.com/amnweb/yasb/graphs/contributors)
