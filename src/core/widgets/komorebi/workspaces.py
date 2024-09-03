@@ -228,6 +228,8 @@ class WorkspaceWidget(BaseWidget):
             except IndexError:
                 button = self._try_add_workspace_button(workspace_index)
                 buttons_added = True
+            self._update_button(button)
+            
         if buttons_added:
             self._workspace_buttons.sort(key=lambda btn: btn.workspace_index)
             self._clear_container_layout()
