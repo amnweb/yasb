@@ -20,9 +20,11 @@ bars:
       position: "top"
       center: false
     blur_effect:
-      enabled: false
-      acrylic: false
-      dark: false
+      enabled: false # Blur effect will be applied to the bar
+      acrylic: false # Acrylic effect will be applied to the bar
+      dark_mode: false # Dark mode will add more shadow to the bar
+      round_corners: false # Default radius from OS
+      border_color: System # None, System or HEX color (this option is related to round_corners=true)
     window_flags:
       always_on_top: false
       windows_app_bar: true
@@ -51,21 +53,13 @@ bars:
           
           "media",
           "wifi",
-          #"disk",
-          #"battery",
-          #"language",
-          #"ip_info",
-          #"traffic",
           "cpu",
-          #"github",
           "weather",
           "memory",
-          #"wallapers",
           "volume",
           "power_menu"
         ]
 widgets:
-
   disk:
     type: "yasb.disk.DiskWidget"
     options:
@@ -303,19 +297,13 @@ widgets:
     options:
       label: "{data}"
       app_list:
-        #- {icon: "\uf489", launch: "wt"}
-        #- {icon: "\uf413", launch: "explorer c:\\Users\\amn"}
-        #- {icon: "\udb82\ude1e", launch: "C:\\Users\\amn\\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe"}
         #- {icon: "\udb80\ude39", launch: "C:\\Program Files\\Mozilla Firefox\\firefox.exe"}
-        #- {icon: "\uf1ff", launch: "C:\\Users\\amn\\AppData\\Local\\Discord\\Update.exe --processStart Discord.exe"}
-        #- {icon: "\ue217", launch: "C:\\Users\\amn\\AppData\\Roaming\\Telegram Desktop\\Telegram.exe"}
         - {icon: "\uf0a2", launch: "notification_center"}
         - {icon: "\ueb51", launch: "quick_settings"}
         #- {icon: "\uf46a", launch: "cmd.exe /c start ms-settings:windowsupdate"}
         - {icon: "\uf422", launch: "search"}
         #- {icon: "\udb84\udf55", launch: "widget"}
         # Currently available to use quick_settings, notification_center, search, widget, launcher (launcher will trigger ALT+A)
- 
 
   github:
     type: "yasb.github.GithubWidget"
@@ -339,6 +327,15 @@ widgets:
       image_path: "C:\\Users\\xxx\\Images" # Path to folder with images
       change_automatically: false # Automatically change wallpaper
       update_interval: 60 # If change_automatically is true, update interval in seconds
+
+  taskbar:
+    type: "yasb.taskbar.TaskbarWidget"
+    options:
+      icon_size: 16
+      ignore_apps:
+        processes: []
+        titles: []
+        classes: []
 
   nvidia_temp:
     type: "yasb.custom.CustomWidget"
