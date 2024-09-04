@@ -1,6 +1,5 @@
 PyQt6
 PyQt6_sip
-BlurWindow
 Cerberus
 cssutils
 humanize
