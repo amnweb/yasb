@@ -10,14 +10,15 @@ from core.utils.win32.system_function import function_map
 class ApplicationsWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
 
-    def __init__(self, label: str, class_name: str,app_list:  list[str, dict[str]]):
+    def __init__(self, label: str, class_name: str,app_list:  list[str, dict[str]],container_padding: dict):
         super().__init__(class_name=f"apps-widget {class_name}")
         self._label = label
         self._apps = app_list
+        self._padding = container_padding
         # Construct container
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
-        #self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
+        self._widget_container_layout.setContentsMargins(self._padding['left'],self._padding['top'],self._padding['right'],self._padding['bottom'])
         # Initialize container
         self._widget_container: QWidget = QWidget()
         self._widget_container.setLayout(self._widget_container_layout)
