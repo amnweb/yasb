@@ -65,7 +65,8 @@ class WorkspaceWidget(BaseWidget):
             label_default_name: str,
             hide_if_offline: bool,
             label_zero_index: bool,
-            hide_empty_workspaces: bool
+            hide_empty_workspaces: bool,
+            container_padding: dict
     ):
         super().__init__(class_name="komorebi-workspaces")
         self._event_service = EventService()
@@ -75,6 +76,7 @@ class WorkspaceWidget(BaseWidget):
         self._label_default_name = label_default_name
         self._label_zero_index = label_zero_index
         self._hide_if_offline = hide_if_offline
+        self._padding = container_padding
         self._komorebi_screen = None
         self._komorebi_workspaces = []
         self._prev_workspace_index = None
@@ -111,7 +113,7 @@ class WorkspaceWidget(BaseWidget):
         # Construct container which holds workspace buttons
         self._workspace_container_layout: QHBoxLayout = QHBoxLayout()
         self._workspace_container_layout.setSpacing(0)
-        # self._workspace_container_layout.setContentsMargins(0, 0, 0, 0)
+        self._workspace_container_layout.setContentsMargins(self._padding['left'],self._padding['top'],self._padding['right'],self._padding['bottom'])
         self._workspace_container_layout.addWidget(self._offline_text)
         self._workspace_container: QWidget = QWidget()
         self._workspace_container.setLayout(self._workspace_container_layout)
@@ -229,7 +231,7 @@ class WorkspaceWidget(BaseWidget):
                 button = self._try_add_workspace_button(workspace_index)
                 buttons_added = True
             self._update_button(button)
-            
+                
         if buttons_added:
             self._workspace_buttons.sort(key=lambda btn: btn.workspace_index)
             self._clear_container_layout()
