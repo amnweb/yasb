@@ -3,7 +3,7 @@ BAR_DEFAULTS = {
     'screens': ['*'],
     'class_name': 'yasb-bar',
     'alignment': {'position': 'top', 'center': False},
-    'blur_effect': {'enabled': False, 'dark': False, 'acrylic': False},
+    'blur_effect': {'enabled': False, 'dark_mode': False, 'acrylic': False,'round_corners': False,'border_color': "System"},
     'window_flags': {'always_on_top': False, 'windows_app_bar': False},
     'dimensions': {'width': '100%', 'height': 30},
     'padding': {'top': 0, 'left': 0, 'bottom': 0, 'right': 0},
@@ -52,13 +52,21 @@ BAR_SCHEMA = {
                     'type': 'boolean',
                     'default': BAR_DEFAULTS['blur_effect']['enabled']
                 },
-                'dark': {
+                'dark_mode': {
                     'type': 'boolean',
-                    'default': BAR_DEFAULTS['blur_effect']['enabled']
+                    'default': BAR_DEFAULTS['blur_effect']['dark_mode']
                 },
                 'acrylic': {
                     'type': 'boolean',
-                    'default': BAR_DEFAULTS['blur_effect']['enabled']
+                    'default': BAR_DEFAULTS['blur_effect']['acrylic']
+                },
+                'round_corners': {
+                    'type': 'boolean',
+                    'default': BAR_DEFAULTS['blur_effect']['round_corners']
+                },
+                'border_color': {
+                    'type': 'string',
+                    'default': BAR_DEFAULTS['blur_effect']['border_color']
                 }
             },
             'default': BAR_DEFAULTS['blur_effect']

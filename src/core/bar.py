@@ -6,7 +6,7 @@ from PyQt6.QtCore import Qt, QRect
 from core.utils.utilities import is_valid_percentage_str, percent_to_float
 from core.utils.win32.utilities import get_monitor_hwnd
 from core.validation.bar import BAR_DEFAULTS
-from BlurWindow.blurWindow import GlobalBlur
+from core.utils.win32.blurWindow import Blur
  
 try:
     from core.utils.win32 import app_bar
@@ -69,15 +69,15 @@ class Bar(QWidget):
         self._add_widgets(widgets)
         
         if blur_effect['enabled']:
-            GlobalBlur(
+            Blur(
                 self.winId(),
                 Acrylic=blur_effect['acrylic'],
-                Dark=blur_effect['dark'],
-                QWidget=self
+                DarkMode=blur_effect['dark_mode'],
+                RoundCorners=blur_effect['round_corners'],
+                BorderColor=blur_effect['border_color']
             )
 
         self.screen().geometryChanged.connect(self.on_geometry_changed, Qt.ConnectionType.QueuedConnection)
-
         self.show()
 
     @property
