@@ -210,13 +210,12 @@ class MainWindow(BaseStyledWidget,AnimatedWidget):
         self.center_on_screen()
 
         if blur:
- 
             Blur(
                 self.winId(),
                 Acrylic=False,
                 DarkMode=False,
                 RoundCorners=False,
-                BorderColor="custom"
+                BorderColor="None"
             )
         if blur_background:
             Blur(
@@ -224,7 +223,7 @@ class MainWindow(BaseStyledWidget,AnimatedWidget):
                 Acrylic=False,
                 DarkMode=False,
                 RoundCorners=False,
-                BorderColor="custom"
+                BorderColor="None"
             )
  
 
