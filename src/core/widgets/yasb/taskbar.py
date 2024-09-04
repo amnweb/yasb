@@ -113,7 +113,6 @@ class TaskbarWidget(BaseWidget):
     #         self._widget_container_layout.addWidget(icon_label)
     
     def _update_label(self, hwnd: int, win_info: dict, event: WinEvent) -> None:
-        print("Updating label")
         visible_windows = self.get_visible_windows(hwnd, win_info, event)
         existing_hwnds = set(self.window_buttons.keys())
         new_icons = []
