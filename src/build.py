@@ -23,6 +23,7 @@ build_options = {
         'core.widgets.yasb.wifi',
         'core.widgets.yasb.language',
         'core.widgets.yasb.disk',
+        'core.widgets.yasb.taskbar',
         'core.widgets.komorebi.active_layout',
         'core.widgets.komorebi.workspaces'
     ],
