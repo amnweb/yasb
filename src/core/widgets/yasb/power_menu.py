@@ -3,7 +3,7 @@ from PyQt6.QtWidgets import QApplication, QWidget, QPushButton, QVBoxLayout, QHB
 from PyQt6 import QtCore, QtGui
 from PyQt6.QtGui import QCursor
 from PyQt6.QtCore import Qt, QPropertyAnimation, pyqtSignal
-from BlurWindow.blurWindow import GlobalBlur
+from core.utils.win32.blurWindow import Blur
 from core.widgets.base import BaseWidget
 from core.validation.widgets.yasb.power_menu import VALIDATION_SCHEMA
 from core.config import get_stylesheet_path
@@ -210,9 +210,23 @@ class MainWindow(BaseStyledWidget,AnimatedWidget):
         self.center_on_screen()
 
         if blur:
-            GlobalBlur(self.winId())
+ 
+            Blur(
+                self.winId(),
+                Acrylic=False,
+                DarkMode=False,
+                RoundCorners=False,
+                BorderColor="custom"
+            )
         if blur_background:
-            GlobalBlur(self.overlay.winId())
+            Blur(
+                self.overlay.winId(),
+                Acrylic=False,
+                DarkMode=False,
+                RoundCorners=False,
+                BorderColor="custom"
+            )
+ 
 
         self.fade_in()
 
