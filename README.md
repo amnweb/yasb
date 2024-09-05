@@ -1,4 +1,4 @@
-<p align="center"><img src="https://raw.githubusercontent.com/amnweb/yasb/main/src/assets/images/app_icon.png" width="180"></p>
+<p align="center"><img src="https://raw.githubusercontent.com/amnweb/yasb/main/src/assets/images/app_icon.png" width="120"></p>
 <h2 align="center">Yasb - Yet Another Status Bar</h2>
 <p align="center">
   A highly configurable cross-platform (Windows) status bar written in Python.
@@ -76,6 +76,7 @@ winget install --id AmN.yasb
 .github-widget {} -> Styles specific to the github widget
 .language-widget {} -> Styles specific to the language widget
 .disk-widget {} -> Styles specific to the disk widget
+.taskbar-widget {} -> Styles specific to the taskbar widget
 ```
 
 
