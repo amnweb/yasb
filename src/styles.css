@@ -93,6 +93,7 @@
 }
 .komorebi-workspaces .ws-btn {
 	font-size: 16px;
+    border:none;
     background-color: transparent;
 	margin: 0 4px 0 4px;
 	color: #95a0ad;
