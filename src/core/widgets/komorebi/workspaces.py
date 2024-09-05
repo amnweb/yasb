@@ -227,10 +227,11 @@ class WorkspaceWidget(BaseWidget):
         for workspace_index, workspace in enumerate(self._komorebi_workspaces):
             try:
                 button = self._workspace_buttons[workspace_index]
+                buttons_added = True
             except IndexError:
                 button = self._try_add_workspace_button(workspace_index)
                 buttons_added = True
-            self._update_button(button)
+            #self._update_button(button)
                 
         if buttons_added:
             self._workspace_buttons.sort(key=lambda btn: btn.workspace_index)
