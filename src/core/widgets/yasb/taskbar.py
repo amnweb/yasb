@@ -217,9 +217,13 @@ class TaskbarWidget(BaseWidget):
     
     
     def bring_to_foreground(self, hwnd):
+        if not win32gui.IsWindow(hwnd):
+            logging.warning(f"Invalid window handle: {hwnd}")
+            return
+
         # Check if the window is minimized
         if win32gui.IsIconic(hwnd):
             win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
         else:
             win32gui.ShowWindow(hwnd, win32con.SW_SHOW)
-        win32gui.SetForegroundWindow(hwnd)  
+        win32gui.SetForegroundWindow(hwnd)
