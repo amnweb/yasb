@@ -170,6 +170,16 @@ class MediaWidget(BaseWidget):
         # Shorten fields if necessary with ...
         media_info = {k: self._format_max_field_size(v) if isinstance(v, str) else v for k, v in
                       media_info.items()}
+        
+         # Handle splitting album_artist
+        album_artist = media_info.get('album_artist', '')
+        # Check for various types of dashes
+        for dash in ['\u2014', '\u2013', '-']:
+            if dash in album_artist:
+                artist, album = album_artist.split(dash, 1)  # Split only on the first dash
+                media_info['artist'] = artist.strip()
+                media_info['album'] = album.strip()
+                break
 
         # Format the label
         format_label_content = active_label_content.format(**media_info)
