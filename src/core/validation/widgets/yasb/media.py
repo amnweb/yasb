@@ -66,6 +66,7 @@ VALIDATION_SCHEMA = {
     },
     'hide_controls': {
         'type': 'boolean',
+        'required': False,
         'default': False
     },
     'controls_left': {
