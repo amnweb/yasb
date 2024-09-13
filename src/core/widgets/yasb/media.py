@@ -43,7 +43,6 @@ class MediaWidget(BaseWidget):
         self._thumbnail_corner_radius = thumbnail_corner_radius
         self._hide_empty = hide_empty
         self._hide_controls = hide_controls
-
         # Construct container
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
@@ -133,7 +132,7 @@ class MediaWidget(BaseWidget):
             if not self._controls_only:
                 active_label.show()
 
-        else:
+        elif not self._hide_controls:
             # Hide thumbnail and label fields
             self._thumbnail_label.hide()
             active_label.hide()
@@ -147,17 +146,18 @@ class MediaWidget(BaseWidget):
     @QtCore.pyqtSlot(GlobalSystemMediaTransportControlsSessionPlaybackInfo)
     def _on_playback_info_changed(self, playback_info: GlobalSystemMediaTransportControlsSessionPlaybackInfo):
         # Set play-pause state icon
-        self._play_label.setText(self._media_button_icons['pause' if playback_info.playback_status == 4 else 'play'])
+        if not self._hide_controls:
+            self._play_label.setText(self._media_button_icons['pause' if playback_info.playback_status == 4 else 'play'])
 
-        enabled_if = lambda enabled: "disabled" if not enabled else ""
-        self._prev_label.setProperty("class", f"btn prev {enabled_if(playback_info.controls.is_previous_enabled)}")
-        self._play_label.setProperty("class", f"btn play {enabled_if(playback_info.controls.is_play_pause_toggle_enabled)}")
-        self._next_label.setProperty("class", f"btn next {enabled_if(playback_info.controls.is_next_enabled)}")
+            enabled_if = lambda enabled: "disabled" if not enabled else ""
+            self._prev_label.setProperty("class", f"btn prev {enabled_if(playback_info.controls.is_previous_enabled)}")
+            self._play_label.setProperty("class", f"btn play {enabled_if(playback_info.controls.is_play_pause_toggle_enabled)}")
+            self._next_label.setProperty("class", f"btn next {enabled_if(playback_info.controls.is_next_enabled)}")
 
-        # Refresh style sheets
-        self._prev_label.setStyleSheet('')
-        self._play_label.setStyleSheet('')
-        self._next_label.setStyleSheet('')
+            # Refresh style sheets
+            self._prev_label.setStyleSheet('')
+            self._play_label.setStyleSheet('')
+            self._next_label.setStyleSheet('')
 
     @QtCore.pyqtSlot(object) # None or dict
     def _on_media_properties_changed(self, media_info: Optional[dict[str, Any]]):
@@ -171,7 +171,6 @@ class MediaWidget(BaseWidget):
         # Shorten fields if necessary with ...
         media_info = {k: self._format_max_field_size(v) if isinstance(v, str) else v for k, v in
                       media_info.items()}
-        
          # Handle splitting album_artist
         album_artist = media_info.get('album_artist', '')
         # Check for various types of dashes
@@ -181,7 +180,6 @@ class MediaWidget(BaseWidget):
                 media_info['artist'] = artist.strip()
                 media_info['album'] = album.strip()
                 break
-
         # Format the label
         format_label_content = active_label_content.format(**media_info)
         active_label.setText(format_label_content)
