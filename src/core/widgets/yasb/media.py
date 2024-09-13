@@ -23,7 +23,7 @@ class MediaWidget(BaseWidget):
     _media_info_signal = QtCore.pyqtSignal(object)
     _session_status_signal = QtCore.pyqtSignal(bool)
 
-    def __init__(self, label: str, label_alt: str, hide_empty: bool, callbacks: dict[str, str],
+    def __init__(self, label: str, label_alt: str, hide_empty: bool, hide_controls: bool, callbacks: dict[str, str],
                  max_field_size: dict[str, int], show_thumbnail: bool, controls_only: bool, controls_left: bool,
                  thumbnail_alpha: int,
                  thumbnail_padding: int,
@@ -42,6 +42,7 @@ class MediaWidget(BaseWidget):
         self._thumbnail_padding = thumbnail_padding
         self._thumbnail_corner_radius = thumbnail_corner_radius
         self._hide_empty = hide_empty
+        self._hide_controls = hide_controls
 
         # Construct container
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
@@ -58,14 +59,14 @@ class MediaWidget(BaseWidget):
         # Make a grid box to overlay the text and thumbnail
         self.thumbnail_box = QGridLayout()
 
-        if self._controls_left:
+        if not self._hide_controls:
             self._prev_label, self._play_label, self._next_label = self._create_media_buttons()
-            if not controls_only:
-                self._widget_container_layout.addLayout(self.thumbnail_box)
+    
+        if not self._controls_only:
+            self._widget_container_layout.addLayout(self.thumbnail_box)
         else:
-            if not controls_only:
+            if self._hide_controls:
                 self._widget_container_layout.addLayout(self.thumbnail_box)
-            self._prev_label, self._play_label, self._next_label = self._create_media_buttons()
 
         self._label = QLabel()
         self._label.setAlignment(Qt.AlignmentFlag.AlignCenter)

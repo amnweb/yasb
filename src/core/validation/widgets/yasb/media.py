@@ -64,6 +64,10 @@ VALIDATION_SCHEMA = {
         'type': 'boolean',
         'default': False
     },
+    'hide_controls': {
+        'type': 'boolean',
+        'default': False
+    },
     'controls_left': {
         'type': 'boolean',
         'default': True
