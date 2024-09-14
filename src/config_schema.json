@@ -1,0 +1,2040 @@
+{
+  "$schema": "http://json-schema.org/draft-06/schema#",
+  "$ref": "#/definitions/config",
+  "definitions": {
+    "config": {
+      "type": "object",
+      "title": "config",
+      "description": "main config for yasb.",
+      "additionalProperties": false,
+      "properties": {
+        "watch_stylesheet": {
+          "type": "boolean",
+          "description": "Watch for css stylesheet changes and reload with new changes."
+        },
+        "watch_config": {
+          "type": "boolean",
+          "description": "Watch for config.yaml changes and reload with new changes."
+        },
+        "debug": {
+          "type": "boolean",
+          "description": "Enable this for more detailed logs to help with debuging."
+        },
+        "komorebi": {
+          "$ref": "#/definitions/komorebi"
+        },
+        "bars": {
+          "$ref": "#/definitions/bars"
+        },
+        "widgets": {
+          "$ref": "#/definitions/widgets"
+        }
+      },
+      "required": [
+        "bars",
+        "widgets"
+      ]
+    },
+    "komorebi": {
+      "type": "object",
+      "title": "komorebi",
+      "description": "Settings for komorebi.",
+      "additionalProperties": false,
+      "properties": {
+        "start_command": {
+          "type": "string",
+          "default": "komorebic start --whkd",
+          "description": "The command to start komorebi."
+        },
+        "stop_command": {
+          "type": "string",
+          "default": "komorebic stop --whkd",
+          "description": "The command to stop komorebi."
+        },
+        "reload_command": {
+          "type": "string",
+          "default": "komorebic reload-configuration",
+          "description": "The command to reload komorebi."
+        }
+      }
+    },
+    "bars": {
+      "type": "object",
+      "title": "bars",
+      "description": "The config for the bar.",
+      "additionalProperties": false,
+      "properties": {
+        "status-bar": {
+          "$ref": "#/definitions/status-bar"
+        }
+      }
+    },
+    "status-bar": {
+      "type": "object",
+      "title": "status-bar",
+      "description": "The config for the status-bar.",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "title": "enabled",
+          "description": "Whether or not to enable the bar."
+        },
+        "screens": {
+          "type": "array",
+          "title": "screens",
+          "description": "The screens you want the bar to show on. `['DELL P2419H (1)']` for example",
+          "default": "['*']",
+          "items": {
+            "type": "string"
+          }
+        },
+        "class_name": {
+          "type": "string",
+          "title": "class_name",
+          "default": "yasb-bar",
+          "description": "The css class name for the main bar."
+        },
+        "alignment": {
+          "$ref": "#/definitions/alignment"
+        },
+        "blur_effect": {
+          "$ref": "#/definitions/blur_effect"
+        },
+        "window_flags": {
+          "$ref": "#/definitions/window_flags"
+        },
+        "dimensions": {
+          "$ref": "#/definitions/dimensions"
+        },
+        "padding": {
+          "$ref": "#/definitions/padding"
+        },
+        "widgets": {
+          "$ref": "#/definitions/status-bar_widgets"
+        }
+      }
+    },
+    "alignment": {
+      "type": "object",
+      "additionalProperties": false,
+      "title": "alignment",
+      "description": "alignment settings.",
+      "properties": {
+        "position": {
+          "type": "string",
+          "title": "position",
+          "description": "The position of the bar on the screen.",
+          "default": "top",
+          "enum": [
+            "top",
+            "bottom"
+          ]
+        },
+        "center": {
+          "type": "boolean",
+          "title": "center",
+          "description": "Whether to center the bar or not."
+        }
+      }
+    },
+    "blur_effect": {
+      "type": "object",
+      "additionalProperties": false,
+      "title": "blur_effect",
+      "description": "blur_effect settings.",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "title": "enabled",
+          "description": "Whether or not to enable blur effects."
+        },
+        "acrylic": {
+          "type": "boolean",
+          "title": "acrylic",
+          "default": false,
+          "description": "Acrylic effect will be applied to the bar"
+        },
+        "dark_mode": {
+          "type": "boolean",
+          "title": "dark_mode",
+          "default": false,
+          "description": "Dark mode will add more shadow to the bar"
+        },
+        "round_corners": {
+          "type": "boolean",
+          "title": "round_corners",
+          "default": false,
+          "description": "Default radius from OS"
+        },
+        "border_color": {
+          "type": "string",
+          "default": "System",
+          "title": "border_color",
+          "description": "`None`, `System` or HEX color (this option is related to round_corners=true)"
+        }
+      }
+    },
+    "window_flags": {
+      "type": "object",
+      "additionalProperties": false,
+      "title": "window_flags",
+      "description": "window_flags settings.",
+      "properties": {
+        "always_on_top": {
+          "type": "boolean",
+          "title": "always_on_top",
+          "description": "Whether or not to always keep the bar on top of everyting else on screen.",
+          "default": false
+        },
+        "windows_app_bar": {
+          "type": "boolean",
+          "title": "windows_app_bar",
+          "description": "????? windows_app_bar.",
+          "default": false
+        }
+      }
+    },
+    "dimensions": {
+      "type": "object",
+      "additionalProperties": false,
+      "title": "dimensions",
+      "description": "dimensions settings.",
+      "properties": {
+        "width": {
+          "type": "string",
+          "title": "width",
+          "description": "The width of the bar on the screen.",
+          "default": "100%"
+        },
+        "height": {
+          "type": "number",
+          "title": "height",
+          "description": "The height of the bar on the screen.",
+          "default": 36
+        }
+      }
+    },
+    "padding": {
+      "type": "object",
+      "additionalProperties": false,
+      "title": "padding",
+      "description": "padding settings.",
+      "properties": {
+        "top": {
+          "type": "number",
+          "title": "top",
+          "description": "The top padding for the bar.",
+          "default": 4
+        },
+        "left": {
+          "type": "number",
+          "title": "left",
+          "description": "The left padding for the bar.",
+          "default": 0
+        },
+        "bottom": {
+          "type": "number",
+          "title": "bottom",
+          "description": "The bottom padding for the bar.",
+          "default": 4
+        },
+        "right": {
+          "type": "number",
+          "title": "right",
+          "description": "The right padding for the bar.",
+          "default": 0
+        }
+      }
+    },
+    "status-bar_widgets": {
+      "type": "object",
+      "additionalProperties": false,
+      "title": "widgets",
+      "description": "widgets settings.",
+      "properties": {
+        "left": {
+          "type": "array",
+          "title": "left",
+          "description": "The widgets to put in the left of the bar.",
+          "items": {
+            "type": "string",
+            "enum": [
+              "win_button",
+              "komorebi_workspaces",
+              "komorebi_active_layout",
+              "active_window",
+              "clock",
+              "apps",
+              "media",
+              "wifi",
+              "cpu",
+              "weather",
+              "memory",
+              "volume",
+              "power_menu"
+            ]
+          },
+          "default": [
+            "win_button",
+            "komorebi_workspaces",
+            "komorebi_active_layout",
+            "active_window"
+          ]
+        },
+        "center": {
+          "type": "array",
+          "title": "center",
+          "description": "The widgets to put in the center of the bar.",
+          "items": {
+            "type": "string",
+            "enum": [
+              "win_button",
+              "komorebi_workspaces",
+              "komorebi_active_layout",
+              "active_window",
+              "clock",
+              "apps",
+              "media",
+              "wifi",
+              "cpu",
+              "weather",
+              "memory",
+              "volume",
+              "power_menu"
+            ]
+          },
+          "default": [
+            "clock",
+            "apps"
+          ]
+        },
+        "right": {
+          "type": "array",
+          "title": "right",
+          "description": "The widgets to put in the right of the bar.",
+          "items": {
+            "type": "string",
+            "enum": [
+              "win_button",
+              "komorebi_workspaces",
+              "komorebi_active_layout",
+              "active_window",
+              "clock",
+              "apps",
+              "media",
+              "wifi",
+              "cpu",
+              "weather",
+              "memory",
+              "volume",
+              "power_menu"
+            ]
+          },
+          "default": [
+            "media",
+            "wifi",
+            "cpu",
+            "weather",
+            "memory",
+            "volume",
+            "power_menu"
+          ]
+        }
+      }
+    },
+    "widgets": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "disk": {
+          "$ref": "#/definitions/widgets_disk"
+        },
+        "media": {
+          "$ref": "#/definitions/widgets_media"
+        },
+        "active_window": {
+          "$ref": "#/definitions/widgets_active_window"
+        },
+        "battery": {
+          "$ref": "#/definitions/widgets_battery"
+        },
+        "clock": {
+          "$ref": "#/definitions/widgets_clock"
+        },
+        "cpu": {
+          "$ref": "#/definitions/widgets_cpu"
+        },
+        "memory": {
+          "$ref": "#/definitions/widgets_memory"
+        },
+        "language": {
+          "$ref": "#/definitions/widgets_language"
+        },
+        "komorebi_workspaces": {
+          "$ref": "#/definitions/widgets_komorebi_workspaces"
+        },
+        "komorebi_active_layout": {
+          "$ref": "#/definitions/widgets_komorebi_active_layout"
+        },
+        "wifi": {
+          "$ref": "#/definitions/widgets_wifi"
+        },
+        "traffic": {
+          "$ref": "#/definitions/widgets_traffic"
+        },
+        "ip_info": {
+          "$ref": "#/definitions/widgets_ip_info"
+        },
+        "weather": {
+          "$ref": "#/definitions/widgets_weather"
+        },
+        "volume": {
+          "$ref": "#/definitions/widgets_volume"
+        },
+        "power_menu": {
+          "$ref": "#/definitions/widgets_power_menu"
+        },
+        "apps": {
+          "$ref": "#/definitions/widgets_apps"
+        },
+        "github": {
+          "$ref": "#/definitions/widgets_github"
+        },
+        "wallapers": {
+          "$ref": "#/definitions/widgets_wallpapers"
+        },
+        "taskbar": {
+          "$ref": "#/definitions/widgets_taskbar"
+        },
+        "nvidia_temp": {
+          "$ref": "#/definitions/widgets_nvidia_temp"
+        },
+        "win_button": {
+          "$ref": "#/definitions/widgets_win_button"
+        }
+      }
+    },
+    "widget_type": {
+      "type": "string",
+      "title": "widget type",
+      "description": "The type of widget."
+    },
+    "widget_label": {
+      "type": "string",
+      "title": "widget label",
+      "description": "The label text for the widget."
+    },
+    "widget_label_alt": {
+      "type": "string",
+      "title": "widget label alt",
+      "description": "The alternative label text for the widget."
+    },
+    "widget_update_interval_secs": {
+      "type": "integer",
+      "title": "widget update interval",
+      "description": "The amount of seconds between updates for the widget."
+    },
+    "widget_update_interval_milisecond": {
+      "type": "integer",
+      "title": "widget update interval",
+      "description": "The amount of miliseconds between updates for the widget."
+    },
+    "widget_callback_on_left": {
+      "type": "string",
+      "title": "widget callback on left",
+      "description": "The callback to run on left click."
+    },
+    "widget_callback_on_middle": {
+      "type": "string",
+      "title": "widget callback on middle",
+      "description": "The callback to run on middle click."
+    },
+    "widget_callback_on_right": {
+      "type": "string",
+      "title": "widget callback on right",
+      "description": "The callback to run on right click."
+    },
+    "widgets_disk": {
+      "type": "object",
+      "title": "disk widget",
+      "description": "Settings for disk widget.",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "$ref": "#/definitions/widget_type",
+          "default": "yasb.disk.DiskWidget"
+        },
+        "options": {
+          "type": "object",
+          "title": "disk widget options",
+          "description": "disk widget options.",
+          "additionalProperties": false,
+          "properties": {
+            "label": {
+              "$ref": "#/definitions/widget_label",
+              "default": "{volume_label} {space[used][percent]}"
+            },
+            "label_alt": {
+              "$ref": "#/definitions/widget_label_alt",
+              "default": "{volume_label} {space[used][gb]} / {space[total][gb]}"
+            },
+            "volume_label": {
+              "type": "string",
+              "title": "disk widget volume label",
+              "description": "disk widget volume label.",
+              "default": "C"
+            },
+            "update_interval": {
+              "$ref": "#/definitions/widget_update_interval_secs",
+              "default": 60
+            },
+            "callbacks": {
+              "type": "object",
+              "title": "disk widget callbacks",
+              "description": "disk widget callbacks.",
+              "additionalProperties": false,
+              "properties": {
+                "on_left": {
+                  "$ref": "#/definitions/widget_callback_on_left"
+                },
+                "on_middle": {
+                  "$ref": "#/definitions/widget_callback_on_middle",
+                  "default": "C"
+                },
+                "on_right": {
+                  "$ref": "#/definitions/widget_callback_on_right",
+                  "default": "exec explorer C:\\"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "widgets_media": {
+      "type": "object",
+      "title": "media widget",
+      "description": "Settings for media widget.",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "$ref": "#/definitions/widget_type",
+          "default": "yasb.media.MediaWidget"
+        },
+        "options": {
+          "type": "object",
+          "title": "media widget options",
+          "description": "media widget options",
+          "additionalProperties": false,
+          "properties": {
+            "label": {
+              "$ref": "#/definitions/widget_label",
+              "default": "{title} - {artist}"
+            },
+            "label_alt": {
+              "$ref": "#/definitions/widget_label_alt",
+              "default": "{title}"
+            },
+            "max_field_size": {
+              "type": "object",
+              "title": "max_field_size",
+              "description": "max_field_size",
+              "additionalProperties": false,
+              "properties": {
+                "label": {
+                  "type": "integer",
+                  "title": "label",
+                  "description": "max_field_size for label",
+                  "default": 20
+                },
+                "label_alt": {
+                  "type": "integer",
+                  "title": "label",
+                  "description": "max_field_size for label_alt",
+                  "default": 30
+                }
+              }
+            },
+            "show_thumbnail": {
+              "type": "boolean",
+              "title": "show_thumbnail",
+              "description": "show thumbnail.",
+              "default": true
+            },
+            "controls_only": {
+              "type": "boolean",
+              "title": "controls_only",
+              "description": "controls only.",
+              "default": false
+            },
+            "controls_left": {
+              "type": "boolean",
+              "title": "controls_left",
+              "description": "controls left.",
+              "default": true
+            },
+            "hide_empty": {
+              "type": "boolean",
+              "title": "hide_empty",
+              "description": "hide empty.",
+              "default": true
+            },
+            "thumbnail_alpha": {
+              "type": "integer",
+              "title": "thumbnail_alpha",
+              "description": "thumbnail alpha.",
+              "default": 80
+            },
+            "thumbnail_padding": {
+              "type": "integer",
+              "title": "thumbnail_padding",
+              "description": "thumbnail padding.",
+              "default": 8
+            },
+            "thumbnail_corner_radius": {
+              "type": "integer",
+              "title": "thumbnail_corner_radius",
+              "description": "thumbnail corner_radius. Set to 0 for square corners",
+              "default": 16
+            },
+            "icons": {
+              "type": "object",
+              "title": "icons",
+              "description": "the icons to use.",
+              "additionalProperties": false,
+              "properties": {
+                "prev_track": {
+                  "type": "string",
+                  "title": "prev_track",
+                  "descroption": "previous track icon symbol",
+                  "default": "\ue892"
+                },
+                "next_track": {
+                  "type": "string",
+                  "title": "next_track",
+                  "descroption": "next track icon symbol",
+                  "default": "\ue893"
+                },
+                "play": {
+                  "type": "string",
+                  "title": "play",
+                  "descroption": "play track icon symbol",
+                  "default": "\ue768"
+                },
+                "pause": {
+                  "type": "string",
+                  "title": "pause",
+                  "descroption": "pause track icon symbol",
+                  "default": "\ue769"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "widgets_active_window": {
+      "type": "object",
+      "title": "active_window widget",
+      "description": "Settings for active_window widget.",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "$ref": "#/definitions/widget_type",
+          "default": "yasb.active_window.ActiveWindowWidget"
+        },
+        "options": {
+          "type": "object",
+          "title": "active window options",
+          "description": "active window options",
+          "additionalProperties": false,
+          "properties": {
+            "label": {
+              "$ref": "#/definitions/widget_label",
+              "default": "{win[title]}"
+            },
+            "label_alt": {
+              "$ref": "#/definitions/widget_label_alt",
+              "default": "[class_name='{win[class_name]}' exe='{win[process][name]}' hwnd={win[hwnd]}]"
+            },
+            "label_no_window": {
+              "type": "string",
+              "title": "label for no window",
+              "description": "label for no window.",
+              "default": ""
+            },
+            "label_icon": {
+              "type": "boolean",
+              "title": "label_icon",
+              "description": "label icon",
+              "default": true
+            },
+            "label_icon_size": {
+              "type": "integer",
+              "title": "label_icon_size",
+              "description": "label icon size",
+              "default": 16
+            },
+            "max_length": {
+              "type": "integer",
+              "title": "max_length",
+              "description": "max length",
+              "default": 56
+            },
+            "max_length_ellipsis": {
+              "type": "string",
+              "title": "max_length_ellipsis",
+              "description": "max length ellipsis",
+              "default": "..."
+            },
+            "monitor_exclusive": {
+              "type": "boolean",
+              "title": "monitor_exclusive",
+              "description": "monitor exclusive",
+              "default": true
+            }
+          }
+        }
+      }
+    },
+    "widgets_battery": {
+      "type": "object",
+      "title": "battery widget",
+      "description": "Settings for battery widget.",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "$ref": "#/definitions/widget_type",
+          "default": "yasb.battery.BatteryWidget"
+        },
+        "options": {
+          "type": "object",
+          "title": "battery options",
+          "description": "battery options.",
+          "additionalProperties": false,
+          "properties": {
+            "label": {
+              "$ref": "#/definitions/widget_label",
+              "default": "<span>{icon}</span>{percent}%"
+            },
+            "label_alt": {
+              "$ref": "#/definitions/widget_label_alt",
+              "default": "{icon} {percent}% | time: {time_remaining}"
+            },
+            "charging_options": {
+              "type": "object",
+              "title": "charging_options",
+              "description": "charging_options",
+              "additionalProperties": false,
+              "properties": {
+                "icon_format": {
+                  "type": "string",
+                  "title": "icon_format",
+                  "description": "icon format.",
+                  "default": "{charging_icon}"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "widgets_clock": {
+      "type": "object",
+      "title": "clock widget",
+      "description": "Settings for clock widget.",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "$ref": "#/definitions/widget_type",
+          "default": "yasb.clock.ClockWidget"
+        },
+        "options": {
+          "type": "object",
+          "title": "clock",
+          "additionalProperties": false,
+          "properties": {
+            "label": {
+              "$ref": "#/definitions/widget_label",
+              "default": "{%a %d, %b %H:%M}"
+            },
+            "label_alt": {
+              "$ref": "#/definitions/widget_label_alt",
+              "default": "{%A %d %B %Y, %H:%M}"
+            },
+            "locale": {
+              "type": "boolean",
+              "title": "locale",
+              "description": "Langugae for date, you can set your own, example 'en_EN', or 'fr_FR'."
+            },
+            "timezones": {
+              "type": "array",
+              "title": "timezones",
+              "description": "Looking up time zone info from registry, example '[America/Montreal]'.",
+              "default": [],
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "widgets_cpu": {
+      "type": "object",
+      "title": "cpu widget",
+      "description": "Settings for cpu widget.",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "$ref": "#/definitions/widget_type",
+          "default": "yasb.cpu.CpuWidget"
+        },
+        "options": {
+          "type": "object",
+          "title": "cpu options",
+          "description": "cpu options.",
+          "additionalProperties": false,
+          "properties": {
+            "label": {
+              "$ref": "#/definitions/widget_label",
+              "default": "<span>{icon}</span>{percent}%"
+            },
+            "label_alt": {
+              "$ref": "#/definitions/widget_label_alt",
+              "default": "{icon} {percent}% | time: {time_remaining}"
+            },
+            "update_interval": {
+              "$ref": "#/definitions/widget_update_interval_milisecond",
+              "default": 2000
+            },
+            "histogram_icons": {
+              "type": "array",
+              "title": "histogram_icons",
+              "description": "histogram_icons",
+              "items": {
+                "type": "string"
+              },
+              "default": [
+                "\u2581",
+                "\u2581",
+                "\u2582",
+                "\u2583",
+                "\u2584",
+                "\u2585",
+                "\u2586",
+                "\u2587",
+                "\u2588"
+              ]
+            },
+            "histogram_num_columns": {
+              "type": "integer",
+              "title": "histogram_num_columns",
+              "description": "histogram_num_columns",
+              "default": 8
+            },
+            "callbacks": {
+              "properties": {
+                "on_left": {
+                  "$ref": "#/definitions/widget_callback_on_left"
+                },
+                "on_middle": {
+                  "$ref": "#/definitions/widget_callback_on_middle"
+                },
+                "on_right": {
+                  "$ref": "#/definitions/widget_callback_on_right",
+                  "default": "exec cmd /c Taskmgr"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "widgets_memory": {
+      "type": "object",
+      "title": "memory widget",
+      "description": "Settings for memory widget.",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "$ref": "#/definitions/widget_type",
+          "default": "yasb.memory.MemoryWidget"
+        },
+        "options": {
+          "type": "object",
+          "title": "memory options",
+          "description": "memory options.",
+          "additionalProperties": false,
+          "properties": {
+            "label": {
+              "$ref": "#/definitions/widget_label",
+              "default": "<span>\uf4bc</span> {virtual_mem_free}"
+            },
+            "label_alt": {
+              "$ref": "#/definitions/widget_label_alt",
+              "default": "<span>\uf4bc</span> {virtual_mem_percent}%"
+            },
+            "update_interval": {
+              "$ref": "#/definitions/widget_update_interval_milisecond",
+              "default": 10000
+            },
+            "callbacks": {
+              "properties": {
+                "on_left": {
+                  "$ref": "#/definitions/widget_callback_on_left"
+                },
+                "on_middle": {
+                  "$ref": "#/definitions/widget_callback_on_middle"
+                },
+                "on_right": {
+                  "$ref": "#/definitions/widget_callback_on_right",
+                  "default": "exec cmd /c Taskmgr"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "widgets_language": {
+      "type": "object",
+      "title": "language widget",
+      "description": "Settings for language widget.",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "$ref": "#/definitions/widget_type",
+          "default": "yasb.language.LanguageWidget"
+        },
+        "options": {
+          "type": "object",
+          "title": "language options",
+          "description": "language options.",
+          "additionalProperties": false,
+          "properties": {
+            "label": {
+              "$ref": "#/definitions/widget_label",
+              "default": "<span>\uf1ab</span> {lang[language_code]}-{lang[country_code]}"
+            },
+            "label_alt": {
+              "$ref": "#/definitions/widget_label_alt",
+              "default": " {lang[full_name]}"
+            },
+            "update_interval": {
+              "$ref": "#/definitions/widget_update_interval_secs",
+              "default": 5
+            },
+            "callbacks": {
+              "properties": {
+                "on_left": {
+                  "$ref": "#/definitions/widget_callback_on_left",
+                  "default": "toggle_label"
+                },
+                "on_middle": {
+                  "$ref": "#/definitions/widget_callback_on_middle"
+                },
+                "on_right": {
+                  "$ref": "#/definitions/widget_callback_on_right"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "widgets_komorebi_workspaces": {
+      "type": "object",
+      "title": "komorebi workspaces widget",
+      "description": "Settings for komorebi_workspaces widget.",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "$ref": "#/definitions/widget_type",
+          "default": "komorebi.workspaces.WorkspaceWidget"
+        },
+        "options": {
+          "type": "object",
+          "title": "komorebi_workspaces options",
+          "description": "komorebi_workspaces options.",
+          "additionalProperties": false,
+          "properties": {
+            "label_offline": {
+              "type": "string",
+              "title": "label_offline",
+              "description": "label_offline.",
+              "default": "Komorebi Offline"
+            },
+            "label_workspace_btn": {
+              "type": "string",
+              "title": "label_workspace_btn",
+              "description": "label_workspace_btn.",
+              "default": "\udb81\udc3d"
+            },
+            "label_workspace_active_btn": {
+              "type": "string",
+              "title": "label_workspace_active_btn",
+              "description": "label_workspace_active_btn.",
+              "default": "\udb81\udc3e"
+            },
+            "label_default_name": {
+              "type": "string",
+              "title": "label_default_name",
+              "description": "label_default_name.",
+              "default": "{index}"
+            },
+            "label_zero_index": {
+              "type": "boolean",
+              "title": "label_zero_index",
+              "description": "label_zero_index.",
+              "default": false
+            },
+            "hide_empty_workspaces": {
+              "type": "boolean",
+              "title": "hide_empty_workspaces",
+              "description": "hide_empty_workspaces.",
+              "default": false
+            },
+            "hide_if_offline": {
+              "type": "boolean",
+              "title": "hide_if_offline",
+              "description": "hide_if_offline.",
+              "default": false
+            }
+          }
+        }
+      }
+    },
+    "widgets_komorebi_active_layout": {
+      "type": "object",
+      "title": "komorebi_active_layout widget",
+      "description": "Settings for komorebi_active_layout widget.",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "$ref": "#/definitions/widget_type",
+          "default": "komorebi.active_layout.ActiveLayoutWidget"
+        },
+        "options": {
+          "type": "object",
+          "title": "komorebi_active_layout options",
+          "description": "komorebi_active_layout options.",
+          "additionalProperties": false,
+          "properties": {
+            "hide_if_offline": {
+              "type": "boolean",
+              "title": "hide_if_offline",
+              "description": "hide if offline",
+              "default": true
+            },
+            "label": {
+              "$ref": "#/definitions/widget_label",
+              "default": "{icon}"
+            },
+            "layouts": {
+              "type": "array",
+              "title": "layouts",
+              "description": "The layouts to cycle.",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "bsp",
+                  "columns",
+                  "rows",
+                  "grid",
+                  "vertical_stack",
+                  "horizontal_stack",
+                  "ultrawide_vertical_stack",
+                  "right_main_vertical_stack"
+                ]
+              },
+              "default": [
+                "bsp",
+                "columns",
+                "rows",
+                "grid",
+                "vertical_stack",
+                "horizontal_stack",
+                "ultrawide_vertical_stack",
+                "right_main_vertical_stack"
+              ]
+            },
+            "layout_icons": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "bsp": {
+                  "type": "string",
+                  "title": "bsp icon",
+                  "description": "The icon for bsp.",
+                  "default": "BSP"
+                },
+                "columns": {
+                  "type": "string",
+                  "title": "columns icon",
+                  "description": "The icon for columns.",
+                  "default": "COLS"
+                },
+                "rows": {
+                  "type": "string",
+                  "title": "rows icon",
+                  "description": "The icon for rows.",
+                  "default": "ROWS"
+                },
+                "grid": {
+                  "type": "string",
+                  "title": "grid icon",
+                  "description": "The icon for grid.",
+                  "default": "GRID"
+                },
+                "vertical_stack": {
+                  "type": "string",
+                  "title": "vertical_stack",
+                  "description": "The icon for vertical_stack.",
+                  "default": "V-STACK"
+                },
+                "horizontal_stack": {
+                  "type": "string",
+                  "title": "horizontal_stack",
+                  "description": "The icon for horizontal_stack.",
+                  "default": "H-STACK"
+                },
+                "ultrawide_vertical_stack": {
+                  "type": "string",
+                  "title": "ultrawide_vertical_stack",
+                  "description": "The icon for ultrawide_vertical_stack.",
+                  "default": "W-STACK"
+                },
+                "right_main_vertical_stack": {
+                  "type": "string",
+                  "title": "right_main_vertical_stack",
+                  "description": "The icon for right_main_vertical_stack.",
+                  "default": "RMV-STACK"
+                },
+                "monocle": {
+                  "type": "string",
+                  "title": "monocle",
+                  "description": "The icon for monocle.",
+                  "default": "MONOCLE"
+                },
+                "maximised": {
+                  "type": "string",
+                  "title": "maximised",
+                  "description": "The icon for maximised.",
+                  "default": "MAX"
+                },
+                "floating": {
+                  "type": "string",
+                  "title": "floating",
+                  "description": "The icon for floating.",
+                  "default": "FLOATING"
+                },
+                "paused": {
+                  "type": "string",
+                  "title": "paused",
+                  "description": "The icon for paused.",
+                  "default": "PAUSED"
+                }
+              }
+            },
+            "callbacks": {
+              "properties": {
+                "on_left": {
+                  "$ref": "#/definitions/widget_callback_on_left",
+                  "default": "next_layout"
+                },
+                "on_middle": {
+                  "$ref": "#/definitions/widget_callback_on_middle",
+                  "default": "toggle_monocle"
+                },
+                "on_right": {
+                  "$ref": "#/definitions/widget_callback_on_right",
+                  "default": "prev_layout"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "widgets_wifi": {
+      "type": "object",
+      "title": "wifi widget",
+      "description": "Settings for wifi widget.",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "$ref": "#/definitions/widget_type",
+          "default": "yasb.wifi.wifiwidget"
+        },
+        "options": {
+          "type": "object",
+          "title": "wifi options",
+          "description": "wifi options.",
+          "additionalproperties": false,
+          "properties": {
+            "label": {
+              "$ref": "#/definitions/widget_label",
+              "default": "<span>{wifi_icon}</span>"
+            },
+            "label_alt": {
+              "$ref": "#/definitions/widget_label_alt",
+              "default": "{wifi_name} {wifi_strength}%"
+            },
+            "update_interval": {
+              "$ref": "#/definitions/widget_update_interval_milisecond",
+              "default": 5000
+            },
+            "callbacks": {
+              "properties": {
+                "on_left": {
+                  "$ref": "#/definitions/widget_callback_on_left",
+                  "default": "exec cmd.exe /c start ms-settings:network"
+                },
+                "on_middle": {
+                  "$ref": "#/definitions/widget_callback_on_middle",
+                  "default": "do_nothing"
+                },
+                "on_right": {
+                  "$ref": "#/definitions/widget_callback_on_right",
+                  "default": "toggle_label"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "widgets_traffic": {
+      "type": "object",
+      "title": "traffic widget",
+      "description": "Settings for traffic widget.",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "$ref": "#/definitions/widget_type",
+          "default": "yasb.traffic.TrafficWidget"
+        },
+        "options": {
+          "type": "object",
+          "title": "traffic options",
+          "description": "traffic options.",
+          "additionalproperties": false,
+          "properties": {
+            "label": {
+              "$ref": "#/definitions/widget_label",
+              "default": "<span>\udb86\uddb3</span>{download_speed} | <span>\udb86\uddb2</span>{upload_speed}"
+            },
+            "label_alt": {
+              "$ref": "#/definitions/widget_label_alt",
+              "default": "Download {download_speed} \ue621 Upload {upload_speed}"
+            },
+            "update_interval": {
+              "$ref": "#/definitions/widget_update_interval_milisecond",
+              "description": "Update interval should be a multiple of 1000",
+              "default": 1000
+            },
+            "callbacks": {
+              "properties": {
+                "on_left": {
+                  "$ref": "#/definitions/widget_callback_on_left",
+                  "default": "toggle_label"
+                },
+                "on_middle": {
+                  "$ref": "#/definitions/widget_callback_on_middle"
+                },
+                "on_right": {
+                  "$ref": "#/definitions/widget_callback_on_right",
+                  "default": "exec cmd /c Taskmgr"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "widgets_ip_info": {
+      "type": "object",
+      "title": "ip_info widget",
+      "description": "Settings for ip_info widget.",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "$ref": "#/definitions/widget_type",
+          "default": "yasb.custom.CustomWidget"
+        },
+        "options": {
+          "type": "object",
+          "title": "ip_info options",
+          "description": "ip_info options.",
+          "additionalproperties": false,
+          "properties": {
+            "label": {
+              "$ref": "#/definitions/widget_label",
+              "default": "<span>\udb81\udd9f</span> {data[ip]}"
+            },
+            "label_alt": {
+              "$ref": "#/definitions/widget_label_alt",
+              "default": "<span>\uf450</span> {data[city]} {data[region]}, {data[country]}"
+            },
+            "class_name": {
+              "type": "string",
+              "title": "class_name",
+              "description": "class_name",
+              "default": "ip-info-widget"
+            },
+            "exec_options": {
+              "type": "object",
+              "title": "exec options",
+              "description": "exec options.",
+              "additionalProperties": false,
+              "properties": {
+                "run_cmd": {
+                  "type": "string",
+                  "title": "run_cmd",
+                  "description": "run_cmd.",
+                  "default": "curl.exe https://ipinfo.io"
+                },
+                "run_interval": {
+                  "$ref": "#/definitions/widget_update_interval_milisecond",
+                  "default": 120000
+                },
+                "return_format": {
+                  "type": "string",
+                  "title": "return_format",
+                  "description": "return_format.",
+                  "default": "json"
+                }
+              }
+            },
+            "callbacks": {
+              "properties": {
+                "on_left": {
+                  "$ref": "#/definitions/widget_callback_on_left",
+                  "default": "toggle_label"
+                },
+                "on_middle": {
+                  "$ref": "#/definitions/widget_callback_on_middle",
+                  "default": "exec cmd /c ncpa.cpl"
+                },
+                "on_right": {
+                  "$ref": "#/definitions/widget_callback_on_right",
+                  "default": "exec cmd /c start https://ipinfo.io/{data[ip]} "
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "widgets_weather": {
+      "type": "object",
+      "title": "weather widget",
+      "description": "Settings for weather widget.",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "$ref": "#/definitions/widget_type",
+          "default": "yasb.weather.WeatherWidget"
+        },
+        "options": {
+          "type": "object",
+          "title": "weather options",
+          "description": "weather options.",
+          "additionalProperties": false,
+          "properties": {
+            "label": {
+              "$ref": "#/definitions/widget_label",
+              "default": "<span>{icon}</span> {temp_c}"
+            },
+            "label_alt": {
+              "$ref": "#/definitions/widget_label_alt",
+              "default": "{location}: Min {min_temp_c}, Max {max_temp_c}, Humidity {humidity}"
+            },
+            "api_key": {
+              "type": "string",
+              "title": "api_key",
+              "description": "REPLACE THIS. Your api key. Get your free API key from https://www.weatherapi.com/",
+              "default": "3bf4cf9a7c3f40d6b31174128242807"
+            },
+            "update_interval": {
+              "$ref": "#/definitions/widget_update_interval_secs",
+              "description": "Update interval in seconds, Min 600 seconds",
+              "default": 600
+            },
+            "hide_decimal": {
+              "type": "boolean",
+              "title": "hide_decimal",
+              "description": "hide_decimal",
+              "default": true
+            },
+            "location": {
+              "type": "string",
+              "title": "location",
+              "description": "location. You can use 'USA Los Angeles 90006' {COUNTRY CITY ZIP_CODE}, or just city.",
+              "default": "Los Angeles, CA, USA"
+            },
+            "callbacks": {
+              "properties": {
+                "on_left": {
+                  "$ref": "#/definitions/widget_callback_on_left",
+                  "default": "toggle_label"
+                },
+                "on_middle": {
+                  "$ref": "#/definitions/widget_callback_on_middle"
+                },
+                "on_right": {
+                  "$ref": "#/definitions/widget_callback_on_right"
+                }
+              }
+            },
+            "icons": {
+              "type": "object",
+              "title": "icons",
+              "description": "icons. https://www.weatherapi.com/docs/. Usage {temp_c}, {min_temp_c}, {max_temp_c}, {temp_f}, {min_temp_f}, {max_temp_f}, {location}, {humidity}, {icon}, {conditions} ",
+              "additionalProperties": false,
+              "properties": {
+                "sunnyDay": {
+                  "type": "string",
+                  "title": "sunnyDay",
+                  "description": "sunnyDay icon.",
+                  "default": "\ue30d"
+                },
+                "clearNight": {
+                  "type": "string",
+                  "title": "clearNight",
+                  "description": "clearNight icon.",
+                  "default": "\ue32b"
+                },
+                "cloudyDay": {
+                  "type": "string",
+                  "title": "cloudyDay",
+                  "description": "cloudyDay icon.",
+                  "default": "\udb81\udd99"
+                },
+                "cloudyNight": {
+                  "type": "string",
+                  "title": "cloudyNight",
+                  "description": "cloudyNight icon.",
+                  "default": "\ue311"
+                },
+                "rainyDay": {
+                  "type": "string",
+                  "title": "rainyDay",
+                  "description": "rainyDay icon.",
+                  "default": "\udb81\ude7e"
+                },
+                "rainyNight": {
+                  "type": "string",
+                  "title": "rainyNight",
+                  "description": "rainyNight icon.",
+                  "default": "\udb81\ude7e"
+                },
+                "snowyIcyDay": {
+                  "type": "string",
+                  "title": "snowyIcyDay",
+                  "description": "snowyIcyDay icon.",
+                  "default": "\udb81\udd98"
+                },
+                "snowyIcyNight": {
+                  "type": "string",
+                  "title": "snowyIcyNight",
+                  "description": "snowyIcyNight icon.",
+                  "default": "\udb81\udd98"
+                },
+                "blizzard": {
+                  "type": "string",
+                  "title": "blizzard",
+                  "description": "blizzard icon.",
+                  "default": "\uebaa"
+                },
+                "default": {
+                  "type": "string",
+                  "title": "default",
+                  "description": "default icon.",
+                  "default": "\uebaa"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "widgets_volume": {
+      "type": "object",
+      "title": "volume widget",
+      "description": "Settings for volume widget.",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "$ref": "#/definitions/widget_type",
+          "default": "yasb.volume.VolumeWidget"
+        },
+        "options": {
+          "type": "object",
+          "title": "volume options",
+          "description": "volume options.",
+          "additionalProperties": false,
+          "properties": {
+            "label": {
+              "$ref": "#/definitions/widget_label",
+              "default": "<span>{icon}</span> {level}"
+            },
+            "label_alt": {
+              "$ref": "#/definitions/widget_label_alt",
+              "default": "{volume}"
+            },
+            "volume_icons": {
+              "type": "array",
+              "title": "volume_icons",
+              "description": "volume_icons",
+              "items": {
+                "type": "string"
+              },
+              "default": [
+                "\ueee8",
+                "\uf026",
+                "\uf027",
+                "\uf027",
+                "\uf028"
+              ]
+            },
+            "callbacks": {
+              "properties": {
+                "on_left": {
+                  "$ref": "#/definitions/widget_callback_on_left"
+                },
+                "on_middle": {
+                  "$ref": "#/definitions/widget_callback_on_middle"
+                },
+                "on_right": {
+                  "$ref": "#/definitions/widget_callback_on_right",
+                  "default": "exec cmd.exe /c start ms-settings:sound"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "widgets_power_menu": {
+      "type": "object",
+      "title": "power_menu widget",
+      "description": "Settings for power_menu widget.",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "$ref": "#/definitions/widget_type",
+          "default": "yasb.power_menu.PowerMenuWidget"
+        },
+        "options": {
+          "type": "object",
+          "title": "power_menu options",
+          "description": "power_menu options.",
+          "additionalProperties": false,
+          "properties": {
+            "label": {
+              "$ref": "#/definitions/widget_label",
+              "default": "\uf011"
+            },
+            "uptime": {
+              "type": "boolean",
+              "title": "uptime",
+              "description": "uptime",
+              "default": true
+            },
+            "blur": {
+              "type": "boolean",
+              "title": "blur",
+              "description": "blur",
+              "default": false
+            },
+            "blur_background": {
+              "type": "boolean",
+              "title": "blur_background",
+              "description": "blur_background",
+              "default": true
+            },
+            "animation_duration": {
+              "type": "integer",
+              "title": "animation_duration",
+              "description": "animation_duration in miliseconds.",
+              "default": 300
+            },
+            "button_row": {
+              "type": "integer",
+              "title": "button_row",
+              "description": "button_row. Number of buttons in row, min 1 max 5",
+              "default": 3,
+              "minimum": 1,
+              "maximum": 5
+            },
+            "buttons": {
+              "type": "object",
+              "title": "buttons",
+              "description": "buttons.",
+              "additionalProperties": false,
+              "properties": {
+                "lock": {
+                  "type": "array",
+                  "title": "lock",
+                  "description": "lock.",
+                  "items": {
+                    "type": "string"
+                  },
+                  "default": [
+                    "\uea75",
+                    "Lock"
+                  ]
+                },
+                "signout": {
+                  "type": "array",
+                  "title": "signout",
+                  "description": "signout.",
+                  "items": {
+                    "type": "string"
+                  },
+                  "default": [
+                    "\udb80\udf43",
+                    "Sign out"
+                  ]
+                },
+                "sleep": {
+                  "type": "array",
+                  "title": "sleep",
+                  "description": "sleep.",
+                  "items": {
+                    "type": "string"
+                  },
+                  "default": [
+                    "\u23fe",
+                    "Sleep"
+                  ]
+                },
+                "shutdown": {
+                  "type": "array",
+                  "title": "shutdown",
+                  "description": "shutdown.",
+                  "items": {
+                    "type": "string"
+                  },
+                  "default": [
+                    "\uf011",
+                    "Shut Down"
+                  ]
+                },
+                "restart": {
+                  "type": "array",
+                  "title": "restart",
+                  "description": "restart.",
+                  "items": {
+                    "type": "string"
+                  },
+                  "default": [
+                    "\uead2",
+                    "Restart"
+                  ]
+                },
+                "hibernate": {
+                  "type": "array",
+                  "title": "hibernate",
+                  "description": "hibernate.",
+                  "items": {
+                    "type": "string"
+                  },
+                  "default": [
+                    "\uf28e",
+                    "Hibernate"
+                  ]
+                },
+                "cancel": {
+                  "type": "array",
+                  "title": "cancel",
+                  "description": "cancel.",
+                  "items": {
+                    "type": "string"
+                  },
+                  "default": [
+                    "\udb81\udf3a",
+                    "Cancel"
+                  ]
+                },
+                "force_shutdown": {
+                  "type": "array",
+                  "title": "force_shutdown",
+                  "description": "force_shutdown.",
+                  "items": {
+                    "type": "string"
+                  },
+                  "default": [
+                    "\uf011",
+                    "Force Shut Down"
+                  ]
+                },
+                "force_restart": {
+                  "type": "array",
+                  "title": "force_restart",
+                  "description": "force_restart.",
+                  "items": {
+                    "type": "string"
+                  },
+                  "default": [
+                    "\uead2",
+                    "Force Restart"
+                  ]
+                },
+                "here": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "app_list_widget_item": {
+      "type": "object",
+      "title": "apps_list widget array item",
+      "description": "apps_list widget array item",
+      "additionalProperties": false,
+      "properties": {
+        "icon": {
+          "type": "string",
+          "title": "icon",
+          "description": "icon"
+        },
+        "launch": {
+          "type": "string",
+          "title": "icon",
+          "description": "icon"
+        }
+      }
+    },
+    "widgets_apps": {
+      "type": "object",
+      "title": "apps widget",
+      "description": "Settings for apps widget.",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "$ref": "#/definitions/widget_type",
+          "default": "yasb.applications.ApplicationsWidget"
+        },
+        "options": {
+          "type": "object",
+          "title": "apps options",
+          "description": "apps options.",
+          "additionalProperties": false,
+          "properties": {
+            "label": {
+              "$ref": "#/definitions/widget_label",
+              "default": "{data}"
+            },
+            "app_list": {
+              "type": "array",
+              "title": "app_list",
+              "description": "app_list.\n#- {icon: '\udb80\ude39', launch: 'C:\\Program Files\\Mozilla Firefox\\firefox.exe'}\n- {icon: '\uf0a2', launch: 'notification_center'}\n- {icon: '\ueb51', launch: 'quick_settings'}\n#- {icon: '\uf46a', launch: 'cmd.exe /c start ms-settings:windowsupdate'}\n- {icon: '\uf422', launch: 'search'}\n#- {icon: '\udb84\udf55', launch: 'widget'}\n# Currently available to use quick_settings, notification_center, search, widget, launcher (launcher will trigger ALT+A)",
+              "items": {
+                "$ref": "#/definitions/app_list_widget_item"
+              }
+            }
+          }
+        }
+      }
+    },
+    "widgets_github": {
+      "type": "object",
+      "title": "github widget",
+      "description": "Settings for github widget.",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "$ref": "#/definitions/widget_type",
+          "default": "yasb.github.GithubWidget"
+        },
+        "options": {
+          "type": "object",
+          "title": "github options",
+          "description": "github options.",
+          "additionalProperties": false,
+          "properties": {
+            "label": {
+              "$ref": "#/definitions/widget_label",
+              "default": "<span>\ueba1</span>"
+            },
+            "label_alt": {
+              "$ref": "#/definitions/widget_label_alt",
+              "description": "{data} return number of unread notification",
+              "default": "Notifications {data}"
+            },
+            "token": {
+              "type": "string",
+              "title": "token",
+              "description": "github token. GitHub Personal access tokens (classic) https://github.com/settings/tokens",
+              "default": "ghp_xxxxxxxxxxx"
+            },
+            "max_notification": {
+              "type": "integer",
+              "title": "max_notification",
+              "description": "max_notification. Max number of notification displaying in menu max: 50",
+              "default": 20,
+              "maximum": 50
+            },
+            "only_unread": {
+              "type": "boolean",
+              "title": "only_unread",
+              "description": "only_unread. Show only unread or all notifications",
+              "default": false
+            },
+            "max_field_size": {
+              "type": "integer",
+              "title": "max_field_size",
+              "description": "max_field_size. Max characters in title before truncation.",
+              "default": 54
+            },
+            "menu_width": {
+              "type": "integer",
+              "title": "menu_width",
+              "description": "menu_width",
+              "default": 400
+            },
+            "menu_height": {
+              "type": "integer",
+              "title": "menu_height",
+              "description": "menu_height",
+              "default": 400
+            },
+            "menu_offset": {
+              "type": "integer",
+              "title": "menu_height",
+              "description": "menu_height",
+              "default": 240
+            },
+            "update_interval": {
+              "$ref": "#/definitions/widget_update_interval_secs",
+              "description": "Check for new notification in seconds",
+              "default": 300
+            }
+          }
+        }
+      }
+    },
+    "widgets_wallpapers": {
+      "type": "object",
+      "title": "wallpapers widget",
+      "description": "Settings for wallpapers widget.",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "$ref": "#/definitions/widget_type",
+          "default": "yasb.wallpapers.WallpapersWidget"
+        },
+        "options": {
+          "type": "object",
+          "title": "wallpapers options",
+          "description": "wallpapers options.",
+          "additionalProperties": false,
+          "properties": {
+            "label": {
+              "$ref": "#/definitions/widget_label",
+              "default": "<span>\udb83\ude09</span>"
+            },
+            "image_path": {
+              "type": "string",
+              "title": "image_path",
+              "description": "image_path. Path to folder with images. example 'C:\\Users\\xxx\\Images'",
+              "default": "C:\\Users\\xxx\\Images"
+            },
+            "change_automatically": {
+              "type": "boolean",
+              "title": "change_automatically",
+              "description": "change_automatically. Automatically change wallpaper",
+              "default": false
+            },
+            "update_interval": {
+              "$ref": "#/definitions/widget_update_interval_secs",
+              "description": "If change_automatically is true, update interval in seconds",
+              "default": 60
+            }
+          }
+        }
+      }
+    },
+    "widgets_taskbar": {
+      "type": "object",
+      "title": "taskbar widget",
+      "description": "Settings for taskbar widget.",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "$ref": "#/definitions/widget_type",
+          "default": "yasb.wallpapers.WallpapersWidget"
+        },
+        "options": {
+          "type": "object",
+          "title": "taskbar options",
+          "description": "taskbar options.",
+          "additionalProperties": false,
+          "properties": {
+            "label": {
+              "$ref": "#/definitions/widget_label",
+              "default": "yasb.taskbar.TaskbarWidget"
+            },
+            "icon_size": {
+              "type": "integer",
+              "title": "icon_size",
+              "description": "icon_size.",
+              "default": 16
+            },
+            "ignore_apps": {
+              "type": "object",
+              "title": "language options",
+              "description": "language options.",
+              "additionalProperties": false,
+              "properties": {
+                "processes": {
+                  "type": "array",
+                  "title": "processes",
+                  "description": "processes.",
+                  "items": {
+                    "type": "string"
+                  },
+                  "default": []
+                },
+                "titles": {
+                  "type": "array",
+                  "title": "titles",
+                  "description": "titles.",
+                  "items": {
+                    "type": "string"
+                  },
+                  "default": []
+                },
+                "classes": {
+                  "type": "array",
+                  "title": "classes",
+                  "description": "classes.",
+                  "items": {
+                    "type": "string"
+                  },
+                  "default": []
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "widgets_nvidia_temp": {
+      "type": "object",
+      "title": "nvidia_temp widget",
+      "description": "Settings for nvidia_temp widget.",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "$ref": "#/definitions/widget_type",
+          "default": "yasb.custom.CustomWidget"
+        },
+        "options": {
+          "type": "object",
+          "title": "nvidia_temp options",
+          "description": "nvidia_temp options.",
+          "additionalProperties": false,
+          "properties": {
+            "label": {
+              "$ref": "#/definitions/widget_label",
+              "default": "{data}<span>\udb81\udd04</span>"
+            },
+            "label_alt": {
+              "$ref": "#/definitions/widget_label_alt",
+              "default": "{data}"
+            },
+            "class_name": {
+              "type": "string",
+              "title": "class_name",
+              "description": "class_name.",
+              "default": "system-widget"
+            },
+            "exec_options": {
+              "type": "object",
+              "title": "exec_options",
+              "description": "exec_options.",
+              "additionalProperties": false,
+              "properties": {
+                "run_cmd": {
+                  "type": "string",
+                  "title": "run_cmd",
+                  "description": "run_cmd.",
+                  "default": "powershell nvidia-smi --query-gpu=temperature.gpu --format=csv,noheader"
+                },
+                "run_interval": {
+                  "type": "integer",
+                  "title": "run_interval",
+                  "description": "run_interval. 10000 # run every 10 sec",
+                  "default": 10000
+                },
+                "return_format": {
+                  "type": "string",
+                  "title": "return_format",
+                  "description": "return_format.",
+                  "default": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "widgets_win_button": {
+      "type": "object",
+      "title": "win_button widget",
+      "description": "Settings for win_button widget.",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "$ref": "#/definitions/widget_type",
+          "default": "yasb.custom.CustomWidget"
+        },
+        "options": {
+          "type": "object",
+          "title": "win_button options",
+          "description": "win_button options.",
+          "additionalProperties": false,
+          "properties": {
+            "label": {
+              "$ref": "#/definitions/widget_label",
+              "default": "\ue62a"
+            },
+            "label_alt": {
+              "$ref": "#/definitions/widget_label_alt",
+              "default": "\ue62a"
+            },
+            "class_name": {
+              "type": "string",
+              "title": "class_name",
+              "description": "class_name.",
+              "default": "system-widget"
+            },
+            "callbacks": {
+              "type": "object",
+              "title": "disk widget callbacks",
+              "description": "disk widget callbacks.",
+              "additionalProperties": false,
+              "properties": {
+                "on_left": {
+                  "$ref": "#/definitions/widget_callback_on_left",
+                  "default": "exec start_menu"
+                },
+                "on_middle": {
+                  "$ref": "#/definitions/widget_callback_on_middle"
+                },
+                "on_right": {
+                  "$ref": "#/definitions/widget_callback_on_right"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
