@@ -870,11 +870,13 @@
           "properties": {
             "label": {
               "$ref": "#/definitions/widget_label",
-              "default": "<span>\uf4bc</span> {virtual_mem_free}"
+              "default": "<span>\uf4bc</span> {virtual_mem_free}",
+              "description": "The label text for the widget. Special values included here are:\n'{virtual_mem_free}'\n'{virtual_mem_percent}'\n'{virtual_mem_total}'\n'{virtual_mem_avail}'\n'{virtual_mem_used}'\n'{virtual_mem_outof}'\n'{swap_mem_free}'\n'{swap_mem_percent}'\n'{swap_mem_total}'"
             },
             "label_alt": {
               "$ref": "#/definitions/widget_label_alt",
-              "default": "<span>\uf4bc</span> {virtual_mem_percent}%"
+              "default": "<span>\uf4bc</span> {virtual_mem_percent}%",
+              "description": "The label text for the widget. Special values included here are:\n'{virtual_mem_free}'\n'{virtual_mem_percent}'\n'{virtual_mem_total}'\n'{virtual_mem_avail}'\n'{virtual_mem_used}'\n'{virtual_mem_outof}'\n'{swap_mem_free}'\n'{swap_mem_percent}'\n'{swap_mem_total}'"
             },
             "update_interval": {
               "$ref": "#/definitions/widget_update_interval_milisecond",
