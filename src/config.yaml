@@ -153,7 +153,6 @@ widgets:
       callbacks:
         on_right: "exec cmd /c Taskmgr"
 
-
   language:
     type: "yasb.language.LanguageWidget"
     options:
@@ -162,7 +161,6 @@ widgets:
       update_interval: 5 # 5 seconds
       callbacks:
         on_left: "toggle_label"
-
 
   komorebi_workspaces:
     type: "komorebi.workspaces.WorkspaceWidget"
@@ -174,6 +172,12 @@ widgets:
         label_zero_index: false
         hide_empty_workspaces: false
         hide_if_offline: false
+        animation: true
+        container_padding:
+          top: 0
+          left: 8
+          bottom: 0
+          right: 8
 
   komorebi_active_layout:
     type: "komorebi.active_layout.ActiveLayoutWidget"
@@ -194,6 +198,11 @@ widgets:
         maximised: "MAX"
         floating: "FLOATING"
         paused: "PAUSED"
+      container_padding:
+        top: 0
+        left: 8
+        bottom: 0
+        right: 8
       callbacks:
         on_left: 'next_layout'
         on_middle: 'toggle_monocle'

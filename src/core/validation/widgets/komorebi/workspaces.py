@@ -6,6 +6,7 @@ DEFAULTS = {
     'hide_if_offline': False,
     'label_zero_index': False,
     'hide_empty_workspaces': False,
+    'animation': False,
     'container_padding': {'top': 0, 'left': 0, 'bottom': 0, 'right': 0},
 }
 
@@ -37,6 +38,10 @@ VALIDATION_SCHEMA = {
     'hide_empty_workspaces': {
         'type': 'boolean',
         'default': DEFAULTS['hide_empty_workspaces']
+    },
+    'animation': { 
+        'type': 'boolean',
+        'default': DEFAULTS['animation']
     },
     'container_padding': {
         'type': 'dict',
