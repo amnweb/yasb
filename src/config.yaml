@@ -169,7 +169,7 @@ widgets:
         label_zero_index: false
         hide_empty_workspaces: false
         hide_if_offline: false
-        animation: true
+        animation: false
         container_padding:
           top: 0
           left: 8
@@ -340,11 +340,17 @@ widgets:
   taskbar:
     type: "yasb.taskbar.TaskbarWidget"
     options:
+      animation: false
       icon_size: 16
       ignore_apps:
         processes: []
         titles: []
         classes: []
+      container_padding:
+        top: 0
+        left: 0
+        bottom: 0
+        right: 0
 
   nvidia_temp:
     type: "yasb.custom.CustomWidget"

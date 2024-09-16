@@ -8,7 +8,7 @@ from core.widgets.base import BaseWidget
 from core.utils.win32.windows import WinEvent
 from core.event_service import EventService
 from PyQt6.QtGui import QPixmap, QImage, QCursor
-from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget
+from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget, QGraphicsOpacityEffect
 from PyQt6.QtCore import Qt, pyqtSignal, QTimer
 from core.validation.widgets.yasb.taskbar import VALIDATION_SCHEMA
 from core.utils.win32.utilities import get_hwnd_info
@@ -41,14 +41,17 @@ class TaskbarWidget(BaseWidget):
     def __init__(
             self,
             icon_size: int,
-            ignore_apps: dict[str, list[str]]
+            animation: bool,
+            ignore_apps: dict[str, list[str]],
+            container_padding: dict
     ):
         super().__init__(class_name="taskbar-widget")
 
         self.icon_label = QLabel()
         self._label_icon_size = icon_size
-
+        self._animation = animation
         self._ignore_apps = ignore_apps
+        self._padding = container_padding
         self._win_info = None
         self._update_retry_count = 0
         
@@ -60,7 +63,7 @@ class TaskbarWidget(BaseWidget):
         # Construct container
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
+        self._widget_container_layout.setContentsMargins(self._padding['left'],self._padding['top'],self._padding['right'],self._padding['bottom'])
         
         # Initialize container
         self._widget_container: QWidget = QWidget()
@@ -144,20 +147,28 @@ class TaskbarWidget(BaseWidget):
             if widget != self.icon_label:
                 hwnd = widget.property("hwnd")
                 if hwnd in removed_hwnds:
-                    self._widget_container_layout.removeWidget(widget)
-                    widget.deleteLater()
+                    if self._animation:
+                        self._animate_icon(widget, start_width=widget.width(), end_width=0)
+                    else:
+                        self._widget_container_layout.removeWidget(widget)
+                        widget.deleteLater()
 
         # Add new icons
         for title, icon, hwnd, process in new_icons:
             icon_label = ClickableLabel()
             icon_label.setProperty("class", "app-icon")
+            if self._animation:
+                icon_label.setFixedWidth(0)
             icon_label.setPixmap(icon)
             icon_label.setToolTip(title)
             icon_label.setProperty("hwnd", hwnd)
             icon_label.clicked.connect(lambda hwnd=hwnd: self.bring_to_foreground(hwnd))
             icon_label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
             self._widget_container_layout.addWidget(icon_label)
-            
+
+            if self._animation:
+                self._animate_icon(icon_label, start_width=0, end_width=icon_label.sizeHint().width())
+
     def _get_app_icon(self, hwnd: int, title:str, process: dict, event: WinEvent) -> None:
         try:
             if hwnd != win32gui.GetForegroundWindow():
@@ -227,3 +238,48 @@ class TaskbarWidget(BaseWidget):
         else:
             win32gui.ShowWindow(hwnd, win32con.SW_SHOW)
         win32gui.SetForegroundWindow(hwnd)
+        
+        
+    def _animate_icon(self, icon_label, start_width=None, end_width=None,fps = 120, duration=240):
+        if start_width is None:
+            start_width = 0
+        if end_width is None:
+            end_width = self._label_icon_size
+        
+        step_duration = int(duration / fps)
+        width_increment = (end_width - start_width) / fps
+        opacity_increment = 1.0 / fps if end_width > start_width else -1.0 / fps
+
+        self._current_step = 0
+        self._current_width = start_width
+        self._current_opacity = 0.0 if end_width > start_width else 1.0
+
+        # Set up the opacity effect
+        opacity_effect = QGraphicsOpacityEffect()
+        icon_label.setGraphicsEffect(opacity_effect)
+        opacity_effect.setOpacity(self._current_opacity)
+
+        def update_properties():
+            if self._current_step < fps:
+                self._current_width += width_increment
+                self._current_opacity += opacity_increment
+                icon_label.setFixedWidth(int(self._current_width))
+                opacity_effect.setOpacity(self._current_opacity)
+                self._current_step += 1
+            else:
+                icon_label._animation_timer.stop()
+                if end_width == 0:
+                    icon_label.hide()
+                    self._widget_container_layout.removeWidget(icon_label)
+                    icon_label.deleteLater()
+
+        # Ensure the label is shown before starting the animation
+        icon_label.show()
+
+        # Create a new timer for this animation
+        animation_timer = QTimer()
+        animation_timer.timeout.connect(update_properties)
+        animation_timer.start(step_duration)
+
+        # Store the timer in the icon_label to prevent conflicts
+        icon_label._animation_timer = animation_timer
