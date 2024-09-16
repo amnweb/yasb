@@ -165,6 +165,9 @@ class WeatherWidget(BaseWidget):
                 weather_data = json.loads(response.read())
                 current = weather_data['current']
                 forecast = weather_data['forecast']['forecastday'][0]['day']
+                current_hour = int(datetime.now().hour)
+                hour_forecast = weather_data['forecast']['forecastday'][0]['hour'][current_hour]
+                logging.info(f"hour_forecast {hour_forecast}")
                 def format_temp(temp, unit):
                     return f'{int(temp) if self._hide_decimal else temp}°{unit}'
                 def format_speed(speed, unit):
@@ -199,6 +202,7 @@ class WeatherWidget(BaseWidget):
                     '{wind_mph}': format_speed(current['wind_mph'], 'mph'),
                     '{wind_kph}': format_speed(current['wind_kph'], 'kph'),
                     '{wind_dir}': f"{current['wind_kph']}",
+                    '{chance_of_rain}': f"{hour_forecast['chance_of_rain']}%",
                 }
         except (urllib.error.URLError, json.JSONDecodeError) as e:
             logging.error(f"Error occurred: {e}")
@@ -220,4 +224,5 @@ class WeatherWidget(BaseWidget):
                 '{wind_mph}': 'N/A',
                 '{wind_kph}': 'N/A',
                 '{wind_dir}': 'N/A',
+                '{chance_of_rain}': 'N/A',
             }
