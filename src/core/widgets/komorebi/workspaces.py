@@ -1,6 +1,6 @@
 import logging
 from PyQt6.QtWidgets import QPushButton, QWidget, QHBoxLayout, QLabel
-from PyQt6.QtCore import Qt, pyqtSignal, QTimer,QPropertyAnimation
+from PyQt6.QtCore import Qt, pyqtSignal, QTimer
 from PyQt6.QtGui import QCursor
 from typing import Literal
 from contextlib import suppress
