@@ -1347,7 +1347,7 @@
             "label": {
               "$ref": "#/definitions/widget_label",
               "default": "<span>{icon}</span> {temp_c}",
-              "description": "The label text for the widget. Special values included here are:\n'<span>{icon}</span>'\n'{temp_c}'\n'{min_temp_c}'\n'{max_temp_c}'\n'{temp_f}'\n'{min_temp_f}'\n'{max_temp_f}'\n'{location}'\n'{humidity}'\n'{is_day}'\n'{icon}'\n'{icon_class}'\n'{conditions}'"
+              "description": "The label text for the widget. Special values included here are:\n'<span>{icon}</span>'\n'{temp_c}'\n'{feelslike_c}'\n'{min_temp_c}'\n'{max_temp_c}'\n'{temp_f}'\n'{feelslike_f}'\n'{min_temp_f}'\n'{max_temp_f}'\n'{location}'\n'{humidity}'\n'{is_day}'\n'{icon}'\n'{icon_class}'\n'{conditions}'\n'{wind_mph}'\n'{wind_kph}'\n'{wind_dir}'"
             },
             "label_alt": {
               "$ref": "#/definitions/widget_label_alt",

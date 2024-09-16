@@ -167,6 +167,8 @@ class WeatherWidget(BaseWidget):
                 forecast = weather_data['forecast']['forecastday'][0]['day']
                 def format_temp(temp, unit):
                     return f'{int(temp) if self._hide_decimal else temp}°{unit}'
+                def format_speed(speed, unit):
+                    return f'{int(speed) if self._hide_decimal else speed} {unit}'
                 conditions_data = current['condition']['text']
                 conditions_code = current['condition']['code']
                  
@@ -181,9 +183,11 @@ class WeatherWidget(BaseWidget):
                 icon_string = f"{conditions_data}{'Day' if current['is_day'] == 1 else 'Night'}".strip()
                 return {
                     '{temp_c}': format_temp(current['temp_c'], 'C'),
+                    '{feelslike_c}': format_temp(current['feelslike_c'], 'C'),
                     '{min_temp_c}': format_temp(forecast['mintemp_c'], 'C'),
                     '{max_temp_c}': format_temp(forecast['maxtemp_c'], 'C'),
                     '{temp_f}': format_temp(current['temp_f'], 'F'),
+                    '{feelslike_f}': format_temp(current['feelslike_f'], 'F'),
                     '{min_temp_f}': format_temp(forecast['mintemp_f'], 'F'),
                     '{max_temp_f}': format_temp(forecast['maxtemp_f'], 'F'),
                     '{location}': weather_data['location']['name'],
@@ -191,15 +195,20 @@ class WeatherWidget(BaseWidget):
                     '{is_day}': current['is_day'],
                     '{icon}': icon_string[0].lower() + icon_string[1:],
                     '{icon_class}': icon_string[0].lower() + icon_string[1:],
-                    '{conditions}': conditions_data
+                    '{conditions}': conditions_data,
+                    '{wind_mph}': format_speed(current['wind_mph'], 'mph'),
+                    '{wind_kph}': format_speed(current['wind_kph'], 'kph'),
+                    '{wind_dir}': f"{current['wind_kph']}",
                 }
         except (urllib.error.URLError, json.JSONDecodeError) as e:
             logging.error(f"Error occurred: {e}")
             return {
                 '{temp_c}': 'N/A',
+                '{feelslike_c}': 'N/A',
                 '{min_temp_c}': 'N/A',
                 '{max_temp_c}': 'N/A',
                 '{temp_f}': 'N/A',
+                '{feelslike_f}': 'N/A',
                 '{min_temp_f}': 'N/A',
                 '{max_temp_f}': 'N/A',
                 '{location}': 'Unknown',
@@ -207,5 +216,8 @@ class WeatherWidget(BaseWidget):
                 '{is_day}': 0,
                 '{icon}': 'unknown',
                 '{icon_class}': '',
-                '{conditions}': 'No Data'
+                '{conditions}': 'No Data',
+                '{wind_mph}': 'N/A',
+                '{wind_kph}': 'N/A',
+                '{wind_dir}': 'N/A',
             }
