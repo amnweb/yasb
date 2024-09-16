@@ -26,7 +26,6 @@ layout_cmds = {
     "UltrawideVerticalStack": "ultrawide-vertical-stack",
     "RightMainVerticalStack": "right-main-vertical-stack"
 }
-
 layout_snake_case = {
     "BSP": "bsp",
     "Columns": "columns",
@@ -37,7 +36,6 @@ layout_snake_case = {
     "UltrawideVerticalStack": "ultrawide_vertical_stack",
     "RightMainVerticalStack": "right_main_vertical_stack"
 }
-
 
 class ActiveLayoutWidget(BaseWidget):
     k_signal_connect = pyqtSignal(dict)
