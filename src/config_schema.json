@@ -250,24 +250,9 @@
     "available_widgets": {
       "type": "array",
       "title": "available_widgets",
-      "description": "All of the widgets available to use. Array of any or none of:\n'win_button'\n'komorebi_workspaces'\n'komorebi_active_layout'\n'active_window'\n'clock'\n'apps'\n'media'\n'wifi'\n'cpu'\n'weather'\n'memory'\n'volume'\n'power_men'\n",
+      "description": "All of the widgets available to use. Array of any or none of:\n'win_button'\n'komorebi_workspaces'\n'komorebi_active_layout'\n'active_window'\n'clock'\n'apps'\n'media'\n'wifi'\n'cpu'\n'weather'\n'memory'\n'volume'\n'power_menu'\n 'your_custom_widget' #Note this needs to be configured if you do add your own.\n",
       "items": {
-        "type": "string",
-        "enum": [
-          "win_button",
-          "komorebi_workspaces",
-          "komorebi_active_layout",
-          "active_window",
-          "clock",
-          "apps",
-          "media",
-          "wifi",
-          "cpu",
-          "weather",
-          "memory",
-          "volume",
-          "power_menu"
-        ]
+        "type": "string"
       }
     },
     "status-bar_widgets": {
