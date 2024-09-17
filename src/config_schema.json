@@ -247,6 +247,29 @@
         }
       }
     },
+    "available_widgets": {
+      "type": "array",
+      "title": "available_widgets",
+      "description": "All of the widgets available to use. Array of any or none of:\n'win_button'\n'komorebi_workspaces'\n'komorebi_active_layout'\n'active_window'\n'clock'\n'apps'\n'media'\n'wifi'\n'cpu'\n'weather'\n'memory'\n'volume'\n'power_men'\n",
+      "items": {
+        "type": "string",
+        "enum": [
+          "win_button",
+          "komorebi_workspaces",
+          "komorebi_active_layout",
+          "active_window",
+          "clock",
+          "apps",
+          "media",
+          "wifi",
+          "cpu",
+          "weather",
+          "memory",
+          "volume",
+          "power_menu"
+        ]
+      }
+    },
     "status-bar_widgets": {
       "type": "object",
       "additionalProperties": false,
@@ -254,27 +277,7 @@
       "description": "widgets settings.",
       "properties": {
         "left": {
-          "type": "array",
-          "title": "left",
-          "description": "The widgets to put in the left of the bar.",
-          "items": {
-            "type": "string",
-            "enum": [
-              "win_button",
-              "komorebi_workspaces",
-              "komorebi_active_layout",
-              "active_window",
-              "clock",
-              "apps",
-              "media",
-              "wifi",
-              "cpu",
-              "weather",
-              "memory",
-              "volume",
-              "power_menu"
-            ]
-          },
+          "$ref": "#definitions/available_widgets",
           "default": [
             "win_button",
             "komorebi_workspaces",
@@ -283,54 +286,14 @@
           ]
         },
         "center": {
-          "type": "array",
-          "title": "center",
-          "description": "The widgets to put in the center of the bar.",
-          "items": {
-            "type": "string",
-            "enum": [
-              "win_button",
-              "komorebi_workspaces",
-              "komorebi_active_layout",
-              "active_window",
-              "clock",
-              "apps",
-              "media",
-              "wifi",
-              "cpu",
-              "weather",
-              "memory",
-              "volume",
-              "power_menu"
-            ]
-          },
+          "$ref": "#definitions/available_widgets",
           "default": [
             "clock",
             "apps"
           ]
         },
         "right": {
-          "type": "array",
-          "title": "right",
-          "description": "The widgets to put in the right of the bar.",
-          "items": {
-            "type": "string",
-            "enum": [
-              "win_button",
-              "komorebi_workspaces",
-              "komorebi_active_layout",
-              "active_window",
-              "clock",
-              "apps",
-              "media",
-              "wifi",
-              "cpu",
-              "weather",
-              "memory",
-              "volume",
-              "power_menu"
-            ]
-          },
+          "$ref": "#definitions/available_widgets",
           "default": [
             "media",
             "wifi",
@@ -345,7 +308,12 @@
     },
     "widgets": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
+      "patternProperties": {
+        ".*": {
+          "$ref": "#/definitions/custom_widget"
+        }
+      },
       "properties": {
         "disk": {
           "$ref": "#/definitions/widgets_disk"
@@ -415,6 +383,55 @@
         }
       }
     },
+    "custom_widget": {
+      "type": "object",
+      "title": "custom_widget",
+      "description": "A custom widget you define.",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "$ref": "#/definitions/widget_type",
+          "default": "yasb.custom.CustomWidget"
+        },
+        "options": {
+          "type": "object",
+          "title": "Custom widget options",
+          "description": "Options for the custom widget.",
+          "additionalProperties": false,
+          "properties": {
+            "label": {
+              "$ref": "#/definitions/widget_label"
+            },
+            "label_alt": {
+              "$ref": "#/definitions/widget_label_alt"
+            },
+            "class_name": {
+              "type": "string",
+              "title": "class_name",
+              "description": "This is the css class name you can use in styles.css to customise the styling of the widget. For example, if your custom widget is called `my_custom_widget` then the css class would be something like `my-custom-widget`. These dont have to match but it makes things easier.",
+              "default": "my-custom-widget"
+            },
+            "callbacks": {
+              "type": "object",
+              "title": "callbacks",
+              "description": "callbacks.",
+              "additionalProperties": false,
+              "properties": {
+                "on_left": {
+                  "$ref": "#/definitions/widget_callback_on_left"
+                },
+                "on_middle": {
+                  "$ref": "#/definitions/widget_callback_on_middle"
+                },
+                "on_right": {
+                  "$ref": "#/definitions/widget_callback_on_right"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "widget_type": {
       "type": "string",
       "title": "widget type",
@@ -423,12 +440,14 @@
     "widget_label": {
       "type": "string",
       "title": "widget label",
-      "description": "The label text for the widget."
+      "description": "The label text for the widget.",
+      "default": ""
     },
     "widget_label_alt": {
       "type": "string",
       "title": "widget label alt",
-      "description": "The alternative label text for the widget."
+      "description": "The alternative label text for the widget.",
+      "default": ""
     },
     "widget_update_interval_secs": {
       "type": "integer",

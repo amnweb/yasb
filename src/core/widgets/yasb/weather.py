@@ -167,7 +167,6 @@ class WeatherWidget(BaseWidget):
                 forecast = weather_data['forecast']['forecastday'][0]['day']
                 current_hour = int(datetime.now().hour)
                 hour_forecast = weather_data['forecast']['forecastday'][0]['hour'][current_hour]
-                logging.info(f"hour_forecast {hour_forecast}")
                 def format_temp(temp, unit):
                     return f'{int(temp) if self._hide_decimal else temp}°{unit}'
                 def format_speed(speed, unit):
