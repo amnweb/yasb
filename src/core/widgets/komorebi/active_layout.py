@@ -68,11 +68,7 @@ class ActiveLayoutWidget(BaseWidget):
         # Construct container
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
-<<<<<<< HEAD
         self._widget_container_layout.setContentsMargins(self._padding['left'],self._padding['top'],self._padding['right'],self._padding['bottom'])
-=======
-        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
->>>>>>> c87d717 (uncommented out line setting contents margin to 0,0,0,0 to remove unnecessary dead space around komorebi active layout widget.)
         # Initialize container
         self._widget_container: QWidget = QWidget()
         self._widget_container.setLayout(self._widget_container_layout)
