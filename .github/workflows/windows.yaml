@@ -21,19 +21,30 @@ jobs:
       with:
         python-version: '3.12.5'
 
-    - name: Install dependencies
+    - name: Create virtual environment
       run: |
-        python -m pip install --upgrade pip && pip install -r requirements.txt && pip install --upgrade cx_Freeze
+        python -m venv venv
+      shell: pwsh
+
+    - name: Activate virtual environment and install dependencies
+      run: |
+        .\venv\Scripts\Activate
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install --upgrade cx_Freeze
       shell: pwsh
 
     - name: Build MSI
       run: |
-        cd src && python build.py bdist_msi
+        .\venv\Scripts\Activate
+        cd src
+        python build.py bdist_msi
       shell: pwsh
 
     - name: Get App Info
       id: get_version
       run: |
+        .\venv\Scripts\Activate
         $version = (Get-Content src/settings.py | Select-String -Pattern 'BUILD_VERSION\s*=\s*"([^"]+)"').Matches.Groups[1].Value
         echo "VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
         $filename = (Get-ChildItem -Path src/dist/out/*.msi).Name
@@ -43,6 +54,7 @@ jobs:
     - name: Create Tag
       id: create_tag
       run: |
+        .\venv\Scripts\Activate
         $tagExists = git tag -l $env:VERSION
         if ($tagExists -eq "") {
           git tag $env:VERSION
@@ -68,6 +80,7 @@ jobs:
 
     - name: Generate Checksum
       run: |
+        .\venv\Scripts\Activate
         $checksum = Get-FileHash src/dist/out/*.msi -Algorithm SHA256
         $filename = [System.IO.Path]::GetFileName($checksum.Path)
         "$($checksum.Hash) $filename" > src/dist/out/checksums.txt
