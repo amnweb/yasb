@@ -29,7 +29,7 @@ class WorkspaceButton(QPushButton):
         self.workspace_index = workspace_index
         self.parent_widget = parent_widget
         self.status = WORKSPACE_STATUS_EMPTY
-        self.setProperty("class", "ws-btn")
+        self.setProperty("class", f"ws-btn button-{self.workspace_index + 1}")
         self.default_label = label if label else str(workspace_index + 1)
         self.active_label = active_label if active_label else self.default_label
         self.populated_label = populated_label if populated_label else self.default_label
@@ -40,7 +40,7 @@ class WorkspaceButton(QPushButton):
 
     def update_and_redraw(self, status: WorkspaceStatus):
         self.status = status
-        self.setProperty("class", f"ws-btn {status.lower()}")
+        self.setProperty("class", f"ws-btn button-{self.workspace_index + 1} {status.lower()}")
         if status == WORKSPACE_STATUS_ACTIVE:
             self.setText(self.active_label)
         elif status == WORKSPACE_STATUS_POPULATED:
