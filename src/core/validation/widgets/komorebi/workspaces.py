@@ -2,6 +2,7 @@ DEFAULTS = {
     'label_offline': 'Komorebi Offline',
     'label_workspace_btn': '{index}',
     'label_workspace_active_btn': '{index}',
+    'label_workspace_populated_btn': '{index}',
     'label_default_name': '',
     'hide_if_offline': False,
     'label_zero_index': False,
@@ -22,6 +23,10 @@ VALIDATION_SCHEMA = {
     'label_workspace_active_btn': {
         'type': 'string',
         'default': DEFAULTS['label_workspace_active_btn']
+    },
+    'label_workspace_populated_btn': {
+        'type': 'string',
+        'default': DEFAULTS['label_workspace_populated_btn']
     },
     'label_default_name': {
         'type': 'string',

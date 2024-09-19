@@ -23,7 +23,7 @@ WORKSPACE_STATUS_POPULATED: WorkspaceStatus = "POPULATED"
 WORKSPACE_STATUS_ACTIVE: WorkspaceStatus = "ACTIVE"
 
 class WorkspaceButton(QPushButton):
-    def __init__(self, workspace_index: int, parent_widget: 'WorkspaceWidget', label: str = None, active_label: str = None, animation: bool = False):
+    def __init__(self, workspace_index: int, parent_widget: 'WorkspaceWidget', label: str = None, active_label: str = None, populated_label: str = None, animation: bool = False):
         super().__init__()
         self.komorebic = KomorebiClient()
         self.workspace_index = workspace_index
@@ -32,6 +32,7 @@ class WorkspaceButton(QPushButton):
         self.setProperty("class", "ws-btn")
         self.default_label = label if label else str(workspace_index + 1)
         self.active_label = active_label if active_label else self.default_label
+        self.populated_label = populated_label if populated_label else self.default_label
         self.setText(self.default_label)
         self.clicked.connect(self.activate_workspace)
         self._animation = animation
@@ -42,6 +43,8 @@ class WorkspaceButton(QPushButton):
         self.setProperty("class", f"ws-btn {status.lower()}")
         if status == WORKSPACE_STATUS_ACTIVE:
             self.setText(self.active_label)
+        elif status == WORKSPACE_STATUS_POPULATED:
+            self.setText(self.populated_label)
         else:
             self.setText(self.default_label)
         self.setStyleSheet('')
@@ -97,6 +100,7 @@ class WorkspaceWidget(BaseWidget):
             label_offline: str,
             label_workspace_btn: str,
             label_workspace_active_btn: str,
+            label_workspace_populated_btn: str,
             label_default_name: str,
             hide_if_offline: bool,
             label_zero_index: bool,
@@ -109,6 +113,7 @@ class WorkspaceWidget(BaseWidget):
         self._komorebic = KomorebiClient()
         self._label_workspace_btn = label_workspace_btn
         self._label_workspace_active_btn = label_workspace_active_btn
+        self._label_workspace_populated_btn = label_workspace_populated_btn
         self._label_default_name = label_default_name
         self._label_zero_index = label_zero_index
         self._hide_if_offline = hide_if_offline
@@ -300,13 +305,18 @@ class WorkspaceWidget(BaseWidget):
             index=ws_index,
             monitor_index=ws_monitor_index
         )
-        return default_label, active_label
+        populated_label = self._label_workspace_populated_btn.format(
+            name=ws_name,
+            index=ws_index,
+            monitor_index=ws_monitor_index
+        )
+        return default_label, active_label, populated_label
 
     def _try_add_workspace_button(self, workspace_index: int) -> WorkspaceButton:
         workspace_button_indexes = [ws_btn.workspace_index for ws_btn in self._workspace_buttons]
         if workspace_index not in workspace_button_indexes:
-            default_label, active_label = self._get_workspace_label(workspace_index)
-            workspace_btn = WorkspaceButton(workspace_index, self, default_label, active_label, self._animation)
+            default_label, active_label, populated_label = self._get_workspace_label(workspace_index)
+            workspace_btn = WorkspaceButton(workspace_index, self, default_label, active_label, populated_label, self._animation)
             self._workspace_buttons.append(workspace_btn)
             return workspace_btn
 
