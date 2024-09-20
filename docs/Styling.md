@@ -77,3 +77,10 @@ Example how to target widget container
 > **Note:**
 > Keep the mind YASB is written in Python and styled with CSS is very limited. You can't use CSS3 or any other advanced CSS features.
 
+
+
+
+## Icons
+There is a nice app at [Character Map UWP](https://github.com/character-map-uwp/Character-Map-UWP) where you can select a font, click on icons, and copy the UTF-16 value. Alternatively, you can visit the Nerd Fonts site and do the same under the icons section.
+
+![Character Map UWP](assets/361286571-e6e1654b-34c7-484f-961c-ace25cb50286.png)
