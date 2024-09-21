@@ -94,6 +94,7 @@
     background-color: transparent;
 	margin: 0 4px 0 4px;
 	color: #95a0ad;
+    border: none;
 }
 .komorebi-workspaces .ws-btn.populated {
 	color: #a0c3ee;
