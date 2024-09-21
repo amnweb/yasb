@@ -308,6 +308,11 @@ widgets:
     type: "yasb.applications.ApplicationsWidget"
     options:
       label: "{data}"
+      container_padding:
+        top: 0
+        left: 8
+        bottom: 0
+        right: 8
       app_list:
         #- {icon: "\udb80\ude39", launch: "C:\\Program Files\\Mozilla Firefox\\firefox.exe"}
         - {icon: "\uf0a2", launch: "notification_center"}
@@ -316,7 +321,6 @@ widgets:
         - {icon: "\uf422", launch: "search"}
         #- {icon: "\udb84\udf55", launch: "widget"}
         # Currently available to use quick_settings, notification_center, search, widget, launcher (launcher will trigger ALT+A)
-
   github:
     type: "yasb.github.GithubWidget"
     options:
