@@ -256,13 +256,12 @@
 .weather-widget .icon.default {}
 */
 
-
 /* MEDIA WIDGET */
 .media-widget {
-	padding: 0;
-	padding-left: 2px;
+    padding: 0;
+	padding-left: 6px;
 	margin: 0;
-	border-radius: 16px;
+	border-radius: 18px;
 	margin-right: 8px;
 }
 .media-widget .label {
@@ -270,23 +269,24 @@
 }
 .media-widget .btn {
 	color: #acb2c9;
-	padding: 0 3px;
-	margin: 4px 0;
-	font-family: Segoe Fluent Icons;
+	padding: 0;
+    font-size: 18px;
 }
 .media-widget .btn:hover {
 	color: #89b4fa;
 }
 .media-widget .btn.play {
-	background-color: #313244;
-	border-radius: 14px;
-	font-size: 16px;
+	font-size: 24px;
+}
+.media-widget .btn.prev {
+    padding:0 4px 0 4px;
+}
+.media-widget .btn.next {
+    padding:0 4px 0 4px;
 }
 .media-widget .btn.disabled:hover,
 .media-widget .btn.disabled {
 	color: #4e525c;
-	font-size: 12px;
-	background-color: rgba(0, 0, 0, 0);
 }
 
 /* GITHUB WIDGET */
