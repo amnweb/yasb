@@ -27,7 +27,7 @@ disk:
 
 - **label:** The format string for the disk widget. Displays free space in percent.
 - **label_alt:** The alternative format string for the disk widget.
-- **volume_label:** Partition/volumew hich you want to show in the bar.
+- **volume_label:** Partition/volume which you want to show in the bar.
 - **update_interval:** The interval in seconds to update the disk widget. Must be between 0 and 3600.
 - **callbacks:** A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions.
  
