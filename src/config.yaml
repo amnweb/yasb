@@ -50,7 +50,6 @@ bars:
         ]
       right:
         [
-          
           "media",
           "wifi",
           "cpu",
@@ -87,10 +86,10 @@ widgets:
       thumbnail_padding: 8
       thumbnail_corner_radius: 16 # Set to 0 for square corners
       icons:
-        prev_track: "\ue892"
-        next_track: "\ue893"
-        play: "\ue768"
-        pause: "\ue769"
+        prev_track: "\udb81\udcae"
+        next_track: "\udb81\udcad"
+        play: "\udb81\udc0d"
+        pause: "\udb80\udfe6"
 
   active_window:
     type: "yasb.active_window.ActiveWindowWidget"
