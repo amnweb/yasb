@@ -36,6 +36,7 @@ class WorkspaceButton(QPushButton):
         self.setText(self.default_label)
         self.clicked.connect(self.activate_workspace)
         self._animation = animation
+        self.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))  # Set cursor to pointer
         self.hide()
 
     def update_and_redraw(self, status: WorkspaceStatus):
@@ -282,9 +283,6 @@ class WorkspaceWidget(BaseWidget):
             for workspace_btn in self._workspace_buttons:
                 self._workspace_container_layout.addWidget(workspace_btn)
                 self._update_button(workspace_btn)
-                # Set the cursor to be a pointer when hovering over the button
-                workspace_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-                
                 
     def _get_workspace_label(self, workspace_index):
         workspace = self._komorebic.get_workspace_by_index(self._komorebi_screen, workspace_index)
@@ -332,4 +330,3 @@ class WorkspaceWidget(BaseWidget):
     def _hide_offline_status(self):
         self._offline_text.hide()
         self._workspace_container.show()
- 
