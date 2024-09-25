@@ -27,6 +27,7 @@ build_options = {
         'core.widgets.komorebi.workspaces'
     ],
     "silent_level": 1,
+    "silent": True,
     "excludes": ['PySide6','pydoc_data','email','colorama','tkinter','PyQt5','PySide2'],
     "build_exe": "dist",
     "include_msvcr": True,
