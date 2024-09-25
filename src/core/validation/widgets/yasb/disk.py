@@ -3,6 +3,7 @@ DEFAULTS = {
     'label_alt': "{volume_label} {space[used][gb]} / {space[total][gb]}",
     'volume_label': "C",
     'update_interval': 60,
+    'decimal_display': 1,
     'callbacks': {
         'on_left': 'toggle_label',
         'on_middle': 'do_nothing',
@@ -28,6 +29,13 @@ VALIDATION_SCHEMA = {
         'default': DEFAULTS['update_interval'],
         'min': 0,
         'max': 3600
+    },
+    'decimal_display': {
+        'required': False,
+        'type': 'integer',
+        'default': DEFAULTS['decimal_display'],
+        'min': 0,
+        'max': 3
     },
     'callbacks': {
         'type': 'dict',
