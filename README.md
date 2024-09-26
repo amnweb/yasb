@@ -47,7 +47,9 @@ winget install --id AmN.yasb
 
 ## Demo YASB
 ![Reborn](demo/demo3.png)
-
+![Windows 11](https://raw.githubusercontent.com/amnweb/yasb-themes/refs/heads/main/themes/7d3895d4-454b-40db-a2f9-44a238d5793b/image.png)
+![Yasb 001](https://raw.githubusercontent.com/amnweb/yasb-themes/refs/heads/main/themes/61e6a045-e090-4f33-a41b-6938702eb446/image.png)
+for more themes visit [yasb-themes](https://github.com/amnweb/yasb-themes)
 ## Demo YASB + Komorebi
 ![Theme Catppuccin Mocha](demo/demo.png)
 ![Theme Catppuccin Mocha](demo/demo2.png)
