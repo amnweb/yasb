@@ -1,7 +1,7 @@
 <p align="center"><img src="https://raw.githubusercontent.com/amnweb/yasb/main/src/assets/images/app_icon.png" width="120"></p>
-<h2 align="center">Yasb - Yet Another Status Bar</h2>
+<h2 align="center">Yasb Reborn</h2>
 <p align="center">
-  A highly configurable cross-platform (Windows) status bar written in Python.
+  A highly configurable Windows status bar written in Python.
   <br><br>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg"></a>
   <a href="https://github.com/amnweb/yasb"><img src="https://img.shields.io/github/languages/top/amnweb/yasb"></a>
