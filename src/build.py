@@ -47,7 +47,7 @@ directory_table = [
 msi_data = {
     "Directory": directory_table,
     "ProgId": [
-        ("Prog.Id", None, None, "Yet Another Status Bar", "IconId", None),
+        ("Prog.Id", None, None, "A highly configurable Windows status bar", "IconId", None),
     ],
     "Icon": [
         ("IconId", "assets/images/app_icon.ico"),
@@ -64,8 +64,8 @@ bdist_msi_options = {
     "all_users": False,
     "summary_data": {
         "author": "AmN",
-        "comments": "Yet Another Status Bar",
-        "keywords": "windows; statusbar"
+        "comments": "A highly configurable Windows status bar",
+        "keywords": "windows; statusbar; ricing; customization; topbar; taskbar; yasb",
     }
 }
 
@@ -84,7 +84,7 @@ setup(
     name="yasb",
     version=BUILD_VERSION,
     author="AmN",
-    description="Yet Another Status Bar",
+    description="A highly configurable Windows status bar",
     executables=executables,
     options={
         "build_exe": build_options,
