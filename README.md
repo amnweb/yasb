@@ -1,5 +1,5 @@
 <p align="center"><img src="https://raw.githubusercontent.com/amnweb/yasb/main/src/assets/images/app_icon.png" width="120"></p>
-<h1 align="center">Yasb Reborn</h1>
+<h1 align="center">YASB Reborn</h1>
 <p align="center">
   A highly configurable Windows status bar written in Python.
   <br><br>
