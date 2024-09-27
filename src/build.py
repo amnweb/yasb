@@ -84,7 +84,7 @@ setup(
     name="yasb",
     version=BUILD_VERSION,
     author="AmN",
-    description="A highly configurable Windows status bar",
+    description="Yasb Status Bar",
     executables=executables,
     options={
         "build_exe": build_options,
