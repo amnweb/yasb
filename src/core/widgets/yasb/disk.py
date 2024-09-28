@@ -13,15 +13,16 @@ class DiskWidget(BaseWidget):
             label: str,
             label_alt: str,
             volume_label: str,
+            decimal_display: int,
             update_interval: int,
             callbacks: dict[str, str],
     ):
         super().__init__(int(update_interval * 1000), class_name="disk-widget")
- 
+        self._decimal_display = decimal_display
         self._show_alt_label = False
         self._label_content = label
         self._label_alt_content = label_alt
-        self._volume_label = volume_label
+        self._volume_label = volume_label.upper()
         
         # Construct container
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
@@ -111,25 +112,28 @@ class DiskWidget(BaseWidget):
     def _get_space(self):
         partitions = psutil.disk_partitions()
         specific_partitions = [partition for partition in partitions if partition.device in (f'{self._volume_label}:\\')]
- 
+
         for partition in specific_partitions:
             usage = psutil.disk_usage(partition.mountpoint)
             percent_used = usage.percent
             percent_free = 100 - percent_used
             return {
                 "total": {
-                    'mb': f"{usage.total / (1024 ** 2):.1f}MB",
-                    'gb': f"{usage.total / (1024 ** 3):.1f}GB"
+                    'mb': f"{usage.total / (1024 ** 2):.{self._decimal_display}f}MB",
+                    'gb': f"{usage.total / (1024 ** 3):.{self._decimal_display}f}GB",
+                    'tb': f"{usage.total / (1024 ** 4):.{self._decimal_display}f}TB"
                 },
                 "free": {
-                    'mb': f"{usage.free / (1024 ** 2):.1f}MB",
-                    'gb': f"{usage.free / (1024 ** 3):.1f}GB",
-                    'percent': f"{percent_free:.1f}%"
+                    'mb': f"{usage.free / (1024 ** 2):.{self._decimal_display}f}MB",
+                    'gb': f"{usage.free / (1024 ** 3):.{self._decimal_display}f}GB",
+                    'tb': f"{usage.free / (1024 ** 4):.{self._decimal_display}f}TB",
+                    'percent': f"{percent_free:.{self._decimal_display}f}%"
                 },
                 "used": {
-                    'mb': f"{usage.used / (1024 ** 2):.1f}MB",
-                    'gb': f"{usage.used / (1024 ** 3):.1f}GB",
-                    'percent': f"{percent_used:.1f}%"
+                    'mb': f"{usage.used / (1024 ** 2):.{self._decimal_display}f}MB",
+                    'gb': f"{usage.used / (1024 ** 3):.{self._decimal_display}f}GB",
+                    'tb': f"{usage.used / (1024 ** 4):.{self._decimal_display}f}TB",
+                    'percent': f"{percent_used:.{self._decimal_display}f}%"
                 }
             }
         return None

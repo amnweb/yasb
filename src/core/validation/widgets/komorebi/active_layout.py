@@ -16,6 +16,7 @@ DEFAULTS = {
         "floating": "><>",
         "paused": "[P]"
     },
+    'container_padding': {'top': 0, 'left': 0, 'bottom': 0, 'right': 0},
     'callbacks': {
         'on_left': 'next_layout',
         'on_middle': 'toggle_monocle',
@@ -108,6 +109,11 @@ VALIDATION_SCHEMA = {
             },
         },
         'default': DEFAULTS['layout_icons']
+    },
+    'container_padding': {
+        'type': 'dict',
+        'default': DEFAULTS['container_padding'],
+        'required': False
     },
     'callbacks': {
         'type': 'dict',

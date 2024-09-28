@@ -26,7 +26,6 @@ layout_cmds = {
     "UltrawideVerticalStack": "ultrawide-vertical-stack",
     "RightMainVerticalStack": "right-main-vertical-stack"
 }
-
 layout_snake_case = {
     "BSP": "bsp",
     "Columns": "columns",
@@ -38,7 +37,6 @@ layout_snake_case = {
     "RightMainVerticalStack": "right_main_vertical_stack"
 }
 
-
 class ActiveLayoutWidget(BaseWidget):
     k_signal_connect = pyqtSignal(dict)
     k_signal_disconnect = pyqtSignal()
@@ -48,11 +46,12 @@ class ActiveLayoutWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
     event_listener = KomorebiEventListener
 
-    def __init__(self, label: str, layouts: list[str], layout_icons: dict[str, str], hide_if_offline: bool, callbacks: dict[str, str]):
+    def __init__(self, label: str, layouts: list[str], layout_icons: dict[str, str], hide_if_offline: bool, container_padding: dict, callbacks: dict[str, str]):
         super().__init__(class_name="komorebi-active-layout")
         self._label = label
         self._layout_icons = layout_icons
         self._layouts_config = layouts
+        self._padding = container_padding
         self._reset_layouts()
         self._hide_if_offline = hide_if_offline
         self._event_service = EventService()
@@ -69,7 +68,7 @@ class ActiveLayoutWidget(BaseWidget):
         # Construct container
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
-        #self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
+        self._widget_container_layout.setContentsMargins(self._padding['left'],self._padding['top'],self._padding['right'],self._padding['bottom'])
         # Initialize container
         self._widget_container: QWidget = QWidget()
         self._widget_container.setLayout(self._widget_container_layout)

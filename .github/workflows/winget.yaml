@@ -30,6 +30,6 @@ jobs:
           version: ${{ steps.get-version.outputs.version }}
           release-tag: ${{ steps.get-version.outputs.release-tag }}
           installers-regex: '\.msi$'
-          max-versions-to-keep: 5
+          max-versions-to-keep: 8
           fork-user: amnweb
           token: ${{ secrets.WINGET_TOKEN }}

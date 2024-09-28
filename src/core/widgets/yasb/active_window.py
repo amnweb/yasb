@@ -50,7 +50,6 @@ class ActiveWindowWidget(BaseWidget):
             max_length_ellipsis: str
     ):
         super().__init__(class_name="active-window-widget")
-
         self._win_info = None
         self._show_alt = False
         self._label = label
@@ -59,12 +58,13 @@ class ActiveWindowWidget(BaseWidget):
         self._label_no_window = label_no_window
         self._label_icon = label_icon
         self._label_icon_size = label_icon_size
+        self.dpi = self.screen().devicePixelRatio() 
         self._monitor_exclusive = monitor_exclusive
         self._max_length = max_length
         self._max_length_ellipsis = max_length_ellipsis
         self._event_service = EventService()
         self._update_retry_count = 0
- 
+
          # Construct container
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
@@ -153,15 +153,14 @@ class ActiveWindowWidget(BaseWidget):
             class_name = win_info['class_name']
 
             if self._label_icon:
-                dpi = self.screen().devicePixelRatio() 
                 if event != WinEvent.WinEventOutOfContext:
                     self._update_retry_count = 0
                 if (hwnd, title, pid) in self._icon_cache:
                     icon_img = self._icon_cache[(hwnd, title, pid)]
                 else:
-                    icon_img = get_window_icon(hwnd, dpi)
+                    icon_img = get_window_icon(hwnd, self.dpi)
                     if icon_img:
-                        icon_img = icon_img.resize((int(self._label_icon_size * dpi), int(self._label_icon_size * dpi)), Image.LANCZOS).convert("RGBA")
+                        icon_img = icon_img.resize((int(self._label_icon_size * self.dpi), int(self._label_icon_size * self.dpi)), Image.LANCZOS).convert("RGBA")
                     else:
                         # UWP apps might need a moment to start under ApplicationFrameHost
                         # So we delay the detection, but only do it once.

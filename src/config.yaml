@@ -50,7 +50,6 @@ bars:
         ]
       right:
         [
-          
           "media",
           "wifi",
           "cpu",
@@ -87,10 +86,10 @@ widgets:
       thumbnail_padding: 8
       thumbnail_corner_radius: 16 # Set to 0 for square corners
       icons:
-        prev_track: "\ue892"
-        next_track: "\ue893"
-        play: "\ue768"
-        pause: "\ue769"
+        prev_track: "\udb81\udcae"
+        next_track: "\udb81\udcad"
+        play: "\udb81\udc0d"
+        pause: "\udb80\udfe6"
 
   active_window:
     type: "yasb.active_window.ActiveWindowWidget"
@@ -150,7 +149,6 @@ widgets:
       callbacks:
         on_right: "exec cmd /c Taskmgr"
 
-
   language:
     type: "yasb.language.LanguageWidget"
     options:
@@ -160,17 +158,23 @@ widgets:
       callbacks:
         on_left: "toggle_label"
 
-
   komorebi_workspaces:
     type: "komorebi.workspaces.WorkspaceWidget"
     options:
         label_offline: "Komorebi Offline"
         label_workspace_btn: "\udb81\udc3d"
         label_workspace_active_btn: "\udb81\udc3e"
+        label_workspace_populated_btn: "\udb81\udc3d"
         label_default_name: "{index}"
         label_zero_index: false
         hide_empty_workspaces: false
         hide_if_offline: false
+        animation: false
+        container_padding:
+          top: 0
+          left: 8
+          bottom: 0
+          right: 8
 
   komorebi_active_layout:
     type: "komorebi.active_layout.ActiveLayoutWidget"
@@ -191,6 +195,11 @@ widgets:
         maximised: "MAX"
         floating: "FLOATING"
         paused: "PAUSED"
+      container_padding:
+        top: 0
+        left: 8
+        bottom: 0
+        right: 8
       callbacks:
         on_left: 'next_layout'
         on_middle: 'toggle_monocle'
@@ -296,6 +305,11 @@ widgets:
     type: "yasb.applications.ApplicationsWidget"
     options:
       label: "{data}"
+      container_padding:
+        top: 0
+        left: 8
+        bottom: 0
+        right: 8
       app_list:
         #- {icon: "\udb80\ude39", launch: "C:\\Program Files\\Mozilla Firefox\\firefox.exe"}
         - {icon: "\uf0a2", launch: "notification_center"}
@@ -304,7 +318,6 @@ widgets:
         - {icon: "\uf422", launch: "search"}
         #- {icon: "\udb84\udf55", launch: "widget"}
         # Currently available to use quick_settings, notification_center, search, widget, launcher (launcher will trigger ALT+A)
-
   github:
     type: "yasb.github.GithubWidget"
     options:
@@ -331,11 +344,17 @@ widgets:
   taskbar:
     type: "yasb.taskbar.TaskbarWidget"
     options:
+      animation: false
       icon_size: 16
       ignore_apps:
         processes: []
         titles: []
         classes: []
+      container_padding:
+        top: 0
+        left: 0
+        bottom: 0
+        right: 0
 
   nvidia_temp:
     type: "yasb.custom.CustomWidget"

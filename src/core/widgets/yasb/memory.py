@@ -87,7 +87,6 @@ class MemoryWidget(BaseWidget):
         self._widgets_alt = process_content(content_alt, is_alt=True)
             
             
-            
     def _update_label(self):
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
         active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
@@ -99,15 +98,15 @@ class MemoryWidget(BaseWidget):
             virtual_mem = psutil.virtual_memory()
             swap_mem = psutil.swap_memory()
             label_options = {
-                "{virtual_mem_free}": naturalsize(virtual_mem.free),
+                "{virtual_mem_free}": naturalsize(virtual_mem.free, True, True),
                 "{virtual_mem_percent}": virtual_mem.percent,
-                "{virtual_mem_total}": naturalsize(virtual_mem.total),
-                "{virtual_mem_avail}": naturalsize(virtual_mem.available),
-                "{virtual_mem_used}": naturalsize(virtual_mem.used),
-                "{virtual_mem_outof}": f"{naturalsize(virtual_mem.used)} / {naturalsize(virtual_mem.total)}",
-                "{swap_mem_free}": naturalsize(swap_mem.free),
+                "{virtual_mem_total}": naturalsize(virtual_mem.total, True, True),
+                "{virtual_mem_avail}": naturalsize(virtual_mem.available, True, True),
+                "{virtual_mem_used}": naturalsize(virtual_mem.used, True, True),
+                "{virtual_mem_outof}": f"{naturalsize(virtual_mem.used, True, True)} / {naturalsize(virtual_mem.total, True, True)}",
+                "{swap_mem_free}": naturalsize(swap_mem.free, True, True),
                 "{swap_mem_percent}": swap_mem.percent,
-                "{swap_mem_total}": naturalsize(swap_mem.total),
+                "{swap_mem_total}": naturalsize(swap_mem.total, True, True),
             }
             for part in label_parts:
                 part = part.strip()

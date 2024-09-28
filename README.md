@@ -1,13 +1,14 @@
 <p align="center"><img src="https://raw.githubusercontent.com/amnweb/yasb/main/src/assets/images/app_icon.png" width="120"></p>
-<h2 align="center">Yasb - Yet Another Status Bar</h2>
+<h1 align="center">YASB Reborn</h1>
 <p align="center">
-  A highly configurable cross-platform (Windows) status bar written in Python.
+  A highly configurable Windows status bar written in Python.
   <br><br>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg"></a>
   <a href="https://github.com/amnweb/yasb"><img src="https://img.shields.io/github/languages/top/amnweb/yasb"></a>
   <a href="https://github.com/amnweb/yasb/issues"><img src="https://img.shields.io/github/issues/amnweb/yasb?label=Issues"></a>
   <a href="https://github.com/amnweb/yasb/releases"><img src="https://img.shields.io/github/downloads/amnweb/yasb/total?label=Total%20Downloads"></a>
   <a href="https://github.com/amnweb/yasb/releases/latest"><img src="https://img.shields.io/github/v/release/amnweb/yasb?label=Latest%20Release"></a>
+  <a href="https://discord.gg/QZX8xq5y" title="Discord"><img alt="Discord" src="https://img.shields.io/discord/898554690126630914?label=Discord&cacheSeconds=600"></a>
 </p>
 
 ***
@@ -47,7 +48,9 @@ winget install --id AmN.yasb
 
 ## Demo YASB
 ![Reborn](demo/demo3.png)
-
+![Windows 11](https://raw.githubusercontent.com/amnweb/yasb-themes/refs/heads/main/themes/7d3895d4-454b-40db-a2f9-44a238d5793b/image.png)
+![Yasb 001](https://raw.githubusercontent.com/amnweb/yasb-themes/refs/heads/main/themes/61e6a045-e090-4f33-a41b-6938702eb446/image.png)
+for more themes visit [yasb-themes](https://github.com/amnweb/yasb-themes)
 ## Demo YASB + Komorebi
 ![Theme Catppuccin Mocha](demo/demo.png)
 ![Theme Catppuccin Mocha](demo/demo2.png)

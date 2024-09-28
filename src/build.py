@@ -1,8 +1,7 @@
-import sys
 from cx_Freeze import setup, Executable
 from settings import BUILD_VERSION
+import datetime
  
-#base = "console"
 base = "gui"
 build_options = {
     "packages": [
@@ -28,7 +27,8 @@ build_options = {
         'core.widgets.komorebi.workspaces'
     ],
     "silent_level": 1,
-    "excludes": ['PySide6','pydoc_data','email','colorama','tkinter'],
+    "silent": True,
+    "excludes": ['PySide6','pydoc_data','email','colorama','tkinter','PyQt5','PySide2'],
     "build_exe": "dist",
     "include_msvcr": True,
     "optimize": 1,
@@ -47,7 +47,7 @@ directory_table = [
 msi_data = {
     "Directory": directory_table,
     "ProgId": [
-        ("Prog.Id", None, None, "This is a description", "IconId", None),
+        ("Prog.Id", None, None, "A highly configurable Windows status bar", "IconId", None),
     ],
     "Icon": [
         ("IconId", "assets/images/app_icon.ico"),
@@ -56,7 +56,7 @@ msi_data = {
 
 bdist_msi_options = {
     "data": msi_data,
-    #"target_name": f"yasb_installer.msi",
+    "install_icon": "assets/images/app_icon.ico",
     "upgrade_code": "{3f620cf5-07b5-47fd-8e37-9ca8ad14b608}",
     "add_to_path": False,
     "dist_dir": "dist/out",
@@ -64,8 +64,8 @@ bdist_msi_options = {
     "all_users": False,
     "summary_data": {
         "author": "AmN",
-        "comments": "Yet Another Status Bar",
-        "keywords": "windows; statusbar"
+        "comments": "A highly configurable Windows status bar",
+        "keywords": "windows; statusbar; ricing; customization; topbar; taskbar; yasb",
     }
 }
 
@@ -76,7 +76,7 @@ executables = [
         icon="assets/images/app_icon.ico",
         shortcut_name="Yasb",
         shortcut_dir="MyProgramMenu",
-        copyright="Copyright (C) 2024 AmN",
+        copyright=f"Copyright (C) {datetime.datetime.now().year} AmN",
         target_name="yasb.exe",
     )
 ]
@@ -84,7 +84,7 @@ setup(
     name="yasb",
     version=BUILD_VERSION,
     author="AmN",
-    description="Yet Another Status Bar",
+    description="Yasb Status Bar",
     executables=executables,
     options={
         "build_exe": build_options,
