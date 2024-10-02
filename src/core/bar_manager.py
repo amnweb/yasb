@@ -106,9 +106,10 @@ class BarManager(QObject):
 
     def create_bar(self, config: dict, name: str, screen: QScreen, init=False) -> None:
         screen_name = screen.name().replace('\\', '').replace('.', '')
+        is_primary = QApplication.primaryScreen() == screen
         bar_id = f"{name}_{screen_name}_{str(uuid.uuid4())[:8]}"
         bar_config = deepcopy(config)
-        bar_widgets, widget_event_listeners = self._widget_builder.build_widgets(bar_config.get('widgets', {}))
+        bar_widgets, widget_event_listeners = self._widget_builder.build_widgets(bar_config.get('widgets', {}), is_primary)
         bar_options = {
             **bar_config,
             'bar_id': bar_id,

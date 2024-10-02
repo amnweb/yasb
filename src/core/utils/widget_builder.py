@@ -19,16 +19,16 @@ class WidgetBuilder(QObject):
         self._invalid_widget_types = {}
         self._invalid_widget_options = {}
 
-    def build_widgets(self, widget_map: dict[str, list[str]]) -> tuple[dict[str, list[QWidget]], set]:
+    def build_widgets(self, widget_map: dict[str, list[str]], is_primary: bool = False) -> tuple[dict[str, list[QWidget]], set]:
         bar_widgets = {}
 
         for column, widget_names in widget_map.items():
-            built_widgets = [self._build_widget(widget_name) for widget_name in widget_names]
+            built_widgets = [self._build_widget(widget_name, is_primary) for widget_name in widget_names]
             bar_widgets[column] = [widget for widget in built_widgets if widget is not None]
 
         return bar_widgets, self._widget_event_listeners
 
-    def _build_widget(self, widget_name: str) -> Optional[QWidget]:
+    def _build_widget(self, widget_name: str, is_primary: bool = False) -> Optional[QWidget]:
         widget_config = self._widget_configurations.get(widget_name, None)
 
         if (widget_name in self._invalid_widget_names) or (widget_name in self._invalid_widget_options):
@@ -36,6 +36,8 @@ class WidgetBuilder(QObject):
         elif not widget_config:
             self._invalid_widget_names.add(widget_name)
             logging.warning(f"No widget config could be found for widget '{widget_name}")
+        elif widget_config.get("screens", "all") == "primary" and not is_primary:
+            pass
         else:
             try:
                 widget_module_str, widget_class_str = widget_config['type'].rsplit('.', 1)
