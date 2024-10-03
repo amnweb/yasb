@@ -39,8 +39,13 @@ def get_config_dir() -> str:
     if path.isdir(HOME_CONFIGURATION_DIR):
         return HOME_CONFIGURATION_DIR
     else:
-        return SRC_CONFIGURATION_DIR
-
+        try:
+            makedirs(HOME_CONFIGURATION_DIR)
+            return HOME_CONFIGURATION_DIR
+        except OSError:
+            logging.error(f"Failed to create configuration directory at {HOME_CONFIGURATION_DIR}.")
+            return SRC_CONFIGURATION_DIR
+        
 
 def get_config_path() -> str:
     if path.isdir(HOME_CONFIGURATION_DIR) and path.isfile(HOME_CONFIG_PATH):       
