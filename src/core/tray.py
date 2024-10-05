@@ -1,10 +1,13 @@
+import datetime
 import logging
+
 import webbrowser
 import os
 import shutil
 import sys
 from pathlib import Path
 import subprocess
+
 import winshell
 from PyQt6.QtWidgets import QSystemTrayIcon, QMenu, QMessageBox
 from PyQt6.QtGui import QIcon, QGuiApplication
@@ -69,7 +72,7 @@ class TrayIcon(QSystemTrayIcon):
         }
         QMenu::item {
             margin:0 4px;
-            padding: 6px 16px;
+            padding: 4px 12px 5px 12px;
             border-radius:4px;
             font-size: 11px;
             font-weight: 600;
@@ -101,7 +104,10 @@ class TrayIcon(QSystemTrayIcon):
         reload_action.triggered.connect(self._reload_application)
         
         menu.addSeparator()
-
+        debug_menu = menu.addMenu("Debug")
+        info_action = debug_menu.addAction("Information")
+        info_action.triggered.connect(self._show_info)
+        
         if self.is_komorebi_installed():
             komorebi_menu = menu.addMenu("Komorebi")
             start_komorebi = komorebi_menu.addAction("Start Komorebi")
@@ -121,14 +127,7 @@ class TrayIcon(QSystemTrayIcon):
         else:
             enable_startup_action = menu.addAction("Enable Autostart")
             enable_startup_action.triggered.connect(self._enable_startup)
-        
-        menu.addSeparator()
-         
-        debug_menu = menu.addMenu("Debug")
-         
-        info_action = debug_menu.addAction("Information")
-        info_action.triggered.connect(self._show_info)
-        
+      
         logs_action = debug_menu.addAction("Logs")
         logs_action.triggered.connect(self._open_logs)
 
@@ -219,7 +218,6 @@ class TrayIcon(QSystemTrayIcon):
         <div><a href="{GITHUB_THEME_URL}">{GITHUB_THEME_URL}</a></div>
         </div>
         """
-        # Create a QMessageBox instance
         about_box = QMessageBox()
         about_box.setWindowTitle("About YASB")
         
@@ -232,6 +230,9 @@ class TrayIcon(QSystemTrayIcon):
 
     def _show_info(self):
         import platform
+        import socket
+        import uuid
+        import psutil
         screens = QGuiApplication.screens()
         # monitor information
         screens_info = """
@@ -251,25 +252,37 @@ class TrayIcon(QSystemTrayIcon):
             screens_info += f"<div> - Logical DPI: {screen.logicalDotsPerInch()}</div>"
             screens_info += f"<div> - Physical DPI: {screen.physicalDotsPerInch()}</div><br>"
         screens_info += "</div>"
-          
-        # system information if we need
+
+        hostname = socket.gethostname()
+        ip_address = socket.gethostbyname(hostname)
+
+        mac_address = ':'.join(['{:02x}'.format((uuid.getnode() >> elements) & 0xff) for elements in range(0,2*6,2)][::-1])
+        boot_time = datetime.datetime.fromtimestamp(psutil.boot_time())
+        uptime = datetime.datetime.now() - boot_time
+
         system_info = """
         <div style="font-size:16px;font-weight:bold;margin-bottom:8px">System Information</div>
         <div style="font-size:12px">
         System: {system}<br>
-        Node Name: {node}<br>
         Release: {release}<br>
         Version: {version}<br>
+        Hostname: {hostname}<br>
         Machine: {machine}<br>
-        Processor: {processor}
+        Processor: {processor}<br>
+        Uptime: {uptime}<br>
+        IP Address: {ip_address}<br>
+        MAC Address: {mac_address}<br>
         </div>
         """.format(
             system=platform.system(),
-            node=platform.node(),
             release=platform.release(),
             version=platform.version(),
+            hostname=hostname,
             machine=platform.machine(),
-            processor=platform.processor()
+            processor=platform.processor(),
+            uptime=str(uptime).split('.')[0],
+            ip_address=ip_address,
+            mac_address=mac_address
         )
         
         # Combine both sections
