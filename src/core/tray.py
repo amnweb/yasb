@@ -7,11 +7,12 @@ from pathlib import Path
 import subprocess
 import winshell
 from PyQt6.QtWidgets import QSystemTrayIcon, QMenu, QMessageBox
-from PyQt6.QtGui import QIcon
+from PyQt6.QtGui import QIcon, QGuiApplication
 from PyQt6.QtCore import QCoreApplication, QSize, Qt
 from core.bar_manager import BarManager
 from settings import GITHUB_URL, SCRIPT_PATH, APP_NAME, APP_NAME_FULL, DEFAULT_CONFIG_DIRECTORY, GITHUB_THEME_URL, BUILD_VERSION
 from core.config import get_config
+from core.console import WindowShellDialog
 
 OS_STARTUP_FOLDER = os.path.join(os.environ['APPDATA'], r'Microsoft\Windows\Start Menu\Programs\Startup')
 VBS_PATH = os.path.join(SCRIPT_PATH, 'yasb.vbs')
@@ -85,7 +86,7 @@ class TrayIcon(QSystemTrayIcon):
         QMenu::right-arrow {
             width: 8px;
             height: 8px;
-            padding-right:16px;
+            padding-right:24px;
         }
         """
         menu.setStyleSheet(style_sheet)
@@ -122,7 +123,15 @@ class TrayIcon(QSystemTrayIcon):
             enable_startup_action.triggered.connect(self._enable_startup)
         
         menu.addSeparator()
+         
+        debug_menu = menu.addMenu("Debug")
+         
+        info_action = debug_menu.addAction("Information")
+        info_action.triggered.connect(self._show_info)
         
+        logs_action = debug_menu.addAction("Logs")
+        logs_action.triggered.connect(self._open_logs)
+
         about_action = menu.addAction("About")
         about_action.triggered.connect(self._show_about_dialog)
         
@@ -220,3 +229,62 @@ class TrayIcon(QSystemTrayIcon):
         about_box.setWindowIcon(icon)
         about_box.setText(about_text)
         about_box.exec()
+
+    def _show_info(self):
+        import platform
+        screens = QGuiApplication.screens()
+        # monitor information
+        screens_info = """
+        <div style="font-size:16px;font-weight:bold;margin-bottom:8px">Monitor Information</div>
+        <div style="font-size:12px">
+        """
+        for screen in screens:
+            geometry = screen.geometry()
+            available_geometry = screen.availableGeometry()
+            physical_size = screen.physicalSize()
+            is_primary = " (Primary)" if screen == QGuiApplication.primaryScreen() else ""
+            
+            screens_info += f"<div>Monitor: {screen.name()}{is_primary}</div>"
+            screens_info += f"<div> - Geometry: x={geometry.x()}, y={geometry.y()}, width={geometry.width()}, height={geometry.height()}</div>"
+            screens_info += f"<div> - Available Geometry: x={available_geometry.x()}, y={available_geometry.y()}, width={available_geometry.width()}, height={available_geometry.height()}</div>"
+            screens_info += f"<div> - Physical Size: width={physical_size.width()}mm, height={physical_size.height()}mm</div>"
+            screens_info += f"<div> - Logical DPI: {screen.logicalDotsPerInch()}</div>"
+            screens_info += f"<div> - Physical DPI: {screen.physicalDotsPerInch()}</div><br>"
+        screens_info += "</div>"
+          
+        # system information if we need
+        system_info = """
+        <div style="font-size:16px;font-weight:bold;margin-bottom:8px">System Information</div>
+        <div style="font-size:12px">
+        System: {system}<br>
+        Node Name: {node}<br>
+        Release: {release}<br>
+        Version: {version}<br>
+        Machine: {machine}<br>
+        Processor: {processor}
+        </div>
+        """.format(
+            system=platform.system(),
+            node=platform.node(),
+            release=platform.release(),
+            version=platform.version(),
+            machine=platform.machine(),
+            processor=platform.processor()
+        )
+        
+        # Combine both sections
+        screens_info += system_info
+        
+        # Create a QMessageBox instance
+        info_box = QMessageBox()
+        info_box.setWindowTitle("System Information")
+        info_box.setTextFormat(Qt.TextFormat.RichText)
+        info_box.setText(screens_info)
+        icon_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'assets', 'images', 'app_icon.png')
+        icon = QIcon(icon_path)
+ 
+        info_box.setWindowIcon(icon)
+        info_box.exec()
+        
+    def _open_logs(self):
+        WindowShellDialog().exec()
