@@ -78,7 +78,31 @@ Example how to target widget container
 > Keep the mind YASB is written in Python and styled with CSS is very limited. You can't use CSS3 or any other advanced CSS features.
 
 
+## Follow OS Theme
+YASB can follow the OS theme, if you have OS dark style YASB will add class `.dark` on the root element, if you want to have different light and dark themes you can use the following CSS to achieve this.
 
+```css
+.yasb-bar {
+    /* background color for light style */
+    background-color: #1e1e1e;
+}
+.yasb-bar.dark {
+    /* background color for dark style */
+    background-color: #1e1e1e;
+}
+.yasb-bar .label {
+    /* text color for light style */
+    color: #000000;
+}
+.yasb-bar.dark .label {
+    /* text color for dark style */
+    color: #ffffff;
+}
+.icon {
+    color: #cdd6f4;
+}
+
+```
 
 ## Icons
 There is a nice app at [Character Map UWP](https://github.com/character-map-uwp/Character-Map-UWP) where you can select a font, click on icons, and copy the UTF-16 value. Alternatively, you can visit the Nerd Fonts site and do the same under the icons section.

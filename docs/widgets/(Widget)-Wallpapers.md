@@ -23,3 +23,11 @@ wallpapers:
 - **update_interval:** The interval in seconds to update the wallpaper. Must be between 60 and 86400.
 - **change_automatically:** Whether to automatically change the wallpaper.
 - **image_path:** The path to the folder containing images for the wallpaper. This field is required.
+
+
+## Example Style
+```css
+.wallpapers-widget {}
+.wallpapers-widget .widget-content {}
+.wallpapers-widget .widget-content .label {}
+```

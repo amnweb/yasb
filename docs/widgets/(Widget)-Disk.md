@@ -34,4 +34,9 @@ disk:
 - **callbacks:** A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions.
  
 
-The `label` and `label_alt` options use format strings that can include placeholders for disk widget. These placeholders will be replaced with actual values when the widget is rendered. You can use `{space[used][percent]}`, `{space[used][mb]}`, `{space[used][gb]}`, `{space[used][tb]}`, `{space[free][percent]}`, `{space[free][mb]}`, `{space[free][gb]}`, `{space[free][tb]}`, `{space[total][mb]}`, `{space[total][gb]}`, `{space[total][tb]}`
+## Example Style
+```css
+.disk-widget {}
+.disk-widget .widget-content {}
+.disk-widget .widget-content .label {}
+```

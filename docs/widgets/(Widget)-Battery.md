@@ -50,3 +50,16 @@ battery:
   - `on_left`: The name of the callback function for left mouse button click.
   - `on_middle`: The name of the callback function for middle mouse button click.
   - `on_right`: The name of the callback function for right mouse button click.
+
+
+## Example Style
+```css
+.battery-widget {}
+.battery-widget .widget-content {}
+.battery-widget .widget-content .icon_critical {} 
+.battery-widget .widget-content .icon_low {} 
+.battery-widget .widget-content .icon_medium {} 
+.battery-widget .widget-content .icon_high {} 
+.battery-widget .widget-content .icon_full {} 
+.battery-widget .widget-content .icon_charging {}
+```

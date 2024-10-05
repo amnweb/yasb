@@ -41,13 +41,26 @@ All valid options for the widgets are listed on the widgets page.
 | `widgets`         | list  | `left[],center[],right[]` | Active widgets and position. |
 
 # Multiple Bars Example
+> **Note:**
+> If you want to have different bars on each screen you will need to define on which screen the bar should be displayed, `screens` inside bar config is your monitor name. You can find your monitor name inside device manager or click on YASB tray icon and select Debug > Information to show all available screens.
 
-```bars:
+```
+bars:
   status-bar:
     screens: ['DELL P2419H (1)'] 
-    ...
+    widgets:
+      left: ["clock"]
+      center: ["cpu"]
+      right: ["memory"]
+
   status-bar-2:
     screens: ['DELL P2419H (2)'] 
+    widgets:
+      left: ["active_window"]
+      center: ["media"]
+      right: ["volume","power_menu"]
+
+widgets:
     ...
 ```
 
