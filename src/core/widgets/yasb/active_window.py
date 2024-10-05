@@ -33,6 +33,7 @@ except ImportError:
 class ActiveWindowWidget(BaseWidget):
     foreground_change = pyqtSignal(int, WinEvent)
     window_name_change = pyqtSignal(int, WinEvent)
+    focus_change_workspaces = pyqtSignal()
     validation_schema = VALIDATION_SCHEMA
     event_listener = SystemEventListener
 
@@ -114,12 +115,24 @@ class ActiveWindowWidget(BaseWidget):
         self._event_service.register_event(WinEvent.EventObjectNameChange, self.window_name_change)
         self._event_service.register_event(WinEvent.EventObjectStateChange, self.window_name_change)
 
+        self.focus_change_workspaces.connect(self._on_focus_change_workspaces)
+        self._event_service.register_event("workspace_update", self.focus_change_workspaces)
+ 
+
+    def _on_focus_change_workspaces(self):
+        hwnd = win32gui.GetForegroundWindow()
+        if self._win_info and hwnd == self._win_info["hwnd"] and hwnd != 0:
+            self._on_focus_change_event(hwnd, WinEvent.WinEventOutOfContext)
+        else:
+            self.hide()
+        
     def _toggle_title_text(self) -> None:
         self._show_alt = not self._show_alt
         self._active_label = self._label_alt if self._show_alt else self._label
         self._update_text()
 
     def _on_focus_change_event(self, hwnd: int, event: WinEvent) -> None:
+         
         win_info = get_hwnd_info(hwnd)
         if (not win_info or not hwnd or
                 not win_info['title'] or
@@ -131,6 +144,8 @@ class ActiveWindowWidget(BaseWidget):
 
         if self._monitor_exclusive and self.screen().name() != monitor_name and win_info.get('monitor_hwnd', 'Unknown') != self.monitor_hwnd:
             self.hide()
+        elif win32gui.GetForegroundWindow() == 0:
+            self.hide()    
         else:
             self.show()
             self._update_window_title(hwnd, win_info, event)
