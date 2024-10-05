@@ -40,3 +40,25 @@ power_menu:
 - **animation_duration:** The duration of the animation in milliseconds. Must be between 0 and 2000.
 - **button_row:** The number of buttons in a row. Must be between 1 and 5.
 - **buttons:** A dictionary defining the buttons and their properties. Possible properties are: `lock`, `signout`, `sleep`, `shutdown`, `restart`, `hibernate`, `cancel`, `force_shutdown`, `force_restart`.
+
+
+## Example Style
+```css
+.uptime {}
+.power-menu-widget .label { /*icon on the bar*/ }
+.power-menu-popup {}
+.power-menu-popup .button {}
+.power-menu-popup .button.hover {}
+.power-menu-popup .button .label {}
+.power-menu-popup .button .icon {}
+/* A style for a specific button. */
+.power-menu-popup .button.cancel {}
+.power-menu-popup .button.shutdown {}
+.power-menu-popup .button.restart {}
+.power-menu-popup .button.signout {}
+.power-menu-popup .button.hibernate {}
+.power-menu-popup .button.sleep {}
+.power-menu-popup .button.force_shutdown {}
+.power-menu-popup .button.force_restart {}
+
+```

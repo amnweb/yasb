@@ -42,3 +42,11 @@ github:
 - **menu_width:** The width of the menu in pixels.
 - **menu_height:** The height of the menu in pixels.
 - **menu_offset:** The offset of the menu in pixels.
+
+
+## Example Style
+```css
+.github-widget {}
+.github-widget .widget-content {}
+.github-widget .widget-content .label {}
+```

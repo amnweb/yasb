@@ -33,7 +33,7 @@ cpu:
       on_right: "exec cmd /c Taskmgr"
 ```
 
-# Description of Options
+## Description of Options
 
 - **label**: The format string for the CPU usage label. You can use placeholders like `{info[percent][total]}` to dynamically insert CPU information.
 - **label_alt**: The alternative format string for the CPU usage label. Useful for displaying additional CPU details.
@@ -41,3 +41,11 @@ cpu:
 - **histogram_icons**: A list of icons representing different levels of CPU usage in the histogram.
 - **histogram_num_columns**: The number of columns to display in the CPU usage histogram.
 - **callbacks**: A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions.
+
+
+## Example Style
+```css
+.cpu-widget {}
+.cpu-widget .widget-content {}
+.cpu-widget .widget-content .label {}
+```

@@ -35,3 +35,10 @@ clock:
 - **callbacks:** A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions.
 
 Clock format https://docs.python.org/3/library/time.html#time.strftime
+
+## Example Style
+```css
+.clock-widget {}
+.clock-widget .widget-content {}
+.clock-widget .widget-content .label {}
+```

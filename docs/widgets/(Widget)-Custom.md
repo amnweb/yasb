@@ -49,3 +49,10 @@ nvidia_temp:
 - **class_name**: The CSS class name for the widget.
 - **exec_options**: A dictionary specifying the execution options. The keys are `run_cmd`, `run_interval`, and `return_format`. `return_format` can be `json` or `string`.
 - **callbacks**: A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions.
+
+## Example Style
+```css
+.custom-widget {}
+.custom-widget .widget-content {}
+.custom-widget .widget-content .label {}
+```

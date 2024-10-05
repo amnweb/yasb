@@ -41,3 +41,10 @@ active_window:
 - **monitor_exclusive:** A boolean indicating whether the widget should be exclusive to a single monitor.
 - **ignore_window:** A dictionary specifying which windows to ignore. It contains three lists: classes, processes, and titles.
 - **callbacks:** A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions.
+
+## Example Style
+```css
+.active-window-widget {}
+.active-window-widget .widget-content {}
+.active-window-widget .widget-content .label {}
+```

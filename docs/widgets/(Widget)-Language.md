@@ -26,3 +26,10 @@ language:
 - **label_alt:** The alternative format string for the label. Useful for displaying the full language name.
 - **update_interval:** The interval in seconds to update the language information. Must be between 1 and 3600.
 - **callbacks:** A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions.
+
+## Example Style
+```css
+.language-widget {}
+.language-widget .widget-content {}
+.language-widget .widget-content .label {}
+```
