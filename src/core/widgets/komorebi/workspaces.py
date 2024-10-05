@@ -209,6 +209,8 @@ class WorkspaceWidget(BaseWidget):
                             self._try_remove_workspace_button(workspace_index)
                 self._add_or_update_buttons()
             elif event['type'] in self._workspace_focus_events or self._has_active_workspace_index_changed():
+                # send workspace_update event to active_window widgets
+                self._event_service.emit_event("workspace_update")
                 try:
                     prev_workspace_button = self._workspace_buttons[self._prev_workspace_index]
                     self._update_button(prev_workspace_button)
