@@ -2,18 +2,17 @@ import logging
 from settings import APP_BAR_TITLE
 from PyQt6.QtWidgets import QApplication, QWidget, QHBoxLayout, QGridLayout, QFrame
 from PyQt6.QtGui import QScreen
-from PyQt6.QtCore import Qt, QRect
+from PyQt6.QtCore import Qt, QRect, QEvent
 from core.utils.utilities import is_valid_percentage_str, percent_to_float
 from core.utils.win32.utilities import get_monitor_hwnd
 from core.validation.bar import BAR_DEFAULTS
 from core.utils.win32.blurWindow import Blur
- 
+
 try:
     from core.utils.win32 import app_bar
     IMPORT_APP_BAR_MANAGER_SUCCESSFUL = True
 except ImportError:
     IMPORT_APP_BAR_MANAGER_SUCCESSFUL = False
-
 
 class Bar(QWidget):
     def __init__(
@@ -40,7 +39,8 @@ class Bar(QWidget):
         self._window_flags = window_flags
         self._dimensions = dimensions
         self._padding = padding
-
+        self._is_dark_theme = None
+        
         self.screen_name = self.screen().name()
         self.app_bar_edge = app_bar.AppBarEdge.Top \
             if self._alignment['position'] == "top" \
@@ -63,7 +63,8 @@ class Bar(QWidget):
 
         self._bar_frame = QFrame(self)
         self._bar_frame.setProperty("class", f"bar {class_name}")
-
+        self.update_theme_class()
+        
         self.position_bar(init)
         self.monitor_hwnd = get_monitor_hwnd(int(self.winId()))
         self._add_widgets(widgets)
@@ -78,8 +79,41 @@ class Bar(QWidget):
             )
 
         self.screen().geometryChanged.connect(self.on_geometry_changed, Qt.ConnectionType.QueuedConnection)
-        self.show()
+        self.show()     
 
+    
+    def detect_os_theme(self) -> bool:
+        try:
+            import winreg
+            with winreg.ConnectRegistry(None, winreg.HKEY_CURRENT_USER) as registry:
+                with winreg.OpenKey(registry, r'SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize') as key:
+                    value, _ = winreg.QueryValueEx(key, 'AppsUseLightTheme')
+                    return value == 0
+        except Exception as e:
+            logging.error(f"Failed to determine Windows theme: {e}")
+            return False
+        
+    
+    def update_theme_class(self):
+        is_dark_theme = self.detect_os_theme()
+        # Possible there is better solution for this, but in this way we can prevent MS events spam 
+        if is_dark_theme != self._is_dark_theme: 
+            class_property = self._bar_frame.property("class")
+            if is_dark_theme:
+                class_property += " dark"
+            else:
+                class_property = class_property.replace(" dark", "")
+            self._bar_frame.setProperty("class", class_property)
+            update_styles(self._bar_frame)
+            self._is_dark_theme = is_dark_theme
+ 
+    
+    def event(self, event: QEvent) -> bool:
+        # Update theme class when system theme changes
+        if event.type() == QEvent.Type.ApplicationPaletteChange:
+            self.update_theme_class()
+        return super().event(event)
+     
     @property
     def bar_id(self) -> str:
         return self._bar_id
@@ -110,7 +144,6 @@ class Bar(QWidget):
         screen_y = self.screen().geometry().y()
         x = int(screen_x + (screen_w / 2) - (bar_w / 2))if self._alignment['center'] else screen_x
         y = int(screen_y + screen_h - bar_h) if self._alignment['position'] == "bottom" else screen_y
-
         return x, y
 
     def position_bar(self, init=False) -> None:
@@ -145,12 +178,10 @@ class Bar(QWidget):
             bar_width,
             bar_height
         )
-
         self.try_add_app_bar(scale_screen_height=not should_downscale_screen_geometry)
         
     def _add_widgets(self, widgets: dict[str, list] = None):
         bar_layout = QGridLayout()
-        
         bar_layout.setContentsMargins(0, 0, 0, 0)
         bar_layout.setSpacing(0)
         
@@ -179,3 +210,9 @@ class Bar(QWidget):
             bar_layout.addWidget(layout_container, 0, column_num)
  
         self._bar_frame.setLayout(bar_layout)
+        
+def update_styles(widget):
+    widget.style().unpolish(widget)
+    widget.style().polish(widget)
+    for child in widget.findChildren(QWidget):
+        update_styles(child)
