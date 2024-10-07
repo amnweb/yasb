@@ -16,3 +16,4 @@ winshell
 pillow
 qasync
 requests
+obs-websocket-py
