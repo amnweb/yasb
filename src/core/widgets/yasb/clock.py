@@ -48,7 +48,6 @@ class ClockWidget(BaseWidget):
         self._create_dynamically_label(self._label_content, self._label_alt_content)
         
         self.register_callback("toggle_label", self._toggle_label)
-        self.register_callback("toggle_label", self._toggle_label)
         self.register_callback("update_label", self._update_label)
         self.register_callback("next_timezone", self._next_timezone)
 
