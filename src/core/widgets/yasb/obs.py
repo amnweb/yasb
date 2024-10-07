@@ -8,14 +8,14 @@ from PyQt6.QtCore import Qt, QTimer, QMetaObject, Q_ARG
 from obswebsocket import obsws, requests, events
 from settings import DEBUG
 
-class ObsEventFilter(logging.Filter):
-    def filter(self, record):
-        return 'Got event' not in record.getMessage()
-
+# Set OBS WebSocket logger to WARNING
 obs_logger = logging.getLogger('obswebsocket')
-obs_logger.addFilter(ObsEventFilter())
 
-
+if DEBUG:
+    obs_logger.setLevel(logging.INFO)
+else:
+    obs_logger.setLevel(logging.WARNING)
+    
 class ObsWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
 
@@ -91,7 +91,7 @@ class ObsWidget(BaseWidget):
             else:
                 self.update_button(False)
         except Exception as e:
-            logging.info("Error while updating OBS button state")
+            logging.error("Error while updating OBS button state")
 
 
     def update_button(self, state):
