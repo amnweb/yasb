@@ -220,6 +220,9 @@ class WorkspaceWidget(BaseWidget):
                     self._add_or_update_buttons()
             elif event['type'] in self._update_buttons_event_watchlist:
                 self._add_or_update_buttons()
+            # send workspace_update event to active_window widgets
+            if event['type'] == 'MoveWindow':
+                self._event_service.emit_event("workspace_update")
 
     def _clear_container_layout(self):
         for i in reversed(range(self._workspace_container_layout.count())):

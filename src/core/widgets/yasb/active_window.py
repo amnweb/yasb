@@ -120,11 +120,21 @@ class ActiveWindowWidget(BaseWidget):
  
 
     def _on_focus_change_workspaces(self):
+        # Temporary fix for MoveWindow event from Komorebi: MoveWindow event is not sending enough data to know on which monitor the window is being moved also animation is a problem and because of that we are using singleShot to wait for the animation to finish.
         hwnd = win32gui.GetForegroundWindow()
-        if self._win_info and hwnd == self._win_info["hwnd"] and hwnd != 0:
+        if hwnd != 0:
             self._on_focus_change_event(hwnd, WinEvent.WinEventOutOfContext)
+            if self._update_retry_count < 3:
+                self._update_retry_count += 1
+                QTimer.singleShot(200, lambda: self._on_focus_change_event(hwnd, WinEvent.WinEventOutOfContext))
+                return
+            else:
+                self._update_retry_count = 0
         else:
             self.hide()
+
+
+        
         
     def _toggle_title_text(self) -> None:
         self._show_alt = not self._show_alt
@@ -183,6 +193,7 @@ class ActiveWindowWidget(BaseWidget):
                             if self._update_retry_count < 10:
                                 self._update_retry_count += 1
                                 QTimer.singleShot(500, lambda: self._update_window_title(hwnd, win_info, WinEvent.WinEventOutOfContext))
+                                print(self._update_retry_count)
                                 return
                             else:
                                 self._update_retry_count = 0
