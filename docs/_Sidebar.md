@@ -15,6 +15,7 @@
     - [Language](./(Widget)-Language)
     - [Media](./(Widget)-Media)
     - [Memory](./(Widget)-Memory)
+    - [Network](./(Widget)-Obs)
     - [Traffic](./(Widget)-Traffic)
     - [Taskbar](./(Widget)-Taskbar)
     - [Power Menu](./(Widget)-Power-Menu)
