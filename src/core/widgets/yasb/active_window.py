@@ -132,9 +132,7 @@ class ActiveWindowWidget(BaseWidget):
                 self._update_retry_count = 0
         else:
             self.hide()
-
-
-        
+            
         
     def _toggle_title_text(self) -> None:
         self._show_alt = not self._show_alt
@@ -193,7 +191,6 @@ class ActiveWindowWidget(BaseWidget):
                             if self._update_retry_count < 10:
                                 self._update_retry_count += 1
                                 QTimer.singleShot(500, lambda: self._update_window_title(hwnd, win_info, WinEvent.WinEventOutOfContext))
-                                print(self._update_retry_count)
                                 return
                             else:
                                 self._update_retry_count = 0
