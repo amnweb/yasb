@@ -22,6 +22,7 @@
     - [Volume](./(Widget)-Volume)
     - [Wallpapers](./(Widget)-Wallpapers)
     - [Weather](./(Widget)-Weather)
+    - [WHKD](./(Widget)-Whkd)
     - [Komorebi Workspaces](./(Widget)-Komorebi-Workspaces)
     - [Komorebi Layout](./(Widget)-Komorebi-Layout)
 - [Writing Widget](./Writing-Widget)
