@@ -120,7 +120,6 @@ class ActiveWindowWidget(BaseWidget):
  
 
     def _on_focus_change_workspaces(self, event: str) -> None:
-        print(event)
         # Temporary fix for MoveWindow event from Komorebi: MoveWindow event is not sending enough data to know on which monitor the window is being moved also animation is a problem and because of that we are using singleShot to try catch the window after the animation is done and this will run only on MoveWindow event
         if event in ['Hide', 'Destroy']:
             self.hide()
