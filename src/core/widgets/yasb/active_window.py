@@ -127,7 +127,7 @@ class ActiveWindowWidget(BaseWidget):
         hwnd = win32gui.GetForegroundWindow()
         if hwnd != 0:
             self._on_focus_change_event(hwnd, WinEvent.WinEventOutOfContext)
-            if self._update_retry_count < 3 and event in ['MoveWindow', 'Show']:
+            if self._update_retry_count < 3 and event in ['MoveWindow']:
                 self._update_retry_count += 1
                 QTimer.singleShot(200, lambda: self._on_focus_change_event(hwnd, WinEvent.WinEventOutOfContext))
                 return
