@@ -14,7 +14,7 @@ obs_logger = logging.getLogger('obswebsocket')
 if DEBUG:
     obs_logger.setLevel(logging.INFO)
 else:
-    obs_logger.setLevel(logging.WARNING)
+    obs_logger.setLevel(logging.ERROR)
     
 class ObsWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
@@ -76,7 +76,7 @@ class ObsWidget(BaseWidget):
                 logging.info("Connected to OBS WebSocket")
             self.ws.register(self.on_event)
             self.update_button_state()
-             
+
         except Exception:
             if DEBUG:
                 logging.error(f"Failed to connect to OBS WebSocket")
@@ -91,7 +91,8 @@ class ObsWidget(BaseWidget):
             else:
                 self.update_button(False)
         except Exception as e:
-            logging.error("Error while updating OBS button state")
+            if DEBUG:
+                logging.error("Error while updating OBS button state")
 
 
     def update_button(self, state):
