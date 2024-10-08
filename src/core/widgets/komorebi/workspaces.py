@@ -210,7 +210,7 @@ class WorkspaceWidget(BaseWidget):
                 self._add_or_update_buttons()
             elif event['type'] in self._workspace_focus_events or self._has_active_workspace_index_changed():
                 # send workspace_update event to active_window widgets
-                self._event_service.emit_event("workspace_update")
+                self._event_service.emit_event("workspace_update",event['type'])
                 try:
                     prev_workspace_button = self._workspace_buttons[self._prev_workspace_index]
                     self._update_button(prev_workspace_button)
@@ -222,7 +222,7 @@ class WorkspaceWidget(BaseWidget):
                 self._add_or_update_buttons()
             # send workspace_update event to active_window widgets
             if event['type'] == 'MoveWindow':
-                self._event_service.emit_event("workspace_update")
+                self._event_service.emit_event("workspace_update","MoveWindow")
 
     def _clear_container_layout(self):
         for i in reversed(range(self._workspace_container_layout.count())):

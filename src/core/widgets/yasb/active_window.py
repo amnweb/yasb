@@ -33,7 +33,7 @@ except ImportError:
 class ActiveWindowWidget(BaseWidget):
     foreground_change = pyqtSignal(int, WinEvent)
     window_name_change = pyqtSignal(int, WinEvent)
-    focus_change_workspaces = pyqtSignal()
+    focus_change_workspaces = pyqtSignal(str)
     validation_schema = VALIDATION_SCHEMA
     event_listener = SystemEventListener
 
@@ -119,12 +119,12 @@ class ActiveWindowWidget(BaseWidget):
         self._event_service.register_event("workspace_update", self.focus_change_workspaces)
  
 
-    def _on_focus_change_workspaces(self):
-        # Temporary fix for MoveWindow event from Komorebi: MoveWindow event is not sending enough data to know on which monitor the window is being moved also animation is a problem and because of that we are using singleShot to wait for the animation to finish.
+    def _on_focus_change_workspaces(self, event : str) -> None:
+        # Temporary fix for MoveWindow event from Komorebi: MoveWindow event is not sending enough data to know on which monitor the window is being moved also animation is a problem and because of that we are using singleShot to try catch the window after the animation is done and this will run only on MoveWindow event
         hwnd = win32gui.GetForegroundWindow()
         if hwnd != 0:
             self._on_focus_change_event(hwnd, WinEvent.WinEventOutOfContext)
-            if self._update_retry_count < 3:
+            if self._update_retry_count < 3 and event == "MoveWindow":
                 self._update_retry_count += 1
                 QTimer.singleShot(200, lambda: self._on_focus_change_event(hwnd, WinEvent.WinEventOutOfContext))
                 return
@@ -151,13 +151,10 @@ class ActiveWindowWidget(BaseWidget):
         monitor_name = win_info['monitor_info'].get('device', None)
 
         if self._monitor_exclusive and self.screen().name() != monitor_name and win_info.get('monitor_hwnd', 'Unknown') != self.monitor_hwnd:
-            self.hide()
-        elif win32gui.GetForegroundWindow() == 0:
-            self.hide()    
+            self.hide() 
         else:
-            self.show()
             self._update_window_title(hwnd, win_info, event)
-
+            
         # Check if the window title is in the list of ignored titles
         if(win_info['title'] in IGNORED_TITLES):
             self.hide()
@@ -221,6 +218,8 @@ class ActiveWindowWidget(BaseWidget):
 
                 if self._window_title_text.isHidden():
                     self._window_title_text.show()
+                if self.isHidden():
+                    self.show()
         except Exception:
             logging.exception(
                 f"Failed to update active window title for window with HWND {hwnd} emitted by event {event}"
