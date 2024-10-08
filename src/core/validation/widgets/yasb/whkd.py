@@ -1,5 +1,5 @@
 DEFAULTS = {
-    'label': "{icon}",
+    'label': "\uf11c",
     'container_padding': {'top': 0, 'left': 0, 'bottom': 0, 'right': 0},
 }
 VALIDATION_SCHEMA = {
