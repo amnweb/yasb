@@ -62,6 +62,34 @@ for more themes visit [yasb-themes](https://github.com/amnweb/yasb-themes)
 > [!NOTE]  
 > This repository is updated on a regular basis; when you update files, always check [styles.css](src/styles.css) and [config.yaml](src/config.yaml) for new features and changes; otherwise, your config can be broken.
 
+
+## List of currently available widgets in YASB.
+
+| Widget Name | Descirption
+|----------|----------|
+| [Active Windows Title](https://github.com/amnweb/yasb/wiki/(Widget)-Active-Windows-Title) | Displays the title of the currently active window.
+| [Applications](https://github.com/amnweb/yasb/wiki/(Widget)-Applications) | Shows a list of predefined applications.
+| [Battery](https://github.com/amnweb/yasb/wiki/(Widget)-Battery) | Displays the current battery status.
+| [CPU](https://github.com/amnweb/yasb/wiki/(Widget)-CPU) | Shows the current CPU usage.
+| [Clock](https://github.com/amnweb/yasb/wiki/(Widget)-Clock) | Displays the current time and date.
+| [Custom](https://github.com/amnweb/yasb/wiki/(Widget)-Custom) | Create a custom widget.
+| [Github](https://github.com/amnweb/yasb/wiki/(Widget)-Github) | Shows notifications from GitHub.
+| [Disk](https://github.com/amnweb/yasb/wiki/(Widget)-Disk) | Displays disk usage information.
+| [Language](https://github.com/amnweb/yasb/wiki/(Widget)-Language) | Shows the current input language.
+| [Media](https://github.com/amnweb/yasb/wiki/(Widget)-Media) | Displays media controls and information.
+| [Memory](https://github.com/amnweb/yasb/wiki/(Widget)-Memory) | Shows current memory usage.
+| [OBS](https://github.com/amnweb/yasb/wiki/(Widget)-Obs) | Integrates with OBS Studio to show recording status.
+| [Traffic](https://github.com/amnweb/yasb/wiki/(Widget)-Traffic) | Displays network traffic information.
+| [Taskbar](https://github.com/amnweb/yasb/wiki/(Widget)-Taskbar) | A customizable taskbar for launching applications.
+| [Power Menu](https://github.com/amnweb/yasb/wiki/(Widget)-Power-Menu) | A menu for power options.
+| [Volume](https://github.com/amnweb/yasb/wiki/(Widget)-Volume) | Shows and controls the system volume.
+| [Wallpapers](https://github.com/amnweb/yasb/wiki/(Widget)-Wallpapers) | Allows changing wallpapers.
+| [Weather](https://github.com/amnweb/yasb/wiki/(Widget)-Weather) | Displays current weather information.
+| [WHKD](https://github.com/amnweb/yasb/wiki/(Widget)-Whkd) | Shows the current hotkey.
+| [Komorebi Workspaces](https://github.com/amnweb/yasb/wiki/(Widget)-Komorebi-Workspaces) | Shows the current workspace.
+| [Komorebi Layout](https://github.com/amnweb/yasb/wiki/(Widget)-Komorebi-Layout) | Shows the current layout.
+
+
 ## How to style
 ```
 .widget .label {} -> Global label for all
