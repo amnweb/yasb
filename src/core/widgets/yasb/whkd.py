@@ -57,18 +57,19 @@ class WhkdWidget(BaseWidget):
         self._widgets = process_content(content)
 
     def show_popup(self, event):
-        # Check if WHKD_CONFIG_HOME exists in the environment variables
-        whkd_config_home = os.getenv('WHKD_CONFIG_HOME')
-        if whkd_config_home:
-            file_path = os.path.join(whkd_config_home, 'whkdrc')
-        else:
-            file_path = os.path.join(os.path.expanduser('~'), '.config', 'whkdrc')
+        if event.button() == Qt.MouseButton.LeftButton:
+            # Check if WHKD_CONFIG_HOME exists in the environment variables
+            whkd_config_home = os.getenv('WHKD_CONFIG_HOME')
+            if whkd_config_home:
+                file_path = os.path.join(whkd_config_home, 'whkdrc')
+            else:
+                file_path = os.path.join(os.path.expanduser('~'), '.config', 'whkdrc')
 
-        filtered_lines = self.read_and_filter_file(file_path)
-        formatted_content = self.format_content(filtered_lines)
+            filtered_lines = self.read_and_filter_file(file_path)
+            formatted_content = self.format_content(filtered_lines)
 
-        self._popup_window = KeybindsWindow(formatted_content, file_path)
-        self._popup_window.show()
+            self._popup_window = KeybindsWindow(formatted_content, file_path)
+            self._popup_window.show()
 
     def read_and_filter_file(self, file_path):
         with open(file_path, 'r') as file:
