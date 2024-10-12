@@ -8,13 +8,14 @@ import pythoncom
 import pywintypes
 from core.widgets.base import BaseWidget
 from core.validation.widgets.yasb.wallpapers import VALIDATION_SCHEMA
-from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget
+from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget, QGraphicsOpacityEffect
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QCursor
 from typing import List
 import win32gui
 from win32comext.shell import shell, shellcon
 from settings import DEBUG
+import threading
 
 class WallpapersWidget(BaseWidget):
     user32 = ctypes.windll.user32
@@ -36,8 +37,9 @@ class WallpapersWidget(BaseWidget):
         self._image_path = image_path
         self._run_after = run_after
         
-        self._last_image = None  # Track the last selected image
-
+        self._last_image = None
+        self._is_running = False 
+        
         # Construct container
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
@@ -164,10 +166,17 @@ class WallpapersWidget(BaseWidget):
         iad.SetWallpaper(str(image_path), 0)
         iad.ApplyChanges(shellcon.AD_APPLY_ALL)
         self.force_refresh()
-
+ 
 
     def change_background(self, event=None):
         if event is None or event.button() == Qt.MouseButton.LeftButton:
+            if self._is_running:  # Check if a command is already running
+                return  # Exit if a command is running
+            if self._run_after:
+                self._is_running = True  # Set the flag to indicate a command is running
+                opacity_effect = QGraphicsOpacityEffect()
+                opacity_effect.setOpacity(0.5)
+                self._widget_container.setGraphicsEffect(opacity_effect)
             # Get a list of all image files in the folder
             wallpapers = [os.path.join(self._image_path, f) for f in os.listdir(self._image_path) if f.endswith(('.png', '.jpg', '.jpeg', '.bmp', '.gif'))]
             # Randomly select a new wallpaper
@@ -183,14 +192,20 @@ class WallpapersWidget(BaseWidget):
                 logging.error(f"Error setting wallpaper {new_wallpaper}: {e}")
 
             if self._run_after:
-                self.run_after_command(new_wallpaper)
-
+                threading.Thread(target=self.run_after_command, args=(new_wallpaper,)).start()
+            
 
     def run_after_command(self, new_wallpaper):
-        for command in self._run_after:
-            formatted_command = command.replace("{image}", f'"{new_wallpaper}"')
-            if DEBUG:
-                logging.debug(f"Running command: {formatted_command}")
-            result = subprocess.run(formatted_command, shell=True, capture_output=True, text=True)    
-            if result.stderr:
-                logging.error(f"error: {result.stderr}")              
+        if self._run_after:
+            for command in self._run_after:
+                formatted_command = command.replace("{image}", f'"{new_wallpaper}"')
+                if DEBUG:
+                    logging.debug(f"Running command: {formatted_command}")
+                result = subprocess.run(formatted_command, shell=True, capture_output=True, text=True)    
+                if result.stderr:
+                    logging.error(f"error: {result.stderr}")    
+        reset_effect = QGraphicsOpacityEffect()
+        reset_effect.setOpacity(1.0)
+        self._widget_container.setGraphicsEffect(reset_effect)
+        self._is_running = False
+                          
