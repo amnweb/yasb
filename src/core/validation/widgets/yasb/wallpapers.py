@@ -2,7 +2,8 @@ DEFAULTS = {
     'label': "{icon}",
     'update_interval': 60,
     'change_automatically': False,
-    'image_path': ""
+    'image_path': "",
+    "run_after": []
 }
 
 VALIDATION_SCHEMA = {
@@ -24,5 +25,13 @@ VALIDATION_SCHEMA = {
         'required': True,
         'type': 'string',
         'default': DEFAULTS['image_path']
+    },
+    "run_after": {
+        "required": False,
+        "type": "list",
+        "default": DEFAULTS["run_after"],
+        "schema": {
+            "type": "string"
+        }
     }
 }

@@ -1,30 +1,41 @@
 import os
-import logging
 import ctypes
 import random
 import re
+import logging
+import subprocess
+import pythoncom
+import pywintypes
 from core.widgets.base import BaseWidget
 from core.validation.widgets.yasb.wallpapers import VALIDATION_SCHEMA
 from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QCursor
-from core.widgets.yasb.applications import ClickableLabel
+from typing import List
+import win32gui
+from win32comext.shell import shell, shellcon
+from settings import DEBUG
 
 class WallpapersWidget(BaseWidget):
+    user32 = ctypes.windll.user32
     validation_schema = VALIDATION_SCHEMA
     _timer_running = False
+    
     def __init__(
         self,
         label: str,
         update_interval: int,
         change_automatically: bool,
-        image_path: str
+        image_path: str,
+        run_after: list[str],
     ):
         super().__init__(int(update_interval * 1000), class_name="wallpapers-widget")
 
         self._label_content = label
         self._change_automatically = change_automatically
         self._image_path = image_path
+        self._run_after = run_after
+        
         self._last_image = None  # Track the last selected image
 
         # Construct container
@@ -55,7 +66,7 @@ class WallpapersWidget(BaseWidget):
 
     def _create_dynamically_label(self, content: str):
         def process_content(content, is_alt=False):
-            label_parts = re.split('(<span.*?>.*?</span>)', content) #Filters out empty parts before entering the loop
+            label_parts = re.split('(<span.*?>.*?</span>)', content) 
             label_parts = [part for part in label_parts if part]
             widgets = []
             for part in label_parts:
@@ -66,12 +77,12 @@ class WallpapersWidget(BaseWidget):
                     class_name = re.search(r'class=(["\'])([^"\']+?)\1', part)
                     class_result = class_name.group(2) if class_name else 'icon'
                     icon = re.sub(r'<span.*?>|</span>', '', part).strip()
-                    label = ClickableLabel(icon)
+                    label = QLabel(icon)
                     label.setProperty("class", class_result)
                     label.setToolTip(f'Change Wallaper')
                     label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
                 else:
-                    label = ClickableLabel(part)
+                    label = QLabel(part)
                     label.setProperty("class", "label") 
                     label.setToolTip(f'Change Wallaper')
                     label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
@@ -80,7 +91,8 @@ class WallpapersWidget(BaseWidget):
                 self._widget_container_layout.addWidget(label)
                 widgets.append(label)
                 label.show()
-                label.clicked.connect(self.change_background)
+                label.mousePressEvent = self.change_background
+ 
             return widgets
         self._widgets = process_content(content)
 
@@ -95,7 +107,6 @@ class WallpapersWidget(BaseWidget):
             part = part.strip()
             if part:              
                 if '<span' in part and '</span>' in part:
-                    # Update icon ClickableLabel
                     icon = re.sub(r'<span.*?>|</span>', '', part).strip()
                     active_widgets[widget_index].setText(icon)
                 else:
@@ -103,31 +114,83 @@ class WallpapersWidget(BaseWidget):
                 widget_index += 1
  
 
-    def change_background(self):
+    def _make_filter(self, class_name: str, title: str):
+        """https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-enumwindows"""
+        def enum_windows(handle: int, h_list: list):
+            if not (class_name or title):
+                h_list.append(handle)
+            if class_name and class_name not in win32gui.GetClassName(handle):
+                return True  # continue enumeration
+            if title and title not in win32gui.GetWindowText(handle):
+                return True  # continue enumeration
+            h_list.append(handle)
+        return enum_windows
+
+
+    def find_window_handles(self, parent: int = None, window_class: str = None, title: str = None) -> List[int]:
+        cb = self._make_filter(window_class, title)
         try:
-            # Define valid image extensions
-            valid_extensions = ('.png', '.jpg', '.jpeg', '.bmp', '.gif')
-            # Get a list of all image files in the images folder
-            images = [f for f in os.listdir(self._image_path) if os.path.isfile(os.path.join(self._image_path, f)) and f.lower().endswith(valid_extensions)]
-            if not images:
-                return
+            handle_list = []
+            if parent:
+                win32gui.EnumChildWindows(parent, cb, handle_list)
+            else:
+                win32gui.EnumWindows(cb, handle_list)
+            return handle_list
+        except pywintypes.error:
+            return []
 
-            # Select a random image that is different from the last one
-            random_image = random.choice(images)
-            while random_image == self._last_image and len(images) > 1:
-                random_image = random.choice(images)
 
-            # Full path to the selected image
-            image_path = os.path.join(self._image_path, random_image)
-            # Change the desktop background
-            ctypes.windll.user32.SystemParametersInfoW(20, 0, image_path, 3)
-            # Update the last selected image
-            self._last_image = random_image
-        except Exception as e:
-            logging.error("Error changing wallpaper: %s", str(e))
-    
-class ClickableLabel(QLabel):
-    clicked = pyqtSignal()
-    def mouseReleaseEvent(self, event):
-        self.clicked.emit()
-        super().mouseReleaseEvent(event) 
+    def force_refresh(self):
+        self.user32.UpdatePerUserSystemParameters(1)
+
+
+    def enable_activedesktop(self):
+        try:
+            progman = self.find_window_handles(window_class='Progman')[0]
+            cryptic_params = (0x52c, 0, 0, 0, 500, None)
+            self.user32.SendMessageTimeoutW(progman, *cryptic_params)
+        except IndexError as e:
+            raise WindowsError('Cannot enable Active Desktop') from e
+
+
+    def set_wallpaper(self, image_path: str, use_activedesktop: bool = True):
+        if use_activedesktop:
+            self.enable_activedesktop()
+        pythoncom.CoInitialize()
+        iad = pythoncom.CoCreateInstance(shell.CLSID_ActiveDesktop,
+                                        None,
+                                        pythoncom.CLSCTX_INPROC_SERVER,
+                                        shell.IID_IActiveDesktop)
+        iad.SetWallpaper(str(image_path), 0)
+        iad.ApplyChanges(shellcon.AD_APPLY_ALL)
+        self.force_refresh()
+
+
+    def change_background(self, event=None):
+        if event is None or event.button() == Qt.MouseButton.LeftButton:
+            # Get a list of all image files in the folder
+            wallpapers = [os.path.join(self._image_path, f) for f in os.listdir(self._image_path) if f.endswith(('.png', '.jpg', '.jpeg', '.bmp', '.gif'))]
+            # Randomly select a new wallpaper
+            new_wallpaper = random.choice(wallpapers)
+            # prevent the same wallpaper from being selected 
+            while new_wallpaper == self._last_image and len(wallpapers) > 1:
+                new_wallpaper = random.choice(wallpapers)
+
+            try:
+                self.set_wallpaper(new_wallpaper)
+                self._last_image = new_wallpaper
+            except Exception as e:
+                logging.error(f"Error setting wallpaper {new_wallpaper}: {e}")
+
+            if self._run_after:
+                self.run_after_command(new_wallpaper)
+
+
+    def run_after_command(self, new_wallpaper):
+        for command in self._run_after:
+            formatted_command = command.replace("{image}", f'"{new_wallpaper}"')
+            if DEBUG:
+                logging.debug(f"Running command: {formatted_command}")
+            result = subprocess.run(formatted_command, shell=True, capture_output=True, text=True)    
+            if result.stderr:
+                logging.error(f"error: {result.stderr}")              
