@@ -215,4 +215,5 @@ def update_styles(widget):
     widget.style().unpolish(widget)
     widget.style().polish(widget)
     for child in widget.findChildren(QWidget):
-        update_styles(child)
+        child.style().unpolish(child)
+        child.style().polish(child)
