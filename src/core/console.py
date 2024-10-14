@@ -1,6 +1,7 @@
 import os
 from os import path
 from pathlib import Path
+import re
 from PyQt6.QtWidgets import QVBoxLayout, QTextEdit, QDialog, QDialogButtonBox
 from PyQt6.QtGui import QIcon
 from PyQt6.QtCore import QThread, pyqtSignal, Qt
@@ -39,6 +40,7 @@ class WindowShellDialog(QDialog):
         self.setWindowIcon(QIcon(icon.pixmap(48, 48)))
 
         self.setWindowFlags(self.windowFlags() | Qt.WindowType.WindowMinimizeButtonHint)
+        self.setWindowFlags(self.windowFlags() | Qt.WindowType.WindowMaximizeButtonHint)
         self.setWindowModality(Qt.WindowModality.WindowModal)
         self.setContentsMargins(0, 0, 0, 0)
 
@@ -80,14 +82,27 @@ class WindowShellDialog(QDialog):
         self.output_viewer.append(f"Log started {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
     def append_colored_text(self, line):
-        if "CRITICAL" in line:
-            formatted_line = f'<span style="color:#ff000;font-weight:bold">{line}</span>'
-        elif "ERROR" in line:
-            formatted_line = f'<span style="color:#ff4d4d;;font-weight:bold">{line}</span>'
-        elif "WARNING" in line:
-            formatted_line = f'<span style="color:#ffb64d;">{line}</span>'
+        # Regular expression to match the date part at the beginning of the line
+        date_pattern = r'^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})'
+        match = re.match(date_pattern, line)
+        
+        if match:
+            date_part = match.group(1)
+            log_line = line[len(date_part):]
+            formatted_date = f'<span style="color:rgba(255, 255, 255, 0.3);">{date_part}</span>'
         else:
-            formatted_line = f'<span>{line}</span>'
+            formatted_date = ''
+            log_line = line
+
+        if "CRITICAL" in log_line:
+            formatted_line = f'{formatted_date}<span style="color:#ff000;font-weight:bold">{log_line}</span>'
+        elif "ERROR" in log_line:
+            formatted_line = f'{formatted_date}<span style="color:#ff4d4d;font-weight:bold">{log_line}</span>'
+        elif "WARNING" in log_line:
+            formatted_line = f'{formatted_date}<span style="color:#ffb64d;">{log_line}</span>'
+        else:
+            formatted_line = f'{formatted_date}<span>{log_line}</span>'
+
         self.output_viewer.append(formatted_line)
 
     def close_dialog(self):
