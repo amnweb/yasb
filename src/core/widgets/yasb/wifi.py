@@ -1,6 +1,6 @@
 import logging
 import re
-from winsdk.windows.networking.connectivity import NetworkInformation
+from winsdk.windows.networking.connectivity import NetworkInformation, NetworkConnectivityLevel
 from core.widgets.base import BaseWidget
 from core.validation.widgets.yasb.wifi import VALIDATION_SCHEMA
 from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget
@@ -138,7 +138,7 @@ class WifiWidget(BaseWidget):
     def _get_wifi_strength(self):
         connections = NetworkInformation.get_connection_profiles()
         for connection in connections:
-            if connection.is_wlan_connection_profile:
+            if connection.get_network_connectivity_level() == NetworkConnectivityLevel.INTERNET_ACCESS:
                 signal_strength = connection.get_signal_bars()
                 return signal_strength * 20
         return 0
@@ -146,7 +146,7 @@ class WifiWidget(BaseWidget):
     def _get_wifi_name(self):
         connections = NetworkInformation.get_connection_profiles()
         for connection in connections:
-            if connection.is_wlan_connection_profile:
+            if connection.get_network_connectivity_level() == NetworkConnectivityLevel.INTERNET_ACCESS:
                 return connection.profile_name
         return "No WiFi"
 
