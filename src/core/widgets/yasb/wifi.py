@@ -1,14 +1,10 @@
 import logging
 import re
-
 from winsdk.windows.networking.connectivity import NetworkInformation
-
 from core.widgets.base import BaseWidget
 from core.validation.widgets.yasb.wifi import VALIDATION_SCHEMA
 from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget
 from PyQt6.QtCore import Qt
-import os
-
 
 class WifiWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
@@ -140,23 +136,18 @@ class WifiWidget(BaseWidget):
                 widget_index += 1
 
     def _get_wifi_strength(self):
-        # Get the wifi strength from the system
-        result = os.popen("netsh wlan show interfaces").read()
-        # Return 0 if no wifi interface is found
-        if "There is no wireless interface on the system." in result:
-            return 0
-        # Extract signal strength from the result
-        for line in result.split("\n"):
-            if "Signal" in line:  # FIXME: This will break if the system language is not English
-                strength = line.split(":")[1].strip().split(" ")[0].replace("%", "")
-                return int(strength)
+        connections = NetworkInformation.get_connection_profiles()
+        for connection in connections:
+            if connection.is_wlan_connection_profile:
+                signal_strength = connection.get_signal_bars()
+                return signal_strength * 20
         return 0
 
     def _get_wifi_name(self):
-        result = os.popen("netsh wlan show interfaces").read()
-        for line in result.split("\n"):
-            if "SSID" in line:
-                return line.split(":")[1].strip()
+        connections = NetworkInformation.get_connection_profiles()
+        for connection in connections:
+            if connection.is_wlan_connection_profile:
+                return connection.profile_name
         return "No WiFi"
 
     def _get_wifi_icon(self):
@@ -164,11 +155,13 @@ class WifiWidget(BaseWidget):
         strength = self._get_wifi_strength()
         if strength == 0:
             return self._wifi_icons[0], strength
-        elif strength <= 25:
+        elif strength <= 20:
             return self._wifi_icons[1], strength
-        elif strength <= 50:
+        elif strength <= 40:
             return self._wifi_icons[2], strength
-        elif strength <= 75:
+        elif strength <= 60:
+            return self._wifi_icons[3], strength
+        elif strength <= 80:
             return self._wifi_icons[3], strength
         else:
             return self._wifi_icons[4], strength
