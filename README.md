@@ -83,34 +83,10 @@ for more themes visit [yasb-themes](https://github.com/amnweb/yasb-themes)
 - **[Volume](https://github.com/amnweb/yasb/wiki/(Widget)-Volume)**: Shows and controls the system volume.
 - **[Wallpapers](https://github.com/amnweb/yasb/wiki/(Widget)-Wallpapers)**: Allows changing wallpapers.
 - **[Weather](https://github.com/amnweb/yasb/wiki/(Widget)-Weather)**: Displays current weather information.
+- **[WiFi](https://github.com/amnweb/yasb/wiki/(Widget)-WiFi)**: Shows the current WiFi status.
 - **[WHKD](https://github.com/amnweb/yasb/wiki/(Widget)-Whkd)**: Shows the current hotkey.
 - **[Komorebi Workspaces](https://github.com/amnweb/yasb/wiki/(Widget)-Komorebi-Workspaces)**: Shows the current workspace.
 - **[Komorebi Layout](https://github.com/amnweb/yasb/wiki/(Widget)-Komorebi-Layout)**: Shows the current layout.
-
-
-## How to style
-```
-.widget .label {} -> Global label for all
-.active-window-widget {} -> Styles specific to the active window widget
-.clock-widget {} -> Styles specific to the clock widget
-.cpu-widget {} -> Styles specific to the CPU widget
-.memory-widget {} -> Styles specific to the memory widget
-.weather-widget {} -> Styles specific to the weather widget
-.komorebi-workspaces {} -> Styles specific to komorebi workspaces
-.komorebi-active-layout {} -> Styles specific to komorebi active layout
-.volume-widget {} -> Styles specific to the volume widget 
-.apps-widget {} -> Styles specific to the apps widget
-.power-menu-widget {} -> Styles for the power menu button widget
-.power-menu-popup {} -> Styles for the power menu popup widget
-.power-menu-popup > .button {} -> Styles for power buttons inside the popup 
-.power-menu-popup > .button > .icon,
-.power-menu-popup > .button > .label {} -> Styles for power buttons icons and labels inside the popup
-.media-widget {} -> Styles specific to the media widget
-.github-widget {} -> Styles specific to the github widget
-.language-widget {} -> Styles specific to the language widget
-.disk-widget {} -> Styles specific to the disk widget
-.taskbar-widget {} -> Styles specific to the taskbar widget
-```
 
 
 ## 🏆 Contributors
