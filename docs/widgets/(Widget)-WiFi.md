@@ -2,11 +2,11 @@
 
 | Option              | Type    | Default                                                                 | Description                                                                 |
 |---------------------|---------|-------------------------------------------------------------------------|-----------------------------------------------------------------------------|
-| `label`             | string  | `"{icon}"`                                                              | The label format for the WiFi widget.                                       |
-| `label_alt`         | string  | `"{wifi_name} {wifi_strength}%"`                                        | The alternative label format for the WiFi widget.                           |
-| `update_interval`   | integer  | `1000`                                                                 | Update interval in milliseconds.                                            |
-| `wifi_icons`        | list    | `["\udb82\udd2e","\udb82\udd1f","\udb82\udd22","\udb82\udd25","\udb82\udd28",]`    | Icons for different WiFi signal strengths.                       |
-| `callbacks`         | dict    | `{'on_left': 'toggle_label', 'on_middle': 'do_nothing', 'on_right': 'do_nothing'}` | Callbacks for mouse events on the widget.                        |
+| `label`   | string  | `"{icon}"`    | The label format for the WiFi widget. |
+| `label_alt`   | string  | `"{wifi_name} {wifi_strength}%"`  | The alternative label format for the WiFi widget. |
+| `update_interval` | integer  | `1000`   | Update interval in milliseconds.  |
+| `wifi_icons`  | list    | `["\udb82\udd2e","\udb82\udd1f","\udb82\udd22","\udb82\udd25","\udb82\udd28"]`   | Icons for different WiFi signal strengths.    |
+| `callbacks`   | dict    | `{ 'on_left': 'next_layout', 'on_middle': 'toggle_monocle', 'on_right': 'prev_layout' }` | Callbacks for mouse events on the widget.    |
 
 
 ## Example Configuration
