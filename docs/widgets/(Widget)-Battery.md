@@ -62,5 +62,4 @@ battery:
 .battery-widget .widget-container .label.status-medium {}
 .battery-widget .widget-container .label.status-high {}
 .battery-widget .widget-container .label.status-full {}
-.battery-widget .widget-container .label.status-full {}
 ```
