@@ -10,8 +10,6 @@ from PyQt6.QtCore import Qt
 
 class MemoryWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
-    CLASS_NAME = "memory-widget"
-
     def __init__(
             self,
             label: str,
@@ -20,7 +18,7 @@ class MemoryWidget(BaseWidget):
             callbacks: dict[str, str],
             memory_thresholds: dict[str, int]
     ):
-        super().__init__(update_interval, class_name=self.CLASS_NAME)
+        super().__init__(update_interval, class_name="memory-widget")
         self._memory_thresholds = memory_thresholds
         self._show_alt_label = False
         self._label_content = label
@@ -119,11 +117,12 @@ class MemoryWidget(BaseWidget):
                         active_widgets[widget_index].setText(icon)
                     else:
                         active_widgets[widget_index].setText(part)
+                        # Set memory threshold as property
+                        active_widgets[widget_index].setProperty("class", f"label status-{self._get_virtual_memory_threshold(virtual_mem.percent)}")
+                        active_widgets[widget_index].setStyleSheet('')
                     widget_index += 1
 
-            # Set memory threshold as property
-            self._widget_frame.setProperty("class", f"widget {self.CLASS_NAME} status-{self._get_virtual_memory_threshold(virtual_mem.percent)}")
-            self._widget_frame.setStyleSheet('')
+
 
         except Exception:
             logging.exception("Failed to retrieve updated memory info")

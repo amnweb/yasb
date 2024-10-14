@@ -10,8 +10,6 @@ from typing import Union
 
 class BatteryWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
-    CLASS_NAME = "battery-widget"
-
     def __init__(
             self,
             label: str,
@@ -23,7 +21,7 @@ class BatteryWidget(BaseWidget):
             status_icons: dict[str, str],
             callbacks: dict[str, str]
     ):
-        super().__init__(update_interval, class_name=self.CLASS_NAME)
+        super().__init__(update_interval, class_name="battery-widget")
         self._time_remaining_natural = time_remaining_natural
         self._status_thresholds = status_thresholds
         self._status_icons = status_icons
@@ -184,8 +182,4 @@ class BatteryWidget(BaseWidget):
                     active_widgets[widget_index].setText(formatted_text)
                     active_widgets[widget_index].setProperty("class", f"label {alt_class} status-{threshold}")
                     active_widgets[widget_index].setStyleSheet('')
-
-                # Set memory threshold as property
-                self._widget_frame.setProperty("class", f"widget {self.CLASS_NAME} status-{threshold}")
-                self._widget_frame.setStyleSheet('')
                 widget_index += 1
