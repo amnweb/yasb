@@ -35,3 +35,17 @@ memory:
 - **memory_thresholds:** A dictionary specifying the thresholds for memory usage levels. The keys are `low`, `medium`, and `high`, and the values are the percentage thresholds.
 
 The `label` and `label_alt` options use format strings that can include placeholders for memory metrics. These placeholders will be replaced with actual values when the widget is rendered. You can use `{virtual_mem_free}`, `{virtual_mem_percent}`, `{virtual_mem_total}`, `{virtual_mem_avail}`, `{virtual_mem_used}`, `{virtual_mem_outof}`, `{swap_mem_free}`, `{swap_mem_percent}`, `{swap_mem_total}`
+
+
+## Example Style
+```css
+.memory-widget {}
+.memory-widget .widget-container {}
+.memory-widget .label {}
+.memory-widget .label.alt {}
+.memory-widget .icon {}
+.memory-widget .label.status-low {}
+.memory-widget .label.status-medium {}
+.memory-widget .label.status-high {}
+.memory-widget .label.status-critical {}
+```

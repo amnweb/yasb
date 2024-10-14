@@ -30,3 +30,11 @@ volume:
 - **label_alt**: The alternative format string for the volume label. Useful for displaying additional volume details.
 - **volume_icons**: A list of icons representing different volume levels. The icons are used based on the current volume percentage.
 - **callbacks**: A dictionary specifying the callbacks for mouse events. The keys are `on_middle` and `on_right`, and the values are the names of the callback functions.
+
+## Example Style
+```css
+.volume-widget {}
+.volume-widget .widget-container {}
+.volume-widget .label {}
+.volume-widget .icon {}
+```

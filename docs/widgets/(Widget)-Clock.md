@@ -39,6 +39,8 @@ Clock format https://docs.python.org/3/library/time.html#time.strftime
 ## Example Style
 ```css
 .clock-widget {}
-.clock-widget .widget-content {}
-.clock-widget .widget-content .label {}
+.clock-widget .widget-container {}
+.clock-widget .widget-container .label {}
+.clock-widget .widget-container .label.alt {}
+.clock-widget .widget-container .icon {}
 ```

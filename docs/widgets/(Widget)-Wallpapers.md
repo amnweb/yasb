@@ -32,8 +32,9 @@ wallpapers:
 ## Example Style
 ```css
 .wallpapers-widget {}
-.wallpapers-widget .widget-content {}
-.wallpapers-widget .widget-content .label {}
+.wallpapers-widget .widget-container {}
+.wallpapers-widget .label {}
+.wallpapers-widget .icon {}
 ```
 
 # Using Pywal with Wallpapers

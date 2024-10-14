@@ -49,3 +49,10 @@ komorebi_active_layout:
 - **layout_icons**: The icons for each layout.
 - **container_padding:** Explicitly set padding inside widget container.
 - **callbacks**: A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions.
+
+## Example Style
+```css
+.komorebi-active-layout {}
+.komorebi-active-layout .widget-container {}
+.komorebi-active-layout .label {}
+```

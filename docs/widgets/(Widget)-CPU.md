@@ -46,6 +46,8 @@ cpu:
 ## Example Style
 ```css
 .cpu-widget {}
-.cpu-widget .widget-content {}
-.cpu-widget .widget-content .label {}
+.cpu-widget .widget-container {}
+.cpu-widget .widget-container .label {}
+.cpu-widget .widget-container .label.alt {}
+.cpu-widget .widget-container .icon {}
 ```

@@ -30,6 +30,8 @@ language:
 ## Example Style
 ```css
 .language-widget {}
-.language-widget .widget-content {}
-.language-widget .widget-content .label {}
+.language-widget .widget-container {}
+.language-widget .label {}
+.language-widget .label.alt {}
+.language-widget .icon {}
 ```

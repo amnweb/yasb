@@ -47,3 +47,21 @@ weather:
 - **api_key:** The API key for accessing the weather service. You can get free API key `weatherapi.com`
 - **icons:** A dictionary of icons for different weather conditions `sunnyDay`, `sunnyNight`, `clearDay`, `clearNight`, `cloudyDay`, `cloudyNight`, `rainyDay`, `rainyNight`, `snowyIcyDay`, `snowyIcyNight`, `blizzard`, `default`.
 - **callbacks:** A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions.
+
+## Example Style
+```css
+.weather-widget {}
+.weather-widget .widget-container {}
+.weather-widget .label {}
+.weather-widget .label.alt {}
+.weather-widget .icon {}
+.weather-widget .icon.cloudyDay {}
+.weather-widget .icon.cloudyNight {} 
+.weather-widget .icon.rainyDay {} 
+.weather-widget .icon.rainyNight {} 
+.weather-widget .icon.snowyIcyDay {} 
+.weather-widget .icon.snowyIcyNight {} 
+.weather-widget .icon.blizzard {} 
+.weather-widget .icon.default {}
+```
+

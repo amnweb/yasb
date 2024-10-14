@@ -62,3 +62,15 @@ media:
 - **thumbnail_padding:** The padding around the media thumbnail.
 - **thumbnail_corner_radius:** The corner radius for the media thumbnail. Set to 0 for square corners.
 - **icons:** Icons for the media controls.
+
+## Example Style
+```css
+.media-widget {}
+.media-widget .widget-container {}
+.media-widget .label {}
+.media-widget .label.alt {}
+.media-widget .btn.play {}
+.media-widget .btn.prev {}
+.media-widget .btn.next {}
+.media-widget .btn.disabled {}
+```

@@ -55,11 +55,12 @@ battery:
 ## Example Style
 ```css
 .battery-widget {}
-.battery-widget .widget-content {}
-.battery-widget .widget-content .icon_critical {} 
-.battery-widget .widget-content .icon_low {} 
-.battery-widget .widget-content .icon_medium {} 
-.battery-widget .widget-content .icon_high {} 
-.battery-widget .widget-content .icon_full {} 
-.battery-widget .widget-content .icon_charging {}
+.battery-widget .widget-container {}
+.battery-widget .widget-container .label {}
+.battery-widget .widget-container .label_alt {}
+.battery-widget .widget-container .label.status-low {}
+.battery-widget .widget-container .label.status-medium {}
+.battery-widget .widget-container .label.status-high {}
+.battery-widget .widget-container .label.status-full {}
+.battery-widget .widget-container .label.status-full {}
 ```

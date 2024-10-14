@@ -47,6 +47,6 @@ github:
 ## Example Style
 ```css
 .github-widget {}
-.github-widget .widget-content {}
-.github-widget .widget-content .label {}
+.github-widget .widget-container {}
+.github-widget .widget-container .label {}
 ```

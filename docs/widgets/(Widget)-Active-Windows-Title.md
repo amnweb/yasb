@@ -45,6 +45,8 @@ active_window:
 ## Example Style
 ```css
 .active-window-widget {}
-.active-window-widget .widget-content {}
-.active-window-widget .widget-content .label {}
+.active-window-widget .widget-container {}
+.active-window-widget .widget-container .label {}
+.active-window-widget .widget-container .label.alt {}
+.active-window-widget .widget-container .icon {}
 ```

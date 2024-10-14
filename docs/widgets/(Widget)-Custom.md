@@ -53,6 +53,8 @@ nvidia_temp:
 ## Example Style
 ```css
 .custom-widget {}
-.custom-widget .widget-content {}
-.custom-widget .widget-content .label {}
+.custom-widget .widget-container {}
+.custom-widget .widget-container .label {}
+.custom-widget .widget-container .label.alt {}
+.custom-widget .widget-container .icon {}
 ```

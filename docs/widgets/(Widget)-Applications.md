@@ -35,6 +35,6 @@ apps:
 ## Example Style
 ```css
 .apps-widget {}
-.apps-widget .widget-content {}
-.apps-widget .widget-content .label { /*icons*/ } 
+.apps-widget .widget-container {}
+.apps-widget .widget-container .label { /*icons*/ } 
 ```

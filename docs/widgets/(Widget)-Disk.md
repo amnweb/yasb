@@ -37,6 +37,8 @@ disk:
 ## Example Style
 ```css
 .disk-widget {}
-.disk-widget .widget-content {}
-.disk-widget .widget-content .label {}
+.disk-widget .widget-container {}
+.disk-widget .widget-container .label {}
+.disk-widget .widget-container .label.alt {}
+.disk-widget .widget-container .icon {}
 ```
