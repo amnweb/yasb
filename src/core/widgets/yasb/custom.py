@@ -24,7 +24,7 @@ class CustomWidget(BaseWidget):
         self._exec_data = None
         self._exec_cmd = exec_options['run_cmd'].split(" ") if exec_options.get('run_cmd', False) else None
         self._exec_return_type = exec_options['return_format']
-
+        self._hide_empty = exec_options['hide_empty']
         self._show_alt_label = False
         self._label_content = label
         self._label_alt_content = label_alt
@@ -67,10 +67,9 @@ class CustomWidget(BaseWidget):
     def _create_dynamically_label(self, content: str, content_alt: str):
         def process_content(content, is_alt=False):
             label_parts = re.split('(<span.*?>.*?</span>)', content)
-            #label_parts = [part for part in label_parts if part]
             widgets = []
             for part in label_parts:
-                part = part.strip()  # Remove any leading/trailing whitespace
+                part = part.strip()
                 if not part:
                     continue
                 if '<span' in part and '</span>' in part:
@@ -96,18 +95,15 @@ class CustomWidget(BaseWidget):
     def _truncate_label(self, label):
         if self._label_max_length and len(label) > self._label_max_length:
             return label[:self._label_max_length] + "..."
-
-        return label
-
+        return label            
+    
+    
     def _update_label(self):
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
         active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
         label_parts = re.split('(<span.*?>.*?</span>)', active_label_content)
-        #label_parts = [part for part in label_parts if part]
         widget_index = 0
-
         try:
-         
             for part in label_parts:
                 part = part.strip()
                 if part and widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
@@ -117,10 +113,15 @@ class CustomWidget(BaseWidget):
                         active_widgets[widget_index].setText(icon)
                     else:
                         active_widgets[widget_index].setText(self._truncate_label(part.format(data=self._exec_data)))
+                    if self._hide_empty:
+                        if self._exec_data:
+                            active_widgets[widget_index].show()
+                        else:
+                            active_widgets[widget_index].hide()
                     widget_index += 1
- 
         except Exception:
             active_widgets[widget_index].setText(self._truncate_label(part))
+        
 
     def _exec_callback(self):
         self._exec_data = None

@@ -4,7 +4,8 @@ DEFAULTS = {
         'run_cmd': None,
         'run_once': False,
         'run_interval': 0,
-        'return_format': "json"
+        'return_format': "json",
+        'hide_empty': False
     },
     'callbacks': {
         'on_left': "toggle_label",
@@ -54,6 +55,11 @@ VALIDATION_SCHEMA = {
                 'type': 'string',
                 'allowed': ['string', 'json'],
                 'default': DEFAULTS['exec_options']['return_format']
+            },
+            'hide_empty': {
+                'type': 'boolean',
+                'required': False,
+                'default': DEFAULTS['exec_options']['hide_empty']
             }
         },
         'default': DEFAULTS['exec_options']
