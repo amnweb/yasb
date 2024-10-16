@@ -88,19 +88,18 @@ class BarManager(QObject):
 
     def initialize_bars(self, init=False) -> None:
         self._widget_builder = WidgetBuilder(self.config['widgets'])
-
+        screens = [bar_config['screens'][0] for bar_name, bar_config in self.config['bars'].items()]
         for bar_name, bar_config in self.config['bars'].items():
-
             if bar_config['screens'] == ['*']:
                 for screen in QApplication.screens():
+                    if screen.name() in screens:
+                        continue
                     self.create_bar(bar_config, bar_name, screen, init)
                 continue
-
             for screen_name in bar_config['screens']:
                 screen = get_screen_by_name(screen_name)
                 if screen:
                     self.create_bar(bar_config, bar_name, screen, init)
-
         self.run_listeners_in_threads()
         self._widget_builder.raise_alerts_if_errors_present()
 
