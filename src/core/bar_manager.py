@@ -18,7 +18,6 @@ class BarManager(QObject):
     styles_modified = pyqtSignal()
     config_modified = pyqtSignal()
  
-    
     def __init__(self, config: dict, stylesheet: str):
         super().__init__()
         self.config = config
@@ -40,7 +39,6 @@ class BarManager(QObject):
     @pyqtSlot()
     def on_styles_modified(self):
         stylesheet = get_stylesheet(show_error_dialog=True)
-
         if stylesheet and (stylesheet != self.stylesheet):
             self.stylesheet = stylesheet
             for bar in self.bars:
@@ -55,11 +53,10 @@ class BarManager(QObject):
             logging.error(f"Error loading config: {e}")
             return
         if config and (config != self.config):
-            if config['bars'] != self.config['bars'] or config['widgets'] != self.config['widgets'] or config['komorebi'] != self.config['komorebi'] or config['debug'] != self.config['debug']:
+            if any(config[key] != self.config[key] for key in ['bars', 'widgets', 'komorebi', 'debug']):
                 os.execl(sys.executable, sys.executable, *sys.argv)
             else:
                 self.config = config
-
             logging.info("Successfully loaded updated config and re-initialised all bars.")
 
     @pyqtSlot(QScreen)
@@ -85,14 +82,13 @@ class BarManager(QObject):
         self._threads.clear()
         self.widget_event_listeners.clear()
  
-
     def initialize_bars(self, init=False) -> None:
         self._widget_builder = WidgetBuilder(self.config['widgets'])
-        screens = [bar_config['screens'][0] for bar_name, bar_config in self.config['bars'].items()]
+        screens_in_config = {screen for bar_config in self.config['bars'].values() for screen in bar_config['screens']}
         for bar_name, bar_config in self.config['bars'].items():
             if bar_config['screens'] == ['*']:
                 for screen in QApplication.screens():
-                    if screen.name() in screens:
+                    if screen.name() in screens_in_config:
                         continue
                     self.create_bar(bar_config, bar_name, screen, init)
                 continue
