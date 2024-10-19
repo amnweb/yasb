@@ -12,6 +12,7 @@ from cerberus import Validator, schema
 from yaml.parser import ParserError
 from yaml import safe_load, dump
 from xml.dom import SyntaxErr
+from core.utils.css_processor import CSSProcessor
 
 SRC_CONFIGURATION_DIR = path.dirname(argv[0])
 HOME_CONFIGURATION_DIR = path.join(Path.home(), settings.DEFAULT_CONFIG_DIRECTORY)
@@ -104,10 +105,13 @@ def get_config(show_error_dialog=False) -> Union[dict, None]:
 
 def get_stylesheet(show_error_dialog=False) -> Union[str, None]:
     styles_path = get_stylesheet_path()
-
     try:
-        parser = CSSParser(raiseExceptions=True)
-        return parser.parseFile(styles_path).cssText.decode('utf-8')
+        css_processor = CSSProcessor(styles_path)
+        css_content = css_processor.process()
+        parser = CSSParser(raiseExceptions=True, parseComments=False)
+        css_final = parser.parseString(css_content).cssText.decode('utf-8')
+        return css_final
+
     except SyntaxErr as e:
         logging.error(f"The file '{styles_path}' contains Syntax Error(s). Please fix:\n{str(e)}")
         if show_error_dialog:
@@ -121,6 +125,7 @@ def get_stylesheet(show_error_dialog=False) -> Union[str, None]:
         logging.error(f"The file '{styles_path}' could not be found. Does it exist?")
     except OSError:
         logging.error(f"The file '{styles_path}' could not be read. Do you have read/write permissions?")
+    return None
 
 
 def get_config_and_stylesheet() -> tuple[dict, str]:
