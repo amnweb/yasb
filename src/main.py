@@ -11,12 +11,12 @@ from core.tray import TrayIcon
 from core.watcher import create_observer
 from core.event_service import EventService
 import settings
+import ctypes
+import ctypes.wintypes
+
 logging.getLogger('asyncio').setLevel(logging.WARNING)
 
 def main():
-    if sys.version_info < (3, 12):
-        logging.error("This application requires Python 3.12 or higher.")
-        sys.exit(1)
     config, stylesheet = get_config_and_stylesheet()
     if config['debug']:
         settings.DEBUG = True
@@ -54,7 +54,6 @@ def main():
     with loop:
         loop.run_forever()
 
-
 if __name__ == "__main__":
     init_logger()
     base_excepthook = sys.excepthook 
@@ -64,6 +63,12 @@ if __name__ == "__main__":
         # base_excepthook(exctype, value, traceback) 
         sys.exit(1) 
     sys.excepthook = exception_hook 
+
+    # Create a named mutex to prevent multiple instances
+    mutex = ctypes.windll.kernel32.CreateMutexW(None, False, "yasb_reborn")
+    if ctypes.windll.kernel32.GetLastError() == 183:  # ERROR_ALREADY_EXISTS
+        logging.error("Another instance of the YASB is already running.")
+        sys.exit(1)
     try:
         main()
     except BaseException as e:
@@ -73,3 +78,5 @@ if __name__ == "__main__":
         logging.getLogger().handlers = [h for h in logging.getLogger().handlers if not isinstance(h, logging.StreamHandler)]
         logging.exception("Exception in main()")
         raise
+    finally:
+        ctypes.windll.kernel32.ReleaseMutex(mutex)
