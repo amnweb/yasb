@@ -66,8 +66,12 @@ if __name__ == "__main__":
 
     # Create a named mutex to prevent multiple instances
     mutex = ctypes.windll.kernel32.CreateMutexW(None, False, "yasb_reborn")
+    if mutex == 0:
+        logging.error("Failed to create mutex.")
+        sys.exit(1)
     if ctypes.windll.kernel32.GetLastError() == 183:  # ERROR_ALREADY_EXISTS
         logging.error("Another instance of the YASB is already running.")
+        ctypes.windll.kernel32.CloseHandle(mutex)
         sys.exit(1)
     try:
         main()
@@ -80,3 +84,4 @@ if __name__ == "__main__":
         raise
     finally:
         ctypes.windll.kernel32.ReleaseMutex(mutex)
+        ctypes.windll.kernel32.CloseHandle(mutex)
