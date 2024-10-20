@@ -1,6 +1,6 @@
 # YASB CLI (Command Line Interface)
 
-The YASB CLI is a command line interface that allows you to interact with the YASB configuration and status bar. The CLI is a powerful tool that allows you to manage your YASB configuration, start, stop, enable autostart, disable autostart, and reload the status bar.
+The YASB CLI is a command line interface that allows you to interact with the YASB configuration and status bar. The CLI is a powerful tool that allows you to manage your YASB configuration, start, stop, enable autostart, disable autostart, reload the status bar and watch the logs in the terminal.
 
 ## Usage
 `yasbc [command] [options]`
