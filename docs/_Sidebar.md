@@ -2,6 +2,7 @@
 - [Installation](./Installation)
 - [Configuration](./Configuration)
 - [Styling](./Styling)
+- [YASB CLI](./CLI)
 - [FAQ](./FAQ)
 - Widgets:
     - [Active Windows Title](./(Widget)-Active-Windows-Title)
