@@ -26,13 +26,15 @@ build_options = {
         'core.widgets.yasb.whkd',
         'core.widgets.yasb.taskbar',
         'core.widgets.komorebi.active_layout',
-        'core.widgets.komorebi.workspaces'
+        'core.widgets.komorebi.workspaces',
     ],
+
     "silent_level": 1,
     "silent": True,
     "excludes": ['PySide6','pydoc_data','email','colorama','tkinter','PyQt5','PySide2'],
     "build_exe": "dist",
     "include_msvcr": True,
+    "includes": ["colorama"],
     "optimize": 1,
     "include_files": [
             ("assets/images/app_icon.png","lib/assets/images/app_icon.png"),
@@ -60,7 +62,7 @@ bdist_msi_options = {
     "data": msi_data,
     "install_icon": "assets/images/app_icon.ico",
     "upgrade_code": "{3f620cf5-07b5-47fd-8e37-9ca8ad14b608}",
-    "add_to_path": False,
+    "add_to_path": True,
     "dist_dir": "dist/out",
     "initial_target_dir": r'[LocalAppDataFolder]\Yasb',
     "all_users": False,
@@ -80,6 +82,12 @@ executables = [
         shortcut_dir="MyProgramMenu",
         copyright=f"Copyright (C) {datetime.datetime.now().year} AmN",
         target_name="yasb.exe",
+    ),  
+    Executable(
+        "core/utils/yasb_cli.py",
+        base="Console",
+        copyright=f"Copyright (C) {datetime.datetime.now().year} AmN",
+        target_name="yasbc.exe",
     )
 ]
 setup(
