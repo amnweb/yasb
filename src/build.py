@@ -26,7 +26,7 @@ build_options = {
         'core.widgets.yasb.whkd',
         'core.widgets.yasb.taskbar',
         'core.widgets.komorebi.active_layout',
-        'core.widgets.komorebi.workspaces',
+        'core.widgets.komorebi.workspaces'
     ],
 
     "silent_level": 1,
@@ -84,7 +84,7 @@ executables = [
         target_name="yasb.exe",
     ),  
     Executable(
-        "core/utils/yasb_cli.py",
+        "core/utils/cli.py",
         base="Console",
         copyright=f"Copyright (C) {datetime.datetime.now().year} AmN",
         target_name="yasbc.exe",
