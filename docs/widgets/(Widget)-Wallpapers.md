@@ -74,37 +74,37 @@ For usage in `YASB` there are several methods you can try:
         $colors = Get-Content -Raw -Path $colorsPath | ConvertFrom-Json
         # Generate the @variables{} section
         $variablesSection = @"
-        @variables{
-            backgroundcol: $($colors.special.background);
-            foregroundcol: $($colors.special.foreground);
-            cursorcol: $($colors.special.cursor);
-            colors0: $($colors.colors.color0);
-            colors1: $($colors.colors.color1);
-            colors2: $($colors.colors.color2);
-            colors3: $($colors.colors.color3);
-            colors4: $($colors.colors.color4);
-            colors5: $($colors.colors.color5);
-            colors6: $($colors.colors.color6);
-            colors7: $($colors.colors.color7);
-            colors8: $($colors.colors.color8);
-            colors9: $($colors.colors.color9);
-            colors10: $($colors.colors.color10);
-            colors11: $($colors.colors.color11);
-            colors12: $($colors.colors.color12);
-            colors13: $($colors.colors.color13);
-            colors14: $($colors.colors.color14);
-            colors15: $($colors.colors.color15);
+        :root{
+            --backgroundcol: $($colors.special.background);
+            --foregroundcol: $($colors.special.foreground);
+            --cursorcol: $($colors.special.cursor);
+            --colors0: $($colors.colors.color0);
+            --colors1: $($colors.colors.color1);
+            --colors2: $($colors.colors.color2);
+            --colors3: $($colors.colors.color3);
+            --colors4: $($colors.colors.color4);
+            --colors5: $($colors.colors.color5);
+            --colors6: $($colors.colors.color6);
+            --colors7: $($colors.colors.color7);
+            --colors8: $($colors.colors.color8);
+            --colors9: $($colors.colors.color9);
+            --colors10: $($colors.colors.color10);
+            --colors11: $($colors.colors.color11);
+            --colors12: $($colors.colors.color12);
+            --colors13: $($colors.colors.color13);
+            --colors14: $($colors.colors.color14);
+            --colors15: $($colors.colors.color15);
         }
         "@
         # Read the existing styles.css file, typically located at $HOME\.config\yasb\styles.css
         $stylesPath = "$HOME\.config\yasb\styles.css"
         $stylesContent = Get-Content -Raw -Path $stylesPath
-        # Check if @variables{} section exists, if so replace it, otherwise prepend it
-        if ($stylesContent -match "@variables\{[\s\S]*?\}") {
-            # Replace the existing @variables{} section
-            $newStylesContent = $stylesContent -replace "@variables\{[\s\S]*?\}", $variablesSection
+        # Check if :root{} section exists, if so replace it, otherwise prepend it
+        if ($stylesContent -match ":root\{[\s\S]*?\}") {
+            # Replace the existing :root{} section
+            $newStylesContent = $stylesContent -replace ":root\{[\s\S]*?\}", $variablesSection
         } else {
-            # Prepend the new @variables{} section
+            # Prepend the new :root{} section
             $newStylesContent = "$variablesSection`n$stylesContent"
         }
         # Trim trailing whitespace from the content
@@ -117,82 +117,47 @@ For usage in `YASB` there are several methods you can try:
 2. Using the `@import` function in `style.css` to import colors generated from pywal. **REQUIRES RESTART OF YASB EVERY TIME COLOR IS CHANGED!**
 
     - <details>
-      <summary>Click for an example yasb-colors.css</summary>
+      <summary>Click for an example colors.css</summary>
 
       ```css
       /* Colors for YASB */
-      @variables{
+      :root{
 
           /* Special */
-          backgroundcol: #0d0c13;
-          foregroundcol: #c2c2c4;
-          cursorcol: #c2c2c4;
+          --backgroundcol: #0d0c13;
+          --foregroundcol: #c2c2c4;
+          --cursorcol: #c2c2c4;
 
           /* Colors */
-          colors0: #0d0c13;
-          colors1: #544e7f;
-          colors2: #69567f;
-          colors3: #7c607c;
-          colors4: #80516e;
-          colors5: #834457;
-          colors6: #937d82;
-          colors7: #908d97;
-          colors8: #59596c;
-          colors9: #7069aa;
-          colors10: #8c73aa;
-          colors11: #a680a6;
-          colors12: #ab6c93;
-          colors13: #af5b75;
-          colors14: #c5a7ae;
-          colors15: #c2c2c4;
+          --colors0: #0d0c13;
+          --colors1: #544e7f;
+          --colors2: #69567f;
+          --colors3: #7c607c;
+          --colors4: #80516e;
+          --colors5: #834457;
+          --colors6: #937d82;
+          --colors7: #908d97;
+          --colors8: #59596c;
+          --colors9: #7069aa;
+          --colors10: #8c73aa;
+          --colors11: #a680a6;
+          --colors12: #ab6c93;
+          --colors13: #af5b75;
+          --colors14: #c5a7ae;
+          --colors15: #c2c2c4;
       }
       ```
     </details>
 
     - Which you can then import and use the colors as variables like this:
     - ```css
-      @import url('../../.cache/wal/yasb-colors.css');
+      @import url('../../.cache/wal/colors.css');
       * {
           etc: 12px;
-          color: var(foregroundcol);
+          color: var(--foregroundcol);
           font-weight: 500;
       }
       ```
-
-    - And Here is a template for pywal generation of `colors-yasb.css`:
-
-    - <details>
-        <summary>Click for yasb-colors.css template</summary>
-
-        ```css
-        /* Colors for YASB */
-        @variables{{
-
-            /* Special */
-            backgroundcol: {background};
-            foregroundcol: {foreground};
-            cursorcol: {cursor};
-
-            /* Colors */
-            colors0: {color0};
-            colors1: {color1};
-            colors2: {color2};
-            colors3: {color3};
-            colors4: {color4};
-            colors5: {color5};
-            colors6: {color6};
-            colors7: {color7};
-            colors8: {color8};
-            colors9: {color9};
-            colors10: {color10};
-            colors11: {color11};
-            colors12: {color12};
-            colors13: {color13};
-            colors14: {color14};
-            colors15: {color15};
-        }}
-      ```
-    </details>
 
 3. Making the entire style.css a template:
 
