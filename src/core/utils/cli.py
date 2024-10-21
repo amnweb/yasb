@@ -12,10 +12,14 @@ import datetime
 import getpass
 import win32security
 import ctypes
+import requests
+import tempfile
 from settings import BUILD_VERSION
 from colorama import just_fix_windows_console
 just_fix_windows_console()
 
+YASB_VERSION = BUILD_VERSION
+YASB_CLI_VERSION = "1.0.1"
 # Check if exe file exists
 OS_STARTUP_FOLDER = os.path.join(os.environ['APPDATA'], r'Microsoft\Windows\Start Menu\Programs\Startup')
 INSTALLATION_PATH = os.path.abspath(os.path.join(__file__, "../../.."))
@@ -98,6 +102,7 @@ class CLIHandler:
         subparsers.add_parser('start', help='Start the application')
         subparsers.add_parser('stop', help='Stop the application')
         subparsers.add_parser('reload', help='Reload the application')
+        subparsers.add_parser('update', help='Update the application')
         
         enable_autostart_parser = subparsers.add_parser('enable-autostart', help='Enable autostart on system boot')
         enable_autostart_parser.add_argument('--task', action='store_true', help='Enable autostart as a scheduled task')
@@ -107,7 +112,7 @@ class CLIHandler:
         
         subparsers.add_parser('help', help='Show help message')
         subparsers.add_parser('log', help='Tail yasb process logs (cancel with Ctrl-C)')
-        parser.add_argument('-v', '--version', action='version', version=f'YASB Reborn v{BUILD_VERSION}', help="Show program's version number and exit.")
+        parser.add_argument('-v', '--version', action='store_true', help="Show program's version number and exit.")
         parser.add_argument('-h', '--help', action='store_true', help='Show help message')
         args = parser.parse_args()
  
@@ -129,7 +134,10 @@ class CLIHandler:
             else:
                 print("YASB is not running. Reload aborted.")
             sys.exit(0)
-        
+        elif args.command == 'update':
+            CLIUpdateHandler.update_yasb(YASB_VERSION)
+            sys.exit(0)
+            
         elif args.command == 'enable-autostart':
             if args.task:
                 if not CLITaskHandler.is_admin():
@@ -175,13 +183,17 @@ class CLIHandler:
             print("  reload             Reload the application")
             print("  enable-autostart   Enable autostart on system boot")
             print("  disable-autostart  Disable autostart on system boot")
+            print("  update             Update the application")
             print("  log                Tail yasb process logs (cancel with Ctrl-C)")
             print("  help               Print this message")
             print('\n' + Format.underline + 'Options' + Format.end + ':')
-            print("  --version  Print version")
-            print("  --help     Print this message")
+            print("-v, --version  Print version")
+            print("-h, --help     Print this message")
             sys.exit(0)
-
+            
+        elif args.version:
+            version_message = f"\nYASB Reborn " + Format.underline + f"v{YASB_VERSION}" + Format.end + f"\nYASB-CLI " + Format.underline + f"v{YASB_CLI_VERSION}" + Format.end + "\n"
+            print(version_message)
         else:
             logging.info("Unknown command. Use --help for available options.")
             sys.exit(1)
@@ -262,6 +274,64 @@ class CLITaskHandler:
         except Exception:
             print(f"Failed to delete task YASB or task does not exist.")
         
+import re
+
+import re
+
+class CLIUpdateHandler():
+    def update_yasb(YASB_VERSION):
+        # Fetch the latest tag from the GitHub API
+        api_url = f"https://api.github.com/repos/amnweb/yasb/releases/latest"
+        response = requests.get(api_url)
+        latest_release = response.json()
+        tag = latest_release['tag_name'].lstrip('v')
+        changelog = "https://github.com/amnweb/yasb/releases/latest"
+        # Step 2: Generate the download link based on the latest tag
+        msi_url = f"https://github.com/amnweb/yasb/releases/download/v{tag}/yasb-{tag}-win64.msi"
+        temp_dir = tempfile.gettempdir()
+        msi_path = os.path.join(temp_dir, f"yasb-{tag}-win64.msi")
+        if tag <= YASB_VERSION:
+            print("\nYASB Reborn is already up to date.\n")
+            sys.exit(0)
+        print(f"\nYASB Reborn version " + Format.underline + f"{tag}" + Format.end + " is available.")
+        print(f"\nChangelog {changelog}")
+        # Ask the user if they want to continue with the update
+        try:
+            user_input = input("\nDo you want to continue with the update? (Y/n): ").strip().lower()
+            if user_input not in ['y', 'yes', '']:
+                print("\nUpdate canceled.")
+                sys.exit(0)
+        except KeyboardInterrupt:
+            print("\nUpdate canceled.")
+            sys.exit(0)
+        # Step 3: Download the latest MSI file
+        try:
+            response = requests.get(msi_url, stream=True)
+            total_length = int(response.headers.get('content-length'))
+            downloaded = 0
+            chunk_size = 4096
+            with open(msi_path, "wb") as file:
+                for data in response.iter_content(chunk_size=chunk_size):
+                    file.write(data)
+                    downloaded += len(data)
+                    print(f"\rDownloading {downloaded / total_length * 100:.1f}%", end='')
+            print("\rDownload completed.          ")
+        except KeyboardInterrupt:
+            print("\nDownload interrupted by user.")
+            sys.exit(0)
+            
+        # Verify the downloaded file size
+        downloaded_size = os.path.getsize(msi_path)
+        if downloaded_size != total_length:
+            print("Error: Downloaded file size does not match expected size.")
+            sys.exit(0)
+        # Step 4: Run the MSI installer in silent mode and restart the application
+        if is_process_running("yasb.exe"):
+            subprocess.run(["taskkill", "/f", "/im", "yasb.exe"], creationflags=subprocess.CREATE_NO_WINDOW)
+        
+        install_command = ["msiexec", "/i", os.path.abspath(msi_path), "/passive", "/norestart"]
+        subprocess.Popen(install_command)
+        sys.exit(0)
     
 if __name__ == "__main__":
     CLIHandler.parse_arguments()
