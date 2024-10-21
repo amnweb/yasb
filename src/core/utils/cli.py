@@ -20,7 +20,7 @@ just_fix_windows_console()
 
 YASB_VERSION = BUILD_VERSION
 YASB_CLI_VERSION = "1.0.1"
-# Check if exe file exists
+
 OS_STARTUP_FOLDER = os.path.join(os.environ['APPDATA'], r'Microsoft\Windows\Start Menu\Programs\Startup')
 INSTALLATION_PATH = os.path.abspath(os.path.join(__file__, "../../.."))
 EXE_PATH = os.path.join(INSTALLATION_PATH, 'yasb.exe')
@@ -274,10 +274,6 @@ class CLITaskHandler:
         except Exception:
             print(f"Failed to delete task YASB or task does not exist.")
         
-import re
-
-import re
-
 class CLIUpdateHandler():
     def update_yasb(YASB_VERSION):
         # Fetch the latest tag from the GitHub API
