@@ -6,16 +6,15 @@ from PyQt6.QtCore import Qt, QPropertyAnimation, pyqtSignal
 from core.utils.win32.blurWindow import Blur
 from core.widgets.base import BaseWidget
 from core.validation.widgets.yasb.power_menu import VALIDATION_SCHEMA
-from core.config import get_stylesheet_path
+from core.config import get_stylesheet
 from core.utils.win32.power import PowerOperations
 import datetime
 import psutil
 
 class BaseStyledWidget(QWidget):
-    def apply_stylesheet(self, path):
-        with open(path, "r") as f:
-            stylesheet = f.read()
-            self.setStyleSheet(stylesheet)
+    def apply_stylesheet(self):
+        stylesheet = get_stylesheet()
+        self.setStyleSheet(stylesheet)
             
 class ClickableLabel(QLabel):
     clicked = pyqtSignal()
@@ -55,7 +54,7 @@ class OverlayWidget(BaseStyledWidget,AnimatedWidget):
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.Tool)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         if uptime:
-            self.boot_time(get_stylesheet_path())
+            self.boot_time()
             
  
     def update_geometry(self, screen_geometry):
@@ -68,7 +67,7 @@ class OverlayWidget(BaseStyledWidget,AnimatedWidget):
         overlay_color = QtGui.QColor(0, 0, 0, 50)
         painter.fillRect(self.rect(), overlay_color)
         
-    def boot_time(self, stylesheet_path):
+    def boot_time(self):
         self.label_boot = QLabel(self)
         self.label_boot.setProperty("class", "uptime")
         self.label_boot.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -79,7 +78,7 @@ class OverlayWidget(BaseStyledWidget,AnimatedWidget):
         layout.addWidget(self.label_boot)
         self.setLayout(layout)
         # Apply the stylesheet here
-        self.apply_stylesheet(stylesheet_path)
+        self.apply_stylesheet()
         # Start timer for live updates
         self.timer = QtCore.QTimer(self)
         self.timer.timeout.connect(self.update_uptime_display)
@@ -205,7 +204,7 @@ class MainWindow(BaseStyledWidget,AnimatedWidget):
         main_layout.addLayout(button_layout3)
         main_layout.addLayout(button_layout4)
         self.setLayout(main_layout)
-        self.apply_stylesheet(get_stylesheet_path())
+        self.apply_stylesheet()
         self.adjustSize()
         self.center_on_screen()
 
