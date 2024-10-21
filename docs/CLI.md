@@ -27,7 +27,7 @@ yasbc enable-autostart
 To disable autostart for the status bar on system boot, use the following command:
 ```bash
 yasbc disable-autostart
-
+```
 To create task scheduler for autostart on windows, use the following command:
 ```bash
 yasbc enable-autostart --task
