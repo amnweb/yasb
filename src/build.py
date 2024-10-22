@@ -10,6 +10,7 @@ build_options = {
         'core.widgets.yasb.weather',
         'core.widgets.yasb.memory',
         'core.widgets.yasb.cpu',
+        'core.widgets.yasb.libre_monitor',
         'core.widgets.yasb.active_window',
         'core.widgets.yasb.applications',
         'core.widgets.yasb.battery',
