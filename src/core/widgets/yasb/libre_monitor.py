@@ -137,7 +137,7 @@ class LibreHardwareMonitorWidget(BaseWidget):
             "unit": "",
             "min": 0.0,
             "max": 0.0,
-            "histogram": ""
+            "histogram": "No Connection..."
         }
         if self._data and self._data.get("result") == "ok":
             value = self._data.get("value", 0.0)
