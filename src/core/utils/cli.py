@@ -325,8 +325,13 @@ class CLIUpdateHandler():
         if is_process_running("yasb.exe"):
             subprocess.run(["taskkill", "/f", "/im", "yasb.exe"], creationflags=subprocess.CREATE_NO_WINDOW)
         
-        install_command = ["msiexec", "/i", os.path.abspath(msi_path), "/passive", "/norestart"]
-        subprocess.Popen(install_command)
+        # Construct the install command as a string
+        install_command = f'msiexec /i "{os.path.abspath(msi_path)}" /passive /norestart'
+        run_after_command = f'"{EXE_PATH}"'
+        combined_command = f'{install_command} && {run_after_command}'
+
+        # Finally run update and restart the application
+        subprocess.Popen(combined_command, shell=True, creationflags=subprocess.CREATE_NO_WINDOW)
         sys.exit(0)
     
 if __name__ == "__main__":
