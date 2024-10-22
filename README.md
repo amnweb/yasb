@@ -74,6 +74,7 @@ for more themes visit [yasb-themes](https://github.com/amnweb/yasb-themes)
 - **[Github](https://github.com/amnweb/yasb/wiki/(Widget)-Github)**: Shows notifications from GitHub.
 - **[Disk](https://github.com/amnweb/yasb/wiki/(Widget)-Disk)**: Displays disk usage information.
 - **[Language](https://github.com/amnweb/yasb/wiki/(Widget)-Language)**: Shows the current input language.
+- **[Libre Hardware Monitor](https://github.com/amnweb/yasb/wiki/(Widget)-Libre-HW-Monitor)**: Connects to Libre Hardware Monitor to get sensor data.
 - **[Media](https://github.com/amnweb/yasb/wiki/(Widget)-Media)**: Displays media controls and information.
 - **[Memory](https://github.com/amnweb/yasb/wiki/(Widget)-Memory)**: Shows current memory usage.
 - **[OBS](https://github.com/amnweb/yasb/wiki/(Widget)-Obs)**: Integrates with OBS Studio to show recording status.
