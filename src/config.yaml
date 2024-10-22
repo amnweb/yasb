@@ -375,3 +375,49 @@ widgets:
       class_name: "system-widget"
       callbacks:
         on_left: "exec start_menu"
+
+  libre_monitor_widget:
+    type: "yasb.libre_monitor.LibreHardwareMonitorWidget"
+    options:
+      # Available "info" keys: value, unit, min, max, histogram
+      label: "<span>\udb82\udcae </span> {info[value]}{info[unit]}"
+      label_alt: "<span>\uf437 </span>{info[histogram]} {info[value]} ({info[min]}/{info[max]}) {info[unit]}"
+      sensor_id: "/gpu-nvidia/0/temperature/0" # "SensorId" from http://localhost:8085/data.json when the Libre HWM server is running.
+      update_interval: 1000 # Update interval in milliseconds. Limited by the Libre HWM update interval.
+      precision: 0
+      histogram_num_columns: 10
+
+      # Optional. Custom widget class name to customize multiple widgets. Default is libre-monitor-widget.
+      class_name: "libre-monitor-widget"
+
+      # Optional. A history of min and max values.
+      # history_size: 50
+
+      # Optional. Custom histogram icons. Must have exactly 9 icons.
+      # histogram_icons:
+      #  - '\u2581'
+      #  - '\u2581'
+      #  - '\u2582'
+      #  - '\u2583'
+      #  - '\u2584'
+      #  - '\u2585'
+      #  - '\u2586'
+      #  - '\u2587'
+      #  - '\u2588'
+
+      # Optional. Fixed min/max value range for the histogram. Actual {info[min]} and {info[max]} values are untouched.
+      # histogram_fixed_min: 0.0
+      # histogram_fixed_max: 100.0
+
+      # Optional. Custom Libre HWM server host and port.
+      # server_host: "localhost"
+      # server_port: 8085
+
+      # Optional. If you enable auth in Libre HWM, set username and password and restart the server.
+      # server_username: "admin"
+      # server_password: "password"
+
+      callbacks:
+        on_left: "toggle_label"
+        on_middle: "do_nothing"
+        on_right: "do_nothing"

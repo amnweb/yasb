@@ -14,6 +14,7 @@
     - [Github](./(Widget)-Github)
     - [Disk](./(Widget)-Disk)
     - [Language](./(Widget)-Language)
+    - [Libre Hardware Monitor](./(Widget)-Libre-HW-Monitor)
     - [Media](./(Widget)-Media)
     - [Memory](./(Widget)-Memory)
     - [OBS](./(Widget)-Obs)

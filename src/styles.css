@@ -19,6 +19,7 @@
 .language-widget {} -> Styles specific to the language widget
 .disk-widget {} -> Styles specific to the disk widget
 .taskbar-widget {} -> Styles specific to the taskbar widget
+.libre-monitor-widget {} -> Styles specific to the Libre Hardware Monitor widget
 */
 * {
     font-size: 12px;
@@ -308,4 +309,11 @@
 }
 .taskbar-widget .app-icon {
     padding: 0 6px;
+}
+
+/* LIBRE MONITOR WIDGET */
+.libre-monitor-widget .icon {
+    font-size: 14px;
+    color: #cba6f7;
+    margin: 0 2px 1px 0;
 }
