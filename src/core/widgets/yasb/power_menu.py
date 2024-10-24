@@ -10,6 +10,7 @@ from core.config import get_stylesheet
 from core.utils.win32.power import PowerOperations
 import datetime
 import psutil
+from core.utils.utilities import is_windows_10
 
 class BaseStyledWidget(QWidget):
     def apply_stylesheet(self):
@@ -211,7 +212,7 @@ class MainWindow(BaseStyledWidget,AnimatedWidget):
         if blur:
             Blur(
                 self.winId(),
-                Acrylic=False,
+                Acrylic=True if is_windows_10() else False,
                 DarkMode=False,
                 RoundCorners=False,
                 BorderColor="None"
@@ -219,7 +220,7 @@ class MainWindow(BaseStyledWidget,AnimatedWidget):
         if blur_background:
             Blur(
                 self.overlay.winId(),
-                Acrylic=False,
+                Acrylic=True if is_windows_10() else False,
                 DarkMode=False,
                 RoundCorners=False,
                 BorderColor="None"
