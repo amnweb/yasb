@@ -5,6 +5,7 @@
 | `update_interval`  | integer  | 60        | The interval in seconds to update the wallpaper. Must be between 60 and 86400. |
 | `change_automatically` | boolean | `False`       | Whether to automatically change the wallpaper. |
 | `image_path`      | string   | `""`        | The path to the folder containing images for the wallpaper. This field is required. |
+| `gallery`         | object   | `{}`        | The gallery options for the wallpaper widget. |
 | `run_after`       | list     | `[]`        | A list of functions to run after the wallpaper is updated. |
 ## Example Configuration
 
@@ -16,6 +17,19 @@ wallpapers:
     image_path: "C:\\Users\\{Username}\\Images" # Example path to folder with images
     change_automatically: false # Automatically change wallpaper
     update_interval: 60 # If change_automatically is true, update interval in seconds
+    gallery:
+        enabled: true
+        blur: true
+        image_width: 220
+        image_per_page: 8
+        show_buttons: false
+        orientation: "portrait"
+        image_spacing: 8
+        lazy_load: true
+        lazy_load_delay: 80
+        lazy_load_fadein: 400
+        image_corner_radius: 20
+        enable_cache: true
     run_after: # List of functions to run after wallpaper is updated
       - "wal -s -t -e -q -n -i {image}", # Example command to run after wallpaper is updated
       - "cmd.exe /c start /min pwsh ./yasb.ps1", # Example command to run after wallpaper is updated
@@ -26,15 +40,57 @@ wallpapers:
 - **update_interval:** The interval in seconds to update the wallpaper. Must be between 60 and 86400.
 - **change_automatically:** Whether to automatically change the wallpaper.
 - **image_path:** The path to the folder containing images for the wallpaper. This field is required.
+- **gallery:** The gallery options for the wallpaper widget.
+  - **enabled:** Whether to enable the gallery.
+  - **blur:** Whether to blur the background when the gallery is open.
+  - **image_width:** The width of the images in the gallery.
+  - **image_per_page:** The number of images per page in the gallery.
+  - **show_buttons:** Whether to show the navigation buttons in the gallery.
+  - **orientation:** The orientation of the images in the gallery. Can be "portrait" or "landscape".
+  - **image_spacing:** The spacing between images in the gallery.
+  - **lazy_load:** Whether to lazy load images in the gallery.
+  - **lazy_load_delay:** The delay in milliseconds between loading images in the gallery.
+  - **lazy_load_fadein:** The fade-in duration in milliseconds for lazy loaded images.
+  - **image_corner_radius:** The corner radius of the images in the gallery. (Note: This is not same as the css border-radius property.)
+  - **enable_cache:** Whether to enable caching of images in the gallery. (Note: Images are cached in memory and not saved to disk.)
 - **run_after:** A list of functions to run after the wallpaper is updated.
 
 
+> Gallery options above fit screen for 1920x1080 resolution. You may need to adjust the values for other resolutions.
+
 ## Example Style
 ```css
-.wallpapers-widget {}
-.wallpapers-widget .widget-container {}
-.wallpapers-widget .label {}
-.wallpapers-widget .icon {}
+.wallpapers-widget {
+    padding: 0 6px 0 6px;
+}
+.wallpapers-gallery-window {
+    background-color: rgba(85, 42, 240, 0.01);
+    border: 0;
+    margin: 0;
+}
+.wallpapers-gallery-buttons {
+    background-color:rgba(255, 255, 255, 0);
+    color: white;
+    border: none;
+    font-size: 14px;
+    padding: 8px 0;
+    border-radius: 8px;
+    margin:0 8px 8px 8px;
+    width: 600px;
+}
+.wallpapers-gallery-buttons:hover {
+    background-color:rgba(255, 255, 255, 0.1)
+}
+.wallpapers-gallery-image {
+    border: 4px solid transparent;
+    border-radius: 10px;
+}
+.wallpapers-gallery-image:hover {
+    border: 4px solid rgb(66, 68, 83);
+}
+.wallpapers-gallery-image.focused {
+    border: 4px solid #89b4fa;
+}
 ```
 
 # Using Pywal with Wallpapers
