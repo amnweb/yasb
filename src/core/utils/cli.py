@@ -331,7 +331,7 @@ class CLIUpdateHandler():
         combined_command = f'{install_command} && {run_after_command}'
 
         # Finally run update and restart the application
-        subprocess.Popen(combined_command, shell=True, creationflags=subprocess.CREATE_NO_WINDOW)
+        subprocess.Popen(combined_command, shell=True)
         sys.exit(0)
     
 if __name__ == "__main__":
