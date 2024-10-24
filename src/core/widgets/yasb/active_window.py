@@ -12,9 +12,9 @@ from PIL import Image
 import win32gui
 from core.utils.win32.app_icons import get_window_icon
 
-IGNORED_TITLES = ['', ' ', 'FolderView', 'Program Manager', 'python3', 'pythonw3', 'YasbBar', 'Search', 'Start']
+IGNORED_TITLES = ['', ' ', 'FolderView', 'Program Manager', 'python3', 'pythonw3', 'YasbBar', 'Search', 'Start', 'yasb']
 IGNORED_CLASSES = ['WorkerW', 'TopLevelWindowForOverflowXamlIsland', 'Shell_TrayWnd', 'Shell_SecondaryTrayWnd']
-IGNORED_PROCESSES = ['SearchHost.exe', 'komorebi.exe']
+IGNORED_PROCESSES = ['SearchHost.exe', 'komorebi.exe', 'yasb.exe']
 IGNORED_YASB_TITLES = [APP_BAR_TITLE]
 IGNORED_YASB_CLASSES = [
     'Qt662QWindowIcon',
