@@ -55,6 +55,7 @@ wallpapers:
   - **enable_cache:** Whether to enable caching of images in the gallery. (Note: Images are cached in memory and not saved to disk.)
 - **run_after:** A list of functions to run after the wallpaper is updated.
 
+> If gallery is enabled left mouse click on the widget will open the gallery and right mouse click will change the wallpaper and get random one. 
 
 > Gallery options above fit screen for 1920x1080 resolution. You may need to adjust the values for other resolutions.
 
