@@ -221,9 +221,9 @@ class WallpapersWidget(BaseWidget):
             new_wallpaper = image_path
         else:
             """Randomly select a new wallpaper and prevent the same wallpaper from being selected """
+            new_wallpaper = random.choice(wallpapers)
             while new_wallpaper == self._last_image and len(wallpapers) > 1:
                 new_wallpaper = random.choice(wallpapers)
-            new_wallpaper = random.choice(wallpapers)
 
         try:
             self.set_wallpaper(new_wallpaper)
