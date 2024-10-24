@@ -9,15 +9,19 @@ import pywintypes
 from core.widgets.base import BaseWidget
 from core.validation.widgets.yasb.wallpapers import VALIDATION_SCHEMA
 from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget, QGraphicsOpacityEffect
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QCursor
 from typing import List
 import win32gui
 from win32comext.shell import shell, shellcon
 from settings import DEBUG
 import threading
+from core.event_service import EventService
+from core.utils.widgets.wallpapers_gallery import ImageGallery
 
 class WallpapersWidget(BaseWidget):
+    set_wallpaper_signal = pyqtSignal(str) 
+    
     user32 = ctypes.windll.user32
     validation_schema = VALIDATION_SCHEMA
     _timer_running = False
@@ -29,14 +33,19 @@ class WallpapersWidget(BaseWidget):
         change_automatically: bool,
         image_path: str,
         run_after: list[str],
+        gallery: dict = None
     ):
+        """Initialize the WallpapersWidget with configuration parameters."""
         super().__init__(int(update_interval * 1000), class_name="wallpapers-widget")
+        self._image_gallery = None
 
+        self._event_service = EventService()
         self._label_content = label
         self._change_automatically = change_automatically
         self._image_path = image_path
         self._run_after = run_after
-        
+        self._gallery = gallery
+
         self._last_image = None
         self._is_running = False 
         
@@ -53,6 +62,9 @@ class WallpapersWidget(BaseWidget):
 
         self._create_dynamically_label(self._label_content)
 
+        self.set_wallpaper_signal.connect(self.change_background)
+        self._event_service.register_event("set_wallpaper_signal", self.set_wallpaper_signal)
+        
         self.register_callback("change_background", self.change_background)
 
         self.callback_timer = "change_background"
@@ -60,13 +72,15 @@ class WallpapersWidget(BaseWidget):
             self.start_timer()
 
     def start_timer(self):
-        if not WallpapersWidget._timer_running:
+        """Start the timer for automatic wallpaper changes."""
+        if not self._timer_running:
             if self.timer_interval and self.timer_interval > 0:
                 self.timer.timeout.connect(self._timer_callback)
                 self.timer.start(self.timer_interval)
-                WallpapersWidget._timer_running = True
+                self._timer_running = True
 
     def _create_dynamically_label(self, content: str):
+        """Create labels dynamically based on the provided content."""
         def process_content(content, is_alt=False):
             label_parts = re.split('(<span.*?>.*?</span>)', content) 
             label_parts = [part for part in label_parts if part]
@@ -93,13 +107,14 @@ class WallpapersWidget(BaseWidget):
                 self._widget_container_layout.addWidget(label)
                 widgets.append(label)
                 label.show()
-                label.mousePressEvent = self.change_background
+                label.mousePressEvent = self.handle_mouse_events
  
             return widgets
         self._widgets = process_content(content)
 
         
     def _update_label(self):
+        """Update the label content dynamically."""
         active_widgets = self._widgets
         active_label_content = self._label_content
         label_parts = re.split('(<span.*?>.*?</span>)', active_label_content)
@@ -117,7 +132,10 @@ class WallpapersWidget(BaseWidget):
  
 
     def _make_filter(self, class_name: str, title: str):
-        """https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-enumwindows"""
+        """
+        Create a filter function for enumerating windows.
+        https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-enumwindows
+        """
         def enum_windows(handle: int, h_list: list):
             if not (class_name or title):
                 h_list.append(handle)
@@ -130,6 +148,7 @@ class WallpapersWidget(BaseWidget):
 
 
     def find_window_handles(self, parent: int = None, window_class: str = None, title: str = None) -> List[int]:
+        """Find window handles based on class name and title."""
         cb = self._make_filter(window_class, title)
         try:
             handle_list = []
@@ -143,10 +162,12 @@ class WallpapersWidget(BaseWidget):
 
 
     def force_refresh(self):
+        """Force a system refresh of user parameters."""
         self.user32.UpdatePerUserSystemParameters(1)
 
 
     def enable_activedesktop(self):
+        """Enable the Active Desktop feature."""
         try:
             progman = self.find_window_handles(window_class='Progman')[0]
             cryptic_params = (0x52c, 0, 0, 0, 500, None)
@@ -156,6 +177,7 @@ class WallpapersWidget(BaseWidget):
 
 
     def set_wallpaper(self, image_path: str, use_activedesktop: bool = True):
+        """Set the desktop wallpaper to the specified image."""
         if use_activedesktop:
             self.enable_activedesktop()
         pythoncom.CoInitialize()
@@ -167,35 +189,54 @@ class WallpapersWidget(BaseWidget):
         iad.ApplyChanges(shellcon.AD_APPLY_ALL)
         self.force_refresh()
  
+    def handle_mouse_events(self, event=None):
+        """Handle mouse events for changing wallpapers."""
+        if self._gallery['enabled']: 
+            if event is None or event.button() == Qt.MouseButton.LeftButton:
+                if self._image_gallery is not None and self._image_gallery.isVisible():
+                    self._image_gallery.fade_out_and_close_gallery()
+                else:   
+                    self._image_gallery = ImageGallery(self._image_path, self._gallery)
+                    self._image_gallery.fade_in_gallery()
+            if event is None or event.button() == Qt.MouseButton.RightButton:
+                self.change_background()
+        else:
+            if event is None or event.button() == Qt.MouseButton.LeftButton:
+                self.change_background()
+  
+    
+    def change_background(self, image_path: str = None):
+        """Change the desktop wallpaper to a new image."""
+        if self._is_running: 
+            return
+        if self._run_after:
+            self._is_running = True
+            opacity_effect = QGraphicsOpacityEffect()
+            opacity_effect.setOpacity(0.5)
+            self._widget_container.setGraphicsEffect(opacity_effect)
 
-    def change_background(self, event=None):
-        if event is None or event.button() == Qt.MouseButton.LeftButton:
-            if self._is_running:  # Check if a command is already running
-                return  # Exit if a command is running
-            if self._run_after:
-                self._is_running = True  # Set the flag to indicate a command is running
-                opacity_effect = QGraphicsOpacityEffect()
-                opacity_effect.setOpacity(0.5)
-                self._widget_container.setGraphicsEffect(opacity_effect)
-            # Get a list of all image files in the folder
-            wallpapers = [os.path.join(self._image_path, f) for f in os.listdir(self._image_path) if f.endswith(('.png', '.jpg', '.jpeg', '.bmp', '.gif'))]
-            # Randomly select a new wallpaper
-            new_wallpaper = random.choice(wallpapers)
-            # prevent the same wallpaper from being selected 
+        wallpapers = [os.path.join(self._image_path, f) for f in os.listdir(self._image_path) if f.endswith(('.png', '.jpg', '.jpeg', '.bmp', '.gif'))]
+        
+        if image_path:
+            new_wallpaper = image_path
+        else:
+            """Randomly select a new wallpaper and prevent the same wallpaper from being selected """
             while new_wallpaper == self._last_image and len(wallpapers) > 1:
                 new_wallpaper = random.choice(wallpapers)
+            new_wallpaper = random.choice(wallpapers)
 
-            try:
-                self.set_wallpaper(new_wallpaper)
-                self._last_image = new_wallpaper
-            except Exception as e:
-                logging.error(f"Error setting wallpaper {new_wallpaper}: {e}")
+        try:
+            self.set_wallpaper(new_wallpaper)
+            self._last_image = new_wallpaper
+        except Exception as e:
+            logging.error(f"Error setting wallpaper {new_wallpaper}: {e}")
 
-            if self._run_after:
-                threading.Thread(target=self.run_after_command, args=(new_wallpaper,)).start()
+        if self._run_after:
+            threading.Thread(target=self.run_after_command, args=(new_wallpaper,)).start()
             
 
     def run_after_command(self, new_wallpaper):
+        """Run post-change commands after setting the wallpaper."""
         if self._run_after:
             for command in self._run_after:
                 formatted_command = command.replace("{image}", f'"{new_wallpaper}"')
@@ -208,4 +249,3 @@ class WallpapersWidget(BaseWidget):
         reset_effect.setOpacity(1.0)
         self._widget_container.setGraphicsEffect(reset_effect)
         self._is_running = False
-                          
