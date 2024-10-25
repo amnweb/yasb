@@ -18,6 +18,7 @@ from settings import DEBUG
 import threading
 from core.event_service import EventService
 from core.utils.widgets.wallpapers_gallery import ImageGallery
+from core.utils.alert_dialog import raise_info_alert
 
 class WallpapersWidget(BaseWidget):
     set_wallpaper_signal = pyqtSignal(str) 
@@ -191,6 +192,16 @@ class WallpapersWidget(BaseWidget):
  
     def handle_mouse_events(self, event=None):
         """Handle mouse events for changing wallpapers."""
+        
+        if not os.path.exists(self._image_path):
+            raise_info_alert(
+                title=f"Error",
+                msg=f"The specified directory does not exist\n{self._image_path}",
+                informative_msg=f"Please check the path and set a valid directory in the configuration.",
+                rich_text=True
+            )
+            return
+        
         if self._gallery['enabled']: 
             if event is None or event.button() == Qt.MouseButton.LeftButton:
                 if self._image_gallery is not None and self._image_gallery.isVisible():
