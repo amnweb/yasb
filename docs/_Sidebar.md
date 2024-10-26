@@ -21,6 +21,7 @@
     - [Traffic](./(Widget)-Traffic)
     - [Taskbar](./(Widget)-Taskbar)
     - [Power Menu](./(Widget)-Power-Menu)
+    - [Update Check](./(Widget)-Update-Check)
     - [Volume](./(Widget)-Volume)
     - [Wallpapers](./(Widget)-Wallpapers)
     - [Weather](./(Widget)-Weather)
