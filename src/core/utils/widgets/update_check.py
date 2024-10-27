@@ -80,7 +80,15 @@ class UpdateCheckService:
         update_info = self.get_winget_update()
         self.emit_event('winget_update', update_info)
         threading.Timer(self.winget_update_interval, self.winget_update_timer_callback).start()
+        
+    def windows_update_reload(self):
+        update_info = self.get_windows_update()
+        self.emit_event('windows_update', update_info)
 
+    def winget_update_reload(self):
+        update_info = self.get_winget_update()
+        self.emit_event('winget_update', update_info)
+        
     def emit_event(self, event_name, data):
         self.event_service.emit_event(event_name, data)
 
