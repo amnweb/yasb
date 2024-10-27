@@ -1,6 +1,6 @@
 DEFAULTS = {
-    'label': "\uf538 {virtual_mem_free}/{virtual_mem_total}",
-    'label_alt': "\uf538 VIRT: {virtual_mem_percent}% SWAP: {swap_mem_percent}%",
+    'label': "\uf4bc {virtual_mem_free}/{virtual_mem_total}",
+    'label_alt': "\uf4bc VIRT: {virtual_mem_percent}% SWAP: {swap_mem_percent}%",
     'update_interval': 5000,
     'callbacks': {
         'on_left': "toggle_label",

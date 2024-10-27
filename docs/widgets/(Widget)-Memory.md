@@ -1,8 +1,8 @@
 # Memory Widget Configuration
 | Option            | Type    | Default                                                                 | Description                                                                 |
 |-------------------|---------|-------------------------------------------------------------------------|-----------------------------------------------------------------------------|
-| `label`           | string  | `'\uf538 {virtual_mem_free}/{virtual_mem_total}'`                        | The format string for the memory widget. Displays free and total virtual memory. |
-| `label_alt`       | string  | `'\uf538 VIRT: {virtual_mem_percent}% SWAP: {swap_mem_percent}%'`        | The alternative format string for the memory widget. Displays virtual and swap memory percentages. |
+| `label`           | string  | `'\uf4bc {virtual_mem_free}/{virtual_mem_total}'`                        | The format string for the memory widget. Displays free and total virtual memory. |
+| `label_alt`       | string  | `'\uf4bc VIRT: {virtual_mem_percent}% SWAP: {swap_mem_percent}%'`        | The alternative format string for the memory widget. Displays virtual and swap memory percentages. |
 | `update_interval` | integer | `5000`                                                                  | The interval in milliseconds to update the memory widget. Must be between 0 and 60000. |
 | `callbacks`       | dict    | `{'on_left': 'toggle_label', 'on_middle': 'do_nothing', 'on_right': 'do_nothing'}` | Callbacks for mouse events on the memory widget. |
 | `memory_thresholds` | dict  | `{'low': 25, 'medium': 50, 'high': 90}`                                 | Thresholds for memory usage levels. |
@@ -13,8 +13,8 @@
 memory:
   type: "yasb.memory.MemoryWidget"
   options:
-    label: '\uf538 {virtual_mem_free}/{virtual_mem_total}'
-    label_alt: '\uf538 VIRT: {virtual_mem_percent}% SWAP: {swap_mem_percent}%'
+    label: "<span>\uf4bc</span> {virtual_mem_free}/{virtual_mem_total}"
+    label_alt: "<span>\uf4bc</span> VIRT: {virtual_mem_percent}% SWAP: {swap_mem_percent}%"
     update_interval: 5000
     callbacks:
       on_left: 'toggle_label'
