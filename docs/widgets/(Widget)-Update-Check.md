@@ -25,6 +25,13 @@ This widget checks for available updates using Windows Update and Winget.
 | `interval`      | integer | `240`      | Check interval in minutes (10 to 10080).                     |
 | `exclude`       | list    | `[]`       | List of packages to exclude from checking.                   |
 
+
+## Click Handlers
+- Left-clicking the Winget widget will open the Winget package manager in PowerShell or pwsh.
+- Left-clicking the Windows Update widget will open the Windows Update settings.
+- Right-clicking the Winget widget will run check for updates.
+- Right-clicking the Windows Update widget will run check for updates.
+
 ## Example Configuration
 
 ```yaml
