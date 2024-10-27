@@ -41,15 +41,18 @@ class UpdateCheckWidget(BaseWidget):
 
         self._create_dynamically_label(self._winget_update_label, self._windows_update_label)
 
-        self.windows_update_signal.connect(self._on_update_signal('windows'))
-        self._event_service.register_event("windows_update", self.windows_update_signal)
-
-        self.winget_update_signal.connect(self._on_update_signal('winget'))
-        self._event_service.register_event("winget_update", self.winget_update_signal)
+        if self._window_update_enabled:
+            self._update_label('windows', 0, [])
+            self.windows_update_signal.connect(self._on_update_signal('windows'))
+            self._event_service.register_event("windows_update", self.windows_update_signal)
+            
+        if self._winget_update_enabled:
+            self._update_label('winget', 0, [])
+            self.winget_update_signal.connect(self._on_update_signal('winget'))
+            self._event_service.register_event("winget_update", self.winget_update_signal)
         
-        self._update_label('winget', 0, [])
-        self._update_label('windows', 0, [])
         self.check_and_hide_widget()
+
 
     def _create_dynamically_label(self, windows_label: str, winget_label: str):
         def process_content(label_text, label_type):
