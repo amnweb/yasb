@@ -41,7 +41,6 @@ class WorkspaceButton(QPushButton):
         self.hide()
         
     def update_visible_buttons(self):
-        print("Updating visible buttons")
         visible_buttons = [btn for btn in self.parent_widget._workspace_buttons if btn.isVisible()]
         for index, button in enumerate(visible_buttons):
             current_class = button.property("class")
