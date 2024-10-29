@@ -194,7 +194,7 @@ class WeatherWidget(BaseWidget):
                     '{conditions}': conditions_data
                 }
         except (urllib.error.URLError, json.JSONDecodeError) as e:
-            logging.error(f"Error occurred: {e}")
+            logging.error(f"Error fetching weather data: {e}")
             return {
                 '{temp_c}': 'N/A',
                 '{min_temp_c}': 'N/A',
