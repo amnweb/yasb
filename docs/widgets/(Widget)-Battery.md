@@ -32,7 +32,6 @@ battery:
 - `time_remaining_natural`: A boolean indicating whether to display the remaining time in a natural format.
 - `charging_options`: A dictionary specifying options for displaying the charging state. It contains:
   - `icon_format`: The format string for the charging icon. You can use placeholders like `{charging_icon}` and `{icon}`.
-  - `blink_charging_icon`: A boolean indicating whether the charging icon should blink.
 - `status_thresholds`: A dictionary specifying the thresholds for different battery statuses. It contains:
   - `critical`: The battery percentage threshold for critical status.
   - `low`: The battery percentage threshold for low status.
@@ -58,8 +57,17 @@ battery:
 .battery-widget .widget-container {}
 .battery-widget .widget-container .label {}
 .battery-widget .widget-container .label_alt {}
+.battery-widget .widget-container .icon {}
+
 .battery-widget .widget-container .label.status-low {}
 .battery-widget .widget-container .label.status-medium {}
 .battery-widget .widget-container .label.status-high {}
 .battery-widget .widget-container .label.status-full {}
+.battery-widget .widget-container .label.status-charging {}
+
+.battery-widget .widget-container .icon.status-low {}
+.battery-widget .widget-container .icon.status-medium {}
+.battery-widget .widget-container .icon.status-high {}
+.battery-widget .widget-container .icon.status-full {}
+.battery-widget .widget-container .icon.status-charging {}
 ```
