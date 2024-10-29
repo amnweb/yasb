@@ -225,13 +225,17 @@ class UpdateCheckWidget(BaseWidget):
                 update_names = [update.Title for update in search_result.Updates if update.Title not in self._windows_update_exclude]
                 return {"count": count, "names": update_names}
             return {"count": 0, "names": []}
+        except win32com.client.pywintypes.com_error:
+            logging.error("No internet connection. Unable to check for Windows updates.")
+            return {"count": 0, "names": []}
         except Exception as e:
             logging.error(f"Error running windows update: {e}")
+            return {"count": 0, "names": []}
 
     def get_winget_update(self):
         try:
             result = subprocess.run(
-                ['winget', 'upgrade'],
+                ['winget', 'upgrade','--no-cache'],
                 capture_output=True,
                 text=True,
                 check=True,
@@ -274,9 +278,14 @@ class UpdateCheckWidget(BaseWidget):
             update_names = [f"{software['name']} ({software['id']}): {software['version']} -> {software['available_version']}" for software in upgrade_list]
             count = len(upgrade_list)
             return {"count": count, "names": update_names}
-        
+        except OSError:
+            logging.error("No internet connection. Unable to check for winget updates.")
+            return {"count": 0, "names": []}
         except subprocess.CalledProcessError as e:
             logging.error(f"Error running winget upgrade: {e}")
+            return {"count": 0, "names": []}
+        except Exception as e:
+            logging.error(f"Unexpected error: {e}")
             return {"count": 0, "names": []}
 
     def stop_updates(self):
