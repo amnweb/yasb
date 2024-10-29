@@ -235,7 +235,7 @@ class UpdateCheckWidget(BaseWidget):
     def get_winget_update(self):
         try:
             result = subprocess.run(
-                ['winget', 'upgrade','--no-cache'],
+                ['winget', 'upgrade'],
                 capture_output=True,
                 text=True,
                 check=True,
