@@ -33,7 +33,7 @@ wallpapers:
     run_after: # List of functions to run after wallpaper is updated
       - "wal -s -t -e -q -n -i {image}", # Example command to run after wallpaper is updated
       - "cmd.exe /c start /min pwsh ./yasb.ps1", # Example command to run after wallpaper is updated
-  wallpaper_engine:
+   wallpaper_engine:
           wallpaper_engine_dir: "D:\\Steam\\steamapps\\workshop\\content\\431960"
           wallpaper_engine_exe: "D:\\Steam\\steamapps\\common\\wallpaper_engine\\wallpaper32.exe"
 ```
