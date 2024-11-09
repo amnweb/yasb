@@ -9,14 +9,9 @@ from PyQt6.QtGui import QWheelEvent
 from comtypes import CLSCTX_ALL, CoInitialize, CoUninitialize, COMObject
 from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume, IAudioEndpointVolumeCallback
 from pycaw.callbacks import MMNotificationClient
- 
+from core.utils.win32.system_function import KEYEVENTF_KEYUP, VK_VOLUME_UP, VK_VOLUME_DOWN
 # Disable comtypes logging
 logging.getLogger('comtypes').setLevel(logging.CRITICAL)
-
-# Constants from the Windows API
-VK_VOLUME_UP = 0xAF
-VK_VOLUME_DOWN = 0xAE
-KEYEVENTF_KEYUP = 0x0002
  
 class AudioEndpointChangeCallback(MMNotificationClient):
     def __init__(self,parent):
