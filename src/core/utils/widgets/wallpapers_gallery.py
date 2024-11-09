@@ -1,6 +1,20 @@
 import os
 import re
-from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QScrollArea, QGraphicsOpacityEffect, QSizePolicy
+import pathlib
+from PyQt6.QtWidgets import (
+    QApplication,
+    QMainWindow,
+    QWidget,
+    QVBoxLayout,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QScrollArea,
+    QGraphicsOpacityEffect,
+    QSizePolicy,
+)
+from itertools import chain
+from typing import Dict, Optional
 from PyQt6.QtGui import QPixmap, QKeySequence, QShortcut, QPainter, QPainterPath
 from PyQt6.QtCore import Qt, QTimer, QPropertyAnimation, pyqtProperty, QRectF
 from core.utils.win32.blurWindow import Blur
@@ -8,10 +22,12 @@ from core.event_service import EventService
 from core.config import get_stylesheet
 from core.utils.utilities import is_windows_10
 
+
 class ImageCache:
     """
     Singleton cache for storing and retrieving images.
     """
+
     _instance = None
     _cache = {}
 
@@ -28,34 +44,42 @@ class ImageCache:
 
     def __contains__(self, key):
         return key in self._cache
-    
+
+
 class BaseStyledWidget(QWidget):
     """
     BaseStyledWidget applies filtered styles to the widget from a given stylesheet.
     """
+
     def apply_stylesheet(self):
         stylesheet = get_stylesheet()
         classes_to_include = [
-            'wallpapers-gallery-window',
-            'wallpapers-gallery-buttons',
-            'wallpapers-gallery-buttons:hover',
-            'wallpapers-gallery-image',
-            'wallpapers-gallery-image.focused',
-            'wallpapers-gallery-image:hover'
+            "wallpapers-gallery-window",
+            "wallpapers-gallery-buttons",
+            "wallpapers-gallery-buttons:hover",
+            "wallpapers-gallery-image",
+            "wallpapers-gallery-image.focused",
+            "wallpapers-gallery-image:hover",
         ]
         filtered_stylesheet = self.extract_class_styles(stylesheet, classes_to_include)
         self.setStyleSheet(filtered_stylesheet)
 
     def extract_class_styles(self, stylesheet, classes):
-        pattern = re.compile(r'(\.({})\s*\{{[^}}]*\}})'.format('|'.join(re.escape(cls) for cls in classes)), re.MULTILINE)
+        pattern = re.compile(
+            r"(\.({})\s*\{{[^}}]*\}})".format(
+                "|".join(re.escape(cls) for cls in classes)
+            ),
+            re.MULTILINE,
+        )
         matches = pattern.findall(stylesheet)
-        return '\n'.join(match[0] for match in matches)
+        return "\n".join(match[0] for match in matches)
 
 
 class HoverLabel(QLabel, BaseStyledWidget):
     """
     HoverLabel: QLabel with hover, focus, and opacity effects for a wallpapers gallery.
     """
+
     def __init__(self, parent, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -109,32 +133,73 @@ class ImageGallery(QMainWindow, BaseStyledWidget):
     """
     ImageGallery displays a gallery of images with navigation and lazy loading features.
     """
-    def __init__(self, image_folder, gallery):
+
+    def __init__(self, image_folder, gallery, wallpaper_engine: Optional[Dict] = None):
         super().__init__()
         self.gallery = gallery
         self._event_service = EventService()
+        self.wallpaper_engine = wallpaper_engine
         self.image_folder = image_folder
-        self.image_files = [f for f in os.listdir(image_folder) if f.lower().endswith(('png', 'jpg', 'jpeg', 'gif', 'bmp'))]
+
+        if self.wallpaper_engine:
+
+            self.image_folder = self.wallpaper_engine.get("wallpaper_engine_dir")
+
+            folders = [folders for folders in os.listdir(image_folder)]
+
+            imgs = []
+
+            for folder in folders:
+
+                path = f"{image_folder}\\{folder}"
+
+                images = chain(
+                    pathlib.Path(path).glob("*.jpg"), pathlib.Path(path).glob("*.gif")
+                )
+
+                selected_img = [image for image in images]
+
+                if selected_img:
+                    # Get the first image in the list and convert it to a string
+                    just_img = str(selected_img[0]).rsplit("\\", maxsplit=1)[-1]
+
+                    # Assign the image filename to the folder key in the dictionary
+                    imgs.append(f"{folder}\\{just_img}")
+
+            final_list = list([path for path in imgs])
+            self.image_files = final_list
+
+        else:
+
+            self.image_files = [
+                f
+                for f in os.listdir(image_folder)
+                if f.lower().endswith(("png", "jpg", "jpeg", "gif", "bmp"))
+            ]
+
         self.current_index = 0
-        self.images_per_page = self.gallery['image_per_page']
-        self.image_width = self.gallery['image_width']
-        self.orientation = self.gallery['orientation']
-        self.image_height = int(self.image_width * 9) // 16 if self.orientation == "landscape" else int(self.image_width * 16) // 9
-        self.show_button = self.gallery['show_buttons']
+        self.images_per_page = self.gallery["image_per_page"]
+        self.image_width = self.gallery["image_width"]
+        self.orientation = self.gallery["orientation"]
+        self.image_height = (
+            int(self.image_width * 9) // 16
+            if self.orientation == "landscape"
+            else int(self.image_width * 16) // 9
+        )
+        self.show_button = self.gallery["show_buttons"]
         self.window_height = self.image_height + 20
-        self.blur = self.gallery['blur']
-        self.image_spacing = self.gallery['image_spacing']
-        self.lazy_load = self.gallery['lazy_load']
-        self.lazy_load_fadein = self.gallery['lazy_load_fadein']
-        self.corner_radius = self.gallery['image_corner_radius']
-        self.lazy_load_delay = self.gallery['lazy_load_delay']
-        self.enable_cache = self.gallery['enable_cache']
+        self.blur = self.gallery["blur"]
+        self.image_spacing = self.gallery["image_spacing"]
+        self.lazy_load = self.gallery["lazy_load"]
+        self.lazy_load_fadein = self.gallery["lazy_load_fadein"]
+        self.corner_radius = self.gallery["image_corner_radius"]
+        self.lazy_load_delay = self.gallery["lazy_load_delay"]
+        self.enable_cache = self.gallery["enable_cache"]
         self.focused_index = None
         self.image_cache = ImageCache()
         self.is_loading = False
         self.initUI()
         self.apply_stylesheet()
-
 
     def initUI(self):
         """
@@ -147,9 +212,13 @@ class ImageGallery(QMainWindow, BaseStyledWidget):
             (screen_width - (screen_width - 60)) // 2,
             (screen_height - self.window_height) // 2,
             screen_width - 60,
-            self.window_height
+            self.window_height,
         )
-        self.setWindowFlags(Qt.WindowType.Tool | Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint)
+        self.setWindowFlags(
+            Qt.WindowType.Tool
+            | Qt.WindowType.FramelessWindowHint
+            | Qt.WindowType.WindowStaysOnTopHint
+        )
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
@@ -159,7 +228,7 @@ class ImageGallery(QMainWindow, BaseStyledWidget):
                 Acrylic=True if is_windows_10() else False,
                 DarkMode=True,
                 RoundCorners=True,
-                BorderColor="System"
+                BorderColor="System",
             )
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
@@ -172,25 +241,34 @@ class ImageGallery(QMainWindow, BaseStyledWidget):
         self.scroll_area.setWidgetResizable(True)
         self.scroll_area.setFixedHeight(self.window_height)
         self.scroll_area.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.scroll_area.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+        )
+        self.scroll_area.setVerticalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+        )
         layout.addWidget(self.scroll_area)
         self.image_container = QWidget()
-       
+
         self.scroll_area.setWidget(self.image_container)
         self.image_layout = QHBoxLayout()
         self.image_container.setLayout(self.image_layout)
         self.image_container.setContentsMargins(0, 0, 0, 0)
-        self.image_container.setFixedWidth(int(self.image_width * self.images_per_page + self.image_spacing * (self.images_per_page - 1)))
+        self.image_container.setFixedWidth(
+            int(
+                self.image_width * self.images_per_page
+                + self.image_spacing * (self.images_per_page - 1)
+            )
+        )
         if self.show_button:
             button_layout = QHBoxLayout()
             button_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            self.prev_button = QPushButton('Prev')
+            self.prev_button = QPushButton("Prev")
             self.prev_button.setProperty("class", "wallpapers-gallery-buttons")
             self.prev_button.setCursor(Qt.CursorShape.PointingHandCursor)
             self.prev_button.clicked.connect(self.load_prev_images)
             button_layout.addWidget(self.prev_button)
-            self.next_button = QPushButton('Next')
+            self.next_button = QPushButton("Next")
             self.next_button.setProperty("class", "wallpapers-gallery-buttons")
             self.next_button.setCursor(Qt.CursorShape.PointingHandCursor)
             self.next_button.clicked.connect(self.load_next_images)
@@ -215,17 +293,32 @@ class ImageGallery(QMainWindow, BaseStyledWidget):
         """
         Loads the next image in the gallery with optional caching and lazy loading.
         """
-        if self.current_image_index < len(self.image_files) and self.current_image_index < self.current_index + self.images_per_page:
-            image_path = os.path.join(self.image_folder, self.image_files[self.current_image_index])
+        if (
+            self.current_image_index < len(self.image_files)
+            and self.current_image_index < self.current_index + self.images_per_page
+        ):
+            image_path = os.path.join(
+                self.image_folder, self.image_files[self.current_image_index]
+            )
             if self.enable_cache:
-                pixmap = self.image_cache.get(image_path) or self.image_cache.set(image_path, self.create_pixmap(image_path)) or self.image_cache.get(image_path)
+                pixmap = (
+                    self.image_cache.get(image_path)
+                    or self.image_cache.set(image_path, self.create_pixmap(image_path))
+                    or self.image_cache.get(image_path)
+                )
             else:
                 pixmap = self.create_pixmap(image_path)
             label = HoverLabel(self)
-            label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+            label.setSizePolicy(
+                QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
+            )
             label.setPixmap(pixmap)
-            label.setAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignVCenter)
-            label.mousePressEvent = self.create_mouse_press_event(self.current_image_index)
+            label.setAlignment(
+                Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignVCenter
+            )
+            label.mousePressEvent = self.create_mouse_press_event(
+                self.current_image_index
+            )
             self.image_layout.addWidget(label)
             self.image_layout.setSpacing(self.image_spacing)
             self.image_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
@@ -248,28 +341,43 @@ class ImageGallery(QMainWindow, BaseStyledWidget):
         Create a rounded pixmap from an image path with specified dimensions and orientation.
         """
         if self.orientation == "landscape":
-            pixmap = QPixmap(image_path).scaled(self.image_width, self.image_height, Qt.AspectRatioMode.IgnoreAspectRatio, Qt.TransformationMode.SmoothTransformation)
+            pixmap = QPixmap(image_path).scaled(
+                self.image_width,
+                self.image_height,
+                Qt.AspectRatioMode.IgnoreAspectRatio,
+                Qt.TransformationMode.SmoothTransformation,
+            )
         else:
-            pixmap = QPixmap(image_path).scaled(self.image_width, self.image_height, Qt.AspectRatioMode.KeepAspectRatioByExpanding, Qt.TransformationMode.SmoothTransformation)
+            pixmap = QPixmap(image_path).scaled(
+                self.image_width,
+                self.image_height,
+                Qt.AspectRatioMode.KeepAspectRatioByExpanding,
+                Qt.TransformationMode.SmoothTransformation,
+            )
         rounded_pixmap = QPixmap(self.image_width, self.image_height)
         rounded_pixmap.fill(Qt.GlobalColor.transparent)
         painter = QPainter(rounded_pixmap)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         path = QPainterPath()
-        path.addRoundedRect(QRectF(0, 0, self.image_width, self.image_height), self.corner_radius, self.corner_radius)
+        path.addRoundedRect(
+            QRectF(0, 0, self.image_width, self.image_height),
+            self.corner_radius,
+            self.corner_radius,
+        )
         painter.setClipPath(path)
         x = int((self.image_width - pixmap.width()) / 2)
         y = int((self.image_height - pixmap.height()) / 2)
         painter.drawPixmap(x, y, pixmap)
         painter.end()
         self.image_cache.set(image_path, pixmap)
- 
+
         return rounded_pixmap
 
     def create_mouse_press_event(self, index):
         def mouse_press_event(event):
             self.focused_index = index
             self.update_focus()
+
         return mouse_press_event
 
     def update_focus(self):
@@ -363,7 +471,9 @@ class ImageGallery(QMainWindow, BaseStyledWidget):
         if event.key() == Qt.Key.Key_Escape:
             self.fade_out_and_close_gallery()
         elif event.key() == Qt.Key.Key_Return and self.focused_index is not None:
-            label = self.image_layout.itemAt(self.focused_index - self.current_index).widget()
+            label = self.image_layout.itemAt(
+                self.focused_index - self.current_index
+            ).widget()
             label.blink()
             self.set_wallpaper()
         elif event.key() == Qt.Key.Key_Left:
@@ -377,7 +487,9 @@ class ImageGallery(QMainWindow, BaseStyledWidget):
 
     def set_wallpaper(self):
         if self.focused_index is not None:
-            image_path = os.path.join(self.image_folder, self.image_files[self.focused_index])
+            image_path = os.path.join(
+                self.image_folder, self.image_files[self.focused_index]
+            )
             self._event_service.emit_event("set_wallpaper_signal", image_path)
 
     def showEvent(self, event):
@@ -408,4 +520,3 @@ class ImageGallery(QMainWindow, BaseStyledWidget):
         self.fade_out_animation.setEndValue(0)
         self.fade_out_animation.finished.connect(self.destroy)
         self.fade_out_animation.start()
-         
