@@ -18,6 +18,7 @@ build_options = {
         'core.widgets.yasb.custom',
         'core.widgets.yasb.github',
         'core.widgets.yasb.media',
+        'core.widgets.yasb.microphone',
         'core.widgets.yasb.wallpapers',
         'core.widgets.yasb.traffic',
         'core.widgets.yasb.wifi',
@@ -33,7 +34,7 @@ build_options = {
 
     "silent_level": 1,
     "silent": True,
-    "excludes": ['PySide6','pydoc_data','email','colorama','tkinter','PyQt5','PySide2'],
+    "excludes": ['PySide6','pydoc_data','email','tkinter','PyQt5','PySide2'],
     "build_exe": "dist",
     "include_msvcr": True,
     "includes": ["colorama"],
