@@ -1,14 +1,16 @@
 DEFAULTS = {
-    'label': "{microphone[percent]}%",
-    'label_alt': "{microphone[percent]}%",
-    'microphone_icons': [
-        "\uf131",  # Icon for muted
-        "\uf130",  # Icon for 0-100%
-    ],
+    'label': '{icon}',
+    'label_alt': '{icon} {level}%',
+    'icons': {
+        'normal': '\uf130',
+        'muted': '\uf131',
+    },
+    'container_padding': {'top': 0, 'left': 0, 'bottom': 0, 'right': 0},
     'callbacks': {
+        'on_left': 'toggle_mute',
         'on_middle': 'do_nothing',
         'on_right': 'do_nothing'
-    },
+    }    
 }
 
 VALIDATION_SCHEMA = {
@@ -20,17 +22,26 @@ VALIDATION_SCHEMA = {
         'type': 'string',
         'default': DEFAULTS['label_alt']
     },
-    'microphone_icons': {
-        'type': 'list',
-        'default': DEFAULTS['microphone_icons'],
-        "schema": {
-            'type': 'string',
-            'required': False
-        }
+    'icons': {
+        'type': 'dict',
+        'schema': {
+            'normal': {'type': 'string', 'default': DEFAULTS['icons']['normal']},
+            'muted': {'type': 'string', 'default': DEFAULTS['icons']['muted']}
+        },
+        'default': DEFAULTS['icons']
+    },
+    'container_padding': {
+        'type': 'dict',
+        'default': DEFAULTS['container_padding'],
+        'required': False
     },
     'callbacks': {
         'type': 'dict',
         'schema': {
+            'on_left': {
+                'type': 'string',
+                'default': DEFAULTS['callbacks']['on_left'],
+            },
             'on_middle': {
                 'type': 'string',
                 'default': DEFAULTS['callbacks']['on_middle'],

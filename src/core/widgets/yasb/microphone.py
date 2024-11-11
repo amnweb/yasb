@@ -37,19 +37,24 @@ class MicrophoneWidget(BaseWidget):
         self,
         label: str,
         label_alt: str,
-        microphone_icons: list[str],
+        icons: dict[str, str],
+        container_padding: dict[str, int],
         callbacks: dict[str, str]
     ):
         super().__init__(class_name="microphone-widget")
+
+        self._initializing = True
+        self.audio_endpoint = None
+        
         self._show_alt_label = False
         self._label_content = label
         self._label_alt_content = label_alt
-
-        self.audio_endpoint = None
-        self._microphone_icons = microphone_icons
+        self._icons = icons
+        self._padding = container_padding
+        
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
+        self._widget_container_layout.setContentsMargins(self._padding['left'],self._padding['top'],self._padding['right'],self._padding['bottom'])
         self._widget_container: QWidget = QWidget()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
@@ -57,9 +62,9 @@ class MicrophoneWidget(BaseWidget):
         self._create_dynamically_label(self._label_content, self._label_alt_content)
         
         self.register_callback("toggle_label", self._toggle_label)
-        self.register_callback("update_label", self._update_label)
         self.register_callback("toggle_mute", self.toggle_mute)
-        self.callback_left = "toggle_mute"
+         
+        self.callback_left = callbacks["on_left"]
         self.callback_right = callbacks["on_right"]
         self.callback_middle = callbacks["on_middle"]
         
@@ -69,9 +74,10 @@ class MicrophoneWidget(BaseWidget):
         
         self._initialize_microphone_interface()
         self.update_label_signal.connect(self._update_label)
-        
+
         self._update_label()
-        
+        self._initializing = False
+                
 
     def _toggle_label(self):
         self._show_alt_label = not self._show_alt_label
@@ -80,7 +86,7 @@ class MicrophoneWidget(BaseWidget):
         for widget in self._widgets_alt:
             widget.setVisible(self._show_alt_label)
         self._update_label()
-
+        
     def _create_dynamically_label(self, content: str, content_alt: str):
         def process_content(content, is_alt=False):
             label_parts = re.split('(<span.*?>.*?</span>)', content)
@@ -109,9 +115,14 @@ class MicrophoneWidget(BaseWidget):
             return widgets
         self._widgets = process_content(content)
         self._widgets_alt = process_content(content_alt, is_alt=True)
+ 
 
-
-    def _update_label(self):
+    def _update_label(self): 
+        if self.audio_endpoint:
+            if self.isHidden() and not self._initializing:
+                self.show()
+        else:
+            self.hide()
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
         active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
         label_parts = re.split('(<span.*?>.*?</span>)', active_label_content)
@@ -120,13 +131,13 @@ class MicrophoneWidget(BaseWidget):
         try:
             self._initialize_microphone_interface()
             mute_status = self.audio_endpoint.GetMute() if self.audio_endpoint else None
-            icon_audio = self._get_audio_icon()
-            level_audio = "mute" if mute_status == 1 else f'{round(self.audio_endpoint.GetMasterVolumeLevelScalar() * 100)}%' if self.audio_endpoint else "N/A"
+            min_icon = self._get_mic_icon()
+            min_level = "mute" if mute_status == 1 else f'{round(self.audio_endpoint.GetMasterVolumeLevelScalar() * 100)}%' if self.audio_endpoint else "N/A"
         except Exception:
-            icon_audio, level_audio = "N/A", "N/A"
+            min_icon, min_level = "N/A", "N/A"
         label_options = {
-            "{icon}": icon_audio,
-            "{level}": level_audio
+            "{icon}": min_icon,
+            "{level}": min_level
         }
 
         for part in label_parts:
@@ -149,30 +160,30 @@ class MicrophoneWidget(BaseWidget):
         try:
             devices = AudioUtilities.GetMicrophone()
             if not devices:
-                raise Exception("Microphone not found")
+                logging.error("Microphone not found")
             interface = devices.Activate(IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
             self.audio_endpoint = interface.QueryInterface(IAudioEndpointVolume)
             self.callback = AudioEndpointVolumeCallback(self)
             self.audio_endpoint.RegisterControlChangeNotify(self.callback)
-            self.show()
-        except Exception as e:
+        except Exception:
             self.audio_endpoint = None
-            self.hide()
         finally:
             CoUninitialize()
 
 
-    def _get_audio_icon(self):
+    def _get_mic_icon(self):
         if not self.audio_endpoint:
-            return self._microphone_icons[0]
+            return self._icons['normal']
         current_mute_status = self.audio_endpoint.GetMute()
         current_level = round(self.audio_endpoint.GetMasterVolumeLevelScalar() * 100)
-        self.setToolTip(f'Volume {current_level}')
         if current_mute_status == 1:
-            audio_icon = self._microphone_icons[0]  # muted
+            mic_icon = self._icons['muted']
+            tooltip = f'Muted: Volume {current_level}'
         else:
-            audio_icon = self._microphone_icons[1]  # normal
-        return audio_icon
+            mic_icon = self._icons['normal']
+            tooltip = f'Volume {current_level}'
+        self.setToolTip(tooltip)
+        return mic_icon
 
 
     def toggle_mute(self):
@@ -208,4 +219,3 @@ class MicrophoneWidget(BaseWidget):
             self._increase_volume()
         elif event.angleDelta().y() < 0:
             self._decrease_volume()
-            
