@@ -16,8 +16,8 @@ microphone:
   label: '<span>{icon}</span>'
   label_alt: '<span>{icon}</span> {level}%'
   icons:
-    normal: "\udb80\udf6c"
-    muted: "\udb80\udf6d"
+    normal: "\uf130"
+    muted: "\uf131"
   callbacks:
     on_left: 'toggle_mute'
     on_middle: 'toggle_label'
