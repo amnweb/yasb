@@ -14,15 +14,16 @@
 ```yaml
 microphone:
   type: "yasb.microphone.MicrophoneWidget"
-  label: '<span>{icon}</span>'
-  label_alt: '<span>{icon}</span> {level}%'
-  icons:
-    normal: "\uf130"
-    muted: "\uf131"
-  callbacks:
-    on_left: 'toggle_mute'
-    on_middle: 'toggle_label'
-    on_right: 'exec cmd.exe /c start ms-settings:sound'
+  options:
+    label: '<span>{icon}</span>'
+    label_alt: '<span>{icon}</span> {level}%'
+    icons:
+      normal: "\uf130"
+      muted: "\uf131"
+    callbacks:
+      on_left: 'toggle_mute'
+      on_middle: 'toggle_label'
+      on_right: 'exec cmd.exe /c start ms-settings:sound'
 ```
 
 ## Description of Options

@@ -2,7 +2,6 @@ from cx_Freeze import setup, Executable
 from settings import BUILD_VERSION
 import datetime
  
-base = "gui"
 build_options = {
     "packages": [
         'core.widgets.yasb.power_menu',
@@ -80,7 +79,7 @@ bdist_msi_options = {
 executables = [
     Executable(
         "main.py",
-        base=base,
+        base="gui",
         icon="assets/images/app_icon.ico",
         shortcut_name="Yasb",
         shortcut_dir="MyProgramMenu",
@@ -94,6 +93,7 @@ executables = [
         target_name="yasbc.exe",
     )
 ]
+
 setup(
     name="yasb",
     version=BUILD_VERSION,
