@@ -17,6 +17,7 @@
     - [Libre Hardware Monitor](./(Widget)-Libre-HW-Monitor)
     - [Media](./(Widget)-Media)
     - [Memory](./(Widget)-Memory)
+    - [Microphone](./(Widget)-Microphone)
     - [OBS](./(Widget)-Obs)
     - [Traffic](./(Widget)-Traffic)
     - [Taskbar](./(Widget)-Taskbar)
