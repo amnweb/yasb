@@ -77,6 +77,7 @@ for more themes visit [yasb-themes](https://github.com/amnweb/yasb-themes)
 - **[Libre Hardware Monitor](https://github.com/amnweb/yasb/wiki/(Widget)-Libre-HW-Monitor)**: Connects to Libre Hardware Monitor to get sensor data.
 - **[Media](https://github.com/amnweb/yasb/wiki/(Widget)-Media)**: Displays media controls and information.
 - **[Memory](https://github.com/amnweb/yasb/wiki/(Widget)-Memory)**: Shows current memory usage.
+- **[Microphone](https://github.com/amnweb/yasb/wiki/(Widget)-Microphone)**: Displays the current microphone status.
 - **[OBS](https://github.com/amnweb/yasb/wiki/(Widget)-Obs)**: Integrates with OBS Studio to show recording status.
 - **[Traffic](https://github.com/amnweb/yasb/wiki/(Widget)-Traffic)**: Displays network traffic information.
 - **[Taskbar](https://github.com/amnweb/yasb/wiki/(Widget)-Taskbar)**: A customizable taskbar for launching applications.
