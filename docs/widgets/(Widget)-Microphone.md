@@ -6,6 +6,7 @@
 | `label_alt`       | string  | `'{icon} {level}%'`        | The alternative format string for the microphone widget. Displays icon or level. |
 | `icons`       | dict    | `{'normal', 'muted'` | Icons for microphone widget |
 | `callbacks`       | dict    | `{'on_left': 'toggle_mute', 'on_middle': 'toggle_label', 'on_right': 'do_nothing'}` | Callbacks for mouse events on the memory widget. |
+| `container_padding`  | dict | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}`      | Explicitly set padding inside widget container. |
 
 
 ## Example Configuration

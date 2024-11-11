@@ -8,6 +8,7 @@
     - [Active Windows Title](./(Widget)-Active-Windows-Title)
     - [Applications](./(Widget)-Applications)
     - [Battery](./(Widget)-Battery)
+    - [Bluetooth](./(Widget)-Bluetooth)
     - [CPU](./(Widget)-CPU)
     - [Clock](./(Widget)-Clock)
     - [Custom](./(Widget)-Custom)
