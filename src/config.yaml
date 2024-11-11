@@ -333,7 +333,7 @@ widgets:
       menu_offset: 240 
       update_interval: 300 # Check for new notification in seconds
 
-  wallapers:
+  wallpapers:
     type: "yasb.wallpapers.WallpapersWidget"
     options:
       label: "<span>\udb83\ude09</span>"
