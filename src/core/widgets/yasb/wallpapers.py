@@ -8,6 +8,7 @@ import subprocess
 import pythoncom
 import pywintypes
 import pathlib
+import psutil
 from itertools import chain
 from core.widgets.base import BaseWidget
 from core.validation.widgets.yasb.wallpapers import VALIDATION_SCHEMA
@@ -232,6 +233,18 @@ class WallpapersWidget(BaseWidget):
                     self._image_gallery.fade_out_and_close_gallery()
                 else:
                     if self._wallpaper_engine:
+                        wallpaper_engine = self._wallpaper_engine.get(
+                            "wallpaper_engine_exe"
+                        )
+                        running = self.is_wallpaper_engine_running()
+
+                        if not running:
+                            try:
+                                subprocess.Popen(str(wallpaper_engine), shell=True)
+
+                            except Exception as e:
+                                logging.error(f"Failed to start wallpaper_engine: {e}")
+
                         self._image_gallery = ImageGallery(
                             self._wallpaper_engine.get("wallpaper_engine_dir"),
                             self._gallery,
@@ -245,6 +258,18 @@ class WallpapersWidget(BaseWidget):
                         self._image_gallery.fade_in_gallery()
             if event is None or event.button() == Qt.MouseButton.RightButton:
                 if self._wallpaper_engine:
+                    wallpaper_engine = self._wallpaper_engine.get(
+                        "wallpaper_engine_exe"
+                    )
+                    running = self.is_wallpaper_engine_running()
+
+                    if not running:
+                        try:
+                            subprocess.Popen(str(wallpaper_engine), shell=True)
+
+                        except Exception as e:
+                            logging.error(f"Failed to start wallpaper_engine: {e}")
+
                     self.change_background_wallpaper_engine()
                 else:
                     self.change_background()
@@ -252,9 +277,35 @@ class WallpapersWidget(BaseWidget):
         else:
             if event is None or event.button() == Qt.MouseButton.LeftButton:
                 if self._wallpaper_engine:
-                    self.change_background_wallpaper_engine()
+                    if self._wallpaper_engine:
+                        wallpaper_engine = self._wallpaper_engine.get(
+                            "wallpaper_engine_exe"
+                        )
+                        running = self.is_wallpaper_engine_running()
+
+                        if not running:
+                            try:
+                                subprocess.Popen(str(wallpaper_engine), shell=True)
+
+                            except Exception as e:
+                                logging.error(f"Failed to start wallpaper_engine: {e}")
+
+                        self.change_background_wallpaper_engine()
+
                 else:
                     self.change_background()
+
+    def is_wallpaper_engine_running(self):
+        """Checks if wallpaper engine is running."""
+        try:
+            process_names = [p.name().lower() for p in psutil.process_iter()]
+            if "wallpaper64.exe" in process_names or "wallpaper32.exe" in process_names:
+                return True
+
+        except Exception as e:
+            logging.warning(f"Wallpaper Engine is not running: {e}")
+
+        return False
 
     def change_background_wallpaper_engine(self, image_path: str = None):
         """Changes the background if wallpaper_engine is running."""
@@ -263,17 +314,13 @@ class WallpapersWidget(BaseWidget):
             return
 
         if image_path:
-
             wallpaper_engine = self._wallpaper_engine.get("wallpaper_engine_exe")
-
             dir_str = image_path.replace("preview.jpg", "").replace("preview.gif", "")
 
             # Error check | Was having issues with getting just directories.
             # Not sure why but adding the dir fixes the issues.
             if not os.path.exists(dir_str):
-
                 wallpaper_dir = self._wallpaper_engine.get("wallpaper_engine_dir")
-
                 dir_str = f"{wallpaper_dir}\\{dir_str}"
 
             try:
@@ -283,11 +330,9 @@ class WallpapersWidget(BaseWidget):
                     for file in os.listdir(dir_str)
                     if file.endswith(("pkg", "mp4"))
                 ][0]
-
                 # Remove spaces frpm file names so CLI can fine.
                 old_pkg = f"{dir_str}\\{pkg}"
                 new_pkg = f'{dir_str}\\{pkg.replace(" ", "")}'
-
                 # Only rename if the old and new package names are different
                 if old_pkg != new_pkg:
                     os.rename(old_pkg, new_pkg)
@@ -296,7 +341,6 @@ class WallpapersWidget(BaseWidget):
                 logging.error(f"Failed to change wallpaper: {dir_str}:{e}")
 
             pkg_str = f'{dir_str}\\{pkg.replace(" ", "")}'
-
             change_wall_command = (
                 f"{wallpaper_engine} -control openWallpaper -file {pkg_str}"
             )
@@ -308,44 +352,32 @@ class WallpapersWidget(BaseWidget):
             new_wallpaper = image_path
 
         else:
-
             image_folder = self._wallpaper_engine.get("wallpaper_engine_dir")
-
             folders = [folders for folders in os.listdir(image_folder)]
-
             imgs = []
 
             for folder in folders:
-
                 path = f"{image_folder}\\{folder}"
-
                 images = chain(
                     pathlib.Path(path).glob("*.jpg"), pathlib.Path(path).glob("*.gif")
                 )
-
                 selected_img = [image for image in images]
 
                 if selected_img:
                     # Get the first image in the list and convert it to a string
                     just_img = str(selected_img[0]).rsplit("\\", maxsplit=1)[-1]
-
                     # Assign the image filename to the folder key in the dictionary
                     imgs.append(f"{folder}\\{just_img}")
 
             final_list = list([path for path in imgs])
-
             new_wallpaper = f"{image_folder}\\{random.choice(final_list)}"
-
             while new_wallpaper == self._last_image and len(final_list) > 1:
                 new_wallpaper = random.choice(final_list)
 
             try:
                 self.change_background_wallpaper_engine(new_wallpaper)
-
                 self._last_image = new_wallpaper
-
             except Exception as e:
-
                 logging.error(f"Error setting wallpaper {new_wallpaper}: {e}")
 
         if self._run_after:
