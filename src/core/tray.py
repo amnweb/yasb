@@ -244,10 +244,11 @@ class TrayIcon(QSystemTrayIcon):
             available_geometry = screen.availableGeometry()
             physical_size = screen.physicalSize()
             is_primary = " (Primary)" if screen == QGuiApplication.primaryScreen() else ""
+            device_pixel_ratio = screen.devicePixelRatio()
             
             screens_info += f"<div>Monitor: {screen.name()}{is_primary}</div>"
-            screens_info += f"<div> - Geometry: x={geometry.x()}, y={geometry.y()}, width={geometry.width()}, height={geometry.height()}</div>"
-            screens_info += f"<div> - Available Geometry: x={available_geometry.x()}, y={available_geometry.y()}, width={available_geometry.width()}, height={available_geometry.height()}</div>"
+            screens_info += f"<div> - Geometry: x={geometry.x()}, y={geometry.y()}, width={geometry.width() * device_pixel_ratio}, height={geometry.height() * device_pixel_ratio}</div>"
+            screens_info += f"<div> - Available Geometry: x={available_geometry.x()}, y={available_geometry.y()}, width={available_geometry.width() * device_pixel_ratio}, height={available_geometry.height() * device_pixel_ratio}</div>"
             screens_info += f"<div> - Physical Size: width={physical_size.width()}mm, height={physical_size.height()}mm</div>"
             screens_info += f"<div> - Logical DPI: {screen.logicalDotsPerInch()}</div>"
             screens_info += f"<div> - Physical DPI: {screen.physicalDotsPerInch()}</div><br>"
