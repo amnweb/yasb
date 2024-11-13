@@ -1,170 +1,296 @@
+"""
+This is very experimental and may not work as expected. It uses ctypes to interact with the Windows Bluetooth API. We need to test this on more systems to ensure it works as expected.
+"""
+import re
+import ctypes
 from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget
-from PyQt6.QtCore import Qt, pyqtSlot
-from PyQt6.QtBluetooth import (QBluetoothDeviceDiscoveryAgent,
-                               QBluetoothDeviceInfo,
-                               QBluetoothLocalDevice,
-                               QBluetoothAddress)
-from typing import Dict
+from PyQt6.QtCore import Qt, QThread, pyqtSignal, QTimer
+from ctypes import wintypes
 from core.widgets.base import BaseWidget
 from core.validation.widgets.yasb.bluetooth import VALIDATION_SCHEMA
-import re
-import logging
+import os
 from settings import DEBUG
+import logging
+
+def get_bluetooth_api():
+    """Get Bluetooth API with fallbacks since the DLL may not be in the same location on all systems."""
+    possible_paths = [
+        "BluetoothAPIs.dll",
+        os.path.join(os.environ['SystemRoot'], 'System32', 'BluetoothAPIs.dll'),
+        os.path.join(os.environ['SystemRoot'], 'SysWOW64', 'BluetoothAPIs.dll') # For 32-bit Python on 64-bit Windows
+    ]
+    
+    for path in possible_paths:
+        try:
+            return ctypes.WinDLL(path)
+        except (WindowsError, OSError) as e:
+            last_error = e
+            continue
+            
+    raise RuntimeError(f"Failed to load BluetoothAPIs.dll. Error: {last_error}")
+
+# Define SYSTEMTIME structure
+class SYSTEMTIME(ctypes.Structure):
+    _fields_ = [
+        ('wYear', wintypes.WORD),
+        ('wMonth', wintypes.WORD),
+        ('wDayOfWeek', wintypes.WORD),
+        ('wDay', wintypes.WORD),
+        ('wHour', wintypes.WORD),
+        ('wMinute', wintypes.WORD),
+        ('wSecond', wintypes.WORD),
+        ('wMilliseconds', wintypes.WORD),
+    ]
+
+# Define BLUETOOTH_DEVICE_INFO structure
+class BLUETOOTH_DEVICE_INFO(ctypes.Structure):
+    _fields_ = [
+        ("dwSize", wintypes.DWORD),
+        ("Address", ctypes.c_ulonglong),
+        ("ulClassofDevice", wintypes.ULONG),
+        ("fConnected", wintypes.BOOL),
+        ("fRemembered", wintypes.BOOL),
+        ("fAuthenticated", wintypes.BOOL),
+        ("stLastSeen", SYSTEMTIME),
+        ("stLastUsed", SYSTEMTIME),
+        ("szName", ctypes.c_wchar * 248),
+    ]
+
+# Define BLUETOOTH_DEVICE_SEARCH_PARAMS structure
+class BLUETOOTH_DEVICE_SEARCH_PARAMS(ctypes.Structure):
+    _fields_ = [
+        ("dwSize", wintypes.DWORD),
+        ("fReturnAuthenticated", wintypes.BOOL),
+        ("fReturnRemembered", wintypes.BOOL),
+        ("fReturnUnknown", wintypes.BOOL),
+        ("fReturnConnected", wintypes.BOOL),
+        ("fIssueInquiry", wintypes.BOOL),
+        ("cTimeoutMultiplier", ctypes.c_ubyte),
+        ("hRadio", wintypes.HANDLE),
+    ]
+
+# Define BLUETOOTH_FIND_RADIO_PARAMS structure
+class BLUETOOTH_FIND_RADIO_PARAMS(ctypes.Structure):
+    _fields_ = [
+        ("dwSize", wintypes.DWORD),
+    ]
+
+class BluetoothThread(QThread):
+    status_signal = pyqtSignal(str)
+
+    def __init__(self, bt_api):
+        super().__init__()
+        self.bt_api = bt_api
+
+    def run(self):
+        status = self.get_bluetooth_status()
+        self.status_signal.emit(status)
+
+    def is_bluetooth_enabled(self):
+        find_radio_params = BLUETOOTH_FIND_RADIO_PARAMS(
+            dwSize=ctypes.sizeof(BLUETOOTH_FIND_RADIO_PARAMS)
+        )
+        radio_handle = wintypes.HANDLE()
+        find_first_radio = self.bt_api.BluetoothFindFirstRadio
+        find_first_radio.argtypes = [
+            ctypes.POINTER(BLUETOOTH_FIND_RADIO_PARAMS),
+            ctypes.POINTER(wintypes.HANDLE),
+        ]
+        find_first_radio.restype = wintypes.HANDLE  # Correct restype for a handle
+        radio_finder = find_first_radio(
+            ctypes.byref(find_radio_params), ctypes.byref(radio_handle)
+        )
+        if radio_finder and radio_finder != wintypes.HANDLE(0):
+            # Define argtypes and restype for BluetoothFindRadioClose
+            self.bt_api.BluetoothFindRadioClose.argtypes = [wintypes.HANDLE]
+            self.bt_api.BluetoothFindRadioClose.restype = wintypes.BOOL
+            self.bt_api.BluetoothFindRadioClose.argtypes = [wintypes.HANDLE]
+            self.bt_api.BluetoothFindRadioClose.restype = wintypes.BOOL
+            self.bt_api.BluetoothFindRadioClose(radio_finder)
+            ctypes.windll.kernel32.CloseHandle(radio_handle)
+            return True
+        return False
+
+    def get_bluetooth_devices(self):
+        devices = []
+        find_radio_params = BLUETOOTH_FIND_RADIO_PARAMS(
+            dwSize=ctypes.sizeof(BLUETOOTH_FIND_RADIO_PARAMS)
+        )
+        radio_handle = wintypes.HANDLE()
+        find_first_radio = self.bt_api.BluetoothFindFirstRadio
+        find_first_radio.argtypes = [
+            ctypes.POINTER(BLUETOOTH_FIND_RADIO_PARAMS),
+            ctypes.POINTER(wintypes.HANDLE),
+        ]
+        find_first_radio.restype = wintypes.HANDLE
+        radio_finder = find_first_radio(
+            ctypes.byref(find_radio_params), ctypes.byref(radio_handle)
+        )
+        if not radio_finder or radio_finder == wintypes.HANDLE(0):
+            return devices
+        try:
+            while True:
+                device_search_params = BLUETOOTH_DEVICE_SEARCH_PARAMS(
+                    dwSize=ctypes.sizeof(BLUETOOTH_DEVICE_SEARCH_PARAMS),
+                    fReturnAuthenticated=True,
+                    fReturnRemembered=True,
+                    fReturnUnknown=False,
+                    fReturnConnected=True,
+                    fIssueInquiry=False,
+                    cTimeoutMultiplier=1,
+                    hRadio=radio_handle,
+                )
+                device_info = BLUETOOTH_DEVICE_INFO()
+                device_info.dwSize = ctypes.sizeof(BLUETOOTH_DEVICE_INFO)
+                find_first_device = self.bt_api.BluetoothFindFirstDevice
+                find_first_device.argtypes = [
+                    ctypes.POINTER(BLUETOOTH_DEVICE_SEARCH_PARAMS),
+                    ctypes.POINTER(BLUETOOTH_DEVICE_INFO),
+                ]
+                find_first_device.restype = wintypes.HANDLE
+                device_finder = find_first_device(
+                    ctypes.byref(device_search_params), ctypes.byref(device_info)
+                )
+                if not device_finder or device_finder == wintypes.HANDLE(0):
+                    break
+                try:
+                    while True:
+                        address = ':'.join(
+                            [
+                                '%02X' % ((device_info.Address >> (8 * i)) & 0xFF)
+                                for i in range(6)
+                            ][::-1]
+                        )
+                        devices.append(
+                            {
+                                "name": device_info.szName,
+                                "address": address,
+                                "connected": bool(device_info.fConnected),
+                                "authenticated": bool(device_info.fAuthenticated)
+                            }
+                        )
+                        next_device = self.bt_api.BluetoothFindNextDevice
+                        next_device.argtypes = [
+                            wintypes.HANDLE,
+                            ctypes.POINTER(BLUETOOTH_DEVICE_INFO),
+                        ]
+                        next_device.restype = wintypes.BOOL
+                        if not next_device(device_finder, ctypes.byref(device_info)):
+                            break
+                finally:
+                    self.bt_api.BluetoothFindDeviceClose.argtypes = [wintypes.HANDLE]
+                    self.bt_api.BluetoothFindDeviceClose.restype = wintypes.BOOL
+                    self.bt_api.BluetoothFindDeviceClose(device_finder)
+                # Move to the next radio (if any)
+                next_radio = self.bt_api.BluetoothFindNextRadio
+                next_radio.argtypes = [
+                    wintypes.HANDLE,
+                    ctypes.POINTER(wintypes.HANDLE),
+                ]
+                next_radio.restype = wintypes.BOOL
+                if not next_radio(radio_finder, ctypes.byref(radio_handle)):
+                    break
+        finally:
+            self.bt_api.BluetoothFindRadioClose(radio_finder)
+            ctypes.windll.kernel32.CloseHandle(radio_handle)
+        return devices
+
+    def get_bluetooth_status(self):
+        if self.is_bluetooth_enabled():
+            devices = self.get_bluetooth_devices()
+            if devices:
+                # Only show devices that are both connected AND authenticated (paired)
+                connected_devices = [
+                    device['name'] 
+                    for device in devices 
+                    if device['connected'] and device['authenticated']  # Add authenticated check
+                ]
+                if connected_devices:
+                    return f"Connected to: {', '.join(connected_devices)}"
+            return "Bluetooth is on, but no paired devices connected."
+        return "Bluetooth is disabled."
+
 class BluetoothWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
 
-    def __init__(self, label: str, label_alt: str, icons: Dict[str, str], container_padding: dict[str, int], callbacks: Dict[str, str]):
+    def __init__(
+        self,
+        label: str,
+        label_alt: str,
+        icons: dict[str, str],
+        container_padding: dict[str, int],
+        callbacks: dict[str, str]
+    ):
         super().__init__(class_name="bluetooth-widget")
         self._show_alt_label = False
         self._label_content = label
         self._label_alt_content = label_alt
-        self._icons = icons
         self._padding = container_padding
-        self.clear_devices_list()
-
-        self._widget_container_layout = QHBoxLayout()
+        try:
+            self.bt_api = get_bluetooth_api()
+        except RuntimeError as e:
+            if DEBUG:
+                logging.error(f"Bluetooth support unavailable: {e}")
+            self.bt_api = None
+        self.current_status = None
+        self._icons = icons
+        
+        self.bluetooth_icon = None
+        self.connected_devices = None
+        
+        self._widget_container_layout: QHBoxLayout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(self._padding['left'],self._padding['top'],self._padding['right'],self._padding['bottom'])
-
-        self._widget_container = QWidget()
+        self._widget_container_layout.setContentsMargins(self._padding['left'], self._padding['top'], self._padding['right'], self._padding['bottom'])
+        self._widget_container: QWidget = QWidget()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
         self.widget_layout.addWidget(self._widget_container)
-
         self._create_dynamically_label(self._label_content, self._label_alt_content)
-        
-        # Setup Bluetooth
-        self._setup_bluetooth()
-        
-        # Register callbacks
+
         self.register_callback("toggle_label", self._toggle_label)
+ 
         self.callback_left = callbacks['on_left']
         self.callback_right = callbacks['on_right']
         self.callback_middle = callbacks['on_middle']
-        
-        # Initial state update and discovery
-        self._update_state()
-        self.start_discovery()
-
-    def _setup_bluetooth(self):
-        self.local_device = QBluetoothLocalDevice()
-        self.discovery_agent = None
-        self._initialize_bluetooth()
-        self.local_device.hostModeStateChanged.connect(self._handle_bluetooth_state)
-
-    def clear_devices_list(self):
-        self.known_devices = {}
-        self.connected_device_names = []
-        self.current_device_name = "No device"
-        
-    def _initialize_bluetooth(self):
-        if self.local_device.isValid():
-            if self.discovery_agent is None:
-                self.discovery_agent = QBluetoothDeviceDiscoveryAgent()
-                self.discovery_agent.deviceDiscovered.connect(self.device_discovered)
-                self.discovery_agent.finished.connect(self.discovery_finished)
-                
-            self.local_device.deviceConnected.connect(self.device_connected)
-            self.local_device.deviceDisconnected.connect(self.device_disconnected)
-            return True
-        return False
-
-    @pyqtSlot(QBluetoothLocalDevice.HostMode)
-    def _handle_bluetooth_state(self, mode):
-        if mode != QBluetoothLocalDevice.HostMode.HostPoweredOff:           
-            if self._initialize_bluetooth():
-                self.start_discovery()
-        else:
-            self.clear_devices_list()
-        self._update_state()
-
-
-    def start_discovery(self):
-        if self.discovery_agent and self.local_device.isValid():
-            if DEBUG:
-                logging.info("Starting device discovery...")
-            if self.discovery_agent.isActive():
-                self.discovery_agent.stop()
-            self.discovery_agent.setLowEnergyDiscoveryTimeout(0)
-            self.discovery_agent.start(QBluetoothDeviceDiscoveryAgent.DiscoveryMethod.ClassicMethod)
-            self._update_state()
-        else:
-            if DEBUG:
-                logging.info("Bluetooth adapter not available")
-
-    @pyqtSlot(QBluetoothDeviceInfo)
-    def device_discovered(self, device_info):
-        if not self.local_device.isValid() or self.local_device.hostMode() == QBluetoothLocalDevice.HostMode.HostPoweredOff:
-            self.clear_devices_list()
-            self._update_state()
-            return
-        
-        addr = device_info.address().toString()
-        name = device_info.name()
-        
-        if name and device_info.isValid():
-            self.known_devices[addr] = name
-            if DEBUG:
-                logging.info(f"Found device: {name} ({addr})")
-
-            connected_addrs = []
-            if self.local_device.isValid() and self.local_device.hostMode() != QBluetoothLocalDevice.HostMode.HostPoweredOff:
-                connected_addrs = [d.toString() for d in self.local_device.connectedDevices()]
-                
-            is_connected = (addr in connected_addrs and
-                            device_info.coreConfigurations() != QBluetoothDeviceInfo.CoreConfiguration.UnknownCoreConfiguration)
-            if DEBUG:
-                logging.info(f"Device {name} connection state: {is_connected}")
-            
-            if is_connected:
-                if name not in self.connected_device_names:
-                    self.connected_device_names.append(name)
-                    self.current_device_name = ", ".join(self.connected_device_names)
-                    self._update_state()
-            else:
-                if name in self.connected_device_names:
-                    self.connected_device_names.remove(name)
-                    self.current_device_name = ", ".join(self.connected_device_names) if self.connected_device_names else "No device"
-                    self._update_state()
-
-    @pyqtSlot()
-    def discovery_finished(self):
-        self._update_state()
-        self.start_discovery()
+   
  
-    @pyqtSlot(QBluetoothAddress)
-    def device_connected(self, address):
-        addr_str = address.toString()
-        device_name = self.known_devices.get(addr_str, "Unknown device")
-        if device_name not in self.connected_device_names:
-            self.connected_device_names.append(device_name)
-        self.current_device_name = ", ".join(self.connected_device_names)
-        if DEBUG:
-            logging.info(f"Device connected: {device_name} ({addr_str})")
-        self._update_state()
 
-    @pyqtSlot(QBluetoothAddress)
-    def device_disconnected(self, address):
-        addr_str = address.toString()
-        device_name = self.known_devices.get(addr_str, "Unknown device")
-        if device_name in self.connected_device_names:
-            self.connected_device_names.remove(device_name)
-        self.current_device_name = ", ".join(self.connected_device_names) if self.connected_device_names else "No device"
-        if DEBUG:
-            logging.info(f"Device disconnected: {device_name} ({addr_str})")
-        self._update_state()
+        self.current_status = None  # Store the current Bluetooth status
+        self.bluetooth_thread = BluetoothThread(self.bt_api)
+        self.bluetooth_thread.status_signal.connect(self._update_state)
 
+         # Setup QTimer
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self.start_bluetooth_thread)
+        self.timer.start(3000)
+
+        self.start_bluetooth_thread()
+        self._update_label(self._icons['bluetooth_off'])
+        
+        
+    def start_bluetooth_thread(self):
+        if not self.bluetooth_thread.isRunning():
+            self.bluetooth_thread = BluetoothThread(self.bt_api)
+            self.bluetooth_thread.status_signal.connect(self._update_state)
+            self.bluetooth_thread.start()
+            
+    def stop(self):
+        self.timer.stop()
+        if self.bluetooth_thread.isRunning():
+            self.bluetooth_thread.terminate()
+            self.bluetooth_thread.wait()
+            
     def _toggle_label(self):
         self._show_alt_label = not self._show_alt_label
         for widget in self._widgets:
             widget.setVisible(not self._show_alt_label)
         for widget in self._widgets_alt:
             widget.setVisible(self._show_alt_label)
-        self._update_state()
+        self._update_label(self.bluetooth_icon,self.connected_devices)
 
     def _create_dynamically_label(self, content: str, content_alt: str):
         def process_content(content, is_alt=False):
-            label_parts = re.split(r'(<span.*?>.*?</span>)', content)
+            label_parts = re.split('(<span.*?>.*?</span>)', content)
             label_parts = [part for part in label_parts if part]
             widgets = []
             for part in label_parts:
@@ -188,22 +314,29 @@ class BluetoothWidget(BaseWidget):
                 else:
                     label.show()
             return widgets
-
         self._widgets = process_content(content)
         self._widgets_alt = process_content(content_alt, is_alt=True)
 
-    def _update_label(self, icon=None):
+
+    def _update_label(self, icon, connected_devices=None):
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
         active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
-        
-        label_parts = re.split(r'(<span.*?>.*?</span>)', active_label_content)
+        label_parts = re.split('(<span.*?>.*?</span>)', active_label_content)
         label_parts = [part for part in label_parts if part]
         widget_index = 0
 
+        if connected_devices:
+            device_names = ", ".join(connected_devices)
+            tooltip_text = "Connected devices\n" + "\n".join(f"• {name}" for name in connected_devices) if connected_devices else "No devices connected"
+        else:
+            device_names = "No devices connected"
+            tooltip_text = "No devices connected"
+
         label_options = {
             "{icon}": icon,
-            "{device_name}": self.current_device_name
+            "{device_name}": device_names
         }
+
         for part in label_parts:
             part = part.strip()
             if part:
@@ -218,51 +351,26 @@ class BluetoothWidget(BaseWidget):
                         active_widgets[widget_index].setText(formatted_text)
                 widget_index += 1
 
-    def _update_state(self):
-        if not self.local_device.isValid():
-            bluetooth_icon = self._icons['bluetooth_off']
-            self.clear_devices_list()
-            self.current_device_name = "Bluetooth disabled"
-            self._widget_container.setToolTip("Bluetooth is not available")
-            self._update_label(bluetooth_icon)
-            return
-        
-        mode = self.local_device.hostMode()
-        if mode == QBluetoothLocalDevice.HostMode.HostPoweredOff:
-            bluetooth_icon = self._icons['bluetooth_off']
-            self.clear_devices_list()
-            self._widget_container.setToolTip("Bluetooth is turned off")
-            self._update_label(bluetooth_icon)
-            return
+        # Set tooltip with connected device names
+        self._widget_container.setToolTip(tooltip_text)
 
-        connected_devices = self.local_device.connectedDevices()
-        if connected_devices:
-            self.connected_device_names = []
-            for device in connected_devices:
-                addr = device.toString()
-                if addr in self.known_devices:
-                    name = self.known_devices[addr]
-                    self.connected_device_names.append(name)
-            
-            if self.connected_device_names:
-                bluetooth_icon = self._icons['bluetooth_connected']
-                self.current_device_name = ", ".join(self.connected_device_names)
-            else:
-                bluetooth_icon = self._icons['bluetooth_on']
-                self.current_device_name = "No device"
-                self.connected_device_names = []
+    def _update_state(self, status):
+        self.current_status = status
+        if DEBUG and self.current_status != "Bluetooth is disabled.":
+            logging.info(f"Bluetooth: {self.current_status}")
+
+        if not self.current_status:  # Handle None case
+            return self._icons['bluetooth_off']
+
+        if self.current_status == "Bluetooth is disabled.":
+            bluetooth_icon = self._icons['bluetooth_off']
+            connected_devices = None
+        elif "Connected to" in self.current_status:
+            bluetooth_icon = self._icons['bluetooth_connected']
+            connected_devices = self.current_status.replace("Connected to: ", "").split(", ")
         else:
             bluetooth_icon = self._icons['bluetooth_on']
-            self.current_device_name = "No device"
-            self.connected_device_names = []
-        
-        tooltip = "Connected devices:\n" + "\n".join(f"• {name}" for name in self.connected_device_names) if self.connected_device_names else "No devices connected"
-        self._widget_container.setToolTip(tooltip)
-        self._update_label(bluetooth_icon)
-        
-    def get_current_device_name(self):
-        connected_devices = self.local_device.connectedDevices()
-        if connected_devices:
-            addr = connected_devices[0].toString()
-            return self.known_devices.get(addr, "Unknown device")
-        return "No device"
+            connected_devices = None
+        self.bluetooth_icon = bluetooth_icon
+        self.connected_devices = connected_devices
+        self._update_label(bluetooth_icon, connected_devices)
