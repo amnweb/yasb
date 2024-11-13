@@ -30,9 +30,9 @@ jobs:
       run: |
         .\venv\Scripts\Activate
         python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install colorama
-        pip install --upgrade cx_Freeze
+        pip install --force --no-cache -r requirements.txt
+        pip install --force --no-cache colorama
+        pip install --force --no-cache --upgrade cx_Freeze==7.2.4
         # pip install --force --no-cache --pre --extra-index-url https://marcelotduarte.github.io/packages/ cx_Freeze
       shell: pwsh
 
