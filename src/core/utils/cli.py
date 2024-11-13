@@ -19,7 +19,7 @@ from colorama import just_fix_windows_console
 just_fix_windows_console()
 
 YASB_VERSION = BUILD_VERSION
-YASB_CLI_VERSION = "1.0.1"
+YASB_CLI_VERSION = "1.0.2"
 
 OS_STARTUP_FOLDER = os.path.join(os.environ['APPDATA'], r'Microsoft\Windows\Start Menu\Programs\Startup')
 INSTALLATION_PATH = os.path.abspath(os.path.join(__file__, "../../.."))
@@ -44,12 +44,15 @@ class Format:
     green = '\033[92m'
 
 def format_log_line(line):
+    # Color timestamp
     line = re.sub(r'^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}', f"{Format.gray}\\g<0>{Format.end}", line, count=1)
-    
+    # Remove filename:line: pattern, generally we don't need this in logs
+    line = re.sub(r'\s+\w+\.py:\d+:\s*', ' ', line)
     log_levels = ["CRITICAL", "ERROR", "WARNING", "NOTICE", "INFO", "DEBUG", "TRACE"]
     for level in log_levels:
         if level in line:
-            padded_level = level.ljust(8)
+            padding = max(8, len(level))
+            padded_level = level.rjust(padding)
             if level in ['CRITICAL', 'ERROR']:
                 line = line.replace(level, f"{Format.red}{padded_level}{Format.end}")
             elif level == "WARNING":
@@ -58,6 +61,10 @@ def format_log_line(line):
                 line = line.replace(level, f"{Format.green}{padded_level}{Format.end}")
             elif level == "TRACE":
                 line = line.replace(level, f"{Format.blue}{padded_level}{Format.end}")
+            elif level == "INFO":
+                line = line.replace(level, f"{Format.green}{padded_level}{Format.end}")
+            elif level == "DEBUG":
+                line = line.replace(level, f"{Format.green}{padded_level}{Format.end}")
             else:
                 line = line.replace(level, padded_level)
             break
