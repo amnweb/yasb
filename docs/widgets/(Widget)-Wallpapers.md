@@ -33,6 +33,9 @@ wallpapers:
     run_after: # List of functions to run after wallpaper is updated
       - "wal -s -t -e -q -n -i {image}", # Example command to run after wallpaper is updated
       - "cmd.exe /c start /min pwsh ./yasb.ps1", # Example command to run after wallpaper is updated
+    wallpaper_engine:
+        wallpaper_engine_dir: "D:\\Steam\\steamapps\\workshop\\content\\431960"
+        wallpaper_engine_exe: "D:\\Steam\\steamapps\\common\\wallpaper_engine\\wallpaper32.exe"
 ```
 
 ## Description of Options
@@ -54,6 +57,8 @@ wallpapers:
   - **image_corner_radius:** The corner radius of the images in the gallery. (Note: This is not same as the css border-radius property.)
   - **enable_cache:** Whether to enable caching of images in the gallery. (Note: Images are cached in memory and not saved to disk.)
 - **run_after:** A list of functions to run after the wallpaper is updated.
+- **wallpaper_engine_dir:** Location of wallpaper workshop contents. Make sure 431960 is your target.
+- **wallpaper_engine_exe:** Location of wallpaper32.exe file. Located within steamapps.
 
 > If gallery is enabled left mouse click on the widget will open the gallery and right mouse click will change the wallpaper and get random one. 
 
