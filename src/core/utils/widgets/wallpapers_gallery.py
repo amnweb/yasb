@@ -111,6 +111,7 @@ class ImageGallery(QMainWindow, BaseStyledWidget):
     """
     def __init__(self, image_folder, gallery):
         super().__init__()
+ 
         self.gallery = gallery
         self._event_service = EventService()
         self.image_folder = image_folder
@@ -132,20 +133,24 @@ class ImageGallery(QMainWindow, BaseStyledWidget):
         self.focused_index = None
         self.image_cache = ImageCache()
         self.is_loading = False
-        self.initUI()
         self.apply_stylesheet()
 
 
-    def initUI(self):
+    def initUI(self, parent=None):
         """
         Initialize the UI components and layout for the wallpapers gallery window.
         """
-        screen_geometry = QApplication.primaryScreen().geometry()
+        if parent:
+            screen = parent.screen()
+        else:
+            screen = QApplication.primaryScreen()
+        
+        screen_geometry = screen.geometry()
         screen_width = screen_geometry.width()
         screen_height = screen_geometry.height()
         self.setGeometry(
-            (screen_width - (screen_width - 60)) // 2,
-            (screen_height - self.window_height) // 2,
+            screen_geometry.x() + (screen_width - (screen_width - 60)) // 2,
+            screen_geometry.y() + (screen_height - self.window_height) // 2,
             screen_width - 60,
             self.window_height
         )
@@ -393,7 +398,13 @@ class ImageGallery(QMainWindow, BaseStyledWidget):
         else:
             self.load_images()
 
-    def fade_in_gallery(self):
+    def fade_in_gallery(self, parent=None):
+        # find any existing gallery windows, this is to prevent multiple galleries from opening on multiple screens.
+        existing_galleries = [widget for widget in QApplication.topLevelWidgets() if isinstance(widget, type(self)) and widget.isVisible()]
+        for gallery in existing_galleries:
+            gallery.fade_out_and_close_gallery()
+        
+        self.initUI(parent)
         self.fade_in_animation = QPropertyAnimation(self, b"windowOpacity")
         self.fade_in_animation.setDuration(200)
         self.fade_in_animation.setStartValue(0)

@@ -204,11 +204,12 @@ class WallpapersWidget(BaseWidget):
         
         if self._gallery['enabled']: 
             if event is None or event.button() == Qt.MouseButton.LeftButton:
+                
                 if self._image_gallery is not None and self._image_gallery.isVisible():
                     self._image_gallery.fade_out_and_close_gallery()
                 else:   
                     self._image_gallery = ImageGallery(self._image_path, self._gallery)
-                    self._image_gallery.fade_in_gallery()
+                    self._image_gallery.fade_in_gallery(parent=self)
             if event is None or event.button() == Qt.MouseButton.RightButton:
                 self.change_background()
         else:
