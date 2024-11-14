@@ -150,21 +150,22 @@ class Bar(QWidget):
         bar_width = self._dimensions['width']
         bar_height = self._dimensions['height']
 
-        screen_scale = self.screen().devicePixelRatio()
+        #screen_scale = self.screen().devicePixelRatio()
         screen_width = self.screen().geometry().width()
         screen_height = self.screen().geometry().height()
- 
+        
+        # Commented out for now, as it causes issues with the bar position on 4k monitors, probably we don't need it anymore.
         # Fix for non-primary display Windows OS scaling on app startup
-        should_downscale_screen_geometry = (
-            init and
-            len(QApplication.screens()) > 1 and
-            screen_scale >= 2.0 and
-            QApplication.primaryScreen() != self.screen()
-        )
+        # should_downscale_screen_geometry = (
+        #     init and
+        #     len(QApplication.screens()) > 1 and
+        #     screen_scale >= 2.0 and
+        #     QApplication.primaryScreen() != self.screen()
+        # )
 
-        if should_downscale_screen_geometry:
-            screen_width = screen_width / screen_scale
-            screen_height = screen_height / screen_scale
+        # if should_downscale_screen_geometry:
+        #     screen_width = screen_width / screen_scale
+        #     screen_height = screen_height  / screen_scale
 
         if is_valid_percentage_str(str(self._dimensions['width'])):
             bar_width = int(screen_width * percent_to_float(self._dimensions['width']) - self._padding['left'] - self._padding['right'])
@@ -178,7 +179,7 @@ class Bar(QWidget):
             bar_width,
             bar_height
         )
-        self.try_add_app_bar(scale_screen_height=not should_downscale_screen_geometry)
+        self.try_add_app_bar(scale_screen_height=True)
         
     def _add_widgets(self, widgets: dict[str, list] = None):
         bar_layout = QGridLayout()
