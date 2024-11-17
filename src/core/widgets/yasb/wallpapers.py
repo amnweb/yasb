@@ -333,19 +333,13 @@ class WallpapersWidget(BaseWidget):
                     if file.endswith(("pkg", "mp4"))
                 ][0]
                 # Remove spaces frpm file names so CLI can fine.
-                old_pkg = f"{dir_str}\\{pkg}"
-                new_pkg = f'{dir_str}\\{pkg.replace(" ", "")}'
-                # Only rename if the old and new package names are different
-                if old_pkg != new_pkg:
-                    os.rename(old_pkg, new_pkg)
+                pkg = f'"{dir_str}\\{pkg}"'
 
             except Exception as e:
                 logging.error(f"Failed to change wallpaper: {dir_str}:{e}")
 
-            pkg_str = f'"{new_pkg}"'
-
             change_wall_command = (
-                f"{wallpaper_engine} -control openWallpaper -file {pkg_str}"
+                f"{wallpaper_engine} -control openWallpaper -file {pkg}"
             )
 
             subprocess.Popen(change_wall_command, shell=True)
