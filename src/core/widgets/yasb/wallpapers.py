@@ -240,7 +240,9 @@ class WallpapersWidget(BaseWidget):
 
                         if not running:
                             try:
-                                subprocess.Popen(str(wallpaper_engine), shell=True)
+                                subprocess.Popen(
+                                    f"{wallpaper_engine} -control mute", shell=True
+                                )
 
                             except Exception as e:
                                 logging.error(f"Failed to start wallpaper_engine: {e}")
@@ -265,8 +267,9 @@ class WallpapersWidget(BaseWidget):
 
                     if not running:
                         try:
-                            subprocess.Popen(str(wallpaper_engine), shell=True)
-
+                            subprocess.Popen(
+                                f"{wallpaper_engine} -control mute", shell=True
+                            )
                         except Exception as e:
                             logging.error(f"Failed to start wallpaper_engine: {e}")
 
@@ -277,20 +280,21 @@ class WallpapersWidget(BaseWidget):
         else:
             if event is None or event.button() == Qt.MouseButton.LeftButton:
                 if self._wallpaper_engine:
-                    if self._wallpaper_engine:
-                        wallpaper_engine = self._wallpaper_engine.get(
-                            "wallpaper_engine_exe"
-                        )
-                        running = self.is_wallpaper_engine_running()
+                    wallpaper_engine = self._wallpaper_engine.get(
+                        "wallpaper_engine_exe"
+                    )
+                    running = self.is_wallpaper_engine_running()
 
-                        if not running:
-                            try:
-                                subprocess.Popen(str(wallpaper_engine), shell=True)
+                    if not running:
+                        try:
+                            subprocess.Popen(
+                                f"{wallpaper_engine} -control mute", shell=True
+                            )
 
-                            except Exception as e:
-                                logging.error(f"Failed to start wallpaper_engine: {e}")
+                        except Exception as e:
+                            logging.error(f"Failed to start wallpaper_engine: {e}")
 
-                        self.change_background_wallpaper_engine()
+                    self.change_background_wallpaper_engine()
 
                 else:
                     self.change_background()
@@ -301,10 +305,8 @@ class WallpapersWidget(BaseWidget):
             process_names = [p.name().lower() for p in psutil.process_iter()]
             if "wallpaper64.exe" in process_names or "wallpaper32.exe" in process_names:
                 return True
-
         except Exception as e:
             logging.warning(f"Wallpaper Engine is not running: {e}")
-
         return False
 
     def change_background_wallpaper_engine(self, image_path: str = None):
@@ -340,18 +342,20 @@ class WallpapersWidget(BaseWidget):
             except Exception as e:
                 logging.error(f"Failed to change wallpaper: {dir_str}:{e}")
 
-            pkg_str = f'{dir_str}\\{pkg.replace(" ", "")}'
+            pkg_str = f'"{new_pkg}"'
+
             change_wall_command = (
                 f"{wallpaper_engine} -control openWallpaper -file {pkg_str}"
             )
 
-            subprocess.call(change_wall_command, shell=True)
-            subprocess.call(f"{wallpaper_engine} -control mute", shell=True)
+            subprocess.Popen(change_wall_command, shell=True)
+            subprocess.Popen(f"{wallpaper_engine} -control mute", shell=True)
             self.force_refresh()
 
             new_wallpaper = image_path
 
         else:
+
             image_folder = self._wallpaper_engine.get("wallpaper_engine_dir")
             folders = [folders for folders in os.listdir(image_folder)]
             imgs = []
