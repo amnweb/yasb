@@ -319,31 +319,40 @@ class WallpapersWidget(BaseWidget):
             wallpaper_engine = self._wallpaper_engine.get("wallpaper_engine_exe")
             dir_str = image_path.replace("preview.jpg", "").replace("preview.gif", "")
 
+            check_mute = self._wallpaper_engine.get("mute")
+
             # Error check | Was having issues with getting just directories.
             # Not sure why but adding the dir fixes the issues.
             if not os.path.exists(dir_str):
                 wallpaper_dir = self._wallpaper_engine.get("wallpaper_engine_dir")
                 dir_str = f"{wallpaper_dir}\\{dir_str}"
 
+            logging.debug(dir_str)
+
             try:
                 # find PKG
                 pkg = [
                     file
                     for file in os.listdir(dir_str)
-                    if file.endswith(("pkg", "mp4"))
+                    if file.endswith(("pkg", "mp4", "html"))
                 ][0]
                 # Remove spaces frpm file names so CLI can fine.
+
                 pkg = f'"{dir_str}\\{pkg}"'
 
             except Exception as e:
                 logging.error(f"Failed to change wallpaper: {dir_str}:{e}")
 
             change_wall_command = (
-                f"{wallpaper_engine} -control openWallpaper -file {pkg}"
+                f'"{wallpaper_engine}" -control openWallpaper -file {pkg}'
             )
 
             subprocess.Popen(change_wall_command, shell=True)
-            subprocess.Popen(f"{wallpaper_engine} -control mute", shell=True)
+            subprocess.Popen(f'"{wallpaper_engine}" -control unmute', shell=True)
+
+            if check_mute:
+                subprocess.Popen(f'"{wallpaper_engine}" -control mute', shell=True)
+
             self.force_refresh()
 
             new_wallpaper = image_path

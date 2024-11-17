@@ -21,6 +21,7 @@ DEFAULTS = {
     "wallpaper_engine": {
         "wallpaper_engine_dir": "",
         "wallpaper_engine_exe": "",
+        "mute": True,
     },
 }
 
@@ -119,6 +120,10 @@ VALIDATION_SCHEMA = {
             "wallpaper_engine_exe": {
                 "type": "string",
                 "default": DEFAULTS["wallpaper_engine"]["wallpaper_engine_exe"],
+            },
+            "mute": {
+                "type": "boolean",
+                "default": DEFAULTS["wallpaper_engine"]["mute"],
             },
         },
     },
