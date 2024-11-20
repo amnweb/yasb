@@ -71,4 +71,4 @@ home:
 }
 ```
 
-![Home YASB Widget](../assets/456789123-f4e5d6c7-89ab-4cde-1234-56789abcdef.png)
+![Home YASB Widget](assets/456789123-f4e5d6c7-89ab-4cde-1234-56789abcdef.png)
