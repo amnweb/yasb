@@ -13,6 +13,7 @@
     - [Clock](./(Widget)-Clock)
     - [Custom](./(Widget)-Custom)
     - [Github](./(Widget)-Github)
+    - [Home](./(Widget)-Home)
     - [Disk](./(Widget)-Disk)
     - [Language](./(Widget)-Language)
     - [Libre Hardware Monitor](./(Widget)-Libre-HW-Monitor)

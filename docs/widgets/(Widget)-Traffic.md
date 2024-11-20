@@ -13,8 +13,8 @@
 traffic:
   type: "yasb.traffic.TrafficWidget"
   options:
-    label: '\ueb01 \ueab4 {download_speed} | \ueab7 {upload_speed}'
-    label_alt: 'Download {download_speed} | Upload {upload_speed}'
+    label: "\ueb01 \ueab4 {download_speed} | \ueab7 {upload_speed}"
+    label_alt: "Download {download_speed} | Upload {upload_speed}"
     update_interval: 1000
     callbacks:
       on_left: 'toggle_label'

@@ -40,7 +40,7 @@ nvidia_temp:
     exec_options:
       run_cmd: "powershell nvidia-smi --query-gpu=temperature.gpu --format=csv,noheader"
       run_interval: 10000 # run every 10 sec
-      return_format: "string",
+      return_format: "string"
       hide_empty: false
 ```
 
