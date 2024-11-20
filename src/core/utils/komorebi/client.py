@@ -82,8 +82,8 @@ class KomorebiClient:
                     if managed_window['hwnd'] == window_hwnd:
                         return add_index(workspace, i)
 
-    def activate_workspace(self, ws_idx: int, wait: bool = False) -> None:
-        p = subprocess.Popen([self._komorebic_path, "focus-workspace", str(ws_idx)], shell=True)
+    def activate_workspace(self, m_idx: int, ws_idx: int, wait: bool = False) -> None:
+        p = subprocess.Popen([self._komorebic_path, "focus-monitor-workspace", str(m_idx), str(ws_idx)], shell=True)
 
         if wait:
             p.wait()

@@ -64,7 +64,7 @@ class WorkspaceButton(QPushButton):
 
     def activate_workspace(self):
         try:
-            self.komorebic.activate_workspace(self.workspace_index)
+            self.komorebic.activate_workspace(self.parent_widget._komorebi_screen['index'], self.workspace_index)
             if self._animation:
                 self.animate_buttons()
         except Exception:
