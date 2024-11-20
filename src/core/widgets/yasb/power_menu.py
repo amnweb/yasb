@@ -7,7 +7,7 @@ from core.utils.win32.blurWindow import Blur
 from core.widgets.base import BaseWidget
 from core.validation.widgets.yasb.power_menu import VALIDATION_SCHEMA
 from core.config import get_stylesheet
-from core.utils.win32.power import PowerOperations
+from core.utils.widgets.power import PowerOperations
 import datetime
 import psutil
 from core.utils.utilities import is_windows_10

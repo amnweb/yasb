@@ -5,24 +5,27 @@ from PyQt6.QtCore import QCoreApplication
 import ctypes
 
 class PowerOperations:
-    def __init__(self, main_window, overlay):
+    def __init__(self, main_window=None, overlay=None):
         self.main_window = main_window
         self.overlay = overlay
         
+    def clear_widget(self):
+        if self.main_window:
+            self.main_window.hide()
+        if self.overlay:
+            self.overlay
+            
     def signout(self):
-        self.main_window.hide()
-        self.overlay.hide()
+        self.clear_widget()
         QCoreApplication.exit(0)
         subprocess.Popen("shutdown /l", stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True)
 
     def lock(self):
-        self.main_window.hide()
-        self.overlay.hide()
+        self.clear_widget()
         subprocess.Popen("rundll32.exe user32.dll,LockWorkStation", stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True)
 
     def sleep(self):
-        self.main_window.hide()
-        self.overlay.hide()
+        self.clear_widget()
         access = (win32security.TOKEN_ADJUST_PRIVILEGES | win32security.TOKEN_QUERY)
         htoken = win32security.OpenProcessToken(win32api.GetCurrentProcess(), access)
         if htoken:
@@ -33,32 +36,27 @@ class PowerOperations:
             win32api.CloseHandle(htoken)
 
     def restart(self):
-        self.main_window.hide()
-        self.overlay.hide()
+        self.clear_widget()
         QCoreApplication.exit(0)
         subprocess.Popen("shutdown /r /t 0", stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True)
 
     def shutdown(self):
-        self.main_window.hide()
-        self.overlay.hide()
+        self.clear_widget()
         QCoreApplication.exit(0)
         subprocess.Popen("shutdown /s /hybrid /t 0", stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True)
 
     def force_shutdown(self):
-        self.main_window.hide()
-        self.overlay.hide()
+        self.clear_widget()
         QCoreApplication.exit(0)
         subprocess.Popen("shutdown /s /f /t 0", stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True)
 
     def force_restart(self):
-        self.main_window.hide()
-        self.overlay.hide()
+        self.clear_widget()
         QCoreApplication.exit(0)
         subprocess.Popen("shutdown /r /f /t 0", stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True)
     
     def hibernate(self):
-        self.main_window.hide()
-        self.overlay.hide()
+        self.clear_widget()
         subprocess.Popen("shutdown /h", stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True)
 
     def cancel(self):
