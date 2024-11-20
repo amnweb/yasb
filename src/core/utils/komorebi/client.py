@@ -105,9 +105,9 @@ class KomorebiClient:
         except subprocess.SubprocessError:
             logging.exception("Failed to toggle focus-follows-mouse")
 
-    def change_layout(self, layout: str) -> None:
+    def change_layout(self, m_idx: int, ws_idx: int, layout: str) -> None:
         try:
-            subprocess.Popen([self._komorebic_path, "change-layout", layout], shell=True)
+            subprocess.Popen([self._komorebic_path, "workspace-layout", str(m_idx), str(ws_idx), layout], shell=True)
         except subprocess.SubprocessError:
             logging.exception(f"Failed to change layout of currently active workspace to {layout}")
 
@@ -131,7 +131,7 @@ class KomorebiClient:
     def flip_layout_horizontal_and_vertical(self) -> None:
         self.flip_layout("horizontal-and-vertical")
 
-    def toggle(self, toggle_type: str, wait: bool = False) -> None:
+    def toggle(self, m_idx: int, ws_inx: int, toggle_type: str, wait: bool = False) -> None:
         try:
             p = subprocess.Popen([self._komorebic_path, f"toggle-{toggle_type}"], shell=True)
 

@@ -101,20 +101,24 @@ class ActiveLayoutWidget(BaseWidget):
     def _reset_layouts(self):
         self._layouts = deque([x.replace('_', '-') for x in self._layouts_config])
 
+    def change_layout(self, layout: str):
+        self._komorebic.change_layout(self._komorebi_screen['index'], self._focused_workspace['index'], layout)
+
     def _first_layout(self):
         if self._is_shift_layout_allowed():
             self._reset_layouts()
-            self._komorebic.change_layout(self._layouts[0])
+
+            self.change_layout(self._layouts[0])
 
     def _next_layout(self):
         if self._is_shift_layout_allowed():
             self._layouts.rotate(1)
-            self._komorebic.change_layout(self._layouts[0])
+            self.change_layout(self._layouts[0])
 
     def _prev_layout(self):
         if self._is_shift_layout_allowed():
             self._layouts.rotate(-1)
-            self._komorebic.change_layout(self._layouts[0])
+            self.change_layout(self._layouts[0])
 
     def _is_shift_layout_allowed(self):
         return not bool(
