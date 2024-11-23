@@ -30,6 +30,7 @@
     - [Weather](./(Widget)-Weather)
     - [WiFi](./(Widget)-WiFi)
     - [WHKD](./(Widget)-Whkd)
+    - [Windows-Desktops](./(Widget)-Windows-Desktops)
     - [Komorebi Workspaces](./(Widget)-Komorebi-Workspaces)
     - [Komorebi Layout](./(Widget)-Komorebi-Layout)
 - [Writing Widget](./Writing-Widget)

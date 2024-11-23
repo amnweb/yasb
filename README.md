@@ -90,8 +90,9 @@ for more themes visit [yasb-themes](https://github.com/amnweb/yasb-themes)
 - **[Weather](https://github.com/amnweb/yasb/wiki/(Widget)-Weather)**: Displays current weather information.
 - **[WiFi](https://github.com/amnweb/yasb/wiki/(Widget)-WiFi)**: Shows the current WiFi status.
 - **[WHKD](https://github.com/amnweb/yasb/wiki/(Widget)-Whkd)**: Shows the current hotkey.
-- **[Komorebi Workspaces](https://github.com/amnweb/yasb/wiki/(Widget)-Komorebi-Workspaces)**: Shows the current workspace.
-- **[Komorebi Layout](https://github.com/amnweb/yasb/wiki/(Widget)-Komorebi-Layout)**: Shows the current layout.
+- **[Windows-Desktops](https://github.com/amnweb/yasb/wiki/(Widget)-Windows-Desktops)**: Windows desktops switcher.
+- **[Komorebi Workspaces](https://github.com/amnweb/yasb/wiki/(Widget)-Komorebi-Workspaces)**: Komorebi workspaces widget.
+- **[Komorebi Layout](https://github.com/amnweb/yasb/wiki/(Widget)-Komorebi-Layout)**: Shows the current layout of Komorebi.
 
 
 ## 🏆 Contributors
