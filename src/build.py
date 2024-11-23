@@ -28,6 +28,8 @@ build_options = {
         'core.widgets.yasb.whkd',
         'core.widgets.yasb.taskbar',
         'core.widgets.yasb.update_check',
+        'core.widgets.yasb.windows_desktops',
+        'core.widgets.yasb.home',
         'core.widgets.komorebi.active_layout',
         'core.widgets.komorebi.workspaces'
     ],

@@ -17,3 +17,4 @@ pillow
 qasync
 requests
 obs-websocket-py
+pyvda
