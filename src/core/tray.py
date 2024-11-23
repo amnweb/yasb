@@ -26,7 +26,12 @@ EXE_PATH = os.path.join(INSTALLATION_PATH, 'yasb.exe')
 SHORTCUT_FILENAME = "yasb.lnk"
 AUTOSTART_FILE = EXE_PATH if os.path.exists(EXE_PATH) else VBS_PATH
 WORKING_DIRECTORY = INSTALLATION_PATH if os.path.exists(EXE_PATH) else SCRIPT_PATH
-
+ 
+class MenuExt(QMenu):
+    def focusOutEvent(self, event):
+        self.close()
+        super().focusOutEvent(event)   
+        
 class TrayIcon(QSystemTrayIcon):
     def __init__(self, bar_manager: BarManager):
         super().__init__()
@@ -59,7 +64,7 @@ class TrayIcon(QSystemTrayIcon):
  
         
     def _load_context_menu(self):
-        menu = QMenu()
+        menu = MenuExt()
         menu.setWindowModality(Qt.WindowModality.WindowModal)
         style_sheet = """
         QMenu {
