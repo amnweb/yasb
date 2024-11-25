@@ -10,6 +10,7 @@ from pyvda import VirtualDesktop, get_virtual_desktops
 class WorkspaceButton(QPushButton):
     def __init__(self, workspace_index: int, label: str = None, active_label: str = None, parent=None):
         super().__init__(parent)
+        
         self.workspace_index = workspace_index
         self.setProperty("class", "ws-btn")
         self.default_label = label if label else str(workspace_index)
@@ -17,11 +18,12 @@ class WorkspaceButton(QPushButton):
         self.setText(self.default_label)
         self.clicked.connect(self.activate_workspace)
         self.parent_widget = parent
+        self.workspace_animation = self.parent_widget._switch_workspace_animation
         self.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
        
     def activate_workspace(self):
         try:
-            VirtualDesktop(self.workspace_index).go()
+            VirtualDesktop(self.workspace_index).go(self.workspace_animation)
             if isinstance(self.parent_widget, WorkspaceWidget):
                 # Emit event to update desktops on all monitors
                 self.parent_widget._event_service.emit_event(
@@ -40,6 +42,7 @@ class WorkspaceWidget(BaseWidget):
             self,
             label_workspace_btn: str,
             label_workspace_active_btn: str,
+            switch_workspace_animation: bool,
             container_padding: dict,
     ):
         super().__init__(class_name="windows-desktops")
@@ -54,7 +57,7 @@ class WorkspaceWidget(BaseWidget):
         self._label_workspace_btn = label_workspace_btn
         self._label_workspace_active_btn = label_workspace_active_btn
         self._padding = container_padding
-        
+        self._switch_workspace_animation = switch_workspace_animation
         self._virtual_desktops = range(1, len(get_virtual_desktops()) + 1)
         self._prev_workspace_index = None
         self._curr_workspace_index = VirtualDesktop.current().number
