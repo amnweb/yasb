@@ -3,6 +3,7 @@
 |----------------------------|---------|--------------------------|-----------------------------------------------------------------------------|
 | `label_workspace_btn`    | string  | `'{index}'`              | The format string for workspace buttons.                                    |
 | `label_workspace_active_btn` | string | `'{index}'`              | The format string for the active workspace button.                          |
+| `switch_workspace_animation` | string | `'true'`                 | The OS animation to use when switching workspaces.                             |
 | `container_padding`  | dict | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}`      | Explicitly set padding inside widget container.
 
 ## Example Configuration
@@ -23,6 +24,7 @@ windows_workspaces:
 ## Description of Options
 - **label_workspace_btn:** The format string for workspace buttons, can be icon or {index}.
 - **label_workspace_active_btn:** The format string for the active workspace button, can be icon or {index}.
+- **switch_workspace_animation:** The OS animation to use when switching workspaces.
 - **container_padding:** Explicitly set padding inside widget container.
 
 
