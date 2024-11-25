@@ -1,23 +1,26 @@
 # Libre Hardware Monitor Widget Configuration
 
-| Option                  | Type    | Default                                                                                        | Description                                                          |
-|-------------------------|---------|------------------------------------------------------------------------------------------------|----------------------------------------------------------------------|
-| `label`                 | string  | `"<span>\udb82\udcae </span> {info[value]}{info[unit]}"`                                       | The primary label format.                                            |
-| `label_alt`             | string  | `"<span>\uf4bc </span>{info[histogram]} {info[value]} ({info[min]}/{info[max]}) {info[unit]}"` | Histograms. The alternative label format.                            |
-| `sensor_id`             | string  | `"/amdcpu/0/load/0"`                                                                           | Libre Hardware Monitor SensorId from http://localhost:8085/data.json |
-| `class_name`            | string  | `"libre-monitor-widget"`                                                                       | CSS class name for styling of different widget instances.            |
-| `update_interval`       | integer | `1000`                                                                                         | The interval in milliseconds to update the widget.                   |
-| `precision`             | integer | `1`                                                                                            | Floating point precision of the info[value].                         |
-| `history_size`          | integer | `60`                                                                                           | The size of the min/max history.                                     |
-| `histogram_num_columns` | integer | `10`                                                                                           | The number of columns in the histogram.                              |
-| `histogram_fixed_min`   | integer | `None`                                                                                         | Histogram minimum value. If None - set as history minimum value.     |
-| `histogram_fixed_max`   | integer | `None`                                                                                         | Histogram maximum value. If None - set as history maximum value.     |
-| `server_host`           | string  | `"localhost"`                                                                                  | Libre Hardware Monitor server host.                                  |
-| `server_port`           | integer | `8085`                                                                                         | Libre Hardware Monitor server port.                                  |
-| `server_username`       | string  | `""`                                                                                           | Libre Hardware Monitor username. Only needed if auth is enabled.     |
-| `server_password`       | string  | `""`                                                                                           | Libre Hardware Monitor password. Only needed if auth is enabled.     |
-| `histogram_icons`       | list    | `['\u2581', '\u2581', '\u2582', '\u2583', '\u2584', '\u2585', '\u2586', '\u2587', '\u2588']`   | Icons representing CPU usage histograms.                             |
-| `callbacks`             | dict    | `{'on_left': 'toggle_label', 'on_middle': 'do_nothing', 'on_right': 'do_nothing'}`             | Callback functions for different mouse button actions.               |
+| Option                   | Type    | Default                                                                                        | Description                                                                                                                                  |
+|--------------------------|---------|------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------|
+| `label`                  | string  | `"<span>\udb82\udcae </span> {info[value]}{info[unit]}"`                                       | The primary label format.                                                                                                                    |
+| `label_alt`              | string  | `"<span>\uf4bc </span>{info[histogram]} {info[value]} ({info[min]}/{info[max]}) {info[unit]}"` | Histograms. The alternative label format.                                                                                                    |
+| `sensor_id`              | string  | `"/amdcpu/0/load/0"`                                                                           | Libre Hardware Monitor SensorId from http://localhost:8085/data.json                                                                         |
+| `class_name`             | string  | `"libre-monitor-widget"`                                                                       | CSS class name for styling of different widget instances.                                                                                    |
+| `update_interval`        | integer | `1000`                                                                                         | The interval in milliseconds to update the widget.                                                                                           |
+| `precision`              | integer | `2`                                                                                            | Floating point precision of the info[value].                                                                                                 |
+| `history_size`           | integer | `60`                                                                                           | The size of the min/max history.                                                                                                             |
+| `histogram_num_columns`  | integer | `10`                                                                                           | The number of columns in the histogram.                                                                                                      |
+| `histogram_fixed_min`    | integer | `None`                                                                                         | Histogram minimum value. If None - set as history minimum value.                                                                             |
+| `histogram_fixed_max`    | integer | `None`                                                                                         | Histogram maximum value. If None - set as history maximum value.                                                                             |
+| `sensor_id_error_label`  | string  | `N/A`                                                                                          | The label shown when the sensor id is invalid or the sensor does not exist/disabled.                                                         |
+| `connection_error_label` | string  | `Connection error...`                                                                          | The label shown when YASB can't connect to the Libre Hardware Monitor Web server. Either the server is not running or the IP/port is wrong.  |
+| `auth_error_label`       | string  | `Auth Failed...`                                                                               | The label shown when there is a username/password issue while connecting to LHM Web server if the authentication is enabled in LHM settings. |
+| `server_host`            | string  | `"localhost"`                                                                                  | Libre Hardware Monitor server host.                                                                                                          |
+| `server_port`            | integer | `8085`                                                                                         | Libre Hardware Monitor server port.                                                                                                          |
+| `server_username`        | string  | `""`                                                                                           | Libre Hardware Monitor username. Only needed if auth is enabled.                                                                             |
+| `server_password`        | string  | `""`                                                                                           | Libre Hardware Monitor password. Only needed if auth is enabled.                                                                             |
+| `histogram_icons`        | list    | `['\u2581', '\u2581', '\u2582', '\u2583', '\u2584', '\u2585', '\u2586', '\u2587', '\u2588']`   | Icons representing CPU usage histograms.                                                                                                     |
+| `callbacks`              | dict    | `{'on_left': 'toggle_label', 'on_middle': 'do_nothing', 'on_right': 'do_nothing'}`             | Callback functions for different mouse button actions.                                                                                       |
 
 ## Example Configuration (GPU Temperature)
 
@@ -29,7 +32,7 @@
       label_alt: "<span>\uf437 </span>{info[histogram]} {info[value]} ({info[min]}/{info[max]}) {info[unit]}"
       sensor_id: "/gpu-nvidia/0/temperature/0"
       update_interval: 1000
-      precision: 1
+      precision: 2
       histogram_num_columns: 10
       class_name: "libre-monitor-widget"
 
@@ -80,6 +83,9 @@
 - **histogram_fixed_max**: Set the fixed maximum value of the histogram. Actual sensor max value from the history is not changed. If not set manually it will be set as history maximum value.
 - **histogram_icons**: A list of icons representing different values of the histogram.
 - **histogram_num_columns**: The number of columns to display in the histogram.
+- **sensor_id_error_label**: The label shown when the sensor id is invalid or the sensor does not exist/disabled.
+- **connection_error_label**: The label shown when YASB can't connect to the Libre Hardware Monitor Web server. Either the server is not running or the IP/port is wrong.
+- **auth_error_label**: The label shown when there is a username/password issue while connecting to LHM Web server if the authentication is enabled in LHM settings.
 - **server_host**: The host of the Libre Hardware Monitor server.
 - **server_port**: The port of the Libre Hardware Monitor server.
 - **server_username**: The username of the Libre Hardware Monitor server. Required if auth is enabled.

@@ -26,6 +26,9 @@ class LibreHardwareMonitorWidget(BaseWidget):
             history_size: int,
             histogram_fixed_min: float | None,
             histogram_fixed_max: float | None,
+            sensor_id_error_label,
+            connection_error_label,
+            auth_error_label,
             server_host: str,
             server_port: int,
             server_username: str,
@@ -42,6 +45,9 @@ class LibreHardwareMonitorWidget(BaseWidget):
         self._history_long: deque[float] = deque([], maxlen=history_size)
         self._histogram_fixed_min = histogram_fixed_min
         self._histogram_fixed_max = histogram_fixed_max
+        self._sensor_id_error_label = sensor_id_error_label
+        self._connection_error_label = connection_error_label
+        self._auth_error_label = auth_error_label
         self._histogram_icons = histogram_icons
         self._histogram_num_columns = histogram_num_columns
         self._server_host = server_host
@@ -71,6 +77,14 @@ class LibreHardwareMonitorWidget(BaseWidget):
         self._network_manager.finished.connect(self._handle_network_response)
         # Called if the server requests authentication
         self._network_manager.authenticationRequired.connect(self._handle_authentication)
+
+        # Create a request
+        url = QUrl(f"http://{self._server_host}:{self._server_port}/Sensor?action=Get&id={self._sensor_id}")
+        self.request = QNetworkRequest(url)
+        self.request.setHeader(
+            QNetworkRequest.KnownHeaders.ContentTypeHeader,
+            "application/x-www-form-urlencoded",
+        )
 
         # Callbacks
         self.callback_left = callbacks["on_left"]
@@ -132,12 +146,12 @@ class LibreHardwareMonitorWidget(BaseWidget):
         """Make a request and update the label with the received data"""
         self._make_request()
         info = {
-            "status": "No Connection...",
-            "value": 0.0,
+            "status": "",
+            "value": "",
             "unit": "",
-            "min": 0.0,
-            "max": 0.0,
-            "histogram": "No Connection..."
+            "min": "",
+            "max": "",
+            "histogram": "",
         }
         if self._data and self._data.get("result") == "ok":
             value = self._data.get("value", 0.0)
@@ -179,10 +193,7 @@ class LibreHardwareMonitorWidget(BaseWidget):
 
     def _make_request(self):
         """Makes a post request to LibreHardwareMonitor"""
-        url = QUrl(f"http://{self._server_host}:{self._server_port}/Sensor?action=Get&id={self._sensor_id}")
-        request = QNetworkRequest(url)
-        request.setHeader(QNetworkRequest.KnownHeaders.ContentTypeHeader, "application/x-www-form-urlencoded")
-        self._network_manager.post(request, b"")
+        self._network_manager.post(self.request, b"")
 
     def _handle_network_response(self, reply: QNetworkReply):
         """
@@ -195,18 +206,21 @@ class LibreHardwareMonitorWidget(BaseWidget):
             if self._data.get("result") == "ok":
                 self._data["status"] = "Connected..."
             else:
-                self._data["status"] = "Invalid sensor id..."
+                self._data["status"] = self._sensor_id_error_label
+                self._data["histogram"] = self._sensor_id_error_label
         elif reply.error() == QNetworkReply.NetworkError.AuthenticationRequiredError:
             self._data = {
-                "status": "Authentication Failed...",
+                "status": self._auth_error_label,
                 "result": "fail",
-                "value": 0.0,
+                "value": "",
+                "histogram": self._auth_error_label,
             }
         else:
             self._data = {
-                "status": "Connection Error...",
+                "status": self._connection_error_label,
                 "result": "fail",
-                "value": 0.0,
+                "value": "",
+                "histogram": self._auth_error_label,
             }
         reply.deleteLater()
 
