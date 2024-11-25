@@ -14,7 +14,7 @@ class KomorebiClient:
     def __init__(
             self,
             komorebic_path: str = "komorebic.exe",
-            timeout_secs: float = 0.5
+            timeout_secs: float = 1.0
     ):
         super().__init__()
         self._timeout_secs = timeout_secs

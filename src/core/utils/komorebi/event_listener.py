@@ -123,7 +123,7 @@ class KomorebiEventListener(QThread):
                 "Failed to retrieve komorebi state before starting event listener: None returned. "
                 "Retrying in 1 second... Is komorebi online and its binaries added to $PATH?"
             )
-            time.sleep(1)
+            time.sleep(2)
             state = self._komorebic.query_state()
 
         self.event_service.emit_event(KomorebiEvent.KomorebiConnect, state)
