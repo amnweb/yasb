@@ -1,12 +1,35 @@
 import re
 import subprocess
 import json
+import threading
 from core.widgets.base import BaseWidget
 from core.validation.widgets.yasb.custom import VALIDATION_SCHEMA
 from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, pyqtSignal, QObject
 from core.utils.win32.system_function import function_map
 
+class CustomWorker(QObject):
+    finished = pyqtSignal()
+    data_ready = pyqtSignal(object)
+
+    def __init__(self, cmd, return_type, hide_empty):
+        super().__init__()
+        self.cmd = cmd
+        self.return_type = return_type
+        self.hide_empty = hide_empty
+
+    def run(self):
+        exec_data = None
+        if self.cmd:
+            proc = subprocess.Popen(self.cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,creationflags=subprocess.CREATE_NO_WINDOW,  shell=True)
+            output = proc.stdout.read()
+            if self.return_type == "json":
+                exec_data = json.loads(output)
+            else:
+                exec_data = output.decode('utf-8').strip()
+        self.data_ready.emit(exec_data)
+        self.finished.emit()
+        
 class CustomWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
 
@@ -28,7 +51,7 @@ class CustomWidget(BaseWidget):
         self._show_alt_label = False
         self._label_content = label
         self._label_alt_content = label_alt
- 
+        
         # Construct container
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
@@ -81,6 +104,7 @@ class CustomWidget(BaseWidget):
                 else:
                     label = QLabel(part)
                     label.setProperty("class", "label")
+                    label.setText("Loading...")
                 label.setAlignment(Qt.AlignmentFlag.AlignCenter)
                 self._widget_container_layout.addWidget(label)
                 widgets.append(label)
@@ -88,6 +112,7 @@ class CustomWidget(BaseWidget):
                     label.hide()
                 else:
                     label.show()
+                    
             return widgets
         self._widgets = process_content(content)
         self._widgets_alt = process_content(content_alt, is_alt=True)
@@ -108,7 +133,6 @@ class CustomWidget(BaseWidget):
                 part = part.strip()
                 if part and widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
                     if '<span' in part and '</span>' in part:
-                        # Ensure the icon is correctly set
                         icon = re.sub(r'<span.*?>|</span>', '', part).strip()
                         active_widgets[widget_index].setText(icon)
                     else:
@@ -121,21 +145,21 @@ class CustomWidget(BaseWidget):
                     widget_index += 1
         except Exception:
             active_widgets[widget_index].setText(self._truncate_label(part))
+
         
-
     def _exec_callback(self):
-        self._exec_data = None
-
         if self._exec_cmd:
-            proc = subprocess.Popen(self._exec_cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True)
-            output = proc.stdout.read()
-            if self._exec_return_type == "json":
-                self._exec_data = json.loads(output)
-            else:
-                self._exec_data = output.decode('utf-8').strip()
+            worker = CustomWorker(self._exec_cmd, self._exec_return_type, self._hide_empty)
+            worker_thread = threading.Thread(target=worker.run)
+            worker.data_ready.connect(self._handle_exec_data)
+            worker.finished.connect(worker.deleteLater)
+            worker_thread.start()
+           
 
-            self._update_label()
-
+    def _handle_exec_data(self, exec_data):
+        self._exec_data = exec_data
+        self._update_label()
+        
     def _cb_execute_subprocess(self, cmd: str, *cmd_args: list[str]):
         # Overrides the default 'exec' callback from BaseWidget to allow for data formatting
         if self._exec_data:
