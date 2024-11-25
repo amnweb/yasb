@@ -17,4 +17,4 @@ pillow
 qasync
 requests
 obs-websocket-py
-pip install git+https://github.com/amnweb/pyvda.git
+git+https://github.com/amnweb/pyvda.git
