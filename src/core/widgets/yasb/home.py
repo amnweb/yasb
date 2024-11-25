@@ -1,9 +1,7 @@
-"""
-This widget need to check, there is some bug with click event, sometimes need to click twice to trigger the event.
-"""
 import logging
 import os
 import re
+import subprocess
 from core.widgets.base import BaseWidget
 from core.validation.widgets.yasb.home import VALIDATION_SCHEMA
 from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget, QMenu, QWidgetAction
@@ -12,7 +10,7 @@ from core.utils.win32.blurWindow import Blur
 from core.utils.utilities import is_windows_10
 import os
 from core.utils.widgets.power import PowerOperations
-       
+
 class HomeWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
     def __init__(
@@ -102,15 +100,18 @@ class HomeWidget(BaseWidget):
         self._menu = QMenu(self)
         self._update_menu_style()
         self._setup_menu()
+        self._menu.aboutToHide.connect(self._on_menu_about_to_hide)
+        self._menu.triggered.connect(self.on_menu_triggered)
         
     def _update_menu_style(self):
         self._menu.setProperty('class', 'home-menu')
+        
         self._menu.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         if self._blur:
             Blur(
                 self._menu.winId(),
                 Acrylic=True if is_windows_10() else False,
-                DarkMode=True,
+                DarkMode=False,
                 RoundCorners=True,
                 BorderColor="System"
             )
@@ -120,7 +121,7 @@ class HomeWidget(BaseWidget):
             self.add_menu_action(
                 self._menu,
                 "About this PC",
-                lambda: os.system("winver")
+                lambda: subprocess.Popen("winver", shell=True, creationflags=subprocess.CREATE_NO_WINDOW)
             )
             self._menu.addSeparator()
             self.add_menu_action(
@@ -131,7 +132,7 @@ class HomeWidget(BaseWidget):
             self.add_menu_action(
                 self._menu,
                 "Task Manager",
-                lambda: os.system("taskmgr")
+                lambda: subprocess.Popen("taskmgr", shell=True, creationflags=subprocess.CREATE_NO_WINDOW)
             )
             self._menu.addSeparator()
        
@@ -179,19 +180,23 @@ class HomeWidget(BaseWidget):
                 "Logout",
                 lambda: self.power_operations.signout()
             )
-        self._menu.triggered.connect(self.on_menu_triggered)
-         
-    def on_menu_triggered(self):
-        self._menu.hide()
-        self.is_menu_visible = False
         
+    def on_menu_triggered(self):
+        self._reset_menu_visibility()
+        
+    def _on_menu_about_to_hide(self):
+        QTimer.singleShot(100, self._reset_menu_visibility)      
+          
     def _toggle_menu(self):
         if self.is_menu_visible:
-            self._menu.hide()
-            self.is_menu_visible = False
-            return        
+            self._reset_menu_visibility()
+            return
         global_position = self.mapToGlobal(QPoint(0, self.height() + 6))
         self._menu.move(global_position)
         self._update_menu_style()
-        self._menu.show()
-        self.is_menu_visible = True 
+        QTimer.singleShot(0, self._menu.show)
+        self.is_menu_visible = True
+
+    def _reset_menu_visibility(self):
+        self.is_menu_visible = False
+        self._menu.hide()
