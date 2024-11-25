@@ -20,6 +20,9 @@ DEFAULTS = {
     'history_size': 60,
     'histogram_fixed_min': None,
     'histogram_fixed_max': None,
+    'sensor_id_error_label': "N/A",
+    'connection_error_label': "Connection error...",
+    'auth_error_label': "Auth Failed...",
     'server_host': 'localhost',
     'server_port': 8085,
     'server_username': '',
@@ -99,6 +102,21 @@ VALIDATION_SCHEMA = {
         'max': 10000.0,
         'required': False,
         'nullable': True
+    },
+    'sensor_id_error_label': {
+        'type': 'string',
+        'default': DEFAULTS['sensor_id_error_label'],
+        'required': False,
+    },
+    'connection_error_label': {
+        'type': 'string',
+        'default': DEFAULTS['connection_error_label'],
+        'required': False,
+    },
+    'auth_error_label': {
+        'type': 'string',
+        'default': DEFAULTS['auth_error_label'],
+        'required': False,
     },
     'server_host': {
         'type': 'string',
