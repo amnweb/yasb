@@ -40,13 +40,13 @@ update_check:
   options:
     windows_update:
       enabled: True
-      label: '<span>\uf0ab</span> {count}'
-      interval: 60
+      label: "<span>\uf0ab</span> {count}"
+      interval: 240
       exclude: []
     winget_update:
       enabled: True
-      label: '<span>\uf0ab</span> {count}'
-      interval: 30
+      label: "<span>\uf0ab</span> {count}"
+      interval: 60
       exclude: []
 ```
 
