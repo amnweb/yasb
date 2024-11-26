@@ -154,6 +154,8 @@ class CustomWidget(BaseWidget):
             worker.data_ready.connect(self._handle_exec_data)
             worker.finished.connect(worker.deleteLater)
             worker_thread.start()
+        else:
+            self._update_label()
            
 
     def _handle_exec_data(self, exec_data):
