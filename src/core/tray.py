@@ -73,12 +73,12 @@ class TrayIcon(QSystemTrayIcon):
             border:1px solid #373b3e;
             padding:5px 0;
             margin:0;
-            border-radius:6px
+            border-radius:4px
         }
         QMenu::item {
             margin:0 4px;
-            padding: 4px 12px 5px 12px;
-            border-radius:4px;
+            padding: 4px 16px 5px 16px;
+            border-radius: 6px;
             font-size: 11px;
             font-weight: 600;
             font-family: 'Segoe UI', sans-serif;
@@ -208,8 +208,11 @@ class TrayIcon(QSystemTrayIcon):
 
     def _exit_application(self):
         logging.info("Exiting Application from tray...")
-        QCoreApplication.exit(0)
-
+        try:
+            QCoreApplication.exit(0)
+        except:
+            os._exit(0)
+            
     def _open_docs_in_browser(self):
         webbrowser.open(self._docs_url)
 
