@@ -266,7 +266,6 @@ class UpdateCheckWidget(BaseWidget):
             self._windows_container, self._widget_windows = process_content(self._windows_update_label, "windows")
 
     def _update_label(self, widget_type, data, names):
-        print(names)
         if widget_type == 'winget':
             active_widgets = self._widget_widget
             active_label_content = self._winget_update_label
