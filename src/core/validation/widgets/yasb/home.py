@@ -4,6 +4,8 @@ DEFAULTS = {
     'power_menu': True,
     'system_menu': True,
     'blur': False,
+    'alignment': 'left',
+    'menu_labels': {'shutdown': 'Shutdown', 'restart': 'Restart', 'logout': 'Logout', 'lock': 'Lock', 'sleep': 'Sleep', 'system': 'System Settings', 'about': 'About This PC', 'task_manager': 'Task Manager'},
     'callbacks': {
         'on_left': 'toggle_menu'
     }
@@ -45,6 +47,26 @@ VALIDATION_SCHEMA = {
         'default': DEFAULTS['blur'],
         'required': False
     },
+    'alignment': {
+        'type': 'string',
+        'default': DEFAULTS['alignment'],
+        'required': False
+    },
+    'menu_labels': {
+        'type': 'dict',
+        'required': False,
+        'schema': {
+            'shutdown': {'type': 'string', 'default': DEFAULTS['menu_labels']['shutdown']},
+            'restart': {'type': 'string', 'default': DEFAULTS['menu_labels']['restart']},
+            'logout': {'type': 'string', 'default': DEFAULTS['menu_labels']['logout']},
+            'lock': {'type': 'string', 'default': DEFAULTS['menu_labels']['lock']},
+            'sleep': {'type': 'string', 'default': DEFAULTS['menu_labels']['sleep']},
+            'system': {'type': 'string', 'default': DEFAULTS['menu_labels']['system']},
+            'about': {'type': 'string', 'default': DEFAULTS['menu_labels']['about']},
+            'task_manager': {'type': 'string', 'default': DEFAULTS['menu_labels']['task_manager']}
+        },
+        'default': DEFAULTS['menu_labels']
+    },
     'callbacks': {
         'required': False,
         'type': 'dict',
@@ -55,5 +77,5 @@ VALIDATION_SCHEMA = {
             }
         },
         'default': DEFAULTS['callbacks']
-    }   
+    }
 }

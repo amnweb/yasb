@@ -19,6 +19,8 @@ class HomeWidget(BaseWidget):
             power_menu: bool,
             system_menu: bool,
             blur: bool,
+            alignment: str,
+            menu_labels: dict[str, str],
             callbacks: dict[str, str],
             menu_list: list[str, dict[str]] = None
         ):
@@ -30,6 +32,8 @@ class HomeWidget(BaseWidget):
         self._power_menu = power_menu
         self._system_menu = system_menu
         self._blur = blur
+        self._alignment = alignment
+        self._menu_labels = menu_labels
         # Construct container
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
@@ -120,18 +124,18 @@ class HomeWidget(BaseWidget):
         if self._system_menu:
             self.add_menu_action(
                 self._menu,
-                "About this PC",
+                self._menu_labels['about'],
                 lambda: subprocess.Popen("winver", shell=True, creationflags=subprocess.CREATE_NO_WINDOW)
             )
             self._menu.addSeparator()
             self.add_menu_action(
                 self._menu,
-                "System Settings",
+                self._menu_labels['system'],
                 lambda: os.startfile("ms-settings:")
             )
             self.add_menu_action(
                 self._menu,
-                "Task Manager",
+                self._menu_labels['task_manager'],
                 lambda: subprocess.Popen("taskmgr", shell=True, creationflags=subprocess.CREATE_NO_WINDOW)
             )
             self._menu.addSeparator()
@@ -156,28 +160,28 @@ class HomeWidget(BaseWidget):
         if self._power_menu:
             self.add_menu_action(
                 self._menu,
-                "Sleep",
+                self._menu_labels['sleep'],
                 lambda: self.power_operations.sleep()
             )
             self.add_menu_action(
                 self._menu,
-                "Restart",
+                self._menu_labels['restart'],
                 lambda: self.power_operations.restart()
             )
             self.add_menu_action(
                 self._menu,
-                "Shut Down",
+                self._menu_labels['shutdown'],
                 lambda: self.power_operations.shutdown()
             )
             self._menu.addSeparator()
             self.add_menu_action(
                 self._menu,
-                "Lock Screen",
+                self._menu_labels['lock'],
                 lambda: self.power_operations.lock()
             )
             self.add_menu_action(
                 self._menu,
-                "Logout",
+                self._menu_labels['logout'],
                 lambda: self.power_operations.signout()
             )
         
@@ -191,7 +195,25 @@ class HomeWidget(BaseWidget):
         if self.is_menu_visible:
             self._reset_menu_visibility()
             return
-        global_position = self.mapToGlobal(QPoint(0, self.height() + 6))
+        
+        self._menu.adjustSize()
+        widget_global_pos = self.mapToGlobal(QPoint(0, self.height() + 6))
+        
+        if self._alignment == 'left':
+            global_position = widget_global_pos
+        elif self._alignment == 'right':
+            global_position = QPoint(
+                widget_global_pos.x() + self.width() - self._menu.width(),
+                widget_global_pos.y()
+            )
+        elif self._alignment == 'center':
+            global_position = QPoint(
+                widget_global_pos.x() + (self.width() - self._menu.width()) // 2,
+                widget_global_pos.y()
+            )
+        else:
+            global_position = widget_global_pos
+
         self._menu.move(global_position)
         self._update_menu_style()
         QTimer.singleShot(0, self._menu.show)
