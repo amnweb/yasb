@@ -15,11 +15,28 @@ class UpdateWorker(QThread):
     windows_update_signal = pyqtSignal(dict)
     winget_update_signal = pyqtSignal(dict)
     
-    def __init__(self, update_type, parent=None):
+    def __init__(self, update_type,exclude_list=None, parent=None):
         super().__init__(parent)
         self.update_type = update_type
         self.running = True
+        self.exclude_list = exclude_list or []
 
+    def filter_updates(self, updates, names):
+        if not self.exclude_list:
+            return len(updates), names
+            
+        valid_excludes = [x.lower() for x in self.exclude_list if x and x.strip()]
+        filtered_names = []
+        filtered_count = 0
+        
+        for name in names:
+            # Only exclude if matches a non-empty pattern
+            if not any(excluded in name.lower() for excluded in valid_excludes):
+                filtered_names.append(name)
+                filtered_count += 1
+                
+        return filtered_count, filtered_names
+    
     def stop(self):
         self.running = False
         self.wait()
@@ -30,9 +47,9 @@ class UpdateWorker(QThread):
                 update_session = win32com.client.Dispatch("Microsoft.Update.Session")
                 update_searcher = update_session.CreateUpdateSearcher()
                 search_result = update_searcher.Search("IsInstalled=0")
-                count = search_result.Updates.Count
                 update_names = [update.Title for update in search_result.Updates]
-                self.windows_update_signal.emit({"count": count, "names": update_names})
+                count, filtered_names = self.filter_updates(search_result.Updates, update_names)
+                self.windows_update_signal.emit({"count": count, "names": filtered_names})
                 
             elif self.update_type == 'winget':
                 result = subprocess.run(
@@ -75,10 +92,10 @@ class UpdateWorker(QThread):
                     f"{software['name']} ({software['id']}): {software['version']} -> {software['available_version']}" 
                     for software in upgrade_list
                 ]
-                
+                count, filtered_names = self.filter_updates(upgrade_list, update_names)
                 self.winget_update_signal.emit({
-                    "count": len(upgrade_list), 
-                    "names": update_names
+                    "count": count, 
+                    "names": filtered_names
                 })
                 
         except Exception as e:
@@ -128,7 +145,7 @@ class UpdateCheckWidget(BaseWidget):
 
 
     def start_windows_update_timer(self):
-        self.windows_worker = UpdateWorker('windows')
+        self.windows_worker = UpdateWorker('windows', self._windows_update_exclude)
         self.windows_worker.windows_update_signal.connect(
             lambda x: self.emit_event('windows_update', x)
         )
@@ -136,7 +153,7 @@ class UpdateCheckWidget(BaseWidget):
 
 
     def start_winget_update_timer(self):
-        self.winget_worker = UpdateWorker('winget')
+        self.winget_worker = UpdateWorker('winget', self._winget_update_exclude)
         self.winget_worker.winget_update_signal.connect(
             lambda x: self.emit_event('winget_update', x)
         )
@@ -195,6 +212,7 @@ class UpdateCheckWidget(BaseWidget):
 
 
     def _update_label(self, widget_type, data, names):
+        print(names)
         if widget_type == 'winget':
             active_widgets = self._widget_widget
             active_label_content = self._winget_update_label
@@ -278,81 +296,6 @@ class UpdateCheckWidget(BaseWidget):
             self.hide()
         else:
             self.show()
-
-    # def get_windows_update(self):
-    #     try:
-    #         # Create the Windows Update Session
-    #         update_session = win32com.client.Dispatch("Microsoft.Update.Session")
-    #         update_searcher = update_session.CreateUpdateSearcher()
-    #         # Search for updates that are not installed
-    #         search_result = update_searcher.Search("IsInstalled=0")
-    #         # Check if there are any updates available
-    #         if (count := search_result.Updates.Count) > 0:
-    #             update_names = [update.Title for update in search_result.Updates if update.Title not in self._windows_update_exclude]
-    #             return {"count": count, "names": update_names}
-    #         return {"count": 0, "names": []}
-    #     except win32com.client.pywintypes.com_error:
-    #         logging.error("No internet connection. Unable to check for Windows updates.")
-    #         return {"count": 0, "names": []}
-    #     except Exception as e:
-    #         logging.error(f"Error running windows update: {e}")
-    #         return {"count": 0, "names": []}
-
-    # def get_winget_update(self):
-    #     try:
-    #         result = subprocess.run(
-    #             ['winget', 'upgrade'],
-    #             capture_output=True,
-    #             text=True,
-    #             check=True,
-    #             shell=True,
-    #             creationflags=subprocess.CREATE_NO_WINDOW
-    #         )
-    #         # Split the output into lines
-    #         lines = result.stdout.strip().split('\n')
-    #         # Find the line that starts with "Name", it contains the header
-    #         fl = 0
-    #         while not lines[fl].startswith("Name"):
-    #             fl += 1
-    #         # Line fl has the header, we can find char positions for Id, Version, Available, and Source
-    #         id_start = lines[fl].index("Id")
-    #         version_start = lines[fl].index("Version")
-    #         available_start = lines[fl].index("Available")
-    #         source_start = lines[fl].index("Source")
-    #         # Now cycle through the real packages and split accordingly
-    #         upgrade_list = []
-            
-    #         for line in lines[fl + 1:]:
-    #             # Stop processing when reaching the explicit targeting section
-    #             if line.startswith("The following packages have an upgrade available"):
-    #                 break
-    #             if len(line) > (available_start + 1) and not line.startswith('-'):
-    #                 name = line[:id_start].strip()
-    #                 if name in self._winget_update_exclude:
-    #                     continue
-    #                 id = line[id_start:version_start].strip()
-    #                 version = line[version_start:available_start].strip()
-    #                 available = line[available_start:source_start].strip()
-    #                 software = {
-    #                     "name": name,
-    #                     "id": id,
-    #                     "version": version,
-    #                     "available_version": available
-    #                 }
-    #                 upgrade_list.append(software)
-                    
-    #         update_names = [f"{software['name']} ({software['id']}): {software['version']} -> {software['available_version']}" for software in upgrade_list]
-    #         count = len(upgrade_list)
-    #         return {"count": count, "names": update_names}
-    #     except OSError:
-    #         logging.error("No internet connection. Unable to check for winget updates.")
-    #         return {"count": 0, "names": []}
-    #     except subprocess.CalledProcessError as e:
-    #         logging.error(f"Error running winget upgrade: {e}")
-    #         return {"count": 0, "names": []}
-    #     except Exception as e:
-    #         logging.error(f"Unexpected error: {e}")
-    #         return {"count": 0, "names": []}
 
     def stop_updates(self):
         if self.windows_worker:
