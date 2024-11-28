@@ -1,96 +1,89 @@
+# This is default and very simple configuration file for Yasb. 
+# For more information about configuration options, please visit the Wiki https://github.com/amnweb/yasb/wiki
 watch_stylesheet: true
 watch_config: true
-debug: false # Enable debug mode to see more logs
-
-# This komorebi setting will be used for tray context menu.
-# If you don't use komorebi, you can remove this section.
+debug: false
 komorebi:
   start_command: "komorebic start --whkd"
   stop_command: "komorebic stop --whkd"
-  reload_command: "komorebic reload-configuration"
-  
-# This is the main configuration file for Yet Another Status Bar (YASB)
+  reload_command: "komorebic stop --whkd && komorebic start --whkd"
 bars:
-  status-bar:
+  primary-bar:
     enabled: true
-    #screens: ['DELL P2419H (1)'] # If you want to show on specific screen
-    screens: ['*'] 
+    screens: ["*"]
     class_name: "yasb-bar"
     alignment:
       position: "top"
       center: false
     blur_effect:
-      enabled: false # Blur effect will be applied to the bar
-      acrylic: false # Acrylic effect will be applied to the bar
-      dark_mode: false # Dark mode will add more shadow to the bar
-      round_corners: false # Default radius from OS
-      border_color: System # None, System or HEX color (this option is related to round_corners=true)
+      enabled: false
+      acrylic: false
+      dark_mode: false
+      round_corners: false
+      border_color: System
     window_flags:
       always_on_top: false
       windows_app_bar: true
     dimensions:
       width: "100%"
-      height: 36
+      height: 32
     padding:
       top: 4
-      left: 0
-      bottom: 4
-      right: 0
+      left: 6
+      bottom: 0
+      right: 6
     widgets:
-      left:
-        [
-          "win_button",
-          "komorebi_workspaces",
-          "komorebi_active_layout",
-          "active_window"
-        ] 
+      left: [
+        "home",
+        "komorebi_workspaces",
+        "komorebi_active_layout",
+        "active_window",
+      ]
       center: [
-         "clock",
-         "apps"
-        ]
-      right:
-        [
-          "media",
-          "wifi",
-          "cpu",
-          "weather",
-          "memory",
-          "volume",
-          "power_menu"
+        "clock",
+        "apps"
+      ]
+      right: [
+        "media",
+        "taskbar",
+        "weather",
+        "microphone",
+        "volume",
+        "power_menu"
         ]
 widgets:
-  disk:
-    type: "yasb.disk.DiskWidget"
+  home:
+    type: "yasb.home.HomeWidget"
     options:
-        label: "{volume_label} {space[used][percent]}"
-        label_alt: "{volume_label} {space[used][gb]} / {space[total][gb]}"
-        volume_label: "C"
-        update_interval: 60 # Update interval in seconds
-        callbacks:
-          on_middle: "do_nothing"
-          on_right: "exec explorer C:\\" # Open disk C in file explorer
-
+      label: "<span>\udb81\udf17</span>"
+      menu_list:
+      - { title: "User Home", path: "~" }
+      - { title: "Download", path: "~\\Downloads" }
+      - { title: "Documents", path: "~\\Documents" }
+      - { title: "Pictures", path: "~\\Pictures" }
+      system_menu: true
+      power_menu: true
+      blur: false
   media:
     type: "yasb.media.MediaWidget"
     options:
-      label: "{title} - {artist}"
-      label_alt: "{title}"
+      label: "{title}"
+      label_alt: "{artist}"
       max_field_size:
-        label: 20
-        label_alt: 30
+        label: 64
+        label_alt: 24
       show_thumbnail: true
       controls_only: false
       controls_left: true
       hide_empty: true
-      thumbnail_alpha: 80
+      thumbnail_alpha: 150
       thumbnail_padding: 8
-      thumbnail_corner_radius: 16 # Set to 0 for square corners
+      thumbnail_corner_radius: 0
       icons:
-        prev_track: "\udb81\udcae"
-        next_track: "\udb81\udcad"
-        play: "\udb81\udc0d"
-        pause: "\udb80\udfe6"
-
+        prev_track: "\ue892"
+        next_track: "\ue893"
+        play: "\ue768"
+        pause: "\ue769"
   active_window:
     type: "yasb.active_window.ActiveWindowWidget"
     options:
@@ -98,90 +91,49 @@ widgets:
       label_alt: "[class_name='{win[class_name]}' exe='{win[process][name]}' hwnd={win[hwnd]}]"
       label_no_window: ""
       label_icon: true
-      label_icon_size: 16
+      label_icon_size: 14
       max_length: 56
       max_length_ellipsis: "..."
-      monitor_exclusive: true
-
-  battery:
-    type: "yasb.battery.BatteryWidget"
-    options:
-      label: "<span>{icon}</span>{percent}%"
-      label_alt: "{icon} {percent}% | time: {time_remaining}"
-      charging_options:
-        icon_format: "{charging_icon}"
-
+      monitor_exclusive: false
   clock:
     type: "yasb.clock.ClockWidget"
     options:
-      label: "{%a %d, %b %H:%M}"
-      label_alt: "{%A %d %B %Y, %H:%M}"
-      #locale: 'en_EN' # Langugae for date, you can set your own, example fr_FR
-      timezones: [] #Looking up time zone info from registry
-      #timezones: ["America/Montreal"]
-
-  cpu:
-    type: "yasb.cpu.CpuWidget"
-    options:
-      label: "<span>\uf4bc</span> {info[percent][total]}%"
-      label_alt: "<span>\uf437</span> {info[histograms][cpu_percent]}"
-      update_interval: 2000
-      histogram_icons:
-        - '\u2581' # 0%
-        - '\u2581' # 10%
-        - '\u2582' # 20%
-        - '\u2583' # 30%
-        - '\u2584' # 40%
-        - '\u2585' # 50%
-        - '\u2586' # 60%
-        - '\u2587' # 70%
-        - '\u2588' # 80%+
-      histogram_num_columns: 8
-      callbacks:
-        on_right: "exec cmd /c Taskmgr"
-
-  memory:
-    type: "yasb.memory.MemoryWidget"
-    options:
-      label: "<span>\uf4bc</span> {virtual_mem_free}"
-      label_alt: "<span>\uf4bc</span> {virtual_mem_percent}%"
-      update_interval: 10000
-      callbacks:
-        on_right: "exec cmd /c Taskmgr"
-
-  language:
-    type: "yasb.language.LanguageWidget"
-    options:
-      label: "<span>\uf1ab</span> {lang[language_code]}-{lang[country_code]}"
-      label_alt: " {lang[full_name]}"
-      update_interval: 5 # 5 seconds
-      callbacks:
-        on_left: "toggle_label"
-
+      label: "{%a, %d %b %H:%M}"
+      label_alt: "{%A, %d %B %Y %H:%M}"
+      timezones: []
   komorebi_workspaces:
     type: "komorebi.workspaces.WorkspaceWidget"
     options:
-        label_offline: "Komorebi Offline"
-        label_workspace_btn: "\udb81\udc3d"
-        label_workspace_active_btn: "\udb81\udc3e"
-        label_workspace_populated_btn: "\udb81\udc3d"
-        label_default_name: "{index}"
-        label_zero_index: false
-        hide_empty_workspaces: false
-        hide_if_offline: false
-        animation: false
-        container_padding:
-          top: 0
-          left: 8
-          bottom: 0
-          right: 8
-
+      label_offline: "\u23fc Offline"
+      label_workspace_btn: "\udb81\udc3d"
+      label_workspace_active_btn: ""
+      label_workspace_populated_btn: "\udb81\udc3e"
+      label_default_name: "{index}"
+      label_zero_index: false
+      hide_empty_workspaces: false
+      hide_if_offline: true
+      animation: true
+      container_padding:
+        top: 0
+        left: 8
+        bottom: 0
+        right: 8
   komorebi_active_layout:
     type: "komorebi.active_layout.ActiveLayoutWidget"
     options:
       hide_if_offline: true
       label: "{icon}"
-      layouts: ['bsp', 'columns', 'rows', 'grid', 'vertical_stack', 'horizontal_stack', 'ultrawide_vertical_stack','right_main_vertical_stack']
+      layouts:
+        [
+          "bsp",
+          "columns",
+          "rows",
+          "grid",
+          "vertical_stack",
+          "horizontal_stack",
+          "ultrawide_vertical_stack",
+          "right_main_vertical_stack",
+        ]
       layout_icons:
         bsp: "BSP"
         columns: "COLS"
@@ -201,85 +153,56 @@ widgets:
         bottom: 0
         right: 8
       callbacks:
-        on_left: 'next_layout'
-        on_middle: 'toggle_monocle'
-        on_right: 'prev_layout'
-
-  wifi:
-    type: "yasb.wifi.WifiWidget"
-    options:
-      label: "<span>{wifi_icon}</span>"
-      label_alt: "{wifi_name} {wifi_strength}%"
-      update_interval: 5000
-      callbacks:
-        on_left: "exec cmd.exe /c start ms-settings:network"
-        on_middle: "do_nothing"
-        on_right: "toggle_label"
-
-  traffic:
-    type: "yasb.traffic.TrafficWidget"
-    options:
-      label: "<span>\udb86\uddb3</span>{download_speed} | <span>\udb86\uddb2</span>{upload_speed}"
-      label_alt: "Download {download_speed} \ue621 Upload {upload_speed}"
-      update_interval: 1000 # Update interval should be a multiple of 1000
-      callbacks:
-        on_left: "toggle_label"
-        on_right: "exec cmd /c Taskmgr"
-
-  ip_info:
-    type: "yasb.custom.CustomWidget"
-    options:
-      label: "<span>\udb81\udd9f</span> {data[ip]}"
-      label_alt: "<span>\uf450</span> {data[city]} {data[region]}, {data[country]}"
-      class_name: "ip-info-widget"
-      exec_options:
-        run_cmd: "curl.exe https://ipinfo.io"
-        run_interval: 120000  # every 5 minutes
-        return_format: "json"
-      callbacks:
-        on_left: "toggle_label"
-        on_middle: "exec cmd /c ncpa.cpl" # open network settings
-        on_right: "exec cmd /c start https://ipinfo.io/{data[ip]} " # open ipinfo in browser
-
+        on_left: "next_layout"
+        on_middle: "toggle_monocle"
+        on_right: "prev_layout"
   weather:
     type: "yasb.weather.WeatherWidget"
     options:
       label: "<span>{icon}</span> {temp_c}"
       label_alt: "{location}: Min {min_temp_c}, Max {max_temp_c}, Humidity {humidity}"
-      api_key: '3bf4cf9a7c3f40d6b31174128242807' # Get your free API key from https://www.weatherapi.com/
-      update_interval: 600 # Update interval in seconds, Min 600 seconds
+      api_key: "3bf4cf9a7c3f40d6b31174128242807"
+      update_interval: 600
       hide_decimal: true
-      location: 'Los Angeles, CA, USA' # You can use "USA Los Angeles 90006" {COUNTRY CITY ZIP_CODE}, or just city.
+      location: "USA Los Angeles 90006"
       callbacks:
         on_left: "toggle_label"
-      icons: 
-        sunnyDay: "\ue30d"
-        clearNight: "\ue32b"
+      icons:
+        sunnyDay: "\udb81\udd99"
+        clearNight: "\udb81\udd99"
         cloudyDay: "\udb81\udd99"
-        cloudyNight: "\ue311"
-        rainyDay: "\udb81\ude7e"
-        rainyNight: "\udb81\ude7e"
-        snowyIcyDay: "\udb81\udd98"
-        snowyIcyNight: "\udb81\udd98"
-        blizzard: "\uebaa"
-        default: "\uebaa"
-        # https://www.weatherapi.com/docs/
-        # Usage {temp_c}, {min_temp_c}, {max_temp_c}, {temp_f}, {min_temp_f}, {max_temp_f}, {location}, {humidity}, {icon}, {conditions}
-
+        cloudyNight: "\udb81\udd99"
+        rainyDay: "\udb81\udd99"
+        rainyNight: "\udb81\udd99"
+        snowyIcyDay: "\udb81\udd99"
+        snowyIcyNight: "\udb81\udd99"
+        blizzard: "\udb81\udd99"
+        default: "\udb81\udd99"
   volume:
     type: "yasb.volume.VolumeWidget"
     options:
       label: "<span>{icon}</span> {level}"
       label_alt: "{volume}"
       volume_icons:
-        - "\ueee8"  # Icon for muted
-        - "\uf026"  # Icon for 0-10% volume
-        - "\uf027"  # Icon for 11-30% volume
-        - "\uf027"  # Icon for 31-60% volume
-        - "\uf028"  # Icon for 61-100% volume
+        - "\ueee8"
+        - "\uf026"
+        - "\uf027"
+        - "\uf027"
+        - "\uf028"
       callbacks:
         on_right: "exec cmd.exe /c start ms-settings:sound"
-
+  microphone:
+    type: "yasb.microphone.MicrophoneWidget"
+    options:
+      label: "<span>{icon}</span> {level}"
+      label_alt: "<span>{icon}</span> {level}%"
+      icons:
+        normal: "\udb80\udf6c"
+        muted: "\udb80\udf6d"
+      callbacks:
+        on_left: "toggle_mute"
+        on_middle: "toggle_label"
+        on_right: "exec cmd.exe /c start ms-settings:sound"
   power_menu:
     type: "yasb.power_menu.PowerMenuWidget"
     options:
@@ -287,64 +210,32 @@ widgets:
       uptime: True
       blur: False
       blur_background: True
-      animation_duration: 300 # Milisecond 
-      button_row: 3 # Number of buttons in row, min 1 max 5
+      animation_duration: 200
+      button_row: 5
       buttons:
-        lock: ["\uea75","Lock"]
-        signout: ["\udb80\udf43","Sign out"]
-        #sleep: ["\u23fe","Sleep"]
-        shutdown: ["\uf011","Shut Down"]
-        restart: ["\uead2","Restart"]
-        hibernate: ["\uf28e","Hibernate"]
-        cancel: ["\udb81\udf3a","Cancel"]
-        #force_shutdown: ["\uf011","Force Shut Down"]
-        #force_restart: ["\uead2","Force Restart"]
- 
-
+        shutdown: ["\uf011", "Shut Down"]
+        restart: ["\uead2", "Restart"]
+        signout: ["\udb80\udf43", "Sign out"]
+        hibernate: ["\uf28e", "Hibernate"]
+        sleep: ["\u23fe", "Sleep"]
+        cancel: ["", "Cancel"]
   apps:
     type: "yasb.applications.ApplicationsWidget"
     options:
-      label: "{data}"
       container_padding:
         top: 0
         left: 8
         bottom: 0
         right: 8
+      label: "{data}"
       app_list:
-        #- {icon: "\udb80\ude39", launch: "C:\\Program Files\\Mozilla Firefox\\firefox.exe"}
-        - {icon: "\uf0a2", launch: "notification_center"}
-        - {icon: "\ueb51", launch: "quick_settings"}
-        #- {icon: "\uf46a", launch: "cmd.exe /c start ms-settings:windowsupdate"}
-        - {icon: "\uf422", launch: "search"}
-        #- {icon: "\udb84\udf55", launch: "widget"}
-        # Currently available to use quick_settings, notification_center, search, widget, launcher (launcher will trigger ALT+A)
-  github:
-    type: "yasb.github.GithubWidget"
-    options:
-      label: "<span>\ueba1</span>"
-      label_alt: "Notifications {data}" # {data} return number of unread notification
-      token: ghp_xxxxxxxxxxx # GitHub Personal access tokens (classic) https://github.com/settings/tokens
-      # You can set token: env, this means you have to set YASB_GITHUB_TOKEN in environment variable
-      max_notification: 20 # Max number of notification displaying in menu max: 50
-      only_unread: false # Show only unread or all notifications; 
-      max_field_size: 54 # Max characters in title before truncation.
-      menu_width: 400 
-      menu_height: 400 
-      menu_offset: 240 
-      update_interval: 300 # Check for new notification in seconds
-
-  wallpapers:
-    type: "yasb.wallpapers.WallpapersWidget"
-    options:
-      label: "<span>\udb83\ude09</span>"
-      image_path: "C:\\Users\\xxx\\Images" # Path to folder with images
-      change_automatically: false # Automatically change wallpaper
-      update_interval: 60 # If change_automatically is true, update interval in seconds
-
+        - { icon: "\uf422", launch: "search" }
+        - { icon: "\ueb03", launch: "cmd /c Taskmgr" }
+        - { icon: "\udb80\ude39",launch: "C:\\Program Files\\Mozilla Firefox\\firefox.exe" }
   taskbar:
     type: "yasb.taskbar.TaskbarWidget"
     options:
-      animation: false
+      animation: true
       icon_size: 16
       ignore_apps:
         processes: []
@@ -355,69 +246,3 @@ widgets:
         left: 0
         bottom: 0
         right: 0
-
-  nvidia_temp:
-    type: "yasb.custom.CustomWidget"
-    options:
-      label: "{data}<span>\udb81\udd04</span>"
-      label_alt: "{data}"
-      class_name: "system-widget"
-      exec_options:
-        run_cmd: "powershell nvidia-smi --query-gpu=temperature.gpu --format=csv,noheader"
-        run_interval: 10000 # run every 10 sec
-        return_format: "string"
-
-  win_button:
-    type: "yasb.custom.CustomWidget"
-    options:
-      label: "\ue62a"
-      label_alt: "\ue62a"
-      class_name: "system-widget"
-      callbacks:
-        on_left: "exec start_menu"
-
-  libre_monitor_widget:
-    type: "yasb.libre_monitor.LibreHardwareMonitorWidget"
-    options:
-      # Available "info" keys: value, unit, min, max, histogram
-      label: "<span>\udb82\udcae </span> {info[value]}{info[unit]}"
-      label_alt: "<span>\uf437 </span>{info[histogram]} {info[value]} ({info[min]}/{info[max]}) {info[unit]}"
-      sensor_id: "/gpu-nvidia/0/temperature/0" # "SensorId" from http://localhost:8085/data.json when the Libre HWM server is running.
-      update_interval: 1000 # Update interval in milliseconds. Limited by the Libre HWM update interval.
-      precision: 0
-      histogram_num_columns: 10
-
-      # Optional. Custom widget class name to customize multiple widgets. Default is libre-monitor-widget.
-      class_name: "libre-monitor-widget"
-
-      # Optional. A history of min and max values.
-      # history_size: 50
-
-      # Optional. Custom histogram icons. Must have exactly 9 icons.
-      # histogram_icons:
-      #  - '\u2581'
-      #  - '\u2581'
-      #  - '\u2582'
-      #  - '\u2583'
-      #  - '\u2584'
-      #  - '\u2585'
-      #  - '\u2586'
-      #  - '\u2587'
-      #  - '\u2588'
-
-      # Optional. Fixed min/max value range for the histogram. Actual {info[min]} and {info[max]} values are untouched.
-      # histogram_fixed_min: 0.0
-      # histogram_fixed_max: 100.0
-
-      # Optional. Custom Libre HWM server host and port.
-      # server_host: "localhost"
-      # server_port: 8085
-
-      # Optional. If you enable auth in Libre HWM, set username and password and restart the server.
-      # server_username: "admin"
-      # server_password: "password"
-
-      callbacks:
-        on_left: "toggle_label"
-        on_middle: "do_nothing"
-        on_right: "do_nothing"
