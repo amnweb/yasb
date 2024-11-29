@@ -52,6 +52,7 @@ class UpdateWorker(QThread):
                 result = subprocess.run(
                     ['winget', 'upgrade'],
                     capture_output=True,
+                    encoding='utf-8',
                     text=True,
                     check=True,
                     shell=True,
