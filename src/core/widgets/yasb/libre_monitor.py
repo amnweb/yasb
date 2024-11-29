@@ -8,6 +8,7 @@ from PyQt6.QtNetwork import QAuthenticator, QNetworkAccessManager, QNetworkReque
 
 from core.validation.widgets.yasb.libre_monitor import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
+from urllib.parse import quote
 
 
 class LibreHardwareMonitorWidget(BaseWidget):
@@ -79,7 +80,7 @@ class LibreHardwareMonitorWidget(BaseWidget):
         self._network_manager.authenticationRequired.connect(self._handle_authentication)
 
         # Create a request
-        url = QUrl(f"http://{self._server_host}:{self._server_port}/Sensor?action=Get&id={self._sensor_id}")
+        url = QUrl(f"http://{self._server_host}:{self._server_port}/Sensor?action=Get&id={quote(self._sensor_id)}")
         self.request = QNetworkRequest(url)
         self.request.setHeader(
             QNetworkRequest.KnownHeaders.ContentTypeHeader,
