@@ -276,12 +276,14 @@ class TaskbarWidget(BaseWidget):
             logging.warning(f"Invalid window handle: {hwnd}")
             return
 
-        # Check if the window is minimized
         if win32gui.IsIconic(hwnd):
+            # If the window is minimized, restore it
             win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
-        else:
             win32gui.ShowWindow(hwnd, win32con.SW_SHOW)
-        win32gui.SetForegroundWindow(hwnd)
+            win32gui.SetForegroundWindow(hwnd)
+        else:
+            # If the window is not minimized, minimize it
+            win32gui.ShowWindow(hwnd, win32con.SW_MINIMIZE)
         
     def _animate_icon(self, icon_label, start_width=None, end_width=None,fps = 120, duration=240):
         if start_width is None:
