@@ -13,7 +13,7 @@ class PowerOperations:
         if self.main_window:
             self.main_window.hide()
         if self.overlay:
-            self.overlay
+            self.overlay.hide()
             
     def signout(self):
         self.clear_widget()
