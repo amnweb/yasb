@@ -7,6 +7,11 @@ DEFAULTS = {
         'titles': []
     },
     'container_padding': {'top': 0, 'left': 0, 'bottom': 0, 'right': 0},
+    'callbacks': {
+        'on_left': 'toggle_app',
+        'on_middle': 'do_nothing',
+        'on_right': 'do_nothing'
+    }
 }
 
 VALIDATION_SCHEMA = {
@@ -51,4 +56,22 @@ VALIDATION_SCHEMA = {
         'default': DEFAULTS['container_padding'],
         'required': False
     },
+    'callbacks': {
+        'type': 'dict',
+        'schema': {
+            'on_left': {
+                'type': 'string',
+                'default': DEFAULTS['callbacks']['on_left'],
+            },
+            'on_middle': {
+                'type': 'string',
+                'default': DEFAULTS['callbacks']['on_middle'],
+            },
+            'on_right': {
+                'type': 'string',
+                'default': DEFAULTS['callbacks']['on_right']
+            }
+        },
+        'default': DEFAULTS['callbacks']
+    }
 }

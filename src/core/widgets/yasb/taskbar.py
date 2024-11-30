@@ -3,12 +3,13 @@ Note: This is probably not the best way to do this, but debouncing the events is
 Need to find a better way to do this.
 """
 import logging
+import psutil
 from settings import DEBUG
 from core.widgets.base import BaseWidget
 from core.utils.win32.windows import WinEvent
 from core.event_service import EventService
 from PyQt6.QtGui import QPixmap, QImage, QCursor
-from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget, QGraphicsOpacityEffect
+from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget, QGraphicsOpacityEffect, QApplication
 from PyQt6.QtCore import Qt, pyqtSignal, QTimer
 from core.validation.widgets.yasb.taskbar import VALIDATION_SCHEMA
 from core.utils.win32.utilities import get_hwnd_info
@@ -16,6 +17,7 @@ from PIL import Image
 import win32gui
 from core.utils.win32.app_icons import get_window_icon
 import win32con
+import win32process 
 
 try:
     from core.utils.win32.event_listener import SystemEventListener
@@ -23,16 +25,7 @@ except ImportError:
     SystemEventListener = None
     logging.warning("Failed to load Win32 System Event Listener")
     
-class ClickableLabel(QLabel):
-    clicked = pyqtSignal()
-    def __init__(self, parent=None):
-        super().__init__(parent)
-
-    def mouseReleaseEvent(self, event):
-        if event.button() == Qt.MouseButton.LeftButton:
-            self.clicked.emit()
-        super().mouseReleaseEvent(event)
-        
+ 
 class TaskbarWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
     update_event = pyqtSignal(int, WinEvent)
@@ -43,7 +36,8 @@ class TaskbarWidget(BaseWidget):
             icon_size: int,
             animation: bool,
             ignore_apps: dict[str, list[str]],
-            container_padding: dict
+            container_padding: dict,
+            callbacks: dict[str, str]
     ):
         super().__init__(class_name="taskbar-widget")
 
@@ -77,6 +71,13 @@ class TaskbarWidget(BaseWidget):
         self._event_service.register_event(WinEvent.EventObjectFocus, self.update_event)
         self._event_service.register_event(WinEvent.EventObjectDestroy, self.update_event)
 
+        self.register_callback("toggle_app", self._on_toggle_app)
+        self.register_callback("kill_app", self._on_kill_app)
+ 
+        self.callback_left = callbacks["on_left"]
+        self.callback_right = callbacks["on_right"]
+        self.callback_middle = callbacks["on_middle"]
+        
         # Debounce timers
         self._debounce_timer_focus = QTimer()
         self._debounce_timer_focus.setSingleShot(True)
@@ -155,14 +156,13 @@ class TaskbarWidget(BaseWidget):
 
         # Add new icons
         for title, icon, hwnd, process in new_icons:
-            icon_label = ClickableLabel()
+            icon_label = QLabel()
             icon_label.setProperty("class", "app-icon")
             if self._animation:
                 icon_label.setFixedWidth(0)
             icon_label.setPixmap(icon)
             icon_label.setToolTip(title)
             icon_label.setProperty("hwnd", hwnd)
-            icon_label.clicked.connect(lambda hwnd=hwnd: self.bring_to_foreground(hwnd))
             icon_label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
             self._widget_container_layout.addWidget(icon_label)
 
@@ -205,7 +205,6 @@ class TaskbarWidget(BaseWidget):
             if DEBUG:
                 logging.exception(f"Failed to get icons for window with HWND {hwnd} emitted by event {event}")
             
-            
     def get_visible_windows(self, hwnd: int, win_info: dict, event: WinEvent) -> None:
         process = win_info['process']
         def is_window_visible_on_taskbar(hwnd):
@@ -225,8 +224,53 @@ class TaskbarWidget(BaseWidget):
             return True
         win32gui.EnumWindows(enum_windows_proc, None)
         return visible_windows
-    
-    
+          
+    def _perform_action_on_app(self, action: str) -> None:
+        widget = QApplication.instance().widgetAt(QCursor.pos())
+        if not widget:
+            logging.warning("No widget found under cursor.")
+            return
+
+        hwnd = widget.property("hwnd")
+        if not hwnd:
+            logging.warning("No hwnd found for widget.")
+            return
+
+        if action == "toggle":
+            self.bring_to_foreground(hwnd)
+        elif action == "kill":
+            self.kill_app(hwnd)
+        else:
+            logging.warning(f"Unknown action '{action}'.")
+         
+    def _on_toggle_app(self) -> None:
+        self._perform_action_on_app("toggle")
+
+    def _on_kill_app(self) -> None:
+        self._perform_action_on_app("kill")
+
+    def kill_app(self, hwnd) -> None:
+        if hwnd == 0:
+            logging.warning("No foreground window detected.")
+            return
+        _, pid = win32process.GetWindowThreadProcessId(hwnd)
+        try:
+            process = psutil.Process(pid)
+            process_name = process.name()
+            process.terminate()
+            try:
+                process.wait(timeout=3)
+                logging.info(f"Terminated process {process_name} with PID {pid}")
+            except psutil.TimeoutExpired:
+                process.kill()
+                process.wait(timeout=2)
+                logging.info(f"Force killed process {process_name} with PID {pid}")
+            
+        except psutil.NoSuchProcess:
+            logging.info(f"Process with PID {pid} was terminated successfully")
+        except psutil.AccessDenied:
+            logging.error(f"Access denied when trying to terminate PID {pid}")       
+                    
     def bring_to_foreground(self, hwnd):
         if not win32gui.IsWindow(hwnd):
             logging.warning(f"Invalid window handle: {hwnd}")
@@ -238,7 +282,6 @@ class TaskbarWidget(BaseWidget):
         else:
             win32gui.ShowWindow(hwnd, win32con.SW_SHOW)
         win32gui.SetForegroundWindow(hwnd)
-        
         
     def _animate_icon(self, icon_label, start_width=None, end_width=None,fps = 120, duration=240):
         if start_width is None:
