@@ -3,7 +3,6 @@ Note: This is probably not the best way to do this, but debouncing the events is
 Need to find a better way to do this.
 """
 import logging
-import psutil
 from settings import DEBUG
 from core.widgets.base import BaseWidget
 from core.utils.win32.windows import WinEvent
@@ -17,7 +16,6 @@ from PIL import Image
 import win32gui
 from core.utils.win32.app_icons import get_window_icon
 import win32con
-import win32process 
 
 try:
     from core.utils.win32.event_listener import SystemEventListener
@@ -71,8 +69,7 @@ class TaskbarWidget(BaseWidget):
         self._event_service.register_event(WinEvent.EventObjectFocus, self.update_event)
         self._event_service.register_event(WinEvent.EventObjectDestroy, self.update_event)
 
-        self.register_callback("toggle_app", self._on_toggle_app)
-        self.register_callback("kill_app", self._on_kill_app)
+        self.register_callback("toggle_window", self._on_toggle_window)
  
         self.callback_left = callbacks["on_left"]
         self.callback_right = callbacks["on_right"]
@@ -213,7 +210,7 @@ class TaskbarWidget(BaseWidget):
                 if not (ex_style & win32con.WS_EX_TOOLWINDOW):
                     return True
             return False
-
+        
         visible_windows = []
         
         def enum_windows_proc(hwnd, lParam):
@@ -225,12 +222,12 @@ class TaskbarWidget(BaseWidget):
         win32gui.EnumWindows(enum_windows_proc, None)
         return visible_windows
           
-    def _perform_action_on_app(self, action: str) -> None:
+    def _perform_action(self, action: str) -> None:
         widget = QApplication.instance().widgetAt(QCursor.pos())
         if not widget:
             logging.warning("No widget found under cursor.")
             return
-
+        
         hwnd = widget.property("hwnd")
         if not hwnd:
             logging.warning("No hwnd found for widget.")
@@ -238,52 +235,27 @@ class TaskbarWidget(BaseWidget):
 
         if action == "toggle":
             self.bring_to_foreground(hwnd)
-        elif action == "kill":
-            self.kill_app(hwnd)
         else:
             logging.warning(f"Unknown action '{action}'.")
          
-    def _on_toggle_app(self) -> None:
-        self._perform_action_on_app("toggle")
-
-    def _on_kill_app(self) -> None:
-        self._perform_action_on_app("kill")
-
-    def kill_app(self, hwnd) -> None:
-        if hwnd == 0:
-            logging.warning("No foreground window detected.")
-            return
-        _, pid = win32process.GetWindowThreadProcessId(hwnd)
-        try:
-            process = psutil.Process(pid)
-            process_name = process.name()
-            process.terminate()
-            try:
-                process.wait(timeout=3)
-                logging.info(f"Terminated process {process_name} with PID {pid}")
-            except psutil.TimeoutExpired:
-                process.kill()
-                process.wait(timeout=2)
-                logging.info(f"Force killed process {process_name} with PID {pid}")
-            
-        except psutil.NoSuchProcess:
-            logging.info(f"Process with PID {pid} was terminated successfully")
-        except psutil.AccessDenied:
-            logging.error(f"Access denied when trying to terminate PID {pid}")       
-                    
+    def _on_toggle_window(self) -> None:
+        self._perform_action("toggle")
+    
     def bring_to_foreground(self, hwnd):
         if not win32gui.IsWindow(hwnd):
-            logging.warning(f"Invalid window handle: {hwnd}")
             return
-
         if win32gui.IsIconic(hwnd):
             # If the window is minimized, restore it
             win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
-            win32gui.ShowWindow(hwnd, win32con.SW_SHOW)
             win32gui.SetForegroundWindow(hwnd)
         else:
-            # If the window is not minimized, minimize it
-            win32gui.ShowWindow(hwnd, win32con.SW_MINIMIZE)
+            # Check if the window is already in the foreground
+            foreground_hwnd = win32gui.GetForegroundWindow()
+            if hwnd != foreground_hwnd:
+                # Bring the window to the foreground
+                win32gui.SetForegroundWindow(hwnd)
+            else:
+                win32gui.ShowWindow(hwnd, win32con.SW_MINIMIZE)
         
     def _animate_icon(self, icon_label, start_width=None, end_width=None,fps = 120, duration=240):
         if start_width is None:
