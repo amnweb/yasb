@@ -2,10 +2,8 @@ import re
 from core.widgets.base import BaseWidget
 from core.validation.widgets.yasb.language import VALIDATION_SCHEMA
 from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget
-from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtCore import Qt
 import ctypes
-import ctypes
-from ctypes import wintypes
 
 # Constants
 LOCALE_NAME_MAX_LENGTH = 85
@@ -13,14 +11,14 @@ LOCALE_SISO639LANGNAME = 0x59
 LOCALE_SISO3166CTRYNAME = 0x5A
 LOCALE_SLANGUAGE = 0x2
 LOCALE_SCOUNTRY = 0x6
-
+LOCALE_SNATIVECTRYNAME = 0x07
+LOCALE_SNATIVELANGNAME = 0x04
 # Define necessary ctypes structures and functions
 user32 = ctypes.WinDLL('user32', use_last_error=True)
 kernel32 = ctypes.WinDLL('kernel32', use_last_error=True)
 
 class LanguageWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
-
     def __init__(
         self,
         label: str,
@@ -68,11 +66,11 @@ class LanguageWidget(BaseWidget):
 
     def _create_dynamically_label(self, content: str, content_alt: str):
         def process_content(content, is_alt=False):
-            label_parts = re.split('(<span.*?>.*?</span>)', content) #Filters out empty parts before entering the loop
+            label_parts = re.split('(<span.*?>.*?</span>)', content)
             label_parts = [part for part in label_parts if part]
             widgets = []
             for part in label_parts:
-                part = part.strip()  # Remove any leading/trailing whitespace
+                part = part.strip()
                 if not part:
                     continue
                 if '<span' in part and '</span>' in part:
@@ -137,6 +135,8 @@ class LanguageWidget(BaseWidget):
         country_name = ctypes.create_unicode_buffer(LOCALE_NAME_MAX_LENGTH)
         full_lang_name = ctypes.create_unicode_buffer(LOCALE_NAME_MAX_LENGTH)
         full_country_name = ctypes.create_unicode_buffer(LOCALE_NAME_MAX_LENGTH)
+        native_country_name = ctypes.create_unicode_buffer(LOCALE_NAME_MAX_LENGTH)
+        native_lang_name = ctypes.create_unicode_buffer(LOCALE_NAME_MAX_LENGTH)
         # Get the ISO language name
         kernel32.GetLocaleInfoW(lang_id, LOCALE_SISO639LANGNAME, lang_name, LOCALE_NAME_MAX_LENGTH)
         # Get the ISO country name
@@ -145,9 +145,17 @@ class LanguageWidget(BaseWidget):
         kernel32.GetLocaleInfoW(lang_id, LOCALE_SLANGUAGE, full_lang_name, LOCALE_NAME_MAX_LENGTH)
         # Get the full country name
         kernel32.GetLocaleInfoW(lang_id, LOCALE_SCOUNTRY, full_country_name, LOCALE_NAME_MAX_LENGTH)
-        
+        # Get the native country name
+        kernel32.GetLocaleInfoW(lang_id, LOCALE_SNATIVECTRYNAME, native_country_name, LOCALE_NAME_MAX_LENGTH)
+      
+        kernel32.GetLocaleInfoW(lang_id, LOCALE_SNATIVELANGNAME, native_lang_name, LOCALE_NAME_MAX_LENGTH)
         language_code = lang_name.value
         country_code = country_name.value
         full_name = f"{full_lang_name.value}"
-        return  {'language_code': language_code, 'country_code': country_code, 'full_name': full_name}
-             
+        return {
+            'language_code': language_code,
+            'country_code': country_code,
+            'full_name': full_name,
+            'native_country_name': native_country_name.value,
+            'native_lang_name': native_lang_name.value
+        }
