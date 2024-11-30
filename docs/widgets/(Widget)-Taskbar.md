@@ -5,7 +5,7 @@
 | `ignore_apps`       | dict    | `processes:[],titles[],classes:[]` | Ignore some apps. |
 | `animation`  | boolean | `false`      | Icons animation.                                           |
 | `container_padding`  | dict | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}`      | Explicitly set padding inside widget container.
-| `callbacks`         | dict    | `{'on_left': 'toggle_app', 'on_middle': 'do_nothing', 'on_right': 'do_nothing'}` | Callbacks for mouse events on the widget.                                   |
+| `callbacks`         | dict    | `{'on_left': 'toggle_window', 'on_middle': 'do_nothing', 'on_right': 'do_nothing'}` | Callbacks for mouse events on the widget.                                   |
 
 ## Example Configuration
 
@@ -35,9 +35,7 @@ taskbar:
 - processes: A list of process names to ignore.
 - titles: A list of window titles to ignore.
 - classes: A list of window classes to ignore.
-- **callbacks:** A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions, which can be `toggle_app` or `kill_app`.
- 
-> Note: The `toggle_app` callback will minimize or restore the app, while the `kill_app` callback will try to close the app if it's possible or it will kill the process.
+- **callbacks:** A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions, which can be `toggle_window`.
 
 ## Style
 ```css
