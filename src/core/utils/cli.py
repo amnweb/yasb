@@ -19,7 +19,7 @@ from colorama import just_fix_windows_console
 just_fix_windows_console()
 
 YASB_VERSION = BUILD_VERSION
-YASB_CLI_VERSION = "1.0.2"
+YASB_CLI_VERSION = "1.0.3"
 
 OS_STARTUP_FOLDER = os.path.join(os.environ['APPDATA'], r'Microsoft\Windows\Start Menu\Programs\Startup')
 INSTALLATION_PATH = os.path.abspath(os.path.join(__file__, "../../.."))
@@ -282,6 +282,22 @@ class CLITaskHandler:
             print(f"Failed to delete task YASB or task does not exist.")
         
 class CLIUpdateHandler():
+
+    def get_installed_product_code():
+        ERROR_NO_MORE_ITEMS = 259
+        MAX_GUID_CHARS = 39
+        msi = ctypes.windll.msi
+        product_code = ctypes.create_unicode_buffer(MAX_GUID_CHARS + 1)
+        index = 0
+        while True:
+            result = msi.MsiEnumRelatedProductsW("{3f620cf5-07b5-47fd-8e37-9ca8ad14b608}", 0, index, product_code)
+            if result == ERROR_NO_MORE_ITEMS:
+                break
+            elif result == 0:
+                return product_code.value
+            index += 1
+        return None
+    
     def update_yasb(YASB_VERSION):
         # Fetch the latest tag from the GitHub API
         api_url = f"https://api.github.com/repos/amnweb/yasb/releases/latest"
@@ -331,11 +347,17 @@ class CLIUpdateHandler():
         # Step 4: Run the MSI installer in silent mode and restart the application
         if is_process_running("yasb.exe"):
             subprocess.run(["taskkill", "/f", "/im", "yasb.exe"], creationflags=subprocess.CREATE_NO_WINDOW)
-        
+            
+        # Construct the uninstall command as a string
+        product_code = CLIUpdateHandler.get_installed_product_code()
+        if product_code is not None:
+            uninstall_command = f'msiexec /x {product_code} /passive'
+        else:
+            uninstall_command = ""
         # Construct the install command as a string
         install_command = f'msiexec /i "{os.path.abspath(msi_path)}" /passive /norestart'
         run_after_command = f'"{EXE_PATH}"'
-        combined_command = f'{install_command} && {run_after_command}'
+        combined_command = f'{uninstall_command} && {install_command} && {run_after_command}'
 
         # Finally run update and restart the application
         subprocess.Popen(combined_command, shell=True)
