@@ -24,7 +24,7 @@ jobs:
             core.setOutput('release-tag', tag);
             console.log("Release tag: ", tag, " Version: ", version);
 
-      - uses: vedantmgoyal9/winget-releaser@main
+      - uses: vedantmgoyal9/winget-releaser@v2
         with:
           identifier: AmN.yasb
           version: ${{ steps.get-version.outputs.version }}
