@@ -16,12 +16,12 @@
 weather:
   type: "yasb.weather.WeatherWidget"
   options:
-    label: '<span>{icon}</span> {temp_c}'
-    label_alt: '{location}: Min {min_temp_c}, Max {max_temp_c}, Humidity {humidity}'
-    api_key: '209841561465465461' # Get your free API key from https://www.weatherapi.com/
+    label: "<span>{icon}</span> {temp_c}"
+    label_alt: "{location}: Min {min_temp_c}, Max {max_temp_c}, Humidity {humidity}"
+    api_key: "209841561465465461" # Get your free API key from https://www.weatherapi.com/
     update_interval: 600 # Update interval in seconds, Min 600 seconds
     hide_decimal: true
-    location: 'Los Angeles, CA, USA' # You can use "USA Los Angeles 90006" {COUNTRY CITY ZIP_CODE}, or just city.
+    location: "Los Angeles, CA, USA" # You can use "USA Los Angeles 90006" {COUNTRY CITY ZIP_CODE}, or just city.
     callbacks:
       on_left: "toggle_label"
     icons: 
@@ -39,12 +39,12 @@ weather:
 
 ## Description of Options
 
-- **label:** The format string for the weather label. You can use placeholders like `{temp_c}`, `{min_temp_c}`, `{max_temp_c}`, `{temp_f}`, `{min_temp_f}`, `{max_temp_f}`, `{location}`, `{humidity}`, `{icon}`, `{conditions}`.
+- **label:** The format string for the weather label. You can use placeholders like `{temp_c}`, `{min_temp_c}`, `{max_temp_c}`, `{temp_f}`, `{min_temp_f}`, `{max_temp_f}`, `{location}`, `{humidity}`, `{icon}`, `{conditions}`, `{wind_mph}`, `{wind_kph}`, `{wind_dir}`, `{wind_degree}`, `{pressure_mb}`, `{pressure_in}`, `{precip_mm}`, `{precip_in}`, `{uv}`, `{vis_km}`, `{vis_miles}`, `{cloud}`, `{feelslike_c}`, `{feelslike_f}`.
 - **label_alt:** The alternative format string for the weather label. Useful for displaying additional weather details.
 - **update_interval:** The interval in seconds to update the weather data. Must be between 60 and 36000000.
 - **hide_decimal:** Whether to hide the decimal part of the temperature.
 - **location:** The location for which to fetch the weather data. You can use example "USA Los Angeles 90006" {COUNTRY CITY ZIP_CODE}, or just city.
-- **api_key:** The API key for accessing the weather service. You can get free API key `weatherapi.com`
+- **api_key:** The API key for accessing the weather service. You can get free API key `weatherapi.com`. API key can be set to `env`, this means you have to set `YASB_WEATHER_API_KEY` in environment variable or you can set it directly in the configuration file.
 - **icons:** A dictionary of icons for different weather conditions `sunnyDay`, `sunnyNight`, `clearDay`, `clearNight`, `cloudyDay`, `cloudyNight`, `rainyDay`, `rainyNight`, `snowyIcyDay`, `snowyIcyNight`, `blizzard`, `default`.
 - **callbacks:** A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions.
 
