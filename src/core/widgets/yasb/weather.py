@@ -31,7 +31,7 @@ class WeatherWidget(BaseWidget):
         self._location = location
         self._hide_decimal = hide_decimal
         self._icons = icons
-        self._api_key = api_key if api_key != 'env' else os.getenv('YASB_WEATHER_API')
+        self._api_key = api_key if api_key != 'env' else os.getenv('YASB_WEATHER_API_KEY')
         self.api_url = f"http://api.weatherapi.com/v1/forecast.json?key={self._api_key}&q={urllib.parse.quote(self._location)}&days=1&aqi=no&alerts=no"
         print(self.api_url)
         # Store weather data
