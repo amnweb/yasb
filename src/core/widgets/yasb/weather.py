@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 import re
 import urllib.request
 import urllib.parse
@@ -30,9 +31,9 @@ class WeatherWidget(BaseWidget):
         self._location = location
         self._hide_decimal = hide_decimal
         self._icons = icons
-        self._api_key = api_key
+        self._api_key = api_key if api_key != 'env' else os.getenv('YASB_WEATHER_API')
         self.api_url = f"http://api.weatherapi.com/v1/forecast.json?key={self._api_key}&q={urllib.parse.quote(self._location)}&days=1&aqi=no&alerts=no"
-        
+        print(self.api_url)
         # Store weather data
         self.weather_data = None
         self._show_alt_label = False
@@ -115,6 +116,7 @@ class WeatherWidget(BaseWidget):
         label_parts = [part for part in label_parts if part]
  
         widget_index = 0
+
         try:
             for part in label_parts:
                 part = part.strip()
@@ -138,6 +140,7 @@ class WeatherWidget(BaseWidget):
                             self._reload_css(active_widgets[widget_index])
                     else:
                         active_widgets[widget_index].setText(part)
+                 
                     if not active_widgets[widget_index].isVisible():
                         active_widgets[widget_index].show()
                     widget_index += 1
@@ -191,7 +194,21 @@ class WeatherWidget(BaseWidget):
                     '{is_day}': current['is_day'],
                     '{icon}': icon_string[0].lower() + icon_string[1:],
                     '{icon_class}': icon_string[0].lower() + icon_string[1:],
-                    '{conditions}': conditions_data
+                    '{conditions}': conditions_data,
+                    '{wind_mph}': current['wind_mph'],
+                    '{wind_kph}': current['wind_kph'],
+                    '{wind_dir}': current['wind_dir'],
+                    '{wind_degree}': current['wind_degree'],
+                    '{pressure_mb}': current['pressure_mb'],
+                    '{pressure_in}': current['pressure_in'],
+                    '{precip_mm}': current['precip_mm'],
+                    '{precip_in}': current['precip_in'],
+                    '{uv}': current['uv'],
+                    '{vis_km}': current['vis_km'],
+                    '{vis_miles}': current['vis_miles'],
+                    '{cloud}': current['cloud'],
+                    '{feelslike_c}': format_temp(current['feelslike_c'], 'C'),
+                    '{feelslike_f}': format_temp(current['feelslike_f'], 'F')                 
                 }
         except (urllib.error.URLError, json.JSONDecodeError) as e:
             logging.error(f"Error fetching weather data: {e}")
@@ -207,5 +224,19 @@ class WeatherWidget(BaseWidget):
                 '{is_day}': 0,
                 '{icon}': 'unknown',
                 '{icon_class}': '',
-                '{conditions}': 'No Data'
+                '{conditions}': 'No Data',
+                '{wind_mph}': 'N/A',
+                '{wind_kph}': 'N/A',
+                '{wind_dir}': 'N/A',
+                '{wind_degree}': 'N/A',
+                '{pressure_mb}': 'N/A',
+                '{pressure_in}': 'N/A',
+                '{precip_mm}': 'N/A',
+                '{precip_in}': 'N/A',
+                '{uv}': 'N/A',
+                '{vis_km}': 'N/A',
+                '{vis_miles}': 'N/A',
+                '{cloud}': 'N/A',
+                '{feelslike_c}': 'N/A',
+                '{feelslike_f}': 'N/A'
             }
