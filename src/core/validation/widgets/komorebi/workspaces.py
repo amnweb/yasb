@@ -4,6 +4,7 @@ DEFAULTS = {
     'label_workspace_active_btn': '{index}',
     'label_workspace_populated_btn': '{index}',
     'label_default_name': '',
+    'label_float_override': 'Override Active',
     'hide_if_offline': False,
     'label_zero_index': False,
     'hide_empty_workspaces': False,
@@ -31,6 +32,10 @@ VALIDATION_SCHEMA = {
     'label_default_name': {
         'type': 'string',
         'default': DEFAULTS['label_default_name']
+    },
+    'label_float_override': {
+        'type': 'string',
+        'default': DEFAULTS['label_float_override']
     },
     'hide_if_offline': {
         'type': 'boolean',

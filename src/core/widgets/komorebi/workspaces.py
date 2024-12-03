@@ -116,6 +116,7 @@ class WorkspaceWidget(BaseWidget):
             label_workspace_active_btn: str,
             label_workspace_populated_btn: str,
             label_default_name: str,
+            label_float_override: str,
             hide_if_offline: bool,
             label_zero_index: bool,
             hide_empty_workspaces: bool,
@@ -129,6 +130,7 @@ class WorkspaceWidget(BaseWidget):
         self._label_workspace_active_btn = label_workspace_active_btn
         self._label_workspace_populated_btn = label_workspace_populated_btn
         self._label_default_name = label_default_name
+        self._label_float_override = label_float_override
         self._label_zero_index = label_zero_index
         self._hide_if_offline = hide_if_offline
         self._padding = container_padding
@@ -178,6 +180,13 @@ class WorkspaceWidget(BaseWidget):
         self._workspace_container.hide()
         self.widget_layout.addWidget(self._offline_text)
         self.widget_layout.addWidget(self._workspace_container)
+        
+        self.float_override_label = QLabel()
+        self.float_override_label.setText(self._label_float_override)
+        self.float_override_label.setProperty("class", "float-override")
+        self.float_override_label.hide()
+        self.widget_layout.addWidget(self.float_override_label)
+        
         self._register_signals_and_events()
 
     def _register_signals_and_events(self):
@@ -234,10 +243,17 @@ class WorkspaceWidget(BaseWidget):
                     self._add_or_update_buttons()
             elif event['type'] in self._update_buttons_event_watchlist:
                 self._add_or_update_buttons()
+                
+            # Show float override label if float override is active
+            if state['float_override'] and self._label_float_override:
+                self.float_override_label.show()
+            else:
+                self.float_override_label.hide()
+                
         # send workspace_update event to active_window widgets
         if event['type'] in ['MoveWindow', 'Show', 'Hide', 'Destroy']:
             self._event_service.emit_event("workspace_update",event['type'])
- 
+
     def _clear_container_layout(self):
         for i in reversed(range(self._workspace_container_layout.count())):
             old_workspace_widget = self._workspace_container_layout.itemAt(i).widget()
