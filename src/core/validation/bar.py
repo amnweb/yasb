@@ -4,6 +4,7 @@ BAR_DEFAULTS = {
     'class_name': 'yasb-bar',
     'alignment': {'position': 'top', 'center': False},
     'blur_effect': {'enabled': False, 'dark_mode': False, 'acrylic': False,'round_corners': False,'border_color': "System"},
+    'animation': {'enabled': True, 'duration': 500},
     'window_flags': {'always_on_top': False, 'windows_app_bar': False},
     'dimensions': {'width': '100%', 'height': 30},
     'padding': {'top': 0, 'left': 0, 'bottom': 0, 'right': 0},
@@ -70,6 +71,22 @@ BAR_SCHEMA = {
                 }
             },
             'default': BAR_DEFAULTS['blur_effect']
+        },
+        'animation': {
+            'type': 'dict',
+            'required': False,
+            'schema': {
+                'enabled': {
+                    'type': 'boolean',
+                    'default': BAR_DEFAULTS['animation']['enabled']
+                },
+                'duration': {
+                    'type': 'integer',
+                    'min': 0,
+                    'default': BAR_DEFAULTS['animation']['duration']
+                }
+            },
+            'default': BAR_DEFAULTS['animation']
         },
         'window_flags': {
             'type': 'dict',

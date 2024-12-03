@@ -1,8 +1,8 @@
 import logging
 from settings import APP_BAR_TITLE
-from PyQt6.QtWidgets import QApplication, QWidget, QHBoxLayout, QGridLayout, QFrame
+from PyQt6.QtWidgets import QWidget, QHBoxLayout, QGridLayout, QFrame
 from PyQt6.QtGui import QScreen
-from PyQt6.QtCore import Qt, QRect, QEvent
+from PyQt6.QtCore import Qt, QRect, QEvent, QPropertyAnimation, QEasingCurve, QPoint
 from core.utils.utilities import is_valid_percentage_str, percent_to_float
 from core.utils.win32.utilities import get_monitor_hwnd
 from core.validation.bar import BAR_DEFAULTS
@@ -26,6 +26,7 @@ class Bar(QWidget):
             class_name: str = BAR_DEFAULTS['class_name'],
             alignment: dict = BAR_DEFAULTS['alignment'],
             blur_effect: dict = BAR_DEFAULTS['blur_effect'],
+            animation: dict = BAR_DEFAULTS['animation'],
             window_flags: dict = BAR_DEFAULTS['window_flags'],
             dimensions: dict = BAR_DEFAULTS['dimensions'],
             padding: dict = BAR_DEFAULTS['padding']
@@ -39,12 +40,15 @@ class Bar(QWidget):
         self._window_flags = window_flags
         self._dimensions = dimensions
         self._padding = padding
+        self._animation = animation
         self._is_dark_theme = None
         
         self.screen_name = self.screen().name()
-        self.app_bar_edge = app_bar.AppBarEdge.Top \
-            if self._alignment['position'] == "top" \
+        self.app_bar_edge = (
+            app_bar.AppBarEdge.Top
+            if self._alignment['position'] == "top"
             else app_bar.AppBarEdge.Bottom
+        )
 
         if self._window_flags['windows_app_bar'] and IMPORT_APP_BAR_MANAGER_SUCCESSFUL:
             self.app_bar_manager = app_bar.Win32AppBar()
@@ -79,40 +83,12 @@ class Bar(QWidget):
             )
 
         self.screen().geometryChanged.connect(self.on_geometry_changed, Qt.ConnectionType.QueuedConnection)
-        self.show()     
-
-    
-    def detect_os_theme(self) -> bool:
-        try:
-            import winreg
-            with winreg.ConnectRegistry(None, winreg.HKEY_CURRENT_USER) as registry:
-                with winreg.OpenKey(registry, r'SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize') as key:
-                    value, _ = winreg.QueryValueEx(key, 'AppsUseLightTheme')
-                    return value == 0
-        except Exception as e:
-            logging.error(f"Failed to determine Windows theme: {e}")
-            return False
+        if self._animation['enabled']:
+            self.animation_bar()
+        self.show()
         
-    
-    def update_theme_class(self):
-        is_dark_theme = self.detect_os_theme()
-        # Possible there is better solution for this, but in this way we can prevent MS events spam 
-        if is_dark_theme != self._is_dark_theme: 
-            class_property = self._bar_frame.property("class")
-            if is_dark_theme:
-                class_property += " dark"
-            else:
-                class_property = class_property.replace(" dark", "")
-            self._bar_frame.setProperty("class", class_property)
-            update_styles(self._bar_frame)
-            self._is_dark_theme = is_dark_theme
- 
-    
-    def event(self, event: QEvent) -> bool:
-        # Update theme class when system theme changes
-        if event.type() == QEvent.Type.ApplicationPaletteChange:
-            self.update_theme_class()
-        return super().event(event)
+        
+
      
     @property
     def bar_id(self) -> str:
@@ -150,22 +126,8 @@ class Bar(QWidget):
         bar_width = self._dimensions['width']
         bar_height = self._dimensions['height']
 
-        #screen_scale = self.screen().devicePixelRatio()
         screen_width = self.screen().geometry().width()
         screen_height = self.screen().geometry().height()
-        
-        # Commented out for now, as it causes issues with the bar position on 4k monitors, probably we don't need it anymore.
-        # Fix for non-primary display Windows OS scaling on app startup
-        # should_downscale_screen_geometry = (
-        #     init and
-        #     len(QApplication.screens()) > 1 and
-        #     screen_scale >= 2.0 and
-        #     QApplication.primaryScreen() != self.screen()
-        # )
-
-        # if should_downscale_screen_geometry:
-        #     screen_width = screen_width / screen_scale
-        #     screen_height = screen_height  / screen_scale
 
         if is_valid_percentage_str(str(self._dimensions['width'])):
             bar_width = int(screen_width * percent_to_float(self._dimensions['width']) - self._padding['left'] - self._padding['right'])
@@ -185,7 +147,6 @@ class Bar(QWidget):
         bar_layout = QGridLayout()
         bar_layout.setContentsMargins(0, 0, 0, 0)
         bar_layout.setSpacing(0)
-        
 
         for column_num, layout_type in enumerate(['left', 'center', 'right']):
             layout = QHBoxLayout()
@@ -211,6 +172,63 @@ class Bar(QWidget):
             bar_layout.addWidget(layout_container, 0, column_num)
  
         self._bar_frame.setLayout(bar_layout)
+        
+        
+    def animation_bar(self):
+        self.final_pos = self.pos()
+        if self._alignment['position'] == "top":
+            self.initial_pos = QPoint(self.final_pos.x(), self.final_pos.y() - self.height())
+        else:
+            screen_height = self.screen().geometry().height()
+            self.initial_pos = QPoint(self.final_pos.x(), self.final_pos.y() + screen_height)
+        self.move(self.initial_pos)
+        self.animation = QPropertyAnimation(self, b"pos")
+        self.animation.setDuration(self._animation['duration'])
+        self.animation.setStartValue(self.initial_pos)
+        self.animation.setEndValue(self.final_pos)
+        self.animation.setEasingCurve(QEasingCurve.Type.OutExpo)
+        
+        
+    def showEvent(self, event):
+        super().showEvent(event)
+        try:
+            self.animation.start()
+        except AttributeError:
+            logging.error("Animation not initialized.")
+        
+        
+    def detect_os_theme(self) -> bool:
+        try:
+            import winreg
+            with winreg.ConnectRegistry(None, winreg.HKEY_CURRENT_USER) as registry:
+                with winreg.OpenKey(registry, r'SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize') as key:
+                    value, _ = winreg.QueryValueEx(key, 'AppsUseLightTheme')
+                    return value == 0
+        except Exception as e:
+            logging.error(f"Failed to determine Windows theme: {e}")
+            return False
+        
+    
+    def update_theme_class(self):
+        if not hasattr(self, '_bar_frame'):
+            return
+        
+        is_dark_theme = self.detect_os_theme()
+        if is_dark_theme != self._is_dark_theme: 
+            class_property = self._bar_frame.property("class")
+            if is_dark_theme:
+                class_property += " dark"
+            else:
+                class_property = class_property.replace(" dark", "")
+            self._bar_frame.setProperty("class", class_property)
+            update_styles(self._bar_frame)
+            self._is_dark_theme = is_dark_theme
+ 
+    
+    def changeEvent(self, event: QEvent) -> None:
+        if event.type() == QEvent.Type.PaletteChange:
+            self.update_theme_class()
+        super().changeEvent(event)
         
 def update_styles(widget):
     widget.style().unpolish(widget)

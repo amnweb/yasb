@@ -38,6 +38,7 @@ All valid options for the widgets are listed on the widgets page.
 | `window_flags`    | object  | `{always_on_top: false, windows_app_bar: true}` | The window flags for the status bar. |
 | `dimensions`      | object  | `{width: "100%", height: 36}` | The dimensions of the status bar. |
 | `padding`         | object  | `{top: 4, left: 0, bottom: 4, right: 0}` | The padding for the status bar. |
+| `animation`       | object  | `{enabled: true, duration: 500}` | The animation settings for the status bar. Duration is in milliseconds. |
 | `widgets`         | list  | `left[],center[],right[]` | Active widgets and position. |
 
 # Multiple Bars Example
@@ -68,7 +69,7 @@ widgets:
 We used Windows API for blur, and because of this some parts are limited with the OS.
 
 `blur_effect.enabled` Will enable defaul blur.<br>
-`blur_effect.acrylic` Enable an acrylic blur effect behind a window.<br>
+`blur_effect.acrylic` Enable an acrylic blur effect behind a window. (Windows 10)<br>
 `blur_effect.dark_mode` Dark mode and more shadow below bar.<br>
 `blur_effect.round_corners` True or False, if set to True Windows will add radius. You can't set a custom value.<br>
-`blur_effect.border_color` Border color for bar can be `None`, `System` or `Hex Color`. (This applies to system round_corners and if blur_effect.round_corners is True.)
+`blur_effect.border_color` Border color for bar can be `None`, `System` or `Hex Color` `"#ff0000"`. (This applies to system round_corners and if blur_effect.round_corners is True.)
