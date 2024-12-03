@@ -5,6 +5,7 @@ DEFAULTS = {
     'system_menu': True,
     'blur': False,
     'alignment': 'left',
+    'direction': 'down',
     'menu_labels': {'shutdown': 'Shutdown', 'restart': 'Restart', 'logout': 'Logout', 'lock': 'Lock', 'sleep': 'Sleep', 'system': 'System Settings', 'about': 'About This PC', 'task_manager': 'Task Manager'},
     'callbacks': {
         'on_left': 'toggle_menu'
@@ -50,6 +51,11 @@ VALIDATION_SCHEMA = {
     'alignment': {
         'type': 'string',
         'default': DEFAULTS['alignment'],
+        'required': False
+    },
+    'direction': {
+        'type': 'string',
+        'default': DEFAULTS['direction'],
         'required': False
     },
     'menu_labels': {

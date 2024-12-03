@@ -20,6 +20,7 @@ class HomeWidget(BaseWidget):
             system_menu: bool,
             blur: bool,
             alignment: str,
+            direction: str,
             menu_labels: dict[str, str],
             callbacks: dict[str, str],
             menu_list: list[str, dict[str]] = None
@@ -33,6 +34,7 @@ class HomeWidget(BaseWidget):
         self._system_menu = system_menu
         self._blur = blur
         self._alignment = alignment
+        self._direction = direction
         self._menu_labels = menu_labels
         # Construct container
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
@@ -199,6 +201,10 @@ class HomeWidget(BaseWidget):
         self._menu.adjustSize()
         widget_global_pos = self.mapToGlobal(QPoint(0, self.height() + 6))
         
+        if self._direction == 'up':
+            global_y = self.mapToGlobal(QPoint(0, 0)).y() - self._menu.height()
+            widget_global_pos = QPoint(self.mapToGlobal(QPoint(0, 0)).x(), global_y)
+            
         if self._alignment == 'left':
             global_position = widget_global_pos
         elif self._alignment == 'right':

@@ -8,6 +8,7 @@
 | `power_menu`    | boolean | `true`                                                                 | Show power menu. |
 | `blur`          | boolean | `true`                                                                 | Blur background. |
 | `alignment`     | string  | `"left"`                                                               | Alignment of the menu. Possible values: `"left"`, `"center"`, `"right"`. |
+| `direction`     | string  | `"down"`                                                           | Direction of the menu. Possible values: `"up"`, `"down"`. |
 | `menu_labels`   | dict | `{'shutdown': 'Shutdown', 'restart': 'Restart', 'logout': 'Logout', 'lock': 'Lock', 'sleep': 'Sleep', 'system': 'System Settings', 'about': 'About This PC', 'task_manager': 'Task Manager'}` | Custom label names for system and power items. | 
 | `container_padding`  | dict | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}`      | Explicitly set padding inside widget container. |
 
@@ -32,6 +33,7 @@ home:
       bottom: 0
       right: 0
     alignment: "left"
+    direction: "down"
     menu_labels:
       shutdown: "Shutdown"
       restart: "Restart"
@@ -52,6 +54,7 @@ home:
 - **power_menu**: Show power menu. Enabling this option will show power menu items like shutdown, restart, sleep, lock and sign out.
 - **blur**: Blur background. Enabling this option will blur the background and add default OS radius and border to the widget.
 - **alignment**: Alignment of the menu. Possible values: `"left"`, `"center"`, `"right"`.
+- **direction**: Direction of the menu. Possible values: `"up"`, `"down"`.
 - **menu_labels**: Custom label names for system and power items. Use this option to change the default labels for system and power menu items.
 - **container_padding**: Explicitly set padding inside widget container. Use this option to set padding inside the widget container. You can set padding for top, left, bottom and right sides of the widget container.
 
