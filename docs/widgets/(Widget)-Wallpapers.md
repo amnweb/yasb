@@ -31,8 +31,8 @@ wallpapers:
         image_corner_radius: 20
         enable_cache: true
     run_after: # List of functions to run after wallpaper is updated
-      - "wal -s -t -e -q -n -i {image}", # Example command to run after wallpaper is updated
-      - "cmd.exe /c start /min pwsh ./yasb.ps1", # Example command to run after wallpaper is updated
+      - "wal -s -t -e -q -n -i {image}" # Example command to run after wallpaper is updated
+      - "cmd.exe /c start /min pwsh ./yasb.ps1" # Example command to run after wallpaper is updated
 ```
 
 ## Description of Options
