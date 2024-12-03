@@ -6,6 +6,7 @@
 | `label_workspace_active_btn` | string | `'{index}'`              | The format string for the active workspace button.                          |
 | `label_workspace_populated_btn` | string | `'{index}'`              | The format string for the populated workspace button.                          |
 | `label_default_name`       | string  | `''`                     | The default name for workspaces.                                            |
+| `label_float_override`     | string  | `'Override Active'`                     | The label to display when Komorebi is Float Override Active. |
 | `hide_if_offline`       | boolean | `false`         | Whether to hide the widget if Komorebi is offline.                          |
 | `label_zero_index`        | boolean | `false`    | Whether to use zero-based indexing for workspace labels.                    |
 | `hide_empty_workspaces`  | boolean | `false`      | Whether to hide empty workspaces.                                           |
@@ -40,6 +41,7 @@ komorebi_workspaces:
 - **label_workspace_active_btn:** The format string for the active workspace button, can be icon, {name} or {index}.
 - **label_workspace_populated_btn:** The format string for the populated workspace button, can be icon, {name} or {index}.
 - **label_default_name:** The default name for workspaces.
+- **label_float_override:** The label to display when Komorebi is Float Override Active.
 - **hide_if_offline:** Whether to hide the widget if Komorebi is offline.
 - **label_zero_index:** Whether to use zero-based indexing for workspace labels.
 - **hide_empty_workspaces:** Whether to hide empty workspaces.
@@ -56,6 +58,7 @@ komorebi_workspaces:
 .komorebi-workspaces .ws-btn.active {} /*Style for the active workspace button.*/
 .komorebi-workspaces .ws-btn.button-1 {} /*Style for first button.*/
 .komorebi-workspaces .ws-btn.button-2 {} /*Style for second  button.*/
+.komorebi-workspaces .float-override {} /*Style for float override text and icon.*/
 ```
 
 > [!NOTE]  
