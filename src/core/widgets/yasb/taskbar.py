@@ -1,7 +1,3 @@
-"""
-Note: This is probably not the best way to do this, but debouncing the events is the only way to prevent high CPU usage.
-Need to find a better way to do this.
-"""
 import logging
 from settings import DEBUG
 from core.widgets.base import BaseWidget
@@ -87,6 +83,10 @@ class TaskbarWidget(BaseWidget):
         self._debounced_foreground_event = None
 
     def _on_update_event(self, hwnd: int, event: WinEvent) -> None:
+        """
+        Note: This is probably not the best way to do this, but debouncing the events is the only way to prevent high CPU usage.
+        Need to find a better way to do this.
+        """
         if event == WinEvent.EventObjectFocus:
             self._debounced_focus_event = (hwnd, event)
             if not self._debounce_timer_focus.isActive():
@@ -122,6 +122,7 @@ class TaskbarWidget(BaseWidget):
         self._update_label(hwnd, win_info, event)
 
     def _update_label(self, hwnd: int, win_info: dict, event: WinEvent) -> None:
+         
         visible_windows = self.get_visible_windows(hwnd, win_info, event)
         existing_hwnds = set(self.window_buttons.keys())
         new_icons = []
@@ -234,6 +235,7 @@ class TaskbarWidget(BaseWidget):
             return
 
         if action == "toggle":
+            self._blink_on_click(widget)
             self.bring_to_foreground(hwnd)
         else:
             logging.warning(f"Unknown action '{action}'.")
@@ -256,8 +258,38 @@ class TaskbarWidget(BaseWidget):
                 win32gui.SetForegroundWindow(hwnd)
             else:
                 win32gui.ShowWindow(hwnd, win32con.SW_MINIMIZE)
-        
-    def _animate_icon(self, icon_label, start_width=None, end_width=None,fps = 120, duration=240):
+                
+    def _blink_on_click(self, icon_label, duration=200):
+        if hasattr(self, '_opacity_effect') and self._opacity_effect is not None:
+            self._opacity_effect.setOpacity(1.0)
+            if self._blink_timer.isActive():
+                self._blink_timer.stop()
+
+        self._opacity_effect = QGraphicsOpacityEffect()
+        icon_label.setGraphicsEffect(self._opacity_effect)
+        self._opacity_effect.setOpacity(0.4)
+
+        self._blink_timer = QTimer()
+        step = 0
+        steps = 20
+        increment = 0.5 / steps
+
+        def animate():
+            nonlocal step
+            new_opacity = self._opacity_effect.opacity() + increment
+            if new_opacity >= 1.0:
+                new_opacity = 1.0
+                self._opacity_effect.setOpacity(new_opacity)
+                self._blink_timer.stop()
+                self._opacity_effect = None
+                return
+            self._opacity_effect.setOpacity(new_opacity)
+            step += 1
+
+        self._blink_timer.timeout.connect(animate)
+        self._blink_timer.start(duration // steps)
+    
+    def _animate_icon(self, icon_label, start_width=None, end_width=None,fps = 60, duration=120):
         if start_width is None:
             start_width = 0
         if end_width is None:
