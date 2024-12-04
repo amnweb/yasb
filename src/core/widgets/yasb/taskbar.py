@@ -309,7 +309,7 @@ class TaskbarWidget(BaseWidget):
         opacity_effect.setOpacity(self._current_opacity)
 
         def update_properties():
-            if self._current_step < fps:
+            if self._current_step <= fps:
                 self._current_width += width_increment
                 self._current_opacity += opacity_increment
                 icon_label.setFixedWidth(int(self._current_width))
