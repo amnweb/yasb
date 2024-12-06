@@ -182,8 +182,6 @@ class UpdateManager:
 class UpdateCheckWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
 
-    TOOLTIP_STYLE = """QToolTip { padding:4px;color: #cdd6f4;font-size:12px; background-color: #1e1e2e; border: 1px solid #313244; }"""
-
     def __init__(self, windows_update: dict[str, str], winget_update: dict[str, str]):
         super().__init__(class_name="update-check-widget")
 
@@ -296,7 +294,6 @@ class UpdateCheckWidget(BaseWidget):
                     active_widgets[widget_index].setText(formatted_text)
                 active_widgets[widget_index].setCursor(Qt.CursorShape.PointingHandCursor)
                 active_widgets[widget_index].setToolTip("\n".join(names))
-                active_widgets[widget_index].setStyleSheet(self.TOOLTIP_STYLE)
                 widget_index += 1
 
 
