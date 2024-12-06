@@ -39,6 +39,9 @@ For more information about configuration options, please visit the Wiki https://
 	margin: 0;
 	padding: 0;
 }
+
+/* Global styles for ToolTip */
+QToolTip {padding:6px;color: #cdd6f4;font-size:12px; background-color: #1e1e2e; border: 0px solid #313244; border-radius: 6px; }
 .yasb-bar {
 	padding: 0;
 	margin: 0; 
