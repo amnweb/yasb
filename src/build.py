@@ -69,8 +69,8 @@ bdist_msi_options = {
     "upgrade_code": "{3f620cf5-07b5-47fd-8e37-9ca8ad14b608}",
     "add_to_path": True,
     "dist_dir": "dist/out",
-    "initial_target_dir": r'[LocalAppDataFolder]\Yasb',
-    "all_users": False,
+    "initial_target_dir": r'[ProgramFiles64Folder]\Yasb',
+    "all_users": True,
     "summary_data": {
         "author": "AmN",
         "comments": "A highly configurable Windows status bar",
@@ -88,6 +88,14 @@ executables = [
         copyright=f"Copyright (C) {datetime.datetime.now().year} AmN",
         target_name="yasb.exe",
     ),  
+    Executable(
+        "core/utils/themes.py",
+        base="gui",
+        shortcut_name="Yasb Themes",
+        icon="assets/images/app_icon.ico",
+        copyright=f"Copyright (C) {datetime.datetime.now().year} AmN",
+        target_name="yasb_themes.exe",
+    ),
     Executable(
         "core/utils/cli.py",
         base="Console",

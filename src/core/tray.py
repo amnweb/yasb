@@ -1,13 +1,11 @@
 import datetime
 import logging
-
 import webbrowser
 import os
 import shutil
 import sys
 from pathlib import Path
 import subprocess
-
 import winshell
 from PyQt6.QtWidgets import QSystemTrayIcon, QMenu, QMessageBox
 from PyQt6.QtGui import QIcon, QGuiApplication
@@ -23,15 +21,11 @@ VBS_PATH = os.path.join(SCRIPT_PATH, 'yasb.vbs')
 # Check if exe file exists
 INSTALLATION_PATH = os.path.abspath(os.path.join(__file__, "../../.."))
 EXE_PATH = os.path.join(INSTALLATION_PATH, 'yasb.exe')
+THEME_EXE_PATH = os.path.join(INSTALLATION_PATH, 'yasb_themes.exe')
 SHORTCUT_FILENAME = "yasb.lnk"
 AUTOSTART_FILE = EXE_PATH if os.path.exists(EXE_PATH) else VBS_PATH
 WORKING_DIRECTORY = INSTALLATION_PATH if os.path.exists(EXE_PATH) else SCRIPT_PATH
- 
-class MenuExt(QMenu):
-    def focusOutEvent(self, event):
-        self.close()
-        super().focusOutEvent(event)   
-        
+
 class TrayIcon(QSystemTrayIcon):
     def __init__(self, bar_manager: BarManager):
         super().__init__()
@@ -40,7 +34,7 @@ class TrayIcon(QSystemTrayIcon):
         self._icon = QIcon()
         self._load_favicon()
         self._load_context_menu()
-        self.setToolTip(f"{APP_NAME}")
+        self.setToolTip(APP_NAME)
         self._load_config()
  
         
@@ -61,10 +55,8 @@ class TrayIcon(QSystemTrayIcon):
         self._icon.addFile(os.path.join(parent_directory, 'assets', 'images', 'app_icon.png'), QSize(48, 48))
         self.setIcon(self._icon)
         
- 
-        
     def _load_context_menu(self):
-        menu = MenuExt()
+        menu = QMenu()
         menu.setWindowModality(Qt.WindowModality.WindowModal)
         style_sheet = """
         QMenu {
@@ -78,7 +70,7 @@ class TrayIcon(QSystemTrayIcon):
         QMenu::item {
             margin:0 4px;
             padding: 4px 16px 5px 16px;
-            border-radius: 6px;
+            border-radius: 4px;
             font-size: 11px;
             font-weight: 600;
             font-family: 'Segoe UI', sans-serif;
@@ -104,15 +96,18 @@ class TrayIcon(QSystemTrayIcon):
         
         open_config_action = menu.addAction("Open Config")
         open_config_action.triggered.connect(self._open_config)
+        if os.path.exists(THEME_EXE_PATH):
+            yasb_themes_action = menu.addAction("Get Themes")
+            yasb_themes_action.triggered.connect(lambda: os.startfile(THEME_EXE_PATH))
         
         reload_action = menu.addAction("Reload YASB")
         reload_action.triggered.connect(self._reload_application)
-        
+
         menu.addSeparator()
         debug_menu = menu.addMenu("Debug")
         info_action = debug_menu.addAction("Information")
         info_action.triggered.connect(self._show_info)
-        
+        menu.addSeparator()
         if self.is_komorebi_installed():
             komorebi_menu = menu.addMenu("Komorebi")
             start_komorebi = komorebi_menu.addAction("Start Komorebi")
