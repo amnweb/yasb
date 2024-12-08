@@ -183,6 +183,7 @@ widgets:
     options:
       label: "<span>{icon}</span> {level}"
       label_alt: "{volume}"
+      tooltip: false
       volume_icons:
         - "\ueee8"
         - "\uf026"

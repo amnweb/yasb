@@ -31,71 +31,76 @@ For more information about configuration options, please visit the Wiki https://
     --crust: rgba(17, 17, 27, 0.85);
     --main: #10151d;
 }
-*{
-	font-size: 12px;
-	color: var(--subtext0);
-	font-weight: 600;
-	font-family: "JetBrainsMono NFP";
-	margin: 0;
-	padding: 0;
-}
-
 /* Global styles for ToolTip */
-QToolTip {padding:6px;color: #cdd6f4;font-size:12px; background-color: #1e1e2e; border: 0px solid #313244; border-radius: 6px; }
+QToolTip {
+    padding: 6px;
+    color: #cdd6f4;
+    font-size: 12px;
+    background-color: #1e1e2e;
+    border: 0px solid #313244;
+    border-radius: 6px;
+}
+* {
+    font-size: 12px;
+    color: var(--subtext0);
+    font-weight: 600;
+    font-family: "JetBrainsMono NFP";
+    margin: 0;
+    padding: 0;
+}
 .yasb-bar {
-	padding: 0;
-	margin: 0; 
+    padding: 0;
+    margin: 0;
     background-color: var(--crust);
     border-radius: 8px;
 }
 .widget {
-	padding: 0 12px;
-	margin: 0;
+    padding: 0 12px;
+    margin: 0;
 }
 .icon {
-	font-size: 16px;
+    font-size: 16px;
 }
 .widget .label {
-	padding: 0px 2px; 
+    padding: 0px 2px;
 }
 .komorebi-active-layout {
-	padding: 0 4px 0 0;
+    padding: 0 4px 0 0;
 }
 .komorebi-active-layout .label {
-	font-weight: 600;
-	padding: 2px 0 0 0;
+    font-weight: 600;
+    padding: 2px 0 0 0;
 }
 .apps-widget .widget-container,
 .komorebi-workspaces .widget-container,
-.komorebi-active-layout .widget-container
-{
-	background-color: var(--crust);
-	margin: 3px 0 3px 0;
-	border-radius: 12px;
+.komorebi-active-layout .widget-container {
+    background-color: var(--crust);
+    margin: 3px 0 3px 0;
+    border-radius: 12px;
     border: 1px solid var(--surface0);
 }
 .komorebi-workspaces .widget-container {
     border-top-left-radius: 6px;
-	border-bottom-left-radius: 6px;
+    border-bottom-left-radius: 6px;
     margin-left: 4px;
 }
 .komorebi-workspaces {
-	border-top-right-radius: 14px;
-	border-bottom-right-radius: 14px;
-	padding: 0 4px 0 0;
+    border-top-right-radius: 14px;
+    border-bottom-right-radius: 14px;
+    padding: 0 4px 0 0;
 }
 .komorebi-workspaces .offline-status {
     color: var(--surface2);
     font-size: 12px;
     padding: 0 0 0 4px;
-    font-weight:600;
+    font-weight: 600;
 }
 .komorebi-workspaces .ws-btn {
     border: none;
-    background-color:transparent;
-	margin:0;
+    background-color: transparent;
+    margin: 0;
     font-size: 12px;
-	color:  var(--overlay1);
+    color: var(--overlay1);
     height: 28px;
     width: 18px;
 }
@@ -103,7 +108,7 @@ QToolTip {padding:6px;color: #cdd6f4;font-size:12px; background-color: #1e1e2e; 
     color: var(--subtext1);
 }
 .komorebi-workspaces .ws-btn.populated {
-    color:transparent;
+    color: transparent;
     width: 10px;
     height: 10px;
     background-color: var(--lavender);
@@ -112,72 +117,72 @@ QToolTip {padding:6px;color: #cdd6f4;font-size:12px; background-color: #1e1e2e; 
     font-size: 1px;
 }
 .komorebi-workspaces .ws-btn.active {
-	color: transparent;
+    color: transparent;
     background-color: var(--blue);
     width: 36px;
     max-width: 36px;
     height: 10px;
     margin: 0 4px;
-    border-radius: 5px; 
+    border-radius: 5px;
 }
 .apps-widget {
-	padding: 0 4px 0 2px;
+    padding: 0 4px 0 2px;
 }
 .apps-widget .label {
-	font-size: 14px;
-	padding: 0 2px;
+    font-size: 14px;
+    padding: 0 2px;
     color: var(--subtext0);
 }
 .apps-widget .label:hover {
-	color: var(--text);
+    color: var(--text);
 }
 
 .power-menu-widget .label {
-	color: #f38ba8;
-	font-size: 13px;
+    color: #f38ba8;
+    font-size: 13px;
 }
 .power-menu-popup {
-	background-color: transparent	 
+    background-color: transparent
 }
 .power-menu-popup .button {
-	padding: 0;
-	width: 180px;
-	height: 230px;
-	border-radius: 8px;
-	background-color: var(--crust);
-	color:var(--text);
-	border-left: 4px solid rgba(58, 59, 83, 0);
+    padding: 0;
+    width: 180px;
+    height: 230px;
+    border-radius: 8px;
+    background-color: var(--crust);
+    color: var(--text);
+    border-left: 4px solid rgba(58, 59, 83, 0);
     border-right: 4px solid rgba(58, 59, 83, 0);
     border-top: 4px solid rgba(58, 59, 83, 0);
     border-bottom: 4px solid rgba(58, 59, 83, 0);
-	margin: 0px;
+    margin: 0px;
 }
 .power-menu-popup .button.hover {
-	background-color:var(--base);
-	border-left: 4px solid var(--base);
+    background-color: var(--base);
+    border-left: 4px solid var(--base);
     border-right: 4px solid var(--base);
     border-top: 4px solid var(--base);
     border-bottom: 4px solid var(--base);
 }
 
 .power-menu-popup .button .label {
-	margin-bottom: 8px;
-	font-size: 16px;
-	font-weight: 500;
-	color: var(--overlay2)
+    margin-bottom: 8px;
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--overlay2)
 }
 .power-menu-popup .button .icon {
-	font-size: 64px;
-	padding-top: 32px;
-	color: var(--surface2)
+    font-size: 64px;
+    padding-top: 32px;
+    color: var(--surface2)
 }
- 
+
 .power-menu-popup .button.cancel .icon {
     padding: 0;
     margin: 0;
 }
 .power-menu-popup .button.cancel .label {
-	color: var(--red);
+    color: var(--red);
     margin: 0;
 }
 .power-menu-popup .button.cancel {
@@ -185,10 +190,10 @@ QToolTip {padding:6px;color: #cdd6f4;font-size:12px; background-color: #1e1e2e; 
     border-radius: 4px;
 }
 .uptime {
-	font-size: 14px;
-	margin-bottom: 10px;
-	color: var(--surface2);
-	font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 10px;
+    color: var(--surface2);
+    font-weight: 600;
 }
 .microphone-widget {
     padding: 0 6px 0 6px;
@@ -200,59 +205,59 @@ QToolTip {padding:6px;color: #cdd6f4;font-size:12px; background-color: #1e1e2e; 
     color: var(--mauve);
 }
 .volume-widget .icon {
-	color: var(--blue);
-	margin: 1px 2px 0 0;
+    color: var(--blue);
+    margin: 1px 2px 0 0;
 }
 .weather-widget,
 .volume-widget {
-    padding:0 6px;
+    padding: 0 6px;
 }
 .weather-widget .icon {
-	font-size: 18px;
-	margin: 0 2px 1px 0;
+    font-size: 18px;
+    margin: 0 2px 1px 0;
     color: var(--yellow);
 }
 .media-widget {
-	padding: 0;
-	margin: 0;
+    padding: 0;
+    margin: 0;
     border-radius: 0;
 }
 .media-widget .label {
-	color: #bac2db;
-	background-color: rgba(24, 24, 37, 0.7);
+    color: #bac2db;
+    background-color: rgba(24, 24, 37, 0.7);
     padding: 0px;
-	padding-right: 4px;
-	font-size: 12px;
+    padding-right: 4px;
+    font-size: 12px;
 }
 .media-widget .label.maintext {
     padding-top: 3px;
 }
 .media-widget .btn {
-	color: #989caa;
-	padding:0 1px;
-	margin: 0;
-	font-family: Segoe Fluent Icons;
+    color: #989caa;
+    padding: 0 1px;
+    margin: 0;
+    font-family: Segoe Fluent Icons;
     font-weight: 400;
 }
 .media-widget .btn:hover {
-	color: #babfd3;
+    color: #babfd3;
 }
 .media-widget .btn.play {
-	font-size: 16px;
+    font-size: 16px;
 }
 .media-widget .btn.disabled:hover,
 .media-widget .btn.disabled {
-	color: #4e525c;
-	font-size: 12px;
-	background-color: rgba(0, 0, 0, 0);
+    color: #4e525c;
+    font-size: 12px;
+    background-color: rgba(0, 0, 0, 0);
 }
-.taskbar-widget{
+.taskbar-widget {
     padding: 0;
     margin: 0;
     border: none;
-} 
-.taskbar-widget .app-icon{
-    padding:0 6px;
+}
+.taskbar-widget .app-icon {
+    padding: 0 6px;
     border: none;
     margin: 0;
 }
@@ -266,20 +271,20 @@ QToolTip {padding:6px;color: #cdd6f4;font-size:12px; background-color: #1e1e2e; 
     color: var(--text);
 }
 .home-menu {
-    background-color:var(--crust); 
+    background-color: var(--crust);
 }
 .home-menu .menu-item {
     padding: 8px 48px 9px 16px;
     font-size: 12px;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    color: var(--text); 
+    color: var(--text);
     font-weight: 600;
 }
 .home-menu .menu-item:hover {
-    background-color:rgba(128, 130, 158, 0.15);
+    background-color: rgba(128, 130, 158, 0.15);
     color: #fff;
-} 
+}
 .home-menu:separator {
     height: 1px;
-    background-color:rgba(128, 130, 158, 0.3);
+    background-color: rgba(128, 130, 158, 0.3);
 }
