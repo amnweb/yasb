@@ -3,6 +3,7 @@ DEFAULTS = {
     'label_alt': '\uf017 {%d-%m-%y %H:%M:%S}',
     'update_interval': 1000,
     'locale':"",
+    'tooltip': True,
     'timezones': [],
     'callbacks': {
         'on_left': 'toggle_label',
@@ -24,6 +25,11 @@ VALIDATION_SCHEMA = {
         'required': False,
         'type': 'string',
         'default': DEFAULTS['locale']
+    },
+    'tooltip': {
+        'type': 'boolean',
+        'required': False,
+        'default': DEFAULTS['tooltip']
     },
     'update_interval': {
         'type': 'integer',

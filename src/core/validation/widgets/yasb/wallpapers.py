@@ -3,6 +3,7 @@ DEFAULTS = {
     'update_interval': 60,
     'change_automatically': False,
     'image_path': "",
+    'tooltip': True,
     'gallery': {
         'enabled': False,
         'blur': True,
@@ -39,6 +40,11 @@ VALIDATION_SCHEMA = {
         'required': True,
         'type': 'string',
         'default': DEFAULTS['image_path']
+    },
+    'tooltip': {
+        'required': False,
+        'type': 'boolean',
+        'default': DEFAULTS['tooltip']
     },
     'gallery': {
         'type': 'dict',

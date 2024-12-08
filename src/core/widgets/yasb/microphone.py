@@ -37,6 +37,7 @@ class MicrophoneWidget(BaseWidget):
         self,
         label: str,
         label_alt: str,
+        tooltip: bool,
         icons: dict[str, str],
         container_padding: dict[str, int],
         callbacks: dict[str, str]
@@ -49,6 +50,7 @@ class MicrophoneWidget(BaseWidget):
         self._show_alt_label = False
         self._label_content = label
         self._label_alt_content = label_alt
+        self._tooltip = tooltip
         self._icons = icons
         self._padding = container_padding
         
@@ -182,7 +184,8 @@ class MicrophoneWidget(BaseWidget):
         else:
             mic_icon = self._icons['normal']
             tooltip = f'Volume {current_level}'
-        self.setToolTip(tooltip)
+        if self._tooltip:
+            self.setToolTip(tooltip)
         return mic_icon
 
 

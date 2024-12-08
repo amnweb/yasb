@@ -29,6 +29,7 @@ class TaskbarWidget(BaseWidget):
             self,
             icon_size: int,
             animation: bool,
+            tooltip: bool,
             ignore_apps: dict[str, list[str]],
             container_padding: dict,
             callbacks: dict[str, str]
@@ -38,6 +39,7 @@ class TaskbarWidget(BaseWidget):
         self.icon_label = QLabel()
         self._label_icon_size = icon_size
         self._animation = animation
+        self._tooltip = tooltip
         self._ignore_apps = ignore_apps
         self._padding = container_padding
         self._win_info = None
@@ -159,7 +161,8 @@ class TaskbarWidget(BaseWidget):
             if self._animation:
                 icon_label.setFixedWidth(0)
             icon_label.setPixmap(icon)
-            icon_label.setToolTip(title)
+            if self._tooltip:
+                icon_label.setToolTip(title)
             icon_label.setProperty("hwnd", hwnd)
             icon_label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
             self._widget_container_layout.addWidget(icon_label)

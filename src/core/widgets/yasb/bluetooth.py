@@ -217,6 +217,7 @@ class BluetoothWidget(BaseWidget):
         self,
         label: str,
         label_alt: str,
+        tooltip: bool,
         icons: dict[str, str],
         container_padding: dict[str, int],
         callbacks: dict[str, str]
@@ -225,6 +226,7 @@ class BluetoothWidget(BaseWidget):
         self._show_alt_label = False
         self._label_content = label
         self._label_alt_content = label_alt
+        self._tooltip = tooltip
         self._padding = container_padding
         try:
             self.bt_api = get_bluetooth_api()
@@ -351,8 +353,8 @@ class BluetoothWidget(BaseWidget):
                         active_widgets[widget_index].setText(formatted_text)
                 widget_index += 1
 
-        # Set tooltip with connected device names
-        self._widget_container.setToolTip(tooltip_text)
+        if self._tooltip:
+            self._widget_container.setToolTip(tooltip_text)
 
     def _update_state(self, status):
         self.current_status = status

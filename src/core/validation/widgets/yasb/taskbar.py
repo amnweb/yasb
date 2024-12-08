@@ -1,6 +1,7 @@
 DEFAULTS = {
     'icon_size': 16,
     'animation': False,
+    'tooltip': True,
     'ignore_apps': {
         'classes': [],
         'processes': [],
@@ -23,6 +24,11 @@ VALIDATION_SCHEMA = {
         'type': 'boolean',
         'default': DEFAULTS['animation'],
         'required': False
+    },
+    'tooltip': {
+        'type': 'boolean',
+        'required': False,
+        'default': DEFAULTS['tooltip']
     },
     'ignore_apps': {
         'type': 'dict',

@@ -4,6 +4,7 @@
 | `icon_size`           | integer  | 16                        | The size of icons |
 | `ignore_apps`       | dict    | `processes:[],titles[],classes:[]` | Ignore some apps. |
 | `animation`  | boolean | `false`      | Icons animation.                                           |
+| `tooltip`  | boolean  | `True`        | Whether to show the tooltip on hover. |
 | `container_padding`  | dict | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}`      | Explicitly set padding inside widget container.
 | `callbacks`         | dict    | `{'on_left': 'toggle_window', 'on_middle': 'do_nothing', 'on_right': 'do_nothing'}` | Callbacks for mouse events on the widget.                                   |
 
@@ -30,6 +31,7 @@ taskbar:
 
 - **icon_size:** The size of icons which will show in the widget.
 - **animation:** Icons animation.
+- **tooltip:** Whether to show the tooltip on hover.
 - **container_padding:** Explicitly set padding inside widget container.
 - **ignore_apps:** A dictionary that allows you to specify which applications should be ignored by the taskbar widget. It includes:
 - processes: A list of process names to ignore.

@@ -1,6 +1,7 @@
 DEFAULTS = {
     'label': '\udb80\udcb1',
     'label_alt': '\uf293',
+    'tooltip': True,
     'icons': {
         'bluetooth_on': '\udb80\udcaf',
         'bluetooth_off': '\udb80\udcb2',
@@ -22,6 +23,11 @@ VALIDATION_SCHEMA = {
     'label_alt': {
         'type': 'string',
         'default': DEFAULTS['label_alt']
+    },
+    'tooltip': {
+        'type': 'boolean',
+        'required': False,
+        'default': DEFAULTS['tooltip']
     },
     'icons': {
         'type': 'dict',

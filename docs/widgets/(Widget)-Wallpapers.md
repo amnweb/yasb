@@ -2,6 +2,7 @@
 | Option               | Type     | Default        | Description                                                                 |
 |----------------------|----------|----------------|-----------------------------------------------------------------------------|
 | `label`           | string   | `"{icon}"`     | The format string for the wallpaper widget label. |
+| `tooltip`  | boolean  | `True`        | Whether to show the tooltip on hover. |
 | `update_interval`  | integer  | 60        | The interval in seconds to update the wallpaper. Must be between 60 and 86400. |
 | `change_automatically` | boolean | `False`       | Whether to automatically change the wallpaper. |
 | `image_path`      | string   | `""`        | The path to the folder containing images for the wallpaper. This field is required. |
@@ -38,6 +39,7 @@ wallpapers:
 ## Description of Options
 - **label:** The format string for the wallpaper widget label.
 - **update_interval:** The interval in seconds to update the wallpaper. Must be between 60 and 86400.
+- **tooltip:** Whether to show the tooltip on hover.
 - **change_automatically:** Whether to automatically change the wallpaper.
 - **image_path:** The path to the folder containing images for the wallpaper. This field is required.
 - **gallery:** The gallery options for the wallpaper widget.

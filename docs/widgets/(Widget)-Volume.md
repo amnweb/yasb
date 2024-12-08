@@ -3,6 +3,7 @@
 |--------------|--------|-------------------------------------------------------------------------|-----------------------------------------------------------------------------|
 | `label`      | string | `'{volume[percent]}%'`                                                  | The format string for the volume label. You can use placeholders like `{volume[percent]}` to dynamically insert volume information. |
 | `label_alt`  | string | `'{volume[percent]}%'`                                                  | The alternative format string for the volume label. Useful for displaying additional volume details. |
+| `tooltip`  | boolean  | `True`        | Whether to show the tooltip on hover. |
 | `volume_icons` | list  | `['\ueee8', '\uf026', '\uf027', '\uf027', '\uf028']`                    | A list of icons representing different volume levels. The icons are used based on the current volume percentage. |
 | `callbacks`  | dict   | `{'on_middle': 'do_nothing', 'on_right': 'do_nothing'}`                  | Callbacks for mouse events on the volume widget. |
 
@@ -28,6 +29,7 @@ volume:
 
 - **label**: The format string for the volume label. You can use placeholders like `{volume[percent]}` to dynamically insert volume information.
 - **label_alt**: The alternative format string for the volume label. Useful for displaying additional volume details.
+- **tooltip**: Whether to show the tooltip on hover.
 - **volume_icons**: A list of icons representing different volume levels. The icons are used based on the current volume percentage.
 - **callbacks**: A dictionary specifying the callbacks for mouse events. The keys are `on_middle` and `on_right`, and the values are the names of the callback functions.
 

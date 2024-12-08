@@ -17,12 +17,14 @@ class ClockWidget(BaseWidget):
             label: str,
             label_alt: str,
             locale: str,
+            tooltip: bool,
             update_interval: int,
             timezones: list[str],
             callbacks: dict[str, str],
     ):
         super().__init__(update_interval, class_name="clock-widget")
         self._locale = locale
+        self._tooltip = tooltip
         self._active_tz = None
         self._timezones = cycle(timezones if timezones else [get_localzone_name()])
         self._active_datetime_format_str = ''
@@ -126,5 +128,6 @@ class ClockWidget(BaseWidget):
                 
     def _next_timezone(self):
         self._active_tz = next(self._timezones)
-        self.setToolTip(self._active_tz)
+        if self._tooltip:
+            self.setToolTip(self._active_tz)
         self._update_label()

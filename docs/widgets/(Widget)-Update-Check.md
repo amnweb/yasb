@@ -13,6 +13,7 @@ This widget checks for available updates using Windows Update and Winget.
 |-----------------|---------|------------|--------------------------------------------------------------|
 | `enabled`       | boolean | `False`    | Enable Windows Update checking.                              |
 | `label`         | string  | `'{count}'`| Format string for the widget label. `{count}` shows update count. |
+| `tooltip`  | boolean  | `True`        | Whether to show the tooltip on hover. |
 | `interval`      | integer | `1440`     | Check interval in minutes (30 to 10080).                     |
 | `exclude`       | list    | `[]`       | List of updates to exclude from checking.                    |
 
@@ -22,6 +23,7 @@ This widget checks for available updates using Windows Update and Winget.
 |-----------------|---------|------------|--------------------------------------------------------------|
 | `enabled`       | boolean | `False`    | Enable Winget package update checking.                       |
 | `label`         | string  | `'{count}'`| Format string for the widget label. `{count}` shows update count. |
+| `tooltip`  | boolean  | `True`        | Whether to show the tooltip on hover. |
 | `interval`      | integer | `240`      | Check interval in minutes (10 to 10080).                     |
 | `exclude`       | list    | `[]`       | List of packages to exclude from checking.                   |
 

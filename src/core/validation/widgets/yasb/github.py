@@ -2,13 +2,14 @@ DEFAULTS = {
     'label': '{icon}',
     'label_alt': '{data} Notifications',
     'update_interval': 600,
-    "token": "",
-    "max_notification":20,
-    "only_unread": False,
-    "max_field_size": 100,
-    "menu_width": 400,
-    "menu_height": 400,
-    "menu_offset": 240
+    'token': "",
+    'tooltip': True,
+    'max_notification':20,
+    'only_unread': False,
+    'max_field_size': 100,
+    'menu_width': 400,
+    'menu_height': 400,
+    'menu_offset': 240
 }
 
 VALIDATION_SCHEMA = {
@@ -29,6 +30,11 @@ VALIDATION_SCHEMA = {
     'token': {
         'type': 'string',
         'default': DEFAULTS['token']
+    },
+    'tooltip': {
+        'type': 'boolean',
+        'required': False,
+        'default': DEFAULTS['tooltip']
     },
     'max_notification': {
         'type': 'integer',

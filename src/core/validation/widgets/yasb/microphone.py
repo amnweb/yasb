@@ -1,6 +1,7 @@
 DEFAULTS = {
     'label': '{icon}',
     'label_alt': '{icon} {level}%',
+    'tooltip': True,
     'icons': {
         'normal': '\uf130',
         'muted': '\uf131',
@@ -21,6 +22,11 @@ VALIDATION_SCHEMA = {
     'label_alt': {
         'type': 'string',
         'default': DEFAULTS['label_alt']
+    },
+    'tooltip': {
+        'type': 'boolean',
+        'required': False,
+        'default': DEFAULTS['tooltip']
     },
     'icons': {
         'type': 'dict',

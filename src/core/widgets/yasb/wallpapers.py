@@ -33,6 +33,7 @@ class WallpapersWidget(BaseWidget):
         update_interval: int,
         change_automatically: bool,
         image_path: str,
+        tooltip: bool,
         run_after: list[str],
         gallery: dict = None
     ):
@@ -44,6 +45,7 @@ class WallpapersWidget(BaseWidget):
         self._label_content = label
         self._change_automatically = change_automatically
         self._image_path = image_path
+        self._tooltip = tooltip
         self._run_after = run_after
         self._gallery = gallery
 
@@ -96,12 +98,14 @@ class WallpapersWidget(BaseWidget):
                     icon = re.sub(r'<span.*?>|</span>', '', part).strip()
                     label = QLabel(icon)
                     label.setProperty("class", class_result)
-                    label.setToolTip(f'Change Wallaper')
+                    if self._tooltip:
+                        label.setToolTip(f'Change Wallaper')
                     label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
                 else:
                     label = QLabel(part)
                     label.setProperty("class", "label") 
-                    label.setToolTip(f'Change Wallaper')
+                    if self._tooltip:
+                        label.setToolTip(f'Change Wallaper')
                     label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
                     
                 label.setAlignment(Qt.AlignmentFlag.AlignCenter)    

@@ -38,6 +38,7 @@ class VolumeWidget(BaseWidget):
         self,
         label: str,
         label_alt: str,
+        tooltip: bool,
         volume_icons: list[str],
         callbacks: dict[str, str]
     ):
@@ -45,7 +46,8 @@ class VolumeWidget(BaseWidget):
         self._show_alt_label = False
         self._label_content = label
         self._label_alt_content = label_alt
-
+        self._tooltip = tooltip
+        
         self.volume = None
         self._volume_icons = volume_icons
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
@@ -146,7 +148,8 @@ class VolumeWidget(BaseWidget):
     def _get_volume_icon(self):
         current_mute_status = self.volume.GetMute()
         current_volume_level = round(self.volume.GetMasterVolumeLevelScalar() * 100)
-        self.setToolTip(f'Volume {current_volume_level}')
+        if self._tooltip:
+            self.setToolTip(f'Volume {current_volume_level}')
         if current_mute_status == 1:
             volume_icon = self._volume_icons[0]
         elif 0 <= current_volume_level < 11:

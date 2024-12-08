@@ -1,6 +1,7 @@
 DEFAULTS = {
     'label': "{volume[percent]}%",
     'label_alt': "{volume[percent]}%",
+    'tooltip': True,
     'volume_icons': [
         "\ueee8",  # Icon for muted
         "\uf026",  # Icon for 0-10% volume
@@ -22,6 +23,11 @@ VALIDATION_SCHEMA = {
     'label_alt': {
         'type': 'string',
         'default': DEFAULTS['label_alt']
+    },
+    'tooltip': {
+        'type': 'boolean',
+        'required': False,
+        'default': DEFAULTS['tooltip']
     },
     'volume_icons': {
         'type': 'list',

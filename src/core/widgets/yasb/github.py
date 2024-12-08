@@ -30,13 +30,14 @@ class HoverWidget(QWidget):
 class GithubWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
 
-    def __init__(self, label: str, label_alt: str, token: str,max_notification: int, only_unread: bool, max_field_size: int, menu_width: int,menu_height: int,menu_offset: str, update_interval: int):
+    def __init__(self, label: str, label_alt: str, token: str, tooltip: bool, max_notification: int, only_unread: bool, max_field_size: int, menu_width: int,menu_height: int,menu_offset: str, update_interval: int):
         super().__init__((update_interval * 1000), class_name="github-widget")
         self._menu_open = False
         self._show_alt_label = False
         self._label_content = label
         self._label_alt_content = label_alt
         self._token = token if token != 'env' else os.getenv('YASB_GITHUB_TOKEN')
+        self._tooltip = tooltip
         self._menu_width = menu_width
         self._menu_height = menu_height
         self._menu_offset = menu_offset
@@ -122,7 +123,8 @@ class GithubWidget(BaseWidget):
             if '<span' in part and '</span>' in part:
                 icon = re.sub(r'<span.*?>|</span>', '', part).strip()
                 current_widget.setText(icon)
-                current_widget.setToolTip(f'Notifications {notification_count}')
+                if self._tooltip:
+                    current_widget.setToolTip(f'Notifications {notification_count}')
                 # Update class based on notification count
                 current_classes = current_widget.property("class").split()
                 notification_class = "new-notification"

@@ -188,6 +188,9 @@ class UpdateCheckWidget(BaseWidget):
         self._windows_update = windows_update
         self._winget_update = winget_update
 
+        self._windows_update_tooltip = self._windows_update['tooltip']
+        self._winget_update_tooltip = self._winget_update['tooltip']
+        
         self._window_update_enabled = self._windows_update.get('enabled', False)
         self._windows_update_label = self._windows_update.get('label', '')
         self._windows_update_exclude = self._windows_update.get('exclude', [])
@@ -293,7 +296,10 @@ class UpdateCheckWidget(BaseWidget):
                     formatted_text = part.format(count=data)
                     active_widgets[widget_index].setText(formatted_text)
                 active_widgets[widget_index].setCursor(Qt.CursorShape.PointingHandCursor)
-                active_widgets[widget_index].setToolTip("\n".join(names))
+                if widget_type == 'windows' and self._windows_update_tooltip:
+                    active_widgets[widget_index].setToolTip("\n".join(names))
+                elif widget_type == 'winget' and self._winget_update_tooltip:
+                    active_widgets[widget_index].setToolTip("\n".join(names))
                 widget_index += 1
 
 

@@ -2,12 +2,14 @@ DEFAULTS = {
     'windows_update': {
         'enabled': False,
         'label': '{count}',
+        'tooltip': True,
         'interval': 1440,
         'exclude': []
     },
     'winget_update': {
         'enabled': False,
         'label': '{count}',
+        'tooltip': True,
         'interval': 240,
         'exclude': []
     }
@@ -24,6 +26,11 @@ VALIDATION_SCHEMA = {
             'label': {
                 'type': 'string',
                 'default': DEFAULTS['windows_update']['label']
+            },
+            'tooltip': {
+                'type': 'boolean',
+                'required': False,
+                'default': DEFAULTS['windows_update']['tooltip']
             },
             'interval': {
                 'type': 'integer',
@@ -50,6 +57,11 @@ VALIDATION_SCHEMA = {
             'label': {
                 'type': 'string',
                 'default': DEFAULTS['winget_update']['label']
+            },
+            'tooltip': {
+                'type': 'boolean',
+                'required': False,
+                'default': DEFAULTS['windows_update']['tooltip']
             },
             'interval': {
                 'type': 'integer',
