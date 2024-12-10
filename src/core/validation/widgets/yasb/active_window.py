@@ -40,9 +40,7 @@ VALIDATION_SCHEMA = {
     },
     'label_icon_size': {
         'type': 'integer',
-        'default': DEFAULTS['label_icon_size'],
-        'min': 12,
-        'max': 24,
+        'default': DEFAULTS['label_icon_size']
     },
     'max_length': {
         'type': 'integer',
