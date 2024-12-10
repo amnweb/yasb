@@ -9,7 +9,7 @@ import subprocess
 import winshell
 from PyQt6.QtWidgets import QSystemTrayIcon, QMenu, QMessageBox
 from PyQt6.QtGui import QIcon, QGuiApplication
-from PyQt6.QtCore import QCoreApplication, QSize, Qt
+from PyQt6.QtCore import QCoreApplication, QSize, Qt 
 from core.bar_manager import BarManager
 from settings import GITHUB_URL, SCRIPT_PATH, APP_NAME, APP_NAME_FULL, DEFAULT_CONFIG_DIRECTORY, GITHUB_THEME_URL, BUILD_VERSION
 from core.config import get_config
@@ -17,8 +17,6 @@ from core.console import WindowShellDialog
 
 OS_STARTUP_FOLDER = os.path.join(os.environ['APPDATA'], r'Microsoft\Windows\Start Menu\Programs\Startup')
 VBS_PATH = os.path.join(SCRIPT_PATH, 'yasb.vbs')
-
-# Check if exe file exists
 INSTALLATION_PATH = os.path.abspath(os.path.join(__file__, "../../.."))
 EXE_PATH = os.path.join(INSTALLATION_PATH, 'yasb.exe')
 THEME_EXE_PATH = os.path.join(INSTALLATION_PATH, 'yasb_themes.exe')
@@ -36,7 +34,6 @@ class TrayIcon(QSystemTrayIcon):
         self._load_context_menu()
         self.setToolTip(APP_NAME)
         self._load_config()
- 
         
     def _load_config(self):
         try:
@@ -160,7 +157,7 @@ class TrayIcon(QSystemTrayIcon):
             logging.info(f"Created shortcut at {shortcut_path}")
         except Exception as e:
             logging.error(f"Failed to create startup shortcut: {e}")
-        self._load_context_menu()  # Reload context menu
+        self._load_context_menu()
 
     def _disable_startup(self):
         shortcut_path = os.path.join(OS_STARTUP_FOLDER, SHORTCUT_FILENAME)
@@ -210,25 +207,26 @@ class TrayIcon(QSystemTrayIcon):
             
     def _open_docs_in_browser(self):
         webbrowser.open(self._docs_url)
-
+ 
+                
     def _show_about_dialog(self):
-        about_text = f"""
-        <div style="font-family:'Segoe UI',sans-serif;">
-        <div style="font-size:20px;font-weight:700;">{APP_NAME} REBORN</div><br/>
-        <div style="font-size:14px;font-weight:500">{APP_NAME_FULL}</div>
-        <div style="font-size:12px;">Version: {BUILD_VERSION}</div><br>
-        <div><a href="{GITHUB_URL}">{GITHUB_URL}</a></div>
-        <div><a href="{GITHUB_THEME_URL}">{GITHUB_THEME_URL}</a></div>
-        </div>
-        """
-        about_box = QMessageBox()
+        about_box = QMessageBox()  
         about_box.setWindowTitle("About YASB")
-        
         icon_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'assets', 'images', 'app_icon.png')
         icon = QIcon(icon_path)
         about_box.setIconPixmap(icon.pixmap(48, 48))
         about_box.setWindowIcon(icon)
+        about_text = f"""
+        <div style="font-family:'Segoe UI',sans-serif;">
+        <div style="font-size:24px;font-weight:400;"><span style="font-weight:bold">YASB</span> Reborn</div>
+        <div style="font-size:13px;font-weight:600;margin-top:8px">{APP_NAME_FULL}</div>
+        <div style="font-size:13px;font-weight:600;">Version: {BUILD_VERSION}</div><br>
+        <div><a href="{GITHUB_URL}">{GITHUB_URL}</a></div>
+        <div><a href="{GITHUB_THEME_URL}">{GITHUB_THEME_URL}</a></div>
+        </div>
+        """
         about_box.setText(about_text)
+        about_box.setStandardButtons(QMessageBox.StandardButton.Close)
         about_box.exec()
 
     def _show_info(self):
@@ -236,11 +234,15 @@ class TrayIcon(QSystemTrayIcon):
         import socket
         import uuid
         import psutil
+        
+        info_box = QMessageBox()
+        info_box.setWindowTitle("System Information")
+        info_box.setTextFormat(Qt.TextFormat.RichText)
+        
         screens = QGuiApplication.screens()
-        # monitor information
         screens_info = """
-        <div style="font-size:16px;font-weight:bold;margin-bottom:8px">Monitor Information</div>
-        <div style="font-size:12px">
+        <div style="font-size:16px;font-weight:bold;margin-bottom:8px;font-family:'Segoe UI'">Monitor Information</div>
+        <div style="font-size:13px;font-family:'Segoe UI'">
         """
         for screen in screens:
             geometry = screen.geometry()
@@ -255,7 +257,7 @@ class TrayIcon(QSystemTrayIcon):
             screens_info += f"<div> - Physical Size: width={physical_size.width()}mm, height={physical_size.height()}mm</div>"
             screens_info += f"<div> - Logical DPI: {screen.logicalDotsPerInch()}</div>"
             screens_info += f"<div> - Physical DPI: {screen.physicalDotsPerInch()}</div><br>"
-        screens_info += "</div>"
+        screens_info += "</div><br>"
 
         hostname = socket.gethostname()
         ip_address = socket.gethostbyname(hostname)
@@ -265,17 +267,17 @@ class TrayIcon(QSystemTrayIcon):
         uptime = datetime.datetime.now() - boot_time
 
         system_info = """
-        <div style="font-size:16px;font-weight:bold;margin-bottom:8px">System Information</div>
-        <div style="font-size:12px">
-        System: {system}<br>
-        Release: {release}<br>
-        Version: {version}<br>
-        Hostname: {hostname}<br>
-        Machine: {machine}<br>
-        Processor: {processor}<br>
-        Uptime: {uptime}<br>
-        IP Address: {ip_address}<br>
-        MAC Address: {mac_address}<br>
+        <div style="font-size:16px;font-weight:bold;margin-bottom:8px;font-family:'Segoe UI'">System Information</div>
+        <div style="font-size:13px;font-family:'Segoe UI'">
+        - System: {system}<br>
+        - Release: {release}<br>
+        - Version: {version}<br>
+        - Hostname: {hostname}<br>
+        - Machine: {machine}<br>
+        - Processor: {processor}<br>
+        - Uptime: {uptime}<br>
+        - IP Address: {ip_address}<br>
+        - MAC Address: {mac_address}<br>
         </div>
         """.format(
             system=platform.system(),
@@ -288,19 +290,12 @@ class TrayIcon(QSystemTrayIcon):
             ip_address=ip_address,
             mac_address=mac_address
         )
-        
-        # Combine both sections
         screens_info += system_info
-        
-        # Create a QMessageBox instance
-        info_box = QMessageBox()
-        info_box.setWindowTitle("System Information")
-        info_box.setTextFormat(Qt.TextFormat.RichText)
         info_box.setText(screens_info)
         icon_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'assets', 'images', 'app_icon.png')
         icon = QIcon(icon_path)
- 
         info_box.setWindowIcon(icon)
+        info_box.setStandardButtons(QMessageBox.StandardButton.Close)
         info_box.exec()
         
     def _open_logs(self):

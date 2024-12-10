@@ -3,10 +3,9 @@ import sys
 import requests
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QLabel, QScrollArea, QFrame, QHBoxLayout, QPushButton, QMessageBox, QDialog)
-from PyQt6.QtGui import QPixmap, QFont, QDesktopServices, QIcon, QPalette, QColor
+from PyQt6.QtGui import QPixmap, QFont, QDesktopServices, QIcon
 from PyQt6.QtCore import Qt, QThread, pyqtSignal, QUrl, QTimer, QPropertyAnimation
 from PyQt6.QtWidgets import QGraphicsOpacityEffect
-
 
 class ImageLoader(QThread):
     finished = pyqtSignal(str, bytes)
@@ -47,10 +46,10 @@ class ThemeCard(QFrame):
         self.setObjectName("themeCard")
         self.setStyleSheet("""
             #themeCard {
-                background-color:rgba(19, 22, 26, 0.7);
-                border:1px solid #2c323b;
+                background-color:rgba(0, 0, 0, 0.1);
+                border:1px solid #333;
                 border-radius: 8px;
-                margin: 0 5px 5px 5px;
+                margin: 0 5px 10px 5px;
                 padding: 5px;
             }
         """)
@@ -84,6 +83,7 @@ class ThemeCard(QFrame):
                 margin-top:10px;
                 border-radius: 4px;
                 font-family: 'Segoe UI';
+                font-weight: 600;
                 font-size: 12px;
             }
             QPushButton:hover {
@@ -103,17 +103,21 @@ class ThemeCard(QFrame):
         install_btn.setFixedWidth(80)
         install_btn.setStyleSheet("""
             QPushButton {
-                background-color: #2c323b;
-                border: 1px solid #363e49;
+                background-color: #0078D4;
+                border: 1px solid #0884e2;
                 color: white;
                 padding: 3px 5px;
                 margin-top:10px;
                 border-radius: 4px;
                 font-family: 'Segoe UI';
+                font-weight: 600;
                 font-size: 12px;
             }
             QPushButton:hover {
-                background-color: #393f47;
+                background-color: #0884e2;
+            }
+            QPushButton:pressed {
+                background-color: #0f8dee;
             }
         """)
         top_layout.addWidget(install_btn)
@@ -123,7 +127,7 @@ class ThemeCard(QFrame):
         layout.addLayout(top_layout)
 
         # Author label
-        author = QLabel(f"author <a style=\"color:#89b4fa;text-decoration:none\" href='{self.theme_data['homepage']}'>{self.theme_data['author']}</a>")
+        author = QLabel(f"author <a style=\"color:#0078D4;text-decoration:none\" href='{self.theme_data['homepage']}'>{self.theme_data['author']}</a>")
         author.setFont(QFont('Segoe UI', 10))
         author.setOpenExternalLinks(True)
         layout.addWidget(author)
@@ -131,7 +135,10 @@ class ThemeCard(QFrame):
         # Description label
         description = QLabel(self.theme_data['description'])
         description.setFont(QFont('Segoe UI', 10))
-        description.setStyleSheet("color: rgba(255,255,255,0.5);")
+        opacity_effect = QGraphicsOpacityEffect()
+        opacity_effect.setOpacity(0.75)
+        description.setGraphicsEffect(opacity_effect)
+
         layout.addWidget(description)
 
         # Scroll area for image
@@ -206,7 +213,6 @@ class ThemeCard(QFrame):
         # Apply styles to the dialog
         dialog.setStyleSheet("""
             QLabel {
-                color: #ffffff;
                 font-size: 12px;
                 padding: 10px;
                 font-family: 'Segoe UI';
@@ -221,28 +227,31 @@ class ThemeCard(QFrame):
         button_layout = QHBoxLayout()
 
         yes_button = QPushButton("Install")
+        yes_button.setCursor(Qt.CursorShape.PointingHandCursor)
         yes_button.clicked.connect(dialog.accept)
         yes_button.setStyleSheet("""
             QPushButton {
-                background-color: #2c323b;
-                border: 1px solid #363e49;
+                background-color: #0078D4;
+                border: 1px solid #0884e2;
                 color: white;
                 padding: 4px 16px;
                 border-radius: 4px;
                 font-family: 'Segoe UI';
                 font-size: 12px;
+                font-weight: 600;
             }
             QPushButton:hover {
-                background-color: #393f47;
+                background-color: #0884e2;
             }
             QPushButton:focus {
                 outline: none;
             }
             QPushButton:pressed {
-                background-color: #2c323b;
+                background-color: #0f8dee;
             }
         """)
         no_button = QPushButton("Cancel")
+        no_button.setCursor(Qt.CursorShape.PointingHandCursor)
         no_button.setObjectName("cancelButton")
         no_button.clicked.connect(dialog.reject)
         no_button.setStyleSheet("""
@@ -254,6 +263,7 @@ class ThemeCard(QFrame):
                 border-radius: 4px;
                 font-family: 'Segoe UI';
                 font-size: 12px;
+                font-weight: 600;
             }
             QPushButton:hover {
                 background-color: #393f47;
@@ -307,7 +317,6 @@ class ThemeViewer(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("YASB Theme Gallery")
-
         icon_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'assets', 'images', 'app_icon.png')
         icon = QIcon(icon_path)
         self.setWindowIcon(QIcon(icon.pixmap(48, 48)))
@@ -337,7 +346,7 @@ class ThemeViewer(QMainWindow):
 
         self.backup_info = QLabel("Backup your current theme before installing a new one. You can do this by copying the <b>config.yaml</b> and <b>styles.css</b> files from the <b><i>.config/yasb</i></b> directory to a safe location.")
         self.backup_info.setWordWrap(True)
-        self.backup_info.setStyleSheet("color:#f7bfcb; background-color: rgba(166, 16, 48, 0.3);border-radius:6px;border:1px solid rgba(166, 16, 48, 0.5);padding:4px 8px;font-size:11px;font-family:'Segoe UI';margin:14px 20px 0 14px")
+        self.backup_info.setStyleSheet("color:#fff; background-color: rgba(166, 16, 48, 0.3);border-radius:6px;border:1px solid rgba(166, 16, 48, 0.5);padding:4px 8px;font-size:11px;font-family:'Segoe UI';margin:14px 20px 0 14px")
         self.backup_info.hide()
         layout.addWidget(self.backup_info)
 
@@ -345,7 +354,7 @@ class ThemeViewer(QMainWindow):
         self.scroll = QScrollArea()
 
         self.scroll.setWidgetResizable(True)
-        self.scroll.setStyleSheet("""
+        self.setStyleSheet("""
             QScrollArea {
                 background-color:transparent;
                 border: none;
@@ -392,6 +401,7 @@ class ThemeViewer(QMainWindow):
         self.minimum_display_timer.timeout.connect(self.on_minimum_time_elapsed)
         self.minimum_display_timer.start(3000)
 
+            
     def load_themes(self):
         self.theme_loader = ThemeLoader()
         self.theme_loader.finished.connect(self.on_themes_loaded)
@@ -441,12 +451,7 @@ class ThemeViewer(QMainWindow):
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    # Force dark theme
-    palette = QPalette()
-    palette.setColor(QPalette.ColorRole.Window, QColor("#1e1e1e"))
-    palette.setColor(QPalette.ColorRole.WindowText, QColor("#ffffff"))
-
-    app.setPalette(palette)
     viewer = ThemeViewer()
+ 
     viewer.show()
     sys.exit(app.exec())

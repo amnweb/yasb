@@ -2,7 +2,7 @@ import os
 from os import path
 from pathlib import Path
 import re
-from PyQt6.QtWidgets import QVBoxLayout, QTextEdit, QDialog, QDialogButtonBox
+from PyQt6.QtWidgets import QVBoxLayout, QTextEdit, QDialog
 from PyQt6.QtGui import QIcon
 from PyQt6.QtCore import QThread, pyqtSignal, Qt
 from settings import DEFAULT_CONFIG_DIRECTORY, DEFAULT_LOG_FILENAME
@@ -34,20 +34,7 @@ class WindowShellDialog(QDialog):
         super().__init__()
         self.setWindowTitle("YASB Console")
         self.resize(1060, 600)
-        icon_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'assets', 'images', 'app_icon.png')
-        
-        icon = QIcon(icon_path)
-        self.setWindowIcon(QIcon(icon.pixmap(48, 48)))
-
-        self.setWindowFlags(self.windowFlags() | Qt.WindowType.WindowMinimizeButtonHint)
-        self.setWindowFlags(self.windowFlags() | Qt.WindowType.WindowMaximizeButtonHint)
-        self.setWindowModality(Qt.WindowModality.WindowModal)
-        self.setContentsMargins(0, 0, 0, 0)
-
-        layout = QVBoxLayout()
-        self.output_viewer = QTextEdit()
-        self.output_viewer.setReadOnly(True)
-        self.output_viewer.setStyleSheet("""
+        self.setStyleSheet("""
             QTextEdit {
                 background-color: #13161a;
                 color: #cfd1e1;
@@ -64,14 +51,24 @@ class WindowShellDialog(QDialog):
                 color: #cfd1e1;
             }
         """)
+        icon_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'assets', 'images', 'app_icon.png')
+        
+        icon = QIcon(icon_path)
+        self.setWindowIcon(QIcon(icon.pixmap(48, 48)))
+
+        self.setWindowFlags(self.windowFlags() | Qt.WindowType.WindowMinimizeButtonHint)
+        self.setWindowFlags(self.windowFlags() | Qt.WindowType.WindowMaximizeButtonHint)
+        self.setWindowModality(Qt.WindowModality.WindowModal)
+        self.setContentsMargins(0, 0, 0, 0)
+
+        layout = QVBoxLayout()
+        self.output_viewer = QTextEdit()
+        self.output_viewer.setReadOnly(True)
+
         layout.addWidget(self.output_viewer)
-
-        button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
-        button_box.rejected.connect(self.close_dialog)
-        layout.addWidget(button_box)
-
+ 
         self.setLayout(layout)
-
+            
         HOME_CONFIGURATION_DIR = path.join(Path.home(), DEFAULT_CONFIG_DIRECTORY)
         log_file_path = f"{HOME_CONFIGURATION_DIR}\\{DEFAULT_LOG_FILENAME}"
 
