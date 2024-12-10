@@ -245,7 +245,7 @@ class WorkspaceWidget(BaseWidget):
                 self._add_or_update_buttons()
                 
             # Show float override label if float override is active
-            if state['float_override'] and self._label_float_override:
+            if state.get('float_override') and self._label_float_override:
                 self.float_override_label.show()
             else:
                 self.float_override_label.hide()
