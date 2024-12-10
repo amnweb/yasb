@@ -292,32 +292,34 @@ class TaskbarWidget(BaseWidget):
         self._blink_timer.timeout.connect(animate)
         self._blink_timer.start(duration // steps)
     
-    def _animate_icon(self, icon_label, start_width=None, end_width=None,fps = 60, duration=120):
+    def _animate_icon(self, icon_label, start_width=None, end_width=None, fps=60, duration=120):
         if start_width is None:
             start_width = 0
         if end_width is None:
             end_width = self._label_icon_size
-        
+
         step_duration = int(duration / fps)
         width_increment = (end_width - start_width) / fps
         opacity_increment = 1.0 / fps if end_width > start_width else -1.0 / fps
 
-        self._current_step = 0
-        self._current_width = start_width
-        self._current_opacity = 0.0 if end_width > start_width else 1.0
+        # Use local variables instead of instance variables
+        current_step = 0
+        current_width = start_width
+        current_opacity = 0.0 if end_width > start_width else 1.0
 
         # Set up the opacity effect
         opacity_effect = QGraphicsOpacityEffect()
         icon_label.setGraphicsEffect(opacity_effect)
-        opacity_effect.setOpacity(self._current_opacity)
+        opacity_effect.setOpacity(current_opacity)
 
         def update_properties():
-            if self._current_step <= fps:
-                self._current_width += width_increment
-                self._current_opacity += opacity_increment
-                icon_label.setFixedWidth(int(self._current_width))
-                opacity_effect.setOpacity(self._current_opacity)
-                self._current_step += 1
+            nonlocal current_step, current_width, current_opacity
+            if current_step <= fps:
+                current_width += width_increment
+                current_opacity += opacity_increment
+                icon_label.setFixedWidth(int(current_width))
+                opacity_effect.setOpacity(current_opacity)
+                current_step += 1
             else:
                 icon_label._animation_timer.stop()
                 if end_width == 0:
