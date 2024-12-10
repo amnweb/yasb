@@ -43,7 +43,7 @@ weather:
 - **label_alt:** The alternative format string for the weather label. Useful for displaying additional weather details.
 - **update_interval:** The interval in seconds to update the weather data. Must be between 60 and 36000000.
 - **hide_decimal:** Whether to hide the decimal part of the temperature.
-- **location:** The location for which to fetch the weather data. You can use example "USA Los Angeles 90006" {COUNTRY CITY ZIP_CODE}, or just city.
+- **location:** The location for which to fetch the weather data. You can use example "USA Los Angeles 90006" {COUNTRY CITY ZIP_CODE}, or just city. Location can be set to `env`, this means you have to set `YASB_WEATHER_LOCATION` in environment variable or you can set it directly in the configuration file.
 - **api_key:** The API key for accessing the weather service. You can get free API key `weatherapi.com`. API key can be set to `env`, this means you have to set `YASB_WEATHER_API_KEY` in environment variable or you can set it directly in the configuration file.
 - **icons:** A dictionary of icons for different weather conditions `sunnyDay`, `sunnyNight`, `clearDay`, `clearNight`, `cloudyDay`, `cloudyNight`, `rainyDay`, `rainyNight`, `snowyIcyDay`, `snowyIcyNight`, `blizzard`, `default`.
 - **callbacks:** A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions.
