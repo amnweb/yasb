@@ -28,7 +28,7 @@ class WeatherWidget(BaseWidget):
         super().__init__((update_interval * 1000), class_name="weather-widget")
         self._label_content = label
         self._label_alt_content = label_alt
-        self._location = location
+        self._location = location if location != 'env' else os.getenv('YASB_WEATHER_LOCATION')
         self._hide_decimal = hide_decimal
         self._icons = icons
         self._api_key = api_key if api_key != 'env' else os.getenv('YASB_WEATHER_API_KEY')
