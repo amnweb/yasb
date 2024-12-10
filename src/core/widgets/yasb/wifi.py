@@ -140,7 +140,7 @@ class WifiWidget(BaseWidget):
         for connection in connections:
             if connection.get_network_connectivity_level() == NetworkConnectivityLevel.INTERNET_ACCESS:
                 signal_strength = connection.get_signal_bars()
-                return signal_strength * 20
+                return signal_strength
         return 0
 
     def _get_wifi_name(self):
@@ -151,17 +151,14 @@ class WifiWidget(BaseWidget):
         return "No WiFi"
 
     def _get_wifi_icon(self):
-        # Map strength to its corresponding icon
         strength = self._get_wifi_strength()
         if strength == 0:
             return self._wifi_icons[0], strength
-        elif strength <= 20:
-            return self._wifi_icons[1], strength
-        elif strength <= 40:
-            return self._wifi_icons[2], strength
-        elif strength <= 60:
-            return self._wifi_icons[3], strength
-        elif strength <= 80:
-            return self._wifi_icons[3], strength
-        else:
-            return self._wifi_icons[4], strength
+        elif strength == 1:
+            return self._wifi_icons[1], strength * 25
+        elif strength == 2:
+            return self._wifi_icons[2], strength * 25
+        elif strength == 3:
+            return self._wifi_icons[3], strength * 25
+        elif strength == 4:
+            return self._wifi_icons[4], strength * 25
