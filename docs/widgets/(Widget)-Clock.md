@@ -16,15 +16,15 @@
 clock:
   type: "yasb.clock.ClockWidget"
   options:
-    label: '\uf017 {%H:%M:%S}'
-    label_alt: '\uf017 {%d-%m-%y %H:%M:%S}'
+    label: "uf017 {%H:%M:%S}"
+    label_alt: "\uf017 {%d-%m-%y %H:%M:%S}"
     locale: ""
     update_interval: 1000
     timezones: []
     callbacks:
-      on_left: 'toggle_label'
-      on_middle: 'do_nothing'
-      on_right: 'next_timezone'
+      on_left: "toggle_label"
+      on_middle: "do_nothing"
+      on_right: "next_timezone"
 ```
 
 ## Description of Options

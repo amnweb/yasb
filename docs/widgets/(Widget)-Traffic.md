@@ -17,8 +17,8 @@ traffic:
     label_alt: "Download {download_speed} | Upload {upload_speed}"
     update_interval: 1000
     callbacks:
-      on_left: 'toggle_label'
-      on_right: 'exec cmd /c Taskmgr'
+      on_left: "toggle_label"
+      on_right: "exec cmd /c Taskmgr"
 ```
 
 ## Description of Options

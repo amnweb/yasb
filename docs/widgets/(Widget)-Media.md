@@ -26,13 +26,13 @@
 media:
   type: "yasb.media.MediaWidget"
   options:
-    label: '{title} - {artist}'
-    label_alt: '{title}'
+    label: "{title} - {artist}"
+    label_alt: "{title}"
     hide_empty: true
     callbacks:
-      on_left: 'toggle_label'
-      on_middle: 'do_nothing'
-      on_right: 'do_nothing'
+      on_left: "toggle_label"
+      on_middle: "do_nothing"
+      on_right: "do_nothing"
     max_field_size:
       label: 20
       label_alt: 30
@@ -43,10 +43,10 @@ media:
     thumbnail_padding: 8
     thumbnail_corner_radius: 16
     icons:
-      prev_track: '\ue892'
-      next_track: '\ue893'
-      play: '\ue768'
-      pause: '\ue769'
+      prev_track: "\ue892"
+      next_track: "\ue893"
+      play: "\ue768"
+      pause: "\ue769"
 ```
 
 ## Description of Options

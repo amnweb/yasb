@@ -16,15 +16,15 @@
 microphone:
   type: "yasb.microphone.MicrophoneWidget"
   options:
-    label: '<span>{icon}</span>'
-    label_alt: '<span>{icon}</span> {level}%'
+    label: "<span>{icon}</span>"
+    label_alt: "<span>{icon}</span> {level}%"
     icons:
       normal: "\uf130"
       muted: "\uf131"
     callbacks:
-      on_left: 'toggle_mute'
-      on_middle: 'toggle_label'
-      on_right: 'exec cmd.exe /c start ms-settings:sound'
+      on_left: "toggle_mute"
+      on_middle: "toggle_label"
+      on_right: "exec cmd.exe /c start ms-settings:sound"
 ```
 
 ## Description of Options

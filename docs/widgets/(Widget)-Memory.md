@@ -17,9 +17,9 @@ memory:
     label_alt: "<span>\uf4bc</span> VIRT: {virtual_mem_percent}% SWAP: {swap_mem_percent}%"
     update_interval: 5000
     callbacks:
-      on_left: 'toggle_label'
-      on_middle: 'do_nothing'
-      on_right: 'do_nothing'
+      on_left: "toggle_label"
+      on_middle: "do_nothing"
+      on_right: "do_nothing"
     memory_thresholds:
       low: 25
       medium: 50
