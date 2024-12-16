@@ -1,4 +1,4 @@
-PyQt6
+PyQt6==6.7.1
 PyQt6_sip
 Cerberus
 cssutils
