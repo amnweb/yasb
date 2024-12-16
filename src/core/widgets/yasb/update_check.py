@@ -8,6 +8,7 @@ from core.validation.widgets.yasb.update_check import VALIDATION_SCHEMA
 from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 import win32com.client
+from settings import DEBUG
 
 class UpdateWorker(QThread):
     windows_update_signal = pyqtSignal(dict)
@@ -65,7 +66,8 @@ class UpdateWorker(QThread):
                     fl += 1
                 
                 if fl >= len(lines):
-                    logging.error("Invalid winget output format.")
+                    if DEBUG:
+                        logging.warning("Invalid winget output format.")
                     self.winget_update_signal.emit({"count": 0, "names": []})
                     return
                 
