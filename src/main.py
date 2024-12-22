@@ -13,15 +13,18 @@ from core.event_service import EventService
 import settings
 import ctypes
 import ctypes.wintypes
+from core.utils.win32.windows import WindowsTaskbar
 
 logging.getLogger('asyncio').setLevel(logging.WARNING)
 
 def main():
     config, stylesheet = get_config_and_stylesheet()
+    global hide_taskbar
+    hide_taskbar = config['hide_taskbar']
+    
     if config['debug']:
         settings.DEBUG = True
         logging.info("Debug mode enabled.")
-
     app = QApplication(argv)
     app.setQuitOnLastWindowClosed(False)
 
@@ -49,18 +52,24 @@ def main():
         if observer:
             observer.stop()
             observer.join()
+            if hide_taskbar:
+                WindowsTaskbar.hide(False, settings.DEBUG)
     app.aboutToQuit.connect(stop_observer)
 
     with loop:
+        if hide_taskbar:
+            WindowsTaskbar.hide(True, settings.DEBUG)
         loop.run_forever()
+        
 
 if __name__ == "__main__":
     init_logger()
     base_excepthook = sys.excepthook 
     def exception_hook(exctype, value, traceback):
+        if hide_taskbar:
+            WindowsTaskbar.hide(False, settings.DEBUG)
         EventService().clear()
         logging.error("Unhandled exception", exc_info=value)
-        # base_excepthook(exctype, value, traceback) 
         sys.exit(1) 
     sys.excepthook = exception_hook 
 
