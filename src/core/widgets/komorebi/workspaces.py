@@ -159,7 +159,8 @@ class WorkspaceWidget(BaseWidget):
             KomorebiEvent.Unmanage.value,
             KomorebiEvent.WatchConfiguration.value,
             KomorebiEvent.WorkspaceName.value,
-            KomorebiEvent.Cloak.value
+            KomorebiEvent.Cloak.value,
+            #KomorebiEvent.CloseWorkspace.value
         ]
         # Disable default mouse event handling inherited from BaseWidget
         self.mousePressEvent = None
@@ -220,7 +221,7 @@ class WorkspaceWidget(BaseWidget):
             self.hide()
 
     def _on_komorebi_update_event(self, event: dict, state: dict) -> None:
-        if self._update_komorebi_state(state):
+        if self._update_komorebi_state(state):           
             if event['type'] == KomorebiEvent.MoveWorkspaceToMonitorNumber.value:
                 if event['content'] != self._komorebi_screen['index']:
                     workspaces = self._komorebic.get_workspaces(self._komorebi_screen)
@@ -243,7 +244,18 @@ class WorkspaceWidget(BaseWidget):
                     self._add_or_update_buttons()
             elif event['type'] in self._update_buttons_event_watchlist:
                 self._add_or_update_buttons()
-                
+
+            # Remove workspace button if workspace is closed
+            if event['type'] == KomorebiEvent.CloseWorkspace.value:
+                workspaces = self._komorebic.get_workspaces(self._komorebi_screen)
+                screen_workspace_indexes = list(map(lambda ws: ws['index'], workspaces))
+                button_workspace_indexes = list(map(lambda ws: ws.workspace_index, self._workspace_buttons))
+                unknown_indexes = set(button_workspace_indexes) - set(screen_workspace_indexes)
+                if len(unknown_indexes) >= 0:
+                    for workspace_index in unknown_indexes:
+                        self._try_remove_workspace_button(workspace_index)
+                    self._add_or_update_buttons()
+                    
             # Show float override label if float override is active
             if state.get('float_override') and self._label_float_override:
                 self.float_override_label.show()
@@ -305,7 +317,7 @@ class WorkspaceWidget(BaseWidget):
 
     def _add_or_update_buttons(self) -> None:
         buttons_added = False
-        for workspace_index, workspace in enumerate(self._komorebi_workspaces):
+        for workspace_index, workspace in enumerate(self._komorebi_workspaces):             
             try:
                 button = self._workspace_buttons[workspace_index]
                 self._update_button(button)
