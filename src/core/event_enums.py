@@ -35,6 +35,7 @@ class KomorebiEvent(Event):
     Manage = "Manage"
     Unmanage = "Unmanage"
     Cloak = "Cloak"
+    CloseWorkspace  = "CloseWorkspace"
     MoveContainerToMonitorNumber = "MoveContainerToMonitorNumber"
     MoveContainerToWorkspaceNumber = "MoveContainerToWorkspaceNumber"
     MoveWorkspaceToMonitorNumber = "MoveWorkspaceToMonitorNumber"
