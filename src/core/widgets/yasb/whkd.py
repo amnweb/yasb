@@ -1,9 +1,8 @@
 import re
-import sys
 import os
 from core.widgets.base import BaseWidget
 from core.validation.widgets.yasb.whkd import VALIDATION_SCHEMA
-from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget, QApplication, QSizePolicy, QVBoxLayout, QScrollArea, QPushButton
+from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget, QApplication, QSizePolicy, QVBoxLayout, QScrollArea, QPushButton, QLineEdit
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QCursor, QIcon
 
@@ -99,19 +98,51 @@ class KeybindWidget(QWidget):
         self.initUI(keybind, command)
 
     def initUI(self, keybind, command):
+        container = QWidget()
+        container.setObjectName("keybindContainer")
         layout = QHBoxLayout()
         
         keybind_label = QLabel(keybind)
-        keybind_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        keybind_label.setStyleSheet("background-color:#3a3a3a;color:white;padding:4px 8px;font-size:13px;min-width:120px;font-weight:bold;border-radius:4px;max-height:24px")
+        keybind_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        keybind_label.setStyleSheet("""
+            background-color: #3a3a3a;
+            color: white;
+            padding: 4px 8px;
+            font-size: 15px;
+            font-weight: bold;
+            border-radius: 4px;
+            max-height: 24px;
+            font-family: 'Segoe UI', sans-serif;
+        """)
         command_label = QLabel(command)
-        command_label.setStyleSheet("padding:4px;font-size: 14px")
-        
+        command_label.setStyleSheet("""
+            padding:4px;
+            font-size: 14px;
+            font-family: 'Segoe UI', sans-serif;
+        """)
         layout.addWidget(keybind_label)
         layout.addWidget(command_label)
-        layout.setSpacing(0)
-        layout.setContentsMargins(0, 0, 0, 5)
-        self.setLayout(layout)
+        layout.setSpacing(5)
+        layout.setContentsMargins(5, 5, 5, 5)
+        container.setLayout(layout)
+        
+        container.setStyleSheet("""
+            QWidget#keybindContainer {
+                background-color: transparent;
+                border-radius: 4px;
+                border:1px solid transparent;
+            }
+            QWidget#keybindContainer:hover {
+                background-color: #3a3a3a;
+                border:1px solid #53545a;
+            }
+        """)
+        main_layout = QVBoxLayout()
+        main_layout.addWidget(container)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        self.setLayout(main_layout)
+        
+ 
         # Adjust the width of the keybind_label based on its content
         keybind_label.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Preferred)
         keybind_label.setMinimumWidth(keybind_label.sizeHint().width())
@@ -120,6 +151,7 @@ class KeybindsWindow(QWidget):
     def __init__(self, content, file_path):
         super().__init__()
         self.file_path = file_path
+        self.original_content = content  # Store the original content
         self.initUI(content)
 
     def initUI(self, content):
@@ -132,7 +164,7 @@ class KeybindsWindow(QWidget):
         # Get screen size and set window center
         screen = QApplication.primaryScreen()
         screen_size = screen.size()
-        window_width = 640
+        window_width = 720
         window_height = 640
         self.setGeometry(
             (screen_size.width() - window_width) // 2,
@@ -142,20 +174,39 @@ class KeybindsWindow(QWidget):
         )
 
         layout = QVBoxLayout()
+        layout.setAlignment(Qt.AlignmentFlag.AlignTop)  # Align items to the top
+        layout.setSpacing(5)  # Set spacing between items if needed
+        # Add input field for filtering
+        self.filter_input = QLineEdit()
+        self.filter_input.setPlaceholderText("Type to filter keybinds...")
+        self.filter_input.setStyleSheet("""
+            QLineEdit {
+                padding: 8px;
+                font-size: 16px;
+                font-family: 'Segoe UI', sans-serif;
+                border: 1px solid transparent;
+                border-radius: 4px;
+                outline: none; 
+            }
+            QLineEdit:focus {
+            border: 1px solid #0078D4;
+            }
+        """)
+        self.filter_input.setFixedHeight(40)
+        self.filter_input.textChanged.connect(self.filter_keybinds)
+        layout.addWidget(self.filter_input)
 
         # Create a scroll area
-        scroll_area = QScrollArea()
-        scroll_area.setWidgetResizable(True)
+        self.scroll_area = QScrollArea()
+        self.scroll_area.setWidgetResizable(True)
 
         # Get the window's background color
-        window_background_color = self.palette().color(self.backgroundRole()).name()
-        scroll_area.setStyleSheet(f"""
+        
+        self.scroll_area.setStyleSheet(f"""
             QScrollArea {{
-                background-color: {window_background_color};
                 border: 0;
             }}
             QScrollBar:vertical {{
-                background-color: {window_background_color};
                 width: 4px;
                 margin: 0px;
                 border: 0;
@@ -176,7 +227,6 @@ class KeybindsWindow(QWidget):
                 width: 0;
                 height: 0;
                 image: none;
-                background: {window_background_color};
             }}
             QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{
                 background: none;
@@ -184,18 +234,16 @@ class KeybindsWindow(QWidget):
         """)
 
         # Create a widget to hold the keybind widgets
-        container = QWidget()
-        container_layout = QVBoxLayout()
-
+        self.container = QWidget()
+        self.container_layout = QVBoxLayout()
+        self.container_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         # Add each formatted line as a KeybindWidget
-        for keybind, command in content:
-            keybind_widget = KeybindWidget(keybind, command)
-            container_layout.addWidget(keybind_widget)
+        self.add_keybind_widgets(content)
 
-        container.setLayout(container_layout)
-        scroll_area.setWidget(container)
+        self.container.setLayout(self.container_layout)
+        self.scroll_area.setWidget(self.container)
 
-        layout.addWidget(scroll_area)
+        layout.addWidget(self.scroll_area)
 
         # Add a button to open the file in the default text editor
         open_button = QPushButton("Edit Config File")
@@ -217,6 +265,24 @@ class KeybindsWindow(QWidget):
         layout.addWidget(open_button)
         self.setLayout(layout)
 
+    def add_keybind_widgets(self, content):
+        # Clear existing widgets
+        for i in reversed(range(self.container_layout.count())):
+            widget = self.container_layout.itemAt(i).widget()
+            if widget is not None:
+                widget.setParent(None)
+
+        # Add each formatted line as a KeybindWidget
+        for keybind, command in content:
+            keybind_widget = KeybindWidget(keybind, command)
+            self.container_layout.addWidget(keybind_widget)
+
+    def filter_keybinds(self, text):
+        filtered_content = [
+            (keybind, command) for keybind, command in self.original_content
+            if text.lower() in keybind.lower() or text.lower() in command.lower()
+        ]
+        self.add_keybind_widgets(filtered_content)
+
     def open_file(self):
         os.startfile(self.file_path)
- 
