@@ -19,7 +19,7 @@ from colorama import just_fix_windows_console
 just_fix_windows_console()
 
 YASB_VERSION = BUILD_VERSION
-YASB_CLI_VERSION = "1.0.3"
+YASB_CLI_VERSION = "1.0.4"
 
 OS_STARTUP_FOLDER = os.path.join(os.environ['APPDATA'], r'Microsoft\Windows\Start Menu\Programs\Startup')
 INSTALLATION_PATH = os.path.abspath(os.path.join(__file__, "../../.."))
@@ -199,7 +199,7 @@ class CLIHandler:
             sys.exit(0)
             
         elif args.version:
-            version_message = f"\nYASB Reborn " + Format.underline + f"v{YASB_VERSION}" + Format.end + f"\nYASB-CLI " + Format.underline + f"v{YASB_CLI_VERSION}" + Format.end + "\n"
+            version_message = f"YASB Reborn v{YASB_VERSION}\nYASB-CLI v{YASB_CLI_VERSION}"
             print(version_message)
         else:
             logging.info("Unknown command. Use --help for available options.")
@@ -347,6 +347,10 @@ class CLIUpdateHandler():
         # Step 4: Run the MSI installer in silent mode and restart the application
         if is_process_running("yasb.exe"):
             subprocess.run(["taskkill", "/f", "/im", "yasb.exe"], creationflags=subprocess.CREATE_NO_WINDOW)
+        if is_process_running("yasb_themes.exe"):
+            subprocess.run(["taskkill", "/f", "/im", "yasb_themes.exe"], creationflags=subprocess.CREATE_NO_WINDOW)
+        if is_process_running("yasbc.exe"):
+            subprocess.run(["taskkill", "/f", "/im", "yasbc.exe"], creationflags=subprocess.CREATE_NO_WINDOW)
             
         # Construct the uninstall command as a string
         product_code = CLIUpdateHandler.get_installed_product_code()
@@ -354,6 +358,7 @@ class CLIUpdateHandler():
             uninstall_command = f'msiexec /x {product_code} /passive'
         else:
             uninstall_command = ""
+            
         # Construct the install command as a string
         install_command = f'msiexec /i "{os.path.abspath(msi_path)}" /passive /norestart'
         run_after_command = f'"{EXE_PATH}"'
