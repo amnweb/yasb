@@ -53,7 +53,7 @@ class BarManager(QObject):
             logging.error(f"Error loading config: {e}")
             return
         if config and (config != self.config):
-            if any(config[key] != self.config[key] for key in ['bars', 'widgets', 'komorebi', 'debug']):
+            if any(config[key] != self.config[key] for key in ['bars', 'widgets', 'komorebi', 'debug','hide_taskbar']):
                 os.execl(sys.executable, sys.executable, *sys.argv)
             else:
                 self.config = config
