@@ -80,7 +80,7 @@ def get_config(show_error_dialog=False) -> Union[dict, None]:
     config_path = get_config_path()
 
     try:
-        with open(config_path) as yaml_stream:
+        with open(config_path, encoding='utf-8') as yaml_stream:
             config = safe_load(yaml_stream)
 
         if yaml_validator.validate(config, CONFIG_SCHEMA):
