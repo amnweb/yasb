@@ -349,9 +349,7 @@ class CLIUpdateHandler():
             subprocess.run(["taskkill", "/f", "/im", "yasb.exe"], creationflags=subprocess.CREATE_NO_WINDOW)
         if is_process_running("yasb_themes.exe"):
             subprocess.run(["taskkill", "/f", "/im", "yasb_themes.exe"], creationflags=subprocess.CREATE_NO_WINDOW)
-        if is_process_running("yasbc.exe"):
-            subprocess.run(["taskkill", "/f", "/im", "yasbc.exe"], creationflags=subprocess.CREATE_NO_WINDOW)
-            
+
         # Construct the uninstall command as a string
         product_code = CLIUpdateHandler.get_installed_product_code()
         if product_code is not None:
