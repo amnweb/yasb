@@ -11,6 +11,7 @@ LOCALE_SISO639LANGNAME = 0x59
 LOCALE_SISO3166CTRYNAME = 0x5A
 LOCALE_SLANGUAGE = 0x2
 LOCALE_SCOUNTRY = 0x6
+LOCALE_SNAME = 0x5c
 LOCALE_SNATIVECTRYNAME = 0x07
 LOCALE_SNATIVELANGNAME = 0x04
 # Define necessary ctypes structures and functions
@@ -126,10 +127,12 @@ class LanguageWidget(BaseWidget):
         hwnd = user32.GetForegroundWindow()
         # Get the thread id of the foreground window
         thread_id = user32.GetWindowThreadProcessId(hwnd, None)
-        # Get the keyboard layout for the thread
-        hkl = user32.GetKeyboardLayout(thread_id)
-        # Get the language identifier from the HKL
-        lang_id = hkl & 0xFFFF
+        # Get the active input locale identifier for the thread
+        input_locale_id = user32.GetKeyboardLayout(thread_id)
+        # Extract the low word (language identifier) and high word (keyboard layout identifier) from the active input locale identifier
+        lang_id = input_locale_id & 0xFFFF
+        layout_id = (input_locale_id >> 16) & 0xFFFF
+
         # Buffers for the language and country names
         lang_name = ctypes.create_unicode_buffer(LOCALE_NAME_MAX_LENGTH)
         country_name = ctypes.create_unicode_buffer(LOCALE_NAME_MAX_LENGTH)
@@ -137,6 +140,8 @@ class LanguageWidget(BaseWidget):
         full_country_name = ctypes.create_unicode_buffer(LOCALE_NAME_MAX_LENGTH)
         native_country_name = ctypes.create_unicode_buffer(LOCALE_NAME_MAX_LENGTH)
         native_lang_name = ctypes.create_unicode_buffer(LOCALE_NAME_MAX_LENGTH)
+        layout_locale_name = ctypes.create_unicode_buffer(LOCALE_NAME_MAX_LENGTH)
+
         # Get the ISO language name
         kernel32.GetLocaleInfoW(lang_id, LOCALE_SISO639LANGNAME, lang_name, LOCALE_NAME_MAX_LENGTH)
         # Get the ISO country name
@@ -147,8 +152,11 @@ class LanguageWidget(BaseWidget):
         kernel32.GetLocaleInfoW(lang_id, LOCALE_SCOUNTRY, full_country_name, LOCALE_NAME_MAX_LENGTH)
         # Get the native country name
         kernel32.GetLocaleInfoW(lang_id, LOCALE_SNATIVECTRYNAME, native_country_name, LOCALE_NAME_MAX_LENGTH)
-      
+        # Get the native language name
         kernel32.GetLocaleInfoW(lang_id, LOCALE_SNATIVELANGNAME, native_lang_name, LOCALE_NAME_MAX_LENGTH)
+        # Convert the keyboard layout name to a human-readable string
+        kernel32.GetLocaleInfoW(layout_id, LOCALE_SNAME, layout_locale_name, LOCALE_NAME_MAX_LENGTH)
+
         language_code = lang_name.value
         country_code = country_name.value
         full_name = f"{full_lang_name.value}"
@@ -157,5 +165,6 @@ class LanguageWidget(BaseWidget):
             'country_code': country_code,
             'full_name': full_name,
             'native_country_name': native_country_name.value,
-            'native_lang_name': native_lang_name.value
+            'native_lang_name': native_lang_name.value,
+            'layout_name': layout_locale_name.value
         }
