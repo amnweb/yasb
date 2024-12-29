@@ -69,6 +69,7 @@ for more themes visit [yasb-themes](https://github.com/amnweb/yasb-themes)
 - **[Applications](https://github.com/amnweb/yasb/wiki/(Widget)-Applications)**: Shows a list of predefined applications.
 - **[Battery](https://github.com/amnweb/yasb/wiki/(Widget)-Battery)**: Displays the current battery status.
 - **[Bluetooth](https://github.com/amnweb/yasb/wiki/(Widget)-Bluetooth)**: Shows the current Bluetooth status and connected devices.
+- **[Brightness](https://github.com/amnweb/yasb/wiki/(Widget)-Brightness)**: Displays and change the current brightness level.
 - **[CPU](https://github.com/amnweb/yasb/wiki/(Widget)-CPU)**: Shows the current CPU usage.
 - **[Clock](https://github.com/amnweb/yasb/wiki/(Widget)-Clock)**: Displays the current time and date.
 - **[Custom](https://github.com/amnweb/yasb/wiki/(Widget)-Custom)**: Create a custom widget.
