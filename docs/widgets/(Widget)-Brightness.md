@@ -7,12 +7,12 @@
 | `tooltip`  | boolean  | `True`        | Whether to show the tooltip on hover. |
 | `brightness_icons` | list  | `['\udb80\udcde', '\udb80\udcdd', '\udb80\udcdf', '\udb80\udce0']`                    | A list of icons representing different brightness levels. The icons are used based on the current brightness percentage. |
 | `hide_unsupported` | boolean | `True` | Whether to hide the widget if the current system does not support brightness control. |
-| `auto_light` | boolean | `True` | Whether to automatically adjust the brightness icon based on the current brightness level. |
+| `auto_light` | boolean | `False` | Whether to automatically adjust the brightness icon based on the current brightness level. |
 | `auto_light_icon` | string | `"\udb80\udce1"` | The icon to use when the auto_light option is enabled. |
 | `auto_light_night_level` | int | `50` | The brightness level at which the widget switches to the night. |
 | `auto_light_day_level` | int | `100` | The brightness level at which the widget switches to the day. |
 | `auto_light_night_start_time` | string | `"20:00"` | The time at which the night starts. |
-| `auto_light_night_end_time` | string | `"06:00"` | The time at which the night ends. |
+| `auto_light_night_end_time` | string | `"06:30"` | The time at which the night ends. |
 | `callbacks`     | dict    | `{'on_left': 'toggle_label', 'on_middle': 'do_nothing', 'on_right': 'do_nothing'}` | Callbacks for mouse events on the clock widget. |
 | `container_padding`  | dict | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}`      | Explicitly set padding inside widget container.      |
 
