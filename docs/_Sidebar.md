@@ -9,6 +9,7 @@
     - [Applications](./(Widget)-Applications)
     - [Battery](./(Widget)-Battery)
     - [Bluetooth](./(Widget)-Bluetooth)
+    - [Brightness](./(Widget)-Brightness)
     - [CPU](./(Widget)-CPU)
     - [Clock](./(Widget)-Clock)
     - [Custom](./(Widget)-Custom)
