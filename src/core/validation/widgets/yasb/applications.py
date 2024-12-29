@@ -10,6 +10,11 @@ VALIDATION_SCHEMA = {
         'required': False,
         'default': ""
     },
+    'image_icon_size': {
+        'type': 'integer',
+        'required': False,
+        'default': 14
+    },
     'app_list': {
         'type': 'list',
         'schema': {
