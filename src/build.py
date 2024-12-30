@@ -27,6 +27,7 @@ build_options = {
         'core.widgets.yasb.obs',
         'core.widgets.yasb.whkd',
         'core.widgets.yasb.taskbar',
+        'core.widgets.yasb.brightness',
         'core.widgets.yasb.update_check',
         'core.widgets.yasb.windows_desktops',
         'core.widgets.yasb.home',
