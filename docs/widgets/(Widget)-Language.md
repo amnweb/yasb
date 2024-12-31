@@ -22,7 +22,7 @@ language:
 ```
 
 ## Description of Options
-- **label:** The format string for the label. You can use placeholders like `{lang[language_code]}`, `{lang[country_code]}`, `{lang[full_name]}`, `{lang[native_country_name]}`, `{lang[native_lang_name]}`, 
+- **label:** The format string for the label. You can use placeholders like `{lang[language_code]}`, `{lang[country_code]}`, `{lang[full_name]}`, `{lang[native_country_name]}`, `{lang[native_lang_name]}`, `{lang[layout_name]}`, `{lang[full_layout_name]}`, `{lang[layout_country_name]}`.
 - **label_alt:** The alternative format string for the label. Useful for displaying the full language name.
 - **update_interval:** The interval in seconds to update the language information. Must be between 1 and 3600.
 - **callbacks:** A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions.
