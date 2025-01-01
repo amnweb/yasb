@@ -22,7 +22,7 @@
 # Installation
 
 ### Requirements
-- Nerd Fonts. Install [Nerd Fonts](https://www.nerdfonts.com/font-downloads) (JetBrainsMono recommended)
+- Nerd Fonts. Install [Nerd Fonts](https://www.nerdfonts.com/font-downloads) ([JetBrainsMono](https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.zip) recommended)
 - Windows 10 & 11
 
 ### Installer
@@ -43,7 +43,7 @@ winget install --id AmN.yasb
 - Install Python 3.12
 - Install required Python Modules:
   - `pip install -r requirements.txt`
-  - Create the directory `C:/Users/{username}/.config/yasb/` and copy [styles.css](src/styles.css) and [config.yaml](src/config.yaml) into folder. If you don't have the `.config/yasb/` directory, on first run, the application will create it for you.
+  - Create the directory `C:/Users/{username}/.config/yasb/` and copy [styles.css](src/styles.css) and [config.yaml](src/config.yaml) into folder. If you don't have the `.config/yasb/` directory, on first run, the application will create it for you with the default configuration.
   - Configure [styles.css](src/styles.css) and [config.yaml](src/config.yaml) to your liking.
 - Start the application:
   - run `python src/main.py` in your terminal (or click [yasb.vbs](src/yasb.vbs))
