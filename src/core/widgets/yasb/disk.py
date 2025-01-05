@@ -1,10 +1,43 @@
+import os
 import psutil
 import re
 from core.widgets.base import BaseWidget
 from core.validation.widgets.yasb.disk import VALIDATION_SCHEMA
-from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget
-from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget, QDialog, QProgressBar, QVBoxLayout, QApplication
+from PyQt6.QtCore import Qt, QPoint, pyqtSignal, QEvent
+from core.utils.win32.blurWindow import Blur
+from core.utils.utilities import is_windows_10
 
+class PopupWidget(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        QApplication.instance().installEventFilter(self)
+
+    def eventFilter(self, obj, event):
+        if event.type() == QEvent.Type.MouseButtonPress:
+            global_pos = event.globalPosition().toPoint()
+            if not self.geometry().contains(global_pos):
+                self.hide()
+                return True
+        return super().eventFilter(obj, event)
+
+    def hideEvent(self, event):
+        QApplication.instance().removeEventFilter(self)
+        super().hideEvent(event)
+
+
+class ClickableDiskWidget(QWidget):
+    clicked = pyqtSignal()
+
+    def __init__(self, label, parent=None):
+        super().__init__(parent)
+        self.label = label
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.clicked.emit()
+        super().mousePressEvent(event)  
+        
 class DiskWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
 
@@ -15,6 +48,8 @@ class DiskWidget(BaseWidget):
             volume_label: str,
             decimal_display: int,
             update_interval: int,
+            group_label: dict[str, str],
+            container_padding: dict[str, int],
             callbacks: dict[str, str],
     ):
         super().__init__(int(update_interval * 1000), class_name="disk-widget")
@@ -23,11 +58,13 @@ class DiskWidget(BaseWidget):
         self._label_content = label
         self._label_alt_content = label_alt
         self._volume_label = volume_label.upper()
-        
+        self._padding = container_padding
+        self._group_label = group_label
+
         # Construct container
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
+        self._widget_container_layout.setContentsMargins(self._padding['left'],self._padding['top'],self._padding['right'],self._padding['bottom'])
         # Initialize container
         self._widget_container: QWidget = QWidget()
         self._widget_container.setLayout(self._widget_container_layout)
@@ -43,9 +80,15 @@ class DiskWidget(BaseWidget):
         self.callback_right = callbacks['on_right']
         self.callback_middle = callbacks['on_middle']
         self.callback_timer = "update_label"
-        self.start_timer()
-
+        if not self._group_label['enabled']:
+            self.start_timer()
+        
+            
+        
     def _toggle_label(self):
+        if self._group_label['enabled']:
+            self.show_group_label()
+            return
         self._show_alt_label = not self._show_alt_label
         for widget in self._widgets:
             widget.setVisible(not self._show_alt_label)
@@ -59,7 +102,7 @@ class DiskWidget(BaseWidget):
             label_parts = [part for part in label_parts if part]
             widgets = []
             for part in label_parts:
-                part = part.strip()  # Remove any leading/trailing whitespace
+                part = part.strip()
                 if not part:
                     continue
                 if '<span' in part and '</span>' in part:
@@ -71,7 +114,9 @@ class DiskWidget(BaseWidget):
                 else:
                     label = QLabel(part)
                     label.setProperty("class", "label")
-                label.setAlignment(Qt.AlignmentFlag.AlignCenter)    
+                label.setAlignment(Qt.AlignmentFlag.AlignCenter)  
+                if self._group_label['enabled']:
+                    label.setCursor(Qt.CursorShape.PointingHandCursor)  
                 self._widget_container_layout.addWidget(label)
                 widgets.append(label)
                 if is_alt:
@@ -107,12 +152,114 @@ class DiskWidget(BaseWidget):
                     active_widgets[widget_index].setText(formatted_text)
                 widget_index += 1
 
- 
+           
+    def show_group_label(self):  
+        self.dialog = PopupWidget(self)
+        self.dialog.setProperty("class", "disk-group")
+        self.dialog.setWindowFlag(Qt.WindowType.FramelessWindowHint)
+        self.dialog.setWindowFlag(Qt.WindowType.Popup)
+        layout = QVBoxLayout()
+        for label in self._group_label['volume_labels']:
+            disk_space = self._get_space(label)
+            if disk_space is None:
+                continue
+            row_widget = QWidget()
+            row_widget.setProperty("class", "disk-group-row")
+            
+            clicable_row = ClickableDiskWidget(label)
+            clicable_row.clicked.connect(lambda lbl=label: self.open_explorer(lbl))
+            clicable_row.setCursor(Qt.CursorShape.PointingHandCursor)
+       
+            v_layout = QVBoxLayout(clicable_row)
+            h_layout = QHBoxLayout()
+            
+            label_widget = QLabel(f"{label}:")
+            label_widget.setProperty("class", "disk-group-label")
+            h_layout.addWidget(label_widget)
 
-    def _get_space(self):
+            label_size = QLabel()
+            label_size.setProperty("class", "disk-group-label-size")
+
+            # show size in TB if it's more than 1000GB
+            total_gb = float(disk_space['total']['gb'].strip('GB'))
+            free_gb = float(disk_space['free']['gb'].strip('GB'))
+            if total_gb > 1000:
+                total_size = disk_space['total']['tb']
+            else:
+                total_size = disk_space['total']['gb']     
+                
+            if free_gb > 1000:
+                free_size = disk_space['free']['tb']
+            else:
+                free_size = disk_space['free']['gb']         
+            label_size.setText(f"{free_size} / {total_size}")
+            h_layout.addStretch()    
+            h_layout.addWidget(label_size)
+
+            v_layout.addLayout(h_layout)
+
+            progress_bar = QProgressBar()
+            progress_bar.setTextVisible(False)
+            progress_bar.setProperty("class", "disk-group-label-bar")
+            if disk_space:
+                progress_bar.setValue(int(float(disk_space['used']['percent'].strip('%'))))
+            v_layout.addWidget(progress_bar)
+
+            row_widget_layout = QVBoxLayout(row_widget)
+            row_widget_layout.setContentsMargins(0, 0, 0, 0)
+            row_widget_layout.setSpacing(0)
+            row_widget_layout.addWidget(clicable_row)
+
+            layout.addWidget(row_widget)
+                
+        self.dialog.setLayout(layout)
+        
+        if self._group_label['blur']:
+            Blur(
+                self.dialog.winId(),
+                Acrylic=True if is_windows_10() else False,
+                DarkMode=False,
+                RoundCorners=True,
+                BorderColor="System"
+            )
+
+        # Position the dialog 
+        self.dialog.adjustSize()
+        widget_global_pos = self.mapToGlobal(QPoint(0, self.height() + self._group_label['distance']))
+        if self._group_label['direction'] == 'up':
+            global_y = self.mapToGlobal(QPoint(0, 0)).y() - self.dialog.height() - self._group_label['distance']
+            widget_global_pos = QPoint(self.mapToGlobal(QPoint(0, 0)).x(), global_y)
+
+        if self._group_label['alignment'] == 'left':
+            global_position = widget_global_pos
+        elif self._group_label['alignment'] == 'right':
+            global_position = QPoint(
+                widget_global_pos.x() + self.width() - self.dialog.width(),
+                widget_global_pos.y()
+            )
+        elif self._group_label['alignment'] == 'center':
+            global_position = QPoint(
+                widget_global_pos.x() + (self.width() - self.dialog.width()) // 2,
+                widget_global_pos.y()
+            )
+        else:
+            global_position = widget_global_pos
+        
+        self.dialog.move(global_position)
+        self.dialog.show()        
+    
+    def open_explorer(self, label):
+        os.startfile(f"{label}:\\")
+        
+    def _get_space(self, volume_label=None):
+        if volume_label is None:
+            volume_label = self._volume_label
+
         partitions = psutil.disk_partitions()
-        specific_partitions = [partition for partition in partitions if partition.device in (f'{self._volume_label}:\\')]
-
+        specific_partitions = [partition for partition in partitions if partition.device in (f'{volume_label}:\\')]
+        if not specific_partitions:
+            return
+    
         for partition in specific_partitions:
             usage = psutil.disk_usage(partition.mountpoint)
             percent_used = usage.percent
@@ -136,4 +283,4 @@ class DiskWidget(BaseWidget):
                     'percent': f"{percent_used:.{self._decimal_display}f}%"
                 }
             }
-        return None
+        return None  
