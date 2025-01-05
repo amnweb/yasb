@@ -50,6 +50,21 @@ komorebi_active_layout:
 - **container_padding:** Explicitly set padding inside widget container.
 - **callbacks**: A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions.
 
+### Allowed Callbacks:
+```
+"next_layout"
+"prev_layout"
+"flip_layout"
+"flip_layout_horizontal"
+"flip_layout_vertical"
+"flip_layout_horizontal_and_vertical"
+"first_layout"
+"toggle_tiling"
+"toggle_float"
+"toggle_monocle"
+"toggle_maximise"
+"toggle_pause"
+```
 ## Example Style
 ```css
 .komorebi-active-layout {}
