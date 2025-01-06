@@ -38,7 +38,7 @@ class ApplicationsWidget(BaseWidget):
                     label.setProperty("class", "label")
                     icon = app_data['icon']
                     if os.path.isfile(icon):
-                        pixmap = QPixmap(icon).scaled(self._image_icon_size, self._image_icon_size)
+                        pixmap = QPixmap(icon).scaled(self._image_icon_size, self._image_icon_size, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
                         label.setPixmap(pixmap)
                     else:
                         label.setText(icon)
