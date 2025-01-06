@@ -14,6 +14,7 @@ from core.bar_manager import BarManager
 from settings import GITHUB_URL, SCRIPT_PATH, APP_NAME, APP_NAME_FULL, DEFAULT_CONFIG_DIRECTORY, GITHUB_THEME_URL, BUILD_VERSION
 from core.config import get_config
 from core.console import WindowShellDialog
+import threading
 
 OS_STARTUP_FOLDER = os.path.join(os.environ['APPDATA'], r'Microsoft\Windows\Start Menu\Programs\Startup')
 VBS_PATH = os.path.join(SCRIPT_PATH, 'yasb.vbs')
@@ -177,22 +178,28 @@ class TrayIcon(QSystemTrayIcon):
             logging.error(f"Failed to open config directory: {e}")
 
     def _start_komorebi(self):
-        try:
-            subprocess.run(self.komorebi_start, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True)
-        except Exception as e:
-            logging.error(f"Failed to start komorebi: {e}")
+        def run_komorebi_start():
+            try:
+                subprocess.run(self.komorebi_start, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True)
+            except Exception as e:
+                logging.error(f"Failed to start komorebi: {e}")
+        threading.Thread(target=run_komorebi_start).start()
 
     def _stop_komorebi(self):
-        try:
-            subprocess.run(self.komorebi_stop, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True)
-        except Exception as e:
-            logging.error(f"Failed to stop komorebi: {e}")
-
+        def run_komorebi_stop():
+            try:
+                subprocess.run(self.komorebi_stop, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True)
+            except Exception as e:
+                logging.error(f"Failed to stop komorebi: {e}")
+        threading.Thread(target=run_komorebi_stop).start()
+        
     def _reload_komorebi(self):
-        try:
-            subprocess.run(self.komorebi_reload, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True)
-        except Exception as e:
-            logging.error(f"Failed to reload komorebi: {e}")
+        def run_komorebi_reload():
+            try:
+                subprocess.run(self.komorebi_reload, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True)
+            except Exception as e:
+                logging.error(f"Failed to reload komorebi: {e}")
+        threading.Thread(target=run_komorebi_reload).start()
 
     def _reload_application(self):
         logging.info("Reloading Application...")
