@@ -3,7 +3,7 @@ import psutil
 import re
 from core.widgets.base import BaseWidget
 from core.validation.widgets.yasb.disk import VALIDATION_SCHEMA
-from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget, QDialog, QProgressBar, QVBoxLayout, QApplication
+from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget, QProgressBar, QVBoxLayout, QApplication
 from PyQt6.QtCore import Qt, QPoint, pyqtSignal, QEvent
 from core.utils.win32.blurWindow import Blur
 from core.utils.utilities import is_windows_10
@@ -83,8 +83,7 @@ class DiskWidget(BaseWidget):
         if not self._group_label['enabled']:
             self.start_timer()
         
-            
-        
+
     def _toggle_label(self):
         if self._group_label['enabled']:
             self.show_group_label()
