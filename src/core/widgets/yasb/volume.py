@@ -124,7 +124,7 @@ class VolumeWidget(BaseWidget):
             icon_volume = self._get_volume_icon()
             level_volume = "mute" if mute_status == 1 else f'{round(self.volume.GetMasterVolumeLevelScalar() * 100)}%'
         except Exception:
-            icon_volume, level_volume = "N/A", "N/A"
+            icon_volume, level_volume = "", "No Device"
 
         label_options = {
             "{icon}": icon_volume,
@@ -167,12 +167,24 @@ class VolumeWidget(BaseWidget):
         ctypes.windll.user32.keybd_event(vk_code, 0, KEYEVENTF_KEYUP, 0)
 
     def _increase_volume(self):
-        self._simulate_key_press(VK_VOLUME_UP)
-        self._update_label()
+        if self.volume is None:
+            logging.warning("Cannot increase volume: No audio device connected.")
+            return
+        try:
+            self._simulate_key_press(VK_VOLUME_UP)
+            self._update_label()
+        except Exception as e:
+            logging.error(f"Failed to increase volume: {e}")
 
     def _decrease_volume(self):
-        self._simulate_key_press(VK_VOLUME_DOWN)
-        self._update_label()
+        if self.volume is None:
+            logging.warning("Cannot decrease volume: No audio device connected.")
+            return
+        try:
+            self._simulate_key_press(VK_VOLUME_DOWN)
+            self._update_label()
+        except Exception as e:
+            logging.error(f"Failed to decrease volume: {e}")
 
     def wheelEvent(self, event: QWheelEvent):
         if event.angleDelta().y() > 0:
@@ -182,18 +194,30 @@ class VolumeWidget(BaseWidget):
 
 
     def toggle_mute(self):
-        current_mute_status = self.volume.GetMute()
-        self.volume.SetMute(not current_mute_status, None)
-        self._update_label()
+        if self.volume is None:
+            logging.warning("Cannot toggle mute: No audio device connected.")
+            return
+        try:
+            current_mute_status = self.volume.GetMute()
+            self.volume.SetMute(not current_mute_status, None)
+            self._update_label()
+        except Exception as e:
+            logging.error(f"Failed to toggle mute: {e}")
    
    
     def _initialize_volume_interface(self):
         CoInitialize()
         try:
             devices = AudioUtilities.GetSpeakers()
+            if not devices:
+                self.volume = None
+                return
             interface = devices.Activate(IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
             self.volume = interface.QueryInterface(IAudioEndpointVolume)
             self.callback = AudioEndpointVolumeCallback(self)
             self.volume.RegisterControlChangeNotify(self.callback)
+        except Exception as e:
+            logging.error(f"Failed to initialize volume interface: {e}")
+            self.volume = None
         finally:
-            CoUninitialize()         
+            CoUninitialize()        
