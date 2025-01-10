@@ -1,6 +1,6 @@
 import ctypes
 from ctypes.wintypes import HWND
-
+from core.utils.utilities import is_windows_10
 user32 = ctypes.windll.user32
 dwm = ctypes.windll.dwmapi
 
@@ -98,7 +98,7 @@ def set_window_corner_preference(hwnd, preference, border_color):
     if result != 0:
         raise ctypes.WinError()
 
-def Blur(hwnd, Acrylic=False, DarkMode=False, RoundCorners=False, BorderColor="System"):
+def Blur(hwnd, Acrylic=False, DarkMode=False, RoundCorners=False, RoundCornersType="normal", BorderColor="System"):
     """Apply blur, dark mode, and corner preferences to a window."""
     hwnd = int(hwnd)
     try:
@@ -110,7 +110,7 @@ def Blur(hwnd, Acrylic=False, DarkMode=False, RoundCorners=False, BorderColor="S
         if DarkMode:
             set_dark_mode(hwnd)
 
-        if RoundCorners:
-            set_window_corner_preference(hwnd, DWMWCP_ROUND, BorderColor)
+        if RoundCorners and not is_windows_10():
+            set_window_corner_preference(hwnd, DWMWCP_ROUND if RoundCornersType == "normal" else DWMWCP_ROUNDSMALL, BorderColor)
     except Exception as e:
         print(f"Failed to apply settings: {e}")
