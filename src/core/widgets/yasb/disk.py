@@ -3,28 +3,11 @@ import psutil
 import re
 from core.widgets.base import BaseWidget
 from core.validation.widgets.yasb.disk import VALIDATION_SCHEMA
-from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget, QProgressBar, QVBoxLayout, QApplication
-from PyQt6.QtCore import Qt, QPoint, pyqtSignal, QEvent
+from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget, QProgressBar, QVBoxLayout
+from PyQt6.QtCore import Qt, QPoint, pyqtSignal
 from core.utils.win32.blurWindow import Blur
 from core.utils.utilities import is_windows_10
-
-class PopupWidget(QWidget):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        QApplication.instance().installEventFilter(self)
-
-    def eventFilter(self, obj, event):
-        if event.type() == QEvent.Type.MouseButtonPress:
-            global_pos = event.globalPosition().toPoint()
-            if not self.geometry().contains(global_pos):
-                self.hide()
-                return True
-        return super().eventFilter(obj, event)
-
-    def hideEvent(self, event):
-        QApplication.instance().removeEventFilter(self)
-        super().hideEvent(event)
-
+from core.utils.utilities import PopupWidget
 
 class ClickableDiskWidget(QWidget):
     clicked = pyqtSignal()
@@ -75,6 +58,7 @@ class DiskWidget(BaseWidget):
         self._create_dynamically_label(self._label_content, self._label_alt_content)
 
         self.register_callback("toggle_label", self._toggle_label)
+        self.register_callback("toggle_group", self._toggle_group)
         self.register_callback("update_label", self._update_label)
         self.callback_left = callbacks['on_left']
         self.callback_right = callbacks['on_right']
@@ -85,16 +69,17 @@ class DiskWidget(BaseWidget):
         
 
     def _toggle_label(self):
-        if self._group_label['enabled']:
-            self.show_group_label()
-            return
         self._show_alt_label = not self._show_alt_label
         for widget in self._widgets:
             widget.setVisible(not self._show_alt_label)
         for widget in self._widgets_alt:
             widget.setVisible(self._show_alt_label)
         self._update_label()
-
+        
+    def _toggle_group(self):
+        if self._group_label['enabled']:
+            self.show_group_label()
+        
     def _create_dynamically_label(self, content: str, content_alt: str):
         def process_content(content, is_alt=False):
             label_parts = re.split('(<span.*?>.*?</span>)', content)
@@ -157,6 +142,8 @@ class DiskWidget(BaseWidget):
         self.dialog.setProperty("class", "disk-group")
         self.dialog.setWindowFlag(Qt.WindowType.FramelessWindowHint)
         self.dialog.setWindowFlag(Qt.WindowType.Popup)
+        self.dialog.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint)
+        
         layout = QVBoxLayout()
         for label in self._group_label['volume_labels']:
             disk_space = self._get_space(label)
@@ -218,8 +205,9 @@ class DiskWidget(BaseWidget):
                 self.dialog.winId(),
                 Acrylic=True if is_windows_10() else False,
                 DarkMode=False,
-                RoundCorners=True,
-                BorderColor="System"
+                RoundCorners=self._group_label['round_corners'],
+                RoundCornersType=self._group_label['round_corners_type'],
+                BorderColor=self._group_label['border_color']
             )
 
         # Position the dialog 
