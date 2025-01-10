@@ -160,8 +160,8 @@ widgets:
   weather:
     type: "yasb.weather.WeatherWidget"
     options:
-      label: "<span>{icon}</span> {temp_c}"
-      label_alt: "{location}: Min {min_temp_c}, Max {max_temp_c}, Humidity {humidity}"
+      label: "<span>{icon}</span> {temp}"
+      label_alt: "{location}: Min {min_temp}, Max {max_temp}, Humidity {humidity}"
       api_key: "3bf4cf9a7c3f40d6b31174128242807"
       update_interval: 600
       hide_decimal: true
