@@ -8,6 +8,9 @@ DEFAULTS = {
         'enabled': False,
         'volume_labels': ['C'],
         'blur': True,
+        'round_corners': True,
+        'round_corners_type': 'normal',
+        'border_color': 'System',
         'alignment': 'right',
         'direction': 'down',
         'distance': 6,
@@ -64,6 +67,19 @@ VALIDATION_SCHEMA = {
             'blur': {
                 'type': 'boolean',
                 'default': DEFAULTS['group_label']['blur']
+            },
+            'round_corners': {
+                'type': 'boolean',
+                'default': DEFAULTS['group_label']['round_corners']
+            },
+            'round_corners_type': {
+                'type': 'string',
+                'default': DEFAULTS['group_label']['round_corners_type'],
+                'allowed': ['normal', 'small']
+            },
+            'border_color': {
+                'type': 'string',
+                'default': DEFAULTS['group_label']['border_color']
             },
             'alignment': {
                 'type': 'string',
