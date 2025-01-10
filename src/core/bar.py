@@ -79,6 +79,7 @@ class Bar(QWidget):
                 Acrylic=blur_effect['acrylic'],
                 DarkMode=blur_effect['dark_mode'],
                 RoundCorners=blur_effect['round_corners'],
+                RoundCornersType=blur_effect['round_corners_type'],
                 BorderColor=blur_effect['border_color']
             )
 
