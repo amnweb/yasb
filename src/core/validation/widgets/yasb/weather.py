@@ -5,6 +5,7 @@ DEFAULTS = {
     'hide_decimal': False,
     'location': 'London',
     'api_key': '0',
+    'units': 'metric',
     'icons': {
         'sunnyDay': '\ue30d',
         'clearNight': '\ue32b',
@@ -16,6 +17,16 @@ DEFAULTS = {
         'snowyIcyNight': '\udb81\udd98',
         'blizzard': '\uebaa',
         'default': '\uebaa'
+    },
+    'weather_card': {
+        'blur': True,
+        'round_corners': True,
+        'round_corners_type': 'normal',
+        'border_color': 'System',
+        'alignment': 'right',
+        'direction': 'down',
+        'distance': 6,
+        'icon_size': 64
     },
     'callbacks': {
         'on_left': 'do_nothing',
@@ -50,6 +61,11 @@ VALIDATION_SCHEMA = {
     'api_key': {
         'type': 'string',
         'default': DEFAULTS['api_key']
+    },
+    'units': {
+        'type': 'string',
+        'default': DEFAULTS['units'],
+        'allowed': ['metric', 'imperial']
     },
     'icons': {
         'type': 'dict',
@@ -97,6 +113,45 @@ VALIDATION_SCHEMA = {
             }
         },
         'default': DEFAULTS['icons']
+    },
+    'weather_card': {
+        'type': 'dict',
+        'schema': {
+            'blur': {
+                'type': 'boolean',
+                'default': DEFAULTS['weather_card']['blur']
+            },
+            'round_corners': {
+                'type': 'boolean',
+                'default': DEFAULTS['weather_card']['round_corners']
+            },
+            'round_corners_type': {
+                'type': 'string',
+                'default': DEFAULTS['weather_card']['round_corners_type'],
+                'allowed': ['normal', 'small']
+            },
+            'border_color': {
+                'type': 'string',
+                'default': DEFAULTS['weather_card']['border_color']
+            },
+            'alignment': {
+                'type': 'string',
+                'default': DEFAULTS['weather_card']['alignment']
+            },
+            'direction': {
+                'type': 'string',
+                'default': DEFAULTS['weather_card']['direction']
+            },
+            'distance': {
+                'type': 'integer',
+                'default': DEFAULTS['weather_card']['distance']
+            },
+            'icon_size': {
+                'type': 'integer',
+                'default': DEFAULTS['weather_card']['icon_size']
+            }
+        },
+        'default': DEFAULTS['weather_card']
     },
     'callbacks': {
         'type': 'dict',

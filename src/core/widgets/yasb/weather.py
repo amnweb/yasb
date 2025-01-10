@@ -8,9 +8,14 @@ import threading
 from datetime import datetime
 from core.widgets.base import BaseWidget
 from core.validation.widgets.yasb.weather import VALIDATION_SCHEMA
-from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget
-from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget, QVBoxLayout
+from PyQt6.QtCore import Qt, QTimer, QPoint
+from PyQt6.QtGui import QPixmap
+from core.utils.win32.blurWindow import Blur
+from core.utils.utilities import is_windows_10
+from core.utils.utilities import PopupWidget
 
+ 
 class WeatherWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
 
@@ -22,6 +27,8 @@ class WeatherWidget(BaseWidget):
             hide_decimal: bool,
             location: str,
             api_key: str,
+            units: str,
+            weather_card: dict[str, str],
             callbacks: dict[str, str],
             icons: dict[str, str]
     ):
@@ -32,10 +39,14 @@ class WeatherWidget(BaseWidget):
         self._hide_decimal = hide_decimal
         self._icons = icons
         self._api_key = api_key if api_key != 'env' else os.getenv('YASB_WEATHER_API_KEY')
-        self.api_url = f"http://api.weatherapi.com/v1/forecast.json?key={self._api_key}&q={urllib.parse.quote(self._location)}&days=1&aqi=no&alerts=no"
+        self.api_url = f"http://api.weatherapi.com/v1/forecast.json?key={self._api_key}&q={urllib.parse.quote(self._location)}&days=3&aqi=no&alerts=no"
+        self._units = units
         # Store weather data
         self.weather_data = None
         self._show_alt_label = False
+        
+        self._weather_card = weather_card
+        self._icon_cache = dict()
         # Construct container
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
@@ -51,6 +62,7 @@ class WeatherWidget(BaseWidget):
         self._create_dynamically_label(self._label_content, self._label_alt_content)
         
         self.register_callback("toggle_label", self._toggle_label)
+        self.register_callback("toggle_card", self._toggle_card)
         self.register_callback("update_label", self._update_label)
         
         self.callback_left = callbacks['on_left']
@@ -63,6 +75,7 @@ class WeatherWidget(BaseWidget):
         # Start the timer after initializing everything
         self.start_timer()
 
+
     def _toggle_label(self):
         self._show_alt_label = not self._show_alt_label
         for widget in self._widgets:
@@ -70,6 +83,159 @@ class WeatherWidget(BaseWidget):
         for widget in self._widgets_alt:
             widget.setVisible(self._show_alt_label)
         self._update_label(update_class=False)
+
+    def _toggle_card(self):
+        self._popup_card()
+
+            
+    def _popup_card(self):
+        if self.weather_data is None:
+            logging.warning("Weather data is not yet available.")
+            return
+
+        self.dialog = PopupWidget(self)
+        self.dialog.setProperty("class", "weather-card")
+        self.dialog.setWindowFlag(Qt.WindowType.FramelessWindowHint)
+        self.dialog.setWindowFlag(Qt.WindowType.Popup)
+        self.dialog.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint)
+ 
+
+        main_layout = QVBoxLayout()
+        frame_today = QWidget()
+        frame_today.setProperty("class", "weather-card-today")
+        layout_today = QVBoxLayout(frame_today)
+        
+        today_label0 = QLabel(f"{self.weather_data['{location}']} {self.weather_data['{temp}']}")
+        today_label0.setProperty("class", "label location")
+        today_label0.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        today_label1 = QLabel(f"Feels like {self.weather_data['{feelslike}']} - {self.weather_data['{condition_text}']} - Humidity {self.weather_data['{humidity}']}\nPressure {self.weather_data['{pressure}']} - Visibility {self.weather_data['{vis}']} - Cloud {self.weather_data['{cloud}']}%")
+        today_label1.setProperty("class", "label")
+        today_label1.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        layout_today.addWidget(today_label0)
+        layout_today.addWidget(today_label1)
+ 
+        # Create frames for each day
+        frame_day0 = QWidget()
+        frame_day0.setProperty("class", "weather-card-day")
+        frame_day1 = QWidget()
+        frame_day1.setProperty("class", "weather-card-day")
+        frame_day2 = QWidget()
+        frame_day2.setProperty("class", "weather-card-day")
+ 
+        # Create layouts for frames
+        layout_day0 = QHBoxLayout(frame_day0)
+        layout_day1 = QHBoxLayout(frame_day1)
+        layout_day2 = QHBoxLayout(frame_day2)
+
+        # Day 0
+        row_day0_label = QLabel(f"Today\nMin: {self.weather_data['{min_temp}']}\nMax: {self.weather_data['{max_temp}']}")
+        row_day0_label.setProperty("class", "label")
+        row_day0_icon_label = QLabel()
+        try:
+            if (self.weather_data['{day0_icon}']) in self._icon_cache:
+                icon_data_day0 = self._icon_cache[self.weather_data['{day0_icon}']]
+            else:
+                icon_data_day0 = urllib.request.urlopen(self.weather_data['{day0_icon}']).read()
+            pixmap_day0 = QPixmap()
+            pixmap_day0.loadFromData(icon_data_day0)
+            scaled_pixmap_day0 = pixmap_day0.scaledToHeight(self._weather_card['icon_size'], Qt.TransformationMode.SmoothTransformation)
+            row_day0_icon_label.setPixmap(scaled_pixmap_day0)
+            self._icon_cache[self.weather_data['{day0_icon}']] = icon_data_day0
+        except:
+            logging.warning("Could not load day0 icon")
+
+        # Add widgets to frame layouts
+        layout_day0.addWidget(row_day0_label)
+        layout_day0.addWidget(row_day0_icon_label)
+
+        # Day 1
+        row_day1_label = QLabel(f"{self.weather_data['{day1_name}']}\nMin: {self.weather_data['{day1_min_temp}']}\nMax: {self.weather_data['{day1_max_temp}']}")
+        row_day1_label.setProperty("class", "label")
+        row_day1_icon_label = QLabel()
+        try:
+            if (self.weather_data['{day1_icon}']) in self._icon_cache:
+                icon_data_day1 = self._icon_cache[self.weather_data['{day1_icon}']]
+            else:
+                icon_data_day1 = urllib.request.urlopen(self.weather_data['{day1_icon}']).read()
+            pixmap_day1 = QPixmap()
+            pixmap_day1.loadFromData(icon_data_day1)
+            scaled_pixmap_day1 = pixmap_day1.scaledToHeight(self._weather_card['icon_size'], Qt.TransformationMode.SmoothTransformation)
+            row_day1_icon_label.setPixmap(scaled_pixmap_day1)
+            self._icon_cache[self.weather_data['{day1_icon}']] = icon_data_day1
+        except:
+            logging.warning("Could not load day1 icon")
+
+        layout_day1.addWidget(row_day1_label)
+        layout_day1.addWidget(row_day1_icon_label)
+
+        # Day 2
+        row_day2_label = QLabel(f"{self.weather_data['{day2_name}']}\nMin: {self.weather_data['{day2_min_temp}']}\nMax: {self.weather_data['{day2_max_temp}']}")
+        row_day2_label.setProperty("class", "label")
+        row_day2_icon_label = QLabel()
+        try:
+            if (self.weather_data['{day2_icon}']) in self._icon_cache:
+                icon_data_day2 = self._icon_cache[self.weather_data['{day2_icon}']]
+            else:
+                icon_data_day2 = urllib.request.urlopen(self.weather_data['{day2_icon}']).read()
+            pixmap_day2 = QPixmap()
+            pixmap_day2.loadFromData(icon_data_day2)
+            scaled_pixmap_day2 = pixmap_day2.scaledToHeight(self._weather_card['icon_size'], Qt.TransformationMode.SmoothTransformation)
+            row_day2_icon_label.setPixmap(scaled_pixmap_day2)
+            self._icon_cache[self.weather_data['{day2_icon}']] = icon_data_day2
+        except:
+            logging.warning("Could not load day2 icon")
+
+        layout_day2.addWidget(row_day2_label)
+        layout_day2.addWidget(row_day2_icon_label)
+
+        # Create days layout and add frames
+        days_layout = QHBoxLayout()
+        days_layout.addWidget(frame_day0)
+        days_layout.addWidget(frame_day1)
+        days_layout.addWidget(frame_day2)
+
+        # Add the "Current" label on top, days on bottom
+        main_layout.addWidget(frame_today)
+        main_layout.addLayout(days_layout)
+
+        self.dialog.setLayout(main_layout)
+        if self._weather_card['blur']:
+            Blur(
+                self.dialog.winId(),
+                Acrylic=True if is_windows_10() else False,
+                DarkMode=False,
+                RoundCorners=self._weather_card['round_corners'],
+                RoundCornersType=self._weather_card['round_corners_type'],
+                BorderColor=self._weather_card['border_color']
+            )
+        # Position the dialog 
+        self.dialog.adjustSize()
+        widget_global_pos = self.mapToGlobal(QPoint(0, self.height() + self._weather_card['distance']))
+        if self._weather_card['direction'] == 'up':
+            global_y = self.mapToGlobal(QPoint(0, 0)).y() - self.dialog.height() - self._weather_card['distance']
+            widget_global_pos = QPoint(self.mapToGlobal(QPoint(0, 0)).x(), global_y)
+
+        if self._weather_card['alignment'] == 'left':
+            global_position = widget_global_pos
+        elif self._weather_card['alignment'] == 'right':
+            global_position = QPoint(
+                widget_global_pos.x() + self.width() - self.dialog.width(),
+                widget_global_pos.y()
+            )
+        elif self._weather_card['alignment'] == 'center':
+            global_position = QPoint(
+                widget_global_pos.x() + (self.width() - self.dialog.width()) // 2,
+                widget_global_pos.y()
+            )
+        else:
+            global_position = widget_global_pos
+        
+        self.dialog.move(global_position)
+        self.dialog.show() 
+        
+
 
     def _create_dynamically_label(self, content: str, content_alt: str):
         def process_content(content, is_alt=False):
@@ -91,7 +257,8 @@ class WeatherWidget(BaseWidget):
                     label = QLabel(part)
                     label.setProperty("class", "label")
                     label.setText("weather update...")
-                label.setAlignment(Qt.AlignmentFlag.AlignCenter)    
+                label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                label.setCursor(Qt.CursorShape.PointingHandCursor)
                 self._widget_container_layout.addWidget(label)
                 widgets.append(label)
                 if is_alt:
@@ -146,6 +313,21 @@ class WeatherWidget(BaseWidget):
         except Exception as e:
             logging.exception(f"Failed to update label: {e}")
 
+
+    def _convert_epoch_to_datetime(self, epoch: int):
+        return datetime.fromtimestamp(epoch).strftime("%B %d")
+ 
+    def _format_temp(self, temp_f, temp_c):
+        temp = temp_f if self._units == 'imperial' else temp_c
+        value = int(temp) if self._hide_decimal else temp
+        unit = '°F' if self._units == 'imperial' else '°C'
+        return f"{value}{unit}"
+
+    def _format_measurement(self, imperial_val, imperial_unit, metric_val, metric_unit):
+        if self._units == 'imperial':
+            return f"{imperial_val} {imperial_unit}"
+        return f"{metric_val} {metric_unit}"
+    
     def fetch_weather_data(self):
         # Start a new thread to fetch weather data
         threading.Thread(target=self._get_weather_data).start()
@@ -167,8 +349,9 @@ class WeatherWidget(BaseWidget):
                 weather_data = json.loads(response.read())
                 current = weather_data['current']
                 forecast = weather_data['forecast']['forecastday'][0]['day']
-                def format_temp(temp, unit):
-                    return f'{int(temp) if self._hide_decimal else temp}°{unit}'
+                forecast1 = weather_data['forecast']['forecastday'][1]
+                forecast2 = weather_data['forecast']['forecastday'][2]
+
                 conditions_data = current['condition']['text']
                 conditions_code = current['condition']['code']
                  
@@ -181,61 +364,80 @@ class WeatherWidget(BaseWidget):
                 if conditions_code in {1114,1210,1213,1219,1222,1225,1237,1255,1258,1261,1264,1246,1282}:
                     conditions_data = "snowyIcy"
                 icon_string = f"{conditions_data}{'Day' if current['is_day'] == 1 else 'Night'}".strip()
+
                 return {
-                    '{temp_c}': format_temp(current['temp_c'], 'C'),
-                    '{min_temp_c}': format_temp(forecast['mintemp_c'], 'C'),
-                    '{max_temp_c}': format_temp(forecast['maxtemp_c'], 'C'),
-                    '{temp_f}': format_temp(current['temp_f'], 'F'),
-                    '{min_temp_f}': format_temp(forecast['mintemp_f'], 'F'),
-                    '{max_temp_f}': format_temp(forecast['maxtemp_f'], 'F'),
-                    '{location}': weather_data['location']['name'],
-                    '{humidity}': f"{current['humidity']}%",
-                    '{is_day}': current['is_day'],
-                    '{icon}': icon_string[0].lower() + icon_string[1:],
+                    # Current conditions
+                    '{temp}':      self._format_temp(current['temp_f'], current['temp_c']),
+                    '{feelslike}': self._format_temp(current['feelslike_f'], current['feelslike_c']),
+                    '{humidity}':  f"{current['humidity']}%",
+                    '{cloud}':     current['cloud'],
+                    
+                    # Forecast today
+                    '{min_temp}':  self._format_temp(forecast['mintemp_f'], forecast['mintemp_c']),
+                    '{max_temp}':  self._format_temp(forecast['maxtemp_f'], forecast['maxtemp_c']),
+                    
+                    # Location and conditions
+                    '{location}':       weather_data['location']['name'],
+                    '{conditions}':     conditions_data,
+                    '{condition_text}': current['condition']['text'],
+                    '{is_day}':        current['is_day'],
+                    
+                    # Icons
+                    '{icon}':       icon_string[0].lower() + icon_string[1:],
                     '{icon_class}': icon_string[0].lower() + icon_string[1:],
-                    '{conditions}': conditions_data,
-                    '{wind_mph}': current['wind_mph'],
-                    '{wind_kph}': current['wind_kph'],
-                    '{wind_dir}': current['wind_dir'],
+                    '{day0_icon}':  f'http:{forecast["condition"]["icon"]}',
+                    
+                    # Wind data
+                    '{wind}':        self._format_measurement(current['wind_mph'], 'mph', current['wind_kph'], 'km/h'),
+                    '{wind_dir}':    current['wind_dir'],
                     '{wind_degree}': current['wind_degree'],
-                    '{pressure_mb}': current['pressure_mb'],
-                    '{pressure_in}': current['pressure_in'],
-                    '{precip_mm}': current['precip_mm'],
-                    '{precip_in}': current['precip_in'],
-                    '{uv}': current['uv'],
-                    '{vis_km}': current['vis_km'],
-                    '{vis_miles}': current['vis_miles'],
-                    '{cloud}': current['cloud'],
-                    '{feelslike_c}': format_temp(current['feelslike_c'], 'C'),
-                    '{feelslike_f}': format_temp(current['feelslike_f'], 'F')                 
+                    
+                    # Other measurements
+                    '{pressure}': self._format_measurement(current['pressure_in'], 'in', current['pressure_mb'], 'mb'),
+                    '{precip}':   self._format_measurement(current['precip_in'], 'in', current['precip_mm'], 'mm'),
+                    '{vis}':      self._format_measurement(current['vis_miles'], 'mi', current['vis_km'], 'km'),
+                    '{uv}':       current['uv'],
+                    
+                    # Future forecasts
+                    '{day1_name}':     self._convert_epoch_to_datetime(forecast1['date_epoch']),
+                    '{day1_min_temp}': self._format_temp(forecast1['day']['mintemp_f'], forecast1['day']['mintemp_c']),
+                    '{day1_max_temp}': self._format_temp(forecast1['day']['maxtemp_f'], forecast1['day']['maxtemp_c']),
+                    '{day1_icon}':     f'http:{forecast1["day"]["condition"]["icon"]}',
+                    
+                    '{day2_name}':     self._convert_epoch_to_datetime(forecast2['date_epoch']),
+                    '{day2_min_temp}': self._format_temp(forecast2['day']['mintemp_f'], forecast2['day']['mintemp_c']),
+                    '{day2_max_temp}': self._format_temp(forecast2['day']['maxtemp_f'], forecast2['day']['maxtemp_c']),
+                    '{day2_icon}':     f'http:{forecast2["day"]["condition"]["icon"]}'
                 }
         except (urllib.error.URLError, json.JSONDecodeError) as e:
             logging.error(f"Error fetching weather data: {e}")
             return {
-                '{temp_c}': 'N/A',
-                '{min_temp_c}': 'N/A',
-                '{max_temp_c}': 'N/A',
-                '{temp_f}': 'N/A',
-                '{min_temp_f}': 'N/A',
-                '{max_temp_f}': 'N/A',
-                '{location}': 'Unknown',
+                '{temp}': 'N/A',
+                '{min_temp}': 'N/A',
+                '{max_temp}': 'N/A',
+                '{location}': 'N/A',
                 '{humidity}': 'N/A',
-                '{is_day}': 0,
-                '{icon}': 'unknown',
-                '{icon_class}': '',
-                '{conditions}': 'No Data',
-                '{wind_mph}': 'N/A',
-                '{wind_kph}': 'N/A',
+                '{is_day}': 'N/A',
+                '{day0_icon}': 'N/A',
+                '{icon}': 'N/A',
+                '{icon_class}': 'N/A',
+                '{conditions}': 'N/A',
+                '{condition_text}': 'N/A',
+                '{wind}': 'N/A',
                 '{wind_dir}': 'N/A',
                 '{wind_degree}': 'N/A',
-                '{pressure_mb}': 'N/A',
-                '{pressure_in}': 'N/A',
-                '{precip_mm}': 'N/A',
-                '{precip_in}': 'N/A',
+                '{pressure}': 'N/A',
+                '{precip}': 'N/A',
                 '{uv}': 'N/A',
-                '{vis_km}': 'N/A',
-                '{vis_miles}': 'N/A',
+                '{vis}': 'N/A',
                 '{cloud}': 'N/A',
-                '{feelslike_c}': 'N/A',
-                '{feelslike_f}': 'N/A'
+                '{feelslike}': 'N/A',
+                '{day1_name}': 'N/A',
+                '{day1_min_temp}': 'N/A',
+                '{day1_max_temp}': 'N/A',
+                '{day1_icon}': 'N/A',
+                '{day2_name}': 'N/A',
+                '{day2_min_temp}': 'N/A',
+                '{day2_max_temp}': 'N/A',
+                '{day2_icon}': 'N/A'         
             }
