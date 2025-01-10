@@ -23,7 +23,8 @@ class WorkspaceButton(QPushButton):
        
     def activate_workspace(self):
         try:
-            VirtualDesktop(self.workspace_index).go(self.workspace_animation)
+            #VirtualDesktop(self.workspace_index).go(self.workspace_animation)
+            VirtualDesktop(self.workspace_index).go()
             if isinstance(self.parent_widget, WorkspaceWidget):
                 # Emit event to update desktops on all monitors
                 self.parent_widget._event_service.emit_event(
