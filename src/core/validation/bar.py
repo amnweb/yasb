@@ -3,7 +3,7 @@ BAR_DEFAULTS = {
     'screens': ['*'],
     'class_name': 'yasb-bar',
     'alignment': {'position': 'top', 'center': False},
-    'blur_effect': {'enabled': False, 'dark_mode': False, 'acrylic': False,'round_corners': False,'border_color': "System"},
+    'blur_effect': {'enabled': False, 'dark_mode': False, 'acrylic': False,'round_corners': False,'round_corners_type':'normal','border_color': "System"},
     'animation': {'enabled': True, 'duration': 500},
     'window_flags': {'always_on_top': False, 'windows_app_bar': False},
     'dimensions': {'width': '100%', 'height': 30},
@@ -64,6 +64,11 @@ BAR_SCHEMA = {
                 'round_corners': {
                     'type': 'boolean',
                     'default': BAR_DEFAULTS['blur_effect']['round_corners']
+                },
+                'round_corners_type': {
+                    'type': 'string',
+                    'allowed': ['normal', 'small'],
+                    'default': BAR_DEFAULTS['blur_effect']['round_corners_type']
                 },
                 'border_color': {
                     'type': 'string',
