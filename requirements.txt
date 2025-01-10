@@ -17,5 +17,5 @@ pillow
 qasync
 requests
 obs-websocket-py
-git+https://github.com/amnweb/pyvda.git
+pyvda
 git+https://github.com/amnweb/screen_brightness_control.git
