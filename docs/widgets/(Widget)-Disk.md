@@ -6,7 +6,7 @@
 | `volume_label`       | string  | `'C'`        | Partition which you want to show in the bar |
 | `decimal_display` | integer | `1`                                                                  | The number of decimal to show, defaul 1 (min 0 max 3) |
 | `update_interval` | integer | `60`                                                                  | The interval in seconds to update the disk widget. Must be between 0 and 3600. |
-| `group_label` | dict | `{'enabled': False, 'volume_labels': ["C"], 'blur': True, 'alignment': 'right', 'direction': 'down', 'distance': 6}` | Group labels for multiple disks. This will show the labels of multiple disks in a popup window. |
+| `group_label` | dict | `{'enabled': False, 'volume_labels': ["C"], 'blur': True, 'round_corners': True, 'round_corners_type': 'normal','border_color': 'System', 'alignment': 'right', 'direction': 'down', 'distance': 6}` | Group labels for multiple disks. This will show the labels of multiple disks in a popup window. |
 | `callbacks`       | dict    | `{'on_left': 'do_nothing', 'on_middle': 'do_nothing', 'on_right': "exec explorer C:\\"}` | Callbacks for mouse events. |
 | `container_padding`  | dict | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}`      | Explicitly set padding inside widget container. |
 
@@ -28,8 +28,19 @@ disk:
         alignment: 'center'
         direction: 'down'
         distance: 6
+      group_label:
+        enabled: true
+        volume_labels: ["C", "D", "E", "F"]
+        blur: True
+        round_corners: True
+        round_corners_type: "small"
+        border_color: "System"
+        alignment: "right"
+        direction: "down"
+        distance: 6
       callbacks:
-        on_middle: "do_nothing"
+        on_left: "toggle_group"
+        on_middle: "toggle_label"
         on_right: "exec explorer C:\\" # Open disk C in file explorer
 ```
 
@@ -44,14 +55,15 @@ disk:
   - **enabled:** Enable group labels.
   - **volume_labels:** List of volume labels to show in the group label.
   - **blur:** Enable blur effect for the group label.
+  - **round_corners:** Enable round corners for group label.
+  - **round_corners_type:** Border type for group label can be `normal` and `small`. Default is `normal`.
+  - **border_color:** Border color for group label can be `None`, `System` or `Hex Color` `"#ff0000"`.
   - **alignment:** Alignment of the group label. Possible values are `left`, `center`, and `right`.
   - **direction:** Direction of the group label. Possible values are `up` and `down`.
   - **distance:** Distance of the group label from the widget.
 - **callbacks:** A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions.
 - **container_padding:** Explicitly set padding inside widget container.
- 
-> [!NOTE]
-> When `group_label` is enabled, the `callbacks`, `update_interval` and `label_alt` options will be ignored. Left mouse click on volume_label will open the disk in file explorer.
+
 
 ## Widget Style
 ```css

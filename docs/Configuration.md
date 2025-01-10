@@ -72,4 +72,7 @@ We used Windows API for blur, and because of this some parts are limited with th
 `blur_effect.acrylic` Enable an acrylic blur effect behind a window. (Windows 10)<br>
 `blur_effect.dark_mode` Dark mode and more shadow below bar.<br>
 `blur_effect.round_corners` True or False, if set to True Windows will add radius. You can't set a custom value.<br>
+`blur_effect.round_corners_type` Border type for bar can be `normal` and `small`. Default is `normal`.<br>
 `blur_effect.border_color` Border color for bar can be `None`, `System` or `Hex Color` `"#ff0000"`. (This applies to system round_corners and if blur_effect.round_corners is True.)
+
+> Most of this options are limited to Windows 11 only, and some options like border_color, round_corners,round_corners_type wont work on Windows 10.
