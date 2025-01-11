@@ -5,9 +5,7 @@ from core.widgets.base import BaseWidget
 from core.validation.widgets.yasb.disk import VALIDATION_SCHEMA
 from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget, QProgressBar, QVBoxLayout
 from PyQt6.QtCore import Qt, QPoint, pyqtSignal
-from core.utils.win32.blurWindow import Blur
-from core.utils.utilities import is_windows_10
-from core.utils.utilities import PopupWidget
+from core.utils.utilities import PopupWidget, blink_on_click
 
 class ClickableDiskWidget(QWidget):
     clicked = pyqtSignal()
@@ -78,6 +76,7 @@ class DiskWidget(BaseWidget):
         
     def _toggle_group(self):
         if self._group_label['enabled']:
+            blink_on_click(self)
             self.show_group_label()
         
     def _create_dynamically_label(self, content: str, content_alt: str):
@@ -100,7 +99,7 @@ class DiskWidget(BaseWidget):
                     label.setProperty("class", "label")
                 label.setAlignment(Qt.AlignmentFlag.AlignCenter)  
                 if self._group_label['enabled']:
-                    label.setCursor(Qt.CursorShape.PointingHandCursor)  
+                    label.setCursor(Qt.CursorShape.PointingHandCursor)
                 self._widget_container_layout.addWidget(label)
                 widgets.append(label)
                 if is_alt:
@@ -138,7 +137,7 @@ class DiskWidget(BaseWidget):
 
            
     def show_group_label(self):  
-        self.dialog = PopupWidget(self)
+        self.dialog = PopupWidget(self, self._group_label['blur'], self._group_label['round_corners'], self._group_label['round_corners_type'], self._group_label['border_color'])
         self.dialog.setProperty("class", "disk-group")
         self.dialog.setWindowFlag(Qt.WindowType.FramelessWindowHint)
         self.dialog.setWindowFlag(Qt.WindowType.Popup)
@@ -200,15 +199,6 @@ class DiskWidget(BaseWidget):
                 
         self.dialog.setLayout(layout)
         
-        if self._group_label['blur']:
-            Blur(
-                self.dialog.winId(),
-                Acrylic=True if is_windows_10() else False,
-                DarkMode=False,
-                RoundCorners=self._group_label['round_corners'],
-                RoundCornersType=self._group_label['round_corners_type'],
-                BorderColor=self._group_label['border_color']
-            )
 
         # Position the dialog 
         self.dialog.adjustSize()

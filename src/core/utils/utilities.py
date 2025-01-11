@@ -1,8 +1,9 @@
 import platform
 import re
-from PyQt6.QtWidgets import QApplication, QFrame
-from PyQt6.QtCore import QEvent
+from PyQt6.QtWidgets import QApplication, QFrame, QGraphicsOpacityEffect
+from PyQt6.QtCore import QEvent, QTimer
 from PyQt6.QtGui import QScreen
+from core.utils.win32.blurWindow import Blur
 
 def is_windows_10() -> bool:
     version = platform.version()
@@ -17,14 +18,60 @@ def is_valid_percentage_str(s: str) -> bool:
 def get_screen_by_name(screen_name: str) -> QScreen:
     return next(filter(lambda scr: screen_name in scr.name(), QApplication.screens()), None)
 
+def blink_on_click(self, duration=200):
+    if hasattr(self, '_opacity_effect') and self._opacity_effect is not None:
+        self._opacity_effect.setOpacity(1.0)
+        if self._blink_timer.isActive():
+            self._blink_timer.stop()
+
+    self._opacity_effect = QGraphicsOpacityEffect()
+    self.setGraphicsEffect(self._opacity_effect)
+    self._opacity_effect.setOpacity(0.4)
+
+    self._blink_timer = QTimer()
+    step = 0
+    steps = 20
+    increment = 0.5 / steps
+
+    def animate():
+        nonlocal step
+        new_opacity = self._opacity_effect.opacity() + increment
+        if new_opacity >= 1.0:
+            new_opacity = 1.0
+            self._opacity_effect.setOpacity(new_opacity)
+            self._blink_timer.stop()
+            self._opacity_effect = None
+            return
+        self._opacity_effect.setOpacity(new_opacity)
+        step += 1
+
+    self._blink_timer.timeout.connect(animate)
+    self._blink_timer.start(duration // steps)
+
 class PopupWidget(QFrame):
     """
-    A custom QFrame widget that acts as a popup and hides itself when a mouse click occurs outside its geometry.
+    A custom QFrame widget that acts as a popup and hides itself when a mouse click occurs outside its geometry
     """
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, blur=False, round_corners=False, round_corners_type="normal", border_color="None"):
         super().__init__(parent)
+        self._blur = blur
+        self._round_corners = round_corners
+        self._round_corners_type = round_corners_type
+        self._border_color = border_color
         QApplication.instance().installEventFilter(self)
-        
+ 
+    def showEvent(self, event):
+        if self._blur:
+            Blur(
+                self.winId(),
+                Acrylic=True if is_windows_10() else False,
+                DarkMode=False,
+                RoundCorners=False if is_windows_10() else self._round_corners,
+                RoundCornersType=self._round_corners_type,
+                BorderColor=self._border_color
+            )
+        super().showEvent(event)
+
     def eventFilter(self, obj, event):
         if event.type() == QEvent.Type.MouseButtonPress:
             global_pos = event.globalPosition().toPoint()
@@ -36,7 +83,8 @@ class PopupWidget(QFrame):
     def hideEvent(self, event):
         QApplication.instance().removeEventFilter(self)
         super().hideEvent(event)
-        
+
+
 class Singleton(type):
     _instances = {}
 

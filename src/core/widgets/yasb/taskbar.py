@@ -12,6 +12,7 @@ from PIL import Image
 import win32gui
 from core.utils.win32.app_icons import get_window_icon
 import win32con
+from core.utils.utilities import blink_on_click
 
 try:
     from core.utils.win32.event_listener import SystemEventListener
@@ -238,7 +239,7 @@ class TaskbarWidget(BaseWidget):
             return
 
         if action == "toggle":
-            self._blink_on_click(widget)
+            blink_on_click(widget)
             self.bring_to_foreground(hwnd)
         else:
             logging.warning(f"Unknown action '{action}'.")
@@ -261,36 +262,7 @@ class TaskbarWidget(BaseWidget):
                 win32gui.SetForegroundWindow(hwnd)
             else:
                 win32gui.ShowWindow(hwnd, win32con.SW_MINIMIZE)
-                
-    def _blink_on_click(self, icon_label, duration=200):
-        if hasattr(self, '_opacity_effect') and self._opacity_effect is not None:
-            self._opacity_effect.setOpacity(1.0)
-            if self._blink_timer.isActive():
-                self._blink_timer.stop()
 
-        self._opacity_effect = QGraphicsOpacityEffect()
-        icon_label.setGraphicsEffect(self._opacity_effect)
-        self._opacity_effect.setOpacity(0.4)
-
-        self._blink_timer = QTimer()
-        step = 0
-        steps = 20
-        increment = 0.5 / steps
-
-        def animate():
-            nonlocal step
-            new_opacity = self._opacity_effect.opacity() + increment
-            if new_opacity >= 1.0:
-                new_opacity = 1.0
-                self._opacity_effect.setOpacity(new_opacity)
-                self._blink_timer.stop()
-                self._opacity_effect = None
-                return
-            self._opacity_effect.setOpacity(new_opacity)
-            step += 1
-
-        self._blink_timer.timeout.connect(animate)
-        self._blink_timer.start(duration // steps)
     
     def _animate_icon(self, icon_label, start_width=None, end_width=None, fps=60, duration=120):
         if start_width is None:

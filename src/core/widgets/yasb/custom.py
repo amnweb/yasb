@@ -7,6 +7,7 @@ from core.validation.widgets.yasb.custom import VALIDATION_SCHEMA
 from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget
 from PyQt6.QtCore import Qt, pyqtSignal, QObject
 from core.utils.win32.system_function import function_map
+from core.utils.utilities import blink_on_click
 
 class CustomWorker(QObject):
     finished = pyqtSignal()
@@ -79,6 +80,7 @@ class CustomWidget(BaseWidget):
             self.start_timer()
 
     def _toggle_label(self):
+        blink_on_click(self)
         self._show_alt_label = not self._show_alt_label
         for widget in self._widgets:
             widget.setVisible(not self._show_alt_label)

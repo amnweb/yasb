@@ -2,13 +2,16 @@ import os
 import re
 import logging
 import threading
+import time
 import requests
 from datetime import datetime
 from core.validation.widgets.yasb.github import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
 from PyQt6.QtGui import QDesktopServices,QCursor
-from PyQt6.QtWidgets import QMenu, QWidget, QVBoxLayout, QLabel, QPushButton, QHBoxLayout, QScrollArea, QVBoxLayout, QWidgetAction
+from PyQt6.QtWidgets import QMenu, QWidget, QVBoxLayout, QLabel, QPushButton, QHBoxLayout, QScrollArea, QVBoxLayout, QWidgetAction, QApplication
 from PyQt6.QtCore import Qt, QPoint, QTimer, QUrl
+from core.utils.utilities import blink_on_click
+
 logging.getLogger("urllib3").setLevel(logging.WARNING)
 
 class HoverWidget(QWidget):
@@ -57,13 +60,24 @@ class GithubWidget(BaseWidget):
         self._create_dynamically_label(self._label_content, self._label_alt_content)
         
         self.register_callback("toggle_label", self._toggle_label)
-        self.register_callback("get_github_data", self.get_github_data)       
+        self.register_callback("toggle_menu", self._toggle_menu)
+        self.register_callback("get_github_data", self.get_github_data) 
+        
+        callbacks = {
+            "on_left": "toggle_menu",
+            "on_right": "toggle_label"
+        }
+        self.callback_left = callbacks['on_left']
+        self.callback_right = callbacks['on_right']
         
         self.callback_timer = "get_github_data" 
         self.start_timer()
         
  
-        
+    def _toggle_menu(self):
+        blink_on_click(self)
+        self.show_menu(self)
+                       
     def _toggle_label(self):
         self._show_alt_label = not self._show_alt_label
         for widget in self._widgets:
@@ -85,11 +99,11 @@ class GithubWidget(BaseWidget):
                     class_name = re.search(r'class=(["\'])([^"\']+?)\1', part)
                     class_result = class_name.group(2) if class_name else 'icon'
                     icon = re.sub(r'<span.*?>|</span>', '', part).strip()
-                    label = ClickableLabel(icon, widget_ref=self)
+                    label = QLabel(icon)
                     label.setProperty("class", class_result)
                     label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
                 else:
-                    label = ClickableLabel(part, widget_ref=self)
+                    label = QLabel(part)
                     label.setProperty("class", "label")
                     label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
                 label.setAlignment(Qt.AlignmentFlag.AlignCenter)    
@@ -345,14 +359,3 @@ class GithubWidget(BaseWidget):
         except Exception as e:
             logging.error(f"An unexpected error occurred: {str(e)}")
             return []  # Handle any other exceptions
-
-
-class ClickableLabel(QLabel):
-    def __init__(self, text, parent=None, widget_ref=None):
-        super().__init__(text, parent)
-        self.widget_ref = widget_ref
-    def mousePressEvent(self, event):
-        if event.button() == Qt.MouseButton.LeftButton and self.widget_ref:
-            self.widget_ref.show_menu(self)
-        if event.button() == Qt.MouseButton.RightButton:
-            self.widget_ref._toggle_label() 

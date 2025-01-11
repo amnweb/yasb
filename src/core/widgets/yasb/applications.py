@@ -7,6 +7,7 @@ from PyQt6.QtCore import Qt, QTimer
 import subprocess
 import logging
 from core.utils.win32.system_function import function_map
+from core.utils.utilities import blink_on_click
 
 class ApplicationsWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
@@ -71,36 +72,7 @@ class ClickableLabel(QLabel):
 
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton and self.data:
-            self._blink_on_click()
+            blink_on_click(self)
             self.parent_widget.execute_code(self.data)
-
-    def _blink_on_click(self, duration=200):
-        if hasattr(self, '_opacity_effect') and self._opacity_effect is not None:
-            self._opacity_effect.setOpacity(1.0)
-            if self._blink_timer.isActive():
-                self._blink_timer.stop()
-
-        self._opacity_effect = QGraphicsOpacityEffect()
-        self.setGraphicsEffect(self._opacity_effect)
-        self._opacity_effect.setOpacity(0.4)
-
-        self._blink_timer = QTimer()
-        step = 0
-        steps = 20
-        increment = 0.5 / steps
-
-        def animate():
-            nonlocal step
-            new_opacity = self._opacity_effect.opacity() + increment
-            if new_opacity >= 1.0:
-                new_opacity = 1.0
-                self._opacity_effect.setOpacity(new_opacity)
-                self._blink_timer.stop()
-                self._opacity_effect = None
-                return
-            self._opacity_effect.setOpacity(new_opacity)
-            step += 1
-
-        self._blink_timer.timeout.connect(animate)
-        self._blink_timer.start(duration // steps)
+ 
             

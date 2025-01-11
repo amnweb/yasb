@@ -5,7 +5,7 @@ from core.widgets.base import BaseWidget
 from core.validation.widgets.yasb.traffic import VALIDATION_SCHEMA
 from PyQt6.QtWidgets import QLabel,QHBoxLayout,QWidget
 from PyQt6.QtCore import Qt
-
+from core.utils.utilities import blink_on_click
 
 class TrafficWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
@@ -53,6 +53,7 @@ class TrafficWidget(BaseWidget):
         self.start_timer()
 
     def _toggle_label(self):
+        blink_on_click(self)
         self._show_alt_label = not self._show_alt_label
         for widget in self._widgets:
             widget.setVisible(not self._show_alt_label)
@@ -118,11 +119,7 @@ class TrafficWidget(BaseWidget):
                     active_widgets[widget_index].setText(part)
                 widget_index += 1
         
-                            
 
-
-        
-        
     def _get_speed(self) -> list[str]:
         current_io = psutil.net_io_counters()
         upload_diff = current_io.bytes_sent - self.bytes_sent

@@ -7,6 +7,7 @@ from core.validation.widgets.yasb.battery import VALIDATION_SCHEMA
 from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget
 from PyQt6.QtCore import Qt
 from typing import Union
+from core.utils.utilities import blink_on_click
 
 class BatteryWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
@@ -60,6 +61,7 @@ class BatteryWidget(BaseWidget):
         self.start_timer()
 
     def _toggle_label(self):
+        blink_on_click(self)
         self._show_alt_label = not self._show_alt_label
         for widget in self._widgets:
             widget.setVisible(not self._show_alt_label)

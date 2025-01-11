@@ -5,6 +5,7 @@ from core.validation.widgets.yasb.whkd import VALIDATION_SCHEMA
 from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget, QApplication, QSizePolicy, QVBoxLayout, QScrollArea, QPushButton, QLineEdit
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QCursor, QIcon
+from core.utils.utilities import blink_on_click
 
 class WhkdWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
@@ -57,6 +58,7 @@ class WhkdWidget(BaseWidget):
 
     def show_popup(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
+            blink_on_click(self)
             # Check if WHKD_CONFIG_HOME exists in the environment variables
             whkd_config_home = os.getenv('WHKD_CONFIG_HOME')
             if whkd_config_home:

@@ -1,16 +1,14 @@
-import logging
 import os
 import re
 import subprocess
 from core.widgets.base import BaseWidget
 from core.validation.widgets.yasb.home import VALIDATION_SCHEMA
-from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget, QMenu, QWidgetAction
-from PyQt6.QtCore import Qt, QPoint, QTimer
-from core.utils.win32.blurWindow import Blur
-from core.utils.utilities import is_windows_10
+from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget, QVBoxLayout, QFrame, QApplication
+from PyQt6.QtCore import Qt, QPoint
 import os
 from core.utils.widgets.power import PowerOperations
-
+from core.utils.utilities import PopupWidget, blink_on_click
+        
 class HomeWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
     def __init__(
@@ -19,6 +17,9 @@ class HomeWidget(BaseWidget):
             power_menu: bool,
             system_menu: bool,
             blur: bool,
+            round_corners: bool,
+            round_corners_type: str,
+            border_color: str,
             alignment: str,
             direction: str,
             distance: int,
@@ -34,6 +35,9 @@ class HomeWidget(BaseWidget):
         self._power_menu = power_menu
         self._system_menu = system_menu
         self._blur = blur
+        self._round_corners = round_corners
+        self._round_corners_type = round_corners_type
+        self._border_color = border_color
         self._alignment = alignment
         self._direction = direction
         self._distance = distance
@@ -57,9 +61,7 @@ class HomeWidget(BaseWidget):
 
         self.register_callback("toggle_menu", self._toggle_menu)         
         self.callback_left = callbacks["on_left"]
-        
-        self._create_menu()
-        self.is_menu_visible = False
+
         
     def _create_dynamically_label(self, content: str):
         def process_content(content):
@@ -79,127 +81,87 @@ class HomeWidget(BaseWidget):
                 else:
                     label = QLabel(part)
                     label.setProperty("class", "label")
-                label.setAlignment(Qt.AlignmentFlag.AlignCenter)    
+                label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                label.setCursor(Qt.CursorShape.PointingHandCursor)
                 self._widget_container_layout.addWidget(label)
                 widgets.append(label)
                 label.show()
-                label.setCursor(Qt.CursorShape.PointingHandCursor)
+                
             return widgets
         self._widgets = process_content(content)
-       
-    def add_menu_action(self, menu, text, triggered_func):
-        label = QLabel(text)
-        label.setProperty('class', 'menu-item')
-        label.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
-        label.setCursor(Qt.CursorShape.PointingHandCursor)
-       
-        widget_action = QWidgetAction(menu)
-        widget_action.setDefaultWidget(label)
-        widget_action.triggered.connect(triggered_func)
-        menu.addAction(widget_action)
-       
-        return widget_action
+ 
                
     def create_menu_action(self, path):
         expanded_path = os.path.expanduser(path)
         return lambda: os.startfile(expanded_path)
            
     def _create_menu(self):
-        self._menu = QMenu(self)
-        self._update_menu_style()
-        self._setup_menu()
-        self._menu.aboutToHide.connect(self._on_menu_about_to_hide)
-        self._menu.triggered.connect(self.on_menu_triggered)
-        
-    def _update_menu_style(self):
+        self._menu = PopupWidget(self, self._blur, self._round_corners, self._round_corners_type, self._border_color)
         self._menu.setProperty('class', 'home-menu')
+        self._menu.setWindowFlag(Qt.WindowType.FramelessWindowHint)
+        self._menu.setWindowFlag(Qt.WindowType.Popup)
+        self._menu.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint)
         
-        self._menu.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-        if self._blur:
-            Blur(
-                self._menu.winId(),
-                Acrylic=True if is_windows_10() else False,
-                DarkMode=False,
-                RoundCorners=True,
-                BorderColor="System"
-            )
-        
-    def _setup_menu(self):
+
+ 
+        # Create main vertical layout for the popup
+        main_layout = QVBoxLayout(self._menu)
+        main_layout.setSpacing(0)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+
         if self._system_menu:
-            self.add_menu_action(
-                self._menu,
-                self._menu_labels['about'],
-                lambda: subprocess.Popen("winver", shell=True, creationflags=subprocess.CREATE_NO_WINDOW)
-            )
-            self._menu.addSeparator()
-            self.add_menu_action(
-                self._menu,
-                self._menu_labels['system'],
-                lambda: os.startfile("ms-settings:")
-            )
-            self.add_menu_action(
-                self._menu,
-                self._menu_labels['task_manager'],
-                lambda: subprocess.Popen("taskmgr", shell=True, creationflags=subprocess.CREATE_NO_WINDOW)
-            )
-            self._menu.addSeparator()
-       
-        if self._menu_list is not None:
-            if isinstance(self._menu_list, list):
-                for menu_item in self._menu_list:
-                    if 'title' in menu_item and 'path' in menu_item:
-                        action = self.create_menu_action(menu_item['path'])
-                        self.add_menu_action(
-                            self._menu,
-                            menu_item['title'],
-                            action
-                        )
-            else:
-                logging.error(f"Expected menu_list to be a list but got {type(self._menu_list)}")
-                return
+            # System menu items
+            self._add_menu_item(main_layout, self._menu_labels['about'], 
+                lambda: subprocess.Popen("winver", shell=True, creationflags=subprocess.CREATE_NO_WINDOW))
             
+            self._add_separator(main_layout)
+            
+            self._add_menu_item(main_layout, self._menu_labels['system'],
+                lambda: os.startfile("ms-settings:"))
+            self._add_menu_item(main_layout, self._menu_labels['task_manager'],
+                lambda: subprocess.Popen("taskmgr", shell=True, creationflags=subprocess.CREATE_NO_WINDOW))
+                
+            self._add_separator(main_layout)
+
+        # Custom menu items
+        if isinstance(self._menu_list, list):
+            for menu_item in self._menu_list:
+                if 'title' in menu_item and 'path' in menu_item:
+                    self._add_menu_item(main_layout, menu_item['title'],
+                        self.create_menu_action(menu_item['path']))
         if self._menu_list is not None and len(self._menu_list) > 0 and self._power_menu:
-            self._menu.addSeparator()
+            self._add_separator(main_layout)
        
         if self._power_menu:
-            self.add_menu_action(
-                self._menu,
+            self._add_menu_item(
+                main_layout,
                 self._menu_labels['sleep'],
                 lambda: self.power_operations.sleep()
             )
-            self.add_menu_action(
-                self._menu,
+            self._add_menu_item(
+                main_layout,
                 self._menu_labels['restart'],
                 lambda: self.power_operations.restart()
             )
-            self.add_menu_action(
-                self._menu,
+            self._add_menu_item(
+                main_layout,
                 self._menu_labels['shutdown'],
                 lambda: self.power_operations.shutdown()
             )
-            self._menu.addSeparator()
-            self.add_menu_action(
-                self._menu,
+            
+            self._add_separator(main_layout)
+            
+            self._add_menu_item(
+                main_layout,
                 self._menu_labels['lock'],
                 lambda: self.power_operations.lock()
             )
-            self.add_menu_action(
-                self._menu,
+            self._add_menu_item(
+                main_layout,
                 self._menu_labels['logout'],
                 lambda: self.power_operations.signout()
             )
-        
-    def on_menu_triggered(self):
-        self._reset_menu_visibility()
-        
-    def _on_menu_about_to_hide(self):
-        QTimer.singleShot(100, self._reset_menu_visibility)      
-          
-    def _toggle_menu(self):
-        if self.is_menu_visible:
-            self._reset_menu_visibility()
-            return
-        
+            
         self._menu.adjustSize()
         widget_global_pos = self.mapToGlobal(QPoint(0, self.height() + self._distance))
         
@@ -223,10 +185,44 @@ class HomeWidget(BaseWidget):
             global_position = widget_global_pos
 
         self._menu.move(global_position)
-        self._update_menu_style()
-        QTimer.singleShot(0, self._menu.show)
-        self.is_menu_visible = True
+ 
 
-    def _reset_menu_visibility(self):
-        self.is_menu_visible = False
-        self._menu.hide()
+        self._menu.show()
+
+
+    def _add_menu_item(self, layout, text, triggered_func):
+        # Create widget container
+        item = QWidget()
+        item_layout = QHBoxLayout(item)
+        item_layout.setContentsMargins(0, 0, 0, 0)
+        
+        # Create label
+        label = QLabel(text)
+        label.setProperty('class', 'menu-item')
+        label.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
+        label.setCursor(Qt.CursorShape.PointingHandCursor)
+        
+        # Add label to layout
+        item_layout.addWidget(label)
+        
+        # Add click event
+        def mouse_press_handler(event):
+            if event.button() == Qt.MouseButton.LeftButton:
+                triggered_func()
+                self._menu.hide()
+        
+        item.mousePressEvent = mouse_press_handler
+        layout.addWidget(item)
+        
+        return item
+
+    def _add_separator(self, layout):
+        separator = QFrame(self)
+        separator.setFrameShape(QFrame.Shape.HLine)
+        separator.setProperty('class', 'separator')
+        separator.setStyleSheet('border:none')
+        layout.addWidget(separator)
+
+    def _toggle_menu(self):
+        blink_on_click(self)
+        self._create_menu()

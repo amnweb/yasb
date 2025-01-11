@@ -4,6 +4,9 @@ DEFAULTS = {
     'power_menu': True,
     'system_menu': True,
     'blur': False,
+    'round_corners': True,
+    'round_corners_type': 'normal',
+    'border_color': 'System',
     'alignment': 'left',
     'direction': 'down',
     'distance': 6,
@@ -47,6 +50,21 @@ VALIDATION_SCHEMA = {
     'blur': {
         'type': 'boolean',
         'default': DEFAULTS['blur'],
+        'required': False
+    },
+    'round_corners': {
+        'type': 'boolean',
+        'default': DEFAULTS['round_corners'],
+        'required': False
+    },
+    'round_corners_type': {
+        'type': 'string',
+        'default': DEFAULTS['round_corners_type'],
+        'required': False
+    },
+    'border_color': {
+        'type': 'string',
+        'default': DEFAULTS['border_color'],
         'required': False
     },
     'alignment': {

@@ -6,7 +6,7 @@ from core.widgets.base import BaseWidget
 from core.validation.widgets.yasb.memory import VALIDATION_SCHEMA
 from PyQt6.QtWidgets import QLabel,QHBoxLayout,QWidget
 from PyQt6.QtCore import Qt
-
+from core.utils.utilities import blink_on_click
 
 class MemoryWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
@@ -48,6 +48,7 @@ class MemoryWidget(BaseWidget):
         self.start_timer()
         
     def _toggle_label(self):
+        blink_on_click(self)
         self._show_alt_label = not self._show_alt_label
         for widget in self._widgets:
             widget.setVisible(not self._show_alt_label)

@@ -11,10 +11,7 @@ from core.validation.widgets.yasb.weather import VALIDATION_SCHEMA
 from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget, QVBoxLayout
 from PyQt6.QtCore import Qt, QTimer, QPoint
 from PyQt6.QtGui import QPixmap
-from core.utils.win32.blurWindow import Blur
-from core.utils.utilities import is_windows_10
-from core.utils.utilities import PopupWidget
-
+from core.utils.utilities import PopupWidget, blink_on_click
  
 class WeatherWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
@@ -77,6 +74,7 @@ class WeatherWidget(BaseWidget):
 
 
     def _toggle_label(self):
+        blink_on_click(self)
         self._show_alt_label = not self._show_alt_label
         for widget in self._widgets:
             widget.setVisible(not self._show_alt_label)
@@ -85,6 +83,7 @@ class WeatherWidget(BaseWidget):
         self._update_label(update_class=False)
 
     def _toggle_card(self):
+        blink_on_click(self)
         self._popup_card()
 
             
@@ -93,7 +92,8 @@ class WeatherWidget(BaseWidget):
             logging.warning("Weather data is not yet available.")
             return
 
-        self.dialog = PopupWidget(self)
+        self.dialog = PopupWidget(self, self._weather_card['blur'], self._weather_card['round_corners'], self._weather_card['round_corners_type'], self._weather_card['border_color'])
+    
         self.dialog.setProperty("class", "weather-card")
         self.dialog.setWindowFlag(Qt.WindowType.FramelessWindowHint)
         self.dialog.setWindowFlag(Qt.WindowType.Popup)
@@ -201,15 +201,8 @@ class WeatherWidget(BaseWidget):
         main_layout.addLayout(days_layout)
 
         self.dialog.setLayout(main_layout)
-        if self._weather_card['blur']:
-            Blur(
-                self.dialog.winId(),
-                Acrylic=True if is_windows_10() else False,
-                DarkMode=False,
-                RoundCorners=self._weather_card['round_corners'],
-                RoundCornersType=self._weather_card['round_corners_type'],
-                BorderColor=self._weather_card['border_color']
-            )
+        
+ 
         # Position the dialog 
         self.dialog.adjustSize()
         widget_global_pos = self.mapToGlobal(QPoint(0, self.height() + self._weather_card['distance']))

@@ -19,6 +19,7 @@ import threading
 from core.event_service import EventService
 from core.utils.widgets.wallpapers_gallery import ImageGallery
 from core.utils.alert_dialog import raise_info_alert
+from core.utils.utilities import blink_on_click
 
 class WallpapersWidget(BaseWidget):
     set_wallpaper_signal = pyqtSignal(str) 
@@ -207,6 +208,7 @@ class WallpapersWidget(BaseWidget):
             return
         
         if self._gallery['enabled']: 
+            blink_on_click(self)
             if event is None or event.button() == Qt.MouseButton.LeftButton:
                 
                 if self._image_gallery is not None and self._image_gallery.isVisible():

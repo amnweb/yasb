@@ -11,6 +11,7 @@ from core.utils.win32.utilities import get_hwnd_info
 from PIL import Image
 import win32gui
 from core.utils.win32.app_icons import get_window_icon
+from core.utils.utilities import blink_on_click
 
 IGNORED_TITLES = ['', ' ', 'FolderView', 'Program Manager', 'python3', 'pythonw3', 'YasbBar', 'Search', 'Start', 'yasb']
 IGNORED_CLASSES = ['WorkerW', 'TopLevelWindowForOverflowXamlIsland', 'Shell_TrayWnd', 'Shell_SecondaryTrayWnd']
@@ -138,6 +139,7 @@ class ActiveWindowWidget(BaseWidget):
             
         
     def _toggle_title_text(self) -> None:
+        blink_on_click(self)
         self._show_alt = not self._show_alt
         self._active_label = self._label_alt if self._show_alt else self._label
         self._update_text()

@@ -7,7 +7,7 @@ from PyQt6.QtCore import Qt
 from datetime import datetime
 from tzlocal import get_localzone_name
 from itertools import cycle
-
+from core.utils.utilities import blink_on_click
 
 class ClockWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
@@ -65,6 +65,7 @@ class ClockWidget(BaseWidget):
         self.start_timer()
 
     def _toggle_label(self):
+        blink_on_click(self)
         self._show_alt_label = not self._show_alt_label
         for widget in self._widgets:
             widget.setVisible(not self._show_alt_label)
@@ -89,8 +90,9 @@ class ClockWidget(BaseWidget):
                     label.setProperty("class", class_result)
                 else:
                     label = QLabel(part)
-                    label.setProperty("class", "label") 
-                label.setAlignment(Qt.AlignmentFlag.AlignCenter)    
+                    label.setProperty("class", "label")
+                label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                label.setCursor(Qt.CursorShape.PointingHandCursor)
                 self._widget_container_layout.addWidget(label)
                 widgets.append(label)
                 if is_alt:
