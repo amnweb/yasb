@@ -77,6 +77,7 @@ class PopupWidget(QFrame):
             global_pos = event.globalPosition().toPoint()
             if not self.geometry().contains(global_pos):
                 self.hide()
+                self.deleteLater()
                 return True
         return super().eventFilter(obj, event)
 
