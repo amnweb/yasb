@@ -53,7 +53,7 @@ weather:
 
 ## Description of Options
 
-- **label:** The format string for the weather label. You can use placeholders like `{temp_c}`, `{min_temp_c}`, `{max_temp_c}`, `{temp_f}`, `{min_temp_f}`, `{max_temp_f}`, `{location}`, `{humidity}`, `{icon}`, `{conditions}`, `{wind_mph}`, `{wind_kph}`, `{wind_dir}`, `{wind_degree}`, `{pressure_mb}`, `{pressure_in}`, `{precip_mm}`, `{precip_in}`, `{uv}`, `{vis_km}`, `{vis_miles}`, `{cloud}`, `{feelslike_c}`, `{feelslike_f}`.
+- **label:** The format string for the weather label. You can use placeholders like `{temp}`, `{min_temp}`, `{max_temp}`, `{feelslike}`, `{location}`, `{humidity}`, `{icon}`, `{conditions}`, `{wind}`, `{wind_dir}`, `{wind_degree}`, `{pressure}`, `{precip}`, `{uv}`, `{vis}`, `{cloud}`.
 - **label_alt:** The alternative format string for the weather label. Useful for displaying additional weather details.
 - **update_interval:** The interval in seconds to update the weather data. Must be between 60 and 36000000.
 - **hide_decimal:** Whether to hide the decimal part of the temperature.
@@ -109,4 +109,3 @@ weather:
     font-size: 12px;
 }
 ```
-
