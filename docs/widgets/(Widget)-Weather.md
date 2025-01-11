@@ -1,8 +1,8 @@
 # Weather Widget Options
 | Option          | Type    | Default                                                                 | Description                                                                 |
 |-----------------|---------|-------------------------------------------------------------------------|-----------------------------------------------------------------------------|
-| `label`         | string  | `'<span>{icon}</span> {temp_c}'`                                        | The format string for the weather label. You can use placeholders like `{temp_c}`, `{icon}`, etc. |
-| `label_alt`     | string  | `'{location}: Min {min_temp_c}, Max {max_temp_c}, Humidity {humidity}'` | The alternative format string for the weather label. Useful for displaying additional weather details. |
+| `label`         | string  | `'<span>{icon}</span> {temp}'`                                        | The format string for the weather label. You can use placeholders like `{temp}`, `{icon}`, etc. |
+| `label_alt`     | string  | `'{location}: Min {min_temp}, Max {max_temp}, Humidity {humidity}'` | The alternative format string for the weather label. Useful for displaying additional weather details. |
 | `update_interval` | integer | `3600`                                                                 | The interval in seconds to update the weather data. Must be between 60 and 36000000. |
 | `hide_decimal`  | boolean | `False`                                                                 | Whether to hide the decimal part of the temperature. |
 | `location`      | string  | `'London'`                                                              | The location for which to fetch the weather data. |
