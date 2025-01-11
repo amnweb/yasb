@@ -34,7 +34,7 @@ All valid options for the widgets are listed on the widgets page.
 | `screens`         | list    | `['*']`       | The screens on which the status bar should be displayed. |
 | `class_name`      | string  | `"yasb-bar"`  | The CSS class name for the status bar. |
 | `alignment`       | object  | `{position: "top", center: false}` | The alignment settings for the status bar. |
-| `blur_effect`     | object  | `{enabled: false, acrylic: false, dark_mode: false, round_corners: false, border_color: System}` | The blur effect settings for the status bar. |
+| `blur_effect`     | object  | `{enabled: false, acrylic: false, dark_mode: false, round_corners: false, round_corners_type: 'normal', border_color: System}` | The blur effect settings for the status bar. |
 | `window_flags`    | object  | `{always_on_top: false, windows_app_bar: true}` | The window flags for the status bar. |
 | `dimensions`      | object  | `{width: "100%", height: 36}` | The dimensions of the status bar. |
 | `padding`         | object  | `{top: 4, left: 0, bottom: 4, right: 0}` | The padding for the status bar. |
