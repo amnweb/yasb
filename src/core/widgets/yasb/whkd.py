@@ -1,5 +1,7 @@
 import re
 import os
+import logging
+from core.utils.alert_dialog import raise_info_alert
 from core.widgets.base import BaseWidget
 from core.validation.widgets.yasb.whkd import VALIDATION_SCHEMA
 from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget, QApplication, QSizePolicy, QVBoxLayout, QScrollArea, QPushButton, QLineEdit
@@ -65,6 +67,16 @@ class WhkdWidget(BaseWidget):
                 file_path = os.path.join(whkd_config_home, 'whkdrc')
             else:
                 file_path = os.path.join(os.path.expanduser('~'), '.config', 'whkdrc')
+                
+            if not os.path.exists(file_path):
+                logging.error(f"File not found: {file_path}")
+                raise_info_alert(
+                    title=f"Error",
+                    msg=f"The specified file does not exist\n{file_path}",
+                    informative_msg=f"Please make sure the file exists and try again.",
+                    rich_text=True
+                )
+                return
 
             filtered_lines = self.read_and_filter_file(file_path)
             formatted_content = self.format_content(filtered_lines)
