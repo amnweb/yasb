@@ -237,7 +237,8 @@ widgets:
   taskbar:
     type: "yasb.taskbar.TaskbarWidget"
     options:
-      animation: true
+      animation:
+        enabled: true
       icon_size: 16
       ignore_apps:
         processes: []
