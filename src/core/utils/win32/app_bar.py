@@ -100,7 +100,7 @@ class Win32AppBar:
         else:
             self.app_bar_data.rc.top = screen.geometry().y() + screen_height - bar_height
             self.app_bar_data.rc.bottom = screen.geometry().y() + screen_height
-        logging.debug(f"Bar Created on Screen: {screen.name()}\nBar Height: {app_bar_height}px\nDPI Scale: {screen.devicePixelRatio()}\nScale Screen: {scale_screen}\nScreen Geometry: X: {screen.geometry().x()}, Y: {screen.geometry().y()}\nWidth: {screen.geometry().width()}, Height: {screen.geometry().height()}")
+        logging.info(f"Bar Created on Screen: {screen.name()} [Bar Height: {app_bar_height}px, DPI Scale: {screen.devicePixelRatio()}, Scale Screen: {scale_screen}, Screen Geometry: X: {screen.geometry().x()}, Y: {screen.geometry().y()}, Screen Width: {screen.geometry().width()}, Screen Height: {screen.geometry().height()}]")
 
     def register_new(self):
         shell32.SHAppBarMessage(AppBarMessage.New, P_APPBAR_DATA(self.app_bar_data))
