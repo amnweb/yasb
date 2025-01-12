@@ -1,4 +1,5 @@
 import os
+import subprocess
 import sys
 import requests
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
@@ -285,6 +286,7 @@ class ThemeCard(QFrame):
         # Show the dialog and check the user's response
         if dialog.exec() == QDialog.DialogCode.Accepted:
             try:
+                subprocess.run(["yasbc", "stop"], creationflags=subprocess.CREATE_NO_WINDOW)
                 # Define the URLs for the files
                 base_url = f"https://raw.githubusercontent.com/amnweb/yasb-themes/main/themes/{self.theme_data['id']}"
                 config_url = f"{base_url}/config.yaml"
@@ -298,17 +300,18 @@ class ThemeCard(QFrame):
                 # Create the directory if it doesn't exist
                 os.makedirs(os.path.dirname(config_path), exist_ok=True)
 
-                # Download and save the config.yaml file
-                config_response = requests.get(config_url)
-                config_response.raise_for_status()
-                with open(config_path, 'wb') as config_file:
-                    config_file.write(config_response.content)
-
                 # Download and save the styles.css file
                 styles_response = requests.get(styles_url)
                 styles_response.raise_for_status()
                 with open(styles_path, 'wb') as styles_file:
                     styles_file.write(styles_response.content)
+                    
+                # Download and save the config.yaml file
+                config_response = requests.get(config_url)
+                config_response.raise_for_status()
+                with open(config_path, 'wb') as config_file:
+                    config_file.write(config_response.content)
+                subprocess.run(["yasbc", "start"], creationflags=subprocess.CREATE_NO_WINDOW)
             except Exception as e:
                 QMessageBox.critical(self, 'Error', f"Failed to install theme: {str(e)}")
 
