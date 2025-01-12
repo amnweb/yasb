@@ -68,7 +68,14 @@ class WhkdWidget(BaseWidget):
         if event.button() == Qt.MouseButton.LeftButton:
             if self._animation['enabled']:
                 AnimationManager.animate(self, self._animation['type'], self._animation['duration'])
-            # Check if WHKD_CONFIG_HOME exists in the environment variables
+                
+            if self._popup_window is not None:
+                try:
+                    self._popup_window.deleteLater()
+                except RuntimeError:
+                     self._popup_window = None
+
+            # Check if WHKD_CONFIG_HOME exists in the environment variables and use it as the default path
             whkd_config_home = os.getenv('WHKD_CONFIG_HOME')
             if whkd_config_home:
                 file_path = os.path.join(whkd_config_home, 'whkdrc')
@@ -171,6 +178,7 @@ class KeybindWidget(QWidget):
 class KeybindsWindow(QWidget):
     def __init__(self, content, file_path):
         super().__init__()
+        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         self.file_path = file_path
         self.original_content = content  # Store the original content
         self.initUI(content)
@@ -307,3 +315,15 @@ class KeybindsWindow(QWidget):
 
     def open_file(self):
         os.startfile(self.file_path)
+
+    def closeEvent(self, event):
+        if hasattr(self, 'container'):
+            for i in reversed(range(self.container_layout.count())):
+                widget = self.container_layout.itemAt(i).widget()
+                if widget:
+                    widget.deleteLater()
+        self.container_layout = None
+        self.container = None
+        self.scroll_area = None
+        self.filter_input = None
+        super().closeEvent(event)
