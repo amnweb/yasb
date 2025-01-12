@@ -19,7 +19,7 @@ from colorama import just_fix_windows_console
 just_fix_windows_console()
 
 YASB_VERSION = BUILD_VERSION
-YASB_CLI_VERSION = "1.0.4"
+YASB_CLI_VERSION = "1.0.5"
 
 OS_STARTUP_FOLDER = os.path.join(os.environ['APPDATA'], r'Microsoft\Windows\Start Menu\Programs\Startup')
 INSTALLATION_PATH = os.path.abspath(os.path.join(__file__, "../../.."))
@@ -167,6 +167,9 @@ class CLIHandler:
             
         elif args.command == 'log':
             log_file = os.path.join(os.path.expanduser("~"), ".config", "yasb", "yasb.log")
+            if not os.path.exists(log_file):
+                print("Log file does not exist. Please restart YASB to generate logs.")
+                sys.exit(1)
             try:
                 with open(log_file, 'r') as f:
                     f.seek(0, os.SEEK_END)
