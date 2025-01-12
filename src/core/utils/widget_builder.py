@@ -74,6 +74,7 @@ class WidgetBuilder(QObject):
             undefined_widgets = "\n".join([
                 f" - The widget \"{widget_name}\" is undefined." for widget_name in self._invalid_widget_names
             ])
+            logging.error(f"Failed to add undefined widget(s) {undefined_widgets}")
             raise_info_alert(
                 title=f"Failed to add undefined widget(s) in {DEFAULT_CONFIG_FILENAME}",
                 msg="Failed to add undefined widget(s) to bar.",
@@ -84,17 +85,20 @@ class WidgetBuilder(QObject):
             additional_details = "\n".join([(
                 f" - {widget_name}{validation_errors}"
             ) for widget_name, validation_errors in self._invalid_widget_options.items()])
+            logging.error(f"Failed to validate widget(s) due to invalid options {additional_details}")
             raise_info_alert(
                 title=f"Failed to validate widget(s) in {DEFAULT_CONFIG_FILENAME}",
                 msg="Failed to validate widget(s) due to invalid options",
                 informative_msg="Please click 'Show Details' to find out more.",
                 additional_details=additional_details
             )
+            
         if self._invalid_widget_types:
             widget_names_and_types = "\n".join([
                 f" - {widget_name} has unknown type \"{widget_type}\""
                 for widget_name, widget_type in self._invalid_widget_types.items()
             ])
+            logging.error(f"Failed to build widget(s) due to unknown widget type(s) {widget_names_and_types}")
             raise_info_alert(
                 title=f"Failed to build widget(s) in {DEFAULT_CONFIG_FILENAME}",
                 msg="Failed to build widget(s) of unknown widget type(s)",
@@ -103,6 +107,7 @@ class WidgetBuilder(QObject):
             )
         if self._missing_widget_types:
             widget_names = "\n".join([f" - {widget_name}" for widget_name in self._missing_widget_types])
+            logging.error(f"Failed to import widget(s) due to missing widget type(s) {widget_names}")
             raise_info_alert(
                 title=f"Failed to import widget(s) in {DEFAULT_CONFIG_FILENAME}",
                 msg="Failed to import widget(s) with missing widget type(s)",
