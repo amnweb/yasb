@@ -11,7 +11,8 @@ from core.validation.widgets.yasb.weather import VALIDATION_SCHEMA
 from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget, QVBoxLayout
 from PyQt6.QtCore import Qt, QTimer, QPoint
 from PyQt6.QtGui import QPixmap
-from core.utils.utilities import PopupWidget, blink_on_click
+from core.utils.utilities import PopupWidget
+from core.utils.widgets.animation_manager import AnimationManager
  
 class WeatherWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
@@ -27,7 +28,8 @@ class WeatherWidget(BaseWidget):
             units: str,
             weather_card: dict[str, str],
             callbacks: dict[str, str],
-            icons: dict[str, str]
+            icons: dict[str, str],
+            animation: dict[str, str]
     ):
         super().__init__((update_interval * 1000), class_name="weather-widget")
         self._label_content = label
@@ -41,6 +43,7 @@ class WeatherWidget(BaseWidget):
         # Store weather data
         self.weather_data = None
         self._show_alt_label = False
+        self._animation = animation
         
         self._weather_card = weather_card
         self._icon_cache = dict()
@@ -74,7 +77,8 @@ class WeatherWidget(BaseWidget):
 
 
     def _toggle_label(self):
-        blink_on_click(self)
+        if self._animation['enabled']:
+            AnimationManager.animate(self, self._animation['type'], self._animation['duration'])
         self._show_alt_label = not self._show_alt_label
         for widget in self._widgets:
             widget.setVisible(not self._show_alt_label)
@@ -83,7 +87,8 @@ class WeatherWidget(BaseWidget):
         self._update_label(update_class=False)
 
     def _toggle_card(self):
-        blink_on_click(self)
+        if self._animation['enabled']:
+            AnimationManager.animate(self, self._animation['type'], self._animation['duration'])
         self._popup_card()
 
             

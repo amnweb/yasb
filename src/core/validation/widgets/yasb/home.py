@@ -11,6 +11,11 @@ DEFAULTS = {
     'direction': 'down',
     'distance': 6,
     'menu_labels': {'shutdown': 'Shutdown', 'restart': 'Restart', 'logout': 'Logout', 'lock': 'Lock', 'sleep': 'Sleep', 'system': 'System Settings', 'about': 'About This PC', 'task_manager': 'Task Manager'},
+    'animation': {
+        'enabled': True,
+        'type': 'fadeInOut',
+        'duration': 200
+    },
     'callbacks': {
         'on_left': 'toggle_menu'
     }
@@ -96,6 +101,25 @@ VALIDATION_SCHEMA = {
             'task_manager': {'type': 'string', 'default': DEFAULTS['menu_labels']['task_manager']}
         },
         'default': DEFAULTS['menu_labels']
+    },
+    'animation': {
+        'type': 'dict',
+        'required': False,
+        'schema': {
+            'enabled': {
+                'type': 'boolean',
+                'default': DEFAULTS['animation']['enabled']
+            },
+            'type': {
+                'type': 'string',
+                'default': DEFAULTS['animation']['type']
+            },
+            'duration': {
+                'type': 'integer',
+                'default': DEFAULTS['animation']['duration']
+            }
+        },
+        'default': DEFAULTS['animation']
     },
     'callbacks': {
         'required': False,

@@ -5,7 +5,7 @@ from core.widgets.base import BaseWidget
 from core.validation.widgets.yasb.traffic import VALIDATION_SCHEMA
 from PyQt6.QtWidgets import QLabel,QHBoxLayout,QWidget
 from PyQt6.QtCore import Qt
-from core.utils.utilities import blink_on_click
+from core.utils.widgets.animation_manager import AnimationManager
 
 class TrafficWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
@@ -20,6 +20,7 @@ class TrafficWidget(BaseWidget):
         label: str,
         label_alt: str,
         update_interval: int,
+        animation: dict[str, str],
         callbacks: dict[str, str],
     ):
         super().__init__(update_interval, class_name="traffic-widget")
@@ -28,7 +29,7 @@ class TrafficWidget(BaseWidget):
         self._show_alt_label = False
         self._label_content = label
         self._label_alt_content = label_alt
-
+        self._animation = animation
         # Construct container
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
@@ -53,7 +54,8 @@ class TrafficWidget(BaseWidget):
         self.start_timer()
 
     def _toggle_label(self):
-        blink_on_click(self)
+        if self._animation['enabled']:
+            AnimationManager.animate(self, self._animation['type'], self._animation['duration'])
         self._show_alt_label = not self._show_alt_label
         for widget in self._widgets:
             widget.setVisible(not self._show_alt_label)

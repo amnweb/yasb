@@ -10,6 +10,7 @@ from PyQt6.QtGui import QWheelEvent, QCursor
 from core.utils.win32.utilities import get_monitor_info
 import screen_brightness_control as sbc
 from datetime import datetime
+from core.utils.widgets.animation_manager import AnimationManager
 
 if DEBUG:
     logging.getLogger("screen_brightness_control").setLevel(logging.INFO)
@@ -35,6 +36,7 @@ class BrightnessWidget(BaseWidget):
         auto_light_night_end_time: str,
         auto_light_day_level: int,
         container_padding: dict[str, int],
+        animation: dict[str, str],
         callbacks: dict[str, str]
     ):
         super().__init__(class_name="brightness-widget")
@@ -54,6 +56,7 @@ class BrightnessWidget(BaseWidget):
         self._auto_light_day_level = auto_light_day_level
         self._step = 1
         self._current_mode = None
+        self._animation = animation
         
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
@@ -78,6 +81,8 @@ class BrightnessWidget(BaseWidget):
             QTimer.singleShot(1000, self.auto_light)
         
     def _toggle_label(self):
+        if self._animation['enabled']:
+            AnimationManager.animate(self, self._animation['type'], self._animation['duration'])
         self._show_alt_label = not self._show_alt_label
         for widget in self._widgets:
             widget.setVisible(not self._show_alt_label)

@@ -7,6 +7,11 @@ DEFAULTS = {
     'max_length': None,
     'max_length_ellipsis': '...',
     'monitor_exclusive': True,
+    'animation': {
+        'enabled': True,
+        'type': 'fadeInOut',
+        'duration': 200
+    },
     'ignore_windows': {
         'classes': [],
         'processes': [],
@@ -56,6 +61,25 @@ VALIDATION_SCHEMA = {
         'type': 'boolean',
         'required': False,
         'default': DEFAULTS['monitor_exclusive']
+    },
+    'animation': {
+        'type': 'dict',
+        'required': False,
+        'schema': {
+            'enabled': {
+                'type': 'boolean',
+                'default': DEFAULTS['animation']['enabled']
+            },
+            'type': {
+                'type': 'string',
+                'default': DEFAULTS['animation']['type']
+            },
+            'duration': {
+                'type': 'integer',
+                'default': DEFAULTS['animation']['duration']
+            }
+        },
+        'default': DEFAULTS['animation']
     },
     'ignore_window': {
         'type': 'dict',

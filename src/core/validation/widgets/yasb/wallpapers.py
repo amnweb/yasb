@@ -18,7 +18,12 @@ DEFAULTS = {
         'lazy_load_delay': 50,
         'enable_cache': True
     },
-    "run_after": []
+    "run_after": [],
+    'animation': {
+        'enabled': True,
+        'type': 'fadeInOut',
+        'duration': 200
+    }
 }
 
 VALIDATION_SCHEMA = {
@@ -120,5 +125,24 @@ VALIDATION_SCHEMA = {
         "schema": {
             "type": "string"
         }
+    },
+    'animation': {
+        'type': 'dict',
+        'required': False,
+        'schema': {
+            'enabled': {
+                'type': 'boolean',
+                'default': DEFAULTS['animation']['enabled']
+            },
+            'type': {
+                'type': 'string',
+                'default': DEFAULTS['animation']['type']
+            },
+            'duration': {
+                'type': 'integer',
+                'default': DEFAULTS['animation']['duration']
+            }
+        },
+        'default': DEFAULTS['animation']
     }
 }

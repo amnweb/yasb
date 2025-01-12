@@ -10,6 +10,8 @@ from comtypes import CLSCTX_ALL, CoInitialize, CoUninitialize, COMObject
 from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume, IAudioEndpointVolumeCallback
 from pycaw.callbacks import MMNotificationClient
 from core.utils.win32.system_function import KEYEVENTF_KEYUP
+from core.utils.widgets.animation_manager import AnimationManager
+
 # Disable comtypes logging
 logging.getLogger('comtypes').setLevel(logging.CRITICAL)
 
@@ -39,6 +41,7 @@ class MicrophoneWidget(BaseWidget):
         label_alt: str,
         tooltip: bool,
         icons: dict[str, str],
+        animation: dict[str, str],
         container_padding: dict[str, int],
         callbacks: dict[str, str]
     ):
@@ -53,6 +56,7 @@ class MicrophoneWidget(BaseWidget):
         self._tooltip = tooltip
         self._icons = icons
         self._padding = container_padding
+        self._animation = animation
         
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
@@ -82,6 +86,8 @@ class MicrophoneWidget(BaseWidget):
                 
 
     def _toggle_label(self):
+        if self._animation['enabled']:
+            AnimationManager.animate(self, self._animation['type'], self._animation['duration'])
         self._show_alt_label = not self._show_alt_label
         for widget in self._widgets:
             widget.setVisible(not self._show_alt_label)

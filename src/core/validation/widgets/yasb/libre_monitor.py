@@ -32,6 +32,11 @@ DEFAULTS = {
         'on_middle': 'do_nothing',
         'on_right': 'do_nothing'
     },
+    'animation': {
+        'enabled': True,
+        'type': 'fadeInOut',
+        'duration': 200
+    }
 }
 
 VALIDATION_SCHEMA = {
@@ -157,5 +162,24 @@ VALIDATION_SCHEMA = {
             }
         },
         'default': DEFAULTS['callbacks']
+    },
+    'animation': {
+        'type': 'dict',
+        'required': False,
+        'schema': {
+            'enabled': {
+                'type': 'boolean',
+                'default': DEFAULTS['animation']['enabled']
+            },
+            'type': {
+                'type': 'string',
+                'default': DEFAULTS['animation']['type']
+            },
+            'duration': {
+                'type': 'integer',
+                'default': DEFAULTS['animation']['duration']
+            }
+        },
+        'default': DEFAULTS['animation']
     }
 }

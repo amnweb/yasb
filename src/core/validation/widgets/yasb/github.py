@@ -9,7 +9,12 @@ DEFAULTS = {
     'max_field_size': 100,
     'menu_width': 400,
     'menu_height': 400,
-    'menu_offset': 240
+    'menu_offset': 240,
+    'animation': {
+        'enabled': True,
+        'type': 'fadeInOut',
+        'duration': 200
+    }
 }
 
 VALIDATION_SCHEMA = {
@@ -59,5 +64,24 @@ VALIDATION_SCHEMA = {
     'menu_offset': {
         'type': 'integer',
         'default': DEFAULTS['menu_offset']
+    },
+    'animation': {
+        'type': 'dict',
+        'required': False,
+        'schema': {
+            'enabled': {
+                'type': 'boolean',
+                'default': DEFAULTS['animation']['enabled']
+            },
+            'type': {
+                'type': 'string',
+                'default': DEFAULTS['animation']['type']
+            },
+            'duration': {
+                'type': 'integer',
+                'default': DEFAULTS['animation']['duration']
+            }
+        },
+        'default': DEFAULTS['animation']
     }
 }

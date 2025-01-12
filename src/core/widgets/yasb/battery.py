@@ -7,7 +7,7 @@ from core.validation.widgets.yasb.battery import VALIDATION_SCHEMA
 from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget
 from PyQt6.QtCore import Qt
 from typing import Union
-from core.utils.utilities import blink_on_click
+from core.utils.widgets.animation_manager import AnimationManager
 
 class BatteryWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
@@ -20,6 +20,7 @@ class BatteryWidget(BaseWidget):
             charging_options: dict[str, Union[str, bool]],
             status_thresholds: dict[str, int],
             status_icons: dict[str, str],
+            animation: dict[str, str],
             callbacks: dict[str, str]
     ):
         super().__init__(update_interval, class_name="battery-widget")
@@ -30,7 +31,7 @@ class BatteryWidget(BaseWidget):
         self._blink = False
         self._show_alt = False
         self._last_threshold = None
-
+        self._animation = animation
         self._icon_charging_format = charging_options['icon_format']
         self._icon_charging_blink = charging_options['blink_charging_icon']
 
@@ -61,7 +62,8 @@ class BatteryWidget(BaseWidget):
         self.start_timer()
 
     def _toggle_label(self):
-        blink_on_click(self)
+        if self._animation['enabled']:
+            AnimationManager.animate(self, self._animation['type'], self._animation['duration'])
         self._show_alt_label = not self._show_alt_label
         for widget in self._widgets:
             widget.setVisible(not self._show_alt_label)

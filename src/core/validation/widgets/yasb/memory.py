@@ -2,6 +2,11 @@ DEFAULTS = {
     'label': "\uf4bc {virtual_mem_free}/{virtual_mem_total}",
     'label_alt': "\uf4bc VIRT: {virtual_mem_percent}% SWAP: {swap_mem_percent}%",
     'update_interval': 5000,
+    'animation': {
+        'enabled': True,
+        'type': 'fadeInOut',
+        'duration': 200
+    },
     'callbacks': {
         'on_left': "toggle_label",
         'on_middle': "do_nothing",
@@ -53,6 +58,25 @@ VALIDATION_SCHEMA = {
             }
         },
         'default': DEFAULTS['memory_thresholds']
+    },
+    'animation': {
+        'type': 'dict',
+        'required': False,
+        'schema': {
+            'enabled': {
+                'type': 'boolean',
+                'default': DEFAULTS['animation']['enabled']
+            },
+            'type': {
+                'type': 'string',
+                'default': DEFAULTS['animation']['type']
+            },
+            'duration': {
+                'type': 'integer',
+                'default': DEFAULTS['animation']['duration'],
+                'min': 0
+            }
+        }
     },
     'callbacks': {
         'type': 'dict',

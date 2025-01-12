@@ -5,7 +5,8 @@ from core.widgets.base import BaseWidget
 from core.validation.widgets.yasb.disk import VALIDATION_SCHEMA
 from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget, QProgressBar, QVBoxLayout
 from PyQt6.QtCore import Qt, QPoint, pyqtSignal
-from core.utils.utilities import PopupWidget, blink_on_click
+from core.utils.utilities import PopupWidget
+from core.utils.widgets.animation_manager import AnimationManager
 
 class ClickableDiskWidget(QWidget):
     clicked = pyqtSignal()
@@ -31,6 +32,7 @@ class DiskWidget(BaseWidget):
             update_interval: int,
             group_label: dict[str, str],
             container_padding: dict[str, int],
+            animation: dict[str, str],
             callbacks: dict[str, str],
     ):
         super().__init__(int(update_interval * 1000), class_name="disk-widget")
@@ -41,7 +43,7 @@ class DiskWidget(BaseWidget):
         self._volume_label = volume_label.upper()
         self._padding = container_padding
         self._group_label = group_label
-
+        self._animation = animation
         # Construct container
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
@@ -76,7 +78,8 @@ class DiskWidget(BaseWidget):
         
     def _toggle_group(self):
         if self._group_label['enabled']:
-            blink_on_click(self)
+            if self._animation['enabled']:
+                AnimationManager.animate(self, self._animation['type'], self._animation['duration'])
             self.show_group_label()
         
     def _create_dynamically_label(self, content: str, content_alt: str):

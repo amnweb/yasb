@@ -13,8 +13,7 @@ from core.utils.win32.media import WindowsMedia
 from core.widgets.base import BaseWidget
 from core.validation.widgets.yasb.media import VALIDATION_SCHEMA
 from PyQt6.QtWidgets import QLabel, QGridLayout, QHBoxLayout, QWidget
-from core.widgets.yasb.applications import ClickableLabel
-
+from core.utils.widgets.animation_manager import AnimationManager
 
 class MediaWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
@@ -23,12 +22,22 @@ class MediaWidget(BaseWidget):
     _media_info_signal = QtCore.pyqtSignal(object)
     _session_status_signal = QtCore.pyqtSignal(bool)
 
-    def __init__(self, label: str, label_alt: str, hide_empty: bool, callbacks: dict[str, str],
-                 max_field_size: dict[str, int], show_thumbnail: bool, controls_only: bool, controls_left: bool,
-                 thumbnail_alpha: int,
-                 thumbnail_padding: int,
-                 thumbnail_corner_radius: int,
-                 icons: dict[str, str]):
+    def __init__(
+            self,
+            label: str,
+            label_alt: str,
+            hide_empty: bool,
+            callbacks: dict[str, str],
+            max_field_size: dict[str, int],
+            show_thumbnail: bool,
+            controls_only: bool,
+            controls_left: bool,
+            thumbnail_alpha: int,
+            thumbnail_padding: int,
+            thumbnail_corner_radius: int,
+            icons: dict[str, str],
+            animation: dict[str, str],
+        ):
         super().__init__(class_name="media-widget")
         self._label_content = label
         self._label_alt_content = label_alt
@@ -42,7 +51,7 @@ class MediaWidget(BaseWidget):
         self._thumbnail_padding = thumbnail_padding
         self._thumbnail_corner_radius = thumbnail_corner_radius
         self._hide_empty = hide_empty
-
+        self._animation = animation
         # Construct container
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
@@ -243,3 +252,15 @@ class MediaWidget(BaseWidget):
             func()
         except Exception as e:
             logging.error(f"Error executing code: {e}")
+            
+class ClickableLabel(QLabel):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.parent_widget = parent
+        self.data = None 
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton and self.data:
+            if self.parent_widget._animation['enabled']:
+                AnimationManager.animate(self, self.parent_widget._animation['type'], self.parent_widget._animation['duration'])
+            self.parent_widget.execute_code(self.data)

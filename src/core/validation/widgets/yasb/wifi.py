@@ -14,7 +14,12 @@ DEFAULTS = {
         "\udb82\udd25",  # Icon for 50-74% strength
         "\udb82\udd28"   # Icon for 75-100% strength
     ],
-    'ethernet_icon': "\ueba9"
+    'ethernet_icon': "\ueba9",
+    'animation': {
+        'enabled': True,
+        'type': 'fadeInOut',
+        'duration': 200
+    }
 }
 
 VALIDATION_SCHEMA = {
@@ -43,6 +48,25 @@ VALIDATION_SCHEMA = {
     'ethernet_icon': {
         'type': 'string',
         'default': DEFAULTS['ethernet_icon']
+    },
+    'animation': {
+        'type': 'dict',
+        'required': False,
+        'schema': {
+            'enabled': {
+                'type': 'boolean',
+                'default': DEFAULTS['animation']['enabled']
+            },
+            'type': {
+                'type': 'string',
+                'default': DEFAULTS['animation']['type']
+            },
+            'duration': {
+                'type': 'integer',
+                'default': DEFAULTS['animation']['duration']
+            }
+        },
+        'default': DEFAULTS['animation']
     },
     'callbacks': {
         'type': 'dict',

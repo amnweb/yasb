@@ -9,6 +9,11 @@ DEFAULTS = {
         "\uf027",  # Icon for 31-60% volume
         "\uf028"   # Icon for 61-100% volume
     ],
+    'animation': {
+        'enabled': True,
+        'type': 'fadeInOut',
+        'duration': 200
+    },
     'callbacks': {
         'on_middle': 'do_nothing',
         'on_right': 'do_nothing'
@@ -36,6 +41,25 @@ VALIDATION_SCHEMA = {
             'type': 'string',
             'required': False
         }
+    },
+    'animation': {
+        'type': 'dict',
+        'required': False,
+        'schema': {
+            'enabled': {
+                'type': 'boolean',
+                'default': DEFAULTS['animation']['enabled']
+            },
+            'type': {
+                'type': 'string',
+                'default': DEFAULTS['animation']['type']
+            },
+            'duration': {
+                'type': 'integer',
+                'default': DEFAULTS['animation']['duration']
+            }
+        },
+        'default': DEFAULTS['animation']
     },
     'callbacks': {
         'type': 'dict',

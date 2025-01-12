@@ -7,7 +7,7 @@ from core.validation.widgets.yasb.custom import VALIDATION_SCHEMA
 from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget
 from PyQt6.QtCore import Qt, pyqtSignal, QObject
 from core.utils.win32.system_function import function_map
-from core.utils.utilities import blink_on_click
+from core.utils.widgets.animation_manager import AnimationManager
 
 class CustomWorker(QObject):
     finished = pyqtSignal()
@@ -41,6 +41,7 @@ class CustomWidget(BaseWidget):
             label_max_length: int,
             exec_options: dict,
             callbacks: dict,
+            animation: dict[str, str],
             class_name: str
     ):
         super().__init__(exec_options['run_interval'], class_name=f"custom-widget {class_name}")
@@ -52,7 +53,7 @@ class CustomWidget(BaseWidget):
         self._show_alt_label = False
         self._label_content = label
         self._label_alt_content = label_alt
-        
+        self._animation = animation
         # Construct container
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
@@ -80,7 +81,8 @@ class CustomWidget(BaseWidget):
             self.start_timer()
 
     def _toggle_label(self):
-        blink_on_click(self)
+        if self._animation['enabled']:
+            AnimationManager.animate(self, self._animation['type'], self._animation['duration'])
         self._show_alt_label = not self._show_alt_label
         for widget in self._widgets:
             widget.setVisible(not self._show_alt_label)

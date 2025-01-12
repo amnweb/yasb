@@ -7,15 +7,21 @@ from core.validation.widgets.yasb.whkd import VALIDATION_SCHEMA
 from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget, QApplication, QSizePolicy, QVBoxLayout, QScrollArea, QPushButton, QLineEdit
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QCursor, QIcon
-from core.utils.utilities import blink_on_click
+from core.utils.widgets.animation_manager import AnimationManager
 
 class WhkdWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
 
-    def __init__(self, label: str, container_padding: dict):
+    def __init__(
+            self,
+            label: str,
+            animation: dict[str, str],
+            container_padding: dict
+        ):
         super().__init__(class_name="whkd-widget")
         self._label_content = label
         self._padding = container_padding
+        self._animation = animation
         # Construct container
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
@@ -60,7 +66,8 @@ class WhkdWidget(BaseWidget):
 
     def show_popup(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
-            blink_on_click(self)
+            if self._animation['enabled']:
+                AnimationManager.animate(self, self._animation['type'], self._animation['duration'])
             # Check if WHKD_CONFIG_HOME exists in the environment variables
             whkd_config_home = os.getenv('WHKD_CONFIG_HOME')
             if whkd_config_home:

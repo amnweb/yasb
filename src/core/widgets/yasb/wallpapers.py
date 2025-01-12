@@ -19,7 +19,7 @@ import threading
 from core.event_service import EventService
 from core.utils.widgets.wallpapers_gallery import ImageGallery
 from core.utils.alert_dialog import raise_info_alert
-from core.utils.utilities import blink_on_click
+from core.utils.widgets.animation_manager import AnimationManager
 
 class WallpapersWidget(BaseWidget):
     set_wallpaper_signal = pyqtSignal(str) 
@@ -35,6 +35,7 @@ class WallpapersWidget(BaseWidget):
         change_automatically: bool,
         image_path: str,
         tooltip: bool,
+        animation: dict[str, str],
         run_after: list[str],
         gallery: dict = None
     ):
@@ -49,7 +50,8 @@ class WallpapersWidget(BaseWidget):
         self._tooltip = tooltip
         self._run_after = run_after
         self._gallery = gallery
-
+        self._animation = animation
+        
         self._last_image = None
         self._is_running = False 
         
@@ -208,7 +210,8 @@ class WallpapersWidget(BaseWidget):
             return
         
         if self._gallery['enabled']: 
-            blink_on_click(self)
+            if self._animation['enabled']:
+                AnimationManager.animate(self, self._animation['type'], self._animation['duration'])
             if event is None or event.button() == Qt.MouseButton.LeftButton:
                 
                 if self._image_gallery is not None and self._image_gallery.isVisible():

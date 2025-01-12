@@ -22,6 +22,11 @@ DEFAULTS = {
         'icon_high': '\uf241',
         'icon_full': '\uf240'
     },
+    'animation': {
+        'enabled': True,
+        'type': 'fadeInOut',
+        'duration': 200
+    },
     'callbacks': {
         'on_left': 'toggle_label',
         'on_middle': 'do_nothing',
@@ -127,6 +132,25 @@ VALIDATION_SCHEMA = {
             },
         },
         'default': DEFAULTS['status_icons']
+    },
+    'animation': {
+        'type': 'dict',
+        'required': False,
+        'schema': {
+            'enabled': {
+                'type': 'boolean',
+                'default': DEFAULTS['animation']['enabled']
+            },
+            'type': {
+                'type': 'string',
+                'default': DEFAULTS['animation']['type']
+            },
+            'duration': {
+                'type': 'integer',
+                'default': DEFAULTS['animation']['duration']
+            }
+        },
+        'default': DEFAULTS['animation']
     },
     'callbacks': {
         'type': 'dict',

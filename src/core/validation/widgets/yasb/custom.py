@@ -7,6 +7,11 @@ DEFAULTS = {
         'return_format': "json",
         'hide_empty': False
     },
+    'animation': {
+        'enabled': True,
+        'type': 'fadeInOut',
+        'duration': 200
+    },
     'callbacks': {
         'on_left': "toggle_label",
         'on_middle': "do_nothing",
@@ -63,6 +68,25 @@ VALIDATION_SCHEMA = {
             }
         },
         'default': DEFAULTS['exec_options']
+    },
+    'animation': {
+        'type': 'dict',
+        'required': False,
+        'schema': {
+            'enabled': {
+                'type': 'boolean',
+                'default': DEFAULTS['animation']['enabled']
+            },
+            'type': {
+                'type': 'string',
+                'default': DEFAULTS['animation']['type']
+            },
+            'duration': {
+                'type': 'integer',
+                'default': DEFAULTS['animation']['duration']
+            }
+        },
+        'default': DEFAULTS['animation']
     },
     'callbacks': {
         'type': 'dict',

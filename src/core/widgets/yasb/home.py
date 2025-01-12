@@ -3,12 +3,13 @@ import re
 import subprocess
 from core.widgets.base import BaseWidget
 from core.validation.widgets.yasb.home import VALIDATION_SCHEMA
-from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget, QVBoxLayout, QFrame, QApplication
+from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget, QVBoxLayout, QFrame
 from PyQt6.QtCore import Qt, QPoint
 import os
 from core.utils.widgets.power import PowerOperations
-from core.utils.utilities import PopupWidget, blink_on_click
-        
+from core.utils.utilities import PopupWidget
+from core.utils.widgets.animation_manager import AnimationManager
+
 class HomeWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
     def __init__(
@@ -24,6 +25,7 @@ class HomeWidget(BaseWidget):
             direction: str,
             distance: int,
             menu_labels: dict[str, str],
+            animation: dict[str, str],
             callbacks: dict[str, str],
             menu_list: list[str, dict[str]] = None
         ):
@@ -42,6 +44,7 @@ class HomeWidget(BaseWidget):
         self._direction = direction
         self._distance = distance
         self._menu_labels = menu_labels
+        self._animation = animation
         # Construct container
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
@@ -224,5 +227,6 @@ class HomeWidget(BaseWidget):
         layout.addWidget(separator)
 
     def _toggle_menu(self):
-        blink_on_click(self)
+        if self._animation['enabled']:
+            AnimationManager.animate(self, self._animation['type'], self._animation['duration'])
         self._create_menu()

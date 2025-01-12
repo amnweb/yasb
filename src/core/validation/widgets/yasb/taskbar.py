@@ -1,11 +1,15 @@
 DEFAULTS = {
     'icon_size': 16,
-    'animation': False,
     'tooltip': True,
     'ignore_apps': {
         'classes': [],
         'processes': [],
         'titles': []
+    },
+    'animation': {
+        'enabled': True,
+        'type': 'fadeInOut',
+        'duration': 200
     },
     'container_padding': {'top': 0, 'left': 0, 'bottom': 0, 'right': 0},
     'callbacks': {
@@ -19,11 +23,6 @@ VALIDATION_SCHEMA = {
     'icon_size': {
         'type': 'integer',
         'default': DEFAULTS['icon_size']
-    },
-    'animation': {
-        'type': 'boolean',
-        'default': DEFAULTS['animation'],
-        'required': False
     },
     'tooltip': {
         'type': 'boolean',
@@ -56,6 +55,25 @@ VALIDATION_SCHEMA = {
             }
         },
         'default': DEFAULTS['ignore_apps']
+    },
+    'animation': {
+        'type': ['dict', 'boolean'],
+        'required': False,
+        'schema': {
+            'enabled': {
+                'type': 'boolean',
+                'default': DEFAULTS['animation']['enabled']
+            },
+            'type': {
+                'type': 'string',
+                'default': DEFAULTS['animation']['type']
+            },
+            'duration': {
+                'type': 'integer',
+                'default': DEFAULTS['animation']['duration']
+            }
+        },
+        'default': DEFAULTS['animation']
     },
     'container_padding': {
         'type': 'dict',

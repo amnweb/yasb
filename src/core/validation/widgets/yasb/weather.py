@@ -28,6 +28,11 @@ DEFAULTS = {
         'distance': 6,
         'icon_size': 64
     },
+    'animation': {
+        'enabled': True,
+        'type': 'fadeInOut',
+        'duration': 200
+    },
     'callbacks': {
         'on_left': 'do_nothing',
         'on_middle': 'do_nothing',
@@ -152,6 +157,24 @@ VALIDATION_SCHEMA = {
             }
         },
         'default': DEFAULTS['weather_card']
+    },
+    'animation': {
+        'type': 'dict',
+        'schema': {
+            'enabled': {
+                'type': 'boolean',
+                'default': DEFAULTS['animation']['enabled']
+            },
+            'type': {
+                'type': 'string',
+                'default': DEFAULTS['animation']['type']
+            },
+            'duration': {
+                'type': 'integer',
+                'default': DEFAULTS['animation']['duration']
+            }
+        },
+        'default': DEFAULTS['animation']
     },
     'callbacks': {
         'type': 'dict',

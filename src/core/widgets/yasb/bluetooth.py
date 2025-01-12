@@ -11,6 +11,7 @@ from core.validation.widgets.yasb.bluetooth import VALIDATION_SCHEMA
 import os
 from settings import DEBUG
 import logging
+from core.utils.widgets.animation_manager import AnimationManager
 
 def get_bluetooth_api():
     """Get Bluetooth API with fallbacks since the DLL may not be in the same location on all systems."""
@@ -219,6 +220,7 @@ class BluetoothWidget(BaseWidget):
         label_alt: str,
         tooltip: bool,
         icons: dict[str, str],
+        animation: dict[str, str],
         container_padding: dict[str, int],
         callbacks: dict[str, str]
     ):
@@ -236,7 +238,7 @@ class BluetoothWidget(BaseWidget):
             self.bt_api = None
         self.current_status = None
         self._icons = icons
-        
+        self._animation = animation
         self.bluetooth_icon = None
         self.connected_devices = None
         
@@ -283,6 +285,8 @@ class BluetoothWidget(BaseWidget):
             self.bluetooth_thread.wait()
             
     def _toggle_label(self):
+        if self._animation['enabled']:
+            AnimationManager.animate(self, self._animation['type'], self._animation['duration'])
         self._show_alt_label = not self._show_alt_label
         for widget in self._widgets:
             widget.setVisible(not self._show_alt_label)

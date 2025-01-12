@@ -2,15 +2,14 @@ import os
 import re
 import logging
 import threading
-import time
 import requests
 from datetime import datetime
 from core.validation.widgets.yasb.github import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
 from PyQt6.QtGui import QDesktopServices,QCursor
-from PyQt6.QtWidgets import QMenu, QWidget, QVBoxLayout, QLabel, QPushButton, QHBoxLayout, QScrollArea, QVBoxLayout, QWidgetAction, QApplication
+from PyQt6.QtWidgets import QMenu, QWidget, QVBoxLayout, QLabel, QPushButton, QHBoxLayout, QScrollArea, QVBoxLayout, QWidgetAction
 from PyQt6.QtCore import Qt, QPoint, QTimer, QUrl
-from core.utils.utilities import blink_on_click
+from core.utils.widgets.animation_manager import AnimationManager
 
 logging.getLogger("urllib3").setLevel(logging.WARNING)
 
@@ -33,7 +32,21 @@ class HoverWidget(QWidget):
 class GithubWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
 
-    def __init__(self, label: str, label_alt: str, token: str, tooltip: bool, max_notification: int, only_unread: bool, max_field_size: int, menu_width: int,menu_height: int,menu_offset: str, update_interval: int):
+    def __init__(
+            self,
+            label: str,
+            label_alt: str,
+            token: str,
+            tooltip: bool,
+            max_notification: int,
+            only_unread: bool,
+            max_field_size: int,
+            menu_width: int,
+            menu_height: int,
+            menu_offset: str,
+            update_interval: int,
+            animation: dict[str, str],
+        ):
         super().__init__((update_interval * 1000), class_name="github-widget")
         self._menu_open = False
         self._show_alt_label = False
@@ -47,6 +60,7 @@ class GithubWidget(BaseWidget):
         self._max_notification = max_notification
         self._only_unread = only_unread
         self._max_field_size = max_field_size
+        self._animation = animation
         self._github_data = []
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
@@ -75,7 +89,8 @@ class GithubWidget(BaseWidget):
         
  
     def _toggle_menu(self):
-        blink_on_click(self)
+        if self._animation['enabled']:
+            AnimationManager.animate(self, self._animation['type'], self._animation['duration'])
         self.show_menu(self)
                        
     def _toggle_label(self):

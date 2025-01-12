@@ -2,6 +2,11 @@ DEFAULTS = {
     "label": "\ueb01 \ueab4 {download_speed} | \ueab7 {upload_speed}",
     "label_alt": "\ueb01 \ueab4 {upload_speed} | \ueab7 {download_speed}",
     "update_interval": 1000,
+    "animation": {
+        'enabled': True,
+        'type': 'fadeInOut',
+        'duration': 200
+    },
     "callbacks": {
         "on_left": "toggle_label",
         "on_middle": "do_nothing",
@@ -18,6 +23,25 @@ VALIDATION_SCHEMA = {
         "min": 0,
         "max": 60000,
     },
+    'animation': {
+        'type': 'dict',
+        'required': False,
+        'schema': {
+            'enabled': {
+                'type': 'boolean',
+                'default': DEFAULTS['animation']['enabled']
+            },
+            'type': {
+                'type': 'string',
+                'default': DEFAULTS['animation']['type']
+            },
+            'duration': {
+                'type': 'integer',
+                'default': DEFAULTS['animation']['duration']
+            }
+        },
+        'default': DEFAULTS['animation']
+    },        
     "callbacks": {
         "type": "dict",
         "schema": {

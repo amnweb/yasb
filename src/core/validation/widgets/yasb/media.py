@@ -1,6 +1,11 @@
 DEFAULTS = {
     'label': '\uf017 {%H:%M:%S}',
     'label_alt': '\uf017 {%d-%m-%y %H:%M:%S}',
+    'animation': {
+        'enabled': True,
+        'type': 'fadeInOut',
+        'duration': 200
+    },
     'callbacks': {
         'on_left': 'toggle_label',
         'on_middle': 'do_nothing',
@@ -20,6 +25,25 @@ VALIDATION_SCHEMA = {
     'hide_empty': {
         'type': 'boolean',
         'default': False
+    },
+    'animation': {
+        'type': 'dict',
+        'required': False,
+        'schema': {
+            'enabled': {
+                'type': 'boolean',
+                'default': DEFAULTS['animation']['enabled']
+            },
+            'type': {
+                'type': 'string',
+                'default': DEFAULTS['animation']['type']
+            },
+            'duration': {
+                'type': 'integer',
+                'default': DEFAULTS['animation']['duration']
+            }
+        },
+        'default': DEFAULTS['animation']
     },
     'callbacks': {
         'type': 'dict',
@@ -86,6 +110,7 @@ VALIDATION_SCHEMA = {
         'min': 0,
         'max': 100
     },
+    
     'icons': {
         'type': 'dict',
         'schema': {

@@ -14,6 +14,11 @@ DEFAULTS = {
         '\u2588'
     ],
     'histogram_num_columns': 10,
+    'animation': {
+        'enabled': True,
+        'type': 'fadeInOut',
+        'duration': 200
+    },
     'callbacks': {
         'on_left': 'toggle_label',
         'on_middle': 'do_nothing',
@@ -50,6 +55,25 @@ VALIDATION_SCHEMA = {
         'default': DEFAULTS['histogram_num_columns'],
         'min': 0,
         'max': 128
+    },
+    'animation': {
+        'type': 'dict',
+        'required': False,
+        'schema': {
+            'enabled': {
+                'type': 'boolean',
+                'default': DEFAULTS['animation']['enabled']
+            },
+            'type': {
+                'type': 'string',
+                'default': DEFAULTS['animation']['type']
+            },
+            'duration': {
+                'type': 'integer',
+                'default': DEFAULTS['animation']['duration']
+            }
+        },
+        'default': DEFAULTS['animation']
     },
     'callbacks': {
         'type': 'dict',
