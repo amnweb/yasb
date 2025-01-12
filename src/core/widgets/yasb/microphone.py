@@ -196,6 +196,8 @@ class MicrophoneWidget(BaseWidget):
 
 
     def toggle_mute(self):
+        if self._animation['enabled']:
+            AnimationManager.animate(self, self._animation['type'], self._animation['duration'])
         if self.audio_endpoint:
             current_mute_status = self.audio_endpoint.GetMute()
             self.audio_endpoint.SetMute(not current_mute_status, None)

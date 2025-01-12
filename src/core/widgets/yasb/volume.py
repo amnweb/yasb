@@ -199,6 +199,8 @@ class VolumeWidget(BaseWidget):
 
 
     def toggle_mute(self):
+        if self._animation['enabled']:
+            AnimationManager.animate(self, self._animation['type'], self._animation['duration'])
         if self.volume is None:
             logging.warning("Cannot toggle mute: No audio device connected.")
             return
