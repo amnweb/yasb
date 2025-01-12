@@ -76,7 +76,8 @@ VALIDATION_SCHEMA = {
                 'default': DEFAULTS['animation']['duration'],
                 'min': 0
             }
-        }
+        },
+        'default': DEFAULTS['animation']
     },
     'callbacks': {
         'type': 'dict',
