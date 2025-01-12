@@ -18,36 +18,6 @@ def is_valid_percentage_str(s: str) -> bool:
 def get_screen_by_name(screen_name: str) -> QScreen:
     return next(filter(lambda scr: screen_name in scr.name(), QApplication.screens()), None)
 
-def blink_on_click(self, duration=200):
-    if hasattr(self, '_opacity_effect') and self._opacity_effect is not None:
-        self._opacity_effect.setOpacity(1.0)
-        if self._blink_timer.isActive():
-            self._blink_timer.stop()
-
-    self._opacity_effect = QGraphicsOpacityEffect()
-    self.setGraphicsEffect(self._opacity_effect)
-    self._opacity_effect.setOpacity(0.4)
-
-    self._blink_timer = QTimer()
-    step = 0
-    steps = 20
-    increment = 0.5 / steps
-
-    def animate():
-        nonlocal step
-        new_opacity = self._opacity_effect.opacity() + increment
-        if new_opacity >= 1.0:
-            new_opacity = 1.0
-            self._opacity_effect.setOpacity(new_opacity)
-            self._blink_timer.stop()
-            self._opacity_effect = None
-            return
-        self._opacity_effect.setOpacity(new_opacity)
-        step += 1
-
-    self._blink_timer.timeout.connect(animate)
-    self._blink_timer.start(duration // steps)
-
 class PopupWidget(QFrame):
     """
     A custom QFrame widget that acts as a popup and hides itself when a mouse click occurs outside its geometry
