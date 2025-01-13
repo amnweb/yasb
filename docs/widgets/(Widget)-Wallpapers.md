@@ -8,6 +8,9 @@
 | `image_path`      | string   | `""`        | The path to the folder containing images for the wallpaper. This field is required. |
 | `gallery`         | object   | `{}`        | The gallery options for the wallpaper widget. |
 | `run_after`       | list     | `[]`        | A list of functions to run after the wallpaper is updated. |
+| `animation`         | dict    | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
+| `container_padding`  | dict | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}`      | Explicitly set padding inside widget container. |
+
 ## Example Configuration
 
 ```yaml
@@ -56,6 +59,8 @@ wallpapers:
   - **image_corner_radius:** The corner radius of the images in the gallery. (Note: This is not same as the css border-radius property.)
   - **enable_cache:** Whether to enable caching of images in the gallery. (Note: Images are cached in memory and not saved to disk.)
 - **run_after:** A list of functions to run after the wallpaper is updated.
+- **animation:** A dictionary specifying the animation settings for the widget. It contains three keys: `enabled`, `type`, and `duration`. The `type` can be `fadeInOut` and the `duration` is the animation duration in milliseconds.
+- **container_padding**: Explicitly set padding inside widget container. Use this option to set padding inside the widget container. You can set padding for top, left, bottom and right sides of the widget container.
 
 > If gallery is enabled left mouse click on the widget will open the gallery and right mouse click will change the wallpaper and get random one. 
 

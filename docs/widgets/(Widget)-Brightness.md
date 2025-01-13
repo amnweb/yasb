@@ -15,6 +15,7 @@
 | `auto_light_night_end_time` | string | `"06:30"` | The time at which the night ends. |
 | `callbacks`     | dict    | `{'on_left': 'toggle_label', 'on_middle': 'do_nothing', 'on_right': 'do_nothing'}` | Callbacks for mouse events on the clock widget. |
 | `container_padding`  | dict | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}`      | Explicitly set padding inside widget container.      |
+| `animation`         | dict    | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
 
 ## Example Configuration
 
@@ -60,7 +61,7 @@
 - **auto_light_night_end_time:** The time at which the night ends.
 - **callbacks:** Callbacks for mouse events on the clock widget.
 - **container_padding:** Explicitly set padding inside widget container.
-
+- **animation:** A dictionary specifying the animation settings for the widget. It contains three keys: `enabled`, `type`, and `duration`. The `type` can be `fadeInOut` and the `duration` is the animation duration in milliseconds.
 
 ## Example Style
 ```css

@@ -8,6 +8,8 @@
 | `histogram_icons`     | list    | `['\u2581', '\u2581', '\u2582', '\u2583', '\u2584', '\u2585', '\u2586', '\u2587', '\u2588']` | Icons representing CPU usage histograms.                                    |
 | `histogram_num_columns` | integer | `10`                                                                    | The number of columns in the histogram.                                     |
 | `callbacks`           | dict    | `{'on_left': 'toggle_label', 'on_middle': 'do_nothing', 'on_right': 'do_nothing'}` | Callback functions for different mouse button actions.                      |
+| `animation`         | dict    | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
+| `container_padding`  | dict | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}`      | Explicitly set padding inside widget container. |
 
 ## Example Configuration
 
@@ -41,7 +43,8 @@ cpu:
 - **histogram_icons**: A list of icons representing different levels of CPU usage in the histogram.
 - **histogram_num_columns**: The number of columns to display in the CPU usage histogram.
 - **callbacks**: A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions.
-
+- **animation:** A dictionary specifying the animation settings for the widget. It contains three keys: `enabled`, `type`, and `duration`. The `type` can be `fadeInOut` and the `duration` is the animation duration in milliseconds.
+- **container_padding**: Explicitly set padding inside widget container. Use this option to set padding inside the widget container. You can set padding for top, left, bottom and right sides of the widget container.
 
 ## Example Style
 ```css

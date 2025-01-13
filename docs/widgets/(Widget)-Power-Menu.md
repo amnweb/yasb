@@ -9,7 +9,7 @@
 | `animation_duration`| integer | `200`       | The duration of the animation in milliseconds. Must be between 0 and 2000.  |
 | `button_row`        | integer | `3`         | The number of buttons in a row. Must be between 1 and 5.                    |
 | `buttons`           | dict    | `{}`        | A dictionary defining the buttons and their properties.                     |
-
+| `container_padding`  | dict | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}`      | Explicitly set padding inside widget container. |
 ## Example Configuration
 
 ```yaml
@@ -40,7 +40,7 @@ power_menu:
 - **animation_duration:** The duration of the animation in milliseconds. Must be between 0 and 2000.
 - **button_row:** The number of buttons in a row. Must be between 1 and 5.
 - **buttons:** A dictionary defining the buttons and their properties. Possible properties are: `lock`, `signout`, `sleep`, `shutdown`, `restart`, `hibernate`, `cancel`, `force_shutdown`, `force_restart`.
-
+- **container_padding**: Explicitly set padding inside widget container. Use this option to set padding inside the widget container. You can set padding for top, left, bottom and right sides of the widget container.
 
 ## Example Style
 ```css

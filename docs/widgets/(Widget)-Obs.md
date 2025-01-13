@@ -8,7 +8,7 @@ ObsWidget is a custom widget that integrates with OBS (Open Broadcaster Software
 | `icons`      | dict   | `{recording: "\ueba7", stopped: "\ueba5", paused: "\ueba7"}`       | The alternative format string for the label. Useful for displaying additional notification details. |
 | `hide_when_not_recording`| boolean  | true                          | Hide widget when OBS and recording are not running. |
 | `blinking_icon`          | boolean   | true                           | Blink icons when recording is active. |
-
+| `container_padding`  | dict | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}`      | Explicitly set padding inside widget container. |
 
 ## Example Configuration
 
@@ -33,7 +33,7 @@ obs:
 - **icons:**  Icons for different recording states.
 - **hide_when_not_recording:** Hide widget when OBS and recording are not running.
 - **blinking_icon:** Blink icons when recording is active.
-
+- **container_padding**: Explicitly set padding inside widget container. Use this option to set padding inside the widget container. You can set padding for top, left, bottom and right sides of the widget container.
 
 ## Example Style
 ```css

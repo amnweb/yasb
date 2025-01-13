@@ -13,6 +13,8 @@
 | `menu_width`     | integer  | `400`                          | The width of the menu in pixels. |
 | `menu_height`    | integer  | `400`                          | The height of the menu in pixels. |
 | `menu_offset`    | integer  | `240`                          | The offset of the menu in pixels. |
+| `animation`         | dict    | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
+| `container_padding`  | dict | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}`      | Explicitly set padding inside widget container. |
 
 ## Example Configuration
 
@@ -44,7 +46,8 @@ github:
 - **menu_width:** The width of the menu in pixels.
 - **menu_height:** The height of the menu in pixels.
 - **menu_offset:** The offset of the menu in pixels.
-
+- **animation:** A dictionary specifying the animation settings for the widget. It contains three keys: `enabled`, `type`, and `duration`. The `type` can be `fadeInOut` and the `duration` is the animation duration in milliseconds.
+- **container_padding**: Explicitly set padding inside widget container. Use this option to set padding inside the widget container. You can set padding for top, left, bottom and right sides of the widget container.
 
 ## Example Style
 ```css

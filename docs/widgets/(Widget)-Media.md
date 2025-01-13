@@ -19,7 +19,8 @@
 | `icons.next_track`      | string  | `\uf051`| Icon for the next track button.                                             |
 | `icons.play`            | string  | `\uf04b`| Icon for the play button.                                                   |
 | `icons.pause`           | string  | `\uf04c`| Icon for the pause button.                                                  |
-
+| `animation`         | dict    | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
+| `container_padding`  | dict | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}`      | Explicitly set padding inside widget container. |
 ## Example Configuration
 
 ```yaml
@@ -62,6 +63,8 @@ media:
 - **thumbnail_padding:** The padding around the media thumbnail.
 - **thumbnail_corner_radius:** The corner radius for the media thumbnail. Set to 0 for square corners.
 - **icons:** Icons for the media controls.
+- **animation:** A dictionary specifying the animation settings for the widget. It contains three keys: `enabled`, `type`, and `duration`. The `type` can be `fadeInOut` and the `duration` is the animation duration in milliseconds.
+- **container_padding**: Explicitly set padding inside widget container. Use this option to set padding inside the widget container. You can set padding for top, left, bottom and right sides of the widget container.
 
 ## Example Style
 ```css

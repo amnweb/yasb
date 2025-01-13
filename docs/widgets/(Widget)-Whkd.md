@@ -6,6 +6,7 @@ Whkd is a simple hotkey daemon for Windows that reacts to input events by execut
 |------------------|----------|--------------------------------|-----------------------------------------------------------------------------|
 | `label`          | string   | `"\uf11c"`                       | The string for the label button.  |
 | `container_padding`  | dict | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}`      | Explicitly set padding inside widget container.      |
+| `animation`         | dict    | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
 
 
 ## Example Configuration
@@ -20,7 +21,7 @@ whkd:
 
 - **label:** The string for the label button.
 - **container_padding:** Explicitly set padding inside widget container.
-
+- **animation:** A dictionary specifying the animation settings for the widget. It contains three keys: `enabled`, `type`, and `duration`. The `type` can be `fadeInOut` and the `duration` is the animation duration in milliseconds.
 
 ## Example Style
 ```css
