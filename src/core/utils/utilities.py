@@ -40,6 +40,7 @@ class PopupWidget(QFrame):
                 RoundCornersType=self._round_corners_type,
                 BorderColor=self._border_color
             )
+        self.activateWindow() 
         super().showEvent(event)
 
     def eventFilter(self, obj, event):

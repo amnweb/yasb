@@ -104,9 +104,7 @@ class HomeWidget(BaseWidget):
         self._menu.setWindowFlag(Qt.WindowType.FramelessWindowHint)
         self._menu.setWindowFlag(Qt.WindowType.Popup)
         self._menu.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint)
-        
 
- 
         # Create main vertical layout for the popup
         main_layout = QVBoxLayout(self._menu)
         main_layout.setSpacing(0)
@@ -188,8 +186,6 @@ class HomeWidget(BaseWidget):
             global_position = widget_global_pos
 
         self._menu.move(global_position)
- 
-
         self._menu.show()
 
 
