@@ -46,6 +46,7 @@ class GithubWidget(BaseWidget):
             menu_offset: str,
             update_interval: int,
             animation: dict[str, str],
+            container_padding: dict[str, int]
         ):
         super().__init__((update_interval * 1000), class_name="github-widget")
         self._menu_open = False
@@ -62,9 +63,10 @@ class GithubWidget(BaseWidget):
         self._max_field_size = max_field_size
         self._animation = animation
         self._github_data = []
+        self._padding = container_padding
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
+        self._widget_container_layout.setContentsMargins(self._padding['left'],self._padding['top'],self._padding['right'],self._padding['bottom'])
 
         self._widget_container: QWidget = QWidget()
         self._widget_container.setLayout(self._widget_container_layout)

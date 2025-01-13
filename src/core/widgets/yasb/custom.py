@@ -42,6 +42,7 @@ class CustomWidget(BaseWidget):
             exec_options: dict,
             callbacks: dict,
             animation: dict[str, str],
+            container_padding: dict[str, int],
             class_name: str
     ):
         super().__init__(exec_options['run_interval'], class_name=f"custom-widget {class_name}")
@@ -54,10 +55,11 @@ class CustomWidget(BaseWidget):
         self._label_content = label
         self._label_alt_content = label_alt
         self._animation = animation
+        self._padding = container_padding
         # Construct container
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
+        self._widget_container_layout.setContentsMargins(self._padding['left'],self._padding['top'],self._padding['right'],self._padding['bottom'])
         # Initialize container
         self._widget_container: QWidget = QWidget()
         self._widget_container.setLayout(self._widget_container_layout)

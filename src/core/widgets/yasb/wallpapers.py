@@ -37,6 +37,7 @@ class WallpapersWidget(BaseWidget):
         tooltip: bool,
         animation: dict[str, str],
         run_after: list[str],
+        container_padding: dict[str, int],
         gallery: dict = None
     ):
         """Initialize the WallpapersWidget with configuration parameters."""
@@ -51,6 +52,7 @@ class WallpapersWidget(BaseWidget):
         self._run_after = run_after
         self._gallery = gallery
         self._animation = animation
+        self._padding = container_padding
         
         self._last_image = None
         self._is_running = False 
@@ -58,7 +60,7 @@ class WallpapersWidget(BaseWidget):
         # Construct container
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
+        self._widget_container_layout.setContentsMargins(self._padding['left'],self._padding['top'],self._padding['right'],self._padding['bottom'])
         # Initialize container
         self._widget_container: QWidget = QWidget()
         self._widget_container.setLayout(self._widget_container_layout)

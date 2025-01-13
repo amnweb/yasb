@@ -9,6 +9,7 @@ from core.event_enums import KomorebiEvent
 from core.widgets.base import BaseWidget
 from core.utils.komorebi.client import KomorebiClient
 from core.validation.widgets.komorebi.active_layout import VALIDATION_SCHEMA
+from core.utils.widgets.animation_manager import AnimationManager
 
 try:
     from core.utils.komorebi.event_listener import KomorebiEventListener
@@ -46,7 +47,7 @@ class ActiveLayoutWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
     event_listener = KomorebiEventListener
 
-    def __init__(self, label: str, layouts: list[str], layout_icons: dict[str, str], hide_if_offline: bool, container_padding: dict, callbacks: dict[str, str]):
+    def __init__(self, label: str, layouts: list[str], layout_icons: dict[str, str], hide_if_offline: bool, container_padding: dict, animation: dict[str, str], callbacks: dict[str, str]):
         super().__init__(class_name="komorebi-active-layout")
         self._label = label
         self._layout_icons = layout_icons
@@ -64,7 +65,7 @@ class ActiveLayoutWidget(BaseWidget):
         self._active_layout_text = QLabel()
         self._active_layout_text.setProperty("class", "label")
         self._active_layout_text.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        
+        self._animation = animation
         # Construct container
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
@@ -110,12 +111,16 @@ class ActiveLayoutWidget(BaseWidget):
         if self._is_shift_layout_allowed():
             self._layouts.rotate(1)
             self._komorebic.change_layout(self._layouts[0])
-
+            if self._animation['enabled']:
+                AnimationManager.animate(self, self._animation['type'], self._animation['duration'])
+            
     def _prev_layout(self):
         if self._is_shift_layout_allowed():
             self._layouts.rotate(-1)
             self._komorebic.change_layout(self._layouts[0])
-
+            if self._animation['enabled']:
+                AnimationManager.animate(self, self._animation['type'], self._animation['duration'])
+            
     def _is_shift_layout_allowed(self):
         return not bool(
             not self._focused_workspace.get('tile', False) or

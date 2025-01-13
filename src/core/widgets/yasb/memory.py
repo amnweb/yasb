@@ -17,7 +17,8 @@ class MemoryWidget(BaseWidget):
             update_interval: int,
             animation: dict[str, str],
             callbacks: dict[str, str],
-            memory_thresholds: dict[str, int]
+            memory_thresholds: dict[str, int],
+            container_padding: dict[str, int]
     ):
         super().__init__(update_interval, class_name="memory-widget")
         self._memory_thresholds = memory_thresholds
@@ -25,10 +26,12 @@ class MemoryWidget(BaseWidget):
         self._label_content = label
         self._label_alt_content = label_alt
         self._animation = animation
+        self._padding = container_padding
+        
         # Construct container
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
+        self._widget_container_layout.setContentsMargins(self._padding['left'],self._padding['top'],self._padding['right'],self._padding['bottom'])
         # Initialize container
         self._widget_container: QWidget = QWidget()
         self._widget_container.setLayout(self._widget_container_layout)

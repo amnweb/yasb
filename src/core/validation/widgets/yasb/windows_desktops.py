@@ -20,7 +20,25 @@ VALIDATION_SCHEMA = {
     },
     'container_padding': {
         'type': 'dict',
-        'default': DEFAULTS['container_padding'],
-        'required': False
+        'required': False,
+        'schema': {
+            'top': {
+                'type': 'integer',
+                'default': DEFAULTS['container_padding']['top']
+            },
+            'left': {
+                'type': 'integer',
+                'default': DEFAULTS['container_padding']['left']
+            },
+            'bottom': {
+                'type': 'integer',
+                'default': DEFAULTS['container_padding']['bottom']
+            },
+            'right': {
+                'type': 'integer',
+                'default': DEFAULTS['container_padding']['right']
+            }
+        },
+        'default': DEFAULTS['container_padding']
     }
 }

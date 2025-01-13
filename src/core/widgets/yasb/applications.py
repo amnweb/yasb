@@ -19,7 +19,7 @@ class ApplicationsWidget(BaseWidget):
             app_list:  list[str, dict[str]],
             image_icon_size: int,
             animation: dict[str, str],
-            container_padding: dict
+            container_padding: dict[str, int],
         ):
         super().__init__(class_name=f"apps-widget {class_name}")
         self._label = label

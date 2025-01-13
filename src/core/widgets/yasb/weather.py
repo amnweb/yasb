@@ -29,6 +29,7 @@ class WeatherWidget(BaseWidget):
             weather_card: dict[str, str],
             callbacks: dict[str, str],
             icons: dict[str, str],
+            container_padding: dict[str, int],
             animation: dict[str, str]
     ):
         super().__init__((update_interval * 1000), class_name="weather-widget")
@@ -40,6 +41,7 @@ class WeatherWidget(BaseWidget):
         self._api_key = api_key if api_key != 'env' else os.getenv('YASB_WEATHER_API_KEY')
         self.api_url = f"http://api.weatherapi.com/v1/forecast.json?key={self._api_key}&q={urllib.parse.quote(self._location)}&days=3&aqi=no&alerts=no"
         self._units = units
+        self._padding = container_padding
         # Store weather data
         self.weather_data = None
         self._show_alt_label = False
@@ -50,7 +52,7 @@ class WeatherWidget(BaseWidget):
         # Construct container
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
+        self._widget_container_layout.setContentsMargins(self._padding['left'],self._padding['top'],self._padding['right'],self._padding['bottom'])
         
         # Initialize container
         self._widget_container: QWidget = QWidget()

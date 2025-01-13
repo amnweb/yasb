@@ -42,6 +42,7 @@ class VolumeWidget(BaseWidget):
         tooltip: bool,
         volume_icons: list[str],
         animation: dict[str, str],
+        container_padding: dict[str, int],
         callbacks: dict[str, str]
     ):
         super().__init__(class_name="volume-widget")
@@ -50,12 +51,12 @@ class VolumeWidget(BaseWidget):
         self._label_alt_content = label_alt
         self._tooltip = tooltip
         self._animation = animation
-        
+        self._padding = container_padding
         self.volume = None
         self._volume_icons = volume_icons
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
+        self._widget_container_layout.setContentsMargins(self._padding['left'],self._padding['top'],self._padding['right'],self._padding['bottom'])
         self._widget_container: QWidget = QWidget()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
@@ -67,6 +68,7 @@ class VolumeWidget(BaseWidget):
         self.callback_left = "toggle_mute"
         self.callback_right = callbacks["on_right"]
         self.callback_middle = callbacks["on_middle"]
+        self._padding = container_padding
         
         self.cb = AudioEndpointChangeCallback(self)
         self.enumerator = AudioUtilities.GetDeviceEnumerator()

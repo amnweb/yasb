@@ -21,7 +21,8 @@ class BatteryWidget(BaseWidget):
             status_thresholds: dict[str, int],
             status_icons: dict[str, str],
             animation: dict[str, str],
-            callbacks: dict[str, str]
+            callbacks: dict[str, str],
+            container_padding: dict[str, int],
     ):
         super().__init__(update_interval, class_name="battery-widget")
         self._time_remaining_natural = time_remaining_natural
@@ -34,14 +35,15 @@ class BatteryWidget(BaseWidget):
         self._animation = animation
         self._icon_charging_format = charging_options['icon_format']
         self._icon_charging_blink = charging_options['blink_charging_icon']
-
+        self._padding = container_padding
+        
         self._show_alt_label = False
         self._label_content = label
         self._label_alt_content = label_alt
         # Construct container
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
+        self._widget_container_layout.setContentsMargins(self._padding['left'],self._padding['top'],self._padding['right'],self._padding['bottom'])
         # Initialize container
         self._widget_container: QWidget = QWidget()
         self._widget_container.setLayout(self._widget_container_layout)

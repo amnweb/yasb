@@ -21,6 +21,7 @@ class ClockWidget(BaseWidget):
             update_interval: int,
             timezones: list[str],
             animation: dict[str, str],
+            container_padding: dict[str, int],
             callbacks: dict[str, str],
     ):
         super().__init__(update_interval, class_name="clock-widget")
@@ -32,6 +33,7 @@ class ClockWidget(BaseWidget):
         self._active_datetime_format = None
         self._animation = animation
         self._label_content = label
+        self._padding = container_padding
         self._label_alt_content = label_alt
         if self._locale:
             import locale
@@ -40,7 +42,7 @@ class ClockWidget(BaseWidget):
         # Construct container
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
+        self._widget_container_layout.setContentsMargins(self._padding['left'],self._padding['top'],self._padding['right'],self._padding['bottom'])
         # Initialize container
         self._widget_container: QWidget = QWidget()
         self._widget_container.setLayout(self._widget_container_layout)

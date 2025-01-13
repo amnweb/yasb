@@ -15,6 +15,7 @@ DEFAULTS = {
         "\udb82\udd28"   # Icon for 75-100% strength
     ],
     'ethernet_icon': "\ueba9",
+    'container_padding': {'top': 0, 'left': 0, 'bottom': 0, 'right': 0},
     'animation': {
         'enabled': True,
         'type': 'fadeInOut',
@@ -67,6 +68,29 @@ VALIDATION_SCHEMA = {
             }
         },
         'default': DEFAULTS['animation']
+    },
+    'container_padding': {
+        'type': 'dict',
+        'required': False,
+        'schema': {
+            'top': {
+                'type': 'integer',
+                'default': DEFAULTS['container_padding']['top']
+            },
+            'left': {
+                'type': 'integer',
+                'default': DEFAULTS['container_padding']['left']
+            },
+            'bottom': {
+                'type': 'integer',
+                'default': DEFAULTS['container_padding']['bottom']
+            },
+            'right': {
+                'type': 'integer',
+                'default': DEFAULTS['container_padding']['right']
+            }
+        },
+        'default': DEFAULTS['container_padding']
     },
     'callbacks': {
         'type': 'dict',

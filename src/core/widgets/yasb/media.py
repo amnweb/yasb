@@ -37,6 +37,7 @@ class MediaWidget(BaseWidget):
             thumbnail_corner_radius: int,
             icons: dict[str, str],
             animation: dict[str, str],
+            container_padding: dict[str, int]
         ):
         super().__init__(class_name="media-widget")
         self._label_content = label
@@ -52,10 +53,11 @@ class MediaWidget(BaseWidget):
         self._thumbnail_corner_radius = thumbnail_corner_radius
         self._hide_empty = hide_empty
         self._animation = animation
+        self._padding = container_padding
         # Construct container
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
+        self._widget_container_layout.setContentsMargins(self._padding['left'],self._padding['top'],self._padding['right'],self._padding['bottom'])
         # Initialize container
         self._widget_container: QWidget = QWidget()
         self._widget_container.setLayout(self._widget_container_layout)

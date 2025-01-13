@@ -17,6 +17,11 @@ DEFAULTS = {
         "paused": "[P]"
     },
     'container_padding': {'top': 0, 'left': 0, 'bottom': 0, 'right': 0},
+    'animation': {
+        'enabled': True,
+        'type': 'fadeInOut',
+        'duration': 200
+    },
     'callbacks': {
         'on_left': 'next_layout',
         'on_middle': 'toggle_monocle',
@@ -114,6 +119,24 @@ VALIDATION_SCHEMA = {
         'type': 'dict',
         'default': DEFAULTS['container_padding'],
         'required': False
+    },
+    'animation': {
+        'type': 'dict',
+        'schema': {
+            'enabled': {
+                'type': 'boolean',
+                'default': DEFAULTS['animation']['enabled']
+            },
+            'type': {
+                'type': 'string',
+                'default': DEFAULTS['animation']['type']
+            },
+            'duration': {
+                'type': 'integer',
+                'default': DEFAULTS['animation']['duration']
+            }
+        },
+        'default': DEFAULTS['animation']
     },
     'callbacks': {
         'type': 'dict',

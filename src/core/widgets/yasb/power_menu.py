@@ -107,7 +107,7 @@ class OverlayWidget(BaseStyledWidget,AnimatedWidget):
 class PowerMenuWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
 
-    def __init__(self, label: str, uptime: bool, blur: bool, blur_background: bool, animation_duration: int, button_row: int, buttons: dict[str, list[str]]):
+    def __init__(self, label: str, uptime: bool, blur: bool, blur_background: bool, animation_duration: int, button_row: int, container_padding: dict[str, int],buttons: dict[str, list[str]]):
         super().__init__(0, class_name="power-menu-widget")
         
         self.buttons = buttons
@@ -116,12 +116,27 @@ class PowerMenuWidget(BaseWidget):
         self.blur_background = blur_background
         self.animation_duration = animation_duration
         self.button_row = button_row
-
+        self._padding = container_padding
+        
         self._button = ClickableLabel(label)
         self._button.setProperty("class", "label power-button")
         self._button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self._button.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.widget_layout.addWidget(self._button)
+        
+        # Construct container
+        self._widget_container_layout: QHBoxLayout = QHBoxLayout()
+        self._widget_container_layout.setSpacing(0)
+        self._widget_container_layout.setContentsMargins(self._padding['left'],self._padding['top'],self._padding['right'],self._padding['bottom'])
+        # Initialize container
+        
+        self._widget_container: QWidget = QWidget()
+        self._widget_container.setLayout(self._widget_container_layout)
+        self._widget_container.setProperty("class", "widget-container")
+        # Add the container to the main widget layout
+        self.widget_layout.addWidget(self._widget_container)
+        self._widget_container_layout.addWidget(self._button)
+        
+
         self._button.clicked.connect(self.show_main_window)
         self.main_window = None
 
