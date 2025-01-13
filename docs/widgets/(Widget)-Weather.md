@@ -10,7 +10,7 @@
 | `api_key`       | string  | `'0'`                                                                   | The API key for accessing the weather service. |
 | `icons`         | dict    | `{ 'sunnyDay': '\ue30d', 'clearNight': '\ue32b', 'cloudyDay': '\ue312', 'cloudyNight': '\ue311', 'rainyDay': '\udb81\ude7e', 'rainyNight': '\udb81\ude7e', 'snowyIcyDay': '\udb81\udd98', 'snowyIcyNight': '\udb81\udd98', 'blizzard': '\uebaa', 'default': '\uebaa' }` | A dictionary of icons for different weather conditions. |
 | `callbacks`     | dict    | `{ 'on_left': 'do_nothing', 'on_middle': 'do_nothing', 'on_right': 'do_nothing' }` | Callbacks for mouse events on the weather widget. |
-| `weather_card`  | dict    | `{ 'enabled': True, 'blur': True, 'round_corners': True, 'round_corners_type': 'normal', 'border_color': 'System', 'alignment': 'right', 'direction': 'down', 'distance': 6, 'icon_size': 64 }` | Configuration for the weather card popup display. Controls visibility, appearance, and positioning. |
+| `weather_card`  | dict    | `{ blur': True, 'round_corners': True, 'round_corners_type': 'normal', 'border_color': 'System', 'alignment': 'right', 'direction': 'down', 'distance': 6, 'icon_size': 64 }` | Configuration for the weather card popup display. Controls visibility, appearance, and positioning. |
 | `animation`         | dict    | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
 | `container_padding`  | dict | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}`      | Explicitly set padding inside widget container. |
 
@@ -43,7 +43,6 @@ weather:
       blizzard: "\uebaa"
       default: "\uebaa"
     weather_card: 
-      enabled: True
       blur: True
       round_corners: True
       round_corners_type: "normal"
@@ -65,7 +64,6 @@ weather:
 - **units:** The units for the weather data. Can be `'metric'` or `'imperial'`.
 - **icons:** A dictionary of icons for different weather conditions `sunnyDay`, `sunnyNight`, `clearDay`, `clearNight`, `cloudyDay`, `cloudyNight`, `rainyDay`, `rainyNight`, `snowyIcyDay`, `snowyIcyNight`, `blizzard`, `default`.
 - **weather_card:** Configuration for the weather card popup display. Controls visibility, appearance, and positioning.
-  - **enabled:** Enable weather card.
   - **blur:** Enable blur effect for the weather card.
   - **round_corners:** Enable round corners for weather card.
   - **round_corners_type:** Border type for weather card can be `normal` and `small`. Default is `normal`.
