@@ -15,6 +15,9 @@ bars:
     alignment:
       position: "top"
       center: false
+    animation:
+      enabled: true
+      duration: 1000
     blur_effect:
       enabled: false
       acrylic: false
