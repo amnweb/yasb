@@ -1,6 +1,7 @@
 import os
 import psutil
 import re
+import win32api
 from core.widgets.base import BaseWidget
 from core.validation.widgets.yasb.disk import VALIDATION_SCHEMA
 from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget, QProgressBar, QVBoxLayout
@@ -138,7 +139,15 @@ class DiskWidget(BaseWidget):
                     active_widgets[widget_index].setText(formatted_text)
                 widget_index += 1
 
-           
+    def _get_volume_label(self, drive_letter):
+        if not self._group_label['show_label_name']:
+            return None
+        try:
+            volume_label = win32api.GetVolumeInformation(f"{drive_letter}:\\")[0]
+            return volume_label
+        except Exception:
+            return None
+         
     def show_group_label(self):  
         self.dialog = PopupWidget(self, self._group_label['blur'], self._group_label['round_corners'], self._group_label['round_corners_type'], self._group_label['border_color'])
         self.dialog.setProperty("class", "disk-group")
@@ -154,6 +163,9 @@ class DiskWidget(BaseWidget):
             row_widget = QWidget()
             row_widget.setProperty("class", "disk-group-row")
             
+            volume_label = self._get_volume_label(label)
+            display_label = f"{volume_label} ({label}):" if volume_label else f"{label}:"
+    
             clicable_row = ClickableDiskWidget(label)
             clicable_row.clicked.connect(lambda lbl=label: self.open_explorer(lbl))
             clicable_row.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -161,7 +173,7 @@ class DiskWidget(BaseWidget):
             v_layout = QVBoxLayout(clicable_row)
             h_layout = QHBoxLayout()
             
-            label_widget = QLabel(f"{label}:")
+            label_widget = QLabel(display_label)
             label_widget.setProperty("class", "disk-group-label")
             h_layout.addWidget(label_widget)
 

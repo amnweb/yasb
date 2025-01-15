@@ -7,6 +7,7 @@ DEFAULTS = {
     'group_label': {
         'enabled': False,
         'volume_labels': ['C'],
+        'show_label_name': True,
         'blur': True,
         'round_corners': True,
         'round_corners_type': 'normal',
@@ -68,6 +69,10 @@ VALIDATION_SCHEMA = {
                     'type': 'string'
                 },
                 'default': DEFAULTS['group_label']['volume_labels']
+            },
+            'show_label_name': {
+                'type': 'boolean',
+                'default': DEFAULTS['group_label']['show_label_name']
             },
             'blur': {
                 'type': 'boolean',
