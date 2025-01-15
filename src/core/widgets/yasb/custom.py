@@ -25,7 +25,10 @@ class CustomWorker(QObject):
             proc = subprocess.Popen(self.cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,creationflags=subprocess.CREATE_NO_WINDOW,  shell=True)
             output = proc.stdout.read()
             if self.return_type == "json":
-                exec_data = json.loads(output)
+                try:
+                    exec_data = json.loads(output)
+                except json.JSONDecodeError:
+                    exec_data = None
             else:
                 exec_data = output.decode('utf-8').strip()
         self.data_ready.emit(exec_data)
