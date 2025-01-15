@@ -4,12 +4,26 @@ DEFAULTS = {
     'update_interval': 600,
     'token': "",
     'tooltip': True,
-    'max_notification':20,
+    'max_notification':30,
     'only_unread': False,
     'max_field_size': 100,
-    'menu_width': 400,
-    'menu_height': 400,
-    'menu_offset': 240,
+    'menu': {
+        'blur': True,
+        'round_corners': True,
+        'round_corners_type': 'normal',
+        'border_color': 'System',
+        'alignment': 'right',
+        'direction': 'down',
+        'distance': 6
+    },
+    'icons': {
+        'issue': '\uf41b',
+        'pull_request': '\uea64',
+        'release': '\uea84',
+        'discussion': '\uf442',
+        'default': '\uea84',
+        'github_logo': '\uea84'
+    },
     'animation': {
         'enabled': True,
         'type': 'fadeInOut',
@@ -54,17 +68,71 @@ VALIDATION_SCHEMA = {
         'type': 'integer',
         'default': DEFAULTS['max_field_size']
     },
-    'menu_width': {
-        'type': 'integer',
-        'default': DEFAULTS['menu_width']
+    'menu': {
+        'type': 'dict',
+        'required': False,
+        'schema': {
+            'blur': {
+                'type': 'boolean',
+                'default': DEFAULTS['menu']['blur']
+            },
+            'round_corners': {
+                'type': 'boolean',
+                'default': DEFAULTS['menu']['round_corners']
+            },
+            'round_corners_type': {
+                'type': 'string',
+                'default': DEFAULTS['menu']['round_corners_type']
+            },
+            'border_color': {
+                'type': 'string',
+                'default': DEFAULTS['menu']['border_color']
+            },
+            'alignment': {
+                'type': 'string',
+                'default': DEFAULTS['menu']['alignment']
+            },
+            'direction': {
+                'type': 'string',
+                'default': DEFAULTS['menu']['direction']
+            },
+            'distance': {
+                'type': 'integer',
+                'default': DEFAULTS['menu']['distance']
+            }
+        },
+        'default': DEFAULTS['menu']
     },
-    'menu_height': {
-        'type': 'integer',
-        'default': DEFAULTS['menu_height']
-    },
-    'menu_offset': {
-        'type': 'integer',
-        'default': DEFAULTS['menu_offset']
+    'icons': {
+        'type': 'dict',
+        'required': False,
+        'schema': {
+            'issue': {
+                'type': 'string',
+                'default': DEFAULTS['icons']['issue']
+            },
+            'pull_request': {
+                'type': 'string',
+                'default': DEFAULTS['icons']['pull_request']
+            },
+            'release': {
+                'type': 'string',
+                'default': DEFAULTS['icons']['release']
+            },
+            'discussion': {
+                'type': 'string',
+                'default': DEFAULTS['icons']['discussion']
+            },
+            'default': {
+                'type': 'string',
+                'default': DEFAULTS['icons']['default']
+            },
+            'github_logo': {
+                'type': 'string',
+                'default': DEFAULTS['icons']['github_logo']
+            }
+        },
+        'default': DEFAULTS['icons']
     },
     'animation': {
         'type': 'dict',
