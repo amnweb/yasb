@@ -11,10 +11,10 @@
 | `only_unread`    | boolean  | `False`                        | Whether to show only unread notifications. |
 | `max_field_size` | integer  | `100`                          | The maximum number of characters in the title before truncation. |
 | `menu` | dict | `{'blur': True, 'round_corners': True, 'round_corners_type': 'normal', 'border_color': 'System', 'alignment': 'right', 'direction': 'down', 'distance': 6}` | Menu settings for the widget. |
+| `icons`          | dict     | `{'issue': '\uf41b', 'pull_request': '\uea64', 'release': '\uea84', 'discussion': '\uf442', 'default': '\uea84', 'github_logo': '\uea84'}` | Icons for different types of notifications in the menu. |
 | `animation`         | dict    | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
 | `container_padding`  | dict | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}`      | Explicitly set padding inside widget container. |
 
-## Example Configuration
 
 ```yaml
 github:
