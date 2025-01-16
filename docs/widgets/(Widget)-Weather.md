@@ -22,7 +22,7 @@ weather:
   options:
     label: "<span>{icon}</span> {temp}"
     label_alt: "{location}: Min {min_temp}, Max {max_temp}, Humidity {humidity}"
-    api_key: "209841561465465461" # Get your free API key from https://www.weatherapi.com/
+    api_key: "3bf4cf9a7c3f40d6b31174128242807" # Get your free API key from https://www.weatherapi.com/
     update_interval: 600 # Update interval in seconds, Min 600 seconds
     hide_decimal: true
     units: "metric" # Can be 'metric' or 'imperial'
