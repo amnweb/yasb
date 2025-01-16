@@ -20,7 +20,7 @@
 weather:
   type: "yasb.weather.WeatherWidget"
   options:
-    label: "<span>{icon}</span> {temp_c}"
+    label: "<span>{icon}</span> {temp}"
     label_alt: "{location}: Min {min_temp}, Max {max_temp}, Humidity {humidity}"
     api_key: "209841561465465461" # Get your free API key from https://www.weatherapi.com/
     update_interval: 600 # Update interval in seconds, Min 600 seconds
