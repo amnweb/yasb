@@ -24,13 +24,6 @@ disk:
       group_label:
         enabled: true
         volume_labels: ["C", "D", "E", "F"]
-        blur: true
-        alignment: 'center'
-        direction: 'down'
-        distance: 6
-      group_label:
-        enabled: true
-        volume_labels: ["C", "D", "E", "F"]
         show_label_name: true
         blur: True
         round_corners: True
@@ -119,3 +112,68 @@ disk:
     color: #585b70
 }
 ```
+
+## Example Settings for Group Label and show menu
+```yaml
+  disk:
+    type: "yasb.disk.DiskWidget"
+    options:
+        label: "<span>\uf473</span>"
+        label_alt: "<span>\uf473</span>"
+        group_label:
+          enabled: true
+          volume_labels: ["C", "D", "E", "F"]
+          show_label_name: true 
+          blur: True
+          round_corners: True
+          round_corners_type: "normal"
+          border_color: "System"
+          alignment: "right"
+          direction: "down"
+          distance: 6
+        callbacks:
+          on_left: "toggle_group"
+```
+
+## Style for Group Label and show menu
+```css
+.disk-widget {
+    padding: 0 6px 0 6px;
+}
+.disk-group {
+    background-color:rgba(17, 17, 27, 0.4); 
+}
+.disk-group-row {
+    min-width: 220px;
+    max-width: 220px;
+    max-height: 40px;
+    margin: 0;
+    padding: 0;
+    border-radius: 6px;
+    border: 1px solid rgba(128, 128, 128, 0);
+}
+.disk-group-row:hover {
+    background-color:rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.disk-group-label-bar{
+    max-height:8px;
+    border:0px solid rgba(128, 128, 128, 0);
+    background-color: rgba(137, 180, 250, 0.1);
+    border-radius: 4px;
+}
+.disk-group-label-bar::chunk{
+    background-color: rgba(61, 135, 255, 0.3);
+    border-radius: 4px;
+}
+.disk-group-label {
+    font-size: 10px;
+}
+.disk-group-label-size {
+    font-size: 10px;
+    color: #666879;
+}
+```
+
+## Preview of example above
+![GitHub YASB Widget](assets/758425162-b61ef748-4280-0884-dc5f59c2ba8d.png)
