@@ -1,6 +1,7 @@
 DEFAULTS = {
     "label": "\ueb01 \ueab4 {download_speed} | \ueab7 {upload_speed}",
     "label_alt": "\ueb01 \ueab4 {upload_speed} | \ueab7 {download_speed}",
+    "interface": "Auto",
     "update_interval": 1000,
     "animation": {
         'enabled': True,
@@ -18,6 +19,11 @@ DEFAULTS = {
 VALIDATION_SCHEMA = {
     "label": {"type": "string", "default": DEFAULTS["label"]},
     "label_alt": {"type": "string", "default": DEFAULTS["label_alt"]},
+    "interface": {
+        "type": "string",
+        "required": False,
+        "default": DEFAULTS["interface"]
+    },
     "update_interval": {
         "type": "integer",
         "default": DEFAULTS["update_interval"],

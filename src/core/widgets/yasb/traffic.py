@@ -1,5 +1,7 @@
 import re
 import psutil
+import logging
+from settings import DEBUG
 from humanize import naturalsize
 from core.widgets.base import BaseWidget
 from core.validation.widgets.yasb.traffic import VALIDATION_SCHEMA
@@ -19,6 +21,7 @@ class TrafficWidget(BaseWidget):
         self,
         label: str,
         label_alt: str,
+        interface: str,
         update_interval: int,
         animation: dict[str, str],
         container_padding: dict[str, int],
@@ -32,7 +35,7 @@ class TrafficWidget(BaseWidget):
         self._label_alt_content = label_alt
         self._animation = animation
         self._padding = container_padding
-        
+        self._interface = interface
         # Construct container
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
@@ -53,7 +56,11 @@ class TrafficWidget(BaseWidget):
         self.callback_right = callbacks["on_right"]
         self.callback_middle = callbacks["on_middle"]
         self.callback_timer = "update_label"
-
+        if DEBUG:
+            if self._interface == "Auto":
+                logging.debug("Network Interface: Auto")
+            else:
+                logging.debug(f"Network Interface: {self._interface}")
         self.start_timer()
 
     def _toggle_label(self):
@@ -123,10 +130,17 @@ class TrafficWidget(BaseWidget):
                 else:
                     active_widgets[widget_index].setText(part)
                 widget_index += 1
-        
+
 
     def _get_speed(self) -> list[str]:
-        current_io = psutil.net_io_counters()
+        if self._interface == "Auto":
+            current_io = psutil.net_io_counters()
+        else:
+            io_counters = psutil.net_io_counters(pernic=True)
+            if self._interface not in io_counters:
+                return "N/A", "N/A"
+            current_io = io_counters[self._interface]
+            
         upload_diff = current_io.bytes_sent - self.bytes_sent
         download_diff = current_io.bytes_recv - self.bytes_recv
 
