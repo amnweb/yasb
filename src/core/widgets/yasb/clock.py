@@ -8,6 +8,7 @@ from datetime import datetime
 from tzlocal import get_localzone_name
 from itertools import cycle
 from core.utils.widgets.animation_manager import AnimationManager
+import locale
 
 class ClockWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
@@ -35,9 +36,6 @@ class ClockWidget(BaseWidget):
         self._label_content = label
         self._padding = container_padding
         self._label_alt_content = label_alt
-        if self._locale:
-            import locale
-            locale.setlocale(locale.LC_TIME, self._locale)
  
         # Construct container
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
@@ -114,7 +112,9 @@ class ClockWidget(BaseWidget):
         label_parts = re.split('(<span.*?>.*?</span>)', active_label_content)
         label_parts = [part for part in label_parts if part]
         widget_index = 0 
-
+        if self._locale:
+            org_locale = locale.getlocale(locale.LC_TIME)
+        
         for part in label_parts:
             part = part.strip()
             if part and widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
@@ -123,6 +123,8 @@ class ClockWidget(BaseWidget):
                     active_widgets[widget_index].setText(icon)
                 else:
                     try:
+                        if self._locale:
+                            locale.setlocale(locale.LC_TIME, self._locale)
                         datetime_format_search = re.search('\\{(.*)}', part)
                         datetime_format_str = datetime_format_search.group()
                         datetime_format = datetime_format_search.group(1)
@@ -132,7 +134,9 @@ class ClockWidget(BaseWidget):
                         format_label_content = part                    
                     active_widgets[widget_index].setText(format_label_content)
                 widget_index += 1
-                
+        if self._locale:
+            locale.setlocale(locale.LC_TIME, org_locale)
+            
     def _next_timezone(self):
         self._active_tz = next(self._timezones)
         if self._tooltip:
