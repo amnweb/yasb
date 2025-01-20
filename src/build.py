@@ -30,6 +30,7 @@ build_options = {
         'core.widgets.yasb.brightness',
         'core.widgets.yasb.update_check',
         'core.widgets.yasb.windows_desktops',
+        'core.widgets.yasb.server_monitor',
         'core.widgets.yasb.home',
         'core.widgets.komorebi.active_layout',
         'core.widgets.komorebi.workspaces'
@@ -44,6 +45,7 @@ build_options = {
     "optimize": 1,
     "include_files": [
             ("assets/images/app_icon.png","lib/assets/images/app_icon.png"),
+            ("assets/images/app_transparent.png","lib/assets/images/app_transparent.png"),
             ("config.yaml","config.yaml"),
             ("styles.css","styles.css")
         ]
