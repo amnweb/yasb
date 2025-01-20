@@ -6,6 +6,7 @@ DEFAULTS = {
     'location': 'London',
     'api_key': '0',
     'units': 'metric',
+    'show_alerts': False,
     'icons': {
         'sunnyDay': '\ue30d',
         'clearNight': '\ue32b',
@@ -72,6 +73,10 @@ VALIDATION_SCHEMA = {
         'type': 'string',
         'default': DEFAULTS['units'],
         'allowed': ['metric', 'imperial']
+    },
+    'show_alerts': {
+        'type': 'boolean',
+        'default': DEFAULTS['show_alerts']
     },
     'icons': {
         'type': 'dict',
