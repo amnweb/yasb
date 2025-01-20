@@ -18,4 +18,5 @@ qasync
 requests
 obs-websocket-py
 pyvda
+win11toast
 git+https://github.com/amnweb/screen_brightness_control.git
