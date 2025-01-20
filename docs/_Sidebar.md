@@ -22,6 +22,7 @@
     - [Memory](./(Widget)-Memory)
     - [Microphone](./(Widget)-Microphone)
     - [OBS](./(Widget)-Obs)
+    - [Server Monitor](./(Widget)-Server-Monitor)
     - [Traffic](./(Widget)-Traffic)
     - [Taskbar](./(Widget)-Taskbar)
     - [Power Menu](./(Widget)-Power-Menu)
