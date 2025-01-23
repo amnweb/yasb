@@ -154,7 +154,7 @@ class WeatherWidget(BaseWidget):
             if (self.weather_data['{day0_icon}']) in self._icon_cache:
                 icon_data_day0 = self._icon_cache[self.weather_data['{day0_icon}']]
             else:
-                icon_data_day0 = urllib.request.urlopen(self.weather_data['{day0_icon}']).read()
+                icon_data_day0 = urllib.request.urlopen(self.weather_data['{day0_icon}'], timeout=2).read()
             pixmap_day0 = QPixmap()
             pixmap_day0.loadFromData(icon_data_day0)
             scaled_pixmap_day0 = pixmap_day0.scaledToHeight(self._weather_card['icon_size'], Qt.TransformationMode.SmoothTransformation)
@@ -175,7 +175,7 @@ class WeatherWidget(BaseWidget):
             if (self.weather_data['{day1_icon}']) in self._icon_cache:
                 icon_data_day1 = self._icon_cache[self.weather_data['{day1_icon}']]
             else:
-                icon_data_day1 = urllib.request.urlopen(self.weather_data['{day1_icon}']).read()
+                icon_data_day1 = urllib.request.urlopen(self.weather_data['{day1_icon}'], timeout=2).read()
             pixmap_day1 = QPixmap()
             pixmap_day1.loadFromData(icon_data_day1)
             scaled_pixmap_day1 = pixmap_day1.scaledToHeight(self._weather_card['icon_size'], Qt.TransformationMode.SmoothTransformation)
@@ -195,7 +195,7 @@ class WeatherWidget(BaseWidget):
             if (self.weather_data['{day2_icon}']) in self._icon_cache:
                 icon_data_day2 = self._icon_cache[self.weather_data['{day2_icon}']]
             else:
-                icon_data_day2 = urllib.request.urlopen(self.weather_data['{day2_icon}']).read()
+                icon_data_day2 = urllib.request.urlopen(self.weather_data['{day2_icon}'], timeout=2).read()
             pixmap_day2 = QPixmap()
             pixmap_day2.loadFromData(icon_data_day2)
             scaled_pixmap_day2 = pixmap_day2.scaledToHeight(self._weather_card['icon_size'], Qt.TransformationMode.SmoothTransformation)
@@ -349,7 +349,6 @@ class WeatherWidget(BaseWidget):
         return f"{metric_val} {metric_unit}"
     
     def fetch_weather_data(self):
-        # Start a new thread to fetch weather data
         threading.Thread(target=self._get_weather_data).start()
 
     def _get_weather_data(self):
@@ -385,6 +384,19 @@ class WeatherWidget(BaseWidget):
                 if conditions_code in {1114,1210,1213,1219,1222,1225,1237,1255,1258,1261,1264,1246,1282}:
                     conditions_data = "snowyIcy"
                 icon_string = f"{conditions_data}{'Day' if current['is_day'] == 1 else 'Night'}".strip()
+
+                # Load icons into cache for current and future forecasts if not already cached
+                # We will try to load the images for 1sec, if it fails we will try again when popup is opened
+                img_icon_keys = [f'http:{day["condition"]["icon"]}' for day in [forecast] + [forecast1["day"], forecast2["day"]]]
+                for key in img_icon_keys:
+                    if key not in self._icon_cache:
+                        try:
+                            with urllib.request.urlopen(key, timeout=1) as icon_response:
+                                self._icon_cache[key] = icon_response.read()
+                        except urllib.error.URLError as e:
+                            logging.warning(f"Could not load icon {key}: {e}")
+                        except Exception as e:
+                            logging.warning(f"An unexpected error occurred while loading icon {key}: {e}")
 
                 return {
                     # Current conditions
