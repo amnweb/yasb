@@ -2,8 +2,8 @@
 | Option                  | Type    | Default                 | Description                                              |
 |-------------------------|---------|-------------------------|----------------------------------------------------------|
 | `offline_label`         | string  | `'GlazeWM Offline'`     | The label to display when GlazeWM is offline.            |
-| `populated_label`       | string  | `'{index}'`             | Optional label for populated workspaces.                 |
-| `empty_label`           | string  | `'{index}'`             | Optional label for empty workspaces.                     |
+| `populated_label`       | string  | `'{name}'`              | Optional label for populated workspaces.                 |
+| `empty_label`           | string  | `'{name}'`              | Optional label for empty workspaces.                     |
 | `hide_empty_workspaces` | boolean | `true`                  | Whether to hide empty workspaces.                        |
 | `hide_if_offline`       | boolean | `false`                 | Whether to hide workspaces widget if GlazeWM is offline. |
 | `glazewm_server_uri`    | string  | `'ws://localhost:6123'` | Optional GlazeWM server uri.                             |
@@ -23,8 +23,8 @@ glazewm_workspaces:
     # However, you can customize populated and empty labels here using {name} and {display_name} placeholders if needed.
     # {name} will be replaced with workspace name (index) from GlazeWM.
     # {display_name} will be replaced with workspace display_name from GlazeWM.
-    
-    # populated_label: "{name} {display_name} \uebb4"e
+
+    # populated_label: "{name} {display_name} \uebb4"
     # empty_label: "{name} {display_name} \uebb5"
 ```
 

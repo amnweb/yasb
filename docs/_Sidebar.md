@@ -14,6 +14,8 @@
     - [Clock](./(Widget)-Clock)
     - [Custom](./(Widget)-Custom)
     - [Github](./(Widget)-Github)
+    - [GlazeWM Workspaces](./(Widget)-GlazeWM-Workspaces)
+    - [GlazeWM Tiling Direction](./(Widget)-GlazeWM-Tiling-Direction)
     - [Home](./(Widget)-Home)
     - [Disk](./(Widget)-Disk)
     - [Language](./(Widget)-Language)
