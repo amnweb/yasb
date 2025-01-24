@@ -1,4 +1,4 @@
-name: Windows
+name: Windows-Dev
 
 on:
   workflow_dispatch:
