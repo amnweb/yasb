@@ -5,6 +5,15 @@ DEFAULTS = {
     'locale':"",
     'tooltip': True,
     'timezones': [],
+    'calendar': {
+        'blur': True,
+        'round_corners': True,
+        'round_corners_type': 'normal',
+        'border_color': 'System',
+        'alignment': 'right',
+        'direction': 'down',
+        'distance': 6
+    },
     'animation': {
         'enabled': True,
         'type': 'fadeInOut',
@@ -12,9 +21,9 @@ DEFAULTS = {
     },
     'container_padding': {'top': 0, 'left': 0, 'bottom': 0, 'right': 0},
     'callbacks': {
-        'on_left': 'toggle_label',
-        'on_middle': 'do_nothing',
-        'on_right': 'next_timezone'
+        'on_left': 'toggle_calendar',
+        'on_middle': 'next_timezone',
+        'on_right': 'toggle_label'
     }
 }
 
@@ -50,6 +59,41 @@ VALIDATION_SCHEMA = {
             'type': 'string',
             'required': False
         }
+    },
+    'calendar': {
+        'type': 'dict',
+        'required': False,
+        'schema': {
+            'blur': {
+                'type': 'boolean',
+                'default': DEFAULTS['calendar']['blur']
+            },
+            'round_corners': {
+                'type': 'boolean',
+                'default': DEFAULTS['calendar']['round_corners']
+            },
+            'round_corners_type': {
+                'type': 'string',
+                'default': DEFAULTS['calendar']['round_corners_type']
+            },
+            'border_color': {
+                'type': 'string',
+                'default': DEFAULTS['calendar']['border_color']
+            },
+            'alignment': {
+                'type': 'string',
+                'default': DEFAULTS['calendar']['alignment']
+            },
+            'direction': {
+                'type': 'string',
+                'default': DEFAULTS['calendar']['direction']
+            },
+            'distance': {
+                'type': 'integer',
+                'default': DEFAULTS['calendar']['distance']
+            }
+        },
+        'default': DEFAULTS['calendar']
     },
     'animation': {
         'type': 'dict',
