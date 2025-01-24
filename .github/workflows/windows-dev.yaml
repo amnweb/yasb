@@ -1,0 +1,63 @@
+name: Windows
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        ref: dev
+        
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Create virtual environment
+      run: |
+        python -m venv venv
+      shell: pwsh
+
+    - name: Activate virtual environment and install dependencies
+      run: |
+        .\venv\Scripts\Activate
+        python -m pip install --upgrade pip
+        pip install --force --no-cache -r requirements.txt
+        pip install --force --no-cache colorama
+        pip install --force --no-cache --upgrade cx_Freeze
+      shell: pwsh
+
+    - name: Build MSI
+      run: |
+        .\venv\Scripts\Activate
+        cd src
+        python build.py bdist_msi
+      shell: pwsh
+
+    - name: Get App Info
+      id: get_version
+      run: |
+        .\venv\Scripts\Activate
+        $version = (Get-Content src/settings.py | Select-String -Pattern 'BUILD_VERSION\s*=\s*"([^"]+)"').Matches.Groups[1].Value
+        echo "VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        $filename = (Get-ChildItem -Path src/dist/out/*.msi).Name
+        echo "FILENAME=$filename" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+      shell: pwsh
+
+
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: yasb-dev-v${{ env.VERSION }}
+        path: |
+          src/dist/out/*.msi
+        retention-days: 5
