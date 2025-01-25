@@ -33,7 +33,9 @@ build_options = {
         'core.widgets.yasb.server_monitor',
         'core.widgets.yasb.home',
         'core.widgets.komorebi.active_layout',
-        'core.widgets.komorebi.workspaces'
+        'core.widgets.komorebi.workspaces',
+        'core.widgets.glazewm.tiling_direction',
+        'core.widgets.glazewm.workspaces'
     ],
 
     "silent_level": 1,
