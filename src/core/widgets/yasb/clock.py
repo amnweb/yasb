@@ -33,7 +33,10 @@ class CustomCalendar(QCalendarWidget):
             self.setLocale(qt_locale)
             
         self.update_calendar_display()
-
+    def paintCell(self, painter, rect, date):
+        if date < self.minimumDate() or date > self.maximumDate():
+            return  # Skip drawing
+        super().paintCell(painter, rect, date)
     def update_calendar_display(self):
         if self.timezone:
             datetime_now = datetime.now(pytz.timezone(self.timezone))
@@ -180,15 +183,17 @@ class ClockWidget(BaseWidget):
             self.setToolTip(self._active_tz)
         self._update_label()
         
-        
-        
+
     def update_month_label(self, year, month):
         qlocale = QLocale(self._locale) if self._locale else QLocale.system()
         new_month = qlocale.monthName(month)
-        new_day = qlocale.dayName(QDate(year, month, 1).dayOfWeek())
-
-        self.day_label.setText(new_day)
         self.month_label.setText(new_month)
+        # Update day and date based on the calendar’s selected day
+        selectedDate = self.calendar.selectedDate()
+        newDate = QDate(year, month, selectedDate.day())
+        self.day_label.setText(qlocale.dayName(newDate.dayOfWeek()))
+        self.date_label.setText(newDate.toString("d"))
+ 
         
     def update_selected_date(self, date: QDate):
         qlocale = QLocale(self._locale) if self._locale else QLocale.system()
@@ -198,7 +203,6 @@ class ClockWidget(BaseWidget):
         
         
     def show_calendar(self):
-        # Create popup widget
         self._yasb_calendar = PopupWidget(self, self._calendar['blur'], self._calendar['round_corners'], 
                             self._calendar['round_corners_type'], self._calendar['border_color'])
         self._yasb_calendar.setProperty('class', 'calendar')
