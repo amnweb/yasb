@@ -1,19 +1,180 @@
 import re
-import ctypes
+import comtypes
+from comtypes import COMMETHOD, GUID
+from comtypes import CLSCTX_ALL, CoInitialize, CoUninitialize, COMObject
 import logging
+import enum
+import ctypes
+from ctypes import HRESULT, POINTER
+from ctypes import c_int as enum
+from ctypes.wintypes import BOOL, INT, LPCWSTR, WORD
 from core.widgets.base import BaseWidget
 from core.validation.widgets.yasb.volume import VALIDATION_SCHEMA
-from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget, QVBoxLayout, QSlider, QPushButton
+from PyQt6.QtCore import Qt, pyqtSignal, QPoint
 from PyQt6.QtGui import QWheelEvent
-from comtypes import CLSCTX_ALL, CoInitialize, CoUninitialize, COMObject
-from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume, IAudioEndpointVolumeCallback
+from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume, IAudioEndpointVolumeCallback, EDataFlow, IMMDeviceEnumerator
 from pycaw.callbacks import MMNotificationClient
 from core.utils.win32.system_function import KEYEVENTF_KEYUP, VK_VOLUME_UP, VK_VOLUME_DOWN
 from core.utils.widgets.animation_manager import AnimationManager
+from core.utils.utilities import PopupWidget
 # Disable comtypes logging
 logging.getLogger('comtypes').setLevel(logging.CRITICAL)
  
+IID_IPolicyConfig = GUID('{f8679f50-850a-41cf-9c72-430f290290c8}')
+CLSID_PolicyConfigClient = GUID('{870af99c-171d-4f9e-af0d-e63df40c2bc9}')
+IID_AudioSes = ('{00000000-0000-0000-0000-000000000000}')
+
+REFERENCE_TIME = ctypes.c_longlong
+# LPCGUID = POINTER(GUID)
+LPREFERENCE_TIME = POINTER(REFERENCE_TIME)
+
+class DeviceSharedMode(ctypes.Structure):
+    _fields_ = [
+        ('dummy_', INT)
+    ]
+
+PDeviceSharedMode = POINTER(DeviceSharedMode)
+
+class WAVEFORMATEX(ctypes.Structure):
+    _fields_ = [
+        ('wFormatTag', WORD),
+        ('nChannels', WORD),
+        ('nSamplesPerSec', WORD),
+        ('nAvgBytesPerSec', WORD),
+        ('nBlockAlign', WORD),
+        ('wBitsPerSample', WORD),
+        ('cbSize', WORD),
+    ]
+
+
+PWAVEFORMATEX = POINTER(WAVEFORMATEX)
+
+class _tagpropertykey(ctypes.Structure):
+    pass
+
+class tag_inner_PROPVARIANT(ctypes.Structure):
+    pass
+
+PROPVARIANT = tag_inner_PROPVARIANT
+PPROPVARIANT = POINTER(PROPVARIANT)
+#PROPERTYKEY = _tagpropertykey
+PPROPERTYKEY = POINTER(_tagpropertykey)
+
+class ERole(enum):
+    eConsole = 0
+    eMultimedia = 1
+    eCommunications = 2
+    ERole_enum_count = 3
+
+
+class IPolicyConfig(comtypes.IUnknown):
+    _case_insensitive_ = True
+    _iid_ = IID_IPolicyConfig
+    _methods_ = (
+        COMMETHOD(
+            [],
+            HRESULT,
+            'GetMixFormat',
+            (['in'], LPCWSTR, 'pwstrDeviceId'),
+            (['out'], POINTER(PWAVEFORMATEX), 'pFormat')
+        ),
+        COMMETHOD(
+            [],
+            HRESULT,
+            'GetDeviceFormat',
+            (['in'], LPCWSTR, 'pwstrDeviceId'),
+            (['in'], BOOL, 'bDefault'),
+            (['out'], POINTER(PWAVEFORMATEX), 'pFormat')
+        ),
+        COMMETHOD(
+            [],
+            HRESULT,
+            'ResetDeviceFormat',
+            (['in'], LPCWSTR, 'pwstrDeviceId')
+        ),
+        COMMETHOD(
+            [],
+            HRESULT,
+            'SetDeviceFormat',
+            (['in'], LPCWSTR, 'pwstrDeviceId'),
+            (['in'], PWAVEFORMATEX, 'pEndpointFormat'),
+            (['in'], PWAVEFORMATEX, 'pMixFormat')
+        ),
+
+        COMMETHOD(
+            [],
+            HRESULT,
+            'GetProcessingPeriod',
+            (['in'], LPCWSTR, 'pwstrDeviceId'),
+            (['in'], BOOL, 'bDefault'),
+            (['out'], LPREFERENCE_TIME, 'hnsDefaultDevicePeriod'),
+            (['out'], LPREFERENCE_TIME, 'hnsMinimumDevicePeriod')
+        ),
+        COMMETHOD(
+            [],
+            HRESULT,
+            'SetProcessingPeriod',
+            (['in'], LPCWSTR, 'pwstrDeviceId'),
+            (['in'], LPREFERENCE_TIME, 'hnsDevicePeriod')
+        ),
+        COMMETHOD(
+            [],
+            HRESULT,
+            'GetShareMode',
+            (['in'], LPCWSTR, 'pwstrDeviceId'),
+            (['out'], PDeviceSharedMode, 'pMode')
+        ),
+        COMMETHOD(
+            [],
+            HRESULT,
+            'SetShareMode',
+            (['in'], LPCWSTR, 'pwstrDeviceId'),
+            (['in'], PDeviceSharedMode, 'pMode')
+        ),
+        COMMETHOD(
+            [],
+            HRESULT,
+            'GetPropertyValue',
+            (['in'], LPCWSTR, 'pwstrDeviceId'),
+            (['in'], PPROPERTYKEY, 'key'),
+            (['out'], PPROPVARIANT, 'pValue')
+        ),
+        COMMETHOD(
+            [],
+            HRESULT,
+            'SetPropertyValue',
+            (['in'], LPCWSTR, 'pwstrDeviceId'),
+            (['in'], PPROPERTYKEY, 'key'),
+            (['in'], PPROPVARIANT, 'pValue')
+        ),
+        COMMETHOD(
+            [],
+            HRESULT,
+            'SetDefaultEndpoint',
+            (['in'], LPCWSTR, 'pwstrDeviceId'),
+            (['in'], ERole, 'ERole')
+        ),
+        COMMETHOD(
+            [],
+            HRESULT,
+            'SetEndpointVisibility',
+            (['in'], LPCWSTR, 'pwstrDeviceId'),
+            (['in'], BOOL, 'bVisible')
+        )
+    )
+
+#PIPolicyConfig = POINTER(IPolicyConfig)
+class AudioSes(object):
+    name = u'AudioSes'
+    _reg_typelib_ = (IID_AudioSes, 1, 0)
+
+class CPolicyConfigClient (comtypes.CoClass):
+    _reg_clsid_ = CLSID_PolicyConfigClient
+    _idlflags_ = []
+    _reg_typelib_ = (IID_AudioSes, 1, 0)
+    _com_interfaces_ = [IPolicyConfig]
+    
 class AudioEndpointChangeCallback(MMNotificationClient):
     def __init__(self,parent):
         super().__init__()
@@ -41,6 +202,7 @@ class VolumeWidget(BaseWidget):
         label_alt: str,
         tooltip: bool,
         volume_icons: list[str],
+        audio_menu: dict[str, str],
         animation: dict[str, str],
         container_padding: dict[str, int],
         callbacks: dict[str, str]
@@ -50,6 +212,7 @@ class VolumeWidget(BaseWidget):
         self._label_content = label
         self._label_alt_content = label_alt
         self._tooltip = tooltip
+        self._audio_menu = audio_menu
         self._animation = animation
         self._padding = container_padding
         self.volume = None
@@ -62,24 +225,210 @@ class VolumeWidget(BaseWidget):
         self._widget_container.setProperty("class", "widget-container")
         self.widget_layout.addWidget(self._widget_container)
         self._create_dynamically_label(self._label_content, self._label_alt_content)
+        
         self.register_callback("toggle_label", self._toggle_label)
         self.register_callback("update_label", self._update_label)
         self.register_callback("toggle_mute", self.toggle_mute)
-        self.callback_left = "toggle_mute"
+        self.register_callback("toggle_volume_menu", self._toggle_volume_menu)
+ 
+        self.callback_left = callbacks['on_left']
         self.callback_right = callbacks["on_right"]
         self.callback_middle = callbacks["on_middle"]
-        self._padding = container_padding
-        
+
         self.cb = AudioEndpointChangeCallback(self)
         self.enumerator = AudioUtilities.GetDeviceEnumerator()
         self.enumerator.RegisterEndpointNotificationCallback(self.cb)
         
         self._initialize_volume_interface()
         self.update_label_signal.connect(self._update_label)
+        self.update_label_signal.connect(self._update_slider_value)
         
         self._update_label()
 
+    def _toggle_volume_menu(self):
+        if self._animation['enabled']:
+            AnimationManager.animate(self, self._animation['type'], self._animation['duration'])
+        self.show_volume_menu()
+
+
+    def _on_slider_value_changed(self, value):
+        if self.volume is not None:
+            try:
+                self.volume.SetMasterVolumeLevelScalar(value / 100, None)
+                self._update_label()
+            except Exception as e:
+                logging.error(f"Failed to set volume: {e}")
+
+                
+    def _list_audio_devices(self):
+        CLSID_MMDeviceEnumerator = GUID("{BCDE0395-E52F-467C-8E3D-C4579291692E}")
+        devices = []
+        Flow = EDataFlow.eRender.value
+        comtypes.CoInitialize()
+        try:
+            deviceEnumerator = comtypes.CoCreateInstance(
+                CLSID_MMDeviceEnumerator,
+                IMMDeviceEnumerator,
+                comtypes.CLSCTX_INPROC_SERVER)
+                
+            if deviceEnumerator is None:
+                return devices
+
+            collection = deviceEnumerator.EnumAudioEndpoints(Flow, 1)
+            if collection is None:
+                return devices
+
+            count = collection.GetCount()
+            for i in range(count):
+                dev = collection.Item(i)
+                
+                if dev is not None:
+                    createDev = AudioUtilities.CreateDevice(dev)
+                    if not ": None" in str(createDev):
+                        devices.append((createDev.id, createDev.FriendlyName))
+            return devices
+        finally:
+            comtypes.CoUninitialize()    
+ 
+    def _update_slider_value(self):
+        """Helper method to update slider value based on current volume"""
+        if hasattr(self, 'volume_slider') and self.volume is not None:
+            try:
+                current_volume = round(self.volume.GetMasterVolumeLevelScalar() * 100)
+                self.volume_slider.setValue(current_volume)
+            except:
+                pass
+            
+    def _update_device_buttons(self, active_device_id):
+        # Update classes for all device buttons
+        for device_id, btn in self.device_buttons.items():
+            if device_id == active_device_id:
+                btn.setProperty("class", "device selected")
+            else:
+                btn.setProperty("class", "device")
+            btn.style().unpolish(btn)
+            btn.style().polish(btn)
+            
+
+    def _set_default_device(self, device_id: str):
+        """Set default audio device with error handling and multiple interface attempts"""
+        CoInitialize()
         
+        sender = self.sender()
+        device_id = sender.property('device_id')
+
+        try:
+            logging.debug(f"Attempting PolicyConfig interface with device: {device_id}")
+            pc = comtypes.CoCreateInstance(
+                CLSID_PolicyConfigClient,
+                interface=IPolicyConfig,
+                clsctx=CLSCTX_ALL
+            )
+            # eConsole = 0, eMultimedia = 1, eCommunications = 2
+            pc.SetDefaultEndpoint(device_id, 0)
+            # Re-initialize volume interface for new device
+            self._initialize_volume_interface()
+            # Update the slider value
+            self._update_slider_value()
+            # Update the device buttons
+            self._update_device_buttons(device_id)
+            return
+        except Exception as e:
+            logging.debug(f"PolicyConfig failed: {e}")           
+        finally:
+            CoUninitialize()
+            self._update_label()
+    
+
+                
+    def show_volume_menu(self):  
+        self.dialog = PopupWidget(self, self._audio_menu['blur'], self._audio_menu['round_corners'], self._audio_menu['round_corners_type'], self._audio_menu['border_color'])
+        self.dialog.setProperty("class", "audio-menu")
+        self.dialog.setWindowFlag(Qt.WindowType.FramelessWindowHint)
+        self.dialog.setWindowFlag(Qt.WindowType.Popup)
+        self.dialog.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint)
+        
+        # Create vertical layout for the dialog
+        layout = QVBoxLayout()
+        layout.setSpacing(0)
+        layout.setContentsMargins(10, 10, 10, 10)
+        
+
+        # Create a container widget and layout
+        self.container = QWidget()
+        self.container.setProperty("class", "audio-container")
+        self.container_layout = QVBoxLayout()
+        self.container_layout.setSpacing(0)
+        self.container_layout.setContentsMargins(0, 0, 0, 10)
+            
+
+    
+        self.devices = self._list_audio_devices()
+        if len(self.devices) > 1:
+            current_device = AudioUtilities.GetSpeakers()
+            current_device_id = current_device.GetId()
+            self.device_buttons = {}
+            for device_id, device_name in self.devices:
+                btn = QPushButton(device_name)
+                if device_id == current_device_id:
+                    btn.setProperty("class", "device selected")
+                else:
+                    btn.setProperty("class", "device")
+                btn.setProperty("device_id", device_id)
+                btn.clicked.connect(self._set_default_device)
+                self.container_layout.addWidget(btn)
+                self.device_buttons[device_id] = btn
+
+            self.container.setLayout(self.container_layout)
+    
+        layout.addWidget(self.container)
+    
+        # Create volume slider
+        self.volume_slider = QSlider(Qt.Orientation.Horizontal)
+        self.volume_slider.setProperty("class", "volume-slider")
+        self.volume_slider.setMinimum(0)
+        self.volume_slider.setMaximum(100)
+ 
+        # Set current volume
+        try:
+            current_volume = round(self.volume.GetMasterVolumeLevelScalar() * 100)
+            self.volume_slider.setValue(current_volume)
+        except:
+            self.volume_slider.setValue(0)
+            
+        # Connect slider value change to volume control
+        self.volume_slider.valueChanged.connect(self._on_slider_value_changed)
+        
+        # Add slider to layout
+        layout.addWidget(self.volume_slider)
+        self.dialog.setLayout(layout)
+        
+
+        # Position the dialog 
+        self.dialog.adjustSize()
+        widget_global_pos = self.mapToGlobal(QPoint(0, self.height() + self._audio_menu['distance']))
+        if self._audio_menu['direction'] == 'up':
+            global_y = self.mapToGlobal(QPoint(0, 0)).y() - self.dialog.height() - self._audio_menu['distance']
+            widget_global_pos = QPoint(self.mapToGlobal(QPoint(0, 0)).x(), global_y)
+
+        if self._audio_menu['alignment'] == 'left':
+            global_position = widget_global_pos
+        elif self._audio_menu['alignment'] == 'right':
+            global_position = QPoint(
+                widget_global_pos.x() + self.width() - self.dialog.width(),
+                widget_global_pos.y()
+            )
+        elif self._audio_menu['alignment'] == 'center':
+            global_position = QPoint(
+                widget_global_pos.x() + (self.width() - self.dialog.width()) // 2,
+                widget_global_pos.y()
+            )
+        else:
+            global_position = widget_global_pos
+        
+        self.dialog.move(global_position)
+        self.dialog.show()  
+               
     def _toggle_label(self):
         if self._animation['enabled']:
             AnimationManager.animate(self, self._animation['type'], self._animation['duration'])

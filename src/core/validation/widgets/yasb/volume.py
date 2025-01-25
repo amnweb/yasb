@@ -9,6 +9,15 @@ DEFAULTS = {
         "\uf027",  # Icon for 31-60% volume
         "\uf028"   # Icon for 61-100% volume
     ],
+    'audio_menu': {
+        'blur': True,
+        'round_corners': True,
+        'round_corners_type': 'normal',
+        'border_color': 'System',
+        'alignment': 'right',
+        'direction': 'down',
+        'distance': 6
+    },
     'animation': {
         'enabled': True,
         'type': 'fadeInOut',
@@ -16,9 +25,10 @@ DEFAULTS = {
     },
     'container_padding': {'top': 0, 'left': 0, 'bottom': 0, 'right': 0},
     'callbacks': {
+        'on_left': 'toggle_volume_menu',
         'on_middle': 'do_nothing',
-        'on_right': 'do_nothing'
-    },
+        'on_right': 'toggle_mute'
+    }
 }
 
 VALIDATION_SCHEMA = {
@@ -42,6 +52,41 @@ VALIDATION_SCHEMA = {
             'type': 'string',
             'required': False
         }
+    },
+    'audio_menu': {
+        'type': 'dict',
+        'required': False,
+        'schema': {
+            'blur': {
+                'type': 'boolean',
+                'default': DEFAULTS['audio_menu']['blur']
+            },
+            'round_corners': {
+                'type': 'boolean',
+                'default': DEFAULTS['audio_menu']['round_corners']
+            },
+            'round_corners_type': {
+                'type': 'string',
+                'default': DEFAULTS['audio_menu']['round_corners_type']
+            },
+            'border_color': {
+                'type': 'string',
+                'default': DEFAULTS['audio_menu']['border_color']
+            },
+            'alignment': {
+                'type': 'string',
+                'default': DEFAULTS['audio_menu']['alignment']
+            },
+            'direction': {
+                'type': 'string',
+                'default': DEFAULTS['audio_menu']['direction']
+            },
+            'distance': {
+                'type': 'integer',
+                'default': DEFAULTS['audio_menu']['distance']
+            }
+        },
+        'default': DEFAULTS['audio_menu']
     },
     'animation': {
         'type': 'dict',
@@ -88,6 +133,10 @@ VALIDATION_SCHEMA = {
     'callbacks': {
         'type': 'dict',
         'schema': {
+            'on_left': {
+                'type': 'string',
+                'default': DEFAULTS['callbacks']['on_left'],
+            },
             'on_middle': {
                 'type': 'string',
                 'default': DEFAULTS['callbacks']['on_middle'],
