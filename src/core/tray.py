@@ -14,6 +14,7 @@ from core.bar_manager import BarManager
 from settings import GITHUB_URL, SCRIPT_PATH, APP_NAME, APP_NAME_FULL, DEFAULT_CONFIG_DIRECTORY, GITHUB_THEME_URL, BUILD_VERSION
 from core.config import get_config
 from core.console import WindowShellDialog
+from core.utils.cli_client import TCPHandler
 import threading
 
 OS_STARTUP_FOLDER = os.path.join(os.environ['APPDATA'], r'Microsoft\Windows\Start Menu\Programs\Startup')
@@ -36,7 +37,11 @@ class TrayIcon(QSystemTrayIcon):
         self.setToolTip(APP_NAME)
         self._load_config()
         self._bar_manager.remove_tray_icon_signal.connect(self.remove_tray_icon)
-        
+        # Start the TCP server if the executable exists, if running from source, the server will not start
+        if os.path.exists(EXE_PATH):
+            self.tcp_handler = TCPHandler(self.stop_or_reload_application)
+            self.start_tcp_server()
+
     def _load_config(self):
         try:
             config = get_config(show_error_dialog=True)
@@ -47,6 +52,22 @@ class TrayIcon(QSystemTrayIcon):
             self.komorebi_start = config['komorebi']["start_command"]
             self.komorebi_stop = config['komorebi']["stop_command"]
             self.komorebi_reload = config['komorebi']["reload_command"]
+
+    def start_tcp_server(self):
+        """
+        Start the TCP server in a separate daemon thread.
+        """
+        server_thread = threading.Thread(target=self.tcp_handler.start_socket_server, daemon=True)
+        server_thread.start()
+
+    def stop_or_reload_application(self, reload=False):
+        """
+        Stop or reload the application from the TCP server.
+        """
+        if reload:
+            self._reload_application()
+        else:
+            self._exit_application()
             
     def _load_favicon(self):
         # Get the current directory of the script
@@ -140,9 +161,14 @@ class TrayIcon(QSystemTrayIcon):
 
     @pyqtSlot()
     def remove_tray_icon(self):
-        self.hide()
-        self.deleteLater()
-        logging.info("Tray icon removed successfully.")
+        """
+        Remove the tray icon from the system tray.
+        """
+        try:
+            self.hide()
+            self.deleteLater()
+        except Exception as e:
+            logging.error(f"Error removing tray icon: {e}")
 
     def is_autostart_enabled(self):
         return os.path.exists(os.path.join(OS_STARTUP_FOLDER, SHORTCUT_FILENAME))
@@ -214,12 +240,13 @@ class TrayIcon(QSystemTrayIcon):
         os.execl(sys.executable, sys.executable, *sys.argv)
 
     def _exit_application(self):
-        logging.info("Exiting Application from tray...")
+        self.remove_tray_icon()
+        logging.info("Exiting Application...")
         try:
             QCoreApplication.exit(0)
         except:
             os._exit(0)
-        self.remove_tray_icon()
+        
             
     def _open_docs_in_browser(self):
         webbrowser.open(self._docs_url)

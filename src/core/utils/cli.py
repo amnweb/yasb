@@ -1,4 +1,5 @@
 import argparse
+import socket
 import subprocess
 import sys
 import logging
@@ -16,10 +17,11 @@ import requests
 import tempfile
 from settings import BUILD_VERSION
 from colorama import just_fix_windows_console
+
 just_fix_windows_console()
 
 YASB_VERSION = BUILD_VERSION
-YASB_CLI_VERSION = "1.0.6"
+YASB_CLI_VERSION = "1.0.7"
 
 OS_STARTUP_FOLDER = os.path.join(os.environ['APPDATA'], r'Microsoft\Windows\Start Menu\Programs\Startup')
 INSTALLATION_PATH = os.path.abspath(os.path.join(__file__, "../../.."))
@@ -76,7 +78,23 @@ class CustomArgumentParser(argparse.ArgumentParser):
         sys.exit(2)
 
 class CLIHandler:
-        
+
+    def stop_or_reload_application(reload=False):
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+                sock.connect(('localhost', 65432))
+                if reload:
+                    sock.sendall(b'reload')
+                else:
+                    sock.sendall(b'stop')
+                response = sock.recv(1024).decode('utf-8')
+                if response != 'ACK':
+                    print(f"Received unexpected response: {response}")
+        except ConnectionRefusedError:
+            print("Failed to connect to yasb.exe. It may not be running.")
+        except Exception as e:
+            print(f"Error: {e}")
+
     def _enable_startup():
         shortcut_path = os.path.join(OS_STARTUP_FOLDER, SHORTCUT_FILENAME)
         try:
@@ -130,14 +148,13 @@ class CLIHandler:
             
         elif args.command == 'stop':
             print("Stop YASB...")
-            subprocess.run(["taskkill", "/f", "/im", "yasb.exe"], creationflags=subprocess.CREATE_NO_WINDOW)
+            CLIHandler.stop_or_reload_application()
             sys.exit(0)
             
         elif args.command == 'reload':
             if is_process_running("yasb.exe"):
                 print("Reload YASB...")
-                subprocess.run(["taskkill", "/f", "/im", "yasb.exe"], creationflags=subprocess.CREATE_NO_WINDOW)
-                subprocess.Popen(["yasb.exe"])
+                CLIHandler.stop_or_reload_application(reload=True)
             else:
                 print("YASB is not running. Reload aborted.")
             sys.exit(0)
