@@ -209,6 +209,7 @@ class TrayIcon(QSystemTrayIcon):
         threading.Thread(target=run_komorebi_reload).start()
 
     def _reload_application(self):
+        self.remove_tray_icon()
         logging.info("Reloading Application...")
         os.execl(sys.executable, sys.executable, *sys.argv)
 
@@ -218,6 +219,7 @@ class TrayIcon(QSystemTrayIcon):
             QCoreApplication.exit(0)
         except:
             os._exit(0)
+        self.remove_tray_icon()
             
     def _open_docs_in_browser(self):
         webbrowser.open(self._docs_url)
