@@ -32,7 +32,6 @@ volume:
        alignment': 'right'
        direction': 'down'
        distance': 6
-    },
     callbacks:
       on_left: "toggle_volume_menu"
       on_right: "toggle_mute"
