@@ -148,9 +148,11 @@ class CustomWidget(BaseWidget):
                         active_widgets[widget_index].setText(self._truncate_label(part.format(data=self._exec_data)))
                     if self._hide_empty:
                         if self._exec_data:
-                            active_widgets[widget_index].show()
+                            self.setVisible(True)
+                            #active_widgets[widget_index].show()
                         else:
-                            active_widgets[widget_index].hide()
+                            self.setVisible(False)
+                            #active_widgets[widget_index].hide()
                     widget_index += 1
         except Exception:
             active_widgets[widget_index].setText(self._truncate_label(part))
