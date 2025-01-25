@@ -105,6 +105,8 @@ widgets:
       label: "{%a, %d %b %H:%M}"
       label_alt: "{%A, %d %B %Y %H:%M}"
       timezones: []
+      callbacks:
+        on_left: "toggle_label"
   komorebi_workspaces:
     type: "komorebi.workspaces.WorkspaceWidget"
     options:
@@ -195,6 +197,7 @@ widgets:
         - "\uf027"
         - "\uf028"
       callbacks:
+        on_left: "toggle_mute"
         on_right: "exec cmd.exe /c start ms-settings:sound"
   microphone:
     type: "yasb.microphone.MicrophoneWidget"
