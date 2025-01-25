@@ -123,10 +123,11 @@ class GlazewmWorkspacesWidget(BaseWidget):
 
         self.offline_text = QLabel(self.label_offline)
         self.offline_text.setProperty("class", "offline-status")
-        self.offline_text.setVisible(True)
 
         self.widget_layout.addWidget(self.offline_text)
         self.widget_layout.addWidget(self.workspace_container)
+
+        self.offline_text.setVisible(True)
 
         self.monitor_hwnd = get_monitor_hwnd(int(QWidget.winId(self)))
 
@@ -143,8 +144,7 @@ class GlazewmWorkspacesWidget(BaseWidget):
 
     def _update_connection_status(self, status: bool):
         self.workspace_container.setVisible(status)
-        self.offline_text.setVisible(not status)
-        self.setVisible(status if self.hide_if_offline else True)
+        self.offline_text.setVisible(not status if not self.hide_if_offline else False)
 
     def _update_workspaces(self, message: list[Monitor]):
         # Find the target monitor
