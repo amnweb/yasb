@@ -1,4 +1,5 @@
 import logging
+import re
 from enum import StrEnum, auto
 
 from PyQt6.QtCore import Qt
@@ -169,10 +170,11 @@ class GlazewmWorkspacesWidget(BaseWidget):
             btn.workspace_window_count = workspace.num_windows
             btn.is_displayed = workspace.is_displayed
 
+        def natural_sort_key(s, _nsre=re.compile(r"(\d+)")):
+            return [int(text) if text.isdigit() else text.lower() for text in _nsre.split(s)]
+
         # Insert the new widget if it's not present
-        # NOTE: "name" assumed to be an integer but GlazeWM allows any string as name (?).
-        # User should use "display_name" in GlazeWM config if they wish to have a custom workspace name anyway.
-        for i, ws_name in enumerate(sorted(self.workspaces.keys())):
+        for i, ws_name in enumerate(sorted(self.workspaces.keys(), key=natural_sort_key)):
             if self.workspace_container_layout.indexOf(self.workspaces[ws_name]) != i:
                 self.workspace_container_layout.insertWidget(i, self.workspaces[ws_name])
 
