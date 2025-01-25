@@ -9,7 +9,7 @@ import subprocess
 import winshell
 from PyQt6.QtWidgets import QSystemTrayIcon, QMenu, QMessageBox
 from PyQt6.QtGui import QIcon, QGuiApplication
-from PyQt6.QtCore import QCoreApplication, QSize, Qt
+from PyQt6.QtCore import QCoreApplication, QSize, Qt, pyqtSlot
 from core.bar_manager import BarManager
 from settings import GITHUB_URL, SCRIPT_PATH, APP_NAME, APP_NAME_FULL, DEFAULT_CONFIG_DIRECTORY, GITHUB_THEME_URL, BUILD_VERSION
 from core.config import get_config
@@ -35,6 +35,7 @@ class TrayIcon(QSystemTrayIcon):
         self._load_context_menu()
         self.setToolTip(APP_NAME)
         self._load_config()
+        self._bar_manager.remove_tray_icon_signal.connect(self.remove_tray_icon)
         
     def _load_config(self):
         try:
@@ -136,6 +137,12 @@ class TrayIcon(QSystemTrayIcon):
         exit_action.triggered.connect(self._exit_application)
         
         self.setContextMenu(menu)
+
+    @pyqtSlot()
+    def remove_tray_icon(self):
+        self.hide()
+        self.deleteLater()
+        logging.info("Tray icon removed successfully.")
 
     def is_autostart_enabled(self):
         return os.path.exists(os.path.join(OS_STARTUP_FOLDER, SHORTCUT_FILENAME))

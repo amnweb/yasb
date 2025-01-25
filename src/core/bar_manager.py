@@ -17,7 +17,8 @@ from settings import DEBUG
 class BarManager(QObject):
     styles_modified = pyqtSignal()
     config_modified = pyqtSignal()
- 
+    remove_tray_icon_signal = pyqtSignal()
+    
     def __init__(self, config: dict, stylesheet: str):
         super().__init__()
         self.config = config
@@ -54,6 +55,7 @@ class BarManager(QObject):
             return
         if config and (config != self.config):
             if any(config[key] != self.config[key] for key in ['bars', 'widgets', 'komorebi', 'debug','hide_taskbar']):
+                self.remove_tray_icon_signal.emit()
                 os.execl(sys.executable, sys.executable, *sys.argv)
             else:
                 self.config = config
@@ -62,6 +64,7 @@ class BarManager(QObject):
     @pyqtSlot(QScreen)
     def on_screens_update(self, _screen: QScreen) -> None:
         logging.info("Screens updated. Re-initialising all bars.")
+        self.remove_tray_icon_signal.emit()
         os.execl(sys.executable, sys.executable, *sys.argv)
 
     def run_listeners_in_threads(self):
