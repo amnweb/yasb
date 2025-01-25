@@ -26,12 +26,12 @@ volume:
       - "\uf028"  # Icon for 61-100% volume
      audio_menu:
        blur: True
-       round_corners': True
-       round_corners_type': 'normal'
-       border_color': 'System'
-       alignment': 'right'
-       direction': 'down'
-       distance': 6
+       round_corners: True
+       round_corners_type: 'normal'
+       border_color: 'System'
+       alignment: 'right'
+       direction: 'down'
+       distance: 6
     callbacks:
       on_left: "toggle_volume_menu"
       on_right: "toggle_mute"
