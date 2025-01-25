@@ -72,6 +72,11 @@ class BrightnessWidget(BaseWidget):
         self.callback_right = callbacks["on_right"]
         self.callback_middle = callbacks["on_middle"]
         
+        self.current_brightness = None
+        self.monitor_timer = QTimer()
+        self.monitor_timer.timeout.connect(self.check_brightness)
+        self.monitor_timer.start(3000)
+        
         QTimer.singleShot(10, self._update_label)
         
         if self._auto_light:
@@ -285,7 +290,12 @@ class BrightnessWidget(BaseWidget):
             else:
                 self.set_brightness(self._auto_light_day_level, monitor_info['device_id'])
         
-        
+    def check_brightness(self):
+        brightness = self.get_brightness()
+        if brightness is not None and brightness != self.current_brightness:
+            self._update_label()
+            self.current_brightness = brightness
+            
     def wheelEvent(self, event: QWheelEvent):
         if event.angleDelta().y() > 0:
             self.update_brightness(increase=True, decrease=False)
