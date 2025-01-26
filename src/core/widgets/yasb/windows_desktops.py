@@ -1,6 +1,6 @@
 import logging
 from PyQt6.QtWidgets import QPushButton, QWidget, QHBoxLayout
-from PyQt6.QtCore import pyqtSignal, Qt
+from PyQt6.QtCore import pyqtSignal, Qt, QTimer
 from PyQt6.QtGui import QCursor
 from core.widgets.base import BaseWidget
 from core.validation.widgets.yasb.windows_desktops import VALIDATION_SCHEMA
@@ -19,8 +19,20 @@ class WorkspaceButton(QPushButton):
         self.clicked.connect(self.activate_workspace)
         self.parent_widget = parent
         self.workspace_animation = self.parent_widget._switch_workspace_animation
+        self.animation = self.parent_widget._animation
         self.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-       
+        
+    def update_visible_buttons(self):
+        visible_buttons = [btn for btn in self.parent_widget._workspace_buttons if btn.isVisible()]
+        for index, button in enumerate(visible_buttons):
+            current_class = button.property("class")
+            new_class = ' '.join([cls for cls in current_class.split() if not cls.startswith('button-')])
+            new_class = f"{new_class} button-{index + 1}"
+            button.setProperty("class", new_class)
+            button.setStyleSheet('')
+        if self.animation:
+            self.animate_buttons()
+            
     def activate_workspace(self):
         try:
             #VirtualDesktop(self.workspace_index).go(self.workspace_animation)
@@ -34,7 +46,38 @@ class WorkspaceButton(QPushButton):
         except Exception:
             logging.exception(f"Failed to focus desktop at index {self.workspace_index}")
 
+    def animate_buttons(self, duration=200, step=120):
+        #Store the initial width if not already stored
+        #we need this to animate the width back to the initial width
+        if not hasattr(self, '_initial_width'):
+            self._initial_width = self.width()
 
+        self._current_width = self.width()
+        target_width = self.sizeHint().width()
+
+        step_duration = int(duration / step)
+        width_increment = (target_width - self._current_width) / step
+
+        self._current_step = 0
+
+        def update_width():
+            if self._current_step < step:
+                self._current_width += width_increment
+                self.setFixedWidth(int(self._current_width))
+                self._current_step += 1
+            else:
+                self._animation_timer.stop()
+                self.setFixedWidth(target_width)
+
+        # Stop any existing timer before starting a new one to prevent conflicts
+        if hasattr(self, '_animation_timer') and self._animation_timer.isActive():
+            self._animation_timer.stop()
+
+        self._animation_timer = QTimer()
+        self._animation_timer.timeout.connect(update_width)
+        self._animation_timer.start(step_duration)
+        
+        
 class WorkspaceWidget(BaseWidget):
     d_signal_virtual_desktop_changed = pyqtSignal(dict)
     d_signal_virtual_desktop_update  = pyqtSignal(dict)
@@ -44,6 +87,7 @@ class WorkspaceWidget(BaseWidget):
             label_workspace_btn: str,
             label_workspace_active_btn: str,
             switch_workspace_animation: bool,
+            animation: bool,
             container_padding: dict,
     ):
         super().__init__(class_name="windows-desktops")
@@ -59,6 +103,7 @@ class WorkspaceWidget(BaseWidget):
         self._label_workspace_active_btn = label_workspace_active_btn
         self._padding = container_padding
         self._switch_workspace_animation = switch_workspace_animation
+        self._animation = animation
         self._virtual_desktops = range(1, len(get_virtual_desktops()) + 1)
         self._prev_workspace_index = None
         self._curr_workspace_index = VirtualDesktop.current().number
@@ -109,14 +154,15 @@ class WorkspaceWidget(BaseWidget):
 
     def _update_button(self, workspace_btn: WorkspaceButton) -> None:  
         if workspace_btn.workspace_index == self._curr_workspace_index:
-            workspace_btn.setProperty("class", "ws-btn-active")
+            workspace_btn.setProperty("class", "ws-btn active")
             workspace_btn.setStyleSheet('')
             workspace_btn.setText(workspace_btn.active_label)
         else:
             workspace_btn.setProperty("class", "ws-btn")
             workspace_btn.setStyleSheet('')
             workspace_btn.setText(workspace_btn.default_label)
- 
+        QTimer.singleShot(0, workspace_btn.update_visible_buttons)
+    
     def _add_or_remove_buttons(self) -> None:
         changes_made = False
         current_indices = set(self._virtual_desktops)
@@ -147,9 +193,10 @@ class WorkspaceWidget(BaseWidget):
         if changes_made:
             self._workspace_buttons.sort(key=lambda btn: btn.workspace_index)
             self._clear_container_layout()
-            
             for workspace_btn in self._workspace_buttons:
                 self._workspace_container_layout.addWidget(workspace_btn)
+
+ 
 
     def _get_workspace_label(self, workspace_index):
         label = self._label_workspace_btn.format(

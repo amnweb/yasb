@@ -2,6 +2,7 @@ DEFAULTS = {
     'label_workspace_btn': '{index}',
     'label_workspace_active_btn': '{index}',
     'switch_workspace_animation': True,
+    'animation': False,
     'container_padding': {'top': 0, 'left': 0, 'bottom': 0, 'right': 0},
 }
 VALIDATION_SCHEMA = {
@@ -17,6 +18,11 @@ VALIDATION_SCHEMA = {
         'type': 'boolean',
         'required': False,
         'default': DEFAULTS['switch_workspace_animation']
+    },
+    'animation': {
+        'type': 'boolean',
+        'required': False,
+        'default': DEFAULTS['animation']
     },
     'container_padding': {
         'type': 'dict',
