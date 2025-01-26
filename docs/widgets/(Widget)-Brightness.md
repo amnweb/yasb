@@ -7,12 +7,14 @@
 | `tooltip`  | boolean  | `True`        | Whether to show the tooltip on hover. |
 | `brightness_icons` | list  | `['\udb80\udcde', '\udb80\udcdd', '\udb80\udcdf', '\udb80\udce0']`                    | A list of icons representing different brightness levels. The icons are used based on the current brightness percentage. |
 | `hide_unsupported` | boolean | `True` | Whether to hide the widget if the current system does not support brightness control. |
+| `brightness_toggle_level` | `[int, int]` | `[0, ,50, 100]` | The brightness level to set when the widget is clicked. |
 | `auto_light` | boolean | `False` | Whether to automatically adjust the brightness icon based on the current brightness level. |
 | `auto_light_icon` | string | `"\udb80\udce1"` | The icon to use when the auto_light option is enabled. |
 | `auto_light_night_level` | int | `50` | The brightness level at which the widget switches to the night. |
 | `auto_light_day_level` | int | `100` | The brightness level at which the widget switches to the day. |
 | `auto_light_night_start_time` | string | `"20:00"` | The time at which the night starts. |
 | `auto_light_night_end_time` | string | `"06:30"` | The time at which the night ends. |
+| `brightness_menu` | dict | `{'blur': True, 'round_corners': True, 'round_corners_type': 'normal', 'border_color': 'System', 'alignment': 'right', 'direction': 'down', 'distance': 6}` | Menu settings for the widget. |
 | `callbacks`     | dict    | `{'on_left': 'toggle_label', 'on_middle': 'do_nothing', 'on_right': 'do_nothing'}` | Callbacks for mouse events on the clock widget. |
 | `container_padding`  | dict | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}`      | Explicitly set padding inside widget container.      |
 | `animation`         | dict    | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
@@ -26,6 +28,8 @@
       label: "<span>{icon}</span>"
       label_alt: "Brightness {percent}%"
       tooltip: true
+      hide_unsupported: true
+      brightness_toggle_level: [0, 50, 100]
       auto_light: false
       auto_light_icon: "\udb80\udce1"
       auto_light_night_level: 35
@@ -38,6 +42,14 @@
         "\udb80\udcdf",  # Icon for 51-75% brightness
         "\udb80\udce0"   # Icon for 76-100% brightness
       ]
+      brightness_menu:
+        blur: true
+        round_corners: true
+        round_corners_type: "normal"
+        border_color: "System"
+        alignment: "right"
+        direction: "down"
+        distance: 6
       callbacks:
           on_left: "toggle_label"
       container_padding:
@@ -53,13 +65,22 @@
 - **tooltip:** Whether to show the tooltip on hover.
 - **brightness_icons:** A list of icons representing different brightness levels. The icons are used based on the current brightness percentage.
 - **hide_unsupported:** Whether to hide the widget if the current system does not support brightness control.
+- **brightness_toggle_level:** The brightness level to set when the widget is clicked.
+- **brightness_menu**: A dictionary specifying the menu settings for the widget. It contains the following keys:
+  - **blur**: Enable blur effect for the menu.
+  - **round_corners**: Enable round corners for the menu (this option is not supported on Windows 10).
+  - **round_corners_type**: Set the type of round corners for the menu (normal, small) (this option is not supported on Windows 10).
+  - **border_color**: Set the border color for the menu (this option is not supported on Windows 10).
+  - **alignment**: Set the alignment of the menu (left, right).
+  - **direction**: Set the direction of the menu (up, down).
+  - **distance**: Set the distance of the menu from the widget.
 - **auto_light:** Whether to automatically adjust the brightness icon based on the current brightness level.
 - **auto_light_icon:** The icon to use when the auto_light option is enabled.
 - **auto_light_night_level:** The brightness level at which the widget switches to the night.
 - **auto_light_day_level:** The brightness level at which the widget switches to the day.
 - **auto_light_night_start_time:** The time at which the night starts.
 - **auto_light_night_end_time:** The time at which the night ends.
-- **callbacks:** Callbacks for mouse events on the clock widget.
+- **callbacks:** Callbacks for mouse events on the clock widget. can be `toggle_brightness_menu`, `toggle_label`, `toggle_level_next`, `toggle_level_prev`, `do_nothing`.
 - **container_padding:** Explicitly set padding inside widget container.
 - **animation:** A dictionary specifying the animation settings for the widget. It contains three keys: `enabled`, `type`, and `duration`. The `type` can be `fadeInOut` and the `duration` is the animation duration in milliseconds.
 
@@ -69,4 +90,17 @@
 .brightness-widget .widget-container {}
 .brightness-widget .widget-container .label {}
 .brightness-widget .widget-container .icon {}
+```
+
+## Style for the brightness menu
+```css
+.brightness-menu {
+    background-color:rgba(17, 17, 27, 0.4); 
+}
+.brightness-slider {
+    border: none;
+}
+.brightness-slider::groove {}
+.brightness-slider::handle{} 
+
 ```

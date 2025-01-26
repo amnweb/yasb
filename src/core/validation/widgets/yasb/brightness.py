@@ -8,6 +8,16 @@ DEFAULTS = {
         "\udb80\udcdf",  # Icon for 51-75% brightness
         "\udb80\udce0"   # Icon for 76-100% brightness
     ],
+    'brightness_toggle_level': [],
+    'brightness_menu': {
+        'blur': True,
+        'round_corners': True,
+        'round_corners_type': 'normal',
+        'border_color': 'System',
+        'alignment': 'right',
+        'direction': 'down',
+        'distance': 6
+    },
     'hide_unsupported': True,
     'auto_light': False,
     'auto_light_icon': "\udb80\udce1",
@@ -49,6 +59,49 @@ VALIDATION_SCHEMA = {
             'type': 'string',
             'required': False
         }
+    },
+    'brightness_toggle_level': {
+        'type': 'list',
+        'default': DEFAULTS['brightness_toggle_level'],
+        "schema": {
+            'type': 'integer',
+            'required': False
+        }
+    },
+    'brightness_menu': {
+        'type': 'dict',
+        'required': False,
+        'schema': {
+            'blur': {
+                'type': 'boolean',
+                'default': DEFAULTS['brightness_menu']['blur']
+            },
+            'round_corners': {
+                'type': 'boolean',
+                'default': DEFAULTS['brightness_menu']['round_corners']
+            },
+            'round_corners_type': {
+                'type': 'string',
+                'default': DEFAULTS['brightness_menu']['round_corners_type']
+            },
+            'border_color': {
+                'type': 'string',
+                'default': DEFAULTS['brightness_menu']['border_color']
+            },
+            'alignment': {
+                'type': 'string',
+                'default': DEFAULTS['brightness_menu']['alignment']
+            },
+            'direction': {
+                'type': 'string',
+                'default': DEFAULTS['brightness_menu']['direction']
+            },
+            'distance': {
+                'type': 'integer',
+                'default': DEFAULTS['brightness_menu']['distance']
+            }
+        },
+        'default': DEFAULTS['brightness_menu']
     },
     'hide_unsupported': {
         'type': 'boolean',

@@ -4,13 +4,14 @@ import logging
 from settings import DEBUG
 from core.widgets.base import BaseWidget
 from core.validation.widgets.yasb.brightness import VALIDATION_SCHEMA
-from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget
-from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget, QSlider, QVBoxLayout
+from PyQt6.QtCore import Qt, QTimer, QPoint
 from PyQt6.QtGui import QWheelEvent, QCursor
 from core.utils.win32.utilities import get_monitor_info
 import screen_brightness_control as sbc
 from datetime import datetime
 from core.utils.widgets.animation_manager import AnimationManager
+from core.utils.utilities import PopupWidget
 
 if DEBUG:
     logging.getLogger("screen_brightness_control").setLevel(logging.INFO)
@@ -28,6 +29,8 @@ class BrightnessWidget(BaseWidget):
         label_alt: str,
         tooltip: bool,
         brightness_icons: list[str],
+        brightness_toggle_level: list[int],
+        brightness_menu: dict[str, str],
         hide_unsupported: bool,
         auto_light: bool,
         auto_light_icon: str,
@@ -47,6 +50,8 @@ class BrightnessWidget(BaseWidget):
         self._tooltip = tooltip
         self._padding = container_padding
         self._brightness_icons = brightness_icons
+        self._brightness_toggle_level = brightness_toggle_level
+        self._brightness_menu = brightness_menu
         self._hide_unsupported = hide_unsupported
         self._auto_light = auto_light
         self._auto_light_icon = auto_light_icon
@@ -66,8 +71,12 @@ class BrightnessWidget(BaseWidget):
         self._widget_container.setProperty("class", "widget-container")
         self.widget_layout.addWidget(self._widget_container)
         self._create_dynamically_label(self._label_content, self._label_alt_content)
+        
         self.register_callback("toggle_label", self._toggle_label)
-
+        self.register_callback("toggle_level_next", self._toggle_level_next)
+        self.register_callback("toggle_level_prev", self._toggle_level_prev)
+        self.register_callback("toggle_brightness_menu", self._toggle_brightness_menu)
+        
         self.callback_left = callbacks["on_left"]
         self.callback_right = callbacks["on_right"]
         self.callback_middle = callbacks["on_middle"]
@@ -95,7 +104,40 @@ class BrightnessWidget(BaseWidget):
             widget.setVisible(self._show_alt_label)
         self._update_label()
 
+    def _toggle_level_next(self):
+        monitor_info = self.get_monitor_handle()
+        if not monitor_info:
+            return
+        current = self.get_brightness()
+        if not self._brightness_toggle_level:
+            return
+        levels = self._brightness_toggle_level
+        next_levels = [level for level in levels if level > current]
+        if next_levels:
+            self.set_brightness(next_levels[0], monitor_info['device_id'])
+        else:
+            self.set_brightness(levels[0], monitor_info['device_id'])
 
+    def _toggle_level_prev(self):
+        monitor_info = self.get_monitor_handle()
+        if not monitor_info:
+            return
+        current = self.get_brightness()
+        if not self._brightness_toggle_level:
+            return
+        levels = self._brightness_toggle_level
+        prev_levels = [level for level in levels if level < current]
+        if prev_levels:
+            self.set_brightness(prev_levels[-1], monitor_info['device_id'])
+        else:
+            self.set_brightness(levels[-1], monitor_info['device_id'])
+
+
+    def _toggle_brightness_menu(self):
+        if self._animation['enabled']:
+            AnimationManager.animate(self, self._animation['type'], self._animation['duration'])
+        self.show_brightness_menu()
+        
     def _create_dynamically_label(self, content: str, content_alt: str):
         def process_content(content, is_alt=False):
             label_parts = re.split('(<span.*?>.*?</span>)', content)
@@ -167,7 +209,79 @@ class BrightnessWidget(BaseWidget):
                         active_widgets[widget_index].setText(formatted_text)
                 widget_index += 1
 
+    def show_brightness_menu(self):  
+        self.dialog = PopupWidget(self, self._brightness_menu['blur'], self._brightness_menu['round_corners'], self._brightness_menu['round_corners_type'], self._brightness_menu['border_color'])
+        self.dialog.setProperty("class", "brightness-menu")
+        self.dialog.setWindowFlag(Qt.WindowType.FramelessWindowHint)
+        self.dialog.setWindowFlag(Qt.WindowType.Popup)
+        self.dialog.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint)
+        
+        # Create vertical layout for the dialog
+        layout = QVBoxLayout()
+        layout.setSpacing(0)
+        layout.setContentsMargins(10, 10, 10, 10)
 
+        # Create brightness slider
+        self.brightness_slider = QSlider(Qt.Orientation.Horizontal)
+        self.brightness_slider.setProperty("class", "brightness-slider")
+        self.brightness_slider.setMinimum(0)
+        self.brightness_slider.setMaximum(100)
+ 
+        # Set current brightness
+        try:
+            current = self.get_brightness()
+            self.brightness_slider.setValue(current)
+        except:
+            pass
+            
+        # Connect slider value change to brightness control
+        self.brightness_slider.valueChanged.connect(self._on_slider_value_changed_if_not_dragging)
+        self.brightness_slider.sliderReleased.connect(lambda: self._on_slider_value_changed(self.brightness_slider.value()))
+        
+        # Add slider to layout
+        layout.addWidget(self.brightness_slider)
+        self.dialog.setLayout(layout)
+        
+
+        # Position the dialog 
+        self.dialog.adjustSize()
+        widget_global_pos = self.mapToGlobal(QPoint(0, self.height() + self._brightness_menu['distance']))
+        if self._brightness_menu['direction'] == 'up':
+            global_y = self.mapToGlobal(QPoint(0, 0)).y() - self.dialog.height() - self._brightness_menu['distance']
+            widget_global_pos = QPoint(self.mapToGlobal(QPoint(0, 0)).x(), global_y)
+
+        if self._brightness_menu['alignment'] == 'left':
+            global_position = widget_global_pos
+        elif self._brightness_menu['alignment'] == 'right':
+            global_position = QPoint(
+                widget_global_pos.x() + self.width() - self.dialog.width(),
+                widget_global_pos.y()
+            )
+        elif self._brightness_menu['alignment'] == 'center':
+            global_position = QPoint(
+                widget_global_pos.x() + (self.width() - self.dialog.width()) // 2,
+                widget_global_pos.y()
+            )
+        else:
+            global_position = widget_global_pos
+        
+        self.dialog.move(global_position)
+        self.dialog.show() 
+
+    def _on_slider_value_changed_if_not_dragging(self, value):
+        if not self.brightness_slider.isSliderDown():
+            self._on_slider_value_changed(value)
+
+    def _on_slider_value_changed(self, value):
+        monitor_info = self.get_monitor_handle()
+        if not monitor_info:
+            return
+        try:
+            self.set_brightness(value, monitor_info['device_id'])
+            self._update_label()
+        except Exception as e:
+            logging.error(f"Failed to set brightness: {e}")
+                
     def extract_display_number(self, device_path: str) -> int:
         try:
             # Extract everything after 'DISPLAY'
