@@ -5,7 +5,6 @@ DEFAULTS = {
     'update_interval': 60,
     'decimal_display': 1,
     'group_label': {
-        'enabled': False,
         'volume_labels': ['C'],
         'show_label_name': True,
         'blur': True,
@@ -59,10 +58,6 @@ VALIDATION_SCHEMA = {
         'type': 'dict',
         'required': False,
         'schema': {
-            'enabled': {
-                'type': 'boolean',
-                'default': DEFAULTS['group_label']['enabled']
-            },
             'volume_labels': {
                 'type': 'list',
                 'schema': {
