@@ -1,5 +1,6 @@
 import argparse
-import socket
+import pywintypes
+import win32file
 import subprocess
 import sys
 import logging
@@ -80,18 +81,29 @@ class CustomArgumentParser(argparse.ArgumentParser):
 class CLIHandler:
 
     def stop_or_reload_application(reload=False):
+        pipe_name = r'\\.\pipe\yasb_pipe'
         try:
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-                sock.connect(('localhost', 65432))
-                if reload:
-                    sock.sendall(b'reload')
-                else:
-                    sock.sendall(b'stop')
-                response = sock.recv(1024).decode('utf-8')
-                if response != 'ACK':
-                    print(f"Received unexpected response: {response}")
-        except ConnectionRefusedError:
-            print("Failed to connect to yasb.exe. It may not be running.")
+            pipe_handle = win32file.CreateFile(
+                pipe_name,
+                win32file.GENERIC_READ | win32file.GENERIC_WRITE,
+                0,
+                None,
+                win32file.OPEN_EXISTING,
+                0,
+                None
+            )
+            cmd = b'reload' if reload else b'stop'
+            win32file.WriteFile(pipe_handle, cmd)
+            _, response = win32file.ReadFile(pipe_handle, 64 * 1024)
+            if response.decode('utf-8').strip() != 'ACK':
+                print(f"Received unexpected response: {response.decode('utf-8').strip()}")
+            win32file.CloseHandle(pipe_handle)
+        except pywintypes.error as e:
+            # ERROR_FILE_NOT_FOUND can indicate the pipe doesn't exist
+            if e.args[0] == 2:
+                print("Failed to connect to YASB. Pipe not found. It may not be running.")
+            else:
+                print(f"Pipe error: {e}")
         except Exception as e:
             print(f"Error: {e}")
 

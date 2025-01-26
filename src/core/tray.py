@@ -14,7 +14,7 @@ from core.bar_manager import BarManager
 from settings import GITHUB_URL, SCRIPT_PATH, APP_NAME, APP_NAME_FULL, DEFAULT_CONFIG_DIRECTORY, GITHUB_THEME_URL, BUILD_VERSION
 from core.config import get_config
 from core.console import WindowShellDialog
-from core.utils.cli_client import TCPHandler
+from core.utils.cli_client import CliPipeHandler
 import threading
 
 OS_STARTUP_FOLDER = os.path.join(os.environ['APPDATA'], r'Microsoft\Windows\Start Menu\Programs\Startup')
@@ -37,10 +37,10 @@ class TrayIcon(QSystemTrayIcon):
         self.setToolTip(APP_NAME)
         self._load_config()
         self._bar_manager.remove_tray_icon_signal.connect(self.remove_tray_icon)
-        # Start the TCP server if the executable exists, if running from source, the server will not start
+        # Start the CLI pipe server if the executable exists, if running from source, the server will not start
         if os.path.exists(EXE_PATH):
-            self.tcp_handler = TCPHandler(self.stop_or_reload_application)
-            self.start_tcp_server()
+            self.cli_pipi_handler = CliPipeHandler(self.stop_or_reload_application)
+            self.start_cli_server()
 
     def _load_config(self):
         try:
@@ -53,16 +53,16 @@ class TrayIcon(QSystemTrayIcon):
             self.komorebi_stop = config['komorebi']["stop_command"]
             self.komorebi_reload = config['komorebi']["reload_command"]
 
-    def start_tcp_server(self):
+    def start_cli_server(self):
         """
-        Start the TCP server in a separate daemon thread.
+        Start the CLI pipe server in a separate thread.
         """
-        server_thread = threading.Thread(target=self.tcp_handler.start_socket_server, daemon=True)
+        server_thread = threading.Thread(target=self.cli_pipi_handler.start_cli_pipe_server, daemon=True)
         server_thread.start()
 
     def stop_or_reload_application(self, reload=False):
         """
-        Stop or reload the application from the TCP server.
+        Stop or reload the application from the CLI.
         """
         if reload:
             self._reload_application()
@@ -76,8 +76,9 @@ class TrayIcon(QSystemTrayIcon):
         self.setIcon(self._icon)
         
     def _load_context_menu(self):
-        menu = QMenu()
-        menu.setWindowModality(Qt.WindowModality.WindowModal)
+        self.menu = QMenu()
+        self.menu.setWindowModality(Qt.WindowModality.WindowModal)
+        
         style_sheet = """
         QMenu {
             background-color: #26292b;
@@ -109,27 +110,27 @@ class TrayIcon(QSystemTrayIcon):
             padding-right:24px;
         }
         """
-        menu.setStyleSheet(style_sheet)
+        self.menu.setStyleSheet(style_sheet)
         
-        github_action = menu.addAction("Visit GitHub")
+        github_action = self.menu.addAction("Visit GitHub")
         github_action.triggered.connect(self._open_docs_in_browser)
         
-        open_config_action = menu.addAction("Open Config")
+        open_config_action = self.menu.addAction("Open Config")
         open_config_action.triggered.connect(self._open_config)
         if os.path.exists(THEME_EXE_PATH):
-            yasb_themes_action = menu.addAction("Get Themes")
+            yasb_themes_action = self.menu.addAction("Get Themes")
             yasb_themes_action.triggered.connect(lambda: os.startfile(THEME_EXE_PATH))
         
-        reload_action = menu.addAction("Reload YASB")
+        reload_action = self.menu.addAction("Reload YASB")
         reload_action.triggered.connect(self._reload_application)
 
-        menu.addSeparator()
-        debug_menu = menu.addMenu("Debug")
+        self.menu.addSeparator()
+        debug_menu = self.menu.addMenu("Debug")
         info_action = debug_menu.addAction("Information")
         info_action.triggered.connect(self._show_info)
-        menu.addSeparator()
+        self.menu.addSeparator()
         if self.is_komorebi_installed():
-            komorebi_menu = menu.addMenu("Komorebi")
+            komorebi_menu = self.menu.addMenu("Komorebi")
             start_komorebi = komorebi_menu.addAction("Start Komorebi")
             start_komorebi.triggered.connect(self._start_komorebi)
             
@@ -139,25 +140,25 @@ class TrayIcon(QSystemTrayIcon):
             reload_komorebi = komorebi_menu.addAction("Reload Komorebi")
             reload_komorebi.triggered.connect(self._reload_komorebi)
             
-            menu.addSeparator()
+            self.menu.addSeparator()
 
         if self.is_autostart_enabled():
-            disable_startup_action = menu.addAction("Disable Autostart")
+            disable_startup_action = self.menu.addAction("Disable Autostart")
             disable_startup_action.triggered.connect(self._disable_startup)
         else:
-            enable_startup_action = menu.addAction("Enable Autostart")
+            enable_startup_action = self.menu.addAction("Enable Autostart")
             enable_startup_action.triggered.connect(self._enable_startup)
       
         logs_action = debug_menu.addAction("Logs")
         logs_action.triggered.connect(self._open_logs)
 
-        about_action = menu.addAction("About")
+        about_action = self.menu.addAction("About")
         about_action.triggered.connect(self._show_about_dialog)
         
-        exit_action = menu.addAction("Exit")
+        exit_action = self.menu.addAction("Exit")
         exit_action.triggered.connect(self._exit_application)
         
-        self.setContextMenu(menu)
+        self.setContextMenu(self.menu)
 
     @pyqtSlot()
     def remove_tray_icon(self):
