@@ -6,7 +6,7 @@
 | `volume_label`       | string  | `'C'`        | Partition which you want to show in the bar |
 | `decimal_display` | integer | `1`                                                                  | The number of decimal to show, defaul 1 (min 0 max 3) |
 | `update_interval` | integer | `60`                                                                  | The interval in seconds to update the disk widget. Must be between 0 and 3600. |
-| `group_label` | dict | `{'enabled': False, 'volume_labels': ["C"], 'show_label_name': True, 'blur': True, 'round_corners': True, 'round_corners_type': 'normal','border_color': 'System', 'alignment': 'right', 'direction': 'down', 'distance': 6}` | Group labels for multiple disks. This will show the labels of multiple disks in a popup window. |
+| `group_label` | dict | `{'volume_labels': ["C"], 'show_label_name': True, 'blur': True, 'round_corners': True, 'round_corners_type': 'normal','border_color': 'System', 'alignment': 'right', 'direction': 'down', 'distance': 6}` | Group labels for multiple disks. This will show the labels of multiple disks in a popup window. |
 | `callbacks`       | dict    | `{'on_left': 'do_nothing', 'on_middle': 'do_nothing', 'on_right': "exec explorer C:\\"}` | Callbacks for mouse events. |
 | `container_padding`  | dict | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}`      | Explicitly set padding inside widget container. |
 | `animation`         | dict    | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
@@ -22,7 +22,6 @@ disk:
       volume_label: "C"
       update_interval: 60
       group_label:
-        enabled: true
         volume_labels: ["C", "D", "E", "F"]
         show_label_name: true
         blur: True
@@ -46,7 +45,6 @@ disk:
 - **decimal_display:** The number of decimal to show, defaul 1 (min 0 max 3).
 - **update_interval:** The interval in seconds to update the disk widget. Must be between 0 and 3600.
 - **group_label:** Group labels for multiple disks. This will show the labels of multiple disks in a popup window.
-  - **enabled:** Enable group labels.
   - **volume_labels:** List of volume labels to show in the group label.
   - **show_label_name:** Show the label name in the group label.
   - **blur:** Enable blur effect for the group label.
