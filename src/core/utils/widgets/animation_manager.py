@@ -33,6 +33,7 @@ class AnimationManager:
                 widget._animation_timer.stop()
 
         widget._opacity_effect = QGraphicsOpacityEffect()
+        widget._opacity_effect.setEnabled(True)
         widget.setGraphicsEffect(widget._opacity_effect)
         widget._opacity_effect.setOpacity(0.5)
 
@@ -48,6 +49,7 @@ class AnimationManager:
                 new_opacity = 1.0
                 widget._opacity_effect.setOpacity(new_opacity)
                 widget._animation_timer.stop()
+                widget._opacity_effect.setEnabled(False)
                 widget._opacity_effect = None
                 return
             widget._opacity_effect.setOpacity(new_opacity)
