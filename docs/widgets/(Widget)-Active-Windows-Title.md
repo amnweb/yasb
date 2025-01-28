@@ -10,7 +10,7 @@
 | `max_length`        | integer | `None`                                                                  | The maximum length of the label text.                                       |
 | `max_length_ellipsis` | string | `"..."`                                                                | The ellipsis to use when the label text exceeds the maximum length.         |
 | `monitor_exclusive` | boolean | `True`                                                                  | Whether the widget should be exclusive to the monitor.                      |
-| `ignore_windows`    | dict    | `{'classes': [], 'processes': [], 'titles': []}`                        | Windows to ignore based on class names, process names, and titles.          |
+| `ignore_window`    | dict    | `{'classes': [], 'processes': [], 'titles': []}`                        | Windows to ignore based on class names, process names, and titles.          |
 | `callbacks`         | dict    | `{'on_left': 'toggle_label', 'on_middle': 'do_nothing', 'on_right': 'do_nothing'}` | Callbacks for mouse events on the widget.                        |
 | `container_padding`  | dict | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}`      | Explicitly set padding inside widget container. |
 | `animation`         | dict    | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
