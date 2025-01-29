@@ -58,6 +58,9 @@ for more themes visit [yasb-themes](https://github.com/amnweb/yasb-themes)
 ## Demo YASB + Komorebi
 ![Theme Catppuccin Mocha](demo/demo.png)
 ![Theme Catppuccin Mocha](demo/demo2.png)
+https://github.com/user-attachments/assets/aab8d8e8-248f-46a1-919c-9b0601236ac1
+
+
 
 > [!NOTE]  
 > This repository is updated on a regular basis; when you update files, always check [styles.css](src/styles.css) and [config.yaml](src/config.yaml) for new features and changes; otherwise, your config can be broken.
