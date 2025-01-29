@@ -90,7 +90,7 @@ class TrafficWidget(BaseWidget):
        
         self._create_dynamically_label(self._label_content,self._label_alt_content)
 
-        if hide_if_offline:
+        if self._hide_if_offline:
             self.internet_checker = InternetChecker(parent=self)
             self.internet_checker.connection_changed.connect(self._on_connection_changed)
         
