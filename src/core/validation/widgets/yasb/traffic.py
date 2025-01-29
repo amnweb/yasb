@@ -3,6 +3,8 @@ DEFAULTS = {
     "label_alt": "\ueb01 \ueab4 {upload_speed} | \ueab7 {download_speed}",
     "interface": "Auto",
     "update_interval": 1000,
+    "hide_if_offline": False,
+    "max_label_length": 0,
     "animation": {
         'enabled': True,
         'type': 'fadeInOut',
@@ -29,6 +31,17 @@ VALIDATION_SCHEMA = {
         "default": DEFAULTS["update_interval"],
         "min": 0,
         "max": 60000,
+    },
+    "hide_if_offline": {
+        "type": "boolean",
+        "required": False,
+        "default": DEFAULTS["hide_if_offline"],
+    },
+    'max_label_length': {
+        'type': 'integer',
+        'required': False,
+        'default': DEFAULTS['max_label_length'],
+        'min': 0
     },
     'animation': {
         'type': 'dict',

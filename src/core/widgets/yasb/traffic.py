@@ -1,4 +1,5 @@
 import re
+import socket
 import psutil
 import logging
 from settings import DEBUG
@@ -6,9 +7,45 @@ from humanize import naturalsize
 from core.widgets.base import BaseWidget
 from core.validation.widgets.yasb.traffic import VALIDATION_SCHEMA
 from PyQt6.QtWidgets import QLabel,QHBoxLayout,QWidget
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QObject
 from core.utils.widgets.animation_manager import AnimationManager
 
+class InternetChecker(QObject):
+    """
+    Primary Host: 8.8.8.8 (google-public-dns-a.google.com)
+    Primary Port: 53/tcp
+    Secondary Host: 1.1.1.1 (cloudflare-dns.com)
+    Secondary Port: 853/tcp
+    
+    If the primary host is not reachable, the secondary host will be checked, if the secondary host is not reachable, the function will return False which means that the internet is not connected.
+    """
+    
+    connection_changed = pyqtSignal(bool) 
+
+    def __init__(self, parent=None, check_interval=10000):
+        super().__init__(parent)
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self.check_connection)
+        self.check_connection()
+        self.timer.start(check_interval)
+            
+    def check_connection(self):
+        is_connected = self.internet()
+        self.connection_changed.emit(is_connected)
+    
+    def internet(self, primary_host="8.8.8.8", primary_port=53, 
+                secondary_host="1.1.1.1", secondary_port=853, timeout=3):
+        try:
+            socket.setdefaulttimeout(timeout)
+            socket.socket(socket.AF_INET, socket.SOCK_STREAM).connect((primary_host, primary_port))
+            return True
+        except socket.error:
+            try:
+                socket.socket(socket.AF_INET, socket.SOCK_STREAM).connect((secondary_host, secondary_port))
+                return True
+            except socket.error:
+                return False
+            
 class TrafficWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
     # initialize io counters
@@ -23,6 +60,8 @@ class TrafficWidget(BaseWidget):
         label_alt: str,
         interface: str,
         update_interval: int,
+        hide_if_offline: bool,
+        max_label_length: int,
         animation: dict[str, str],
         container_padding: dict[str, int],
         callbacks: dict[str, str],
@@ -36,6 +75,8 @@ class TrafficWidget(BaseWidget):
         self._animation = animation
         self._padding = container_padding
         self._interface = interface
+        self._hide_if_offline = hide_if_offline
+        self._max_label_length = max_label_length
         # Construct container
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
@@ -49,6 +90,10 @@ class TrafficWidget(BaseWidget):
        
         self._create_dynamically_label(self._label_content,self._label_alt_content)
 
+        if hide_if_offline:
+            self.internet_checker = InternetChecker(parent=self)
+            self.internet_checker.connection_changed.connect(self._on_connection_changed)
+        
         self.register_callback("toggle_label", self._toggle_label)
         self.register_callback("update_label", self._update_label)
 
@@ -58,11 +103,25 @@ class TrafficWidget(BaseWidget):
         self.callback_timer = "update_label"
         if DEBUG:
             if self._interface == "Auto":
-                logging.debug("Network Interface: Auto")
+                logging.debug("Network Interface Auto")
             else:
-                logging.debug(f"Network Interface: {self._interface}")
+                logging.debug(f"Network Interface {self._interface}")
         self.start_timer()
 
+        
+    def _on_connection_changed(self, is_connected: bool):
+        """
+        Handle internet connection status changes.
+        is_connected (bool): True if internet is connected, False otherwise
+        """
+        current_visibility = self._widget_container.isVisible()
+        if current_visibility == is_connected:
+            return
+            
+        self._widget_container.setVisible(is_connected)
+        if DEBUG and not is_connected:
+            logging.debug(f"Internet Connection Status Disconnected")
+        
     def _toggle_label(self):
         if self._animation['enabled']:
             AnimationManager.animate(self, self._animation['type'], self._animation['duration'])
@@ -111,12 +170,17 @@ class TrafficWidget(BaseWidget):
         label_parts = [part for part in label_parts if part]
         widget_index = 0
 
+
+
         try:
             upload_speed, download_speed = self._get_speed()
         except Exception:
             upload_speed, download_speed = "N/A", "N/A"
 
-        label_options = [("{upload_speed}", upload_speed), ("{download_speed}", download_speed)]
+        label_options = [
+            ("{upload_speed}", upload_speed),
+            ("{download_speed}", download_speed)
+        ]
 
         for part in label_parts:
             part = part.strip()
@@ -160,4 +224,9 @@ class TrafficWidget(BaseWidget):
 
         self.bytes_sent = current_io.bytes_sent
         self.bytes_recv = current_io.bytes_recv
+        
+        if self._max_label_length > 0:
+            upload_speed = str.rjust(upload_speed, self._max_label_length)
+            download_speed = str.rjust(download_speed, self._max_label_length)
+
         return upload_speed, download_speed
