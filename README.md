@@ -58,6 +58,7 @@ for more themes visit [yasb-themes](https://github.com/amnweb/yasb-themes)
 ## Demo YASB + Komorebi
 ![Theme Catppuccin Mocha](demo/demo.png)
 ![Theme Catppuccin Mocha](demo/demo2.png)
+
 https://github.com/user-attachments/assets/aab8d8e8-248f-46a1-919c-9b0601236ac1
 
 
