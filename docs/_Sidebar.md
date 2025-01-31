@@ -23,6 +23,7 @@
     - [Media](./(Widget)-Media)
     - [Memory](./(Widget)-Memory)
     - [Microphone](./(Widget)-Microphone)
+    - [Notifications](./(Widget)-Notifications)
     - [OBS](./(Widget)-Obs)
     - [Server Monitor](./(Widget)-Server-Monitor)
     - [Traffic](./(Widget)-Traffic)
