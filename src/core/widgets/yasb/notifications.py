@@ -7,7 +7,8 @@ from core.utils.widgets.windows_notification import WindowsNotificationEventList
 from core.widgets.base import BaseWidget
 from core.validation.widgets.yasb.notifications import VALIDATION_SCHEMA
 from core.utils.widgets.animation_manager import AnimationManager
-from core.utils.win32.system_function import notification_center
+from core.utils.win32.system_function import notification_center, quick_settings
+from core.utils.utilities import is_windows_10
 try:
     from core.utils.widgets.windows_notification import WindowsNotificationEventListener
 except ImportError:
@@ -77,7 +78,10 @@ class NotificationsWidget(BaseWidget):
     def _toggle_notification(self):
         if self._animation['enabled']:
             AnimationManager.animate(self, self._animation['type'], self._animation['duration'])
-        notification_center()
+        if is_windows_10():
+            quick_settings()
+        else:
+            notification_center()
 
 
     def _toggle_label(self):
