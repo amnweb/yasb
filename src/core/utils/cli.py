@@ -81,7 +81,7 @@ class CustomArgumentParser(argparse.ArgumentParser):
 class CLIHandler:
 
     def stop_or_reload_application(reload=False):
-        pipe_name = r'\\.\pipe\yasb_pipe'
+        pipe_name = r'\\.\pipe\yasb_pipe_cli'
         try:
             pipe_handle = win32file.CreateFile(
                 pipe_name,

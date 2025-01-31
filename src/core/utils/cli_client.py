@@ -6,7 +6,7 @@ from settings import DEBUG
 class CliPipeHandler:
     def __init__(self, stop_or_reload_callback):
         self.stop_or_reload_callback = stop_or_reload_callback
-        self.pipe_name = r'\\.\pipe\yasb_pipe'
+        self.pipe_name = r'\\.\pipe\yasb_pipe_cli'
         self.server_thread = None
         self.stop_event = threading.Event()
 
