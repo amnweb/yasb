@@ -1,0 +1,35 @@
+name: Feature request
+description: Suggest an idea for this project
+labels: ["feature-request"]
+body:
+    - type: textarea
+      id: request
+      attributes:
+          label: What is the request?
+          description: A clear and concise description of what the problem is. Ex. I'm always frustrated when...
+      validations:
+          required: true
+
+    - type: textarea
+      id: useful
+      attributes:
+          label: Why is it useful?
+          description: A clear and concise description of what you want to happen.
+      validations:
+          required: true
+
+    - type: textarea
+      id: implemented
+      attributes:
+          label: How could it be implemented?
+          description: A clear and concise description of any alternative solutions or features you've considered.
+      validations:
+          required: false
+
+    - type: textarea
+      id: additional
+      attributes:
+          label: Additional context
+          description: Add any other context or screenshots about the feature request here.
+      validations:
+          required: false

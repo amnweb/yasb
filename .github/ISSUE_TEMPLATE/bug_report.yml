@@ -1,0 +1,71 @@
+name: Bug Report
+description: Create a report to help us improve YASB
+body:
+    - type: markdown
+      attributes:
+          value: |
+              Thanks for taking the time to fill out this bug report!
+
+    - type: dropdown
+      id: os-version
+      attributes:
+          label: Windows version
+          description: Windows version where the bug occurs.
+          options:
+              - "Windows 10"
+              - "Windows 11"
+          default: 1
+      validations:
+          required: true
+
+    - type: input
+      id: os-build
+      attributes:
+          label: Windows OS build
+          description: The Windows OS build where the bug occurs. You can find it in `Settings > System > About`
+      validations:
+          required: true
+
+    - type: dropdown
+      id: yasb-running
+      attributes:
+          label: YASB installed or from source
+          description: Installed YASB or if you are running it from source.
+          options:
+              - Installed
+              - Source
+          default: 0
+      validations:
+          required: true
+
+    - type: input
+      id: python-version
+      attributes:
+          label: Python Version
+          description: If running from source, what version of Python are you using?
+          placeholder: e.g. Python 3.9.0
+      validations:
+          required: false
+
+    - type: input
+      id: yasb-version
+      attributes:
+          label: YASB version installed
+          description: YASB version where the bug occurs. In console, type `yasbs --version` to get the version. If running from source, type `git rev-parse --short HEAD` in the YASB directory.
+
+    - type: textarea
+      id: what-happened
+      attributes:
+          label: Describe the bug
+          description: A clear and concise description of what the bug is. Screenshots or videos are welcome.
+      validations:
+          required: true
+
+    - type: textarea
+      id: logs
+      attributes:
+          label: Relevant log output
+          description: The YASB log related to the error. You can find it in directory `~/.config/yasb/yasb.log`
+          render: shell
+      validations:
+          required: true

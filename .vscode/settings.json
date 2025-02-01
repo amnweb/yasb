@@ -7,5 +7,9 @@
     },
     "files.watcherExclude": {
         "**/__pycache__": true
+    },
+    "yaml.schemas": {
+        "file:///c%3A/Users/amn/.vscode/extensions/docsmsft.docs-yaml-1.0.5/dist/toc.schema.json": "/toc\\.yml/i",
+        "https://json.schemastore.org/github-issue-config.json": "file:///c%3A/Users/amn/Desktop/k/yasb/.github/ISSUE_TEMPLATE/config.yaml"
     }
 }
