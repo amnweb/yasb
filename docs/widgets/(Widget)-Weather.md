@@ -129,3 +129,6 @@ weather:
     font-size: 12px;
 }
 ```
+
+## Preview of the weather card
+![Weather YASB Widget](assets/955689587-g4ejd6c7-22ab-6cde-9822-34789abcdef.png)
