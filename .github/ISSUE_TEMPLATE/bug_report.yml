@@ -51,7 +51,7 @@ body:
       id: yasb-version
       attributes:
           label: YASB version installed
-          description: YASB version where the bug occurs. In console, type `yasbs --version` to get the version. If running from source, type `git rev-parse --short HEAD` in the YASB directory.
+          description: YASB version where the bug occurs. In console, type `yasbc --version` to get the version. If running from source, type `git rev-parse --short HEAD` in the YASB directory.
 
     - type: textarea
       id: what-happened
