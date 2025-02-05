@@ -9,6 +9,7 @@ import os
 from core.utils.widgets.power import PowerOperations
 from core.utils.utilities import PopupWidget
 from core.utils.widgets.animation_manager import AnimationManager
+import logging
 
 class HomeWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
@@ -95,9 +96,10 @@ class HomeWidget(BaseWidget):
  
                
     def create_menu_action(self, path):
-        expanded_path = os.path.expanduser(path)
-        return lambda: os.startfile(expanded_path)
-           
+        path = os.path.expanduser(path)
+        return lambda: os.startfile(path) if os.path.exists(path) else logging.error(f"The system cannot find the file specified: '{path}'")
+
+
     def _create_menu(self):
         self._menu = PopupWidget(self, self._blur, self._round_corners, self._round_corners_type, self._border_color)
         self._menu.setProperty('class', 'home-menu')
@@ -119,6 +121,7 @@ class HomeWidget(BaseWidget):
             
             self._add_menu_item(main_layout, self._menu_labels['system'],
                 lambda: os.startfile("ms-settings:"))
+
             self._add_menu_item(main_layout, self._menu_labels['task_manager'],
                 lambda: subprocess.Popen("taskmgr", shell=True, creationflags=subprocess.CREATE_NO_WINDOW))
                 
