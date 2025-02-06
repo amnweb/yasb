@@ -344,7 +344,6 @@ class ThemeViewer(QMainWindow):
         layout.setContentsMargins(0, 0, 0, 0)
 
         # Add the placeholder label
-        self._icon_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'assets', 'images', 'app_transparent.png')
         self.placeholder_label = QLabel("<span style='font-weight:700'>YASB</span> Reborn")
         self.placeholder_label.setFont(QFont('Segoe UI', 64, QFont.Weight.Normal))
         self.placeholder_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
