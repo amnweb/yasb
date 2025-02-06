@@ -287,7 +287,6 @@ class WeatherWidget(BaseWidget):
             logging.warning("Weather data is not yet available.")
             return
         if DEBUG:
-            logging.debug(f"Wether API url: {self.api_url}")
             logging.debug(f"Weather data: {self.weather_data}")
         active_widgets = self._show_alt_label and self._widgets_alt or self._widgets
         active_label_content = self._show_alt_label and self._label_alt_content or self._label_content
