@@ -128,13 +128,15 @@ class ThemeCard(QFrame):
         layout.addLayout(top_layout)
 
         # Author label
-        author = QLabel(f"author <a style=\"color:#0078D4;text-decoration:none\" href='{self.theme_data['homepage']}'>{self.theme_data['author']}</a>")
+        homepage = self.theme_data['homepage'] if self.theme_data['homepage'] else f'https://github.com/{self.theme_data['author']}'
+        author = QLabel(f"author <a style=\"color:#0078D4;font-weight:500;text-decoration:none\" href='{homepage}'>{self.theme_data['author']}</a>")
         author.setFont(QFont('Segoe UI', 10))
         author.setOpenExternalLinks(True)
         layout.addWidget(author)
 
         # Description label
         description = QLabel(self.theme_data['description'])
+        description.setWordWrap(True)
         description.setFont(QFont('Segoe UI', 10))
         opacity_effect = QGraphicsOpacityEffect()
         opacity_effect.setOpacity(0.75)
@@ -342,7 +344,8 @@ class ThemeViewer(QMainWindow):
         layout.setContentsMargins(0, 0, 0, 0)
 
         # Add the placeholder label
-        self.placeholder_label = QLabel("<span style='font-weight:bold'>YASB</span> Reborn")
+        self._icon_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'assets', 'images', 'app_transparent.png')
+        self.placeholder_label = QLabel("<span style='font-weight:700'>YASB</span> Reborn")
         self.placeholder_label.setFont(QFont('Segoe UI', 64, QFont.Weight.Normal))
         self.placeholder_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self.placeholder_label)
