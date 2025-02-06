@@ -153,7 +153,8 @@ class ClockWidget(BaseWidget):
         label_parts = [part for part in label_parts if part]
         widget_index = 0 
         if self._locale:
-            org_locale = locale.getlocale(locale.LC_TIME)
+            org_locale_time = locale.getlocale(locale.LC_TIME)
+            org_locale_ctype = locale.getlocale(locale.LC_CTYPE)
 
         for part in label_parts:
             part = part.strip()
@@ -165,6 +166,7 @@ class ClockWidget(BaseWidget):
                     try:
                         if self._locale:
                             locale.setlocale(locale.LC_TIME, self._locale)
+                            locale.setlocale(locale.LC_CTYPE, self._locale)
                         datetime_format_search = re.search('\\{(.*)}', part)
                         datetime_format_str = datetime_format_search.group()
                         datetime_format = datetime_format_search.group(1)
@@ -175,7 +177,8 @@ class ClockWidget(BaseWidget):
                     active_widgets[widget_index].setText(format_label_content)
                 widget_index += 1
         if self._locale:
-            locale.setlocale(locale.LC_TIME, org_locale)  
+            locale.setlocale(locale.LC_TIME, org_locale_time)
+            locale.setlocale(locale.LC_CTYPE, org_locale_ctype)
                       
     def _next_timezone(self):
         self._active_tz = next(self._timezones)
