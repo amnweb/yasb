@@ -122,7 +122,11 @@ class WeatherWidget(BaseWidget):
         today_label1.setProperty("class", "label")
         today_label1.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
-        today_label2 = QLabel(f"{self.weather_data['{alert_title}']}<br>Alert expires {self.weather_data['{alert_end_date}']}<br>{self.weather_data['{alert_desc}']}")
+        today_label2 = QLabel(
+            f"{self.weather_data['{alert_title}']}"
+            f"{'<br>Alert expires ' + self.weather_data['{alert_end_date}'] if self.weather_data['{alert_end_date}'] else ''}"
+            f"<br>{self.weather_data['{alert_desc}']}"
+        )
         today_label2.setProperty("class", "label arert")
         today_label2.setAlignment(Qt.AlignmentFlag.AlignCenter)
         today_label2.setWordWrap(True)
@@ -130,7 +134,7 @@ class WeatherWidget(BaseWidget):
         
         layout_today.addWidget(today_label0)
         layout_today.addWidget(today_label1)
-        if self._show_alerts and self.weather_data['{alert_title}'] and self.weather_data['{alert_desc}'] and self.weather_data['{alert_end_date}']:
+        if self._show_alerts and self.weather_data['{alert_title}'] and self.weather_data['{alert_desc}']:
             layout_today.addWidget(today_label2)
  
         # Create frames for each day
@@ -446,9 +450,9 @@ class WeatherWidget(BaseWidget):
                     '{day2_icon}':     f'http:{forecast2["day"]["condition"]["icon"]}',
                     
                     # Alerts
-                    '{alert_title}':    alerts['alert'][0]['headline'] if alerts['alert'] else None,
-                    '{alert_desc}':     alerts['alert'][0]['desc'] if alerts['alert'] else None,
-                    '{alert_end_date}':    self._format_alert_datetime(alerts['alert'][0]['expires']) if alerts['alert'] else None,
+                    '{alert_title}':    alerts['alert'][0]['headline'] if alerts['alert'] and alerts['alert'][0]['headline'] else None,
+                    '{alert_desc}':     alerts['alert'][0]['desc'] if alerts['alert'] and alerts['alert'][0]['desc'] else None,
+                    '{alert_end_date}':    self._format_alert_datetime(alerts['alert'][0]['expires']) if alerts['alert'] and alerts['alert'][0]['expires'] else None,
                 }
         except (urllib.error.URLError, json.JSONDecodeError) as e:
             logging.error(f"Error fetching weather data: {e}")
