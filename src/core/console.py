@@ -39,8 +39,8 @@ class WindowShellDialog(QDialog):
                 background-color: #13161a;
                 color: #cfd1e1;
                 border:1px solid #2c323b;
-                font-family: 'JetBrainsMono NFP','Courier New', Consolas, monospace;
-                font-size:13px;
+                font-family: 'JetBrainsMono Nerd Font Propo','JetBrainsMono NFP', 'JetBrains Mono', Consolas, 'Courier New', monospace;
+                font-size:14px;
                 selection-background-color: #373b3e;
                 selection-color: #cfd1e1;
             }
