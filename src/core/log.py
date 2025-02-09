@@ -11,7 +11,7 @@ LOG_DATETIME = "%Y-%m-%d %H:%M:%S"
 
 def init_logger():
     logging.basicConfig(
-        handlers=[RotatingFileHandler(join(get_config_dir(), DEFAULT_LOG_FILENAME), maxBytes=1024*1024, backupCount=5, encoding='utf-8')],
+        handlers=[RotatingFileHandler(join(get_config_dir(), DEFAULT_LOG_FILENAME), maxBytes=1024*1024, backupCount=5)],
         level=logging.DEBUG,
         format=LOG_FORMAT,
         datefmt=LOG_DATETIME,
