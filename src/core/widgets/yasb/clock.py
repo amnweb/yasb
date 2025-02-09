@@ -191,9 +191,13 @@ class ClockWidget(BaseWidget):
         qlocale = QLocale(self._locale) if self._locale else QLocale.system()
         new_month = qlocale.monthName(month)
         self.month_label.setText(new_month)
-        # Update day and date based on the calendar’s selected day
-        selectedDate = self.calendar.selectedDate()
-        newDate = QDate(year, month, selectedDate.day())
+        
+        selected_day = self.calendar.selectedDate().day()
+        days_in_month = QDate(year, month, 1).daysInMonth()
+        if selected_day > days_in_month:
+            selected_day = days_in_month
+
+        newDate = QDate(year, month, selected_day)
         self.day_label.setText(qlocale.dayName(newDate.dayOfWeek()))
         self.date_label.setText(newDate.toString("d"))
  
