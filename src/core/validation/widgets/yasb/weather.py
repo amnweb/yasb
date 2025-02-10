@@ -3,7 +3,7 @@ DEFAULTS = {
     'label_alt': '0',
     'update_interval': 3600,
     'hide_decimal': False,
-    'location': 'London',
+    'location': '',
     'api_key': '0',
     'units': 'metric',
     'show_alerts': False,

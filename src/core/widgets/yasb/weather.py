@@ -41,6 +41,10 @@ class WeatherWidget(BaseWidget):
         self._hide_decimal = hide_decimal
         self._icons = icons
         self._api_key = api_key if api_key != 'env' else os.getenv('YASB_WEATHER_API_KEY')
+        if not self._api_key or not self._location:
+            logging.error("API key or location is missing. Please provide a valid API key and location.")
+            return
+        self.api_url = f"http://api.weatherapi.com/v1/forecast.json?key={self._api_key}&q={urllib.parse.quote(self._location)}&days=3&aqi=no&alerts=yes"
         self._units = units
         self._show_alerts = show_alerts
         self._padding = container_padding
@@ -50,7 +54,7 @@ class WeatherWidget(BaseWidget):
         self._animation = animation
         self._weather_card = weather_card
         self._icon_cache = dict()
-        self.api_url = f"http://api.weatherapi.com/v1/forecast.json?key={self._api_key}&q={urllib.parse.quote(self._location)}&days=3&aqi=no&alerts=yes"
+
         # Construct container
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
