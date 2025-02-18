@@ -1,7 +1,6 @@
-PyQt6==6.7.1
+PyQt6>=6.8.0
 PyQt6_sip
 cerberus
-#cssutils
 humanize
 psutil
 pytz
@@ -10,7 +9,6 @@ PyYAML
 tzlocal
 watchdog
 winsdk
-#pyquery
 pycaw
 winshell
 pillow
