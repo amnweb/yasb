@@ -13,6 +13,7 @@ from core.utils.widgets.animation_manager import AnimationManager
 from PIL import Image
 import win32gui
 import win32con
+import atexit
 
 try:
     from core.utils.win32.event_listener import SystemEventListener
@@ -94,9 +95,10 @@ class TaskbarWidget(BaseWidget):
         self._debounced_foreground_event = None
 
         if QApplication.instance():
-            QApplication.instance().aboutToQuit.connect(self.stop_taskbar_events)
-            
-    def stop_taskbar_events(self) -> None:
+            QApplication.instance().aboutToQuit.connect(self._stop_events)
+        atexit.register(self._stop_events)
+
+    def _stop_events(self) -> None:
         self._event_service.clear()
  
     def _on_update_event(self, hwnd: int, event: WinEvent) -> None:

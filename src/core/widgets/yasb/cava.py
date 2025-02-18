@@ -11,6 +11,7 @@ from core.validation.widgets.yasb.cava import VALIDATION_SCHEMA
 from PyQt6.QtWidgets import QHBoxLayout, QWidget, QLabel, QApplication
 from PyQt6.QtGui import QLinearGradient, QPainter, QColor
 from PyQt6.QtCore import QTimer, pyqtSignal
+import atexit
 
 class CavaBar(QWidget):
     def __init__(self, cava_widget):
@@ -122,8 +123,8 @@ class CavaWidget(BaseWidget):
 
         # Connect signal and start audio processing
         self.samplesUpdated.connect(self.on_samples_updated)
+        self.destroyed.connect(self.stop_cava)
         self.start_cava()
-        
 
         # Set up auto-hide timer for silence
         if self._hide_empty and self._sleep_timer > 0:
@@ -134,12 +135,16 @@ class CavaWidget(BaseWidget):
 
         if QApplication.instance():
             QApplication.instance().aboutToQuit.connect(self.stop_cava)
+        atexit.register(self.stop_cava)   
 
     def stop_cava(self) -> None:
         self._stop_cava = True
+        if hasattr(self, "_cava_process") and self._cava_process.poll() is None:
+            self._cava_process.terminate()
         if hasattr(self, "thread_cava") and self.thread_cava.is_alive():
-            self.thread_cava.join()
-        
+            if threading.current_thread() != self.thread_cava:
+                self.thread_cava.join()
+
     def initialize_colors(self) -> None:
         self.foreground_color = QColor(self._foreground)
         if self._gradient == 1:
@@ -168,6 +173,7 @@ class CavaWidget(BaseWidget):
     def hide_bar_frame(self) -> None:
         self.hide()
         self._hide_cava_widget = True
+
 
     def start_cava(self) -> None:
         # Build configuration file, temp config file will be created in %temp% directory
@@ -211,7 +217,7 @@ class CavaWidget(BaseWidget):
                 with open(cava_config_path, "w") as config_file:
                     config_file.write(config_template)
                     config_file.flush()
-                process = subprocess.Popen(
+                self._cava_process = subprocess.Popen(
                     ["cava", "-p", cava_config_path],
                     stdout=subprocess.PIPE,
                     creationflags=subprocess.CREATE_NO_WINDOW
@@ -220,7 +226,7 @@ class CavaWidget(BaseWidget):
                 fmt = bytetype * self._bars_number
                 while True:
                     try:
-                        data = process.stdout.read(chunk)
+                        data = self._cava_process.stdout.read(chunk)
                     except Exception as e:
                         return
                     if len(data) < chunk:
@@ -231,8 +237,9 @@ class CavaWidget(BaseWidget):
                     self.samplesUpdated.emit(samples)
             except Exception as e:
                 logging.error(f"Error processing audio in Cava: {e}")
+                self.stop_cava()
             finally:
-                process.terminate()
+                self.stop_cava()
 
         self.thread_cava = threading.Thread(target=process_audio, daemon=True)
         self.thread_cava.start()

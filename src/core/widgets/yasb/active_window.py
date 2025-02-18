@@ -12,6 +12,7 @@ from PIL import Image
 import win32gui
 from core.utils.win32.app_icons import get_window_icon
 from core.utils.widgets.animation_manager import AnimationManager
+import atexit
 
 IGNORED_TITLES = ['', ' ', 'FolderView', 'Program Manager', 'python3', 'pythonw3', 'YasbBar', 'Search', 'Start', 'yasb']
 IGNORED_CLASSES = ['WorkerW', 'TopLevelWindowForOverflowXamlIsland', 'Shell_TrayWnd', 'Shell_SecondaryTrayWnd']
@@ -121,8 +122,12 @@ class ActiveWindowWidget(BaseWidget):
 
         self.focus_change_workspaces.connect(self._on_focus_change_workspaces)
         self._event_service.register_event("workspace_update", self.focus_change_workspaces)
- 
+        
+        atexit.register(self._stop_events)
 
+    def _stop_events(self) -> None:
+        self._event_service.clear()
+        
     def _on_focus_change_workspaces(self, event: str) -> None:
         # Temporary fix for MoveWindow event from Komorebi: MoveWindow event is not sending enough data to know on which monitor the window is being moved also animation is a problem and because of that we are using singleShot to try catch the window after the animation is done and this will run only on MoveWindow event
         if event in ['Hide', 'Destroy']:
