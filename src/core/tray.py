@@ -65,7 +65,7 @@ class TrayIcon(QSystemTrayIcon):
         Stop or reload the application from the CLI.
         """
         if reload:
-            self._reload_application()
+            self.reload_action.trigger()
         else:
             self._exit_application()
             
@@ -123,7 +123,8 @@ class TrayIcon(QSystemTrayIcon):
         
         reload_action = self.menu.addAction("Reload YASB")
         reload_action.triggered.connect(self._reload_application)
-
+        self.reload_action = reload_action
+        
         self.menu.addSeparator()
         debug_menu = self.menu.addMenu("Debug")
         info_action = debug_menu.addAction("Information")
