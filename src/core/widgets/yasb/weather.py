@@ -295,8 +295,8 @@ class WeatherWidget(BaseWidget):
         if self.weather_data is None:
             logging.warning("Weather data is not yet available.")
             return
-        if DEBUG:
-            logging.debug(f"Weather data: {self.weather_data}")
+        # if DEBUG:
+        #     logging.debug(f"Weather data: {self.weather_data}")
         active_widgets = self._show_alt_label and self._widgets_alt or self._widgets
         active_label_content = self._show_alt_label and self._label_alt_content or self._label_content
         label_parts = re.split(r'(<span.*?>.*?</span>)', active_label_content)
