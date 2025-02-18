@@ -33,6 +33,7 @@ build_options = {
         'core.widgets.yasb.server_monitor',
         'core.widgets.yasb.notifications',
         'core.widgets.yasb.home',
+        'core.widgets.yasb.cava',
         'core.widgets.komorebi.active_layout',
         'core.widgets.komorebi.workspaces',
         'core.widgets.glazewm.tiling_direction',
