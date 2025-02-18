@@ -1,11 +1,10 @@
 import logging
-import os
 import sys
 import uuid
 from contextlib import suppress
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtGui import QScreen
-from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot
+from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot, QProcess
 from core.bar import Bar
 from core.utils.widget_builder import WidgetBuilder
 from core.utils.utilities import get_screen_by_name
@@ -56,7 +55,8 @@ class BarManager(QObject):
         if config and (config != self.config):
             if any(config[key] != self.config[key] for key in ['bars', 'widgets', 'komorebi', 'debug','hide_taskbar']):
                 self.remove_tray_icon_signal.emit()
-                os.execl(sys.executable, sys.executable, *sys.argv)
+                QProcess.startDetached(sys.executable, sys.argv)
+                sys.exit()
             else:
                 self.config = config
             logging.info("Successfully loaded updated config and re-initialised all bars.")
@@ -65,7 +65,8 @@ class BarManager(QObject):
     def on_screens_update(self, _screen: QScreen) -> None:
         logging.info("Screens updated. Re-initialising all bars.")
         self.remove_tray_icon_signal.emit()
-        os.execl(sys.executable, sys.executable, *sys.argv)
+        QProcess.startDetached(sys.executable, sys.argv)
+        sys.exit()
 
     def run_listeners_in_threads(self):
         for listener in self.widget_event_listeners:
