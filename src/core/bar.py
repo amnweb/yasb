@@ -2,11 +2,12 @@ import logging
 from settings import APP_BAR_TITLE
 from PyQt6.QtWidgets import QWidget, QHBoxLayout, QGridLayout, QFrame
 from PyQt6.QtGui import QScreen
-from PyQt6.QtCore import Qt, QRect, QEvent, QPropertyAnimation, QEasingCurve, QPoint
+from PyQt6.QtCore import Qt, QRect, QEvent, QPropertyAnimation, QEasingCurve, QPoint, QTimer
 from core.utils.utilities import is_valid_percentage_str, percent_to_float
 from core.utils.win32.utilities import get_monitor_hwnd
 from core.validation.bar import BAR_DEFAULTS
 from core.utils.win32.blurWindow import Blur
+import win32gui
 
 try:
     from core.utils.win32 import app_bar
@@ -88,9 +89,7 @@ class Bar(QWidget):
             self.animation_bar()
         self.show()
         
-        
 
-     
     @property
     def bar_id(self) -> str:
         return self._bar_id
@@ -197,8 +196,46 @@ class Bar(QWidget):
                 self.animation.start()
             except AttributeError:
                 logging.error("Animation not initialized.")
-        
-        
+        if not hasattr(self, "_fullscreen_timer") and self._window_flags['hide_on_fullscreen'] and self._window_flags['always_on_top']:
+            self._fullscreen_timer = QTimer(self)
+            self._fullscreen_timer.setInterval(500)
+            self._fullscreen_timer.timeout.connect(self.is_foreground_fullscreen)
+            self._fullscreen_timer.start()
+
+
+    def is_foreground_fullscreen(self):
+        # Get the active window's handle using win32gui
+        hwnd = win32gui.GetForegroundWindow()
+        if not hwnd:
+            return
+
+        # Get the window rectangle: (left, top, right, bottom) then convert to (x, y, width, height)
+        rect = win32gui.GetWindowRect(hwnd)
+        window_rect = (rect[0], rect[1], rect[2] - rect[0], rect[3] - rect[1])
+
+        # Get the primary screen geometry
+        screen_geometry = self.screen().geometry()
+        screen_rect = (
+            screen_geometry.x(),
+            screen_geometry.y(),
+            screen_geometry.width(),
+            screen_geometry.height()
+        )
+        # Determine fullscreen state
+        is_fullscreen = (window_rect == screen_rect)
+        # Cache the previous state so we only update if it changes
+        if hasattr(self, "_prev_fullscreen_state") and self._prev_fullscreen_state == is_fullscreen:
+            return
+        self._prev_fullscreen_state = is_fullscreen
+        # Update visibility only when necessary
+        if is_fullscreen:
+            if self.isVisible():
+                self.hide()
+        else:
+            if not self.isVisible():
+                self.show() 
+
+
     def detect_os_theme(self) -> bool:
         try:
             import winreg
