@@ -93,6 +93,12 @@ class TaskbarWidget(BaseWidget):
         self._debounce_timer_foreground.timeout.connect(self._process_debounced_foreground_event)
         self._debounced_foreground_event = None
 
+        if QApplication.instance():
+            QApplication.instance().aboutToQuit.connect(self.stop_taskbar_events)
+            
+    def stop_taskbar_events(self) -> None:
+        self._event_service.clear()
+ 
     def _on_update_event(self, hwnd: int, event: WinEvent) -> None:
         """
         Note: This is probably not the best way to do this, but debouncing the events is the only way to prevent high CPU usage.
