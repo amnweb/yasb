@@ -10,6 +10,7 @@
     - [Battery](./(Widget)-Battery)
     - [Bluetooth](./(Widget)-Bluetooth)
     - [Brightness](./(Widget)-Brightness)
+    - [Cava](./(Widget)-Cava)
     - [CPU](./(Widget)-CPU)
     - [Clock](./(Widget)-Clock)
     - [Custom](./(Widget)-Custom)
