@@ -208,11 +208,15 @@ class Bar(QWidget):
         hwnd = win32gui.GetForegroundWindow()
         if not hwnd:
             return
-
+        hwnd_class_name = win32gui.GetClassName(hwnd)
+     
+        # Check if the foreground window is the desktop
+        if hwnd_class_name in ["Progman", "WorkerW"]:
+            return
         # Get the window rectangle: (left, top, right, bottom) then convert to (x, y, width, height)
         rect = win32gui.GetWindowRect(hwnd)
         window_rect = (rect[0], rect[1], rect[2] - rect[0], rect[3] - rect[1])
-
+ 
         # Get the primary screen geometry
         screen_geometry = self.screen().geometry()
         screen_rect = (
@@ -221,6 +225,7 @@ class Bar(QWidget):
             screen_geometry.width(),
             screen_geometry.height()
         )
+
         # Determine fullscreen state
         is_fullscreen = (window_rect == screen_rect)
         # Cache the previous state so we only update if it changes
