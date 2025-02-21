@@ -65,7 +65,7 @@ body:
       id: logs
       attributes:
           label: Relevant log output
-          description: The YASB log related to the error. You can find it in directory `~/.config/yasb/yasb.log`
+          description: The YASB log related to the error. You can find it in directory `~/.config/yasb/yasb.log` or if environment variable `YASB_CONFIG_HOME`.
           render: shell
       validations:
           required: true
