@@ -23,6 +23,9 @@ Required files:
 - `config.yaml` - Main configuration
 - `styles.css` - Visual styling
 
+### Q: How to set custom configuration directory?
+**A:** Set the `YASB_CONFIG_HOME` environment variable to the desired directory path.
+
 ### Q: YASB crashes after updating?
 **A:** After updates:
 - Check release notes for breaking changes

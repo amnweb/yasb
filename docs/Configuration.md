@@ -2,7 +2,7 @@
 
 The configuration uses the YAML file format and is named `config` or `config.yaml`.
 
-Valid directories for this file are `C:/Users/{username}/.config/yasb/`.
+Valid directories for this file are `C:/Users/{username}/.config/yasb/` or ENV variable `YASB_CONFIG_HOME` if set.
 A good starting point is the [default config](https://github.com/amnweb/yasb/blob/main/src/config.yaml).
 
 All valid options for the widgets are listed on the widgets page.
