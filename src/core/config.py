@@ -7,7 +7,6 @@ from pathlib import Path
 from typing import Union
 from core.validation.config import CONFIG_SCHEMA
 from core.utils.alert_dialog import raise_info_alert
-#from cssutils import CSSParser
 from cerberus import Validator, schema
 from yaml.parser import ParserError
 from yaml import safe_load, dump

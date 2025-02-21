@@ -1,4 +1,3 @@
-import os
 import asyncio
 import logging
 import sys
@@ -15,9 +14,6 @@ import settings
 import ctypes
 import ctypes.wintypes
 from core.utils.win32.windows import WindowsTaskbar
-
-# Set font engine to GDI as DirectWrite causes issues with some fonts in PyQt6.8
-os.environ["QT_QPA_PLATFORM"] = "windows:fontengine=gdi"
 
 logging.getLogger('asyncio').setLevel(logging.WARNING)
 

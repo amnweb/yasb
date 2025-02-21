@@ -195,7 +195,8 @@ class CLIHandler:
             sys.exit(0)    
             
         elif args.command == 'log':
-            log_file = os.path.join(os.path.expanduser("~"), ".config", "yasb", "yasb.log")
+            config_home = os.getenv('YASB_CONFIG_HOME') if os.getenv('YASB_CONFIG_HOME') else os.path.join(os.path.expanduser("~"), ".config", "yasb")
+            log_file = os.path.join(config_home, "yasb.log")
             if not os.path.exists(log_file):
                 print("Log file does not exist. Please restart YASB to generate logs.")
                 sys.exit(1)
