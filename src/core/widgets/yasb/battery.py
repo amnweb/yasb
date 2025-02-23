@@ -179,14 +179,12 @@ class BatteryWidget(BaseWidget):
                     .replace("{is_charging}", is_charging_str) \
                     .replace("{icon}", charging_icon)
                 if '<span' in battery_status and '</span>' in battery_status:
-                    # Ensure the icon is correctly set
-                    icon = re.sub(r'<span.*?>|</span>', '', battery_status).strip()
-                    active_widgets[widget_index].setText(icon)
                     icon = re.sub(r'<span.*?>|</span>', '', battery_status).strip()
                     active_widgets[widget_index].setText(icon)
                     existing_classes = active_widgets[widget_index].property("class")
                     new_classes = re.sub(r'status-\w+', '', existing_classes).strip()
                     active_widgets[widget_index].setProperty("class", f"{new_classes} status-{threshold}")
+                    active_widgets[widget_index].setStyleSheet('')
                 else:
                     alt_class = "alt" if self._show_alt_label else ""
                     formatted_text = battery_status.format(battery_status) 
