@@ -39,7 +39,30 @@ All valid options for the widgets are listed on the widgets page.
 | `dimensions`      | object  | `{width: "100%", height: 36}` | The dimensions of the status bar. |
 | `padding`         | object  | `{top: 4, left: 0, bottom: 4, right: 0}` | The padding for the status bar. |
 | `animation`       | object  | `{enabled: true, duration: 500}` | The animation settings for the status bar. Duration is in milliseconds. |
-| `widgets`         | list  | `left[],center[],right[]` | Active widgets and position. |
+| `widgets`         | list  | `left[], center[], right[]` | Active widgets and position. |
+| `layouts`         | object  | See below | Configuration for widget layouts in each section (left, center, right). |
+
+### Layouts Configuration
+Each section (left, center, right) can be configured with the following properties:
+
+| Option            | Type    | Default       | Description |
+|-------------------|---------|---------------|-------------|
+| `alignment`       | string  | Section-dependent | Widget alignment within section ("left", "center", "right") |
+| `stretch`         | boolean | `true`        | Whether widgets should stretch to fill available space |
+
+Example:
+```yaml
+layouts:
+  left:
+    alignment: "left"
+    stretch: true
+  center:
+    alignment: "center"
+    stretch: true
+  right:
+    alignment: "right"
+    stretch: true
+```
 
 # Multiple Bars Example
 > **Note:**
