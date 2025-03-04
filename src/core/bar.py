@@ -23,6 +23,7 @@ class Bar(QWidget):
             bar_screen: QScreen,
             stylesheet: str,
             widgets: dict[str, list],
+            layouts: dict[str, dict[str, bool | str]],
             init: bool = False,
             class_name: str = BAR_DEFAULTS['class_name'],
             alignment: dict = BAR_DEFAULTS['alignment'],
@@ -43,6 +44,7 @@ class Bar(QWidget):
         self._padding = padding
         self._animation = animation
         self._is_dark_theme = None
+        self._layouts = layouts
         
         self.screen_name = self.screen().name()
         self.app_bar_edge = (
@@ -149,31 +151,37 @@ class Bar(QWidget):
         bar_layout.setSpacing(0)
 
         for column_num, layout_type in enumerate(['left', 'center', 'right']):
+            config = self._layouts[layout_type]
             layout = QHBoxLayout()
             layout.setContentsMargins(0, 0, 0, 0)
             layout.setSpacing(0)
             layout_container = QFrame()
             layout_container.setProperty("class", f"container container-{layout_type}")
 
-            if layout_type in ["center", "right"]:
-                layout.addStretch()
+            # Add widgets
+            if layout_type in widgets:
+                for widget in widgets[layout_type]:
+                    widget.parent_layout_type = layout_type
+                    widget.bar_id = self.bar_id
+                    widget.monitor_hwnd = self.monitor_hwnd
+                    layout.addWidget(widget, 0)
 
-            for widget in widgets[layout_type]:
-               
-                widget.parent_layout_type = layout_type
-                widget.bar_id = self.bar_id
-                widget.monitor_hwnd = self.monitor_hwnd
-                layout.addWidget(widget, 0)
+            if config['alignment'] == "left" and config['stretch']:
+                layout.addStretch(1)
 
-            if layout_type in ["left", "center"]:
-                layout.addStretch()
+            elif config['alignment'] == "right" and config['stretch']:
+                layout.insertStretch(0, 1)
+
+            elif config['alignment'] == "center" and config['stretch']:
+                layout.insertStretch(0, 1) 
+                layout.addStretch(1)
 
             layout_container.setLayout(layout)
             bar_layout.addWidget(layout_container, 0, column_num)
- 
+
         self._bar_frame.setLayout(bar_layout)
-        
-        
+
+
     def animation_bar(self):
         self.final_pos = self.pos()
         if self._alignment['position'] == "top":

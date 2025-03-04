@@ -8,7 +8,9 @@ BAR_DEFAULTS = {
     'window_flags': {'always_on_top': False, 'windows_app_bar': False, 'hide_on_fullscreen': False},
     'dimensions': {'width': '100%', 'height': 30},
     'padding': {'top': 0, 'left': 0, 'bottom': 0, 'right': 0},
-    'widgets': {'left': [], 'center': [], 'right': []}
+    'widgets': {'left': [], 'center': [], 'right': []},
+    'layouts': {'left': {'alignment': 'left','stretch': True},'center': {'alignment': 'center','stretch': True},'right': {'alignment': 'right','stretch': True}
+    }
 }
 
 BAR_SCHEMA = {
@@ -177,6 +179,57 @@ BAR_SCHEMA = {
                 }
             },
             'default': BAR_DEFAULTS['widgets']
+        },
+        'layouts': {
+            'type': 'dict',
+            'schema': {
+                'left': {
+                    'type': 'dict',
+                    'schema': {
+                        'alignment': {
+                            'type': 'string',
+                            'allowed': ['left', 'center', 'right'],
+                            'default': BAR_DEFAULTS['layouts']['left']['alignment']
+                        },
+                        'stretch': {
+                            'type': 'boolean',
+                            'default': BAR_DEFAULTS['layouts']['left']['stretch']
+                        }
+                    },
+                    'default': BAR_DEFAULTS['layouts']['left']
+                },
+                'center': {
+                    'type': 'dict',
+                    'schema': {
+                        'alignment': {
+                            'type': 'string',
+                            'allowed': ['left', 'center', 'right'],
+                            'default': BAR_DEFAULTS['layouts']['center']['alignment']
+                        },
+                        'stretch': {
+                            'type': 'boolean',
+                            'default': BAR_DEFAULTS['layouts']['center']['stretch']
+                        }
+                    },
+                    'default': BAR_DEFAULTS['layouts']['center']
+                },
+                'right': {
+                    'type': 'dict',
+                    'schema': {
+                        'alignment': {
+                            'type': 'string',
+                            'allowed': ['left', 'center', 'right'],
+                            'default': BAR_DEFAULTS['layouts']['right']['alignment']
+                        },
+                        'stretch': {
+                            'type': 'boolean',
+                            'default': BAR_DEFAULTS['layouts']['right']['stretch']
+                        }
+                    },
+                    'default': BAR_DEFAULTS['layouts']['right']
+                }
+            },
+            'default': BAR_DEFAULTS['layouts']
         }
     },
     'default': BAR_DEFAULTS
