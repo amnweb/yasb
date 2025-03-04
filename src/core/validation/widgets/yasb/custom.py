@@ -3,7 +3,7 @@ DEFAULTS = {
     'exec_options': {
         'run_cmd': None,
         'run_once': False,
-        'run_interval': 0,
+        'run_interval': 120000,
         'return_format': "json",
         'hide_empty': False,
         'use_shell': True,
