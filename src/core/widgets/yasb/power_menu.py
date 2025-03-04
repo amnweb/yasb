@@ -1,4 +1,3 @@
-import sys
 from PyQt6.QtWidgets import QApplication, QWidget, QPushButton, QVBoxLayout, QHBoxLayout, QLabel, QStyleOption, QStyle
 from PyQt6 import QtCore, QtGui
 from PyQt6.QtGui import QCursor
@@ -154,11 +153,19 @@ class PowerMenuWidget(BaseWidget):
             
 
 class MainWindow(BaseStyledWidget,AnimatedWidget):
-    def __init__(self, parent_button, uptime,blur, blur_background, animation_duration, button_row, buttons):
+    def __init__(self, parent_button, uptime, blur, blur_background, animation_duration, button_row, buttons):
         super(MainWindow, self).__init__(animation_duration)
 
         self.overlay = OverlayWidget(animation_duration,uptime)
         self.parent_button = parent_button
+        self.button_row = button_row  # Store button_row as instance attribute
+        
+        # Add focus policy to allow keyboard focus
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+
+        # Initialize variables to track focused button
+        self.buttons_list = []
+        self.current_focus_index = -1
 
         self.setProperty("class", "power-menu-popup")
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.Tool)
@@ -175,8 +182,6 @@ class MainWindow(BaseStyledWidget,AnimatedWidget):
             icon, text = button_info
             self.buttons_info.append((icon, text, action_method, button_name))
 
-
-
         main_layout = QVBoxLayout()
         button_layout1 = QHBoxLayout()
         button_layout2 = QHBoxLayout()
@@ -189,6 +194,9 @@ class MainWindow(BaseStyledWidget,AnimatedWidget):
             button = QPushButton(self)
             button.setProperty("class", f"button {class_name}")
             button_layout = QVBoxLayout(button)
+
+            # Store buttons in a list for navigation
+            self.buttons_list.append(button)
 
             # Only add icon label if icon is not empty or None
             if icon:
@@ -214,6 +222,7 @@ class MainWindow(BaseStyledWidget,AnimatedWidget):
             
             button.clicked.connect(action)
             button.installEventFilter(self)
+ 
 
         main_layout.addLayout(button_layout1)
         main_layout.addLayout(button_layout2)
@@ -241,7 +250,6 @@ class MainWindow(BaseStyledWidget,AnimatedWidget):
                 BorderColor="None"
             )
  
-
         self.fade_in()
 
     def center_on_screen(self):
@@ -255,7 +263,6 @@ class MainWindow(BaseStyledWidget,AnimatedWidget):
         self.move(x, y)
         self.overlay.update_geometry(screen_geometry)  # Update overlay geometry to match screen
  
-
     def paintEvent(self, event):
         option = QStyleOption()
         option.initFrom(self)
@@ -276,7 +283,107 @@ class MainWindow(BaseStyledWidget,AnimatedWidget):
     def keyPressEvent(self, event):
         if event.key() == Qt.Key.Key_Escape:
             self.cancel_action()
-        super(MainWindow, self).keyPressEvent(event)
+            event.accept()  # Mark event as handled
+        elif event.key() == Qt.Key.Key_Right:
+            self.navigate_focus(1)
+            event.accept()  # Mark event as handled
+        elif event.key() == Qt.Key.Key_Left:
+            self.navigate_focus(-1)
+            event.accept()  # Mark event as handled
+        elif event.key() == Qt.Key.Key_Down:
+            self.navigate_focus(self.button_row)
+            event.accept()  # Mark event as handled
+        elif event.key() == Qt.Key.Key_Up:
+            self.navigate_focus(-self.button_row)
+            event.accept()  # Mark event as handled
+        elif event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter, Qt.Key.Key_Space):
+            # Trigger click on the focused button
+            if 0 <= self.current_focus_index < len(self.buttons_list):
+                self.buttons_list[self.current_focus_index].click()
+                event.accept()  # Mark event as handled
+        else:
+            super(MainWindow, self).keyPressEvent(event)
+    
+    def navigate_focus(self, step):
+        """Navigate button focus by step."""
+        if not self.buttons_list:
+            return
+
+        total_buttons = len(self.buttons_list)
+        
+        # If no button is currently focused, start with the appropriate first button
+        if self.current_focus_index < 0 or self.current_focus_index >= total_buttons:
+            if step > 0:
+                # When pressing right arrow with no selection, select the first button
+                new_index = 0
+            elif step < 0:
+                # When pressing left arrow with no selection, select the last button
+                new_index = total_buttons - 1
+            else:
+                # For other keys with no selection, default to first button
+                new_index = 0
+        else:
+            # Normal navigation with existing selection
+            current = self.current_focus_index
+            
+            # Simple navigation with wrapping
+            if step == 1:  # Right
+                new_index = (current + 1) % total_buttons
+            elif step == -1:  # Left
+                new_index = (current - 1) % total_buttons
+            elif step == self.button_row:  # Down
+                new_index = (current + self.button_row) % total_buttons
+            elif step == -self.button_row:  # Up
+                new_index = (current - self.button_row) % total_buttons
+            else:
+                new_index = current  # No change
+        
+        self.set_focused_button(new_index)
+    
+    def set_focused_button(self, index):
+        """Set focus to the button at the given index."""
+        if not self.buttons_list:
+            return
+            
+        # Safety check - ensure index is valid
+        if index < 0 or index >= len(self.buttons_list):
+            return
+        
+        # Update our internal tracking
+        self.current_focus_index = index
+        
+        # First, remove hover from all buttons
+        for i, button in enumerate(self.buttons_list):
+            # Parse class components
+            class_parts = button.property('class').split()
+            # Remove any hover class if present
+            if 'hover' in class_parts:
+                class_parts.remove('hover')
+            # Set class without hover
+            clean_class = ' '.join(class_parts)
+            button.setProperty("class", clean_class)
+            button.style().unpolish(button)
+            button.style().polish(button)
+        
+        # Then apply hover to the selected button
+        current_button = self.buttons_list[self.current_focus_index]
+        current_class = current_button.property('class')
+        
+        # Add hover class
+        hover_class = f"{current_class} hover"
+        current_button.setProperty("class", hover_class)
+        current_button.style().unpolish(current_button)
+        current_button.style().polish(current_button)
+
+        self.setFocus()
+    
+    def showEvent(self, event):
+        """Override show event to set focus."""
+        super(MainWindow, self).showEvent(event)
+        # Set focus to the window and first button when shown
+        self.setFocus()
+        self.current_focus_index = -1
+ 
     
     def signout_action(self):
         self.power_operations.signout()
