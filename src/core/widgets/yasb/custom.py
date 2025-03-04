@@ -13,16 +13,18 @@ class CustomWorker(QObject):
     finished = pyqtSignal()
     data_ready = pyqtSignal(object)
 
-    def __init__(self, cmd, return_type, hide_empty):
+    def __init__(self, cmd, use_shell, encoding, return_type, hide_empty):
         super().__init__()
         self.cmd = cmd
+        self.use_shell = use_shell
+        self.encoding = encoding
         self.return_type = return_type
         self.hide_empty = hide_empty
 
     def run(self):
         exec_data = None
         if self.cmd:
-            proc = subprocess.Popen(self.cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,creationflags=subprocess.CREATE_NO_WINDOW,  shell=True)
+            proc = subprocess.Popen(self.cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,creationflags=subprocess.CREATE_NO_WINDOW,  shell=self.use_shell, encoding=self.encoding)
             output = proc.stdout.read()
             if self.return_type == "json":
                 try:
@@ -53,6 +55,8 @@ class CustomWidget(BaseWidget):
         self._exec_data = None
         self._exec_cmd = exec_options['run_cmd'].split(" ") if exec_options.get('run_cmd', False) else None
         self._exec_return_type = exec_options['return_format']
+        self._exec_shell = exec_options['use_shell']
+        self._exec_encoding = exec_options['encoding']
         self._hide_empty = exec_options['hide_empty']
         self._show_alt_label = False
         self._label_content = label
@@ -160,7 +164,7 @@ class CustomWidget(BaseWidget):
         
     def _exec_callback(self):
         if self._exec_cmd:
-            worker = CustomWorker(self._exec_cmd, self._exec_return_type, self._hide_empty)
+            worker = CustomWorker(self._exec_cmd, self._exec_shell, self._exec_encoding, self._exec_return_type, self._hide_empty)
             worker_thread = threading.Thread(target=worker.run)
             worker.data_ready.connect(self._handle_exec_data)
             worker.finished.connect(worker.deleteLater)
@@ -186,4 +190,4 @@ class CustomWidget(BaseWidget):
         if cmd in function_map:
             function_map[cmd]()
         else:
-            subprocess.Popen([cmd, *cmd_args] if cmd_args else [cmd], shell=True)
+            subprocess.Popen([cmd, *cmd_args] if cmd_args else [cmd], shell=self._exec_shell, encoding=self._exec_encoding)

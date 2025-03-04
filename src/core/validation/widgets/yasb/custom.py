@@ -5,7 +5,9 @@ DEFAULTS = {
         'run_once': False,
         'run_interval': 0,
         'return_format': "json",
-        'hide_empty': False
+        'hide_empty': False,
+        'use_shell': True,
+        'encoding': None
     },
     'animation': {
         'enabled': True,
@@ -66,6 +68,15 @@ VALIDATION_SCHEMA = {
                 'type': 'boolean',
                 'required': False,
                 'default': DEFAULTS['exec_options']['hide_empty']
+            },
+            'use_shell': {
+                'type': 'boolean',
+                'default': DEFAULTS['exec_options']['use_shell']
+            },
+            'encoding': {
+                'type': 'string',
+                'nullable': True,
+                'default': DEFAULTS['exec_options']['encoding']
             }
         },
         'default': DEFAULTS['exec_options']
