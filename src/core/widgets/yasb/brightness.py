@@ -155,14 +155,13 @@ class BrightnessWidget(BaseWidget):
                     label.setProperty("class", class_result)
                 else:
                     label = QLabel(part)
-                    label.setProperty("class", "label")
+                    label.setProperty("class", "label alt" if is_alt else "label")
                 label.setAlignment(Qt.AlignmentFlag.AlignCenter)
                 label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
                 self._widget_container_layout.addWidget(label)
                 widgets.append(label)
                 if is_alt:
                     label.hide()
-                    label.setProperty("class", "label alt")
                 else:
                     label.show()
             return widgets
