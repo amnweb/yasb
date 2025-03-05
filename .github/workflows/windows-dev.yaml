@@ -14,7 +14,7 @@ jobs:
     - name: Checkout Repository
       uses: actions/checkout@v4
       with:
-        ref: dev
+        fetch-depth: 0
 
     - name: Set up Python
       uses: actions/setup-python@v5
@@ -59,4 +59,4 @@ jobs:
         name: yasb-dev-v${{ env.VERSION }}
         path: |
           src/dist/out/*.msi
-        retention-days: 5
+        retention-days: 10
