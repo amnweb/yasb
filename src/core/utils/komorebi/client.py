@@ -4,7 +4,6 @@ import json
 from contextlib import suppress
 from typing import Optional
 
-
 def add_index(dictionary: dict, dictionary_index: int) -> dict:
     dictionary['index'] = dictionary_index
     return dictionary
@@ -84,9 +83,9 @@ class KomorebiClient:
 
     def activate_workspace(self, m_idx: int, ws_idx: int, wait: bool = False) -> None:
         p = subprocess.Popen([self._komorebic_path, "focus-monitor-workspace", str(m_idx), str(ws_idx)], shell=True)
-
         if wait:
             p.wait()
+
     def next_workspace(self) -> None:
         try:
             subprocess.Popen([self._komorebic_path, "cycle-workspace", "next"], shell=True)
@@ -133,7 +132,6 @@ class KomorebiClient:
 
     def toggle(self, toggle_type: str, wait: bool = False) -> None:
         try:
-             
             command = f'"{self._komorebic_path}" focus-monitor-at-cursor && "{self._komorebic_path}" toggle-{toggle_type}'
             p = subprocess.Popen(command, shell=True)
 
