@@ -90,7 +90,7 @@ class ActiveLayoutWidget(BaseWidget):
         self.register_callback("flip_layout_vertical", self._komorebic.flip_layout_vertical)
         self.register_callback("flip_layout_horizontal_and_vertical", self._komorebic.flip_layout_horizontal_and_vertical)
         self.register_callback("first_layout", self._first_layout)
-        self.register_callback("toggle_tiling", lambda: self._komorebic.toggle("tiling"),)
+        self.register_callback("toggle_tiling", lambda: self._komorebic.toggle("tiling"))
         self.register_callback("toggle_float", lambda: self._komorebic.toggle("float"))
         self.register_callback("toggle_monocle", lambda: self._komorebic.toggle("monocle"))
         self.register_callback("toggle_maximise", lambda: self._komorebic.toggle("maximise"))
