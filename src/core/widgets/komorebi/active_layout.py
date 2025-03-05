@@ -90,7 +90,7 @@ class ActiveLayoutWidget(BaseWidget):
         self.register_callback("flip_layout_vertical", self._komorebic.flip_layout_vertical)
         self.register_callback("flip_layout_horizontal_and_vertical", self._komorebic.flip_layout_horizontal_and_vertical)
         self.register_callback("first_layout", self._first_layout)
-        self.register_callback("toggle_tiling", lambda: self._komorebic.toggle("tiling"))
+        self.register_callback("toggle_tiling", lambda: self._komorebic.toggle("tiling"),)
         self.register_callback("toggle_float", lambda: self._komorebic.toggle("float"))
         self.register_callback("toggle_monocle", lambda: self._komorebic.toggle("monocle"))
         self.register_callback("toggle_maximise", lambda: self._komorebic.toggle("maximise"))
@@ -102,22 +102,25 @@ class ActiveLayoutWidget(BaseWidget):
     def _reset_layouts(self):
         self._layouts = deque([x.replace('_', '-') for x in self._layouts_config])
 
+    def change_layout(self, layout: str):
+        self._komorebic.change_layout(self._komorebi_screen['index'], self._focused_workspace['index'], layout)
+
     def _first_layout(self):
         if self._is_shift_layout_allowed():
             self._reset_layouts()
-            self._komorebic.change_layout(self._layouts[0])
+            self.change_layout(self._layouts[0])
 
     def _next_layout(self):
         if self._is_shift_layout_allowed():
             self._layouts.rotate(1)
-            self._komorebic.change_layout(self._layouts[0])
+            self.change_layout(self._layouts[0])
             if self._animation['enabled']:
                 AnimationManager.animate(self, self._animation['type'], self._animation['duration'])
             
     def _prev_layout(self):
         if self._is_shift_layout_allowed():
             self._layouts.rotate(-1)
-            self._komorebic.change_layout(self._layouts[0])
+            self.change_layout(self._layouts[0])
             if self._animation['enabled']:
                 AnimationManager.animate(self, self._animation['type'], self._animation['duration'])
             

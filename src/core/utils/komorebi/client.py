@@ -82,8 +82,8 @@ class KomorebiClient:
                     if managed_window['hwnd'] == window_hwnd:
                         return add_index(workspace, i)
 
-    def activate_workspace(self, ws_idx: int, wait: bool = False) -> None:
-        p = subprocess.Popen([self._komorebic_path, "focus-workspace", str(ws_idx)], shell=True)
+    def activate_workspace(self, m_idx: int, ws_idx: int, wait: bool = False) -> None:
+        p = subprocess.Popen([self._komorebic_path, "focus-monitor-workspace", str(m_idx), str(ws_idx)], shell=True)
 
         if wait:
             p.wait()
@@ -105,9 +105,9 @@ class KomorebiClient:
         except subprocess.SubprocessError:
             logging.exception("Failed to toggle focus-follows-mouse")
 
-    def change_layout(self, layout: str) -> None:
+    def change_layout(self, m_idx: int, ws_idx: int, layout: str) -> None:
         try:
-            subprocess.Popen([self._komorebic_path, "change-layout", layout], shell=True)
+            subprocess.Popen([self._komorebic_path, "workspace-layout", str(m_idx), str(ws_idx), layout], shell=True)
         except subprocess.SubprocessError:
             logging.exception(f"Failed to change layout of currently active workspace to {layout}")
 
@@ -133,7 +133,9 @@ class KomorebiClient:
 
     def toggle(self, toggle_type: str, wait: bool = False) -> None:
         try:
-            p = subprocess.Popen([self._komorebic_path, f"toggle-{toggle_type}"], shell=True)
+             
+            command = f'"{self._komorebic_path}" focus-monitor-at-cursor && "{self._komorebic_path}" toggle-{toggle_type}'
+            p = subprocess.Popen(command, shell=True)
 
             if wait:
                 p.wait()
