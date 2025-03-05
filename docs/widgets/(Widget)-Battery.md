@@ -58,7 +58,7 @@ battery:
 .battery-widget {}
 .battery-widget .widget-container {}
 .battery-widget .widget-container .label {}
-.battery-widget .widget-container .label_alt {}
+.battery-widget .widget-container .label.alt {}
 .battery-widget .widget-container .icon {}
 
 .battery-widget .widget-container .label.status-low {}
