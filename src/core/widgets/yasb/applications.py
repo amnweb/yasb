@@ -63,8 +63,9 @@ class ApplicationsWidget(BaseWidget):
                 function_map[data]()
             else:    
                 try:
-                    command = data.split()
-                    subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, shell=True)
+                    if not any(param in data for param in ['-new-tab', '-new-window','-private-window']):
+                        data = data.split()
+                    subprocess.Popen(data, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, shell=True)
                 except Exception as e:
                     logging.error(f"Error starting app: {str(e)}")
         except Exception as e:

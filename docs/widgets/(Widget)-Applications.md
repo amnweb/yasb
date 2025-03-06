@@ -1,4 +1,5 @@
 # Applications Widget Options
+
 | Option     | Type   | Default | Description                                                                 |
 |------------|--------|---------|-----------------------------------------------------------------------------|
 | `label`   | string | {data}    | The label for the applications widget.                                      |
@@ -16,11 +17,14 @@ apps:
   options:
     label: "{data}"
     app_list:
-      - {icon: "\uf0a2", launch: "notification_center"}
-      - {icon: "\ueb51", launch: "quick_settings"}
-      - {icon: "\uf422", launch: "search"}
-      - {icon: "\uf489", launch: "wt"}
-      - {icon: "C:\\Users\\marko\\icons\\vscode.png", launch: "C:\\Users\\Username\\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe"}
+      - {icon: "\uf0a2", launch: "notification_center"} # launch notification center
+      - {icon: "\ueb51", launch: "quick_settings"} # launch quick settings
+      - {icon: "\uf422", launch: "search"} # launch search
+      - {icon: "\uf489", launch: "wt"} # launch terminal
+      - {icon: "C:\\Users\\marko\\icons\\vscode.png", launch: "C:\\Users\\Username\\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe"} # open vscode
+      - {icon: "\udb81\udc4d",launch: "\"C:\\Program Files\\Mozilla Firefox\\firefox.exe\" -new-tab www.reddit.com"} # open reddit in new tab in firefox
+      - {icon: "\udb81\udc4d",launch: "\"C:\\Program Files\\Mozilla Firefox\\firefox.exe\" -new-window www.reddit.com"} # open reddit in new window in firefox
+      - {icon: "\udb81\udc4d",launch: "\"C:\\Program Files\\Mozilla Firefox\\firefox.exe\" -private-window www.reddit.com"} # open reddit in private window in firefox
     container_padding: 
       top: 0
       left: 8
