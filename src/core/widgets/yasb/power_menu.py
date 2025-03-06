@@ -274,10 +274,16 @@ class MainWindow(BaseStyledWidget,AnimatedWidget):
             source.setProperty("class", f"button {source.property('class').split()[1]} hover")
             source.style().unpolish(source)
             source.style().polish(source)
+            for child in source.findChildren(QLabel):
+                child.style().unpolish(child)
+                child.style().polish(child)
         elif event.type() == QtCore.QEvent.Type.Leave and isinstance(source, QPushButton):
             source.setProperty("class", f"button {source.property('class').split()[1]}")
             source.style().unpolish(source)
             source.style().polish(source)
+            for child in source.findChildren(QLabel):
+                child.style().unpolish(child)
+                child.style().polish(child)
         return super(MainWindow, self).eventFilter(source, event)
     
     def keyPressEvent(self, event):
@@ -291,10 +297,10 @@ class MainWindow(BaseStyledWidget,AnimatedWidget):
             self.navigate_focus(-1)
             event.accept()  # Mark event as handled
         elif event.key() == Qt.Key.Key_Down:
-            self.navigate_focus(self.button_row)
+            self.navigate_focus(self.button_row)  # Move down by one row
             event.accept()  # Mark event as handled
         elif event.key() == Qt.Key.Key_Up:
-            self.navigate_focus(-self.button_row)
+            self.navigate_focus(-self.button_row)  # Move up by one row
             event.accept()  # Mark event as handled
         elif event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter, Qt.Key.Key_Space):
             # Trigger click on the focused button
@@ -303,7 +309,7 @@ class MainWindow(BaseStyledWidget,AnimatedWidget):
                 event.accept()  # Mark event as handled
         else:
             super(MainWindow, self).keyPressEvent(event)
-    
+
     def navigate_focus(self, step):
         """Navigate button focus by step."""
         if not self.buttons_list:
@@ -314,30 +320,52 @@ class MainWindow(BaseStyledWidget,AnimatedWidget):
         # If no button is currently focused, start with the appropriate first button
         if self.current_focus_index < 0 or self.current_focus_index >= total_buttons:
             if step > 0:
-                # When pressing right arrow with no selection, select the first button
+                # When pressing right or down arrow with no selection, select the first button
                 new_index = 0
             elif step < 0:
-                # When pressing left arrow with no selection, select the last button
+                # When pressing left or up arrow with no selection, select the last button
                 new_index = total_buttons - 1
             else:
-                # For other keys with no selection, default to first button
+                # Default to first button
                 new_index = 0
         else:
             # Normal navigation with existing selection
             current = self.current_focus_index
             
-            # Simple navigation with wrapping
             if step == 1:  # Right
                 new_index = (current + 1) % total_buttons
             elif step == -1:  # Left
                 new_index = (current - 1) % total_buttons
-            elif step == self.button_row:  # Down
-                new_index = (current + self.button_row) % total_buttons
-            elif step == -self.button_row:  # Up
-                new_index = (current - self.button_row) % total_buttons
+            elif step == self.button_row or step == -self.button_row:  # Up/Down - vertical movement
+                # Calculate the current row and column
+                current_row = current // self.button_row
+                current_col = current % self.button_row
+                
+                # Determine total rows
+                total_rows = (total_buttons + self.button_row - 1) // self.button_row
+                
+                if step == self.button_row:  # Down
+                    # Move to next row, same column
+                    new_row = (current_row + 1) % total_rows
+                else:  # Up
+                    # Move to previous row, same column
+                    new_row = (current_row - 1) % total_rows
+                    
+                # Calculate new index
+                new_index = new_row * self.button_row + current_col
+                
+                # If we've moved to a partial row and the column is beyond its bounds
+                if new_index >= total_buttons:
+                    if step == self.button_row:
+                        # When moving down to an out-of-bounds position, wrap to first row
+                        new_index = current_col
+                    else:
+                        # When moving up to an out-of-bounds position, use last valid button
+                        new_index = total_buttons - 1
             else:
                 new_index = current  # No change
-        
+
+        new_index = max(0, min(new_index, total_buttons - 1))
         self.set_focused_button(new_index)
     
     def set_focused_button(self, index):
