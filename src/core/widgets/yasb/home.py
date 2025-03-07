@@ -25,6 +25,8 @@ class HomeWidget(BaseWidget):
             alignment: str,
             direction: str,
             distance: int,
+            offset_top: int,
+            offset_left: int,
             menu_labels: dict[str, str],
             animation: dict[str, str],
             callbacks: dict[str, str],
@@ -44,6 +46,8 @@ class HomeWidget(BaseWidget):
         self._alignment = alignment
         self._direction = direction
         self._distance = distance
+        self._offset_top = offset_top
+        self._offset_left = offset_left
         self._menu_labels = menu_labels
         self._animation = animation
         # Construct container
@@ -167,11 +171,11 @@ class HomeWidget(BaseWidget):
             )
             
         self._menu.adjustSize()
-        widget_global_pos = self.mapToGlobal(QPoint(0, self.height() + self._distance))
+        widget_global_pos = self.mapToGlobal(QPoint(self._offset_left, self.height() + self._offset_top))
         
         if self._direction == 'up':
-            global_y = self.mapToGlobal(QPoint(0, 0)).y() - self._menu.height() - self._distance
-            widget_global_pos = QPoint(self.mapToGlobal(QPoint(0, 0)).x(), global_y)
+            global_y = self.mapToGlobal(QPoint(0, 0)).y() - self._menu.height() - self._offset_top
+            widget_global_pos = QPoint(self.mapToGlobal(QPoint(0, 0)).x() + self._offset_left, global_y)
             
         if self._alignment == 'left':
             global_position = widget_global_pos

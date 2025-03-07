@@ -216,10 +216,10 @@ class DiskWidget(BaseWidget):
 
         # Position the dialog 
         self.dialog.adjustSize()
-        widget_global_pos = self.mapToGlobal(QPoint(0, self.height() + self._group_label['distance']))
+        widget_global_pos = self.mapToGlobal(QPoint(self._group_label['offset_left'], self.height() + self._group_label['offset_top']))
         if self._group_label['direction'] == 'up':
-            global_y = self.mapToGlobal(QPoint(0, 0)).y() - self.dialog.height() - self._group_label['distance']
-            widget_global_pos = QPoint(self.mapToGlobal(QPoint(0, 0)).x(), global_y)
+            global_y = self.mapToGlobal(QPoint(0, 0)).y() - self.dialog.height() - self._group_label['offset_left']
+            widget_global_pos = QPoint(self.mapToGlobal(QPoint(0, 0)).x() + self._group_label['offset_left'], global_y)
 
         if self._group_label['alignment'] == 'left':
             global_position = widget_global_pos

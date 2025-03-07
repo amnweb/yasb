@@ -12,7 +12,7 @@
 | `desktop_notifications`  | dict | `{'ssl': false, 'offline': false}` | Desktop notification settings. Show desktop notifications for SSL warnings and offline servers. |
 | `timeout`         | integer | `5`                                                                 | The timeout in seconds for server checks. Must be between 1 and 30. |
 | `servers`         | list    | `[]`                                                                   | A list of server dictionaries. |
-| `menu` | dict | `{'blur': True, 'round_corners': True, 'round_corners_type': 'normal', 'border_color': 'System', 'alignment': 'right', 'direction': 'down', 'distance': 6}` | Menu settings for the widget. |
+| `menu` | dict | `{'blur': True, 'round_corners': True, 'round_corners_type': 'normal', 'border_color': 'System', 'alignment': 'right', 'direction': 'down', 'offset_top': 6, 'offset_left': 0}` | Menu settings for the widget. |
 | `icons`          | dict     | `{'online': '\uf444', 'offline': '\uf4c3', 'warning': '\uf4c3', 'reload': '\udb81\udc50'}` | Icons for different server states and actions. |
 | `callbacks`       | dict    | `{'on_left': 'toggle_label', 'on_middle': 'do_nothing', 'on_right': 'do_nothing'}` | Callbacks for mouse events on the memory widget. |
 | `animation`         | dict    | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
@@ -46,7 +46,6 @@
           border_color: "System"
           alignment: "right"
           direction: "down"
-          distance: 6
         callbacks:
           on_left: "toggle_menu"
           on_right: "toggle_label"
@@ -72,7 +71,8 @@
   - **border_color:** Set the border color for the menu (this option is not supported on Windows 10).
   - **alignment:** Set the alignment of the menu (left, right).
   - **direction:** Set the direction of the menu (up, down).
-  - **distance:** Set the distance of the menu from the widget.
+  - **offset_top:** Set the offset from the top of the widget.
+  - **offset_left:** Set the offset from the left of the widget.
 - **icons:** Icons for different server states and actions.
 - **callbacks:** Callbacks for mouse events on the memory widget.
 - **animation:** Animation settings for the widget.

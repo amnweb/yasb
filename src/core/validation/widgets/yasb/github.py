@@ -14,7 +14,9 @@ DEFAULTS = {
         'border_color': 'System',
         'alignment': 'right',
         'direction': 'down',
-        'distance': 6
+        'distance': 6, # deprecated
+        'offset_top': 6,
+        'offset_left': 0,
     },
     'icons': {
         'issue': '\uf41b',
@@ -99,6 +101,14 @@ VALIDATION_SCHEMA = {
             'distance': {
                 'type': 'integer',
                 'default': DEFAULTS['menu']['distance']
+            },
+            'offset_top': {
+                'type': 'integer',
+                'default': DEFAULTS['menu']['offset_top']
+            },
+            'offset_left': {
+                'type': 'integer',
+                'default': DEFAULTS['menu']['offset_left']
             }
         },
         'default': DEFAULTS['menu']

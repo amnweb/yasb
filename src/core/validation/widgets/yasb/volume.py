@@ -16,7 +16,9 @@ DEFAULTS = {
         'border_color': 'System',
         'alignment': 'right',
         'direction': 'down',
-        'distance': 6
+        'distance': 6, # deprecated
+        'offset_top': 6,
+        'offset_left': 0,
     },
     'animation': {
         'enabled': True,
@@ -84,6 +86,14 @@ VALIDATION_SCHEMA = {
             'distance': {
                 'type': 'integer',
                 'default': DEFAULTS['audio_menu']['distance']
+            },
+            'offset_top': {
+                'type': 'integer',
+                'default': DEFAULTS['audio_menu']['offset_top']
+            },
+            'offset_left': {
+                'type': 'integer',
+                'default': DEFAULTS['audio_menu']['offset_left']
             }
         },
         'default': DEFAULTS['audio_menu']

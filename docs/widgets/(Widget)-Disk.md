@@ -6,7 +6,7 @@
 | `volume_label`       | string  | `'C'`        | Partition which you want to show in the bar |
 | `decimal_display` | integer | `1`                                                                  | The number of decimal to show, defaul 1 (min 0 max 3) |
 | `update_interval` | integer | `60`                                                                  | The interval in seconds to update the disk widget. Must be between 0 and 3600. |
-| `group_label` | dict | `{'volume_labels': ["C"], 'show_label_name': True, 'blur': True, 'round_corners': True, 'round_corners_type': 'normal','border_color': 'System', 'alignment': 'right', 'direction': 'down', 'distance': 6}` | Group labels for multiple disks. This will show the labels of multiple disks in a popup window. |
+| `group_label` | dict | `{'volume_labels': ["C"], 'show_label_name': True, 'blur': True, 'round_corners': True, 'round_corners_type': 'normal','border_color': 'System', 'alignment': 'right', 'direction': 'down', 'offset_top': 6, 'offset_left': 0}` | Group labels for multiple disks. This will show the labels of multiple disks in a popup window. |
 | `callbacks`       | dict    | `{'on_left': 'do_nothing', 'on_middle': 'do_nothing', 'on_right': "exec explorer C:\\"}` | Callbacks for mouse events. |
 | `container_padding`  | dict | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}`      | Explicitly set padding inside widget container. |
 | `animation`         | dict    | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
@@ -30,7 +30,6 @@ disk:
         border_color: "System"
         alignment: "right"
         direction: "down"
-        distance: 6
       callbacks:
         on_left: "toggle_group"
         on_middle: "toggle_label"
@@ -53,7 +52,8 @@ disk:
   - **border_color:** Border color for group label can be `None`, `System` or `Hex Color` `"#ff0000"`.
   - **alignment:** Alignment of the group label. Possible values are `left`, `center`, and `right`.
   - **direction:** Direction of the group label. Possible values are `up` and `down`.
-  - **distance:** Distance of the group label from the widget.
+  - **offset_top:** Offset from the top of the screen.
+  - **offset_left:** Offset from the left of the screen.
 - **callbacks:** A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions.
 - **container_padding:** Explicitly set padding inside widget container.
 - **animation:** A dictionary specifying the animation settings for the widget. It contains three keys: `enabled`, `type`, and `duration`. The `type` can be `fadeInOut` and the `duration` is the animation duration in milliseconds.

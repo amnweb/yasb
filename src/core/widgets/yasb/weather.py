@@ -231,10 +231,10 @@ class WeatherWidget(BaseWidget):
  
         # Position the dialog 
         self.dialog.adjustSize()
-        widget_global_pos = self.mapToGlobal(QPoint(0, self.height() + self._weather_card['distance']))
+        widget_global_pos = self.mapToGlobal(QPoint(self._weather_card['offset_left'], self.height() + self._weather_card['offset_top']))
         if self._weather_card['direction'] == 'up':
-            global_y = self.mapToGlobal(QPoint(0, 0)).y() - self.dialog.height() - self._weather_card['distance']
-            widget_global_pos = QPoint(self.mapToGlobal(QPoint(0, 0)).x(), global_y)
+            global_y = self.mapToGlobal(QPoint(0, 0)).y() - self.dialog.height() - self._weather_card['offset_top']
+            widget_global_pos = QPoint(self.mapToGlobal(QPoint(0, 0)).x() + self._weather_card['offset_left'], global_y)
 
         if self._weather_card['alignment'] == 'left':
             global_position = widget_global_pos

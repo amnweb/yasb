@@ -10,7 +10,7 @@
 | `max_notification`| integer | `20`                           | The maximum number of notifications to display in the menu. |
 | `only_unread`    | boolean  | `False`                        | Whether to show only unread notifications. |
 | `max_field_size` | integer  | `100`                          | The maximum number of characters in the title before truncation. |
-| `menu` | dict | `{'blur': True, 'round_corners': True, 'round_corners_type': 'normal', 'border_color': 'System', 'alignment': 'right', 'direction': 'down', 'distance': 6}` | Menu settings for the widget. |
+| `menu` | dict | `{'blur': True, 'round_corners': True, 'round_corners_type': 'normal', 'border_color': 'System', 'alignment': 'right', 'direction': 'down', 'offset_top': 6, 'offset_left': 0}` | Menu settings for the widget. |
 | `icons`          | dict     | `{'issue': '\uf41b', 'pull_request': '\uea64', 'release': '\uea84', 'discussion': '\uf442', 'default': '\uea84', 'github_logo': '\uea84'}` | Icons for different types of notifications in the menu. |
 | `animation`         | dict    | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
 | `container_padding`  | dict | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}`      | Explicitly set padding inside widget container. |
@@ -34,7 +34,6 @@ github:
       border_color: "System" # Set the border color for the menu (this option is not supported on Windows 10)
       alignment: "right"
       direction: "down"
-      distance: 6
 ```
 ## Description of Options
 
@@ -53,7 +52,8 @@ github:
   - **border_color:** Set the border color for the menu (this option is not supported on Windows 10).
   - **alignment:** Set the alignment of the menu (left, right).
   - **direction:** Set the direction of the menu (up, down).
-  - **distance:** Set the distance of the menu from the widget.
+  - **offset_top:** Set the offset from the top of the screen.
+  - **offset_left:** Set the offset from the left of the screen.
 - **animation:** A dictionary specifying the animation settings for the widget. It contains three keys: `enabled`, `type`, and `duration`. The `type` can be `fadeInOut` and the `duration` is the animation duration in milliseconds.
 - **container_padding**: Explicitly set padding inside widget container. Use this option to set padding inside the widget container. You can set padding for top, left, bottom and right sides of the widget container.
 

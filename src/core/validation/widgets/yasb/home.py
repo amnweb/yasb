@@ -9,7 +9,9 @@ DEFAULTS = {
     'border_color': 'System',
     'alignment': 'left',
     'direction': 'down',
-    'distance': 6,
+    'distance': 6, # deprecated
+    'offset_top': 6,
+    'offset_left': 0,
     'menu_labels': {'shutdown': 'Shutdown', 'restart': 'Restart', 'logout': 'Logout', 'lock': 'Lock', 'sleep': 'Sleep', 'system': 'System Settings', 'about': 'About This PC', 'task_manager': 'Task Manager'},
     'animation': {
         'enabled': True,
@@ -103,6 +105,16 @@ VALIDATION_SCHEMA = {
     'distance': {
         'type': 'integer',
         'default': DEFAULTS['distance'],
+        'required': False
+    },
+    'offset_top': {
+        'type': 'integer',
+        'default': DEFAULTS['offset_top'],
+        'required': False
+    },
+    'offset_left': {
+        'type': 'integer',
+        'default': DEFAULTS['offset_left'],
         'required': False
     },
     'menu_labels': {

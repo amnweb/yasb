@@ -321,11 +321,11 @@ class GithubWidget(BaseWidget):
             main_layout.addWidget(footer_label)
 
         self._menu.adjustSize()
-        widget_global_pos = self.mapToGlobal(QPoint(0, self.height() + self._menu_popup['distance']))
+        widget_global_pos = self.mapToGlobal(QPoint(self._menu_popup['offset_left'], self.height() + self._menu_popup['offset_top']))
 
         if self._menu_popup['direction'] == 'up':
-            global_y = self.mapToGlobal(QPoint(0, 0)).y() - self._menu.height() - self._menu_popup['distance']
-            widget_global_pos = QPoint(self.mapToGlobal(QPoint(0, 0)).x(), global_y)
+            global_y = self.mapToGlobal(QPoint(0, 0)).y() - self._menu.height() - self._menu_popup['offset_top']
+            widget_global_pos = QPoint(self.mapToGlobal(QPoint(0, 0)).x() + self._menu_popup['offset_left'], global_y)
 
         if self._menu_popup['alignment'] == 'left':
             global_position = widget_global_pos

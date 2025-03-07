@@ -14,7 +14,7 @@
 | `auto_light_day_level` | int | `100` | The brightness level at which the widget switches to the day. |
 | `auto_light_night_start_time` | string | `"20:00"` | The time at which the night starts. |
 | `auto_light_night_end_time` | string | `"06:30"` | The time at which the night ends. |
-| `brightness_menu` | dict | `{'blur': True, 'round_corners': True, 'round_corners_type': 'normal', 'border_color': 'System', 'alignment': 'right', 'direction': 'down', 'distance': 6}` | Menu settings for the widget. |
+| `brightness_menu` | dict | `{'blur': True, 'round_corners': True, 'round_corners_type': 'normal', 'border_color': 'System', 'alignment': 'right', 'direction': 'down', 'offset_top': 6, 'offset_left': 0}` | Menu settings for the widget. |
 | `callbacks`     | dict    | `{'on_left': 'toggle_label', 'on_middle': 'do_nothing', 'on_right': 'do_nothing'}` | Callbacks for mouse events on the clock widget. |
 | `container_padding`  | dict | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}`      | Explicitly set padding inside widget container.      |
 | `animation`         | dict    | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
@@ -49,7 +49,6 @@
         border_color: "System"
         alignment: "right"
         direction: "down"
-        distance: 6
       callbacks:
           on_left: "toggle_label"
       container_padding:
@@ -73,7 +72,8 @@
   - **border_color**: Set the border color for the menu (this option is not supported on Windows 10).
   - **alignment**: Set the alignment of the menu (left, right).
   - **direction**: Set the direction of the menu (up, down).
-  - **distance**: Set the distance of the menu from the widget.
+  - **offset_top**: Set the top offset of the menu.
+  - **offset_left**: Set the left offset of the menu.
 - **auto_light:** Whether to automatically adjust the brightness icon based on the current brightness level.
 - **auto_light_icon:** The icon to use when the auto_light option is enabled.
 - **auto_light_night_level:** The brightness level at which the widget switches to the night.

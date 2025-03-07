@@ -262,11 +262,11 @@ class ClockWidget(BaseWidget):
 
         # Position and show the popup
         self._yasb_calendar.adjustSize()
-        widget_global_pos = self.mapToGlobal(QPoint(0, self.height() + self._calendar['distance']))
+        widget_global_pos = self.mapToGlobal(QPoint(self._calendar['offset_left'], self.height() + self._calendar['offset_top']))
 
         if self._calendar['direction'] == 'up':
-            global_y = self.mapToGlobal(QPoint(0, 0)).y() - self._yasb_calendar.height() - self._calendar['distance']
-            widget_global_pos = QPoint(self.mapToGlobal(QPoint(0, 0)).x(), global_y)
+            global_y = self.mapToGlobal(QPoint(0, 0)).y() - self._yasb_calendar.height() - self._calendar['offset_top']
+            widget_global_pos = QPoint(self.mapToGlobal(QPoint(0, 0)).x() + self._calendar['offset_left'], global_y)
 
         if self._calendar['alignment'] == 'left':
             global_position = widget_global_pos

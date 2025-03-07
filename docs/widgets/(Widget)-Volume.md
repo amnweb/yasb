@@ -6,7 +6,7 @@
 | `tooltip`  | boolean  | `True`        | Whether to show the tooltip on hover. |
 | `volume_icons` | list  | `['\ueee8', '\uf026', '\uf027', '\uf027', '\uf028']`                    | A list of icons representing different volume levels. The icons are used based on the current volume percentage. |
 | `callbacks`  | dict   | `{'on_left': 'toggle_volume_menu', 'on_middle': 'do_nothing', 'on_right': 'toggle_mute'}`                  | Callbacks for mouse events on the volume widget. |
-| `audio_menu` | dict | `{'blur': True, 'round_corners': True, 'round_corners_type': 'normal', 'border_color': 'System', 'alignment': 'right', 'direction': 'down', 'distance': 6}` | Menu settings for the widget. |
+| `audio_menu` | dict | `{'blur': True, 'round_corners': True, 'round_corners_type': 'normal', 'border_color': 'System', 'alignment': 'right', 'direction': 'down', 'offset_top': 6, 'offset_left': 0}` | Menu settings for the widget. |
 | `animation`         | dict    | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
 | `container_padding`  | dict | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}`      | Explicitly set padding inside widget container. |
 
@@ -31,7 +31,6 @@ volume:
        border_color: 'System'
        alignment: 'right'
        direction: 'down'
-       distance: 6
     callbacks:
       on_left: "toggle_volume_menu"
       on_right: "toggle_mute"
@@ -50,7 +49,8 @@ volume:
   - **border_color**: Set the border color for the menu (this option is not supported on Windows 10).
   - **alignment**: Set the alignment of the menu (left, right).
   - **direction**: Set the direction of the menu (up, down).
-  - **distance**: Set the distance of the menu from the widget.
+  - **offset_top**: Set the top offset of the menu.
+  - **offset_left**: Set the left offset of the menu.
 - **callbacks**: A dictionary specifying the callbacks for mouse events. The keys are `on_middle` and `on_right`, and the values are the names of the callback functions.
 - **animation:** A dictionary specifying the animation settings for the widget. It contains three keys: `enabled`, `type`, and `duration`. The `type` can be `fadeInOut` and the `duration` is the animation duration in milliseconds.
 - **container_padding**: Explicitly set padding inside widget container. Use this option to set padding inside the widget container. You can set padding for top, left, bottom and right sides of the widget container.

@@ -244,10 +244,10 @@ class BrightnessWidget(BaseWidget):
 
         # Position the dialog 
         self.dialog.adjustSize()
-        widget_global_pos = self.mapToGlobal(QPoint(0, self.height() + self._brightness_menu['distance']))
+        widget_global_pos = self.mapToGlobal(QPoint(self._brightness_menu['offset_left'], self.height() + self._brightness_menu['offset_top']))
         if self._brightness_menu['direction'] == 'up':
-            global_y = self.mapToGlobal(QPoint(0, 0)).y() - self.dialog.height() - self._brightness_menu['distance']
-            widget_global_pos = QPoint(self.mapToGlobal(QPoint(0, 0)).x(), global_y)
+            global_y = self.mapToGlobal(QPoint(0, 0)).y() - self.dialog.height() - self._brightness_menu['offset_top']
+            widget_global_pos = QPoint(self.mapToGlobal(QPoint(0, 0)).x() + self._brightness_menu['offset_left'], global_y)
 
         if self._brightness_menu['alignment'] == 'left':
             global_position = widget_global_pos

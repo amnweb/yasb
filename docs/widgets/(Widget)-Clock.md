@@ -8,7 +8,7 @@
 | `locale`            | string  | `""`                                                                                  | The locale to use for the clock. If not specified, it defaults to an empty string.                                  |
 | `update_interval`   | integer | `1000`                                                                                | The interval in milliseconds to update the clock. Must be between 0 and 60000.                                      |
 | `timezones`         | list    | `[]`                                                                                  | A list of timezones to cycle through. Each timezone should be a valid timezone string.                              |
-| `calendar` | dict | `{'blur': True, 'round_corners': True, 'round_corners_type': 'normal', 'border_color': 'System', 'alignment': 'right', 'direction': 'down', 'distance': 6}` | Calendar settings for the widget. |
+| `calendar` | dict | `{'blur': True, 'round_corners': True, 'round_corners_type': 'normal', 'border_color': 'System', 'alignment': 'right', 'direction': 'down', 'offset_top': 6, 'offset_left': 0}` | Calendar settings for the widget. |
 | `callbacks`         | dict    | `{'on_left': 'toggle_calendar', 'on_middle': 'next_timezone', 'on_right': 'toggle_label'}` | Callbacks for mouse events on the clock widget.                                                                     |
 | `animation`         | dict    | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}`                             | Animation settings for the widget.                                                                                  |
 | `container_padding` | dict    | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}`                                      | Explicitly set padding inside widget container.                                                                     |
@@ -27,11 +27,10 @@ clock:
     calendar: 
       blur: True
       round_corners: True
-      round_corners_type: 'normal'
-      border_color: 'System'
-      alignment: 'center'
-      direction: 'down'
-      distance: 6
+      round_corners_type: "normal"
+      border_color: "System"
+      alignment: "center"
+      direction: "down"
     callbacks:
       on_left: "toggle_label"
       on_middle: "do_nothing"
@@ -53,7 +52,8 @@ clock:
   - **border_color:** Set the border color for the calendar (this option is not supported on Windows 10).
   - **alignment:** Set the alignment of the calendar (left, right).
   - **direction:** Set the direction of the calendar (up, down).
-  - **distance:** Set the distance of the calendar from the widget.
+  - **offset_top:** Set the offset from the top of the widget container.
+  - **offset_left:** Set the offset from the left of the widget container.
 - **callbacks:** A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions.
 - **animation:** A dictionary specifying the animation settings for the widget. It contains three keys: `enabled`, `type`, and `duration`. The `type` can be `fadeInOut` and the `duration` is the animation duration in milliseconds.
 - **container_padding**: Explicitly set padding inside widget container. Use this option to set padding inside the widget container. You can set padding for top, left, bottom and right sides of the widget container.

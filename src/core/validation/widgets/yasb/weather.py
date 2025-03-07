@@ -26,7 +26,9 @@ DEFAULTS = {
         'border_color': 'System',
         'alignment': 'right',
         'direction': 'down',
-        'distance': 6,
+        'distance': 6, # deprecated
+        'offset_top': 6,
+        'offset_left': 0,
         'icon_size': 64
     },
     'animation': {
@@ -156,6 +158,14 @@ VALIDATION_SCHEMA = {
             'distance': {
                 'type': 'integer',
                 'default': DEFAULTS['weather_card']['distance']
+            },
+            'offset_top': {
+                'type': 'integer',
+                'default': DEFAULTS['weather_card']['offset_top']
+            },
+            'offset_left': {
+                'type': 'integer',
+                'default': DEFAULTS['weather_card']['offset_left']
             },
             'icon_size': {
                 'type': 'integer',
