@@ -1,4 +1,5 @@
 import logging
+from math import ceil
 from settings import APP_BAR_TITLE
 from PyQt6.QtWidgets import QWidget, QHBoxLayout, QGridLayout, QFrame
 from PyQt6.QtGui import QScreen
@@ -212,20 +213,17 @@ class Bar(QWidget):
 
 
     def is_foreground_fullscreen(self):
-        # Get the active window's handle using win32gui
+        """Check if the active foreground window is in fullscreen mode."""
         hwnd = win32gui.GetForegroundWindow()
         if not hwnd:
             return
-        hwnd_class_name = win32gui.GetClassName(hwnd)
-     
-        # Check if the foreground window is the desktop
-        if hwnd_class_name in ["Progman", "WorkerW"]:
+
+        class_name = win32gui.GetClassName(hwnd)
+        if class_name in ("Progman", "WorkerW", "XamlWindow"):
             return
-        # Get the window rectangle: (left, top, right, bottom) then convert to (x, y, width, height)
-        rect = win32gui.GetWindowRect(hwnd)
-        window_rect = (rect[0], rect[1], rect[2] - rect[0], rect[3] - rect[1])
- 
-        # Get the primary screen geometry
+        left, top, right, bottom = win32gui.GetWindowRect(hwnd)
+        window_rect = (left, top, right - left, bottom - top)
+
         screen_geometry = self.screen().geometry()
         screen_rect = (
             screen_geometry.x(),
@@ -234,19 +232,17 @@ class Bar(QWidget):
             screen_geometry.height()
         )
 
-        # Determine fullscreen state
-        is_fullscreen = (window_rect == screen_rect)
-        # Cache the previous state so we only update if it changes
-        if hasattr(self, "_prev_fullscreen_state") and self._prev_fullscreen_state == is_fullscreen:
+        self.dpi = self.screen().devicePixelRatio()
+        scaled_screen_rect = screen_rect[:2] + tuple(round(dim * self.dpi) for dim in screen_rect[2:])
+        is_fullscreen = (window_rect == scaled_screen_rect)
+        if getattr(self, "_prev_fullscreen_state", None) == is_fullscreen:
             return
+
         self._prev_fullscreen_state = is_fullscreen
-        # Update visibility only when necessary
-        if is_fullscreen:
-            if self.isVisible():
-                self.hide()
-        else:
-            if not self.isVisible():
-                self.show() 
+        if is_fullscreen and self.isVisible():
+            self.hide()
+        elif not is_fullscreen and not self.isVisible():
+            self.show()
 
 
     def detect_os_theme(self) -> bool:
