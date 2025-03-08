@@ -12,7 +12,7 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 import win32gui
 from glob import glob
-from PIL import Image
+from PIL import Image, ImageFilter 
 from settings import DEBUG
 
 pil_logger = logging.getLogger('PIL')
@@ -20,7 +20,7 @@ pil_logger.setLevel(logging.INFO)
 
 TARGETSIZE_REGEX = re.compile(r'targetsize-([0-9]+)')
 
-def get_window_icon(hwnd, dpi = 1.0):
+def get_window_icon(hwnd, smooth_level = 0):
     """Fetch the icon of the window."""
     try:
         hicon = win32gui.SendMessage(hwnd, win32con.WM_GETICON, win32con.ICON_BIG, 0)
@@ -61,8 +61,12 @@ def get_window_icon(hwnd, dpi = 1.0):
                     (bmpinfo['bmWidth'], bmpinfo['bmHeight']),
                     raw_data, 'raw', 'BGRA', 0, 1
                 ).convert('RGBA')
-                target_size = 48  # target size (48x48) wihout DPI, most of uwps are also 44x44
-                img = img.resize((target_size, target_size), Image.LANCZOS)
+                #target_size = 48  # target size (48x48) wihout DPI, most of uwps are also 48x48
+                #img = img.resize((target_size, target_size), Image.LANCZOS)
+                if smooth_level == 1:
+                    img = img.filter(ImageFilter.SMOOTH)
+                elif smooth_level == 2:
+                    img = img.filter(ImageFilter.SMOOTH_MORE)
                 return img
             finally:
                 # Cleaning up resources
