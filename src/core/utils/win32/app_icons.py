@@ -4,12 +4,15 @@ import re
 import logging
 import win32ui
 import win32con
+import win32api
+import ctypes
+import ctypes.wintypes
 from core.utils.win32.app_uwp import get_package
 import xml.etree.ElementTree as ET
 from pathlib import Path
 import win32gui
 from glob import glob
-from PIL import Image
+from PIL import Image, ImageFilter 
 from settings import DEBUG
 
 pil_logger = logging.getLogger('PIL')
@@ -17,7 +20,7 @@ pil_logger.setLevel(logging.INFO)
 
 TARGETSIZE_REGEX = re.compile(r'targetsize-([0-9]+)')
 
-def get_window_icon(hwnd, dpi):
+def get_window_icon(hwnd, smooth_level = 0):
     """Fetch the icon of the window."""
     try:
         hicon = win32gui.SendMessage(hwnd, win32con.WM_GETICON, win32con.ICON_BIG, 0)
@@ -38,7 +41,8 @@ def get_window_icon(hwnd, dpi):
             try:
                 hdc = win32ui.CreateDCFromHandle(hdc_handle)
                 hbmp = win32ui.CreateBitmap()
-                bitmap_size = int(32 * dpi)
+                system_icon_size = win32api.GetSystemMetrics(win32con.SM_CXICON)
+                bitmap_size = int(system_icon_size)
                 hbmp.CreateCompatibleBitmap(hdc, bitmap_size, bitmap_size)
                 memdc = hdc.CreateCompatibleDC()
                 # Select the bitmap into the memory device context
@@ -50,12 +54,19 @@ def get_window_icon(hwnd, dpi):
  
                 bmpinfo = hbmp.GetInfo()
                 bmpstr = hbmp.GetBitmapBits(True)
- 
+                
+                raw_data = bytes(bmpstr)
                 img = Image.frombuffer(
                     'RGBA',
                     (bmpinfo['bmWidth'], bmpinfo['bmHeight']),
-                    bmpstr, 'raw', 'BGRA', 0, 1
-                )
+                    raw_data, 'raw', 'BGRA', 0, 1
+                ).convert('RGBA')
+                #target_size = 48  # target size (48x48) wihout DPI, most of uwps are also 48x48
+                #img = img.resize((target_size, target_size), Image.LANCZOS)
+                if smooth_level == 1:
+                    img = img.filter(ImageFilter.SMOOTH)
+                elif smooth_level == 2:
+                    img = img.filter(ImageFilter.SMOOTH_MORE)
                 return img
             finally:
                 # Cleaning up resources
@@ -89,13 +100,8 @@ def get_window_icon(hwnd, dpi):
                     #logging.debug("Released device context handle.")
                 except Exception as e:
                     #logging.debug(f"Error releasing device context handle: {e}")
-                    pass                
-    
+                    pass
         else:
-            import win32api
-            import ctypes
-            import ctypes.wintypes
-            import win32process
             try:
                 class_name = win32gui.GetClassName(hwnd)
             except:
@@ -126,7 +132,7 @@ def get_window_icon(hwnd, dpi):
             manifest_path = os.path.join(package.package_path, "AppXManifest.xml")
             if not os.path.exists(manifest_path):
                 if DEBUG:
-                    print(f"manifest not found {manifest_path}")
+                    logging.error(f"manifest not found {manifest_path}")
                 return None
             root = ET.parse(manifest_path)
             velement = root.find(".//VisualElements")
@@ -187,6 +193,5 @@ def get_window_icon(hwnd, dpi):
                 return None
             return img
     except Exception as e:
-        logging.exception("")
-        print(f"Error fetching icon: {e}")
+        logging.error(f"Error fetching icon: {e}")
         return None

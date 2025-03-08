@@ -40,7 +40,7 @@ class TaskbarWidget(BaseWidget):
             callbacks: dict[str, str]
     ):
         super().__init__(class_name="taskbar-widget")
-
+        self.dpi = None # Initial DPI value
         self.icon_label = QLabel()
         self._label_icon_size = icon_size
         if isinstance(animation, bool):
@@ -57,8 +57,7 @@ class TaskbarWidget(BaseWidget):
         self._padding = container_padding
         self._win_info = None
         self._update_retry_count = 0
-        
-        self.dpi = self.screen().devicePixelRatio() 
+
         self._icon_cache = dict()
         self.window_buttons = {}
         self._event_service = EventService()
@@ -190,40 +189,51 @@ class TaskbarWidget(BaseWidget):
             if self._animation['enabled']:
                 self._animate_icon(icon_label, start_width=0, end_width=icon_label.sizeHint().width())
 
-    def _get_app_icon(self, hwnd: int, title:str, process: dict, event: WinEvent) -> Optional[QPixmap]:
+
+    def _get_app_icon(self, hwnd: int, title: str, process: dict, event: WinEvent) -> QPixmap | None:
         try:
             pid = process["pid"]
-            
+            cache_key = (hwnd, title, pid, self.dpi)
+
             if event != WinEvent.WinEventOutOfContext:
                 self._update_retry_count = 0
 
-            if (hwnd, title, pid) in self._icon_cache:
-                icon_img = self._icon_cache[(hwnd, title, pid)]
+            if cache_key in self._icon_cache:
+                icon_img = self._icon_cache[cache_key]
             else:
-                icon_img = get_window_icon(hwnd, self.dpi)
+                self.dpi = self.screen().devicePixelRatio()
+                icon_img = get_window_icon(hwnd)
                 if icon_img:
-                    icon_img = icon_img.resize((int(self._label_icon_size * self.dpi), int(self._label_icon_size * self.dpi)), Image.Resampling.LANCZOS).convert("RGBA")
-                else:
-                    # UWP apps I hate it
-                    if process["name"] == "ApplicationFrameHost.exe":
-                        if self._update_retry_count < 10:
-                            self._update_retry_count += 1
-                            QTimer.singleShot(500, lambda: self._get_app_icon(hwnd, title, process, WinEvent.WinEventOutOfContext))
-                            return
-                        else:
-                            self._update_retry_count = 0
-            if icon_img:
+                    icon_img = icon_img.resize(
+                        (int(self._label_icon_size * self.dpi), int(self._label_icon_size * self.dpi)),
+                        Image.LANCZOS
+                    ).convert("RGBA")
+                elif process["name"] == "ApplicationFrameHost.exe":
+                    if self._update_retry_count < 10:
+                        self._update_retry_count += 1
+                        QTimer.singleShot(
+                            500,
+                            lambda: self._get_app_icon(hwnd, title, process, WinEvent.WinEventOutOfContext)
+                        )
+                        return None
+                    self._update_retry_count = 0
+
                 if not DEBUG:
-                    self._icon_cache[(hwnd, title, pid)] = icon_img
-                qimage = QImage(icon_img.tobytes(), icon_img.width, icon_img.height, QImage.Format.Format_RGBA8888)
-                pixmap = QPixmap.fromImage(qimage)
-            else:
-                pixmap = None
+                    self._icon_cache[cache_key] = icon_img
+
+            if not icon_img:
+                return None
+            qimage = QImage(icon_img.tobytes(), icon_img.width, icon_img.height, QImage.Format.Format_RGBA8888)
+            pixmap = QPixmap.fromImage(qimage)
+            pixmap.setDevicePixelRatio(self.dpi)
             return pixmap
+
         except Exception:
             if DEBUG:
                 logging.exception(f"Failed to get icons for window with HWND {hwnd} emitted by event {event}")
-            
+            return None
+
+
     def get_visible_windows(self, _: int, win_info: dict, event: WinEvent) -> list[tuple[str, int, Optional[QPixmap], WinEvent]]:
         process = win_info['process']
         def is_window_visible_on_taskbar(hwnd):
