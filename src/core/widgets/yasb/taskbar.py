@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 from settings import DEBUG
 from core.widgets.base import BaseWidget
 from core.utils.win32.windows import WinEvent
@@ -21,7 +22,9 @@ except ImportError:
     SystemEventListener = None
     logging.warning("Failed to load Win32 System Event Listener")
     
- 
+# Missing from win32con
+WS_EX_NOREDIRECTIONBITMAP = 0x20_0000
+
 class TaskbarWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
     update_event = pyqtSignal(int, WinEvent)
@@ -54,7 +57,7 @@ class TaskbarWidget(BaseWidget):
         self._padding = container_padding
         self._win_info = None
         self._update_retry_count = 0
-        
+
         self._icon_cache = dict()
         self.window_buttons = {}
         self._event_service = EventService()
@@ -186,18 +189,15 @@ class TaskbarWidget(BaseWidget):
             if self._animation['enabled']:
                 self._animate_icon(icon_label, start_width=0, end_width=icon_label.sizeHint().width())
 
- 
+
     def _get_app_icon(self, hwnd: int, title: str, process: dict, event: WinEvent) -> QPixmap | None:
         try:
-            if hwnd != win32gui.GetForegroundWindow():
-                return None
-            
             pid = process["pid"]
             cache_key = (hwnd, title, pid, self.dpi)
-            
+
             if event != WinEvent.WinEventOutOfContext:
                 self._update_retry_count = 0
- 
+
             if cache_key in self._icon_cache:
                 icon_img = self._icon_cache[cache_key]
             else:
@@ -212,7 +212,7 @@ class TaskbarWidget(BaseWidget):
                     if self._update_retry_count < 10:
                         self._update_retry_count += 1
                         QTimer.singleShot(
-                            500, 
+                            500,
                             lambda: self._get_app_icon(hwnd, title, process, WinEvent.WinEventOutOfContext)
                         )
                         return None
@@ -232,24 +232,25 @@ class TaskbarWidget(BaseWidget):
             if DEBUG:
                 logging.exception(f"Failed to get icons for window with HWND {hwnd} emitted by event {event}")
             return None
- 
-            
-    def get_visible_windows(self, hwnd: int, win_info: dict, event: WinEvent) -> None:
+
+
+    def get_visible_windows(self, _: int, win_info: dict, event: WinEvent) -> list[tuple[str, int, Optional[QPixmap], WinEvent]]:
         process = win_info['process']
         def is_window_visible_on_taskbar(hwnd):
-            if win32gui.IsWindowVisible(hwnd) and win32gui.GetWindowText(hwnd):
+            if win32gui.IsWindowVisible(hwnd):
                 ex_style = win32gui.GetWindowLong(hwnd, win32con.GWL_EXSTYLE)
-                if not (ex_style & win32con.WS_EX_TOOLWINDOW):
+                if not (ex_style & win32con.WS_EX_TOOLWINDOW or ex_style == WS_EX_NOREDIRECTIONBITMAP):
                     return True
             return False
         
         visible_windows = []
         
-        def enum_windows_proc(hwnd, lParam):
+        def enum_windows_proc(hwnd, _):
             if is_window_visible_on_taskbar(hwnd):
                 title = win32gui.GetWindowText(hwnd)
                 icon = self._get_app_icon(hwnd, title, process, event)
-                visible_windows.append((title, hwnd, icon ,process))
+                if title and icon:
+                    visible_windows.append((title, hwnd, icon, process))
             return True
         win32gui.EnumWindows(enum_windows_proc, None)
         return visible_windows
