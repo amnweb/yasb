@@ -55,6 +55,7 @@ class ActiveWindowWidget(BaseWidget):
             container_padding: dict[str, int],
     ):
         super().__init__(class_name="active-window-widget")
+        self.dpi = None
         self._win_info = None
         self._show_alt = False
         self._label = label
@@ -63,7 +64,6 @@ class ActiveWindowWidget(BaseWidget):
         self._label_no_window = label_no_window
         self._label_icon = label_icon
         self._label_icon_size = label_icon_size
-        self.dpi = self.screen().devicePixelRatio() 
         self._monitor_exclusive = monitor_exclusive
         self._max_length = max_length
         self._max_length_ellipsis = max_length_ellipsis
@@ -185,16 +185,21 @@ class ActiveWindowWidget(BaseWidget):
             process = win_info['process']
             pid = process["pid"]
             class_name = win_info['class_name']
-
+            cache_key = (hwnd, title, pid, self.dpi)
+            
             if self._label_icon:
                 if event != WinEvent.WinEventOutOfContext:
                     self._update_retry_count = 0
-                if (hwnd, title, pid) in self._icon_cache:
-                    icon_img = self._icon_cache[(hwnd, title, pid)]
+                if cache_key in self._icon_cache:
+                    icon_img = self._icon_cache[cache_key]
                 else:
-                    icon_img = get_window_icon(hwnd, self.dpi)
+                    self.dpi = self.screen().devicePixelRatio()
+                    icon_img = get_window_icon(hwnd)
                     if icon_img:
-                        icon_img = icon_img.resize((int(self._label_icon_size * self.dpi), int(self._label_icon_size * self.dpi)), Image.LANCZOS).convert("RGBA")
+                        icon_img = icon_img.resize(
+                            (int(self._label_icon_size * self.dpi), int(self._label_icon_size * self.dpi)),
+                            Image.LANCZOS
+                        ).convert("RGBA")
                     else:
                         # UWP apps might need a moment to start under ApplicationFrameHost
                         # So we delay the detection, but only do it once.
@@ -207,10 +212,11 @@ class ActiveWindowWidget(BaseWidget):
                                 self._update_retry_count = 0
 
                     if not DEBUG:
-                        self._icon_cache[(hwnd, title, pid)] = icon_img
+                        self._icon_cache[cache_key] = icon_img
                 if icon_img:
                     qimage = QImage(icon_img.tobytes(), icon_img.width, icon_img.height, QImage.Format.Format_RGBA8888)
                     self.pixmap = QPixmap.fromImage(qimage)
+                    self.pixmap.setDevicePixelRatio(self.dpi)
                 else:
                     self.pixmap = None
 
