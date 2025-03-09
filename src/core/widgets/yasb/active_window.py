@@ -14,15 +14,13 @@ from core.utils.win32.app_icons import get_window_icon
 from core.utils.widgets.animation_manager import AnimationManager
 import atexit
 
-IGNORED_TITLES = ['', ' ', 'FolderView', 'Program Manager', 'python3', 'pythonw3', 'YasbBar', 'Search', 'Start', 'yasb']
+IGNORED_TITLES = ['', ' ', 'FolderView', 'Program Manager', 'python3', 'pythonw3', 'YasbBar', 'Search', 'Start']
 IGNORED_CLASSES = ['WorkerW', 'TopLevelWindowForOverflowXamlIsland', 'Shell_TrayWnd', 'Shell_SecondaryTrayWnd']
 IGNORED_PROCESSES = ['SearchHost.exe', 'komorebi.exe', 'yasb.exe']
 IGNORED_YASB_TITLES = [APP_BAR_TITLE]
 IGNORED_YASB_CLASSES = [
-    'Qt662QWindowIcon',
-    'Qt662QWindowIcon',
-    'Qt662QWindowToolSaveBits',
-    'Qt662QWindowToolSaveBits'
+    'Qt673QWindowIcon',
+    'Qt673QWindowToolSaveBits'
 ]
 
 try:
@@ -125,6 +123,15 @@ class ActiveWindowWidget(BaseWidget):
         
         atexit.register(self._stop_events)
 
+
+    def _set_no_window_or_hide(self) -> None:
+        if self._label_no_window:
+            self._window_title_text.setText(self._label_no_window)
+            if self._label_icon:
+                self._window_icon_label.hide()
+        else:
+            self.hide()
+            
     def _stop_events(self) -> None:
         self._event_service.clear()
         
@@ -143,7 +150,7 @@ class ActiveWindowWidget(BaseWidget):
             else:
                 self._update_retry_count = 0
         else:
-            self.hide()
+            self._set_no_window_or_hide()
             
         
     def _toggle_title_text(self) -> None:
@@ -165,14 +172,14 @@ class ActiveWindowWidget(BaseWidget):
         monitor_name = win_info['monitor_info'].get('device', None)
 
         if self._monitor_exclusive and self.screen().name() != monitor_name and win_info.get('monitor_hwnd', 'Unknown') != self.monitor_hwnd:
-            self.hide() 
+            self._set_no_window_or_hide()
         else:
             self._update_window_title(hwnd, win_info, event)
             
         # Check if the window title is in the list of ignored titles
         if(win_info['title'] in IGNORED_TITLES):
-            self.hide()
-
+            self._set_no_window_or_hide()
+            
     def _on_window_name_change_event(self, hwnd: int, event: WinEvent) -> None:
         if self._win_info and hwnd == self._win_info["hwnd"]:
             self._on_focus_change_event(hwnd, event)
@@ -231,7 +238,7 @@ class ActiveWindowWidget(BaseWidget):
                     win_info['title'] = truncated_title
                     self._window_title_text.setText(self._label_no_window)
                     if self._label_icon:
-                        self._window_icon_label.setText(self._label_no_window)
+                        self._window_icon_label.hide()
                     
                 self._win_info = win_info
                 self._update_text()
