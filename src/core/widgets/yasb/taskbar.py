@@ -150,7 +150,7 @@ class TaskbarWidget(BaseWidget):
         removed_hwnds = []
 
         for title, hwnd, icon, process in visible_windows:
-            if hwnd not in self.window_buttons and icon is not None:
+            if hwnd not in self.window_buttons:
                 self.window_buttons[hwnd] = (title, icon, hwnd, process)
                 new_icons.append((title, icon, hwnd, process))
             elif hwnd in existing_hwnds:
@@ -164,8 +164,13 @@ class TaskbarWidget(BaseWidget):
         # Remove icons for windows that are no longer visible
         for i in reversed(range(self._widget_container_layout.count())):
             widget = self._widget_container_layout.itemAt(i).widget()
+            hwnd = widget.property("hwnd")
+
+            widget.setProperty("class", self._get_icon_class(hwnd))
+            widget.style().unpolish(widget)
+            widget.style().polish(widget)
+
             if widget != self.icon_label:
-                hwnd = widget.property("hwnd")
                 if hwnd in removed_hwnds:
                     if self._animation['enabled']:
                         self._animate_icon(widget, start_width=widget.width(), end_width=0)
@@ -176,7 +181,7 @@ class TaskbarWidget(BaseWidget):
         # Add new icons
         for title, icon, hwnd, process in new_icons:
             icon_label = QLabel()
-            icon_label.setProperty("class", "app-icon")
+            icon_label.setProperty("class", self._get_icon_class(hwnd))
             if self._animation['enabled']:
                 icon_label.setFixedWidth(0)
             icon_label.setPixmap(icon)
@@ -189,6 +194,10 @@ class TaskbarWidget(BaseWidget):
             if self._animation['enabled']:
                 self._animate_icon(icon_label, start_width=0, end_width=icon_label.sizeHint().width())
 
+    def _get_icon_class(self, hwnd: int) -> str:
+        if hwnd == win32gui.GetForegroundWindow():
+            return "app-icon foreground"
+        return "app-icon"
 
     def _get_app_icon(self, hwnd: int, title: str, process: dict, event: WinEvent) -> QPixmap | None:
         try:
