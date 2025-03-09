@@ -51,6 +51,9 @@ taskbar:
 .taskbar-widget .app-icon {
     padding:0 6px;
 }
+.taskbar-widget .app-icon.foreground{
+    background-color: rgba(0, 0, 0, 0.4);
+}
 ```
 
 > [!IMPORTANT]  
