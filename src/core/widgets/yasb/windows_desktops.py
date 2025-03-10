@@ -1,12 +1,13 @@
 import logging
-from PyQt6.QtWidgets import QPushButton, QWidget, QHBoxLayout, QMenu, QInputDialog
+from PyQt6.QtWidgets import QPushButton, QWidget, QHBoxLayout, QInputDialog, QFileDialog
 from PyQt6.QtCore import pyqtSignal, Qt, QTimer
 from PyQt6.QtGui import QCursor
 from core.widgets.base import BaseWidget
 from core.validation.widgets.yasb.windows_desktops import VALIDATION_SCHEMA
 from core.event_service import EventService
-from pyvda import VirtualDesktop, get_virtual_desktops
-
+from pyvda import VirtualDesktop, get_virtual_desktops, set_wallpaper_for_all_desktops
+from core.utils.utilities import ContextMenu
+    
 class WorkspaceButton(QPushButton):
     def __init__(self, workspace_index: int, label: str = None, active_label: str = None, parent=None):
         super().__init__(parent)
@@ -78,18 +79,44 @@ class WorkspaceButton(QPushButton):
         self._animation_timer.start(step_duration)
         
     def contextMenuEvent(self, event):
-        menu = QMenu(self)
+        menu = ContextMenu(self)
         menu.setProperty("class", "context-menu")
         rename_action = menu.addAction("Rename")
         delete_action = menu.addAction("Delete")
         menu.addSeparator() 
         create_action = menu.addAction("Create New Desktop")
+        menu.addSeparator() 
+        set_wallpaper_action = menu.addAction("Set Wallpaper On This Desktop")
+        set_wallpaper_action_all = menu.addAction("Set Wallpaper On All Desktops")
 
         rename_action.triggered.connect(self.rename_desktop)
         delete_action.triggered.connect(self.delete_desktop)
         create_action.triggered.connect(self.create_new_desktop)
+        set_wallpaper_action.triggered.connect(self.set_wallpaper)
+        set_wallpaper_action_all.triggered.connect(self.set_wallpaper_all)
         
         menu.exec(self.mapToGlobal(event.pos()))
+
+
+    def set_wallpaper(self):
+        image_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Select Wallpaper Image",
+            "",
+            "Images (*.png *.jpg *.jpeg *.bmp *.gif)"
+        )
+        if image_path:
+            VirtualDesktop(self.workspace_index).set_wallpaper(image_path)
+ 
+    def set_wallpaper_all(self):
+        image_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Select Wallpaper Image",
+            "",
+            "Images (*.png *.jpg *.jpeg *.bmp *.gif)"
+        )
+        if image_path:
+            set_wallpaper_for_all_desktops(image_path)
 
     def rename_desktop(self):
         dialog = QInputDialog(self)     
