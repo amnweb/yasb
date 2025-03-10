@@ -108,7 +108,10 @@ class WorkspaceButton(QPushButton):
             "Images (*.png *.jpg *.jpeg *.bmp *.gif)"
         )
         if image_path:
-            VirtualDesktop(self.workspace_index).set_wallpaper(image_path)
+            try:
+                VirtualDesktop(self.workspace_index).set_wallpaper(image_path)
+            except Exception as e:
+                logging.exception(f"Failed to set wallpaper: {e}")
  
     def set_wallpaper_all(self):
         image_path, _ = QFileDialog.getOpenFileName(
@@ -118,7 +121,10 @@ class WorkspaceButton(QPushButton):
             "Images (*.png *.jpg *.jpeg *.bmp *.gif)"
         )
         if image_path:
-            set_wallpaper_for_all_desktops(image_path)
+            try:
+                set_wallpaper_for_all_desktops(image_path)
+            except Exception as e:
+                logging.exception(f"Failed to set wallpaper for all desktops: {e}")
 
     def rename_desktop(self):
         dialog = QInputDialog(self)     
