@@ -6,7 +6,7 @@ from core.widgets.base import BaseWidget
 from core.validation.widgets.yasb.windows_desktops import VALIDATION_SCHEMA
 from core.event_service import EventService
 from pyvda import VirtualDesktop, get_virtual_desktops, set_wallpaper_for_all_desktops
-from core.utils.utilities import ContextMenu
+from core.utils.utilities import ContextMenu, is_windows_10
     
 class WorkspaceButton(QPushButton):
     def __init__(self, workspace_index: int, label: str = None, active_label: str = None, parent=None):
@@ -85,15 +85,17 @@ class WorkspaceButton(QPushButton):
         delete_action = menu.addAction("Delete")
         menu.addSeparator() 
         create_action = menu.addAction("Create New Desktop")
-        menu.addSeparator() 
-        set_wallpaper_action = menu.addAction("Set Wallpaper On This Desktop")
-        set_wallpaper_action_all = menu.addAction("Set Wallpaper On All Desktops")
+        if not is_windows_10():
+            menu.addSeparator() 
+            set_wallpaper_action = menu.addAction("Set Wallpaper On This Desktop")
+            set_wallpaper_action_all = menu.addAction("Set Wallpaper On All Desktops")
 
         rename_action.triggered.connect(self.rename_desktop)
         delete_action.triggered.connect(self.delete_desktop)
         create_action.triggered.connect(self.create_new_desktop)
-        set_wallpaper_action.triggered.connect(self.set_wallpaper)
-        set_wallpaper_action_all.triggered.connect(self.set_wallpaper_all)
+        if not is_windows_10():
+            set_wallpaper_action.triggered.connect(self.set_wallpaper)
+            set_wallpaper_action_all.triggered.connect(self.set_wallpaper_all)
         
         menu.exec(self.mapToGlobal(event.pos()))
 
