@@ -26,9 +26,12 @@ class CavaBar(QWidget):
         left_margin = self._cava_widget._bar_spacing // 2
         for i, sample in enumerate(self._cava_widget.samples):
             x = left_margin + i * (self._cava_widget._bar_width + self._cava_widget._bar_spacing)
-            height = int(sample * self._cava_widget._height)
+            # Compute height and enforce minimum height of self._cava_widget._min_height
+            computed_height = int(sample * self._cava_widget._height)
+            height = max(self._cava_widget._min_height, computed_height)
             y = self._cava_widget._height - height
             if height > 0:
+                print(height)
                 if self._cava_widget._gradient == 1 and self._cava_widget.colors:
                     gradient = QLinearGradient(0, 1, 0, 0)
                     gradient.setCoordinateMode(QLinearGradient.CoordinateMode.ObjectBoundingMode)
@@ -46,6 +49,7 @@ class CavaWidget(BaseWidget):
     def __init__(
             self,
             bar_height: int,
+            min_bar_height: int,
             bars_number: int,
             output_bit_format: str,
             bar_spacing: int,
@@ -70,6 +74,7 @@ class CavaWidget(BaseWidget):
         super().__init__(class_name="cava-widget")
         # Widget configuration
         self._height = bar_height
+        self._min_height = min_bar_height
         self._bars_number = bars_number
         self._output_bit_format = output_bit_format
         self._bar_spacing = bar_spacing

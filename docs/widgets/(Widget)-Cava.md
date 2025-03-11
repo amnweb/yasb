@@ -5,6 +5,7 @@
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `bar_height` | integer | 20 | The height of bars in pixels |
+| `min_bar_height` | integer | 0 | The minimum height of bars in pixels |
 | `bars_number` | integer | 10 | The number of bars (0-512). 0 sets it to auto |
 | `output_bit_format` | string | "16bit" | Binary bit format, can be '8bit' (0-255) or '16bit' (0-65530) |
 | `bar_spacing` | integer | 1 | Space between bars |
@@ -33,6 +34,7 @@
     type: "yasb.cava.CavaWidget"
     options:
       bar_height: 12
+      min_bar_height: 0
       gradient: 1
       reverse: 0
       foreground: "#89b4fa"
@@ -54,6 +56,7 @@
 ## Description of Options
 
 - **bar_height**: The height of bars in pixels.
+- **min_bar_height**: The minimum height of bars in pixels.
 - **bars_number**: The number of bars to display. Can be between 0 and 512. 0 sets it to auto.
 - **output_bit_format**: Binary bit format, can be '8bit' (0-255) or '16bit' (0-65530).
 - **bar_spacing**: Space between bars in number of characters.

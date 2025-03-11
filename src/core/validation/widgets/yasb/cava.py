@@ -1,9 +1,11 @@
 DEFAULTS = {
     'bar_height': 20,
+    'min_bar_height': 0,
     'bars_number': 10,
     'output_bit_format': "16bit",
     'bar_spacing': 1,
     'bar_width': 3,
+    'min_bar_height': 1,
     'sleep_timer': 0,
     'sensitivity': 100,
     'lower_cutoff_freq': 50,
@@ -27,6 +29,11 @@ VALIDATION_SCHEMA = {
         'type': 'integer',
         'required': False,
         'default': DEFAULTS['bar_height']
+    },
+    'min_bar_height': {
+        'type': 'integer',
+        'required': False,
+        'default': DEFAULTS['min_bar_height']
     },
     'bars_number': {
         'type': 'integer',
