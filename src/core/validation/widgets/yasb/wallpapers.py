@@ -15,8 +15,8 @@ DEFAULTS = {
         'image_spacing': 5,
         'lazy_load': True,
         'lazy_load_fadein': 200,
-        'lazy_load_delay': 50,
-        'enable_cache': True
+        'lazy_load_delay': 0, # Deprecated
+        'enable_cache': False # Deprecated
     },
     "run_after": [],
     'animation': {

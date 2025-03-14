@@ -183,6 +183,7 @@ class WallpapersWidget(BaseWidget):
             cryptic_params = (0x52c, 0, 0, 0, 500, None)
             self.user32.SendMessageTimeoutW(progman, *cryptic_params)
         except IndexError as e:
+            logging.error("Cannot enable Active Desktop: %s", e)
             raise WindowsError('Cannot enable Active Desktop') from e
 
 
