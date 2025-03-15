@@ -314,7 +314,9 @@ class WeatherWidget(BaseWidget):
                 if isinstance(active_widgets[widget_index], QLabel):
                     if '<span' in part and '</span>' in part:
                         icon = re.sub(r'<span.*?>|</span>', '', part).strip()
-                        icon = self._icons.get(icon, self._icons["default"])
+                        # Only replace with icons dictionary if the content is actually in the dictionary
+                        if icon in self._icons:
+                            icon = self._icons.get(icon)
                         active_widgets[widget_index].setText(icon)
                         if update_class:
                         # Retrieve current class and append new class based on weather conditions
@@ -393,6 +395,13 @@ class WeatherWidget(BaseWidget):
                     conditions_data = "snowyIcy"
                 icon_string = f"{conditions_data}{'Day' if current['is_day'] == 1 else 'Night'}".strip()
 
+                if icon_string:
+                    icon_label =  self._icons["default"]
+                    if icon_label not in self._icons:
+                        icon_label = self._icons["default"]
+                else:
+                    icon_label = self._icons["default"]
+                    
                 # Load icons into cache for current and future forecasts if not already cached
                 # We will try to load the images for 1sec, if it fails we will try again when popup is opened
                 img_icon_keys = [f'http:{day["condition"]["icon"]}' for day in [forecast] + [forecast1["day"], forecast2["day"]]]
@@ -428,7 +437,7 @@ class WeatherWidget(BaseWidget):
                     '{is_day}':        current['is_day'],
                     
                     # Icons
-                    '{icon}':       icon_string[0].lower() + icon_string[1:],
+                    '{icon}':       icon_label,
                     '{icon_class}': icon_string[0].lower() + icon_string[1:],
                     '{day0_icon}':  f'http:{forecast["condition"]["icon"]}',
                     
