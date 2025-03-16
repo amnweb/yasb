@@ -1,6 +1,15 @@
 name: Windows-Dev
 
 on:
+  pull_request:
+    branches:
+      - "*"
+  push:
+    branches:
+      - main
+      - dev
+      - feature/*
+      - hotfix/*
   workflow_dispatch:
 
 permissions:
