@@ -2,14 +2,10 @@ name: Windows-Dev
 
 on:
   pull_request:
-    branches:
-      - "*"
-  push:
+    types: [closed]
     branches:
       - main
       - dev
-      - feature/*
-      - hotfix/*
   workflow_dispatch:
 
 permissions:
@@ -17,6 +13,7 @@ permissions:
 
 jobs:
   build:
+    if: github.event.pull_request.merged == true || github.event_name == 'workflow_dispatch'
     runs-on: windows-latest
     
     steps:
