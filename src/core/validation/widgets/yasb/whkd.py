@@ -30,7 +30,17 @@ VALIDATION_SCHEMA = {
             }
         },
         'default': DEFAULTS['animation']
-    },   
+    },
+    'special_keys': {
+        'type': 'list',
+        'schema': {
+            'type': 'dict',
+            'schema': {
+                'key': {'type': 'string'},
+                'key_replace': {'type': 'string'}
+            }
+        }
+    },
     'container_padding': {
         'type': 'dict',
         'required': False,
