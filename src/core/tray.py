@@ -167,7 +167,6 @@ class TrayIcon(QSystemTrayIcon):
         Remove the tray icon from the system tray.
         """
         try:
-            self.hide()
             self.deleteLater()
         except Exception as e:
             logging.error(f"Error removing tray icon: {e}")
