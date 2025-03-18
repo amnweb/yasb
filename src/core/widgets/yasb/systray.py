@@ -152,12 +152,8 @@ class SystrayWidget(BaseWidget):
             self.widget_layout.insertWidget(0, self.unpinned_vis_btn)
         else:
             self.widget_layout.insertWidget(-1, self.unpinned_vis_btn)
-
-        # Delay the client setup for a bit just to give YASB tray icon some time to init
-        init_timer = QTimer(self)
-        init_timer.setSingleShot(True)
-        init_timer.timeout.connect(self.setup_client)  # pyright: ignore [reportUnknownMemberType]
-        init_timer.start(5000)
+        
+        QTimer.singleShot(0, self.setup_client)  # pyright: ignore [reportUnknownMemberType]
 
     def setup_client(self):
         """Setup the tray monitor client and connect signals"""
@@ -443,11 +439,7 @@ class SystrayWidget(BaseWidget):
 
     def get_screen_id(self):
         """Get the screen id for the current systray widget instance"""
-        window_handle = self.windowHandle()
-        if window_handle is not None:
-            screen = window_handle.screen()
-        else:
-            screen = QGuiApplication.primaryScreen()
+        screen = self.screen()
         if screen is not None:
             raw_id = f"{screen.manufacturer()}{screen.name()}{screen.serialNumber()}".upper()
             self.screen_id = re.sub(r"\W+", "", raw_id)
