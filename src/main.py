@@ -5,7 +5,7 @@ from sys import argv, exit
 import qasync
 from PyQt6.QtWidgets import QApplication
 from core.bar_manager import BarManager
-from core.config import get_config_and_stylesheet
+from core.config import get_config_and_stylesheet, get_resolved_env_file_path
 from core.log import init_logger
 from core.tray import TrayIcon
 from core.watcher import create_observer
@@ -14,6 +14,7 @@ import settings
 import ctypes
 import ctypes.wintypes
 from core.utils.win32.windows import WindowsTaskbar
+from dotenv import load_dotenv
 
 logging.getLogger('asyncio').setLevel(logging.WARNING)
 
@@ -27,6 +28,14 @@ def main():
         logging.info("Debug mode enabled.")
     app = QApplication(argv)
     app.setQuitOnLastWindowClosed(False)
+
+    env_file = config.get('env_file')
+    if env_file:
+        env_file = get_resolved_env_file_path(env_file)
+        if load_dotenv(env_file):
+            logging.info(f"Loaded environment variables from {env_file}")
+        else:
+            logging.warning(f"Failed to load environment variables from {env_file}")
 
     # Need qasync event loop to make async calls work properly with PyQt6
     loop = qasync.QEventLoop(app)

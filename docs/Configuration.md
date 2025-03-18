@@ -16,6 +16,7 @@ All valid options for the widgets are listed on the widgets page.
 | `watch_config`         | boolean    | `true`        | Reload bar when config is changed. |
 | `debug`      | boolean  | `false`   | Enable debug mode to see more logs |
 | `hide_taskbar`      | boolean  | `false`   | Hide Windows taskbar from all screens. Note: for better performance set taskbar auto-hide. |
+| `env_file`      | string  | `None`   | Load environment variables from file. |
 
 
 ## Komorebi settings for tray menu

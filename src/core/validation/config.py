@@ -14,6 +14,12 @@ CONFIG_SCHEMA = {
         'default': False,
         'required': False,
     },
+    'env_file': {
+        'type': 'string',
+        'nullable': True,
+        'required': False,
+        'default': None,
+    },
     'hide_taskbar': {
         'type': 'boolean',
         'default': False,
