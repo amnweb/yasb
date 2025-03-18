@@ -118,8 +118,8 @@ class IconData:
 class TrayMonitor(QObject):
     """Main class to handle systray message interception and forwarding"""
 
-    icon_modified = pyqtSignal(object)
-    icon_deleted = pyqtSignal(object)
+    icon_modified = pyqtSignal(IconData)
+    icon_deleted = pyqtSignal(IconData)
 
     def __init__(self, parent: QObject | None = None):
         super().__init__(parent)
