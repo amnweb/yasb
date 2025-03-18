@@ -157,10 +157,11 @@ class SystrayWidget(BaseWidget):
         init_timer = QTimer(self)
         init_timer.setSingleShot(True)
         init_timer.timeout.connect(self.setup_client)  # pyright: ignore [reportUnknownMemberType]
-        init_timer.start(3000)
+        init_timer.start(5000)
 
     def setup_client(self):
         """Setup the tray monitor client and connect signals"""
+        self.load_state()
         client = SystrayWidget.get_client_instance()
         client.icon_modified.connect(self.on_icon_modified)  # pyright: ignore [reportUnknownMemberType]
         client.icon_deleted.connect(self.on_icon_deleted)  # pyright: ignore [reportUnknownMemberType]
@@ -176,8 +177,6 @@ class SystrayWidget(BaseWidget):
     def showEvent(self, a0: QShowEvent | None) -> None:
         """Called when the widget is shown on the screen"""
         super().showEvent(a0)
-        self.get_screen_id()
-        self.load_state()
         self.unpinned_vis_btn.setChecked(self.show_unpinned)
         self.unpinned_vis_btn.setText(self.label_expanded if self.show_unpinned else self.label_collapsed)
         self.unpinned_widget.setVisible(self.show_unpinned)
@@ -401,7 +400,7 @@ class SystrayWidget(BaseWidget):
                 is_pinned=w.is_pinned,
                 index=index,
             )
-        self.current_state = widgets_state
+        self.current_state |= widgets_state
 
     def save_state(self):
         """Save the current icon position and pinned state to disk."""
@@ -410,6 +409,7 @@ class SystrayWidget(BaseWidget):
         if not LOCALDATA_FOLDER.exists():
             LOCALDATA_FOLDER.mkdir(parents=True, exist_ok=True)
 
+        self.get_screen_id()
         file_path = LOCALDATA_FOLDER / Path(f"systray_state_{self.screen_id}.json")
         logger.debug(f"Saving state to {file_path}")
         saved_state: dict[str, Any] = {}
@@ -427,7 +427,7 @@ class SystrayWidget(BaseWidget):
 
     def load_state(self):
         """Load the saved icon position and pinned state from disk."""
-        logger.debug("Loading state from disk")
+        self.get_screen_id()
         file_path = LOCALDATA_FOLDER / Path(f"systray_state_{self.screen_id}.json")
         logger.debug(f"Loading state from {file_path}")
         self.current_state = {}
