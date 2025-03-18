@@ -7,8 +7,13 @@ from pathlib import Path
 from typing import Any, override
 from uuid import UUID
 
-from PyQt6.QtCore import Qt, QThread, QTimer, pyqtSlot  # pyright: ignore [reportUnknownVariableType]
-from PyQt6.QtGui import QGuiApplication, QShowEvent
+from PyQt6.QtCore import (
+    Qt,
+    QThread,
+    QTimer,
+    pyqtSlot,  # pyright: ignore [reportUnknownVariableType]
+)
+from PyQt6.QtGui import QShowEvent
 from PyQt6.QtWidgets import (
     QApplication,
     QHBoxLayout,
@@ -73,9 +78,8 @@ class SystrayWidget(BaseWidget):
         if cls._instance is None:
             cls._instance = TrayMonitor()
             cls._thread = TrayMonitorThread(cls._instance)
-            cls._thread.start()
 
-        return cls._instance
+        return cls._instance, cls._thread
 
     def __init__(
         self,
@@ -89,7 +93,7 @@ class SystrayWidget(BaseWidget):
         show_battery: bool,
         show_volume: bool,
     ):
-        super().__init__(class_name=class_name)  # pyright: ignore [reportArgumentType]
+        super().__init__(class_name=class_name)  # type: ignore
         self.label_collapsed = label_collapsed
         self.label_expanded = label_expanded
         self.label_position = label_position if label_position in {"left", "right"} else "left"
@@ -117,16 +121,16 @@ class SystrayWidget(BaseWidget):
 
         # This timer will check if icons are still valid and have actual process attached
         self.icon_check_timer = QTimer(self)
-        self.icon_check_timer.timeout.connect(self.check_icons)  # pyright: ignore [reportUnknownMemberType]
+        self.icon_check_timer.timeout.connect(self.check_icons)  # type: ignore
         self.icon_check_timer.start(5000)
 
         self.sort_timer = QTimer(self)
-        self.sort_timer.timeout.connect(self.sort_icons)  # pyright: ignore [reportUnknownMemberType]
+        self.sort_timer.timeout.connect(self.sort_icons)  # type: ignore
         self.sort_timer.setSingleShot(True)
 
         self.unpinned_vis_btn = QPushButton()
         self.unpinned_vis_btn.setCheckable(True)
-        self.unpinned_vis_btn.clicked.connect(self.toggle_unpinned_widget_visibility)  # pyright: ignore [reportUnknownMemberType]
+        self.unpinned_vis_btn.clicked.connect(self.toggle_unpinned_widget_visibility)  # type: ignore
 
         self.unpinned_widget = DropWidget(self)
         self.unpinned_layout = self.unpinned_widget.main_layout
@@ -140,10 +144,10 @@ class SystrayWidget(BaseWidget):
         self.unpinned_widget.setProperty("class", "unpinned-container")
         self.unpinned_vis_btn.setProperty("class", "unpinned-visibility-btn")
 
-        self.unpinned_widget.drag_started.connect(self.on_drag_started)  # pyright: ignore [reportUnknownMemberType]
-        self.unpinned_widget.drag_ended.connect(self.on_drag_ended)  # pyright: ignore [reportUnknownMemberType]
-        self.pinned_widget.drag_started.connect(self.on_drag_started)  # pyright: ignore [reportUnknownMemberType]
-        self.pinned_widget.drag_ended.connect(self.on_drag_ended)  # pyright: ignore [reportUnknownMemberType]
+        self.unpinned_widget.drag_started.connect(self.on_drag_started)  # type: ignore
+        self.unpinned_widget.drag_ended.connect(self.on_drag_ended)  # type: ignore
+        self.pinned_widget.drag_started.connect(self.on_drag_started)  # type: ignore
+        self.pinned_widget.drag_ended.connect(self.on_drag_ended)  # type: ignore
 
         self.widget_layout.addWidget(self.unpinned_widget)
         self.widget_layout.addWidget(self.pinned_widget)
@@ -152,22 +156,25 @@ class SystrayWidget(BaseWidget):
             self.widget_layout.insertWidget(0, self.unpinned_vis_btn)
         else:
             self.widget_layout.insertWidget(-1, self.unpinned_vis_btn)
-        
+
         QTimer.singleShot(0, self.setup_client)  # pyright: ignore [reportUnknownMemberType]
 
     def setup_client(self):
         """Setup the tray monitor client and connect signals"""
         self.load_state()
-        client = SystrayWidget.get_client_instance()
-        client.icon_modified.connect(self.on_icon_modified)  # pyright: ignore [reportUnknownMemberType]
-        client.icon_deleted.connect(self.on_icon_deleted)  # pyright: ignore [reportUnknownMemberType]
+        client, thread = SystrayWidget.get_client_instance()
+        client.icon_modified.connect(self.on_icon_modified)  # type: ignore
+        client.icon_deleted.connect(self.on_icon_deleted)  # type: ignore
 
         app_inst = QApplication.instance()
         if app_inst is not None:
-            app_inst.aboutToQuit.connect(self.save_state)  # pyright: ignore [reportUnknownMemberType]
+            app_inst.aboutToQuit.connect(self.save_state)  # type: ignore
+
+        if thread is not None and not thread.isRunning():
+            thread.start()
 
         # We need to send this message for each instance of the taskbar widget on init
-        client.send_taskbar_created()
+        QTimer.singleShot(200, client.send_taskbar_created)  # pyright: ignore [reportUnknownMemberType]
 
     @override
     def showEvent(self, a0: QShowEvent | None) -> None:
@@ -177,19 +184,19 @@ class SystrayWidget(BaseWidget):
         self.unpinned_vis_btn.setText(self.label_expanded if self.show_unpinned else self.label_collapsed)
         self.unpinned_widget.setVisible(self.show_unpinned)
 
-    @pyqtSlot()  # pyright: ignore [reportUntypedFunctionDecorator]
+    @pyqtSlot()
     def on_drag_started(self):
         """Handle drag started signal for drag-and-drop functionality"""
         # Always show pinned widget during drag operations
         self.update_pinned_widget_visibility(force_show=True)
 
-    @pyqtSlot()  # pyright: ignore [reportUntypedFunctionDecorator]
+    @pyqtSlot()
     def on_drag_ended(self):
         """Handle drag ended signal for drag-and-drop functionality"""
         # Update visibility based on content
         self.update_pinned_widget_visibility()
 
-    @pyqtSlot(IconData)  # pyright: ignore [reportUntypedFunctionDecorator]
+    @pyqtSlot(IconData)
     def on_icon_modified(self, data: IconData):
         """Handle icon modified signal sent by the tray monitor"""
         if data.guid in self.filtered_guids:
@@ -198,8 +205,8 @@ class SystrayWidget(BaseWidget):
         if icon is None:
             icon = IconWidget()
             icon.data = IconData()
-            icon.pinned_changed.connect(self.on_icon_pinned_changed)  # pyright: ignore [reportUnknownMemberType]
-            icon.icon_moved.connect(self.on_icon_moved)  # pyright: ignore [reportUnknownMemberType]
+            icon.pinned_changed.connect(self.on_icon_pinned_changed)  # type: ignore
+            icon.icon_moved.connect(self.on_icon_moved)  # type: ignore
             self.icons.append(icon)
 
             # Check if the saved data exists for the icon by uuid and exe path
@@ -226,8 +233,8 @@ class SystrayWidget(BaseWidget):
         icon.setHidden(data.uFlags & NIF_STATE != 0 and data.dwState == 1)
         self.update_pinned_widget_visibility()
 
-    @pyqtSlot(IconData)  # pyright: ignore [reportUntypedFunctionDecorator]
-    def on_icon_deleted(self, data: IconData):
+    @pyqtSlot(IconData)
+    def on_icon_deleted(self, data: IconData) -> None:
         """Handles the icon deleted signal sent by the tray monitor"""
         icon = self.find_icon(data.guid, data.hWnd, data.uID)
         if icon is not None:
@@ -235,7 +242,7 @@ class SystrayWidget(BaseWidget):
             icon.deleteLater()
             self.update_pinned_widget_visibility()
 
-    @pyqtSlot(object)  # pyright: ignore [reportUntypedFunctionDecorator]
+    @pyqtSlot(object)
     def on_icon_pinned_changed(self, icon: IconWidget):
         """Handles the icon pinned changed signal sent when user [Mod]+Clicks on the icon"""
         if icon.parent() is self.unpinned_widget:
@@ -253,7 +260,7 @@ class SystrayWidget(BaseWidget):
         self.save_state()
         self.update_pinned_widget_visibility()
 
-    @pyqtSlot(object)  # pyright: ignore [reportUntypedFunctionDecorator]
+    @pyqtSlot(object)
     def on_icon_moved(self, icon: IconWidget):
         """Handle icon moved signal"""
         if icon.parent() is self.unpinned_widget:
