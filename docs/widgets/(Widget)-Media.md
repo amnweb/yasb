@@ -10,6 +10,7 @@
 | `show_thumbnail`        | boolean | true    | Whether to show the media thumbnail.                                        |
 | `controls_only`         | boolean | false   | Whether to show only the media controls.                                    |
 | `controls_left`         | boolean | true    | Whether to position the controls on the left.                               |
+| `controls_hide`         | boolean | false   | Whether to hide the media controls buttons                                  |
 | `hide_empty`            | boolean | true    | Whether to hide the widget when there is no media information.              |
 | `thumbnail_alpha`       | integer | 50      | The alpha transparency value for the thumbnail.                             |
 | `thumbnail_padding`     | integer | 8       | The padding around the thumbnail.                                           |
@@ -40,6 +41,7 @@ media:
     show_thumbnail: true
     controls_only: false
     controls_left: true
+    controls_hide: false
     thumbnail_alpha: 80
     thumbnail_padding: 8
     thumbnail_corner_radius: 16
@@ -59,6 +61,7 @@ media:
 - **show_thumbnail:** Whether to show the media thumbnail.
 - **controls_only:** Whether to show only the media controls.
 - **controls_left:** Whether to place the media controls on the left.
+- **controls_hide:** Whether to hide the media controls buttons.
 - **thumbnail_alpha:** The alpha (transparency) value for the media thumbnail.
 - **thumbnail_padding:** The padding around the media thumbnail.
 - **thumbnail_corner_radius:** The corner radius for the media thumbnail. Set to 0 for square corners.

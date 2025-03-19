@@ -116,6 +116,10 @@ VALIDATION_SCHEMA = {
         'type': 'boolean',
         'default': True
     },
+    'controls_hide': {
+        'type': 'boolean',
+        'default': False
+    },
     'thumbnail_alpha': {
         'type': 'integer',
         'default': 50,

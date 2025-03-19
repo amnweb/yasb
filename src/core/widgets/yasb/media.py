@@ -32,6 +32,7 @@ class MediaWidget(BaseWidget):
             show_thumbnail: bool,
             controls_only: bool,
             controls_left: bool,
+            controls_hide: bool,
             thumbnail_alpha: int,
             thumbnail_padding: int,
             thumbnail_corner_radius: int,
@@ -49,6 +50,7 @@ class MediaWidget(BaseWidget):
         self._media_button_icons = icons
         self._controls_only = controls_only
         self._controls_left = controls_left
+        self._controls_hide = controls_hide
         self._thumbnail_padding = thumbnail_padding
         self._thumbnail_corner_radius = thumbnail_corner_radius
         self._hide_empty = hide_empty
@@ -157,17 +159,18 @@ class MediaWidget(BaseWidget):
     @QtCore.pyqtSlot(GlobalSystemMediaTransportControlsSessionPlaybackInfo)
     def _on_playback_info_changed(self, playback_info: GlobalSystemMediaTransportControlsSessionPlaybackInfo):
         # Set play-pause state icon
-        self._play_label.setText(self._media_button_icons['pause' if playback_info.playback_status == 4 else 'play'])
+        if not self._controls_hide:
+            self._play_label.setText(self._media_button_icons['pause' if playback_info.playback_status == 4 else 'play'])
 
-        enabled_if = lambda enabled: "disabled" if not enabled else ""
-        self._prev_label.setProperty("class", f"btn prev {enabled_if(playback_info.controls.is_previous_enabled)}")
-        self._play_label.setProperty("class", f"btn play {enabled_if(playback_info.controls.is_play_pause_toggle_enabled)}")
-        self._next_label.setProperty("class", f"btn next {enabled_if(playback_info.controls.is_next_enabled)}")
+            enabled_if = lambda enabled: "disabled" if not enabled else ""
+            self._prev_label.setProperty("class", f"btn prev {enabled_if(playback_info.controls.is_previous_enabled)}")
+            self._play_label.setProperty("class", f"btn play {enabled_if(playback_info.controls.is_play_pause_toggle_enabled)}")
+            self._next_label.setProperty("class", f"btn next {enabled_if(playback_info.controls.is_next_enabled)}")
 
-        # Refresh style sheets
-        self._prev_label.setStyleSheet('')
-        self._play_label.setStyleSheet('')
-        self._next_label.setStyleSheet('')
+            # Refresh style sheets
+            self._prev_label.setStyleSheet('')
+            self._play_label.setStyleSheet('')
+            self._next_label.setStyleSheet('')
 
     @QtCore.pyqtSlot(object) # None or dict
     def _on_media_properties_changed(self, media_info: Optional[dict[str, Any]]):
@@ -236,12 +239,13 @@ class MediaWidget(BaseWidget):
             return text
 
     def _create_media_button(self, icon, action):
-        label = ClickableLabel(self)
-        label.setProperty("class", "btn")
-        label.setText(icon)
-        label.data = action
-        self._widget_container_layout.addWidget(label)
-        return label
+        if not self._controls_hide:
+            label = ClickableLabel(self)
+            label.setProperty("class", "btn")
+            label.setText(icon)
+            label.data = action
+            self._widget_container_layout.addWidget(label)
+            return label
 
     def _create_media_buttons(self):
         return (self._create_media_button(self._media_button_icons['prev_track'], WindowsMedia.prev),
