@@ -7,9 +7,9 @@ import sys
 from pathlib import Path
 import subprocess
 import winshell
-from PyQt6.QtWidgets import QSystemTrayIcon, QMenu, QMessageBox
+from PyQt6.QtWidgets import QSystemTrayIcon, QMenu, QMessageBox, QApplication
 from PyQt6.QtGui import QIcon, QGuiApplication
-from PyQt6.QtCore import QCoreApplication, QSize, Qt, pyqtSlot, QProcess
+from PyQt6.QtCore import QCoreApplication, QSize, Qt, pyqtSlot, QProcess, QEvent
 from core.bar_manager import BarManager
 from settings import GITHUB_URL, SCRIPT_PATH, APP_NAME, APP_NAME_FULL, DEFAULT_CONFIG_DIRECTORY, GITHUB_THEME_URL, BUILD_VERSION
 from core.config import get_config
@@ -42,6 +42,18 @@ class TrayIcon(QSystemTrayIcon):
             self.cli_pipi_handler = CliPipeHandler(self.stop_or_reload_application)
             self.start_cli_server()
 
+    def eventFilter(self, obj, event):
+        if event.type() == QEvent.Type.MouseButtonPress:
+            if self.menu and self.menu.isVisible():
+                global_pos = event.globalPosition().toPoint()
+                all_menus = [self.menu]
+                all_menus += [act.menu() for act in self.menu.actions() if act.menu() and act.menu().isVisible()]
+                if not any(m.geometry().contains(global_pos) for m in all_menus):
+                    self.menu.hide()
+                    self.menu.deleteLater()
+                    return True
+        return super().eventFilter(obj, event)
+    
     def _load_config(self):
         try:
             config = get_config(show_error_dialog=True)
@@ -160,6 +172,8 @@ class TrayIcon(QSystemTrayIcon):
         exit_action.triggered.connect(self._exit_application)
         
         self.setContextMenu(self.menu)
+        # Connect the activated signal to show the menu
+        self.activated.connect(lambda reason: self.menu.activateWindow() if reason == QSystemTrayIcon.ActivationReason.Context else None)
 
     @pyqtSlot()
     def remove_tray_icon(self):
@@ -236,10 +250,15 @@ class TrayIcon(QSystemTrayIcon):
         threading.Thread(target=run_komorebi_reload).start()
 
     def _reload_application(self):
-        self.remove_tray_icon()
-        logging.info("Reloading Application...")
-        QProcess.startDetached(sys.executable, sys.argv)
-        sys.exit()
+        try:
+            self.remove_tray_icon()
+            QApplication.processEvents()
+            logging.info("Reloading Application...")
+            QProcess.startDetached(sys.executable, sys.argv)
+            QCoreApplication.exit(0)
+        except Exception as e:
+            logging.error(f"Error during reload: {e}")
+            os._exit(0)
 
     def _exit_application(self):
         self.remove_tray_icon()
