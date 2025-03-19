@@ -6,8 +6,10 @@ DEFAULTS = {
     "icon_size": 16,
     "pin_click_modifier": "alt",
     "show_unpinned": True,
+    "show_unpinned_button": True,
     "show_battery": False,
     "show_volume": False,
+    "show_network": False,
 }
 
 VALIDATION_SCHEMA = {
@@ -48,6 +50,11 @@ VALIDATION_SCHEMA = {
         "required": False,
         "default": DEFAULTS["show_unpinned"],
     },
+    "show_unpinned_button": {
+        "type": "boolean",
+        "required": False,
+        "default": DEFAULTS["show_unpinned_button"],
+    },
     "show_battery": {
         "type": "boolean",
         "required": False,
@@ -57,5 +64,10 @@ VALIDATION_SCHEMA = {
         "type": "boolean",
         "required": False,
         "default": DEFAULTS["show_volume"],
+    },
+    "show_network": {
+        "type": "boolean",
+        "required": False,
+        "default": DEFAULTS["show_network"],
     },
 }

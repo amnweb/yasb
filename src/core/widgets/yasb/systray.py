@@ -47,6 +47,7 @@ LOCALDATA_FOLDER = Path(os.environ["LOCALAPPDATA"]) / "Yasb"
 
 BATTERY_ICON_GUID = UUID("7820ae75-23e3-4229-82c1-e41cb67d5b9c")
 VOLUME_ICON_GUID = UUID("7820ae73-23e3-4229-82c1-e41cb67d5b9c")
+NETWORK_GUID = UUID("7820ae74-23e3-4229-82c1-e41cb67d5b9c")
 
 
 class TrayMonitorThread(QThread):
@@ -90,23 +91,26 @@ class SystrayWidget(BaseWidget):
         icon_size: int,
         pin_click_modifier: str,
         show_unpinned: bool,
+        show_unpinned_button: bool,
         show_battery: bool,
         show_volume: bool,
+        show_network: bool,
     ):
         super().__init__(class_name=class_name)  # type: ignore
         self.label_collapsed = label_collapsed
         self.label_expanded = label_expanded
         self.label_position = label_position if label_position in {"left", "right"} else "left"
         self.icon_size = icon_size
-        self.show_volume = show_volume
-        self.show_battery = show_battery
         self.show_unpinned = show_unpinned
+        self.show_unpinned_button = show_unpinned_button
 
         self.filtered_guids: set[UUID] = set()
-        if not self.show_battery:
+        if not show_battery:
             self.filtered_guids.add(BATTERY_ICON_GUID)
-        if not self.show_volume:
+        if not show_volume:
             self.filtered_guids.add(VOLUME_ICON_GUID)
+        if not show_network:
+            self.filtered_guids.add(NETWORK_GUID)
 
         IconWidget.icon_size = icon_size
         IconWidget.pin_modifier_key = {
@@ -127,6 +131,10 @@ class SystrayWidget(BaseWidget):
         self.sort_timer = QTimer(self)
         self.sort_timer.timeout.connect(self.sort_icons)  # type: ignore
         self.sort_timer.setSingleShot(True)
+
+        self.pinned_vis_check_timer = QTimer(self)
+        self.pinned_vis_check_timer.timeout.connect(self.update_pinned_widget_visibility)  # type: ignore
+        self.pinned_vis_check_timer.setSingleShot(True)
 
         self.unpinned_vis_btn = QPushButton()
         self.unpinned_vis_btn.setCheckable(True)
@@ -157,6 +165,8 @@ class SystrayWidget(BaseWidget):
         else:
             self.widget_layout.insertWidget(-1, self.unpinned_vis_btn)
 
+        self.unpinned_vis_btn.setVisible(self.show_unpinned_button)
+
         QTimer.singleShot(0, self.setup_client)  # pyright: ignore [reportUnknownMemberType]
 
     def setup_client(self):
@@ -182,7 +192,7 @@ class SystrayWidget(BaseWidget):
         super().showEvent(a0)
         self.unpinned_vis_btn.setChecked(self.show_unpinned)
         self.unpinned_vis_btn.setText(self.label_expanded if self.show_unpinned else self.label_collapsed)
-        self.unpinned_widget.setVisible(self.show_unpinned)
+        self.unpinned_widget.setVisible(self.show_unpinned or not self.show_unpinned_button)
 
     @pyqtSlot()
     def on_drag_started(self):
@@ -231,7 +241,7 @@ class SystrayWidget(BaseWidget):
         self.update_icon_data(icon.data, data)
         icon.update_icon()
         icon.setHidden(data.uFlags & NIF_STATE != 0 and data.dwState == 1)
-        self.update_pinned_widget_visibility()
+        self.pinned_vis_check_timer.start(300)
 
     @pyqtSlot(IconData)
     def on_icon_deleted(self, data: IconData) -> None:
@@ -240,7 +250,7 @@ class SystrayWidget(BaseWidget):
         if icon is not None:
             self.icons.remove(icon)
             icon.deleteLater()
-            self.update_pinned_widget_visibility()
+            self.pinned_vis_check_timer.start(300)
 
     @pyqtSlot(object)
     def on_icon_pinned_changed(self, icon: IconWidget):
@@ -295,7 +305,7 @@ class SystrayWidget(BaseWidget):
                 icons_changed = True
 
         if icons_changed:
-            self.update_pinned_widget_visibility()
+            self.pinned_vis_check_timer.start(300)
 
     def update_icon_data(self, old_data: IconData | None, new_data: IconData):
         """Update the icon data with the new data received from the tray monitor"""
