@@ -1,4 +1,3 @@
-import ctypes
 import logging
 from settings import DEBUG 
 from typing import Any, Callable
@@ -11,7 +10,6 @@ from PIL import Image, ImageFile
 import io
 
 from core.utils.utilities import Singleton
-from core.utils.win32.system_function import KEYEVENTF_EXTENDEDKEY, KEYEVENTF_KEYUP
 
 from winsdk.windows.media.control import (GlobalSystemMediaTransportControlsSessionManager as SessionManager,
                                           GlobalSystemMediaTransportControlsSession as Session,
