@@ -7,6 +7,7 @@ import win32con
 import win32api
 import ctypes
 import ctypes.wintypes
+from core.utils.systray.utils import hicon_to_image
 from core.utils.win32.app_uwp import get_package
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -35,6 +36,10 @@ def get_window_icon(hwnd, smooth_level = 0):
                 hicon = win32gui.GetClassLong(hwnd, win32con.GCL_HICON)
 
         if hicon:
+            img = hicon_to_image(hicon)
+            if img is not None:
+                return img
+
             hdc_handle = win32gui.GetDC(0)
             if not hdc_handle:
                 raise Exception("Failed to get DC handle")
