@@ -6,6 +6,7 @@ from PIL.ImageDraw import ImageDraw
 from PIL.ImageQt import QPixmap
 from PyQt6 import QtCore
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QWheelEvent
 from PIL.ImageQt import ImageQt
 from winsdk.windows.media.control import GlobalSystemMediaTransportControlsSessionPlaybackInfo
 
@@ -193,6 +194,11 @@ class MediaWidget(BaseWidget):
         if not self._show_thumbnail:
             return
 
+        # If no media in session, hide thumbnail and stop here
+        if media_info['thumbnail'] is None and not media_info['title']:
+            self._thumbnail_label.hide()
+            return
+
         # Only update the thumbnail if the title/artist changes or if we did a toggle (resize)
         try:
             if media_info['thumbnail'] is not None:
@@ -248,16 +254,21 @@ class MediaWidget(BaseWidget):
             return label
 
     def _create_media_buttons(self):
-        return (self._create_media_button(self._media_button_icons['prev_track'], WindowsMedia.prev),
-                self._create_media_button(
-            self._media_button_icons['play'], WindowsMedia.play_pause), self._create_media_button(
-            self._media_button_icons['next_track'], WindowsMedia.next))
+        return (self._create_media_button(self._media_button_icons['prev_track'], WindowsMedia().prev),
+                self._create_media_button(self._media_button_icons['play'], WindowsMedia().play_pause),
+                self._create_media_button( self._media_button_icons['next_track'], WindowsMedia().next))
 
     def execute_code(self, func):
         try:
             func()
         except Exception as e:
             logging.error(f"Error executing code: {e}")
+
+    def wheelEvent(self, event: QWheelEvent):
+        if event.angleDelta().y() > 0:
+            self.media.switch_session(+1) # Next
+        elif event.angleDelta().y() < 0:
+            self.media.switch_session(-1) # Prev
             
 class ClickableLabel(QLabel):
     def __init__(self, parent=None):
