@@ -33,6 +33,8 @@ systray:
 ```
 
 ## Important Notes:
+This widget is NOT compatible with "Buttery Taskbar" application. There is no fix.
+
 There are some limitations with the systray widget:
 - Systray widget will not show icons for apps if they ignore "TaskbarCreated" message. Meaning that if the original developers decided to ignore this message - their systray icons will not be shown. It's rare, but there are such cases (NVIDIA App for example). This is NOT a YASB bug.
 - In rare cases systray icon might ignore click events if the original application was already running before YASB was started. Example: Epic Games Launcher. No solution for this so far.
