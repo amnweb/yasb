@@ -19,7 +19,6 @@ from PIL.ImageQt import ImageQt
 from PyQt6.QtCore import QObject, pyqtSignal
 from PyQt6.QtGui import QPixmap
 from win32con import (
-    CW_USEDEFAULT,
     HWND_BROADCAST,
     HWND_TOPMOST,
     SWP_NOACTIVATE,
@@ -32,10 +31,10 @@ from win32con import (
     WM_DESTROY,
     WM_TIMER,
     WM_USER,
+    WS_DISABLED,
     WS_EX_APPWINDOW,
     WS_EX_TOOLWINDOW,
     WS_EX_TOPMOST,
-    WS_OVERLAPPEDWINDOW,
 )
 
 import core.utils.systray.utils as utils
@@ -144,11 +143,11 @@ class TrayMonitor(QObject):
             WS_EX_TOOLWINDOW | WS_EX_APPWINDOW | WS_EX_TOPMOST,
             wnd_class_name,
             wnd_class_name,
-            WS_OVERLAPPEDWINDOW,
-            CW_USEDEFAULT,
-            CW_USEDEFAULT,
-            CW_USEDEFAULT,
-            CW_USEDEFAULT,
+            WS_DISABLED,
+            0,
+            0,
+            0,
+            0,
             None,
             None,
             self.wc.hInstance,
