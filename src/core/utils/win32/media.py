@@ -173,13 +173,18 @@ class WindowsMedia(metaclass=Singleton):
         if DEBUG:
             self._log.debug('MediaCallback: _on_media_properties_changed')
         try:
-            asyncio.get_event_loop()
+            # Only for the initial timer based update, because it is called from an event loop
+            asyncio.create_task(self._update_media_properties(session))
         except RuntimeError:
             with self._media_info_lock:
                 self._event_loop.run_until_complete(self._update_media_properties(session))
-        else:
-            # Only for the initial timer based update, because it is called from an event loop
-            asyncio.create_task(self._update_media_properties(session))
+
+                if self._media_info and self._is_media_info_empty(self._media_info):
+                    sessions = self._session_manager.get_sessions()
+
+                    # If current session isn't in the list of sessions, switch the session
+                    if not any(self._are_same_sessions(sessions[i], self._current_session) for i in range(sessions.size)):
+                        self.switch_session(1)
 
     @_current_session_only
     async def _update_media_properties(self, session: Session):
@@ -244,6 +249,12 @@ class WindowsMedia(metaclass=Singleton):
             # Close the stream
             readable_stream.close()
     
+    @staticmethod
+    def _is_media_info_empty(media_info: dict[str, Any]) -> bool:
+        keys = ['album_artist', 'album_title', 'album_track_count', 'artist', 'playback_type', 'subtitle', 'title', 'track_number']
+        # Check if all keys have 'zero' values
+        return all(not media_info.get(key) for key in keys)
+    
     def _are_same_sessions(self, session1: Session, session2: Session) -> bool:
         return session1.source_app_user_model_id == session2.source_app_user_model_id
     
@@ -262,9 +273,11 @@ class WindowsMedia(metaclass=Singleton):
             idx = (current_session_idx + direction) % len(sessions)
             if self._are_same_sessions(sessions[idx], self._current_session):
                 return
-            self._log.info(f"Switching to session {idx} ({sessions[idx].source_app_user_model_id})")
+            if DEBUG:
+                self._log.info(f"Switching to session {idx} ({sessions[idx].source_app_user_model_id})")
             self._current_session = sessions[idx]
-            self._on_current_session_changed(self._session_manager, None, is_overridden=True)
+
+        self._on_current_session_changed(self._session_manager, None, is_overridden=True)
 
     def play_pause(self):
         with self._current_session_lock:
