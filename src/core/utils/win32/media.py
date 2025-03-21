@@ -1,4 +1,3 @@
-import ctypes
 import logging
 from settings import DEBUG 
 from typing import Any, Callable
@@ -11,7 +10,6 @@ from PIL import Image, ImageFile
 import io
 
 from core.utils.utilities import Singleton
-from core.utils.win32.system_function import KEYEVENTF_EXTENDEDKEY, KEYEVENTF_KEYUP
 
 from winsdk.windows.media.control import (GlobalSystemMediaTransportControlsSessionManager as SessionManager,
                                           GlobalSystemMediaTransportControlsSession as Session,
@@ -98,12 +96,19 @@ class WindowsMedia(metaclass=Singleton):
         # Manually trigger the callback on startup
         self._on_current_session_changed(self._session_manager, None, is_setup=True)
 
-    def _on_current_session_changed(self, manager: SessionManager, args: SessionsChangedEventArgs, is_setup=False):
+    def _on_current_session_changed(
+        self,
+        manager: SessionManager,
+        args: SessionsChangedEventArgs,
+        is_setup=False,
+        is_overridden=False,
+    ):
         if DEBUG:
             self._log.debug('MediaCallback: _on_current_session_changed')
 
         with self._current_session_lock:
-            self._current_session = manager.get_current_session()
+            if not is_overridden:
+                self._current_session = manager.get_current_session()
 
             if self._current_session is not None:
 
@@ -121,7 +126,19 @@ class WindowsMedia(metaclass=Singleton):
 
             for callback in callbacks:
                 callback(self._current_session is not None)
+    
+    def _current_session_only(fn):
+        """
+        Decorator to ensure that the function is only called if the session is the same as the current session
+        """
 
+        def wrapper(self: "WindowsMedia", session: Session, *args, **kwargs):
+            with self._current_session_lock:
+                if self._are_same_sessions(session, self._current_session):
+                    return fn(self, session, *args, **kwargs)
+        return wrapper
+
+    @_current_session_only
     def _on_playback_info_changed(self, session: Session, args: PlaybackInfoChangedEventArgs):
         if DEBUG:
             self._log.info('MediaCallback: _on_playback_info_changed')
@@ -136,6 +153,7 @@ class WindowsMedia(metaclass=Singleton):
             for callback in callbacks:
                 callback(self._playback_info)
 
+    @_current_session_only
     def _on_timeline_properties_changed(self, session: Session, args: TimelinePropertiesChangedEventArgs):
         if DEBUG:
             self._log.info('MediaCallback: _on_timeline_properties_changed')
@@ -150,18 +168,25 @@ class WindowsMedia(metaclass=Singleton):
             for callback in callbacks:
                 callback(self._timeline_info)
 
+    @_current_session_only
     def _on_media_properties_changed(self, session: Session, args: MediaPropertiesChangedEventArgs):
         if DEBUG:
             self._log.debug('MediaCallback: _on_media_properties_changed')
         try:
-            asyncio.get_event_loop()
+            # Only for the initial timer based update, because it is called from an event loop
+            asyncio.create_task(self._update_media_properties(session))
         except RuntimeError:
             with self._media_info_lock:
                 self._event_loop.run_until_complete(self._update_media_properties(session))
-        else:
-            # Only for the initial timer based update, because it is called from an event loop
-            asyncio.create_task(self._update_media_properties(session))
 
+                if self._media_info and self._is_media_info_empty(self._media_info):
+                    sessions = self._session_manager.get_sessions()
+
+                    # If current session isn't in the list of sessions, switch the session
+                    if not any(self._are_same_sessions(sessions[i], self._current_session) for i in range(sessions.size)):
+                        self.switch_session(1)
+
+    @_current_session_only
     async def _update_media_properties(self, session: Session):
         if DEBUG:
             self._log.debug('MediaCallback: Attempting media info update')
@@ -171,14 +196,9 @@ class WindowsMedia(metaclass=Singleton):
 
             media_info = self._properties_2_dict(media_info)
 
-            # Skip initial change calls where the thumbnail is None. This prevents processing multiple updates.
-            # Might prevent showing info for no-thumbnail media
-            if media_info['thumbnail'] is None:
-                if DEBUG:
-                    self._log.debug('MediaCallback: Skipping media info update: no thumbnail')
-                return
+            if media_info['thumbnail'] is not None:
+                media_info['thumbnail'] = await self.get_thumbnail(media_info['thumbnail'])
 
-            media_info['thumbnail'] = await self.get_thumbnail(media_info['thumbnail'])
         except Exception as e:
             self._log.error(f'MediaCallback: Error occurred whilst fetching media properties and thumbnail: {e}')
             return
@@ -228,21 +248,48 @@ class WindowsMedia(metaclass=Singleton):
         finally:
             # Close the stream
             readable_stream.close()
-
+    
     @staticmethod
-    def play_pause():
-        user32 = ctypes.windll.user32
-        user32.keybd_event(VK_MEDIA_PLAY_PAUSE, 0, KEYEVENTF_EXTENDEDKEY, 0)
-        user32.keybd_event(VK_MEDIA_PLAY_PAUSE, 0, KEYEVENTF_KEYUP, 0)
+    def _is_media_info_empty(media_info: dict[str, Any]) -> bool:
+        keys = ['album_artist', 'album_title', 'album_track_count', 'artist', 'playback_type', 'subtitle', 'title', 'track_number']
+        # Check if all keys have 'zero' values
+        return all(not media_info.get(key) for key in keys)
+    
+    def _are_same_sessions(self, session1: Session, session2: Session) -> bool:
+        return session1.source_app_user_model_id == session2.source_app_user_model_id
+    
+    def switch_session(self, direction: int):
+        sessions = self._session_manager.get_sessions()
+        if len(sessions) == 0:
+            return
 
-    @staticmethod
-    def prev():
-        user32 = ctypes.windll.user32
-        user32.keybd_event(VK_MEDIA_PREV_TRACK, 0, KEYEVENTF_EXTENDEDKEY, 0)
-        user32.keybd_event(VK_MEDIA_PREV_TRACK, 0, KEYEVENTF_KEYUP, 0)
+        with self._current_session_lock:
+            current_session_idx = -1
+            for i, session in enumerate(sessions):
+                if self._current_session is None or self._are_same_sessions(session, self._current_session):
+                    current_session_idx = i
+                    break
+            
+            idx = (current_session_idx + direction) % len(sessions)
+            if self._are_same_sessions(sessions[idx], self._current_session):
+                return
+            if DEBUG:
+                self._log.info(f"Switching to session {idx} ({sessions[idx].source_app_user_model_id})")
+            self._current_session = sessions[idx]
 
-    @staticmethod
-    def next():
-        user32 = ctypes.windll.user32
-        user32.keybd_event(VK_MEDIA_NEXT_TRACK, 0, KEYEVENTF_EXTENDEDKEY, 0)
-        user32.keybd_event(VK_MEDIA_NEXT_TRACK, 0, KEYEVENTF_KEYUP, 0)
+        self._on_current_session_changed(self._session_manager, None, is_overridden=True)
+
+    def play_pause(self):
+        with self._current_session_lock:
+            if self._current_session is not None:
+                self._current_session.try_toggle_play_pause_async()
+
+    def prev(self):
+        with self._current_session_lock:
+            if self._current_session is not None:
+                self._current_session.try_skip_previous_async()
+
+    def next(self):
+        with self._current_session_lock:
+            if self._current_session is not None:
+                self._current_session.try_skip_next_async()
