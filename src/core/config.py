@@ -1,4 +1,6 @@
 import logging
+import os
+import re
 import shutil
 import settings
 from os import path, makedirs
@@ -75,6 +77,23 @@ def get_stylesheet_path() -> str:
         return DEFAULT_STYLES_PATH
 
 
+def parse_env(obj):
+    """
+    Recursively expand $env:VARIABLE_NAME patterns in strings,
+    dicts, and lists.
+    """
+    if isinstance(obj, dict):
+        return {k: parse_env(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [parse_env(item) for item in obj]
+    elif isinstance(obj, str):
+        pattern = r'\$env:([\w_]+)'
+        for var in re.findall(pattern, obj):
+            val = os.environ.get(var, '')
+            obj = obj.replace(f'$env:{var}', val)
+    return obj
+
+
 def get_config(show_error_dialog=False) -> Union[dict, None]:
     config_path = get_config_path()
 
@@ -83,7 +102,7 @@ def get_config(show_error_dialog=False) -> Union[dict, None]:
             config = safe_load(yaml_stream)
 
         if yaml_validator.validate(config, CONFIG_SCHEMA):
-            return yaml_validator.normalized(config)
+            return parse_env(yaml_validator.normalized(config))
         else:
             pretty_errors = dump(yaml_validator.errors)
             logging.error(f"The config file '{config_path}' contains validation errors. Please fix:\n{pretty_errors}")
@@ -107,8 +126,6 @@ def get_stylesheet(show_error_dialog=False) -> Union[str, None]:
     try:
         css_processor = CSSProcessor(styles_path)
         css_content = css_processor.process()
-        #parser = CSSParser(raiseExceptions=True, parseComments=False)
-        #css_final = parser.parseString(css_content).cssText.decode('utf-8')
         return css_content
 
     except SyntaxErr as e:
