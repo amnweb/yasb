@@ -20,11 +20,6 @@ CONFIG_SCHEMA = {
         'required': False,
         'default': None,
     },
-    'hide_taskbar': {
-        'type': 'boolean',
-        'default': False,
-        'required': False,
-    },
     'komorebi': {
         'type': 'dict',
         'schema': {

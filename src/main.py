@@ -13,16 +13,13 @@ from core.event_service import EventService
 import settings
 import ctypes
 import ctypes.wintypes
-from core.utils.win32.windows import WindowsTaskbar
 from dotenv import load_dotenv
 
 logging.getLogger('asyncio').setLevel(logging.WARNING)
 
 def main():
     config, stylesheet = get_config_and_stylesheet()
-    global hide_taskbar
-    hide_taskbar = config['hide_taskbar']
-    
+
     if config['debug']:
         settings.DEBUG = True
         logging.info("Debug mode enabled.")
@@ -61,13 +58,10 @@ def main():
         if observer:
             observer.stop()
             observer.join()
-            if hide_taskbar:
-                WindowsTaskbar.hide(False, settings.DEBUG)
+
     app.aboutToQuit.connect(stop_observer)
 
     with loop:
-        if hide_taskbar:
-            WindowsTaskbar.hide(True, settings.DEBUG)
         loop.run_forever()
         
 
@@ -75,8 +69,6 @@ if __name__ == "__main__":
     init_logger()
     base_excepthook = sys.excepthook 
     def exception_hook(exctype, value, traceback):
-        if hide_taskbar:
-            WindowsTaskbar.hide(False, settings.DEBUG)
         EventService().clear()
         logging.error("Unhandled exception", exc_info=value)
         sys.exit(1) 

@@ -1,6 +1,5 @@
 import ctypes.wintypes
 from core.event_enums import Event
-import logging
 
 user32 = ctypes.windll.user32
 user32.SetWinEventHook.restype = ctypes.wintypes.HANDLE
@@ -18,7 +17,6 @@ WinEventProcType = ctypes.WINFUNCTYPE(
     ctypes.wintypes.DWORD,
     ctypes.wintypes.DWORD
 )
-
 
 class WinEvent(Event):
     """
@@ -102,21 +100,3 @@ class WinEvent(Event):
     EventUIAEventIdEnd = 0x4EFF
     EventUIAPropIdStart = 0x7500
     EventUIAPropIdEnd = 0x75FF
- 
-
-class WindowsTaskbar:    
-    @staticmethod
-    def hide(state, debug):
-        SW_SHOWNORMAL = 1
-        SW_HIDE = 0
-        user32 = ctypes.WinDLL('user32', use_last_error=True)
-        try:
-            for class_name in ["Shell_TrayWnd", "Shell_SecondaryTrayWnd"]:
-                taskbar = user32.FindWindowW(class_name, None)
-                if taskbar:
-                    user32.ShowWindow(taskbar, SW_HIDE if state else SW_SHOWNORMAL)
-                    if debug:
-                        logging.info(f"Taskbar {taskbar} found and {'hide' if state else 'restore'}.")
-        except Exception as e:
-            if debug:
-                logging.error(f"Failed to hide taskbar: {e}")
