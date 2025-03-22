@@ -154,7 +154,10 @@ class ClockWidget(BaseWidget):
         widget_index = 0 
         if self._locale:
             org_locale_time = locale.getlocale(locale.LC_TIME)
-
+            try:
+                org_locale_ctype = locale.getlocale(locale.LC_CTYPE)
+            except locale.Error:
+                    pass
         for part in label_parts:
             part = part.strip()
             if part and widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
@@ -165,6 +168,10 @@ class ClockWidget(BaseWidget):
                     try:
                         if self._locale:
                             locale.setlocale(locale.LC_TIME, self._locale)
+                            try:
+                                locale.setlocale(locale.LC_CTYPE, self._locale)
+                            except locale.Error:
+                                 pass
                         datetime_format_search = re.search('\\{(.*)}', part)
                         datetime_format_str = datetime_format_search.group()
                         datetime_format = datetime_format_search.group(1)
@@ -176,6 +183,10 @@ class ClockWidget(BaseWidget):
                 widget_index += 1
         if self._locale:
             locale.setlocale(locale.LC_TIME, org_locale_time)
+            try:
+                locale.setlocale(locale.LC_CTYPE, org_locale_ctype)
+            except locale.Error:
+                pass
                       
     def _next_timezone(self):
         self._active_tz = next(self._timezones)
