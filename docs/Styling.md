@@ -77,6 +77,20 @@ Example how to target widget container
 > **Note:**
 > Keep the mind YASB is written in Python and styled with CSS is very limited. You can't use CSS3 or any other advanced CSS features.
 
+## Widget elements Tooltips Style
+
+Tooltips can be styled with the following:
+```
+QToolTip {
+    padding: 4px;
+    color: white;
+    font-size: 12px;
+    background-color: rgb(36, 36, 36);
+}
+```
+> **Note:**
+> This is a limited selector. Border, background alpha, or shadow are not accessible through it.
+
 
 ## Follow OS Theme
 YASB can follow the OS theme, if you have OS dark style YASB will add class `.dark` on the root element, if you want to have different light and dark themes you can use the following CSS to achieve this.
