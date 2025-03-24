@@ -222,11 +222,8 @@ class TrayIcon(QSystemTrayIcon):
         self._load_context_menu()  # Reload context menu
 
     def _open_config(self):
-        config_dir = os.environ.get('YASB_CONFIG_HOME')
-        if not config_dir:
-            config_dir = os.path.join(Path.home(), DEFAULT_CONFIG_DIRECTORY)
         try:
-            subprocess.run(["explorer", str(config_dir)])
+            subprocess.run(["explorer", str(os.path.join(Path.home(), DEFAULT_CONFIG_DIRECTORY))])
         except Exception as e:
             logging.error(f"Failed to open config directory: {e}")
 
@@ -274,7 +271,11 @@ class TrayIcon(QSystemTrayIcon):
             os._exit(0)
 
     def _open_in_browser(self, url):
-        webbrowser.open(url)
+        try:
+            webbrowser.WindowsDefault().open(url)
+        except Exception as e:
+            logging.error(f"Failed to open browser: {e}")
+ 
             
     def _show_about_dialog(self):
         about_box = QMessageBox()  
