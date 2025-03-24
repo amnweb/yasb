@@ -98,5 +98,5 @@ Required files:
 ## Getting Help
 
 - Check the [Wiki](https://github.com/amnweb/yasb/wiki)
-- Join [Discord](https://discord.gg/Db6t9bUnQn)
+- Join [Discord](https://discord.gg/qkeunvBFgX)
 - Open an [issue](https://github.com/amnweb/yasb/issues)
