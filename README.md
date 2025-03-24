@@ -8,7 +8,7 @@
   <a href="https://github.com/amnweb/yasb/issues"><img src="https://img.shields.io/github/issues/amnweb/yasb?label=Issues"></a>
   <a href="https://github.com/amnweb/yasb/releases"><img src="https://img.shields.io/github/downloads/amnweb/yasb/total?label=Total%20Downloads"></a>
   <a href="https://github.com/amnweb/yasb/releases/latest"><img src="https://img.shields.io/github/v/release/amnweb/yasb?label=Latest%20Release"></a>
-  <a href="https://discord.gg/Db6t9bUnQn" title="Discord"><img alt="Discord" src="https://img.shields.io/discord/898554690126630914?label=Discord&cacheSeconds=600"></a>
+  <a href="https://discord.gg/qkeunvBFgX" title="Discord"><img alt="Discord" src="https://img.shields.io/discord/1353495377768218654?label=Discord&cacheSeconds=600"></a>
 </p>
 
 ***

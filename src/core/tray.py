@@ -30,7 +30,6 @@ class TrayIcon(QSystemTrayIcon):
     def __init__(self, bar_manager: BarManager):
         super().__init__()
         self._bar_manager = bar_manager
-        self._docs_url = GITHUB_URL
         self._icon = QIcon()
         self._load_favicon()
         self._load_context_menu()
@@ -123,10 +122,7 @@ class TrayIcon(QSystemTrayIcon):
         }
         """
         self.menu.setStyleSheet(style_sheet)
-        
-        github_action = self.menu.addAction("Visit GitHub")
-        github_action.triggered.connect(self._open_docs_in_browser)
-        
+
         open_config_action = self.menu.addAction("Open Config")
         open_config_action.triggered.connect(self._open_config)
         if os.path.exists(THEME_EXE_PATH):
@@ -137,10 +133,20 @@ class TrayIcon(QSystemTrayIcon):
         reload_action.triggered.connect(self._reload_application)
         self.reload_action = reload_action
         
+        github_action = self.menu.addAction("Visit GitHub")
+        github_action.triggered.connect(lambda: self._open_in_browser(f"{GITHUB_URL}"))
+
+        discord_action = self.menu.addAction("Join Discord")
+        discord_action.triggered.connect(lambda: self._open_in_browser("https://discord.gg/qkeunvBFgX"))
+
         self.menu.addSeparator()
         debug_menu = self.menu.addMenu("Debug")
         info_action = debug_menu.addAction("Information")
         info_action.triggered.connect(self._show_info)
+
+        logs_action = debug_menu.addAction("Logs")
+        logs_action.triggered.connect(self._open_logs) 
+            
         self.menu.addSeparator()
         if self.is_komorebi_installed():
             komorebi_menu = self.menu.addMenu("Komorebi")
@@ -161,9 +167,6 @@ class TrayIcon(QSystemTrayIcon):
         else:
             enable_startup_action = self.menu.addAction("Enable Autostart")
             enable_startup_action.triggered.connect(self._enable_startup)
-      
-        logs_action = debug_menu.addAction("Logs")
-        logs_action.triggered.connect(self._open_logs)
 
         about_action = self.menu.addAction("About")
         about_action.triggered.connect(self._show_about_dialog)
@@ -219,9 +222,11 @@ class TrayIcon(QSystemTrayIcon):
         self._load_context_menu()  # Reload context menu
 
     def _open_config(self):
-        CONFIG_DIR = os.path.join(Path.home(), DEFAULT_CONFIG_DIRECTORY)
+        config_dir = os.environ.get('YASB_CONFIG_HOME')
+        if not config_dir:
+            config_dir = os.path.join(Path.home(), DEFAULT_CONFIG_DIRECTORY)
         try:
-            subprocess.run(["explorer", str(CONFIG_DIR)])
+            subprocess.run(["explorer", str(config_dir)])
         except Exception as e:
             logging.error(f"Failed to open config directory: {e}")
 
@@ -267,12 +272,10 @@ class TrayIcon(QSystemTrayIcon):
             QCoreApplication.exit(0)
         except:
             os._exit(0)
-        
+
+    def _open_in_browser(self, url):
+        webbrowser.open(url)
             
-    def _open_docs_in_browser(self):
-        webbrowser.open(self._docs_url)
- 
-                
     def _show_about_dialog(self):
         about_box = QMessageBox()  
         about_box.setWindowTitle("About YASB")
@@ -286,7 +289,8 @@ class TrayIcon(QSystemTrayIcon):
         <div style="font-size:13px;font-weight:600;margin-top:8px">{APP_NAME_FULL}</div>
         <div style="font-size:13px;font-weight:600;">Version: {BUILD_VERSION}</div><br>
         <div><a href="{GITHUB_URL}">{GITHUB_URL}</a></div>
-        <div><a href="{GITHUB_THEME_URL}">{GITHUB_THEME_URL}</a></div>
+        <div style="margin-top:4px"><a href="{GITHUB_THEME_URL}">{GITHUB_THEME_URL}</a></div>
+        <div style="margin-top:4px"><a href="https://discord.gg/qkeunvBFgX">Join Discord</a></div>
         </div>
         """
         about_box.setText(about_text)
