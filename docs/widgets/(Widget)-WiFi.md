@@ -27,10 +27,10 @@ wifi:
     ethernet_icon: "\ueba9"
     wifi_icons: [
       "\udb82\udd2e",  # Icon for 0% strength
-      "\udb82\udd1f",  # Icon for 1-20% strength
-      "\udb82\udd22",  # Icon for 21-40% strength
-      "\udb82\udd25",  # Icon for 41-80% strength
-      "\udb82\udd28"   # Icon for 81-100% strength
+      "\udb82\udd1f",  # Icon for 1-24% strength
+      "\udb82\udd22",  # Icon for 25-49% strength
+      "\udb82\udd25",  # Icon for 50-74% strength
+      "\udb82\udd28"   # Icon for 75-100% strength
     ]
 ```
 
