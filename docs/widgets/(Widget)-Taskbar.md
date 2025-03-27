@@ -4,6 +4,7 @@
 | `icon_size`           | integer  | 16                        | The size of icons |
 | `ignore_apps`       | dict    | `processes:[],titles[],classes:[]` | Ignore some apps. |
 | `tooltip`  | boolean  | `True`        | Whether to show the tooltip on hover. |
+| `title_label`       | dict    | `{'enabled': False, 'show': 'focused', 'min_length': 10, 'max_length': 30}`                     | Title label configuration for displaying window titles.                     |
 | `container_padding`  | dict | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}`      | Explicitly set padding inside widget container.
 | `callbacks`         | dict    | `{'on_left': 'toggle_window', 'on_middle': 'do_nothing', 'on_right': 'do_nothing'}` | Callbacks for mouse events on the widget.                                   |
 | `animation`         | dict    | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
@@ -19,6 +20,11 @@ taskbar:
       enabled: true
       duration: 200
       type: "fadeInOut"
+    title_label:
+      enabled: false
+      show: "focused"
+      min_length: 10
+      max_length: 30
     ignore_apps:
       processes: []
       titles: []
@@ -34,6 +40,11 @@ taskbar:
 
 - **icon_size:** The size of icons which will show in the widget.
 - **tooltip:** Whether to show the tooltip on hover.
+- **title_label:** A dictionary specifying the configuration for window title labels. It includes:
+  - enabled: A boolean flag to enable or disable title labels.
+  - show: A string that determines the display behavior (either "focused" or "always").
+  - min_length: The minimum length of the title label.
+  - max_length: The maximum length of the title label.
 - **container_padding:** Explicitly set padding inside widget container.
 - **ignore_apps:** A dictionary that allows you to specify which applications should be ignored by the taskbar widget. It includes:
 - processes: A list of process names to ignore.
@@ -54,7 +65,10 @@ taskbar:
 .taskbar-widget .app-icon.foreground{
     background-color: rgba(0, 0, 0, 0.4);
 }
+/* if title_label is enabled: */
+.taskbar-widget .app-title {}
+.taskbar-widget .app-title.foreground {}
 ```
 
 > [!IMPORTANT]  
-> Taskbar apps will work only if they are minimized so that YASB can restore them on click; if you close the app to go in the system tray, YASB can't work in that way.
+> The title label is disabled by default. If you decide to enable it, keep in mind that it may result in slightly higher CPU usage.

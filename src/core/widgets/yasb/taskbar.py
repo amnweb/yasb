@@ -1,20 +1,24 @@
 import logging
+import time
+import atexit
 from typing import Optional
+
+from PIL import Image
+import win32gui
+import win32con
+
+from PyQt6.QtCore import Qt, pyqtSignal, QTimer
+from PyQt6.QtGui import QPixmap, QImage, QCursor
+from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget, QGraphicsOpacityEffect, QApplication
+
 from settings import DEBUG
 from core.widgets.base import BaseWidget
 from core.utils.win32.windows import WinEvent
 from core.event_service import EventService
-from PyQt6.QtGui import QPixmap, QImage, QCursor
-from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget, QGraphicsOpacityEffect, QApplication
-from PyQt6.QtCore import Qt, pyqtSignal, QTimer
 from core.validation.widgets.yasb.taskbar import VALIDATION_SCHEMA
 from core.utils.win32.utilities import get_hwnd_info
 from core.utils.win32.app_icons import get_window_icon
 from core.utils.widgets.animation_manager import AnimationManager
-from PIL import Image
-import win32gui
-import win32con
-import atexit
 
 try:
     from core.utils.win32.event_listener import SystemEventListener
@@ -25,6 +29,24 @@ except ImportError:
 # Missing from win32con
 WS_EX_NOREDIRECTIONBITMAP = 0x20_0000
 
+# Exclude the context menu, taskbar, and other system classes that we don't want to process
+EXCLUDED_CLASSES = {
+    "Progman",
+    "SysListView32",
+    "XamlExplorerHostIslandWindow_WASDK",
+    "Microsoft.UI.Content.PopupWindowSiteBridge",
+    "Microsoft.UI.Content.DesktopChildSiteBridge",
+    "Windows.UI.Composition.DesktopWindowContentBridge",
+    "SysHeader32",
+    "Windows.UI.Input.InputSite.WindowClass",
+    "Shell_TrayWnd",
+    "Shell_SecondaryTrayWnd",
+    "#32768",
+    "Qt673QWindowToolSaveBits",
+    "Qt673QWindowToolTipSaveBits",
+    "Qt673QWindowToolTipDropShadowSaveBits"
+}
+
 class TaskbarWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
     update_event = pyqtSignal(int, WinEvent)
@@ -34,12 +56,14 @@ class TaskbarWidget(BaseWidget):
             self,
             icon_size: int,
             animation:dict[str, str] | bool,
+            title_label: dict[str, str],
             tooltip: bool,
             ignore_apps: dict[str, list[str]],
             container_padding: dict,
             callbacks: dict[str, str]
     ):
         super().__init__(class_name="taskbar-widget")
+
         self.dpi = None # Initial DPI value
         self.icon_label = QLabel()
         self._label_icon_size = icon_size
@@ -52,6 +76,7 @@ class TaskbarWidget(BaseWidget):
             }
         else:
             self._animation = animation
+        self._title_label = title_label
         self._tooltip = tooltip
         self._ignore_apps = ignore_apps
         self._padding = container_padding
@@ -59,7 +84,8 @@ class TaskbarWidget(BaseWidget):
         self._update_retry_count = 0
 
         self._icon_cache = dict()
-        self.window_buttons = {}
+        self._window_buttons = {}
+        self._hwnd_title_cache = {}
         self._event_service = EventService()
         
         # Construct container
@@ -74,101 +100,121 @@ class TaskbarWidget(BaseWidget):
         # Add the container to the main widget layout
         self.widget_layout.addWidget(self._widget_container)
         
-        self.update_event.connect(self._on_update_event)
-        self._event_service.register_event(WinEvent.EventSystemForeground, self.update_event)
-        self._event_service.register_event(WinEvent.EventObjectFocus, self.update_event)
-        self._event_service.register_event(WinEvent.EventObjectDestroy, self.update_event)
-
         self.register_callback("toggle_window", self._on_toggle_window)
- 
         self.callback_left = callbacks["on_left"]
         self.callback_right = callbacks["on_right"]
         self.callback_middle = callbacks["on_middle"]
         
-        # Debounce timers
-        self._debounce_timer_focus = QTimer()
-        self._debounce_timer_focus.setSingleShot(True)
-        self._debounce_timer_focus.timeout.connect(self._process_debounced_focus_event)
-        self._debounced_focus_event = None
-
-        self._debounce_timer_foreground = QTimer()
-        self._debounce_timer_foreground.setSingleShot(True)
-        self._debounce_timer_foreground.timeout.connect(self._process_debounced_foreground_event)
-        self._debounced_foreground_event = None
-
+        self.update_event.connect(self._process_event)
+        self._event_service.register_event(WinEvent.EventSystemForeground, self.update_event)
+        self._event_service.register_event(WinEvent.EventObjectFocus, self.update_event)
+        self._event_service.register_event(WinEvent.EventObjectHide, self.update_event)
+        
+        if self._tooltip or self._title_label['enabled']:
+            # Register for title change events only if title labels or tooltip are enabled
+            self._event_service.register_event(WinEvent.EventObjectNameChange, self.update_event)
+        self._event_service.register_event(WinEvent.EventObjectDestroy, self.update_event)
+        
+        # Load all currently visible windows when the widget is initialized
+        self._load_initial_windows()
+        
         if QApplication.instance():
             QApplication.instance().aboutToQuit.connect(self._stop_events)
         atexit.register(self._stop_events)
 
+
     def _stop_events(self) -> None:
         self._event_service.clear()
  
-    def _on_update_event(self, hwnd: int, event: WinEvent) -> None:
-        """
-        Note: This is probably not the best way to do this, but debouncing the events is the only way to prevent high CPU usage.
-        Need to find a better way to do this.
-        """
-        if event == WinEvent.EventObjectFocus:
-            self._debounced_focus_event = (hwnd, event)
-            if not self._debounce_timer_focus.isActive():
-                self._debounce_timer_focus.start(100)
-        elif event == WinEvent.EventSystemForeground:
-            self._debounced_foreground_event = (hwnd, event)
-            if not self._debounce_timer_foreground.isActive():
-                self._debounce_timer_foreground.start(100)
-        else:
-            self._process_event(hwnd, event)
-
-    def _process_debounced_focus_event(self):
-        if self._debounced_focus_event:
-            hwnd, event = self._debounced_focus_event
-            self._process_event(hwnd, event)
-            self._debounced_focus_event = None
-
-    def _process_debounced_foreground_event(self):
-        if self._debounced_foreground_event:
-            hwnd, event = self._debounced_foreground_event
-            self._process_event(hwnd, event)
-            self._debounced_foreground_event = None
 
     def _process_event(self, hwnd: int, event: WinEvent) -> None:
+        # Maintain a dictionary of last event times per (hwnd, event)
+        if not hasattr(self, "_last_event_time"):
+            self._last_event_time = {}
+        now = time.time()
+        key = (hwnd, event)
+        debounce_interval = 0.1  # seconds
+        if now - self._last_event_time.get(key, 0) < debounce_interval:
+            return  # Skip event
+        self._last_event_time[key] = now
+
         win_info = get_hwnd_info(hwnd)
-        
         if (not win_info or not hwnd or
                 not win_info['title'] or
+                win_info['class_name'] in EXCLUDED_CLASSES or
                 win_info['title'] in self._ignore_apps['titles'] or
                 win_info['class_name'] in self._ignore_apps['classes'] or
                 win_info['process']['name'] in self._ignore_apps['processes']):
-            return 
-        self._update_label(hwnd, win_info, event)
+            return
+
+        cached_title = self._hwnd_title_cache.get(hwnd)
+        # For EventObjectNameChange, if the title hasn't changed, just ignore.
+        if self._tooltip or self._title_label['enabled']:
+            if event == WinEvent.EventObjectNameChange and win_info['title'] == cached_title:
+                return
+
+        if win_info['title'] != cached_title or event != WinEvent.EventSystemForeground:
+            self._hwnd_title_cache[hwnd] = win_info['title']
+            self._update_label(hwnd, win_info, event)
+ 
 
     def _update_label(self, hwnd: int, win_info: dict, event: WinEvent) -> None:
-         
         visible_windows = self.get_visible_windows(hwnd, win_info, event)
-        existing_hwnds = set(self.window_buttons.keys())
+        existing_hwnds = set(self._window_buttons.keys())
         new_icons = []
         removed_hwnds = []
+        updated_titles = {}
 
         for title, hwnd, icon, process in visible_windows:
-            if hwnd not in self.window_buttons:
-                self.window_buttons[hwnd] = (title, icon, hwnd, process)
+            if hwnd not in self._window_buttons and icon is not None:
+                self._window_buttons[hwnd] = (title, icon, hwnd, process)
                 new_icons.append((title, icon, hwnd, process))
             elif hwnd in existing_hwnds:
                 existing_hwnds.remove(hwnd)
+                old_title = self._window_buttons[hwnd][0]
+                if old_title != title:
+                    # Update the stored title in window_buttons
+                    self._window_buttons[hwnd] = (title, self._window_buttons[hwnd][1], hwnd, process)
+                    updated_titles[hwnd] = title
 
         # Collect hwnds for windows that are no longer visible
         for hwnd in existing_hwnds:
             removed_hwnds.append(hwnd)
-            del self.window_buttons[hwnd]
+            del self._window_buttons[hwnd]
 
         # Remove icons for windows that are no longer visible
         for i in reversed(range(self._widget_container_layout.count())):
             widget = self._widget_container_layout.itemAt(i).widget()
             hwnd = widget.property("hwnd")
 
+            if self._title_label['enabled']:
+                if widget.property("class") and "app-title" in str(widget.property("class")):
+                    if hwnd in removed_hwnds:
+                        # Remove title labels for closed windows
+                        self._widget_container_layout.removeWidget(widget)
+                        widget.deleteLater()
+                    elif hwnd in self._window_buttons:
+                        title = self._window_buttons[hwnd][0]
+                        formatted_title = self._format_title(title)
+                        if widget.text() != formatted_title:
+                            widget.setText(formatted_title)
+                            
+                        widget.setProperty("class", self._get_title_class(hwnd))
+                        if self._title_label['show'] == 'focused':
+                            widget.setVisible(self._get_title_visibility(hwnd))
+                        widget.style().unpolish(widget)
+                        widget.style().polish(widget)
+                    continue  # Skip the rest of the loop for title labels
+                
+
             widget.setProperty("class", self._get_icon_class(hwnd))
             widget.style().unpolish(widget)
             widget.style().polish(widget)
+
+            # Update tooltip if title changed and tooltip is enabled
+            if self._tooltip and hwnd in updated_titles:
+                title = updated_titles[hwnd]
+                widget.setToolTip(self._format_title(title))
 
             if widget != self.icon_label:
                 if hwnd in removed_hwnds:
@@ -186,24 +232,63 @@ class TaskbarWidget(BaseWidget):
                 icon_label.setFixedWidth(0)
             icon_label.setPixmap(icon)
             if self._tooltip:
-                icon_label.setToolTip(title)
+                icon_label.setToolTip(self._format_title(title))
             icon_label.setProperty("hwnd", hwnd)
             icon_label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
             self._widget_container_layout.addWidget(icon_label)
 
+            if self._title_label['enabled']:    
+                title_label = QLabel(self._format_title(title))
+                title_label.setProperty("class", self._get_title_class(hwnd))
+                title_label.setProperty("hwnd", hwnd)
+                title_label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+                if self._tooltip:
+                    title_label.setToolTip(self._format_title(title))
+                self._widget_container_layout.addWidget(title_label)
+                if self._title_label['show'] == 'focused':
+                    title_label.setVisible(self._get_title_visibility(hwnd))
+
             if self._animation['enabled']:
                 self._animate_icon(icon_label, start_width=0, end_width=icon_label.sizeHint().width())
+
+
 
     def _get_icon_class(self, hwnd: int) -> str:
         if hwnd == win32gui.GetForegroundWindow():
             return "app-icon foreground"
         return "app-icon"
 
-    def _get_app_icon(self, hwnd: int, title: str, process: dict, event: WinEvent) -> QPixmap | None:
-        try:
-            pid = process["pid"]
-            cache_key = (hwnd, title, pid, self.dpi)
+    def _get_title_class(self, hwnd: int) -> str:
+        if hwnd == win32gui.GetForegroundWindow():
+            return "app-title foreground"
+        return "app-title"
+    
+    def _get_title_visibility(self, hwnd: int) -> str:
+        if hwnd == win32gui.GetForegroundWindow():
+            return True
+        return False
+ 
+    def _format_title(self, title: str) -> str:
+        """Format a window title according to max and min length settings."""
+        if len(title) > self._title_label['max_length']:
+            formatted_title = title[:self._title_label['max_length']] + ".."
+        else:
+            formatted_title = title
 
+        min_length = self._title_label.get('min_length', 0)
+        if len(formatted_title) < min_length:
+            formatted_title = formatted_title.ljust(min_length)
+
+        return formatted_title
+
+    def _get_app_icon(self, hwnd: int, title:str, process: dict, event: WinEvent, skip_foreground_check=False) -> QPixmap | None:
+        try:
+            # Skip the foreground check during initial load
+            if not skip_foreground_check and hwnd != win32gui.GetForegroundWindow():
+                return
+            pid = process["pid"]
+            cache_key = (hwnd, pid, self.dpi)
+            
             if event != WinEvent.WinEventOutOfContext:
                 self._update_retry_count = 0
 
@@ -217,19 +302,16 @@ class TaskbarWidget(BaseWidget):
                         (int(self._label_icon_size * self.dpi), int(self._label_icon_size * self.dpi)),
                         Image.LANCZOS
                     ).convert("RGBA")
-                elif process["name"] == "ApplicationFrameHost.exe":
-                    if self._update_retry_count < 10:
-                        self._update_retry_count += 1
-                        QTimer.singleShot(
-                            500,
-                            lambda: self._get_app_icon(hwnd, title, process, WinEvent.WinEventOutOfContext)
-                        )
-                        return None
-                    self._update_retry_count = 0
-
+                else:
+                    if process["name"] == "ApplicationFrameHost.exe":
+                        if self._update_retry_count < 10:
+                            self._update_retry_count += 1
+                            QTimer.singleShot(500, lambda: self._get_app_icon(hwnd, title, process, WinEvent.WinEventOutOfContext, skip_foreground_check))
+                            return
+                        else:
+                            self._update_retry_count = 0
                 if not DEBUG:
                     self._icon_cache[cache_key] = icon_img
-
             if not icon_img:
                 return None
             qimage = QImage(icon_img.tobytes(), icon_img.width, icon_img.height, QImage.Format.Format_RGBA8888)
@@ -241,29 +323,35 @@ class TaskbarWidget(BaseWidget):
             if DEBUG:
                 logging.exception(f"Failed to get icons for window with HWND {hwnd} emitted by event {event}")
             return None
-
-
-    def get_visible_windows(self, _: int, win_info: dict, event: WinEvent) -> list[tuple[str, int, Optional[QPixmap], WinEvent]]:
+            
+        
+    def get_visible_windows(self, _: int, win_info: dict, event: WinEvent) -> list[tuple[str, int, Optional[QPixmap], dict]]:
         process = win_info['process']
-        def is_window_visible_on_taskbar(hwnd):
-            if win32gui.IsWindowVisible(hwnd):
-                ex_style = win32gui.GetWindowLong(hwnd, win32con.GWL_EXSTYLE)
-                if not (ex_style & win32con.WS_EX_TOOLWINDOW or ex_style == WS_EX_NOREDIRECTIONBITMAP):
-                    return True
-            return False
-        
         visible_windows = []
-        
         def enum_windows_proc(hwnd, _):
-            if is_window_visible_on_taskbar(hwnd):
-                title = win32gui.GetWindowText(hwnd)
-                icon = self._get_app_icon(hwnd, title, process, event)
-                if title and icon:
+            if win32gui.IsWindowVisible(hwnd) and win32gui.GetWindowText(hwnd):
+                ex_style = win32gui.GetWindowLong(hwnd, win32con.GWL_EXSTYLE)
+                if not (ex_style & win32con.WS_EX_TOOLWINDOW):
+                    title = win32gui.GetWindowText(hwnd)
+                    
+                    # First check if we already have this window in our buttons
+                    if hwnd in self._window_buttons:
+                        # Reuse existing icon if title is the same
+                        stored_title, icon, _, _ = self._window_buttons[hwnd]
+                        if title == stored_title:
+                            visible_windows.append((title, hwnd, icon, process))
+                            return True
+                    
+                    # If not already stored or title changed, get a new icon
+                    icon = self._get_app_icon(hwnd, title, process, event)
                     visible_windows.append((title, hwnd, icon, process))
+
             return True
+        
         win32gui.EnumWindows(enum_windows_proc, None)
         return visible_windows
           
+    
     def _perform_action(self, action: str) -> None:
         widget = QApplication.instance().widgetAt(QCursor.pos())
         if not widget:
@@ -282,8 +370,10 @@ class TaskbarWidget(BaseWidget):
         else:
             logging.warning(f"Unknown action '{action}'.")
          
+    
     def _on_toggle_window(self) -> None:
         self._perform_action("toggle")
+    
     
     def bring_to_foreground(self, hwnd):
         if not win32gui.IsWindow(hwnd):
@@ -301,7 +391,60 @@ class TaskbarWidget(BaseWidget):
             else:
                 win32gui.ShowWindow(hwnd, win32con.SW_MINIMIZE)
 
-    
+
+    def _load_initial_windows(self):
+        """
+        Load all currently visible windows when the widget is first initialized.
+        """
+        visible_windows = []
+        
+        def enum_windows_proc(hwnd, _):
+            if win32gui.IsWindowVisible(hwnd) and win32gui.GetWindowText(hwnd):
+                ex_style = win32gui.GetWindowLong(hwnd, win32con.GWL_EXSTYLE)
+                if not (ex_style & win32con.WS_EX_TOOLWINDOW or ex_style == WS_EX_NOREDIRECTIONBITMAP):
+                    title = win32gui.GetWindowText(hwnd)
+                    # Skip windows that should be ignored
+                    if (title in self._ignore_apps['titles'] or 
+                        win32gui.GetClassName(hwnd) in self._ignore_apps['classes']):
+                        return True
+                    
+                    win_info = get_hwnd_info(hwnd)
+                    if win_info and win_info['process']['name'] not in self._ignore_apps['processes']:
+                        process = win_info['process']
+                        icon = self._get_app_icon(hwnd, title, process, WinEvent.WinEventOutOfContext, skip_foreground_check=True)
+                        if icon and title:
+                            visible_windows.append((title, hwnd, icon, process))
+                            
+            return True
+        
+        win32gui.EnumWindows(enum_windows_proc, None)
+
+        if visible_windows:
+            for title, hwnd, icon, process in visible_windows:
+                if hwnd not in self._window_buttons and icon is not None:
+                    self._window_buttons[hwnd] = (title, icon, hwnd, process)
+                    
+                    icon_label = QLabel()
+                    icon_label.setProperty("class", "app-icon")
+                    icon_label.setPixmap(icon)
+                    if self._tooltip:
+                        icon_label.setToolTip(self._format_title(title))
+                    icon_label.setProperty("hwnd", hwnd)
+                    icon_label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+                    self._widget_container_layout.addWidget(icon_label)
+                    # Add title labels during initial load
+                    if self._title_label['enabled']:
+                        title_label = QLabel(self._format_title(title))
+                        title_label.setProperty("class", self._get_title_class(hwnd))
+                        title_label.setProperty("hwnd", hwnd)
+                        title_label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+                        if self._tooltip:
+                            title_label.setToolTip(self._format_title(title))
+                        self._widget_container_layout.addWidget(title_label)
+                        if self._title_label['show'] == 'focused':
+                            title_label.setVisible(self._get_title_visibility(hwnd))
+
+                    
     def _animate_icon(self, icon_label, start_width=None, end_width=None, fps=60, duration=120):
         if start_width is None:
             start_width = 0
@@ -335,6 +478,18 @@ class TaskbarWidget(BaseWidget):
                 if end_width == 0:
                     icon_label.hide()
                     self._widget_container_layout.removeWidget(icon_label)
+                    
+                    # Also remove the title label if it exists and we're removing an icon
+                    hwnd = icon_label.property("hwnd")
+                    if self._title_label['enabled'] and hwnd:
+                        for i in range(self._widget_container_layout.count()):
+                            widget = self._widget_container_layout.itemAt(i).widget()
+                            if (widget and widget.property("hwnd") == hwnd and 
+                                widget.property("class") and "app-title" in str(widget.property("class"))):
+                                self._widget_container_layout.removeWidget(widget)
+                                widget.deleteLater()
+                                break
+                    
                     icon_label.deleteLater()
 
         # Ensure the label is shown before starting the animation
