@@ -8,6 +8,7 @@ from typing import Any, override
 from uuid import UUID
 
 from PyQt6.QtCore import (
+    QPoint,
     Qt,
     QThread,
     QTimer,
@@ -18,6 +19,7 @@ from PyQt6.QtWidgets import (
     QApplication,
     QHBoxLayout,
     QLayout,
+    QMenu,
     QPushButton,
 )
 
@@ -139,6 +141,8 @@ class SystrayWidget(BaseWidget):
         self.unpinned_vis_btn = QPushButton()
         self.unpinned_vis_btn.setCheckable(True)
         self.unpinned_vis_btn.clicked.connect(self.toggle_unpinned_widget_visibility)  # type: ignore
+        self.unpinned_vis_btn.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.unpinned_vis_btn.customContextMenuRequested.connect(self.show_context_menu)  # type: ignore
 
         self.unpinned_widget = DropWidget(self)
         self.unpinned_layout = self.unpinned_widget.main_layout
@@ -168,6 +172,33 @@ class SystrayWidget(BaseWidget):
         self.unpinned_vis_btn.setVisible(self.show_unpinned_button)
 
         QTimer.singleShot(0, self.setup_client)  # pyright: ignore [reportUnknownMemberType]
+
+    def show_context_menu(self, pos: QPoint):
+        """Show the context menu for the unpinned visibility button"""
+        menu = QMenu(self)
+        menu.setContentsMargins(0, 0, 0, 0)
+        menu.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
+        menu.setStyleSheet("""
+            QMenu::item {
+                padding: 4px 6px;
+            }
+            QMenu::item:selected {
+                background-color: #444;
+                color: white;
+                border-radius: 6px;
+            }
+        """)
+        refresh_action = menu.addAction("Refresh Systray")  # pyright: ignore [reportUnknownMemberType]
+        if not refresh_action:
+            return
+        refresh_action.triggered.connect(self.refresh_systray)  # pyright: ignore [reportUnknownMemberType]
+        menu.exec(self.unpinned_vis_btn.mapToGlobal(pos))
+
+    def refresh_systray(self):
+        """Refresh the icons by sending a message to the tray monitor"""
+        client, _ = SystrayWidget.get_client_instance()
+        client.send_taskbar_created()
+        logger.debug("Systray icons refreshed")
 
     def setup_client(self):
         """Setup the tray monitor client and connect signals"""
