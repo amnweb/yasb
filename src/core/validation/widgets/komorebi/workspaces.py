@@ -5,6 +5,7 @@ DEFAULTS = {
     'label_workspace_populated_btn': '{index}',
     'label_default_name': '',
     'label_float_override': 'Override Active',
+    'toggle_workspace_layer': {'enabled': False, 'tiling_label': "Tiling", 'floating_label': "Floating"},
     'hide_if_offline': False,
     'label_zero_index': False,
     'hide_empty_workspaces': False,
@@ -37,6 +38,24 @@ VALIDATION_SCHEMA = {
         'type': 'string',
         'default': DEFAULTS['label_float_override']
     },
+    'toggle_workspace_layer': {
+        'type': 'dict',
+        'default': DEFAULTS['toggle_workspace_layer'],
+        'schema': {
+            'enabled': {
+                'type': 'boolean',
+                'default': DEFAULTS['toggle_workspace_layer']['enabled']
+            },
+            'tiling_label': {
+                'type': 'string',
+                'default': DEFAULTS['toggle_workspace_layer']['tiling_label']
+            },
+            'floating_label': {
+                'type': 'string',
+                'default': DEFAULTS['toggle_workspace_layer']['floating_label']
+            }
+        }
+    },
     'hide_if_offline': {
         'type': 'boolean',
         'default': DEFAULTS['hide_if_offline']
@@ -49,7 +68,7 @@ VALIDATION_SCHEMA = {
         'type': 'boolean',
         'default': DEFAULTS['hide_empty_workspaces']
     },
-    'animation': { 
+    'animation': {
         'type': 'boolean',
         'default': DEFAULTS['animation']
     },

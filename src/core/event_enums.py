@@ -26,6 +26,7 @@ class KomorebiEvent(Event):
     ToggleMonocle = "ToggleMonocle"
     ToggleMaximise = "ToggleMaximise"
     TogglePause = "TogglePause"
+    ToggleWorkspaceLayer = "ToggleWorkspaceLayer"
     EnsureWorkspaces = "EnsureWorkspaces"
     CycleFocusMonitor = "CycleFocusMonitor"
     CycleFocusWorkspace = "CycleFocusWorkspace"
