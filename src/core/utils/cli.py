@@ -22,7 +22,7 @@ from colorama import just_fix_windows_console
 just_fix_windows_console()
 
 YASB_VERSION = BUILD_VERSION
-YASB_CLI_VERSION = "1.0.7"
+YASB_CLI_VERSION = "1.0.8"
 
 OS_STARTUP_FOLDER = os.path.join(os.environ['APPDATA'], r'Microsoft\Windows\Start Menu\Programs\Startup')
 INSTALLATION_PATH = os.path.abspath(os.path.join(__file__, "../../.."))
@@ -154,7 +154,12 @@ class CLIHandler:
         args = parser.parse_args()
  
         if args.command == 'start':
-            print("Start YASB in background...")
+            print(f"Start YASB Reborn v{YASB_VERSION} in background.")
+            print("\n# Community")
+            print("* Join the Discord https://discord.gg/qkeunvBFgX - Chat, ask questions, share your desktops and more...")
+            print("* GitHub discussions https://github.com/amnweb/yasb/discussions - Ask questions, share your ideas and more...")
+            print("\n# Documentation")
+            print("* Read the docs https://github.com/amnweb/yasb/wiki - how to configure and use YASB")
             subprocess.Popen(["yasb.exe"])
             sys.exit(0)
             
