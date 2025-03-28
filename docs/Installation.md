@@ -19,6 +19,7 @@ winget install --id AmN.yasb
 
 ### Using Python
 - Install Python 3.12
+- Install Visual Studio with Individual Components `Windows SDK` and `MSVC build tools`
 - Install required Python Modules:
   - `pip install -r requirements.txt`
   - Create the directory `C:/Users/{username}/.config/yasb/` and copy [styles.css](https://github.com/amnweb/yasb/blob/main/src/styles.css) and [config.yaml](https://github.com/amnweb/yasb/blob/main/src/config.yaml) into folder. If you don't have the `.config/yasb/` directory, on first run the application will create it for you. To use a custom directory, set the `YASB_CONFIG_HOME` environment variable.
