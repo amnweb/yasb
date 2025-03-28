@@ -52,17 +52,22 @@ class KomorebiClient:
         except (KeyError, TypeError):
             return None
 
-    def get_num_windows(self, workspace: dict):
-        containers = workspace['containers']['elements']
-        if workspace.get('floating_windows', []):
+    def get_num_windows(self, workspace: dict) -> bool:
+        floating = workspace.get('floating_windows', [])
+        if isinstance(floating, dict):
+            if floating.get('elements', []):
+                return True
+        elif floating:
             return True
 
-        for container in containers:
+        for container in workspace['containers']['elements']:
             if container.get('windows', {}).get('elements', []):
                 return True
 
         return False
 
+ 
+    
     def get_workspace_by_window_hwnd(self, workspaces: list[Optional[dict]], window_hwnd: int) -> Optional[dict]:
         for i, workspace in enumerate(workspaces):
 
