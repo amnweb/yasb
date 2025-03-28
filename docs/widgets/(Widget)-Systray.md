@@ -50,6 +50,9 @@ There are some limitations with the systray widget:
 - **show_volume:** Whether to show volume icon (from the original systray).
 - **show_network:** Whether to show network icon (from the original systray).
 
+## Debug Options
+Show unpinned button has a right click menu that allows you to refresh the systray icons.
+
 ## Style
 ```css
 .systray {} /* The base widget style */
