@@ -67,6 +67,7 @@ class IconWidget(QPushButton):
         self.scaled_pixmap = None
         self.is_pinned = False
         self.lmb_pressed = False
+        self.ignore_next_release = False
 
     def update_scaled_pixmap(self):
         """Pre-compute the scaled pixmap."""
@@ -108,9 +109,12 @@ class IconWidget(QPushButton):
 
     @override
     def mouseReleaseEvent(self, e: QMouseEvent | None) -> None:
-        self.lmb_pressed = False
         if e is None:
             return super().mouseReleaseEvent(e)
+        if self.ignore_next_release:
+            self.ignore_next_release = False
+            return super().mouseReleaseEvent(e)
+        self.lmb_pressed = False
         btn = e.button()
         if btn == Qt.MouseButton.LeftButton and (self.last_cursor_pos - e.pos()).manhattanLength() > 8:
             return super().mouseReleaseEvent(e)
@@ -127,6 +131,9 @@ class IconWidget(QPushButton):
 
     @override
     def mouseDoubleClickEvent(self, a0: QMouseEvent | None) -> None:
+        if a0 is None:
+            return super().mouseDoubleClickEvent(a0)
+        self.ignore_next_release = True
         self.send_action(WM_LBUTTONDBLCLK)
         return super().mouseDoubleClickEvent(a0)
 
