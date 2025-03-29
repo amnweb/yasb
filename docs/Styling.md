@@ -51,6 +51,10 @@ You can specify different icon class in the configuration file as shown below.
 label: "<span class=\"icon-1"\">\uf4bc</span> {virtual_mem_free}"
 ```
 
+> **Note**:
+> To avoid some icons being cut off on the sides, it's recommended to use the proportional version of your Nerd Font (e.g. `JetBrainsMono Nerd Font Propo`),
+
+
 ## Style Text
 
 Text can be styled with the following:
@@ -75,7 +79,7 @@ Example how to target widget container
 ```
 
 > **Note:**
-> Keep the mind YASB is written in Python and styled with CSS is very limited. You can't use CSS3 or any other advanced CSS features.
+> Keep in mind that YASB is written in Python and styled with very limited CSS. You can't use CSS3 or any other advanced CSS features.
 
 
 ## Follow OS Theme
