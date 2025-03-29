@@ -51,6 +51,12 @@ You can specify different icon class in the configuration file as shown below.
 label: "<span class=\"icon-1"\">\uf4bc</span> {virtual_mem_free}"
 ```
 
+> **Note**:
+> If you're not using the proportional version of your Nerd Font (e.g. `JetBrainsMono Nerd Font Propo`),
+> you might come across some icons being cut off on the right.
+> To fix this, you can set the `padding-right` value inside `.icon` of your widget in `styles.css`.
+
+
 ## Style Text
 
 Text can be styled with the following:
