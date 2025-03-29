@@ -81,7 +81,7 @@ Example how to target widget container
 ```
 
 > **Note:**
-> Keep the mind YASB is written in Python and styled with CSS is very limited. You can't use CSS3 or any other advanced CSS features.
+> Keep in mind that YASB is written in Python and styled with very limited CSS. You can't use CSS3 or any other advanced CSS features.
 
 
 ## Follow OS Theme
