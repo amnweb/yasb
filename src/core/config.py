@@ -2,6 +2,7 @@ import logging
 import os
 import re
 import shutil
+import sys
 import settings
 from os import path, makedirs
 from sys import argv, exit
@@ -15,7 +16,7 @@ from yaml import safe_load, dump
 from xml.dom import SyntaxErr
 from core.utils.css_processor import CSSProcessor
 
-SRC_CONFIGURATION_DIR = path.dirname(argv[0])
+SRC_CONFIGURATION_DIR = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.path.dirname(argv[0])
 HOME_CONFIGURATION_DIR = path.join(Path.home(), settings.DEFAULT_CONFIG_DIRECTORY)
 HOME_STYLES_PATH = path.normpath(path.join(HOME_CONFIGURATION_DIR, settings.DEFAULT_STYLES_FILENAME))
 HOME_CONFIG_PATH = path.normpath(path.join(HOME_CONFIGURATION_DIR, settings.DEFAULT_CONFIG_FILENAME))
