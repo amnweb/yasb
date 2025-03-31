@@ -1,4 +1,5 @@
 import os
+import shutil
 import subprocess
 import sys
 import requests
@@ -6,7 +7,7 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QLabel, QScrollArea, QFrame, QHBoxLayout, QPushButton, QMessageBox, QDialog)
 from PyQt6.QtGui import QPixmap, QFont, QDesktopServices, QIcon
 from PyQt6.QtCore import Qt, QThread, pyqtSignal, QUrl, QTimer, QPropertyAnimation
-from PyQt6.QtWidgets import QGraphicsOpacityEffect
+from PyQt6.QtWidgets import QGraphicsOpacityEffect, QSizePolicy
 
 class ImageLoader(QThread):
     finished = pyqtSignal(str, bytes)
@@ -68,7 +69,7 @@ class ThemeCard(QFrame):
         # Name label (left-aligned)
         name = QLabel(self.theme_data["name"])
         name.setOpenExternalLinks(True)
-        name.setFont(QFont('Segoe UI', 16, QFont.Weight.Bold))
+        name.setFont(QFont('Segoe UI', 18, QFont.Weight.DemiBold))
         top_layout.addWidget(name)
 
         # Download button (right-aligned)
@@ -129,7 +130,7 @@ class ThemeCard(QFrame):
 
         # Author label
         homepage = self.theme_data['homepage'] if self.theme_data['homepage'] else f'https://github.com/{self.theme_data['author']}'
-        author = QLabel(f"author <a style=\"color:#0078D4;font-weight:500;text-decoration:none\" href='{homepage}'>{self.theme_data['author']}</a>")
+        author = QLabel(f"author <a style=\"color:#239af5;font-weight:600;text-decoration:none\" href='{homepage}'>{self.theme_data['author']}</a>")
         author.setFont(QFont('Segoe UI', 10))
         author.setOpenExternalLinks(True)
         layout.addWidget(author)
@@ -166,21 +167,23 @@ class ThemeCard(QFrame):
         self.loader.finished.connect(self.set_image)
         self.loader.start()
 
+ 
     def set_image(self, theme_id, image_data):
         if theme_id == self.theme_data['id']:
             pixmap = QPixmap()
             if image_data and pixmap.loadFromData(image_data):
-                # Scale image to 60px height to fit the scroll area
-                set_scale = 1.2
-                self.scroll.setFixedHeight(int(pixmap.height() * set_scale))  
-                resized_pixmap = pixmap.scaled(
-                    int(1920 * set_scale),
-                    int(pixmap.height() * set_scale),
-                    Qt.AspectRatioMode.KeepAspectRatio,
+                screen = QApplication.primaryScreen()
+                dpr = screen.devicePixelRatio()
+                target_width = int(screen.geometry().width() * dpr)
+                resized_pixmap = pixmap.scaledToWidth(
+                    target_width,
                     Qt.TransformationMode.SmoothTransformation
                 )
+                resized_pixmap.setDevicePixelRatio(dpr)
+                display_size = resized_pixmap.size() / dpr
+                self.scroll.setFixedHeight(display_size.height())
                 self.image_label.setPixmap(resized_pixmap)
-                self.image_label.setFixedSize(resized_pixmap.size())
+                self.image_label.setFixedSize(display_size)
             else:
                 self.image_label.setText("Invalid image")
 
@@ -348,16 +351,83 @@ class ThemeViewer(QMainWindow):
         self.placeholder_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self.placeholder_label)
 
-        config_home = os.getenv('YASB_CONFIG_HOME') if os.getenv('YASB_CONFIG_HOME') else os.path.join(os.path.expanduser("~"), ".config", "yasb")
-        self.backup_info = QLabel(f"Backup your current theme before installing a new one. You can do this by copying the <b>config.yaml</b> and <b>styles.css</b> files from the <b><i>{config_home}</i></b> directory to a safe location.")
+        # Wrap backup_info and buttons in a row widget
+        self.row_widget = QWidget()
+        self.row_widget.setObjectName("rowWidget")
+        self.row_widget.setStyleSheet("""
+            QWidget#rowWidget {
+                background-color: rgba(255, 255, 255, 0.05);
+            }
+        """)
+        row_layout = QHBoxLayout(self.row_widget)
+        row_layout.setContentsMargins(20, 10, 20, 10)
+
+        # Create backup_info
+        self.backup_info = QLabel("Backup your current config files before installing a new theme.")
         self.backup_info.setWordWrap(True)
-        self.backup_info.setStyleSheet("color:#fff; background-color: rgba(166, 16, 48, 0.3);border-radius:6px;border:1px solid rgba(166, 16, 48, 0.5);padding:4px 8px;font-size:11px;font-family:'Segoe UI';margin:14px 20px 0 14px")
-        self.backup_info.hide()
-        layout.addWidget(self.backup_info)
+        self.backup_info.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Maximum)
+        row_layout.addWidget(self.backup_info)
 
-        # Setup scroll area but hide it initially
+        # Horizontal layout for buttons
+        self.backup_restore_layout = QHBoxLayout()
+        self.backup_button = QPushButton("Backup")
+        self.backup_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.backup_button.clicked.connect(self.backup_config)
+        self.backup_button.setStyleSheet("""
+            QPushButton {
+                background-color: #2c323b;
+                border: 1px solid #363e49;
+                color: white;
+                padding: 4px 16px;
+                border-radius: 4px;
+                font-family: 'Segoe UI';
+                font-size: 12px;
+                font-weight: 600;
+            }
+            QPushButton:hover {
+                background-color: #393f47;
+            }
+            QPushButton:focus {
+                outline: none;
+            }
+            QPushButton:pressed {
+                background-color: #2c323b;
+            }
+        """)
+        self.restore_button = QPushButton("Restore")
+        self.restore_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.restore_button.clicked.connect(self.restore_config)
+        self.restore_button.setStyleSheet("""
+            QPushButton {
+                background-color: #2c323b;
+                border: 1px solid #363e49;
+                color: white;
+                padding: 4px 16px;
+                border-radius: 4px;
+                font-family: 'Segoe UI';
+                font-size: 12px;
+                font-weight: 600;
+            }
+            QPushButton:hover {
+                background-color: #393f47;
+            }
+            QPushButton:focus {
+                outline: none;
+            }
+            QPushButton:pressed {
+                background-color: #2c323b;
+            }
+        """)
+        self.backup_restore_layout.addWidget(self.backup_button)
+        self.backup_restore_layout.addWidget(self.restore_button)
+        row_layout.addLayout(self.backup_restore_layout)
+
+        # Add row_widget to main layout, then hide it
+        layout.addWidget(self.row_widget)
+        self.row_widget.hide()
+
+        # Setup scroll area
         self.scroll = QScrollArea()
-
         self.scroll.setWidgetResizable(True)
         self.setStyleSheet("""
             QScrollArea {
@@ -446,12 +516,107 @@ class ThemeViewer(QMainWindow):
 
     def on_fade_out_complete(self):
         self.placeholder_label.hide()
-        self.backup_info.show()
+        self.row_widget.show()
         self.scroll.show()
         for theme_id, theme in self.themes.items():
             theme['id'] = theme_id
             theme_card = ThemeCard(theme)
             self.container_layout.addWidget(theme_card)
+
+    def backup_config(self):
+        original_style = self.backup_button.styleSheet()
+        config_home = os.getenv('YASB_CONFIG_HOME') \
+            if os.getenv('YASB_CONFIG_HOME') \
+            else os.path.join(os.path.expanduser("~"), ".config", "yasb")
+        config_path = os.path.join(config_home, "config.yaml")
+        styles_path = os.path.join(config_home, "styles.css")
+        backup_config_path = os.path.join(config_home, "config.yaml.backup")
+        backup_styles_path = os.path.join(config_home, "styles.css.backup")
+
+        try:
+            if os.path.exists(config_path):
+                shutil.copy2(config_path, backup_config_path)
+            if os.path.exists(styles_path):
+                shutil.copy2(styles_path, backup_styles_path)
+
+            # Verify that backup files exist
+            backup_ok = True
+            if os.path.exists(config_path) and not os.path.exists(backup_config_path):
+                backup_ok = False
+            if os.path.exists(styles_path) and not os.path.exists(backup_styles_path):
+                backup_ok = False
+            
+            if backup_ok:
+                self.backup_button.setText("Backup complete!")
+                self.backup_button.setStyleSheet("""
+                    QPushButton {
+                    background-color: #0078D4;
+                    border: 1px solid #0884e2;
+                    color: white;
+                    padding: 4px 16px;
+                    border-radius: 4px;
+                    font-family: 'Segoe UI';
+                    font-size: 12px;
+                    font-weight: 600;
+                    }
+                """)
+            else:
+                QMessageBox.critical(self, 'Error', "Backup failed: Backup file(s) missing.")
+                return
+
+            QTimer.singleShot(
+                2000,
+                lambda: (
+                    self.backup_button.setText("Backup"),
+                    self.backup_button.setStyleSheet(original_style)
+                )
+            )
+
+        except Exception as e:
+            QMessageBox.critical(self, 'Error', f"Backup failed: {str(e)}")
+
+    def restore_config(self):
+        self.restore_button.setText("Restoring...")
+        QApplication.processEvents() # Update the UI immediately
+        
+        config_home = os.getenv('YASB_CONFIG_HOME') if os.getenv('YASB_CONFIG_HOME') \
+            else os.path.join(os.path.expanduser("~"), ".config", "yasb")
+        config_path = os.path.join(config_home, "config.yaml")
+        styles_path = os.path.join(config_home, "styles.css")
+        backup_config_path = os.path.join(config_home, "config.yaml.backup")
+        backup_styles_path = os.path.join(config_home, "styles.css.backup")
+        try:
+            if not os.path.exists(backup_config_path) or not os.path.exists(backup_styles_path):
+                self.restore_button.setText("Restore")
+                QMessageBox.warning(self, 'Error', "Restore failed: Backup file(s) missing.")
+                return
+
+            subprocess.run(["yasbc", "stop"], creationflags=subprocess.CREATE_NO_WINDOW, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+            shutil.copy2(backup_config_path, config_path)
+            shutil.copy2(backup_styles_path, styles_path)
+
+            # Verify that the restored files exist
+            restore_ok = True
+            if not os.path.exists(config_path):
+                restore_ok = False
+            if not os.path.exists(styles_path):
+                restore_ok = False
+
+            if restore_ok:
+                self.restore_button.setText("Restore complete!")
+            else:
+                QMessageBox.warning(self, 'Error', "Restore failed: Backup file(s) missing.")
+                return
+
+            subprocess.run(["yasbc", "start"], creationflags=subprocess.CREATE_NO_WINDOW,
+                        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            QTimer.singleShot(
+                2000,
+                lambda: self.restore_button.setText("Restore")
+            )
+        except Exception as e:
+            QMessageBox.critical(self, 'Error', f"Restore failed: {str(e)}")
 
 
 if __name__ == '__main__':
