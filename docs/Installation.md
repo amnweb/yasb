@@ -2,10 +2,9 @@
 - Nerd Fonts. Install [Nerd Fonts](https://www.nerdfonts.com/font-downloads) ([JetBrainsMono](https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.zip) recommended)
 - Windows 10 & 11
 
-### Installer
-- Visit the [releases page](https://github.com/amnweb/yasb/releases) on GitHub.
-- Look for the latest release version, which will typically be listed at the top.
-- Under the "Assets" section of the release, you’ll find various files. Click on the installer file to download it.
+### Manual Installation
+1. Download the latest installer from the [GitHub releases page](https://github.com/amnweb/yasb/releases/latest).
+2. Run the installer and follow the on-screen instructions to complete the installation.
 
 ***
 
@@ -13,6 +12,15 @@
 Install the YASB using [winget](https://learn.microsoft.com/en-us/windows/package-manager/winget/) install
 ```
 winget install --id AmN.yasb
+```
+
+***
+
+### Scoop
+Install YASB using [Scoop](https://scoop.sh/):
+```
+scoop bucket add extras
+scoop install extras/yasb
 ```
 
 ***
