@@ -17,6 +17,7 @@ The YASB CLI is a command line interface that allows you to interact with the YA
 
 ## Options
 - `--help` - Show the help message for the command.
+- `--silent` - Disable print messages for `start`, `stop` and `reload`
 - `--version` - Show the YASB version.
 
 ## Autostart
