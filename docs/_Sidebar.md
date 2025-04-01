@@ -38,6 +38,7 @@
     - [WiFi](./(Widget)-WiFi)
     - [WHKD](./(Widget)-Whkd)
     - [Windows-Desktops](./(Widget)-Windows-Desktops)
-    - [Komorebi Workspaces](./(Widget)-Komorebi-Workspaces)
+    - [Komorebi Control](./(Widget)-Komorebi-Control)
     - [Komorebi Layout](./(Widget)-Komorebi-Layout)
+    - [Komorebi Workspaces](./(Widget)-Komorebi-Workspaces)
 - [Writing Widget](./Writing-Widget)
