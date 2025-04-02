@@ -136,9 +136,15 @@ class CLIHandler:
         parser = CustomArgumentParser(description="The command-line interface for YASB Reborn.", add_help=False)
         subparsers = parser.add_subparsers(dest='command', help='Commands')
 
-        subparsers.add_parser('start', help='Start the application')
-        subparsers.add_parser('stop', help='Stop the application')
-        subparsers.add_parser('reload', help='Reload the application')
+        start_parser = subparsers.add_parser('start', help='Start the application')
+        start_parser.add_argument('-s', '--silent', action='store_true', help='Silence print messages')
+
+        stop_parser = subparsers.add_parser('stop', help='Stop the application')
+        stop_parser.add_argument('-s', '--silent', action='store_true', help='Silence print messages')
+
+        reload_parser = subparsers.add_parser('reload', help='Reload the application')
+        reload_parser.add_argument('-s', '--silent', action='store_true', help='Silence print messages')
+
         subparsers.add_parser('update', help='Update the application')
 
         enable_autostart_parser = subparsers.add_parser('enable-autostart', help='Enable autostart on system boot')
@@ -150,7 +156,6 @@ class CLIHandler:
         subparsers.add_parser('help', help='Show help message')
         subparsers.add_parser('log', help='Tail yasb process logs (cancel with Ctrl-C)')
         parser.add_argument('-v', '--version', action='store_true', help="Show program's version number and exit.")
-        parser.add_argument('-s', '--silent', action='store_true', help='Silence print messages')
         parser.add_argument('-h', '--help', action='store_true', help='Show help message')
         args = parser.parse_args()
 
@@ -237,7 +242,6 @@ class CLIHandler:
             print("  help               Print this message")
             print('\n' + Format.underline + 'Options' + Format.end + ':')
             print("-v, --version  Print version")
-            print("-s, --silent   Silence print messages")
             print("-h, --help     Print this message")
             sys.exit(0)
 
