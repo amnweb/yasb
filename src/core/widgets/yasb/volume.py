@@ -20,7 +20,7 @@ from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.utilities import PopupWidget
 # Disable comtypes logging
 logging.getLogger('comtypes').setLevel(logging.CRITICAL)
- 
+
 IID_IPolicyConfig = GUID('{f8679f50-850a-41cf-9c72-430f290290c8}')
 CLSID_PolicyConfigClient = GUID('{870af99c-171d-4f9e-af0d-e63df40c2bc9}')
 IID_AudioSes = ('{00000000-0000-0000-0000-000000000000}')
@@ -174,15 +174,15 @@ class CPolicyConfigClient (comtypes.CoClass):
     _idlflags_ = []
     _reg_typelib_ = (IID_AudioSes, 1, 0)
     _com_interfaces_ = [IPolicyConfig]
-    
+
 class AudioEndpointChangeCallback(MMNotificationClient):
     def __init__(self,parent):
         super().__init__()
         self.parent = parent
- 
-    def on_property_value_changed(self, device_id, property_struct, fmtid, pid):        
+
+    def on_property_value_changed(self, device_id, property_struct, fmtid, pid):
         self.parent.update_label_signal.emit()
-        
+
 class AudioEndpointVolumeCallback(COMObject):
     _com_interfaces_ = [IAudioEndpointVolumeCallback]
     def __init__(self, parent):
@@ -190,8 +190,8 @@ class AudioEndpointVolumeCallback(COMObject):
         self.parent = parent
     def OnNotify(self, pNotify):
         self.parent.update_label_signal.emit()
- 
-          
+
+
 class VolumeWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
     update_label_signal = pyqtSignal()
@@ -200,6 +200,7 @@ class VolumeWidget(BaseWidget):
         self,
         label: str,
         label_alt: str,
+        mute_text: str,
         tooltip: bool,
         volume_icons: list[str],
         audio_menu: dict[str, str],
@@ -211,6 +212,7 @@ class VolumeWidget(BaseWidget):
         self._show_alt_label = False
         self._label_content = label
         self._label_alt_content = label_alt
+        self._mute_text = mute_text
         self._tooltip = tooltip
         self._audio_menu = audio_menu
         self._animation = animation
@@ -225,12 +227,12 @@ class VolumeWidget(BaseWidget):
         self._widget_container.setProperty("class", "widget-container")
         self.widget_layout.addWidget(self._widget_container)
         self._create_dynamically_label(self._label_content, self._label_alt_content)
-        
+
         self.register_callback("toggle_label", self._toggle_label)
         self.register_callback("update_label", self._update_label)
         self.register_callback("toggle_mute", self.toggle_mute)
         self.register_callback("toggle_volume_menu", self._toggle_volume_menu)
- 
+
         self.callback_left = callbacks['on_left']
         self.callback_right = callbacks["on_right"]
         self.callback_middle = callbacks["on_middle"]
@@ -238,11 +240,11 @@ class VolumeWidget(BaseWidget):
         self.cb = AudioEndpointChangeCallback(self)
         self.enumerator = AudioUtilities.GetDeviceEnumerator()
         self.enumerator.RegisterEndpointNotificationCallback(self.cb)
-        
+
         self._initialize_volume_interface()
         self.update_label_signal.connect(self._update_label)
         self.update_label_signal.connect(self._update_slider_value)
-        
+
         self._update_label()
 
     def _toggle_volume_menu(self):
@@ -259,7 +261,7 @@ class VolumeWidget(BaseWidget):
             except Exception as e:
                 logging.error(f"Failed to set volume: {e}")
 
-                
+
     def _list_audio_devices(self):
         CLSID_MMDeviceEnumerator = GUID("{BCDE0395-E52F-467C-8E3D-C4579291692E}")
         devices = []
@@ -270,7 +272,7 @@ class VolumeWidget(BaseWidget):
                 CLSID_MMDeviceEnumerator,
                 IMMDeviceEnumerator,
                 comtypes.CLSCTX_INPROC_SERVER)
-                
+
             if deviceEnumerator is None:
                 return devices
 
@@ -281,15 +283,15 @@ class VolumeWidget(BaseWidget):
             count = collection.GetCount()
             for i in range(count):
                 dev = collection.Item(i)
-                
+
                 if dev is not None:
                     createDev = AudioUtilities.CreateDevice(dev)
                     if not ": None" in str(createDev):
                         devices.append((createDev.id, createDev.FriendlyName))
             return devices
         finally:
-            comtypes.CoUninitialize()    
- 
+            comtypes.CoUninitialize()
+
     def _update_slider_value(self):
         """Helper method to update slider value based on current volume"""
         if hasattr(self, 'volume_slider') and self.volume is not None:
@@ -298,7 +300,7 @@ class VolumeWidget(BaseWidget):
                 self.volume_slider.setValue(current_volume)
             except:
                 pass
-            
+
     def _update_device_buttons(self, active_device_id):
         # Update classes for all device buttons
         for device_id, btn in self.device_buttons.items():
@@ -308,12 +310,12 @@ class VolumeWidget(BaseWidget):
                 btn.setProperty("class", "device")
             btn.style().unpolish(btn)
             btn.style().polish(btn)
-            
+
 
     def _set_default_device(self, device_id: str):
         """Set default audio device with error handling and multiple interface attempts"""
         CoInitialize()
-        
+
         sender = self.sender()
         device_id = sender.property('device_id')
 
@@ -334,25 +336,25 @@ class VolumeWidget(BaseWidget):
             self._update_device_buttons(device_id)
             return
         except Exception as e:
-            logging.debug(f"PolicyConfig failed: {e}")           
+            logging.debug(f"PolicyConfig failed: {e}")
         finally:
             CoUninitialize()
             self._update_label()
-    
 
-                
-    def show_volume_menu(self):  
+
+
+    def show_volume_menu(self):
         self.dialog = PopupWidget(self, self._audio_menu['blur'], self._audio_menu['round_corners'], self._audio_menu['round_corners_type'], self._audio_menu['border_color'])
         self.dialog.setProperty("class", "audio-menu")
         self.dialog.setWindowFlag(Qt.WindowType.FramelessWindowHint)
         self.dialog.setWindowFlag(Qt.WindowType.Popup)
         self.dialog.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint)
-        
+
         # Create vertical layout for the dialog
         layout = QVBoxLayout()
         layout.setSpacing(0)
         layout.setContentsMargins(10, 10, 10, 10)
-        
+
 
         # Create a container widget and layout
         self.container = QWidget()
@@ -360,9 +362,9 @@ class VolumeWidget(BaseWidget):
         self.container_layout = QVBoxLayout()
         self.container_layout.setSpacing(0)
         self.container_layout.setContentsMargins(0, 0, 0, 10)
-            
 
-    
+
+
         self.devices = self._list_audio_devices()
         if len(self.devices) > 1:
             current_device = AudioUtilities.GetSpeakers()
@@ -380,31 +382,31 @@ class VolumeWidget(BaseWidget):
                 self.device_buttons[device_id] = btn
 
             self.container.setLayout(self.container_layout)
-    
+
         layout.addWidget(self.container)
-    
+
         # Create volume slider
         self.volume_slider = QSlider(Qt.Orientation.Horizontal)
         self.volume_slider.setProperty("class", "volume-slider")
         self.volume_slider.setMinimum(0)
         self.volume_slider.setMaximum(100)
- 
+
         # Set current volume
         try:
             current_volume = round(self.volume.GetMasterVolumeLevelScalar() * 100)
             self.volume_slider.setValue(current_volume)
         except:
             self.volume_slider.setValue(0)
-            
+
         # Connect slider value change to volume control
         self.volume_slider.valueChanged.connect(self._on_slider_value_changed)
-        
+
         # Add slider to layout
         layout.addWidget(self.volume_slider)
         self.dialog.setLayout(layout)
-        
 
-        # Position the dialog 
+
+        # Position the dialog
         self.dialog.adjustSize()
         widget_global_pos = self.mapToGlobal(QPoint(self._audio_menu['offset_left'], self.height() + self._audio_menu['offset_top']))
         if self._audio_menu['direction'] == 'up':
@@ -425,10 +427,10 @@ class VolumeWidget(BaseWidget):
             )
         else:
             global_position = widget_global_pos
-        
+
         self.dialog.move(global_position)
-        self.dialog.show()  
-               
+        self.dialog.show()
+
     def _toggle_label(self):
         if self._animation['enabled']:
             AnimationManager.animate(self, self._animation['type'], self._animation['duration'])
@@ -478,7 +480,7 @@ class VolumeWidget(BaseWidget):
             self._initialize_volume_interface()
             mute_status = self.volume.GetMute()
             icon_volume = self._get_volume_icon()
-            level_volume = "mute" if mute_status == 1 else f'{round(self.volume.GetMasterVolumeLevelScalar() * 100)}%'
+            level_volume = self._mute_text if mute_status == 1 else f'{round(self.volume.GetMasterVolumeLevelScalar() * 100)}%'
         except Exception:
             icon_volume, level_volume = "", "No Device"
 
@@ -561,8 +563,8 @@ class VolumeWidget(BaseWidget):
             self._update_label()
         except Exception as e:
             logging.error(f"Failed to toggle mute: {e}")
-   
-   
+
+
     def _initialize_volume_interface(self):
         CoInitialize()
         try:
@@ -578,4 +580,4 @@ class VolumeWidget(BaseWidget):
             logging.error(f"Failed to initialize volume interface: {e}")
             self.volume = None
         finally:
-            CoUninitialize()        
+            CoUninitialize()

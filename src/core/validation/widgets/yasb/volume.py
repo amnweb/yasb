@@ -1,6 +1,7 @@
 DEFAULTS = {
     'label': "{volume[percent]}%",
     'label_alt': "{volume[percent]}%",
+    'mute_text': "mute",
     'tooltip': True,
     'volume_icons': [
         "\ueee8",  # Icon for muted
@@ -41,6 +42,11 @@ VALIDATION_SCHEMA = {
     'label_alt': {
         'type': 'string',
         'default': DEFAULTS['label_alt']
+    },
+    'mute_text': {
+        'type': 'string',
+        'required': False,
+        'default': DEFAULTS['mute_text']
     },
     'tooltip': {
         'type': 'boolean',
