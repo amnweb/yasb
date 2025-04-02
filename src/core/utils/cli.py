@@ -22,7 +22,7 @@ from colorama import just_fix_windows_console
 just_fix_windows_console()
 
 YASB_VERSION = BUILD_VERSION
-YASB_CLI_VERSION = "1.0.8"
+YASB_CLI_VERSION = "1.0.9"
 
 OS_STARTUP_FOLDER = os.path.join(os.environ['APPDATA'], r'Microsoft\Windows\Start Menu\Programs\Startup')
 INSTALLATION_PATH = os.path.abspath(os.path.join(__file__, "../../.."))
@@ -36,7 +36,7 @@ def is_process_running(process_name):
         if proc.info['name'] == process_name:
             return True
     return False
-    
+
 class Format:
     end = '\033[0m'
     underline = '\033[4m'
@@ -119,7 +119,7 @@ class CLIHandler:
         except Exception as e:
             logging.error(f"Failed to create startup shortcut: {e}")
             print(f"Failed to create startup shortcut: {e}")
-        
+
     def _disable_startup():
         shortcut_path = os.path.join(OS_STARTUP_FOLDER, SHORTCUT_FILENAME)
         if os.path.exists(shortcut_path):
@@ -130,47 +130,56 @@ class CLIHandler:
             except Exception as e:
                 logging.error(f"Failed to remove startup shortcut: {e}")
                 print(f"Failed to remove startup shortcut: {e}")
-        
-        
+
+
     def parse_arguments():
         parser = CustomArgumentParser(description="The command-line interface for YASB Reborn.", add_help=False)
         subparsers = parser.add_subparsers(dest='command', help='Commands')
 
-        subparsers.add_parser('start', help='Start the application')
-        subparsers.add_parser('stop', help='Stop the application')
-        subparsers.add_parser('reload', help='Reload the application')
+        start_parser = subparsers.add_parser('start', help='Start the application')
+        start_parser.add_argument('-s', '--silent', action='store_true', help='Silence print messages')
+
+        stop_parser = subparsers.add_parser('stop', help='Stop the application')
+        stop_parser.add_argument('-s', '--silent', action='store_true', help='Silence print messages')
+
+        reload_parser = subparsers.add_parser('reload', help='Reload the application')
+        reload_parser.add_argument('-s', '--silent', action='store_true', help='Silence print messages')
+
         subparsers.add_parser('update', help='Update the application')
-        
+
         enable_autostart_parser = subparsers.add_parser('enable-autostart', help='Enable autostart on system boot')
         enable_autostart_parser.add_argument('--task', action='store_true', help='Enable autostart as a scheduled task')
-        
+
         disable_autostart_parser = subparsers.add_parser('disable-autostart', help='Disable autostart on system boot')
         disable_autostart_parser.add_argument('--task', action='store_true', help='Disable autostart as a scheduled task')
-        
+
         subparsers.add_parser('help', help='Show help message')
         subparsers.add_parser('log', help='Tail yasb process logs (cancel with Ctrl-C)')
         parser.add_argument('-v', '--version', action='store_true', help="Show program's version number and exit.")
         parser.add_argument('-h', '--help', action='store_true', help='Show help message')
         args = parser.parse_args()
- 
+
         if args.command == 'start':
-            print(f"Start YASB Reborn v{YASB_VERSION} in background.")
-            print("\n# Community")
-            print("* Join the Discord https://discord.gg/qkeunvBFgX - Chat, ask questions, share your desktops and more...")
-            print("* GitHub discussions https://github.com/amnweb/yasb/discussions - Ask questions, share your ideas and more...")
-            print("\n# Documentation")
-            print("* Read the docs https://github.com/amnweb/yasb/wiki - how to configure and use YASB")
+            if not args.silent:
+                print(f"Start YASB Reborn v{YASB_VERSION} in background.")
+                print("\n# Community")
+                print("* Join the Discord https://discord.gg/qkeunvBFgX - Chat, ask questions, share your desktops and more...")
+                print("* GitHub discussions https://github.com/amnweb/yasb/discussions - Ask questions, share your ideas and more...")
+                print("\n# Documentation")
+                print("* Read the docs https://github.com/amnweb/yasb/wiki - how to configure and use YASB")
             subprocess.Popen(["yasb.exe"])
             sys.exit(0)
-            
+
         elif args.command == 'stop':
-            print("Stop YASB...")
+            if not args.silent:
+                print("Stop YASB...")
             CLIHandler.stop_or_reload_application()
             sys.exit(0)
-            
+
         elif args.command == 'reload':
             if is_process_running("yasb.exe"):
-                print("Reload YASB...")
+                if not args.silent:
+                    print("Reload YASB...")
                 CLIHandler.stop_or_reload_application(reload=True)
             else:
                 print("YASB is not running. Reload aborted.")
@@ -178,7 +187,7 @@ class CLIHandler:
         elif args.command == 'update':
             CLIUpdateHandler.update_yasb(YASB_VERSION)
             sys.exit(0)
-            
+
         elif args.command == 'enable-autostart':
             if args.task:
                 if not CLITaskHandler.is_admin():
@@ -188,7 +197,7 @@ class CLIHandler:
             else:
                 CLIHandler._enable_startup()
             sys.exit(0)
-        
+
         elif args.command == 'disable-autostart':
             if args.task:
                 if not CLITaskHandler.is_admin():
@@ -197,8 +206,8 @@ class CLIHandler:
                     CLITaskHandler.delete_task()
             else:
                 CLIHandler._disable_startup()
-            sys.exit(0)    
-            
+            sys.exit(0)
+
         elif args.command == 'log':
             config_home = os.getenv('YASB_CONFIG_HOME') if os.getenv('YASB_CONFIG_HOME') else os.path.join(os.path.expanduser("~"), ".config", "yasb")
             log_file = os.path.join(config_home, "yasb.log")
@@ -218,7 +227,7 @@ class CLIHandler:
             except KeyboardInterrupt:
                 pass
             sys.exit(0)
-            
+
         elif args.command == 'help' or args.help:
             print("The command-line interface for YASB Reborn.")
             print('\n' + Format.underline + 'Usage' + Format.end + ': yasbc <COMMAND>')
@@ -235,7 +244,7 @@ class CLIHandler:
             print("-v, --version  Print version")
             print("-h, --help     Print this message")
             sys.exit(0)
-            
+
         elif args.version:
             version_message = f"YASB Reborn v{YASB_VERSION}\nYASB-CLI v{YASB_CLI_VERSION}"
             print(version_message)
@@ -246,7 +255,7 @@ class CLIHandler:
 
 
 class CLITaskHandler:
-    
+
     def is_admin():
         try:
             return ctypes.windll.shell32.IsUserAnAdmin()
@@ -259,7 +268,7 @@ class CLITaskHandler:
         user, domain, type = win32security.LookupAccountName(None, username)
         sid = win32security.ConvertSidToStringSid(user)
         return sid
-    
+
     def create_task():
         scheduler = win32com.client.Dispatch('Schedule.Service')
         scheduler.Connect()
@@ -308,7 +317,7 @@ class CLITaskHandler:
             print(f"Task YASB Reborn created successfully.")
         except Exception as e:
             print(f"Failed to create task YASB Reborn. Error: {e}")
-        
+
     def delete_task():
         scheduler = win32com.client.Dispatch('Schedule.Service')
         scheduler.Connect()
@@ -318,7 +327,7 @@ class CLITaskHandler:
             print(f"Task YASB Reborn deleted successfully.")
         except Exception:
             print(f"Failed to delete task YASB or task does not exist.")
-        
+
 class CLIUpdateHandler():
 
     def get_installed_product_code():
@@ -335,7 +344,7 @@ class CLIUpdateHandler():
                 return product_code.value
             index += 1
         return None
-    
+
     def update_yasb(YASB_VERSION):
         # Fetch the latest tag from the GitHub API
         api_url = f"https://api.github.com/repos/amnweb/yasb/releases/latest"
@@ -376,7 +385,7 @@ class CLIUpdateHandler():
         except KeyboardInterrupt:
             print("\nDownload interrupted by user.")
             sys.exit(0)
-            
+
         # Verify the downloaded file size
         downloaded_size = os.path.getsize(msi_path)
         if downloaded_size != total_length:
@@ -394,7 +403,7 @@ class CLIUpdateHandler():
         #     uninstall_command = f'msiexec /x {product_code} /passive'
         # else:
         #     uninstall_command = ""
-            
+
         # Construct the install command as a string
         install_command = f'msiexec /i "{os.path.abspath(msi_path)}" /passive /norestart'
         run_after_command = f'"{EXE_PATH}"'
@@ -403,7 +412,7 @@ class CLIUpdateHandler():
         # Finally run update and restart the application
         subprocess.Popen(combined_command, shell=True)
         sys.exit(0)
-    
+
 if __name__ == "__main__":
     CLIHandler.parse_arguments()
     sys.exit(0)
