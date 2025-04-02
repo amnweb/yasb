@@ -11,7 +11,7 @@ watchdog
 winsdk
 pycaw
 winshell
-pillow
+pillow==11.1
 qasync
 requests
 obs-websocket-py
