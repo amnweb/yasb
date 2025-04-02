@@ -1,5 +1,6 @@
 import logging
 import re
+import socket
 from winsdk.windows.networking.connectivity import NetworkInformation, NetworkConnectivityLevel
 from core.widgets.base import BaseWidget
 from core.validation.widgets.yasb.wifi import VALIDATION_SCHEMA
@@ -82,7 +83,7 @@ class WifiWidget(BaseWidget):
                 else:
                     label = QLabel(part)
                     label.setProperty("class", "label alt" if is_alt else "label")
-                label.setAlignment(Qt.AlignmentFlag.AlignCenter)    
+                label.setAlignment(Qt.AlignmentFlag.AlignCenter)
                 self._widget_container_layout.addWidget(label)
                 widgets.append(label)
                 if is_alt:
@@ -93,7 +94,7 @@ class WifiWidget(BaseWidget):
         self._widgets = process_content(content)
         self._widgets_alt = process_content(content_alt, is_alt=True)
 
-        
+
     def _update_label(self):
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
         active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
@@ -102,6 +103,7 @@ class WifiWidget(BaseWidget):
         widget_index = 0
         try:
             connection_info = NetworkInformation.get_internet_connection_profile()
+            ip_addr = socket.gethostbyname(socket.gethostname())
 
             # If no connection or WiFi connection, check WiFi connection
             # (it will set the icon to the 0% icon (no connection) if no WiFi connection is found)
@@ -120,7 +122,8 @@ class WifiWidget(BaseWidget):
         label_options = {
             "{wifi_icon}": wifi_icon,
             "{wifi_name}": wifi_name,
-            "{wifi_strength}": wifi_strength
+            "{wifi_strength}": wifi_strength,
+            "{ip_addr}": ip_addr
         }
         for part in label_parts:
             part = part.strip()
@@ -128,7 +131,7 @@ class WifiWidget(BaseWidget):
                 formatted_text = part
                 for option, value in label_options.items():
                     formatted_text = formatted_text.replace(option, str(value))
-                 
+
                 if '<span' in part and '</span>' in part:
                     # Update icon QLabel
                     if widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
@@ -137,7 +140,7 @@ class WifiWidget(BaseWidget):
                     # Update normal QLabel
                     if widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
                         active_widgets[widget_index].setText(formatted_text)
-                        
+
                 widget_index += 1
 
     def _get_wifi_strength(self):
