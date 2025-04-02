@@ -4,13 +4,24 @@ import subprocess
 from typing import Optional
 from core.widgets.base import BaseWidget
 from core.validation.widgets.komorebi.control import VALIDATION_SCHEMA
-from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget, QVBoxLayout, QSizePolicy
-from PyQt6.QtCore import Qt, QPoint, pyqtSignal, QThread
 from core.utils.utilities import PopupWidget
 from core.utils.widgets.animation_manager import AnimationManager
 from core.event_service import EventService
 from core.event_enums import KomorebiEvent
 from core.utils.komorebi.client import KomorebiClient
+from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget, QVBoxLayout, QSizePolicy
+from PyQt6.QtCore import Qt, QPoint, pyqtSignal, QThread, QEvent
+
+
+class ExtPopupWidget(PopupWidget):
+    def eventFilter(self, obj, event):
+        parent = self.parent()
+        # When menu is locked, block usually hiding events from komorebi
+        if isinstance(parent, KomorebiControlWidget) and parent._lock_menu:
+            if event.type() == QEvent.Type.Close:
+                return True
+        return super().eventFilter(obj, event)
+
 
 class KomorebiControlWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
@@ -42,6 +53,7 @@ class KomorebiControlWidget(BaseWidget):
         self._padding = container_padding
         self._is_komorebi_connected = False
         self._locked_ui = False
+        self._lock_menu = False
         self._version_text = None
 
         # Initialize the event service
@@ -51,7 +63,8 @@ class KomorebiControlWidget(BaseWidget):
         # Construct container
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(self._padding['left'], self._padding['top'], self._padding['right'], self._padding['bottom'])
+        self._widget_container_layout.setContentsMargins(
+            self._padding['left'], self._padding['top'], self._padding['right'], self._padding['bottom'])
         # Initialize container
         self._widget_container: QWidget = QWidget()
         self._widget_container.setLayout(self._widget_container_layout)
@@ -75,8 +88,10 @@ class KomorebiControlWidget(BaseWidget):
         self.k_signal_connect.connect(self._on_komorebi_connect_event)
         self.k_signal_disconnect.connect(self._on_komorebi_disconnect_event)
         # Register for events
-        self._event_service.register_event(KomorebiEvent.KomorebiConnect, self.k_signal_connect)
-        self._event_service.register_event(KomorebiEvent.KomorebiDisconnect, self.k_signal_disconnect)
+        self._event_service.register_event(
+            KomorebiEvent.KomorebiConnect, self.k_signal_connect)
+        self._event_service.register_event(
+            KomorebiEvent.KomorebiDisconnect, self.k_signal_disconnect)
 
     def _start_version_check(self):
         """Starts a background thread to retrieve the Komorebi version."""
@@ -133,8 +148,8 @@ class KomorebiControlWidget(BaseWidget):
             # If we don't have a version yet, start an async check
             self._start_version_check()
         # Always create a fresh dialog
-        self.dialog = PopupWidget(self, self._komorebi_menu['blur'], self._komorebi_menu['round_corners'],
-                                  self._komorebi_menu['round_corners_type'], self._komorebi_menu['border_color'])
+        self.dialog = ExtPopupWidget(self, self._komorebi_menu['blur'], self._komorebi_menu['round_corners'],
+                                     self._komorebi_menu['round_corners_type'], self._komorebi_menu['border_color'])
         self.dialog.setProperty("class", "komorebi-control-menu")
         self.dialog.setWindowFlag(Qt.WindowType.FramelessWindowHint)
         self.dialog.setWindowFlag(Qt.WindowType.Popup)
@@ -235,6 +250,16 @@ class KomorebiControlWidget(BaseWidget):
         except:
             pass
 
+        self._lock_menu = False
+        # If the dialog is visible (and was locked before), force it to regain focus.
+        try:
+            if hasattr(self, 'dialog') and self.dialog is not None and self.dialog.isVisible():
+                self.dialog.activateWindow()
+                self.dialog.setFocus()
+        except RuntimeError:
+            # The dialog has already been deleted.
+            self.dialog = None
+
     def _on_komorebi_disconnect_event(self) -> None:
         self._is_komorebi_connected = False
         # Only unlock UI if this isn't part of a reload operation
@@ -245,7 +270,6 @@ class KomorebiControlWidget(BaseWidget):
             self._update_menu_button_states()
         except:
             pass  # Dialog may have been deleted
-        # No need to directly update the UI if dialog isn't visible
 
     def _update_menu_button_states(self):
         # Check if buttons should be disabled
@@ -298,6 +322,7 @@ class KomorebiControlWidget(BaseWidget):
         return " ".join(flags)
 
     def _start_komorebi(self):
+        self._lock_menu = True
         if not self._is_komorebi_connected:
             flags = self._build_komorebi_flags()
             command = f"{self._komorebic._komorebic_path} start {flags}"
@@ -310,6 +335,7 @@ class KomorebiControlWidget(BaseWidget):
             self._run_komorebi_command(command)
 
     def _reload_komorebi(self):
+        self._lock_menu = True
         if self._is_komorebi_connected:
             self._is_reloading = True
             flags = self._build_komorebi_flags()
@@ -323,6 +349,7 @@ class KomorebiControlWidget(BaseWidget):
                 self._is_reloading = False
                 self._locked_ui = False
                 logging.error(f"Error reloading Komorebi: {e}")
+
 
 class VersionCheckThread(QThread):
     version_result = pyqtSignal(str)
