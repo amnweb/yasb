@@ -212,7 +212,7 @@ class VolumeWidget(BaseWidget):
         self._show_alt_label = False
         self._label_content = label
         self._label_alt_content = label_alt
-        self._mute_level_volume = mute_text
+        self._mute_text = mute_text
         self._tooltip = tooltip
         self._audio_menu = audio_menu
         self._animation = animation
@@ -480,7 +480,7 @@ class VolumeWidget(BaseWidget):
             self._initialize_volume_interface()
             mute_status = self.volume.GetMute()
             icon_volume = self._get_volume_icon()
-            level_volume = self._mute_level_volume if mute_status == 1 else f'{round(self.volume.GetMasterVolumeLevelScalar() * 100)}%'
+            level_volume = self._mute_text if mute_status == 1 else f'{round(self.volume.GetMasterVolumeLevelScalar() * 100)}%'
         except Exception:
             icon_volume, level_volume = "", "No Device"
 
