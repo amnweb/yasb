@@ -1,10 +1,11 @@
 import logging
 import threading
 import win32pipe, win32file, pywintypes
+import settings
 
 class CliPipeHandler:
-    def __init__(self, stop_or_reload_callback):
-        self.stop_or_reload_callback = stop_or_reload_callback
+    def __init__(self, cli_command):
+        self.cli_command = cli_command
         self.pipe_name = r'\\.\pipe\yasb_pipe_cli'
         self.server_thread = None
         self.stop_event = threading.Event()
@@ -13,21 +14,19 @@ class CliPipeHandler:
         try:
             while True:
                 data = win32file.ReadFile(pipe, 64*1024)
-                command = data[1].decode('utf-8').strip()
-                logging.info(f"YASB received command {command}")
-                if command.lower() == 'stop':
+                command = data[1].decode('utf-8').strip().lower()
+                if settings.DEBUG:
+                    logging.debug(f"YASB received command {command}")
+                if command in ('stop', 'reload'):
                     win32file.WriteFile(pipe, b'ACK')
-                    self.stop_or_reload_callback()
-                    self.stop_cli_pipe_server()
-                elif command.lower() == 'reload':
-                    win32file.WriteFile(pipe, b'ACK')
-                    self.stop_or_reload_callback(reload=True)
+                    self.cli_command(command)
                     self.stop_cli_pipe_server()
                 else:
                     win32file.WriteFile(pipe, b'YASB Unknown Command')
         except pywintypes.error as e:
             if e.args[0] == 109:  # ERROR_BROKEN_PIPE
-                logging.info("YASB CLI Pipe client disconnected")
+                if settings.DEBUG:
+                    logging.debug("YASB CLI Pipe client disconnected")
             else:
                 logging.error(f"YASB CLI error handling client: {e}")
 
@@ -36,7 +35,8 @@ class CliPipeHandler:
         Start the Named Pipe server to listen for incoming commands.
         """
         def run_server():
-            logging.info(f"YASB CLI Pipe server started")
+            if settings.DEBUG:
+                logging.debug(f"YASB CLI Pipe server started")
             while not self.stop_event.is_set():
                 pipe = win32pipe.CreateNamedPipe(
                     self.pipe_name,
@@ -65,4 +65,5 @@ class CliPipeHandler:
         self.stop_event.set()
         if self.server_thread:
             self.server_thread.join()
-            logging.info("YASB CLI Pipe server stopped")
+            if settings.DEBUG:
+                logging.debug("YASB CLI Pipe server stopped")

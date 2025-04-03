@@ -1,8 +1,11 @@
 import asyncio
 import logging
 import sys
-from sys import argv, exit
 import qasync
+import ctypes
+from dotenv import load_dotenv
+from sys import argv, exit
+import settings
 from PyQt6.QtWidgets import QApplication
 from core.bar_manager import BarManager
 from core.config import get_config_and_stylesheet, get_resolved_env_file_path
@@ -10,19 +13,27 @@ from core.log import init_logger
 from core.tray import TrayIcon
 from core.watcher import create_observer
 from core.event_service import EventService
-import settings
-import ctypes
-import ctypes.wintypes
-from dotenv import load_dotenv
+from core.utils.cli_client import CliPipeHandler
+from core.app_controller import process_cli_command
 
 logging.getLogger('asyncio').setLevel(logging.WARNING)
 
 def main():
+
     config, stylesheet = get_config_and_stylesheet()
 
     if config['debug']:
         settings.DEBUG = True
         logging.info("Debug mode enabled.")
+
+    if getattr(sys, 'frozen', False):
+        """
+        Start the Named Pipe server to listen for incoming commands.
+        This is only needed when running as a standalone executable.
+        """
+        pipe_handler = CliPipeHandler(cli_command=process_cli_command)
+        pipe_handler.start_cli_pipe_server()
+
     app = QApplication(argv)
     app.setQuitOnLastWindowClosed(False)
 
@@ -60,7 +71,7 @@ def main():
             observer.join()
 
     app.aboutToQuit.connect(stop_observer)
-
+    
     with loop:
         loop.run_forever()
         

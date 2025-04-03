@@ -3,6 +3,7 @@ from ctypes import wintypes, Structure, POINTER, sizeof, windll, c_ulong
 from PyQt6.QtGui import QScreen
 import win32con
 import logging
+import settings
 
 shell32 = windll.shell32
 user32 = windll.user32
@@ -100,7 +101,8 @@ class Win32AppBar:
         else:
             self.app_bar_data.rc.top = screen.geometry().y() + screen_height - bar_height
             self.app_bar_data.rc.bottom = screen.geometry().y() + screen_height
-        logging.info(f"Bar Created on Screen: {screen.name()} [Bar Height: {app_bar_height}px, DPI Scale: {screen.devicePixelRatio()}, Scale Screen: {scale_screen}, Screen Geometry: X: {screen.geometry().x()}, Y: {screen.geometry().y()}, Screen Width: {screen.geometry().width()}, Screen Height: {screen.geometry().height()}]")
+        if settings.DEBUG:
+            logging.debug(f"Bar Created on Screen: {screen.name()} [Bar Height: {app_bar_height}px, DPI Scale: {screen.devicePixelRatio()}, Scale Screen: {scale_screen}, Screen Geometry: X: {screen.geometry().x()}, Y: {screen.geometry().y()}, Screen Width: {screen.geometry().width()}, Screen Height: {screen.geometry().height()}]")
 
     def register_new(self):
         shell32.SHAppBarMessage(AppBarMessage.New, P_APPBAR_DATA(self.app_bar_data))

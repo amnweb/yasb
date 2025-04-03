@@ -3,19 +3,18 @@ import logging
 import webbrowser
 import os
 import shutil
-import sys
 from pathlib import Path
 import subprocess
 import winshell
-from PyQt6.QtWidgets import QSystemTrayIcon, QMenu, QMessageBox, QApplication
+from PyQt6.QtWidgets import QSystemTrayIcon, QMenu, QMessageBox
 from PyQt6.QtGui import QIcon, QGuiApplication
-from PyQt6.QtCore import QCoreApplication, QSize, Qt, pyqtSlot, QProcess, QEvent
+from PyQt6.QtCore import QSize, Qt, QEvent
 from core.bar_manager import BarManager
 from settings import GITHUB_URL, SCRIPT_PATH, APP_NAME, APP_NAME_FULL, DEFAULT_CONFIG_DIRECTORY, GITHUB_THEME_URL, BUILD_VERSION
 from core.config import get_config
 from core.console import WindowShellDialog
-from core.utils.cli_client import CliPipeHandler
 import threading
+from core.app_controller import reload_application, exit_application
 
 OS_STARTUP_FOLDER = os.path.join(os.environ['APPDATA'], r'Microsoft\Windows\Start Menu\Programs\Startup')
 VBS_PATH = os.path.join(SCRIPT_PATH, 'yasb.vbs')
@@ -35,11 +34,6 @@ class TrayIcon(QSystemTrayIcon):
         self._load_context_menu()
         self.setToolTip(APP_NAME)
         self._load_config()
-        self._bar_manager.remove_tray_icon_signal.connect(self.remove_tray_icon)
-        # Start the CLI pipe server if the executable exists, if running from source, the server will not start
-        if os.path.exists(EXE_PATH):
-            self.cli_pipi_handler = CliPipeHandler(self.stop_or_reload_application)
-            self.start_cli_server()
 
     def eventFilter(self, obj, event):
         if event.type() == QEvent.Type.MouseButtonPress:
@@ -63,22 +57,6 @@ class TrayIcon(QSystemTrayIcon):
             self.komorebi_start = config['komorebi']["start_command"]
             self.komorebi_stop = config['komorebi']["stop_command"]
             self.komorebi_reload = config['komorebi']["reload_command"]
-
-    def start_cli_server(self):
-        """
-        Start the CLI pipe server in a separate thread.
-        """
-        server_thread = threading.Thread(target=self.cli_pipi_handler.start_cli_pipe_server, daemon=True)
-        server_thread.start()
-
-    def stop_or_reload_application(self, reload=False):
-        """
-        Stop or reload the application from the CLI.
-        """
-        if reload:
-            self.reload_action.trigger()
-        else:
-            self._exit_application()
             
     def _load_favicon(self):
         # Get the current directory of the script
@@ -178,16 +156,6 @@ class TrayIcon(QSystemTrayIcon):
         # Connect the activated signal to show the menu
         self.activated.connect(lambda reason: self.menu.activateWindow() if reason == QSystemTrayIcon.ActivationReason.Context else None)
 
-    @pyqtSlot()
-    def remove_tray_icon(self):
-        """
-        Remove the tray icon from the system tray.
-        """
-        try:
-            self.deleteLater()
-        except Exception as e:
-            logging.error(f"Error removing tray icon: {e}")
-
     def is_autostart_enabled(self):
         return os.path.exists(os.path.join(OS_STARTUP_FOLDER, SHORTCUT_FILENAME))
 
@@ -252,23 +220,10 @@ class TrayIcon(QSystemTrayIcon):
         threading.Thread(target=run_komorebi_reload).start()
 
     def _reload_application(self):
-        try:
-            self.remove_tray_icon()
-            QApplication.processEvents()
-            logging.info("Reloading Application...")
-            QProcess.startDetached(sys.executable, sys.argv)
-            QCoreApplication.exit(0)
-        except Exception as e:
-            logging.error(f"Error during reload: {e}")
-            os._exit(0)
+        reload_application("Reloading Application...")
 
     def _exit_application(self):
-        self.remove_tray_icon()
-        logging.info("Exiting Application...")
-        try:
-            QCoreApplication.exit(0)
-        except:
-            os._exit(0)
+        exit_application()
 
     def _open_in_browser(self, url):
         try:

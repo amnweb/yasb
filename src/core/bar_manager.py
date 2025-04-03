@@ -1,10 +1,9 @@
 import logging
-import sys
 import uuid
 from contextlib import suppress
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtGui import QScreen
-from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot, QProcess
+from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot
 from core.bar import Bar
 from core.utils.widget_builder import WidgetBuilder
 from core.utils.utilities import get_screen_by_name
@@ -12,11 +11,12 @@ from core.event_service import EventService
 from core.config import get_stylesheet, get_config
 from copy import deepcopy
 from settings import DEBUG
+from core.app_controller import reload_application
 
 class BarManager(QObject):
     styles_modified = pyqtSignal()
     config_modified = pyqtSignal()
-    remove_tray_icon_signal = pyqtSignal()
+    reload_in_progress = False
     
     def __init__(self, config: dict, stylesheet: str):
         super().__init__()
@@ -47,26 +47,31 @@ class BarManager(QObject):
 
     @pyqtSlot()
     def on_config_modified(self):
+        if BarManager.reload_in_progress:
+            return
+        BarManager.reload_in_progress = True
         try:
             config = get_config(show_error_dialog=True)
         except Exception as e:
             logging.error(f"Error loading config: {e}")
+            BarManager.reload_in_progress = False
             return
         if config and (config != self.config):
             if any(config[key] != self.config[key] for key in ['bars', 'widgets', 'komorebi', 'debug', 'env_file']):
-                self.remove_tray_icon_signal.emit()
-                QProcess.startDetached(sys.executable, sys.argv)
-                sys.exit()
+                reload_application("Reloading application due to config changes...")
             else:
                 self.config = config
-            logging.info("Successfully loaded updated config and re-initialised all bars.")
+        BarManager.reload_in_progress = False
+
 
     @pyqtSlot(QScreen)
-    def on_screens_update(self, _screen: QScreen) -> None:
-        logging.info("Screens updated. Re-initialising all bars.")
-        self.remove_tray_icon_signal.emit()
-        QProcess.startDetached(sys.executable, sys.argv)
-        sys.exit()
+    def on_screens_update(self) -> None:
+        if BarManager.reload_in_progress:
+            return
+        BarManager.reload_in_progress = True
+        reload_application("Reloading application due to screen changes...")
+        BarManager.reload_in_progress = False
+        
 
     def run_listeners_in_threads(self):
         for listener in self.widget_event_listeners:

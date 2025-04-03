@@ -6,6 +6,7 @@ import win32pipe
 import win32file
 import pywintypes
 from PyQt6.QtCore import QThread
+from settings import DEBUG
 from core.event_enums import KomorebiEvent
 from core.event_service import EventService
 from core.utils.komorebi.client import KomorebiClient
@@ -106,9 +107,10 @@ class KomorebiEventListener(QThread):
         logging.info(f"Waiting for Komorebi to subscribe to named pipe {self.pipe_name}")
         stderr, proc = self._komorebic.wait_until_subscribed_to_pipe(self.pipe_name)
        
-        if stderr:
-            #logging.warning(f"Komorebi failed to subscribe named pipe. Waiting for subscription: {stderr.decode('utf-8')}")
-             logging.warning(f"Komorebi failed to subscribe named pipe. Waiting for subscription...")   
+        if stderr and DEBUG:
+            stderr_str = stderr.decode('utf-8').replace('\n', ' ').replace('\r', ' ').replace('  ',' ').strip()
+            logging.warning(f"Komorebi failed to subscribe named pipe. Waiting for subscription: {stderr_str}")
+            #logging.warning(f"Komorebi failed to subscribe named pipe. Waiting for subscription...")   
 
         while self._app_running and proc.returncode != 0: 
             time.sleep(10)

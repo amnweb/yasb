@@ -61,14 +61,19 @@ class UpdateWorker(QThread):
                 )
                 
                 lines = result.stdout.strip().split('\n')
+
                 fl = 0
                 while fl < len(lines) and not lines[fl].startswith("Name"):
                     fl += 1
                 
                 if fl >= len(lines):
-                    if DEBUG:
-                        logging.warning("Invalid winget output format.")
-                    self.winget_update_signal.emit({"count": 0, "names": []})
+                    if "No installed package found matching input criteria" in result.stdout:
+                        if DEBUG:
+                            logging.debug("No installed package found matching input criteria.")
+                    else:
+                        if DEBUG:
+                            logging.debug("Invalid winget output format.")
+                        self.winget_update_signal.emit({"count": 0, "names": []})
                     return
                 
                 id_start = lines[fl].index("Id")

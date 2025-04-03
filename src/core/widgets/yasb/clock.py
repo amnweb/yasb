@@ -1,15 +1,20 @@
+import logging
 import re
 import pytz
+import locale
+from datetime import datetime
+from tzlocal import get_localzone_name
+from itertools import cycle
+from settings import DEBUG
 from core.widgets.base import BaseWidget
 from core.validation.widgets.yasb.clock import VALIDATION_SCHEMA
 from PyQt6.QtWidgets import QLabel, QHBoxLayout, QVBoxLayout, QWidget, QCalendarWidget, QSizePolicy, QTableView
 from PyQt6.QtCore import Qt, QDate, QPoint, QLocale
-from datetime import datetime
-from tzlocal import get_localzone_name
-from itertools import cycle
 from core.utils.widgets.animation_manager import AnimationManager
-import locale
 from core.utils.utilities import PopupWidget
+
+if not DEBUG:
+    logging.getLogger('tzlocal').setLevel(logging.WARNING)
 
 class CustomCalendar(QCalendarWidget):
     def __init__(self, parent=None, timezone=None):

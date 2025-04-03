@@ -1,8 +1,8 @@
 import subprocess
 import win32api
 import win32security
-from PyQt6.QtCore import QCoreApplication
 import ctypes
+from core.app_controller import exit_application
 
 class PowerOperations:
     def __init__(self, main_window=None, overlay=None):
@@ -17,7 +17,7 @@ class PowerOperations:
             
     def signout(self):
         self.clear_widget()
-        QCoreApplication.exit(0)
+        exit_application()
         subprocess.Popen("shutdown /l", stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True)
 
     def lock(self):
@@ -37,22 +37,22 @@ class PowerOperations:
 
     def restart(self):
         self.clear_widget()
-        QCoreApplication.exit(0)
+        exit_application()
         subprocess.Popen("shutdown /r /t 0", stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True)
 
     def shutdown(self):
         self.clear_widget()
-        QCoreApplication.exit(0)
+        exit_application()
         subprocess.Popen("shutdown /s /hybrid /t 0", stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True)
 
     def force_shutdown(self):
         self.clear_widget()
-        QCoreApplication.exit(0)
+        exit_application()
         subprocess.Popen("shutdown /s /f /t 0", stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True)
 
     def force_restart(self):
         self.clear_widget()
-        QCoreApplication.exit(0)
+        exit_application()
         subprocess.Popen("shutdown /r /f /t 0", stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True)
     
     def hibernate(self):
