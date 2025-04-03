@@ -1,7 +1,7 @@
 import logging
 import os
 import sys
-from PyQt6.QtCore import QCoreApplication, QProcess
+from PyQt6.QtCore import QProcess
 from PyQt6.QtWidgets import QApplication
 
 
@@ -10,7 +10,7 @@ def reload_application(msg="Reloading Application..."):
         QApplication.processEvents()
         logging.info(msg)
         QProcess.startDetached(sys.executable, sys.argv)
-        QCoreApplication.exit(0)
+        os._exit(0)
     except Exception as e:
         logging.error(f"Error during reload: {e}")
         os._exit(0)

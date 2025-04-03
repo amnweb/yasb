@@ -95,7 +95,7 @@ executables = [
         shortcut_name="Yasb",
         shortcut_dir="MyProgramMenu",
         copyright=f"Copyright (C) {datetime.datetime.now().year} AmN",
-        target_name="yasb.exe",
+        target_name="yasb",
     ),  
     Executable(
         "core/utils/themes.py",
@@ -103,13 +103,13 @@ executables = [
         shortcut_name="Yasb Themes",
         icon="assets/images/app_icon.ico",
         copyright=f"Copyright (C) {datetime.datetime.now().year} AmN",
-        target_name="yasb_themes.exe",
+        target_name="yasb_themes",
     ),
     Executable(
         "core/utils/cli.py",
         base="Console",
         copyright=f"Copyright (C) {datetime.datetime.now().year} AmN",
-        target_name="yasbc.exe",
+        target_name="yasbc",
     )
 ]
 
