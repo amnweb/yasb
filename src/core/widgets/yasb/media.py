@@ -110,8 +110,9 @@ class MediaWidget(BaseWidget):
         self.callback_left = callbacks['on_left']
         self.callback_right = callbacks['on_right']
         self.callback_middle = callbacks['on_middle']
-
+        #Update Wiki
         if not self._controls_only:
+            self.register_callback("toggle_media", self._toggle_media)
             self.register_callback("toggle_label", self._toggle_label)
             self._label.show()
 
@@ -120,7 +121,9 @@ class MediaWidget(BaseWidget):
 
         # Force media update to detect running session
         self.timer.singleShot(0, self.media.force_update)
-
+    #Check for bugs (written by a JS Dev)
+    def _toggle_media(self):
+        WindowsMedia().play_pause
     def _toggle_label(self):
         self._show_alt_label = not self._show_alt_label
 
