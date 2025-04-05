@@ -6,6 +6,7 @@ import win32pipe
 import win32file
 import pywintypes
 from PyQt6.QtCore import QThread
+from settings import DEBUG
 from core.event_enums import KomorebiEvent
 from core.event_service import EventService
 from core.utils.komorebi.client import KomorebiClient
@@ -90,8 +91,8 @@ class KomorebiEventListener(QThread):
                 if self.pipe:
                     win32file.CloseHandle(self.pipe)
                 self.event_service.emit_event(KomorebiEvent.KomorebiDisconnect)
-                logging.info("Attempting to reconnect...")
-                time.sleep(5)
+                logging.info("Attempting to reconnect to Komorebi...")
+                time.sleep(3)
 
     def stop(self):
         self._app_running = False
@@ -103,15 +104,21 @@ class KomorebiEventListener(QThread):
             self.event_service.emit_event(KomorebiEvent[event['type']], event, state)
 
     def _wait_until_komorebi_online(self):
-        logging.info(f"Waiting for Komorebi to subscribe to named pipe {self.pipe_name}")
+        if DEBUG:
+            logging.info(f"Waiting for Komorebi to subscribe to named pipe {self.pipe_name}")
         stderr, proc = self._komorebic.wait_until_subscribed_to_pipe(self.pipe_name)
-       
-        if stderr:
-            #logging.warning(f"Komorebi failed to subscribe named pipe. Waiting for subscription: {stderr.decode('utf-8')}")
-             logging.warning(f"Komorebi failed to subscribe named pipe. Waiting for subscription...")   
+
+        if stderr and DEBUG:
+            stderr_str = ' '.join(stderr.decode('utf-8').replace('\n', ' ').replace('\r', ' ').split())
+            
+            if "(os error 10061)" in stderr_str:
+                error_message = "Komorebi is not running, please start Komorebi."
+                logging.warning(f"Komorebi failed to subscribe named pipe. {error_message}") 
+            else:
+                logging.warning(f"Komorebi failed to subscribe named pipe. {stderr_str}")
 
         while self._app_running and proc.returncode != 0: 
-            time.sleep(10)
+            time.sleep(5)
             stderr, proc = self._komorebic.wait_until_subscribed_to_pipe(self.pipe_name)
 
         win32pipe.ConnectNamedPipe(self.pipe, None)

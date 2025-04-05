@@ -10,11 +10,22 @@ def add_index(dictionary: dict, dictionary_index: int) -> dict:
 
 
 class KomorebiClient:
+    _instance = None
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super(KomorebiClient, cls).__new__(cls)
+        return cls._instance
+
     def __init__(
             self,
             komorebic_path: str = "komorebic.exe",
-            timeout_secs: float = 1.0
+            timeout_secs: float = 0.5
     ):
+        if hasattr(self, "_komorebi_initialized"):
+            return
+        self._komorebi_initialized = True
+
         super().__init__()
         self._timeout_secs = timeout_secs
         self._komorebic_path = komorebic_path
@@ -22,9 +33,17 @@ class KomorebiClient:
         self._previous_mouse_follows_focus = False
 
     def query_state(self) -> Optional[dict]:
-        with suppress(json.JSONDecodeError, subprocess.CalledProcessError, subprocess.TimeoutExpired):
-            output = subprocess.check_output([self._komorebic_path, "state"], timeout=self._timeout_secs, shell=True)
+        try:
+            output = subprocess.check_output(
+                [self._komorebic_path, "state"],
+                timeout=self._timeout_secs,
+                shell=True
+            )
             return json.loads(output)
+        except subprocess.TimeoutExpired as e:
+            logging.error(f"Komorebi state query timed out in {self._timeout_secs} seconds")
+        except (json.JSONDecodeError, subprocess.CalledProcessError):
+            return None
 
     def get_screens(self, state: dict) -> list:
         return state['monitors']['elements']
