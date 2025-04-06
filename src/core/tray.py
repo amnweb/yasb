@@ -1,21 +1,24 @@
 import datetime
 import logging
-import webbrowser
 import os
 import shutil
-import sys
-from pathlib import Path
 import subprocess
+import threading
+import webbrowser
+from pathlib import Path
+
 import winshell
-from PyQt6.QtWidgets import QSystemTrayIcon, QMenu, QMessageBox, QApplication
-from PyQt6.QtGui import QIcon, QGuiApplication
-from PyQt6.QtCore import QCoreApplication, QSize, Qt, pyqtSlot, QProcess, QEvent
+from PyQt6.QtCore import QEvent, QSize, Qt
+from PyQt6.QtGui import QGuiApplication, QIcon
+from PyQt6.QtWidgets import QMenu, QMessageBox, QSystemTrayIcon
+
 from core.bar_manager import BarManager
-from settings import GITHUB_URL, SCRIPT_PATH, APP_NAME, APP_NAME_FULL, DEFAULT_CONFIG_DIRECTORY, GITHUB_THEME_URL, BUILD_VERSION
 from core.config import get_config
 from core.console import WindowShellDialog
-from core.utils.cli_client import CliPipeHandler
-import threading
+from core.utils.controller import exit_application, reload_application
+from settings import (APP_NAME, APP_NAME_FULL, BUILD_VERSION,
+                     DEFAULT_CONFIG_DIRECTORY, GITHUB_THEME_URL,
+                     GITHUB_URL, SCRIPT_PATH)
 
 OS_STARTUP_FOLDER = os.path.join(os.environ['APPDATA'], r'Microsoft\Windows\Start Menu\Programs\Startup')
 VBS_PATH = os.path.join(SCRIPT_PATH, 'yasb.vbs')
@@ -26,7 +29,7 @@ SHORTCUT_FILENAME = "yasb.lnk"
 AUTOSTART_FILE = EXE_PATH if os.path.exists(EXE_PATH) else VBS_PATH
 WORKING_DIRECTORY = INSTALLATION_PATH if os.path.exists(EXE_PATH) else SCRIPT_PATH
 
-class TrayIcon(QSystemTrayIcon):
+class SystemTrayManager(QSystemTrayIcon):
     def __init__(self, bar_manager: BarManager):
         super().__init__()
         self._bar_manager = bar_manager
@@ -35,11 +38,6 @@ class TrayIcon(QSystemTrayIcon):
         self._load_context_menu()
         self.setToolTip(APP_NAME)
         self._load_config()
-        self._bar_manager.remove_tray_icon_signal.connect(self.remove_tray_icon)
-        # Start the CLI pipe server if the executable exists, if running from source, the server will not start
-        if os.path.exists(EXE_PATH):
-            self.cli_pipi_handler = CliPipeHandler(self.stop_or_reload_application)
-            self.start_cli_server()
 
     def eventFilter(self, obj, event):
         if event.type() == QEvent.Type.MouseButtonPress:
@@ -63,22 +61,6 @@ class TrayIcon(QSystemTrayIcon):
             self.komorebi_start = config['komorebi']["start_command"]
             self.komorebi_stop = config['komorebi']["stop_command"]
             self.komorebi_reload = config['komorebi']["reload_command"]
-
-    def start_cli_server(self):
-        """
-        Start the CLI pipe server in a separate thread.
-        """
-        server_thread = threading.Thread(target=self.cli_pipi_handler.start_cli_pipe_server, daemon=True)
-        server_thread.start()
-
-    def stop_or_reload_application(self, reload=False):
-        """
-        Stop or reload the application from the CLI.
-        """
-        if reload:
-            self.reload_action.trigger()
-        else:
-            self._exit_application()
             
     def _load_favicon(self):
         # Get the current directory of the script
@@ -101,7 +83,7 @@ class TrayIcon(QSystemTrayIcon):
         }
         QMenu::item {
             margin:0 4px;
-            padding: 4px 16px 5px 16px;
+            padding: 4px 24px 5px 24px;
             border-radius: 4px;
             font-size: 11px;
             font-weight: 600;
@@ -127,19 +109,14 @@ class TrayIcon(QSystemTrayIcon):
         open_config_action.triggered.connect(self._open_config)
         if os.path.exists(THEME_EXE_PATH):
             yasb_themes_action = self.menu.addAction("Get Themes")
-            yasb_themes_action.triggered.connect(lambda: os.startfile(THEME_EXE_PATH))
-        
+            yasb_themes_action.triggered.connect(lambda: os.startfile(THEME_EXE_PATH))        
+
         reload_action = self.menu.addAction("Reload YASB")
         reload_action.triggered.connect(self._reload_application)
         self.reload_action = reload_action
-        
-        github_action = self.menu.addAction("Visit GitHub")
-        github_action.triggered.connect(lambda: self._open_in_browser(f"{GITHUB_URL}"))
-
-        discord_action = self.menu.addAction("Join Discord")
-        discord_action.triggered.connect(lambda: self._open_in_browser("https://discord.gg/qkeunvBFgX"))
 
         self.menu.addSeparator()
+
         debug_menu = self.menu.addMenu("Debug")
         info_action = debug_menu.addAction("Information")
         info_action.triggered.connect(self._show_info)
@@ -166,27 +143,21 @@ class TrayIcon(QSystemTrayIcon):
             disable_startup_action.triggered.connect(self._disable_startup)
         else:
             enable_startup_action = self.menu.addAction("Enable Autostart")
-            enable_startup_action.triggered.connect(self._enable_startup)
+            enable_startup_action.triggered.connect(self._enable_startup)         
+
+        help_action = self.menu.addAction("Help")
+        help_action.triggered.connect(lambda: self._open_in_browser(f"{GITHUB_URL}/wiki"))
 
         about_action = self.menu.addAction("About")
         about_action.triggered.connect(self._show_about_dialog)
-        
+
+        self.menu.addSeparator()
         exit_action = self.menu.addAction("Exit")
         exit_action.triggered.connect(self._exit_application)
         
         self.setContextMenu(self.menu)
         # Connect the activated signal to show the menu
         self.activated.connect(lambda reason: self.menu.activateWindow() if reason == QSystemTrayIcon.ActivationReason.Context else None)
-
-    @pyqtSlot()
-    def remove_tray_icon(self):
-        """
-        Remove the tray icon from the system tray.
-        """
-        try:
-            self.deleteLater()
-        except Exception as e:
-            logging.error(f"Error removing tray icon: {e}")
 
     def is_autostart_enabled(self):
         return os.path.exists(os.path.join(OS_STARTUP_FOLDER, SHORTCUT_FILENAME))
@@ -252,46 +223,33 @@ class TrayIcon(QSystemTrayIcon):
         threading.Thread(target=run_komorebi_reload).start()
 
     def _reload_application(self):
-        try:
-            self.remove_tray_icon()
-            QApplication.processEvents()
-            logging.info("Reloading Application...")
-            QProcess.startDetached(sys.executable, sys.argv)
-            QCoreApplication.exit(0)
-        except Exception as e:
-            logging.error(f"Error during reload: {e}")
-            os._exit(0)
+        reload_application("Reloading Application from tray...")
 
     def _exit_application(self):
-        self.remove_tray_icon()
-        logging.info("Exiting Application...")
-        try:
-            QCoreApplication.exit(0)
-        except:
-            os._exit(0)
-
+        exit_application("Exiting Application from tray...")
+ 
     def _open_in_browser(self, url):
         try:
-            webbrowser.WindowsDefault().open(url)
+            webbrowser.open(url)
         except Exception as e:
             logging.error(f"Failed to open browser: {e}")
  
-            
     def _show_about_dialog(self):
-        about_box = QMessageBox()  
+        about_box = QMessageBox()
         about_box.setWindowTitle("About YASB")
         icon_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'assets', 'images', 'app_icon.png')
         icon = QIcon(icon_path)
-        about_box.setIconPixmap(icon.pixmap(48, 48))
+        about_box.setStyleSheet("QLabel#qt_msgboxex_icon_label { margin: 10px 10px 10px 20px; }")
+        about_box.setIconPixmap(icon.pixmap(64, 64))
         about_box.setWindowIcon(icon)
         about_text = f"""
-        <div style="font-family:'Segoe UI',sans-serif;">
-        <div style="font-size:24px;font-weight:400;"><span style="font-weight:bold">YASB</span> Reborn</div>
+        <div style="font-family:'Segoe UI',sans-serif">
+        <div style="font-size:24px;font-weight:400;margin-right:60px"><span style="font-weight:bold">YASB</span> Reborn</div>
         <div style="font-size:13px;font-weight:600;margin-top:8px">{APP_NAME_FULL}</div>
         <div style="font-size:13px;font-weight:600;">Version: {BUILD_VERSION}</div><br>
-        <div><a href="{GITHUB_URL}">{GITHUB_URL}</a></div>
-        <div style="margin-top:4px"><a href="{GITHUB_THEME_URL}">{GITHUB_THEME_URL}</a></div>
-        <div style="margin-top:4px"><a href="https://discord.gg/qkeunvBFgX">Join Discord</a></div>
+        <div style="margin-top:5px;font-size:13px;font-weight:600;"><a style="text-decoration:none" href="{GITHUB_URL}">YASB on GitHub</a></div>
+        <div style="margin-top:5px;font-size:13px;font-weight:600;"><a style="text-decoration:none" href="{GITHUB_THEME_URL}">YASB Themes</a></div>
+        <div style="margin-top:5px;font-size:13px;font-weight:600;"><a style="text-decoration:none" href="https://discord.gg/qkeunvBFgX">Join Discord</a></div>
         </div>
         """
         about_box.setText(about_text)
