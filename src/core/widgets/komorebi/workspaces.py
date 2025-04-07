@@ -124,7 +124,9 @@ class WorkspaceWidget(BaseWidget):
             label_zero_index: bool,
             hide_empty_workspaces: bool,
             container_padding: dict,
-            animation: bool
+            animation: bool,
+            enable_scroll_switching: bool,
+            reverse_scroll_direction: bool
     ):
         super().__init__(class_name="komorebi-workspaces")
         self._event_service = EventService()
@@ -197,6 +199,9 @@ class WorkspaceWidget(BaseWidget):
             self.workspace_layer_label.setProperty("class", "workspace-layer")
             self.widget_layout.addWidget(self.workspace_layer_label)
         
+        self._enable_scroll_switching = enable_scroll_switching
+        self._reverse_scroll_direction = reverse_scroll_direction
+
         self._register_signals_and_events()
 
     def _register_signals_and_events(self):
@@ -417,3 +422,26 @@ class WorkspaceWidget(BaseWidget):
     def _hide_offline_status(self):
         self._offline_text.hide()
         self._workspace_container.show()
+
+    def wheelEvent(self, event):
+        """Handle mouse wheel events to switch workspaces."""
+        if not self._enable_scroll_switching or not self._komorebi_screen:
+            return
+
+        delta = event.angleDelta().y()
+        # Determine direction (consider reverse_scroll_direction setting)
+        direction = -1 if (delta > 0) != self._reverse_scroll_direction else 1
+
+        workspaces = self._komorebic.get_workspaces(self._komorebi_screen)
+        if not workspaces:
+            return
+
+        current_idx = self._curr_workspace_index
+        num_workspaces = len(workspaces)
+        next_idx = (current_idx + direction) % num_workspaces
+        try:
+            self._komorebic.activate_workspace(
+                self._komorebi_screen['index'], next_idx)
+        except Exception:
+            logging.exception(
+                f"Failed to switch to workspace at index {next_idx}")

@@ -11,6 +11,8 @@
 | `hide_if_offline`       | boolean | `false`         | Whether to hide the widget if Komorebi is offline.                          |
 | `label_zero_index`        | boolean | `false`    | Whether to use zero-based indexing for workspace labels.                    |
 | `hide_empty_workspaces`  | boolean | `false`      | Whether to hide empty workspaces.                                           |
+| `enable_scroll_switching` | boolean | `false`      | Enable scroll switching between workspaces.                                 |
+| `reverse_scroll_direction` | boolean | `false`      | Reverse scroll direction.                                                  |
 | `animation`  | boolean | `false`      | Buttons animation.                                           |
 | `container_padding`  | dict | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}`      | Explicitly set padding inside widget container.
 
@@ -54,6 +56,8 @@ komorebi_workspaces:
 - **hide_if_offline:** Whether to hide the widget if Komorebi is offline.
 - **label_zero_index:** Whether to use zero-based indexing for workspace labels.
 - **hide_empty_workspaces:** Whether to hide empty workspaces.
+- **enable_scroll_switching:** Enable scroll switching between workspaces.
+- **reverse_scroll_direction:** Reverse scroll direction.
 - **animation:** Buttons animation.
 - **container_padding:** Explicitly set padding inside widget container.
 

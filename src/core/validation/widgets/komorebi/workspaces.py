@@ -10,6 +10,8 @@ DEFAULTS = {
     'label_zero_index': False,
     'hide_empty_workspaces': False,
     'animation': False,
+    'enable_scroll_switching': False,
+    'reverse_scroll_direction': False,
     'container_padding': {'top': 0, 'left': 0, 'bottom': 0, 'right': 0},
 }
 
@@ -71,6 +73,14 @@ VALIDATION_SCHEMA = {
     'animation': {
         'type': 'boolean',
         'default': DEFAULTS['animation']
+    },
+    'enable_scroll_switching': {
+        'type': 'boolean',
+        'default': DEFAULTS['enable_scroll_switching']
+    },
+    'reverse_scroll_direction': {
+        'type': 'boolean',
+        'default': DEFAULTS['reverse_scroll_direction']
     },
     'container_padding': {
         'type': 'dict',
