@@ -30,6 +30,7 @@
     - [Systray](./(Widget)-Systray)
     - [Traffic](./(Widget)-Traffic)
     - [Taskbar](./(Widget)-Taskbar)
+    - [Pomodoro](./(Widget)-Pomodoro)
     - [Power Menu](./(Widget)-Power-Menu)
     - [Update Check](./(Widget)-Update-Check)
     - [Volume](./(Widget)-Volume)

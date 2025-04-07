@@ -51,10 +51,10 @@
 - **komorebi_menu:** Settings for the Komorebi menu.
   - **blur:** Whether to enable blur effect.
   - **round_corners:** Whether to round corners.
-  - **round_corners_type:** Type of rounding (normal, small, large).
-  - **border_color:** Border color (System, Custom).
-  - **alignment:** Alignment of the menu (left, right, top, bottom).
-  - **direction:** Direction of the menu (up, down, left, right).
+  - **round_corners_type:** Type of rounding ("Normal", "Small").
+  - **border_color:** Border color ("System", None, "Hex Color").
+  - **alignment:** Alignment of the menu (left, right, center).
+  - **direction:** Direction of the menu (up, down).
   - **offset_top:** Top offset for the menu.
   - **offset_left:** Left offset for the menu.
 - **callbacks:** Callbacks for mouse events.

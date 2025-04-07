@@ -35,6 +35,7 @@ build_options = {
         'core.widgets.yasb.home',
         'core.widgets.yasb.cava',
         'core.widgets.yasb.systray',
+        'core.widgets.yasb.pomodoro',
         'core.widgets.komorebi.control',
         'core.widgets.komorebi.active_layout',
         'core.widgets.komorebi.workspaces',
@@ -52,6 +53,7 @@ build_options = {
     "include_files": [
             ("assets/images/app_icon.png","lib/assets/images/app_icon.png"),
             ("assets/images/app_transparent.png","lib/assets/images/app_transparent.png"),
+            ("assets/sound/notification01.wav","lib/assets/sound/notification01.wav"),
             ("config.yaml","config.yaml"),
             ("styles.css","styles.css")
         ]
@@ -95,7 +97,7 @@ executables = [
         shortcut_name="Yasb",
         shortcut_dir="MyProgramMenu",
         copyright=f"Copyright (C) {datetime.datetime.now().year} AmN",
-        target_name="yasb.exe",
+        target_name="yasb",
     ),  
     Executable(
         "core/utils/themes.py",
@@ -103,13 +105,13 @@ executables = [
         shortcut_name="Yasb Themes",
         icon="assets/images/app_icon.ico",
         copyright=f"Copyright (C) {datetime.datetime.now().year} AmN",
-        target_name="yasb_themes.exe",
+        target_name="yasb_themes",
     ),
     Executable(
         "core/utils/cli.py",
         base="Console",
         copyright=f"Copyright (C) {datetime.datetime.now().year} AmN",
-        target_name="yasbc.exe",
+        target_name="yasbc",
     )
 ]
 
