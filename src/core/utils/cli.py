@@ -16,13 +16,13 @@ import win32security
 import ctypes
 import requests
 import tempfile
-from settings import BUILD_VERSION
+from settings import BUILD_VERSION, CLI_VERSION
 from colorama import just_fix_windows_console
 
 just_fix_windows_console()
 
 YASB_VERSION = BUILD_VERSION
-YASB_CLI_VERSION = "1.0.9"
+YASB_CLI_VERSION = CLI_VERSION
 
 OS_STARTUP_FOLDER = os.path.join(os.environ['APPDATA'], r'Microsoft\Windows\Start Menu\Programs\Startup')
 INSTALLATION_PATH = os.path.abspath(os.path.join(__file__, "../../.."))
@@ -171,8 +171,6 @@ class CLIHandler:
             sys.exit(0)
 
         elif args.command == 'stop':
-            if not args.silent:
-                print("Stop YASB...")
             CLIHandler.stop_or_reload_application()
             sys.exit(0)
 
