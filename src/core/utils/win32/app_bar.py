@@ -90,10 +90,10 @@ class Win32AppBar:
     def position_bar(self, app_bar_height: int, screen: QScreen, scale_screen: bool = False) -> None:
         geometry = screen.geometry()
         bar_height = int(app_bar_height * screen.devicePixelRatio())
-        screen_height = int(geometry.height() * screen.devicePixelRatio() if scale_screen else geometry.y())
+        screen_height = int(geometry.height() * screen.devicePixelRatio() if scale_screen else geometry.height())
 
         self.app_bar_data.rc.left = geometry.x()
-        self.app_bar_data.rc.right = geometry.x() + bar_height
+        self.app_bar_data.rc.right = geometry.x() + geometry.width()
 
         if self.app_bar_data.uEdge == AppBarEdge.Top:
             self.app_bar_data.rc.top = screen.geometry().y()
