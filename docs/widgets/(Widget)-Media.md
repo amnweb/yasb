@@ -22,6 +22,7 @@
 | `icons.pause`           | string  | `\uf04c`| Icon for the pause button.                                                  |
 | `animation`         | dict    | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
 | `container_padding`  | dict | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}`      | Explicitly set padding inside widget container. |
+| `callbacks`             | object  |     | Actions on mouse events: `toggle_media, toggle_label`                                                          |
 ## Example Configuration
 
 ```yaml
@@ -32,9 +33,9 @@ media:
     label_alt: "{title}"
     hide_empty: true
     callbacks:
-      on_left: "toggle_label"
+      on_left: "toggle_media"
       on_middle: "do_nothing"
-      on_right: "do_nothing"
+      on_right: "toggle_label"
     max_field_size:
       label: 20
       label_alt: 30
@@ -56,7 +57,7 @@ media:
 - **label:** The format string for the media label. You can use placeholders like `{title}` and `{artist}` to dynamically insert media information.
 - **label_alt:** The alternative format string for the media label. Useful for displaying additional media details.
 - **hide_empty:** Whether to hide the widget when there is no media information available.
-- **callbacks:** A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, `on_right`.
+- **callbacks:** A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, `on_right`. The options are `toggle_media` and `toggle label`.
 - **max_field_size:** Maximum field sizes for the labels.
 - **show_thumbnail:** Whether to show the media thumbnail.
 - **controls_only:** Whether to show only the media controls.
