@@ -131,6 +131,8 @@ class Bar(QWidget):
         screen_width = self.screen().geometry().width()
         screen_height = self.screen().geometry().height()
 
+        scale_state = self.screen().devicePixelRatio() > 1.0
+
         if is_valid_percentage_str(str(self._dimensions['width'])):
             bar_width = int(screen_width * percent_to_float(self._dimensions['width']) - self._padding['left'] - self._padding['right'])
         bar_x, bar_y = self.bar_pos(bar_width, bar_height, screen_width, screen_height)
@@ -143,7 +145,7 @@ class Bar(QWidget):
             bar_width,
             bar_height
         )
-        self.try_add_app_bar(scale_screen_height=True)
+        self.try_add_app_bar(scale_screen_height=scale_state)
         
     def _add_widgets(self, widgets: dict[str, list] = None):
         bar_layout = QGridLayout()
