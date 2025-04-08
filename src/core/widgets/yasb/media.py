@@ -121,7 +121,6 @@ class MediaWidget(BaseWidget):
 
         # Force media update to detect running session
         self.timer.singleShot(0, self.media.force_update)
-    #Check for bugs (written by a JS Dev)
     def _toggle_media(self):
         WindowsMedia().play_pause
     def _toggle_label(self):
