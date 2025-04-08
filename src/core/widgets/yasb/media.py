@@ -110,7 +110,7 @@ class MediaWidget(BaseWidget):
         self.callback_left = callbacks['on_left']
         self.callback_right = callbacks['on_right']
         self.callback_middle = callbacks['on_middle']
-        #Update Wiki
+
         if not self._controls_only:
             self.register_callback("toggle_media", self._toggle_media)
             self.register_callback("toggle_label", self._toggle_label)
