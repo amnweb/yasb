@@ -151,7 +151,8 @@ class MediaWidget(BaseWidget):
             self._thumbnail_label.hide()
             active_label.hide()
             active_label.setText('')
-            self._play_label.setText(self._media_button_icons['play'])
+            if not self._controls_hide and self._play_label is not None:
+                self._play_label.setText(self._media_button_icons['play'])
 
             # If we want to hide the widget when no music is playing, hide it!
             if self._hide_empty:
