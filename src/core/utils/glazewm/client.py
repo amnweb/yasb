@@ -51,23 +51,28 @@ class TilingDirection(StrEnum):
 
 class GlazewmClient(QObject):
     workspaces_data_processed = pyqtSignal(list)
-    tiling_direction_processed = pyqtSignal(str)
+    tiling_direction_processed = pyqtSignal(TilingDirection)
     glazewm_connection_status = pyqtSignal(bool)
 
-    def __init__(self, uri: str, initial_messages: list[str] | None = None, reconnect_interval=4000) -> None:
+    def __init__(
+        self,
+        uri: str,
+        initial_messages: list[str] | None = None,
+        reconnect_interval: int = 4000,
+    ):
         super().__init__()
         self.initial_messages = initial_messages if initial_messages else []
 
         self._uri = QUrl(uri)
         self._websocket = QWebSocket()
-        self._websocket.connected.connect(self._on_connected)
-        self._websocket.textMessageReceived.connect(self._handle_message)
-        self._websocket.stateChanged.connect(self._on_state_changed)
-        self._websocket.errorOccurred.connect(self._on_error)
+        self._websocket.connected.connect(self._on_connected)  # type: ignore
+        self._websocket.textMessageReceived.connect(self._handle_message)  # type: ignore
+        self._websocket.stateChanged.connect(self._on_state_changed)  # type: ignore
+        self._websocket.errorOccurred.connect(self._on_error)  # type: ignore
 
         self._reconnect_timer = QTimer()
         self._reconnect_timer.setInterval(reconnect_interval)
-        self._reconnect_timer.timeout.connect(self.connect)
+        self._reconnect_timer.timeout.connect(self.connect)  # type: ignore
 
     def activate_workspace(self, workspace_name: str):
         self._websocket.sendTextMessage(f"command focus --workspace {workspace_name}")
@@ -107,9 +112,16 @@ class GlazewmClient(QObject):
             self._websocket.sendTextMessage(QueryType.MONITORS)
             self._websocket.sendTextMessage(QueryType.TILING_DIRECTION)
         elif response.get("messageType") == MessageType.CLIENT_RESPONSE:
-            data = response.get("data", {})
+            raw_data: Any = response.get("data")
+            if not isinstance(raw_data, dict):
+                logger.warning(f"Expected 'data' to be a dict, got {type(raw_data).__name__}")
+                return
+            data: dict[str, Any] = raw_data
             if response.get("clientMessage") == QueryType.MONITORS:
                 monitors = data.get("monitors", [])
+                if monitors is None:
+                    logger.warning("Expected 'monitors' to be a list, got None")
+                    return
                 self.workspaces_data_processed.emit(self._process_workspaces(monitors))
             elif response.get("clientMessage") == QueryType.TILING_DIRECTION:
                 tiling_direction = TilingDirection(data.get("tilingDirection", TilingDirection.HORIZONTAL))
@@ -120,8 +132,14 @@ class GlazewmClient(QObject):
         for mon in data:
             monitor_name: str | None = mon.get("hardwareId")
             handle: int | None = mon.get("handle")
-            if not monitor_name or not handle:
-                logger.warning("Monitor name or hwnd not found")
+            if monitor_name is None or handle is None:
+                logger.warning(f"Monitor name or hwnd not found | name: {monitor_name}, handle: {handle}")
+                continue
+            if not monitor_name:
+                monitor_name = f"Unknown ({handle})"
+                logger.warning(f"Monitor name not found. Replacing with {monitor_name}")
+            if not handle:
+                logger.warning("Monitor handle not found")
                 continue
             workspaces_data = [
                 Workspace(
