@@ -2,7 +2,7 @@ import logging
 from settings import APP_BAR_TITLE
 from PyQt6.QtWidgets import QWidget, QHBoxLayout, QGridLayout, QFrame
 from PyQt6.QtGui import QScreen
-from PyQt6.QtCore import Qt, QRect, QEvent, QPropertyAnimation, QEasingCurve, QPoint, QTimer
+from PyQt6.QtCore import Qt, QRect, QEvent, QPropertyAnimation, QParallelAnimationGroup, QEasingCurve, QTimer, QSize
 from core.utils.utilities import is_valid_percentage_str, percent_to_float
 from core.utils.win32.utilities import get_monitor_hwnd
 from core.validation.bar import BAR_DEFAULTS
@@ -87,8 +87,7 @@ class Bar(QWidget):
             )
 
         self.screen().geometryChanged.connect(self.on_geometry_changed, Qt.ConnectionType.QueuedConnection)
-        if self._animation['enabled']:
-            self.animation_bar()
+           
         self.show()
         
 
@@ -185,25 +184,39 @@ class Bar(QWidget):
 
 
     def animation_bar(self):
+        # Store final state values
         self.final_pos = self.pos()
-        if self._alignment['position'] == "top":
-            self.initial_pos = QPoint(self.final_pos.x(), self.final_pos.y() - self.height())
-        else:
-            screen_height = self.screen().geometry().height()
-            self.initial_pos = QPoint(self.final_pos.x(), self.final_pos.y() + screen_height)
-        self.move(self.initial_pos)
-        self.animation = QPropertyAnimation(self, b"pos")
-        self.animation.setDuration(self._animation['duration'])
-        self.animation.setStartValue(self.initial_pos)
-        self.animation.setEndValue(self.final_pos)
-        self.animation.setEasingCurve(QEasingCurve.Type.OutExpo)
-        
+        self.final_height = self.height()
+        self.final_width = self.width()
+        # Set initial state for animations
+        self.move(self.final_pos)
+        self.resize(self.final_width, 0)
+        self.setWindowOpacity(0.0)
+        # Create animation group for parallel animations
+        self.animation_group = QParallelAnimationGroup()
+        # Height animation
+        self.height_animation = QPropertyAnimation(self, b"size")
+        self.height_animation.setDuration(self._animation['duration'])
+        self.height_animation.setStartValue(QSize(self.final_width, 0))
+        self.height_animation.setEndValue(QSize(self.final_width, self.final_height))
+        self.height_animation.setEasingCurve(QEasingCurve.Type.OutExpo)
+        # Opacity animation
+        self.opacity_animation = QPropertyAnimation(self, b"windowOpacity")
+        self.opacity_animation.setDuration(self._animation['duration'])
+        self.opacity_animation.setStartValue(0.0)
+        self.opacity_animation.setEndValue(1.0)
+        self.opacity_animation.setEasingCurve(QEasingCurve.Type.OutCubic)
+        # Add animations to group and start
+        self.animation_group.addAnimation(self.height_animation)
+        self.animation_group.addAnimation(self.opacity_animation)
+        self.animation_group.start()
         
     def showEvent(self, event):
         super().showEvent(event)
         if self._animation['enabled']:
             try:
-                self.animation.start()
+                self.animation_bar()
+                
             except AttributeError:
                 logging.error("Animation not initialized.")
         if not hasattr(self, "_fullscreen_timer") and self._window_flags['hide_on_fullscreen'] and self._window_flags['always_on_top']:
