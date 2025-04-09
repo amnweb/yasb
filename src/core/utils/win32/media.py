@@ -172,19 +172,31 @@ class WindowsMedia(metaclass=Singleton):
     def _on_media_properties_changed(self, session: Session, args: MediaPropertiesChangedEventArgs):
         if DEBUG:
             self._log.debug('MediaCallback: _on_media_properties_changed')
-        try:
-            # Only for the initial timer based update, because it is called from an event loop
-            asyncio.create_task(self._update_media_properties(session))
-        except RuntimeError:
-            with self._media_info_lock:
-                self._event_loop.run_until_complete(self._update_media_properties(session))
+        
+        with self._media_info_lock:
+            try:
+                try:
+                    running_loop = asyncio.get_running_loop()
+                    async def process_media_and_check():
+                        await self._update_media_properties(session)
+                        if self._media_info and self._is_media_info_empty(self._media_info):
+                            sessions = self._session_manager.get_sessions()
+                            if not any(self._are_same_sessions(sessions[i], self._current_session) for i in range(sessions.size)):
+                                self.switch_session(1)
+                    
+                    running_loop.create_task(process_media_and_check())
+                    
+                except RuntimeError:
 
-                if self._media_info and self._is_media_info_empty(self._media_info):
-                    sessions = self._session_manager.get_sessions()
-
-                    # If current session isn't in the list of sessions, switch the session
-                    if not any(self._are_same_sessions(sessions[i], self._current_session) for i in range(sessions.size)):
-                        self.switch_session(1)
+                    self._event_loop.run_until_complete(self._update_media_properties(session))
+                    
+                    if self._media_info and self._is_media_info_empty(self._media_info):
+                        sessions = self._session_manager.get_sessions()
+                        if not any(self._are_same_sessions(sessions[i], self._current_session) for i in range(sessions.size)):
+                            self.switch_session(1)
+                            
+            except Exception as e:
+                self._log.error(f"Error in _on_media_properties_changed: {e}")
 
     @_current_session_only
     async def _update_media_properties(self, session: Session):
@@ -256,6 +268,8 @@ class WindowsMedia(metaclass=Singleton):
         return all(not media_info.get(key) for key in keys)
     
     def _are_same_sessions(self, session1: Session, session2: Session) -> bool:
+        if session1 is None or session2 is None:
+            return session1 is session2
         return session1.source_app_user_model_id == session2.source_app_user_model_id
     
     def switch_session(self, direction: int):
