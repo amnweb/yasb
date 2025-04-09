@@ -56,7 +56,7 @@ media:
 - **label:** The format string for the media label. You can use placeholders like `{title}` and `{artist}` to dynamically insert media information.
 - **label_alt:** The alternative format string for the media label. Useful for displaying additional media details.
 - **hide_empty:** Whether to hide the widget when there is no media information available.
-- **callbacks:** A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, `on_right`.
+- **callbacks:** A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, `on_right`. Available callbacks are `toggle_label`, `do_nothing`, and `toggle_play_pause`.
 - **max_field_size:** Maximum field sizes for the labels.
 - **show_thumbnail:** Whether to show the media thumbnail.
 - **controls_only:** Whether to show only the media controls.
@@ -69,7 +69,7 @@ media:
 - **animation:** A dictionary specifying the animation settings for the widget. It contains three keys: `enabled`, `type`, and `duration`. The `type` can be `fadeInOut` and the `duration` is the animation duration in milliseconds.
 - **container_padding**: Explicitly set padding inside widget container. Use this option to set padding inside the widget container. You can set padding for top, left, bottom and right sides of the widget container.
 
-## Example Style
+## Available Styles
 ```css
 .media-widget {}
 .media-widget .widget-container {}
@@ -80,3 +80,44 @@ media:
 .media-widget .btn.next {}
 .media-widget .btn.disabled {}
 ```
+
+## Example Style
+```css
+.media-widget {
+    padding: 0;
+    margin: 0;
+}
+.media-widget .label {
+    color: #bac2db;
+    background-color: rgba(24, 24, 37, 0.7);
+    padding: 0px;
+    padding-right: 4px;
+    font-size: 12px;
+}
+
+.media-widget .label.maintext {
+    padding-top: 3px;
+}
+.media-widget .btn {
+    color: #989caa;
+    padding: 0 4px;
+    margin: 0;
+    font-family: Segoe Fluent Icons;
+    font-weight: 400;
+}
+.media-widget .btn:hover {
+    color: #babfd3;
+}
+.media-widget .btn.play {
+    font-size: 16px;
+}
+.media-widget .btn.disabled:hover,
+.media-widget .btn.disabled {
+    color: #4e525c;
+    font-size: 12px;
+    background-color: rgba(0, 0, 0, 0);
+}
+```
+
+> [!NOTE] 
+> The style example above uses the Segoe Fluent Icons font for buttons, you can use any other icon font or custom icons as per your design requirements.

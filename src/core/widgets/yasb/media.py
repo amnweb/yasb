@@ -112,6 +112,7 @@ class MediaWidget(BaseWidget):
         self.callback_middle = callbacks['on_middle']
 
         if not self._controls_only:
+            self.register_callback("toggle_play_pause", self._toggle_play_pause)
             self.register_callback("toggle_label", self._toggle_label)
             self._label.show()
 
@@ -122,6 +123,8 @@ class MediaWidget(BaseWidget):
         self.timer.singleShot(0, self.media.force_update)
 
     def _toggle_label(self):
+        if self._animation['enabled']:
+            AnimationManager.animate(self, self._animation['type'], self._animation['duration'])
         self._show_alt_label = not self._show_alt_label
 
         if self._show_alt_label:
@@ -133,6 +136,11 @@ class MediaWidget(BaseWidget):
 
         # Force an update on the media info when toggling the label
         self.media.force_update()
+
+    def _toggle_play_pause(self):
+        if self._animation['enabled']:
+            AnimationManager.animate(self, self._animation['type'], self._animation['duration'])
+        WindowsMedia().play_pause()
 
     @QtCore.pyqtSlot(bool)
     def _on_session_status_changed(self, has_session: bool):
@@ -164,10 +172,20 @@ class MediaWidget(BaseWidget):
         if not self._controls_hide:
             self._play_label.setText(self._media_button_icons['pause' if playback_info.playback_status == 4 else 'play'])
 
-            enabled_if = lambda enabled: "disabled" if not enabled else ""
-            self._prev_label.setProperty("class", f"btn prev {enabled_if(playback_info.controls.is_previous_enabled)}")
-            self._play_label.setProperty("class", f"btn play {enabled_if(playback_info.controls.is_play_pause_toggle_enabled)}")
-            self._next_label.setProperty("class", f"btn next {enabled_if(playback_info.controls.is_next_enabled)}")
+            # Update prev button
+            is_prev_enabled = playback_info.controls.is_previous_enabled
+            self._prev_label.setProperty("class", f"btn prev {'disabled' if not is_prev_enabled else ''}")
+            self._prev_label.setCursor(Qt.CursorShape.PointingHandCursor if is_prev_enabled else Qt.CursorShape.ArrowCursor)
+            
+            # Update play/pause button
+            is_play_enabled = playback_info.controls.is_play_pause_toggle_enabled
+            self._play_label.setProperty("class", f"btn play {'disabled' if not is_play_enabled else ''}")
+            self._play_label.setCursor(Qt.CursorShape.PointingHandCursor if is_play_enabled else Qt.CursorShape.ArrowCursor)
+            
+            # Update next button
+            is_next_enabled = playback_info.controls.is_next_enabled
+            self._next_label.setProperty("class", f"btn next {'disabled' if not is_next_enabled else ''}")
+            self._next_label.setCursor(Qt.CursorShape.PointingHandCursor if is_next_enabled else Qt.CursorShape.ArrowCursor)
 
             # Refresh style sheets
             self._prev_label.setStyleSheet('')
@@ -249,6 +267,7 @@ class MediaWidget(BaseWidget):
         if not self._controls_hide:
             label = ClickableLabel(self)
             label.setProperty("class", "btn")
+            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             label.setText(icon)
             label.data = action
             self._widget_container_layout.addWidget(label)
