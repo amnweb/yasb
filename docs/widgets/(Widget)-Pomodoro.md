@@ -107,7 +107,7 @@ pomodoro:
 - **reset_timer**: Reset the current timer.
 - **toggle_label**: Switch between main and alternative label format.
 - **skip_session**: Skip the current session and move to the next one.
-- **show_menu**: Show the timer management menu.
+- **toggle_menu**: Show the timer management menu.
 
 
 ## Available Style
