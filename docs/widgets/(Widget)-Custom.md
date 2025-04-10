@@ -6,7 +6,7 @@
 | `label_alt`     | string  | `"{data}"`    | Example of label alt. |
 | `label_max_length`          | int     | `None`                                                                     | The maximum length of the label. |
 | `class_name`    | string  | `"custom-widget"`                                                      | The CSS class name for the widget. |
-| `exec_options`  | dict    | `{'run_cmd': None, 'run_interval': 120000, 'return_format': 'json', 'hide_empty: False', use_shell: True, endoding: None}` | Execution options for custom widget. |
+| `exec_options`  | dict    | `{'run_cmd': None, 'run_interval': 120000, 'return_format': 'json', 'hide_empty: False', use_shell: True, encoding: None}` | Execution options for custom widget. |
 | `callbacks`     | dict    | `{'on_left': 'toggle_label', 'on_middle': 'do_nothing', 'on_right': 'do_nothing'}` | Callbacks for mouse events. |
 | `animation`         | dict    | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
 | `container_padding`  | dict | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}`      | Explicitly set padding inside widget container. |
