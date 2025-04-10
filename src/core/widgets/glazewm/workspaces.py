@@ -1,9 +1,13 @@
 import logging
 import re
 from enum import StrEnum, auto
+from typing import Any, override
 
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QCursor
+from PyQt6.QtCore import (
+    Qt,
+    pyqtSlot,  # type: ignore
+)
+from PyQt6.QtGui import QCursor, QShowEvent
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QWidget
 
 from core.utils.glazewm.client import GlazewmClient, Monitor
@@ -26,6 +30,11 @@ class WorkspaceStatus(StrEnum):
     ACTIVE = auto()
 
 
+def natural_sort_key(s: str, _nsre: re.Pattern[str] = re.compile(r"(\d+)")):
+    """Sorts a string in the format '1-2-3' in natural order."""
+    return [int(text) if text.isdigit() else text.lower() for text in _nsre.split(s)]
+
+
 class GlazewmWorkspaceButton(QPushButton):
     def __init__(
         self,
@@ -45,16 +54,17 @@ class GlazewmWorkspaceButton(QPushButton):
         self.is_displayed = False
         self.workspace_window_count = 0
         self.status = WorkspaceStatus.EMPTY
-        self.clicked.connect(self._activate_workspace)
+        self.clicked.connect(self._activate_workspace)  # type: ignore
         self.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self._update_status()
 
-    def update(self):
+    def update_button(self):
         self._update_status()
         self._update_label()
         self.setProperty("class", f"ws-btn {self.status.value}")
         self.setStyleSheet("")
 
+    @pyqtSlot()
     def _activate_workspace(self):
         self.glazewm_client.activate_workspace(self.workspace_name)
 
@@ -93,7 +103,7 @@ class GlazewmWorkspaceButton(QPushButton):
 
 
 class GlazewmWorkspacesWidget(BaseWidget):
-    validation_schema = VALIDATION_SCHEMA
+    validation_schema: dict[str, Any] = VALIDATION_SCHEMA
 
     def __init__(
         self,
@@ -112,6 +122,7 @@ class GlazewmWorkspacesWidget(BaseWidget):
         self.hide_empty_workspaces = hide_empty_workspaces
         self.hide_if_offline = hide_if_offline
         self.workspaces: dict[str, GlazewmWorkspaceButton] = {}
+        self.monitor_handle: int | None = None
 
         self.workspace_container_layout = QHBoxLayout()
         self.workspace_container_layout.setSpacing(0)
@@ -128,10 +139,6 @@ class GlazewmWorkspacesWidget(BaseWidget):
         self.widget_layout.addWidget(self.offline_text)
         self.widget_layout.addWidget(self.workspace_container)
 
-        self.offline_text.setVisible(True)
-
-        self.monitor_hwnd = get_monitor_hwnd(int(QWidget.winId(self)))
-
         self.glazewm_client = GlazewmClient(
             self.glazewm_server_uri,
             [
@@ -139,17 +146,24 @@ class GlazewmWorkspacesWidget(BaseWidget):
                 "query monitors",
             ],
         )
-        self.glazewm_client.glazewm_connection_status.connect(self._update_connection_status)
-        self.glazewm_client.workspaces_data_processed.connect(self._update_workspaces)
+        self.glazewm_client.glazewm_connection_status.connect(self._update_connection_status)  # type: ignore
+        self.glazewm_client.workspaces_data_processed.connect(self._update_workspaces)  # type: ignore
+
+    @override
+    def showEvent(self, a0: QShowEvent | None):
+        super().showEvent(a0)
+        self.monitor_handle = get_monitor_hwnd(int(QWidget.winId(self)))
         self.glazewm_client.connect()
 
+    @pyqtSlot(bool)
     def _update_connection_status(self, status: bool):
         self.workspace_container.setVisible(status)
         self.offline_text.setVisible(not status if not self.hide_if_offline else False)
 
+    @pyqtSlot(list)
     def _update_workspaces(self, message: list[Monitor]):
         # Find the target monitor
-        current_mon = next((m for m in message if m.hwnd == self.monitor_hwnd), None)
+        current_mon = next((m for m in message if m.hwnd == self.monitor_handle), None)
         if not current_mon:
             return
 
@@ -170,9 +184,6 @@ class GlazewmWorkspacesWidget(BaseWidget):
             btn.workspace_window_count = workspace.num_windows
             btn.is_displayed = workspace.is_displayed
 
-        def natural_sort_key(s, _nsre=re.compile(r"(\d+)")):
-            return [int(text) if text.isdigit() else text.lower() for text in _nsre.split(s)]
-
         # Insert the new widget if it's not present
         for i, ws_name in enumerate(sorted(self.workspaces.keys(), key=natural_sort_key)):
             if self.workspace_container_layout.indexOf(self.workspaces[ws_name]) != i:
@@ -185,4 +196,4 @@ class GlazewmWorkspacesWidget(BaseWidget):
                 btn.is_displayed = False
                 btn.workspace_window_count = 0
                 btn.setHidden(self.hide_empty_workspaces)
-            btn.update()
+            btn.update_button()

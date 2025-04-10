@@ -1,6 +1,10 @@
 import logging
+from typing import Any
 
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import (
+    Qt,
+    pyqtSlot,  # type: ignore
+)
 from PyQt6.QtGui import QCursor
 from PyQt6.QtWidgets import QHBoxLayout, QPushButton
 
@@ -9,7 +13,7 @@ from core.validation.widgets.glazewm.tiling_direction import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
 from settings import DEBUG
 
-logger = logging.getLogger("glazewm_workspaces")
+logger = logging.getLogger("glazewm_tiling_direction")
 
 if DEBUG:
     logger.setLevel(logging.DEBUG)
@@ -18,7 +22,7 @@ else:
 
 
 class GlazewmTilingDirectionWidget(BaseWidget):
-    validation_schema = VALIDATION_SCHEMA
+    validation_schema: dict[str, Any] = VALIDATION_SCHEMA
 
     def __init__(
         self,
@@ -39,30 +43,32 @@ class GlazewmTilingDirectionWidget(BaseWidget):
         self.tiling_direction_button.setProperty("class", "btn")
         self.tiling_direction_button.setVisible(False)
         self.tiling_direction_button.setLayout(self.workspace_container_layout)
+        self.tiling_direction_button.clicked.connect(self.toggle_tiling_direction)  # type: ignore
 
         self.widget_layout.addWidget(self.tiling_direction_button)
 
         self.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
 
-        self.tiling_direction_button.clicked.connect(self.toggle_tiling_direction)
-
         self.glazewm_client = GlazewmClient(
             glazewm_server_uri,
             [
-                "sub -e focus_changed tiling_direction_changed",
+                "sub -e focus_changed tiling_direction_changed focused_container_moved",
                 "query tiling-direction",
             ],
         )
-        self.glazewm_client.glazewm_connection_status.connect(self._update_connection_status)
-        self.glazewm_client.tiling_direction_processed.connect(self._update_tiling_direction)
+        self.glazewm_client.glazewm_connection_status.connect(self._update_connection_status)  # type: ignore
+        self.glazewm_client.tiling_direction_processed.connect(self._update_tiling_direction)  # type: ignore
         self.glazewm_client.connect()
 
+    @pyqtSlot()
     def toggle_tiling_direction(self):
         self.glazewm_client.toggle_tiling_direction()
 
-    def _update_connection_status(self, status):
+    @pyqtSlot(bool)
+    def _update_connection_status(self, status: bool):
         self.tiling_direction_button.setVisible(status)
 
+    @pyqtSlot(TilingDirection)
     def _update_tiling_direction(self, direction: TilingDirection):
         self.current_tiling_direction = direction
         if direction == TilingDirection.HORIZONTAL:
