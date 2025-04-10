@@ -105,9 +105,10 @@ class MyWidget(BaseWidget):
 
 ## 6. Use real-world examples for reference:
 
--   [`CustomWidget`](src/core/widgets/yasb/custom.py)
--   [`ApplicationsWidget`](src/core/widgets/yasb/applications.py)
--   [`HomeWidget`](src/core/widgets/yasb/home.py)
+-   [`CustomWidget`](https://github.com/amnweb/yasb/blob/main/src/core/widgets/yasb/custom.py)
+-   [`ApplicationsWidget`](https://github.com/amnweb/yasb/blob/main/src/core/widgets/yasb/applications.py)
+-   [`HomeWidget`](https://github.com/amnweb/yasb/blob/main/src/core/widgets/yasb/home.py)
+-   ['CPU](https://github.com/amnweb/yasb/blob/main/src/core/widgets/yasb/cpu.py)
 
 ## 7. Register callbacks and methods:
 
