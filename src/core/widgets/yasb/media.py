@@ -37,6 +37,7 @@ class MediaWidget(BaseWidget):
             thumbnail_alpha: int,
             thumbnail_padding: int,
             thumbnail_corner_radius: int,
+            symmetric_corner_radius: bool,
             icons: dict[str, str],
             animation: dict[str, str],
             container_padding: dict[str, int]
@@ -54,6 +55,7 @@ class MediaWidget(BaseWidget):
         self._controls_hide = controls_hide
         self._thumbnail_padding = thumbnail_padding
         self._thumbnail_corner_radius = thumbnail_corner_radius
+        self._symmetric_corner_radius = symmetric_corner_radius
         self._hide_empty = hide_empty
         self._animation = animation
         self._padding = container_padding
@@ -243,13 +245,33 @@ class MediaWidget(BaseWidget):
 
         # If we want a rounded thumbnail, draw a rounded-corner mask and use it to make the image transparent
         if self._thumbnail_corner_radius > 0:
-            corner_mask = Image.new('L', thumbnail.size, color=0)
+            # Create a higher resolution mask for better antialiasing
+            scale_factor = 2  # Increase for better quality, decrease for better performance
+            hr_size = (thumbnail.width * scale_factor, thumbnail.height * scale_factor)
+            hr_radius = self._thumbnail_corner_radius * scale_factor
+            corner_mask = Image.new('L', hr_size, color=0)
             painter = ImageDraw(corner_mask)
 
             # If controls left, make right corners round and vice versa
             corners = (False, True, True, False) if self._controls_left else (True, False, False, True)
-            painter.rounded_rectangle([0, 0, thumbnail.width - 1, thumbnail.height - 1], self._thumbnail_corner_radius,
-                                      self._thumbnail_alpha, None, 0, corners=corners)
+            if self._symmetric_corner_radius:
+                # Make all corners round
+                corners = (True, True, True, True)
+                
+            # Draw at high resolution
+            painter.rounded_rectangle(
+                [0, 0, hr_size[0] - 1, hr_size[1] - 1], 
+                hr_radius,
+                self._thumbnail_alpha, 
+                None, 
+                0, 
+                corners=corners
+            )
+            
+            # Resize the mask down to the original size with antialiasing
+            corner_mask = corner_mask.resize(thumbnail.size, Image.LANCZOS)
+            
+            # Apply the mask
             thumbnail.putalpha(corner_mask)
         else:
             thumbnail.putalpha(self._thumbnail_alpha)

@@ -138,7 +138,10 @@ VALIDATION_SCHEMA = {
         'min': 0,
         'max': 100
     },
-    
+    'symmetric_corner_radius': {
+        'type': 'boolean',
+        'default': False
+    },
     'icons': {
         'type': 'dict',
         'schema': {
