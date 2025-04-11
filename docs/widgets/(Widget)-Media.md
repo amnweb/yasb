@@ -15,6 +15,7 @@
 | `thumbnail_alpha`       | integer | 50      | The alpha transparency value for the thumbnail.                             |
 | `thumbnail_padding`     | integer | 8       | The padding around the thumbnail.                                           |
 | `thumbnail_corner_radius` | integer | 0     | The corner radius for the thumbnail.                                        |
+| `symmetric_corner_radius` | boolean | false | Whether to use symmetric corner radius for the thumbnail.                   |
 | `icons`                 | dict    |         | Icons for media controls.                                                   |
 | `icons.prev_track`      | string  | `\uf048`| Icon for the previous track button.                                         |
 | `icons.next_track`      | string  | `\uf051`| Icon for the next track button.                                             |
@@ -65,6 +66,7 @@ media:
 - **thumbnail_alpha:** The alpha (transparency) value for the media thumbnail.
 - **thumbnail_padding:** The padding around the media thumbnail.
 - **thumbnail_corner_radius:** The corner radius for the media thumbnail. Set to 0 for square corners.
+- **symmetric_corner_radius:** Whether to use symmetric corner radius for the thumbnail. If set to true, the corner radius will be applied equally on all corners.
 - **icons:** Icons for the media controls.
 - **animation:** A dictionary specifying the animation settings for the widget. It contains three keys: `enabled`, `type`, and `duration`. The `type` can be `fadeInOut` and the `duration` is the animation duration in milliseconds.
 - **container_padding**: Explicitly set padding inside widget container. Use this option to set padding inside the widget container. You can set padding for top, left, bottom and right sides of the widget container.
