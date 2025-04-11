@@ -3,7 +3,7 @@ from settings import APP_BAR_TITLE, DEBUG
 from core.utils.win32.windows import WinEvent
 from core.widgets.base import BaseWidget
 from core.event_service import EventService
-from PyQt6.QtCore import pyqtSignal, QTimer
+from PyQt6.QtCore import pyqtSignal, QTimer, Qt
 from PyQt6.QtGui import QPixmap, QImage
 from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget
 from core.validation.widgets.yasb.active_window import VALIDATION_SCHEMA
@@ -86,6 +86,7 @@ class ActiveWindowWidget(BaseWidget):
         
         self._window_title_text = QLabel()
         self._window_title_text.setProperty("class", "label")
+        self._window_title_text.setTextFormat(Qt.TextFormat.PlainText)
         self._window_title_text.setText(self._label_no_window)
        
         if self._label_icon:
