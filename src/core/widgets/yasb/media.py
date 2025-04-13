@@ -89,24 +89,14 @@ class MediaWidget(BaseWidget):
 
         self._label = QLabel()
         self._label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        if self._label_shadow:
-            shadow_effect = QGraphicsDropShadowEffect(self._label)
-            shadow_effect.setOffset(1, 1)
-            shadow_effect.setBlurRadius(3)
-            shadow_effect.setColor(Qt.GlobalColor.black)
-            self._label.setGraphicsEffect(shadow_effect)
+        self._apply_text_shadow(self._label)
         
         self._label_alt = QLabel()
         self._label_alt.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._apply_text_shadow(self._label_alt)
 
         self._thumbnail_label = QLabel()
         self._thumbnail_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        if self._label_shadow:
-            shadow_effect_alt = QGraphicsDropShadowEffect(self._label_alt)
-            shadow_effect.setOffset(1, 1)
-            shadow_effect.setBlurRadius(3)
-            shadow_effect_alt.setColor(Qt.GlobalColor.black)
-            self._label_alt.setGraphicsEffect(shadow_effect_alt)
 
         self._label.setProperty("class", "label")
         self._label_alt.setProperty("class", "label alt")
@@ -141,6 +131,15 @@ class MediaWidget(BaseWidget):
         # Force media update to detect running session
         self.timer.singleShot(0, self.media.force_update)
 
+    def _apply_text_shadow(self, label: QLabel):
+        """Apply shadow effect to a label."""
+        if self._label_shadow:
+            shadow_effect = QGraphicsDropShadowEffect(label)
+            shadow_effect.setOffset(1, 1)
+            shadow_effect.setBlurRadius(3)
+            shadow_effect.setColor(Qt.GlobalColor.black)
+            label.setGraphicsEffect(shadow_effect)
+        
     def _toggle_label(self):
         if self._animation['enabled']:
             AnimationManager.animate(self, self._animation['type'], self._animation['duration'])
@@ -250,72 +249,100 @@ class MediaWidget(BaseWidget):
             self._thumbnail_label.show()
 
     def _crop_thumbnail(self, thumbnail: Image, active_label_width: int) -> Image:
-        # Scale image with 1:1 ratio to fit width of widget
-        new_width = active_label_width + self._thumbnail_padding
-        new_height = round(thumbnail.height * (new_width / thumbnail.width))
-        thumbnail = thumbnail.resize((new_width, new_height))
+        """Process an image thumbnail for proper display."""
+        # Calculate dimensions while respecting container padding
+        available_width = active_label_width - (self._padding['left'] + self._padding['right'])
+        new_width = available_width + self._thumbnail_padding
+        
+        # Preserve aspect ratio during resize
+        aspect_ratio = thumbnail.width / thumbnail.height
+        new_height = int(new_width / aspect_ratio)
+        
+        # Resize with high-quality resampling
+        thumbnail = thumbnail.resize((new_width, new_height), Image.LANCZOS)
+        
+        # Crop vertically to fit widget height
+        available_height = self._widget_frame.size().height() - (self._padding['top'] + self._padding['bottom'])
+        if thumbnail.height > available_height:
+            y1 = (thumbnail.height - available_height) // 2
+            thumbnail = thumbnail.crop((0, y1, thumbnail.width, y1 + available_height))
+        
+        # Apply base transparency
+        if thumbnail.mode != 'RGBA':
+            thumbnail = thumbnail.convert('RGBA')
+        
+        # Create base alpha channel filled with the thumbnail alpha value
+        base_alpha = Image.new('L', thumbnail.size, color=self._thumbnail_alpha)
+        
+        # Apply effects based on priorities
+        if self._thumbnail_edge_fade:
+            # If edge fade is enabled, use it without corner radius
+            base_alpha = self._apply_edge_fade(base_alpha)
+        elif self._thumbnail_corner_radius > 0:
+            # Only apply corner radius if edge fade is disabled
+            base_alpha = self._create_corner_mask(thumbnail.size, base_alpha)
 
-        # Center crop the image in height direction
-        new_h = self._widget_frame.size().height()
-        y1 = (thumbnail.height - new_h) // 2
-        thumbnail = thumbnail.crop((0, y1, thumbnail.width, y1 + new_h))
+        # Apply final alpha channel
+        thumbnail.putalpha(base_alpha)
+        return thumbnail
 
-        # If we want a rounded thumbnail, draw a rounded-corner mask and use it to make the image transparent
-        if self._thumbnail_corner_radius > 0:
-            # Create a higher resolution mask for better antialiasing
-            scale_factor = 2  # Increase for better quality, decrease for better performance
-            hr_size = (thumbnail.width * scale_factor, thumbnail.height * scale_factor)
-            hr_radius = self._thumbnail_corner_radius * scale_factor
-            corner_mask = Image.new('L', hr_size, color=0)
-            painter = ImageDraw(corner_mask)
-
-            # If controls left, make right corners round and vice versa
-            corners = (False, True, True, False) if self._controls_left else (True, False, False, True)
-            if self._symmetric_corner_radius:
-                # Make all corners round
-                corners = (True, True, True, True)
-                
-            # Draw at high resolution
+    def _create_corner_mask(self, image_size: tuple, base_mask: Image) -> Image:
+        """Create a rounded corner mask compatible with the base alpha mask."""
+        # Determine which corners to round
+        corners = (False, True, True, False) if self._controls_left else (True, False, False, True)
+        if self._symmetric_corner_radius:
+            corners = (True, True, True, True)
+        
+        # Use a higher resolution for better antialiasing
+        scale_factor = 2
+        hr_size = (image_size[0] * scale_factor, image_size[1] * scale_factor)
+        hr_radius = self._thumbnail_corner_radius * scale_factor
+        
+        # Create the high-resolution mask
+        corner_mask = Image.new('L', hr_size, color=0)
+        painter = ImageDraw(corner_mask)
+        
+        try:
+            # Draw rounded rectangle
             painter.rounded_rectangle(
-                [0, 0, hr_size[0] - 1, hr_size[1] - 1], 
+                [0, 0, hr_size[0] - 1, hr_size[1] - 1],
                 hr_radius,
-                self._thumbnail_alpha, 
-                None, 
-                0, 
+                self._thumbnail_alpha,
+                None,
+                0,
                 corners=corners
             )
-            
-            # Resize the mask down to the original size with antialiasing
-            corner_mask = corner_mask.resize(thumbnail.size, Image.LANCZOS)
-            
-            # Apply the rounded-corner mask
-            thumbnail.putalpha(corner_mask)
-        else:
-            thumbnail.putalpha(self._thumbnail_alpha)
-        if self._thumbnail_edge_fade:
-            fade_width = int(thumbnail.width * 0.2)
-            fade_mask = Image.new('L', thumbnail.size, color=255)
-
-            # Left fade
-            for x in range(fade_width):
-                alpha = int(255 * (x / fade_width))
-                box = (x, 0, x+1, thumbnail.height)
-                line = Image.new('L', (1, thumbnail.height), color=alpha)
-                fade_mask.paste(line, box)
-                
-            # Right fade
-            for x in range(thumbnail.width - fade_width, thumbnail.width):
-                alpha = int(255 * ((thumbnail.width - x) / fade_width))
-                box = (x, 0, x+1, thumbnail.height)
-                line = Image.new('L', (1, thumbnail.height), color=alpha)
-                fade_mask.paste(line, box)
-                
-            # Combine the fade mask with the existing alpha channel
-            current_alpha = thumbnail.split()[-1]
-            new_alpha = ImageChops.multiply(current_alpha, fade_mask)
-            thumbnail.putalpha(new_alpha)
+        except Exception as e:
+            logging.error(f"Error creating corner mask, return default thumb: {e}")
+            return base_mask
         
-        return thumbnail
+        # Scale back down with antialiasing
+        corner_mask = corner_mask.resize(image_size, Image.LANCZOS)
+
+        return corner_mask
+
+    def _apply_edge_fade(self, alpha_mask: Image) -> Image:
+        """Apply edge fade effect to an alpha mask."""
+
+        width, height = alpha_mask.size
+        fade_width = int(width * 0.3)
+        fade_mask = Image.new('L', (width, height), color=255)
+        
+        # Create gradient arrays for better performance
+        left_gradient = [int(255 * (x / fade_width)) for x in range(fade_width)]
+        right_gradient = [int(255 * ((width - x) / fade_width)) for x in range(width - fade_width, width)]
+        
+        # Apply gradients
+        for x, alpha in enumerate(left_gradient):
+            line = Image.new('L', (1, height), color=alpha)
+            fade_mask.paste(line, (x, 0))
+        
+        for i, x in enumerate(range(width - fade_width, width)):
+            line = Image.new('L', (1, height), color=right_gradient[i])
+            fade_mask.paste(line, (x, 0))
+        
+        # Use ImageChops.darker instead of multiply to preserve corner transparency
+        return ImageChops.darker(alpha_mask, fade_mask)
 
     def _format_max_field_size(self, text: str):
         max_field_size = self._max_field_size['label_alt' if self._show_alt_label else 'label']

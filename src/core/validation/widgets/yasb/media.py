@@ -148,7 +148,7 @@ VALIDATION_SCHEMA = {
     },
     'thumbnail_edge_fade': {
         'type': 'boolean',
-        'default': True
+        'default': False
     },
     'icons': {
         'type': 'dict',
