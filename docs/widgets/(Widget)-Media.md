@@ -4,6 +4,7 @@
 |-------------------------|---------|---------|-----------------------------------------------------------------------------|
 | `label`                 | string  |         | The main label format for the media widget.                                 |
 | `label_alt`             | string  |         | The alternative label format for the media widget.                          |
+| `label_shadow`         | boolean | false    | Whether to show a shadow effect on the label.                               |
 | `max_field_size`        | dict    |         | Maximum field sizes for labels.                                             |
 | `max_field_size.label`  | integer | 20      | Maximum size for the main label.                                            |
 | `max_field_size.label_alt` | integer | 30   | Maximum size for the alternative label.                                     |
@@ -16,6 +17,7 @@
 | `thumbnail_padding`     | integer | 8       | The padding around the thumbnail.                                           |
 | `thumbnail_corner_radius` | integer | 0     | The corner radius for the thumbnail.                                        |
 | `symmetric_corner_radius` | boolean | false | Whether to use symmetric corner radius for the thumbnail.                   |
+| `thumbnail_edge_fade` | boolean | false      | Whether to apply an edge fade effect to the thumbnail.                     |
 | `icons`                 | dict    |         | Icons for media controls.                                                   |
 | `icons.prev_track`      | string  | `\uf048`| Icon for the previous track button.                                         |
 | `icons.next_track`      | string  | `\uf051`| Icon for the next track button.                                             |
@@ -56,6 +58,7 @@ media:
 ## Description of Options
 - **label:** The format string for the media label. You can use placeholders like `{title}` and `{artist}` to dynamically insert media information.
 - **label_alt:** The alternative format string for the media label. Useful for displaying additional media details.
+- **label_shadow:** Whether to show a shadow effect on the label. This can enhance the visibility of the label against different backgrounds.
 - **hide_empty:** Whether to hide the widget when there is no media information available.
 - **callbacks:** A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, `on_right`. Available callbacks are `toggle_label`, `do_nothing`, and `toggle_play_pause`.
 - **max_field_size:** Maximum field sizes for the labels.
@@ -67,6 +70,7 @@ media:
 - **thumbnail_padding:** The padding around the media thumbnail.
 - **thumbnail_corner_radius:** The corner radius for the media thumbnail. Set to 0 for square corners.
 - **symmetric_corner_radius:** Whether to use symmetric corner radius for the thumbnail. If set to true, the corner radius will be applied equally on all corners.
+- **thumbnail_edge_fade:** Whether to apply an edge fade effect to the thumbnail. This can create a smoother transition between the thumbnail and the background.
 - **icons:** Icons for the media controls.
 - **animation:** A dictionary specifying the animation settings for the widget. It contains three keys: `enabled`, `type`, and `duration`. The `type` can be `fadeInOut` and the `duration` is the animation duration in milliseconds.
 - **container_padding**: Explicitly set padding inside widget container. Use this option to set padding inside the widget container. You can set padding for top, left, bottom and right sides of the widget container.
