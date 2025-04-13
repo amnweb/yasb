@@ -25,6 +25,7 @@
     - [Memory](./(Widget)-Memory)
     - [Microphone](./(Widget)-Microphone)
     - [Notifications](./(Widget)-Notifications)
+    - [Notes](./(Widget)-Notes)
     - [OBS](./(Widget)-Obs)
     - [Server Monitor](./(Widget)-Server-Monitor)
     - [Systray](./(Widget)-Systray)
