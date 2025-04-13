@@ -101,6 +101,7 @@ class TaskbarWidget(BaseWidget):
         self.widget_layout.addWidget(self._widget_container)
         
         self.register_callback("toggle_window", self._on_toggle_window)
+        self.register_callback("close_app", self._on_close_app)
         self.callback_left = callbacks["on_left"]
         self.callback_right = callbacks["on_right"]
         self.callback_middle = callbacks["on_middle"]
@@ -126,6 +127,22 @@ class TaskbarWidget(BaseWidget):
     def _stop_events(self) -> None:
         self._event_service.clear()
  
+    def _on_close_app(self) -> None:
+        widget = QApplication.instance().widgetAt(QCursor.pos())
+        if not widget:
+            logging.warning("No widget found under cursor.")
+            return
+        
+        hwnd = widget.property("hwnd")
+        if not hwnd:
+            logging.warning("No hwnd found for widget.")
+            return
+
+        # Check if the window is valid before attempting to close it
+        if win32gui.IsWindow(hwnd):
+            win32gui.PostMessage(hwnd, win32con.WM_CLOSE, 0, 0)
+        else:
+            logging.warning(f"Invalid window handle: {hwnd}")
 
     def _process_event(self, hwnd: int, event: WinEvent) -> None:
         # Maintain a dictionary of last event times per (hwnd, event)
