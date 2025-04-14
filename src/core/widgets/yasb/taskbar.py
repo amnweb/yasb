@@ -172,11 +172,11 @@ class TaskbarWidget(BaseWidget):
 
         if win_info['title'] != cached_title or event != WinEvent.EventSystemForeground:
             self._hwnd_title_cache[hwnd] = win_info['title']
-            self._update_label(hwnd, win_info, event)
+            self._update_label(hwnd, event)
  
 
-    def _update_label(self, hwnd: int, win_info: dict, event: WinEvent) -> None:
-        visible_windows = self.get_visible_windows(hwnd, win_info, event)
+    def _update_label(self, hwnd: int, event: WinEvent) -> None:
+        visible_windows = self.get_visible_windows(hwnd, event)
         existing_hwnds = set(self._window_buttons.keys())
         new_icons = []
         removed_hwnds = []
@@ -342,15 +342,28 @@ class TaskbarWidget(BaseWidget):
             return None
             
         
-    def get_visible_windows(self, _: int, win_info: dict, event: WinEvent) -> list[tuple[str, int, Optional[QPixmap], dict]]:
-        process = win_info['process']
+    def get_visible_windows(self, _: int, event: WinEvent) -> list[tuple[str, int, Optional[QPixmap], dict]]:
+
         visible_windows = []
         def enum_windows_proc(hwnd, _):
             if win32gui.IsWindowVisible(hwnd) and win32gui.GetWindowText(hwnd):
                 ex_style = win32gui.GetWindowLong(hwnd, win32con.GWL_EXSTYLE)
                 if not (ex_style & win32con.WS_EX_TOOLWINDOW):
                     title = win32gui.GetWindowText(hwnd)
+                    class_name = win32gui.GetClassName(hwnd)
                     
+                    # Skip windows that should be ignored based on title and class
+                    if (title in self._ignore_apps['titles'] or 
+                        class_name in self._ignore_apps['classes'] or
+                        class_name in EXCLUDED_CLASSES):
+                        return True
+                    
+                    # Get the window info to check process name
+                    window_info = get_hwnd_info(hwnd)
+                    if not window_info or window_info['process']['name'] in self._ignore_apps['processes']:
+                        return True
+
+                    process = window_info['process']['name']
                     # First check if we already have this window in our buttons
                     if hwnd in self._window_buttons:
                         # Reuse existing icon if title is the same
@@ -420,11 +433,13 @@ class TaskbarWidget(BaseWidget):
                 ex_style = win32gui.GetWindowLong(hwnd, win32con.GWL_EXSTYLE)
                 if not (ex_style & win32con.WS_EX_TOOLWINDOW or ex_style == WS_EX_NOREDIRECTIONBITMAP):
                     title = win32gui.GetWindowText(hwnd)
+                    class_name = win32gui.GetClassName(hwnd)
+                    
                     # Skip windows that should be ignored
                     if (title in self._ignore_apps['titles'] or 
-                        win32gui.GetClassName(hwnd) in self._ignore_apps['classes']):
+                        class_name in self._ignore_apps['classes'] or
+                        class_name in EXCLUDED_CLASSES):
                         return True
-                    
                     win_info = get_hwnd_info(hwnd)
                     if win_info and win_info['process']['name'] not in self._ignore_apps['processes']:
                         process = win_info['process']
