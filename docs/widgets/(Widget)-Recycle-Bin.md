@@ -6,6 +6,7 @@ Recycle Bin widget is simple widget that shows the status of the recycle bin. It
 | `label`   | string | `{icon} {items_count} {items_size}` | Format for displaying recycle bin information. Available variables: `{icon}`, `{items_count}`, `{items_size}`. |
 | `label_alt`   | string | `{icon} {items_count} {items_size}` | Alternative label format that can be toggled with right-click (or configured callback). |
 | `icons` | dict | `{"bin_empty": "\udb82\ude7a","bin_filled": "\udb82\ude79"}` | Customize icons used for different recycle bin states. |
+| `tooltip`  | boolean  | `True`        | Whether to show the tooltip on hover. |
 | `animation` | dict | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}` | Animation settings for the widget. |
 | `container_padding` | dict | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}` | Explicitly set padding inside widget container. |
 | `callbacks` | dict | See below | Configure widget interaction callbacks. |
@@ -40,6 +41,7 @@ Recycle Bin widget is simple widget that shows the status of the recycle bin. It
 - **icons**: Customize icons used for different recycle bin states. The default icons are:
     - **bin_empty**: Icon when the recycle bin is empty.
     - **bin_filled**: Icon when the recycle bin has items.
+- **tooltip**: Whether to show the tooltip on hover.
 - **container_padding**: Set padding inside widget container for top, left, bottom and right sides.  
 - **animation**: Animation settings including type and duration.
 - **callbacks**: Configure what happens when clicking the widget.

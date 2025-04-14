@@ -17,6 +17,7 @@ class RecycleBinWidget(BaseWidget):
             label: str,
             label_alt: str,
             icons: dict[str, str],
+            tooltip: bool,
             animation: dict[str, str],
             callbacks: dict[str, str],
             container_padding: dict[str, int],
@@ -25,6 +26,7 @@ class RecycleBinWidget(BaseWidget):
         self._label_content = label
         self._label_alt_content = label_alt
         self._icons = icons
+        self._tooltip = tooltip
         self._animation = animation
         self._padding = container_padding
         self._show_alt_label = False
@@ -150,6 +152,8 @@ class RecycleBinWidget(BaseWidget):
                             "class", f"{base_class} {alt_class} {class_name}")
                         active_widgets[widget_index].setStyleSheet('')
                 widget_index += 1
+        if self._tooltip:
+            self._widget_container.setToolTip(f"Items: {self._bin_info['num_items']} ({self._format_size(self._bin_info['size_bytes'])})")
 
     def _get_current_icon(self):
         """Get the icon based on the bin state"""

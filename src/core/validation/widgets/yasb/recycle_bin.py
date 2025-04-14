@@ -5,6 +5,7 @@ DEFAULTS = {
         "bin_empty": "\udb82\ude7a",
         "bin_filled": "\udb82\ude79"
     },
+    'tooltip': True,
     "animation": {
         'enabled': True,
         'type': 'fadeInOut',
@@ -45,6 +46,11 @@ VALIDATION_SCHEMA = {
             }
         },
         "default": DEFAULTS["icons"],
+    },
+    'tooltip': {
+        'type': 'boolean',
+        'required': False,
+        'default': DEFAULTS['tooltip']
     },
     'animation': {
         'type': 'dict',
