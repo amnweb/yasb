@@ -37,6 +37,7 @@ build_options = {
         'core.widgets.yasb.systray',
         'core.widgets.yasb.pomodoro',
         'core.widgets.yasb.notes',
+        'core.widgets.yasb.recycle_bin',
         'core.widgets.komorebi.control',
         'core.widgets.komorebi.active_layout',
         'core.widgets.komorebi.workspaces',

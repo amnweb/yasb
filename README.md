@@ -104,6 +104,7 @@ https://github.com/user-attachments/assets/aab8d8e8-248f-46a1-919c-9b0601236ac1
 - **[Taskbar](https://github.com/amnweb/yasb/wiki/(Widget)-Taskbar)**: A customizable taskbar for launching applications.
 - **[Pomodoro](https://github.com/amnweb/yasb/wiki/(Widget)-Pomodoro)**: A Pomodoro timer widget.
 - **[Power Menu](https://github.com/amnweb/yasb/wiki/(Widget)-Power-Menu)**: A menu for power options.
+- **[Recycle Bin](https://github.com/amnweb/yasb/wiki/(Widget)-Recycle-Bin)**: Shows the status of the recycle bin. 
 - **[Update Checker](https://github.com/amnweb/yasb/wiki/(Widget)-Update-Check)**: Checks for available updates using Windows Update and Winget.
 - **[Volume](https://github.com/amnweb/yasb/wiki/(Widget)-Volume)**: Shows and controls the system volume.
 - **[Wallpapers](https://github.com/amnweb/yasb/wiki/(Widget)-Wallpapers)**: Allows changing wallpapers.

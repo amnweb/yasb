@@ -33,6 +33,7 @@
     - [Taskbar](./(Widget)-Taskbar)
     - [Pomodoro](./(Widget)-Pomodoro)
     - [Power Menu](./(Widget)-Power-Menu)
+    - [Recycle Bin](./(Widget)-Recycle-Bin)
     - [Update Check](./(Widget)-Update-Check)
     - [Volume](./(Widget)-Volume)
     - [Wallpapers](./(Widget)-Wallpapers)
