@@ -363,7 +363,7 @@ class TaskbarWidget(BaseWidget):
                     if not window_info or window_info['process']['name'] in self._ignore_apps['processes']:
                         return True
 
-                    process = window_info['process']['name']
+                    process = window_info['process']
                     # First check if we already have this window in our buttons
                     if hwnd in self._window_buttons:
                         # Reuse existing icon if title is the same
