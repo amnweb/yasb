@@ -181,13 +181,12 @@ class TrayMonitor(QObject):
             PostMessage(self.hwnd, WM_CLOSE, 0, 0)
             self.hwnd = 0
 
-    def send_taskbar_created(self):
-        """Send the taskbar created message to the Windows"""
-        # Register the window to receive the TaskbarCreated message
+    @staticmethod
+    def send_taskbar_created():
+        """Send the taskbar created message to Windows"""
         taskbar_created_msg = RegisterWindowMessage("TaskbarCreated")
-        logger.debug(f"Registered for TaskbarCreated message: {taskbar_created_msg}")
-        # Send the "taskbar created" message to the window
         SendNotifyMessage(HWND_BROADCAST, taskbar_created_msg, 0, 0)
+        logger.debug(f"Sending TaskbarCreated message: {taskbar_created_msg}")
 
     def _window_proc(self, hwnd: int, uMsg: int, wParam: int, lParam: int) -> int:
         """Main window procedure for handling window messages"""
