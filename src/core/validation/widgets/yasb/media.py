@@ -1,10 +1,31 @@
 DEFAULTS = {
-    'label': '\uf017 {%H:%M:%S}',
-    'label_alt': '\uf017 {%d-%m-%y %H:%M:%S}',
+    'label': '{title}',
+    'label_alt': '{artist} - {title}',
     'animation': {
         'enabled': True,
         'type': 'fadeInOut',
         'duration': 200
+    },
+    'media_menu': {
+        'blur': True,
+        'round_corners': True,
+        'round_corners_type': 'normal',
+        'border_color': 'System',
+        'alignment': 'right',
+        'direction': 'down',
+        'offset_top': 6,
+        'offset_left': 0,
+        'thumbnail_size': 100,
+        'thumbnail_corner_radius': 8,
+        'max_title_size': 150,
+        'max_artist_size': 40,
+        'show_source': True
+    },
+    'media_menu_icons': {
+        'play': '\ue768',
+        'pause': '\ue769',
+        'prev_track': '\ue892',
+        'next_track': '\ue893'
     },
     'container_padding': {'top': 0, 'left': 0, 'bottom': 0, 'right': 0},
     'callbacks': {
@@ -22,10 +43,6 @@ VALIDATION_SCHEMA = {
     'label_alt': {
         'type': 'string',
         'default': DEFAULTS['label_alt']
-    },
-    'label_shadow': {
-        'type': 'boolean',
-        'default': False
     },
     'hide_empty': {
         'type': 'boolean',
@@ -49,6 +66,112 @@ VALIDATION_SCHEMA = {
             }
         },
         'default': DEFAULTS['animation']
+    },
+    'media_menu': {
+        'type': 'dict',
+        'required': False,
+        'schema': {
+            'blur': {
+                'type': 'boolean',
+                'default': DEFAULTS['media_menu']['blur']
+            },
+            'round_corners': {
+                'type': 'boolean',
+                'default': DEFAULTS['media_menu']['round_corners']
+            },
+            'round_corners_type': {
+                'type': 'string',
+                'default': DEFAULTS['media_menu']['round_corners_type']
+            },
+            'border_color': {
+                'type': 'string',
+                'default': DEFAULTS['media_menu']['border_color']
+            },
+            'alignment': {
+                'type': 'string',
+                'default': DEFAULTS['media_menu']['alignment'],
+                'allowed': ['left', 'right', 'center']
+            },
+            'direction': {
+                'type': 'string',
+                'default': DEFAULTS['media_menu']['direction'],
+                'allowed': ['up', 'down']
+            },
+            'offset_top': {
+                'type': 'integer',
+                'default': DEFAULTS['media_menu']['offset_top']
+            },
+            'offset_left': {
+                'type': 'integer',
+                'default': DEFAULTS['media_menu']['offset_left']
+            },
+            'thumbnail_size': {
+                'type': 'integer',
+                'default': DEFAULTS['media_menu']['thumbnail_size']
+            },
+            'thumbnail_corner_radius': {
+                'type': 'integer',
+                'default': DEFAULTS['media_menu']['thumbnail_corner_radius']
+            },
+            'max_title_size': {
+                'type': 'integer',
+                'default': DEFAULTS['media_menu']['max_title_size']
+            },
+            'max_artist_size': {
+                'type': 'integer',
+                'default': DEFAULTS['media_menu']['max_artist_size']
+            },
+            'show_source': {
+                'type': 'boolean',
+                'default': DEFAULTS['media_menu']['show_source']
+            }
+        },
+        'default': DEFAULTS['media_menu']
+    },
+    'media_menu_icons': {
+        'type': 'dict',
+        'required': False,
+        'schema': {
+            'play': {
+                'type': 'string',
+                'default': DEFAULTS['media_menu_icons']['play'],
+            },
+            'pause': {
+                'type': 'string',
+                'default': DEFAULTS['media_menu_icons']['pause'],
+            },
+            'prev_track': {
+                'type': 'string',
+                'default': DEFAULTS['media_menu_icons']['prev_track'],
+            },
+            'next_track': {
+                'type': 'string',
+                'default': DEFAULTS['media_menu_icons']['next_track'],
+            }
+        },
+        'default': DEFAULTS['media_menu_icons']
+    },
+    'label_shadow': {
+        'type': 'dict',
+        'required': False,
+        'schema': {
+            'enabled': {'type': 'boolean', 'default': False},
+            'color': {'type': 'string', 'default': 'black'},
+            'offset': {'type': 'list', 'default': [1, 1]},
+            'radius': {'type': 'integer', 'default': 3},
+        },
+        'default': {'enabled': False, 'color': 'black', 'offset': [1, 1], 'radius': 3}
+    },
+    'container_shadow': {
+        'type': 'dict',
+        'required': False,
+        'schema': {
+            'enabled': {'type': 'boolean', 'default': False},
+            'color': {'type': 'string', 'default': 'black'},
+            'offset': {'type': 'list', 'default': [1, 1]},
+            'radius': {'type': 'integer', 'default': 3},
+        },
+        'default': {'enabled': False, 'color': 'black', 'offset': [1, 1], 'radius': 3}
     },
     'container_padding': {
         'type': 'dict',
@@ -105,7 +228,7 @@ VALIDATION_SCHEMA = {
                 'default': 30,
                 'min': 0,
                 'max': 200
-            }
+            }         
         }
     },
     'show_thumbnail': {
@@ -152,6 +275,7 @@ VALIDATION_SCHEMA = {
     },
     'icons': {
         'type': 'dict',
+        'required': False,
         'schema': {
             'prev_track': {
                 'type': 'string',
