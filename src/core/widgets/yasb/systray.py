@@ -62,7 +62,7 @@ class TrayMonitorThread(QThread):
     @override
     def run(self):
         threading.current_thread().name = "TrayMonitorThread"
-        logger.debug("TrayMonitorThread started")
+        logger.debug("Systray thread is starting...")
         self.client.run()
 
 
@@ -196,8 +196,7 @@ class SystrayWidget(BaseWidget):
 
     def refresh_systray(self):
         """Refresh the icons by sending a message to the tray monitor"""
-        client, _ = SystrayWidget.get_client_instance()
-        client.send_taskbar_created()
+        TrayMonitor.send_taskbar_created()
         logger.debug("Systray icons refreshed")
 
     def setup_client(self):
@@ -213,9 +212,7 @@ class SystrayWidget(BaseWidget):
 
         if thread is not None and not thread.isRunning():
             thread.start()
-
-        # We need to send this message for each instance of the taskbar widget on init
-        QTimer.singleShot(200, client.send_taskbar_created)  # pyright: ignore [reportUnknownMemberType]
+            thread.started.connect(self.on_thread_started)  # type: ignore
 
     @override
     def showEvent(self, a0: QShowEvent | None) -> None:
@@ -224,6 +221,10 @@ class SystrayWidget(BaseWidget):
         self.unpinned_vis_btn.setChecked(self.show_unpinned)
         self.unpinned_vis_btn.setText(self.label_expanded if self.show_unpinned else self.label_collapsed)
         self.unpinned_widget.setVisible(self.show_unpinned or not self.show_unpinned_button)
+
+    def on_thread_started(self):
+        logger.debug("Systray thread started")
+        QTimer.singleShot(200, TrayMonitor.send_taskbar_created)  # pyright: ignore [reportUnknownMemberType]
 
     @pyqtSlot()
     def on_drag_started(self):
