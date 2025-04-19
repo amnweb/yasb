@@ -1,8 +1,8 @@
 import platform
 import re
-from PyQt6.QtWidgets import QApplication, QFrame, QMenu
+from PyQt6.QtWidgets import QApplication, QFrame, QMenu, QGraphicsDropShadowEffect
 from PyQt6.QtCore import QEvent
-from PyQt6.QtGui import QScreen
+from PyQt6.QtGui import QScreen, QColor
 from core.utils.win32.blurWindow import Blur
 
 def is_windows_10() -> bool:
@@ -17,6 +17,30 @@ def is_valid_percentage_str(s: str) -> bool:
 
 def get_screen_by_name(screen_name: str) -> QScreen:
     return next(filter(lambda scr: screen_name in scr.name(), QApplication.screens()), None)
+
+def add_shadow(el, color, radius, offset) -> None:
+    """"Add a shadow effect to a given element."""
+    shadow_effect = QGraphicsDropShadowEffect(el)
+    shadow_effect.setOffset(offset[0], offset[1])
+    shadow_effect.setBlurRadius(radius)
+
+    if color.startswith('#'):
+        color = color.lstrip('#')
+        # Handle hex with alpha (#RRGGBBAA format)
+        if len(color) == 8:
+            r = int(color[0:2], 16)
+            g = int(color[2:4], 16)
+            b = int(color[4:6], 16)
+            a = int(color[6:8], 16)
+            shadow_effect.setColor(QColor(r, g, b, a))
+        else:
+            # Regular hex color without alpha
+            shadow_effect.setColor(QColor('#' + color))
+    else:
+        # Named colors like "black", "red", etc.
+        shadow_effect.setColor(QColor(color))
+
+    el.setGraphicsEffect(shadow_effect)
 
 class PopupWidget(QFrame):
     """A custom QFrame widget that acts as a popup and hides itself when a mouse click occurs outside its geometry.
