@@ -405,6 +405,10 @@ class MediaWidget(BaseWidget):
             "foobar2000.exe": "Foobar2000",
             "MusicBee.exe": "MusicBee",
             "AppleInc.AppleMusicWin_nzyj5cx40ttqa!App": "Apple Music",
+            "com.badmanners.murglar": "Murglar",
+            "com.squirrel.TIDAL.TIDAL": "Tidal",
+            "mpv.exe": "NSMusicS",
+            "com.squirrel.Qobuz.Qobuz": "Qobuz"
         }
 
         source_name = None
