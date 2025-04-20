@@ -3,7 +3,7 @@
 | Option              | Type    | Default                                                                 | Description                                                                 |
 |---------------------|---------|-------------------------------------------------------------------------|-----------------------------------------------------------------------------|
 | `label`   | string  | `"{wifi_icon}"`    | The label format for the WiFi widget. |
-| `label_alt`   | string  | `"{wifi_name} {wifi_strength}%"`  | The alternative label format for the WiFi widget. |
+| `label_alt`   | string  | `"{wifi_icon} {wifi_name}"`  | The alternative label format for the WiFi widget. |
 | `update_interval` | integer  | `1000`   | Update interval in milliseconds.  |
 | `wifi_icons`  | list    | `[ "\udb82\udd2e", "\udb82\udd1f", "\udb82\udd22", "\udb82\udd25", "\udb82\udd28" ]`   | Icons for different WiFi signal strengths.    |
 | `ethernet_label`   | string  | `"{wifi_icon}"`    | The label format during active Ethernet connection. |
