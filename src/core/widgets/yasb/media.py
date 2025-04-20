@@ -396,13 +396,15 @@ class MediaWidget(BaseWidget):
         # Define dictionary of known source app IDs and their display names
         source_list = {
             "SpotifyAB.SpotifyMusic_zpdnekdrzrea0!Spotify": "Spotify",
+            "Spotify.exe": "Spotify",
             "308046B0AF4A39CB": "FireFox",
             "F0DC299D809B9700": "Zen",
             "MSEdge": "Edge",
+            "Chrome": "Chrome",
             "Microsoft.ZuneMusic_8wekyb3d8bbwe!Microsoft.ZuneMusic": "Media Player",
             "foobar2000.exe": "Foobar2000",
-            "Chrome": "Chrome",
-            "MusicBee.exe": "MusicBee"
+            "MusicBee.exe": "MusicBee",
+            "AppleInc.AppleMusicWin_nzyj5cx40ttqa!App": "Apple Music",
         }
 
         source_name = None

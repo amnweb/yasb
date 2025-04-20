@@ -148,7 +148,8 @@ class WindowsMedia(metaclass=Singleton):
                 self._timeline_info = None
                 self._last_position = 0
                 self._duration = 0
-                logging.debug('MediaCallback: No active session')
+                if DEBUG:
+                    logging.debug('MediaCallback: No active session')
             # Get subscribers
             with self._subscription_channels_lock:
                 callbacks = self._subscription_channels['session_status']
