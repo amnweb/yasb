@@ -41,8 +41,8 @@ wifi:
 ```
 
 ## Description of Options
-- **label:** The format string for the active window title. You can use placeholders like `{win[title]}` to dynamically insert window information. Default is `"{icon}"`.
-- **label_alt:** The format string for the active window title when the widget is in the alternative state. Default is `"{wifi_name} {wifi_strength}%"`.
+- **label:** The format string for the WiFi Widget. Default is `"{wifi_icon}"`.
+- **label_alt:** The format string for the WiFi Widget when the it's in the alternative state. Default is `"{wifi_icon} {wifi_name}"`.
 - **update_interval:** The interval in milliseconds at which the widget updates. Default is `1000`.
 - **ethernet_label:** The format string for the WiFi Widget during active Ethernet connection. Default is `"{wifi_icon}"`.
 - **ethernet_label_alt:** The format string for the WiFi Widget during active Ethernet connection when the widget is in the alternative state. Default is `"{wifi_icon} {ip_addr}"`.
