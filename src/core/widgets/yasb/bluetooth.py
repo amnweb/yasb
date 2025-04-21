@@ -12,6 +12,7 @@ import os
 from settings import DEBUG
 import logging
 from core.utils.widgets.animation_manager import AnimationManager
+from core.utils.utilities import add_shadow
 
 def get_bluetooth_api():
     """Get Bluetooth API with fallbacks since the DLL may not be in the same location on all systems."""
@@ -222,7 +223,9 @@ class BluetoothWidget(BaseWidget):
         icons: dict[str, str],
         animation: dict[str, str],
         container_padding: dict[str, int],
-        callbacks: dict[str, str]
+        callbacks: dict[str, str],
+        label_shadow: dict = None,
+        container_shadow: dict = None
     ):
         super().__init__(class_name="bluetooth-widget")
         self._show_alt_label = False
@@ -230,6 +233,8 @@ class BluetoothWidget(BaseWidget):
         self._label_alt_content = label_alt
         self._tooltip = tooltip
         self._padding = container_padding
+        self._label_shadow = label_shadow
+        self._container_shadow = container_shadow
         try:
             self.bt_api = get_bluetooth_api()
         except RuntimeError as e:
@@ -248,6 +253,7 @@ class BluetoothWidget(BaseWidget):
         self._widget_container: QWidget = QWidget()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
+        add_shadow(self._widget_container, self._container_shadow)
         self.widget_layout.addWidget(self._widget_container)
         self._create_dynamically_label(self._label_content, self._label_alt_content)
 
@@ -256,8 +262,6 @@ class BluetoothWidget(BaseWidget):
         self.callback_left = callbacks['on_left']
         self.callback_right = callbacks['on_right']
         self.callback_middle = callbacks['on_middle']
-   
- 
 
         self.current_status = None  # Store the current Bluetooth status
         self.bluetooth_thread = BluetoothThread(self.bt_api)
@@ -313,6 +317,7 @@ class BluetoothWidget(BaseWidget):
                     label = QLabel(part)
                     label.setProperty("class", "label")
                 label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                add_shadow(label, self._label_shadow)
                 self._widget_container_layout.addWidget(label)
                 widgets.append(label)
                 if is_alt:

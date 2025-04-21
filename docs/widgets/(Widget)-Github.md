@@ -14,7 +14,8 @@
 | `icons`          | dict     | `{'issue': '\uf41b', 'pull_request': '\uea64', 'release': '\uea84', 'discussion': '\uf442', 'default': '\uea84', 'github_logo': '\uea84'}` | Icons for different types of notifications in the menu. |
 | `animation`         | dict    | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
 | `container_padding`  | dict | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}`      | Explicitly set padding inside widget container. |
-
+| `container_shadow`   | dict   | `None`                  | Container shadow options.                       |
+| `label_shadow`         | dict   | `None`                  | Label shadow options.                 |
 
 ```yaml
 github:
@@ -34,6 +35,11 @@ github:
       border_color: "System" # Set the border color for the menu (this option is not supported on Windows 10)
       alignment: "right"
       direction: "down"
+    label_shadow:
+      enabled: true
+      color: "black"
+      radius: 3
+      offset: [ 1, 1 ]
 ```
 ## Description of Options
 
@@ -56,6 +62,8 @@ github:
   - **offset_left:** Set the offset from the left of the screen.
 - **animation:** A dictionary specifying the animation settings for the widget. It contains three keys: `enabled`, `type`, and `duration`. The `type` can be `fadeInOut` and the `duration` is the animation duration in milliseconds.
 - **container_padding**: Explicitly set padding inside widget container. Use this option to set padding inside the widget container. You can set padding for top, left, bottom and right sides of the widget container.
+- **container_shadow:** Container shadow options.
+- **label_shadow:** Label shadow options.
 
 ## Widget Style
 ```css

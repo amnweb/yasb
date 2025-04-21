@@ -9,6 +9,8 @@
 | `menu`            | Dict   | See below                               | Popup menu settings. See details below.                                                                                |
 | `icons`           | Dict   | `{ note: "\udb82\udd0c", delete: "\ue20d" }` | Icons for note display and delete action.                                                                              |
 | `callbacks`       | Dict   | `{ on_left: "toggle_menu", on_middle: "do_nothing", on_right: "toggle_label" }` | Maps mouse actions to widget functions (e.g., toggling the menu or label).                                              |
+| `container_shadow`   | dict   | `None`                  | Container shadow options.                       |
+| `label_shadow`         | dict   | `None`                  | Label shadow options.                 |
 
 ### Menu Options
 
@@ -59,6 +61,11 @@ notes:
       on_left: "toggle_menu"
       on_middle: "do_nothing"
       on_right: "toggle_label"
+    label_shadow:
+      enabled: true
+      color: "black"
+      radius: 3
+      offset: [ 1, 1 ]
 ```
 
 ## Description of Options
@@ -86,6 +93,8 @@ notes:
   - **on_left**: Triggered when the left mouse button is clicked (default: "toggle_menu").
   - **on_middle**: Triggered on a middle mouse click (default: "do_nothing").
   - **on_right**: Triggered on a right mouse click (default: "toggle_label").
+- **container_shadow:** Container shadow options.
+- **label_shadow:** Label shadow options.
 
 ## Available Styles
 

@@ -15,6 +15,8 @@
 | `reverse_scroll_direction` | boolean | `false`      | Reverse scroll direction.                                                  |
 | `animation`  | boolean | `false`      | Buttons animation.                                           |
 | `container_padding`  | dict | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}`      | Explicitly set padding inside widget container.
+| `container_shadow`      | dict    | `None`                  | Container shadow options.                                |
+| `btn_shadow`            | dict    | `None`                  | Workspace button shadow options.                         |
 
 ## Example Configuration
 
@@ -40,6 +42,11 @@ komorebi_workspaces:
       left: 8
       bottom: 0
       right: 8
+    btn_shadow:
+      enabled: true
+      color: "black"
+      radius: 3
+      offset: [ 1, 1 ]
 ```
 
 ## Description of Options
@@ -60,7 +67,8 @@ komorebi_workspaces:
 - **reverse_scroll_direction:** Reverse scroll direction.
 - **animation:** Buttons animation.
 - **container_padding:** Explicitly set padding inside widget container.
-
+- **container_shadow:** Container shadow options.
+- **btn_shadow:** Workspace button shadow options.
 
 ## Style
 ```css

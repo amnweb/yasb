@@ -5,6 +5,7 @@ from PyQt6.QtGui import QCursor
 from typing import Literal
 from contextlib import suppress
 from core.utils.win32.utilities import get_monitor_hwnd
+from core.utils.utilities import add_shadow
 from core.event_service import EventService
 from core.event_enums import KomorebiEvent
 from core.widgets.base import BaseWidget
@@ -126,7 +127,9 @@ class WorkspaceWidget(BaseWidget):
             container_padding: dict,
             animation: bool,
             enable_scroll_switching: bool,
-            reverse_scroll_direction: bool
+            reverse_scroll_direction: bool,
+            btn_shadow: dict = None,
+            container_shadow: dict = None
     ):
         super().__init__(class_name="komorebi-workspaces")
         self._event_service = EventService()
@@ -141,6 +144,8 @@ class WorkspaceWidget(BaseWidget):
         self._hide_if_offline = hide_if_offline
         self._padding = container_padding
         self._animation = animation
+        self._btn_shadow = btn_shadow
+        self._container_shadow = container_shadow
         self._komorebi_screen = None
         self._komorebi_workspaces = []
         self._prev_workspace_index = None
@@ -184,6 +189,7 @@ class WorkspaceWidget(BaseWidget):
         self._workspace_container: QWidget = QWidget()
         self._workspace_container.setLayout(self._workspace_container_layout)
         self._workspace_container.setProperty("class", "widget-container")
+        add_shadow(self._workspace_container, self._container_shadow)
         self._workspace_container.hide()
         self.widget_layout.addWidget(self._offline_text)
         self.widget_layout.addWidget(self._workspace_container)
@@ -375,6 +381,7 @@ class WorkspaceWidget(BaseWidget):
             for workspace_btn in self._workspace_buttons:
                 self._workspace_container_layout.addWidget(workspace_btn)
                 self._update_button(workspace_btn)
+                add_shadow(workspace_btn, self._btn_shadow)
                 
     def _get_workspace_label(self, workspace_index):
         workspace = self._komorebic.get_workspace_by_index(self._komorebi_screen, workspace_index)

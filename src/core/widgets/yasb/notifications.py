@@ -8,7 +8,7 @@ from core.widgets.base import BaseWidget
 from core.validation.widgets.yasb.notifications import VALIDATION_SCHEMA
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.win32.system_function import notification_center, quick_settings
-from core.utils.utilities import is_windows_10
+from core.utils.utilities import is_windows_10, add_shadow
 try:
     from core.utils.widgets.windows_notification import WindowsNotificationEventListener
 except ImportError:
@@ -28,7 +28,9 @@ class NotificationsWidget(BaseWidget):
             tooltip: bool,
             container_padding: dict,
             animation: dict[str, str],
-            callbacks: dict[str, str]
+            callbacks: dict[str, str],
+            label_shadow: dict = None,
+            container_shadow: dict = None
         ):
         super().__init__(class_name="notification-widget")
         self._show_alt_label = False
@@ -41,6 +43,8 @@ class NotificationsWidget(BaseWidget):
         self._padding = container_padding
         self._animation = animation
         self._callbacks = callbacks
+        self._label_shadow = label_shadow
+        self._container_shadow = container_shadow
 
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
@@ -49,6 +53,8 @@ class NotificationsWidget(BaseWidget):
         self._widget_container: QWidget = QWidget()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
+        add_shadow(self._widget_container, self._container_shadow)
+
         # Add the container to the main widget layout
         self.widget_layout.addWidget(self._widget_container)
 
@@ -115,6 +121,7 @@ class NotificationsWidget(BaseWidget):
                     label.setProperty("class", "label")
                 label.setAlignment(Qt.AlignmentFlag.AlignCenter)  
                 label.setCursor(Qt.CursorShape.PointingHandCursor)
+                add_shadow(label, self._label_shadow)
                 self._widget_container_layout.addWidget(label)
                 widgets.append(label)
                 if is_alt:

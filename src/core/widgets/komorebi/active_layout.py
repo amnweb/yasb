@@ -10,6 +10,7 @@ from core.widgets.base import BaseWidget
 from core.utils.komorebi.client import KomorebiClient
 from core.validation.widgets.komorebi.active_layout import VALIDATION_SCHEMA
 from core.utils.widgets.animation_manager import AnimationManager
+from core.utils.utilities import add_shadow
 
 try:
     from core.utils.komorebi.event_listener import KomorebiEventListener
@@ -47,12 +48,25 @@ class ActiveLayoutWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
     event_listener = KomorebiEventListener
 
-    def __init__(self, label: str, layouts: list[str], layout_icons: dict[str, str], hide_if_offline: bool, container_padding: dict, animation: dict[str, str], callbacks: dict[str, str]):
+    def __init__(
+            self,
+            label: str,
+            layouts: list[str],
+            layout_icons: dict[str, str],
+            hide_if_offline: bool,
+            container_padding: dict,
+            animation: dict[str, str],
+            callbacks: dict[str, str],
+            label_shadow: dict = None,
+            container_shadow: dict = None
+        ):
         super().__init__(class_name="komorebi-active-layout")
         self._label = label
         self._layout_icons = layout_icons
         self._layouts_config = layouts
         self._padding = container_padding
+        self._label_shadow = label_shadow
+        self._container_shadow = container_shadow
         self._reset_layouts()
         self._hide_if_offline = hide_if_offline
         self._event_service = EventService()
@@ -65,6 +79,7 @@ class ActiveLayoutWidget(BaseWidget):
         self._active_layout_text = QLabel()
         self._active_layout_text.setProperty("class", "label")
         self._active_layout_text.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        add_shadow(self._active_layout_text, self._label_shadow)
         self._animation = animation
         # Construct container
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
@@ -74,6 +89,7 @@ class ActiveLayoutWidget(BaseWidget):
         self._widget_container: QWidget = QWidget()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
+        add_shadow(self._widget_container, self._container_shadow)
         # Add the container to the main widget layout
         self.widget_layout.addWidget(self._widget_container)
         

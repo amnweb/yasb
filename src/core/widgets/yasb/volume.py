@@ -17,7 +17,7 @@ from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume, IAudioEndpointVolu
 from pycaw.callbacks import MMNotificationClient
 from core.utils.win32.system_function import KEYEVENTF_KEYUP, VK_VOLUME_UP, VK_VOLUME_DOWN
 from core.utils.widgets.animation_manager import AnimationManager
-from core.utils.utilities import PopupWidget
+from core.utils.utilities import PopupWidget, add_shadow
 # Disable comtypes logging
 logging.getLogger('comtypes').setLevel(logging.CRITICAL)
 
@@ -206,7 +206,9 @@ class VolumeWidget(BaseWidget):
         audio_menu: dict[str, str],
         animation: dict[str, str],
         container_padding: dict[str, int],
-        callbacks: dict[str, str]
+        callbacks: dict[str, str],
+        label_shadow: dict = None,
+        container_shadow: dict = None
     ):
         super().__init__(class_name="volume-widget")
         self._show_alt_label = False
@@ -217,14 +219,19 @@ class VolumeWidget(BaseWidget):
         self._audio_menu = audio_menu
         self._animation = animation
         self._padding = container_padding
+        self._label_shadow = label_shadow
+        self._container_shadow = container_shadow
         self.volume = None
         self._volume_icons = volume_icons
+        
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
         self._widget_container_layout.setContentsMargins(self._padding['left'],self._padding['top'],self._padding['right'],self._padding['bottom'])
         self._widget_container: QWidget = QWidget()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
+        add_shadow(self._widget_container, self._container_shadow)
+
         self.widget_layout.addWidget(self._widget_container)
         self._create_dynamically_label(self._label_content, self._label_alt_content)
 
@@ -439,6 +446,7 @@ class VolumeWidget(BaseWidget):
                     label = QLabel(part)
                     label.setProperty("class", "label")
                 label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                add_shadow(label, self._label_shadow)
                 self._widget_container_layout.addWidget(label)
                 widgets.append(label)
                 if is_alt:

@@ -9,6 +9,7 @@ from core.validation.widgets.yasb.traffic import VALIDATION_SCHEMA
 from PyQt6.QtWidgets import QLabel,QHBoxLayout,QWidget
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QObject
 from core.utils.widgets.animation_manager import AnimationManager
+from core.utils.utilities import add_shadow
 
 class InternetChecker(QObject):
     """
@@ -65,6 +66,8 @@ class TrafficWidget(BaseWidget):
         animation: dict[str, str],
         container_padding: dict[str, int],
         callbacks: dict[str, str],
+        label_shadow: dict = None,
+        container_shadow: dict = None
     ):
         super().__init__(update_interval, class_name="traffic-widget")
         self.interval = update_interval // 1000
@@ -77,6 +80,9 @@ class TrafficWidget(BaseWidget):
         self._interface = interface
         self._hide_if_offline = hide_if_offline
         self._max_label_length = max_label_length
+        self._label_shadow = label_shadow
+        self._container_shadow = container_shadow
+
         # Construct container
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
@@ -85,6 +91,7 @@ class TrafficWidget(BaseWidget):
         self._widget_container: QWidget = QWidget()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
+        add_shadow(self._widget_container, self._container_shadow)
         # Add the container to the main widget layout
         self.widget_layout.addWidget(self._widget_container)
        
@@ -150,7 +157,8 @@ class TrafficWidget(BaseWidget):
                 else:
                     label = QLabel(part)
                     label.setProperty("class", "label")
-                label.setAlignment(Qt.AlignmentFlag.AlignCenter)    
+                label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                add_shadow(label, self._label_shadow)
                 self._widget_container_layout.addWidget(label)
                 widgets.append(label)
                 if is_alt:

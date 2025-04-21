@@ -20,7 +20,8 @@ This widget implements a Pomodoro timer, which is a time management method that 
 | `container_padding` | dict | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}` | Explicitly set padding inside widget container. |
 | `callbacks` | dict | See below | Configure widget interaction callbacks. |
 | `menu` | dict | See below | Configure the appearance and behavior of the timer menu. |
-
+| `container_shadow`   | dict   | `None`                  | Container shadow options.                       |
+| `label_shadow`         | dict   | `None`                  | Label shadow options.                 |
 
 ## Example Configuration
 
@@ -63,6 +64,11 @@ pomodoro:
       circle_break_progress_color: "#a3be8c"
       circle_thickness: 8
       circle_size: 160
+    label_shadow:
+      enabled: true
+      color: "black"
+      radius: 3
+      offset: [ 1, 1 ]
 ```
 
 ## Description of Options
@@ -99,7 +105,8 @@ pomodoro:
     - **circle_work_progress_color:** Color of the work progress in the circular indicator.
     - **circle_break_progress_color:** Color of the break progress in the circular indicator.
     - **circle_thickness:** Thickness of the circular progress indicator.
-
+- **container_shadow:** Container shadow options.
+- **label_shadow:** Label shadow options.
 
 ## Available Callbacks
 

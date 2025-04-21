@@ -13,7 +13,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QCursor
 
 from core.widgets.base import BaseWidget
-from core.utils.utilities import PopupWidget
+from core.utils.utilities import PopupWidget, add_shadow
 from core.validation.widgets.yasb.notes import VALIDATION_SCHEMA
 from core.utils.widgets.animation_manager import AnimationManager
 from core.config import HOME_CONFIGURATION_DIR
@@ -31,7 +31,9 @@ class NotesWidget(BaseWidget):
         animation: dict,
         menu: dict,
         icons: dict,
-        callbacks: dict
+        callbacks: dict,
+        label_shadow: dict = None,
+        container_shadow: dict = None
     ):
         super().__init__(class_name="notes-widget")
         NotesWidget._instances.append(self)
@@ -43,6 +45,8 @@ class NotesWidget(BaseWidget):
         self._padding = container_padding
         self._menu_config = menu
         self._icons = icons
+        self._label_shadow = label_shadow
+        self._container_shadow = container_shadow
 
         self._notes_file = os.path.join(HOME_CONFIGURATION_DIR, "notes.json")
         self._notes = self._load_notes()
@@ -61,6 +65,7 @@ class NotesWidget(BaseWidget):
         self._widget_container = QWidget()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
+        add_shadow(self._widget_container, self._container_shadow)
 
         # Add container to main widget layout
         self.widget_layout.addWidget(self._widget_container)
@@ -140,6 +145,7 @@ class NotesWidget(BaseWidget):
 
                 label.setAlignment(Qt.AlignmentFlag.AlignCenter)
                 label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+                add_shadow(label, self._label_shadow)
                 self._widget_container_layout.addWidget(label)
                 widgets.append(label)
                 if is_alt:

@@ -7,7 +7,8 @@
 | `hide_empty_workspaces` | boolean | `true`                  | Whether to hide empty workspaces.                        |
 | `hide_if_offline`       | boolean | `false`                 | Whether to hide workspaces widget if GlazeWM is offline. |
 | `glazewm_server_uri`    | string  | `'ws://localhost:6123'` | Optional GlazeWM server uri.                             |
-
+| `container_shadow`      | dict    | `None`                  | Container shadow options.                                |
+| `btn_shadow`            | dict    | `None`                  | Workspace button shadow options.                         |
 
 ## Example Configuration
 
@@ -18,6 +19,11 @@ glazewm_workspaces:
     offline_label: "GlazeWM Offline"
     hide_empty_workspaces: true
     hide_if_offline: false
+    btn_shadow:
+      enabled: true
+      color: "black"
+      radius: 3
+      offset: [ 1, 1 ]
 
     # By default workspace names are fetched from GlazeWM and "display_name" option takes priority over "name".
     # However, you can customize populated and empty labels here using {name} and {display_name} placeholders if needed.
@@ -35,8 +41,16 @@ glazewm_workspaces:
 - **hide_empty_workspaces:** Whether to hide empty workspaces.
 - **hide_if_offline:** Whether to hide workspaces widget if GlazeWM is offline.
 - **glazewm_server_uri:** Optional GlazeWM server uri if it ever changes on GlazeWM side.
+- **container_shadow:** Container shadow options.
+- **btn_shadow:** Workspace button shadow options.
 
-## Important Note
+## Note on Shadows
+`container_shadow` is applied to the container if it's not transparent.
+If it is transparent, container shadows will be applied to the `btn` instead.
+This can cause double shadows if you have `btn_shadow` already.
+Apply the shadows only to the container that is actually visible.
+
+## Note on Workspace Names
 In GlazeWM config use "1", "2", "3" for workspace "name" and NOT some custom string. This will ensure proper sorting of workspaces.
 
 If you need a custom name for each workspace - use "display_name".

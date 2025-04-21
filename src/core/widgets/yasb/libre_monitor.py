@@ -10,6 +10,7 @@ from core.validation.widgets.yasb.libre_monitor import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
 from urllib.parse import quote
 from core.utils.widgets.animation_manager import AnimationManager
+from core.utils.utilities import add_shadow
 
 class LibreHardwareMonitorWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
@@ -37,6 +38,8 @@ class LibreHardwareMonitorWidget(BaseWidget):
             animation: dict[str, str],
             container_padding: dict[str, int],
             callbacks: dict,
+            label_shadow: dict = None,
+            container_shadow: dict = None
     ):
         super().__init__(update_interval, class_name=class_name)
         self._show_alt_label = False
@@ -59,6 +62,8 @@ class LibreHardwareMonitorWidget(BaseWidget):
         self._server_password = server_password
         self._animation = animation
         self._padding = container_padding
+        self._label_shadow = label_shadow
+        self._container_shadow = container_shadow
         # UI
         self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
@@ -67,6 +72,7 @@ class LibreHardwareMonitorWidget(BaseWidget):
         self._widget_container = QWidget()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
+        add_shadow(self._widget_container, self._container_shadow)
         self.widget_layout.addWidget(self._widget_container)
 
         self._create_dynamically_label(self._label_content, self._label_alt_content)
@@ -131,6 +137,7 @@ class LibreHardwareMonitorWidget(BaseWidget):
                     label = QLabel(part)
                     label.setProperty("class", "label")
                 label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                add_shadow(label, self._label_shadow)
                 self._widget_container_layout.addWidget(label)
                 widgets.append(label)
                 if is_alt:

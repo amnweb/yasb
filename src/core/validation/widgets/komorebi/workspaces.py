@@ -86,5 +86,27 @@ VALIDATION_SCHEMA = {
         'type': 'dict',
         'default': DEFAULTS['container_padding'],
         'required': False
+    },
+    'btn_shadow': {
+        'type': 'dict',
+        'required': False,
+        'schema': {
+            'enabled': {'type': 'boolean', 'default': False},
+            'color': {'type': 'string', 'default': 'black'},
+            'offset': {'type': 'list', 'default': [1, 1]},
+            'radius': {'type': 'integer', 'default': 3},
+        },
+        'default': {'enabled': False, 'color': 'black', 'offset': [1, 1], 'radius': 3}
+    },
+    'container_shadow': {
+        'type': 'dict',
+        'required': False,
+        'schema': {
+            'enabled': {'type': 'boolean', 'default': False},
+            'color': {'type': 'string', 'default': 'black'},
+            'offset': {'type': 'list', 'default': [1, 1]},
+            'radius': {'type': 'integer', 'default': 3},
+        },
+        'default': {'enabled': False, 'color': 'black', 'offset': [1, 1], 'radius': 3}
     }
 }

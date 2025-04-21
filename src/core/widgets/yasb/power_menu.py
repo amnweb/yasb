@@ -9,7 +9,7 @@ from core.config import get_stylesheet
 from core.utils.widgets.power import PowerOperations
 import datetime
 import psutil
-from core.utils.utilities import is_windows_10
+from core.utils.utilities import is_windows_10, add_shadow
 
 class BaseStyledWidget(QWidget):
     def apply_stylesheet(self):
@@ -106,7 +106,19 @@ class OverlayWidget(BaseStyledWidget,AnimatedWidget):
 class PowerMenuWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
 
-    def __init__(self, label: str, uptime: bool, blur: bool, blur_background: bool, animation_duration: int, button_row: int, container_padding: dict[str, int],buttons: dict[str, list[str]]):
+    def __init__(
+        self,
+        label: str,
+        uptime: bool,
+        blur: bool,
+        blur_background: bool,
+        animation_duration: int,
+        button_row: int,
+        container_padding: dict[str, int],
+        buttons: dict[str, list[str]],
+        label_shadow: dict = None,
+        container_shadow: dict = None
+        ):
         super().__init__(0, class_name="power-menu-widget")
         
         self.buttons = buttons
@@ -116,12 +128,14 @@ class PowerMenuWidget(BaseWidget):
         self.animation_duration = animation_duration
         self.button_row = button_row
         self._padding = container_padding
-        
+        self._label_shadow = label_shadow
+        self._container_shadow = container_shadow
+
         self._button = ClickableLabel(label)
         self._button.setProperty("class", "label power-button")
         self._button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self._button.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        
+        add_shadow(self._button, self._label_shadow)
         # Construct container
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
@@ -131,6 +145,7 @@ class PowerMenuWidget(BaseWidget):
         self._widget_container: QWidget = QWidget()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
+        add_shadow(self._widget_container, self._container_shadow)
         # Add the container to the main widget layout
         self.widget_layout.addWidget(self._widget_container)
         self._widget_container_layout.addWidget(self._button)

@@ -8,6 +8,7 @@ from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget, QProgressBar, QVBoxLay
 from PyQt6.QtCore import Qt, pyqtSignal
 from core.utils.utilities import PopupWidget
 from core.utils.widgets.animation_manager import AnimationManager
+from core.utils.utilities import add_shadow
 
 class ClickableDiskWidget(QWidget):
     clicked = pyqtSignal()
@@ -35,6 +36,8 @@ class DiskWidget(BaseWidget):
             container_padding: dict[str, int],
             animation: dict[str, str],
             callbacks: dict[str, str],
+            label_shadow: dict = None,
+            container_shadow: dict = None
     ):
         super().__init__(int(update_interval * 1000), class_name="disk-widget")
         self._decimal_display = decimal_display
@@ -45,6 +48,8 @@ class DiskWidget(BaseWidget):
         self._padding = container_padding
         self._group_label = group_label
         self._animation = animation
+        self._label_shadow = label_shadow
+        self._container_shadow = container_shadow
         # Construct container
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
@@ -53,6 +58,7 @@ class DiskWidget(BaseWidget):
         self._widget_container: QWidget = QWidget()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
+        add_shadow(self._widget_container, self._container_shadow)
         # Add the container to the main widget layout
         self.widget_layout.addWidget(self._widget_container)
 
@@ -103,6 +109,7 @@ class DiskWidget(BaseWidget):
                     label.setProperty("class", "label")
                 label.setAlignment(Qt.AlignmentFlag.AlignCenter)  
                 label.setCursor(Qt.CursorShape.PointingHandCursor)
+                add_shadow(label, self._label_shadow)
                 self._widget_container_layout.addWidget(label)
                 widgets.append(label)
                 if is_alt:

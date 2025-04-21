@@ -8,6 +8,7 @@ from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget
 from PyQt6.QtCore import Qt, pyqtSignal, QObject
 from core.utils.win32.system_function import function_map
 from core.utils.widgets.animation_manager import AnimationManager
+from core.utils.utilities import add_shadow
 
 class CustomWorker(QObject):
     finished = pyqtSignal()
@@ -48,7 +49,9 @@ class CustomWidget(BaseWidget):
             callbacks: dict,
             animation: dict[str, str],
             container_padding: dict[str, int],
-            class_name: str
+            class_name: str,
+            label_shadow: dict = None,
+            container_shadow: dict = None
     ):
         super().__init__(exec_options['run_interval'], class_name=f"custom-widget {class_name}")
         self._label_max_length = label_max_length
@@ -63,6 +66,8 @@ class CustomWidget(BaseWidget):
         self._label_alt_content = label_alt
         self._animation = animation
         self._padding = container_padding
+        self._label_shadow = label_shadow
+        self._container_shadow = container_shadow
         # Construct container
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
@@ -71,6 +76,7 @@ class CustomWidget(BaseWidget):
         self._widget_container: QWidget = QWidget()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
+        add_shadow(self._widget_container, self._container_shadow)
         # Add the container to the main widget layout
         self.widget_layout.addWidget(self._widget_container)
 
@@ -119,6 +125,7 @@ class CustomWidget(BaseWidget):
                     label.setProperty("class", "label")
                     label.setText("Loading...")
                 label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                add_shadow(label, self._label_shadow)
                 self._widget_container_layout.addWidget(label)
                 widgets.append(label)
                 if is_alt:

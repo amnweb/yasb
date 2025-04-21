@@ -34,6 +34,7 @@ from core.utils.systray.win_types import (
     NIF_TIP,
 )
 from core.utils.systray.win_wrappers import IsWindow
+from core.utils.utilities import add_shadow
 from core.validation.widgets.yasb.systray import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
 from settings import DEBUG
@@ -67,7 +68,7 @@ class TrayMonitorThread(QThread):
 
 
 class SystrayWidget(BaseWidget):
-    validation_schema: dict[str, dict[str, str | bool | int]] = VALIDATION_SCHEMA
+    validation_schema: dict[str, Any] = VALIDATION_SCHEMA
     _instance = None
     _thread = None
 
@@ -97,6 +98,11 @@ class SystrayWidget(BaseWidget):
         show_battery: bool,
         show_volume: bool,
         show_network: bool,
+        container_shadow: dict[str, Any],
+        unpinned_shadow: dict[str, Any],
+        pinned_shadow: dict[str, Any],
+        unpinned_vis_btn_shadow: dict[str, Any],
+        btn_shadow: dict[str, Any],
     ):
         super().__init__(class_name=class_name)  # type: ignore
         self.label_collapsed = label_collapsed
@@ -105,6 +111,11 @@ class SystrayWidget(BaseWidget):
         self.icon_size = icon_size
         self.show_unpinned = show_unpinned
         self.show_unpinned_button = show_unpinned_button
+        self.container_shadow = container_shadow
+        self.unpinned_shadow = unpinned_shadow
+        self.pinned_shadow = pinned_shadow
+        self.unpinned_vis_btn_shadow = unpinned_vis_btn_shadow
+        self.btn_shadow = btn_shadow
 
         self.filtered_guids: set[UUID] = set()
         if not show_battery:
@@ -160,6 +171,11 @@ class SystrayWidget(BaseWidget):
         self.unpinned_widget.drag_ended.connect(self.on_drag_ended)  # type: ignore
         self.pinned_widget.drag_started.connect(self.on_drag_started)  # type: ignore
         self.pinned_widget.drag_ended.connect(self.on_drag_ended)  # type: ignore
+
+        add_shadow(self._widget_frame, self.container_shadow)
+        add_shadow(self.unpinned_widget, self.unpinned_shadow)
+        add_shadow(self.pinned_widget, self.pinned_shadow)
+        add_shadow(self.unpinned_vis_btn, self.unpinned_vis_btn_shadow)
 
         self.widget_layout.addWidget(self.unpinned_widget)
         self.widget_layout.addWidget(self.pinned_widget)
@@ -260,6 +276,7 @@ class SystrayWidget(BaseWidget):
                     IconState(index=-1, is_pinned=False),
                 ),
             )
+            add_shadow(icon, self.btn_shadow)
 
             # Place the new icon in the correct layout and index
             icon.is_pinned = saved_data.is_pinned

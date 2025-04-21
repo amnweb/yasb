@@ -8,7 +8,8 @@ Whkd is a simple hotkey daemon for Windows that reacts to input events by execut
 | `special_keys`   | list     | `None`                           | A list of special keys to be used as hotkeys.  |
 | `container_padding`  | dict | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}`      | Explicitly set padding inside widget container.      |
 | `animation`         | dict    | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
-
+| `container_shadow`   | dict   | `None`                  | Container shadow options.                       |
+| `label_shadow`         | dict   | `None`                  | Label shadow options.                 |
 
 ## Example Configuration
 
@@ -34,6 +35,11 @@ Whkd is a simple hotkey daemon for Windows that reacts to input events by execut
           key_replace: "\u2191"
         - key: "down"
           key_replace: "\u2193"
+      label_shadow:
+        enabled: true
+        color: "black"
+        radius: 3
+        offset: [ 1, 1 ]
 ```
 ## Description of Options
 
@@ -43,6 +49,8 @@ Whkd is a simple hotkey daemon for Windows that reacts to input events by execut
   - **key_replace:** The string to replace the special key with.
 - **container_padding:** Explicitly set padding inside widget container.
 - **animation:** A dictionary specifying the animation settings for the widget. It contains three keys: `enabled`, `type`, and `duration`. The `type` can be `fadeInOut` and the `duration` is the animation duration in milliseconds.
+- **container_shadow:** Container shadow options.
+- **label_shadow:** Label shadow options.
 
 > [!NOTE]  
 > The special keys are keys which you can style and replace with custom icons. Special keys settings are optional. If you don't want to use special keys, you can leave the `special_keys` option empty.

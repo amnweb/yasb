@@ -20,6 +20,7 @@ from core.event_service import EventService
 from core.utils.widgets.wallpapers_gallery import ImageGallery
 from core.utils.alert_dialog import raise_info_alert
 from core.utils.widgets.animation_manager import AnimationManager
+from core.utils.utilities import add_shadow
 
 class WallpapersWidget(BaseWidget):
     set_wallpaper_signal = pyqtSignal(str) 
@@ -38,7 +39,9 @@ class WallpapersWidget(BaseWidget):
         animation: dict[str, str],
         run_after: list[str],
         container_padding: dict[str, int],
-        gallery: dict = None
+        gallery: dict = None,
+        label_shadow: dict = None,
+        container_shadow: dict = None
     ):
         """Initialize the WallpapersWidget with configuration parameters."""
         super().__init__(int(update_interval * 1000), class_name="wallpapers-widget")
@@ -53,7 +56,9 @@ class WallpapersWidget(BaseWidget):
         self._gallery = gallery
         self._animation = animation
         self._padding = container_padding
-        
+        self._label_shadow = label_shadow
+        self._container_shadow = container_shadow
+
         self._last_image = None
         self._is_running = False 
         
@@ -65,6 +70,8 @@ class WallpapersWidget(BaseWidget):
         self._widget_container: QWidget = QWidget()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
+        add_shadow(self._widget_container, self._container_shadow)
+
         # Add the container to the main widget layout
         self.widget_layout.addWidget(self._widget_container)
 
@@ -113,7 +120,8 @@ class WallpapersWidget(BaseWidget):
                         label.setToolTip(f'Change Wallaper')
                     label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
                     
-                label.setAlignment(Qt.AlignmentFlag.AlignCenter)    
+                label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                add_shadow(label, self._label_shadow)
                 self._widget_container_layout.addWidget(label)
                 widgets.append(label)
                 label.show()

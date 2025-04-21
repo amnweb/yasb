@@ -12,6 +12,7 @@ from PIL import Image
 import win32gui
 from core.utils.win32.app_icons import get_window_icon
 from core.utils.widgets.animation_manager import AnimationManager
+from core.utils.utilities import add_shadow
 import atexit
 
 IGNORED_TITLES = ['', ' ', 'FolderView', 'Program Manager', 'python3', 'pythonw3', 'YasbBar', 'Search', 'Start']
@@ -56,6 +57,8 @@ class ActiveWindowWidget(BaseWidget):
             max_length: int,
             max_length_ellipsis: str,
             container_padding: dict[str, int],
+            label_shadow: dict = None,
+            container_shadow: dict = None,
     ):
         super().__init__(class_name="active-window-widget")
         self.dpi = None
@@ -74,6 +77,8 @@ class ActiveWindowWidget(BaseWidget):
         self._update_retry_count = 0
         self._animation = animation
         self._padding = container_padding
+        self._label_shadow = label_shadow
+        self._container_shadow = container_shadow
          # Construct container
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
@@ -82,20 +87,21 @@ class ActiveWindowWidget(BaseWidget):
         self._widget_container: QWidget = QWidget()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
+        add_shadow(self._widget_container, self._container_shadow)
         # Add the container to the main widget layout
         self.widget_layout.addWidget(self._widget_container)
-        
         
         self._window_title_text = QLabel()
         self._window_title_text.setProperty("class", "label")
         self._window_title_text.setTextFormat(Qt.TextFormat.PlainText)
         self._window_title_text.setText(self._label_no_window)
-       
+        add_shadow(self._window_title_text, self._label_shadow)
+            
         if self._label_icon:
             self._window_icon_label = QLabel()
             self._window_icon_label.setProperty("class", "label icon")
             self._window_icon_label.setText(self._label_no_window)
-
+            add_shadow(self._window_icon_label, self._label_shadow)
         self._ignore_window = ignore_window
         self._ignore_window['classes'] += IGNORED_CLASSES
         self._ignore_window['processes'] += IGNORED_PROCESSES

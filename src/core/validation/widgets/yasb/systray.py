@@ -10,6 +10,12 @@ DEFAULTS = {
     "show_battery": False,
     "show_volume": False,
     "show_network": False,
+    "default_shadow": {
+        "enabled": False,
+        "color": "black",
+        "offset": [1, 1],
+        "radius": 3,
+    },
 }
 
 VALIDATION_SCHEMA = {
@@ -69,5 +75,60 @@ VALIDATION_SCHEMA = {
         "type": "boolean",
         "required": False,
         "default": DEFAULTS["show_network"],
+    },
+    "container_shadow": {
+        "type": "dict",
+        "required": False,
+        "schema": {
+            "enabled": {"type": "boolean", "default": False},
+            "color": {"type": "string", "default": "black"},
+            "offset": {"type": "list", "default": [1, 1]},
+            "radius": {"type": "integer", "default": 3},
+        },
+        "default": DEFAULTS["default_shadow"],
+    },
+    "unpinned_shadow": {
+        "type": "dict",
+        "required": False,
+        "schema": {
+            "enabled": {"type": "boolean", "default": False},
+            "color": {"type": "string", "default": "black"},
+            "offset": {"type": "list", "default": [1, 1]},
+            "radius": {"type": "integer", "default": 3},
+        },
+        "default": DEFAULTS["default_shadow"],
+    },
+    "pinned_shadow": {
+        "type": "dict",
+        "required": False,
+        "schema": {
+            "enabled": {"type": "boolean", "default": False},
+            "color": {"type": "string", "default": "black"},
+            "offset": {"type": "list", "default": [1, 1]},
+            "radius": {"type": "integer", "default": 3},
+        },
+        "default": DEFAULTS["default_shadow"],
+    },
+    "unpinned_vis_btn_shadow": {
+        "type": "dict",
+        "required": False,
+        "schema": {
+            "enabled": {"type": "boolean", "default": False},
+            "color": {"type": "string", "default": "black"},
+            "offset": {"type": "list", "default": [1, 1]},
+            "radius": {"type": "integer", "default": 3},
+        },
+        "default": DEFAULTS["default_shadow"],
+    },
+    "btn_shadow": {
+        "type": "dict",
+        "required": False,
+        "schema": {
+            "enabled": {"type": "boolean", "default": False},
+            "color": {"type": "string", "default": "black"},
+            "offset": {"type": "list", "default": [1, 1]},
+            "radius": {"type": "integer", "default": 3},
+        },
+        "default": DEFAULTS["default_shadow"],
     },
 }

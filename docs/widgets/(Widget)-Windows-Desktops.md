@@ -6,6 +6,8 @@
 | `switch_workspace_animation` | string | `'true'`                 | The OS animation to use when switching workspaces.                             |
 | `animation`                | bool   | `false`                   | Buttons animation.   |
 | `container_padding`  | dict | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}`      | Explicitly set padding inside widget container.
+| `container_shadow`      | dict    | `None`                  | Container shadow options.                                |
+| `btn_shadow`            | dict    | `None`                  | Workspace button shadow options.                         |
 
 ## Example Configuration
 
@@ -20,6 +22,11 @@ windows_workspaces:
       left: 8
       bottom: 0
       right: 8
+    btn_shadow:
+      enabled: true
+      color: "black"
+      radius: 3
+      offset: [ 1, 1 ]
 ```
 
 ## Description of Options
@@ -28,7 +35,8 @@ windows_workspaces:
 - **switch_workspace_animation:** The OS animation to use when switching workspaces. (currently unsupported)
 - **animation:** Buttons animation.
 - **container_padding:** Explicitly set padding inside widget container.
-
+- **container_shadow:** Container shadow options.
+- **btn_shadow:** Workspace button shadow options.
 
 ## Style
 ```css
