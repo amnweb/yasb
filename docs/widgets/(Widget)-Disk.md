@@ -10,6 +10,8 @@
 | `callbacks`       | dict    | `{'on_left': 'do_nothing', 'on_middle': 'do_nothing', 'on_right': "exec explorer C:\\"}` | Callbacks for mouse events. |
 | `container_padding`  | dict | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}`      | Explicitly set padding inside widget container. |
 | `animation`         | dict    | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
+| `container_shadow`   | dict   | `None`                  | Container shadow options.                       |
+| `label_shadow`         | dict   | `None`                  | Label shadow options.                 |
 
 ## Example Configuration
 
@@ -34,6 +36,11 @@ disk:
         on_left: "toggle_group"
         on_middle: "toggle_label"
         on_right: "exec explorer C:\\" # Open disk C in file explorer
+      label_shadow:
+        enabled: true
+        color: "black"
+        radius: 3
+        offset: [ 1, 1 ]
 ```
 
 ## Description of Options
@@ -57,6 +64,8 @@ disk:
 - **callbacks:** A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions.
 - **container_padding:** Explicitly set padding inside widget container.
 - **animation:** A dictionary specifying the animation settings for the widget. It contains three keys: `enabled`, `type`, and `duration`. The `type` can be `fadeInOut` and the `duration` is the animation duration in milliseconds.
+- **container_shadow:** Container shadow options.
+- **label_shadow:** Label shadow options.
 
 ## Widget Style
 ```css

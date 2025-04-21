@@ -12,6 +12,8 @@
 | `callbacks`       | dict    | `{'on_left': 'toggle_menu', 'on_middle': 'do_nothing', 'on_right': 'do_nothing'}` | Callbacks for mouse events. |
 | `container_padding`  | dict | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}`      | Explicitly set padding inside widget container. |
 | `animation`         | dict    | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
+| `container_shadow`   | dict   | `None`                  | Container shadow options.                       |
+| `label_shadow`         | dict   | `None`                  | Label shadow options.                 |
 
 ## Example Configuration
 
@@ -36,6 +38,11 @@
           direction: 'down'
           offset_top: 6
           offset_left: 0
+        label_shadow:
+          enabled: true
+          color: "black"
+          radius: 3
+          offset: [ 1, 1 ]
 ```
 
 ## Description of Options
@@ -63,6 +70,8 @@
   - **enabled:** Whether to enable animation.
   - **type:** Type of animation (fadeInOut, slideIn, etc.).
   - **duration:** Duration of the animation in milliseconds.
+- **container_shadow:** Container shadow options.
+- **label_shadow:** Label shadow options.
 
 ## Widget Style
 ```css

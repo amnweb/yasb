@@ -17,6 +17,8 @@
 | `callbacks`       | dict    | `{'on_left': 'toggle_label', 'on_middle': 'do_nothing', 'on_right': 'do_nothing'}` | Callbacks for mouse events on the memory widget. |
 | `animation`         | dict    | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
 | `container_padding`  | dict | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}`      | Explicitly set padding inside widget container.                            |
+| `container_shadow`   | dict   | `None`                  | Container shadow options.                       |
+| `label_shadow`         | dict   | `None`                  | Label shadow options.                 |
 
 ## Example Configuration
 
@@ -49,7 +51,11 @@
         callbacks:
           on_left: "toggle_menu"
           on_right: "toggle_label"
-
+        label_shadow:
+          enabled: true
+          color: "black"
+          radius: 3
+          offset: [ 1, 1 ]
 ```
 
 ## Description of Options
@@ -77,7 +83,8 @@
 - **callbacks:** Callbacks for mouse events on the memory widget.
 - **animation:** Animation settings for the widget.
 - **container_padding**: Explicitly set padding inside widget container. Use this option to set padding inside the widget container. You can set padding for top, left, bottom and right sides of the widget container.
-
+- **container_shadow:** Container shadow options.
+- **label_shadow:** Label shadow options.
 
 
 ## Example Style

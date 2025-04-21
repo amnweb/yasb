@@ -10,7 +10,8 @@ Recycle Bin widget is simple widget that shows the status of the recycle bin. It
 | `animation` | dict | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}` | Animation settings for the widget. |
 | `container_padding` | dict | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}` | Explicitly set padding inside widget container. |
 | `callbacks` | dict | See below | Configure widget interaction callbacks. |
-
+| `container_shadow`   | dict   | `None`                  | Container shadow options.                       |
+| `label_shadow`         | dict   | `None`                  | Label shadow options.                 |
 
 ## Example Configuration
 
@@ -32,6 +33,11 @@ Recycle Bin widget is simple widget that shows the status of the recycle bin. It
         on_left: "open_bin"
         on_right: "toggle_label"
         on_middle: "empty_bin"
+      label_shadow:
+        enabled: true
+        color: "black"
+        radius: 3
+        offset: [ 1, 1 ]
 ```
 
 ## Description of Options
@@ -45,7 +51,8 @@ Recycle Bin widget is simple widget that shows the status of the recycle bin. It
 - **container_padding**: Set padding inside widget container for top, left, bottom and right sides.  
 - **animation**: Animation settings including type and duration.
 - **callbacks**: Configure what happens when clicking the widget.
-
+- **container_shadow:** Container shadow options.
+- **label_shadow:** Label shadow options.
 
 ## Available Callbacks
 

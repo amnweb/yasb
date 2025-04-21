@@ -27,6 +27,12 @@ This widget checks for available updates using Windows Update and Winget.
 | `interval`      | integer | `240`      | Check interval in minutes (10 to 10080).                     |
 | `exclude`       | list    | `[]`       | List of packages to exclude from checking.                   |
 
+## Widget Shadow Options
+| Option          | Type    | Default    | Description                                                  |
+|-----------------|---------|------------|--------------------------------------------------------------|
+| `container_shadow`   | dict   | `None`                  | Container shadow options.                       |
+| `label_shadow`         | dict   | `None`                  | Label shadow options.                 |
+
 
 ## Click Handlers
 - Left-clicking the Winget widget will open the Winget package manager in PowerShell or pwsh.
@@ -50,6 +56,11 @@ update_check:
       label: "<span>\uf0ab</span> {count}"
       interval: 60
       exclude: []
+    label_shadow:
+      enabled: true
+      color: "black"
+      radius: 3
+      offset: [ 1, 1 ]
 ```
 
 ## Available Styles

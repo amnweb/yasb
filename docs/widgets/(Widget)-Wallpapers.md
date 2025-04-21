@@ -10,6 +10,8 @@
 | `run_after`       | list     | `[]`        | A list of functions to run after the wallpaper is updated. |
 | `animation`         | dict    | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
 | `container_padding`  | dict | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}`      | Explicitly set padding inside widget container. |
+| `container_shadow`   | dict   | `None`                  | Container shadow options.                       |
+| `label_shadow`         | dict   | `None`                  | Label shadow options.                 |
 
 ## Example Configuration
 
@@ -37,6 +39,11 @@ wallpapers:
     run_after: # List of functions to run after wallpaper is updated
       - "wal -s -t -e -q -n -i {image}" # Example command to run after wallpaper is updated
       - "cmd.exe /c start /min pwsh ./yasb.ps1" # Example command to run after wallpaper is updated
+    label_shadow:
+      enabled: true
+      color: "black"
+      radius: 3
+      offset: [ 1, 1 ]
 ```
 
 ## Description of Options
@@ -61,6 +68,8 @@ wallpapers:
 - **run_after:** A list of functions to run after the wallpaper is updated.
 - **animation:** A dictionary specifying the animation settings for the widget. It contains three keys: `enabled`, `type`, and `duration`. The `type` can be `fadeInOut` and the `duration` is the animation duration in milliseconds.
 - **container_padding**: Explicitly set padding inside widget container. Use this option to set padding inside the widget container. You can set padding for top, left, bottom and right sides of the widget container.
+- **container_shadow:** Container shadow options.
+- **label_shadow:** Label shadow options.
 
 > If gallery is enabled left mouse click on the widget will open the gallery and right mouse click will change the wallpaper and get random one. 
 
