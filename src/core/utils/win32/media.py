@@ -16,6 +16,8 @@ from winsdk.windows.media.control import (GlobalSystemMediaTransportControlsSess
                                           SessionsChangedEventArgs, MediaPropertiesChangedEventArgs,
                                           TimelinePropertiesChangedEventArgs, PlaybackInfoChangedEventArgs)
 
+from PyQt6.QtCore import QTimer, QDateTime
+
 VK_MEDIA_PLAY_PAUSE = 0xB3
 VK_MEDIA_PREV_TRACK = 0xB1
 VK_MEDIA_NEXT_TRACK = 0xB0
@@ -49,9 +51,22 @@ class WindowsMedia(metaclass=Singleton):
         self._timeline_info = None
 
         self._subscription_channels = {channel: [] for channel in ['media_info', 'playback_info', 'timeline_info',
-                                                                   'session_status']}
+                                                                   'session_status', 'timeline_interpolated']}
         self._subscription_channels_lock = threading.RLock()
         self._registration_tokens = {}
+
+        # Add timeline interpolation properties
+        self._timeline_info = None
+        self._last_position = 0
+        self._last_update_time = 0
+        self._duration = 0
+        self._is_playing = False
+
+        # Create a timer for interpolation
+        self._interpolation_timer = QTimer()
+        self._interpolation_timer.setInterval(200) 
+        self._interpolation_timer.timeout.connect(self._interpolate_timeline)
+        self._interpolation_timer.start()
 
         self._run_setup()
 
@@ -65,6 +80,13 @@ class WindowsMedia(metaclass=Singleton):
             except KeyError:
                 raise ValueError(f'Incorrect channel subscription type provided ({channel}). '
                                  f'Valid options are {list(self._subscription_channels.keys())}')
+
+        # Auto-send current data if available
+        if channel == 'timeline_interpolated' and hasattr(self, '_last_position'):
+            callback({
+                'position': self._last_position,
+                'duration': self._duration
+            })
 
     def stop(self):
         # Clear subscriptions
@@ -119,7 +141,15 @@ class WindowsMedia(metaclass=Singleton):
                     self._on_playback_info_changed(self._current_session, None)
                     self._on_timeline_properties_changed(self._current_session, None)
                     self._on_media_properties_changed(self._current_session, None)
-
+            else:
+                # Clear media info when there's no active session
+                self._media_info = None
+                self._playback_info = None
+                self._timeline_info = None
+                self._last_position = 0
+                self._duration = 0
+                if DEBUG:
+                    logging.debug('MediaCallback: No active session')
             # Get subscribers
             with self._subscription_channels_lock:
                 callbacks = self._subscription_channels['session_status']
@@ -131,12 +161,24 @@ class WindowsMedia(metaclass=Singleton):
         """
         Decorator to ensure that the function is only called if the session is the same as the current session
         """
-
-        def wrapper(self: "WindowsMedia", session: Session, *args, **kwargs):
-            with self._current_session_lock:
-                if self._are_same_sessions(session, self._current_session):
-                    return fn(self, session, *args, **kwargs)
+        if asyncio.iscoroutinefunction(fn):
+            async def wrapper(self: "WindowsMedia", session: Session, *args, **kwargs):
+                with self._current_session_lock:
+                    if self._are_same_sessions(session, self._current_session):
+                        return await fn(self, session, *args, **kwargs)
+                    return None  # Return None without awaiting
+        else:
+            def wrapper(self: "WindowsMedia", session: Session, *args, **kwargs):
+                with self._current_session_lock:
+                    if self._are_same_sessions(session, self._current_session):
+                        return fn(self, session, *args, **kwargs)
+                    return None
         return wrapper
+        # def wrapper(self: "WindowsMedia", session: Session, *args, **kwargs):
+        #     with self._current_session_lock:
+        #         if self._are_same_sessions(session, self._current_session):
+        #             return fn(self, session, *args, **kwargs)
+        # return wrapper
 
     @_current_session_only
     def _on_playback_info_changed(self, session: Session, args: PlaybackInfoChangedEventArgs):
@@ -144,6 +186,9 @@ class WindowsMedia(metaclass=Singleton):
             self._log.info('MediaCallback: _on_playback_info_changed')
         with self._playback_info_lock:
             self._playback_info = session.get_playback_info()
+            
+            # Track play state for interpolation
+            self._is_playing = self._playback_info.playback_status == 4  # 4 = Playing
 
             # Get subscribers
             with self._subscription_channels_lock:
@@ -159,6 +204,10 @@ class WindowsMedia(metaclass=Singleton):
             self._log.info('MediaCallback: _on_timeline_properties_changed')
         with self._timeline_info_lock:
             self._timeline_info = session.get_timeline_properties()
+            # Store values for interpolation
+            self._last_position = self._timeline_info.position.total_seconds()
+            self._last_update_time = QDateTime.currentMSecsSinceEpoch()
+            self._duration = self._timeline_info.end_time.total_seconds()
 
             # Get subscribers
             with self._subscription_channels_lock:
@@ -307,3 +356,54 @@ class WindowsMedia(metaclass=Singleton):
         with self._current_session_lock:
             if self._current_session is not None:
                 self._current_session.try_skip_next_async()
+
+    def _interpolate_timeline(self):
+        """Interpolate timeline between official updates from the Windows API."""
+        if not self._is_playing or self._last_update_time == 0 or self._timeline_info is None:
+            return
+            
+        # Calculate elapsed time since last update
+        elapsed = (QDateTime.currentMSecsSinceEpoch() - self._last_update_time) / 1000
+        
+        # Estimate current position
+        estimated_position = self._last_position + elapsed
+        
+        # Don't go beyond duration
+        if self._duration > 0 and estimated_position > self._duration:
+            estimated_position = self._duration
+            
+        # Create a new timeline info object with interpolated values
+        interpolated_timeline = self._timeline_info
+            
+        # Notify subscribers with interpolated timeline data
+        if interpolated_timeline is not None:
+            # Get subscribers
+            with self._subscription_channels_lock:
+                callbacks = self._subscription_channels.get('timeline_interpolated', [])
+
+            # Perform callbacks
+            for callback in callbacks:
+                callback({
+                    'position': estimated_position,
+                    'duration': self._duration
+                })
+
+    def seek_to_position(self, position: float):
+        """Seek to specific position in seconds."""
+        try:
+            with self._current_session_lock:
+                if self._current_session is not None:
+                    # Convert seconds to 100-nanosecond units (required by the Windows API)
+                    position_in_100ns = int(position * 10000000)
+                    self._current_session.try_change_playback_position_async(position_in_100ns)
+                    # Update last known position for interpolation
+                    self._last_position = position
+                    self._last_update_time = QDateTime.currentMSecsSinceEpoch()
+        except Exception as e:
+            self._log.error(f"Error seeking to position: {e}")
+
+    def is_seek_supported(self):
+        with self._playback_info_lock:
+            if self._playback_info and hasattr(self._playback_info, 'controls'):
+                return self._playback_info.controls.is_playback_position_enabled
+        return False
