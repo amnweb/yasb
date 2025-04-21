@@ -6,7 +6,7 @@ APP_BAR_TITLE = "YasbBar"
 SCRIPT_PATH = os.path.dirname(os.path.abspath(__file__))
 GITHUB_URL = "https://github.com/amnweb/yasb"
 GITHUB_THEME_URL = "https://github.com/amnweb/yasb-themes"
-BUILD_VERSION = "1.6.9"
+BUILD_VERSION = "1.7.0"
 CLI_VERSION = "1.0.9"
 # Development Settings
 DEBUG = False
