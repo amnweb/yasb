@@ -14,6 +14,8 @@ DEFAULTS = {
         "\udb82\udd25",  # Icon for 50-74% strength
         "\udb82\udd28"   # Icon for 75-100% strength
     ],
+    'ethernet_label': "{wifi_icon}",
+    'ethernet_label_alt': "{wifi_icon} {ip_addr}",
     'ethernet_icon': "\ueba9",
     'container_padding': {'top': 0, 'left': 0, 'bottom': 0, 'right': 0},
     'animation': {
@@ -45,6 +47,14 @@ VALIDATION_SCHEMA = {
             'type': 'string',
             'required': False
         }
+    },
+    'ethernet_label': {
+        'type': 'string',
+        'default': DEFAULTS['ethernet_label']
+    },
+    'ethernet_label_alt': {
+        'type': 'string',
+        'default': DEFAULTS['ethernet_label_alt']
     },
     'ethernet_icon': {
         'type': 'string',

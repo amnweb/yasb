@@ -3,9 +3,11 @@
 | Option              | Type    | Default                                                                 | Description                                                                 |
 |---------------------|---------|-------------------------------------------------------------------------|-----------------------------------------------------------------------------|
 | `label`   | string  | `"{wifi_icon}"`    | The label format for the WiFi widget. |
-| `label_alt`   | string  | `"{wifi_name} {wifi_strength}%"`  | The alternative label format for the WiFi widget. |
+| `label_alt`   | string  | `"{wifi_icon} {wifi_name}"`  | The alternative label format for the WiFi widget. |
 | `update_interval` | integer  | `1000`   | Update interval in milliseconds.  |
 | `wifi_icons`  | list    | `[ "\udb82\udd2e", "\udb82\udd1f", "\udb82\udd22", "\udb82\udd25", "\udb82\udd28" ]`   | Icons for different WiFi signal strengths.    |
+| `ethernet_label`   | string  | `"{wifi_icon}"`    | The label format during active Ethernet connection. |
+| `ethernet_label_alt`   | string  | `"{wifi_icon} {ip_addr}"`  | The alternative label format during active Ethernet connection. |
 | `ethernet_icon` | string | "\ueba9" | The icon to indicate Ethernet connection. |
 | `callbacks`   | dict    | `{ 'on_left': 'next_layout', 'on_middle': 'toggle_monocle', 'on_right': 'prev_layout' }` | Callbacks for mouse events on the widget.    |
 | `animation`         | dict    | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
@@ -28,6 +30,8 @@ wifi:
       on_left: "exec cmd.exe /c start ms-settings:network"
       on_middle: "do_nothing"
       on_right: "toggle_label"
+    ethernet_label: "<span>{wifi_icon}</span>"
+    ethernet_label_alt: "<span>{wifi_icon}</span>{ip_addr}"
     ethernet_icon: "\ueba9"
     wifi_icons: [
       "\udb82\udd2e",  # Icon for 0% strength
@@ -44,9 +48,11 @@ wifi:
 ```
 
 ## Description of Options
-- **label:** The format string for the active window title. You can use placeholders like `{win[title]}` to dynamically insert window information. Default is `"{icon}"`.
-- **label_alt:** The format string for the active window title when the widget is in the alternative state. Default is `"{wifi_name} {wifi_strength}%"`.
+- **label:** The format string for the WiFi Widget. Default is `"{wifi_icon}"`.
+- **label_alt:** The format string for the WiFi Widget when the it's in the alternative state. Default is `"{wifi_icon} {wifi_name}"`.
 - **update_interval:** The interval in milliseconds at which the widget updates. Default is `1000`.
+- **ethernet_label:** The format string for the WiFi Widget during active Ethernet connection. Default is `"{wifi_icon}"`.
+- **ethernet_label_alt:** The format string for the WiFi Widget during active Ethernet connection when the widget is in the alternative state. Default is `"{wifi_icon} {ip_addr}"`.
 - **ethernet_icon**: The icon that indicates an active Ethernet connection. It will be used as `{wifi_icon}` whenever there's no active WiFi connection. Default is "\ueba9".
 - **wifi_icons:** A list of icons to use for different WiFi signal strengths. Default is `["\udb82\udd2e","\udb82\udd1f","\udb82\udd22","\udb82\udd25","\udb82\udd28",]`.
 - **callbacks:** A dictionary of callbacks for mouse events on the widget. Default is `{'on_left': 'toggle_label', 'on_middle': 'do_nothing', 'on_right': 'do_nothing'}`.
