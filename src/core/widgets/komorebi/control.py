@@ -4,7 +4,7 @@ import subprocess
 from typing import Optional
 from core.widgets.base import BaseWidget
 from core.validation.widgets.komorebi.control import VALIDATION_SCHEMA
-from core.utils.utilities import PopupWidget
+from core.utils.utilities import PopupWidget, add_shadow
 from core.utils.widgets.animation_manager import AnimationManager
 from core.event_service import EventService
 from core.event_enums import KomorebiEvent
@@ -40,6 +40,8 @@ class KomorebiControlWidget(BaseWidget):
             container_padding: dict[str, int],
             animation: dict[str, str],
             callbacks: dict[str, str],
+            label_shadow: dict = None,
+            container_shadow: dict = None
     ):
         super().__init__(class_name="komorebi-control-widget")
 
@@ -51,6 +53,8 @@ class KomorebiControlWidget(BaseWidget):
         self._komorebi_menu = komorebi_menu
         self._animation = animation
         self._padding = container_padding
+        self._label_shadow = label_shadow
+        self._container_shadow = container_shadow
         self._is_komorebi_connected = False
         self._locked_ui = False
         self._lock_menu = False
@@ -69,6 +73,7 @@ class KomorebiControlWidget(BaseWidget):
         self._widget_container: QWidget = QWidget()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
+        add_shadow(self._widget_container, self._container_shadow)
         # Add the container to the main widget layout
         self.widget_layout.addWidget(self._widget_container)
 
@@ -137,6 +142,7 @@ class KomorebiControlWidget(BaseWidget):
                     label.setProperty("class", "label")
                 label.setAlignment(Qt.AlignmentFlag.AlignCenter)
                 label.setCursor(Qt.CursorShape.PointingHandCursor)
+                add_shadow(label, self._label_shadow)
                 self._widget_container_layout.addWidget(label)
                 widgets.append(label)
                 label.show()
