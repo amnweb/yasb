@@ -10,7 +10,7 @@ from core.validation.widgets.yasb.github import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
 from PyQt6.QtGui import QDesktopServices,QCursor
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel, QHBoxLayout, QScrollArea, QVBoxLayout, QGraphicsOpacityEffect
-from PyQt6.QtCore import Qt, QPoint, QTimer, QUrl
+from PyQt6.QtCore import Qt, QTimer, QUrl
 from core.utils.widgets.animation_manager import AnimationManager
 logging.getLogger("urllib3").setLevel(logging.WARNING)
 

@@ -11,7 +11,7 @@ from urllib.parse import urlparse
 from core.widgets.base import BaseWidget
 from core.validation.widgets.yasb.server_monitor import VALIDATION_SCHEMA
 from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget, QVBoxLayout, QScrollArea, QGraphicsOpacityEffect
-from PyQt6.QtCore import Qt, QPoint, pyqtSignal, QThread, QTimer, QPropertyAnimation, QEasingCurve
+from PyQt6.QtCore import Qt, pyqtSignal, QThread, QTimer, QPropertyAnimation, QEasingCurve
 from core.utils.utilities import PopupWidget
 from core.utils.widgets.animation_manager import AnimationManager
 from win11toast import toast

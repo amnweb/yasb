@@ -9,11 +9,10 @@ from datetime import datetime
 from core.widgets.base import BaseWidget
 from core.validation.widgets.yasb.weather import VALIDATION_SCHEMA
 from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget, QVBoxLayout
-from PyQt6.QtCore import Qt, QTimer, QPoint
+from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QPixmap
 from core.utils.utilities import PopupWidget
 from core.utils.widgets.animation_manager import AnimationManager
-from settings import DEBUG
 
 class WeatherWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
@@ -271,8 +270,7 @@ class WeatherWidget(BaseWidget):
         if self.weather_data is None:
             logging.warning("Weather data is not yet available.")
             return
-        # if DEBUG:
-        #     logging.debug(f"Weather data: {self.weather_data}")
+
         active_widgets = self._show_alt_label and self._widgets_alt or self._widgets
         active_label_content = self._show_alt_label and self._label_alt_content or self._label_content
         label_parts = re.split(r'(<span.*?>.*?</span>)', active_label_content)
