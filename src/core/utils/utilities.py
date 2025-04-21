@@ -1,7 +1,7 @@
 import platform
 import re
-from PyQt6.QtWidgets import QApplication, QFrame, QMenu, QGraphicsDropShadowEffect
-from PyQt6.QtCore import QEvent
+from PyQt6.QtWidgets import QApplication, QWidget, QFrame, QMenu, QGraphicsDropShadowEffect
+from PyQt6.QtCore import QEvent, QPoint, Qt
 from PyQt6.QtGui import QScreen, QColor
 from core.utils.win32.blurWindow import Blur
 
@@ -42,29 +42,84 @@ def add_shadow(el, color, radius, offset) -> None:
 
     el.setGraphicsEffect(shadow_effect)
 
-class PopupWidget(QFrame):
-    """A custom QFrame widget that acts as a popup and hides itself when a mouse click occurs outside its geometry.
-    This widget provides functionality for creating popup windows with optional blur effects and rounded corners.
-    When a mouse click is detected outside the popup's geometry, it automatically hides and deletes itself.
-    Args:
-        parent (QWidget, optional): The parent widget. Defaults to None.
-        blur (bool, optional): Whether to apply blur effect to the popup. Defaults to False.
-        round_corners (bool, optional): Whether to apply rounded corners to the popup. Defaults to False.
-        round_corners_type (str, optional): Type of rounded corners ('normal', 'small'). Defaults to "normal".
-        border_color (str, optional): Color of the popup border ('System','hex', 'None'). Defaults to "None".
+class PopupWidget(QWidget):
+    """
+    A custom popup widget that can be used to create a frameless, translucent window.
+    This widget can be used to create custom popups with various styles and effects.
+    Attributes:
+        _blur (bool): Whether to apply a blur effect to the popup.
+        _round_corners (bool): Whether to round the corners of the popup.
+        _round_corners_type (str): Type of round corners to apply.
+        _border_color (str): Color of the border.
     Methods:
-        showEvent(event): Handles the show event, applying blur effects if enabled.
-        eventFilter(obj, event): Filters mouse click events to hide popup when clicked outside.
-        hideEvent(event): Handles the hide event, cleaning up event filters.
+        setProperty(name, value): Set a property for the popup widget.
+        setPosition(alignment, direction, offset_left, offset_top): Position the popup relative to its parent widget.
+        showEvent(event): Handle the show event for the popup.
+        eventFilter(obj, event): Filter events to detect clicks outside the popup.
+        hideEvent(event): Handle the hide event for the popup.
+        resizeEvent(event): Handle the resize event for the popup.
     """
     def __init__(self, parent=None, blur=False, round_corners=False, round_corners_type="normal", border_color="None"):
         super().__init__(parent)
+        
+        self.setWindowFlags(
+            Qt.WindowType.Popup
+            | Qt.WindowType.FramelessWindowHint
+            | Qt.WindowType.WindowStaysOnTopHint
+            | Qt.WindowType.NoDropShadowWindowHint
+        )
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self._blur = blur
         self._round_corners = round_corners
         self._round_corners_type = round_corners_type
         self._border_color = border_color
+
+        # Create the inner frame
+        self._popup_content = QFrame(self)        
+
         QApplication.instance().installEventFilter(self)
- 
+
+    def setProperty(self, name, value):
+        super().setProperty(name, value)
+        if name == "class":
+            self._popup_content.setProperty(name, value)
+
+    def setPosition(self, alignment='left', direction='down', offset_left=0, offset_top=0):
+        """
+        Position the popup relative to its parent widget.
+        Args:
+            alignment (str): Where to align the popup - 'left', 'right', or 'center'
+            direction (str): Whether popup appears above ('up') or below ('down') the parent
+            offset_left (int): Horizontal offset in pixels
+            offset_top (int): Vertical offset in pixels
+        """
+        parent = self.parent()
+        if not parent:
+            return
+
+        widget_global_pos = parent.mapToGlobal(QPoint(offset_left, parent.height() + offset_top))
+
+        if direction == 'up':
+            global_y = parent.mapToGlobal(QPoint(0, 0)).y() - self.height() - offset_top
+            widget_global_pos = QPoint(parent.mapToGlobal(QPoint(0, 0)).x() + offset_left, global_y)
+
+        if alignment == 'left':
+            global_position = widget_global_pos
+        elif alignment == 'right':
+            global_position = QPoint(
+                widget_global_pos.x() + parent.width() - self.width(),
+                widget_global_pos.y()
+            )
+        elif alignment == 'center':
+            global_position = QPoint(
+                widget_global_pos.x() + (parent.width() - self.width()) // 2,
+                widget_global_pos.y()
+            )
+        else:
+            global_position = widget_global_pos
+
+        self.move(global_position)
+
     def showEvent(self, event):
         if self._blur:
             Blur(
@@ -90,6 +145,10 @@ class PopupWidget(QFrame):
     def hideEvent(self, event):
         QApplication.instance().removeEventFilter(self)
         super().hideEvent(event)
+
+    def resizeEvent(self, event):
+        self._popup_content.setGeometry(0, 0, self.width(), self.height())
+        super().resizeEvent(event)
 
 class ContextMenu(QMenu):
     """A custom context menu class that extends QMenu with additional functionality.

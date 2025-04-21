@@ -185,9 +185,6 @@ class NotesWidget(BaseWidget):
             self._menu_config['border_color']
         )
         self._menu.setProperty('class', 'notes-menu')
-        self._menu.setWindowFlag(Qt.WindowType.FramelessWindowHint)
-        self._menu.setWindowFlag(Qt.WindowType.Popup)
-        self._menu.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint)
 
         # Create main layout
         main_layout = QVBoxLayout(self._menu)
@@ -275,38 +272,13 @@ class NotesWidget(BaseWidget):
         # Initialize edit mode tracking
         self._editing_note = None
 
-        # Position the menu
         self._menu.adjustSize()
-        widget_global_pos = self.mapToGlobal(QPoint(
-            self._menu_config['offset_left'],
-            self.height() + self._menu_config['offset_top']
-        ))
-
-        # Adjust position based on direction
-        if self._menu_config['direction'] == 'up':
-            global_y = self.mapToGlobal(QPoint(0, 0)).y(
-            ) - self._menu.height() - self._menu_config['offset_top']
-            widget_global_pos = QPoint(
-                self.mapToGlobal(QPoint(0, 0)).x() +
-                self._menu_config['offset_left'],
-                global_y
-            )
-
-        # Adjust position based on alignment
-        if self._menu_config['alignment'] == 'left':
-            global_position = widget_global_pos
-        elif self._menu_config['alignment'] == 'right':
-            global_position = QPoint(
-                widget_global_pos.x() + self.width() - self._menu.width(),
-                widget_global_pos.y()
-            )
-        else:
-            global_position = QPoint(
-                widget_global_pos.x() + (self.width() - self._menu.width()) // 2,
-                widget_global_pos.y()
-            )
-
-        self._menu.move(global_position)
+        self._menu.setPosition(
+            alignment=self._menu_config['alignment'],
+            direction=self._menu_config['direction'],
+            offset_left=self._menu_config['offset_left'],
+            offset_top=self._menu_config['offset_top']
+        )
         self._menu.show()
         self._note_input.setFocus()
 

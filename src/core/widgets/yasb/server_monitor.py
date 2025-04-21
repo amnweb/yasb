@@ -358,9 +358,6 @@ class ServerMonitor(BaseWidget):
     def show_menu(self):  
         self.dialog = PopupWidget(self, self._menu['blur'], self._menu['round_corners'], self._menu['round_corners_type'], self._menu['border_color'])
         self.dialog.setProperty("class", "server-menu")
-        self.dialog.setWindowFlag(Qt.WindowType.FramelessWindowHint)
-        self.dialog.setWindowFlag(Qt.WindowType.Popup)
-        self.dialog.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint)
        
         # Get server data list
         server_data_list = self._server_status_data or None
@@ -397,30 +394,14 @@ class ServerMonitor(BaseWidget):
         scroll_area = self._build_server_rows(server_data_list)
         layout.addWidget(scroll_area)
         self.dialog.setLayout(layout)
-        
-        # Position the dialog 
-        self.dialog.adjustSize()
-        widget_global_pos = self.mapToGlobal(QPoint(self._menu['offset_left'], self.height() + self._menu['offset_top']))
-        if self._menu['direction'] == 'up':
-            global_y = self.mapToGlobal(QPoint(0, 0)).y() - self.dialog.height() - self._menu['offset_top']
-            widget_global_pos = QPoint(self.mapToGlobal(QPoint(0, 0)).x() + self._menu['offset_left'], global_y)
 
-        if self._menu['alignment'] == 'left':
-            global_position = widget_global_pos
-        elif self._menu['alignment'] == 'right':
-            global_position = QPoint(
-                widget_global_pos.x() + self.width() - self.dialog.width(),
-                widget_global_pos.y()
-            )
-        elif self._menu['alignment'] == 'center':
-            global_position = QPoint(
-                widget_global_pos.x() + (self.width() - self.dialog.width()) // 2,
-                widget_global_pos.y()
-            )
-        else:
-            global_position = widget_global_pos
-        
-        self.dialog.move(global_position)
+        self.dialog.adjustSize()
+        self.dialog.setPosition(
+            alignment=self._menu['alignment'],
+            direction=self._menu['direction'],
+            offset_left=self._menu['offset_left'],
+            offset_top=self._menu['offset_top']
+        )
         self.dialog.show()        
         
 

@@ -10,7 +10,7 @@ from core.event_service import EventService
 from core.event_enums import KomorebiEvent
 from core.utils.komorebi.client import KomorebiClient
 from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget, QVBoxLayout, QSizePolicy
-from PyQt6.QtCore import Qt, QPoint, pyqtSignal, QThread, QEvent
+from PyQt6.QtCore import Qt, pyqtSignal, QThread, QEvent
 
 
 class ExtPopupWidget(PopupWidget):
@@ -147,13 +147,10 @@ class KomorebiControlWidget(BaseWidget):
         if self._version_text is None:
             # If we don't have a version yet, start an async check
             self._start_version_check()
-        # Always create a fresh dialog
+
         self.dialog = ExtPopupWidget(self, self._komorebi_menu['blur'], self._komorebi_menu['round_corners'],
                                      self._komorebi_menu['round_corners_type'], self._komorebi_menu['border_color'])
         self.dialog.setProperty("class", "komorebi-control-menu")
-        self.dialog.setWindowFlag(Qt.WindowType.FramelessWindowHint)
-        self.dialog.setWindowFlag(Qt.WindowType.Popup)
-        self.dialog.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint)
 
         layout = QVBoxLayout()
 
@@ -209,32 +206,13 @@ class KomorebiControlWidget(BaseWidget):
 
         self.dialog.setLayout(layout)
 
-        # Position the dialog
         self.dialog.adjustSize()
-        widget_global_pos = self.mapToGlobal(QPoint(
-            self._komorebi_menu['offset_left'], self.height() + self._komorebi_menu['offset_top']))
-        if self._komorebi_menu['direction'] == 'up':
-            global_y = self.mapToGlobal(QPoint(0, 0)).y(
-            ) - self.dialog.height() - self._komorebi_menu['offset_left']
-            widget_global_pos = QPoint(self.mapToGlobal(
-                QPoint(0, 0)).x() + self._komorebi_menu['offset_left'], global_y)
-
-        if self._komorebi_menu['alignment'] == 'left':
-            global_position = widget_global_pos
-        elif self._komorebi_menu['alignment'] == 'right':
-            global_position = QPoint(
-                widget_global_pos.x() + self.width() - self.dialog.width(),
-                widget_global_pos.y()
-            )
-        elif self._komorebi_menu['alignment'] == 'center':
-            global_position = QPoint(
-                widget_global_pos.x() + (self.width() - self.dialog.width()) // 2,
-                widget_global_pos.y()
-            )
-        else:
-            global_position = widget_global_pos
-
-        self.dialog.move(global_position)
+        self.dialog.setPosition(
+            alignment=self._komorebi_menu['alignment'],
+            direction=self._komorebi_menu['direction'],
+            offset_left=self._komorebi_menu['offset_left'],
+            offset_top=self._komorebi_menu['offset_top']
+        )
 
         self.dialog.show()
 

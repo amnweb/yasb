@@ -346,15 +346,11 @@ class VolumeWidget(BaseWidget):
     def show_volume_menu(self):
         self.dialog = PopupWidget(self, self._audio_menu['blur'], self._audio_menu['round_corners'], self._audio_menu['round_corners_type'], self._audio_menu['border_color'])
         self.dialog.setProperty("class", "audio-menu")
-        self.dialog.setWindowFlag(Qt.WindowType.FramelessWindowHint)
-        self.dialog.setWindowFlag(Qt.WindowType.Popup)
-        self.dialog.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint)
 
         # Create vertical layout for the dialog
         layout = QVBoxLayout()
         layout.setSpacing(0)
         layout.setContentsMargins(10, 10, 10, 10)
-
 
         # Create a container widget and layout
         self.container = QWidget()
@@ -362,8 +358,6 @@ class VolumeWidget(BaseWidget):
         self.container_layout = QVBoxLayout()
         self.container_layout.setSpacing(0)
         self.container_layout.setContentsMargins(0, 0, 0, 10)
-
-
 
         self.devices = self._list_audio_devices()
         if len(self.devices) > 1:
@@ -408,27 +402,12 @@ class VolumeWidget(BaseWidget):
 
         # Position the dialog
         self.dialog.adjustSize()
-        widget_global_pos = self.mapToGlobal(QPoint(self._audio_menu['offset_left'], self.height() + self._audio_menu['offset_top']))
-        if self._audio_menu['direction'] == 'up':
-            global_y = self.mapToGlobal(QPoint(0, 0)).y() - self.dialog.height() - self._audio_menu['offset_top']
-            widget_global_pos = QPoint(self.mapToGlobal(QPoint(0, 0)).x() + self._audio_menu['offset_left'], global_y)
-
-        if self._audio_menu['alignment'] == 'left':
-            global_position = widget_global_pos
-        elif self._audio_menu['alignment'] == 'right':
-            global_position = QPoint(
-                widget_global_pos.x() + self.width() - self.dialog.width(),
-                widget_global_pos.y()
-            )
-        elif self._audio_menu['alignment'] == 'center':
-            global_position = QPoint(
-                widget_global_pos.x() + (self.width() - self.dialog.width()) // 2,
-                widget_global_pos.y()
-            )
-        else:
-            global_position = widget_global_pos
-
-        self.dialog.move(global_position)
+        self.dialog.setPosition(
+            alignment=self._audio_menu['alignment'],
+            direction=self._audio_menu['direction'],
+            offset_left=self._audio_menu['offset_left'],
+            offset_top=self._audio_menu['offset_top']
+        )
         self.dialog.show()
 
     def _toggle_label(self):

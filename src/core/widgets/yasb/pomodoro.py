@@ -386,9 +386,7 @@ class PomodoroWidget(BaseWidget):
                                    self._menu_config['round_corners_type'], self._menu_config['border_color'])
 
         self._dialog.setProperty("class", "pomodoro-menu")
-        self._dialog.setWindowFlag(Qt.WindowType.FramelessWindowHint)
-        self._dialog.setWindowFlag(Qt.WindowType.Popup)
-        self._dialog.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint)
+
         # Main layout for the popup
         layout = QVBoxLayout()
         layout.setSpacing(8)
@@ -481,31 +479,12 @@ class PomodoroWidget(BaseWidget):
         self._dialog.setLayout(layout)
 
         self._dialog.adjustSize()
-
-        widget_global_pos = self.mapToGlobal(QPoint(
-            self._menu_config['offset_left'], self.height() + self._menu_config['offset_top']))
-        if self._menu_config['direction'] == 'up':
-            global_y = self.mapToGlobal(QPoint(0, 0)).y(
-            ) - self._dialog.height() - self._menu_config['offset_left']
-            widget_global_pos = QPoint(self.mapToGlobal(
-                QPoint(0, 0)).x() + self._menu_config['offset_left'], global_y)
-
-        if self._menu_config['alignment'] == 'left':
-            global_position = widget_global_pos
-        elif self._menu_config['alignment'] == 'right':
-            global_position = QPoint(
-                widget_global_pos.x() + self.width() - self._dialog.width(),
-                widget_global_pos.y()
-            )
-        elif self._menu_config['alignment'] == 'center':
-            global_position = QPoint(
-                widget_global_pos.x() + (self.width() - self._dialog.width()) // 2,
-                widget_global_pos.y()
-            )
-        else:
-            global_position = widget_global_pos
-
-        self._dialog.move(global_position)
+        self._dialog.setPosition(
+            alignment=self._menu_config['alignment'],
+            direction=self._menu_config['direction'],
+            offset_left=self._menu_config['offset_left'],
+            offset_top=self._menu_config['offset_top']
+        )
         self._dialog.show()
 
     def _format_time(self, seconds):

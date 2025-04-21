@@ -107,12 +107,7 @@ class WeatherWidget(BaseWidget):
             return
 
         self.dialog = PopupWidget(self, self._weather_card['blur'], self._weather_card['round_corners'], self._weather_card['round_corners_type'], self._weather_card['border_color'])
-    
         self.dialog.setProperty("class", "weather-card")
-        self.dialog.setWindowFlag(Qt.WindowType.FramelessWindowHint)
-        self.dialog.setWindowFlag(Qt.WindowType.Popup)
-        self.dialog.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint)
- 
 
         main_layout = QVBoxLayout()
         frame_today = QWidget()
@@ -227,34 +222,15 @@ class WeatherWidget(BaseWidget):
         main_layout.addLayout(days_layout)
 
         self.dialog.setLayout(main_layout)
-        
- 
-        # Position the dialog 
+
         self.dialog.adjustSize()
-        widget_global_pos = self.mapToGlobal(QPoint(self._weather_card['offset_left'], self.height() + self._weather_card['offset_top']))
-        if self._weather_card['direction'] == 'up':
-            global_y = self.mapToGlobal(QPoint(0, 0)).y() - self.dialog.height() - self._weather_card['offset_top']
-            widget_global_pos = QPoint(self.mapToGlobal(QPoint(0, 0)).x() + self._weather_card['offset_left'], global_y)
-
-        if self._weather_card['alignment'] == 'left':
-            global_position = widget_global_pos
-        elif self._weather_card['alignment'] == 'right':
-            global_position = QPoint(
-                widget_global_pos.x() + self.width() - self.dialog.width(),
-                widget_global_pos.y()
-            )
-        elif self._weather_card['alignment'] == 'center':
-            global_position = QPoint(
-                widget_global_pos.x() + (self.width() - self.dialog.width()) // 2,
-                widget_global_pos.y()
-            )
-        else:
-            global_position = widget_global_pos
-        
-        self.dialog.move(global_position)
-        self.dialog.show() 
-        
-
+        self.dialog.setPosition(
+            alignment=self._weather_card['alignment'],
+            direction=self._weather_card['direction'],
+            offset_left=self._weather_card['offset_left'],
+            offset_top=self._weather_card['offset_top']
+        )
+        self.dialog.show()
 
     def _create_dynamically_label(self, content: str, content_alt: str):
         def process_content(content, is_alt=False):

@@ -5,7 +5,7 @@ import win32api
 from core.widgets.base import BaseWidget
 from core.validation.widgets.yasb.disk import VALIDATION_SCHEMA
 from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget, QProgressBar, QVBoxLayout
-from PyQt6.QtCore import Qt, QPoint, pyqtSignal
+from PyQt6.QtCore import Qt, pyqtSignal
 from core.utils.utilities import PopupWidget
 from core.utils.widgets.animation_manager import AnimationManager
 
@@ -150,9 +150,6 @@ class DiskWidget(BaseWidget):
     def show_group_label(self):  
         self.dialog = PopupWidget(self, self._group_label['blur'], self._group_label['round_corners'], self._group_label['round_corners_type'], self._group_label['border_color'])
         self.dialog.setProperty("class", "disk-group")
-        self.dialog.setWindowFlag(Qt.WindowType.FramelessWindowHint)
-        self.dialog.setWindowFlag(Qt.WindowType.Popup)
-        self.dialog.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint)
         
         layout = QVBoxLayout()
         for label in self._group_label['volume_labels']:
@@ -216,27 +213,12 @@ class DiskWidget(BaseWidget):
 
         # Position the dialog 
         self.dialog.adjustSize()
-        widget_global_pos = self.mapToGlobal(QPoint(self._group_label['offset_left'], self.height() + self._group_label['offset_top']))
-        if self._group_label['direction'] == 'up':
-            global_y = self.mapToGlobal(QPoint(0, 0)).y() - self.dialog.height() - self._group_label['offset_left']
-            widget_global_pos = QPoint(self.mapToGlobal(QPoint(0, 0)).x() + self._group_label['offset_left'], global_y)
-
-        if self._group_label['alignment'] == 'left':
-            global_position = widget_global_pos
-        elif self._group_label['alignment'] == 'right':
-            global_position = QPoint(
-                widget_global_pos.x() + self.width() - self.dialog.width(),
-                widget_global_pos.y()
-            )
-        elif self._group_label['alignment'] == 'center':
-            global_position = QPoint(
-                widget_global_pos.x() + (self.width() - self.dialog.width()) // 2,
-                widget_global_pos.y()
-            )
-        else:
-            global_position = widget_global_pos
-        
-        self.dialog.move(global_position)
+        self.dialog.setPosition(
+            alignment=self._group_label['alignment'],
+            direction=self._group_label['direction'],
+            offset_left=self._group_label['offset_left'],
+            offset_top=self._group_label['offset_top']
+        )
         self.dialog.show()        
     
     def open_explorer(self, label):

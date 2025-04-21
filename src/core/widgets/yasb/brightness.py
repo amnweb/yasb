@@ -5,7 +5,7 @@ from settings import DEBUG
 from core.widgets.base import BaseWidget
 from core.validation.widgets.yasb.brightness import VALIDATION_SCHEMA
 from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget, QSlider, QVBoxLayout
-from PyQt6.QtCore import Qt, QTimer, QPoint
+from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QWheelEvent, QCursor
 from core.utils.win32.utilities import get_monitor_info
 import screen_brightness_control as sbc
@@ -211,9 +211,6 @@ class BrightnessWidget(BaseWidget):
     def show_brightness_menu(self):  
         self.dialog = PopupWidget(self, self._brightness_menu['blur'], self._brightness_menu['round_corners'], self._brightness_menu['round_corners_type'], self._brightness_menu['border_color'])
         self.dialog.setProperty("class", "brightness-menu")
-        self.dialog.setWindowFlag(Qt.WindowType.FramelessWindowHint)
-        self.dialog.setWindowFlag(Qt.WindowType.Popup)
-        self.dialog.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint)
         
         # Create vertical layout for the dialog
         layout = QVBoxLayout()
@@ -240,31 +237,14 @@ class BrightnessWidget(BaseWidget):
         # Add slider to layout
         layout.addWidget(self.brightness_slider)
         self.dialog.setLayout(layout)
-        
 
-        # Position the dialog 
         self.dialog.adjustSize()
-        widget_global_pos = self.mapToGlobal(QPoint(self._brightness_menu['offset_left'], self.height() + self._brightness_menu['offset_top']))
-        if self._brightness_menu['direction'] == 'up':
-            global_y = self.mapToGlobal(QPoint(0, 0)).y() - self.dialog.height() - self._brightness_menu['offset_top']
-            widget_global_pos = QPoint(self.mapToGlobal(QPoint(0, 0)).x() + self._brightness_menu['offset_left'], global_y)
-
-        if self._brightness_menu['alignment'] == 'left':
-            global_position = widget_global_pos
-        elif self._brightness_menu['alignment'] == 'right':
-            global_position = QPoint(
-                widget_global_pos.x() + self.width() - self.dialog.width(),
-                widget_global_pos.y()
-            )
-        elif self._brightness_menu['alignment'] == 'center':
-            global_position = QPoint(
-                widget_global_pos.x() + (self.width() - self.dialog.width()) // 2,
-                widget_global_pos.y()
-            )
-        else:
-            global_position = widget_global_pos
-        
-        self.dialog.move(global_position)
+        self.dialog.setPosition(
+            alignment=self._brightness_menu['alignment'],
+            direction=self._brightness_menu['direction'],
+            offset_left=self._brightness_menu['offset_left'],
+            offset_top=self._brightness_menu['offset_top']
+        )
         self.dialog.show() 
 
     def _on_slider_value_changed_if_not_dragging(self, value):
