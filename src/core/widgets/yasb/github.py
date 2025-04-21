@@ -5,7 +5,7 @@ import threading
 import requests
 from settings import DEBUG
 from datetime import datetime
-from core.utils.utilities import PopupWidget
+from core.utils.utilities import PopupWidget, add_shadow
 from core.validation.widgets.yasb.github import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
 from PyQt6.QtGui import QDesktopServices,QCursor
@@ -30,7 +30,9 @@ class GithubWidget(BaseWidget):
             icons: dict[str, str],
             update_interval: int,
             animation: dict[str, str],
-            container_padding: dict[str, int]
+            container_padding: dict[str, int],
+            label_shadow: dict = None,
+            container_shadow: dict = None
         ):
         super().__init__((update_interval * 1000), class_name="github-widget")
   
@@ -46,7 +48,9 @@ class GithubWidget(BaseWidget):
         self._max_field_size = max_field_size
         self._animation = animation
         self._padding = container_padding
-        
+        self._label_shadow = label_shadow
+        self._container_shadow = container_shadow
+
         self._github_data = []
         
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
@@ -56,6 +60,9 @@ class GithubWidget(BaseWidget):
         self._widget_container: QWidget = QWidget()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
+        if self._container_shadow['enabled']:
+            add_shadow(self._widget_container, color=self._container_shadow['color'],
+                       radius=self._container_shadow['radius'], offset=self._container_shadow['offset'])
 
         self.widget_layout.addWidget(self._widget_container)
         self._create_dynamically_label(self._label_content, self._label_alt_content)
@@ -105,12 +112,14 @@ class GithubWidget(BaseWidget):
                     icon = re.sub(r'<span.*?>|</span>', '', part).strip()
                     label = QLabel(icon)
                     label.setProperty("class", class_result)
-                    label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
                 else:
                     label = QLabel(part)
                     label.setProperty("class", "label")
-                    label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+                label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
                 label.setAlignment(Qt.AlignmentFlag.AlignCenter)    
+                if self._label_shadow['enabled']:
+                    add_shadow(label, color=self._label_shadow['color'],
+                            radius=self._label_shadow['radius'], offset=self._label_shadow['offset'])
                 self._widget_container_layout.addWidget(label)
                 
                 widgets.append(label)

@@ -8,6 +8,7 @@ from core.validation.widgets.yasb.update_check import VALIDATION_SCHEMA
 from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 import win32com.client
+from core.utils.utilities import add_shadow
 from settings import DEBUG
 
 class UpdateWorker(QThread):
@@ -184,7 +185,13 @@ class UpdateManager:
 class UpdateCheckWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
 
-    def __init__(self, windows_update: dict[str, str], winget_update: dict[str, str]):
+    def __init__(
+            self,
+            windows_update: dict[str, str],
+            winget_update: dict[str, str],
+            label_shadow: dict = None,
+            container_shadow: dict = None
+        ):
         super().__init__(class_name="update-check-widget")
 
         self._windows_update = windows_update
@@ -201,6 +208,9 @@ class UpdateCheckWidget(BaseWidget):
         self._winget_update_label = self._winget_update.get('label', '')
         self._winget_update_exclude = self._winget_update.get('exclude', [])
         
+        self._label_shadow = label_shadow
+        self._container_shadow = container_shadow
+
         self.windows_update_data = 0
         self.winget_update_data = 0
 
@@ -238,6 +248,9 @@ class UpdateCheckWidget(BaseWidget):
             container.setLayout(container_layout)
             class_name = "windows" if label_type == "windows" else "winget"
             container.setProperty("class", f"widget-container {class_name}")
+            if self._container_shadow['enabled']:
+                add_shadow(container, color=self._container_shadow['color'],
+                        radius=self._container_shadow['radius'], offset=self._container_shadow['offset'])
             self.widget_layout.addWidget(container)
             container.hide()
             label_parts = re.split(r'(<span.*?>.*?</span>)', label_text)
@@ -257,7 +270,9 @@ class UpdateCheckWidget(BaseWidget):
                 else:
                     label = QLabel(part)
                     label.setProperty("class", "label")
-
+                if self._label_shadow['enabled']:
+                    add_shadow(label, color=self._label_shadow['color'],
+                            radius=self._label_shadow['radius'], offset=self._label_shadow['offset'])
                 label.setAlignment(Qt.AlignmentFlag.AlignCenter)
                 container_layout.addWidget(label)
                 widgets.append(label)

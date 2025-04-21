@@ -144,6 +144,28 @@ VALIDATION_SCHEMA = {
         },
         'default': DEFAULTS['icons']
     },
+    'label_shadow': {
+        'type': 'dict',
+        'required': False,
+        'schema': {
+            'enabled': {'type': 'boolean', 'default': False},
+            'color': {'type': 'string', 'default': 'black'},
+            'offset': {'type': 'list', 'default': [1, 1]},
+            'radius': {'type': 'integer', 'default': 3},
+        },
+        'default': {'enabled': False, 'color': 'black', 'offset': [1, 1], 'radius': 3}
+    },
+    'container_shadow': {
+        'type': 'dict',
+        'required': False,
+        'schema': {
+            'enabled': {'type': 'boolean', 'default': False},
+            'color': {'type': 'string', 'default': 'black'},
+            'offset': {'type': 'list', 'default': [1, 1]},
+            'radius': {'type': 'integer', 'default': 3},
+        },
+        'default': {'enabled': False, 'color': 'black', 'offset': [1, 1], 'radius': 3}
+    },
     'callbacks': {
         'type': 'dict',
         'required': False,

@@ -11,7 +11,7 @@ from core.utils.win32.utilities import get_monitor_info
 import screen_brightness_control as sbc
 from datetime import datetime
 from core.utils.widgets.animation_manager import AnimationManager
-from core.utils.utilities import PopupWidget
+from core.utils.utilities import PopupWidget, add_shadow
 
 if DEBUG:
     logging.getLogger("screen_brightness_control").setLevel(logging.INFO)
@@ -40,7 +40,9 @@ class BrightnessWidget(BaseWidget):
         auto_light_day_level: int,
         container_padding: dict[str, int],
         animation: dict[str, str],
-        callbacks: dict[str, str]
+        callbacks: dict[str, str],
+        label_shadow: dict = None,
+        container_shadow: dict = None
     ):
         super().__init__(class_name="brightness-widget")
         self._show_alt_label = False
@@ -62,13 +64,18 @@ class BrightnessWidget(BaseWidget):
         self._step = 1
         self._current_mode = None
         self._animation = animation
-        
+        self._label_shadow = label_shadow
+        self._container_shadow = container_shadow
+
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
         self._widget_container_layout.setContentsMargins(self._padding['left'], self._padding['top'], self._padding['right'], self._padding['bottom'])
         self._widget_container: QWidget = QWidget()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
+        if self._container_shadow['enabled']:
+            add_shadow(self._widget_container, color=self._container_shadow['color'],
+                       radius=self._container_shadow['radius'], offset=self._container_shadow['offset'])
         self.widget_layout.addWidget(self._widget_container)
         self._create_dynamically_label(self._label_content, self._label_alt_content)
         
@@ -158,6 +165,9 @@ class BrightnessWidget(BaseWidget):
                     label.setProperty("class", "label alt" if is_alt else "label")
                 label.setAlignment(Qt.AlignmentFlag.AlignCenter)
                 label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+                if self._label_shadow['enabled']:
+                    add_shadow(label, color=self._label_shadow['color'],
+                            radius=self._label_shadow['radius'], offset=self._label_shadow['offset'])
                 self._widget_container_layout.addWidget(label)
                 widgets.append(label)
                 if is_alt:

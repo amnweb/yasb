@@ -5,7 +5,7 @@ import re
 from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget, QVBoxLayout, QPushButton
 from PyQt6.QtCore import Qt, QTimer, QRectF, pyqtProperty, QPropertyAnimation
 from PyQt6.QtGui import QCursor, QPainter, QPen, QColor
-from core.utils.utilities import PopupWidget
+from core.utils.utilities import PopupWidget, add_shadow
 from core.widgets.base import BaseWidget
 from core.validation.widgets.yasb.pomodoro import VALIDATION_SCHEMA
 from core.utils.widgets.animation_manager import AnimationManager
@@ -31,7 +31,9 @@ class PomodoroWidget(BaseWidget):
             animation: dict,
             container_padding: dict,
             callbacks: dict,
-            menu: dict
+            menu: dict,
+            label_shadow: dict = None,
+            container_shadow: dict = None
     ):
         super().__init__(class_name="pomodoro-widget")
 
@@ -52,6 +54,8 @@ class PomodoroWidget(BaseWidget):
         self._animation = animation
         self._padding = container_padding
         self._menu_config = menu
+        self._label_shadow = label_shadow
+        self._container_shadow = container_shadow
 
         # Initialize state
         self._is_running = False
@@ -76,6 +80,9 @@ class PomodoroWidget(BaseWidget):
         self._widget_container = QWidget()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
+        if self._container_shadow['enabled']:
+            add_shadow(self._widget_container, color=self._container_shadow['color'],
+                       radius=self._container_shadow['radius'], offset=self._container_shadow['offset'])
 
         # Add the container to the main widget layout
         self.widget_layout.addWidget(self._widget_container)
@@ -119,6 +126,9 @@ class PomodoroWidget(BaseWidget):
                         "class", "label alt" if is_alt else "label")
                 label.setAlignment(Qt.AlignmentFlag.AlignCenter)
                 label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+                if self._label_shadow['enabled']:
+                    add_shadow(label, color=self._label_shadow['color'],
+                            radius=self._label_shadow['radius'], offset=self._label_shadow['offset'])
                 self._widget_container_layout.addWidget(label)
                 widgets.append(label)
                 if is_alt:

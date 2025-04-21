@@ -7,7 +7,7 @@ from core.widgets.base import BaseWidget
 from core.validation.widgets.yasb.recycle_bin import VALIDATION_SCHEMA
 from core.utils.widgets.recycle_bin_monitor import RecycleBinMonitor
 from core.utils.widgets.animation_manager import AnimationManager
-
+from core.utils.utilities import add_shadow
 
 class RecycleBinWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
@@ -21,6 +21,8 @@ class RecycleBinWidget(BaseWidget):
             animation: dict[str, str],
             callbacks: dict[str, str],
             container_padding: dict[str, int],
+            label_shadow: dict = None,
+            container_shadow: dict = None
     ):
         super().__init__(class_name="recycle-bin-widget")
         self._label_content = label
@@ -33,6 +35,8 @@ class RecycleBinWidget(BaseWidget):
         self._bin_info = {"num_items": 0, "size_bytes": 0}
         self._is_emptying = False
         self._empty_thread = None
+        self._label_shadow = label_shadow
+        self._container_shadow = container_shadow
 
         # Get the singleton monitor instance - monitoring starts automatically
         self.monitor = RecycleBinMonitor.get_instance()
@@ -52,6 +56,9 @@ class RecycleBinWidget(BaseWidget):
         self._widget_container: QWidget = QWidget()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
+        if self._container_shadow['enabled']:
+            add_shadow(self._widget_container, color=self._container_shadow['color'],
+                       radius=self._container_shadow['radius'], offset=self._container_shadow['offset'])
 
         self.widget_layout.addWidget(self._widget_container)
 
@@ -103,6 +110,9 @@ class RecycleBinWidget(BaseWidget):
                     label.setProperty("class", "label")
                 label.setAlignment(Qt.AlignmentFlag.AlignCenter)
                 label.setCursor(Qt.CursorShape.PointingHandCursor)
+                if self._label_shadow['enabled']:
+                    add_shadow(label, color=self._label_shadow['color'],
+                            radius=self._label_shadow['radius'], offset=self._label_shadow['offset'])
                 self._widget_container_layout.addWidget(label)
                 widgets.append(label)
                 if is_alt:

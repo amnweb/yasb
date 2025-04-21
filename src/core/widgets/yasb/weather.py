@@ -11,7 +11,7 @@ from core.validation.widgets.yasb.weather import VALIDATION_SCHEMA
 from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget, QVBoxLayout
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QPixmap
-from core.utils.utilities import PopupWidget
+from core.utils.utilities import PopupWidget, add_shadow
 from core.utils.widgets.animation_manager import AnimationManager
 
 class WeatherWidget(BaseWidget):
@@ -31,7 +31,9 @@ class WeatherWidget(BaseWidget):
             callbacks: dict[str, str],
             icons: dict[str, str],
             container_padding: dict[str, int],
-            animation: dict[str, str]
+            animation: dict[str, str],
+            label_shadow: dict = None,
+            container_shadow: dict = None
     ):
         super().__init__((update_interval * 1000), class_name="weather-widget")
         self._label_content = label
@@ -48,6 +50,8 @@ class WeatherWidget(BaseWidget):
         self._units = units
         self._show_alerts = show_alerts
         self._padding = container_padding
+        self._label_shadow = label_shadow
+        self._container_shadow = container_shadow
         # Store weather data
         self.weather_data = None
         self._show_alt_label = False
@@ -64,7 +68,10 @@ class WeatherWidget(BaseWidget):
         self._widget_container: QWidget = QWidget()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
-        
+        if self._container_shadow['enabled']:
+            add_shadow(self._widget_container, color=self._container_shadow['color'],
+                       radius=self._container_shadow['radius'], offset=self._container_shadow['offset'])
+
         # Add the container to the main widget layout
         self.widget_layout.addWidget(self._widget_container)
         self._create_dynamically_label(self._label_content, self._label_alt_content)
@@ -253,6 +260,9 @@ class WeatherWidget(BaseWidget):
                     label.setText("weather update...")
                 label.setAlignment(Qt.AlignmentFlag.AlignCenter)
                 label.setCursor(Qt.CursorShape.PointingHandCursor)
+                if self._label_shadow['enabled']:
+                    add_shadow(label, color=self._label_shadow['color'],
+                            radius=self._label_shadow['radius'], offset=self._label_shadow['offset'])
                 self._widget_container_layout.addWidget(label)
                 widgets.append(label)
                 if is_alt:
