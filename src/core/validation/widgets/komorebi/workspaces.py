@@ -87,7 +87,7 @@ VALIDATION_SCHEMA = {
         'default': DEFAULTS['container_padding'],
         'required': False
     },
-    'label_shadow': {
+    'btn_shadow': {
         'type': 'dict',
         'required': False,
         'schema': {

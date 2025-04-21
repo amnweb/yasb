@@ -6,7 +6,7 @@ from core.widgets.base import BaseWidget
 from core.validation.widgets.yasb.windows_desktops import VALIDATION_SCHEMA
 from core.event_service import EventService
 from pyvda import VirtualDesktop, get_virtual_desktops, set_wallpaper_for_all_desktops
-from core.utils.utilities import ContextMenu, is_windows_10
+from core.utils.utilities import ContextMenu, is_windows_10, add_shadow
     
 class WorkspaceButton(QPushButton):
     def __init__(self, workspace_index: int, label: str = None, active_label: str = None, parent=None):
@@ -177,6 +177,8 @@ class WorkspaceWidget(BaseWidget):
             switch_workspace_animation: bool,
             animation: bool,
             container_padding: dict,
+            btn_shadow: dict = None,
+            container_shadow: dict = None
     ):
         super().__init__(class_name="windows-desktops")
         self._event_service = EventService()
@@ -192,6 +194,8 @@ class WorkspaceWidget(BaseWidget):
         self._padding = container_padding
         self._switch_workspace_animation = switch_workspace_animation
         self._animation = animation
+        self._btn_shadow = btn_shadow
+        self._container_shadow = container_shadow
         self._virtual_desktops = range(1, len(get_virtual_desktops()) + 1)
         self._prev_workspace_index = None
         self._curr_workspace_index = VirtualDesktop.current().number
@@ -207,6 +211,7 @@ class WorkspaceWidget(BaseWidget):
         self._workspace_container: QWidget = QWidget()
         self._workspace_container.setLayout(self._workspace_container_layout)
         self._workspace_container.setProperty("class", "widget-container")
+        add_shadow(self._workspace_container, self._container_shadow)
         self.widget_layout.addWidget(self._workspace_container)
 
         self.timer_interval = 2000
@@ -290,8 +295,7 @@ class WorkspaceWidget(BaseWidget):
             self._clear_container_layout()
             for workspace_btn in self._workspace_buttons:
                 self._workspace_container_layout.addWidget(workspace_btn)
-
- 
+                add_shadow(workspace_btn, self._btn_shadow)
 
     def _get_workspace_label(self, workspace_index):
         ws_name = VirtualDesktop(workspace_index).name

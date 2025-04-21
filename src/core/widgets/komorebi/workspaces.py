@@ -128,7 +128,7 @@ class WorkspaceWidget(BaseWidget):
             animation: bool,
             enable_scroll_switching: bool,
             reverse_scroll_direction: bool,
-            label_shadow: dict = None,
+            btn_shadow: dict = None,
             container_shadow: dict = None
     ):
         super().__init__(class_name="komorebi-workspaces")
@@ -144,7 +144,7 @@ class WorkspaceWidget(BaseWidget):
         self._hide_if_offline = hide_if_offline
         self._padding = container_padding
         self._animation = animation
-        self._label_shadow = label_shadow
+        self._btn_shadow = btn_shadow
         self._container_shadow = container_shadow
         self._komorebi_screen = None
         self._komorebi_workspaces = []
@@ -381,7 +381,7 @@ class WorkspaceWidget(BaseWidget):
             for workspace_btn in self._workspace_buttons:
                 self._workspace_container_layout.addWidget(workspace_btn)
                 self._update_button(workspace_btn)
-                add_shadow(workspace_btn, self._label_shadow)
+                add_shadow(workspace_btn, self._btn_shadow)
                 
     def _get_workspace_label(self, workspace_index):
         workspace = self._komorebic.get_workspace_by_index(self._komorebi_screen, workspace_index)
