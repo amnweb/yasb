@@ -2,7 +2,7 @@ import json
 import logging
 from dataclasses import dataclass
 from enum import StrEnum, auto
-from typing import Any
+from typing import Any, cast
 
 from PyQt6.QtCore import QObject, QTimer, QUrl, pyqtSignal
 from PyQt6.QtNetwork import QAbstractSocket
@@ -116,7 +116,7 @@ class GlazewmClient(QObject):
             if not isinstance(raw_data, dict):
                 logger.warning(f"Expected 'data' to be a dict, got {type(raw_data).__name__}")
                 return
-            data: dict[str, Any] = raw_data
+            data = cast(dict[str, Any], raw_data)
             if response.get("clientMessage") == QueryType.MONITORS:
                 monitors = data.get("monitors", [])
                 if monitors is None:

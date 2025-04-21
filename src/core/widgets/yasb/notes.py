@@ -65,9 +65,7 @@ class NotesWidget(BaseWidget):
         self._widget_container = QWidget()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
-        if self._container_shadow['enabled']:
-            add_shadow(self._widget_container, color=self._container_shadow['color'],
-                       radius=self._container_shadow['radius'], offset=self._container_shadow['offset'])
+        add_shadow(self._widget_container, self._container_shadow)
 
         # Add container to main widget layout
         self.widget_layout.addWidget(self._widget_container)
@@ -147,9 +145,7 @@ class NotesWidget(BaseWidget):
 
                 label.setAlignment(Qt.AlignmentFlag.AlignCenter)
                 label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-                if self._label_shadow['enabled']:
-                    add_shadow(label, color=self._label_shadow['color'],
-                            radius=self._label_shadow['radius'], offset=self._label_shadow['offset'])
+                add_shadow(label, self._label_shadow)
                 self._widget_container_layout.addWidget(label)
                 widgets.append(label)
                 if is_alt:

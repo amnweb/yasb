@@ -5,6 +5,12 @@ DEFAULTS = {
     "hide_empty_workspaces": True,
     "hide_if_offline": False,
     "glazewm_server_uri": "ws://localhost:6123",
+    "default_shadow": {
+        "enabled": False,
+        "color": "black",
+        "offset": [1, 1],
+        "radius": 3,
+    },
 }
 
 VALIDATION_SCHEMA = {
@@ -33,5 +39,27 @@ VALIDATION_SCHEMA = {
     "glazewm_server_uri": {
         "type": "string",
         "default": DEFAULTS["glazewm_server_uri"],
+    },
+    "container_shadow": {
+        "type": "dict",
+        "required": False,
+        "schema": {
+            "enabled": {"type": "boolean", "default": False},
+            "color": {"type": "string", "default": "black"},
+            "offset": {"type": "list", "default": [1, 1]},
+            "radius": {"type": "integer", "default": 3},
+        },
+        "default": DEFAULTS["default_shadow"],
+    },
+    "btn_shadow": {
+        "type": "dict",
+        "required": False,
+        "schema": {
+            "enabled": {"type": "boolean", "default": False},
+            "color": {"type": "string", "default": "black"},
+            "offset": {"type": "list", "default": [1, 1]},
+            "radius": {"type": "integer", "default": 3},
+        },
+        "default": DEFAULTS["default_shadow"],
     },
 }

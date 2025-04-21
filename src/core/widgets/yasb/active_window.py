@@ -87,28 +87,21 @@ class ActiveWindowWidget(BaseWidget):
         self._widget_container: QWidget = QWidget()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
-        if self._container_shadow['enabled']:
-            add_shadow(self._widget_container, color=self._container_shadow['color'],
-                       radius=self._container_shadow['radius'], offset=self._container_shadow['offset'])
+        add_shadow(self._widget_container, self._container_shadow)
         # Add the container to the main widget layout
         self.widget_layout.addWidget(self._widget_container)
-        
         
         self._window_title_text = QLabel()
         self._window_title_text.setProperty("class", "label")
         self._window_title_text.setTextFormat(Qt.TextFormat.PlainText)
         self._window_title_text.setText(self._label_no_window)
-        if self._label_shadow['enabled']:
-            add_shadow(self._window_title_text, color=self._label_shadow['color'],
-                       radius=self._label_shadow['radius'], offset=self._label_shadow['offset'])
+        add_shadow(self._window_title_text, self._label_shadow)
             
         if self._label_icon:
             self._window_icon_label = QLabel()
             self._window_icon_label.setProperty("class", "label icon")
             self._window_icon_label.setText(self._label_no_window)
-            if self._label_shadow['enabled']:
-                add_shadow(self._window_icon_label, color=self._label_shadow['color'],
-                        radius=self._label_shadow['radius'], offset=self._label_shadow['offset'])
+            add_shadow(self._window_icon_label, self._label_shadow)
         self._ignore_window = ignore_window
         self._ignore_window['classes'] += IGNORED_CLASSES
         self._ignore_window['processes'] += IGNORED_PROCESSES

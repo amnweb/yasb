@@ -135,9 +135,7 @@ class PowerMenuWidget(BaseWidget):
         self._button.setProperty("class", "label power-button")
         self._button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self._button.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        if self._label_shadow['enabled']:
-            add_shadow(self._button, color=self._label_shadow['color'],
-                    radius=self._label_shadow['radius'], offset=self._label_shadow['offset'])
+        add_shadow(self._button, self._label_shadow)
         # Construct container
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
@@ -147,9 +145,7 @@ class PowerMenuWidget(BaseWidget):
         self._widget_container: QWidget = QWidget()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
-        if self._container_shadow['enabled']:
-            add_shadow(self._widget_container, color=self._container_shadow['color'],
-                       radius=self._container_shadow['radius'], offset=self._container_shadow['offset'])
+        add_shadow(self._widget_container, self._container_shadow)
         # Add the container to the main widget layout
         self.widget_layout.addWidget(self._widget_container)
         self._widget_container_layout.addWidget(self._button)
