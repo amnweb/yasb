@@ -1,7 +1,8 @@
 import platform
 import re
+from typing import Any
 from PyQt6.QtWidgets import QApplication, QWidget, QFrame, QMenu, QGraphicsDropShadowEffect
-from PyQt6.QtCore import QEvent, QPoint, Qt
+from PyQt6.QtCore import QEvent, QObject, QPoint, Qt
 from PyQt6.QtGui import QScreen, QColor
 from core.utils.win32.blurWindow import Blur
 
@@ -18,12 +19,17 @@ def is_valid_percentage_str(s: str) -> bool:
 def get_screen_by_name(screen_name: str) -> QScreen:
     return next(filter(lambda scr: screen_name in scr.name(), QApplication.screens()), None)
 
-def add_shadow(el, color, radius, offset) -> None:
-    """"Add a shadow effect to a given element."""
-    shadow_effect = QGraphicsDropShadowEffect(el)
-    shadow_effect.setOffset(offset[0], offset[1])
-    shadow_effect.setBlurRadius(radius)
 
+def add_shadow(el: QWidget, options: dict[str, Any]) -> None:
+    """"Add a shadow effect to a given element."""
+    if not options["enabled"]:
+        return
+
+    shadow_effect = QGraphicsDropShadowEffect(el)
+    shadow_effect.setOffset(options["offset"][0], options["offset"][1])
+    shadow_effect.setBlurRadius(options["radius"])
+
+    color = options["color"]
     if color.startswith('#'):
         color = color.lstrip('#')
         # Handle hex with alpha (#RRGGBBAA format)

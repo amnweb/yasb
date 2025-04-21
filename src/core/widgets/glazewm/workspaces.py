@@ -11,6 +11,7 @@ from PyQt6.QtGui import QCursor, QShowEvent
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QWidget
 
 from core.utils.glazewm.client import GlazewmClient, Monitor
+from core.utils.utilities import add_shadow
 from core.utils.win32.utilities import get_monitor_hwnd
 from core.validation.widgets.glazewm.workspaces import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
@@ -113,6 +114,8 @@ class GlazewmWorkspacesWidget(BaseWidget):
         hide_empty_workspaces: bool,
         hide_if_offline: bool,
         glazewm_server_uri: str,
+        container_shadow: dict[str, Any],
+        btn_shadow: dict[str, Any],
     ):
         super().__init__(class_name="glazewm-workspaces")
         self.label_offline = offline_label
@@ -121,6 +124,8 @@ class GlazewmWorkspacesWidget(BaseWidget):
         self.glazewm_server_uri = glazewm_server_uri
         self.hide_empty_workspaces = hide_empty_workspaces
         self.hide_if_offline = hide_if_offline
+        self.container_shadow = container_shadow
+        self.btn_shadow = btn_shadow
         self.workspaces: dict[str, GlazewmWorkspaceButton] = {}
         self.monitor_handle: int | None = None
 
@@ -135,6 +140,8 @@ class GlazewmWorkspacesWidget(BaseWidget):
 
         self.offline_text = QLabel(self.label_offline)
         self.offline_text.setProperty("class", "offline-status")
+
+        add_shadow(self._widget_frame, self.container_shadow)
 
         self.widget_layout.addWidget(self.offline_text)
         self.widget_layout.addWidget(self.workspace_container)
@@ -177,6 +184,7 @@ class GlazewmWorkspacesWidget(BaseWidget):
                     populated_label=self.populated_label,
                     empty_label=self.empty_label,
                 )
+                add_shadow(btn, self.btn_shadow)
 
             # Update workspace state
             btn.workspace_name = workspace.name

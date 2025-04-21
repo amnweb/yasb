@@ -9,6 +9,7 @@ from PyQt6.QtGui import QCursor
 from PyQt6.QtWidgets import QHBoxLayout, QPushButton
 
 from core.utils.glazewm.client import GlazewmClient, TilingDirection
+from core.utils.utilities import add_shadow
 from core.validation.widgets.glazewm.tiling_direction import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
 from settings import DEBUG
@@ -29,10 +30,14 @@ class GlazewmTilingDirectionWidget(BaseWidget):
         horizontal_label: str,
         vertical_label: str,
         glazewm_server_uri: str,
+        container_shadow: dict[str, Any],
+        btn_shadow: dict[str, Any],
     ):
         super().__init__(class_name="glazewm-tiling-direction")
         self.horizontal_label = horizontal_label
         self.vertical_label = vertical_label
+        self.container_shadow = container_shadow
+        self.btn_shadow = btn_shadow
         self.current_tiling_direction = TilingDirection.HORIZONTAL
 
         self.workspace_container_layout = QHBoxLayout()
@@ -44,6 +49,9 @@ class GlazewmTilingDirectionWidget(BaseWidget):
         self.tiling_direction_button.setVisible(False)
         self.tiling_direction_button.setLayout(self.workspace_container_layout)
         self.tiling_direction_button.clicked.connect(self.toggle_tiling_direction)  # type: ignore
+
+        add_shadow(self._widget_frame, self.container_shadow)
+        add_shadow(self.tiling_direction_button, self.btn_shadow)
 
         self.widget_layout.addWidget(self.tiling_direction_button)
 

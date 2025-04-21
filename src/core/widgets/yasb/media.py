@@ -83,9 +83,7 @@ class MediaWidget(BaseWidget):
         self._widget_container: QWidget = QWidget()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
-        if self._container_shadow['enabled']:
-            add_shadow(self._widget_container, color=self._container_shadow['color'],
-                       radius=self._container_shadow['radius'], offset=self._container_shadow['offset'])
+        add_shadow(self._widget_container, self._container_shadow)
         # Add the container to the main widget layout
         self.widget_layout.addWidget(self._widget_container)
         if self._hide_empty:
@@ -105,16 +103,12 @@ class MediaWidget(BaseWidget):
         self._label = QLabel()
         self._label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._label.setCursor(Qt.CursorShape.PointingHandCursor)
-        if self._label_shadow['enabled']:
-            add_shadow(self._label, color=self._label_shadow['color'],
-                       radius=self._label_shadow['radius'], offset=self._label_shadow['offset'])
+        add_shadow(self._label, self._label_shadow)
         
         self._label_alt = QLabel()
         self._label_alt.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._label.setCursor(Qt.CursorShape.PointingHandCursor)
-        if self._label_shadow['enabled']:
-            add_shadow(self._label_alt, color=self._label_shadow['color'],
-                       radius=self._label_shadow['radius'], offset=self._label_shadow['offset'])
+        add_shadow(self._label_alt, self._label_shadow)
 
         self._thumbnail_label = QLabel()
         self._thumbnail_label.setAlignment(Qt.AlignmentFlag.AlignCenter)

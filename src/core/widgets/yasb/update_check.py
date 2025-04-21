@@ -248,9 +248,7 @@ class UpdateCheckWidget(BaseWidget):
             container.setLayout(container_layout)
             class_name = "windows" if label_type == "windows" else "winget"
             container.setProperty("class", f"widget-container {class_name}")
-            if self._container_shadow['enabled']:
-                add_shadow(container, color=self._container_shadow['color'],
-                        radius=self._container_shadow['radius'], offset=self._container_shadow['offset'])
+            add_shadow(container, self._container_shadow)
             self.widget_layout.addWidget(container)
             container.hide()
             label_parts = re.split(r'(<span.*?>.*?</span>)', label_text)
@@ -270,9 +268,7 @@ class UpdateCheckWidget(BaseWidget):
                 else:
                     label = QLabel(part)
                     label.setProperty("class", "label")
-                if self._label_shadow['enabled']:
-                    add_shadow(label, color=self._label_shadow['color'],
-                            radius=self._label_shadow['radius'], offset=self._label_shadow['offset'])
+                add_shadow(label, self._label_shadow)
                 label.setAlignment(Qt.AlignmentFlag.AlignCenter)
                 container_layout.addWidget(label)
                 widgets.append(label)
