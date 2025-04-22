@@ -84,6 +84,13 @@ media:
       offset: [ 1, 1 ]
 ```
 
+## Available Callbacks
+- `toggle_label`: Toggles the visibility of the label.
+- `do_nothing`: A placeholder callback that does nothing when triggered.
+- `toggle_play_pause`: Toggles between play and pause states.
+- `toggle_media_menu`: Toggles the visibility of the media menu popup.
+
+
 ## Description of Options
 - **label:** The format string for the media label. You can use placeholders like `{title}` and `{artist}` to dynamically insert media information.
 - **label_alt:** The alternative format string for the media label. Useful for displaying additional media details.
