@@ -354,8 +354,8 @@ class MediaWidget(BaseWidget):
             offset_left=self._menu_config['offset_left'],
             offset_top=self._menu_config['offset_top']
         )
-        self._dialog.show()
         self._update_popup_menu_buttons()
+        self._dialog.show()
 
         # Create and install the filter
         self._wheel_filter = WheelEventFilter(self)
