@@ -1,9 +1,9 @@
 import platform
 import re
-from typing import Any
+from typing import Any, cast
 from PyQt6.QtWidgets import QApplication, QWidget, QFrame, QMenu, QGraphicsDropShadowEffect
-from PyQt6.QtCore import QEvent, QObject, QPoint, Qt
-from PyQt6.QtGui import QScreen, QColor
+from PyQt6.QtCore import QEvent, QPoint, Qt
+from PyQt6.QtGui import  QScreen, QColor
 from core.utils.win32.blurWindow import Blur
 
 def is_windows_10() -> bool:
@@ -99,7 +99,7 @@ class PopupWidget(QWidget):
             offset_left (int): Horizontal offset in pixels
             offset_top (int): Vertical offset in pixels
         """
-        parent = self.parent()
+        parent = cast(QWidget, self.parent()) # parent should be a QWidget
         if not parent:
             return
 
@@ -124,6 +124,15 @@ class PopupWidget(QWidget):
         else:
             global_position = widget_global_pos
 
+        # Determine screen where the parent is
+        screen = QApplication.screenAt(parent.mapToGlobal(parent.rect().center()))
+        if screen:
+            available_geometry = screen.availableGeometry()
+            # Ensure the popup fits horizontally
+            x = max(available_geometry.left(), min(global_position.x(), available_geometry.right() - self.width()))
+            # Ensure the popup fits vertically
+            y = max(available_geometry.top(), min(global_position.y(), available_geometry.bottom() - self.height()))
+            global_position = QPoint(x, y)
         self.move(global_position)
 
     def showEvent(self, event):
