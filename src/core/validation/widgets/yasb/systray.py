@@ -10,6 +10,7 @@ DEFAULTS = {
     "show_battery": False,
     "show_volume": False,
     "show_network": False,
+    "container_padding": {"left": 0, "top": 0, "right": 0, "bottom": 0},
     "default_shadow": {
         "enabled": False,
         "color": "black",
@@ -75,6 +76,17 @@ VALIDATION_SCHEMA = {
         "type": "boolean",
         "required": False,
         "default": DEFAULTS["show_network"],
+    },
+    "container_padding": {
+        "type": "dict",
+        "required": False,
+        "schema": {
+            "left": {"type": "integer", "default": 0},
+            "top": {"type": "integer", "default": 0},
+            "right": {"type": "integer", "default": 0},
+            "bottom": {"type": "integer", "default": 0},
+        },
+        "default": DEFAULTS["container_padding"],
     },
     "container_shadow": {
         "type": "dict",
