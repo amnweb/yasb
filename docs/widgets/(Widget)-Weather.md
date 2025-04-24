@@ -6,6 +6,7 @@
 | `update_interval` | integer | `3600`                                                                 | The interval in seconds to update the weather data. Must be between 60 and 36000000. |
 | `hide_decimal`  | boolean | `False`                                                                 | Whether to hide the decimal part of the temperature. |
 | `location`      | string  | `'London'`                                                              | The location for which to fetch the weather data. |
+| `lang` | string | `""` | The language for the weather data. |
 | `show_alerts`   | boolean | `False`                                                                 | Whether to show weather alerts. |
 | `units`         | string  | `'metric'`                                                              | The units for the weather data. Can be `'metric'` or `'imperial'`. |
 | `api_key`       | string  | `'0'`                                                                   | The API key for accessing the weather service. |
@@ -68,6 +69,7 @@ weather:
 - **update_interval:** The interval in seconds to update the weather data. Must be between 60 and 36000000.
 - **hide_decimal:** Whether to hide the decimal part of the temperature.
 - **location:** The location for which to fetch the weather data. You can use example "USA Los Angeles 90006" {COUNTRY CITY ZIP_CODE}, or just city. Location can be set to `env`, this means you have to set `YASB_WEATHER_LOCATION` in environment variable or you can set it directly in the configuration file.
+- **lang:** The language for the weather data. The value should be a language code, such as "fr" for French. Lang can be set to `env`, this means you have to set `YASB_WEATHER_LANG` in environment variable or you can set it directly in the configuration file.
 - **api_key:** The API key for accessing the weather service. You can get free API key `weatherapi.com`. API key can be set to `env`, this means you have to set `YASB_WEATHER_API_KEY` in environment variable or you can set it directly in the configuration file.
 - **show_alerts:** Whether to show weather alerts.
 - **units:** The units for the weather data. Can be `'metric'` or `'imperial'`.

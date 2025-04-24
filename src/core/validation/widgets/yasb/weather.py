@@ -4,6 +4,7 @@ DEFAULTS = {
     'update_interval': 3600,
     'hide_decimal': False,
     'location': '',
+    'lang': '',
     'api_key': '0',
     'units': 'metric',
     'show_alerts': False,
@@ -66,6 +67,10 @@ VALIDATION_SCHEMA = {
     'location': {
         'type': 'string',
         'default': DEFAULTS['location']
+    },
+    'lang': {
+        'type': 'string',
+        'default': DEFAULTS['lang']
     },
     'api_key': {
         'type': 'string',

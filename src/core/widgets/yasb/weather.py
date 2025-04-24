@@ -24,6 +24,7 @@ class WeatherWidget(BaseWidget):
             update_interval: int,
             hide_decimal: bool,
             location: str,
+            lang: str,
             api_key: str,
             units: str,
             show_alerts: bool,
@@ -39,6 +40,7 @@ class WeatherWidget(BaseWidget):
         self._label_content = label
         self._label_alt_content = label_alt
         self._location = location if location != 'env' else os.getenv('YASB_WEATHER_LOCATION')
+        self._lang = lang if lang != 'env' else os.getenv('YASB_WEATHER_LANG')
         self._hide_decimal = hide_decimal
         self._icons = icons
         self._api_key = api_key if api_key != 'env' else os.getenv('YASB_WEATHER_API_KEY')
@@ -47,6 +49,8 @@ class WeatherWidget(BaseWidget):
             self.hide()
             return
         self.api_url = f"http://api.weatherapi.com/v1/forecast.json?key={self._api_key}&q={urllib.parse.quote(self._location)}&days=3&aqi=no&alerts=yes"
+        if self._lang:
+            self.api_url += f"&lang={self._lang}"
         self._units = units
         self._show_alerts = show_alerts
         self._padding = container_padding
