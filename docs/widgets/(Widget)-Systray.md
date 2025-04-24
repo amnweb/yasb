@@ -12,6 +12,7 @@
 | `show_battery`            | boolean | `false`     | Whether to show battery icon (from the original systray).                               |
 | `show_volume`             | boolean | `false`     | Whether to show volume icon (from the original systray).                                |
 | `show_network`            | boolean | `false`     | Whether to show network icon (from the original systray).                               |
+| `container_padding`       | dict    | `None`      | Container padding.                                                                      |
 | `container_shadow`        | dict    | `None`      | Container shadow options.                                                               |
 | `unpinned_shadow`         | dict    | `None`      | Unpinned container shadow options.                                                      |
 | `pinned_shadow`           | dict    | `None`      | Pinned container shadow options.                                                        |
@@ -35,6 +36,11 @@ systray:
     show_battery: false
     show_volume: false
     show_network: false
+    container_padding:
+        left: 0
+        top: 0
+        right: 0
+        bottom: 0
     btn_shadow:
       enabled: true
       color: "black"
@@ -65,6 +71,12 @@ There are some limitations with the systray widget:
 - **show_battery:** Whether to show battery icon (from the original systray).
 - **show_volume:** Whether to show volume icon (from the original systray).
 - **show_network:** Whether to show network icon (from the original systray).
+- **container_padding:** Padding for the widget container.
+- **container_shadow:** Container shadow options.
+- **unpinned_shadow:** Unpinned container shadow options.
+- **pinned_shadow:** Pinned container shadow options.
+- **unpinned_vis_btn_shadow:** Unpinned visibility button shadow options.
+- **btn_shadow:** Systray button (icons) shadow options.
 
 ## Debug Options
 Show unpinned button has a right click menu that allows you to refresh the systray icons.
@@ -72,8 +84,9 @@ Show unpinned button has a right click menu that allows you to refresh the systr
 ## Style
 ```css
 .systray {} /* The base widget style */
-.systray .unpinned-container {} /* Style for unpinned container */
-.systray .pinned-container {} /* Style for pinned container */
+.systray .widget-container {} /* Style for the widget container */
+.systray .unpinned-container {} /* Style for container with unpinned systray icons */
+.systray .pinned-container {} /* Style for container with pinned systray icons */
 .systray .pinned-container[forceshow=true] {} /* Style for pinned container when it is forced to show during dragging operation */
 .systray .button {} /* Style for the individual systray buttons/icons */
 .systray .button[dragging=true] {} /* Style for systray buttons/icons when dragging operation is in progress */
