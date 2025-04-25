@@ -5,8 +5,22 @@ from ctypes import byref
 from dataclasses import dataclass
 from typing import override
 
-from PyQt6.QtCore import QMimeData, QPoint, QSize, Qt, pyqtSignal
-from PyQt6.QtGui import QDrag, QDragEnterEvent, QDragLeaveEvent, QDragMoveEvent, QDropEvent, QIcon, QMouseEvent
+from PyQt6.QtCore import (
+    QMimeData,
+    QPoint,
+    QSize,
+    Qt,
+    pyqtSignal,
+)
+from PyQt6.QtGui import (
+    QDrag,
+    QDragEnterEvent,
+    QDragLeaveEvent,
+    QDragMoveEvent,
+    QDropEvent,
+    QIcon,
+    QMouseEvent,
+)
 from PyQt6.QtWidgets import (
     QFrame,
     QHBoxLayout,
@@ -26,15 +40,15 @@ from win32con import (
 import core.utils.systray.utils as utils
 from core.utils.systray.tray_monitor import IconData
 from core.utils.systray.utils import pack_i32
-from core.utils.systray.win_types import (
-    NIN_CONTEXTMENU,
-    NIN_SELECT,
-)
-from core.utils.systray.win_wrappers import (
+from core.utils.win32.bindings import (
     AllowSetForegroundWindow,
     GetWindowThreadProcessId,
     IsWindow,
     SendNotifyMessage,
+)
+from core.utils.win32.constants import (
+    NIN_CONTEXTMENU,
+    NIN_SELECT,
 )
 
 
