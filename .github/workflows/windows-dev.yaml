@@ -1,20 +1,21 @@
-name: Windows-Dev
+name: Build Dev Release
 
 on:
+  workflow_dispatch:
   pull_request:
     types: [closed]
     branches:
       - main
+      - feature/*
       - dev
-  workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
-    if: github.event.pull_request.merged == true || github.event_name == 'workflow_dispatch'
     runs-on: windows-latest
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
     
     steps:
     - name: Checkout Repository
@@ -48,21 +49,75 @@ jobs:
         python build.py bdist_msi
       shell: pwsh
 
-    - name: Get App Info
-      id: get_version
+    - name: Rename Artifacts File
       run: |
-        .\venv\Scripts\Activate
-        $version = (Get-Content src/settings.py | Select-String -Pattern 'BUILD_VERSION\s*=\s*"([^"]+)"').Matches.Groups[1].Value
-        echo "VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-        $filename = (Get-ChildItem -Path src/dist/out/*.msi).Name
-        echo "FILENAME=$filename" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        $sourceMsi = (Get-ChildItem -Path src/dist/out/*.msi).FullName
+        $targetMsi = "src/dist/out/yasb-dev-win64.msi"
+        Copy-Item -Path $sourceMsi -Destination $targetMsi -Force
+        Remove-Item -Path $sourceMsi
+        echo "FILENAME=yasb-dev-win64.msi" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
       shell: pwsh
 
+    - name: Get App Info
+      id: get_info
+      run: |
+        .\venv\Scripts\Activate
+        $currentDateTime = Get-Date -Format "yyyy-MM-dd HH:mm:ss UTC"
+        echo "BUILD_DATETIME=$currentDateTime" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        $commitHash = git rev-parse --short HEAD
+        echo "COMMIT_HASH=$commitHash" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+      shell: pwsh
+
+    - name: Generate Changelog
+      id: generate_changelog
+      if: github.event_name == 'workflow_dispatch'
+      run: |
+        # Find the latest version tag
+        $latestVersionTag = $(try { git tag --sort=-version:refname | Where-Object { $_ -match "^v\d+\.\d+\.\d+" } | Select-Object -First 1 } catch { $null })
+
+        if ($latestVersionTag) {
+            $commits = $(git log "$latestVersionTag..HEAD" --pretty=format:"* %s (%h)" --no-merges)
+        } else {
+            $commits = $(git log -n 20 --pretty=format:"* %s (%h)" --no-merges)
+        }
+        
+        if ($commits) {
+            $changelog += $commits -join "`n"
+        } else {
+            $changelog += "* No significant changes detected since $latestVersionTag"
+        }
+        
+        # Save changelog to file for the release body
+        $changelog | Out-File -FilePath "CHANGELOG.md" -Encoding utf8
+      shell: pwsh
 
     - name: Upload Artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: yasb-dev-v${{ env.VERSION }}
+        name: yasb-dev-${{ env.COMMIT_HASH }}
         path: |
           src/dist/out/*.msi
         retention-days: 10
+
+    - name: Delete existing dev release
+      if: github.event_name == 'workflow_dispatch'
+      run: |
+        # Delete existing release if it exists (ignore errors if it doesn't)
+        gh release delete dev --yes || true
+        # Delete the tag locally and remotely
+        git tag -d dev || true
+        git push origin :refs/tags/dev || true
+      env:
+        GH_TOKEN: ${{ github.token }}
+      shell: pwsh
+
+    - name: Create GitHub Release
+      if: github.event_name == 'workflow_dispatch'
+      uses: softprops/action-gh-release@v1
+      with:
+        name: YASB Pre-release (${{ env.COMMIT_HASH }})
+        tag_name: dev
+        prerelease: true
+        files: |
+          src/dist/out/*.msi
+        body_path: CHANGELOG.md
