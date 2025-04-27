@@ -64,6 +64,10 @@ pomodoro:
       circle_break_progress_color: "#a3be8c"
       circle_thickness: 8
       circle_size: 160
+    callbacks:
+      on_left: "toggle_menu"
+      on_middle: "reset_timer"
+      on_right: "toggle_label"
     label_shadow:
       enabled: true
       color: "black"
@@ -113,7 +117,6 @@ pomodoro:
 - **toggle_timer**: Start or pause the timer.
 - **reset_timer**: Reset the current timer.
 - **toggle_label**: Switch between main and alternative label format.
-- **skip_session**: Skip the current session and move to the next one.
 - **toggle_menu**: Show the timer management menu.
 
 
