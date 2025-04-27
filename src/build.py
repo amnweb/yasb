@@ -53,9 +53,9 @@ build_options = {
     "includes": ["colorama"],
     "optimize": 1,
     "include_files": [
-            ("assets/images/app_icon.png","lib/assets/images/app_icon.png"),
-            ("assets/images/app_transparent.png","lib/assets/images/app_transparent.png"),
-            ("assets/sound/notification01.wav","lib/assets/sound/notification01.wav"),
+            ("assets/images/app_icon.png","assets/images/app_icon.png"),
+            ("assets/images/app_transparent.png","assets/images/app_transparent.png"),
+            ("assets/sound/notification01.wav","assets/sound/notification01.wav"),
             ("config.yaml","config.yaml"),
             ("styles.css","styles.css")
         ]
