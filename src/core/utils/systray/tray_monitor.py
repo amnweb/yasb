@@ -41,28 +41,10 @@ import core.utils.systray.utils as utils
 from core.utils.systray.utils import (
     array_to_str,
     get_exe_path_from_hwnd,
-    hicon_to_image,
     pack_i32,
 )
-from core.utils.systray.win_types import (
-    COPYDATASTRUCT,
-    NIF_GUID,
-    NIF_ICON,
-    NIF_INFO,
-    NIF_MESSAGE,
-    NIF_STATE,
-    NIF_TIP,
-    NIM_ADD,
-    NIM_DELETE,
-    NIM_MODIFY,
-    NIM_SETVERSION,
-    NOTIFYICONDATA,
-    SHELLTRAYDATA,
-    WINNOTIFYICONIDENTIFIER,
-    WNDCLASS,
-    WNDPROC,
-)
-from core.utils.systray.win_wrappers import (
+from core.utils.win32.app_icons import hicon_to_image
+from core.utils.win32.bindings import (
     CreateWindowEx,
     DefWindowProc,
     DestroyWindow,
@@ -75,6 +57,26 @@ from core.utils.systray.win_wrappers import (
     SetTimer,
     SetWindowPos,
 )
+from core.utils.win32.constants import (
+    NIF_GUID,
+    NIF_ICON,
+    NIF_INFO,
+    NIF_MESSAGE,
+    NIF_STATE,
+    NIF_TIP,
+    NIM_ADD,
+    NIM_DELETE,
+    NIM_MODIFY,
+    NIM_SETVERSION,
+)
+from core.utils.win32.structs import (
+    COPYDATASTRUCT,
+    NOTIFYICONDATA,
+    SHELLTRAYDATA,
+    WINNOTIFYICONIDENTIFIER,
+    WNDCLASS,
+    WNDPROC,
+)
 from settings import DEBUG
 
 logger = logging.getLogger("systray_widget")
@@ -86,7 +88,6 @@ else:
 
 # Load necessary Windows functions
 user32 = windll.user32
-gdi32 = windll.gdi32
 kernel32 = windll.kernel32
 
 

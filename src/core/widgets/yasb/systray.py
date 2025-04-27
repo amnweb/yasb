@@ -26,7 +26,9 @@ from PyQt6.QtWidgets import (
 
 from core.utils.systray.systray_widget import DropWidget, IconState, IconWidget
 from core.utils.systray.tray_monitor import IconData, TrayMonitor
-from core.utils.systray.win_types import (
+from core.utils.utilities import add_shadow
+from core.utils.win32.bindings import IsWindow
+from core.utils.win32.constants import (
     NIF_GUID,
     NIF_ICON,
     NIF_INFO,
@@ -34,8 +36,6 @@ from core.utils.systray.win_types import (
     NIF_STATE,
     NIF_TIP,
 )
-from core.utils.systray.win_wrappers import IsWindow
-from core.utils.utilities import add_shadow
 from core.validation.widgets.yasb.systray import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
 from settings import DEBUG

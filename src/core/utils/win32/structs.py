@@ -1,4 +1,4 @@
-"""Winapi types, structs and constants"""
+"""win32 types and structs"""
 
 import ctypes as ct
 import uuid
@@ -25,31 +25,9 @@ from ctypes.wintypes import (
     WPARAM,
 )
 
-NIM_ADD = 0x0
-NIM_MODIFY = 0x1
-NIM_DELETE = 0x2
-NIM_SETFOCUS = 0x3
-NIM_SETVERSION = 0x4
-
-NIF_MESSAGE = 0x1
-NIF_ICON = 0x2
-NIF_TIP = 0x4
-NIF_STATE = 0x8
-NIF_INFO = 0x10
-NIF_GUID = 0x20
-NIF_REALTIME = 0x40
-NIF_SHOWTIP = 0x80
-
-NIN_POPUPOPEN = 0x406
-NIN_POPUPCLOSE = 0x407
-NIN_SELECT = 0x400
-NIN_CONTEXTMENU = 0x7B
-
-# Define the WNDPROC type
 WNDPROC = WINFUNCTYPE(LPARAM, HWND, UINT, WPARAM, LPARAM)
 
 
-# Set up the WNDCLASSEX structure
 class WNDCLASS(ct.Structure):
     _fields_ = [
         ("style", UINT),
