@@ -9,6 +9,7 @@ from core.utils.utilities import PopupWidget, add_shadow
 from core.widgets.base import BaseWidget
 from core.validation.widgets.yasb.pomodoro import VALIDATION_SCHEMA
 from core.utils.widgets.animation_manager import AnimationManager
+from settings import SCRIPT_PATH
 
 class PomodoroWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
@@ -357,8 +358,7 @@ class PomodoroWidget(BaseWidget):
     def _play_notification_sound(self):
         try:
             import winsound
-            sound = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
-                os.path.dirname(os.path.abspath(__file__))))), 'assets', 'sound', 'notification01.wav')
+            sound = os.path.join(SCRIPT_PATH, 'assets', 'sound', 'notification01.wav')
             winsound.PlaySound(
                 sound, winsound.SND_FILENAME | winsound.SND_ASYNC)
         except Exception as e:
@@ -375,8 +375,7 @@ class PomodoroWidget(BaseWidget):
         try:
             from win11toast import toast
             self._yasb_guid = self._get_guid()
-            self._icon_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
-                os.path.dirname(os.path.abspath(__file__))))), 'assets', 'images', 'app_transparent.png')
+            self._icon_path = os.path.join(SCRIPT_PATH, 'assets', 'images', 'app_transparent.png')
             title = "Pomodoro Timer"
             message = "Break time!" if not self._is_break else "Work time!"
             toast(title, message, app_id=self._yasb_guid, icon=self._icon_path)

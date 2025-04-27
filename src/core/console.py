@@ -5,7 +5,7 @@ import re
 from PyQt6.QtWidgets import QVBoxLayout, QTextEdit, QDialog
 from PyQt6.QtGui import QIcon
 from PyQt6.QtCore import QThread, pyqtSignal, Qt
-from settings import DEFAULT_CONFIG_DIRECTORY, DEFAULT_LOG_FILENAME
+from settings import DEFAULT_CONFIG_DIRECTORY, DEFAULT_LOG_FILENAME, SCRIPT_PATH
 from datetime import datetime
 
 class LogTailer(QThread):
@@ -51,7 +51,7 @@ class WindowShellDialog(QDialog):
                 color: #cfd1e1;
             }
         """)
-        icon_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'assets', 'images', 'app_icon.png')
+        icon_path = os.path.join(SCRIPT_PATH, 'assets', 'images', 'app_icon.png')
         
         icon = QIcon(icon_path)
         self.setWindowIcon(QIcon(icon.pixmap(48, 48)))

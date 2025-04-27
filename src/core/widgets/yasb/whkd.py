@@ -12,6 +12,7 @@ from core.widgets.base import BaseWidget
 from core.validation.widgets.yasb.whkd import VALIDATION_SCHEMA
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.utilities import add_shadow
+from settings import SCRIPT_PATH
 
 class KeybindsDialog(QDialog):
     def __init__(
@@ -35,16 +36,7 @@ class KeybindsDialog(QDialog):
         self.setWindowModality(Qt.WindowModality.WindowModal)
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
 
-        icon_path = os.path.join(
-            os.path.dirname(
-                os.path.dirname(
-                    os.path.dirname(
-                        os.path.dirname(os.path.abspath(__file__))
-                    )
-                )
-            ),
-            'assets', 'images', 'app_icon.png'
-        )
+        icon_path = os.path.join(SCRIPT_PATH,'assets', 'images', 'app_icon.png')
         icon = QIcon(icon_path)
         self.setWindowIcon(QIcon(icon.pixmap(48, 48)))
         self.setMinimumHeight(800)

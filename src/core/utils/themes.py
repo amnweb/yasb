@@ -8,6 +8,7 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
 from PyQt6.QtGui import QPixmap, QFont, QDesktopServices, QIcon
 from PyQt6.QtCore import Qt, QThread, pyqtSignal, QUrl, QTimer, QPropertyAnimation
 from PyQt6.QtWidgets import QGraphicsOpacityEffect, QSizePolicy
+from settings import SCRIPT_PATH
 
 class ImageLoader(QThread):
     finished = pyqtSignal(str, bytes)
@@ -211,7 +212,7 @@ class ThemeCard(QFrame):
         dialog = QDialog(self)
         dialog.setWindowTitle("Install Theme")
         dialog.setModal(True)
-        icon_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'assets', 'images', 'app_icon.png')
+        icon_path = os.path.join(SCRIPT_PATH, 'assets', 'images', 'app_icon.png')
         icon = QIcon(icon_path)
         dialog.setWindowIcon(QIcon(icon.pixmap(48, 48)))
 
@@ -324,7 +325,7 @@ class ThemeViewer(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("YASB Theme Gallery")
-        icon_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'assets', 'images', 'app_icon.png')
+        icon_path = os.path.join(SCRIPT_PATH, 'assets', 'images', 'app_icon.png')
         icon = QIcon(icon_path)
         self.setWindowIcon(QIcon(icon.pixmap(48, 48)))
         screen = QApplication.primaryScreen().geometry()

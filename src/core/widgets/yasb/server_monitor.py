@@ -5,7 +5,7 @@ import requests
 import socket
 import ssl
 import urllib3
-from settings import DEBUG
+from settings import DEBUG, SCRIPT_PATH
 from datetime import datetime
 from urllib.parse import urlparse
 from core.widgets.base import BaseWidget
@@ -179,7 +179,7 @@ class ServerMonitor(BaseWidget):
         self._first_run = True
         self._animations = []
         self._yasb_guid = self._get_guid()
-        self._icon_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))), 'assets', 'images', 'app_transparent.png')
+        self._icon_path = os.path.join(SCRIPT_PATH, 'assets', 'images', 'app_transparent.png')
         
         # Construct container
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
@@ -360,7 +360,7 @@ class ServerMonitor(BaseWidget):
         if ssl_warning and self._desktop_notifications['ssl']:
             toast("Server Monitor", "Some servers have SSL certificate expiring soon",app_id=self._yasb_guid, icon=self._icon_path)
             
-         
+
     def show_menu(self):  
         self.dialog = PopupWidget(self, self._menu['blur'], self._menu['round_corners'], self._menu['round_corners_type'], self._menu['border_color'])
         self.dialog.setProperty("class", "server-menu")
