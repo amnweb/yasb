@@ -1,3 +1,4 @@
+import hashlib
 import logging
 from os.path import basename
 from core.config import get_config_dir
@@ -21,14 +22,29 @@ class FileModifiedEventHandler(PatternMatchingEventHandler):
         self._ignore_patterns = []
         self._ignore_directories = True
         self._case_sensitive = False
+        self._last_styles_hash = None
+        self._last_config_hash = None
+
+    def _file_hash(self, path):
+        try:
+            with open(path, "rb") as f:
+                return hashlib.md5(f.read()).hexdigest()
+        except Exception:
+            return None
 
     def on_modified(self, event: FileModifiedEvent):
         modified_file = basename(event.src_path)
 
         if modified_file == self.styles_file and self.bar_manager.config['watch_stylesheet']:
-            self.bar_manager.styles_modified.emit()
+            new_hash = self._file_hash(event.src_path)
+            if new_hash and new_hash != self._last_styles_hash:
+                self._last_styles_hash = new_hash
+                self.bar_manager.styles_modified.emit()
         elif modified_file == self.config_file and self.bar_manager.config['watch_config']:
-            self.bar_manager.config_modified.emit()
+            new_hash = self._file_hash(event.src_path)
+            if new_hash and new_hash != self._last_config_hash:
+                self._last_config_hash = new_hash
+                self.bar_manager.config_modified.emit()
 
 
 def create_observer(bar_manager: BarManager):
