@@ -31,7 +31,6 @@ class CavaBar(QWidget):
             height = max(self._cava_widget._min_height, computed_height)
             y = self._cava_widget._height - height
             if height > 0:
-                print(height)
                 if self._cava_widget._gradient == 1 and self._cava_widget.colors:
                     gradient = QLinearGradient(0, 1, 0, 0)
                     gradient.setCoordinateMode(QLinearGradient.CoordinateMode.ObjectBoundingMode)
