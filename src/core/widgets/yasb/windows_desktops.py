@@ -214,7 +214,7 @@ class WorkspaceWidget(BaseWidget):
         add_shadow(self._workspace_container, self._container_shadow)
         self.widget_layout.addWidget(self._workspace_container)
 
-        self.timer_interval = 2000
+        self.timer_interval = 200
         self.callback_timer = "update_desktops"
         self.register_callback(self.callback_timer, self.on_update_desktops)
         self.start_timer()
