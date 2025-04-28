@@ -21,21 +21,33 @@ class UpdateWorker(QThread):
         self.running = True
         self.exclude_list = exclude_list or []
 
-    def filter_updates(self, updates, names):
+    def filter_updates(self, updates, names, update_type):
+        if not updates:
+            return 0, [], [] if type == 'winget' else 0, []
+
         if not self.exclude_list:
-            return len(updates), names
- 
+            if update_type == 'winget':
+                filtered_ids = [u['id'] for u in updates]
+                return len(updates), names, filtered_ids
+            else:
+                return len(updates), names
+
         valid_excludes = [x.lower() for x in self.exclude_list if x and x.strip()]
         filtered_names = []
-        filtered_count = 0
-        
-        for name in names:
-            if not any(excluded in name.lower() for excluded in valid_excludes):
-                filtered_names.append(name)
-                filtered_count += 1
-                
-        return filtered_count, filtered_names
-    
+        filtered_ids = []
+
+        if update_type == 'winget':
+            for update, name in zip(updates, names):
+                if not any(excluded in update['id'].lower() or excluded in update['name'].lower() for excluded in valid_excludes):
+                    filtered_names.append(name)
+                    filtered_ids.append(update['id'])
+            return len(filtered_names), filtered_names, filtered_ids
+        else:
+            for name in names:
+                if not any(excluded in name.lower() for excluded in valid_excludes):
+                    filtered_names.append(name)
+            return len(filtered_names), filtered_names
+
     def stop(self):
         self.running = False
         self.wait()
@@ -47,7 +59,7 @@ class UpdateWorker(QThread):
                 update_searcher = update_session.CreateUpdateSearcher()
                 search_result = update_searcher.Search("IsInstalled=0")
                 update_names = [update.Title for update in search_result.Updates]
-                count, filtered_names = self.filter_updates(search_result.Updates, update_names)
+                count, filtered_names = self.filter_updates(search_result.Updates, update_names, self.update_type)
                 self.windows_update_signal.emit({"count": count, "names": filtered_names})
                 
             elif self.update_type == 'winget':
@@ -98,10 +110,12 @@ class UpdateWorker(QThread):
                     f"{software['name']} ({software['id']}): {software['version']} -> {software['available_version']}" 
                     for software in upgrade_list
                 ]
-                count, filtered_names = self.filter_updates(upgrade_list, update_names)
+
+                count, filtered_names, filtered_app_ids = self.filter_updates(upgrade_list, update_names, self.update_type)
                 self.winget_update_signal.emit({
                     "count": count, 
-                    "names": filtered_names
+                    "names": filtered_names,
+                    "app_ids": filtered_app_ids
                 })
                 
         except Exception as e:
@@ -132,8 +146,11 @@ class UpdateManager:
             self._subscribers.remove(callback)
             
     def notify_subscribers(self, event_type, data):
+        if event_type == 'winget_update' and 'app_ids' in data:
+            self._winget_app_ids = data['app_ids']
         for subscriber in self._subscribers:
-            subscriber(event_type, data)
+            if hasattr(subscriber, "emit_event"):
+                subscriber.emit_event(event_type, data)
             
     def start_worker(self, update_type, exclude_list=None):
         if update_type not in self._workers:
@@ -159,9 +176,21 @@ class UpdateManager:
             subprocess.Popen('start ms-settings:windowsupdate', shell=True)
         elif label_type == 'winget':
             powershell_path = shutil.which('pwsh') or shutil.which('powershell') or 'powershell.exe'
-            command = f'start "Winget Upgrade" "{powershell_path}" -NoExit -Command "winget upgrade --all"'
+            # Use stored app_ids
+            if self._winget_app_ids:
+                count = len(self._winget_app_ids)
+                package_label = "PACKAGE" if count == 1 else "PACKAGES"
+                id_args = ' '.join([f'"{app_id}"' for app_id in self._winget_app_ids])
+                command = (
+                    f'start "Winget Upgrade" "{powershell_path}" -NoExit -Command '
+                    f'"Write-Host \\"=========================================\\"; '
+                    f'Write-Host \\"YASB FOUND {count} {package_label} READY TO UPDATE\\"; '
+                    f'Write-Host \\"=========================================\\"; '
+                    f'winget upgrade {id_args}"'
+                )
+            else:
+                command = f'start "Winget Upgrade" "{powershell_path}" -NoExit -Command "winget upgrade --all"'
             subprocess.Popen(command, shell=True)
-        # Notify all subscribers to hide the container
         self.notify_subscribers(f'{label_type}_hide', {})
 
     def handle_right_click(self, label_type):
@@ -217,7 +246,7 @@ class UpdateCheckWidget(BaseWidget):
         self._create_dynamically_label(self._winget_update_label, self._windows_update_label)
 
         self._update_manager = UpdateManager()
-        self._update_manager.register_subscriber(self.emit_event)
+        self._update_manager.register_subscriber(self)
         
         if self._window_update_enabled:
             self._update_manager.start_worker('windows', self._windows_update_exclude)
