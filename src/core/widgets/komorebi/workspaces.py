@@ -180,6 +180,7 @@ class WorkspaceWidget(BaseWidget):
         # Status text shown when komorebi state can't be retrieved
         self._offline_text = QLabel()
         self._offline_text.setText(label_offline)
+        add_shadow(self._offline_text, self._btn_shadow)
         self._offline_text.setProperty("class", "offline-status")
         # Construct container which holds workspace buttons
         self._workspace_container_layout: QHBoxLayout = QHBoxLayout()
@@ -197,12 +198,14 @@ class WorkspaceWidget(BaseWidget):
         self.float_override_label = QLabel()
         self.float_override_label.setText(self._label_float_override)
         self.float_override_label.setProperty("class", "float-override")
+        add_shadow(self.float_override_label, self._btn_shadow)
         self.float_override_label.hide()
         self.widget_layout.addWidget(self.float_override_label)
         
         if self._toggle_workspace_layer['enabled']:
             self.workspace_layer_label = QLabel()
             self.workspace_layer_label.setProperty("class", "workspace-layer")
+            add_shadow(self.workspace_layer_label, self._btn_shadow)
             self.widget_layout.addWidget(self.workspace_layer_label)
         
         self._enable_scroll_switching = enable_scroll_switching
