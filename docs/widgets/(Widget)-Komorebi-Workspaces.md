@@ -69,6 +69,7 @@ komorebi_workspaces:
 - **container_padding:** Explicitly set padding inside widget container.
 - **container_shadow:** Container shadow options.
 - **btn_shadow:** Workspace button shadow options.
+- **label_shadow:** Label shadow options for labels.
 
 ## Style
 ```css
