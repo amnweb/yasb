@@ -50,9 +50,9 @@ windows_workspaces:
 .windows-workspaces .ws-btn.active.button-2 {} /*Style for the active second workspace button.*/
 
 .windows-desktops .context-menu {} /*Style for context menu.*/
-.windows-desktops .context-menu:item {} /*Style for context menu items.*/
-.windows-desktops .context-menu::item:selected {} /*Style for selected context menu items.*/
-.windows-desktops .context-menu::separator {} /*Style for context menu separator.*/
+.windows-desktops .context-menu .menu-item {} /*Style for context menu items.*/
+.windows-desktops .context-menu .menu-item:hover {} /*Style for selected context menu items.*/
+.windows-desktops .context-menu .separator {} /*Style for context menu separator.*/
 
 .windows-desktops .rename-dialog {} /*Style for rename dialog.*/
 .windows-desktops .rename-dialog QPushButton{} /*Style for rename dialog buttons.*/
@@ -88,14 +88,14 @@ windows_workspaces:
     border-radius: 2px;
     padding: 8px 0;
 }
-.windows-desktops .context-menu:item {
+.windows-desktops .context-menu .menu-item {
     padding: 6px 16px;
 }
-.windows-desktops .context-menu::item:selected {
+.windows-desktops .context-menu .menu-item:hover {
     background-color: rgba(255,255,255,0.05);
     color: #ffffff;
 }
-.windows-desktops .context-menu::separator {
+.windows-desktops .context-menu .separator {
     margin: 2px 0px 2px 0px;
     height: 1px;
     background-color: rgba(255,255,255,0.1);
