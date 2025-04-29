@@ -1,7 +1,7 @@
 import logging
 from collections import deque
 from PyQt6.QtGui import QCursor
-from PyQt6.QtWidgets import QWidget, QLabel, QHBoxLayout
+from PyQt6.QtWidgets import QWidget, QLabel, QHBoxLayout, QVBoxLayout, QFrame, QSizePolicy
 from PyQt6.QtCore import Qt, pyqtSignal
 from core.utils.win32.utilities import get_monitor_hwnd
 from core.event_service import EventService
@@ -10,7 +10,7 @@ from core.widgets.base import BaseWidget
 from core.utils.komorebi.client import KomorebiClient
 from core.validation.widgets.komorebi.active_layout import VALIDATION_SCHEMA
 from core.utils.widgets.animation_manager import AnimationManager
-from core.utils.utilities import add_shadow
+from core.utils.utilities import add_shadow, PopupWidget
 
 try:
     from core.utils.komorebi.event_listener import KomorebiEventListener
@@ -53,6 +53,7 @@ class ActiveLayoutWidget(BaseWidget):
             label: str,
             layouts: list[str],
             layout_icons: dict[str, str],
+            layout_menu: dict[str, str],
             hide_if_offline: bool,
             container_padding: dict,
             animation: dict[str, str],
@@ -63,6 +64,7 @@ class ActiveLayoutWidget(BaseWidget):
         super().__init__(class_name="komorebi-active-layout")
         self._label = label
         self._layout_icons = layout_icons
+        self._layout_menu = layout_menu
         self._layouts_config = layouts
         self._padding = container_padding
         self._label_shadow = label_shadow
@@ -111,9 +113,102 @@ class ActiveLayoutWidget(BaseWidget):
         self.register_callback("toggle_monocle", lambda: self._komorebic.toggle("monocle"))
         self.register_callback("toggle_maximise", lambda: self._komorebic.toggle("maximise"))
         self.register_callback("toggle_pause", lambda: self._komorebic.toggle("pause"))
+        self.register_callback("toggle_layout_menu", self._toggle_layout_menu)
 
         self._register_signals_and_events()
         self.hide()
+
+    def _toggle_layout_menu(self):
+        if self._animation['enabled']:
+            AnimationManager.animate(self, self._animation['type'], self._animation['duration'])
+        self._show_layout_menu()
+    
+    def _show_layout_menu(self):
+        self._menu = PopupWidget(
+            self,
+            self._layout_menu['blur'],
+            self._layout_menu['round_corners'],
+            self._layout_menu['round_corners_type'],
+            self._layout_menu['border_color']
+        )
+        self._menu.setProperty('class', 'komorebi-layout-menu')
+
+        main_layout = QVBoxLayout(self._menu)
+        main_layout.setSpacing(0)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        def create_menu_item(icon, text, click_handler):
+            item_widget = QFrame()
+            item_widget.setProperty("class", "menu-item")
+
+            item_layout = QHBoxLayout(item_widget)
+            item_layout.setContentsMargins(0, 0, 0, 0)
+
+            icon_label = QLabel(icon)
+            icon_label.setProperty("class", "menu-item-icon")
+            icon_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+            icon_label.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+
+            text_label = QLabel(text)
+            text_label.setProperty("class", "menu-item-text")
+            text_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+            text_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+
+            if self._layout_menu['show_layout_icons']:
+                item_layout.addWidget(icon_label)
+            item_layout.addWidget(text_label)
+            item_widget.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+            item_widget.mousePressEvent = click_handler
+            return item_widget
+
+        for layout in self._layouts_config:
+            icon = self._layout_icons[layout]
+            text = layout.replace('_', ' ').title()
+            def handler(event, l=layout):
+                self._on_layout_menu_selected(l)
+            main_layout.addWidget(create_menu_item(icon, text, handler))
+
+        self._menu._add_separator(main_layout)
+
+        def make_toggle_handler(func):
+            def handler(event):
+                func()
+                self._menu.hide()
+            return handler
+
+        toggle_icons = {
+            "Toggle Tiling": self._layout_icons["tiling"],
+            "Toggle Monocle": self._layout_icons["monocle"],
+            "Toggle Pause": self._layout_icons["paused"]
+        }
+        toggle_actions = [
+            ("Toggle Tiling", lambda: self._komorebic.toggle("tiling")),
+            ("Toggle Monocle", lambda: self._komorebic.toggle("monocle")),
+            ("Toggle Pause", lambda: self._komorebic.toggle("pause"))
+        ]
+        for label, func in toggle_actions:
+            main_layout.addWidget(
+                create_menu_item(
+                    toggle_icons.get(label, ""),
+                    label,
+                    make_toggle_handler(func)
+                )
+            )
+        
+        self._menu.adjustSize()
+        self._menu.setPosition(
+            alignment=self._layout_menu['alignment'],
+            direction=self._layout_menu['direction'],
+            offset_left=self._layout_menu['offset_left'],
+            offset_top=self._layout_menu['offset_top']
+        )
+        self._menu.show()
+
+    def _on_layout_menu_selected(self, layout):
+        layout_cmd = layout.replace('_', '-')
+        self.change_layout(layout_cmd)
+        self._menu.hide()
+        if self._animation['enabled']:
+            AnimationManager.animate(self, self._animation['type'], self._animation['duration'])
 
     def _reset_layouts(self):
         self._layouts = deque([x.replace('_', '-') for x in self._layouts_config])

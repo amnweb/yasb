@@ -14,7 +14,19 @@ DEFAULTS = {
         "monocle": "[M]",
         "maximised": "[X]",
         "floating": "><>",
-        "paused": "[P]"
+        "paused": "[P]",
+        'tiling': "[T]",
+    },
+    'layout_menu': {
+        'blur': True,
+        'round_corners': True,
+        'round_corners_type': 'normal',
+        'border_color': 'System',
+        'alignment': 'left',
+        'direction': 'down',
+        'offset_top': 6,
+        'offset_left': 0,
+        'show_layout_icons': True,
     },
     'container_padding': {'top': 0, 'left': 0, 'bottom': 0, 'right': 0},
     'animation': {
@@ -41,7 +53,8 @@ ALLOWED_CALLBACKS = [
     "toggle_float",
     "toggle_monocle",
     "toggle_maximise",
-    "toggle_pause"
+    "toggle_pause",
+    "toggle_layout_menu"
 ]
 
 VALIDATION_SCHEMA = {
@@ -112,8 +125,54 @@ VALIDATION_SCHEMA = {
                 'type': 'string',
                 'default': DEFAULTS['layout_icons']['paused']
             },
+            'tiling': {
+                'type': 'string',
+                'default': DEFAULTS['layout_icons']['tiling']
+            },
         },
         'default': DEFAULTS['layout_icons']
+    },
+    'layout_menu': {
+        'type': 'dict',
+        'schema': {
+            'blur': {
+                'type': 'boolean',
+                'default': DEFAULTS['layout_menu']['blur']
+            },
+            'round_corners': {
+                'type': 'boolean',
+                'default': DEFAULTS['layout_menu']['round_corners']
+            },
+            'round_corners_type': {
+                'type': 'string',
+                'default': DEFAULTS['layout_menu']['round_corners_type']
+            },
+            'border_color': {
+                'type': 'string',
+                'default': DEFAULTS['layout_menu']['border_color']
+            },
+            'alignment': {
+                'type': 'string',
+                'default': DEFAULTS['layout_menu']['alignment']
+            },
+            'direction': {
+                'type': 'string',
+                'default': DEFAULTS['layout_menu']['direction']
+            },
+            'offset_top': {
+                'type': 'integer',
+                'default': DEFAULTS['layout_menu']['offset_top']
+            },
+            'offset_left': {
+                'type': 'integer',
+                'default': DEFAULTS['layout_menu']['offset_left']
+            },
+            'show_layout_icons': {
+                'type': 'boolean',
+                'default': DEFAULTS['layout_menu']['show_layout_icons']
+            }
+        },
+        'default': DEFAULTS['layout_menu']
     },
     'container_padding': {
         'type': 'dict',
