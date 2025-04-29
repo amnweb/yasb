@@ -41,6 +41,10 @@ def single_instance_lock(name="yasb_reborn"):
    
 
 def main():
+    # Application instance should be created first
+    app = QApplication(argv)
+    app.setQuitOnLastWindowClosed(False)
+
     # Initialize configuration early after the single instance check
     config, stylesheet = get_config_and_stylesheet()
 
@@ -49,9 +53,6 @@ def main():
         logging.info("Debug mode enabled.")
         
     start_cli_server()
-    
-    app = QApplication(argv)
-    app.setQuitOnLastWindowClosed(False)
 
     env_file = config.get('env_file')
     if env_file:
