@@ -3,18 +3,9 @@ This is default and very simple styles file for Yasb.
 For more information about configuration options, please visit the Wiki https://github.com/amnweb/yasb/wiki
 */
 :root {
-    --rosewater: #f5e0dc;
-    --flamingo: #f2cdcd;
-    --pink: #f5c2e7;
     --mauve: #cba6f7;
     --red: #f38ba8;
-    --maroon: #eba0ac;
-    --peach: #fab387;
     --yellow: #f9e2af;
-    --green: #a6e3a1;
-    --teal: #94e2d5;
-    --sky: #89dceb;
-    --sapphire: #74c7ec;
     --blue: #89b4fa;
     --lavender: #b4befe;
     --text: #cdd6f4;
@@ -27,9 +18,7 @@ For more information about configuration options, please visit the Wiki https://
     --surface1: #45475a;
     --surface0: #282936;
     --base: #1e1e2e;
-    --mantle: rgba(24, 24, 37, 0.5);
-    --crust: rgba(17, 17, 27, 0.85);
-    --main: #10151d;
+    --crust: rgba(32, 32, 43, 0.92);
 }
 /* Global styles for ToolTip */
 QToolTip {
@@ -42,7 +31,7 @@ QToolTip {
 }
 * {
     font-size: 12px;
-    color: var(--subtext0);
+    color: var(--text);
     font-weight: 600;
     font-family: "JetBrainsMono NFP";
     margin: 0;
@@ -53,6 +42,7 @@ QToolTip {
     margin: 0;
     background-color: var(--crust);
     border-radius: 8px;
+    border: 1px solid #313244;
 }
 .widget {
     padding: 0 12px;
@@ -205,8 +195,9 @@ QToolTip {
     color: var(--mauve);
 }
 .volume-widget .icon {
+    font-size: 17px;
     color: var(--blue);
-    margin: 1px 2px 0 0;
+    margin: 0px 2px 0 0;
 }
 .weather-widget,
 .volume-widget {
@@ -224,17 +215,13 @@ QToolTip {
 }
 .media-widget .label {
     color: #bac2db;
-    background-color: rgba(24, 24, 37, 0.7);
     padding: 0px;
     padding-right: 4px;
     font-size: 12px;
 }
-.media-widget .label.maintext {
-    padding-top: 3px;
-}
 .media-widget .btn {
     color: #989caa;
-    padding: 0 1px;
+    padding: 0 4px;
     margin: 0;
     font-family: Segoe Fluent Icons;
     font-weight: 400;
@@ -251,16 +238,6 @@ QToolTip {
     font-size: 12px;
     background-color: rgba(0, 0, 0, 0);
 }
-.taskbar-widget {
-    padding: 0;
-    margin: 0;
-    border: none;
-}
-.taskbar-widget .app-icon {
-    padding: 0 6px;
-    border: none;
-    margin: 0;
-}
 .home-widget {
     padding: 0 4px 0 12px;
 }
@@ -272,11 +249,12 @@ QToolTip {
 }
 .home-menu {
     background-color: var(--crust);
+    border-radius: 8px;
 }
 .home-menu .menu-item {
     padding: 8px 48px 9px 16px;
     font-size: 12px;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-family: 'Segoe UI';
     color: var(--text);
     font-weight: 600;
 }
@@ -284,7 +262,16 @@ QToolTip {
     background-color: rgba(128, 130, 158, 0.15);
     color: #fff;
 }
-.home-menu:separator {
-    height: 1px;
+.home-menu .separator {
+    max-height: 1px;
     background-color: rgba(128, 130, 158, 0.3);
+}
+.notification-widget {
+    padding: 0 0px 0 4px;
+}
+.notification-widget .icon {
+    font-size: 14px;
+} 
+.notification-widget .icon.new-notification {
+    color: var(--blue);
 }

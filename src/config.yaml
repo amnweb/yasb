@@ -32,7 +32,7 @@ bars:
       width: "100%"
       height: 32
     padding:
-      top: 4
+      top: 6
       left: 6
       bottom: 0
       right: 6
@@ -49,10 +49,10 @@ bars:
       ]
       right: [
         "media",
-        "taskbar",
         "weather",
         "microphone",
         "volume",
+        "notifications",
         "power_menu"
         ]
 widgets:
@@ -72,17 +72,18 @@ widgets:
     type: "yasb.media.MediaWidget"
     options:
       label: "{title}"
-      label_alt: "{artist}"
+      label_alt: "{artist} - {title}"
       max_field_size:
-        label: 64
+        label: 24
         label_alt: 24
       show_thumbnail: true
       controls_only: false
       controls_left: true
       hide_empty: true
-      thumbnail_alpha: 150
-      thumbnail_padding: 8
+      thumbnail_alpha: 80
+      thumbnail_padding: 24
       thumbnail_corner_radius: 0
+      thumbnail_edge_fade: true
       icons:
         prev_track: "\ue892"
         next_track: "\ue893"
@@ -98,7 +99,7 @@ widgets:
       label_icon_size: 14
       max_length: 56
       max_length_ellipsis: "..."
-      monitor_exclusive: false
+      monitor_exclusive: true
   clock:
     type: "yasb.clock.ClockWidget"
     options:
@@ -167,7 +168,7 @@ widgets:
     options:
       label: "<span>{icon}</span> {temp}"
       label_alt: "{location}: Min {min_temp}, Max {max_temp}, Humidity {humidity}"
-      api_key: "3bf4cf9a7c3f40d6b31174128242807"
+      api_key: ""
       update_interval: 600
       hide_decimal: true
       location: "USA Los Angeles 90006"
@@ -240,18 +241,14 @@ widgets:
         - { icon: "\uf422", launch: "search" }
         - { icon: "\ueb03", launch: "cmd /c Taskmgr" }
         - { icon: "\udb80\ude39",launch: "C:\\Program Files\\Mozilla Firefox\\firefox.exe" }
-  taskbar:
-    type: "yasb.taskbar.TaskbarWidget"
+  notifications:
+    type: "yasb.notifications.NotificationsWidget"
     options:
-      animation:
-        enabled: true
-      icon_size: 16
-      ignore_apps:
-        processes: []
-        titles: []
-        classes: []
-      container_padding:
-        top: 0
-        left: 0
-        bottom: 0
-        right: 0
+      label: "<span>\uf476</span> {count}"
+      label_alt: "{count} notifications"
+      hide_empty: true
+      tooltip: false
+      callbacks:
+        on_left: "toggle_notification"
+        on_right: "do_nothing"
+        on_middle: "toggle_label"
