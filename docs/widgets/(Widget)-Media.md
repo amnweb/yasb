@@ -140,10 +140,6 @@ media:
     padding-right: 4px;
     font-size: 12px;
 }
-
-.media-widget .label.maintext {
-    padding-top: 3px;
-}
 .media-widget .btn {
     color: #989caa;
     padding: 0 4px;
