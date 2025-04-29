@@ -122,7 +122,7 @@ class HomeWidget(BaseWidget):
             self._add_menu_item(main_layout, self._menu_labels['about'], 
                 lambda: subprocess.Popen("winver", shell=True, creationflags=subprocess.CREATE_NO_WINDOW))
             
-            self._add_separator(main_layout)
+            self._menu._add_separator(main_layout)
             
             self._add_menu_item(main_layout, self._menu_labels['system'],
                 lambda: os.startfile("ms-settings:"))
@@ -130,7 +130,7 @@ class HomeWidget(BaseWidget):
             self._add_menu_item(main_layout, self._menu_labels['task_manager'],
                 lambda: subprocess.Popen("taskmgr", shell=True, creationflags=subprocess.CREATE_NO_WINDOW))
                 
-            self._add_separator(main_layout)
+            self._menu._add_separator(main_layout)
 
         # Custom menu items
         if isinstance(self._menu_list, list):
@@ -139,7 +139,7 @@ class HomeWidget(BaseWidget):
                     self._add_menu_item(main_layout, menu_item['title'],
                         self.create_menu_action(menu_item['path']))
         if self._menu_list is not None and len(self._menu_list) > 0 and self._power_menu:
-            self._add_separator(main_layout)
+            self._menu._add_separator(main_layout)
        
         if self._power_menu:
             self._add_menu_item(
@@ -158,7 +158,7 @@ class HomeWidget(BaseWidget):
                 lambda: self.power_operations.shutdown()
             )
             
-            self._add_separator(main_layout)
+            self._menu._add_separator(main_layout)
             
             self._add_menu_item(
                 main_layout,
@@ -222,13 +222,6 @@ class HomeWidget(BaseWidget):
         layout.addWidget(item)
         
         return item
-
-    def _add_separator(self, layout):
-        separator = QFrame(self)
-        separator.setFrameShape(QFrame.Shape.HLine)
-        separator.setProperty('class', 'separator')
-        separator.setStyleSheet('border:none')
-        layout.addWidget(separator)
 
     def _toggle_menu(self):
         if self._animation['enabled']:

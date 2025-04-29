@@ -1,12 +1,12 @@
 import logging
-from PyQt6.QtWidgets import QPushButton, QWidget, QHBoxLayout, QInputDialog, QFileDialog
+from PyQt6.QtWidgets import QPushButton, QWidget, QHBoxLayout, QVBoxLayout, QInputDialog, QFileDialog, QFrame, QLabel
 from PyQt6.QtCore import pyqtSignal, Qt, QTimer
 from PyQt6.QtGui import QCursor
 from core.widgets.base import BaseWidget
 from core.validation.widgets.yasb.windows_desktops import VALIDATION_SCHEMA
 from core.event_service import EventService
 from pyvda import VirtualDesktop, get_virtual_desktops, set_wallpaper_for_all_desktops
-from core.utils.utilities import ContextMenu, is_windows_10, add_shadow
+from core.utils.utilities import PopupWidget, is_windows_10, add_shadow
     
 class WorkspaceButton(QPushButton):
     def __init__(self, workspace_index: int, label: str = None, active_label: str = None, parent=None):
@@ -79,26 +79,44 @@ class WorkspaceButton(QPushButton):
         self._animation_timer.start(step_duration)
         
     def contextMenuEvent(self, event):
-        menu = ContextMenu(self)
-        menu.setProperty("class", "context-menu")
-        rename_action = menu.addAction("Rename")
-        delete_action = menu.addAction("Delete")
-        menu.addSeparator() 
-        create_action = menu.addAction("Create New Desktop")
-        if not is_windows_10():
-            menu.addSeparator() 
-            set_wallpaper_action = menu.addAction("Set Wallpaper On This Desktop")
-            set_wallpaper_action_all = menu.addAction("Set Wallpaper On All Desktops")
+        # Create the popup menu
+        self._popup_menu = PopupWidget(self)
+        self._popup_menu.setProperty("class", "context-menu")
 
-        rename_action.triggered.connect(self.rename_desktop)
-        delete_action.triggered.connect(self.delete_desktop)
-        create_action.triggered.connect(self.create_new_desktop)
-        if not is_windows_10():
-            set_wallpaper_action.triggered.connect(self.set_wallpaper)
-            set_wallpaper_action_all.triggered.connect(self.set_wallpaper_all)
-        
-        menu.exec(self.mapToGlobal(event.pos()))
+        layout = QVBoxLayout(self._popup_menu)
+        layout.setSpacing(0)
+        layout.setContentsMargins(0, 0, 0, 0)
 
+        def add_menu_item(text, handler):
+            label = QLabel(text, self._popup_menu)
+            label.setProperty("class", "menu-item")
+            label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+            # Mouse press event handler
+            def mousePressEvent(event):
+                handler()
+                self._popup_menu.hide()
+            label.mousePressEvent = mousePressEvent
+            layout.addWidget(label)
+
+        add_menu_item("Rename", self.rename_desktop)
+        add_menu_item("Delete", self.delete_desktop)
+
+        self._popup_menu._add_separator(layout)
+
+        add_menu_item("Create New Desktop", self.create_new_desktop)
+
+        if not is_windows_10():
+            # Separator
+            self._popup_menu._add_separator(layout)
+
+            add_menu_item("Set Wallpaper On This Desktop", self.set_wallpaper)
+            add_menu_item("Set Wallpaper On All Desktops", self.set_wallpaper_all)
+
+        self._popup_menu.adjustSize()
+        self._popup_menu.move(self.mapToGlobal(event.pos()))
+        self._popup_menu.show()
+
+ 
 
     def set_wallpaper(self):
         image_path, _ = QFileDialog.getOpenFileName(
