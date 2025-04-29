@@ -102,10 +102,7 @@ class CSSProcessor:
         if not self._should_check_fonts():
             return set(), {}
 
-        # Ensure QApplication exists
-        app = QApplication.instance()
-        if app is None:
-            app = QApplication(sys.argv)
+        # Check for available fonts
         available_fonts = set(QFontDatabase.families())
 
         font_families = set()
