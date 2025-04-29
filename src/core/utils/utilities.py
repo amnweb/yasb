@@ -135,6 +135,13 @@ class PopupWidget(QWidget):
             global_position = QPoint(x, y)
         self.move(global_position)
 
+    def _add_separator(self, layout):
+        separator = QFrame(self)
+        separator.setFrameShape(QFrame.Shape.HLine)
+        separator.setProperty('class', 'separator')
+        separator.setStyleSheet('border:none')
+        layout.addWidget(separator)
+
     def showEvent(self, event):
         if self._blur:
             Blur(
@@ -164,39 +171,6 @@ class PopupWidget(QWidget):
     def resizeEvent(self, event):
         self._popup_content.setGeometry(0, 0, self.width(), self.height())
         super().resizeEvent(event)
-
-class ContextMenu(QMenu):
-    """A custom context menu class that extends QMenu with additional functionality.
-    This class implements a context menu that automatically closes when clicking outside
-    its boundaries and provides proper window activation handling.
-    Methods:
-        showEvent(event): Handles the menu show event by activating the window
-        hideEvent(event): Handles the menu hide event by removing the event filter
-        eventFilter(obj, event): Filters events to detect clicks outside the menu
-    Inherits:
-        QMenu: Base menu class from Qt
-    """
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        QApplication.instance().installEventFilter(self)
-
-    def showEvent(self, event):
-        self.activateWindow() 
-        super().showEvent(event)
-
-    def hideEvent(self, event):
-        QApplication.instance().removeEventFilter(self)
-        super().hideEvent(event)
-
-    def eventFilter(self, obj, event):
-        if event.type() == QEvent.Type.MouseButtonPress:
-            global_pos = event.globalPosition().toPoint()
-            if not self.geometry().contains(global_pos):
-                self.hide()
-                self.deleteLater()
-                return True
-        return super().eventFilter(obj, event)
-    
 
 class Singleton(type):
     _instances = {}
