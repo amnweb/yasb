@@ -430,12 +430,14 @@ class WorkspaceWidget(BaseWidget):
     def _show_offline_status(self):
         self._offline_text.show()
         self._workspace_container.hide()
-        self.workspace_layer_label.hide()
+        if self._toggle_workspace_layer['enabled']:
+            self.workspace_layer_label.hide()
 
     def _hide_offline_status(self):
         self._offline_text.hide()
         self._workspace_container.show()
-        self.workspace_layer_label.show()
+        if self._toggle_workspace_layer['enabled']:
+            self.workspace_layer_label.show()
 
     def wheelEvent(self, event):
         """Handle mouse wheel events to switch workspaces."""
