@@ -84,7 +84,7 @@ class BarManager(QObject):
                 self._threads[listener].wait(500)
         self._threads.clear()
         self.widget_event_listeners.clear()
- 
+
     def initialize_bars(self, init=False) -> None:
         self._widget_builder = WidgetBuilder(self.config['widgets'])
         screens_in_config = {screen for bar_config in self.config['bars'].values() for screen in bar_config['screens']}
@@ -119,6 +119,7 @@ class BarManager(QObject):
 
         del bar_options['enabled']
         del bar_options['screens']
+        del bar_options['hide_on_desktop']
 
         self.widget_event_listeners = self.widget_event_listeners.union(widget_event_listeners)
         self.bars.append(Bar(**bar_options))

@@ -231,9 +231,8 @@ class Bar(QWidget):
         hwnd = win32gui.GetForegroundWindow()
         if not hwnd:
             return
-
         class_name = win32gui.GetClassName(hwnd)
-        if class_name in ("Progman", "WorkerW", "XamlWindow"):
+        if class_name in ("Progman", "WorkerW", "XamlWindow") and not self._window_flags["hide_on_desktop"]:
             return
         left, top, right, bottom = win32gui.GetWindowRect(hwnd)
         window_rect = (left, top, right - left, bottom - top)
