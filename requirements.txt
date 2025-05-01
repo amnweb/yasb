@@ -17,5 +17,4 @@ obs-websocket-py
 pyvda
 win11toast
 python-dotenv
-colorama
 git+https://github.com/amnweb/screen_brightness_control.git

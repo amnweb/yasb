@@ -3,8 +3,6 @@ from dataclasses import dataclass
 from logging.handlers import RotatingFileHandler
 from os.path import join
 
-from colorama import just_fix_windows_console
-
 from core.config import get_config_dir
 from settings import APP_NAME, BUILD_VERSION, DEFAULT_LOG_FILENAME
 
@@ -16,8 +14,6 @@ CONSOLE_FORMAT = "%(asctime)s,%(msecs)03d: %(message)s"
 CONSOLE_DATETIME = "%H:%M:%S"
 CLI_LOG_FORMAT = "%(asctime)s,%(msecs)03d: %(message)s"
 CLI_LOG_DATETIME = "%H:%M:%S"
-
-just_fix_windows_console()
 
 
 @dataclass
