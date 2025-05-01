@@ -1,11 +1,13 @@
 import os
+import re
 import shutil
 import subprocess
 import sys
+from typing import Dict
 import requests
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QLabel, QScrollArea, QFrame, QHBoxLayout, QPushButton, QMessageBox, QDialog)
-from PyQt6.QtGui import QPixmap, QFont, QDesktopServices, QIcon
+from PyQt6.QtGui import QPixmap, QFont, QDesktopServices, QIcon, QFontDatabase
 from PyQt6.QtCore import Qt, QThread, pyqtSignal, QUrl, QTimer, QPropertyAnimation
 from PyQt6.QtWidgets import QGraphicsOpacityEffect, QSizePolicy
 from settings import SCRIPT_PATH
@@ -209,35 +211,40 @@ class ThemeCard(QFrame):
 
     def install_theme(self):
         # Create a custom styled dialog for the confirmation
-        dialog = QDialog(self)
-        dialog.setWindowTitle("Install Theme")
-        dialog.setModal(True)
+        self.dialog = QDialog(self)
+        self.dialog.setFixedWidth(420)
+        self.dialog.setWindowTitle("Install Theme")
+        self.dialog.setModal(True)
         icon_path = os.path.join(SCRIPT_PATH, 'assets', 'images', 'app_icon.png')
         icon = QIcon(icon_path)
-        dialog.setWindowIcon(QIcon(icon.pixmap(48, 48)))
+        self.dialog.setWindowIcon(QIcon(icon.pixmap(48, 48)))
 
-        dialog.setWindowFlags(dialog.windowFlags() & ~Qt.WindowType.WindowContextHelpButtonHint)
+        self.dialog.setWindowFlags(self.dialog.windowFlags() & ~Qt.WindowType.WindowContextHelpButtonHint)
         # Apply styles to the dialog
-        dialog.setStyleSheet("""
+        self.dialog.setStyleSheet("""
             QLabel {
                 font-size: 12px;
                 padding: 10px;
                 font-family: 'Segoe UI';
             }
         """)
-        layout = QVBoxLayout(dialog)
+        layout = QVBoxLayout(self.dialog)
 
-        confirmation_message = QLabel(f"Are you sure you want to install the theme <b>{self.theme_data['name']}</b>?<br/>This will overwrite your current config and styles files.")
-        layout.addWidget(confirmation_message, alignment=Qt.AlignmentFlag.AlignCenter)
+        confirmation_message = QLabel(f"Are you sure you want to install the theme <b>{self.theme_data['name']}</b>?<br>This will overwrite your current config and styles files.")
+        confirmation_message.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        layout.addWidget(confirmation_message)
 
+        self.compat_label = QLabel("Checking compatibility...")
+        layout.addWidget(self.compat_label)
+        QTimer.singleShot(1000, lambda: self._check_font_families(self.theme_data['id']))
         # Add Yes and No buttons
         button_layout = QHBoxLayout()
-
-        yes_button = QPushButton("Install")
-        yes_button.setCursor(Qt.CursorShape.PointingHandCursor)
-        yes_button.clicked.connect(dialog.accept)
-        yes_button.setStyleSheet("""
+        self.yes_button = QPushButton("Install")
+        self.yes_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.yes_button.clicked.connect(self.dialog.accept)
+        self.yes_button.setStyleSheet("""
             QPushButton {
+                margin: 10px 0;
                 background-color: #0078D4;
                 border: 1px solid #0884e2;
                 color: white;
@@ -260,9 +267,10 @@ class ThemeCard(QFrame):
         no_button = QPushButton("Cancel")
         no_button.setCursor(Qt.CursorShape.PointingHandCursor)
         no_button.setObjectName("cancelButton")
-        no_button.clicked.connect(dialog.reject)
+        no_button.clicked.connect(self.dialog.reject)
         no_button.setStyleSheet("""
             QPushButton {
+                margin: 10px 0;
                 background-color: #2c323b;
                 border: 1px solid #363e49;
                 color: white;
@@ -283,14 +291,14 @@ class ThemeCard(QFrame):
             }
         """)
         button_layout.addStretch()
-        button_layout.addWidget(yes_button)
+        button_layout.addWidget(self.yes_button)
         button_layout.addWidget(no_button)
         button_layout.addStretch()
 
+        layout.addStretch()
         layout.addLayout(button_layout)
-
         # Show the dialog and check the user's response
-        if dialog.exec() == QDialog.DialogCode.Accepted:
+        if self.dialog.exec() == QDialog.DialogCode.Accepted:
             try:
                 subprocess.run(["yasbc", "stop"], creationflags=subprocess.CREATE_NO_WINDOW, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                 # Define the URLs for the files
@@ -320,7 +328,88 @@ class ThemeCard(QFrame):
             except Exception as e:
                 QMessageBox.critical(self, 'Error', f"Failed to install theme: {str(e)}")
 
+    def _check_font_families(self, theme_id):
+        try:
+            styles_url = f"https://raw.githubusercontent.com/amnweb/yasb-themes/main/themes/{theme_id}/styles.css"
+            resp = requests.get(styles_url, timeout=5)
+            resp.raise_for_status()
+            css = resp.text
+            css = self._extract_and_replace_variables(css)
+            available_fonts = set(QFontDatabase.families())
+            font_families = set()
+            missing_fonts = set()
+            matches = re.findall(
+                r'font-family\s*:\s*([^;}\n]+)\s*[;}]+',
+                css,
+                flags=re.IGNORECASE
+            )
+            for match in matches:
+                fonts = [f.strip(" '\"\t\r\n") for f in match.split(',')]
+                for font in fonts:
+                    if font:
+                        font_families.add(font)
+                        if font not in available_fonts:
+                            missing_fonts.add(font)
 
+            if missing_fonts:
+                missing_fonts_label = "Some theme fonts are missing from your system"
+                self.compat_label.setStyleSheet("""
+                    QLabel {
+                        font-size: 12px;
+                        padding: 10px;
+                        margin: 0px 10px;
+                        font-family: 'Segoe UI';
+                        color: #f1e1c9;
+                        background-color: rgba(132, 73, 10, 0.2);
+                        border: 1px solid #955816;
+                        border-radius: 4px
+                    }
+                """)
+                self.compat_label.setText(
+                    f"{missing_fonts_label}<br><b>{'<br>'.join(sorted(missing_fonts))}</b>"
+                )
+                self.yes_button.setText("Install anyway")
+            else:
+                self.compat_label.hide()
+        except Exception as e:
+            self.compat_label.setStyleSheet("""
+                QLabel {
+                    font-size: 12px;
+                    padding: 10px;
+                    font-family: 'Segoe UI';
+                    color: #fff;
+                    background-color: #a00;
+                    border: 1px solid #c33;
+                    border-radius: 4px
+                }
+            """)
+            self.compat_label.setText(f"Error checking fonts: {str(e)}")
+            self.compat_label.setWordWrap(True)
+            self.yes_button.setText("Install anyway")
+        finally:
+            self.dialog.adjustSize()
+    
+    def _extract_and_replace_variables(self, css: str) -> str:
+        # Extract variables from :root
+        root_vars: Dict[str, str] = {}
+        def root_replacer(match):
+            content = match.group(1)
+            for var_match in re.finditer(r'--([\w-]+)\s*:\s*([^;]+);', content):
+                var_name = f'--{var_match.group(1).strip()}'
+                var_value = var_match.group(2).strip()
+                root_vars[var_name] = var_value
+            return ''  # Remove :root block
+
+        css = re.sub(r':root\s*{([^}]*)}', root_replacer, css, flags=re.DOTALL)
+
+        # Replace var(--name) with value
+        def var_replacer(match):
+            var_name = match.group(1).strip()
+            return root_vars.get(var_name, match.group(0))
+
+        css = re.sub(r'var\((--[\w-]+)\)', var_replacer, css)
+        return css
+    
 class ThemeViewer(QMainWindow):
     def __init__(self):
         super().__init__()
