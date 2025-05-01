@@ -63,6 +63,15 @@ class UpdateWorker(QThread):
                 self.windows_update_signal.emit({"count": count, "names": filtered_names})
                 
             elif self.update_type == 'winget':
+                # Define column headers in different languages
+                column_headers = {
+                    "en": {"name": "Name", "id": "Id", "version": "Version", "available": "Available", "source": "Source"},
+                    "de": {"name": "Name", "id": "ID", "version": "Version", "available": "Verfügbar", "source": "Quelle"}
+                }
+                upgrade_terminators = {
+                    "en": "The following packages have an upgrade available",
+                    "de": "Für die folgenden Pakete ist ein Upgrade verfügbar"
+                }
                 result = subprocess.run(
                     ['winget', 'upgrade'],
                     capture_output=True,
@@ -74,37 +83,66 @@ class UpdateWorker(QThread):
                 )
                 
                 lines = result.stdout.strip().split('\n')
-                fl = 0
-                while fl < len(lines) and not lines[fl].startswith("Name"):
-                    fl += 1
                 
-                if fl >= len(lines):
+                # Find header row by looking for any of the known name columns
+                fl = -1
+                detected_language = None
+                
+                for i, line in enumerate(lines):
+                    for lang, headers in column_headers.items():
+                        if headers["name"] in line and headers["version"] in line:
+                            fl = i
+                            detected_language = lang
+                            break
+                    if fl >= 0:
+                        break
+                if fl < 0 or detected_language is None:
                     if DEBUG:
-                        logging.warning("Invalid winget output format.")
+                        logging.warning("Could not identify header row in any supported language.")
                     self.winget_update_signal.emit({"count": 0, "names": []})
                     return
                 
-                id_start = lines[fl].index("Id")
-                version_start = lines[fl].index("Version")
-                available_start = lines[fl].index("Available")
-                source_start = lines[fl].index("Source")
+                # Get the column headers for the detected language
+                headers = column_headers[detected_language]
+                
+                # Find column positions
+                id_start = lines[fl].index(headers["id"])
+                version_start = lines[fl].index(headers["version"])
+                available_start = lines[fl].index(headers["available"])
+                source_start = lines[fl].index(headers["source"])
+                
+                # Default terminator pattern to handle unknown languages
+                default_terminator_pattern = r'^\s*\w+\s+\w+\s+\w+\s+\w+\s+\w+\s*$'
                 
                 upgrade_list = []
                 for line in lines[fl + 1:]:
-                    if line.startswith("The following packages have an upgrade available"):
+                    # Check for known terminators in the detected language
+                    if detected_language in upgrade_terminators and line.startswith(upgrade_terminators[detected_language]):
                         break
+                    
+                    # If not found, use pattern matching to detect end of table
+                    if re.match(default_terminator_pattern, line) and len(line.split()) < 3:
+                        break
+                    
                     if len(line) > (available_start + 1) and not line.startswith('-'):
-                        name = line[:id_start].strip()
-                        id = line[id_start:version_start].strip()
-                        version = line[version_start:available_start].strip()
-                        available = line[available_start:source_start].strip()
-                        software = {
-                            "name": name,
-                            "id": id,
-                            "version": version,
-                            "available_version": available
-                        }
-                        upgrade_list.append(software)
+                        try:
+                            name = line[:id_start].strip()
+                            id_value = line[id_start:version_start].strip()
+                            version = line[version_start:available_start].strip()
+                            available = line[available_start:source_start].strip()
+                            
+                            # Only add if we have all required fields with content
+                            if name and id_value and version and available:
+                                software = {
+                                    "name": name,
+                                    "id": id_value,
+                                    "version": version,
+                                    "available_version": available
+                                }
+                                upgrade_list.append(software)
+                        except Exception as e:
+                            if DEBUG:
+                                logging.warning(f"Error parsing winget line: {line}, {e}")
                 
                 update_names = [
                     f"{software['name']} ({software['id']}): {software['version']} -> {software['available_version']}" 
@@ -366,4 +404,4 @@ class UpdateCheckWidget(BaseWidget):
         if self.windows_update_data == 0 and self.winget_update_data == 0:
             self.hide()
         else:
-            self.show() 
+            self.show()
