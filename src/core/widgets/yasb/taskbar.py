@@ -45,7 +45,10 @@ EXCLUDED_CLASSES = {
     "#32768",
     "Qt673QWindowToolSaveBits",
     "Qt673QWindowToolTipSaveBits",
-    "Qt673QWindowToolTipDropShadowSaveBits"
+    "Qt673QWindowToolTipDropShadowSaveBits",
+    "msctls_statusbar32",
+    "DirectUIHWND",
+    "SHELLDLL_DefView"
 }
 
 class TaskbarWidget(BaseWidget):
@@ -91,6 +94,8 @@ class TaskbarWidget(BaseWidget):
         self._icon_cache = dict()
         self._window_buttons = {}
         self._hwnd_title_cache = {}
+        self._window_info_cache = {}
+        self._name_change_last_fetch = {}
         self._event_service = EventService()
         
         # Construct container
@@ -150,6 +155,7 @@ class TaskbarWidget(BaseWidget):
         else:
             logging.warning(f"Invalid window handle: {hwnd}")
 
+
     def _process_event(self, hwnd: int, event: WinEvent) -> None:
         # Maintain a dictionary of last event times per (hwnd, event)
         if not hasattr(self, "_last_event_time"):
@@ -161,7 +167,45 @@ class TaskbarWidget(BaseWidget):
             return  # Skip event
         self._last_event_time[key] = now
 
-        win_info = get_hwnd_info(hwnd)
+        # Special handling for EventObjectNameChange events
+        # this event can be problematic with apps which have rapid title changes thats why we need to debounce it
+        if event == WinEvent.EventObjectNameChange:
+            cached_title = self._hwnd_title_cache.get(hwnd)
+            
+            # Get cached window info first
+            window_info = self._window_info_cache.get(hwnd)
+            
+            # Always fetch fresh info for important title changes:
+            # 1. If we don't have cached window info, or
+            # 2. If we don't have a cached title
+            if not window_info or cached_title is None:
+                full_win_info = get_hwnd_info(hwnd)
+                win_info = self._cache_window_info(hwnd, full_win_info)
+                if win_info:
+                    self._name_change_last_fetch[hwnd] = now
+            else:
+                # For repeated title changes, apply the debounce
+                name_change_debounce = 1.0  # 5 seconds debounce
+                last_name_fetch = self._name_change_last_fetch.get(hwnd, 0)
+                
+                if now - last_name_fetch < name_change_debounce:
+                    # Use cached info during debounce period
+                    win_info = window_info
+                else:
+                    # Debounce period passed get fresh info
+                    full_win_info = get_hwnd_info(hwnd)
+                    win_info = self._cache_window_info(hwnd, full_win_info)
+                    if win_info:
+                        self._name_change_last_fetch[hwnd] = now
+        else:
+            # Normal processing for other events
+            window_info = self._window_info_cache.get(hwnd)
+            if not window_info:
+                full_win_info = get_hwnd_info(hwnd)
+                win_info = self._cache_window_info(hwnd, full_win_info)
+            else:
+                win_info = window_info
+
         if (not win_info or not hwnd or
                 not win_info['title'] or
                 win_info['class_name'] in EXCLUDED_CLASSES or
@@ -180,6 +224,22 @@ class TaskbarWidget(BaseWidget):
             self._hwnd_title_cache[hwnd] = win_info['title']
             self._update_label(hwnd, event)
  
+    def _cache_window_info(self, hwnd, win_info):
+        """Extract only what we need from the full window info"""
+        if not win_info:
+            return None
+
+        wininfo = {
+            'title': win_info['title'],
+            'class_name': win_info['class_name'],
+            'process': {
+                'name': win_info['process']['name'],
+                'pid': win_info['process']['pid']
+            }
+        }
+
+        self._window_info_cache[hwnd] = wininfo
+        return wininfo
 
     def _update_label(self, hwnd: int, event: WinEvent) -> None:
         visible_windows = self.get_visible_windows(hwnd, event)
@@ -350,10 +410,9 @@ class TaskbarWidget(BaseWidget):
                 logging.exception(f"Failed to get icons for window with HWND {hwnd} emitted by event {event}")
             return None
             
-        
     def get_visible_windows(self, _: int, event: WinEvent) -> list[tuple[str, int, Optional[QPixmap], dict]]:
-
         visible_windows = []
+
         def enum_windows_proc(hwnd, _):
             if win32gui.IsWindowVisible(hwnd) and win32gui.GetWindowText(hwnd):
                 ex_style = win32gui.GetWindowLong(hwnd, win32con.GWL_EXSTYLE)
@@ -367,8 +426,13 @@ class TaskbarWidget(BaseWidget):
                         class_name in EXCLUDED_CLASSES):
                         return True
                     
-                    # Get the window info to check process name
-                    window_info = get_hwnd_info(hwnd)
+                    # Check cached window info
+                    window_info = self._window_info_cache.get(hwnd)
+                    if not window_info:
+                        # Only call get_hwnd_info if not in cache
+                        full_win_info = get_hwnd_info(hwnd)
+                        window_info = self._cache_window_info(hwnd, full_win_info)
+
                     if not window_info or window_info['process']['name'] in self._ignore_apps['processes']:
                         return True
 
@@ -449,7 +513,9 @@ class TaskbarWidget(BaseWidget):
                         class_name in self._ignore_apps['classes'] or
                         class_name in EXCLUDED_CLASSES):
                         return True
-                    win_info = get_hwnd_info(hwnd)
+                    full_win_info = get_hwnd_info(hwnd)
+                    win_info = self._cache_window_info(hwnd, full_win_info)
+                    
                     if win_info and win_info['process']['name'] not in self._ignore_apps['processes']:
                         process = win_info['process']
                         icon = self._get_app_icon(hwnd, title, process, WinEvent.WinEventOutOfContext, skip_foreground_check=True)
