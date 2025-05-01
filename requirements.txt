@@ -10,7 +10,6 @@ tzlocal
 watchdog
 winsdk
 pycaw
-winshell
 pillow==11.1
 qasync
 requests

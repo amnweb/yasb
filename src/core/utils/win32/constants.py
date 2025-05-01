@@ -1,5 +1,7 @@
 """win32 constants that are missing from win32con"""
 
+import ctypes
+
 NIM_ADD = 0x0
 NIM_MODIFY = 0x1
 NIM_DELETE = 0x2
@@ -19,3 +21,5 @@ NIN_POPUPOPEN = 0x406
 NIN_POPUPCLOSE = 0x407
 NIN_SELECT = 0x400
 NIN_CONTEXTMENU = 0x7B
+
+INVALID_HANDLE_VALUE = ctypes.c_void_p(-1).value

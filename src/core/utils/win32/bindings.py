@@ -3,9 +3,11 @@
 from ctypes import (
     POINTER,
     Array,
+    byref,
     c_int,
     c_long,
     c_wchar,
+    create_string_buffer,
     windll,
 )
 from ctypes.wintypes import (
@@ -18,6 +20,7 @@ from ctypes.wintypes import (
     HWND,
     INT,
     LPARAM,
+    LPCVOID,
     LPCWSTR,
     LPDWORD,
     LPVOID,
@@ -124,6 +127,78 @@ kernel32.QueryFullProcessImageNameW.argtypes = [HANDLE, DWORD, LPWSTR, LPDWORD]
 
 kernel32.CloseHandle.restype = BOOL
 kernel32.CloseHandle.argtypes = [HANDLE]
+
+kernel32.CreateNamedPipeW.argtypes = [
+    LPCWSTR,
+    DWORD,
+    DWORD,
+    DWORD,
+    DWORD,
+    DWORD,
+    DWORD,
+    LPVOID,
+]
+kernel32.CreateNamedPipeW.restype = HANDLE
+
+kernel32.ConnectNamedPipe.argtypes = [HANDLE, LPVOID]
+kernel32.ConnectNamedPipe.restype = BOOL
+
+kernel32.DisconnectNamedPipe.argtypes = [HANDLE]
+kernel32.DisconnectNamedPipe.restype = BOOL
+
+kernel32.WaitNamedPipeW.argtypes = [LPCWSTR, DWORD]
+kernel32.WaitNamedPipeW.restype = BOOL
+
+kernel32.CreateEventW.argtypes = [
+    LPVOID,
+    BOOL,
+    BOOL,
+    LPCWSTR,
+]
+kernel32.CreateEventW.restype = HANDLE
+
+kernel32.SetEvent.argtypes = [HANDLE]
+kernel32.SetEvent.restype = BOOL
+
+kernel32.OpenEventW.argtypes = [DWORD, BOOL, LPCWSTR]
+kernel32.OpenEventW.restype = HANDLE
+
+kernel32.WaitForSingleObject.argtypes = [HANDLE, DWORD]
+kernel32.WaitForSingleObject.restype = DWORD
+
+kernel32.ReadFile.argtypes = [
+    HANDLE,
+    LPVOID,
+    DWORD,
+    POINTER(DWORD),
+    LPVOID,
+]
+kernel32.ReadFile.restype = BOOL
+
+kernel32.WriteFile.argtypes = [
+    HANDLE,
+    LPCVOID,
+    DWORD,
+    POINTER(DWORD),
+    LPVOID,
+]
+kernel32.WriteFile.restype = BOOL
+
+kernel32.CreateFileW.argtypes = [
+    LPCWSTR,
+    DWORD,
+    DWORD,
+    LPVOID,
+    DWORD,
+    DWORD,
+    HANDLE,
+]
+kernel32.CreateFileW.restype = HANDLE
+
+kernel32.CloseHandle.argtypes = [
+    HANDLE,
+]
+kernel32.CloseHandle.restype = BOOL
 
 gdi32.GetObjectW.argtypes = [HANDLE, c_int, LPVOID]
 gdi32.GetObjectW.restype = c_int
@@ -283,3 +358,92 @@ def DeleteObject(hObject: int) -> bool:
 
 def GetObject(hgdiobj: int, cbBuffer: int, lpvObject: CArgObject) -> int:
     return gdi32.GetObjectW(hgdiobj, cbBuffer, lpvObject)
+
+
+def CreateNamedPipe(
+    lpName: str,
+    dwOpenMode: int,
+    dePipeMode: int,
+    nMaxInstances: int,
+    nOutBufferSize: int,
+    nInBufferSize: int,
+    nDefaultTimeOut: int,
+    lpSecurityAttributes: int | None,
+) -> int:
+    return kernel32.CreateNamedPipeW(
+        lpName,
+        dwOpenMode,
+        dePipeMode,
+        nMaxInstances,
+        nOutBufferSize,
+        nInBufferSize,
+        nDefaultTimeOut,
+        lpSecurityAttributes,
+    )
+
+
+def ConnectNamedPipe(hNamedPipe: int, lpOverlapped: int | None = None) -> None:
+    kernel32.ConnectNamedPipe(hNamedPipe, lpOverlapped)
+
+
+def DisconnectNamedPipe(hNamedPipe: int) -> bool:
+    return bool(kernel32.DisconnectNamedPipe(hNamedPipe))
+
+
+def WaitNamedPipe(hNamedPipe: str, nTimeOut: int) -> bool:
+    return kernel32.WaitNamedPipeW(hNamedPipe, nTimeOut)
+
+
+def CreateEvent(
+    lpEventAttributes: int | None,
+    bManualReset: bool,
+    bInitialState: bool,
+    lpName: str | None,
+) -> int:
+    return kernel32.CreateEventW(lpEventAttributes, bManualReset, bInitialState, lpName)
+
+
+def SetEvent(hEvent: int) -> bool:
+    return bool(kernel32.SetEvent(hEvent))
+
+
+def OpenEvent(dwDesiredAccess: int, bInheritHandle: bool, lpName: str) -> int:
+    return kernel32.OpenEventW(dwDesiredAccess, bInheritHandle, lpName)
+
+
+def WaitForSingleObject(hHandle: int, dwMilliseconds: int) -> int:
+    return kernel32.WaitForSingleObject(hHandle, dwMilliseconds)
+
+
+def ReadFile(hFile: int, nNumberOfBytesToRead: int) -> bytes:
+    buffer = create_string_buffer(nNumberOfBytesToRead)
+    bytes_read = DWORD()
+    kernel32.ReadFile(hFile, buffer, nNumberOfBytesToRead, byref(bytes_read), None)
+    return buffer.raw[: bytes_read.value]
+
+
+def WriteFile(hFile: int, data: bytes) -> bool:
+    buffer = create_string_buffer(data)
+    bytes_written = DWORD()
+    success = kernel32.WriteFile(hFile, buffer, len(data), byref(bytes_written), None)
+    return bool(success)
+
+
+def CreateFile(
+    lpFileName: str,
+    dwDesiredAccess: int,
+    dwShareMode: int,
+    lpSecurityAttributes: int | None,
+    dwCreationDisposition: int,
+    dwFlagsAndAttributes: int,
+    hTemplateFile: int | None = None,
+) -> int:
+    return kernel32.CreateFileW(
+        lpFileName,
+        dwDesiredAccess,
+        dwShareMode,
+        lpSecurityAttributes,
+        dwCreationDisposition,
+        dwFlagsAndAttributes,
+        hTemplateFile,
+    )

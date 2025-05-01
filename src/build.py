@@ -50,7 +50,7 @@ build_options = {
     "zip_exclude_packages": ["*"],
     "build_exe": "dist",
     "include_msvcr": True,
-    "includes": ["colorama"],
+    "includes": [],
     "optimize": 1,
     "include_files": [
             ("assets/images/app_icon.png","assets/images/app_icon.png"),
@@ -110,7 +110,7 @@ executables = [
         target_name="yasb_themes",
     ),
     Executable(
-        "core/utils/cli.py",
+        "cli.py",
         base="Console",
         copyright=f"Copyright (C) {datetime.datetime.now().year} AmN",
         target_name="yasbc",
