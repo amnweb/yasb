@@ -161,7 +161,6 @@ class CSSProcessor:
             "some icons or symbols may not be visible or may not display correctly."
         )
         msg_box.setInformativeText(
-            '<style>a { color: #fff; }</style>'
             "Please install the missing fonts.<br>" +
             "<br>".join(f"<strong>{font}</strong>" for font in details)
         )
