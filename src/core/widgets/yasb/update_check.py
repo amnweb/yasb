@@ -63,15 +63,16 @@ class UpdateWorker(QThread):
                 self.windows_update_signal.emit({"count": count, "names": filtered_names})
                 
             elif self.update_type == 'winget':
-                # Define column headers in different languages
-                column_headers = {
+
+                WINGET_COLUMN_HEADERS = {
                     "en": {"name": "Name", "id": "Id", "version": "Version", "available": "Available", "source": "Source"},
                     "de": {"name": "Name", "id": "ID", "version": "Version", "available": "Verfügbar", "source": "Quelle"}
                 }
-                upgrade_terminators = {
+                WINGET_SECTION_HEADERS = {
                     "en": "The following packages have an upgrade available",
                     "de": "Für die folgenden Pakete ist ein Upgrade verfügbar"
                 }
+
                 result = subprocess.run(
                     ['winget', 'upgrade'],
                     capture_output=True,
@@ -81,7 +82,7 @@ class UpdateWorker(QThread):
                     shell=True,
                     creationflags=subprocess.CREATE_NO_WINDOW
                 )
-                
+
                 lines = result.stdout.strip().split('\n')
                 
                 # Find header row by looking for any of the known name columns
@@ -89,21 +90,22 @@ class UpdateWorker(QThread):
                 detected_language = None
                 
                 for i, line in enumerate(lines):
-                    for lang, headers in column_headers.items():
-                        if headers["name"] in line and headers["version"] in line:
+                    for lang, headers in WINGET_COLUMN_HEADERS.items():
+                        if headers["name"] in line and headers["id"] in line and headers["version"] in line and headers["available"] in line and headers["source"] in line:
                             fl = i
                             detected_language = lang
                             break
                     if fl >= 0:
                         break
-                if fl < 0 or detected_language is None:
+                # Skip if language is not supported
+                if fl < 0 or detected_language not in WINGET_COLUMN_HEADERS:
                     if DEBUG:
-                        logging.warning("Could not identify header row in any supported language.")
+                        logging.warning("Could not identify header row in any supported language. Skipping processing.")
                     self.winget_update_signal.emit({"count": 0, "names": []})
                     return
                 
                 # Get the column headers for the detected language
-                headers = column_headers[detected_language]
+                headers = WINGET_COLUMN_HEADERS[detected_language]
                 
                 # Find column positions
                 id_start = lines[fl].index(headers["id"])
@@ -111,19 +113,12 @@ class UpdateWorker(QThread):
                 available_start = lines[fl].index(headers["available"])
                 source_start = lines[fl].index(headers["source"])
                 
-                # Default terminator pattern to handle unknown languages
-                default_terminator_pattern = r'^\s*\w+\s+\w+\s+\w+\s+\w+\s+\w+\s*$'
-                
                 upgrade_list = []
                 for line in lines[fl + 1:]:
                     # Check for known terminators in the detected language
-                    if detected_language in upgrade_terminators and line.startswith(upgrade_terminators[detected_language]):
+                    if detected_language in WINGET_SECTION_HEADERS and line.startswith(WINGET_SECTION_HEADERS[detected_language]):
                         break
-                    
-                    # If not found, use pattern matching to detect end of table
-                    if re.match(default_terminator_pattern, line) and len(line.split()) < 3:
-                        break
-                    
+
                     if len(line) > (available_start + 1) and not line.startswith('-'):
                         try:
                             name = line[:id_start].strip()
