@@ -7,7 +7,6 @@ import threading
 import webbrowser
 from pathlib import Path
 
-import winshell
 from PyQt6.QtCore import QEvent, QSize, Qt
 from PyQt6.QtGui import QGuiApplication, QIcon
 from PyQt6.QtWidgets import QMenu, QMessageBox, QSystemTrayIcon
@@ -16,6 +15,7 @@ from core.bar_manager import BarManager
 from core.config import get_config
 from core.console import WindowShellDialog
 from core.utils.controller import exit_application, reload_application
+from core.utils.win32.utilities import create_shortcut
 from settings import (APP_NAME, APP_NAME_FULL, BUILD_VERSION,
                      DEFAULT_CONFIG_DIRECTORY, GITHUB_THEME_URL,
                      GITHUB_URL, SCRIPT_PATH)
@@ -169,14 +169,7 @@ class SystemTrayManager(QSystemTrayIcon):
 
     def _enable_startup(self):
         shortcut_path = os.path.join(OS_STARTUP_FOLDER, SHORTCUT_FILENAME)
-        try:
-            with winshell.shortcut(shortcut_path) as shortcut:
-                shortcut.path = AUTOSTART_FILE
-                shortcut.working_directory = SCRIPT_PATH
-                shortcut.description = "Shortcut to yasb.vbs"
-            logging.info(f"Created shortcut at {shortcut_path}")
-        except Exception as e:
-            logging.error(f"Failed to create startup shortcut: {e}")
+        create_shortcut(shortcut_path, AUTOSTART_FILE, SCRIPT_PATH)
         self._load_context_menu()
 
     def _disable_startup(self):

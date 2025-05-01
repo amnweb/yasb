@@ -1,14 +1,24 @@
 import platform
 import re
 from typing import Any, cast
-from PyQt6.QtWidgets import QApplication, QWidget, QFrame, QMenu, QGraphicsDropShadowEffect
+
+import psutil
 from PyQt6.QtCore import QEvent, QPoint, Qt
-from PyQt6.QtGui import  QScreen, QColor
+from PyQt6.QtGui import QColor, QScreen
+from PyQt6.QtWidgets import QApplication, QFrame, QGraphicsDropShadowEffect, QWidget
+
 from core.utils.win32.blurWindow import Blur
+
 
 def is_windows_10() -> bool:
     version = platform.version()
     return bool(re.match(r'^10\.0\.1\d{4}$', version))
+
+def is_process_running(process_name: str) -> bool:
+    for proc in psutil.process_iter(["name"]):
+        if proc.info["name"] == process_name:
+            return True
+    return False
 
 def percent_to_float(percent: str) -> float:
     return float(percent.strip('%')) / 100.0

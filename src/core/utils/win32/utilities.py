@@ -1,9 +1,12 @@
 import psutil
 import ctypes
 import ctypes.wintypes
+import pythoncom
+import logging
 from win32process import GetWindowThreadProcessId
 from win32gui import GetWindowText, GetClassName, GetWindowRect, GetWindowPlacement
 from win32api import MonitorFromWindow, GetMonitorInfo
+from win32com.client import Dispatch
 from contextlib import suppress
 
 
@@ -98,3 +101,20 @@ def get_hwnd_info(hwnd: int) -> dict:
             'monitor_info': monitor_info,
             'rect': get_window_rect(hwnd)
         }
+
+
+def create_shortcut(shortcut_path: str, autostart_file: str, working_directory: str):
+    try:
+        pythoncom.CoInitialize()
+        shell = Dispatch("WScript.Shell")
+        shortcut = shell.CreateShortCut(shortcut_path)
+        shortcut.Targetpath = autostart_file
+        shortcut.WorkingDirectory = working_directory
+        shortcut.Description = "Shortcut to yasb.exe"
+        shortcut.save()
+        logging.info(f"Created shortcut at {shortcut_path}")
+        print(f"Created shortcut at {shortcut_path}")
+    except Exception as e:
+        logging.error(f"Failed to create startup shortcut: {e}")
+        print(f"Failed to create startup shortcut: {e}")
+        return False

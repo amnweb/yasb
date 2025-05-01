@@ -34,7 +34,7 @@ def exit_application(msg="Exiting Application..."):
         os._exit(0)
 
 
-def process_cli_command(command):
+def process_cli_command(command: str):
     """
     Process CLI commands received from the Named Pipe server.
     Args:
@@ -44,10 +44,8 @@ def process_cli_command(command):
         reload_application("Reloading Application from CLI...")
     elif command == "stop":
         exit_application("Exiting Application from CLI...")
-        
+
 def start_cli_server():
-    if getattr(sys, 'frozen', False):
-        handler = CliPipeHandler(cli_command=process_cli_command)
-        handler.start_cli_pipe_server()
-        sys._cli_pipe_handler = handler
-    return None
+    handler = CliPipeHandler(process_cli_command)
+    handler.start_cli_pipe_server()
+    sys._cli_pipe_handler = handler

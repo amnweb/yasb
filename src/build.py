@@ -110,7 +110,7 @@ executables = [
         target_name="yasb_themes",
     ),
     Executable(
-        "core/utils/cli.py",
+        "cli.py",
         base="Console",
         copyright=f"Copyright (C) {datetime.datetime.now().year} AmN",
         target_name="yasbc",
