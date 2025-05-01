@@ -80,7 +80,7 @@ def get_stylesheet_path() -> str:
 
 def parse_env(obj):
     """
-    Recursively expand $env:VARIABLE_NAME patterns in strings,
+    Recursively expand $env:VARIABLE_NAME or $Env:VARIABLE_NAME patterns in strings,
     dicts, and lists.
     """
     if isinstance(obj, dict):
@@ -89,9 +89,10 @@ def parse_env(obj):
         return [parse_env(item) for item in obj]
     elif isinstance(obj, str):
         pattern = r'\$env:([\w_]+)'
-        for var in re.findall(pattern, obj):
-            val = os.environ.get(var, '')
-            obj = obj.replace(f'$env:{var}', val)
+        def repl(match):
+            var = match.group(1)
+            return os.environ.get(var, '')
+        obj = re.sub(pattern, repl, obj, flags=re.IGNORECASE)
     return obj
 
 
