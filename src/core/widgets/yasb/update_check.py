@@ -119,25 +119,33 @@ class UpdateWorker(QThread):
                     if detected_language in WINGET_SECTION_HEADERS and line.startswith(WINGET_SECTION_HEADERS[detected_language]):
                         break
 
-                    if len(line) > (available_start + 1) and not line.startswith('-'):
-                        try:
-                            name = line[:id_start].strip()
-                            id_value = line[id_start:version_start].strip()
-                            version = line[version_start:available_start].strip()
-                            available = line[available_start:source_start].strip()
-                            
-                            # Only add if we have all required fields with content
-                            if name and id_value and version and available:
-                                software = {
-                                    "name": name,
-                                    "id": id_value,
-                                    "version": version,
-                                    "available_version": available
-                                }
-                                upgrade_list.append(software)
-                        except Exception as e:
-                            if DEBUG:
-                                logging.warning(f"Error parsing winget line: {line}, {e}")
+                    # Skip lines that are too short or are separators
+                    if len(line) < source_start + 1 or line.strip().startswith('-'):
+                        continue
+
+                    try:
+                        name = line[:id_start].strip()
+                        id_value = line[id_start:version_start].strip()
+                        version = line[version_start:available_start].strip()
+                        available = line[available_start:source_start].strip()
+
+                        # Only add if all fields are present, id has no spaces, and version fields look like versions
+                        if (
+                            all([name, id_value, version, available]) and
+                            ' ' not in id_value and
+                            any(char.isdigit() for char in version) and
+                            any(char.isdigit() for char in available)
+                        ):
+                            software = {
+                                "name": name,
+                                "id": id_value,
+                                "version": version,
+                                "available_version": available
+                            }
+                            upgrade_list.append(software)
+                    except Exception as e:
+                        if DEBUG:
+                            logging.warning(f"Error parsing winget line: {line}, {e}")
                 
                 update_names = [
                     f"{software['name']} ({software['id']}): {software['version']} -> {software['available_version']}" 
