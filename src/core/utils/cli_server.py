@@ -64,8 +64,9 @@ class LogPipeServer:
     def stop(self):
         """Stop the logging pipe server"""
         self.stop_event.set()
-        if self.server_thread:
-            self.server_thread.join(timeout=1.0)
+        if self.server_thread and self.server_thread.is_alive():
+            self.server_thread.join(timeout=0.1)
+            self.stop_event.clear()
         logger.info("Log pipe server stopped")
 
     def _run_server(self):
@@ -99,7 +100,7 @@ class LogPipeServer:
                     # Ping the client to keep the connection alive
                     WriteFile(pipe, b"PING")
                     response = ReadFile(pipe, 64 * 1024)
-                    if response.decode("utf-8").strip() != "PONG":
+                    if bool(response) and response.decode("utf-8").strip() != "PONG":
                         handler.close()
                         root_logger.removeHandler(handler)
                         logger.debug("Log pipe server client disconnected")
