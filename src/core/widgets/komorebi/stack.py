@@ -244,7 +244,8 @@ class StackWidget(BaseWidget):
                     self._update_button_status(new_window_button)
                 except (IndexError, TypeError):
                     self._add_or_update_buttons()
-            elif event['type'] in self._reset_buttons_events or self._has_active_container_index_changed() or self._has_active_workspace_index_changed():
+            if event['type'] in self._reset_buttons_events or self._has_active_container_index_changed() or self._has_active_workspace_index_changed():
+                logging.debug(f"Resetting buttons due to event: {event['type']}")
                 self._window_buttons = []
                 self._add_or_update_buttons()
             if event['type'] in ['Minimize', 'Show', 'Hide', 'Destroy', 'Close']:
