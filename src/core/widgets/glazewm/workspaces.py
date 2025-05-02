@@ -148,7 +148,7 @@ class GlazewmWorkspacesWidget(BaseWidget):
         self.offline_text = QLabel(self.label_offline)
         self.offline_text.setProperty("class", "offline-status")
 
-        add_shadow(self._widget_frame, self.container_shadow)
+        add_shadow(self.workspace_container, self.container_shadow)
 
         self.widget_layout.addWidget(self.offline_text)
         self.widget_layout.addWidget(self.workspace_container)
