@@ -60,8 +60,8 @@ This widget displays information about each window in the currently active Komor
 - **label_window_active:** The format string for the active window button, can be {title}, {index}, {process}, or {hwnd}.
 - **label_no_window:** The label to display when no window is in focus.  
 - **label_zero_index:** Whether to use zero-based indexing for workspace labels.
-- **max_length:** The maximum number of characters to display for the window title. If the title exceeds this length, it will be truncated.
-- **max_length_active:** The maximum number of characters to display for the active window title. If the title exceeds this length, it will be truncated.
+- **max_length:** The maximum number of characters to display for the label. If the title exceeds this length, it will be truncated.
+- **max_length_active:** The maximum number of characters to display for the active window label. If the title exceeds this length, it will be truncated.
 - **max_length_ellipsis:** The string to append to truncated window titles.  
 - **hide_if_offline:** Whether to hide the widget if Komorebi is offline.
 - **enable_scroll_switching:** Enable scroll switching between workspaces.
