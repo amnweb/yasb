@@ -44,3 +44,8 @@ class KomorebiEvent(Event):
     SendContainerToMonitorNumber = "SendContainerToMonitorNumber"
     SendContainerToWorkspaceNumber = "SendContainerToWorkspaceNumber"
     WorkspaceName = "WorkspaceName"
+    StackWindow = "StackWindow"
+    UnstackWindow = "UnstackWindow"
+    CycleStack = "CycleStack"
+    FocusStackWindow = "FocusStackWindow"
+    TitleUpdate = "TitleUpdate"

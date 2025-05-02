@@ -1,0 +1,96 @@
+DEFAULTS = {
+    'label_offline': 'Komorebi Offline',
+    'label_window': '{tile}',
+    'label_window_active': '{title}',
+    'label_no_window': '',
+    'label_zero_index': False,
+    'max_length': None,
+    'max_length_ellipsis': '...',
+    'hide_if_offline': False,
+    'animation': False,
+    'enable_scroll_switching': False,
+    'reverse_scroll_direction': False,
+    'container_padding': {'top': 0, 'left': 0, 'bottom': 0, 'right': 0},
+}
+
+VALIDATION_SCHEMA = {
+    'label_offline': {
+        'type': 'string',
+        'default': DEFAULTS['label_offline']
+    },
+    'label_window': {
+        'type': 'string',
+        'default': DEFAULTS['label_window']
+    },
+    'label_window_active': {
+        'type': 'string',
+        'default': DEFAULTS['label_window_active']
+    },
+    'label_no_window': {
+        'type': 'string',
+        'default': DEFAULTS['label_no_window']
+    },
+    'label_zero_index': {
+        'type': 'boolean',
+        'default': DEFAULTS['label_zero_index']
+    },
+    'hide_if_offline': {
+        'type': 'boolean',
+        'default': DEFAULTS['hide_if_offline']
+    },
+    'max_length': {
+        'type': 'integer',
+        'min': 1,
+        'nullable': True,
+        'default': DEFAULTS['max_length']
+    },
+    'max_length_active': {
+        'type': 'integer',
+        'min': 1,
+        'nullable': True,
+        'default': DEFAULTS['max_length']
+    },
+    'max_length_ellipsis': {
+        'type': 'string',
+        'default': DEFAULTS['max_length_ellipsis']
+    },
+    'animation': {
+        'type': 'boolean',
+        'default': DEFAULTS['animation']
+    },
+    'enable_scroll_switching': {
+        'type': 'boolean',
+        'default': DEFAULTS['enable_scroll_switching']
+    },
+    'reverse_scroll_direction': {
+        'type': 'boolean',
+        'default': DEFAULTS['reverse_scroll_direction']
+    },
+    'container_padding': {
+        'type': 'dict',
+        'default': DEFAULTS['container_padding'],
+        'required': False
+    },
+    'label_shadow': {
+        'type': 'dict',
+        'required': False,
+        'schema': {
+            'enabled': {'type': 'boolean', 'default': False},
+            'color': {'type': 'string', 'default': 'black'},
+            'offset': {'type': 'list', 'default': [1, 1]},
+            'radius': {'type': 'integer', 'default': 3},
+        },
+        'default': {'enabled': False, 'color': 'black', 'offset': [1, 1], 'radius': 3}
+    },
+    'container_shadow': {
+        'type': 'dict',
+        'required': False,
+        'schema': {
+            'enabled': {'type': 'boolean', 'default': False},
+            'color': {'type': 'string', 'default': 'black'},
+            'offset': {'type': 'list', 'default': [1, 1]},
+            'radius': {'type': 'integer', 'default': 3},
+        },
+        'default': {'enabled': False, 'color': 'black', 'offset': [1, 1], 'radius': 3}
+    }
+}
