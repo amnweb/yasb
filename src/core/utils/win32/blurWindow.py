@@ -89,7 +89,7 @@ def set_window_corner_preference(hwnd, preference, border_color):
 
     if border_color == "None":
         border_color_value = ctypes.c_int(DWMWA_COLOR_NONE)
-    elif border_color == "System":
+    elif border_color.lower() == "system":
         border_color_value = ctypes.c_int(DWMWA_COLOR_DEFAULT)
     else:
         border_color_value = ctypes.c_int(HEXtoRGBAint(border_color))
