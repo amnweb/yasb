@@ -122,6 +122,7 @@ class StackWidget(BaseWidget):
             animation: bool,
             enable_scroll_switching: bool,
             reverse_scroll_direction: bool,
+            btn_shadow: dict = None,
             label_shadow: dict = None,
             container_shadow: dict = None
     ):
@@ -137,6 +138,7 @@ class StackWidget(BaseWidget):
         self._hide_if_offline = hide_if_offline
         self._padding = container_padding
         self._animation = animation
+        self._btn_shadow = btn_shadow
         self._label_shadow = label_shadow
         self._container_shadow = container_shadow
         self._komorebi_screen = None
@@ -324,7 +326,7 @@ class StackWidget(BaseWidget):
             for window_index in self._window_buttons:
                 self._widget_container_layout.addWidget(window_index)
                 self._update_button_status(window_index)
-                add_shadow(window_index, self._label_shadow)
+                add_shadow(window_index, self._btn_shadow)
                 
     def _get_window_label(self, window_index):
         window = self._komorebic.get_window_by_index(self._komorebi_focus_container, window_index)

@@ -114,6 +114,7 @@ https://github.com/user-attachments/assets/aab8d8e8-248f-46a1-919c-9b0601236ac1
 - **[Windows-Desktops](https://github.com/amnweb/yasb/wiki/(Widget)-Windows-Desktops)**: Windows desktops switcher.
 - **[Komorebi Control](https://github.com/amnweb/yasb/wiki/(Widget)-Komorebi-Control)**: Komorebi control widget.
 - **[Komorebi Layout](https://github.com/amnweb/yasb/wiki/(Widget)-Komorebi-Layout)**: Shows the current layout of Komorebi.
+- **[Komorebi Stack](https://github.com/amnweb/yasb/wiki/(Widget)-Komorebi-Stack)**: Shows windows in the current Komorebi stack.
 - **[Komorebi Workspaces](https://github.com/amnweb/yasb/wiki/(Widget)-Komorebi-Workspaces)**: Komorebi workspaces widget.
 
 

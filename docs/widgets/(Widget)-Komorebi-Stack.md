@@ -16,6 +16,7 @@
 | `container_padding`  | dict | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}`      | Explicitly set padding inside widget container.
 | `container_shadow`      | dict    | `None`                  | Container shadow options.                                |
 | `label_shadow`            | dict    | `None`                  | Label shadow options.                       |
+| `btn_shadow`            | dict    | `None`                  | Window button shadow options.                         |
 
 ## Example Configuration
 
@@ -24,8 +25,8 @@ komorebi_stack:
   type: "komorebi.stack.StackWidget"
   options:
     label_offline: "Offline"
-    label_window: "{index} {process}"
-    label_window_active: "{index} {title}"
+    label_window: "{process}"
+    label_window_active: "{title}"
     label_no_window: "No Window"
     label_zero_index: false
     max_length: 10
@@ -35,6 +36,11 @@ komorebi_stack:
     animation: true
     enable_scroll_switching : true
     container_shadow:
+      enabled: true
+      color: "#000000"
+      offset: [0, 1]
+      radius: 2
+    btn_shadow:
       enabled: true
       color: "#000000"
       offset: [0, 1]
@@ -62,15 +68,37 @@ komorebi_stack:
 - **container_padding:** Explicitly set padding inside widget container.
 - **container_shadow:** Container shadow options.
 - **label_shadow:** Label shadow options for labels.
+- **btn_shadow:** Window button shadow options.
 
 ## Style
 ```css
-.komorebi-workspaces {} /*Style for widget.*/
-.komorebi-workspaces .widget-container {} /*Style for widget container.*/
-.komorebi-workspaces .window {} /*Style for buttons.*/
-.komorebi-workspaces .window.active {} /*Style for the active window button.*/
-.komorebi-workspaces .window.button-1 {} /*Style for first button.*/
-.komorebi-workspaces .window.button-2 {} /*Style for second  button.*/
+.komorebi-stack {} /*Style for widget.*/
+.komorebi-stack .widget-container {} /*Style for widget container.*/
+.komorebi-stack .window {} /*Style for buttons.*/
+.komorebi-stack .window.active {} /*Style for the active window button.*/
+.komorebi-stack .window.button-1 {} /*Style for first button.*/
+.komorebi-stack .window.button-2 {} /*Style for second  button.*/
+```
 
-> [!NOTE]  
-> You can use `button-x` to style each button separately. Where x is the index of the button.
+## Example Style
+```css
+.komorebi-stack {
+    margin: 4px 0;
+}
+.komorebi-stack .widget-container {
+    background-color: #282936; 
+    border-radius: 4px;
+}
+.komorebi-stack .window {
+    background-color: transparent;
+    border: none;
+    margin: 0px 8px;
+    padding: 0 4px;
+}
+.komorebi-stack .window.active {
+    background-color: #45475a;
+    border-radius: 4px;
+    height: auto;
+    margin: 0;
+}
+```
