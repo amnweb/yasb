@@ -6,7 +6,7 @@ This widget displays information about each window in the currently active Komor
 | `label_window`    | string  | `'{index}'`              | The format string for window buttons.                                    |
 | `label_window_active` | string | `'{index}'`              | The format string for the active window button.                          |
 | `label_no_window`       | string  | `''`                     | The label to display when no window is in focus.                                         |
-| `label_zero_index`        | boolean | `false`    | Whether to use zero-based indexing for workspace labels.                    |
+| `label_zero_index`        | boolean | `false`    | Whether to use zero-based indexing for window labels.                    |
 | `max_length`        | boolean | `None`    | 	The maximum length of the label text.              |
 | `max_length_active`        | boolean | `None`    | 	The maximum length of the label text for the active window.              |
 | `max_length_ellipsis`        | boolean | `None`    | 		The ellipsis to use when the label text exceeds the maximum length.              |
