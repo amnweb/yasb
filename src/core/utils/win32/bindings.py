@@ -383,7 +383,7 @@ def CreateNamedPipe(
 
 
 def ConnectNamedPipe(hNamedPipe: int, lpOverlapped: int | None = None) -> None:
-    kernel32.ConnectNamedPipe(hNamedPipe, lpOverlapped)
+    return(kernel32.ConnectNamedPipe(hNamedPipe, lpOverlapped))
 
 
 def DisconnectNamedPipe(hNamedPipe: int) -> bool:
@@ -415,11 +415,15 @@ def WaitForSingleObject(hHandle: int, dwMilliseconds: int) -> int:
     return kernel32.WaitForSingleObject(hHandle, dwMilliseconds)
 
 
-def ReadFile(hFile: int, nNumberOfBytesToRead: int) -> bytes:
+def ReadFile(hFile: int, nNumberOfBytesToRead: int) -> tuple[bool, bytes]:
+    """Reads data from a file handle.
+    - Returns a tuple of (success, data).
+    - If success is False, data will be an empty bytes object.
+    """
     buffer = create_string_buffer(nNumberOfBytesToRead)
     bytes_read = DWORD()
-    kernel32.ReadFile(hFile, buffer, nNumberOfBytesToRead, byref(bytes_read), None)
-    return buffer.raw[: bytes_read.value]
+    success = bool(kernel32.ReadFile(hFile, buffer, nNumberOfBytesToRead, byref(bytes_read), None))
+    return success, buffer.raw[: bytes_read.value]
 
 
 def WriteFile(hFile: int, data: bytes) -> bool:

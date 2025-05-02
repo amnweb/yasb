@@ -9,6 +9,7 @@ import sys
 import tempfile
 import textwrap
 import time
+from ctypes import GetLastError
 
 import requests
 import win32com.client
@@ -21,6 +22,7 @@ from win32con import (
 )
 
 from core.log import Format
+from core.utils.cli_server import read_message, write_message
 from core.utils.utilities import is_process_running
 from core.utils.win32.bindings import (
     CloseHandle,
@@ -74,8 +76,18 @@ class CLIHandler:
                 print("Failed to connect to YASB. Pipe not found. It may not be running.")
                 return
             cmd = b"reload" if reload else b"stop"
-            WriteFile(pipe_handle, cmd)
-            response = ReadFile(pipe_handle, 64 * 1024)
+
+            success = WriteFile(pipe_handle, cmd)
+            if not success:
+                print(f"Failed to write command. Err: {GetLastError()}")
+                CloseHandle(pipe_handle)
+                return
+
+            success, response = ReadFile(pipe_handle, 64 * 1024)
+            if not success or len(response) == 0:
+                print(f"Failed to read response. Err: {GetLastError()}")
+                CloseHandle(pipe_handle)
+                return
             if response.decode("utf-8").strip() != "ACK":
                 print(f"Received unexpected response: {response.decode('utf-8').strip()}")
             CloseHandle(pipe_handle)
@@ -131,16 +143,19 @@ class CLIHandler:
 
         if args.command == "start":
             if not args.silent:
-                print(f"Start YASB Reborn v{YASB_VERSION} in background.")
-                print("\n# Community")
                 print(
-                    "* Join the Discord https://discord.gg/qkeunvBFgX - Chat, ask questions, share your desktops and more..."
+                    textwrap.dedent(f"""\
+                    Start YASB Reborn v{YASB_VERSION} in background.
+
+                    # Community
+                    * Join the Discord https://discord.gg/qkeunvBFgX - Chat, ask questions, share your desktops and more...
+                    * GitHub discussions https://github.com/amnweb/yasb/discussions - Ask questions, share your ideas and more...
+
+                    # Documentation
+                    * Read the docs https://github.com/amnweb/yasb/wiki - how to configure and use YASB
+                    * Read the FAQ https://github.com/amnweb/yasb/wiki/FAQ
+                """)
                 )
-                print(
-                    "* GitHub discussions https://github.com/amnweb/yasb/discussions - Ask questions, share your ideas and more..."
-                )
-                print("\n# Documentation")
-                print("* Read the docs https://github.com/amnweb/yasb/wiki - how to configure and use YASB")
             subprocess.Popen(["yasb.exe"])
             sys.exit(0)
 
@@ -183,16 +198,35 @@ class CLIHandler:
             print("Starting YASB log client. Press Ctrl+C to exit.")
             try:
                 while True:
-                    pipe_handle = self._handle_log_pipe_connection()
-                    if pipe_handle is None:
-                        print("Could not establish connection. Exiting.")
-                        break
-                    result = self._handle_log_stream(pipe_handle)
-                    print("Closing handle...")
-                    CloseHandle(pipe_handle)
-                    if result is None:  # KeyboardInterrupt
-                        break
-                    print("Connection lost. Attempting to reconnect...")
+                    # Wait for the log pipe to be created
+                    while True:
+                        handle = CreateFile(
+                            LOG_SERVER_PIPE_NAME,
+                            GENERIC_READ | GENERIC_WRITE,
+                            0,
+                            None,
+                            OPEN_EXISTING,
+                            0,
+                            None,
+                        )
+                        if handle != INVALID_HANDLE_VALUE:
+                            break
+                        time.sleep(0.1)
+
+                    # Start reading the log stream
+                    while True:
+                        if not write_message(handle, {"type": "PING"}):
+                            print(f"Failed to write PING. Err: {GetLastError()}")
+                            break
+                        for _ in range(2):
+                            msg = read_message(handle)
+                            if msg is None:
+                                print(f"Failed to read message. Err: {GetLastError()}")
+                                break
+                            if msg.get("type") == "PONG":
+                                break
+                            elif msg.get("type") == "DATA":
+                                print(msg.get("data"))
             except KeyboardInterrupt:
                 print("\nExiting YASB log client.")
 
@@ -226,68 +260,6 @@ class CLIHandler:
         else:
             logging.info("Unknown command. Use --help for available options.")
             sys.exit(1)
-
-    def _handle_log_pipe_connection(self):
-        """Attempt to connect to the named pipe with retry"""
-        retries = 0
-        pipe_handle = 0
-        while retries < 24000:  # Wait for 120 seconds
-            try:
-                if retries == 0:
-                    print("Attempting to connect to YASB log pipe...")
-
-                pipe_handle = CreateFile(
-                    LOG_SERVER_PIPE_NAME,
-                    GENERIC_READ | GENERIC_WRITE,
-                    0,
-                    None,
-                    OPEN_EXISTING,
-                    0,
-                    None,
-                )
-
-                if pipe_handle == INVALID_HANDLE_VALUE:
-                    CloseHandle(pipe_handle)
-                    retries += 1
-                    time.sleep(0.005)
-                    continue
-
-                print("Connected to YASB log stream.")
-                retries = 0
-                return pipe_handle
-            except KeyboardInterrupt:
-                print("\nExiting YASB log client.")
-                break
-            except Exception as e:
-                print(f"Error connecting to YASB log pipe: {e}")
-        print("Closing handle...")
-        CloseHandle(pipe_handle)
-        return None
-
-    def _handle_log_stream(self, pipe_handle: int) -> bool | None:
-        """Handle reading logs from the pipe with reconnection capability"""
-        try:
-            while True:
-                try:
-                    # Wait for the initial PING
-                    server_data = ReadFile(pipe_handle, 64 * 1024)
-                    if not bool(server_data):
-                        print("Empty data received, connection might be closed.")
-                        return False  # Empty data received, signal to reconnect.
-                    decoded_data = server_data.decode("utf-8").strip()
-                    if decoded_data == "PING":
-                        WriteFile(pipe_handle, b"PONG")
-                    else:
-                        print(decoded_data)
-                except Exception as e:
-                    print(f"\nConnection error: {e}")
-                    return False
-        except KeyboardInterrupt:
-            print("\nStopping log stream...")
-            return None  # Signal to fully exit
-        except Exception as e:
-            print(f"\nUnexpected error: {e}")
-            return False  # Signal to reconnect
 
 
 class CLITaskHandler:

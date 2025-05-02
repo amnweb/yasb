@@ -1,9 +1,10 @@
+import json
 import logging
 import threading
 import time
+from ctypes import GetLastError
 from typing import Callable
 
-import pywintypes
 from win32con import (
     PIPE_ACCESS_DUPLEX,
     PIPE_READMODE_MESSAGE,
@@ -20,12 +21,48 @@ from core.utils.win32.bindings import (
     ReadFile,
     WriteFile,
 )
+from core.utils.win32.constants import INVALID_HANDLE_VALUE
 from settings import CLI_VERSION
 
 CLI_SERVER_PIPE_NAME = r"\\.\pipe\yasb_pipe_cli"
 LOG_SERVER_PIPE_NAME = r"\\.\pipe\yasb_pipe_log"
+BUFSIZE = 65536
 
 logger = logging.getLogger("cli_server")
+
+
+def write_message(handle: int, msg_dict: dict[str, str]):
+    try:
+        data = json.dumps(msg_dict).encode("utf-8")
+    except Exception as e:
+        print(f"JSON encode error: {e}")
+        print(f"Data: {msg_dict}")
+        return False
+    success = WriteFile(handle, data)
+    return success
+
+
+def read_message(handle: int) -> dict[str, str] | None:
+    success, data = ReadFile(handle, BUFSIZE)
+    if not success or len(data) == 0:
+        return None
+    try:
+        messages: list[str] = []
+        # This is needed in case there are multiple json objects in one data block
+        for line in data.split(b"\0"):
+            if not line.strip():
+                continue
+            json_object = json.loads(line.decode().strip())
+            if json_object.get("type") == "DATA":
+                messages.append(json_object.get("data"))
+            else:
+                # If it's ping/pong, just return the object as is
+                return json_object
+        return {"type": "DATA", "data": "\n".join(messages)}
+    except json.JSONDecodeError as e:
+        print(f"JSON decode error: {e}")
+        print(f"Data: {data}")
+        return None
 
 
 class PipeLogHandler(logging.Handler):
@@ -36,11 +73,16 @@ class PipeLogHandler(logging.Handler):
         self.pipe_handle = pipe_handle
 
     def emit(self, record: logging.LogRecord):
+        """Emit a log record to the pipe"""
+        # NOTE: Do not use logging prints here as it will create an infinite loop
         try:
-            msg = self.format(record) + "\n"
-            WriteFile(self.pipe_handle, msg.encode("utf-8"))
+            fmt = self.format(record)
+            msg = json.dumps({"type": "DATA", "data": fmt}).encode("utf-8") + b"\0"
+            success = WriteFile(self.pipe_handle, msg)
+            if not success:
+                print(f"PipeLogHandler emit failed. Err: {GetLastError()}")
         except OSError as e:
-            logger.debug(f"PipeLogHandler emit failed: {e}")
+            print(f"PipeLogHandler emit failed: {e}")
 
 
 class LogPipeServer:
@@ -72,45 +114,58 @@ class LogPipeServer:
     def _run_server(self):
         """Run the logging pipe server loop"""
         while not self.stop_event.is_set():
-            try:
-                # Create a dedicated pipe for logging
-                pipe = CreateNamedPipe(
-                    LOG_SERVER_PIPE_NAME,
-                    PIPE_ACCESS_DUPLEX,
-                    PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT,
-                    1,
-                    65536,
-                    65536,
-                    0,
-                    None,
-                )
+            # Create a new pipe
+            handle = CreateNamedPipe(
+                LOG_SERVER_PIPE_NAME,
+                PIPE_ACCESS_DUPLEX,
+                PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT,
+                10,
+                BUFSIZE,
+                BUFSIZE,
+                0,
+                None,
+            )
 
-                # Wait for a client to connect
-                ConnectNamedPipe(pipe)
+            # Check the handle
+            if handle == INVALID_HANDLE_VALUE:
+                logger.error(f"Log pipe server failed to create handle. Err: {GetLastError()}")
+                time.sleep(1)
+                continue
 
-                logger.debug("Log pipe server client connected")
+            # Wait for a client to connect
+            if not ConnectNamedPipe(handle):
+                logger.error(f"Log pipe server failed to connect. Err: {GetLastError()}")
+                DisconnectNamedPipe(handle)
+                CloseHandle(handle)
+                time.sleep(0.1)
+                continue
 
-                # Set up logging handler
-                root_logger = logging.getLogger()
-                handler = PipeLogHandler(pipe)
-                formatter = ColoredFormatter(CLI_LOG_FORMAT, datefmt=CLI_LOG_DATETIME)
-                handler.setFormatter(formatter)
-                root_logger.addHandler(handler)
-                while True:
-                    # Ping the client to keep the connection alive
-                    WriteFile(pipe, b"PING")
-                    response = ReadFile(pipe, 64 * 1024)
-                    if bool(response) and response.decode("utf-8").strip() != "PONG":
-                        handler.close()
-                        root_logger.removeHandler(handler)
-                        logger.debug("Log pipe server client disconnected")
+            logger.debug("Log pipe server client connected")
+
+            root_logger = logging.getLogger()
+            handler = PipeLogHandler(handle)
+            formatter = ColoredFormatter(CLI_LOG_FORMAT, datefmt=CLI_LOG_DATETIME)
+            handler.setFormatter(formatter)
+            root_logger.addHandler(handler)
+
+            while True:
+                msg = read_message(handle)
+                if msg is None:
+                    logger.error(f"Client disconnected or read error. Err: {GetLastError()}")
+                    time.sleep(0.1)
+                    break
+
+                if msg and msg.get("type") == "PING":
+                    if not write_message(handle, {"type": "PONG"}):
+                        logger.error(f"Write pong failed. Err: {GetLastError()}")
+                        time.sleep(0.1)
                         break
                     time.sleep(1)
-                DisconnectNamedPipe(pipe)
-                CloseHandle(pipe)
-            except Exception as e:
-                logger.error(f"Log pipe server error: {e}")
-                time.sleep(0.1)
+
+            DisconnectNamedPipe(handle)
+            CloseHandle(handle)
+            root_logger.removeHandler(handler)
+            logger.debug("Log pipe server client disconnected")
 
 
 class CliPipeHandler:
@@ -157,61 +212,58 @@ class CliPipeHandler:
         logger.info(f"CLI server started v{CLI_VERSION}")
 
         while not self.stop_event.is_set():
-            pipe = CreateNamedPipe(
+            handle = CreateNamedPipe(
                 CLI_SERVER_PIPE_NAME,
                 PIPE_ACCESS_DUPLEX,
                 PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT,
-                1,
-                65536,
-                65536,
+                10,
+                BUFSIZE,
+                BUFSIZE,
                 0,
                 None,
             )
+            if handle == INVALID_HANDLE_VALUE:
+                logger.error(f"CLI pipe server failed to create handle. Err: {GetLastError()}")
+                time.sleep(1)
+                continue
 
-            try:
-                ConnectNamedPipe(pipe)
-                self._handle_client_connection(pipe)
-            except Exception as e:
-                if not self.stop_event.is_set():  # Only log errors if not intentionally stopping
-                    logger.error(f"CLI server encountered an error: {e}")
-            finally:
-                try:
-                    DisconnectNamedPipe(pipe)
-                    CloseHandle(pipe)
-                except Exception:
-                    pass
-
-            # Small delay to avoid tight loop if there are recurring errors
-            if not self.stop_event.is_set():
+            # Wait for a client to connect
+            if not ConnectNamedPipe(handle):
+                logger.error("Cli handler server failed to connect")
+                DisconnectNamedPipe(handle)
+                CloseHandle(handle)
                 time.sleep(0.1)
+                continue
+
+            self._handle_client_connection(handle)
 
     def _handle_client_connection(self, pipe: int):
         """Handle a client connection and process commands"""
-        try:
-            data = ReadFile(pipe, 64 * 1024)
-            command = data.decode("utf-8").strip().lower()
+        success, data = ReadFile(pipe, 64 * 1024)
+        if not success or len(data) == 0:
+            logger.error(f"CLI client disconnected or read error. Err: {GetLastError()}")
+            return None
 
-            logger.info(f"CLI server received command: {command}")
+        command = data.decode("utf-8").strip().lower()
 
-            if command == "stop" or command == "reload":
-                WriteFile(pipe, b"ACK")
+        logger.info(f"CLI server received command: {command}")
 
-                # Ensure we restart the pipe server if it's a reload command
-                if command == "reload":
-                    restart_thread = threading.Thread(target=self._restart_pipe_server)
-                    restart_thread.daemon = True
-                    restart_thread.start()
+        if command == "stop" or command == "reload":
+            success = WriteFile(pipe, b"ACK")
+            if not success:
+                logger.error(f"Write ACK failed. Err: {GetLastError()}")
+                return None
 
-                # Execute command
-                self.cli_command(command)
-            else:
-                WriteFile(pipe, b"CLI Unknown Command")
+            # Ensure we restart the pipe server if it's a reload command
+            if command == "reload":
+                restart_thread = threading.Thread(target=self._restart_pipe_server)
+                restart_thread.daemon = True
+                restart_thread.start()
 
-        except pywintypes.error as e:
-            if e.args[0] == 109:  # ERROR_BROKEN_PIPE
-                logger.info("CLI client disconnected")
-            else:
-                logger.error(f"CLI error handling client: {e}")
+            # Execute command
+            self.cli_command(command)
+        else:
+            WriteFile(pipe, b"CLI Unknown Command")
 
     def _restart_pipe_server(self):
         """Restart the pipe server after a brief delay to ensure continuity"""
