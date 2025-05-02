@@ -8,11 +8,11 @@ from settings import APP_NAME, BUILD_VERSION, DEFAULT_LOG_FILENAME
 
 LOG_PATH = join(get_config_dir(), DEFAULT_LOG_FILENAME)
 
-LOG_FORMAT = "%(asctime)s,%(msecs)03d [%(threadName)s] [%(levelname)s] [%(name)s/%(filename)s:%(lineno)d]: %(message)s"
+LOG_FORMAT = "%(asctime)s,%(msecs)03d [%(levelname)s] [%(threadName)s] [%(name)s/%(filename)s:%(lineno)d]: %(message)s"
 LOG_DATETIME = "%Y-%m-%d %H:%M:%S"
-CONSOLE_FORMAT = "%(asctime)s,%(msecs)03d: %(message)s"
+CONSOLE_FORMAT = "%(asctime)s,%(msecs)03d %(levelname)s: %(message)s"
 CONSOLE_DATETIME = "%H:%M:%S"
-CLI_LOG_FORMAT = "%(asctime)s,%(msecs)03d: %(message)s"
+CLI_LOG_FORMAT = "%(asctime)s,%(msecs)03d %(levelname)s: %(message)s"
 CLI_LOG_DATETIME = "%H:%M:%S"
 
 
@@ -30,6 +30,7 @@ class Format:
 
 # ANSI escape codes for colors
 LOG_COLORS = {
+    "DEBUG": Format.blue,
     "INFO": Format.green,
     "WARNING": Format.yellow,
     "ERROR": Format.red,
@@ -41,7 +42,7 @@ LOG_COLORS = {
 class ColoredFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
         log_color = LOG_COLORS.get(record.levelname, LOG_COLORS["RESET"])
-        record.msg = f"{log_color}{record.msg}{LOG_COLORS['RESET']}"
+        record.levelname = f"{log_color}{record.levelname:>8}{LOG_COLORS['RESET']}"
         return super().format(record)
 
 
