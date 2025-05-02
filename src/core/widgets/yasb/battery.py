@@ -164,6 +164,7 @@ class BatteryWidget(BaseWidget):
         if self._battery_state is None:
             if self._hide_unsupported:
                 self.hide()
+                self.timer.stop()
                 return
 
             for part in label_parts:
