@@ -113,6 +113,7 @@ class GlazewmWorkspacesWidget(BaseWidget):
         empty_label: str,
         hide_empty_workspaces: bool,
         hide_if_offline: bool,
+        container_padding: dict,
         glazewm_server_uri: str,
         container_shadow: dict[str, Any],
         btn_shadow: dict[str, Any],
@@ -124,6 +125,7 @@ class GlazewmWorkspacesWidget(BaseWidget):
         self.glazewm_server_uri = glazewm_server_uri
         self.hide_empty_workspaces = hide_empty_workspaces
         self.hide_if_offline = hide_if_offline
+        self._padding = container_padding
         self.container_shadow = container_shadow
         self.btn_shadow = btn_shadow
         self.workspaces: dict[str, GlazewmWorkspaceButton] = {}
@@ -131,7 +133,12 @@ class GlazewmWorkspacesWidget(BaseWidget):
 
         self.workspace_container_layout = QHBoxLayout()
         self.workspace_container_layout.setSpacing(0)
-        self.workspace_container_layout.setContentsMargins(0, 0, 0, 0)
+        self.workspace_container_layout.setContentsMargins(
+            self._padding["left"],
+            self._padding["top"],
+            self._padding["right"],
+            self._padding["bottom"],
+        )
 
         self.workspace_container: QWidget = QWidget()
         self.workspace_container.setLayout(self.workspace_container_layout)
@@ -141,7 +148,7 @@ class GlazewmWorkspacesWidget(BaseWidget):
         self.offline_text = QLabel(self.label_offline)
         self.offline_text.setProperty("class", "offline-status")
 
-        add_shadow(self._widget_frame, self.container_shadow)
+        add_shadow(self.workspace_container, self.container_shadow)
 
         self.widget_layout.addWidget(self.offline_text)
         self.widget_layout.addWidget(self.workspace_container)

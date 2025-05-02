@@ -7,6 +7,7 @@
 | `hide_empty_workspaces` | boolean | `true`                  | Whether to hide empty workspaces.                        |
 | `hide_if_offline`       | boolean | `false`                 | Whether to hide workspaces widget if GlazeWM is offline. |
 | `glazewm_server_uri`    | string  | `'ws://localhost:6123'` | Optional GlazeWM server uri.                             |
+| `container_padding`     | dict    | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}` | Explicitly set padding inside widget container.        |
 | `container_shadow`      | dict    | `None`                  | Container shadow options.                                |
 | `btn_shadow`            | dict    | `None`                  | Workspace button shadow options.                         |
 
@@ -24,6 +25,11 @@ glazewm_workspaces:
       color: "black"
       radius: 3
       offset: [ 1, 1 ]
+    container_padding: 
+      top: 0
+      left: 8
+      bottom: 0
+      right: 8
 
     # By default workspace names are fetched from GlazeWM and "display_name" option takes priority over "name".
     # However, you can customize populated and empty labels here using {name} and {display_name} placeholders if needed.
@@ -41,6 +47,7 @@ glazewm_workspaces:
 - **hide_empty_workspaces:** Whether to hide empty workspaces.
 - **hide_if_offline:** Whether to hide workspaces widget if GlazeWM is offline.
 - **glazewm_server_uri:** Optional GlazeWM server uri if it ever changes on GlazeWM side.
+- **container_padding:** Explicitly set padding inside widget container.
 - **container_shadow:** Container shadow options.
 - **btn_shadow:** Workspace button shadow options.
 
