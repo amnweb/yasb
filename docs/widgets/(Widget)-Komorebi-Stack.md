@@ -11,6 +11,7 @@ This widget displays information about each window in the currently active Komor
 | `max_length_active`        | boolean | `None`    | 	The maximum length of the label text for the active window.              |
 | `max_length_ellipsis`        | boolean | `None`    | 		The ellipsis to use when the label text exceeds the maximum length.              |
 | `hide_if_offline`       | boolean | `false`         | Whether to hide the widget if Komorebi is offline.                          |
+| `show_only_stack`       | boolean | `false`         | Whether to show buttons only for stacked windows (other windows will display `label_no_window`).             |
 | `enable_scroll_switching` | boolean | `false`      | Enable scroll switching between windows.                                 |
 | `reverse_scroll_direction` | boolean | `false`      | Reverse scroll direction.                                                  |
 | `animation`  | boolean | `false`      | Buttons animation.                                           |
@@ -64,6 +65,7 @@ This widget displays information about each window in the currently active Komor
 - **max_length_active:** The maximum number of characters to display for the active window label. If the title exceeds this length, it will be truncated.
 - **max_length_ellipsis:** The string to append to truncated window titles.  
 - **hide_if_offline:** Whether to hide the widget if Komorebi is offline.
+- **show_only_stack:** Whether to show buttons only for stacked windows (other windows will display `label_no_window`).   
 - **enable_scroll_switching:** Enable scroll switching between workspaces.
 - **reverse_scroll_direction:** Reverse scroll direction.
 - **animation:** Buttons animation.
