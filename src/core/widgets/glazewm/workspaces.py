@@ -133,8 +133,12 @@ class GlazewmWorkspacesWidget(BaseWidget):
 
         self.workspace_container_layout = QHBoxLayout()
         self.workspace_container_layout.setSpacing(0)
-        self.workspace_container_layout.setContentsMargins(self._padding['left'],self._padding['top'],self._padding['right'],self._padding['bottom'])
-
+        self.workspace_container_layout.setContentsMargins(
+            self._padding["left"],
+            self._padding["top"],
+            self._padding["right"],
+            self._padding["bottom"],
+        )
 
         self.workspace_container: QWidget = QWidget()
         self.workspace_container.setLayout(self.workspace_container_layout)
