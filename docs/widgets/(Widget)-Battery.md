@@ -6,6 +6,7 @@
 | `label_alt`             | string  | `{percent}%` | Battery percent           | The alternative label format.                                               |
 | `update_interval`       | integer | `5000`                                       | The interval in milliseconds to update the widget.                          |
 | `time_remaining_natural`| boolean | `False`                                      | Whether to display the remaining time in a natural format.                  |
+| `hide_unsupported`| boolean | `True`                                      | Whether to hide the widget if the current system does not have battery info.                  |
 | `charging_options`      | dict    | `{icon_format: '{charging_icon} {icon}', blink_charging_icon: True}` | Options for charging state display.                                         |
 | `status_thresholds`     | dict    | `{critical: 10, low: 25, medium: 75, high: 95, full: 100}` | Thresholds for different battery statuses.                                  |
 | `status_icons`          | dict    | `{icon_charging: '\uf0e7', icon_critical: '\uf244', icon_low: '\uf243', icon_medium: '\uf242', icon_high: '\uf241', icon_full: '\uf240'}` | Icons for different battery statuses.                                       |
@@ -38,6 +39,7 @@ battery:
 - `label_alt`: The alternative label format for the battery widget. Useful for displaying additional battery details such as `{percent}%` and `remaining: {time_remaining}`.
 - `update_interval`: The interval in milliseconds to update the widget.
 - `time_remaining_natural`: A boolean indicating whether to display the remaining time in a natural format.
+- `hide_unsupported`: A boolean indicating whether to hide the widget if the current system does not have battery information.
 - `charging_options`: A dictionary specifying options for displaying the charging state. It contains:
   - `icon_format`: The format string for the charging icon. You can use placeholders like `{charging_icon}` and `{icon}`.
 - `status_thresholds`: A dictionary specifying the thresholds for different battery statuses. It contains:

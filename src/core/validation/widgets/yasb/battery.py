@@ -3,6 +3,7 @@ DEFAULTS = {
     'label_alt': '{percent}% | remaining: {time_remaining}',
     'update_interval': 5000,
     'time_remaining_natural': False,
+    'hide_unsupported': True,
     'charging_options': {
         'icon_format': '{charging_icon} {icon}',
         'blink_charging_icon': True
@@ -53,6 +54,10 @@ VALIDATION_SCHEMA = {
     'time_remaining_natural': {
         'type': 'boolean',
         'default': DEFAULTS['time_remaining_natural']
+    },
+    'hide_unsupported': {
+        'type': 'boolean',
+        'default': DEFAULTS['hide_unsupported']
     },
     'charging_options': {
         'type': 'dict',

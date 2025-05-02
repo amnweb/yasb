@@ -18,6 +18,7 @@ class BatteryWidget(BaseWidget):
             label_alt: str,
             update_interval: int,
             time_remaining_natural: bool,
+            hide_unsupported: bool,
             charging_options: dict[str, Union[str, bool]],
             status_thresholds: dict[str, int],
             status_icons: dict[str, str],
@@ -38,6 +39,7 @@ class BatteryWidget(BaseWidget):
         self._animation = animation
         self._icon_charging_format = charging_options['icon_format']
         self._icon_charging_blink = charging_options['blink_charging_icon']
+        self._hide_unsupported = hide_unsupported
         self._padding = container_padding
         self._label_shadow = label_shadow
         self._container_shadow = container_shadow
@@ -160,6 +162,11 @@ class BatteryWidget(BaseWidget):
         self._battery_state = psutil.sensors_battery()  
         # Check battery state
         if self._battery_state is None:
+            if self._hide_unsupported:
+                self.hide()
+                self.timer.stop()
+                return
+
             for part in label_parts:
                 part = part.strip()
                 if widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
