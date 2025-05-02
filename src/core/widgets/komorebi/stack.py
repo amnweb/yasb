@@ -118,6 +118,7 @@ class StackWidget(BaseWidget):
             max_length_active: int,
             max_length_ellipsis: str,
             hide_if_offline: bool,
+            show_only_stack: bool,
             container_padding: dict,
             animation: bool,
             enable_scroll_switching: bool,
@@ -136,6 +137,7 @@ class StackWidget(BaseWidget):
         self._max_length_active = max_length_active
         self._max_length_ellipsis = max_length_ellipsis
         self._hide_if_offline = hide_if_offline
+        self._show_only_stack = show_only_stack
         self._padding = container_padding
         self._animation = animation
         self._btn_shadow = btn_shadow
@@ -248,6 +250,9 @@ class StackWidget(BaseWidget):
             if event['type'] in ['Minimize', 'Show', 'Hide', 'Destroy', 'Close']:
                 self._window_buttons = []
                 self._add_or_update_buttons()
+            if self._show_only_stack and len(self._window_buttons) == 1:
+                self._show_no_window_text()
+
         else:
             # Clear everything if state can't be updated
             self._window_buttons = []

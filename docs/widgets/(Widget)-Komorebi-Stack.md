@@ -1,4 +1,5 @@
-# Komorebi Workspaces Widget
+# Komorebi Stack Widget
+This widget displays information about each window in the currently active Komorebi stack.
 | Option                     | Type    | Default                  | Description                                                                 |
 |----------------------------|---------|--------------------------|-----------------------------------------------------------------------------|
 | `label_offline`          | string  | `'Komorebi Offline'`     | The label to display when Komorebi is offline.                              |
@@ -21,35 +22,36 @@
 ## Example Configuration
 
 ```yaml
-komorebi_stack:
-  type: "komorebi.stack.StackWidget"
-  options:
-    label_offline: "Offline"
-    label_window: "{process}"
-    label_window_active: "{title}"
-    label_no_window: "No Window"
-    label_zero_index: false
-    max_length: 10
-    max_length_active: 20
-    max_length_ellipsis: ".."
-    hide_if_offline: false
-    animation: true
-    enable_scroll_switching : true
-    container_shadow:
-      enabled: true
-      color: "#000000"
-      offset: [0, 1]
-      radius: 2
-    btn_shadow:
-      enabled: true
-      color: "#000000"
-      offset: [0, 1]
-      radius: 2
-    label_shadow:
-      enabled: true
-      color: "#000000"
-      offset: [0, 1]
-      radius: 2
+  komorebi_stack:
+    type: "komorebi.stack.StackWidget"
+    options:
+      label_offline: "Offline"
+      label_window: "{process}"
+      label_window_active: "{title}"
+      label_no_window: "No Window"
+      label_zero_index: false
+      max_length: 10
+      max_length_active: 20
+      max_length_ellipsis: ".."
+      hide_if_offline: false
+      show_only_stack: false
+      animation: true
+      enable_scroll_switching : true
+      container_shadow:
+        enabled: true
+        color: "#000000"
+        offset: [0, 1]
+        radius: 2
+      btn_shadow:
+        enabled: true
+        color: "#000000"
+        offset: [0, 1]
+        radius: 2
+      label_shadow:
+        enabled: true
+        color: "#000000"
+        offset: [0, 1]
+        radius: 2
 ```
 
 ## Description of Options
@@ -78,6 +80,8 @@ komorebi_stack:
 .komorebi-stack .window.active {} /*Style for the active window button.*/
 .komorebi-stack .window.button-1 {} /*Style for first button.*/
 .komorebi-stack .window.button-2 {} /*Style for second  button.*/
+.komorebi-stack .offline-status{} /*Style for offline status label.*/
+.komorebi-stack .no-window{} /*Style for no window label.*/
 ```
 
 ## Example Style

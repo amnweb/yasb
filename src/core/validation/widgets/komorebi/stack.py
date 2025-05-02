@@ -7,6 +7,7 @@ DEFAULTS = {
     'max_length': None,
     'max_length_ellipsis': '...',
     'hide_if_offline': False,
+    'show_only_stack': False,
     'animation': False,
     'enable_scroll_switching': False,
     'reverse_scroll_direction': False,
@@ -37,6 +38,10 @@ VALIDATION_SCHEMA = {
     'hide_if_offline': {
         'type': 'boolean',
         'default': DEFAULTS['hide_if_offline']
+    },
+    'show_only_stack': {
+        'type': 'boolean',
+        'default': DEFAULTS['show_only_stack']
     },
     'max_length': {
         'type': 'integer',
