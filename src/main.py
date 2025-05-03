@@ -7,11 +7,12 @@ import contextlib
 
 import qasync
 from PyQt6.QtWidgets import QApplication
-from dotenv import load_dotenv
 
 import settings
+from env_loader import load_env
+
 from core.bar_manager import BarManager
-from core.config import get_config_and_stylesheet, get_resolved_env_file_path
+from core.config import get_config_and_stylesheet
 from core.event_service import EventService
 from core.log import init_logger
 from core.tray import SystemTrayManager
@@ -54,15 +55,6 @@ def main():
         
     start_cli_server()
 
-    env_file = config.get('env_file')
-    if env_file:
-        env_file = get_resolved_env_file_path(env_file)
-        if load_dotenv(env_file):
-            if settings.DEBUG:
-                logging.info(f"Loaded environment variables from {env_file}")
-        else:
-            logging.warning(f"Failed to load environment variables from {env_file}")
-
     # Need qasync event loop to work with PyQt6
     loop = qasync.QEventLoop(app)
     asyncio.set_event_loop(loop)
@@ -91,6 +83,8 @@ def main():
 
 if __name__ == "__main__":
     init_logger()
+    load_env()
+
     def exception_hook(exctype, value, traceback):
         EventService().clear()
         logging.error("Unhandled exception", exc_info=value)

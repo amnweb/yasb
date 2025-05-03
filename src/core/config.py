@@ -145,16 +145,6 @@ def get_stylesheet(show_error_dialog=False) -> Union[str, None]:
         logging.error(f"The file '{styles_path}' could not be read. Do you have read/write permissions?")
     return None
 
-def get_resolved_env_file_path(env_file: str) -> str:
-    if path.isabs(env_file):
-        return env_file
-
-    config_path = get_config_path()
-    config_dir = path.dirname(config_path)
-    env_file_path = path.join(config_dir, env_file)
-    
-    return env_file_path
-
 def get_config_and_stylesheet() -> tuple[dict, str]:
     config = get_config()
     stylesheet = get_stylesheet()
