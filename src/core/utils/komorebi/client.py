@@ -174,3 +174,57 @@ class KomorebiClient:
         _stdout, stderr = proc.communicate()
 
         return stderr, proc
+
+    def get_containers(self, workspace: dict) -> list:
+        return [add_index(container, i) for i, container in enumerate(workspace['containers']['elements'])]
+
+    def get_container_by_index(self, workspace: dict, container_index: int) -> Optional[dict]:
+        try:
+            return self.get_containers(workspace)[container_index]
+        except IndexError:
+            return None             
+
+    def get_focused_container(self, workspace: dict) -> Optional[dict]:
+        try:
+            focused_container_index = workspace['containers']['focused']
+            focused_container = self.get_container_by_index(workspace, focused_container_index)
+            focused_container['index'] = focused_container_index
+            return focused_container
+        except (KeyError, TypeError):
+            return None
+
+    def get_windows(self, container: dict) -> list:
+        return [add_index(window, i) for i, window in enumerate(container['windows']['elements'])]
+
+    def get_window_by_index(self, container: dict, window_index: int) -> Optional[dict]:
+        try:
+            return self.get_windows(container)[window_index]
+        except IndexError:
+            return None             
+
+    def get_focused_window(self, container: dict) -> Optional[dict]:
+        try:
+            focused_window_index = container['windows']['focused']
+            focused_window = self.get_window_by_index(container, focused_window_index)
+            focused_window['index'] = focused_window_index
+            return focused_window
+        except (KeyError, TypeError):
+            return None
+
+    def focus_stack_window(self, w_idx: int) -> None:
+        try:
+            subprocess.Popen([self._komorebic_path, "focus-stack-window", str(w_idx)], shell=True)
+        except subprocess.SubprocessError:
+            logging.exception("Failed to focus stack window")
+
+    def next_stack_window(self) -> None:
+        try:
+            subprocess.Popen([self._komorebic_path, "cycle-stack", "next"], shell=True)
+        except subprocess.SubprocessError:
+            logging.exception("Failed to cycle komorebi stack")
+
+    def prev_stack_window(self) -> None:
+        try:
+            subprocess.Popen([self._komorebic_path, "cycle-stack", "prev"], shell=True)
+        except subprocess.SubprocessError:
+            logging.exception("Failed to cycle komorebi stack")

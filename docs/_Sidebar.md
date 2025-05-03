@@ -43,5 +43,6 @@
     - [Windows-Desktops](./(Widget)-Windows-Desktops)
     - [Komorebi Control](./(Widget)-Komorebi-Control)
     - [Komorebi Layout](./(Widget)-Komorebi-Layout)
+    - [Komorebi Stack](./(Widget)-Komorebi-Stack)
     - [Komorebi Workspaces](./(Widget)-Komorebi-Workspaces)
 - [Writing Widget](./Writing-Widget)
