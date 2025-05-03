@@ -8,14 +8,33 @@ A good starting point is the [default config](https://github.com/amnweb/yasb/blo
 All valid options for the widgets are listed on the widgets page.
 
 
- 
+# Environment Variables Support
+
+YASB supports loading environment variables from a `.env` file.  
+This allows you to securely store sensitive information (such as API keys or tokens) outside of your main `config.yaml`.
+
+- The `.env` file should be placed in your config directory:  
+  `C:/Users/{username}/.config/yasb/.env`  
+  or in the directory specified by the `YASB_CONFIG_HOME` environment variable.
+- Variables defined in `.env` can be referenced in your `config.yaml` by setting the value to `env` (for example, `api_key: env` or `api_ley: "$env:YASB_WEATHER_API_KEY"`).
+- The `.env` file is loaded automatically on startup.
+
+**Example `.env` file:**
+```
+YASB_WEATHER_API_KEY=your_api_key_here
+YASB_GITHUB_TOKEN=your_github_token_here
+YASB_WEATHER_LOCATION=your_location_here
+# Some Qt settings
+QT_SCREEN_SCALE_FACTORS="1.25;1"
+QT_SCALE_FACTOR_ROUNDING_POLICY="PassThrough"
+```
+
 ## Status Bar Root Configuration
 | Option            | Type    | Default       | Description |
 |-------------------|---------|---------------|-------------|
 | `watch_stylesheet`         | boolean | `true`        | Reload bar when style is changed. |
 | `watch_config`         | boolean    | `true`        | Reload bar when config is changed. |
 | `debug`      | boolean  | `false`   | Enable debug mode to see more logs |
-| `env_file`      | string  | `None`   | Load environment variables from file. |
 
 
 ## Komorebi settings for tray menu
@@ -24,7 +43,6 @@ All valid options for the widgets are listed on the widgets page.
 | `start_command`         | string | `"komorebic start --whkd"` | Start komorebi with --whkd and default config location. |
 | `stop_command`         | string    | `"komorebic stop --whkd"` | Stop komorebi. |
 | `reload_command`      | string  | `"komorebic reload-configuration"` | Reload komorebi configuration.|
-
 
 
 ## Status Bar Configuration
