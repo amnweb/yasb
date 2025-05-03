@@ -40,6 +40,7 @@ build_options = {
         'core.widgets.yasb.recycle_bin',
         'core.widgets.komorebi.control',
         'core.widgets.komorebi.active_layout',
+        'core.widgets.komorebi.stack',
         'core.widgets.komorebi.workspaces',
         'core.widgets.glazewm.tiling_direction',
         'core.widgets.glazewm.workspaces'
