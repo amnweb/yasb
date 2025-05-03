@@ -135,6 +135,8 @@ class CLIHandler:
             "--task", action="store_true", help="Disable autostart as a scheduled task"
         )
 
+        subparsers.add_parser("reset", help="Restore default config files and clear cache")
+
         subparsers.add_parser("help", help="Show help message")
         subparsers.add_parser("log", help="Tail yasb process logs (cancel with Ctrl-C)")
         parser.add_argument("-v", "--version", action="store_true", help="Show program's version number and exit.")
@@ -171,6 +173,7 @@ class CLIHandler:
             else:
                 print("YASB is not running. Reload aborted.")
             sys.exit(0)
+
         elif args.command == "update":
             self.update_handler.update_yasb(YASB_VERSION)
 
@@ -230,6 +233,58 @@ class CLIHandler:
             except KeyboardInterrupt:
                 print("\nExiting YASB log client.")
 
+        elif args.command == "reset":
+            confirm = input(
+                "YASB will be stopped if it is running.\n"
+                "Do you want to continue and restore default config files and clear the cache? (Y/n): "
+            ).strip().lower()
+
+            if confirm not in ["y", "yes", ""]:
+                print("Reset cancelled.")
+                sys.exit(0)
+
+            import shutil
+            from pathlib import Path
+
+            # Determine config path
+            config_home = os.environ.get("YASB_CONFIG_HOME")
+            if config_home:
+                config_path = Path(config_home)
+            else:
+                config_path = Path.home() / ".config" / "yasb"
+            
+            # Stop YASB if it is running
+            for proc in ["yasb.exe", "yasb_themes.exe"]:
+                if is_process_running(proc):
+                    subprocess.run(["taskkill", "/f", "/im", proc], creationflags=subprocess.CREATE_NO_WINDOW)
+
+            # Delete styles.css and config.yaml if they exist
+            for fname in ["styles.css", "config.yaml"]:
+                fpath = config_path / fname
+                if fpath.exists():
+                    try:
+                        fpath.unlink()
+                        print(f"Deleted {fpath}")
+                    except Exception as e:
+                        print(f"Failed to delete {fpath}: {e}")
+
+            # Clear all files in LOCALDATA_FOLDER if it exists
+            LOCALDATA_FOLDER = Path(os.environ["LOCALAPPDATA"]) / "Yasb"
+            if LOCALDATA_FOLDER.exists() and LOCALDATA_FOLDER.is_dir():
+                for child in LOCALDATA_FOLDER.iterdir():
+                    try:
+                        if child.is_file() or child.is_symlink():
+                            child.unlink()
+                            print(f"Deleted {child}")
+                        elif child.is_dir():
+                            shutil.rmtree(child)
+                            print(f"Deleted folder {child}")
+                    except Exception as e:
+                        print(f"Failed to delete {child}: {e}")
+
+            print("Reset complete.")
+            sys.exit(0)
+            
         elif args.command == "help" or args.help:
             print(
                 textwrap.dedent(f"""\
@@ -245,6 +300,7 @@ class CLIHandler:
                   disable-autostart  Disable autostart on system boot
                   update             Update the application
                   log                Tail yasb process logs (cancel with Ctrl-C)
+                  reset              Restore default config files and clear cache
                   help               Print this message
 
                 {Format.underline}Options{Format.reset}:
@@ -376,10 +432,9 @@ class CLIUpdateHandler:
         self.download_yasb(msi_url, msi_path)
 
         # Step 4: Run the MSI installer in silent mode and restart the application
-        if is_process_running("yasb.exe"):
-            subprocess.run(["taskkill", "/f", "/im", "yasb.exe"], creationflags=subprocess.CREATE_NO_WINDOW)
-        if is_process_running("yasb_themes.exe"):
-            subprocess.run(["taskkill", "/f", "/im", "yasb_themes.exe"], creationflags=subprocess.CREATE_NO_WINDOW)
+        for proc in ["yasb.exe", "yasb_themes.exe"]:
+            if is_process_running(proc):
+                subprocess.run(["taskkill", "/f", "/im", proc], creationflags=subprocess.CREATE_NO_WINDOW)
 
         # Construct the install command as a string
         install_command = f'msiexec /i "{os.path.abspath(msi_path)}" /passive /norestart'
