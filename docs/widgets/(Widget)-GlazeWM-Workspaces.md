@@ -4,6 +4,8 @@
 | `offline_label`         | string  | `'GlazeWM Offline'`     | The label to display when GlazeWM is offline.            |
 | `populated_label`       | string  | `'{name}'`              | Optional label for populated workspaces.                 |
 | `empty_label`           | string  | `'{name}'`              | Optional label for empty workspaces.                     |
+| `active_populated_label`           | string  | `'{name}'`              | Optional label for the currently focused workspace (has opened windows).                     |
+| `active_empty_label`           | string  | `'{name}'`              | Optional label for the currently focused workspace (has no windows opened).                     |
 | `hide_empty_workspaces` | boolean | `true`                  | Whether to hide empty workspaces.                        |
 | `hide_if_offline`       | boolean | `false`                 | Whether to hide workspaces widget if GlazeWM is offline. |
 | `glazewm_server_uri`    | string  | `'ws://localhost:6123'` | Optional GlazeWM server uri.                             |
@@ -44,6 +46,8 @@ glazewm_workspaces:
 - **offline_label:** The label to display when GlazeWM is offline.
 - **populated_label:** Optional label for populated workspaces. If not set, name or display_name from GlazeWM will be used.
 - **empty_label:** Optional label for empty workspaces. If not set, name or display_name from GlazeWM will be used.
+- **active_populated_label:** Optional label for the currently focused workspace (has windows opened). If not set, name or display_name from GlazeWM will be used.
+- **active_empty_label:** Optional label for the currently focused workspace (has no windows opened). If not set, name or display_name from GlazeWM will be used.
 - **hide_empty_workspaces:** Whether to hide empty workspaces.
 - **hide_if_offline:** Whether to hide workspaces widget if GlazeWM is offline.
 - **glazewm_server_uri:** Optional GlazeWM server uri if it ever changes on GlazeWM side.
