@@ -42,6 +42,7 @@ build_options = {
         'core.widgets.komorebi.active_layout',
         'core.widgets.komorebi.stack',
         'core.widgets.komorebi.workspaces',
+        'core.widgets.glazewm.binding_mode',
         'core.widgets.glazewm.tiling_direction',
         'core.widgets.glazewm.workspaces'
     ],
