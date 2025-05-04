@@ -2,6 +2,8 @@ DEFAULTS = {
     "offline_label": "GlazeWM Offline",
     "populated_label": None,
     "empty_label": None,
+    "active_populated_label": None,
+    "active_empty_label": None,
     "hide_empty_workspaces": True,
     "hide_if_offline": False,
     "glazewm_server_uri": "ws://localhost:6123",
@@ -27,6 +29,16 @@ VALIDATION_SCHEMA = {
     "empty_label": {
         "type": "string",
         "default": DEFAULTS["empty_label"],
+        "nullable": True,
+    },
+    "active_populated_label": {
+        "type": "string",
+        "default": DEFAULTS["active_populated_label"],
+        "nullable": True,
+    },
+    "active_empty_label": {
+        "type": "string",
+        "default": DEFAULTS["active_empty_label"],
         "nullable": True,
     },
     "hide_empty_workspaces": {
