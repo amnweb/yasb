@@ -1,9 +1,11 @@
 DEFAULTS = {
     'label_offline': 'Komorebi Offline',
-    'label_window': '{tile}',
+    'label_window': '{title}',
     'label_window_active': '{title}',
     'label_no_window': '',
     'label_zero_index': False,
+    'show_icons': "never",
+    'icon_size': 16,
     'max_length': None,
     'max_length_ellipsis': '...',
     'hide_if_offline': False,
@@ -39,6 +41,16 @@ VALIDATION_SCHEMA = {
         'type': 'boolean',
         'default': DEFAULTS['hide_if_offline']
     },
+    'show_icons': {
+        'type': 'string',
+        'allowed': ['focused', 'always', 'never'],
+        'default': DEFAULTS['show_icons']
+    },
+    'icon_size': {
+        'type': 'integer',
+        'min': 0,
+        'default': DEFAULTS['icon_size']
+    },
     'show_only_stack': {
         'type': 'boolean',
         'default': DEFAULTS['show_only_stack']
@@ -50,6 +62,12 @@ VALIDATION_SCHEMA = {
         'default': DEFAULTS['max_length']
     },
     'max_length_active': {
+        'type': 'integer',
+        'min': 1,
+        'nullable': True,
+        'default': DEFAULTS['max_length']
+    },
+    'max_length_overall': {
         'type': 'integer',
         'min': 1,
         'nullable': True,
