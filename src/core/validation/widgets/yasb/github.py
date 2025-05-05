@@ -7,6 +7,12 @@ DEFAULTS = {
     'max_notification':30,
     'only_unread': False,
     'max_field_size': 100,
+    'notification_dot': {
+        'enabled': True,
+        'corner': 'bottom_left',
+        'color': 'red',
+        'margin': [1, 1],
+    },
     'menu': {
         'blur': True,
         'round_corners': True,
@@ -61,6 +67,27 @@ VALIDATION_SCHEMA = {
     'max_notification': {
         'type': 'integer',
         'default': DEFAULTS['max_notification']
+    },
+    'notification_dot' : {
+        'type': 'dict',
+        'required': False,
+        'schema': {
+            'enabled': {
+                'type': 'boolean',
+                'default': DEFAULTS['notification_dot']['enabled'],
+            },
+            'corner': {
+                'type': 'string',
+                'default': DEFAULTS['notification_dot']['corner'],
+                'allowed': ['top_left', 'top_right', 'bottom_left', 'bottom_right'],
+            },
+            'color': {
+                'type': 'string',
+                'default': DEFAULTS['notification_dot']['color'],
+            },
+            'margin': {'type': 'list', 'default': [1, 1]},
+        },
+        'default': DEFAULTS['notification_dot'],
     },
     'only_unread': {
         'type': 'boolean',
