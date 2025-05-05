@@ -1,18 +1,87 @@
+import logging
 import os
 import re
-import logging
 import threading
-import requests
-from settings import DEBUG
 from datetime import datetime
+from enum import StrEnum
+from typing import Any
+
+import requests
+from PyQt6.QtCore import QPoint, Qt, QTimer, QUrl
+from PyQt6.QtGui import QColor, QCursor, QDesktopServices, QPainter, QPaintEvent
+from PyQt6.QtWidgets import QGraphicsOpacityEffect, QHBoxLayout, QLabel, QScrollArea, QVBoxLayout, QWidget
+
 from core.utils.utilities import PopupWidget, add_shadow
+from core.utils.widgets.animation_manager import AnimationManager
 from core.validation.widgets.yasb.github import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
-from PyQt6.QtGui import QDesktopServices,QCursor
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel, QHBoxLayout, QScrollArea, QVBoxLayout, QGraphicsOpacityEffect
-from PyQt6.QtCore import Qt, QTimer, QUrl
-from core.utils.widgets.animation_manager import AnimationManager
+from settings import DEBUG
+
 logging.getLogger("urllib3").setLevel(logging.WARNING)
+
+
+class Corner(StrEnum):
+    """Enum for notification dot position corners."""
+
+    TOP_LEFT = "top_left"
+    TOP_RIGHT = "top_right"
+    BOTTOM_LEFT = "bottom_left"
+    BOTTOM_RIGHT = "bottom_right"
+
+
+class NotificationLabel(QLabel):
+    """Draws a QLabel with a dot on any of the four corners of the icon."""
+
+    def __init__(self, *args: Any, color: str = "red", corner: Corner = Corner.BOTTOM_LEFT, margin: list[int] = [1, 1], **kwargs: Any):
+        super().__init__(*args, **kwargs)
+        self._show_dot = False
+        self._color = color
+        self._corner = corner
+        self._margin = margin
+
+    def show_dot(self, enabled: bool):
+        self._show_dot = enabled
+        self.update()
+
+    def set_corner(self, corner: str | Corner):
+        """Set the corner where the dot should appear."""
+        self._corner = corner
+        self.update()
+
+    def set_color(self, color: str):
+        """Set the color of the notification dot."""
+        self._color = color
+        self.update()
+
+    def paintEvent(self, a0: QPaintEvent | None):
+        super().paintEvent(a0)
+        if self._show_dot:
+            painter = QPainter(self)
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+            painter.setBrush(QColor(self._color))
+            painter.setPen(Qt.PenStyle.NoPen)
+
+            radius = 6
+            margin_x = self._margin[0]
+            margin_y = self._margin[1]
+
+            # Calculate position based on the specified corner
+            x = y = 0
+            if self._corner == Corner.TOP_LEFT:
+                x = margin_x
+                y = margin_y
+            elif self._corner == Corner.TOP_RIGHT:
+                x = self.width() - radius - margin_x
+                y = margin_y
+            elif self._corner == Corner.BOTTOM_LEFT:
+                x = margin_x
+                y = self.height() - radius - margin_y
+            elif self._corner == Corner.BOTTOM_RIGHT:
+                x = self.width() - radius - margin_x
+                y = self.height() - radius - margin_y
+
+            painter.drawEllipse(QPoint(x + radius // 2, y + radius // 2), radius // 2, radius // 2)
+
 
 class GithubWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
@@ -24,6 +93,7 @@ class GithubWidget(BaseWidget):
             token: str,
             tooltip: bool,
             max_notification: int,
+            notification_dot: dict[str, Any],
             only_unread: bool,
             max_field_size: int,
             menu: dict[str, str],
@@ -32,8 +102,8 @@ class GithubWidget(BaseWidget):
             animation: dict[str, str],
             container_padding: dict[str, int],
             label_shadow: dict = None,
-            container_shadow: dict = None
-        ):
+            container_shadow: dict = None,
+    ):
         super().__init__((update_interval * 1000), class_name="github-widget")
   
         self._show_alt_label = False
@@ -50,6 +120,9 @@ class GithubWidget(BaseWidget):
         self._padding = container_padding
         self._label_shadow = label_shadow
         self._container_shadow = container_shadow
+
+        self._notification_label: NotificationLabel | None = None
+        self._notification_dot: dict[str, Any] = notification_dot
 
         self._github_data = []
         
@@ -108,8 +181,14 @@ class GithubWidget(BaseWidget):
                     class_name = re.search(r'class=(["\'])([^"\']+?)\1', part)
                     class_result = class_name.group(2) if class_name else 'icon'
                     icon = re.sub(r'<span.*?>|</span>', '', part).strip()
-                    label = QLabel(icon)
+                    label = NotificationLabel(
+                        icon,
+                        corner=self._notification_dot["corner"],
+                        color=self._notification_dot["color"],
+                        margin=self._notification_dot["margin"]
+                    )
                     label.setProperty("class", class_result)
+                    self._notification_label = label
                 else:
                     label = QLabel(part)
                     label.setProperty("class", "label")
@@ -134,7 +213,11 @@ class GithubWidget(BaseWidget):
         active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
         # Split label content and filter out empty parts
         label_parts = [part.strip() for part in re.split(r'(<span.*?>.*?</span>)', active_label_content) if part]
-        
+
+        # Setting the notification dot if enabled and the label exists
+        if self._notification_dot["enabled"] and self._notification_label is not None:
+            self._notification_label.show_dot(notification_count > 0)
+
         for widget_index, part in enumerate(label_parts):
             if widget_index >= len(active_widgets) or not isinstance(active_widgets[widget_index], QLabel):
                 continue
