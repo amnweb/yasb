@@ -33,16 +33,20 @@ class Monitor:
     hwnd: int
     workspaces: list[Workspace]
 
+@dataclass
+class BindingMode:
+    name: str
+    display_name: str
+
 
 class MessageType(StrEnum):
     EVENT_SUBSCRIPTION = auto()
     CLIENT_RESPONSE = auto()
 
-
 class QueryType(StrEnum):
     MONITORS = "query monitors"
     TILING_DIRECTION = "query tiling-direction"
-
+    BINDING_MODES = "query binding-modes"
 
 class TilingDirection(StrEnum):
     HORIZONTAL = auto()
@@ -52,6 +56,7 @@ class TilingDirection(StrEnum):
 class GlazewmClient(QObject):
     workspaces_data_processed = pyqtSignal(list)
     tiling_direction_processed = pyqtSignal(TilingDirection)
+    binding_mode_changed = pyqtSignal(BindingMode)
     glazewm_connection_status = pyqtSignal(bool)
 
     def __init__(
@@ -80,6 +85,9 @@ class GlazewmClient(QObject):
     def toggle_tiling_direction(self):
         self._websocket.sendTextMessage("command toggle-tiling-direction")
 
+    def disable_binding_mode(self, binding_mode_name: str):
+        self._websocket.sendTextMessage(f"command wm-disable-binding-mode --name {binding_mode_name}")
+
     def connect(self):
         logger.debug(f"Connecting to {self._uri}...")
         self._websocket.open(self._uri)
@@ -107,10 +115,11 @@ class GlazewmClient(QObject):
         except json.JSONDecodeError:
             logger.warning("Received invalid JSON data.")
             return
-
+        
         if response.get("messageType") == MessageType.EVENT_SUBSCRIPTION:
             self._websocket.sendTextMessage(QueryType.MONITORS)
             self._websocket.sendTextMessage(QueryType.TILING_DIRECTION)
+            self._websocket.sendTextMessage(QueryType.BINDING_MODES)
         elif response.get("messageType") == MessageType.CLIENT_RESPONSE:
             raw_data: Any = response.get("data")
             if not isinstance(raw_data, dict):
@@ -126,6 +135,12 @@ class GlazewmClient(QObject):
             elif response.get("clientMessage") == QueryType.TILING_DIRECTION:
                 tiling_direction = TilingDirection(data.get("tilingDirection", TilingDirection.HORIZONTAL))
                 self.tiling_direction_processed.emit(tiling_direction)
+            elif response.get("clientMessage") == QueryType.BINDING_MODES:
+                binding_modes = data.get("bindingModes", [])
+                if binding_modes is None:
+                    logger.warning(f"Expected 'bindingModes' to be a list, got {type(binding_modes).__name__}")
+                    return
+                self.binding_mode_changed.emit(self._process_binding_modes(binding_modes))
 
     def _process_workspaces(self, data: list[dict[str, Any]]) -> list[Monitor]:
         monitors: list[Monitor] = []
@@ -160,3 +175,12 @@ class GlazewmClient(QObject):
                 )
             )
         return monitors
+
+    def _process_binding_modes(self, data: list[dict[str, Any]]) -> BindingMode:
+        if len(data) == 0:
+            return BindingMode(name=None, display_name=None)
+
+        return BindingMode(
+            name=data[0].get("name", None),
+            display_name=data[0].get("displayName", None),
+        )

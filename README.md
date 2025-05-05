@@ -86,8 +86,9 @@ https://github.com/user-attachments/assets/aab8d8e8-248f-46a1-919c-9b0601236ac1
 - **[Clock](https://github.com/amnweb/yasb/wiki/(Widget)-Clock)**: Displays the current time and date.
 - **[Custom](https://github.com/amnweb/yasb/wiki/(Widget)-Custom)**: Create a custom widget.
 - **[Github](https://github.com/amnweb/yasb/wiki/(Widget)-Github)**: Shows notifications from GitHub.
-- **[GlazeWM Workspaces](https://github.com/amnweb/yasb/wiki/(Widget)-GlazeWM-Workspaces)**: GlazeWM workspaces widget.
+- **[GlazeWM Binding Mode](https://github.com/amnweb/yasb/wiki/(Widget)-GlazeWM-Binding-Mode)**: GlazeWM binding mode widget.
 - **[GlazeWM Tiling Direction](https://github.com/amnweb/yasb/wiki/(Widget)-GlazeWM-Tiling-Direction)**: GlazeWM tiling direction widget.
+- **[GlazeWM Workspaces](https://github.com/amnweb/yasb/wiki/(Widget)-GlazeWM-Workspaces)**: GlazeWM workspaces widget.
 - **[Home](https://github.com/amnweb/yasb/wiki/(Widget)-Home)**: A customizable home widget menu.
 - **[Disk](https://github.com/amnweb/yasb/wiki/(Widget)-Disk)**: Displays disk usage information.
 - **[Language](https://github.com/amnweb/yasb/wiki/(Widget)-Language)**: Shows the current input language.
