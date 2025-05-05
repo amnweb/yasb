@@ -44,6 +44,8 @@ class GlazewmWorkspaceButton(QPushButton):
         display_name: str | None = None,
         populated_label: str | None = None,
         empty_label: str | None = None,
+        active_populated_label: str | None = None,
+        active_empty_label: str | None = None,
     ):
         super().__init__()
         self.setProperty("class", "ws-btn")
@@ -52,6 +54,8 @@ class GlazewmWorkspaceButton(QPushButton):
         self.display_name = display_name
         self.populated_label = populated_label
         self.empty_label = empty_label
+        self.active_populated_label = active_populated_label
+        self.active_empty_label = active_empty_label
         self.is_displayed = False
         self.workspace_window_count = 0
         self.status = WorkspaceStatus.EMPTY
@@ -85,14 +89,18 @@ class GlazewmWorkspaceButton(QPushButton):
         # Label priority: YASB config -> display_name from GlazeWM -> name from GlazeWM
         populated_label = self.populated_label or self.display_name or self.workspace_name
         empty_label = self.empty_label or self.display_name or self.workspace_name
+        active_populated_label = self.active_populated_label or self.display_name or self.workspace_name
+        active_empty_label = self.active_empty_label or self.display_name or self.workspace_name
         # Replace placeholders if any exist
         populated_label = populated_label.format_map(replacements)
         empty_label = empty_label.format_map(replacements)
+        active_populated_label = active_populated_label.format_map(replacements)
+        active_empty_label = active_empty_label.format_map(replacements)
         if self.status == WorkspaceStatus.ACTIVE:
             if self.workspace_window_count > 0:
-                self.setText(populated_label)
+                self.setText(active_populated_label)
             else:
-                self.setText(empty_label)
+                self.setText(active_empty_label)
             self.setHidden(False)
         elif self.status == WorkspaceStatus.POPULATED:
             self.setText(populated_label)
@@ -111,6 +119,8 @@ class GlazewmWorkspacesWidget(BaseWidget):
         offline_label: str,
         populated_label: str,
         empty_label: str,
+        active_populated_label: str,
+        active_empty_label: str,
         hide_empty_workspaces: bool,
         hide_if_offline: bool,
         container_padding: dict,
@@ -122,6 +132,8 @@ class GlazewmWorkspacesWidget(BaseWidget):
         self.label_offline = offline_label
         self.populated_label = populated_label
         self.empty_label = empty_label
+        self.active_populated_label = active_populated_label
+        self.active_empty_label = active_empty_label
         self.glazewm_server_uri = glazewm_server_uri
         self.hide_empty_workspaces = hide_empty_workspaces
         self.hide_if_offline = hide_if_offline
@@ -190,6 +202,8 @@ class GlazewmWorkspacesWidget(BaseWidget):
                     display_name=workspace.display_name,
                     populated_label=self.populated_label,
                     empty_label=self.empty_label,
+                    active_populated_label=self.active_populated_label,
+                    active_empty_label=self.active_empty_label,
                 )
                 add_shadow(btn, self.btn_shadow)
 
