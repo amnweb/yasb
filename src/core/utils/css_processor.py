@@ -32,9 +32,15 @@ class CSSProcessor:
         """
         if not self.css_content:
             return ''
-        css = self._process_imports(self.css_content)
-        css = self._extract_and_replace_variables(css)
+        # Remove comments from the CSS content
+        css = self._remove_comments(self.css_content)
+        # Process @import statements and CSS variables
+        css = self._process_imports(css)
+        # Remove comments again after processing imports
         css = self._remove_comments(css)
+        # Extract and replace CSS variables
+        css = self._extract_and_replace_variables(css)
+        # Check for missing fonts and warn the user
         self._check_font_families(css)
         return css
     
