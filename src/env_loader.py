@@ -18,5 +18,5 @@ def load_env():
     if os.path.isfile(env_path):
         if not load_dotenv(env_path):
             logging.warning(f"Failed to load environment variables from {env_path}")
-    else:
-        logging.info(f"No env file found at {env_path}, skipping environment loading.")
+        else:
+            logging.info(f"Loaded environment variables from {env_path}")
