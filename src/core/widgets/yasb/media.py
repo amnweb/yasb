@@ -667,14 +667,21 @@ class MediaWidget(BaseWidget):
         if self._controls_only:
             return
 
-        # Shorten fields if necessary with ...
-        #media_info = {k: self._format_max_field_size(v) if isinstance(v, str) else v for k, v in media_info.items()}
-        format_label_content = active_label_content.format(**{
-            k: self._format_max_field_size(v) if isinstance(v, str) else v
-            for k, v in media_info.items()
-        })
+        try:
+            formatted_info = {
+                k: self._format_max_field_size(v, f'field_{k}') if isinstance(v, str) else v
+                for k, v in media_info.items()
+            }
+            format_label_content = active_label_content.format(**formatted_info)
+            format_label_content = self._format_max_field_size(format_label_content)
+        except Exception as e:
+            logging.error(f'MediaWidget: Error formatting label: {e}')
+            # Try to at least show the title if available
+            if media_info and 'title' in media_info and media_info['title']:
+                format_label_content = self._format_max_field_size(media_info['title'])
+            else:
+                format_label_content = "No media"
         # Format the label
-        # format_label_content = active_label_content.format(**media_info)
         active_label.setText(format_label_content)
 
         # If we don't want the thumbnail, stop here
