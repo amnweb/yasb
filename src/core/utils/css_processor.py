@@ -103,13 +103,20 @@ class CSSProcessor:
     def _check_font_families(self, css: str):
         """
         Checks for missing font families in the CSS and optionally warns the user.
-        Returns a tuple of (all_fonts_found_in_css, {font: is_installed}).
+        Uses case-insensitive comparison for font names.
         """
         if not self._should_check_fonts():
             return set(), {}
 
-        # Check for available fonts
-        available_fonts = set(QFontDatabase.families())
+        # Generic font families that should be ignored in the check
+        generic_families = {
+            "sans-serif", "serif", "monospace", "cursive", "fantasy", 
+            "system-ui", "ui-serif", "ui-sans-serif", "ui-monospace", "ui-rounded",
+            "emoji", "math", "fangsong", "initial", "inherit", "default"
+        }
+
+        # Check for available fonts (converted to lowercase for case-insensitive comparison)
+        available_fonts = {font.lower() for font in QFontDatabase.families()}
 
         font_families = set()
         font_status = {}
@@ -124,7 +131,7 @@ class CSSProcessor:
             for font in fonts:
                 if font:
                     font_families.add(font)
-                    font_status[font] = font in available_fonts
+                    font_status[font] = font.lower() in generic_families or font.lower() in available_fonts
 
         missing_fonts = [font for font, installed in font_status.items() if not installed]
         if missing_fonts:
