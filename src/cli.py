@@ -135,6 +135,8 @@ class CLIHandler:
             "--task", action="store_true", help="Disable autostart as a scheduled task"
         )
 
+        subparsers.add_parser("monitor-information", help="Show information about connected monitors")
+
         subparsers.add_parser("reset", help="Restore default config files and clear cache")
 
         subparsers.add_parser("help", help="Show help message")
@@ -233,6 +235,32 @@ class CLIHandler:
             except KeyboardInterrupt:
                 print("\nExiting YASB log client.")
 
+        elif args.command == "monitor-information":
+            try:
+                from PyQt6.QtWidgets import QApplication
+                from PyQt6.QtGui import QGuiApplication
+
+                app = QApplication([])
+
+                screens = QGuiApplication.screens()
+                primary_screen = QGuiApplication.primaryScreen()
+
+                for i, screen in enumerate(screens, 1):
+                    geometry = screen.geometry()
+                    print(textwrap.dedent(f"""\
+                        {Format.underline}Monitor {i}:{Format.reset}
+                          Name: {screen.name()}
+                          Resolution: {geometry.width()}x{geometry.height()}
+                          Position: ({geometry.left()},{geometry.top()}) to ({geometry.left() + geometry.width()},{geometry.top() + geometry.height()})
+                          Primary: {'Yes' if screen == primary_screen else 'No'}
+                          Scale Factor: {screen.devicePixelRatio():.2f}
+                          Manufacturer: {screen.manufacturer() or 'Unknown'}
+                          Model: {screen.model() or 'Unknown'}
+                    """))
+                app.quit()
+            except Exception as e:
+                print(f"Error retrieving monitor information: {e}")
+
         elif args.command == "reset":
             confirm = input(
                 "YASB will be stopped if it is running.\n"
@@ -293,15 +321,16 @@ class CLIHandler:
                 {Format.underline}Usage{Format.reset}: yasbc <COMMAND>
 
                 {Format.underline}Commands{Format.reset}:
-                  start              Start the application
-                  stop               Stop the application
-                  reload             Reload the application
-                  enable-autostart   Enable autostart on system boot
-                  disable-autostart  Disable autostart on system boot
-                  update             Update the application
-                  log                Tail yasb process logs (cancel with Ctrl-C)
-                  reset              Restore default config files and clear cache
-                  help               Print this message
+                  start                     Start the application
+                  stop                      Stop the application
+                  reload                    Reload the application
+                  enable-autostart          Enable autostart on system boot
+                  disable-autostart         Disable autostart on system boot
+                  monitor-information       Show information about connected monitors
+                  update                    Update the application
+                  log                       Tail yasb process logs (cancel with Ctrl-C)
+                  reset                     Restore default config files and clear cache
+                  help                      Print this message
 
                 {Format.underline}Options{Format.reset}:
                 -v, --version  Print version
