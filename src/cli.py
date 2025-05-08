@@ -1,8 +1,19 @@
+"""
+YASB CLI
+
+NOTE: Avoid importing heavy libraries directly to avoid slowing down the startup time.
+
+To check the startup time, use the following commands (from venv):
+python -X importtime src/cli.py 2> import_times.log
+pip install tuna
+tuna import_times.log
+"""
+
 import argparse
 import ctypes
 import datetime
 import getpass
-import logging
+import json
 import os
 import subprocess
 import sys
@@ -11,9 +22,6 @@ import textwrap
 import time
 from ctypes import GetLastError
 
-import requests
-import win32com.client
-import win32security
 from packaging.version import Version
 from win32con import (
     GENERIC_READ,
@@ -21,9 +29,6 @@ from win32con import (
     OPEN_EXISTING,
 )
 
-from core.log import Format
-from core.utils.cli_server import read_message, write_message
-from core.utils.utilities import is_process_running
 from core.utils.win32.bindings import (
     CloseHandle,
     CreateFile,
@@ -31,9 +36,9 @@ from core.utils.win32.bindings import (
     WriteFile,
 )
 from core.utils.win32.constants import INVALID_HANDLE_VALUE
-from core.utils.win32.utilities import create_shortcut
 from settings import BUILD_VERSION, CLI_VERSION
 
+BUFSIZE = 65536
 YASB_VERSION = BUILD_VERSION
 YASB_CLI_VERSION = CLI_VERSION
 
@@ -46,6 +51,78 @@ WORKING_DIRECTORY = INSTALLATION_PATH if os.path.exists(EXE_PATH) else None
 
 CLI_SERVER_PIPE_NAME = r"\\.\pipe\yasb_pipe_cli"
 LOG_SERVER_PIPE_NAME = r"\\.\pipe\yasb_pipe_log"
+
+
+def is_process_running(process_name: str) -> bool:
+    import psutil
+
+    for proc in psutil.process_iter(["name"]):
+        if proc.info["name"] == process_name:
+            return True
+    return False
+
+
+def create_shortcut(shortcut_path: str, autostart_file: str, working_directory: str):
+    try:
+        import pythoncom
+        import win32com.client
+
+        pythoncom.CoInitialize()
+        shell = win32com.client.Dispatch("WScript.Shell")
+        shortcut = shell.CreateShortCut(shortcut_path)
+        shortcut.Targetpath = autostart_file
+        shortcut.WorkingDirectory = working_directory
+        shortcut.Description = "Shortcut to yasb.exe"
+        shortcut.save()
+        print(f"Created shortcut at {shortcut_path}")
+    except Exception as e:
+        print(f"Failed to create startup shortcut: {e}")
+        return False
+
+
+def write_message(handle: int, msg_dict: dict[str, str]):
+    try:
+        data = json.dumps(msg_dict).encode("utf-8")
+    except Exception as e:
+        print(f"JSON encode error: {e}")
+        print(f"Data: {msg_dict}")
+        return False
+    success = WriteFile(handle, data)
+    return success
+
+
+def read_message(handle: int) -> dict[str, str] | None:
+    success, data = ReadFile(handle, BUFSIZE)
+    if not success or len(data) == 0:
+        return None
+    try:
+        messages: list[str] = []
+        # This is needed in case there are multiple json objects in one data block
+        for line in data.split(b"\0"):
+            if not line.strip():
+                continue
+            json_object = json.loads(line.decode().strip())
+            if json_object.get("type") == "DATA":
+                messages.append(json_object.get("data"))
+            else:
+                # If it's ping/pong, just return the object as is
+                return json_object
+        return {"type": "DATA", "data": "\n".join(messages)}
+    except json.JSONDecodeError as e:
+        print(f"JSON decode error: {e}")
+        print(f"Data: {data}")
+        return None
+
+
+class Format:
+    reset = "\033[0m"
+    green = "\033[92m"
+    yellow = "\033[93m"
+    red = "\033[91m"
+    red_bg = "\033[41m"
+    underline = "\033[4m"
+    gray = "\033[90m"
+    blue = "\033[94m"
 
 
 class CustomArgumentParser(argparse.ArgumentParser):
@@ -106,10 +183,8 @@ class CLIHandler:
         if os.path.exists(shortcut_path):
             try:
                 os.remove(shortcut_path)
-                logging.info(f"Removed shortcut from {shortcut_path}")
                 print(f"Removed shortcut from {shortcut_path}")
             except Exception as e:
-                logging.error(f"Failed to remove startup shortcut: {e}")
                 print(f"Failed to remove startup shortcut: {e}")
 
     def parse_arguments(self):
@@ -237,8 +312,8 @@ class CLIHandler:
 
         elif args.command == "monitor-information":
             try:
-                from PyQt6.QtWidgets import QApplication
                 from PyQt6.QtGui import QGuiApplication
+                from PyQt6.QtWidgets import QApplication
 
                 app = QApplication([])
 
@@ -247,25 +322,31 @@ class CLIHandler:
 
                 for i, screen in enumerate(screens, 1):
                     geometry = screen.geometry()
-                    print(textwrap.dedent(f"""\
+                    print(
+                        textwrap.dedent(f"""\
                         {Format.underline}Monitor {i}:{Format.reset}
                           Name: {screen.name()}
                           Resolution: {geometry.width()}x{geometry.height()}
                           Position: ({geometry.left()},{geometry.top()}) to ({geometry.left() + geometry.width()},{geometry.top() + geometry.height()})
-                          Primary: {'Yes' if screen == primary_screen else 'No'}
+                          Primary: {"Yes" if screen == primary_screen else "No"}
                           Scale Factor: {screen.devicePixelRatio():.2f}
-                          Manufacturer: {screen.manufacturer() or 'Unknown'}
-                          Model: {screen.model() or 'Unknown'}
-                    """))
+                          Manufacturer: {screen.manufacturer() or "Unknown"}
+                          Model: {screen.model() or "Unknown"}
+                    """)
+                    )
                 app.quit()
             except Exception as e:
                 print(f"Error retrieving monitor information: {e}")
 
         elif args.command == "reset":
-            confirm = input(
-                "YASB will be stopped if it is running.\n"
-                "Do you want to continue and restore default config files and clear the cache? (Y/n): "
-            ).strip().lower()
+            confirm = (
+                input(
+                    "YASB will be stopped if it is running.\n"
+                    "Do you want to continue and restore default config files and clear the cache? (Y/n): "
+                )
+                .strip()
+                .lower()
+            )
 
             if confirm not in ["y", "yes", ""]:
                 print("Reset cancelled.")
@@ -280,7 +361,7 @@ class CLIHandler:
                 config_path = Path(config_home)
             else:
                 config_path = Path.home() / ".config" / "yasb"
-            
+
             # Stop YASB if it is running
             for proc in ["yasb.exe", "yasb_themes.exe"]:
                 if is_process_running(proc):
@@ -312,7 +393,7 @@ class CLIHandler:
 
             print("Reset complete.")
             sys.exit(0)
-            
+
         elif args.command == "help" or args.help:
             print(
                 textwrap.dedent(f"""\
@@ -343,7 +424,7 @@ class CLIHandler:
             version_message = f"YASB Reborn v{YASB_VERSION}\nYASB-CLI v{YASB_CLI_VERSION}"
             print(version_message)
         else:
-            logging.info("Unknown command. Use --help for available options.")
+            print("Unknown command. Use --help for available options.")
             sys.exit(1)
 
 
@@ -357,12 +438,16 @@ class CLITaskHandler:
             return False
 
     def get_current_user_sid(self):
+        import win32security
+
         username = getpass.getuser()
         user, _, _ = win32security.LookupAccountName(None, username)
         sid = win32security.ConvertSidToStringSid(user)
         return sid
 
     def create_task(self):
+        import win32com.client
+
         scheduler = win32com.client.Dispatch("Schedule.Service")
         scheduler.Connect()
         root_folder = scheduler.GetFolder("\\")
@@ -404,6 +489,8 @@ class CLITaskHandler:
             print(f"Failed to create task YASB Reborn. Error: {e}")
 
     def delete_task(self):
+        import win32com.client
+
         scheduler = win32com.client.Dispatch("Schedule.Service")
         scheduler.Connect()
         root_folder = scheduler.GetFolder("\\")
@@ -433,10 +520,13 @@ class CLIUpdateHandler:
         return None
 
     def update_yasb(self, yasb_version: str):
+        from urllib.request import urlopen
+
         # Fetch the latest tag from the GitHub API
         api_url = "https://api.github.com/repos/amnweb/yasb/releases/latest"
-        response = requests.get(api_url)
-        latest_release = response.json()
+        with urlopen(api_url) as response:
+            data = response.read().decode("utf-8")  # Read and decode bytes
+            latest_release = json.loads(data)  # Parse JSON manually
         tag: str = latest_release["tag_name"].lstrip("v")
         changelog = "https://github.com/amnweb/yasb/releases/latest"
         # Step 2: Generate the download link based on the latest tag
@@ -475,40 +565,42 @@ class CLIUpdateHandler:
         sys.exit(0)
 
     def download_yasb(self, msi_url: str, msi_path: str) -> None:
+        import urllib.error
+        from urllib.request import urlopen
+
         try:
-            response = requests.get(msi_url, stream=True)
-            response.raise_for_status()
+            with urlopen(msi_url) as response:
+                content_length = response.getheader("Content-Length")
+                if content_length is None:
+                    print("Error: Missing Content-Length header.")
+                    sys.exit(1)
 
-            content_length = response.headers.get("content-length")
-            if content_length is None:
-                print("Error: Missing Content-Length header.")
-                sys.exit(1)
+                try:
+                    total_length = int(content_length)
+                except ValueError:
+                    print(f"Error: Invalid Content-Length value: {content_length}")
+                    sys.exit(1)
 
-            try:
-                total_length = int(content_length)
-            except ValueError:
-                print(f"Error: Invalid Content-Length value: {content_length}")
-                sys.exit(1)
+                downloaded = 0
+                chunk_size = 4096
 
-            downloaded = 0
-            chunk_size = 4096
+                with open(msi_path, "wb") as file:
+                    while True:
+                        chunk = response.read(chunk_size)
+                        if not chunk:
+                            break
+                        file.write(chunk)
+                        downloaded += len(chunk)
+                        percent = downloaded / total_length * 100
+                        print(f"\rDownloading {percent:.1f}%", end="")
 
-            with open(msi_path, "wb") as file:
-                for data in response.iter_content(chunk_size=chunk_size):
-                    if not data:
-                        continue
-                    file.write(data)
-                    downloaded += len(data)
-                    percent = downloaded / total_length * 100
-                    print(f"\rDownloading {percent:.1f}%", end="")
-
-            print("\rDownload completed.          ")
+                print("\rDownload completed.          ")
 
         except KeyboardInterrupt:
             print("\nDownload interrupted by user.")
             sys.exit(0)
 
-        except requests.RequestException as e:
+        except urllib.error.URLError as e:
             print(f"Download failed: {e}")
             sys.exit(1)
 
