@@ -22,7 +22,6 @@ import textwrap
 import time
 from ctypes import GetLastError
 
-import pythoncom
 from packaging.version import Version
 from win32con import (
     GENERIC_READ,
@@ -65,6 +64,7 @@ def is_process_running(process_name: str) -> bool:
 
 def create_shortcut(shortcut_path: str, autostart_file: str, working_directory: str):
     try:
+        import pythoncom
         import win32com.client
 
         pythoncom.CoInitialize()
@@ -520,12 +520,13 @@ class CLIUpdateHandler:
         return None
 
     def update_yasb(self, yasb_version: str):
-        import requests
+        from urllib.request import urlopen
 
         # Fetch the latest tag from the GitHub API
         api_url = "https://api.github.com/repos/amnweb/yasb/releases/latest"
-        response = requests.get(api_url)
-        latest_release = response.json()
+        with urlopen(api_url) as response:
+            data = response.read().decode("utf-8")  # Read and decode bytes
+            latest_release = json.loads(data)  # Parse JSON manually
         tag: str = latest_release["tag_name"].lstrip("v")
         changelog = "https://github.com/amnweb/yasb/releases/latest"
         # Step 2: Generate the download link based on the latest tag
@@ -564,42 +565,42 @@ class CLIUpdateHandler:
         sys.exit(0)
 
     def download_yasb(self, msi_url: str, msi_path: str) -> None:
-        import requests
+        import urllib.error
+        from urllib.request import urlopen
 
         try:
-            response = requests.get(msi_url, stream=True)
-            response.raise_for_status()
+            with urlopen(msi_url) as response:
+                content_length = response.getheader("Content-Length")
+                if content_length is None:
+                    print("Error: Missing Content-Length header.")
+                    sys.exit(1)
 
-            content_length = response.headers.get("content-length")
-            if content_length is None:
-                print("Error: Missing Content-Length header.")
-                sys.exit(1)
+                try:
+                    total_length = int(content_length)
+                except ValueError:
+                    print(f"Error: Invalid Content-Length value: {content_length}")
+                    sys.exit(1)
 
-            try:
-                total_length = int(content_length)
-            except ValueError:
-                print(f"Error: Invalid Content-Length value: {content_length}")
-                sys.exit(1)
+                downloaded = 0
+                chunk_size = 4096
 
-            downloaded = 0
-            chunk_size = 4096
+                with open(msi_path, "wb") as file:
+                    while True:
+                        chunk = response.read(chunk_size)
+                        if not chunk:
+                            break
+                        file.write(chunk)
+                        downloaded += len(chunk)
+                        percent = downloaded / total_length * 100
+                        print(f"\rDownloading {percent:.1f}%", end="")
 
-            with open(msi_path, "wb") as file:
-                for data in response.iter_content(chunk_size=chunk_size):
-                    if not data:
-                        continue
-                    file.write(data)
-                    downloaded += len(data)
-                    percent = downloaded / total_length * 100
-                    print(f"\rDownloading {percent:.1f}%", end="")
-
-            print("\rDownload completed.          ")
+                print("\rDownload completed.          ")
 
         except KeyboardInterrupt:
             print("\nDownload interrupted by user.")
             sys.exit(0)
 
-        except requests.RequestException as e:
+        except urllib.error.URLError as e:
             print(f"Download failed: {e}")
             sys.exit(1)
 
