@@ -28,7 +28,8 @@ else:
 class WorkspaceStatus(StrEnum):
     EMPTY = auto()
     POPULATED = auto()
-    ACTIVE = auto()
+    ACTIVE_EMPTY = auto()
+    ACTIVE_POPULATED = auto()
 
 
 def natural_sort_key(s: str, _nsre: re.Pattern[str] = re.compile(r"(\d+)")):
@@ -74,9 +75,11 @@ class GlazewmWorkspaceButton(QPushButton):
         self.glazewm_client.activate_workspace(self.workspace_name)
 
     def _update_status(self):
-        if self.is_displayed:
-            self.status = WorkspaceStatus.ACTIVE
-        elif self.workspace_window_count > 0 and not self.is_displayed:
+        if self.is_displayed and self.workspace_window_count > 0:
+            self.status = WorkspaceStatus.ACTIVE_POPULATED
+        elif self.is_displayed:
+            self.status = WorkspaceStatus.ACTIVE_EMPTY
+        elif self.workspace_window_count > 0:
             self.status = WorkspaceStatus.POPULATED
         else:
             self.status = WorkspaceStatus.EMPTY
@@ -96,11 +99,11 @@ class GlazewmWorkspaceButton(QPushButton):
         empty_label = empty_label.format_map(replacements)
         active_populated_label = active_populated_label.format_map(replacements)
         active_empty_label = active_empty_label.format_map(replacements)
-        if self.status == WorkspaceStatus.ACTIVE:
-            if self.workspace_window_count > 0:
-                self.setText(active_populated_label)
-            else:
-                self.setText(active_empty_label)
+        if self.status == WorkspaceStatus.ACTIVE_POPULATED:
+            self.setText(active_populated_label)
+            self.setHidden(False)
+        elif self.status == WorkspaceStatus.ACTIVE_EMPTY:
+            self.setText(active_empty_label)
             self.setHidden(False)
         elif self.status == WorkspaceStatus.POPULATED:
             self.setText(populated_label)

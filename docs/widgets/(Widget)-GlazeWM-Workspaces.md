@@ -1,17 +1,17 @@
 # GlazeWM Workspaces Widget
-| Option                  | Type    | Default                 | Description                                              |
-|-------------------------|---------|-------------------------|----------------------------------------------------------|
-| `offline_label`         | string  | `'GlazeWM Offline'`     | The label to display when GlazeWM is offline.            |
-| `populated_label`       | string  | `'{name}'`              | Optional label for populated workspaces.                 |
-| `empty_label`           | string  | `'{name}'`              | Optional label for empty workspaces.                     |
-| `active_populated_label`           | string  | `'{name}'`              | Optional label for the currently focused workspace (has opened windows).                     |
-| `active_empty_label`           | string  | `'{name}'`              | Optional label for the currently focused workspace (has no windows opened).                     |
-| `hide_empty_workspaces` | boolean | `true`                  | Whether to hide empty workspaces.                        |
-| `hide_if_offline`       | boolean | `false`                 | Whether to hide workspaces widget if GlazeWM is offline. |
-| `glazewm_server_uri`    | string  | `'ws://localhost:6123'` | Optional GlazeWM server uri.                             |
-| `container_padding`     | dict    | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}` | Explicitly set padding inside widget container.        |
-| `container_shadow`      | dict    | `None`                  | Container shadow options.                                |
-| `btn_shadow`            | dict    | `None`                  | Workspace button shadow options.                         |
+| Option                   | Type    | Default                                          | Description                                                                 |
+|--------------------------|---------|--------------------------------------------------|-----------------------------------------------------------------------------|
+| `offline_label`          | string  | `'GlazeWM Offline'`                              | The label to display when GlazeWM is offline.                               |
+| `populated_label`        | string  | `'{name}'`                                       | Optional label for populated workspaces.                                    |
+| `empty_label`            | string  | `'{name}'`                                       | Optional label for empty workspaces.                                        |
+| `active_populated_label` | string  | `'{name}'`                                       | Optional label for the currently focused workspace (has opened windows).    |
+| `active_empty_label`     | string  | `'{name}'`                                       | Optional label for the currently focused workspace (has no windows opened). |
+| `hide_empty_workspaces`  | boolean | `true`                                           | Whether to hide empty workspaces.                                           |
+| `hide_if_offline`        | boolean | `false`                                          | Whether to hide workspaces widget if GlazeWM is offline.                    |
+| `glazewm_server_uri`     | string  | `'ws://localhost:6123'`                          | Optional GlazeWM server uri.                                                |
+| `container_padding`      | dict    | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}` | Explicitly set padding inside widget container.                             |
+| `container_shadow`       | dict    | `None`                                           | Container shadow options.                                                   |
+| `btn_shadow`             | dict    | `None`                                           | Workspace button shadow options.                                            |
 
 ## Example Configuration
 
@@ -82,10 +82,11 @@ workspaces:
 ## Style
 ```css
 .glazewm-workspaces {} /*Style for widget.*/
-.glazewm-workspaces .btn {} /*Style for workspace buttons.*/
-.glazewm-workspaces .btn.active {} /*Style for active workspace button.*/
-.glazewm-workspaces .btn.populated {} /*Style for populated workspace button.*/
-.glazewm-workspaces .btn.empty {} /*Style for empty workspace button.*/
+.glazewm-workspaces .ws-btn {} /*Style for workspace buttons.*/
+.glazewm-workspaces .ws-btn.active_populated {} /*Style for active populated workspace button.*/
+.glazewm-workspaces .ws-btn.active_empty {} /*Style for active empty workspace button.*/
+.glazewm-workspaces .ws-btn.populated {} /*Style for populated workspace button.*/
+.glazewm-workspaces .ws-btn.empty {} /*Style for empty workspace button.*/
 .glazewm-workspaces .offline-status {} /*Style for offline status label.*/
 ```
 
@@ -104,7 +105,12 @@ workspaces:
     color: #CDD6F4;
 }
 
-.glazewm-workspaces .ws-btn.active {
+.glazewm-workspaces .ws-btn.active_populated {
+    color: #C2DAF7;
+    background-color: #727272;
+}
+.glazewm-workspaces .ws-btn.active_empty {
+    color: #7D8B9D;
     background-color: #727272;
 }
 
