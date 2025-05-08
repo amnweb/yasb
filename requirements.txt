@@ -12,7 +12,6 @@ winsdk
 pycaw
 pillow==11.1
 qasync
-requests
 obs-websocket-py
 pyvda
 win11toast

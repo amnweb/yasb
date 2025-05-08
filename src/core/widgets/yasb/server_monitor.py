@@ -1,21 +1,22 @@
+from datetime import datetime
 import logging
 import os
 import re
-import requests
 import socket
 import ssl
-import urllib3
-from settings import DEBUG, SCRIPT_PATH
-from datetime import datetime
 from urllib.parse import urlparse
-from core.widgets.base import BaseWidget
-from core.validation.widgets.yasb.server_monitor import VALIDATION_SCHEMA
-from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget, QVBoxLayout, QScrollArea, QGraphicsOpacityEffect
+import urllib.error
+import urllib.request
+
 from PyQt6.QtCore import Qt, pyqtSignal, QThread, QTimer, QPropertyAnimation, QEasingCurve
+from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget, QVBoxLayout, QScrollArea, QGraphicsOpacityEffect
+from win11toast import toast
+
 from core.utils.utilities import PopupWidget, add_shadow
 from core.utils.widgets.animation_manager import AnimationManager
-from win11toast import toast
-urllib3.disable_warnings()
+from core.validation.widgets.yasb.server_monitor import VALIDATION_SCHEMA
+from core.widgets.base import BaseWidget
+from settings import DEBUG, SCRIPT_PATH
 
 # Add new worker class
 class ServerCheckWorker(QThread):
@@ -87,32 +88,43 @@ class ServerCheckWorker(QThread):
         }
 
     def ping_server(self, server, ssl_verify, ssl_check, timeout):
-        # HTTP response check
+        """Check server availability and collect status information."""
+        http_status = None
+        response_time = None
+        final_hostname = server
+        url = f'https://{server}' if ssl_check else f'http://{server}'
+
+        # Configure SSL context if needed
+        context = ssl.create_default_context() if not ssl_verify else None
+        if context:
+            context.check_hostname = False
+            context.verify_mode = ssl.CERT_NONE
+
         try:
-            url = f'https://{server}' if ssl_check else f'http://{server}'
+            # Time the request
             start_time = datetime.now()
-            response = requests.get(url, timeout=timeout, verify=ssl_verify, allow_redirects=True)
-            end_time = datetime.now()
-            http_status = response.status_code
-            response_time = int((end_time - start_time).total_seconds() * 1000)
-            # Parse the final URL so we can send the correct hostname to the SSL check
-            parsed_url = urlparse(response.url)
-            final_hostname = parsed_url.netloc or server
-        except requests.RequestException:
-            http_status = None
-            response_time = None
-            final_hostname = server
-
-        # SSL expiry check
-        if ssl_check:
-            ssl_days = self.check_ssl_expiry(final_hostname, timeout)
-        else:
-            ssl_days = None
-
-        if http_status is not None and response_time is not None:
-            status = "Online"
-        else:
-            status = "Offline"
+            request = urllib.request.Request(url, method="GET")
+            
+            try:
+                with urllib.request.urlopen(request, timeout=timeout, context=context) as response:
+                    http_status = response.status
+                    # Get redirect hostname if any
+                    parsed_url = urlparse(response.url)
+                    final_hostname = parsed_url.netloc or server
+            except urllib.error.HTTPError as e:
+                http_status = e.code
+                
+            # Calculate response time if we got a status code
+            if http_status is not None:
+                response_time = int((datetime.now() - start_time).total_seconds() * 1000)
+                
+        except (urllib.error.URLError, socket.timeout, ssl.SSLError, ConnectionError):
+            pass
+        
+        # Check SSL if needed and determine status
+        ssl_days = self.check_ssl_expiry(final_hostname, timeout) if ssl_check else None
+        status = "Online" if http_status is not None and http_status < 500 else "Offline"
+        
         return {
             "status": status,
             "response_time": response_time,

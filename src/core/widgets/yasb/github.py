@@ -6,7 +6,9 @@ from datetime import datetime
 from enum import StrEnum
 from typing import Any
 
-import requests
+import json
+import urllib.request
+import urllib.error
 from PyQt6.QtCore import QPoint, Qt, QTimer, QUrl
 from PyQt6.QtGui import QColor, QCursor, QDesktopServices, QPainter, QPaintEvent
 from PyQt6.QtWidgets import QGraphicsOpacityEffect, QHBoxLayout, QLabel, QScrollArea, QVBoxLayout, QWidget
@@ -16,8 +18,6 @@ from core.utils.widgets.animation_manager import AnimationManager
 from core.validation.widgets.yasb.github import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
 from settings import DEBUG
-
-logging.getLogger("urllib3").setLevel(logging.WARNING)
 
 
 class Corner(StrEnum):
@@ -266,13 +266,13 @@ class GithubWidget(BaseWidget):
             'Accept': 'application/vnd.github.v3+json'
         }
         url = f'https://api.github.com/notifications/threads/{notification_id}'
+        req = urllib.request.Request(url, headers=headers, method='PATCH')
         try:
-            response = requests.patch(url, headers=headers)
-            response.raise_for_status()
-            if DEBUG:
-                logging.info(f"Notification {notification_id} marked as read on GitHub.")
-        except requests.HTTPError as e:
-            logging.error(f"HTTP Error occurred: {e.response.status_code} - {e.response.text}")
+            with urllib.request.urlopen(req) as response:
+                if DEBUG:
+                    logging.info(f"Notification {notification_id} marked as read on GitHub.")
+        except urllib.error.HTTPError as e:
+            logging.error(f"HTTP Error occurred: {e.code} - {e.reason}")
         except Exception as e:
             logging.error(f"An unexpected error occurred: {str(e)}, in most cases this error when there is no internet connection.")
 
@@ -436,11 +436,14 @@ class GithubWidget(BaseWidget):
             'per_page': self._max_notification
         }
 
-        try:
-            response = requests.get('https://api.github.com/notifications', headers=headers, params=params)
-            response.raise_for_status()  # Raise an HTTPError for bad responses (4xx or 5xx)
+        url = 'https://api.github.com/notifications'
+        query_string = '&'.join(f"{k}={v}" for k, v in params.items())
+        full_url = f"{url}?{query_string}"
 
-            notifications = response.json()
+        req = urllib.request.Request(full_url, headers=headers)
+        try:
+            with urllib.request.urlopen(req) as response:
+                notifications = json.loads(response.read().decode())
             result = []
             if notifications:
                 for notification in notifications:
@@ -459,7 +462,7 @@ class GithubWidget(BaseWidget):
                         github_url = subject_url.replace('api.github.com/repos', 'github.com')
                     else:
                         github_url = notification['repository']['html_url']
-                    
+
                     result.append({
                         'id': notification['id'],
                         'repository': repo_full_name,
@@ -472,12 +475,12 @@ class GithubWidget(BaseWidget):
             else:
                 return []
 
-        except requests.ConnectionError:
+        except urllib.error.URLError:
             logging.error("No internet connection. Unable to fetch notifications.")
-            return []  # Return an empty list or handle as needed
-        except requests.HTTPError as e:
-            logging.error(f"HTTP Error occurred: {e.response.status_code} - {e.response.text}")
-            return []  # Handle other HTTP errors as needed
+            return []
+        except urllib.error.HTTPError as e:
+            logging.error(f"HTTP Error occurred: {e.code} - {e.reason}")
+            return []
         except Exception as e:
             logging.error(f"An unexpected error occurred: {str(e)}")
-            return []  # Handle any other exceptions
+            return []

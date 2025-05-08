@@ -4,7 +4,7 @@ import shutil
 import subprocess
 import sys
 from typing import Dict
-import requests
+import urllib.request
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QLabel, QScrollArea, QFrame, QHBoxLayout, QPushButton, QMessageBox, QDialog)
 from PyQt6.QtGui import QPixmap, QFont, QDesktopServices, QIcon, QFontDatabase
@@ -22,9 +22,10 @@ class ImageLoader(QThread):
 
     def run(self):
         try:
-            response = requests.get(self.url)
-            self.finished.emit(self.theme_id, response.content)
-        except:
+            with urllib.request.urlopen(self.url) as response:
+                data = response.read()
+            self.finished.emit(self.theme_id, data)
+        except Exception:
             pass
 
 
@@ -35,9 +36,9 @@ class ThemeLoader(QThread):
     def run(self):
         try:
             url = "https://raw.githubusercontent.com/amnweb/yasb-themes/refs/heads/main/themes.json"
-            response = requests.get(url)
-            response.raise_for_status()
-            themes = response.json()
+            with urllib.request.urlopen(url) as response:
+                import json
+                themes = json.loads(response.read().decode('utf-8'))
             self.finished.emit(themes)
         except Exception as e:
             self.error.emit(str(e))
@@ -310,20 +311,19 @@ class ThemeCard(QFrame):
                 config_path = os.path.join(config_home, "config.yaml")
                 styles_path = os.path.join(config_home, "styles.css")
 
-                # Create the directory if it doesn't exist
                 os.makedirs(os.path.dirname(config_path), exist_ok=True)
 
                 # Download and save the styles.css file
-                styles_response = requests.get(styles_url)
-                styles_response.raise_for_status()
+                with urllib.request.urlopen(styles_url) as styles_response:
+                    styles_data = styles_response.read()
                 with open(styles_path, 'wb') as styles_file:
-                    styles_file.write(styles_response.content)
+                    styles_file.write(styles_data)
 
                 # Download and save the config.yaml file
-                config_response = requests.get(config_url)
-                config_response.raise_for_status()
+                with urllib.request.urlopen(config_url) as config_response:
+                    config_data = config_response.read()
                 with open(config_path, 'wb') as config_file:
-                    config_file.write(config_response.content)
+                    config_file.write(config_data)
                 subprocess.run(["yasbc", "start"], creationflags=subprocess.CREATE_NO_WINDOW, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             except Exception as e:
                 QMessageBox.critical(self, 'Error', f"Failed to install theme: {str(e)}")
@@ -331,9 +331,8 @@ class ThemeCard(QFrame):
     def _check_font_families(self, theme_id):
         try:
             styles_url = f"https://raw.githubusercontent.com/amnweb/yasb-themes/main/themes/{theme_id}/styles.css"
-            resp = requests.get(styles_url, timeout=5)
-            resp.raise_for_status()
-            css = resp.text
+            with urllib.request.urlopen(styles_url, timeout=5) as resp:
+                css = resp.read().decode('utf-8')
             css = self._extract_and_replace_variables(css)
             available_fonts = set(QFontDatabase.families())
             font_families = set()
