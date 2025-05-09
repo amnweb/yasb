@@ -3,6 +3,7 @@
 |-----------------|---------|-------------------------------------------------------------------------|-----------------------------------------------------------------------------|
 | `label`         | string  | `'<span>{icon}</span> {temp}'`                                        | The format string for the weather label. You can use placeholders like `{temp}`, `{icon}`, etc. |
 | `label_alt`     | string  | `'{location}: Min {min_temp}, Max {max_temp}, Humidity {humidity}'` | The alternative format string for the weather label. Useful for displaying additional weather details. |
+| `hide_if_failed_api_request` | boolean  | `True` | Hide the widget if API request fails (for example, the API service is down). |
 | `update_interval` | integer | `3600`                                                                 | The interval in seconds to update the weather data. Must be between 60 and 36000000. |
 | `hide_decimal`  | boolean | `False`                                                                 | Whether to hide the decimal part of the temperature. |
 | `location`      | string  | `'London'`                                                              | The location for which to fetch the weather data. |
@@ -65,6 +66,7 @@ weather:
 
 - **label:** The format string for the weather label. You can use placeholders like `{temp}`, `{min_temp}`, `{max_temp}`, `{feelslike}`, `{location}`, `{humidity}`, `{icon}`, `{conditions}`, `{wind}`, `{wind_dir}`, `{wind_degree}`, `{pressure}`, `{precip}`, `{uv}`, `{vis}`, `{cloud}`.
 - **label_alt:** The alternative format string for the weather label. Useful for displaying additional weather details.
+- **hide_if_failed_api_request:** Hide the widget if the API request fails (for example, if the API service is down).
 - **update_interval:** The interval in seconds to update the weather data. Must be between 60 and 36000000.
 - **hide_decimal:** Whether to hide the decimal part of the temperature.
 - **location:** The location for which to fetch the weather data. You can use example "USA Los Angeles 90006" {COUNTRY CITY ZIP_CODE}, or just city. Location can be set to `env`, this means you have to set `YASB_WEATHER_LOCATION` in environment variable or you can set it directly in the configuration file.
