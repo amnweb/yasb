@@ -177,17 +177,26 @@ class KomorebiClient:
 
     def get_containers(self, workspace: dict) -> list:
         return [add_index(container, i) for i, container in enumerate(workspace['containers']['elements'])]
+    
+    def get_monocle_container(self, workspace: dict) -> Optional[dict]:
+        return workspace['monocle_container']
 
-    def get_container_by_index(self, workspace: dict, container_index: int) -> Optional[dict]:
+    def get_container_by_index(self, workspace: dict, container_index: int, get_monocle: bool) -> Optional[dict]:
         try:
             return self.get_containers(workspace)[container_index]
         except IndexError:
-            return None             
+            if get_monocle:
+                try:
+                    return self.get_monocle_container(workspace)
+                except (KeyError, TypeError):
+                    return None   
+            else: 
+                return None          
 
-    def get_focused_container(self, workspace: dict) -> Optional[dict]:
+    def get_focused_container(self, workspace: dict, get_monocle: bool = True) -> Optional[dict]:
         try:
             focused_container_index = workspace['containers']['focused']
-            focused_container = self.get_container_by_index(workspace, focused_container_index)
+            focused_container = self.get_container_by_index(workspace, focused_container_index, get_monocle)
             focused_container['index'] = focused_container_index
             return focused_container
         except (KeyError, TypeError):
