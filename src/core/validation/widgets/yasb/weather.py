@@ -1,6 +1,7 @@
 DEFAULTS = {
     'label': '0',
     'label_alt': '0',
+    'hide_if_failed_api_request' : True,
     'update_interval': 3600,
     'hide_decimal': False,
     'location': '',
@@ -52,6 +53,10 @@ VALIDATION_SCHEMA = {
     'label_alt': {
         'type': 'string',
         'default': DEFAULTS['label_alt']
+    },
+    'hide_if_failed_api_request': {
+        'type': 'boolean',
+        'default': DEFAULTS['hide_if_failed_api_request']
     },
     'update_interval': {
         'type': 'integer',

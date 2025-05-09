@@ -21,6 +21,7 @@ class WeatherWidget(BaseWidget):
             self,
             label: str,
             label_alt: str,
+            hide_if_failed_api_request: bool,
             update_interval: int,
             hide_decimal: bool,
             location: str,
@@ -38,6 +39,7 @@ class WeatherWidget(BaseWidget):
         super().__init__((update_interval * 1000), class_name="weather-widget")
         self._label_content = label
         self._label_alt_content = label_alt
+        self._hide_if_failed_api_request = hide_if_failed_api_request
         self._location = location if location != 'env' else os.getenv('YASB_WEATHER_LOCATION')
         self._hide_decimal = hide_decimal
         self._icons = icons
@@ -276,6 +278,13 @@ class WeatherWidget(BaseWidget):
         if self.weather_data is None:
             logging.warning("Weather data is not yet available.")
             return
+        
+        if self._hide_if_failed_api_request and self.weather_data.get('{temp}') == 'N/A':
+            logging.warning("Weather data is not available. Hiding widget.")
+            self.hide()
+            return
+        
+        self.show()
 
         active_widgets = self._show_alt_label and self._widgets_alt or self._widgets
         active_label_content = self._show_alt_label and self._label_alt_content or self._label_content
