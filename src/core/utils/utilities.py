@@ -68,13 +68,11 @@ def add_shadow(el: QWidget, options: dict[str, Any]) -> None:
 
 @lru_cache(maxsize=1)
 def get_app_identifier():
-    import shutil
-
-    yasb_exe_path = shutil.which("yasb.exe")
-    if yasb_exe_path:
-        return yasb_exe_path
-
-    return 'Yasb'
+    yasb_path = r"C:\Program Files\Yasb\yasb.exe"
+    if os.path.exists(yasb_path):
+        return '{6D809377-6AF0-444B-8957-A3773F02200E}\\Yasb\\yasb.exe'
+    else:
+        return 'Yasb'
 
 class PopupWidget(QWidget):
     """
