@@ -78,7 +78,11 @@ class NotificationsWidget(BaseWidget):
 
     def _on_windows_notification_update(self, total_notifications):
         self._notification_count = total_notifications
-        self._update_label() 
+        if total_notifications > 0:
+            self.setVisible(True)
+        else:
+            self.setVisible(False)
+        self._update_label()
 
 
     def _toggle_notification(self):
@@ -137,9 +141,7 @@ class NotificationsWidget(BaseWidget):
         if self._notification_count == 0 and self._hide_empty:
             self.setVisible(False)
             return
-        
-        if self.isVisible() is False:
-            self.setVisible(True)
+
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
         active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
 
