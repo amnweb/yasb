@@ -9,7 +9,7 @@ import qasync
 from PyQt6.QtWidgets import QApplication
 
 import settings
-from env_loader import load_env
+from env_loader import load_env, set_font_engine
 
 from core.bar_manager import BarManager
 from core.config import get_config_and_stylesheet
@@ -52,8 +52,6 @@ def main():
     if config['debug']:
         settings.DEBUG = True
         logging.info("Debug mode enabled.")
-        
-    start_cli_server()
 
     # Need qasync event loop to work with PyQt6
     loop = qasync.QEventLoop(app)
@@ -83,7 +81,9 @@ def main():
 
 if __name__ == "__main__":
     init_logger()
+    start_cli_server()
     load_env()
+    set_font_engine()
 
     def exception_hook(exctype, value, traceback):
         EventService().clear()

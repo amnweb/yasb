@@ -1,6 +1,14 @@
+from functools import lru_cache
+import os
 import platform
 import re
 from typing import Any, cast
+
+from winrt.windows.data.xml.dom import XmlDocument
+from winrt.windows.ui.notifications import (
+    ToastNotification,
+    ToastNotificationManager,
+)
 
 import psutil
 from PyQt6.QtCore import QEvent, QPoint, Qt
@@ -57,6 +65,16 @@ def add_shadow(el: QWidget, options: dict[str, Any]) -> None:
         shadow_effect.setColor(QColor(color))
 
     el.setGraphicsEffect(shadow_effect)
+
+@lru_cache(maxsize=1)
+def get_app_identifier():
+    import shutil
+
+    yasb_exe_path = shutil.which("yasb.exe")
+    if yasb_exe_path:
+        return yasb_exe_path
+
+    return 'Yasb'
 
 class PopupWidget(QWidget):
     """
@@ -181,6 +199,33 @@ class PopupWidget(QWidget):
     def resizeEvent(self, event):
         self._popup_content.setGeometry(0, 0, self.width(), self.height())
         super().resizeEvent(event)
+
+class ToastNotifier:
+    """
+    A class to show toast notifications using the Windows Toast Notification API.
+    Methods:
+        show(icon_path, title, message, duration):
+    """
+    def __init__(self):
+        self.manager = ToastNotificationManager.get_default()
+        self.toaster = self.manager.create_toast_notifier_with_id(get_app_identifier())
+
+    def show(self, icon_path: str, title: str, message: str, duration: str="short") -> None:
+        # refer to https://learn.microsoft.com/en-us/uwp/schemas/tiles/toastschema/schema-root
+        xml = XmlDocument()
+        xml.load_xml(f"""
+        <toast activationType="protocol" duration="{duration}">
+            <visual>
+                <binding template="ToastGeneric">
+                    <image placement="appLogoOverride" hint-crop="circle" src="{icon_path}"/>
+                    <text>{title}</text>
+                    <text>{message}</text>
+                </binding>
+            </visual>
+        </toast>
+        """)
+        notification = ToastNotification(xml)
+        self.toaster.show(notification)
 
 class Singleton(type):
     _instances = {}

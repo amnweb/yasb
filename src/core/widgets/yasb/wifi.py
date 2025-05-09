@@ -1,7 +1,7 @@
 import logging
 import re
 import socket
-from winsdk.windows.networking.connectivity import NetworkInformation, NetworkConnectivityLevel
+from winrt.windows.networking.connectivity import NetworkInformation, NetworkConnectivityLevel
 from core.widgets.base import BaseWidget
 from core.validation.widgets.yasb.wifi import VALIDATION_SCHEMA
 from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget

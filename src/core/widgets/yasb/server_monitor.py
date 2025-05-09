@@ -10,9 +10,8 @@ import urllib.request
 
 from PyQt6.QtCore import Qt, pyqtSignal, QThread, QTimer, QPropertyAnimation, QEasingCurve
 from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget, QVBoxLayout, QScrollArea, QGraphicsOpacityEffect
-from win11toast import toast
 
-from core.utils.utilities import PopupWidget, add_shadow
+from core.utils.utilities import PopupWidget, ToastNotifier, add_shadow
 from core.utils.widgets.animation_manager import AnimationManager
 from core.validation.widgets.yasb.server_monitor import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
@@ -190,7 +189,6 @@ class ServerMonitor(BaseWidget):
         self._server_status_data = None
         self._first_run = True
         self._animations = []
-        self._yasb_guid = self._get_guid()
         self._icon_path = os.path.join(SCRIPT_PATH, 'assets', 'images', 'app_transparent.png')
         
         # Construct container
@@ -352,13 +350,6 @@ class ServerMonitor(BaseWidget):
                         active_widgets[widget_index].setToolTip(f"{online_count} online, {offline_count} offline")
                 widget_index += 1
 
-
-    def _get_guid(self):
-        yasb_path = r"C:\Program Files\Yasb\yasb.exe"
-        if os.path.exists(yasb_path):
-            return '{6D809377-6AF0-444B-8957-A3773F02200E}\\Yasb\\yasb.exe'
-        else:
-            return 'Yasb'
             
     def _send_notification(self):
         try:
@@ -367,10 +358,11 @@ class ServerMonitor(BaseWidget):
         except Exception:
             offline_count = 0
             ssl_warning = False
+        toaster = ToastNotifier()
         if offline_count > 0 and self._desktop_notifications['offline']:
-            toast("Server Monitor", f"{offline_count} server(s) are offline",app_id=self._yasb_guid, icon=self._icon_path)
+            toaster.show(self._icon_path, "Server Monitor", f"{offline_count} server(s) are offline")
         if ssl_warning and self._desktop_notifications['ssl']:
-            toast("Server Monitor", "Some servers have SSL certificate expiring soon",app_id=self._yasb_guid, icon=self._icon_path)
+            toaster.show(self._icon_path, "Server Monitor", "Some servers have SSL certificate expiring soon")
             
 
     def show_menu(self):  
