@@ -66,6 +66,21 @@ class WindowsNotificationEventListener(QThread):
             logging.error(f"Error in notification listener: {e}")
             await asyncio.sleep(10)
 
+
+    async def clear_all_notifications(self, listener):
+        """
+        Clear all notifications from the notification center.
+        Note: This function is not called in the current implementation.
+        It can be used to clear notifications if needed in the future.
+        """
+        try:
+            notifications = await listener.get_notifications_async(get_all_kinds())
+            for n in notifications:
+                await listener.remove_notification(n.id)
+        except Exception as e:
+            if DEBUG:
+                logging.error(f"Error clearing notifications: {e}")
+
     def run(self):
         asyncio.set_event_loop(self.loop)
         try:
