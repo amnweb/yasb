@@ -119,8 +119,13 @@ class Bar(QWidget):
     def bar_pos(self, bar_w: int, bar_h: int, screen_w: int, screen_h: int) -> tuple[int, int]:
         screen_x = self.screen().geometry().x()
         screen_y = self.screen().geometry().y()
-        x = int(screen_x + (screen_w / 2) - (bar_w / 2))if self._alignment['center'] else screen_x
-        y = int(screen_y + screen_h - bar_h) if self._alignment['position'] == "bottom" else screen_y
+        x = int(screen_x + (screen_w / 2) - (bar_w / 2)) if self._alignment['center'] else screen_x
+
+        if self._alignment['position'] == "bottom":
+            y = int(screen_y + screen_h - bar_h - self._padding['bottom'])
+        else:
+            y = screen_y
+        
         return x, y
 
     def position_bar(self, init=False) -> None:
@@ -135,8 +140,11 @@ class Bar(QWidget):
         if is_valid_percentage_str(str(self._dimensions['width'])):
             bar_width = int(screen_width * percent_to_float(self._dimensions['width']) - self._padding['left'] - self._padding['right'])
         bar_x, bar_y = self.bar_pos(bar_width, bar_height, screen_width, screen_height)
-        bar_x = bar_x + self._padding['left'] 
-        bar_y = bar_y + self._padding['top']
+        bar_x = bar_x + self._padding['left']
+
+        if self._alignment['position'] == "top":
+            bar_y = bar_y + self._padding['top']
+        
         self.setGeometry(bar_x, bar_y, bar_width, bar_height)
         self._bar_frame.setGeometry(
             0,
