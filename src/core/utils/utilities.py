@@ -68,11 +68,21 @@ def add_shadow(el: QWidget, options: dict[str, Any]) -> None:
 
 @lru_cache(maxsize=1)
 def get_app_identifier():
+    """Returns AppUserModelID regardless of installation location"""
+    import sys
+    import os
+
+    # Use a AppUserModelID for Program Files installs
     yasb_path = r"C:\Program Files\Yasb\yasb.exe"
     if os.path.exists(yasb_path):
         return '{6D809377-6AF0-444B-8957-A3773F02200E}\\Yasb\\yasb.exe'
-    else:
-        return 'Yasb'
+        
+    # For other locations
+    if getattr(sys, 'frozen', False):
+        return sys.executable
+
+    # Development environment
+    return 'Yasb'
 
 class PopupWidget(QWidget):
     """
