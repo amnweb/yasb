@@ -9,6 +9,7 @@ DEFAULTS = {
     'hide_if_offline': False,
     'label_zero_index': False,
     'hide_empty_workspaces': False,
+    'app_icons': {'enabled_populated': False, 'enabled_active': False, 'size': 16, 'max_icons': 0, 'hide_label': False, 'hide_duplicates': False, 'hide_floating': False},
     'animation': False,
     'enable_scroll_switching': False,
     'reverse_scroll_direction': False,
@@ -69,6 +70,40 @@ VALIDATION_SCHEMA = {
     'hide_empty_workspaces': {
         'type': 'boolean',
         'default': DEFAULTS['hide_empty_workspaces']
+    },
+    'app_icons': {
+        'type': 'dict',
+        'default': DEFAULTS['app_icons'],
+        'schema': {
+            'enabled_populated': {
+                'type': 'boolean',
+                'default': DEFAULTS['app_icons']['enabled_populated']
+            },
+            'enabled_active': {
+                'type': 'boolean',
+                'default': DEFAULTS['app_icons']['enabled_active']
+            },
+            'size': {
+                'type': 'integer',
+                'default': DEFAULTS['app_icons']['size']
+            },
+            'max_icons': {
+                'type': 'integer',
+                'default': DEFAULTS['app_icons']['max_icons']
+            },
+            'hide_label': {
+                'type': 'boolean',
+                'default': DEFAULTS['app_icons']['hide_label']
+            },
+            'hide_duplicates': {
+                'type': 'boolean',
+                'default': DEFAULTS['app_icons']['hide_duplicates']
+            },
+            'hide_floating': {
+                'type': 'boolean',
+                'default': DEFAULTS['app_icons']['hide_floating']
+            }
+        }
     },
     'animation': {
         'type': 'boolean',
