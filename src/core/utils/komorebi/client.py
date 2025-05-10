@@ -83,6 +83,9 @@ class KomorebiClient:
             if container.get('windows', {}).get('elements', []):
                 return True
 
+        if isinstance(workspace['monocle_container'], dict):
+            return True
+
         return False
 
  
@@ -175,32 +178,38 @@ class KomorebiClient:
 
         return stderr, proc
 
-    def get_containers(self, workspace: dict) -> list:
-        return [add_index(container, i) for i, container in enumerate(workspace['containers']['elements'])]
-    
-    def get_monocle_container(self, workspace: dict) -> Optional[dict]:
-        return workspace['monocle_container']
+    def get_containers(self, workspace: dict, get_monocle: bool = True) -> list:
+        containers = [add_index(container, i) for i, container in enumerate(workspace['containers']['elements'])]
+        monocle_container = self.get_monocle_container(workspace)
+        if get_monocle and monocle_container:
+            containers.append(monocle_container)
+        return containers
 
-    def get_container_by_index(self, workspace: dict, container_index: int, get_monocle: bool) -> Optional[dict]:
+    def get_monocle_container(self, workspace: dict) -> Optional[dict]:
+        try:
+            monocle_container = workspace['monocle_container']
+            return monocle_container if isinstance(monocle_container, dict) else None
+        except (KeyError, TypeError):
+            return None
+
+    def get_container_by_index(self, workspace: dict, container_index: int) -> Optional[dict]:
         try:
             return self.get_containers(workspace)[container_index]
         except IndexError:
-            if get_monocle:
-                try:
-                    return self.get_monocle_container(workspace)
-                except (KeyError, TypeError):
-                    return None   
-            else: 
-                return None          
+            return None          
 
     def get_focused_container(self, workspace: dict, get_monocle: bool = True) -> Optional[dict]:
         try:
             focused_container_index = workspace['containers']['focused']
-            focused_container = self.get_container_by_index(workspace, focused_container_index, get_monocle)
+            focused_container = self.get_container_by_index(workspace, focused_container_index)
             focused_container['index'] = focused_container_index
             return focused_container
         except (KeyError, TypeError):
-            return None
+            if get_monocle:
+                monocle_container = self.get_monocle_container(workspace)
+                return monocle_container   
+            else: 
+                return None
 
     def get_windows(self, container: dict) -> list:
         return [add_index(window, i) for i, window in enumerate(container['windows']['elements'])]
