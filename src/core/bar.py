@@ -8,6 +8,7 @@ from core.utils.win32.utilities import get_monitor_hwnd
 from core.validation.bar import BAR_DEFAULTS
 from core.utils.win32.blurWindow import Blur
 import win32gui
+from win32con import SWP_NOSIZE, SWP_NOMOVE, SWP_SHOWWINDOW, HWND_TOPMOST
 
 try:
     from core.utils.win32 import app_bar
@@ -16,6 +17,17 @@ except ImportError:
     IMPORT_APP_BAR_MANAGER_SUCCESSFUL = False
 
 class Bar(QWidget):
+    def always_always_on_top(self):
+        if self._window_flags['always_on_top']:
+            hwnd = int(self.winId())
+            win32gui.SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_SHOWWINDOW)
+
+    def start_always_on_top_timer(self):
+        self._always_on_top_timer = QTimer(self)
+        self._always_on_top_timer.setInterval(1000)
+        self._always_on_top_timer.timeout.connect(self.always_always_on_top)
+        self._always_on_top_timer.start()
+
     def __init__(
             self,
             bar_id: str,
@@ -66,7 +78,7 @@ class Bar(QWidget):
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose) 
         
         if self._window_flags['always_on_top']:
-            self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint)
+            self.start_always_on_top_timer()
 
         self._bar_frame = QFrame(self)
         self._bar_frame.setProperty("class", f"bar {class_name}")
