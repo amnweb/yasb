@@ -137,11 +137,11 @@ class PopupWidget(QWidget):
         # Determine screen where the parent is
         screen = QApplication.screenAt(parent.mapToGlobal(parent.rect().center()))
         if screen:
-            available_geometry = screen.availableGeometry()
+            screen_geometry = screen.geometry()
             # Ensure the popup fits horizontally
-            x = max(available_geometry.left(), min(global_position.x(), available_geometry.right() - self.width()))
+            x = max(screen_geometry.left(), min(global_position.x(), screen_geometry.right() - self.width()))
             # Ensure the popup fits vertically
-            y = max(available_geometry.top(), min(global_position.y(), available_geometry.bottom() - self.height()))
+            y = max(screen_geometry.top(), min(global_position.y(), screen_geometry.bottom() - self.height()))
             global_position = QPoint(x, y)
         self.move(global_position)
 
