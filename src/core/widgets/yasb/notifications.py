@@ -80,7 +80,7 @@ class NotificationsWidget(BaseWidget):
         self._notification_count = total_notifications
         if total_notifications > 0:
             self.setVisible(True)
-        else:
+        elif self._hide_empty:
             self.setVisible(False)
         self._update_label()
 
