@@ -6,6 +6,12 @@ DEFAULTS = {
         'type': 'fadeInOut',
         'duration': 200
     },
+    'icons': {
+        'prev_track': '\uf048',
+        'next_track': '\uf051',
+        'play': '\uf04b',
+        'pause': '\uf04c',
+    },
     'media_menu': {
         'blur': True,
         'round_corners': True,
@@ -279,20 +285,21 @@ VALIDATION_SCHEMA = {
         'schema': {
             'prev_track': {
                 'type': 'string',
-                'default': '\uf048',
+                'default': DEFAULTS['icons']['prev_track'],
             },
             'next_track': {
                 'type': 'string',
-                'default': '\uf051',
+                'default': DEFAULTS['icons']['next_track'],
             },
             'play': {
                 'type': 'string',
-                'default': '\uf04b',
+                'default': DEFAULTS['icons']['play'],
             },
             'pause': {
                 'type': 'string',
-                'default': '\uf04c',
-            },
+                'default': DEFAULTS['icons']['pause'],
+            }
         },
+        'default': DEFAULTS['icons']
     }
 }
