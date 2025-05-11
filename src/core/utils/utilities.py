@@ -70,6 +70,8 @@ def get_app_identifier():
     """Returns AppUserModelID regardless of installation location"""
     import winreg
     import sys
+    import os
+    from pathlib import Path
     from settings import APP_ID
 
     try:
@@ -77,15 +79,17 @@ def get_app_identifier():
         winreg.CloseKey(key)
         return APP_ID
     except:
-        try:
-            key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, f"SOFTWARE\\Classes\\AppUserModelId\\{APP_ID}")
-            winreg.CloseKey(key)
-            return APP_ID
-        except:
-            if getattr(sys, 'frozen', False):
+        if getattr(sys, 'frozen', False):
+            # Check if YASB is installed via Scoop and if so, return the path to the executable
+            # This is a workaround for the issue where the registry key doesn't exist to return the correct App name and icon
+            scoop_shortcut = os.path.join(
+                    os.environ.get('APPDATA', ''), 
+                    "Microsoft", "Windows", "Start Menu", "Programs", "Scoop Apps", "YASB.lnk"
+                )
+            if Path(scoop_shortcut).exists():
                 return sys.executable
-            # Registry key doesn't exist in either location, return default
-            return 'Yasb'
+        # Fallback to the default AppUserModelID
+        return 'Yasb'
 
 class PopupWidget(QWidget):
     """
