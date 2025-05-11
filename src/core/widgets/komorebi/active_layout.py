@@ -136,29 +136,29 @@ class ActiveLayoutWidget(BaseWidget):
         main_layout = QVBoxLayout(self._menu)
         main_layout.setSpacing(0)
         main_layout.setContentsMargins(0, 0, 0, 0)
-        def create_menu_item(icon, text, click_handler):
-            item_widget = QFrame()
-            item_widget.setProperty("class", "menu-item")
 
-            item_layout = QHBoxLayout(item_widget)
+        def create_menu_item(icon, text, click_handler):
+            item = QFrame()
+            item.setProperty("class", "menu-item")
+            item_layout = QHBoxLayout(item)
             item_layout.setContentsMargins(0, 0, 0, 0)
 
-            icon_label = QLabel(icon)
-            icon_label.setProperty("class", "menu-item-icon")
-            icon_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
-            icon_label.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+            if self._layout_menu['show_layout_icons']:
+                icon_label = QLabel(icon)
+                icon_label.setProperty("class", "menu-item-icon")
+                icon_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+                icon_label.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+                item_layout.addWidget(icon_label)
 
             text_label = QLabel(text)
             text_label.setProperty("class", "menu-item-text")
             text_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
             text_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
-
-            if self._layout_menu['show_layout_icons']:
-                item_layout.addWidget(icon_label)
             item_layout.addWidget(text_label)
-            item_widget.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-            item_widget.mousePressEvent = click_handler
-            return item_widget
+
+            item.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+            item.mousePressEvent = click_handler
+            return item
 
         for layout in self._layouts_config:
             icon = self._layout_icons[layout]
@@ -193,7 +193,7 @@ class ActiveLayoutWidget(BaseWidget):
                     make_toggle_handler(func)
                 )
             )
-        
+
         self._menu.adjustSize()
         self._menu.setPosition(
             alignment=self._layout_menu['alignment'],
