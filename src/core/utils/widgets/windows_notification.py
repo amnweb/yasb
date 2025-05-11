@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from enum import IntFlag
-from winsdk.windows.ui.notifications import management
+import winrt.windows.ui.notifications.management as management
 from PyQt6.QtCore import QThread
 from core.event_service import EventService
 from settings import DEBUG
@@ -22,7 +22,6 @@ def get_all_kinds():
     """
     return NotificationKinds.toast | NotificationKinds.tile | NotificationKinds.badge | NotificationKinds.proto
 
-
 class WindowsNotificationEventListener(QThread):
     def __init__(self):
         super().__init__()
@@ -32,20 +31,20 @@ class WindowsNotificationEventListener(QThread):
         self.event_service = EventService()
         self.loop = asyncio.new_event_loop()
 
-    async def update_count(self, sender):
+    async def update_count(self, listener):
         try:
-            notifications = await sender.get_notifications_async(get_all_kinds())
+            notifications = await listener.get_notifications_async(get_all_kinds())
             return len(notifications)
         except Exception as e:
             if DEBUG:
                 logging.error(f"Error updating notification count: {e}")
             return None
-            
+
     async def watch_notifications(self):
         try:
             listener = management.UserNotificationListener.current
             access_result = await listener.request_access_async()
-            
+
             if access_result == management.UserNotificationListenerAccessStatus.ALLOWED:
                 while self.running:
                     current_count = await self.update_count(listener)
@@ -55,24 +54,39 @@ class WindowsNotificationEventListener(QThread):
                             self.total_notifications += added
                         elif current_count == 0:
                             self.total_notifications = 0
-                        
+
                         self.previous_count = current_count
                         self.event_service.emit_event("WindowsNotificationUpdate", self.total_notifications)
-                    
+
                     await asyncio.sleep(2)
             else:
                 if DEBUG:
                     logging.warning(f"Access denied to notifications, access status: {access_result}")
         except Exception as e:
-            logging.error(f"Error: {e}")
-            await asyncio.sleep(10) # Wait for 5 seconds before retrying if an error occurs
+            logging.error(f"Error in notification listener: {e}")
+            await asyncio.sleep(10)
+
+
+    async def clear_all_notifications(self, listener):
+        """
+        Clear all notifications from the notification center.
+        Note: This function is not called in the current implementation.
+        It can be used to clear notifications if needed in the future.
+        """
+        try:
+            notifications = await listener.get_notifications_async(get_all_kinds())
+            for n in notifications:
+                await listener.remove_notification(n.id)
+        except Exception as e:
+            if DEBUG:
+                logging.error(f"Error clearing notifications: {e}")
 
     def run(self):
         asyncio.set_event_loop(self.loop)
         try:
             self.loop.run_until_complete(self.watch_notifications())
         except Exception as e:
-            logging.error(f"Error in notification listener: {e}")
+            logging.error(f"Error in notification listener thread: {e}")
         finally:
             pending = asyncio.all_tasks(self.loop)
             for task in pending:

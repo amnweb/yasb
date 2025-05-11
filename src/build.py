@@ -1,7 +1,7 @@
 from cx_Freeze import setup, Executable
-from settings import BUILD_VERSION
+from settings import BUILD_VERSION, APP_ID
 import datetime
- 
+
 build_options = {
     "packages": [
         'core.widgets.yasb.power_menu',
@@ -52,7 +52,19 @@ build_options = {
     "zip_exclude_packages": ["*"],
     "build_exe": "dist",
     "include_msvcr": True,
-    "includes": [],
+    "includes": [
+        "winrt.windows.ui.notifications",
+        "winrt.windows.ui.notifications.management",
+        "winrt.windows.data.xml.dom",
+        "winrt.windows.media",
+        "winrt.windows.media.control",
+        "winrt.windows.networking",
+        "winrt.windows.networking.connectivity",
+        "winrt.windows.storage",
+        "winrt.windows.storage.streams",
+        "winrt.windows.foundation",
+        "winrt.windows.foundation.collections",
+    ],
     "optimize": 1,
     "include_files": [
             ("assets/images/app_icon.png","assets/images/app_icon.png"),
@@ -75,6 +87,15 @@ msi_data = {
     ],
     "Icon": [
         ("IconId", "assets/images/app_icon.ico"),
+    ],
+    "Registry": [
+        ("AppUserModelId", -1, 
+        f"Software\\Classes\\AppUserModelId\\{APP_ID}", 
+        "DisplayName", "Yasb", "TARGETDIR"),
+        
+        ("AppUserModelIdIcon", -1, 
+        f"Software\\Classes\\AppUserModelId\\{APP_ID}", 
+        "IconUri", "[TARGETDIR]assets\\images\\app_icon.png", "TARGETDIR"),
     ],
 }
 

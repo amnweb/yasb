@@ -5,13 +5,13 @@ from typing import Any, Callable
 import asyncio
 
 import threading
-from winsdk.windows.storage.streams import Buffer, InputStreamOptions, IRandomAccessStreamReference
+from winrt.windows.storage.streams import Buffer, InputStreamOptions, IRandomAccessStreamReference
 from PIL import Image, ImageFile
 import io
 
 from core.utils.utilities import Singleton
 
-from winsdk.windows.media.control import (GlobalSystemMediaTransportControlsSessionManager as SessionManager,
+from winrt.windows.media.control import (GlobalSystemMediaTransportControlsSessionManager as SessionManager,
                                           GlobalSystemMediaTransportControlsSession as Session,
                                           SessionsChangedEventArgs, MediaPropertiesChangedEventArgs,
                                           TimelinePropertiesChangedEventArgs, PlaybackInfoChangedEventArgs)

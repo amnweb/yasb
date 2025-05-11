@@ -9,7 +9,7 @@ from PyQt6 import QtCore
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QWheelEvent
 from PIL.ImageQt import ImageQt
-from winsdk.windows.media.control import GlobalSystemMediaTransportControlsSessionPlaybackInfo
+from winrt.windows.media.control import GlobalSystemMediaTransportControlsSessionPlaybackInfo
 
 from core.utils.win32.media import WindowsMedia
 from core.widgets.base import BaseWidget
