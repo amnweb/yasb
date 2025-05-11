@@ -3,8 +3,8 @@ import re
 import subprocess
 from core.widgets.base import BaseWidget
 from core.validation.widgets.yasb.home import VALIDATION_SCHEMA
-from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget, QVBoxLayout, QFrame
-from PyQt6.QtCore import Qt, QPoint
+from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget, QVBoxLayout
+from PyQt6.QtCore import Qt
 import os
 from core.utils.widgets.power import PowerOperations
 from core.utils.utilities import PopupWidget, add_shadow
@@ -106,11 +106,14 @@ class HomeWidget(BaseWidget):
 
 
     def _create_menu(self):
-        self._menu = PopupWidget(self, self._blur, self._round_corners, self._round_corners_type, self._border_color)
+        self._menu = PopupWidget(
+            self,
+            self._blur,
+            self._round_corners,
+            self._round_corners_type,
+            self._border_color
+        )
         self._menu.setProperty('class', 'home-menu')
-        self._menu.setWindowFlag(Qt.WindowType.FramelessWindowHint)
-        self._menu.setWindowFlag(Qt.WindowType.Popup)
-        self._menu.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint)
 
         # Create main vertical layout for the popup
         main_layout = QVBoxLayout(self._menu)
@@ -172,28 +175,12 @@ class HomeWidget(BaseWidget):
             )
             
         self._menu.adjustSize()
-        widget_global_pos = self.mapToGlobal(QPoint(self._offset_left, self.height() + self._offset_top))
-        
-        if self._direction == 'up':
-            global_y = self.mapToGlobal(QPoint(0, 0)).y() - self._menu.height() - self._offset_top
-            widget_global_pos = QPoint(self.mapToGlobal(QPoint(0, 0)).x() + self._offset_left, global_y)
-            
-        if self._alignment == 'left':
-            global_position = widget_global_pos
-        elif self._alignment == 'right':
-            global_position = QPoint(
-                widget_global_pos.x() + self.width() - self._menu.width(),
-                widget_global_pos.y()
-            )
-        elif self._alignment == 'center':
-            global_position = QPoint(
-                widget_global_pos.x() + (self.width() - self._menu.width()) // 2,
-                widget_global_pos.y()
-            )
-        else:
-            global_position = widget_global_pos
-
-        self._menu.move(global_position)
+        self._menu.setPosition(
+            alignment=self._alignment,
+            direction=self._direction,
+            offset_left=self._offset_left,
+            offset_top=self._offset_top
+        )
         self._menu.show()
 
 
