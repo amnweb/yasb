@@ -234,7 +234,16 @@ VALIDATION_SCHEMA = {
                 'default': 30,
                 'min': 0,
                 'max': 200
-            }         
+            },
+            'truncate_whole_label': {
+                'type': 'boolean',
+                'default': True
+            }
+        },
+        'default': {
+            'label': 15,
+            'label_alt': 30,
+            'truncate_whole_label': True
         }
     },
     'show_thumbnail': {

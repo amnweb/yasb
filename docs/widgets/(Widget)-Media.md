@@ -8,6 +8,7 @@
 | `max_field_size`        | dict    |         | Maximum field sizes for labels.                                             |
 | `max_field_size.label`  | integer | 20      | Maximum size for the main label.                                            |
 | `max_field_size.label_alt` | integer | 30   | Maximum size for the alternative label.                                     |
+| `max_field_size.truncate_whole_label` | boolean | false | Whether to truncate the whole label if it exceeds the maximum size.        |
 | `show_thumbnail`        | boolean | true    | Whether to show the media thumbnail.                                        |
 | `controls_only`         | boolean | false   | Whether to show only the media controls.                                    |
 | `controls_left`         | boolean | true    | Whether to position the controls on the left.                               |
@@ -98,6 +99,9 @@ media:
 - **hide_empty:** Whether to hide the widget when there is no media information available.
 - **callbacks:** A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, `on_right`. Available callbacks are `toggle_label`, `do_nothing`, and `toggle_play_pause`.
 - **max_field_size:** Maximum field sizes for the labels.
+  - **label:** Maximum size for the main label. If the label exceeds this size, it will be truncated.
+  - **label_alt:** Maximum size for the alternative label. If the label exceeds this size, it will be truncated.
+  - **truncate_whole_label:** Whether to truncate the whole label or separated `{title} {artist}` if it exceeds the maximum size. If set to false, only the part that exceeds the maximum size will be truncated.
 - **show_thumbnail:** Whether to show the media thumbnail.
 - **controls_only:** Whether to show only the media controls.
 - **controls_left:** Whether to place the media controls on the left.
