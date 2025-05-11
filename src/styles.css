@@ -64,7 +64,7 @@ QToolTip {
 .apps-widget .widget-container,
 .komorebi-workspaces .widget-container,
 .komorebi-active-layout .widget-container {
-    background-color: var(--crust);
+    background-color: var(--surface1);
     margin: 3px 0 3px 0;
     border-radius: 12px;
     border: 1px solid var(--surface0);
@@ -220,23 +220,25 @@ QToolTip {
     font-size: 12px;
 }
 .media-widget .btn {
-    color: #989caa;
+    color: #7a7f8b;
     padding: 0 4px;
     margin: 0;
-    font-family: Segoe Fluent Icons;
+    font-family: "JetBrainsMono NFP";
     font-weight: 400;
+    font-size: 20px;
 }
 .media-widget .btn:hover {
     color: #babfd3;
 }
 .media-widget .btn.play {
-    font-size: 16px;
+    font-size: 24px;
+    color: #989caa;
 }
 .media-widget .btn.disabled:hover,
 .media-widget .btn.disabled {
     color: #4e525c;
-    font-size: 12px;
     background-color: rgba(0, 0, 0, 0);
+    font-size: 20px;
 }
 .home-widget {
     padding: 0 4px 0 12px;
@@ -271,7 +273,7 @@ QToolTip {
 }
 .notification-widget .icon {
     font-size: 14px;
-} 
+}
 .notification-widget .icon.new-notification {
     color: var(--blue);
 }

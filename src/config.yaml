@@ -85,10 +85,10 @@ widgets:
       thumbnail_corner_radius: 0
       thumbnail_edge_fade: true
       icons:
-        prev_track: "\ue892"
-        next_track: "\ue893"
-        play: "\ue768"
-        pause: "\ue769"
+        prev_track: "\udb81\udcae"
+        next_track: "\udb81\udcad"
+        play: "\udb81\udc0a"
+        pause: "\udb80\udfe4"
   active_window:
     type: "yasb.active_window.ActiveWindowWidget"
     options:
@@ -168,10 +168,10 @@ widgets:
     options:
       label: "<span>{icon}</span> {temp}"
       label_alt: "{location}: Min {min_temp}, Max {max_temp}, Humidity {humidity}"
-      api_key: ""
+      api_key: env
       update_interval: 600
       hide_decimal: true
-      location: "USA Los Angeles 90006"
+      location: env
       callbacks:
         on_left: "toggle_label"
       icons:
