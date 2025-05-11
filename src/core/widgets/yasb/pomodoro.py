@@ -5,7 +5,7 @@ import re
 from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget, QVBoxLayout, QPushButton
 from PyQt6.QtCore import Qt, QTimer, QRectF, pyqtProperty, QPropertyAnimation
 from PyQt6.QtGui import QCursor, QPainter, QPen, QColor
-from core.utils.utilities import PopupWidget, add_shadow
+from core.utils.utilities import PopupWidget, add_shadow, ToastNotifier
 from core.widgets.base import BaseWidget
 from core.validation.widgets.yasb.pomodoro import VALIDATION_SCHEMA
 from core.utils.widgets.animation_manager import AnimationManager
@@ -364,21 +364,14 @@ class PomodoroWidget(BaseWidget):
         except Exception as e:
             logging.error(f"Failed to play notification sound: {e}")
 
-    def _get_guid(self):
-        yasb_path = r"C:\Program Files\Yasb\yasb.exe"
-        if os.path.exists(yasb_path):
-            return '{6D809377-6AF0-444B-8957-A3773F02200E}\\Yasb\\yasb.exe'
-        else:
-            return 'Yasb'
-
     def _show_desktop_notification(self):
         try:
-            from win11toast import toast
-            self._yasb_guid = self._get_guid()
+            
             self._icon_path = os.path.join(SCRIPT_PATH, 'assets', 'images', 'app_transparent.png')
             title = "Pomodoro Timer"
             message = "Break time!" if not self._is_break else "Work time!"
-            toast(title, message, app_id=self._yasb_guid, icon=self._icon_path)
+            toaster = ToastNotifier()
+            toaster.show(self._icon_path, title, message)
         except Exception as e:
             logging.warning(f"Failed to show desktop notification: {e}")
 
