@@ -21,7 +21,8 @@ DEFAULTS = {
     },
     'icons': {
         'note': '\udb82\udd0c',
-        'delete': '\ue20d',
+        'delete': '\ueab8',
+        'copy': '\uebcc',
     },
     'callbacks': {
         'on_left': 'toggle_menu',
@@ -140,6 +141,10 @@ VALIDATION_SCHEMA = {
             'delete': {
                 'type': 'string',
                 'default': DEFAULTS['icons']['delete']
+            },
+            'copy': {
+                'type': 'string',
+                'default': DEFAULTS['icons']['copy']
             }
         },
         'default': DEFAULTS['icons']

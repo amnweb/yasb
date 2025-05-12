@@ -7,7 +7,7 @@
 | `container_padding` | Dict  | `{ top: 0, left: 0, bottom: 0, right: 0 }` | Specifies the padding within the widget container.                                                                     |
 | `animation`       | Dict   | `{ enabled: true, type: "fadeInOut", duration: 200 }` | Controls animation settings; `enabled` turns animations on/off, `type` defines style, and `duration` is in ms. |
 | `menu`            | Dict   | See below                               | Popup menu settings. See details below.                                                                                |
-| `icons`           | Dict   | `{ note: "\udb82\udd0c", delete: "\ue20d" }` | Icons for note display and delete action.                                                                              |
+| `icons`           | Dict   | `{ note: "\udb82\udd0c", delete: "\ueab8", copy: "\uebcc" }` | Icons for note, delete action and copy text                                                                  |
 | `callbacks`       | Dict   | `{ on_left: "toggle_menu", on_middle: "do_nothing", on_right: "toggle_label" }` | Maps mouse actions to widget functions (e.g., toggling the menu or label).                                              |
 | `container_shadow`   | dict   | `None`                  | Container shadow options.                       |
 | `label_shadow`         | dict   | `None`                  | Label shadow options.                 |
@@ -55,8 +55,9 @@ notes:
       max_title_size: 150
       show_date_time: true
     icons:
-      note: "\udb82\udd0c"
-      delete: "\ue20d"
+      note: "udb82\udd0c"
+      delete: "\ueab8"
+      copy: "uebcc"
     callbacks:
       on_left: "toggle_menu"
       on_middle: "do_nothing"
@@ -89,6 +90,7 @@ notes:
 - **icons** Defines the icons used within the widget:
   - **note**: Icon representing a note.
   - **delete**: Icon used for the delete action.
+  - **copy**: Icon for copying text.
 - **callbacks** A set of functions mapped to mouse actions:
   - **on_left**: Triggered when the left mouse button is clicked (default: "toggle_menu").
   - **on_middle**: Triggered on a middle mouse click (default: "do_nothing").
@@ -123,6 +125,19 @@ notes:
 .notes-menu .note-input {}
 /* Focus style for the note input */
 .notes-menu .note-input:focus {}
+/* Button to delete a note */
+.notes-menu .delete-button {}
+/* Button hover effect */
+.notes-menu .delete-button:hover {}
+/* Button pressed effect */
+.notes-menu .delete-button:pressed {}
+/* Button to copy text */
+.notes-menu .copy-button {}
+/* Button hover effect */
+.notes-menu .copy-button:hover {}
+/* Button pressed effect */
+.notes-menu .copy-button:pressed {}
+/* Button pressed effect */
 ```
 
 ## Example Style
@@ -166,17 +181,31 @@ notes:
 .notes-menu .delete-button:hover {
     background-color: rgba(128, 128, 128, 0.5);
 }
+.notes-menu .copy-button {
+    color: #babfd3;
+    background: transparent;
+    border: none;
+    font-size: 16px;
+    padding: 4px 8px;
+    border-radius: 3px;
+}
+.notes-menu .copy-button:hover {
+    background-color: rgba(128, 128, 128, 0.5);
+}
+.notes-menu .copy-button:pressed {
+    color: #ffffff;
+}
 .notes-menu .note-item .title {
     font-size: 13px;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-family: 'Segoe UI'
 }
 .notes-menu .note-item .date {
     font-size: 12px;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-family: 'Segoe UI';
     color: rgba(255, 255, 255, 0.4);
 }
 .notes-menu .empty-list {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-family: 'Segoe UI';
     color: rgba(255, 255, 255, 0.2);
     font-size: 24px;
     font-weight: 600;
@@ -189,7 +218,7 @@ notes:
     border: none;
     border-radius: 4px;
     color: white;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-family: 'Segoe UI'
 }
 .notes-menu .cancel-button {
     margin-left: 4px;
@@ -206,7 +235,7 @@ notes:
 .notes-menu .note-input {
     background-color:rgba(17, 17, 27, 0.2);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-family: 'Segoe UI';
     font-size: 14px;
     max-height: 30px;
     padding: 4px;

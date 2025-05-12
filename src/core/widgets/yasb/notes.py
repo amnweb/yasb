@@ -365,14 +365,30 @@ class NotesWidget(BaseWidget):
 
         container_layout.addWidget(text_container)
 
-        # Spacer to push delete button to the right
+        # Spacer to push buttons to the right
         container_layout.addItem(QSpacerItem(0, 0, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum))
 
-        # Delete button
+        # Create vertical layout for the buttons
+        buttons_container = QWidget()
+        buttons_layout = QVBoxLayout(buttons_container)
+        buttons_layout.setContentsMargins(0, 0, 0, 0)
+        buttons_layout.setSpacing(5)  # Space between buttons
+        buttons_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)  # Center the buttons vertically
+
+        # Copy button on top
+        copy_button = QPushButton(self._icons['copy'])
+        copy_button.setProperty("class", "copy-button")
+        copy_button.clicked.connect(lambda: self._copy_note(note))
+        buttons_layout.addWidget(copy_button, 0, Qt.AlignmentFlag.AlignCenter)
+
+        # Delete button on bottom
         delete_button = QPushButton(self._icons['delete'])
         delete_button.setProperty("class", "delete-button")
         delete_button.clicked.connect(lambda: self._delete_note(note))
-        container_layout.addWidget(delete_button)
+        buttons_layout.addWidget(delete_button, 0, Qt.AlignmentFlag.AlignCenter)
+
+        # Add the buttons container to the main layout
+        container_layout.addWidget(buttons_container)
 
         # Edit on click
         container.mousePressEvent = lambda e: self._edit_note(note) if e.button() == Qt.MouseButton.LeftButton else None
@@ -410,6 +426,12 @@ class NotesWidget(BaseWidget):
         self._note_input.clear()
         self.add_button.setText("Add Note")
         self.cancel_button.hide()
+
+    def _copy_note(self, note):
+        """Copy note content to clipboard"""
+        from PyQt6.QtWidgets import QApplication
+        clipboard = QApplication.clipboard()
+        clipboard.setText(note['title'])
 
     def _load_notes(self) -> List[Dict]:
         """Load notes from JSON file"""
