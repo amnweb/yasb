@@ -45,7 +45,7 @@ class Bar(QWidget):
         self._animation = animation
         self._is_dark_theme = None
         self._layouts = layouts
-        
+
         self.screen_name = self.screen().name()
         self.app_bar_edge = (
             app_bar.AppBarEdge.Top
@@ -64,18 +64,18 @@ class Bar(QWidget):
         self.setWindowFlag(Qt.WindowType.FramelessWindowHint)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose) 
-        
+
         if self._window_flags['always_on_top']:
             self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint)
 
         self._bar_frame = QFrame(self)
         self._bar_frame.setProperty("class", f"bar {class_name}")
         self.update_theme_class()
-        
+
         self.position_bar(init)
         self.monitor_hwnd = get_monitor_hwnd(int(self.winId()))
         self._add_widgets(widgets)
-        
+
         if blur_effect['enabled']:
             Blur(
                 self.winId(),
@@ -87,9 +87,8 @@ class Bar(QWidget):
             )
 
         self.screen().geometryChanged.connect(self.on_geometry_changed, Qt.ConnectionType.QueuedConnection)
-           
+
         self.show()
-        
 
     @property
     def bar_id(self) -> str:
@@ -108,7 +107,7 @@ class Bar(QWidget):
                 self.screen(),
                 scale_screen_height
             )
-            
+
     def closeEvent(self, event):
         self.try_remove_app_bar()
 
@@ -125,7 +124,7 @@ class Bar(QWidget):
             y = int(screen_y + screen_h - bar_h - self._padding['bottom'])
         else:
             y = screen_y
-        
+
         return x, y
 
     def position_bar(self, init=False) -> None:
@@ -144,7 +143,7 @@ class Bar(QWidget):
 
         if self._alignment['position'] == "top":
             bar_y = bar_y + self._padding['top']
-        
+
         self.setGeometry(bar_x, bar_y, bar_width, bar_height)
         self._bar_frame.setGeometry(
             0,
@@ -153,7 +152,7 @@ class Bar(QWidget):
             bar_height
         )
         self.try_add_app_bar(scale_screen_height=scale_state)
-        
+
     def _add_widgets(self, widgets: dict[str, list] = None):
         bar_layout = QGridLayout()
         bar_layout.setContentsMargins(0, 0, 0, 0)
@@ -169,18 +168,40 @@ class Bar(QWidget):
 
             # Add widgets
             if layout_type in widgets:
-                for widget in widgets[layout_type]:
+                widget_list = widgets[layout_type]
+                total_widgets = len(widget_list)
+
+                for i, widget in enumerate(widget_list):
                     widget.parent_layout_type = layout_type
                     widget.bar_id = self.bar_id
                     widget.monitor_hwnd = self.monitor_hwnd
+
+                    current_class = widget.children()[2].property("class") or ""
+                    class_parts = [cls for cls in current_class.split() if not (
+                        cls in ("first-child", "last-child") or 
+                        cls.startswith("nth-child-") or 
+                        cls.startswith("nth-last-child-")
+                    )]
+
+                    if i == 0:
+                        class_parts.append("first-child")
+                    if i == total_widgets - 1:
+                        class_parts.append("last-child")
+
+                    class_parts.append(f"nth-child-{i}")
+                    class_parts.append(f"nth-last-child-{total_widgets-i-1}")
+                    widget.children()[2].setProperty("class", " ".join(class_parts))
+
                     layout.addWidget(widget, 0)
+
+                for i, widget in enumerate(widget_list):
+                    widget.style().unpolish(widget)
+                    widget.style().polish(widget)
 
             if config['alignment'] == "left" and config['stretch']:
                 layout.addStretch(1)
-
             elif config['alignment'] == "right" and config['stretch']:
                 layout.insertStretch(0, 1)
-
             elif config['alignment'] == "center" and config['stretch']:
                 layout.insertStretch(0, 1) 
                 layout.addStretch(1)
@@ -218,13 +239,13 @@ class Bar(QWidget):
         self.animation_group.addAnimation(self.height_animation)
         self.animation_group.addAnimation(self.opacity_animation)
         self.animation_group.start()
-        
+
     def showEvent(self, event):
         super().showEvent(event)
         if self._animation['enabled']:
             try:
                 self.animation_bar()
-                
+
             except AttributeError:
                 logging.error("Animation not initialized.")
         if not hasattr(self, "_fullscreen_timer") and self._window_flags['hide_on_fullscreen'] and self._window_flags['always_on_top']:
@@ -277,12 +298,11 @@ class Bar(QWidget):
         except Exception as e:
             logging.error(f"Failed to determine Windows theme: {e}")
             return False
-        
-    
+
     def update_theme_class(self):
         if not hasattr(self, '_bar_frame'):
             return
-        
+
         is_dark_theme = self.detect_os_theme()
         if is_dark_theme != self._is_dark_theme: 
             class_property = self._bar_frame.property("class")
@@ -293,13 +313,12 @@ class Bar(QWidget):
             self._bar_frame.setProperty("class", class_property)
             update_styles(self._bar_frame)
             self._is_dark_theme = is_dark_theme
- 
-    
+
     def changeEvent(self, event: QEvent) -> None:
         if event.type() == QEvent.Type.PaletteChange:
             self.update_theme_class()
         super().changeEvent(event)
-        
+
 def update_styles(widget):
     widget.style().unpolish(widget)
     widget.style().polish(widget)
