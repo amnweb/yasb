@@ -25,15 +25,21 @@ self._widget_container.setLayout(self._widget_container_layout)
 self.widget_layout.addWidget(self._widget_container)
 ```
 
-## 4. Use **\_create_dynamically_label()** for dynamic labels:
+## 4. Use **build_widget_label(self, label, label_alt, shadow)** for dynamic labels:
 
 -   This method allows you to create labels with icons and text dynamically.
 
 ```py
-self._create_dynamically_label(self._label_content, self._label_alt_content)
+from core.utils.utilities import build_widget_label
+build_widget_label(self, self._label_content, self._label_alt_content, self._label_shadow)
+```
+of without shadow and alt label:
+```py
+from core.utils.utilities import build_widget_label
+build_widget_label(self, self._label_content, None, None)
 ```
 
--   Example of **\_create_dynamically_label()** method:
+-   Or use a custom function if needed - the **build_widget_label()** method:
 
 ```py
  """
@@ -61,7 +67,7 @@ self._create_dynamically_label(self._label_content, self._label_alt_content)
  - `self._widgets_alt`: Hidden labels created from the alternative content
  """
 
- def _create_dynamically_label(self, content: str, content_alt: str):
+ def build_widget_label(self, content: str, content_alt: str):
      def process_content(content, is_alt=False):
          label_parts = re.split('(<span.*?>.*?</span>)', content)
          label_parts = [part for part in label_parts if part]
