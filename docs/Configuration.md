@@ -16,7 +16,7 @@ This allows you to securely store sensitive information (such as API keys or tok
 - The `.env` file should be placed in your config directory:  
   `C:/Users/{username}/.config/yasb/.env`  
   or in the directory specified by the `YASB_CONFIG_HOME` environment variable.
-- Variables defined in `.env` can be referenced in your `config.yaml` by setting the value to `env` (for example, `api_key: env` or `api_ley: "$env:YASB_WEATHER_API_KEY"`).
+- Variables defined in `.env` can be referenced in your `config.yaml` by setting the value to `env` (for example, `api_key: env` or `api_key: "$env:YASB_WEATHER_API_KEY"`).
 - The `.env` file is loaded automatically on startup.
 
 **Example `.env` file:**
