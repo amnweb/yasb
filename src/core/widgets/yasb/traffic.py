@@ -7,9 +7,9 @@ from humanize import naturalsize
 from core.widgets.base import BaseWidget
 from core.validation.widgets.yasb.traffic import VALIDATION_SCHEMA
 from PyQt6.QtWidgets import QLabel,QHBoxLayout,QWidget
-from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QObject
+from PyQt6.QtCore import QTimer, pyqtSignal, QObject
 from core.utils.widgets.animation_manager import AnimationManager
-from core.utils.utilities import add_shadow
+from core.utils.utilities import add_shadow, build_widget_label
 
 class InternetChecker(QObject):
     """
@@ -94,8 +94,8 @@ class TrafficWidget(BaseWidget):
         add_shadow(self._widget_container, self._container_shadow)
         # Add the container to the main widget layout
         self.widget_layout.addWidget(self._widget_container)
-       
-        self._create_dynamically_label(self._label_content,self._label_alt_content)
+
+        build_widget_label(self, self._label_content, self._label_alt_content, self._label_shadow)
 
         if self._hide_if_offline:
             self.internet_checker = InternetChecker(parent=self)
@@ -138,37 +138,6 @@ class TrafficWidget(BaseWidget):
         for widget in self._widgets_alt:
             widget.setVisible(self._show_alt_label)
         self._update_label()
-        
-    def _create_dynamically_label(self, content: str, content_alt: str):
-        def process_content(content, is_alt=False):
-            label_parts = re.split('(<span.*?>.*?</span>)', content)
-            label_parts = [part for part in label_parts if part]
-            widgets = []
-            for part in label_parts:
-                part = part.strip()  # Remove any leading/trailing whitespace
-                if not part:
-                    continue
-                if '<span' in part and '</span>' in part:
-                    class_name = re.search(r'class=(["\'])([^"\']+?)\1', part)
-                    class_result = class_name.group(2) if class_name else 'icon'
-                    icon = re.sub(r'<span.*?>|</span>', '', part).strip()
-                    label = QLabel(icon)
-                    label.setProperty("class", class_result)
-                else:
-                    label = QLabel(part)
-                    label.setProperty("class", "label")
-                label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                add_shadow(label, self._label_shadow)
-                self._widget_container_layout.addWidget(label)
-                widgets.append(label)
-                if is_alt:
-                    label.hide()
-                else:
-                    label.show()
-            return widgets
-        self._widgets = process_content(content)
-        self._widgets_alt = process_content(content_alt, is_alt=True)
-               
 
     def _update_label(self):
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
@@ -177,9 +146,6 @@ class TrafficWidget(BaseWidget):
         label_parts = re.split('(<span.*?>.*?</span>)', active_label_content)
         label_parts = [part for part in label_parts if part]
         widget_index = 0
-
-
-
         try:
             upload_speed, download_speed = self._get_speed()
         except Exception:

@@ -3,14 +3,14 @@ import json
 from collections import deque
 
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QWidget
-from PyQt6.QtCore import Qt, QUrl
+from PyQt6.QtCore import QUrl
 from PyQt6.QtNetwork import QAuthenticator, QNetworkAccessManager, QNetworkRequest, QNetworkReply
 
 from core.validation.widgets.yasb.libre_monitor import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
 from urllib.parse import quote
 from core.utils.widgets.animation_manager import AnimationManager
-from core.utils.utilities import add_shadow
+from core.utils.utilities import add_shadow, build_widget_label
 
 class LibreHardwareMonitorWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
@@ -75,7 +75,7 @@ class LibreHardwareMonitorWidget(BaseWidget):
         add_shadow(self._widget_container, self._container_shadow)
         self.widget_layout.addWidget(self._widget_container)
 
-        self._create_dynamically_label(self._label_content, self._label_alt_content)
+        build_widget_label(self, self._label_content, self._label_alt_content, self._label_shadow)
 
         self.register_callback("toggle_label", self._toggle_label)
         self.register_callback("update_label", self._update_label)
@@ -115,39 +115,6 @@ class LibreHardwareMonitorWidget(BaseWidget):
         for widget in self._widgets_alt:
             widget.setVisible(self._show_alt_label)
         self._update_label()
-
-    def _create_dynamically_label(self, content: str, content_alt: str):
-        """Label initialization"""
-
-        def process_content(content: str, is_alt=False):
-            label_parts = re.split("(<span.*?>.*?</span>)", content)
-            label_parts = [part for part in label_parts if part]
-            widgets: list[QLabel] = []
-            for part in label_parts:
-                part = part.strip()
-                if not part:
-                    continue
-                if "<span" in part and "</span>" in part:
-                    class_name = re.search(r'class=(["\'])([^"\']+?)\1', part)
-                    class_result = class_name.group(2) if class_name else "icon"
-                    icon = re.sub(r"<span.*?>|</span>", "", part).strip()
-                    label = QLabel(icon)
-                    label.setProperty("class", class_result)
-                else:
-                    label = QLabel(part)
-                    label.setProperty("class", "label")
-                label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                add_shadow(label, self._label_shadow)
-                self._widget_container_layout.addWidget(label)
-                widgets.append(label)
-                if is_alt:
-                    label.hide()
-                else:
-                    label.show()
-            return widgets
-
-        self._widgets = process_content(content)
-        self._widgets_alt = process_content(content_alt, is_alt=True)
 
     def _get_histogram_bar(self, value: float, value_min: float, value_max: float):
         """Gets the appropriate histogram element from the icons list based on the value and min/max"""

@@ -4,14 +4,14 @@ import logging
 from core.widgets.base import BaseWidget
 from core.validation.widgets.yasb.microphone import VALIDATION_SCHEMA
 from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtGui import QWheelEvent
 from comtypes import CLSCTX_ALL, CoInitialize, CoUninitialize, COMObject
 from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume, IAudioEndpointVolumeCallback
 from pycaw.callbacks import MMNotificationClient
 from core.utils.win32.system_function import KEYEVENTF_KEYUP
 from core.utils.widgets.animation_manager import AnimationManager
-from core.utils.utilities import add_shadow
+from core.utils.utilities import add_shadow, build_widget_label
 
 # Disable comtypes logging
 logging.getLogger('comtypes').setLevel(logging.CRITICAL)
@@ -71,7 +71,8 @@ class MicrophoneWidget(BaseWidget):
         self._widget_container.setProperty("class", "widget-container")
         add_shadow(self._widget_container, self._container_shadow)
         self.widget_layout.addWidget(self._widget_container)
-        self._create_dynamically_label(self._label_content, self._label_alt_content)
+
+        build_widget_label(self, self._label_content, self._label_alt_content, self._label_shadow)
         
         self.register_callback("toggle_label", self._toggle_label)
         self.register_callback("toggle_mute", self.toggle_mute)
@@ -100,37 +101,7 @@ class MicrophoneWidget(BaseWidget):
         for widget in self._widgets_alt:
             widget.setVisible(self._show_alt_label)
         self._update_label()
-        
-    def _create_dynamically_label(self, content: str, content_alt: str):
-        def process_content(content, is_alt=False):
-            label_parts = re.split('(<span.*?>.*?</span>)', content)
-            label_parts = [part for part in label_parts if part]
-            widgets = []
-            for part in label_parts:
-                part = part.strip()
-                if not part:
-                    continue
-                if '<span' in part and '</span>' in part:
-                    class_name = re.search(r'class=(["\'])([^"\']+?)\1', part)
-                    class_result = class_name.group(2) if class_name else 'icon'
-                    icon = re.sub(r'<span.*?>|</span>', '', part).strip()
-                    label = QLabel(icon)
-                    label.setProperty("class", class_result)
-                else:
-                    label = QLabel(part)
-                    label.setProperty("class", "label")
-                label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                add_shadow(label, self._label_shadow)
-                self._widget_container_layout.addWidget(label)
-                widgets.append(label)
-                if is_alt:
-                    label.hide()
-                else:
-                    label.show()
-            return widgets
-        self._widgets = process_content(content)
-        self._widgets_alt = process_content(content_alt, is_alt=True)
- 
+
 
     def _update_label(self): 
         if self.audio_endpoint:

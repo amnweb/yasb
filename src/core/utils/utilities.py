@@ -12,7 +12,7 @@ from winrt.windows.ui.notifications import (
 import psutil
 from PyQt6.QtCore import QEvent, QPoint, Qt
 from PyQt6.QtGui import QColor, QScreen
-from PyQt6.QtWidgets import QApplication, QFrame, QGraphicsDropShadowEffect, QWidget
+from PyQt6.QtWidgets import QApplication, QFrame, QGraphicsDropShadowEffect, QLabel, QWidget
 
 from core.utils.win32.blurWindow import Blur
 
@@ -64,6 +64,39 @@ def add_shadow(el: QWidget, options: dict[str, Any]) -> None:
         shadow_effect.setColor(QColor(color))
 
     el.setGraphicsEffect(shadow_effect)
+
+def build_widget_label(self, content: str, content_alt: str = None, content_shadow: dict = None):
+    def process_content(content, is_alt=False):
+        label_parts = re.split('(<span.*?>.*?</span>)', content)
+        label_parts = [part for part in label_parts if part]
+        widgets = []
+        for part in label_parts:
+            part = part.strip()
+            if not part:
+                continue
+            if '<span' in part and '</span>' in part:
+                class_name = re.search(r'class=(["\'])([^"\']+?)\1', part)
+                class_result = class_name.group(2) if class_name else 'icon'
+                icon = re.sub(r'<span.*?>|</span>', '', part).strip()
+                label = QLabel(icon)
+                label.setProperty("class", class_result)
+            else:
+                label = QLabel(part)
+                label.setProperty("class", "label alt" if is_alt else "label")
+            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            label.setCursor(Qt.CursorShape.PointingHandCursor)
+            if content_shadow:
+                add_shadow(label, content_shadow)
+            self._widget_container_layout.addWidget(label)
+            widgets.append(label)
+            if is_alt:
+                label.hide()
+            else:
+                label.show()
+        return widgets
+    self._widgets = process_content(content)
+    if content_alt:
+        self._widgets_alt = process_content(content_alt, is_alt=True)
 
 @lru_cache(maxsize=1)
 def get_app_identifier():
