@@ -1,3 +1,6 @@
+from typing import Any
+
+
 DEFAULTS = {
     'label': '0',
     'label_alt': '0',
@@ -44,7 +47,7 @@ DEFAULTS = {
     }
 }
 
-VALIDATION_SCHEMA = {
+VALIDATION_SCHEMA: dict[str, Any] = {
     'label': {
         'type': 'string',
         'default': DEFAULTS['label']
