@@ -175,6 +175,10 @@ class PopupWidget(QWidget):
             offset_left (int): Horizontal offset in pixels
             offset_top (int): Vertical offset in pixels
         """
+        # store the arguments for later use
+        # this is needed to reposition the popup when resized
+        self._pos_args = (alignment, direction, offset_left, offset_top)
+
         parent = cast(QWidget, self.parent()) # parent should be a QWidget
         if not parent:
             return
@@ -245,7 +249,13 @@ class PopupWidget(QWidget):
         super().hideEvent(event)
 
     def resizeEvent(self, event):
+        # reset geometry
         self._popup_content.setGeometry(0, 0, self.width(), self.height())
+        # reposition if we've already called setPosition()
+        if hasattr(self, '_pos_args'):
+            alignment, direction, offset_left, offset_top = self._pos_args
+            self.setPosition(alignment, direction, offset_left, offset_top)
+
         super().resizeEvent(event)
 
 class ToastNotifier:
