@@ -281,7 +281,7 @@ class WeatherWidget(BaseWidget):
 
         day_widgets: list[QWidget] = []
         # Create frames for each day
-        failed_icons: list[tuple[QLabel, QPixmap, str]] = []
+        failed_icons: list[tuple[QLabel, str]] = []
         for i in range(3):
             frame_day = QWidget()
             day_widgets.append(frame_day)
@@ -300,26 +300,15 @@ class WeatherWidget(BaseWidget):
 
             # Create the icon label and pixmap
             row_day_icon_label = QLabel()
-            pixmap_day = QPixmap()
             icon_url = self.weather_data[f"{{day{i}_icon}}"]
             icon_data_day = self.icon_fetcher.get_icon(icon_url)
             if bool(icon_data_day):
-                self._set_pixmap(row_day_icon_label, pixmap_day, icon_data_day)
+                self._set_pixmap(row_day_icon_label, icon_data_day)
             else:
-                failed_icons.append((row_day_icon_label, pixmap_day, icon_url))
+                failed_icons.append((row_day_icon_label, icon_url))
             # Add widgets to frame layouts
             layout_day.addWidget(row_day_label)
             layout_day.addWidget(row_day_icon_label)
-
-        # If any icons failed to load, try to fetch them again once
-        if failed_icons:
-            self.icon_fetcher.fetch_icons([icon_url for _, _, icon_url in failed_icons])
-
-            def update_failed_icons():
-                for label, pixmap, icon_url in failed_icons:
-                    self._set_pixmap(label, pixmap, self.icon_fetcher.get_icon(icon_url))
-
-            self.icon_fetcher.finished.connect(update_failed_icons)  # type: ignore
 
         # Create days layout and add frames
         days_layout = QHBoxLayout()
@@ -341,8 +330,29 @@ class WeatherWidget(BaseWidget):
         )
         self.dialog.show()
 
-    def _set_pixmap(self, label: QLabel, pixmap: QPixmap, icon_bytes: bytes):
+        # If any icons failed to load, try to fetch them again once
+        if failed_icons:
+            try:
+                # Create a temporary icon fetcher to fetch the missing icons
+                temp_icon_fetcher = IconFetcher(self.dialog)
+                temp_icon_fetcher.fetch_icons([icon_url for _, icon_url in failed_icons])
+
+                def update_failed_icons():
+                    for label, icon_url in failed_icons:
+                        # Update the cached icons
+                        new_icon = temp_icon_fetcher.get_icon(icon_url)
+                        if not bool(new_icon):
+                            continue
+                        self.icon_fetcher.set_icon(icon_url, new_icon)
+                        self._set_pixmap(label, temp_icon_fetcher.get_icon(icon_url))
+
+                temp_icon_fetcher.finished.connect(update_failed_icons)  # type: ignore
+            except Exception as e:
+                logging.debug(f"Failed to update weather card icons: {e}")
+
+    def _set_pixmap(self, label: QLabel, icon_bytes: bytes):
         """Set the pixmap for the day icon label."""
+        pixmap = QPixmap()
         pixmap.loadFromData(icon_bytes)
         scaled_pixmap_day = pixmap.scaledToHeight(
             self._weather_card["icon_size"], Qt.TransformationMode.SmoothTransformation
