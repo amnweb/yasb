@@ -39,6 +39,7 @@ class WeatherDataFetcher(QObject):
 
     def __init__(self, parent: QObject, url: QUrl, timeout: int):
         super().__init__(parent)
+        self.started = False
         self._manager = QNetworkAccessManager(self)
         self._manager.finished.connect(self.handle_response)  # type: ignore[reportUnknownMemberType]
         self._fetch_weather_data_timer = QTimer(self)
@@ -51,6 +52,7 @@ class WeatherDataFetcher(QObject):
         # To not make two or more requests at the same time
         QTimer.singleShot(randint(200, 600), self.make_request)  # type: ignore[reportUnknownMemberType]
         self._fetch_weather_data_timer.start(self._timeout)
+        self.started = True
 
     def make_request(self, url: QUrl | None = None):
         if url is None:
@@ -216,7 +218,8 @@ class WeatherWidget(BaseWidget):
         self.callback_right = callbacks["on_right"]
         self.callback_middle = callbacks["on_middle"]
 
-        self.weather_fetcher.start()
+        if not self.weather_fetcher.started:
+            self.weather_fetcher.start()
 
     def _toggle_label(self):
         if self._animation["enabled"]:
