@@ -177,19 +177,13 @@ class Bar(QWidget):
                     widget.monitor_hwnd = self.monitor_hwnd
 
                     current_class = widget.children()[2].property("class") or ""
-                    class_parts = [cls for cls in current_class.split() if not (
-                        cls in ("first-child", "last-child") or 
-                        cls.startswith("nth-child-") or 
-                        cls.startswith("nth-last-child-")
-                    )]
+                    class_parts = [cls for cls in current_class.split() if cls not in ("first-child", "last-child")]
 
                     if i == 0:
                         class_parts.append("first-child")
                     if i == total_widgets - 1:
                         class_parts.append("last-child")
 
-                    class_parts.append(f"nth-child-{i}")
-                    class_parts.append(f"nth-last-child-{total_widgets-i-1}")
                     widget.children()[2].setProperty("class", " ".join(class_parts))
 
                     layout.addWidget(widget, 0)
