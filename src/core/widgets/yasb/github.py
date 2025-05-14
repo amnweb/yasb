@@ -13,7 +13,7 @@ from PyQt6.QtCore import QPoint, Qt, QTimer, QUrl
 from PyQt6.QtGui import QColor, QCursor, QDesktopServices, QPainter, QPaintEvent
 from PyQt6.QtWidgets import QGraphicsOpacityEffect, QHBoxLayout, QLabel, QScrollArea, QVBoxLayout, QWidget
 
-from core.utils.utilities import PopupWidget, add_shadow, build_widget_label
+from core.utils.utilities import PopupWidget, add_shadow
 from core.utils.widgets.animation_manager import AnimationManager
 from core.validation.widgets.yasb.github import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
@@ -136,7 +136,7 @@ class GithubWidget(BaseWidget):
         add_shadow(self._widget_container, self._container_shadow)
 
         self.widget_layout.addWidget(self._widget_container)
-        build_widget_label(self, self._label_content, self._label_alt_content, self._label_shadow)
+        self._create_dynamically_label(self._label_content, self._label_alt_content)
         
         self.register_callback("toggle_label", self._toggle_label)
         self.register_callback("toggle_menu", self._toggle_menu)
@@ -168,6 +168,43 @@ class GithubWidget(BaseWidget):
             widget.setVisible(self._show_alt_label)
         self._update_label()
  
+    def _create_dynamically_label(self, content: str, content_alt: str):
+        def process_content(content, is_alt=False):
+            label_parts = re.split('(<span.*?>.*?</span>)', content)
+            label_parts = [part for part in label_parts if part]
+            widgets = []
+            for part in label_parts:
+                part = part.strip()  # Remove any leading/trailing whitespace
+                if not part:
+                    continue
+                if '<span' in part and '</span>' in part:
+                    class_name = re.search(r'class=(["\'])([^"\']+?)\1', part)
+                    class_result = class_name.group(2) if class_name else 'icon'
+                    icon = re.sub(r'<span.*?>|</span>', '', part).strip()
+                    label = NotificationLabel(
+                        icon,
+                        corner=self._notification_dot["corner"],
+                        color=self._notification_dot["color"],
+                        margin=self._notification_dot["margin"]
+                    )
+                    label.setProperty("class", class_result)
+                    self._notification_label = label
+                else:
+                    label = QLabel(part)
+                    label.setProperty("class", "label")
+                label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+                label.setAlignment(Qt.AlignmentFlag.AlignCenter)    
+                add_shadow(label, self._label_shadow)
+                self._widget_container_layout.addWidget(label)
+                
+                widgets.append(label)
+                if is_alt:
+                    label.hide()
+                else:
+                    label.show()
+            return widgets
+        self._widgets = process_content(content)
+        self._widgets_alt = process_content(content_alt, is_alt=True)
 
     def _update_label(self):
         notification_count = len([notification for notification in self._github_data if notification['unread']])
