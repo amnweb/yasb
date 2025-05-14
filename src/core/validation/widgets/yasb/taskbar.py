@@ -17,6 +17,12 @@ DEFAULTS = {
         'min_length': 10,
         'max_length': 30
     },
+    'icon_recolor': {
+        'enabled': False,
+        'main_color': '',
+        'highlight_strength': 0.5,
+        'shadow_strength': 0.5,
+    },
     'container_padding': {'top': 0, 'left': 0, 'bottom': 0, 'right': 0},
     'callbacks': {
         'on_left': 'toggle_window',
@@ -84,6 +90,29 @@ VALIDATION_SCHEMA = {
             }
         },
         'default': DEFAULTS['title_label']
+    },
+    'icon_recolor': {
+        'type': ['dict'],
+        'required': False,
+        'schema': {
+            'enabled': {
+                'type': 'boolean',
+                'default': DEFAULTS['icon_recolor']['enabled']
+            },
+            'main_color': {
+                'type': 'string',
+                'default': DEFAULTS['icon_recolor']['main_color']
+            },
+            'highlight_strength': {
+                'type': 'float',
+                'default': DEFAULTS['icon_recolor']['highlight_strength']
+            },
+            'shadow_strength': {
+                'type': 'float',
+                'default': DEFAULTS['icon_recolor']['shadow_strength']
+            }
+        },
+        'default': DEFAULTS['icon_recolor']
     },
     'animation': {
         'type': ['dict', 'boolean'],
