@@ -85,6 +85,9 @@ binding_modes:
 .glazewm-binding-mode .label {
 }
 
+.glazewm-binding-mode .label-offline {
+}
+
 .glazewm-binding-mode .icon {
 }
 ```
@@ -102,6 +105,11 @@ binding_modes:
 .glazewm-binding-mode .label {
     color: var(--text);
     font-size: 12px;
+}
+
+.glazewm-binding-mode .label-offline {
+    color: var(--subtext0);
+    font-size: 10px;
 }
 
 .glazewm-binding-mode .icon {
