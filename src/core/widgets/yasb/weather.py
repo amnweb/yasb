@@ -270,7 +270,7 @@ class WeatherWidget(BaseWidget):
             f"{'<br>Alert expires ' + self.weather_data['{alert_end_date}'] if self.weather_data['{alert_end_date}'] else ''}"
             f"<br>{self.weather_data['{alert_desc}']}"
         )
-        today_label2.setProperty("class", "label arert")
+        today_label2.setProperty("class", "label alert")
         today_label2.setAlignment(Qt.AlignmentFlag.AlignCenter)
         today_label2.setWordWrap(True)
 
