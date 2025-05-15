@@ -7,8 +7,9 @@
 | `glazewm_server_uri` | string | `'ws://localhost:6123'` | Optional GlazeWM server uri. |
 | `hide_if_no_active` | boolean  | `True` | Hide the widget when no binding mode is active. |
 | `label_if_no_active` | string | `"No binding mode active"` | Label to display when no binding mode is active. |
+| `binding_modes_to_cycle_through` | list | `['none', 'resize', 'pause']` | Binding Mode names to cycle through with callbacks `next_binding_mode` and `prev_binding_mode` |
 | `container_padding` | dict | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}` | Explicitly set padding inside widget container. |
-| `callbacks` | dict | `{'on_left': 'disable_binding_mode', 'on_middle': 'do_nothing', 'on_right': 'toggle_lable'}` | Callbacks for mouse events on the widget. |
+| `callbacks` | dict | `{'on_left': 'next_binding_mode', 'on_middle': 'toggle_label', 'on_right': 'disable_binding_mode'}` | Callbacks for mouse events on the widget. |
 | `animation` | dict | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}` | Animation settings for the widget. |
 | `container_shadow` | dict   | `None` | Container shadow options. |
 | `label_shadow` | dict | `None` | Label shadow options. |
@@ -26,10 +27,15 @@ glazewm_binding_mode:
         left: 0
         bottom: 0
         right: 0
+      binding_modes_to_cycle_through: [
+         "none", # none handles if no binding mode is active
+         "resize",
+         "pause"
+      ]
       callbacks:
-        on_left: "disable_binding_mode"
-        on_middle: "do_nothing"
-        on_right: "toggle_label"
+        on_left: "next_binding_mode"
+        on_middle: "toggle_label"
+        on_right: "disable_binding_mode"
 
     # By default binding mode names are fetched from GlazeWM and "display_name" option takes priority over "name".
 ```
@@ -40,12 +46,15 @@ glazewm_binding_mode:
 - **glazewm_server_uri:** Optional GlazeWM server uri if it ever changes on GlazeWM side.
 - **hide_if_no_active:** Hide the widget when no binding mode is active.
 - **label_if_no_active:** Label to display when no binding mode is active.
+- **binding_modes_to_cycle_through:** Binding Mode names to cycle through with callbacks `next_binding_mode` and `prev_binding_mode`. Use `'none'` to handle no binding mode active.
 - **container_padding**: Explicitly set padding inside widget container. Use this option to set padding inside the widget container. You can set padding for top, left, bottom and right sides of the widget container.
 - **callbacks:** A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions.
   - **callback functions**:
     - `toggle_label`: Toggles the label of the widget.
     - `do_nothing`: Does nothing when clicked.
     - `disable_binding_mode`: Disables the binding mode when clicked.
+    - `next_binding_mode`: Switches to the next binding mode.
+    - `prev_binding_mode`: Switches to the previous binding mode.
 - **animation:** A dictionary specifying the animation settings for the widget. It contains three keys: `enabled`, `type`, and `duration`. The `type` can be `fadeInOut` and the `duration` is the animation duration in milliseconds.
 - **container_shadow:** Container shadow options.
 - **label_shadow:** Label shadow options.
