@@ -4,6 +4,11 @@ DEFAULTS = {
     'glazewm_server_uri': 'ws://localhost:6123',
     'hide_if_no_active': True,
     'label_if_no_active': 'No binding mode active',
+    'binding_modes_to_cycle_through' : [
+        'none',
+        'resize',
+        'pause',
+    ],
     'default_shadow': {
         'enabled': False,
         'color': 'black',
@@ -17,9 +22,9 @@ DEFAULTS = {
     },
     'container_padding': {'top': 0, 'left': 0, 'bottom': 0, 'right': 0},
     'callbacks': {
-        'on_left': 'disable_binding_mode',
-        'on_middle': "do_nothing",
-        'on_right': "toggle_label"
+        'on_left': 'next_binding_mode',
+        'on_middle': 'toggle_label',
+        'on_right': 'disable_binding_mode'
     }
 }
 
@@ -43,6 +48,14 @@ VALIDATION_SCHEMA = {
     'label_if_no_active': {
         'type': 'string',
         'default': DEFAULTS['label_if_no_active'],
+    },
+    'binding_modes_to_cycle_through': {
+        'type': 'list',
+        'default': DEFAULTS['binding_modes_to_cycle_through'],
+        'schema': {
+            'type': 'string',
+            'required': False,
+        }
     },
     'container_shadow': {
         'type': 'dict',
