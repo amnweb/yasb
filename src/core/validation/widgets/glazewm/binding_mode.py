@@ -1,9 +1,15 @@
 DEFAULTS = {
-    'label': '<span>\uf071</span> {binding_mode}',
-    'label_alt': '<span>\uf071</span> Current mode: {binding_mode}',
+    'label': '<span>{icon}</span> {binding_mode}',
+    'label_alt': '<span>{icon}</span> Current mode: {binding_mode}',
     'glazewm_server_uri': 'ws://localhost:6123',
     'hide_if_no_active': True,
     'label_if_no_active': 'No binding mode active',
+    'default_icon': '\uf071',
+    'icons': {
+        'none': '',
+        'resize': '\uf071',
+        'pause': '\uf28c',
+    },
     'binding_modes_to_cycle_through' : [
         'none',
         'resize',
@@ -48,6 +54,21 @@ VALIDATION_SCHEMA = {
     'label_if_no_active': {
         'type': 'string',
         'default': DEFAULTS['label_if_no_active'],
+    },
+    'default_icon': {
+        'type': 'string',
+        'default': DEFAULTS['default_icon'],
+    },
+    'icons': {
+        'type': 'dict',
+        'required': False,
+        'default': DEFAULTS['icons'],
+        'keysrules': {
+            'type': 'string',
+        },
+        'valuesrules': {
+            'type': 'string',
+        },
     },
     'binding_modes_to_cycle_through': {
         'type': 'list',

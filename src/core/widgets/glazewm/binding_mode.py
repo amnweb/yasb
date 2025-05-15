@@ -30,6 +30,8 @@ class GlazewmBindingModeWidget(BaseWidget):
         glazewm_server_uri: str,
         hide_if_no_active: bool,
         label_if_no_active: str,
+        default_icon: str,
+        icons: dict[str, str],
         binding_modes_to_cycle_through: list[str],
         container_padding: dict[str, int],
         animation: dict[str, str],
@@ -43,6 +45,8 @@ class GlazewmBindingModeWidget(BaseWidget):
         self._show_alt_label = False
         self._hide_if_no_active = hide_if_no_active
         self._label_if_no_active = label_if_no_active
+        self._default_icon = default_icon
+        self._icons = icons
         self._binding_modes_to_cycle_through = binding_modes_to_cycle_through
         self._current_binding_mode_index = 0
         self._padding = container_padding
@@ -109,6 +113,7 @@ class GlazewmBindingModeWidget(BaseWidget):
 
         label_options = {
             "{binding_mode}": self._active_binding_mode.display_name or self._active_binding_mode.name or self._label_if_no_active,
+            "{icon}": self._icons.get(self._active_binding_mode.name or "none", self._default_icon),
         }
         for part in label_parts:
             part = part.strip()
@@ -118,7 +123,11 @@ class GlazewmBindingModeWidget(BaseWidget):
                     formatted_text = formatted_text.replace(option, str(value))
                 if '<span' in part and '</span>' in part:
                     icon = re.sub(r'<span.*?>|</span>', '', part).strip()
-                    active_widgets[widget_index].setText(icon)
+                    if icon in label_options:
+                        active_widgets[widget_index].setProperty("class", f"icon {self._active_binding_mode.name or "none"}")
+                        active_widgets[widget_index].setText(formatted_text)
+                    else:
+                        active_widgets[widget_index].setText(icon)
                 else:
                     if widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
                         active_widgets[widget_index].setText(formatted_text)
@@ -126,7 +135,7 @@ class GlazewmBindingModeWidget(BaseWidget):
                             active_widgets[widget_index].setProperty("class", "label")
                         if not self._active_binding_mode.name:
                             active_widgets[widget_index].setProperty("class", "label-offline")
-                        self._reload_css(active_widgets[widget_index])
+                self._reload_css(active_widgets[widget_index])
                 widget_index += 1
 
     @pyqtSlot()
