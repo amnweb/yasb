@@ -64,14 +64,18 @@ class WeatherDataFetcher(QObject):
 
     def handle_response(self, reply: QNetworkReply):
         if reply.error() == QNetworkReply.NetworkError.NoError:
-            logging.info(f"Fetched new weather data at {datetime.now()}")
-            self.finished.emit(json.loads(reply.readAll().data().decode()))
+            logging.info(f"Fetching new weather data at {datetime.now()}")
+            try:
+                self.finished.emit(json.loads(reply.readAll().data().decode()))
+            except json.JSONDecodeError as e:
+                logging.error(f"Weather response error. Weather data is not a valid JSON: {e}")
+                self.finished.emit({})
+            except Exception as e:
+                logging.error(f"Weather response error: {e}")
+                self.finished.emit({})
         else:
-            # Retry with delay
-            logging.error(
-                f"Weather response error: {reply.error().name} {reply.error().value}. Retrying in 10 seconds."
-            )
-            QTimer.singleShot(10000, self.make_request)  # type: ignore[reportUnknownMemberType]
+            logging.error(f"Weather response error: {reply.error().name} {reply.error().value}.")
+            self.finished.emit({})
             reply.deleteLater()
 
 
@@ -103,7 +107,6 @@ class IconFetcher(QObject):
             request = QNetworkRequest(QUrl(url))
             request.setRawHeader(*HEADER)
             request.setRawHeader(*CACHE_CONTROL)
-            # logging.debug(f"Fetching new icon for: {url}")
             reply = self._manager.get(request)
             reply.finished.connect(lambda reply=reply, url=url: self._handle_reply(reply, url))  # type: ignore
         if len(self._pending_icons) == 0:
@@ -120,14 +123,11 @@ class IconFetcher(QObject):
             else:
                 raise Exception(f"Failed to fetch icon {url}: {reply.error().name} {reply.error().value}")
         except Exception as e:
-            # Retry with delay
-            logging.warning(f"{e}. Retrying in 5 seconds.")
-            QTimer.singleShot(5000, lambda: self.fetch_icons([url]))  # type: ignore[reportUnknownMemberType]
-            reply.deleteLater()
+            logging.warning(e)
         finally:
-            reply.deleteLater()
             if len(self._pending_icons) == 0:
                 self.finished.emit()
+            reply.deleteLater()
 
     def get_icon(self, url: str) -> bytes:
         return self._icon_cache.get(url, b"")
@@ -176,6 +176,11 @@ class WeatherWidget(BaseWidget):
         self.weather_fetcher.finished.connect(self.process_weather_data)  # type: ignore[reportUnknownMemberType]
         self.weather_fetcher.finished.connect(lambda *_: self._update_label(True))  # type: ignore[reportUnknownMemberType]
         self.icon_fetcher = IconFetcher.get_instance(self)
+
+        # Retry timer
+        self.retry_timer = QTimer(self)
+        self.retry_timer.setSingleShot(True)
+        self.retry_timer.timeout.connect(self.weather_fetcher.make_request)  # type: ignore[reportUnknownMemberType]
 
         # Set weather data formatting
         self._units = units
@@ -345,6 +350,8 @@ class WeatherWidget(BaseWidget):
                             continue
                         self.icon_fetcher.set_icon(icon_url, new_icon)
                         self._set_pixmap(label, temp_icon_fetcher.get_icon(icon_url))
+                    # Cleanup
+                    temp_icon_fetcher.deleteLater()
 
                 temp_icon_fetcher.finished.connect(update_failed_icons)  # type: ignore
             except Exception as e:
@@ -463,14 +470,14 @@ class WeatherWidget(BaseWidget):
 
     def process_weather_data(self, weather_data: dict[str, Any]):
         try:
+            if not weather_data:
+                raise Exception("Weather data is empty.")
             alerts = weather_data["alerts"]
             forecast = weather_data["forecast"]["forecastday"][0]["day"]
             forecast1 = weather_data["forecast"]["forecastday"][1]
             forecast2 = weather_data["forecast"]["forecastday"][2]
 
             current: dict[str, Any] = weather_data["current"]
-            if len(current) == 0:
-                raise Exception("Current weather data is empty.")
             conditions_data = current["condition"]["text"]
             conditions_code = current["condition"]["code"]
 
@@ -533,8 +540,9 @@ class WeatherWidget(BaseWidget):
                 else None,
             }
         except Exception as e:
-            logging.warning(f"Error processing weather data: {e}")
-            QTimer.singleShot(10000, self.weather_fetcher.make_request)  # type: ignore[reportUnknownMemberType]
+            if not self.retry_timer.isActive():
+                logging.warning(f"Error processing weather data: {e}. Retrying fetch in 10 seconds.")
+                self.retry_timer.start(10000)
             if self.weather_data is None:
                 self.weather_data = {
                     "{temp}": "N/A",
@@ -579,7 +587,7 @@ def get_weather(code: int, day: bool) -> tuple[str, str]:
     """Get the weather icon and text based on the weather code and time of day."""
     # fmt: off
     sunny_codes = {1000}
-    coudy_codes = {1003, 1006, 1009}
+    cloudy_codes = {1003, 1006, 1009}
     foggy_codes = {1030, 1135, 1147}
     rainy_codes = {1063, 1150, 1153, 1180, 1183, 1186, 1189, 1192, 1195, 1240, 1243, 1246}
     snowy_codes = {1066, 1069, 1072, 1114, 1168, 1171, 1198, 1201, 1204, 1207, 1210, 1213, 1216, 1219, 1222, 1225, 1237, 1249, 1252, 1255, 1258, 1261, 1264}
@@ -589,7 +597,7 @@ def get_weather(code: int, day: bool) -> tuple[str, str]:
     time = "Day" if day else "Night"
     if code in sunny_codes:
         return f"sunny{time}", "Clear"
-    if code in coudy_codes:
+    if code in cloudy_codes:
         return f"cloudy{time}", "Cloudy"
     if code in foggy_codes:
         return f"foggy{time}", "Foggy"
