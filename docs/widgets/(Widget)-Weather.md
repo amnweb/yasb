@@ -120,7 +120,7 @@ weather:
     font-size: 24px;
     font-weight: 700;
 }
-.weather-card-today .label.arert {
+.weather-card-today .label.alert {
     font-size: 12px;
     font-weight: 700;
     background-color: rgba(247, 199, 42, 0.05);
