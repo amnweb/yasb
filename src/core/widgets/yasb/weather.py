@@ -174,7 +174,7 @@ class WeatherWidget(BaseWidget):
         # Create network manager, request and timer
         self.weather_fetcher = WeatherDataFetcher.get_instance(self, QUrl(self.api_url), update_interval * 1000)
         self.weather_fetcher.finished.connect(self.process_weather_data)  # type: ignore[reportUnknownMemberType]
-        self.weather_fetcher.finished.connect(self._update_label)  # type: ignore[reportUnknownMemberType]
+        self.weather_fetcher.finished.connect(lambda *_: self._update_label(True))  # type: ignore[reportUnknownMemberType]
         self.icon_fetcher = IconFetcher.get_instance(self)
 
         # Set weather data formatting
@@ -416,7 +416,6 @@ class WeatherWidget(BaseWidget):
                     part = part.replace(option, str(value))
                 if not part or widget_index >= len(active_widgets):
                     continue
-                # if isinstance(active_widgets[widget_index], QLabel):
                 if "<span" in part and "</span>" in part:
                     icon = re.sub(r"<span.*?>|</span>", "", part).strip()
                     # Only replace with icons dictionary if the content is actually in the dictionary
@@ -474,28 +473,11 @@ class WeatherWidget(BaseWidget):
                 raise Exception("Current weather data is empty.")
             conditions_data = current["condition"]["text"]
             conditions_code = current["condition"]["code"]
-            icon_string = f"{conditions_data[0].lower() + conditions_data[1:]}{'Day' if current['is_day'] == 1 else 'Night'}".strip()
 
-            rainy_codes = {1063, 1180, 1183, 1186, 1189, 1192, 1195, 1198, 1201, 1240, 1243, 1246, 1273, 1276, 1279}
-            if conditions_code in rainy_codes:
-                conditions_data = "rainy"
+            # Get the weather icon string and weather text based on the code and time of day
+            weather_icon_string, weather_text = get_weather(conditions_code, current["is_day"])
 
-            if conditions_code in {1003}:
-                conditions_data = "cloudy"
-
-            snowy_codes = {1114, 1210, 1213, 1219, 1222, 1225, 1237, 1255, 1258, 1261, 1264, 1246, 1282}
-            if conditions_code in snowy_codes:
-                conditions_data = "snowyIcy"
-
-            if icon_string:
-                if icon_string in self._icons:
-                    icon_label = self._icons[icon_string]
-                else:
-                    icon_label = self._icons["default"]
-            else:
-                icon_label = self._icons["default"]
-
-            # Load icons into cache for current and future forecasts if not already cached
+            # Load icons images into cache for current and future forecasts if not already cached
             img_icon_keys = [
                 f"http:{day['condition']['icon']}" for day in [forecast] + [forecast1["day"], forecast2["day"]]
             ]
@@ -517,11 +499,11 @@ class WeatherWidget(BaseWidget):
                 "{time_zone}": weather_data["location"]["tz_id"],
                 "{localtime}": weather_data["location"]["localtime"],
                 "{conditions}": conditions_data,
-                "{condition_text}": current["condition"]["text"],
-                "{is_day}": current["is_day"],
+                "{condition_text}": weather_text,
+                "{is_day}": "Day" if current["is_day"] else "Night",
                 # Icons
-                "{icon}": icon_label,
-                "{icon_class}": icon_string[0].lower() + icon_string[1:],
+                "{icon}": weather_icon_string,
+                "{icon_class}": weather_icon_string,
                 "{day0_icon}": f"http:{forecast['condition']['icon']}",
                 # Wind data
                 "{wind}": self._format_measurement(current["wind_mph"], "mph", current["wind_kph"], "km/h"),
@@ -562,7 +544,7 @@ class WeatherWidget(BaseWidget):
                     "{location_region}": "N/A",
                     "{location_country}": "N/A",
                     "{time_zone}": "N/A",
-                    "{localtime}": "N/A,",
+                    "{localtime}": "N/A",
                     "{humidity}": "N/A",
                     "{is_day}": "N/A",
                     "{day0_icon}": "N/A",
@@ -591,3 +573,33 @@ class WeatherWidget(BaseWidget):
                     "{alert_desc}": None,
                     "{alert_end_date}": None,
                 }
+
+
+def get_weather(code: int, day: bool) -> tuple[str, str]:
+    """Get the weather icon and text based on the weather code and time of day."""
+    # fmt: off
+    sunny_codes = {1000}
+    coudy_codes = {1003, 1006, 1009}
+    foggy_codes = {1030, 1135, 1147}
+    rainy_codes = {1063, 1150, 1153, 1180, 1183, 1186, 1189, 1192, 1195, 1240, 1243, 1246}
+    snowy_codes = {1066, 1069, 1072, 1114, 1168, 1171, 1198, 1201, 1204, 1207, 1210, 1213, 1216, 1219, 1222, 1225, 1237, 1249, 1252, 1255, 1258, 1261, 1264}
+    thunderstorm_codes = {1087, 1273, 1276, 1279, 1282}
+    blizzard_codes = {1117}
+    # fmt: on
+    time = "Day" if day else "Night"
+    if code in sunny_codes:
+        return f"sunny{time}", "Clear"
+    if code in coudy_codes:
+        return f"cloudy{time}", "Cloudy"
+    if code in foggy_codes:
+        return f"foggy{time}", "Foggy"
+    if code in rainy_codes:
+        return f"rainy{time}", "Rainy"
+    if code in snowy_codes:
+        return f"snowy{time}", "Snowy"
+    if code in thunderstorm_codes:
+        return f"thunderstorm{time}", "Thunderstorm"
+    if code in blizzard_codes:
+        return f"blizzard{time}", "Blizzard"
+
+    return "default", "Cloudy"
