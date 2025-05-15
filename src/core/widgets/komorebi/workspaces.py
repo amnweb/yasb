@@ -29,7 +29,15 @@ WORKSPACE_STATUS_ACTIVE: WorkspaceStatus = "ACTIVE"
 
 class WorkspaceButton(QPushButton):
 
-    def __init__(self, workspace_index: int, parent_widget: 'WorkspaceWidget', label: str = None, active_label: str = None, populated_label: str = None, animation: bool = False):
+    def __init__(
+            self,
+            workspace_index: int,
+            parent_widget: 'WorkspaceWidget',
+            label: str = None,
+            active_label: str = None,
+            populated_label: str = None,
+            animation: bool = False
+        ):
         super().__init__()
         self._animation_initialized = False
         self.komorebic = KomorebiClient()
@@ -110,7 +118,15 @@ class WorkspaceButton(QPushButton):
 
 class WorkspaceButtonWithIcons(QFrame):
 
-    def __init__(self, workspace_index: int, parent_widget: 'WorkspaceWidget', label: str = None, active_label: str = None, populated_label: str = None, animation: bool = False):
+    def __init__(
+            self,
+            workspace_index: int,
+            parent_widget: 'WorkspaceWidget',
+            label: str = None,
+            active_label: str = None,
+            populated_label: str = None,
+            animation: bool = False
+        ):
         super().__init__()
         self._animation_initialized = False
         self.komorebic = KomorebiClient()
@@ -199,6 +215,7 @@ class WorkspaceButtonWithIcons(QFrame):
 
         # Recalculate the widget size based on its contents
         self.setMinimumWidth(self.sizeHint().width())
+        self.updateGeometry()
         self.adjustSize()
 
     def activate_workspace(self):
