@@ -2,11 +2,13 @@
 
 | Option           | Type     | Default                        | Description                                                                 |
 |------------------|----------|--------------------------------|-----------------------------------------------------------------------------|
-| `label`             | string  | `'<span>\uf071</span> {binding_mode}'` | The format string for the binding mode. You can use a placeholder `{binding_mode}` to dynamically insert active binding_mode. |
-| `label_alt`         | string  | `'<span>\uf071</span> Current mode: {binding_mode}'` | The alternative format string for the binding mode. |
+| `label`             | string  | `'<span>{icon}</span> {binding_mode}'` | The format string for the binding mode. You can use a placeholder `{binding_mode}` to dynamically insert active binding_mode. |
+| `label_alt`         | string  | `'<span>{icon}</span> Current mode: {binding_mode}'` | The alternative format string for the binding mode. |
 | `glazewm_server_uri` | string | `'ws://localhost:6123'` | Optional GlazeWM server uri. |
 | `hide_if_no_active` | boolean  | `True` | Hide the widget when no binding mode is active. |
 | `label_if_no_active` | string | `"No binding mode active"` | Label to display when no binding mode is active. |
+| `default_icon` | string | `'\uf071'` | Default icon for the binding modes where no other icon is specified. |
+| `icons` | dict | `{'none': '', 'resize': '\uf071', 'pause': '\uf28c'}` | Specified icons for each Binding Mode, if a binding mode is not specified than the `default_icon` will be used. |
 | `binding_modes_to_cycle_through` | list | `['none', 'resize', 'pause']` | Binding Mode names to cycle through with callbacks `next_binding_mode` and `prev_binding_mode` |
 | `container_padding` | dict | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}` | Explicitly set padding inside widget container. |
 | `callbacks` | dict | `{'on_left': 'next_binding_mode', 'on_middle': 'toggle_label', 'on_right': 'disable_binding_mode'}` | Callbacks for mouse events on the widget. |
@@ -22,16 +24,21 @@ glazewm_binding_mode:
     options:
       hide_if_no_active: false
       label_if_no_active: "No binding mode active"
+      default_icon: "\uf071"
+      icons: 
+        none: ""
+        resize: "\uf071"
+        pause: "\uf28c"
+      binding_modes_to_cycle_through: [
+        "none", # none handles if no binding mode is active
+        "resize",
+        "pause"
+      ]
       container_padding:
         top: 0
         left: 0
         bottom: 0
         right: 0
-      binding_modes_to_cycle_through: [
-         "none", # none handles if no binding mode is active
-         "resize",
-         "pause"
-      ]
       callbacks:
         on_left: "next_binding_mode"
         on_middle: "toggle_label"
@@ -46,6 +53,8 @@ glazewm_binding_mode:
 - **glazewm_server_uri:** Optional GlazeWM server uri if it ever changes on GlazeWM side.
 - **hide_if_no_active:** Hide the widget when no binding mode is active.
 - **label_if_no_active:** Label to display when no binding mode is active.
+- **default_icon:** Default icon for the binding modes where no other icon is defined.
+- **icons:** A dictionary mapping binding mode names to their respective icons. The keys are the binding mode names, and the values are the icon strings. If no icon is defined for a binding mode, the `default_icon` will be used. `'none'` represents no binding mode active.
 - **binding_modes_to_cycle_through:** Binding Mode names to cycle through with callbacks `next_binding_mode` and `prev_binding_mode`. Use `'none'` to handle no binding mode active.
 - **container_padding**: Explicitly set padding inside widget container. Use this option to set padding inside the widget container. You can set padding for top, left, bottom and right sides of the widget container.
 - **callbacks:** A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions.
@@ -88,7 +97,13 @@ binding_modes:
 .glazewm-binding-mode .label-offline {
 }
 
-.glazewm-binding-mode .icon {
+.glazewm-binding-mode .icon.none {
+}
+
+.glazewm-binding-mode .icon.pause {
+}
+
+.glazewm-binding-mode .icon.resize {
 }
 ```
 
@@ -112,7 +127,15 @@ binding_modes:
     font-size: 10px;
 }
 
-.glazewm-binding-mode .icon {
+.glazewm-binding-mode .icon.none {
+    color: var(--blue);
+}
+
+.glazewm-binding-mode .icon.resize {
+    color: var(--yellow);
+}
+
+.glazewm-binding-mode .icon.pause {
     color: var(--red);
 }
 ```
