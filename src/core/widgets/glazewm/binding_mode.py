@@ -1,10 +1,10 @@
 import logging
-from typing import Any
+from typing import Any, cast
 import re
 
 from PyQt6.QtCore import pyqtSlot
 
-from PyQt6.QtWidgets import QHBoxLayout, QWidget, QLabel
+from PyQt6.QtWidgets import QHBoxLayout, QWidget, QLabel, QStyle
 
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.glazewm.client import GlazewmClient, BindingMode
@@ -94,6 +94,12 @@ class GlazewmBindingModeWidget(BaseWidget):
             widget.setVisible(self._show_alt_label)
         self._update_label()
 
+    def _reload_css(self, label: QLabel):
+        style = cast(QStyle, label.style())
+        style.unpolish(label)
+        style.polish(label)
+        label.update()
+
     def _update_label(self):
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
         active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
@@ -116,6 +122,11 @@ class GlazewmBindingModeWidget(BaseWidget):
                 else:
                     if widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
                         active_widgets[widget_index].setText(formatted_text)
+                        if active_widgets[widget_index].property("class") == "label-offline":
+                            active_widgets[widget_index].setProperty("class", "label")
+                        if not self._active_binding_mode.name:
+                            active_widgets[widget_index].setProperty("class", "label-offline")
+                        self._reload_css(active_widgets[widget_index])
                 widget_index += 1
 
     @pyqtSlot()
