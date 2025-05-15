@@ -88,6 +88,9 @@ class GlazewmClient(QObject):
     def disable_binding_mode(self, binding_mode_name: str):
         self._websocket.sendTextMessage(f"command wm-disable-binding-mode --name {binding_mode_name}")
 
+    def enable_binding_mode(self, binding_mode_name: str):
+        self._websocket.sendTextMessage(f"command wm-enable-binding-mode --name {binding_mode_name}")
+
     def connect(self):
         logger.debug(f"Connecting to {self._uri}...")
         self._websocket.open(self._uri)
