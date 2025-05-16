@@ -215,8 +215,6 @@ class WorkspaceButtonWithIcons(QFrame):
 
         # Recalculate the widget size based on its contents
         self.setMinimumWidth(self.sizeHint().width())
-        self.updateGeometry()
-        self.adjustSize()
 
     def activate_workspace(self):
         try:
