@@ -148,6 +148,10 @@ VALIDATION_SCHEMA: dict[str, Any] = {
                 'type': 'string',
                 'default': DEFAULTS['icons']['thunderstormNight'],
             },
+            'blizzard': { # deprecated
+                'type': 'string',
+                'default': DEFAULTS['icons']['blizzardDay'],
+            },
             'default': {
                 'type': 'string',
                 'default': DEFAULTS['icons']['default'],

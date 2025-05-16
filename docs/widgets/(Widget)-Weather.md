@@ -36,21 +36,21 @@ weather:
       on_middle: "do_nothing"
       on_right: "toggle_label"
     icons:
-      sunnyDay: '\ue30d'
-      clearNight: '\ue32b'
-      cloudyDay: '\ue312'
-      cloudyNight: '\ue311'
-      rainyDay: '\ue308'
-      rainyNight: '\ue333'
-      snowyIcyDay: '\ue30a'
-      snowyIcyNight: '\ue335'
-      blizzardDay: '\udb83\udf36'
-      blizzardNight: '\udb83\udf36'
-      foggyDay: '\ue303'
-      foggyNight: '\ue346'
-      thunderstormDay: '\ue30f'
-      thunderstormNight: '\ue338'
-      default: '\uebaa'
+      sunnyDay: "\ue30d"
+      clearNight: "\ue32b"
+      cloudyDay: "\ue312"
+      cloudyNight: "\ue311"
+      rainyDay: "\ue308"
+      rainyNight: "\ue333"
+      snowyIcyDay: "\ue30a"
+      snowyIcyNight: "\ue335"
+      blizzardDay: "\udb83\udf36"
+      blizzardNight: "\udb83\udf36"
+      foggyDay: "\ue303"
+      foggyNight: "\ue346"
+      thunderstormDay: "\ue30f"
+      thunderstormNight: "\ue338"
+      default: "\uebaa"
     weather_card:
       blur: True
       round_corners: True
