@@ -219,8 +219,13 @@ class BluetoothWidget(BaseWidget):
         self,
         label: str,
         label_alt: str,
+        label_no_device: str,
+        label_device_separator: str,
+        max_length: int,
+        max_length_ellipsis: str,
         tooltip: bool,
         icons: dict[str, str],
+        device_aliases: list[dict[str, str]],
         animation: dict[str, str],
         container_padding: dict[str, int],
         callbacks: dict[str, str],
@@ -231,6 +236,11 @@ class BluetoothWidget(BaseWidget):
         self._show_alt_label = False
         self._label_content = label
         self._label_alt_content = label_alt
+        self._label_no_device = label_no_device
+        self._label_devices_separator = label_device_separator
+        self._max_length = max_length
+        self._max_length_ellipsis = max_length_ellipsis
+        self._device_aliases = device_aliases
         self._tooltip = tooltip
         self._padding = container_padding
         self._label_shadow = label_shadow
@@ -308,15 +318,20 @@ class BluetoothWidget(BaseWidget):
         widget_index = 0
 
         if connected_devices:
-            device_names = ", ".join(connected_devices)
+            if self._device_aliases:
+                connected_devices = [
+                    next((alias['alias'] for alias in self._device_aliases if alias['name'].strip() == device.strip()), device) for device in connected_devices
+                ]
+            device_names = self._label_devices_separator.join(connected_devices)
             tooltip_text = "Connected devices\n" + "\n".join(f"• {name}" for name in connected_devices) if connected_devices else "No devices connected"
         else:
-            device_names = "No devices connected"
-            tooltip_text = "No devices connected"
+            device_names = self._label_no_device
+            tooltip_text = self._label_no_device
 
         label_options = {
             "{icon}": icon,
-            "{device_name}": device_names
+            "{device_name}": device_names,
+            "{device_count}": len(connected_devices) if connected_devices else 0,
         }
 
         for part in label_parts:
@@ -329,6 +344,8 @@ class BluetoothWidget(BaseWidget):
                     if widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
                         active_widgets[widget_index].setText(formatted_text)
                 else:
+                    if self._max_length and len(formatted_text) > self._max_length:
+                        formatted_text = formatted_text[:self._max_length] + self._max_length_ellipsis
                     if widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
                         active_widgets[widget_index].setText(formatted_text)
                 widget_index += 1
