@@ -20,11 +20,11 @@ IGNORED_CLASSES = ['WorkerW', 'TopLevelWindowForOverflowXamlIsland', 'Shell_Tray
 IGNORED_PROCESSES = ['SearchHost.exe', 'komorebi.exe', 'yasb.exe']
 IGNORED_YASB_TITLES = [APP_BAR_TITLE]
 IGNORED_YASB_CLASSES = [
-    'Qt673QWindowIcon',
-    'Qt673QWindow',
-    'Qt673QWindowToolSaveBits',
-    'Qt673QWindowPopupSaveBits',
-    'Qt673QWindowPopupDropShadowSaveBits'
+    'Qt690QWindowIcon',
+    'Qt690QWindow',
+    'Qt690QWindowToolSaveBits',
+    'Qt690QWindowPopupSaveBits',
+    'Qt690QWindowPopupDropShadowSaveBits'
 ]
 DEBOUNCE_CLASSES = [
     'OperationStatusWindow'
