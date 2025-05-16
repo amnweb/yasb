@@ -596,7 +596,9 @@ def get_weather(code: int, day: bool) -> tuple[str, str]:
     # fmt: on
     time = "Day" if day else "Night"
     if code in sunny_codes:
-        return f"sunny{time}", "Clear"
+        if day:
+            return "sunnyDay", "Sunny"
+        return "clearNight", "Clear"
     if code in cloudy_codes:
         return f"cloudy{time}", "Cloudy"
     if code in foggy_codes:
