@@ -22,6 +22,7 @@ class WifiWidget(BaseWidget):
         ethernet_label: str,
         ethernet_label_alt: str,
         ethernet_icon: str,
+        hide_if_ethernet: bool,
         animation: dict[str, str],
         container_padding: dict[str, int],
         callbacks: dict[str, str],
@@ -38,6 +39,7 @@ class WifiWidget(BaseWidget):
         self._label_alt_content = label_alt
         self._ethernet_label_content = ethernet_label
         self._ethernet_label_alt_content = ethernet_label_alt
+        self._hide_if_ethernet = hide_if_ethernet
         self._animation = animation
         self._padding = container_padding
         self._label_shadow = label_shadow
@@ -145,6 +147,11 @@ class WifiWidget(BaseWidget):
             logging.error(f'Error in wifi widget update: {e}')
             wifi_icon = wifi_name = wifi_strength = "N/A"
 
+        if self._hide_if_ethernet and self._ethernet_active:
+            self.hide()
+            return
+
+        self.show()
         self._display_correct_label()
         if self._ethernet_active:
             active_widgets = self._widgets_ethernet_alt if self._show_alt_label else self._widgets_ethernet

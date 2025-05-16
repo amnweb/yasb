@@ -17,6 +17,7 @@ DEFAULTS = {
     'ethernet_label': "{wifi_icon}",
     'ethernet_label_alt': "{wifi_icon} {ip_addr}",
     'ethernet_icon': "\ueba9",
+    'hide_if_ethernet': False,
     'container_padding': {'top': 0, 'left': 0, 'bottom': 0, 'right': 0},
     'animation': {
         'enabled': True,
@@ -59,6 +60,10 @@ VALIDATION_SCHEMA = {
     'ethernet_icon': {
         'type': 'string',
         'default': DEFAULTS['ethernet_icon']
+    },
+    'hide_if_ethernet': {
+        'type': 'boolean',
+        'default': DEFAULTS['hide_if_ethernet']
     },
     'animation': {
         'type': 'dict',
