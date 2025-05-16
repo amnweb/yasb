@@ -1,6 +1,6 @@
 import logging
-from PyQt6.QtWidgets import QPushButton, QWidget, QHBoxLayout, QLabel, QFrame
-from PyQt6.QtCore import Qt, pyqtSignal, QTimer, QSize
+from PyQt6.QtWidgets import QWidget, QHBoxLayout, QLabel, QFrame
+from PyQt6.QtCore import Qt, pyqtSignal, QTimer
 from PyQt6.QtGui import QCursor, QPixmap, QImage, QMouseEvent
 from typing import Literal
 from contextlib import suppress
@@ -28,7 +28,15 @@ WINDOW_STATUS_ACTIVE: WindowStatus = "ACTIVE"
 
 class WindowButton(QFrame):
 
-    def __init__(self, window_index: int, parent_widget: 'StackWidget', hwnd: int = None, label: str = None, active_label: str = None, animation: bool = False):
+    def __init__(
+            self,
+            window_index: int,
+            parent_widget: 'StackWidget',
+            hwnd: int = None,
+            label: str = None,
+            active_label: str = None,
+            animation: bool = False
+        ):
         super().__init__()
         self._animation_initialized = False
         self.komorebic = KomorebiClient()
@@ -295,6 +303,7 @@ class StackWidget(BaseWidget):
                     new_window_button = self._window_buttons[self._curr_window_index]
                     self._update_button_status(new_window_button)
                 except (IndexError, TypeError):
+                    self._window_buttons = []
                     self._add_or_update_buttons()
 
             if event['type'] in self._reset_buttons_events or self._has_active_container_index_changed() or self._has_active_workspace_index_changed():
