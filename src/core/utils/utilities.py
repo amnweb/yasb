@@ -16,6 +16,8 @@ from PyQt6.QtWidgets import QApplication, QFrame, QGraphicsDropShadowEffect, QLa
 
 from core.utils.win32.blurWindow import Blur
 
+from PIL import Image, ImageOps, ImageEnhance, ImageColor
+import colorsys
 
 def is_windows_10() -> bool:
     version = platform.version()
@@ -123,6 +125,79 @@ def get_app_identifier():
                 return sys.executable
         # Fallback to the default AppUserModelID
         return 'Yasb'
+
+def recolor_icon(
+    img: Image.Image,
+    hex_color: str,
+    highlight_strength: float,
+    shadow_strength: float,
+    glare_threshold: int = 235,
+    min_glare_ratio: float = 0.1,
+    histogram_bins: int = 20,
+    brightness_range: float = 255.0,
+) -> Image.Image:
+    """
+    Applies a color overlay to an image while preserving its shading and highlights.
+    Args:
+        img: Pillow image to recolor.
+        hex_color: Target color in hex format.
+        glare_threshold: Brightness cutoff (0-255) above which pixels are considered highlights and excluded from histogram analysis.
+        min_glare_ratio: Minimum fraction of pixels that must be below glare_threshold to enable highlight filtering. If fewer pixels qualify, all pixels are used.
+        histogram_bins: Number of bins for brightness histogram analysis. Higher values provide more precise brightness detection but may be affected by noise.
+        brightness_range: Maximum brightness value (0-255) used for histogram normalization. Controls the scaling of brightness differences.
+        highlight_strength: Controls how much the bright areas retain their original brightness (0.0-1.0). Higher values preserve more highlights.
+        shadow_strength: Controls how much the dark areas retain their original darkness (0.0-1.0). Higher values preserve more shadows.
+    Returns:
+        Image.Image: Recolored copy of the input image.
+    """
+    # Copy and convert to RGBA
+    result = img.convert('RGBA').copy()
+    pixels = result.load()
+    w, h = result.size
+
+    # Target color HLS
+    tr, tg, tb = ImageColor.getrgb(hex_color)
+    target_h, target_l, target_s = colorsys.rgb_to_hls(tr / 255, tg / 255, tb / 255)
+
+    # Collect brightness of non-transparent pixels
+    brightness_vals = []
+    non_transparent = []
+    for y in range(h):
+        for x in range(w):
+            r, g, b, a = pixels[x, y]
+            if a == 0:
+                continue
+            bval = 0.299 * r + 0.587 * g + 0.114 * b
+            brightness_vals.append(bval)
+            non_transparent.append((x, y, bval, a))
+
+    # Filter out glare pixels for histogram
+    valid_brightness = [b for b in brightness_vals if b < glare_threshold]
+    if len(valid_brightness) < min_glare_ratio * len(brightness_vals):
+        valid_brightness = brightness_vals
+
+    # Histogram
+    bins = [0] * histogram_bins
+    bin_width = brightness_range / histogram_bins
+    for b in valid_brightness:
+        idx = min(histogram_bins - 1, int(b / bin_width))
+        bins[idx] += 1
+    most_common_bin = bins.index(max(bins))
+    center_b = (most_common_bin + 0.5) * bin_width
+
+    # Apply recoloring
+    for x, y, bval, a in non_transparent:
+        delta = (bval - center_b) / (brightness_range / 2)
+        # Apply different gradient intensity based on whether it's lighter or darker
+        if delta > 0:
+            adjusted_delta = delta * highlight_strength
+        else:
+            adjusted_delta = delta * shadow_strength
+        new_l = max(0.0, min(1.0, target_l + adjusted_delta))
+        nr, ng, nb = colorsys.hls_to_rgb(target_h, new_l, target_s)
+        pixels[x, y] = (int(nr * 255), int(ng * 255), int(nb * 255), a)
+
+    return result
 
 class PopupWidget(QWidget):
     """

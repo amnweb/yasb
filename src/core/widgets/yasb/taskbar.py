@@ -19,7 +19,7 @@ from core.validation.widgets.yasb.taskbar import VALIDATION_SCHEMA
 from core.utils.win32.utilities import get_hwnd_info
 from core.utils.win32.app_icons import get_window_icon
 from core.utils.widgets.animation_manager import AnimationManager
-from core.utils.utilities import add_shadow
+from core.utils.utilities import add_shadow, recolor_icon
 
 try:
     from core.utils.win32.event_listener import SystemEventListener
@@ -59,6 +59,7 @@ class TaskbarWidget(BaseWidget):
     def __init__(
             self,
             icon_size: int,
+            icon_recolor: dict,
             animation:dict[str, str] | bool,
             title_label: dict[str, str],
             tooltip: bool,
@@ -73,6 +74,7 @@ class TaskbarWidget(BaseWidget):
         self.dpi = None # Initial DPI value
         self.icon_label = QLabel()
         self._label_icon_size = icon_size
+        self._icon_recolor = icon_recolor
         if isinstance(animation, bool):
             # Default animation settings if only a boolean is provided to prevent breaking configurations
             self._animation = {
@@ -388,6 +390,11 @@ class TaskbarWidget(BaseWidget):
                         (int(self._label_icon_size * self.dpi), int(self._label_icon_size * self.dpi)),
                         Image.LANCZOS
                     ).convert("RGBA")
+                    if self._icon_recolor['enabled']:
+                        icon_img = recolor_icon(icon_img, 
+                                                 self._icon_recolor['main_color'],
+                                                 self._icon_recolor['highlight_strength'],
+                                                 self._icon_recolor['shadow_strength'])
                 else:
                     if process["name"] == "ApplicationFrameHost.exe":
                         if self._update_retry_count < 10:
