@@ -87,7 +87,7 @@ class MediaWidget(BaseWidget):
         # Add the container to the main widget layout
         self.widget_layout.addWidget(self._widget_container)
         if self._hide_empty:
-            self._widget_frame.hide()
+            self.hide()
         # Make a grid box to overlay the text and thumbnail
         self.thumbnail_box = QGridLayout()
 
@@ -561,7 +561,7 @@ class MediaWidget(BaseWidget):
 
         if has_session:
             # If media is not None, we show the frame
-            self._widget_frame.show()
+            self.show()
 
             # If we do not only have controls, make sure the label is shown
             if not self._controls_only:
@@ -577,7 +577,7 @@ class MediaWidget(BaseWidget):
 
             # If we want to hide the widget when no music is playing, hide it!
             if self._hide_empty:
-                self._widget_frame.hide()
+                self.hide()
 
     @QtCore.pyqtSlot(GlobalSystemMediaTransportControlsSessionPlaybackInfo)
     def _on_playback_info_changed(self, playback_info: GlobalSystemMediaTransportControlsSessionPlaybackInfo):
