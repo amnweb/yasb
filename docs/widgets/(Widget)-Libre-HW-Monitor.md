@@ -20,12 +20,12 @@
 | `server_username`        | string  | `""`                                                                                           | Libre Hardware Monitor username. Only needed if auth is enabled.                                                                             |
 | `server_password`        | string  | `""`                                                                                           | Libre Hardware Monitor password. Only needed if auth is enabled.                                                                             |
 | `histogram_icons`        | list    | `['\u2581', '\u2581', '\u2582', '\u2583', '\u2584', '\u2585', '\u2586', '\u2587', '\u2588']`   | Icons representing CPU usage histograms.                                                                                                     |
-| `callbacks`              | dict    | `{'on_left': 'toggle_label', 'on_middle': 'do_nothing', 'on_right': 'do_nothing'}`             | Callback functions for different mouse button actions.                                                                                       |
+| `callbacks`              | dict    | `{'on_left': 'toggle_label', 'on_middle': 'do_nothing', 'on_right': 'toggle_menu'}`             | Callback functions for different mouse button actions.                                                                                       |
 | `animation`         | dict    | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
 | `container_padding`  | dict | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}`      | Explicitly set padding inside widget container.                            |
 | `container_shadow`   | dict   | `None`                  | Container shadow options.                       |
 | `label_shadow`         | dict   | `None`                  | Label shadow options.                 |
-
+| `libre_menu` |    dict    | See below | Configuration for the Libre Hardware Monitor menu. |
 ## Example Configuration (GPU Temperature)
 
 ```yaml
@@ -63,13 +63,42 @@
       callbacks:
         on_left: "toggle_label"
         on_middle: "do_nothing"
-        on_right: "do_nothing"
+        on_right: "toggle_menu"
       label_shadow:
         enabled: true
         color: "black"
         radius: 3
         offset: [ 1, 1 ]
+      libre_menu:
+        blur: true
+        round_corners: true
+        round_corners_type: "normal"
+        border_color: "System"
+        alignment: "right"
+        direction: "down"
+        offset_top: 6
+        offset_left: 0
+        header_label: "YASB Hardware Monitor"
+        precision: 1
+        columns: 1
+        sensors:
+          - id: "/intelcpu/0/temperature/8"
+            name: "CPU Temp"
+          - id: "/intelcpu/0/load/0"
+            name: "CPU Load"
+          - id: "/intelcpu/0/power/0"
+            name: "CPU Package Power"
+          - id: "/intelcpu/0/power/1"
+            name: "CPU Core Power"
+          - id: "/gpu-nvidia/0/temperature/0"
+            name: "Nvidia Temp"
+          - id: "/lpc/it8689e/0/fan/0"
+            name: "CPU Fan"
+          - id: "/lpc/it8689e/0/fan/1"
+            name: "System Fan"
 ```
+
+
 ## Set up instructions
 1. Install Libre Hardware Monitor https://github.com/LibreHardwareMonitor/LibreHardwareMonitor
 2. Run Libre Hardware Monitor.
@@ -104,6 +133,19 @@
 - **container_padding**: Explicitly set padding inside widget container. Use this option to set padding inside the widget container. You can set padding for top, left, bottom and right sides of the widget container.
 - **container_shadow:** Container shadow options.
 - **label_shadow:** Label shadow options.
+- **libre_menu**: Configuration for the Libre Hardware Monitor menu. Controls visibility, appearance, and positioning.
+  - **blur**: Enable blur effect for the menu.
+  - **round_corners**: Enable round corners for menu.
+  - **round_corners_type**: Border type for menu can be `normal` and `small`. Default is `normal`.
+  - **border_color**: Border color for menu can be `None`, `System` or `Hex Color` `"#ff0000"`.
+  - **alignment**: Alignment of the menu. Possible values are `left`, `center`, and `right`.
+  - **direction**: Direction of the menu. Possible values are `up` and `down`.
+  - **offset_top**: Offset from the top of the widget in pixels.
+  - **offset_left**: Offset from the left of the widget in pixels.
+  - **header_label**: Header label for the menu. Empty string will not show the header (`header_label: ""`).
+  - **precision**: Floating point precision of the value.
+  - **columns**: Number of columns in the menu. Default is 1.
+  - **sensors**: List of sensors to display in the menu with their IDs and names.
 
 ## Example Style
 ```css
@@ -112,4 +154,47 @@
 .libre-monitor-widget .widget-container .label {}
 .libre-monitor-widget .widget-container .label.alt {}
 .libre-monitor-widget .widget-container .icon {}
+
+.libre-menu {}
+.libre-menu .header {}
+.libre-menu .sensor-item {}
+.libre-menu .sensor-name {}
+.libre-menu .sensor-value {}
+```
+
+## Example Style for Libre Hardware Monitor Menu
+```css
+.libre-menu {
+    background-color:rgba(17, 17, 27, 0.9);
+}
+.libre-menu .header {
+    font-size: 18px;
+    font-weight: 600;
+    color: #cdd6f4;
+    font-family: "Segoe UI";
+    padding: 20px 0 10px 0;
+    margin: 0 40px;
+}
+.libre-menu .sensor-item {
+    background-color:rgba(255, 255, 255, 0.01);
+    padding: 0px 8px;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+.libre-menu .sensor-item:hover {
+    background-color:rgba(255, 255, 255, 0.05);
+}
+.libre-menu .sensor-name {
+    font-size: 12px;
+    font-weight: 600;
+    font-family: "Segoe UI";
+    color: rgba(255, 255, 255, 0.5);
+}
+.libre-menu .sensor-value {
+    font-size: 12px;
+    font-family: "Segoe UI";
+    font-weight: 600;
+    color: rgb(255, 255, 255);
+    min-width: 60px;
+}
 ```

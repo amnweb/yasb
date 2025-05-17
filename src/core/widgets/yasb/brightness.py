@@ -6,12 +6,12 @@ from core.widgets.base import BaseWidget
 from core.validation.widgets.yasb.brightness import VALIDATION_SCHEMA
 from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget, QSlider, QVBoxLayout
 from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtGui import QWheelEvent, QCursor
+from PyQt6.QtGui import QWheelEvent
 from core.utils.win32.utilities import get_monitor_info
 import screen_brightness_control as sbc
 from datetime import datetime
 from core.utils.widgets.animation_manager import AnimationManager
-from core.utils.utilities import PopupWidget, add_shadow
+from core.utils.utilities import PopupWidget, add_shadow, build_widget_label
 
 if DEBUG:
     logging.getLogger("screen_brightness_control").setLevel(logging.INFO)
@@ -75,8 +75,9 @@ class BrightnessWidget(BaseWidget):
         self._widget_container.setProperty("class", "widget-container")
         add_shadow(self._widget_container, self._container_shadow)
         self.widget_layout.addWidget(self._widget_container)
-        self._create_dynamically_label(self._label_content, self._label_alt_content)
-        
+
+        build_widget_label(self, self._label_content, self._label_alt_content, self._label_shadow)
+
         self.register_callback("toggle_label", self._toggle_label)
         self.register_callback("toggle_level_next", self._toggle_level_next)
         self.register_callback("toggle_level_prev", self._toggle_level_prev)
@@ -137,43 +138,10 @@ class BrightnessWidget(BaseWidget):
         else:
             self.set_brightness(levels[-1], monitor_info['device_id'])
 
-
     def _toggle_brightness_menu(self):
         if self._animation['enabled']:
             AnimationManager.animate(self, self._animation['type'], self._animation['duration'])
         self.show_brightness_menu()
-        
-    def _create_dynamically_label(self, content: str, content_alt: str):
-        def process_content(content, is_alt=False):
-            label_parts = re.split('(<span.*?>.*?</span>)', content)
-            label_parts = [part for part in label_parts if part]
-            widgets = []
-            for part in label_parts:
-                part = part.strip()
-                if not part:
-                    continue
-                if '<span' in part and '</span>' in part:
-                    class_name = re.search(r'class=(["\'])([^"\']+?)\1', part)
-                    class_result = class_name.group(2) if class_name else 'icon'
-                    icon = re.sub(r'<span.*?>|</span>', '', part).strip()
-                    label = QLabel(icon)
-                    label.setProperty("class", class_result)
-                else:
-                    label = QLabel(part)
-                    label.setProperty("class", "label alt" if is_alt else "label")
-                label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-                add_shadow(label, self._label_shadow)
-                self._widget_container_layout.addWidget(label)
-                widgets.append(label)
-                if is_alt:
-                    label.hide()
-                else:
-                    label.show()
-            return widgets
-        self._widgets = process_content(content)
-        self._widgets_alt = process_content(content_alt, is_alt=True)
-
 
     def _update_label(self):
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets

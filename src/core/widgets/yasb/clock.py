@@ -9,7 +9,7 @@ from tzlocal import get_localzone_name
 from itertools import cycle
 from core.utils.widgets.animation_manager import AnimationManager
 import locale
-from core.utils.utilities import PopupWidget, add_shadow
+from core.utils.utilities import PopupWidget, add_shadow, build_widget_label
 
 class CustomCalendar(QCalendarWidget):
     def __init__(self, parent=None, timezone=None):
@@ -87,7 +87,7 @@ class ClockWidget(BaseWidget):
         # Add the container to the main widget layout
         self.widget_layout.addWidget(self._widget_container)
 
-        self._create_dynamically_label(self._label_content, self._label_alt_content)
+        build_widget_label(self, self._label_content, self._label_alt_content, self._label_shadow)
         
         self.register_callback("toggle_label", self._toggle_label)
         self.register_callback("update_label", self._update_label)
@@ -120,36 +120,7 @@ class ClockWidget(BaseWidget):
             widget.setVisible(self._show_alt_label)
         self._update_label()          
             
-    def _create_dynamically_label(self, content: str, content_alt: str):
-        def process_content(content, is_alt=False):
-            label_parts = re.split('(<span.*?>.*?</span>)', content) #Filters out empty parts before entering the loop
-            label_parts = [part for part in label_parts if part]
-            widgets = []
-            for part in label_parts:
-                part = part.strip()  # Remove any leading/trailing whitespace
-                if not part:
-                    continue
-                if '<span' in part and '</span>' in part:
-                    class_name = re.search(r'class=(["\'])([^"\']+?)\1', part)
-                    class_result = class_name.group(2) if class_name else 'icon'
-                    icon = re.sub(r'<span.*?>|</span>', '', part).strip()
-                    label = QLabel(icon)
-                    label.setProperty("class", class_result)
-                else:
-                    label = QLabel(part)
-                    label.setProperty("class", "label")
-                label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                label.setCursor(Qt.CursorShape.PointingHandCursor)
-                add_shadow(label, self._label_shadow)
-                self._widget_container_layout.addWidget(label)
-                widgets.append(label)
-                if is_alt:
-                    label.hide()
-                else:
-                    label.show()
-            return widgets
-        self._widgets = process_content(content)
-        self._widgets_alt = process_content(content_alt, is_alt=True)
+
 
     def _update_label(self):
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets

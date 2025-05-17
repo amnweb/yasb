@@ -167,7 +167,7 @@ class GithubWidget(BaseWidget):
         for widget in self._widgets_alt:
             widget.setVisible(self._show_alt_label)
         self._update_label()
-
+ 
     def _create_dynamically_label(self, content: str, content_alt: str):
         def process_content(content, is_alt=False):
             label_parts = re.split('(<span.*?>.*?</span>)', content)
@@ -205,7 +205,6 @@ class GithubWidget(BaseWidget):
             return widgets
         self._widgets = process_content(content)
         self._widgets_alt = process_content(content_alt, is_alt=True)
-        
 
     def _update_label(self):
         notification_count = len([notification for notification in self._github_data if notification['unread']])

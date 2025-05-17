@@ -9,7 +9,7 @@
 | `show_alerts`   | boolean | `False`                                                                 | Whether to show weather alerts. |
 | `units`         | string  | `'metric'`                                                              | The units for the weather data. Can be `'metric'` or `'imperial'`. |
 | `api_key`       | string  | `'0'`                                                                   | The API key for accessing the weather service. |
-| `icons`         | dict    | `{ 'sunnyDay': '\ue30d', 'clearNight': '\ue32b', 'cloudyDay': '\ue312', 'cloudyNight': '\ue311', 'rainyDay': '\udb81\ude7e', 'rainyNight': '\udb81\ude7e', 'snowyIcyDay': '\udb81\udd98', 'snowyIcyNight': '\udb81\udd98', 'blizzard': '\uebaa', 'default': '\uebaa' }` | A dictionary of icons for different weather conditions. |
+| `icons`         | dict    | `{ 'sunnyDay': '\ue30d', 'clearNight': '\ue32b', 'cloudyDay': '\ue312', 'cloudyNight': '\ue311', 'rainyDay': '\udb81\ude7e', 'rainyNight': '\udb81\ude7e', 'snowyIcyDay': '\udb81\udd98', 'snowyIcyNight': '\udb81\udd98', 'blizzardDay': '\uebaa', 'default': '\uebaa' }` | A dictionary of icons for different weather conditions. |
 | `callbacks`     | dict    | `{ 'on_left': 'do_nothing', 'on_middle': 'do_nothing', 'on_right': 'do_nothing' }` | Callbacks for mouse events on the weather widget. |
 | `weather_card`  | dict    | `{ blur': True, 'round_corners': True, 'round_corners_type': 'normal', 'border_color': 'System', 'alignment': 'right', 'direction': 'down', 'offset_top': 6, 'offset_left': 0, 'icon_size': 64 }` | Configuration for the weather card popup display. Controls visibility, appearance, and positioning. |
 | `animation`         | dict    | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
@@ -35,18 +35,23 @@ weather:
       on_left: "toggle_card"
       on_middle: "do_nothing"
       on_right: "toggle_label"
-    icons: 
+    icons:
       sunnyDay: "\ue30d"
       clearNight: "\ue32b"
-      cloudyDay: "\udb81\udd99"
+      cloudyDay: "\ue312"
       cloudyNight: "\ue311"
-      rainyDay: "\udb81\ude7e"
-      rainyNight: "\udb81\ude7e"
-      snowyIcyDay: "\udb81\udd98"
-      snowyIcyNight: "\udb81\udd98"
-      blizzard: "\uebaa"
+      rainyDay: "\ue308"
+      rainyNight: "\ue333"
+      snowyIcyDay: "\ue30a"
+      snowyIcyNight: "\ue335"
+      blizzardDay: "\udb83\udf36"
+      blizzardNight: "\udb83\udf36"
+      foggyDay: "\ue303"
+      foggyNight: "\ue346"
+      thunderstormDay: "\ue30f"
+      thunderstormNight: "\ue338"
       default: "\uebaa"
-    weather_card: 
+    weather_card:
       blur: True
       round_corners: True
       round_corners_type: "normal"
@@ -95,13 +100,22 @@ weather:
 .weather-widget .label {}
 .weather-widget .label.alt {}
 .weather-widget .icon {}
+
+/* Individual weather icons */
+.weather-widget .icon.sunnyDay {}
+.weather-widget .icon.clearNight {}
 .weather-widget .icon.cloudyDay {}
-.weather-widget .icon.cloudyNight {} 
-.weather-widget .icon.rainyDay {} 
-.weather-widget .icon.rainyNight {} 
-.weather-widget .icon.snowyIcyDay {} 
-.weather-widget .icon.snowyIcyNight {} 
-.weather-widget .icon.blizzard {} 
+.weather-widget .icon.cloudyNight {}
+.weather-widget .icon.rainyDay {}
+.weather-widget .icon.rainyNight {}
+.weather-widget .icon.snowyIcyDay {}
+.weather-widget .icon.snowyIcyNight {}
+.weather-widget .icon.blizzardDay {}
+.weather-widget .icon.blizzardNight {}
+.weather-widget .icon.foggyDay {}
+.weather-widget .icon.foggyNight {}
+.weather-widget .icon.thunderstormDay {}
+.weather-widget .icon.thunderstormNight {}
 .weather-widget .icon.default {}
 
 /* Weather card style */
@@ -120,7 +134,7 @@ weather:
     font-size: 24px;
     font-weight: 700;
 }
-.weather-card-today .label.arert {
+.weather-card-today .label.alert {
     font-size: 12px;
     font-weight: 700;
     background-color: rgba(247, 199, 42, 0.05);

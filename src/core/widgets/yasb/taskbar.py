@@ -43,9 +43,9 @@ EXCLUDED_CLASSES = {
     "Shell_TrayWnd",
     "Shell_SecondaryTrayWnd",
     "#32768",
-    "Qt673QWindowToolSaveBits",
-    "Qt673QWindowToolTipSaveBits",
-    "Qt673QWindowToolTipDropShadowSaveBits",
+    "Qt690QWindowToolSaveBits",
+    "Qt690QWindowToolTipSaveBits",
+    "Qt690QWindowToolTipDropShadowSaveBits",
     "msctls_statusbar32",
     "DirectUIHWND",
     "SHELLDLL_DefView"

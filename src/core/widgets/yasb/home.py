@@ -1,5 +1,4 @@
 import os
-import re
 import subprocess
 from core.widgets.base import BaseWidget
 from core.validation.widgets.yasb.home import VALIDATION_SCHEMA
@@ -7,7 +6,7 @@ from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget, QVBoxLayout
 from PyQt6.QtCore import Qt
 import os
 from core.utils.widgets.power import PowerOperations
-from core.utils.utilities import PopupWidget, add_shadow
+from core.utils.utilities import PopupWidget, add_shadow, build_widget_label
 from core.utils.widgets.animation_manager import AnimationManager
 import logging
 
@@ -64,41 +63,13 @@ class HomeWidget(BaseWidget):
         self._widget_container.setProperty("class", "widget-container")
         add_shadow(self._widget_container, self._container_shadow)
         # Add the container to the main widget layout
-        self.widget_layout.addWidget(self._widget_container)
-        self._create_dynamically_label(self._label)        
+        self.widget_layout.addWidget(self._widget_container)  
+        build_widget_label(self, self._label, None, self._label_shadow)      
 
         self.register_callback("toggle_menu", self._toggle_menu)         
         self.callback_left = callbacks["on_left"]
 
-        
-    def _create_dynamically_label(self, content: str):
-        def process_content(content):
-            label_parts = re.split('(<span.*?>.*?</span>)', content)
-            label_parts = [part for part in label_parts if part]
-            widgets = []
-            for part in label_parts:
-                part = part.strip()  # Remove any leading/trailing whitespace
-                if not part:
-                    continue
-                if '<span' in part and '</span>' in part:
-                    class_name = re.search(r'class=(["\'])([^"\']+?)\1', part)
-                    class_result = class_name.group(2) if class_name else 'icon'
-                    icon = re.sub(r'<span.*?>|</span>', '', part).strip()
-                    label = QLabel(icon)
-                    label.setProperty("class", class_result)
-                else:
-                    label = QLabel(part)
-                    label.setProperty("class", "label")
-                label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                label.setCursor(Qt.CursorShape.PointingHandCursor)
-                add_shadow(label, self._label_shadow)
-                self._widget_container_layout.addWidget(label)
-                widgets.append(label)
-                label.show()
-                
-            return widgets
-        self._widgets = process_content(content)
- 
+     
                
     def create_menu_action(self, path):
         path = os.path.expanduser(path)

@@ -200,8 +200,6 @@ class WindowsMedia(metaclass=Singleton):
 
     @_current_session_only
     def _on_timeline_properties_changed(self, session: Session, args: TimelinePropertiesChangedEventArgs):
-        if DEBUG:
-            self._log.info('MediaCallback: _on_timeline_properties_changed')
         with self._timeline_info_lock:
             self._timeline_info = session.get_timeline_properties()
             # Store values for interpolation

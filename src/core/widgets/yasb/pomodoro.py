@@ -5,7 +5,7 @@ import re
 from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget, QVBoxLayout, QPushButton
 from PyQt6.QtCore import Qt, QTimer, QRectF, pyqtProperty, QPropertyAnimation
 from PyQt6.QtGui import QCursor, QPainter, QPen, QColor
-from core.utils.utilities import PopupWidget, add_shadow, ToastNotifier
+from core.utils.utilities import PopupWidget, ToastNotifier, add_shadow, build_widget_label
 from core.widgets.base import BaseWidget
 from core.validation.widgets.yasb.pomodoro import VALIDATION_SCHEMA
 from core.utils.widgets.animation_manager import AnimationManager
@@ -82,15 +82,10 @@ class PomodoroWidget(BaseWidget):
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
         add_shadow(self._widget_container, self._container_shadow)
-
-        # Add the container to the main widget layout
         self.widget_layout.addWidget(self._widget_container)
 
-        # Create the label for the widget
-        self._create_dynamically_label(
-            self._label_content, self._label_alt_content)
+        build_widget_label(self, self._label_content, self._label_alt_content, self._label_shadow)
 
-        # Register callbacks
         self.register_callback("toggle_timer", self._toggle_timer)
         self.register_callback("reset_timer", self._reset_timer)
         self.register_callback("toggle_label", self._toggle_label)
@@ -101,40 +96,6 @@ class PomodoroWidget(BaseWidget):
         self.callback_middle = callbacks['on_middle']
 
         self._update_label()
-
-    def _create_dynamically_label(self, content: str, content_alt: str):
-        def process_content(content, is_alt=False):
-            # Filters out empty parts before entering the loop
-            label_parts = re.split('(<span.*?>.*?</span>)', content)
-            label_parts = [part for part in label_parts if part]
-            widgets = []
-            for part in label_parts:
-                part = part.strip()
-                if not part:
-                    continue
-                if '<span' in part and '</span>' in part:
-                    class_name = re.search(r'class=(["\'])([^"\']+?)\1', part)
-                    class_result = class_name.group(
-                        2) if class_name else 'icon'
-                    icon = re.sub(r'<span.*?>|</span>', '', part).strip()
-                    label = QLabel(icon)
-                    label.setProperty("class", class_result)
-                else:
-                    label = QLabel(part)
-                    label.setProperty(
-                        "class", "label alt" if is_alt else "label")
-                label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-                add_shadow(label, self._label_shadow)
-                self._widget_container_layout.addWidget(label)
-                widgets.append(label)
-                if is_alt:
-                    label.hide()
-                else:
-                    label.show()
-            return widgets
-        self._widgets = process_content(content)
-        self._widgets_alt = process_content(content_alt, is_alt=True)
 
     def _toggle_label(self):
         if self._animation['enabled']:

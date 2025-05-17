@@ -11,7 +11,7 @@ from core.utils.alert_dialog import raise_info_alert
 from core.widgets.base import BaseWidget
 from core.validation.widgets.yasb.whkd import VALIDATION_SCHEMA
 from core.utils.widgets.animation_manager import AnimationManager
-from core.utils.utilities import add_shadow
+from core.utils.utilities import add_shadow, build_widget_label
 from settings import SCRIPT_PATH
 
 class KeybindsDialog(QDialog):
@@ -284,42 +284,13 @@ class WhkdWidget(BaseWidget):
         # Add the container to the main widget layout
         self.widget_layout.addWidget(self._widget_container)
 
-        # Dynamically create labels
-        self._create_dynamically_label(self._label_content)
-        # Register callback for left click
+        build_widget_label(self, self._label_content, None, self._label_shadow)
+
         self.register_callback("open_popup", self._open_popup)
         callbacks = {
             "on_left": "open_popup"
         }
         self.callback_left = callbacks['on_left']
-
-    def _create_dynamically_label(self, content: str):
-        def process_content(content):
-            label_parts = re.split('(<span.*?>.*?</span>)', content)
-            label_parts = [part for part in label_parts if part]
-            widgets = []
-            for part in label_parts:
-                part = part.strip()
-                if not part:
-                    continue
-                if '<span' in part and '</span>' in part:
-                    class_name = re.search(r'class=(["\'])([^"\']+?)\1', part)
-                    class_result = class_name.group(
-                        2) if class_name else 'icon'
-                    icon = re.sub(r'<span.*?>|</span>', '', part).strip()
-                    label = QLabel(icon)
-                    label.setProperty("class", class_result)
-                else:
-                    label = QLabel(part)
-                    label.setProperty("class", "label")
-                label.setCursor(Qt.CursorShape.PointingHandCursor)
-                label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                add_shadow(label, self._label_shadow)
-                self._widget_container_layout.addWidget(label)
-                widgets.append(label)
-                label.show()
-            return widgets
-        self._widgets = process_content(content)
 
     def _open_popup(self):
         if self._animation.get('enabled'):

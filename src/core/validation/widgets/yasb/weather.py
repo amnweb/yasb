@@ -1,3 +1,6 @@
+from typing import Any
+
+
 DEFAULTS = {
     'label': '0',
     'label_alt': '0',
@@ -16,7 +19,12 @@ DEFAULTS = {
         'rainyNight': '\udb81\ude7e',
         'snowyIcyDay': '\udb81\udd98',
         'snowyIcyNight': '\udb81\udd98',
-        'blizzard': '\uebaa',
+        'blizzardDay': '\uebaa',
+        'blizzardNight': '\uebaa',
+        'foggyDay': '\ue303',
+        'foggyNight': '\ue346',
+        'thunderstormDay': '\ue30f',
+        'thunderstormNight': '\ue338',
         'default': '\uebaa'
     },
     'weather_card': {
@@ -44,7 +52,7 @@ DEFAULTS = {
     }
 }
 
-VALIDATION_SCHEMA = {
+VALIDATION_SCHEMA: dict[str, Any] = {
     'label': {
         'type': 'string',
         'default': DEFAULTS['label']
@@ -116,9 +124,33 @@ VALIDATION_SCHEMA = {
                 'type': 'string',
                 'default': DEFAULTS['icons']['snowyIcyNight'],
             },
-            'blizzard': {
+            'blizzardDay': {
                 'type': 'string',
-                'default': DEFAULTS['icons']['blizzard'],
+                'default': DEFAULTS['icons']['blizzardDay'],
+            },
+            'blizzardNight': {
+                'type': 'string',
+                'default': DEFAULTS['icons']['blizzardNight'],
+            },
+            'foggyDay': {
+                'type': 'string',
+                'default': DEFAULTS['icons']['foggyDay'],
+            },
+            'foggyNight': {
+                'type': 'string',
+                'default': DEFAULTS['icons']['foggyNight'],
+            },
+            'thunderstormDay': {
+                'type': 'string',
+                'default': DEFAULTS['icons']['thunderstormDay'],
+            },
+            'thunderstormNight': {
+                'type': 'string',
+                'default': DEFAULTS['icons']['thunderstormNight'],
+            },
+            'blizzard': { # deprecated
+                'type': 'string',
+                'default': DEFAULTS['icons']['blizzardDay'],
             },
             'default': {
                 'type': 'string',
