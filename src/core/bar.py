@@ -185,12 +185,8 @@ class Bar(QWidget):
                         class_parts.append("last-child")
 
                     widget.children()[2].setProperty("class", " ".join(class_parts))
-
+                    widget.bar = self
                     layout.addWidget(widget, 0)
-
-                for i, widget in enumerate(widget_list):
-                    widget.style().unpolish(widget)
-                    widget.style().polish(widget)
 
             if config['alignment'] == "left" and config['stretch']:
                 layout.addStretch(1)
@@ -204,7 +200,37 @@ class Bar(QWidget):
             bar_layout.addWidget(layout_container, 0, column_num)
 
         self._bar_frame.setLayout(bar_layout)
+        update_styles(self._bar_frame)
 
+    def update_layout_classes(self):
+        for layout_type in ["left", "center", "right"]:
+            layout = None
+            for i in range(self._bar_frame.layout().count()):
+                container = self._bar_frame.layout().itemAt(i).widget()
+                if container and container.property("class").endswith(f"container-{layout_type}"):
+                    layout = container.layout()
+                    break
+            if not layout:
+                return
+            visible_widgets = [
+                layout.itemAt(i).widget() for i in range(layout.count()) 
+                if layout.itemAt(i).widget() and layout.itemAt(i).widget().isVisible()
+            ]
+            for i in range(layout.count()):
+                widget = layout.itemAt(i).widget()
+                if widget:
+                    frame = widget.children()[2]
+                    current_class = frame.property("class") or ""
+                    class_parts = [cls for cls in current_class.split() if cls not in ("first-child", "last-child")]
+                    frame.setProperty("class", " ".join(class_parts))
+            if visible_widgets:
+                first_widget = visible_widgets[0].children()[2]
+                first_class = first_widget.property("class") or ""
+                first_widget.setProperty("class", f"{first_class} first-child")
+                last_widget = visible_widgets[-1].children()[2]
+                last_class = last_widget.property("class") or ""
+                last_widget.setProperty("class", f"{last_class} last-child")
+        update_styles(self._bar_frame)
 
     def animation_bar(self):
         # Store final state values
