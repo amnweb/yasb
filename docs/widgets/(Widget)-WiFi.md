@@ -9,6 +9,7 @@
 | `ethernet_label`   | string  | `"{wifi_icon}"`    | The label format during active Ethernet connection. |
 | `ethernet_label_alt`   | string  | `"{wifi_icon} {ip_addr}"`  | The alternative label format during active Ethernet connection. |
 | `ethernet_icon` | string | "\ueba9" | The icon to indicate Ethernet connection. |
+| `hide_if_ethernet` | boolean | `False` | Whether to hide the widget if an Ethernet connection is active. |
 | `callbacks`   | dict    | `{ 'on_left': 'next_layout', 'on_middle': 'toggle_monocle', 'on_right': 'prev_layout' }` | Callbacks for mouse events on the widget.    |
 | `animation`         | dict    | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
 | `container_padding`  | dict | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}`      | Explicitly set padding inside widget container.      |
@@ -54,6 +55,7 @@ wifi:
 - **ethernet_label:** The format string for the WiFi Widget during active Ethernet connection. Default is `"{wifi_icon}"`.
 - **ethernet_label_alt:** The format string for the WiFi Widget during active Ethernet connection when the widget is in the alternative state. Default is `"{wifi_icon} {ip_addr}"`.
 - **ethernet_icon**: The icon that indicates an active Ethernet connection. It will be used as `{wifi_icon}` whenever there's no active WiFi connection. Default is "\ueba9".
+- **hide_if_ethernet:** A boolean value that determines whether to hide the widget if an Ethernet connection is active. Default is `False`.
 - **wifi_icons:** A list of icons to use for different WiFi signal strengths. Default is `["\udb82\udd2e","\udb82\udd1f","\udb82\udd22","\udb82\udd25","\udb82\udd28",]`.
 - **callbacks:** A dictionary of callbacks for mouse events on the widget. Default is `{'on_left': 'toggle_label', 'on_middle': 'do_nothing', 'on_right': 'do_nothing'}`.
 - **animation:** A dictionary specifying the animation settings for the widget. It contains three keys: `enabled`, `type`, and `duration`. The `type` can be `fadeInOut` and the `duration` is the animation duration in milliseconds.
