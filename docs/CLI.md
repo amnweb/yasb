@@ -11,8 +11,10 @@ The YASB CLI is a command line interface that allows you to interact with the YA
 - `enable-autostart` - Enable autostart for the status bar on system boot.
 - `disable-autostart` - Disable autostart for the status bar on system boot.
 - `reload` - Reload the status bar configuration.
+- `monitor-information` - Show information about connected monitors.
 - `update` - Update aplicattion to the latest version.
 - `log` - Show the status bar logs in the terminal.
+- `reset` - Restore default config files and clear cache
 - `help` - Show the help message.
 
 ## Options
