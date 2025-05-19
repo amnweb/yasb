@@ -2,7 +2,7 @@ import logging
 from settings import APP_BAR_TITLE
 from PyQt6.QtWidgets import QWidget, QHBoxLayout, QGridLayout, QFrame
 from PyQt6.QtGui import QScreen
-from PyQt6.QtCore import Qt, QRect, QEvent, QPropertyAnimation, QParallelAnimationGroup, QEasingCurve, QTimer, QSize, pyqtSignal
+from PyQt6.QtCore import Qt, QRect, QEvent, QPropertyAnimation, QEasingCurve, QTimer, pyqtSignal
 from core.utils.utilities import is_valid_percentage_str, percent_to_float
 from core.utils.win32.utilities import get_monitor_hwnd
 from core.validation.bar import BAR_DEFAULTS
@@ -199,39 +199,33 @@ class Bar(QWidget):
         self._bar_frame.setLayout(bar_layout)
 
 
-    def animation_bar(self):
-        # Store final state values
-        self.final_pos = self.pos()
-        self.final_height = self.height()
-        self.final_width = self.width()
-        # Set initial state for animations
-        self.move(self.final_pos)
-        self.resize(self.final_width, 0)
+    def show_bar(self):
         self.setWindowOpacity(0.0)
-        # Create animation group for parallel animations
-        self.animation_group = QParallelAnimationGroup()
-        # Height animation
-        self.height_animation = QPropertyAnimation(self, b"size")
-        self.height_animation.setDuration(self._animation['duration'])
-        self.height_animation.setStartValue(QSize(self.final_width, 0))
-        self.height_animation.setEndValue(QSize(self.final_width, self.final_height))
-        self.height_animation.setEasingCurve(QEasingCurve.Type.OutExpo)
-        # Opacity animation
         self.opacity_animation = QPropertyAnimation(self, b"windowOpacity")
         self.opacity_animation.setDuration(self._animation['duration'])
         self.opacity_animation.setStartValue(0.0)
         self.opacity_animation.setEndValue(1.0)
         self.opacity_animation.setEasingCurve(QEasingCurve.Type.OutCubic)
-        # Add animations to group and start
-        self.animation_group.addAnimation(self.height_animation)
-        self.animation_group.addAnimation(self.opacity_animation)
-        self.animation_group.start()
-        
+        self.opacity_animation.start()
+
+    def hide_bar(self):
+        self.opacity_animation = QPropertyAnimation(self, b"windowOpacity")
+        self.opacity_animation.setDuration(self._animation['duration'])
+        self.opacity_animation.setStartValue(1.0)
+        self.opacity_animation.setEndValue(0.0)
+        self.opacity_animation.setEasingCurve(QEasingCurve.Type.InCubic)
+        self.opacity_animation.finished.connect(self._on_hide_bar_finished)
+        self.opacity_animation.start()
+    
+    def _on_hide_bar_finished(self):
+        super().hide()
+        self.setWindowOpacity(1.0)
+    
     def showEvent(self, event):
         super().showEvent(event)
         if self._animation['enabled']:
             try:
-                self.animation_bar()
+                self.show_bar()
                 
             except AttributeError:
                 logging.error("Animation not initialized.")
@@ -241,7 +235,12 @@ class Bar(QWidget):
             self._fullscreen_timer.timeout.connect(self.is_foreground_fullscreen)
             self._fullscreen_timer.start()
 
-
+    def hide(self):
+        if self.isVisible() and self._animation['enabled']:
+            self.hide_bar()
+        else:
+            super().hide()
+        
     def is_foreground_fullscreen(self):
         """Check if the active foreground window is in fullscreen mode."""
         hwnd = win32gui.GetForegroundWindow()
@@ -274,7 +273,6 @@ class Bar(QWidget):
         elif not is_fullscreen and not self.isVisible():
             self.show()
 
-
     def detect_os_theme(self) -> bool:
         try:
             import winreg
@@ -285,8 +283,7 @@ class Bar(QWidget):
         except Exception as e:
             logging.error(f"Failed to determine Windows theme: {e}")
             return False
-        
-    
+
     def update_theme_class(self):
         if not hasattr(self, '_bar_frame'):
             return
@@ -302,30 +299,23 @@ class Bar(QWidget):
             update_styles(self._bar_frame)
             self._is_dark_theme = is_dark_theme
  
-    
     def changeEvent(self, event: QEvent) -> None:
         if event.type() == QEvent.Type.PaletteChange:
             self.update_theme_class()
         super().changeEvent(event)
-        
-        
+
     def _handle_bar_management(self, action, screen_name):
-        
         current_screen_matches = (not screen_name or self.screen().name() == screen_name)
         if current_screen_matches:
             if action == "show":
                 self.show()
-                logging.info(f"Showing bar on screen: {self.screen().name()}")
             elif action == "hide":
                 self.hide()
-                logging.info(f"Hiding bar on screen: {self.screen().name()}")
             elif action == "toggle":
                 if self.isVisible():
                     self.hide()
-                    logging.info(f"Toggled: hiding bar on screen: {self.screen().name()}")
                 else:
                     self.show()
-                    logging.info(f"Toggled: showing bar on screen: {self.screen().name()}")
 
 def update_styles(widget):
     widget.style().unpolish(widget)
