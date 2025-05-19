@@ -32,7 +32,6 @@ class WindowButton(QFrame):
             self,
             window_index: int,
             parent_widget: 'StackWidget',
-            hwnd: int = None,
             label: str = None,
             active_label: str = None,
             animation: bool = False
@@ -41,7 +40,6 @@ class WindowButton(QFrame):
         self._animation_initialized = False
         self.komorebic = KomorebiClient()
         self.window_index = window_index
-        self.hwnd = hwnd
         self.parent_widget = parent_widget
         self.status = WINDOW_STATUS_INACTIVE
         self.setProperty("class", "window")
@@ -55,10 +53,13 @@ class WindowButton(QFrame):
         self.button_layout.setSpacing(0)
         add_shadow(self, self.parent_widget._btn_shadow)
 
+        self.icon = None
         self.icon_label = QLabel()
         self.icon_label.setProperty("class", "icon")
         self.button_layout.addWidget(self.icon_label)
         add_shadow(self.icon_label, self.parent_widget._label_shadow)
+        if self.parent_widget._show_icons == "never" or (self.parent_widget._show_icons == "focused" and self.status == WINDOW_STATUS_INACTIVE):
+            self.icon_label.hide()
 
         self.text_label = QLabel(self.default_label)
         self.text_label.setProperty("class", "label")
@@ -66,7 +67,7 @@ class WindowButton(QFrame):
         add_shadow(self.text_label, self.parent_widget._label_shadow)
 
         self.hide()
-        self.update_icons()
+        self.update_icon()
     
     def mousePressEvent(self, event: QMouseEvent):
         if event.button() == Qt.MouseButton.LeftButton:
@@ -89,21 +90,18 @@ class WindowButton(QFrame):
         else:
             self.text_label.setText(self.default_label)
         self.setStyleSheet('')
-        self.update_icons()
 
-    def update_icons(self):
-        if self.parent_widget._show_icons == "focused" and self.window_index == self.parent_widget._curr_window_index:
-            icon = self.parent_widget._get_app_icon(self.hwnd)
-        elif self.parent_widget._show_icons  == "always":
-            icon = self.parent_widget._get_app_icon(self.hwnd)
-        else:
-            icon = None
-        if icon:
-            self.icon_label.setPixmap(icon)
-            self.icon_label.show()
-        else:
-            self.icon_label.clear()
-            self.icon_label.hide()
+        if self.parent_widget._show_icons == "focused":
+            if self.status == WINDOW_STATUS_ACTIVE:
+                self.icon_label.show()
+            else:
+                self.icon_label.hide()
+
+    def update_icon(self, pixmap: QPixmap = None, ignore_cache: bool = False):
+        if self.parent_widget._show_icons != "never":
+            self.icon = pixmap if pixmap else self.parent_widget._get_app_icon(self.window_index, ignore_cache)
+            if self.icon:
+                self.icon_label.setPixmap(self.icon)
 
     def focus_stack_window(self):
         try:
@@ -112,7 +110,7 @@ class WindowButton(QFrame):
                 pass
                 #self.animate_buttons()
         except Exception:
-            logging.exception(f"Failed to focus workspace at index {self.window_index}")
+            logging.exception(f"Failed to focus stack window at index {self.window_index}")
 
     def animate_buttons(self, duration=200, step=30):
         # Store the initial width if not already stored (to enable reverse animations)
@@ -204,6 +202,8 @@ class StackWidget(BaseWidget):
         self._curr_container_index = None
         self._prev_window_index = None
         self._curr_window_index = None
+        self._prev_num_windows = None
+        self._curr_num_windows = None
         self._window_buttons: list[WindowButton] = []
         self._window_focus_events = [
             KomorebiEvent.CycleStack.value,
@@ -214,7 +214,6 @@ class StackWidget(BaseWidget):
             KomorebiEvent.WatchConfiguration.value,
             KomorebiEvent.StackWindow.value,
             KomorebiEvent.UnstackWindow.value,
-            KomorebiEvent.TitleUpdate.value,
         ]
         # Disable default mouse event handling inherited from BaseWidget
         self.mousePressEvent = None
@@ -230,7 +229,7 @@ class StackWidget(BaseWidget):
         self._no_window_text.setText(label_no_window)
         add_shadow(self._no_window_text, self._label_shadow)
         self._no_window_text.setProperty("class", "no-window")
-        # Construct container which holds workspace buttons
+        # Construct container which holds windows buttons
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
         self._widget_container_layout.setContentsMargins(self._padding['left'],self._padding['top'],self._padding['right'],self._padding['bottom'])
@@ -302,16 +301,29 @@ class StackWidget(BaseWidget):
                     self._update_button_status(prev_window_button)
                     new_window_button = self._window_buttons[self._curr_window_index]
                     self._update_button_status(new_window_button)
+                    if self._komorebi_windows[self._curr_window_index]['exe'] == "ApplicationFrameHost.exe" and not new_window_button.icon:
+                        new_window_button.update_icon(ignore_cache=True)
                 except (IndexError, TypeError):
-                    self._window_buttons = []
-                    self._add_or_update_buttons()
+                    pass
 
             if event['type'] in self._reset_buttons_events or self._has_active_container_index_changed() or self._has_active_workspace_index_changed():
                 self._window_buttons = []
                 self._add_or_update_buttons()
 
-            if event['type'] in ['Minimize', 'Show', 'Hide', 'Destroy', 'Close']:
-                self._window_buttons = []
+            if event['type'] == KomorebiEvent.TitleUpdate.value:
+                hwnd = event['content'][1]['hwnd']
+                for window_btn in self._window_buttons:
+                    window_btn_hwnd = self._komorebi_windows[window_btn.window_index]['hwnd']
+                    if window_btn_hwnd == hwnd:
+                        self._update_button_label(window_btn)
+                        window_btn.update_icon(ignore_cache=True)
+            
+            if self._has_number_of_windows_changed():
+                for window_btn in self._window_buttons:
+                    try:
+                        window = self._komorebi_windows[window_btn.window_index]
+                    except IndexError:
+                        self._try_remove_window_button(window_btn.window_index)
                 self._add_or_update_buttons()
 
             if self._show_only_stack: 
@@ -350,12 +362,18 @@ class StackWidget(BaseWidget):
                 if focused_window:
                     self._prev_window_index = self._curr_window_index
                     self._curr_window_index = focused_window['index']
+                if self._komorebi_windows:
+                    self._prev_num_windows = self._curr_num_windows
+                    self._curr_num_windows = len(self._komorebi_windows)
                 return True
         except TypeError:
             return False
 
+    def _has_number_of_windows_changed(self):
+        return self._prev_num_windows != self._curr_num_windows and not self._has_active_container_index_changed() and not self._has_active_workspace_index_changed()
+
     def _has_active_window_index_changed(self):
-        return self._prev_window_index != self._curr_window_index and not self._has_active_container_index_changed()
+        return self._prev_window_index != self._curr_window_index and not self._has_active_container_index_changed() and not self._has_active_workspace_index_changed()
 
     def _has_active_container_index_changed(self):
         return self._prev_container_index != self._curr_container_index and not self._has_active_workspace_index_changed()
@@ -381,12 +399,25 @@ class StackWidget(BaseWidget):
         window_btn.update_visible_buttons()
         window_btn._animation_initialized = True
 
+    def _update_button_label(self, window_btn: WindowButton) -> None:
+        window_index = window_btn.window_index
+        default_label, active_label = self._get_window_label(window_index)
+        if window_btn.default_label != default_label or window_btn.active_label != active_label:
+            window_btn.default_label = default_label
+            window_btn.active_label = active_label if active_label else default_label
+            window_btn.update_and_redraw(window_btn.status)
+            if self._animation and window_btn._animation_initialized:
+                window_btn.animate_buttons()
+        window_btn._animation_initialized = True
+
     def _add_or_update_buttons(self) -> None:
         buttons_added = False
         for window_index, _ in enumerate(self._komorebi_windows):             
             try:
                 button = self._window_buttons[window_index]
                 self._update_button_status(button)
+                self._update_button_label(button)
+                button.update_icon()
             except IndexError:
                 button = self._try_add_window_button(window_index)
                 buttons_added = True    
@@ -421,18 +452,19 @@ class StackWidget(BaseWidget):
             default_label = default_label[:self._max_length] + self._max_length_ellipsis
         if self._max_length_active and len(active_label) > self._max_length_active:
             active_label = active_label[:self._max_length_active] + self._max_length_ellipsis
-        return default_label, active_label, window['hwnd']
+        return default_label, active_label
 
     def _try_add_window_button(self, window_index: int) -> WindowButton:
         window_button_indexes = [ws_btn.window_index for ws_btn in self._window_buttons]
         if window_index not in window_button_indexes:
-            default_label, active_label, hwnd = self._get_window_label(window_index)
-            window_btn = WindowButton(window_index, self, hwnd, default_label, active_label, self._animation)
+            default_label, active_label = self._get_window_label(window_index)
+            window_btn = WindowButton(window_index, self, default_label, active_label, self._animation)
             self._window_buttons.append(window_btn)
             return window_btn
 
     def _try_remove_window_button(self, window_index: int) -> None:
         with suppress(IndexError):
+            self._window_buttons[window_index].hide()
             self._window_buttons.pop(window_index)
 
     def _show_offline_status(self):
@@ -452,7 +484,7 @@ class StackWidget(BaseWidget):
         self._widget_container.show()
 
     def wheelEvent(self, event):
-        """Handle mouse wheel events to switch workspaces."""
+        """Handle mouse wheel events to switch windows."""
         if not self._enable_scroll_switching or not self._komorebi_screen:
             return
 
@@ -471,40 +503,41 @@ class StackWidget(BaseWidget):
             self._komorebic.focus_stack_window(next_idx)
         except Exception:
             logging.exception(
-                f"Failed to switch to workspace at index {next_idx}")
+                f"Failed to switch to stack window at index {next_idx}")
 
-    def _get_app_icon(self, hwnd: int) -> QPixmap | None:
+    def _get_app_icon(self, window_index: int, ignore_cache: bool) -> QPixmap | None:
         try:
+            hwnd = self._komorebi_windows[window_index]['hwnd']
             process = get_process_info(hwnd)
             pid = process["pid"]
+            self.dpi = self.screen().devicePixelRatio()
             cache_key = (hwnd, pid, self.dpi)
 
-            if cache_key in self._icon_cache:
+            if cache_key in self._icon_cache and not ignore_cache:
                 icon_img = self._icon_cache[cache_key]
             else:
-                self.dpi = self.screen().devicePixelRatio()
                 icon_img = get_window_icon(hwnd)
-                if icon_img:
-                    icon_img = icon_img.resize(
-                        (int(self._icon_size * self.dpi), int(self._icon_size * self.dpi)),
-                        Image.LANCZOS
-                    ).convert("RGBA")
+
+            if icon_img:
+                self._icon_update_retry_count = 0
+                icon_img = icon_img.resize(
+                    (int(self._icon_size * self.dpi), int(self._icon_size * self.dpi)),
+                    Image.LANCZOS
+                ).convert("RGBA")
+                self._icon_cache[cache_key] = icon_img
+                qimage = QImage(icon_img.tobytes(), icon_img.width, icon_img.height, QImage.Format.Format_RGBA8888)
+                pixmap = QPixmap.fromImage(qimage)
+                pixmap.setDevicePixelRatio(self.dpi)
+                try:
+                    self._window_buttons[window_index].update_icon(pixmap=pixmap)
+                except IndexError:
+                    return pixmap
+            elif process["name"] == "ApplicationFrameHost.exe" and window_index == self._curr_window_index:
+                if self._icon_update_retry_count < 10:
+                    self._icon_update_retry_count += 1
+                    QTimer.singleShot(100, lambda: self._get_app_icon(window_index, ignore_cache))
                 else:
-                    if process["name"] == "ApplicationFrameHost.exe":
-                        if self._icon_update_retry_count < 10:
-                            self._icon_update_retry_count += 1
-                            QTimer.singleShot(500, lambda: self._get_app_icon(hwnd))
-                            return
-                        else:
-                            self._icon_update_retry_count = 0
-                if not DEBUG:
-                    self._icon_cache[cache_key] = icon_img
-            if not icon_img:
-                return None
-            qimage = QImage(icon_img.tobytes(), icon_img.width, icon_img.height, QImage.Format.Format_RGBA8888)
-            pixmap = QPixmap.fromImage(qimage)
-            pixmap.setDevicePixelRatio(self.dpi)
-            return pixmap
+                    self._icon_update_retry_count = 0
 
         except Exception:
             if DEBUG:
