@@ -236,6 +236,8 @@ class CliPipeHandler:
                 continue
 
             self._handle_client_connection(handle)
+            DisconnectNamedPipe(handle)
+            CloseHandle(handle)
 
     def _handle_client_connection(self, pipe: int):
         """Handle a client connection and process commands"""
