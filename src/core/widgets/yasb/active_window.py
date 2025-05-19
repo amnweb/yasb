@@ -1,4 +1,5 @@
 import logging
+import os
 from settings import APP_BAR_TITLE, DEBUG
 from core.utils.win32.windows import WinEvent
 from core.widgets.base import BaseWidget
@@ -15,17 +16,15 @@ from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.utilities import add_shadow
 import atexit
 
-IGNORED_TITLES = ['', ' ', 'FolderView', 'Program Manager', 'python3', 'pythonw3', 'YasbBar', 'Search', 'Start']
-IGNORED_CLASSES = ['WorkerW', 'TopLevelWindowForOverflowXamlIsland', 'Shell_TrayWnd', 'Shell_SecondaryTrayWnd']
+# Get the current process ID to exclude our own windows
+CURRENT_PROCESS_ID = os.getpid()
+# Define ignored titles, classes, and processes
+IGNORED_TITLES = ['', ' ', 'FolderView', 'Program Manager',
+                  'python3', 'pythonw3', 'YasbBar', 'Search', 'Start']
+IGNORED_CLASSES = ['WorkerW', 'TopLevelWindowForOverflowXamlIsland',
+                   'Shell_TrayWnd', 'Shell_SecondaryTrayWnd']
 IGNORED_PROCESSES = ['SearchHost.exe', 'komorebi.exe', 'yasb.exe']
 IGNORED_YASB_TITLES = [APP_BAR_TITLE]
-IGNORED_YASB_CLASSES = [
-    'Qt690QWindowIcon',
-    'Qt690QWindow',
-    'Qt690QWindowToolSaveBits',
-    'Qt690QWindowPopupSaveBits',
-    'Qt690QWindowPopupDropShadowSaveBits'
-]
 DEBOUNCE_CLASSES = [
     'OperationStatusWindow'
 ]
@@ -187,7 +186,7 @@ class ActiveWindowWidget(BaseWidget):
         if (not win_info or not hwnd or
                 not win_info['title'] or
                 win_info['title'] in IGNORED_YASB_TITLES or
-                win_info['class_name'] in IGNORED_YASB_CLASSES):
+                win_info['process']['pid'] == CURRENT_PROCESS_ID):
             return
 
         monitor_name = win_info['monitor_info'].get('device', None)
