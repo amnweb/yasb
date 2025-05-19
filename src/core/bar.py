@@ -2,11 +2,12 @@ import logging
 from settings import APP_BAR_TITLE
 from PyQt6.QtWidgets import QWidget, QHBoxLayout, QGridLayout, QFrame
 from PyQt6.QtGui import QScreen
-from PyQt6.QtCore import Qt, QRect, QEvent, QPropertyAnimation, QParallelAnimationGroup, QEasingCurve, QTimer, QSize
+from PyQt6.QtCore import Qt, QRect, QEvent, QPropertyAnimation, QParallelAnimationGroup, QEasingCurve, QTimer, QSize, pyqtSignal
 from core.utils.utilities import is_valid_percentage_str, percent_to_float
 from core.utils.win32.utilities import get_monitor_hwnd
 from core.validation.bar import BAR_DEFAULTS
 from core.utils.win32.blurWindow import Blur
+from core.event_service import EventService
 import win32gui
 
 try:
@@ -16,6 +17,9 @@ except ImportError:
     IMPORT_APP_BAR_MANAGER_SUCCESSFUL = False
 
 class Bar(QWidget):
+
+    handle_bar_management = pyqtSignal(str, str)
+    
     def __init__(
             self,
             bar_id: str,
@@ -34,6 +38,7 @@ class Bar(QWidget):
             padding: dict = BAR_DEFAULTS['padding']
     ):
         super().__init__()
+        self._event_service = EventService()
         self.hide()
         self.setScreen(bar_screen)
         self._bar_id = bar_id
@@ -87,7 +92,10 @@ class Bar(QWidget):
             )
 
         self.screen().geometryChanged.connect(self.on_geometry_changed, Qt.ConnectionType.QueuedConnection)
-           
+
+        self.handle_bar_management.connect(self._handle_bar_management)
+        self._event_service.register_event("handle_bar_cli", self.handle_bar_management)
+
         self.show()
         
 
@@ -300,6 +308,25 @@ class Bar(QWidget):
             self.update_theme_class()
         super().changeEvent(event)
         
+        
+    def _handle_bar_management(self, action, screen_name):
+        
+        current_screen_matches = (not screen_name or self.screen().name() == screen_name)
+        if current_screen_matches:
+            if action == "show":
+                self.show()
+                logging.info(f"Showing bar on screen: {self.screen().name()}")
+            elif action == "hide":
+                self.hide()
+                logging.info(f"Hiding bar on screen: {self.screen().name()}")
+            elif action == "toggle":
+                if self.isVisible():
+                    self.hide()
+                    logging.info(f"Toggled: hiding bar on screen: {self.screen().name()}")
+                else:
+                    self.show()
+                    logging.info(f"Toggled: showing bar on screen: {self.screen().name()}")
+
 def update_styles(widget):
     widget.style().unpolish(widget)
     widget.style().polish(widget)

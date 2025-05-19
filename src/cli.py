@@ -138,7 +138,20 @@ class CLIHandler:
         self.task_handler = CLITaskHandler()
         self.update_handler = CLIUpdateHandler()
 
-    def stop_or_reload_application(self, reload: bool = False):
+    def send_command_to_application(self, command: str):
+        """
+        Send a command to the running YASB application through the pipe.
+        
+        Commands can be:
+        - "stop" - Stop the application
+        - "reload" - Reload the application
+        - "show-bar [screen]" - Show the bar on a specific screen
+        - "hide-bar [screen]" - Hide the bar on a specific screen
+        - "toggle-bar [screen]" - Toggle the bar on a specific screen
+        
+        Args:
+            command: The command to send
+        """
         try:
             pipe_handle = CreateFile(
                 CLI_SERVER_PIPE_NAME,
@@ -152,9 +165,10 @@ class CLIHandler:
             if pipe_handle == INVALID_HANDLE_VALUE:
                 print("Failed to connect to YASB. Pipe not found. It may not be running.")
                 return
-            cmd = b"reload" if reload else b"stop"
-
-            success = WriteFile(pipe_handle, cmd)
+                
+            # Send the command as bytes
+            command_bytes = command.encode('utf-8')
+            success = WriteFile(pipe_handle, command_bytes)
             if not success:
                 print(f"Failed to write command. Err: {GetLastError()}")
                 CloseHandle(pipe_handle)
@@ -165,8 +179,11 @@ class CLIHandler:
                 print(f"Failed to read response. Err: {GetLastError()}")
                 CloseHandle(pipe_handle)
                 return
-            if response.decode("utf-8").strip() != "ACK":
-                print(f"Received unexpected response: {response.decode('utf-8').strip()}")
+                
+            response_text = response.decode("utf-8").strip()
+            if response_text != "ACK":
+                print(f"Received unexpected response: {response_text}")
+            
             CloseHandle(pipe_handle)
         except Exception as e:
             print(f"Error: {e}")
@@ -206,11 +223,18 @@ class CLIHandler:
         enable_autostart_parser.add_argument("--task", action="store_true", help="Enable autostart as a scheduled task")
 
         disable_autostart_parser = subparsers.add_parser("disable-autostart", help="Disable autostart on system boot")
-        disable_autostart_parser.add_argument(
-            "--task", action="store_true", help="Disable autostart as a scheduled task"
-        )
+        disable_autostart_parser.add_argument("--task", action="store_true", help="Disable autostart as a scheduled task")
 
         subparsers.add_parser("monitor-information", help="Show information about connected monitors")
+
+        show_bar_parser = subparsers.add_parser("show-bar", help="Show the bar on a specific screen")
+        show_bar_parser.add_argument("-s", "--screen", type=str, help="Screen name (optional)")
+        
+        hide_bar_parser = subparsers.add_parser("hide-bar", help="Hide the bar on a specific screen")
+        hide_bar_parser.add_argument("-s", "--screen", type=str, help="Screen name (optional)")
+        
+        toggle_bar_parser = subparsers.add_parser("toggle-bar", help="Toggle the bar on a specific screen")
+        toggle_bar_parser.add_argument("-s", "--screen", type=str, help="Screen name (optional)")
 
         subparsers.add_parser("reset", help="Restore default config files and clear cache")
 
@@ -239,18 +263,35 @@ class CLIHandler:
             sys.exit(0)
 
         elif args.command == "stop":
-            self.stop_or_reload_application()
+            self.send_command_to_application("stop")
             sys.exit(0)
 
         elif args.command == "reload":
             if is_process_running("yasb.exe"):
                 if not args.silent:
                     print("Reload YASB...")
-                self.stop_or_reload_application(reload=True)
+                self.send_command_to_application("reload")
             else:
                 print("YASB is not running. Reload aborted.")
             sys.exit(0)
 
+        elif args.command == "show-bar":
+            screen_arg = f" --screen {args.screen}" if args.screen else ""
+            self.send_command_to_application(f"show-bar{screen_arg}")
+            sys.exit(0)
+
+        # For hide-bar command
+        elif args.command == "hide-bar":
+            screen_arg = f" --screen {args.screen}" if args.screen else ""
+            self.send_command_to_application(f"hide-bar{screen_arg}")
+            sys.exit(0)
+
+        # For toggle-bar command
+        elif args.command == "toggle-bar":
+            screen_arg = f" --screen {args.screen}" if args.screen else ""
+            self.send_command_to_application(f"toggle-bar{screen_arg}")
+            sys.exit(0)
+    
         elif args.command == "update":
             self.update_handler.update_yasb(YASB_VERSION)
 
@@ -408,6 +449,9 @@ class CLIHandler:
                   enable-autostart          Enable autostart on system boot
                   disable-autostart         Disable autostart on system boot
                   monitor-information       Show information about connected monitors
+                  show-bar                  Show the bar on all or a specific screen
+                  hide-bar                  Hide the bar on all or a specific screen
+                  toggle-bar                Toggle the bar on all or a specific screen
                   update                    Update the application
                   log                       Tail yasb process logs (cancel with Ctrl-C)
                   reset                     Restore default config files and clear cache
