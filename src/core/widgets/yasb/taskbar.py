@@ -1,4 +1,5 @@
 import logging
+import os
 import time
 import atexit
 from typing import Optional
@@ -29,7 +30,8 @@ except ImportError:
     
 # Missing from win32con
 WS_EX_NOREDIRECTIONBITMAP = 0x20_0000
-
+# Get the current process ID to exclude our own windows
+CURRENT_PROCESS_ID = os.getpid()
 # Exclude the context menu, taskbar, and other system classes that we don't want to process
 EXCLUDED_CLASSES = {
     "Progman",
@@ -43,9 +45,6 @@ EXCLUDED_CLASSES = {
     "Shell_TrayWnd",
     "Shell_SecondaryTrayWnd",
     "#32768",
-    "Qt690QWindowToolSaveBits",
-    "Qt690QWindowToolTipSaveBits",
-    "Qt690QWindowToolTipDropShadowSaveBits",
     "msctls_statusbar32",
     "DirectUIHWND",
     "SHELLDLL_DefView"
@@ -61,6 +60,7 @@ class TaskbarWidget(BaseWidget):
             icon_size: int,
             animation:dict[str, str] | bool,
             title_label: dict[str, str],
+            monitor_exclusive: bool,
             tooltip: bool,
             ignore_apps: dict[str, list[str]],
             container_padding: dict,
@@ -69,7 +69,7 @@ class TaskbarWidget(BaseWidget):
             container_shadow: dict = None
     ):
         super().__init__(class_name="taskbar-widget")
-
+        self.monitor_hwnd = None
         self.dpi = None # Initial DPI value
         self.icon_label = QLabel()
         self._label_icon_size = icon_size
@@ -84,6 +84,7 @@ class TaskbarWidget(BaseWidget):
             self._animation = animation
         self._title_label = title_label
         self._tooltip = tooltip
+        self._monitor_exclusive = monitor_exclusive
         self._ignore_apps = ignore_apps
         self._padding = container_padding
         self._label_shadow = label_shadow
@@ -122,9 +123,14 @@ class TaskbarWidget(BaseWidget):
         self._event_service.register_event(WinEvent.EventObjectFocus, self.update_event)
         self._event_service.register_event(WinEvent.EventObjectHide, self.update_event)
         
+        if self._monitor_exclusive:
+            # Register for monitor change events only if monitor_exclusive is enabled
+            self._event_service.register_event(WinEvent.EventSystemMoveSizeEnd, self.update_event)
+        
         if self._tooltip or self._title_label['enabled']:
             # Register for title change events only if title labels or tooltip are enabled
             self._event_service.register_event(WinEvent.EventObjectNameChange, self.update_event)
+        
         self._event_service.register_event(WinEvent.EventObjectDestroy, self.update_event)
         
         # Load all currently visible windows when the widget is initialized
@@ -167,6 +173,31 @@ class TaskbarWidget(BaseWidget):
             return  # Skip event
         self._last_event_time[key] = now
 
+        if event == WinEvent.EventSystemMoveSizeEnd and self._monitor_exclusive:
+            if hwnd in self._window_info_cache:
+                # First check if we need to get fresh info by comparing monitor information
+                cached_info = self._window_info_cache[hwnd]
+                current_screen_name = self.screen().name()
+                
+                # Get cached monitor information
+                cached_monitor_name = cached_info.get('monitor_info', {}).get('device', None)
+                
+                # Only get fresh info if monitor_exclusive is enabled and we can't determine
+                # from cache or if the monitor appears to have changed
+                needs_refresh = (cached_monitor_name is None or 
+                                cached_monitor_name != current_screen_name)
+                
+                if needs_refresh:
+                    # Window potentially moved to a different monitor, get fresh info
+                    full_win_info = get_hwnd_info(hwnd)
+                    if full_win_info:
+                        window_info = self._cache_window_info(hwnd, full_win_info)
+                        self._update_label(hwnd, event)
+                elif self._monitor_exclusive:
+                    # Monitor hasn't changed but we still need to update in exclusive mode
+                    self._update_label(hwnd, event)
+                return
+        
         # Special handling for EventObjectNameChange events
         # this event can be problematic with apps which have rapid title changes thats why we need to debounce it
         if event == WinEvent.EventObjectNameChange:
@@ -185,7 +216,7 @@ class TaskbarWidget(BaseWidget):
                     self._name_change_last_fetch[hwnd] = now
             else:
                 # For repeated title changes, apply the debounce
-                name_change_debounce = 1.0  # 5 seconds debounce
+                name_change_debounce = 1.0  # 1 seconds debounce
                 last_name_fetch = self._name_change_last_fetch.get(hwnd, 0)
                 
                 if now - last_name_fetch < name_change_debounce:
@@ -211,7 +242,8 @@ class TaskbarWidget(BaseWidget):
                 win_info['class_name'] in EXCLUDED_CLASSES or
                 win_info['title'] in self._ignore_apps['titles'] or
                 win_info['class_name'] in self._ignore_apps['classes'] or
-                win_info['process']['name'] in self._ignore_apps['processes']):
+                win_info['process']['name'] in self._ignore_apps['processes'] or
+                win_info['process']['pid'] == CURRENT_PROCESS_ID):
             return
 
         cached_title = self._hwnd_title_cache.get(hwnd)
@@ -235,7 +267,9 @@ class TaskbarWidget(BaseWidget):
             'process': {
                 'name': win_info['process']['name'],
                 'pid': win_info['process']['pid']
-            }
+            },
+            'monitor_info': win_info.get('monitor_info', {}),
+            'monitor_hwnd': win_info.get('monitor_hwnd', None)
         }
 
         self._window_info_cache[hwnd] = wininfo
@@ -412,6 +446,7 @@ class TaskbarWidget(BaseWidget):
             
     def get_visible_windows(self, _: int, event: WinEvent) -> list[tuple[str, int, Optional[QPixmap], dict]]:
         visible_windows = []
+        current_screen_name = self.screen().name()
 
         def enum_windows_proc(hwnd, _):
             if win32gui.IsWindowVisible(hwnd) and win32gui.GetWindowText(hwnd):
@@ -432,6 +467,13 @@ class TaskbarWidget(BaseWidget):
                         # Only call get_hwnd_info if not in cache
                         full_win_info = get_hwnd_info(hwnd)
                         window_info = self._cache_window_info(hwnd, full_win_info)
+
+                    if self._monitor_exclusive and window_info:
+                        window_monitor_name = window_info.get('monitor_info', {}).get('device', None)
+                        monitor_hwnd = window_info.get('monitor_hwnd', None)
+                        if (window_monitor_name != current_screen_name and 
+                            monitor_hwnd != getattr(self, 'monitor_hwnd', None)):
+                            return True
 
                     if not window_info or window_info['process']['name'] in self._ignore_apps['processes']:
                         return True
@@ -458,12 +500,10 @@ class TaskbarWidget(BaseWidget):
     def _perform_action(self, action: str) -> None:
         widget = QApplication.instance().widgetAt(QCursor.pos())
         if not widget:
-            logging.warning("No widget found under cursor.")
             return
         
         hwnd = widget.property("hwnd")
         if not hwnd:
-            logging.warning("No hwnd found for widget.")
             return
 
         if action == "toggle":

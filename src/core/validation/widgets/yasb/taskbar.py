@@ -1,6 +1,7 @@
 DEFAULTS = {
     'icon_size': 16,
     'tooltip': False,
+    'monitor_exclusive': False,
     'ignore_apps': {
         'classes': [],
         'processes': [],
@@ -34,6 +35,11 @@ VALIDATION_SCHEMA = {
         'type': 'boolean',
         'required': False,
         'default': DEFAULTS['tooltip']
+    },
+    'monitor_exclusive': {
+        'type': 'boolean',
+        'required': False,
+        'default': DEFAULTS['monitor_exclusive']
     },
     'ignore_apps': {
         'type': 'dict',

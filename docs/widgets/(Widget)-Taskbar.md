@@ -5,6 +5,7 @@
 | `ignore_apps`       | dict    | `processes:[],titles[],classes:[]` | Ignore some apps. |
 | `tooltip`  | boolean  | `True`        | Whether to show the tooltip on hover. |
 | `title_label`       | dict    | `{'enabled': False, 'show': 'focused', 'min_length': 10, 'max_length': 30}`                     | Title label configuration for displaying window titles.                     |
+| `monitor_exclusive` | boolean | `False` | Whether the application should be exclusive to the monitor. |
 | `container_padding`  | dict | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}`      | Explicitly set padding inside widget container.
 | `callbacks`         | dict    | `{'on_left': 'toggle_window', 'on_middle': 'do_nothing', 'on_right': 'close_app'}` | Callbacks for mouse events on the widget.                                   |
 | `animation`         | dict    | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
@@ -45,6 +46,7 @@ taskbar:
   - show: A string that determines the display behavior (either "focused" or "always").
   - min_length: The minimum length of the title label.
   - max_length: The maximum length of the title label.
+- **monitor_exclusive:** A boolean indicating whether the application should be exclusive to the monitor. If set to `True`, the taskbar will only show applications on the monitor where the application is running.
 - **container_padding:** Explicitly set padding inside widget container.
 - **ignore_apps:** A dictionary that allows you to specify which applications should be ignored by the taskbar widget. It includes:
 - processes: A list of process names to ignore.
