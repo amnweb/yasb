@@ -1,12 +1,17 @@
 DEFAULTS = {
     'label': '\udb80\udcb1',
     'label_alt': '\uf293',
+    'label_no_device': 'No devices connected',
+    'label_device_separator': ', ',
+    'max_length': None,
+    'max_length_ellipsis': '...',
     'tooltip': True,
     'icons': {
         'bluetooth_on': '\udb80\udcaf',
         'bluetooth_off': '\udb80\udcb2',
         'bluetooth_connected': '\udb80\udcb1',
     },
+    'device_aliases': [],
     'animation': {
         'enabled': True,
         'type': 'fadeInOut',
@@ -28,6 +33,24 @@ VALIDATION_SCHEMA = {
     'label_alt': {
         'type': 'string',
         'default': DEFAULTS['label_alt']
+    },
+    'label_no_device': {
+        'type': 'string',
+        'default': DEFAULTS['label_no_device']
+    },
+    'label_device_separator': {
+        'type': 'string',
+        'default': DEFAULTS['label_device_separator']
+    },
+    'max_length': {
+        'type': 'integer',
+        'min': 1,
+        'nullable': True,
+        'default': DEFAULTS['max_length']
+    },
+    'max_length_ellipsis': {
+        'type': 'string',
+        'default': DEFAULTS['max_length_ellipsis']
     },
     'tooltip': {
         'type': 'boolean',
@@ -51,6 +74,17 @@ VALIDATION_SCHEMA = {
             }
         },
         'default': DEFAULTS['icons']
+    },
+    'device_aliases': {
+        'type': 'list',
+        'schema': {
+            'type': 'dict',
+            'schema': {
+                'name': {'type': 'string', 'required': True},
+                'alias': {'type': 'string', 'required': True}
+            }
+        },
+        "default": DEFAULTS['device_aliases']
     },
     'animation': {
         'type': 'dict',
