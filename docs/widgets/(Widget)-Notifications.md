@@ -54,6 +54,13 @@
 - **container_shadow:** Container shadow options.
 - **label_shadow:** Label shadow options.
 
+## Available Callbacks
+
+- **toggle_notification:** Toggles the notification panel.
+- **toggle_label:** Toggles the label between the default and alternative format.
+- **do_nothing:** A placeholder callback that does nothing.
+- **clear_notifications:** Clears all notifications.
+
 ## Example Style
 ```css
 .notification-widget {

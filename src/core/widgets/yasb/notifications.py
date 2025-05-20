@@ -2,9 +2,8 @@ import logging
 import re
 from PyQt6.QtWidgets import QWidget, QLabel, QHBoxLayout
 from PyQt6.QtCore import pyqtSignal
-from core.event_service import EventService
-from core.utils.widgets.windows_notification import WindowsNotificationEventListener
 from core.widgets.base import BaseWidget
+from core.event_service import EventService
 from core.validation.widgets.yasb.notifications import VALIDATION_SCHEMA
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.win32.system_function import notification_center, quick_settings
@@ -66,6 +65,7 @@ class NotificationsWidget(BaseWidget):
 
         self.register_callback("toggle_label", self._toggle_label)
         self.register_callback("toggle_notification", self._toggle_notification)
+        self.register_callback("clear_notifications", self._clear_notifications)
 
         # Register the WindowsNotificationUpdate event
         self.event_service = EventService()
@@ -103,7 +103,14 @@ class NotificationsWidget(BaseWidget):
         for widget in self._widgets_alt:
             widget.setVisible(self._show_alt_label)
         self._update_label()
-            
+
+
+    def _clear_notifications(self):
+        if self._animation['enabled']:
+            AnimationManager.animate(self, self._animation['type'], self._animation['duration'])
+        if WindowsNotificationEventListener:
+            self.event_service.emit_event("WindowsNotificationClear", "clear_all_notifications")  
+
 
     def _update_label(self):
         if self._notification_count == 0 and self._hide_empty:
