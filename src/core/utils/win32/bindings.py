@@ -66,7 +66,6 @@ user32.CreateWindowExW.argtypes = [
 ]
 user32.CreateWindowExW.restype = HWND
 
-user32.SetWindowPos.restype = c_int
 user32.SetWindowPos.argtypes = [
     HWND,
     HWND,
@@ -76,39 +75,55 @@ user32.SetWindowPos.argtypes = [
     INT,
     UINT,
 ]
+user32.SetWindowPos.restype = c_int
 
-user32.DestroyWindow.restype = c_int
 user32.DestroyWindow.argtypes = [HWND]
+user32.DestroyWindow.restype = c_int
 
-user32.RegisterWindowMessageW.restype = UINT
 user32.RegisterWindowMessageW.argtypes = [LPCWSTR]
+user32.RegisterWindowMessageW.restype = UINT
 
-user32.SendNotifyMessageW.restype = c_int
+user32.RegisterShellHookWindow.argtypes = [HWND]
+user32.RegisterShellHookWindow.restype = BOOL
+
+user32.DeregisterShellHookWindow.argtypes = [HWND]
+user32.DeregisterShellHookWindow.restype = BOOL
+
+user32.SetPropW.argtypes = [HWND, LPCWSTR, HANDLE]
+user32.SetPropW.restype = BOOL
+
+user32.RemovePropW.argtypes = [HWND, LPCWSTR]
+user32.RemovePropW.restype = BOOL
+
+user32.SetTaskmanWindow.argtypes = [HWND]
+user32.SetTaskmanWindow.restype = BOOL
+
 user32.SendNotifyMessageW.argtypes = [HWND, UINT, WPARAM, LPARAM]
+user32.SendNotifyMessageW.restype = c_int
 
-user32.PostMessageW.restype = c_int
 user32.PostMessageW.argtypes = [HWND, UINT, WPARAM, LPARAM]
+user32.PostMessageW.restype = c_int
 
-user32.SetTimer.restype = c_int
 user32.SetTimer.argtypes = [HWND, UINT, UINT, LPVOID]
+user32.SetTimer.restype = c_int
 
-user32.FindWindowW.restype = HWND
 user32.FindWindowW.argtypes = [LPCWSTR, LPCWSTR]
+user32.FindWindowW.restype = HWND
 
-user32.FindWindowExW.restype = HWND
 user32.FindWindowExW.argtypes = [HWND, HWND, LPCWSTR, LPCWSTR]
+user32.FindWindowExW.restype = HWND
 
-user32.SendMessageW.restype = c_int
 user32.SendMessageW.argtypes = [HWND, UINT, WPARAM, LPARAM]
+user32.SendMessageW.restype = c_int
 
-user32.IsWindow.restype = BOOL
 user32.IsWindow.argtypes = [HWND]
+user32.IsWindow.restype = BOOL
 
-user32.GetWindowThreadProcessId.restype = DWORD
 user32.GetWindowThreadProcessId.argtypes = [HWND, LPDWORD]
+user32.GetWindowThreadProcessId.restype = DWORD
 
-user32.AllowSetForegroundWindow.restype = BOOL
 user32.AllowSetForegroundWindow.argtypes = [DWORD]
+user32.AllowSetForegroundWindow.restype = BOOL
 
 user32.GetIconInfo.argtypes = [HICON, POINTER(ICONINFO)]
 user32.GetIconInfo.restype = BOOL
@@ -119,14 +134,14 @@ user32.GetDC.restype = HDC
 user32.ReleaseDC.argtypes = [HANDLE, HDC]
 user32.ReleaseDC.restype = c_int
 
-kernel32.OpenProcess.restype = HANDLE
 kernel32.OpenProcess.argtypes = [DWORD, BOOL, DWORD]
+kernel32.OpenProcess.restype = HANDLE
 
-kernel32.QueryFullProcessImageNameW.restype = BOOL
 kernel32.QueryFullProcessImageNameW.argtypes = [HANDLE, DWORD, LPWSTR, LPDWORD]
+kernel32.QueryFullProcessImageNameW.restype = BOOL
 
-kernel32.CloseHandle.restype = BOOL
 kernel32.CloseHandle.argtypes = [HANDLE]
+kernel32.CloseHandle.restype = BOOL
 
 kernel32.CreateNamedPipeW.argtypes = [
     LPCWSTR,
@@ -265,6 +280,26 @@ def RegisterWindowMessage(lpString: str):
     return user32.RegisterWindowMessageW(lpString)
 
 
+def RegisterShellHookWindow(hwnd: int) -> bool:
+    return user32.RegisterShellHookWindow(hwnd)
+
+
+def DeregisterShellHookWindow(hwnd: int) -> bool:
+    return user32.DeregisterShellHookWindow(hwnd)
+
+
+def SetProp(hwnd: int, lpString: str, hData: int) -> bool:
+    return user32.SetPropW(hwnd, lpString, hData)
+
+
+def RemoveProp(hwnd: int, lpString: str) -> bool:
+    return user32.RemovePropW(hwnd, lpString)
+
+
+def SetTaskmanWindow(hwnd: int) -> bool:
+    return user32.SetTaskmanWindow(hwnd)
+
+
 def SendNotifyMessage(hwnd: int, msg: int, wParam: int, lParam: int) -> int:
     return user32.SendNotifyMessageW(hwnd, msg, wParam, lParam)
 
@@ -382,8 +417,8 @@ def CreateNamedPipe(
     )
 
 
-def ConnectNamedPipe(hNamedPipe: int, lpOverlapped: int | None = None) -> None:
-    return(kernel32.ConnectNamedPipe(hNamedPipe, lpOverlapped))
+def ConnectNamedPipe(hNamedPipe: int, lpOverlapped: int | None = None) -> bool:
+    return bool(kernel32.ConnectNamedPipe(hNamedPipe, lpOverlapped))
 
 
 def DisconnectNamedPipe(hNamedPipe: int) -> bool:
@@ -391,7 +426,7 @@ def DisconnectNamedPipe(hNamedPipe: int) -> bool:
 
 
 def WaitNamedPipe(hNamedPipe: str, nTimeOut: int) -> bool:
-    return kernel32.WaitNamedPipeW(hNamedPipe, nTimeOut)
+    return bool(kernel32.WaitNamedPipeW(hNamedPipe, nTimeOut))
 
 
 def CreateEvent(
