@@ -125,9 +125,6 @@ class WindowsMedia(metaclass=Singleton):
         is_setup=False,
         is_overridden=False,
     ):
-        if DEBUG:
-            self._log.debug('MediaCallback: _on_current_session_changed')
-
         with self._current_session_lock:
             if not is_overridden:
                 self._current_session = manager.get_current_session()
@@ -182,8 +179,6 @@ class WindowsMedia(metaclass=Singleton):
 
     @_current_session_only
     def _on_playback_info_changed(self, session: Session, args: PlaybackInfoChangedEventArgs):
-        if DEBUG:
-            self._log.info('MediaCallback: _on_playback_info_changed')
         with self._playback_info_lock:
             self._playback_info = session.get_playback_info()
             
@@ -217,9 +212,6 @@ class WindowsMedia(metaclass=Singleton):
 
     @_current_session_only
     def _on_media_properties_changed(self, session: Session, args: MediaPropertiesChangedEventArgs):
-        if DEBUG:
-            self._log.debug('MediaCallback: _on_media_properties_changed')
-        
         with self._media_info_lock:
             try:
                 try:
@@ -247,9 +239,6 @@ class WindowsMedia(metaclass=Singleton):
 
     @_current_session_only
     async def _update_media_properties(self, session: Session):
-        if DEBUG:
-            self._log.debug('MediaCallback: Attempting media info update')
-
         try:
             media_info = await session.try_get_media_properties_async()
 
@@ -271,8 +260,6 @@ class WindowsMedia(metaclass=Singleton):
         # Perform callbacks
         for callback in callbacks:
             callback(self._media_info)
-        if DEBUG:
-            self._log.debug('MediaCallback: Media info update finished')
 
     @staticmethod
     def _properties_2_dict(obj) -> dict[str, Any]:
