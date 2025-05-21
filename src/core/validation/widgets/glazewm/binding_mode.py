@@ -1,9 +1,20 @@
 DEFAULTS = {
-    'label': '<span>\uf071</span> {binding_mode}',
-    'label_alt': '<span>\uf071</span> Current mode: {binding_mode}',
+    'label': '<span>{icon}</span> {binding_mode}',
+    'label_alt': '<span>{icon}</span> Current mode: {binding_mode}',
     'glazewm_server_uri': 'ws://localhost:6123',
     'hide_if_no_active': True,
     'label_if_no_active': 'No binding mode active',
+    'default_icon': '\uf071',
+    'icons': {
+        'none': '',
+        'resize': '\uf071',
+        'pause': '\uf28c',
+    },
+    'binding_modes_to_cycle_through' : [
+        'none',
+        'resize',
+        'pause',
+    ],
     'default_shadow': {
         'enabled': False,
         'color': 'black',
@@ -17,9 +28,9 @@ DEFAULTS = {
     },
     'container_padding': {'top': 0, 'left': 0, 'bottom': 0, 'right': 0},
     'callbacks': {
-        'on_left': 'disable_binding_mode',
-        'on_middle': "do_nothing",
-        'on_right': "toggle_label"
+        'on_left': 'next_binding_mode',
+        'on_middle': 'toggle_label',
+        'on_right': 'disable_binding_mode'
     }
 }
 
@@ -43,6 +54,29 @@ VALIDATION_SCHEMA = {
     'label_if_no_active': {
         'type': 'string',
         'default': DEFAULTS['label_if_no_active'],
+    },
+    'default_icon': {
+        'type': 'string',
+        'default': DEFAULTS['default_icon'],
+    },
+    'icons': {
+        'type': 'dict',
+        'required': False,
+        'default': DEFAULTS['icons'],
+        'keysrules': {
+            'type': 'string',
+        },
+        'valuesrules': {
+            'type': 'string',
+        },
+    },
+    'binding_modes_to_cycle_through': {
+        'type': 'list',
+        'default': DEFAULTS['binding_modes_to_cycle_through'],
+        'schema': {
+            'type': 'string',
+            'required': False,
+        }
     },
     'container_shadow': {
         'type': 'dict',
