@@ -98,6 +98,8 @@ class KomorebiEventListener(QThread):
         self._app_running = False
 
     def _emit_event(self, event: dict, state: dict) -> None:
+        if isinstance(event, str):
+            return
         self.event_service.emit_event(KomorebiEvent.KomorebiUpdate, event, state)
 
         if event['type'] in KomorebiEvent:
