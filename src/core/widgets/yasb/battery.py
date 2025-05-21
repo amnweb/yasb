@@ -108,15 +108,16 @@ class BatteryWidget(BaseWidget):
     def _get_charging_icon(self, threshold: str):
         if self._battery_state.power_plugged:
             if self._icon_charging_blink and self._blink:
-                empty_charging_icon = len(self._status_icons["icon_charging"]) * " "
                 icon_str = self._icon_charging_format \
-                    .replace("{charging_icon}", empty_charging_icon) \
+                    .replace("{charging_icon}", "") \
                     .replace("{icon}", self._status_icons[f"icon_{threshold}"])
                 self._blink = not self._blink
             else:
                 icon_str = self._icon_charging_format\
                     .replace("{charging_icon}", self._status_icons["icon_charging"])\
                     .replace("{icon}", self._status_icons[f"icon_{threshold}"])
+                if self._icon_charging_blink:
+                    self._blink = not self._blink
             return icon_str
         else:
             return self._status_icons[f"icon_{threshold}"]
@@ -128,7 +129,7 @@ class BatteryWidget(BaseWidget):
         label_parts = [part for part in label_parts if part]
         widget_index = 0         
         self._battery_state = psutil.sensors_battery()  
-        # Check battery state
+
         if self._battery_state is None:
             if self._hide_unsupported:
                 self.hide()
@@ -144,17 +145,15 @@ class BatteryWidget(BaseWidget):
                     widget_index += 1
             return
 
+        original_threshold = self._get_battery_threshold()
+        threshold = "charging" if self._battery_state.power_plugged else original_threshold
+        time_remaining = self._get_time_remaining()
+        is_charging_str = "yes" if self._battery_state.power_plugged else "no"
+        charging_icon = self._get_charging_icon(original_threshold)
+                
         for part in label_parts:
             part = part.strip()
             if part and widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
-                threshold = self._get_battery_threshold()
-
-                if self._battery_state.power_plugged:
-                    threshold = "charging"
-
-                time_remaining = self._get_time_remaining()
-                is_charging_str = "yes" if self._battery_state.power_plugged else "no"
-                charging_icon = self._get_charging_icon(threshold)
                 battery_status = part\
                     .replace("{percent}", str(self._battery_state.percent)) \
                     .replace("{time_remaining}", time_remaining) \

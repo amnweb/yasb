@@ -21,10 +21,27 @@
 battery:
   type: "yasb.battery.BatteryWidget"
   options:
-    label: "<span>{icon}</span>{percent}%"
-    label_alt: "{icon} {percent}% | time: {time_remaining}"
+    label: "<span>{icon}</span> {percent}%"
+    label_alt: "<span>{icon}</span> {percent}% | time: {time_remaining}"
+    update_interval: 5000
+    time_remaining_natural: False
+    hide_unsupported': True
     charging_options:
       icon_format: "{charging_icon}"
+      blink_charging_icon: false
+    status_thresholds:
+      critical: 10
+      low: 25
+      medium: 75
+      high: 95
+      full: 100
+    status_icons:
+      icon_charging: "\uf0e7"
+      icon_critical: "\uf244"
+      icon_low: "\uf243"
+      icon_medium: "\uf242"
+      icon_high: "\uf241"
+      icon_full: "uf240"
     label_shadow:
       enabled: true
       color: "black"
@@ -42,6 +59,7 @@ battery:
 - `hide_unsupported`: A boolean indicating whether to hide the widget if the current system does not have battery information.
 - `charging_options`: A dictionary specifying options for displaying the charging state. It contains:
   - `icon_format`: The format string for the charging icon. You can use placeholders like `{charging_icon}` and `{icon}`.
+  - `blink_charging_icon`: A boolean indicating whether to blink the charging icon when the battery is charging.
 - `status_thresholds`: A dictionary specifying the thresholds for different battery statuses. It contains:
   - `critical`: The battery percentage threshold for critical status.
   - `low`: The battery percentage threshold for low status.
