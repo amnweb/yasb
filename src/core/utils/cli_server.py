@@ -236,6 +236,8 @@ class CliPipeHandler:
                 continue
 
             self._handle_client_connection(handle)
+            DisconnectNamedPipe(handle)
+            CloseHandle(handle)
 
     def _handle_client_connection(self, pipe: int):
         """Handle a client connection and process commands"""
@@ -244,11 +246,13 @@ class CliPipeHandler:
             logger.error(f"CLI client disconnected or read error. Err: {GetLastError()}")
             return None
 
-        command = data.decode("utf-8").strip().lower()
-
-        logger.info(f"CLI server received command: {command}")
-
-        if command == "stop" or command == "reload":
+        full_command = data.decode("utf-8").strip()
+        # Get just the base command for comparison
+        command = full_command.split()[0].lower() if full_command else ""
+        
+        logger.info(f"CLI server received command: {full_command}")
+        
+        if command in ["stop", "reload", "show-bar", "hide-bar", "toggle-bar"]:
             success = WriteFile(pipe, b"ACK")
             if not success:
                 logger.error(f"Write ACK failed. Err: {GetLastError()}")
@@ -261,7 +265,7 @@ class CliPipeHandler:
                 restart_thread.start()
 
             # Execute command
-            self.cli_command(command)
+            self.cli_command(full_command)
         else:
             WriteFile(pipe, b"CLI Unknown Command")
 
