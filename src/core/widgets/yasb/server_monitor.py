@@ -140,8 +140,9 @@ class ServerCheckWorker(QThread):
                     exp_date = datetime.strptime(cert['notAfter'], '%b %d %H:%M:%S %Y %Z')
                     days_left = (exp_date - datetime.now()).days
                     return days_left
-        except (socket.gaierror, socket.timeout, ssl.SSLError):
-            return None
+        except (socket.gaierror, socket.timeout, ssl.SSLError, 
+                    ConnectionResetError, ConnectionRefusedError, ConnectionAbortedError, ConnectionError):
+            return
         
 class ServerMonitor(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
