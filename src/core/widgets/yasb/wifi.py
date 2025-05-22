@@ -134,24 +134,27 @@ class WifiWidget(BaseWidget):
             connection_info = NetworkInformation.get_internet_connection_profile()
             ip_addr = socket.gethostbyname(socket.gethostname())
             if connection_info is None or connection_info.is_wlan_connection_profile:
+
+                was_ethernet = self._ethernet_active
                 self._ethernet_active = False
-                # sets the wifi_icon to the 0% icon if no WiFi connection is found
+                if was_ethernet and self._hide_if_ethernet:
+                    self.show()
+
                 wifi_icon, wifi_strength = self._get_wifi_icon()
                 wifi_name = self._get_wifi_name()
             else:
                 self._ethernet_active = True
+                if self._hide_if_ethernet:
+                    self.hide()
+                    return
                 wifi_icon = self._ethernet_icon
                 wifi_name = 'Ethernet'
                 wifi_strength = 'N/A'
+
         except Exception as e:
             logging.error(f'Error in wifi widget update: {e}')
             wifi_icon = wifi_name = wifi_strength = "N/A"
 
-        if self._hide_if_ethernet and self._ethernet_active:
-            self.hide()
-            return
-
-        self.show()
         self._display_correct_label()
         if self._ethernet_active:
             active_widgets = self._widgets_ethernet_alt if self._show_alt_label else self._widgets_ethernet
