@@ -178,7 +178,7 @@ class WorkspaceButtonWithIcons(QFrame):
             self.text_label.setText(self.default_label)
         self.setStyleSheet('')
 
-    def update_icons(self, icons: Dict[int, QPixmap] = None):
+    def update_icons(self, icons: Dict[int, QPixmap] = None, update_width: bool = True):
         if icons:
             self.icons.update(icons)
         else:
@@ -195,16 +195,11 @@ class WorkspaceButtonWithIcons(QFrame):
 
         prev_icon_count = len(self.icon_labels)
         # Remove extra QLabel widgets if there are more than needed
-        for i in range(len(icons_list), len(self.icon_labels)):
-            extra_label = self.icon_labels[i]
+        for extra_label in self.icon_labels[len(icons_list):]:
             self.button_layout.removeWidget(extra_label)
             extra_label.setParent(None)
-            self.icon_labels.remove(extra_label)
-        curr_icon_count = len(icons_list)
+        self.icon_labels = self.icon_labels[:len(icons_list)]
 
-        if curr_icon_count < prev_icon_count:
-            self.setMinimumWidth(self.sizeHint().width())
-            
         # Add or update icons
         for index, icon in enumerate(icons_list):
             if index < len(self.icon_labels):
@@ -216,16 +211,23 @@ class WorkspaceButtonWithIcons(QFrame):
                 self.button_layout.addWidget(icon_label)
                 add_shadow(icon_label, self.parent_widget._label_shadow)
                 self.icon_labels.append(icon_label)
+        
+        curr_icon_count = len(icons_list)
 
         if self.parent_widget._workspace_app_icons['hide_label'] and len(self.icon_labels) > 0:
             self.text_label.hide()
         else:
             self.text_label.show()
 
+        if curr_icon_count < prev_icon_count and update_width:
+            if self.parent_widget._animation and self._animation_initialized:
+                self.animate_buttons()
+
     def update_icon_by_hwnd(self, hwnd: int):
-        pixmap = self.parent_widget._get_app_icon(hwnd, self.workspace_index, ignore_cache=True)
-        if pixmap:
-            self.update_icons(icons={hwnd: pixmap})
+        if hwnd in self.icons.keys():
+            pixmap = self.parent_widget._get_app_icon(hwnd, self.workspace_index, ignore_cache=True)
+            if pixmap:
+                self.update_icons(icons={hwnd: pixmap})
 
     def activate_workspace(self):
         try:
@@ -244,6 +246,9 @@ class WorkspaceButtonWithIcons(QFrame):
         
         self._current_width = self.width()
         target_width = self.sizeHint().width()
+        if not self.parent_widget._workspace_app_icons['enabled_active'] and self.parent_widget._workspace_app_icons['enabled_populated']: 
+            for icon_label in self.icon_labels:
+                target_width += icon_label.sizeHint().width() 
 
         step_duration = int(duration / step)
         width_increment = (target_width - self._current_width) / step
@@ -425,17 +430,17 @@ class WorkspaceWidget(BaseWidget):
                 try:
                     if event['type'] in ['ToggleFloat']:
                         self._workspace_buttons[self._curr_workspace_index].update_icons()
-                    if event['type'] in [KomorebiEvent.TitleUpdate.value]:
-                        hwnd = event['content'][1]['hwnd']
-                        self._workspace_buttons[self._curr_workspace_index].update_icon_by_hwnd(hwnd)
                     if self._has_active_workspace_index_changed():
-                        self._workspace_buttons[self._prev_workspace_index].update_icons() 
-                        self._workspace_buttons[self._curr_workspace_index].update_icons() 
+                        self._workspace_buttons[self._prev_workspace_index].update_icons(update_width=False) 
+                        self._workspace_buttons[self._curr_workspace_index].update_icons(update_width=False) 
                     for i in range(len(self._komorebi_workspaces)):
                         if self._prev_num_windows_in_workspaces[i] != self._curr_num_windows_in_workspaces[i]:
                             self._workspace_buttons[i].update_icons()
+                        elif event['type'] in [KomorebiEvent.TitleUpdate.value]:
+                            hwnd = event['content'][1]['hwnd']
+                            self._workspace_buttons[i].update_icon_by_hwnd(hwnd)
                 except (IndexError, TypeError):
-                    for button in self._workspace_buttons: button.update_icons() 
+                    pass
 
             if event['type'] == KomorebiEvent.MoveWorkspaceToMonitorNumber.value:
                 if event['content'] != self._komorebi_screen['index']:
