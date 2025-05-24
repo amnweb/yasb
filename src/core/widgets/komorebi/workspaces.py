@@ -2,7 +2,7 @@ import logging
 from PyQt6.QtWidgets import QPushButton, QWidget, QHBoxLayout, QLabel, QFrame
 from PyQt6.QtCore import Qt, pyqtSignal, QTimer
 from PyQt6.QtGui import QCursor, QPixmap, QImage, QMouseEvent
-from typing import Literal, List
+from typing import Literal, List, Dict
 from contextlib import suppress
 from core.utils.win32.utilities import get_monitor_hwnd
 from core.utils.utilities import add_shadow
@@ -149,7 +149,7 @@ class WorkspaceButtonWithIcons(QFrame):
         self.button_layout.addWidget(self.text_label)
         add_shadow(self.text_label, self.parent_widget._label_shadow)
 
-        self.icons = []
+        self.icons = {}
         self.icon_labels = []
         self.hide()
         self.update_icons()
@@ -178,26 +178,30 @@ class WorkspaceButtonWithIcons(QFrame):
             self.text_label.setText(self.default_label)
         self.setStyleSheet('')
 
-    def update_icons(self):
-        if not self.parent_widget._workspace_app_icons['enabled_active'] and self.workspace_index == self.parent_widget._curr_workspace_index:
-            self.icons = []
-        elif not self.parent_widget._workspace_app_icons['enabled_populated'] and self.workspace_index != self.parent_widget._curr_workspace_index:
-            self.icons = []
+    def update_icons(self, icons: Dict[int, QPixmap] = None, update_width: bool = True):
+        if icons:
+            self.icons.update(icons)
         else:
-            new_icons = self.parent_widget._get_all_icons_in_workspace(self.workspace_index)
-            self.icons = [icon for icon in new_icons if icon is not None]
-            if self.parent_widget._workspace_app_icons['max_icons'] > 0:
-                self.icons = self.icons[:self.parent_widget._workspace_app_icons['max_icons']]
+            self.icons = self.parent_widget._get_all_icons_in_workspace(self.workspace_index)
 
+        if not self.parent_widget._workspace_app_icons['enabled_active'] and self.workspace_index == self.parent_widget._curr_workspace_index:
+            icons_list = []
+        elif not self.parent_widget._workspace_app_icons['enabled_populated'] and self.workspace_index != self.parent_widget._curr_workspace_index:
+            icons_list = []
+        else:
+            icons_list = [icon for icon in self.icons.values() if icon is not None]
+            if self.parent_widget._workspace_app_icons['max_icons'] > 0:
+                icons_list = icons_list[:self.parent_widget._workspace_app_icons['max_icons']]
+
+        prev_icon_count = len(self.icon_labels)
         # Remove extra QLabel widgets if there are more than needed
-        for i in range(len(self.icons), len(self.icon_labels)):
-            extra_label = self.icon_labels[i]
+        for extra_label in self.icon_labels[len(icons_list):]:
             self.button_layout.removeWidget(extra_label)
             extra_label.setParent(None)
-            self.icon_labels.remove(extra_label)
-            
+        self.icon_labels = self.icon_labels[:len(icons_list)]
+
         # Add or update icons
-        for index, icon in enumerate(self.icons):
+        for index, icon in enumerate(icons_list):
             if index < len(self.icon_labels):
                 self.icon_labels[index].setPixmap(icon)
             else:
@@ -207,14 +211,23 @@ class WorkspaceButtonWithIcons(QFrame):
                 self.button_layout.addWidget(icon_label)
                 add_shadow(icon_label, self.parent_widget._label_shadow)
                 self.icon_labels.append(icon_label)
+        
+        curr_icon_count = len(icons_list)
 
         if self.parent_widget._workspace_app_icons['hide_label'] and len(self.icon_labels) > 0:
             self.text_label.hide()
         else:
             self.text_label.show()
 
-        # Recalculate the widget size based on its contents
-        self.setMinimumWidth(self.sizeHint().width())
+        if curr_icon_count < prev_icon_count and update_width:
+            if self.parent_widget._animation and self._animation_initialized:
+                self.animate_buttons()
+
+    def update_icon_by_hwnd(self, hwnd: int):
+        if hwnd in self.icons.keys():
+            pixmap = self.parent_widget._get_app_icon(hwnd, self.workspace_index, ignore_cache=True)
+            if pixmap:
+                self.update_icons(icons={hwnd: pixmap})
 
     def activate_workspace(self):
         try:
@@ -233,6 +246,9 @@ class WorkspaceButtonWithIcons(QFrame):
         
         self._current_width = self.width()
         target_width = self.sizeHint().width()
+        if not self.parent_widget._workspace_app_icons['enabled_active'] and self.parent_widget._workspace_app_icons['enabled_populated']: 
+            for icon_label in self.icon_labels:
+                target_width += icon_label.sizeHint().width() 
 
         step_duration = int(duration / step)
         width_increment = (target_width - self._current_width) / step
@@ -412,16 +428,19 @@ class WorkspaceWidget(BaseWidget):
             # Update icons in workspace buttons (must be done before animation)
             if self._workspace_app_icons_enabled:
                 try:
-                    if event['type'] in [KomorebiEvent.TitleUpdate.value, 'ToggleFloat']:
+                    if event['type'] in ['ToggleFloat']:
                         self._workspace_buttons[self._curr_workspace_index].update_icons()
                     if self._has_active_workspace_index_changed():
-                        self._workspace_buttons[self._prev_workspace_index].update_icons() 
-                        self._workspace_buttons[self._curr_workspace_index].update_icons() 
+                        self._workspace_buttons[self._prev_workspace_index].update_icons(update_width=False) 
+                        self._workspace_buttons[self._curr_workspace_index].update_icons(update_width=False) 
                     for i in range(len(self._komorebi_workspaces)):
                         if self._prev_num_windows_in_workspaces[i] != self._curr_num_windows_in_workspaces[i]:
                             self._workspace_buttons[i].update_icons()
+                        elif event['type'] in [KomorebiEvent.TitleUpdate.value]:
+                            hwnd = event['content'][1]['hwnd']
+                            self._workspace_buttons[i].update_icon_by_hwnd(hwnd)
                 except (IndexError, TypeError):
-                    for button in self._workspace_buttons: button.update_icons() 
+                    pass
 
             if event['type'] == KomorebiEvent.MoveWorkspaceToMonitorNumber.value:
                 if event['content'] != self._komorebi_screen['index']:
@@ -668,13 +687,20 @@ class WorkspaceWidget(BaseWidget):
     def _get_all_icons_in_workspace(self, workspace_index: int) -> List[QPixmap] | None:
         windows_in_workspace = self._get_all_windows_in_workspace(workspace_index)
         self._unique_pids = set()
-        pixmaps = [self._get_app_icon(window['hwnd']) for window in windows_in_workspace]
+        pixmaps = {window['hwnd']: self._get_app_icon(window['hwnd'], workspace_index) for window in windows_in_workspace}
+        try:
+            existing_pixmaps = self._workspace_buttons[workspace_index].icons 
+            for hwnd, pixmap in pixmaps.items():
+                if pixmap is None and hwnd in existing_pixmaps:
+                    pixmaps[hwnd] = existing_pixmaps[hwnd]
+        except IndexError:
+            pass
         return pixmaps
 
-    def _get_app_icon(self, hwnd: int) -> QPixmap | None:
+    def _get_app_icon(self, hwnd: int, workspace_index: int, ignore_cache: bool = False) -> QPixmap | None:
         try:
             process = get_process_info(hwnd)
-            pid = process['pid']
+            pid = process["pid"]
 
             if self._workspace_app_icons['hide_duplicates']:
                 if pid not in self._unique_pids:
@@ -682,34 +708,37 @@ class WorkspaceWidget(BaseWidget):
                 else:
                     return None
 
+            self.dpi = self.screen().devicePixelRatio()
             cache_key = (hwnd, pid, self.dpi)
 
-            if cache_key in self._icon_cache:
+            if cache_key in self._icon_cache and not ignore_cache:
                 icon_img = self._icon_cache[cache_key]
             else:
-                self.dpi = self.screen().devicePixelRatio()
-                icon_img = get_window_icon(hwnd, pid)
-                if icon_img:
-                    icon_img = icon_img.resize(
-                        (int(self._workspace_app_icons['size']  * self.dpi), int(self._workspace_app_icons['size'] * self.dpi)),
-                        Image.LANCZOS
-                    ).convert("RGBA")
+                icon_img = get_window_icon(hwnd)
+
+            if icon_img:
+                self._icon_update_retry_count = 0
+                icon_img = icon_img.resize(
+                    (int(self._workspace_app_icons['size'] * self.dpi), int(self._workspace_app_icons['size'] * self.dpi)),
+                    Image.LANCZOS
+                ).convert("RGBA")
+                self._icon_cache[cache_key] = icon_img
+                qimage = QImage(icon_img.tobytes(), icon_img.width, icon_img.height, QImage.Format.Format_RGBA8888)
+                pixmap = QPixmap.fromImage(qimage)
+                pixmap.setDevicePixelRatio(self.dpi)
+                if process["name"] == "ApplicationFrameHost.exe":
+                    try:
+                        self._workspace_buttons[workspace_index].update_icons(icons={hwnd: pixmap})
+                    except IndexError:
+                        return pixmap
                 else:
-                    if process["name"] == "ApplicationFrameHost.exe":
-                        if self._icon_update_retry_count < 10:
-                            self._icon_update_retry_count += 1
-                            QTimer.singleShot(500, lambda: self._get_app_icon(hwnd))
-                            return
-                        else:
-                            self._icon_update_retry_count = 0
-                if not DEBUG:
-                    self._icon_cache[cache_key] = icon_img
-            if not icon_img:
-                return None
-            qimage = QImage(icon_img.tobytes(), icon_img.width, icon_img.height, QImage.Format.Format_RGBA8888)
-            pixmap = QPixmap.fromImage(qimage)
-            pixmap.setDevicePixelRatio(self.dpi)
-            return pixmap
+                    return pixmap
+            elif process["name"] == "ApplicationFrameHost.exe":
+                if self._icon_update_retry_count < 10:
+                    self._icon_update_retry_count += 1
+                    QTimer.singleShot(100, lambda: self._get_app_icon(hwnd, workspace_index, ignore_cache))
+                else:
+                    self._icon_update_retry_count = 0
 
         except Exception:
             if DEBUG:
