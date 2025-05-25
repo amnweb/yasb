@@ -36,6 +36,7 @@
     - [Power Menu](./(Widget)-Power-Menu)
     - [Recycle Bin](./(Widget)-Recycle-Bin)
     - [Update Check](./(Widget)-Update-Check)
+    - [Visual Studio Code](./(Widget)-VSCode)
     - [Volume](./(Widget)-Volume)
     - [Wallpapers](./(Widget)-Wallpapers)
     - [Weather](./(Widget)-Weather)
