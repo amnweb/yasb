@@ -5,7 +5,7 @@ BAR_DEFAULTS = {
     'alignment': {'position': 'top', 'center': False},
     'blur_effect': {'enabled': False, 'dark_mode': False, 'acrylic': False,'round_corners': False,'round_corners_type':'normal','border_color': "System"},
     'animation': {'enabled': True, 'duration': 500},
-    'window_flags': {'always_on_top': False, 'windows_app_bar': False, 'hide_on_fullscreen': False},
+    'window_flags': {'always_on_top': False, 'windows_app_bar': False, 'hide_on_fullscreen': False, 'auto_hide': False},
     'dimensions': {'width': '100%', 'height': 30},
     'padding': {'top': 0, 'left': 0, 'bottom': 0, 'right': 0},
     'widgets': {'left': [], 'center': [], 'right': []},
@@ -109,6 +109,10 @@ BAR_SCHEMA = {
                 'hide_on_fullscreen': {
                     'type': 'boolean',
                     'default': BAR_DEFAULTS['window_flags']['hide_on_fullscreen']
+                },
+                'auto_hide': {
+                    'type': 'boolean',
+                    'default': BAR_DEFAULTS['window_flags']['auto_hide']
                 }
             },
             'default': BAR_DEFAULTS['window_flags']

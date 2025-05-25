@@ -66,3 +66,15 @@ class PowerOperations:
             self.overlay.fade_out()
         self.main_window.fade_out()
 
+        # Find bar and trigger autohide if applicable
+        if hasattr(self.main_window, 'parent_button') and self.main_window.parent_button:
+            try:
+                widget = self.main_window.parent_button
+                while widget and not hasattr(widget, '_autohide_bar'):
+                    widget = widget.parent()
+                
+                if widget and widget._autohide_bar and widget.isVisible():
+                    widget._hide_timer.start(widget._autohide_delay)
+            except Exception:
+                pass
+            

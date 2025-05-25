@@ -14,6 +14,7 @@ from PyQt6.QtCore import QEvent, QPoint, Qt
 from PyQt6.QtGui import QColor, QScreen
 from PyQt6.QtWidgets import QApplication, QFrame, QGraphicsDropShadowEffect, QLabel, QWidget
 
+from core import bar
 from core.utils.win32.blurWindow import Blur
 
 
@@ -247,6 +248,23 @@ class PopupWidget(QWidget):
     def hideEvent(self, event):
         QApplication.instance().removeEventFilter(self)
         super().hideEvent(event)
+
+        try:
+            bar_el = self.parent()
+            while bar_el and not hasattr(bar_el, '_autohide_bar'):
+                bar_el = bar_el.parent()
+
+            if bar_el:
+                # Check if parent needs autohide
+                if bar_el._autohide_bar:
+                    # Get current cursor position
+                    from PyQt6.QtGui import QCursor
+                    cursor_pos = QCursor.pos()
+                    # If mouse is outside the bar, start the hide timer
+                    if not bar_el.geometry().contains(cursor_pos):
+                        bar_el._hide_timer.start(bar_el._autohide_delay)
+        except Exception:
+            pass
 
     def resizeEvent(self, event):
         # reset geometry

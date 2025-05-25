@@ -52,13 +52,33 @@ QT_SCALE_FACTOR_ROUNDING_POLICY="PassThrough"
 | `screens`         | list    | `['*']`       | The screens on which the status bar should be displayed. |
 | `class_name`      | string  | `"yasb-bar"`  | The CSS class name for the status bar. |
 | `alignment`       | object  | `{position: "top", center: false}` | The alignment settings for the status bar. |
-| `blur_effect`     | object  | `{enabled: false, acrylic: false, dark_mode: false, round_corners: false, round_corners_type: 'normal', border_color: System}` | The blur effect settings for the status bar. |
-| `window_flags`    | object  | `{always_on_top: false, windows_app_bar: true, hide_on_fullscreen: false}` | The window flags for the status bar. |
+| `blur_effect`     | object  | [See below](#blur-effect-configuration) | The blur effect settings for the status bar. |
+| `window_flags`    | object  | [See below](#window-flags-configuration) | The window flags for the status bar. |
 | `dimensions`      | object  | `{width: "100%", height: 36}` | The dimensions of the status bar. |
 | `padding`         | object  | `{top: 4, left: 0, bottom: 4, right: 0}` | The padding for the status bar. |
 | `animation`       | object  | `{enabled: true, duration: 500}` | The animation settings for the status bar. Duration is in milliseconds. |
 | `widgets`         | list  | `left[], center[], right[]` | Active widgets and position. |
-| `layouts`         | object  | See below | Configuration for widget layouts in each section (left, center, right). |
+| `layouts`         | object  | [See below](#layouts-configuration) | Configuration for widget layouts in each section (left, center, right). |
+
+
+### Blur Effect Configuration
+| Option            | Type    | Default       | Description |
+|-------------------|---------|---------------|-------------|
+| `enabled`         | boolean | `false`       | Whether the blur effect is enabled. |
+| `acrylic`         | boolean | `false`       | Whether to use an acrylic blur effect (Windows 10). |
+| `dark_mode`       | boolean | `false`       | Whether to enable dark mode and more shadow below the bar. |
+| `round_corners`   | boolean | `false`       | Whether to enable rounded corners for the bar. Note: This is only effective on Windows 11. |
+| `round_corners_type` | string | `'normal'` | The type of rounded corners, can be `normal` or `small`. Note: This is only effective on Windows 11. |
+| `border_color`    | string  | `'system'`   | The border color for the bar, can be `None`, `"system"`, or a hex color (e.g., `"#ff0000"`). Note: This is only effective on Windows 11. |
+
+
+### Window Flags Configuration
+| Option            | Type    | Default       | Description |
+|-------------------|---------|---------------|-------------|
+| `always_on_top`   | boolean | `false`       | Whether the status bar should always stay on top of other windows. |
+| `windows_app_bar` | boolean | `true`        | Whether the status bar should behave like a Windows app bar. |
+| `hide_on_fullscreen` | boolean | `false`    | Whether the status bar should hide when a window is in fullscreen mode. |
+| `auto_hide` | boolean | `false`    | Whether the status bar should auto-hide when not in use. |
 
 ### Layouts Configuration
 Each section (left, center, right) can be configured with the following properties:
@@ -105,15 +125,3 @@ bars:
 widgets:
     ...
 ```
-
-# Blur Options
-We used the Windows API for blur, and because of this some parts are limited with the OS.
-
-`blur_effect.enabled` Will enable defaul blur.<br>
-`blur_effect.acrylic` Enable an acrylic blur effect behind a window. (Windows 10)<br>
-`blur_effect.dark_mode` Dark mode and more shadow below bar.<br>
-`blur_effect.round_corners` True or False, if set to True Windows will add radius. You can't set a custom value.<br>
-`blur_effect.round_corners_type` Border type for bar can be `normal` and `small`. Default is `normal`.<br>
-`blur_effect.border_color` Border color for bar can be `None`, `System` or `Hex Color` `"#ff0000"`. (This applies to system round_corners and if blur_effect.round_corners is True.)
-
-> Most of these options are limited to Windows 11 only, and some options like border_color, round_corners,round_corners_type won't work on Windows 10.

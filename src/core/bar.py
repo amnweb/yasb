@@ -1,7 +1,7 @@
 import logging
 from settings import APP_BAR_TITLE
 from PyQt6.QtWidgets import QWidget, QHBoxLayout, QGridLayout, QFrame
-from PyQt6.QtGui import QScreen
+from PyQt6.QtGui import QScreen, QCursor
 from PyQt6.QtCore import Qt, QRect, QEvent, QPropertyAnimation, QEasingCurve, QTimer, pyqtSignal
 from core.utils.utilities import is_valid_percentage_str, percent_to_float
 from core.utils.win32.utilities import get_monitor_hwnd
@@ -16,6 +16,19 @@ try:
 except ImportError:
     IMPORT_APP_BAR_MANAGER_SUCCESSFUL = False
 
+class AutoHideZone(QFrame):
+    """A transparent zone at the edge of the screen to detect when to show the bar"""
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowFlags(Qt.WindowType.Tool | Qt.WindowType.FramelessWindowHint |
+                            Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.NoDropShadowWindowHint)
+        self.setWindowOpacity(0.01)
+
+    def enterEvent(self, event):
+        # Show the parent bar when mouse enters detection zone
+        if self.parent():
+            self.parent()._show_bar()
+            
 class Bar(QWidget):
 
     handle_bar_management = pyqtSignal(str, str)
@@ -96,6 +109,22 @@ class Bar(QWidget):
         self.handle_bar_management.connect(self._handle_bar_management)
         self._event_service.register_event("handle_bar_cli", self.handle_bar_management)
 
+        self._autohide_bar = self._window_flags['auto_hide']
+
+        if self._autohide_bar:
+            self._autohide_delay = 400  # default delay before hiding the bar
+            self._detection_zone_height = 1 + self._padding['top'] if self._alignment['position'] == "top" else 1 + self._padding['bottom']
+
+            self._detection_zone = AutoHideZone(self)
+            
+            self._hide_timer = QTimer(self)
+            self._hide_timer.setSingleShot(True)
+            self._hide_timer.timeout.connect(self._hide_bar)
+
+            self.installEventFilter(self)
+            # If the bar is initialized with auto-hide, set up the detection zone after a short delay
+            QTimer.singleShot(1000, self._setup_autohide_zone)
+
         self.show()
         
 
@@ -106,6 +135,9 @@ class Bar(QWidget):
     def on_geometry_changed(self, geo: QRect) -> None:
         logging.info(f"Screen geometry changed. Updating position for bar ({self.bar_id})")
         self.position_bar()
+
+        if self._autohide_bar:
+            self._setup_autohide_zone()
 
     def try_add_app_bar(self, scale_screen_height=False) -> None:
         if self.app_bar_manager:
@@ -316,6 +348,55 @@ class Bar(QWidget):
                     self.hide()
                 else:
                     self.show()
+
+    def _setup_autohide_zone(self):
+        """Position and configure the autohide detection zone"""
+        screen_geometry = self.screen().geometry()
+        
+        if self._alignment['position'] == "top":
+            self._detection_zone.setGeometry(
+                screen_geometry.x(),
+                screen_geometry.y(),
+                screen_geometry.width(),
+                self._detection_zone_height
+            )
+        else:
+            self._detection_zone.setGeometry(
+                screen_geometry.x(),
+                screen_geometry.y() + screen_geometry.height() - self._detection_zone_height,
+                screen_geometry.width(),
+                self._detection_zone_height
+            )
+
+        # Start autohide timer
+        self._hide_timer.start(self._autohide_delay)
+
+    def _show_bar(self):
+        """Show the bar when mouse hovers over detection zone"""
+        if not self.isVisible() and self._autohide_bar:
+            self.show()
+    
+    def _hide_bar(self):
+        """Hide the bar and show detection zone"""
+        if self._autohide_bar and self.isVisible():
+            self.hide()
+            self._detection_zone.show()
+            self._detection_zone.raise_()
+
+    def eventFilter(self, watched, event):
+        """Filter events to detect mouse movement"""
+        if watched == self and self._autohide_bar:
+            if event.type() == QEvent.Type.Enter:
+                # Mouse entered the bar, stop hide timer
+                self._hide_timer.stop()
+            elif event.type() == QEvent.Type.Leave:
+                # Mouse left the bar, start hide timer
+                cursor_pos = QCursor.pos()
+                bar_geometry = self.geometry()
+                # Only start timer if mouse is really outside the bar
+                if not bar_geometry.contains(cursor_pos):
+                    self._hide_timer.start(self._autohide_delay)
+        return super().eventFilter(watched, event)
 
 def update_styles(widget):
     widget.style().unpolish(widget)
