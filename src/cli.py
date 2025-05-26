@@ -213,6 +213,7 @@ class CLIHandler:
 
         stop_parser = subparsers.add_parser("stop", help="Stop the application")
         stop_parser.add_argument("-s", "--silent", action="store_true", help="Silence print messages")
+        stop_parser.add_argument("-f", "--force", action="store_true", help="Force stop the application")
 
         reload_parser = subparsers.add_parser("reload", help="Reload the application")
         reload_parser.add_argument("-s", "--silent", action="store_true", help="Silence print messages")
@@ -263,7 +264,12 @@ class CLIHandler:
             sys.exit(0)
 
         elif args.command == "stop":
-            self.send_command_to_application("stop")
+            if args.force:
+                for proc in ["yasb.exe", "yasb_themes.exe"]:
+                    if is_process_running(proc):
+                        subprocess.run(["taskkill", "/f", "/im", proc], creationflags=subprocess.CREATE_NO_WINDOW)
+            else:
+                self.send_command_to_application("stop")
             sys.exit(0)
 
         elif args.command == "reload":
