@@ -6,7 +6,7 @@ from typing import Any, cast
 from winrt.windows.data.xml.dom import XmlDocument
 from winrt.windows.ui.notifications import (
     ToastNotification,
-    ToastNotificationManager,
+    ToastNotificationManager
 )
 
 import psutil
@@ -14,7 +14,6 @@ from PyQt6.QtCore import QEvent, QPoint, Qt
 from PyQt6.QtGui import QColor, QScreen
 from PyQt6.QtWidgets import QApplication, QFrame, QGraphicsDropShadowEffect, QLabel, QWidget
 
-from core import bar
 from core.utils.win32.blurWindow import Blur
 
 
