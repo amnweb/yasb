@@ -146,6 +146,7 @@ class WorkspaceButtonWithIcons(QFrame):
 
         self.text_label = QLabel(self.default_label)
         self.text_label.setProperty("class", "label")
+        self.text_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.button_layout.addWidget(self.text_label)
         add_shadow(self.text_label, self.parent_widget._label_shadow)
 
