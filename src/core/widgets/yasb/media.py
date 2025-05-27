@@ -572,8 +572,19 @@ class MediaWidget(BaseWidget):
             self._thumbnail_label.hide()
             active_label.hide()
             active_label.setText('')
-            if not self._controls_hide and self._play_label is not None:
-                self._play_label.setText(self._media_button_icons['play'])
+            if not self._controls_hide:
+                if self._play_label is not None:
+                    self._play_label.setText(self._media_button_icons['play'])
+                    self._play_label.setProperty("class", "btn play disabled")
+                    self._play_label.setStyleSheet('')
+                
+                if self._prev_label is not None:
+                    self._prev_label.setProperty("class", "btn prev disabled")
+                    self._prev_label.setStyleSheet('')
+                
+                if self._next_label is not None:
+                    self._next_label.setProperty("class", "btn next disabled")
+                    self._next_label.setStyleSheet('')
 
             # If we want to hide the widget when no music is playing, hide it!
             if self._hide_empty:
@@ -958,7 +969,7 @@ class MediaWidget(BaseWidget):
     def _create_media_button(self, icon, action):
         if not self._controls_hide:
             label = ClickableLabel(self)
-            label.setProperty("class", "btn")
+            label.setProperty("class", "btn disabled")
             label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             label.setText(icon)
             label.data = action
