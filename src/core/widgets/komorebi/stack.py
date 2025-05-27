@@ -194,12 +194,11 @@ class StackWidget(BaseWidget):
         self._label_shadow = label_shadow
         self._container_shadow = container_shadow
         self._komorebi_screen = None
-        self._komorebi_focus_container = None
+        self._curr_focus_container = None
+        self._prev_focus_container = None
         self._komorebi_windows = []
         self._prev_workspace_index = None
         self._curr_workspace_index = None  
-        self._prev_container_index = None
-        self._curr_container_index = None
         self._prev_window_index = None
         self._curr_window_index = None
         self._prev_num_windows = None
@@ -263,11 +262,11 @@ class StackWidget(BaseWidget):
     def _reset(self):
         self._komorebi_state = None
         self._komorebi_screen = None
+        self._curr_focus_container = None
+        self._prev_focus_container = None
         self._komorebi_windows = []
         self._prev_workspace_index = None
         self._curr_workspace_index = None     
-        self._prev_container_index = None
-        self._curr_container_index = None
         self._prev_window_index = None
         self._curr_window_index = None
         self._window_buttons = []
@@ -290,10 +289,7 @@ class StackWidget(BaseWidget):
 
         if self._update_komorebi_state(state):
 
-            if self._show_only_stack:
-                self._no_window_text.hide()
-            else: 
-                self._hide_no_window_text()
+            self._hide_no_window_text()
 
             if event['type'] in self._window_focus_events or self._has_active_window_index_changed():
                 try:
@@ -306,31 +302,23 @@ class StackWidget(BaseWidget):
                 except (IndexError, TypeError):
                     pass
 
-            if event['type'] in self._reset_buttons_events or self._has_active_container_index_changed() or self._has_active_workspace_index_changed():
-                self._window_buttons = []
+            elif event['type'] in self._reset_buttons_events or self._has_active_container_changed() or self._has_active_workspace_index_changed():
+                while len(self._window_buttons) > len(self._komorebi_windows):
+                    self._try_remove_window_button(self._window_buttons[-1].window_index)
                 self._add_or_update_buttons()
 
-            if event['type'] == KomorebiEvent.TitleUpdate.value:
+            elif event['type'] == KomorebiEvent.TitleUpdate.value:
                 hwnd = event['content'][1]['hwnd']
                 for window_btn in self._window_buttons:
                     window_btn_hwnd = self._komorebi_windows[window_btn.window_index]['hwnd']
                     if window_btn_hwnd == hwnd:
                         self._update_button_label(window_btn)
                         window_btn.update_icon(ignore_cache=True)
-            
-            if self._has_number_of_windows_changed():
-                for window_btn in self._window_buttons:
-                    try:
-                        window = self._komorebi_windows[window_btn.window_index]
-                    except IndexError:
-                        self._try_remove_window_button(window_btn.window_index)
-                self._add_or_update_buttons()
 
-            if self._show_only_stack: 
-                if len(self._window_buttons) <= 1:
-                    self._widget_container.hide()
-                else:
-                    self._widget_container.show()
+            if self._show_only_stack and len(self._window_buttons) <= 1:
+                self.hide()
+            else:
+                self.show()
 
         else:
             self._show_no_window_text()
@@ -349,7 +337,6 @@ class StackWidget(BaseWidget):
                 self._komorebi_screen = self._komorebic.get_screen_by_hwnd(self._komorebi_state, self._screen_hwnd)
                 focused_workspace = self._komorebic.get_focused_workspace(self._komorebi_screen)
                 focused_container = self._komorebic.get_focused_container(focused_workspace, get_monocle=True)
-                self._komorebi_focus_container = focused_container
                 self._komorebi_windows = self._komorebic.get_windows(focused_container)
                 focused_window = self._komorebic.get_focused_window(focused_container)
 
@@ -357,8 +344,8 @@ class StackWidget(BaseWidget):
                     self._prev_workspace_index = self._curr_workspace_index
                     self._curr_workspace_index = focused_workspace['index']                    
                 if focused_container:
-                    self._prev_container_index = self._curr_container_index
-                    self._curr_container_index = focused_container['index']
+                    self._prev_focus_container = self._curr_focus_container 
+                    self._curr_focus_container = focused_container
                 if focused_window:
                     self._prev_window_index = self._curr_window_index
                     self._curr_window_index = focused_window['index']
@@ -369,14 +356,11 @@ class StackWidget(BaseWidget):
         except TypeError:
             return False
 
-    def _has_number_of_windows_changed(self):
-        return self._prev_num_windows != self._curr_num_windows and not self._has_active_container_index_changed() and not self._has_active_workspace_index_changed()
-
     def _has_active_window_index_changed(self):
-        return self._prev_window_index != self._curr_window_index and not self._has_active_container_index_changed() and not self._has_active_workspace_index_changed()
+        return self._prev_window_index != self._curr_window_index and not self._has_active_container_changed() and not self._has_active_workspace_index_changed()
 
-    def _has_active_container_index_changed(self):
-        return self._prev_container_index != self._curr_container_index and not self._has_active_workspace_index_changed()
+    def _has_active_container_changed(self):
+        return self._prev_focus_container != self._curr_focus_container and not self._has_active_workspace_index_changed()
 
     def _has_active_workspace_index_changed(self):
         return self._prev_workspace_index != self._curr_workspace_index
@@ -429,7 +413,7 @@ class StackWidget(BaseWidget):
                 self._update_button_status(window_btn)
                 
     def _get_window_label(self, window_index):
-        window = self._komorebic.get_window_by_index(self._komorebi_focus_container, window_index)
+        window = self._komorebic.get_window_by_index(self._curr_focus_container, window_index)
         w_index = window_index if self._label_zero_index else window_index + 1
         process_name = window['exe'].removesuffix('.exe').removesuffix('.EXE')
         default_label = self._label_window.format(
@@ -464,7 +448,8 @@ class StackWidget(BaseWidget):
 
     def _try_remove_window_button(self, window_index: int) -> None:
         with suppress(IndexError):
-            self._window_buttons[window_index].hide()
+            self._window_buttons[window_index].setParent(None)
+            self._widget_container_layout.removeWidget(self._window_buttons[window_index])
             self._window_buttons.pop(window_index)
 
     def _show_offline_status(self):
@@ -476,8 +461,11 @@ class StackWidget(BaseWidget):
         self._widget_container.show()
 
     def _show_no_window_text(self):
-        self._no_window_text.show()
-        self._widget_container.hide()
+        if self._no_window_text.text():
+            self._no_window_text.show()
+            self._widget_container.hide()
+        else:
+            self.hide()
 
     def _hide_no_window_text(self):
         self._no_window_text.hide()
@@ -492,7 +480,7 @@ class StackWidget(BaseWidget):
         # Determine direction (consider reverse_scroll_direction setting)
         direction = -1 if (delta > 0) != self._reverse_scroll_direction else 1
 
-        windows = self._komorebic.get_windows(self._komorebi_focus_container)
+        windows = self._komorebic.get_windows(self._curr_focus_container)
         if not windows:
             return
 
