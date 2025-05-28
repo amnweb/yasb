@@ -5,7 +5,7 @@ from typing import Union
 import humanize
 import psutil
 from PyQt6.QtCore import QTimer
-from PyQt6.QtWidgets import QGraphicsOpacityEffect, QHBoxLayout, QLabel, QWidget
+from PyQt6.QtWidgets import QHBoxLayout, QLabel, QWidget
 
 from core.validation.widgets.yasb.battery import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
@@ -43,7 +43,6 @@ class BatteryWidget(BaseWidget):
         self._icon_charging_format = charging_options['icon_format']
         self._icon_charging_blink = charging_options['blink_charging_icon']
         self._icon_charging_blink_interval = charging_options['blink_interval']
-        self._icon_charging_min_opacity = charging_options['blink_min_opacity']
         self._hide_unsupported = hide_unsupported
         self._padding = container_padding
         self._label_shadow = label_shadow
@@ -83,7 +82,6 @@ class BatteryWidget(BaseWidget):
         self._charging_blink_timer.setInterval(self._icon_charging_blink_interval )
         self._charging_blink_timer.timeout.connect(self._charging_blink)
         self._charging_icon_label = None
-        self._charging_opacity = self._icon_charging_min_opacity
 
         self.start_timer()
 
@@ -132,18 +130,21 @@ class BatteryWidget(BaseWidget):
         return icon
 
     def _charging_blink(self):
-        """Toggle the opacity of the charging icon label to create a blinking effect."""
+        """Toggle the blink class to create a blinking effect using CSS."""
         label = self._charging_icon_label
         if not label:
             return
-        # Toggle opacity between min and max
-        self._charging_opacity = 1.0 if self._charging_opacity <= self._icon_charging_min_opacity else self._icon_charging_min_opacity
 
-        effect = label.graphicsEffect()
-        if not isinstance(effect, QGraphicsOpacityEffect):
-            effect = QGraphicsOpacityEffect(label)
-            label.setGraphicsEffect(effect)
-        effect.setOpacity(self._charging_opacity)
+        current_classes = label.property("class") or ""
+
+        if "blink" in current_classes:
+            new_classes = current_classes.replace("blink", "").strip()
+            new_classes = re.sub(r'\s+', ' ', new_classes)
+        else:
+            new_classes = f"{current_classes} blink".strip()
+        
+        label.setProperty("class", new_classes)
+        label.setStyleSheet('')
 
     def _update_label(self):
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
@@ -202,11 +203,12 @@ class BatteryWidget(BaseWidget):
                         if self._charging_blink_timer.isActive():
                             self._charging_blink_timer.stop()
                         self._charging_icon_label = None
-                        # restore full opacity & normal color
-                        effect = widget_label.graphicsEffect()
-                        if isinstance(effect, QGraphicsOpacityEffect):
-                            effect.setOpacity(1.0)
-                        widget_label.setStyleSheet('')
+                        current_classes = widget_label.property("class") or ""
+                        if "blink" in current_classes:
+                            new_classes = current_classes.replace("blink", "").strip()
+                            new_classes = re.sub(r'\s+', ' ', new_classes)
+                            widget_label.setProperty("class", new_classes)
+                            widget_label.setStyleSheet('')
                 else:
                     alt_class = "alt" if self._show_alt_label else ""
                     formatted_text = battery_status.format(battery_status) 
