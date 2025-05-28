@@ -48,6 +48,14 @@ scoop install extras/yasb
 
 ***
 
+### Chocolatey
+Install YASB using Chocolatey:
+```powershell
+choco install yasb
+```
+
+***
+
 ### Using Python
 - Install Python 3.12
 - Install required Python Modules:
