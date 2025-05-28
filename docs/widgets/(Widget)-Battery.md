@@ -7,7 +7,7 @@
 | `update_interval`       | integer | `5000`                                       | The interval in milliseconds to update the widget.                          |
 | `time_remaining_natural`| boolean | `False`                                      | Whether to display the remaining time in a natural format.                  |
 | `hide_unsupported`| boolean | `True`                                      | Whether to hide the widget if the current system does not have battery info.                  |
-| `charging_options`      | dict    | `{icon_format: '{charging_icon} {icon}', blink_charging_icon: True}` | Options for charging state display.                                         |
+| `charging_options`      | dict    | `{icon_format: '{charging_icon}', blink_charging_icon: True, blink_interval: 500, blink_min_opacity: 0.5}` | Options for charging state display.                                         |
 | `status_thresholds`     | dict    | `{critical: 10, low: 25, medium: 75, high: 95, full: 100}` | Thresholds for different battery statuses.                                  |
 | `status_icons`          | dict    | `{icon_charging: '\uf0e7', icon_critical: '\uf244', icon_low: '\uf243', icon_medium: '\uf242', icon_high: '\uf241', icon_full: '\uf240'}` | Icons for different battery statuses.                                       |
 | `callbacks`             | dict    | `{on_left: 'toggle_label', on_middle: 'do_nothing', on_right: 'do_nothing'}` | Callback functions for different mouse button actions.                      |
@@ -28,7 +28,9 @@ battery:
     hide_unsupported': True
     charging_options:
       icon_format: "{charging_icon}"
-      blink_charging_icon: false
+      blink_charging_icon: true
+      blink_interval: 500
+      blink_min_opacity: 0.5
     status_thresholds:
       critical: 10
       low: 25
@@ -60,6 +62,8 @@ battery:
 - `charging_options`: A dictionary specifying options for displaying the charging state. It contains:
   - `icon_format`: The format string for the charging icon. You can use placeholders like `{charging_icon}` and `{icon}`.
   - `blink_charging_icon`: A boolean indicating whether to blink the charging icon when the battery is charging.
+  - `blink_interval`: The interval in milliseconds for the blinking effect.
+  - `blink_min_opacity`: The minimum opacity for the blinking effect.
 - `status_thresholds`: A dictionary specifying the thresholds for different battery statuses. It contains:
   - `critical`: The battery percentage threshold for critical status.
   - `low`: The battery percentage threshold for low status.
