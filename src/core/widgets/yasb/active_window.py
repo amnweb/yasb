@@ -275,7 +275,7 @@ class ActiveWindowWidget(BaseWidget):
 
             if (title.strip() in self._ignore_window['titles'] or
                     class_name in self._ignore_window['classes'] or
-                    process in self._ignore_window['processes']):
+                    process['name'] in self._ignore_window['processes']):
                 return
             else:
                 if self._max_length and len(win_info['title']) > self._max_length:
