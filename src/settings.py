@@ -1,7 +1,7 @@
 import os
 import sys
 # Application Settings
-APP_NAME = "Yasb"
+APP_NAME = "YASB"
 APP_NAME_FULL = "Yet Another Status Bar"
 APP_BAR_TITLE = "YasbBar"
 APP_ID = "YASB.YetAnotherStatusBar"
