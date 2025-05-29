@@ -36,11 +36,12 @@ from core.utils.win32.bindings import (
     WriteFile,
 )
 from core.utils.win32.constants import INVALID_HANDLE_VALUE
-from settings import BUILD_VERSION, CLI_VERSION
+from settings import BUILD_VERSION, CLI_VERSION, RELEASE_CHANNEL
 
 BUFSIZE = 65536
 YASB_VERSION = BUILD_VERSION
 YASB_CLI_VERSION = CLI_VERSION
+YASB_RELEASE_CHANNEL = RELEASE_CHANNEL
 
 OS_STARTUP_FOLDER = os.path.join(os.environ["APPDATA"], r"Microsoft\Windows\Start Menu\Programs\Startup")
 INSTALLATION_PATH = os.path.abspath(os.path.join(__file__, "../../.."))
@@ -471,7 +472,7 @@ class CLIHandler:
             sys.exit(0)
 
         elif args.version:
-            version_message = f"YASB Reborn v{YASB_VERSION}\nYASB-CLI v{YASB_CLI_VERSION}"
+            version_message = f"YASB Reborn v{YASB_VERSION} ({YASB_RELEASE_CHANNEL})\nYASB-CLI v{YASB_CLI_VERSION}"
             print(version_message)
         else:
             print("Unknown command. Use --help for available options.")

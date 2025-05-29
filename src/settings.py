@@ -10,6 +10,7 @@ GITHUB_URL = "https://github.com/amnweb/yasb"
 GITHUB_THEME_URL = "https://github.com/amnweb/yasb-themes"
 BUILD_VERSION = "1.7.4"
 CLI_VERSION = "1.1.1"
+RELEASE_CHANNEL = "stable"
 # Development Settings
 DEBUG = False
 # Configuration Settings
