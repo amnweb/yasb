@@ -59,6 +59,10 @@ vscode:
 - **container_shadow:** Container shadow options.
 - **label_shadow:** Label shadow options.
 
+## Callbacks in the popup menu
+- **left click**: Opens the selected folder or file in Visual Studio Code.
+- **right click**: Deletes the selected folder or file from the opened history.
+
 ## Widget Style
 ```css
 .vscode-widget {}
