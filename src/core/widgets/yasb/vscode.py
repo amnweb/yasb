@@ -1,25 +1,23 @@
 import json
 import logging
+import os
+import re
 import sqlite3
 import subprocess
-from typing import Any, List
-import re
-import os
-
 import urllib.parse
+from typing import Any
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QHBoxLayout, QLabel, QScrollArea, QVBoxLayout, QWidget
 from PyQt6.QtGui import QCursor
+from PyQt6.QtWidgets import (QHBoxLayout, QLabel, QScrollArea, QVBoxLayout, QWidget)
 
+from core.utils.utilities import PopupWidget, add_shadow, build_widget_label
 from core.utils.widgets.animation_manager import AnimationManager
-from core.utils.utilities import add_shadow, build_widget_label, PopupWidget
 from core.validation.widgets.yasb.vscode import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
 
 class VSCodeWidget(BaseWidget):
     validation_schema: dict[str, Any] = VALIDATION_SCHEMA
-
     def __init__(
         self,
         label: str,
@@ -56,6 +54,8 @@ class VSCodeWidget(BaseWidget):
         self._animation = animation
         self._container_shadow = container_shadow
         self._label_shadow = label_shadow
+        self._recent_workspaces_data = []
+        self._state_file_path = os.path.expandvars(r"%APPDATA%\Code\User\globalStorage\state.vscdb")
 
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
@@ -77,7 +77,7 @@ class VSCodeWidget(BaseWidget):
         self.callback_right = callbacks['on_right']
         self.callback_middle = callbacks['on_middle']
 
-    def _uri_to_windows_path(self, uri):
+    def _uri_to_windows_path(self, uri: str) -> str:
         parsed = urllib.parse.urlparse(uri)
         path = urllib.parse.unquote(parsed.path)
         if path.startswith('/'):
@@ -88,10 +88,9 @@ class VSCodeWidget(BaseWidget):
             path = f"{drive_part}:{rest}"
         return path
     
-    def _load_recent_workspaces(self) -> List[dict]:
+    def _load_recent_workspaces(self):
         try:
-            file_path = os.path.expandvars(r"%APPDATA%\Code\User\globalStorage\state.vscdb")
-            conn = sqlite3.connect(file_path)
+            conn = sqlite3.connect(self._state_file_path)
             cursor = conn.cursor()
             cursor.execute("SELECT value FROM ItemTable WHERE key = 'history.recentlyOpenedPathsList'")
             result = cursor.fetchone()
@@ -101,22 +100,35 @@ class VSCodeWidget(BaseWidget):
                 for path in paths_data:
                     if isinstance(path, dict):
                         if path.get('folderUri'):
-                            folder_path = self._uri_to_windows_path(path.get('folderUri'))
-                            if os.path.exists(folder_path):
-                                result_list.append({"folder":  folder_path})
+                            folder_path = path.get('folderUri')
+                            if os.path.exists(self._uri_to_windows_path(folder_path)):
+                                result_list.append({"folderUri":  folder_path})
                         if path.get('fileUri'):
-                            file_path = self._uri_to_windows_path(path.get('fileUri'))
-                            if os.path.exists(file_path):
-                                result_list.append({"file": file_path})
+                            file_path = path.get('fileUri')
+                            if os.path.exists(self._uri_to_windows_path(file_path)):
+                                result_list.append({"fileUri": file_path})
                     else:
                         logging.error(f"Unexpected entry type: {type(path)}")
             else:
-                logging.error(f"No data found in {file_path}")
+                logging.error(f"No data found in {self._state_file_path}")
             conn.close()
-            return result_list
+            self._recent_workspaces_data = result_list
         except Exception as e:
             logging.error(f"Error: {e}")
-            return []
+
+    def _delete_from_recent_workspaces(self, path: str):
+        try:
+            conn = sqlite3.connect(self._state_file_path)
+            cursor = conn.cursor()
+            updated_paths = [p for p in self._recent_workspaces_data if not (p.get('folderUri') == path or p.get('fileUri') == path)]
+            updated_data = json.dumps({"entries": updated_paths})
+            cursor.execute("UPDATE ItemTable SET value = ? WHERE key = 'history.recentlyOpenedPathsList'", (updated_data,))
+            conn.commit()
+            conn.close()
+            self._recent_workspaces_data = updated_paths
+            self._reload_menu_content()
+        except Exception as e:
+            logging.error(f"Error: {e}")
 
     def _toggle_menu(self):
         if self._animation['enabled']:
@@ -150,23 +162,29 @@ class VSCodeWidget(BaseWidget):
                     active_widgets[widget_index].setText(part)
                 widget_index += 1
 
-    def _handle_mouse_press_event(self, event, folder):
+    def _open_vscode(self, folder: str):
         try:
             subprocess.Popen(['code', folder], shell=True, creationflags=subprocess.CREATE_NO_WINDOW)
         except subprocess.CalledProcessError as e:
             logging.error(f"Failed to open VS Code with folder {folder}: {e}")
         except FileNotFoundError:
             logging.error("VS Code not found in PATH")
-        self._menu.hide()
 
-    def _create_container_mouse_press_event(self, folder):
+    def _handle_mouse_press_event(self, event, path: str):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self._open_vscode(self._uri_to_windows_path(path))
+            self._menu.hide()
+        elif event.button() == Qt.MouseButton.RightButton:
+            self._delete_from_recent_workspaces(path)
+
+    def _create_container_mouse_press_event(self, path: str):
         def mouse_press_event(event):
-            self._handle_mouse_press_event(event, folder)
+            self._handle_mouse_press_event(event, path)
         return mouse_press_event
 
-    def show_menu(self):
+    def show_menu(self, load_data: bool = True):
         self._menu = self._create_popup_menu()
-        self._populate_menu_content()
+        self._populate_menu_content(load_data)
         self._position_and_show_menu()
 
     def _create_popup_menu(self):
@@ -219,15 +237,16 @@ class VSCodeWidget(BaseWidget):
         container_layout.setContentsMargins(0, 0, 0, 0)
         container_layout.setSpacing(0)
         
-        is_folder = 'folder' in workspace_data
+        is_folder = 'folderUri' in workspace_data
         
         if (is_folder and not self._hide_folder_icon) or (not is_folder and not self._hide_file_icon):
             icon_label = QLabel(self._folder_icon if is_folder else self._file_icon)
             icon_label.setProperty("class", "folder-icon" if is_folder else "file-icon")
             container_layout.addWidget(icon_label)
         
-        path = workspace_data.get('folder' if is_folder else 'file')
-        display_path = path.split("/")[-1] if self._truncate_to_root_dir else path
+        path = workspace_data.get('folderUri' if is_folder else 'fileUri')
+        windows_uri_path = self._uri_to_windows_path(path)
+        display_path = windows_uri_path.split("/")[-1] if self._truncate_to_root_dir else windows_uri_path
         if len(display_path) > self._max_field_size:
             display_path = "..." + display_path[-self._max_field_size + 3:]
         
@@ -246,7 +265,7 @@ class VSCodeWidget(BaseWidget):
         
         return container
 
-    def _populate_menu_content(self):
+    def _populate_menu_content(self, load_data: bool):
         main_layout = QVBoxLayout(self._menu)
         main_layout.setSpacing(0)
         main_layout.setContentsMargins(0, 0, 0, 0)
@@ -264,18 +283,24 @@ class VSCodeWidget(BaseWidget):
         scroll_layout.setSpacing(0)
         scroll_area.setWidget(scroll_widget)
         
-        recent_workspaces = self._load_recent_workspaces()
+        if load_data:
+            self._load_recent_workspaces()
+
+        if not self._recent_workspaces_data:
+            self._scroll_layout.addWidget(self._create_no_recents_label())
+            return
+
+        folders = [ws for ws in self._recent_workspaces_data if 'folderUri' in ws][:self._max_number_of_folders]
+        files = [ws for ws in self._recent_workspaces_data if 'fileUri' in ws][:self._max_number_of_files]
+        workspaces_to_show = folders + files
         
-        if not recent_workspaces:
-            scroll_layout.addWidget(self._create_no_recents_label())
-        else:
-            folders = [ws for ws in recent_workspaces if 'folder' in ws][:self._max_number_of_folders]
-            files = [ws for ws in recent_workspaces if 'file' in ws][:self._max_number_of_files]
-            workspaces_to_show = folders + files
-            
-            for workspace in workspaces_to_show:
-                item = self._create_workspace_item(workspace)
-                scroll_layout.addWidget(item)
+        for workspace in workspaces_to_show:
+            item = self._create_workspace_item(workspace)
+            scroll_layout.addWidget(item)
+
+    def _reload_menu_content(self):
+        self._menu.hide()
+        self.show_menu(False)
 
     def _position_and_show_menu(self):
         self._menu.adjustSize()
