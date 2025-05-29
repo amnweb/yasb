@@ -3,6 +3,7 @@ DEFAULTS = {
     'min_bar_height': 0,
     'bars_number': 10,
     'output_bit_format': "16bit",
+    'orientation': 'bottom',
     'bar_spacing': 1,
     'bar_width': 3,
     'min_bar_height': 1,
@@ -15,11 +16,14 @@ DEFAULTS = {
     'channels': 'stereo',
     'mono_option': 'average',
     'reverse': 0,
+    'waveform': 0,
     'foreground': '#ffffff',
     'gradient': 1,
     'gradient_color_1': '#74c7ec',
     'gradient_color_2': '#89b4fa',
     'gradient_color_3': '#cba6f7',
+    'monstercat': 0,
+    'waves': 0,
     'hide_empty': False,
     'container_padding': {'top': 0, 'left': 0, 'bottom': 0, 'right': 0},
     'callbacks': {
@@ -49,6 +53,12 @@ VALIDATION_SCHEMA = {
         'type': 'string',
         'required': False,
         'default': DEFAULTS['output_bit_format']
+    },
+    'orientation': {
+        'type': 'string',
+        'required': False,
+        'allowed': ['top', 'bottom'],
+        'default': DEFAULTS['orientation']
     },
     'bar_spacing': {
         'type': 'integer',
@@ -105,6 +115,11 @@ VALIDATION_SCHEMA = {
         'required': False,
         'default': DEFAULTS['reverse']
     },
+    'waveform': {
+        'type': 'integer',
+        'required': False,
+        'default': DEFAULTS['waveform']
+    },
     'foreground': {
         'type': 'string',
         'required': False,
@@ -129,6 +144,16 @@ VALIDATION_SCHEMA = {
         'type': 'string',
         'required': False,
         'default': DEFAULTS['gradient_color_3']
+    },
+    'monstercat': {
+        'type': 'integer',
+        'required': False,
+        'default': DEFAULTS['monstercat']
+    },
+    'waves': {
+        'type': 'integer',
+        'required': False,
+        'default': DEFAULTS['waves']
     },
     'hide_empty': {
         'type': 'boolean',

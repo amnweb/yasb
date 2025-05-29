@@ -51,6 +51,7 @@ class CavaWidget(BaseWidget):
             min_bar_height: int,
             bars_number: int,
             output_bit_format: str,
+            orientation: str,
             bar_spacing: int,
             bar_width: int,
             sleep_timer: int,
@@ -61,12 +62,15 @@ class CavaWidget(BaseWidget):
             noise_reduction: float,
             mono_option: str,
             reverse: int,
+            waveform: int,
             channels: str,
             foreground: str,
             gradient: bool,
             gradient_color_1: str,
             gradient_color_2: str,
             gradient_color_3: str,
+            monstercat: int,
+            waves: int,
             hide_empty: bool,
             container_padding: dict[str, int],
             callbacks: dict[str, str],
@@ -77,6 +81,7 @@ class CavaWidget(BaseWidget):
         self._min_height = min_bar_height
         self._bars_number = bars_number
         self._output_bit_format = output_bit_format
+        self._orientation = orientation
         self._bar_spacing = bar_spacing
         self._bar_width = bar_width
         self._sleep_timer = sleep_timer
@@ -87,12 +92,15 @@ class CavaWidget(BaseWidget):
         self._noise_reduction = noise_reduction
         self._mono_option = mono_option
         self._reverse = reverse
+        self._waveform = waveform
         self._channels = channels
         self._foreground = foreground
         self._gradient = gradient
         self._gradient_color_1 = gradient_color_1
         self._gradient_color_2 = gradient_color_2
         self._gradient_color_3 = gradient_color_3
+        self._monstercat = monstercat
+        self._waves = waves
         self._hide_empty = hide_empty
         self._padding = container_padding
         self._hide_cava_widget = True
@@ -228,15 +236,20 @@ class CavaWidget(BaseWidget):
         [output]
         method = raw
         bit_format = {self._output_bit_format}
+        orientation = {self._orientation}
         channels = {self._channels}
         mono_option = {self._mono_option}
         reverse = {self._reverse}
+        waveform = {self._waveform}
         [color]
         foreground = '{self._foreground}'
         gradient = {self._gradient}
         gradient_color_1 = '{self._gradient_color_1}'
         gradient_color_2 = '{self._gradient_color_2}'
         gradient_color_3 = '{self._gradient_color_3}'
+        [smoothing]
+        monstercat = {self._monstercat}
+        waves = {self._waves}
         """)
 
         self.initialize_colors()
