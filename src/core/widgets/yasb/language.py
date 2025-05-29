@@ -197,7 +197,7 @@ class LanguageWidget(BaseWidget):
 
         # Left: language code or icon
         lang_code_label = QLabel(lang_info['code'])
-        lang_code_label.setProperty("class", "code")
+        lang_code_label.setProperty("class", "icon" if self._menu_config['show_layout_icon'] else "code")
         lang_code_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         container_layout.addWidget(lang_code_label)
 

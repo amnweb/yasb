@@ -92,6 +92,7 @@ language:
 .language-menu .language-item {}
 .language-menu .language-item.active {}
 .language-menu .language-item .code {}
+.language-menu .language-item .icon {}
 .language-menu .language-item .name {}
 .language-menu .language-item .layout {}
 
@@ -146,6 +147,11 @@ language:
     font-size: 14px;
     min-width: 40px;
     text-transform: uppercase;
+}
+.language-menu .language-item .icon {
+    font-size: 16px;
+    margin-right: 8px;
+    color: #fff;
 }
 .language-menu .language-item .name {
     font-weight: 600;
