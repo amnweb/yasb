@@ -11,7 +11,6 @@ from core.event_service import EventService
 from core.config import get_stylesheet, get_config
 from copy import deepcopy
 from core.utils.controller import reload_application
-from settings import DEBUG
 
 class BarManager(QObject):
     styles_modified = pyqtSignal()
@@ -42,8 +41,6 @@ class BarManager(QObject):
             self.stylesheet = stylesheet
             for bar in self.bars:
                 bar.setStyleSheet(self.stylesheet)
-            if DEBUG:
-                logging.info("Successfully loaded updated stylesheet and applied to all bars.")
 
     @pyqtSlot()
     def on_config_modified(self):
@@ -55,22 +52,19 @@ class BarManager(QObject):
         if config and (config != self.config):
             if any(config[key] != self.config[key] for key in ['bars', 'widgets', 'komorebi', 'debug', 'env_file']):
                 self.config = config
-                reload_application("Reloading Application because of config update...")
+                reload_application("Reloading Application because of config change.")
             else:
                 self.config = config
-            if DEBUG:
-                logging.info("Successfully loaded updated config and re-initialised all bars.")
+            logging.info("Successfully loaded updated config and re-initialised all bars.")
 
     @pyqtSlot(QScreen)
     def on_screens_update(self, _screen: QScreen) -> None:
-        if DEBUG:
-            logging.info("Screens updated. Re-initialising all bars.")
-        reload_application("Reloading Application because of screen update...", forced=True)
+        logging.info("Screens updated. Re-initialising all bars.")
+        reload_application("Reloading Application because of screen update.", forced=True)
 
     def run_listeners_in_threads(self):
         for listener in self.widget_event_listeners:
-            if DEBUG:
-                logging.info(f"Starting {listener.__name__}...")
+            logging.info(f"Starting {listener.__name__}...")
             thread = listener()
             thread.start()
             self._threads[listener] = thread
