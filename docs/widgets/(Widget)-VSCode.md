@@ -14,7 +14,7 @@
 | `max_field_size` | int | `100` | The maximum number of characters in the title before truncation. |
 | `menu`              | dict    | `{'blur': True, 'round_corners': True, 'round_corners_type': 'normal', 'border_color': 'System', 'alignment': 'right', 'direction': 'down', 'offset_top': 6, 'offset_left': 0}` | Menu settings for the widget. |
 | `container_padding` | dict | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}` | Explicitly set padding inside widget container. |
-| `callbacks` | dict | `{'on_left': 'next_binding_mode', 'on_middle': 'toggle_label', 'on_right': 'disable_binding_mode'}` | Callbacks for mouse events on the widget. |
+| `callbacks` | dict | `{'on_left': 'toggle_menu', 'on_middle': 'do_nothing', 'on_right': 'toggle_label'}` | Callbacks for mouse events on the widget. |
 | `animation` | dict | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}` | Animation settings for the widget. |
 | `container_shadow` | dict   | `None` | Container shadow options. |
 | `label_shadow` | dict | `None` | Label shadow options. |
@@ -25,6 +25,8 @@
 vscode:
     type: "yasb.vscode.VSCodeWidget"
     options:
+      label: "<span>\udb82\ude1e</span>"
+      label_alt: "<span>\udb82\ude1e</span> recents"
       max_field_size: 50
       folder_icon: "\uf114"
       file_icon: "\uf016"
