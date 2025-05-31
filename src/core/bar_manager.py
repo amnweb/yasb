@@ -89,6 +89,11 @@ class BarManager(QObject):
                         continue
                     self.create_bar(bar_config, bar_name, screen, init)
                 continue
+            elif bar_config['screens'] == ['primary']:
+                primary_screen = QApplication.primaryScreen()
+                if primary_screen:
+                    self.create_bar(bar_config, bar_name, primary_screen, init)
+                continue
             for screen_name in bar_config['screens']:
                 screen = get_screen_by_name(screen_name)
                 if screen:
