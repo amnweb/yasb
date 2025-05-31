@@ -60,6 +60,8 @@ QT_SCALE_FACTOR_ROUNDING_POLICY="PassThrough"
 | `widgets`         | list  | `left[], center[], right[]` | Active widgets and position. |
 | `layouts`         | object  | [See below](#layouts-configuration) | Configuration for widget layouts in each section (left, center, right). |
 
+> **Note:**
+> `screens` can be specified as a list of monitor names. If you want the bar to appear on all screens, use `['*']`. To specify a single screen, use `['DELL P2419H (1)']` or a similar name based on your monitor setup. To show the bar only and always on the primary screen, use `['primary']`.
 
 ### Blur Effect Configuration
 | Option            | Type    | Default       | Description |
