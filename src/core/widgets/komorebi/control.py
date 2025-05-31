@@ -12,6 +12,11 @@ from core.utils.komorebi.client import KomorebiClient
 from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget, QVBoxLayout, QSizePolicy
 from PyQt6.QtCore import Qt, pyqtSignal, QThread, QEvent
 
+try:
+    from core.utils.komorebi.event_listener import KomorebiEventListener
+except ImportError:
+    KomorebiEventListener = None
+    logging.warning("Failed to load Komorebi Event Listener")
 
 class ExtPopupWidget(PopupWidget):
     def eventFilter(self, obj, event):
@@ -28,6 +33,7 @@ class KomorebiControlWidget(BaseWidget):
 
     k_signal_connect = pyqtSignal(dict)
     k_signal_disconnect = pyqtSignal()
+    event_listener = KomorebiEventListener
 
     def __init__(
             self,
