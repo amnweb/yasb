@@ -1,12 +1,13 @@
 DEFAULTS = {
     'hide_if_offline': False,
     "label": "{icon}",
-    'layouts': ['bsp', 'columns', 'rows', 'grid', 'vertical_stack', 'horizontal_stack', 'ultrawide_vertical_stack', 'right_main_vertical_stack'],
+    'layouts': ['bsp', 'columns', 'rows', 'grid', 'scrolling', 'vertical_stack', 'horizontal_stack', 'ultrawide_vertical_stack', 'right_main_vertical_stack'],
     'layout_icons': {
         "bsp": "[\\\\]",
         "columns": "[||]",
         "rows": "[==]",
         "grid": "[G]",
+        'scrolling': "[SC]",
         "vertical_stack": "[V]=",
         "horizontal_stack": "[H]=",
         "ultrawide_vertical_stack": "||=",
@@ -15,7 +16,7 @@ DEFAULTS = {
         "maximised": "[X]",
         "floating": "><>",
         "paused": "[P]",
-        'tiling': "[T]",
+        'tiling': "[T]"
     },
     'layout_menu': {
         'blur': True,
@@ -93,6 +94,10 @@ VALIDATION_SCHEMA = {
                 'type': 'string',
                 'default': DEFAULTS['layout_icons']['grid']
             },
+            'scrolling': {
+                'type': 'string',
+                'default': DEFAULTS['layout_icons']['scrolling']
+            },
             "vertical_stack": {
                 'type': 'string',
                 'default': DEFAULTS['layout_icons']['vertical_stack']
@@ -128,7 +133,7 @@ VALIDATION_SCHEMA = {
             'tiling': {
                 'type': 'string',
                 'default': DEFAULTS['layout_icons']['tiling']
-            },
+            }
         },
         'default': DEFAULTS['layout_icons']
     },
