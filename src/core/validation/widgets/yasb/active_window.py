@@ -7,6 +7,7 @@ DEFAULTS = {
     'max_length': None,
     'max_length_ellipsis': '...',
     'monitor_exclusive': True,
+    'rewrite': [],
     'animation': {
         'enabled': True,
         'type': 'fadeInOut',
@@ -62,6 +63,29 @@ VALIDATION_SCHEMA = {
         'type': 'boolean',
         'required': False,
         'default': DEFAULTS['monitor_exclusive']
+    },
+    'rewrite': {
+        'type': 'list',
+        'required': False,
+        'schema': {
+            'type': 'dict',
+            'schema': {
+                'pattern': {
+                    'type': 'string',
+                    'required': True
+                },
+                'replacement': {
+                    'type': 'string',
+                    'required': True
+                },
+                'case': {
+                    'type': 'string',
+                    'required': False,
+                    'allowed': ['lower', 'upper', 'title', 'capitalize'],
+                }
+            }
+        },
+        'default': DEFAULTS['rewrite']
     },
     'animation': {
         'type': 'dict',

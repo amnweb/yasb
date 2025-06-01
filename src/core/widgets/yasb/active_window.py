@@ -1,5 +1,7 @@
 import logging
 import os
+import re
+from sys import flags
 from settings import APP_BAR_TITLE, DEBUG
 from core.utils.win32.windows import WinEvent
 from core.widgets.base import BaseWidget
@@ -58,6 +60,7 @@ class ActiveWindowWidget(BaseWidget):
             container_padding: dict[str, int],
             label_shadow: dict = None,
             container_shadow: dict = None,
+            rewrite: list[dict] = None,
     ):
         super().__init__(class_name="active-window-widget")
         self.dpi = None
@@ -78,6 +81,7 @@ class ActiveWindowWidget(BaseWidget):
         self._padding = container_padding
         self._label_shadow = label_shadow
         self._container_shadow = container_shadow
+        self._rewrite_rules = rewrite
          # Construct container
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
@@ -144,6 +148,32 @@ class ActiveWindowWidget(BaseWidget):
         atexit.register(self._stop_events)
 
 
+    def _rewrite_filter(self, text: str) -> str:
+        """ Applies rewrite rules to the given text. """
+        if not text or not self._rewrite_rules:
+            return text
+
+        result = text
+        for rule in self._rewrite_rules:
+            pattern, replacement, case = (
+                rule.get(k, "") for k in ("pattern", "replacement", "case")
+            )
+
+            if not pattern or not replacement:
+                continue
+
+            try:
+                result, count = re.subn(pattern, replacement, result)
+                if count > 0:
+                    transform = getattr(result, case, None)
+                    if callable(transform):
+                        result = transform()
+            except re.error as e:
+                logging.warning(f"Invalid regex pattern '{pattern}': {e}")
+                continue
+
+        return result
+        
     def _set_no_window_or_hide(self) -> None:
         if self._label_no_window:
             self._window_title_text.setText(self._label_no_window)
@@ -284,6 +314,11 @@ class ActiveWindowWidget(BaseWidget):
                     self._window_title_text.setText(self._label_no_window)
                     if self._label_icon:
                         self._window_icon_label.hide()
+                
+                if 'title' in win_info:
+                    win_info['title'] = self._rewrite_filter(win_info['title'])
+                if 'process' in win_info and 'name' in win_info['process']:
+                    win_info['process']['name'] = self._rewrite_filter(win_info['process']['name'])
                     
                 self._win_info = win_info
                 self._update_text()

@@ -16,6 +16,7 @@
 | `animation`         | dict    | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
 | `container_shadow`   | dict   | `None`                  | Container shadow options.                       |
 | `label_shadow`         | dict   | `None`                  | Label shadow options.                 |
+| `rewrite`           | dict | [See below](#rewrite-options)                                                                  | Rewrite options for the widget. |
 
 ## Example Configuration
 
@@ -54,6 +55,39 @@ active_window:
 - **animation:** A dictionary specifying the animation settings for the widget. It contains three keys: `enabled`, `type`, and `duration`. The `type` can be `fadeInOut` and the `duration` is the animation duration in milliseconds.
 - **container_shadow:** Container shadow options.
 - **label_shadow:** Label shadow options.
+- **rewrite:** A dictionary containing rewrite options for the widget. This can include settings for how the widget should behave or display information.
+
+## Rewrite Options
+
+The `rewrite` option allows you to supply a list of search-and-replace rules to be applied, in order, to the window title. Each rule is a dict with the following schema:
+
+| Field       | Type    | Required | Default | Description                                                                                      |
+|-------------|---------|----------|---------|--------------------------------------------------------------------------------------------------|
+| `pattern`   | string  | yes      | None   | A Python regular expression to match against the raw window title. [More Info](https://docs.python.org/3/library/re.html)    |
+| `replacement`| string | yes      | None   | The replacement text; can use backrefs like `\1`, `\2`, etc.                                     |
+| `case`      | string  | no       | None   | If specified, the replacement will be converted to the specified case. Allowed values: `lower`, `upper`, `title`, `capitalize` |
+
+### Example
+```yaml
+active_window:
+  type: "yasb.active_window.ActiveWindowWidget"
+  options:
+    label: "{win[title]}"
+    # …
+    rewrite:
+      # Strip trailing “.exe” (case-insensitive) and lowercase:
+      - pattern: "^(.+?)\\.exe$"
+        replacement: "\\1"
+        case: lower
+
+      # Uppercase the literal word “Studio” anywhere in the title:
+      - pattern: "\\bStudio\\b"
+        replacement: "STUDIO"
+
+      # Replace any title like “…YASB Reborn - Foo” with “🌎 Foo”
+      - pattern: "(.*)YASB Reborn -(.*)$"
+        replacement: "🌎 \\2"
+```
 
 ## Example Style
 ```css
