@@ -81,23 +81,36 @@ class BarManager(QObject):
  
     def initialize_bars(self, init=False) -> None:
         self._widget_builder = WidgetBuilder(self.config['widgets'])
-        screens_in_config = {screen for bar_config in self.config['bars'].values() for screen in bar_config['screens']}
+        primary_screen = QApplication.primaryScreen()
+        primary_screen_name = primary_screen.name() if primary_screen else None
+        available_screen_names = [screen.name() for screen in QApplication.screens()]
+ 
+        assigned_screens = set()
+        for bar_config in self.config['bars'].values():
+            if bar_config['screens'] != ['*']:
+                for screen in bar_config['screens']:
+                    resolved_name = primary_screen_name if screen == "primary" else screen
+                    if resolved_name not in available_screen_names:
+                        logging.warning(f"Screen '{resolved_name}' from config not found among connected screens.")
+                        continue
+                    assigned_screens.add(resolved_name)
+
         for bar_name, bar_config in self.config['bars'].items():
             if bar_config['screens'] == ['*']:
                 for screen in QApplication.screens():
-                    if screen.name() in screens_in_config:
+                    if screen.name() in assigned_screens:
                         continue
                     self.create_bar(bar_config, bar_name, screen, init)
-                continue
-            elif bar_config['screens'] == ['primary']:
-                primary_screen = QApplication.primaryScreen()
-                if primary_screen:
-                    self.create_bar(bar_config, bar_name, primary_screen, init)
-                continue
-            for screen_name in bar_config['screens']:
-                screen = get_screen_by_name(screen_name)
-                if screen:
-                    self.create_bar(bar_config, bar_name, screen, init)
+            else:
+                for screen_name in bar_config['screens']:
+                    resolved_name = primary_screen_name if screen_name == "primary" else screen_name
+                    if resolved_name not in available_screen_names:
+                        logging.warning(f"Screen '{resolved_name}' from config not found among connected screens.")
+                        continue
+                    screen = get_screen_by_name(resolved_name)
+                    if screen:
+                        self.create_bar(bar_config, bar_name, screen, init)
+
         self.run_listeners_in_threads()
         self._widget_builder.raise_alerts_if_errors_present()
 
