@@ -2,7 +2,11 @@ BAR_DEFAULTS = {
     'enabled': True,
     'screens': ['*'],
     'class_name': 'yasb-bar',
-    'alignment': {'position': 'top', 'center': False},
+    'alignment': {
+        'position': 'top',
+        'center':    False, # DEPRECATED
+        'alignment': 'center'
+    },
     'blur_effect': {'enabled': False, 'dark_mode': False, 'acrylic': False,'round_corners': False,'round_corners_type':'normal','border_color': "System"},
     'animation': {'enabled': True, 'duration': 500},
     'window_flags': {'always_on_top': False, 'windows_app_bar': False, 'hide_on_fullscreen': False, 'auto_hide': False},
@@ -42,8 +46,13 @@ BAR_SCHEMA = {
                     'default': BAR_DEFAULTS['alignment']['position']
                 },
                 'center': {
-                    'type': 'boolean',
-                    'default': BAR_DEFAULTS['alignment']['center']
+                'type': 'boolean',
+                'default': BAR_DEFAULTS['alignment']['center']
+                },
+                'alignment': {
+                    'type': 'string',
+                    'allowed': ['left', 'center', 'right'],
+                    'default': BAR_DEFAULTS['alignment']['alignment']
                 }
             },
             'default': BAR_DEFAULTS['alignment']

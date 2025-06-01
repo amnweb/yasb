@@ -51,7 +51,7 @@ QT_SCALE_FACTOR_ROUNDING_POLICY="PassThrough"
 | `enabled`         | boolean | `true`        | Whether the status bar is enabled. |
 | `screens`         | list    | `['*']`       | The screens on which the status bar should be displayed. |
 | `class_name`      | string  | `"yasb-bar"`  | The CSS class name for the status bar. |
-| `alignment`       | object  | `{position: "top", center: false}` | The alignment settings for the status bar. |
+| `alignment` | object  | `{position: "top", alignment: "center"}` | The alignment settings for the status bar. **Deprecated:** The `center` property is deprecated - use `alignment: "left"/"center"/"right"` instead. |
 | `blur_effect`     | object  | [See below](#blur-effect-configuration) | The blur effect settings for the status bar. |
 | `window_flags`    | object  | [See below](#window-flags-configuration) | The window flags for the status bar. |
 | `dimensions`      | object  | `{width: "100%", height: 36}` | The dimensions of the status bar. |
@@ -103,6 +103,9 @@ layouts:
     alignment: "right"
     stretch: true
 ```
+
+### Status Bar Alignment Behavior
+When `width` is set to `100%`, changing the `alignment` value won't have any visible effect since the bar spans the full screen width. The alignment setting only becomes apparent when using smaller width percentages (e.g., `width: "80%"`).
 
 # Multiple Bars Example
 > **Note:**
