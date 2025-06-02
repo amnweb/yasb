@@ -5,6 +5,7 @@ DEFAULTS = {
     "update_interval": 1000,
     "hide_if_offline": False,
     "max_label_length": 0,
+    "hide_decimal": False,
     "animation": {
         'enabled': True,
         'type': 'fadeInOut',
@@ -42,6 +43,11 @@ VALIDATION_SCHEMA = {
         'required': False,
         'default': DEFAULTS['max_label_length'],
         'min': 0
+    },
+    "hide_decimal": {
+        "type": "boolean",
+        "required": False,
+        "default": DEFAULTS["hide_decimal"],
     },
     'animation': {
         'type': 'dict',

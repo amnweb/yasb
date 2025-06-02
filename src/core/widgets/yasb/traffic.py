@@ -63,6 +63,7 @@ class TrafficWidget(BaseWidget):
         update_interval: int,
         hide_if_offline: bool,
         max_label_length: int,
+        hide_decimal: bool,
         animation: dict[str, str],
         container_padding: dict[str, int],
         callbacks: dict[str, str],
@@ -80,6 +81,7 @@ class TrafficWidget(BaseWidget):
         self._interface = interface
         self._hide_if_offline = hide_if_offline
         self._max_label_length = max_label_length
+        self._hide_decimal = hide_decimal
         self._label_shadow = label_shadow
         self._container_shadow = container_shadow
 
@@ -185,15 +187,19 @@ class TrafficWidget(BaseWidget):
         if upload_diff < 1024:
             upload_speed = f"{upload_diff} B/s"
         else:
+            format_str = "%.0f" if self._hide_decimal else "%.1f"
             upload_speed = naturalsize(
                 (current_io.bytes_sent - self.bytes_sent) // self.interval,
+                format=format_str
             ) + "/s"
 
         if download_diff < 1024:
             download_speed = f"{download_diff} B/s"
         else:
+            format_str = "%.0f" if self._hide_decimal else "%.1f"
             download_speed = naturalsize(
                 (current_io.bytes_recv - self.bytes_recv) // self.interval,
+                format=format_str
             ) + "/s"
 
         self.bytes_sent = current_io.bytes_sent
