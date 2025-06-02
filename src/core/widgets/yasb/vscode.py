@@ -1,3 +1,4 @@
+import datetime
 import json
 import logging
 import sqlite3
@@ -24,6 +25,7 @@ class VSCodeWidget(BaseWidget):
         self,
         label: str,
         label_alt: str,
+        menu_title: str,
         file_icon: str,
         folder_icon: str,
         hide_folder_icon: bool,
@@ -32,6 +34,9 @@ class VSCodeWidget(BaseWidget):
         max_number_of_folders: int,
         max_number_of_files: int,
         max_field_size: int,
+        state_storage_path: str,
+        modified_date_format: str,
+        cli_command: str,
         menu: dict[str, str],
         container_padding: dict[str, int],
         animation: dict[str, str],
@@ -42,6 +47,7 @@ class VSCodeWidget(BaseWidget):
         super().__init__(class_name="vscode-widget")
         self._label_content = label
         self._label_alt_content = label_alt
+        self._menu_title = menu_title
         self._file_icon = file_icon
         self._folder_icon = folder_icon
         self._hide_folder_icon = hide_folder_icon
@@ -50,12 +56,18 @@ class VSCodeWidget(BaseWidget):
         self._max_number_of_folders = max_number_of_folders
         self._max_number_of_files = max_number_of_files
         self._max_field_size = max_field_size
+        self._modified_date_format = modified_date_format
+        self._cli_command = cli_command
         self._menu_popup = menu
         self._show_alt_label = False
         self._padding = container_padding
         self._animation = animation
         self._container_shadow = container_shadow
         self._label_shadow = label_shadow
+
+        if state_storage_path == "":
+            state_storage_path = os.path.expandvars(r"%APPDATA%\Code\User\globalStorage\state.vscdb")
+        self._state_file_path = state_storage_path
 
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
@@ -90,8 +102,7 @@ class VSCodeWidget(BaseWidget):
     
     def _load_recent_workspaces(self) -> List[dict]:
         try:
-            file_path = os.path.expandvars(r"%APPDATA%\Code\User\globalStorage\state.vscdb")
-            conn = sqlite3.connect(file_path)
+            conn = sqlite3.connect(self._state_file_path)
             cursor = conn.cursor()
             cursor.execute("SELECT value FROM ItemTable WHERE key = 'history.recentlyOpenedPathsList'")
             result = cursor.fetchone()
@@ -152,7 +163,7 @@ class VSCodeWidget(BaseWidget):
 
     def _handle_mouse_press_event(self, event, folder):
         try:
-            subprocess.Popen(['code', folder], shell=True, creationflags=subprocess.CREATE_NO_WINDOW)
+            subprocess.Popen([self._cli_command, folder], shell=True, creationflags=subprocess.CREATE_NO_WINDOW)
         except subprocess.CalledProcessError as e:
             logging.error(f"Failed to open VS Code with folder {folder}: {e}")
         except FileNotFoundError:
@@ -181,7 +192,7 @@ class VSCodeWidget(BaseWidget):
         return menu
 
     def _create_menu_header(self, layout):
-        header_label = QLabel(f"<span style='font-weight:bold'>VSCode</span> recents")
+        header_label = QLabel(self._menu_title)
         header_label.setProperty("class", "header")
         layout.addWidget(header_label)
 
@@ -233,10 +244,21 @@ class VSCodeWidget(BaseWidget):
         
         title_label = QLabel(display_path)
         title_label.setProperty("class", "title")
-        
+
+        try:
+            mod_time = os.path.getmtime(path)
+            mod_date = datetime.datetime.fromtimestamp(mod_time)
+            date_str = mod_date.strftime(self._modified_date_format)
+        except OSError:
+            date_str = "Unknown"
+
+        date_label = QLabel(date_str)
+        date_label.setProperty("class", "modified-date")
+
         text_content = QWidget()
         text_content_layout = QVBoxLayout(text_content)
         text_content_layout.addWidget(title_label)
+        text_content_layout.addWidget(date_label)
         text_content_layout.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         text_content_layout.setContentsMargins(0, 0, 0, 0)
         text_content_layout.setSpacing(0)

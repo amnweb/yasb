@@ -1,6 +1,7 @@
 DEFAULTS = {
     'label': '<span>\udb82\ude1e</span>',
     'label_alt': '<span>\udb82\ude1e</span> recents',
+    'menu_title': "<span style='font-weight:bold'>VScode</span> recents",
     'folder_icon': '\uf114',
     'file_icon': '\uf016',
     'hide_folder_icon': False,
@@ -9,6 +10,8 @@ DEFAULTS = {
     'max_number_of_folders': 30,
     'max_number_of_files': 30,
     'max_field_size': 100,
+    'modified_date_format': 'Date modified: %Y-%m-%d %H:%M',
+    'cli_command': 'code',
     'menu': {
         'blur': True,
         'round_corners': True,
@@ -41,6 +44,10 @@ VALIDATION_SCHEMA = {
     'label_alt': {
         'type': 'string',
         'default': DEFAULTS['label_alt']
+    },
+    'menu_title': {
+        'type': 'string',
+        'default': DEFAULTS['menu_title'],
     },
     'folder_icon': {
         'type': 'string',
@@ -76,6 +83,18 @@ VALIDATION_SCHEMA = {
         'type': 'integer',
         'default': DEFAULTS['max_field_size'],
         'min': 1,
+    },
+    'state_storage_path': {
+        'type': 'string',
+        'default': '',
+    },
+    'modified_date_format': {
+        'type': 'string',
+        'default': DEFAULTS['modified_date_format'],
+    },
+    'cli_command': {
+        'type': 'string',
+        'default': DEFAULTS['cli_command'],
     },
     'menu': {
         'type': 'dict',
