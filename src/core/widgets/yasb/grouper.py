@@ -55,5 +55,6 @@ class GrouperWidget(BaseWidget):
                         logging.warning(f"GrouperWidget: Failed to create child widget '{widget_name}'")
                 except Exception as e:
                     logging.error(f"GrouperWidget: Error creating child widget '{widget_name}': {e}")
+            widget_builder.raise_alerts_if_errors_present()
         except Exception as e:
             logging.error(f"GrouperWidget: Error initializing child widgets: {e}")
