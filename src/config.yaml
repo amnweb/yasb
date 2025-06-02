@@ -14,7 +14,7 @@ bars:
     class_name: "yasb-bar"
     alignment:
       position: "top"
-      alignment: "center"
+      center: false
     animation:
       enabled: true
       duration: 1000
