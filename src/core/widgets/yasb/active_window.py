@@ -308,17 +308,17 @@ class ActiveWindowWidget(BaseWidget):
                     process['name'] in self._ignore_window['processes']):
                 return
             else:
+                if 'title' in win_info and len(win_info['title']) > 0:
+                    win_info['title'] = self._rewrite_filter(win_info['title'])
+                if 'process' in win_info and 'name' in win_info['process']:
+                    win_info['process']['name'] = self._rewrite_filter(win_info['process']['name'])
+
                 if self._max_length and len(win_info['title']) > self._max_length:
                     truncated_title = f"{win_info['title'][:self._max_length]}{self._max_length_ellipsis}"
                     win_info['title'] = truncated_title
                     self._window_title_text.setText(self._label_no_window)
                     if self._label_icon:
                         self._window_icon_label.hide()
-                
-                if 'title' in win_info:
-                    win_info['title'] = self._rewrite_filter(win_info['title'])
-                if 'process' in win_info and 'name' in win_info['process']:
-                    win_info['process']['name'] = self._rewrite_filter(win_info['process']['name'])
                     
                 self._win_info = win_info
                 self._update_text()
