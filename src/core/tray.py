@@ -15,7 +15,7 @@ from core.bar_manager import BarManager
 from core.config import get_config
 from core.console import WindowShellDialog
 from core.utils.controller import exit_application, reload_application
-from core.utils.win32.utilities import create_shortcut
+from core.utils.win32.utilities import enable_autostart, disable_autostart, is_autostart_enabled
 from settings import (APP_NAME, APP_NAME_FULL, BUILD_VERSION,
                      DEFAULT_CONFIG_DIRECTORY, GITHUB_THEME_URL,
                      GITHUB_URL, SCRIPT_PATH)
@@ -135,7 +135,7 @@ class SystemTrayManager(QSystemTrayIcon):
             
             self.menu.addSeparator()
 
-        if self.is_autostart_enabled():
+        if self._chek_startup():
             disable_startup_action = self.menu.addAction("Disable Autostart")
             disable_startup_action.triggered.connect(self._disable_startup)
         else:
@@ -156,9 +156,6 @@ class SystemTrayManager(QSystemTrayIcon):
         # Connect the activated signal to show the menu
         self.activated.connect(lambda reason: self.menu.activateWindow() if reason == QSystemTrayIcon.ActivationReason.Context else None)
 
-    def is_autostart_enabled(self):
-        return os.path.exists(os.path.join(OS_STARTUP_FOLDER, SHORTCUT_FILENAME))
-
     def is_komorebi_installed(self):
         try:
             komorebi_path = shutil.which('komorebi')
@@ -167,20 +164,30 @@ class SystemTrayManager(QSystemTrayIcon):
             logging.error(f"Error checking komorebi installation: {e}")
             return False
 
-    def _enable_startup(self):
-        shortcut_path = os.path.join(OS_STARTUP_FOLDER, SHORTCUT_FILENAME)
-        create_shortcut(shortcut_path, AUTOSTART_FILE, SCRIPT_PATH)
-        self._load_context_menu()
-
-    def _disable_startup(self):
+    def _remove_shortcut(self):
+        # Backward compatibility for old versions, this should be removed in future releases
+        # Check if the shortcut file exists in the startup folder and remove it if it does
         shortcut_path = os.path.join(OS_STARTUP_FOLDER, SHORTCUT_FILENAME)
         if os.path.exists(shortcut_path):
             try:
                 os.remove(shortcut_path)
-                logging.info(f"Removed shortcut from {shortcut_path}")
-            except Exception as e:
-                logging.error(f"Failed to remove startup shortcut: {e}")
-        self._load_context_menu()  # Reload context menu
+            except Exception:
+                pass
+    
+    def _enable_startup(self):
+        enable_autostart(APP_NAME, AUTOSTART_FILE)
+        self._load_context_menu()
+
+    def _disable_startup(self):
+        disable_autostart(APP_NAME)
+        self._load_context_menu()
+
+    def _chek_startup(self):
+        self._remove_shortcut()
+        if is_autostart_enabled(APP_NAME):
+            return True
+        else:
+            return False
 
     def _open_config(self):
         try:

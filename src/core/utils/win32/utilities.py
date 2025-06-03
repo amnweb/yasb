@@ -1,12 +1,11 @@
+import winreg
 import psutil
 import ctypes
 import ctypes.wintypes
-import pythoncom
 import logging
 from win32process import GetWindowThreadProcessId
 from win32gui import GetWindowText, GetClassName, GetWindowRect, GetWindowPlacement
 from win32api import MonitorFromWindow, GetMonitorInfo
-from win32com.client import Dispatch
 from contextlib import suppress
 
 
@@ -103,18 +102,47 @@ def get_hwnd_info(hwnd: int) -> dict:
         }
 
 
-def create_shortcut(shortcut_path: str, autostart_file: str, working_directory: str):
+def _open_startup_registry(access_flag: int):
+    """Helper function to open the startup registry key."""
+    registry_path = r"SOFTWARE\Microsoft\Windows\CurrentVersion\Run"
+    return winreg.OpenKey(winreg.HKEY_CURRENT_USER, registry_path, 0, access_flag)
+
+
+def enable_autostart(app_name: str, executable_path: str) -> bool:
+    """Add application to Windows startup."""
     try:
-        pythoncom.CoInitialize()
-        shell = Dispatch("WScript.Shell")
-        shortcut = shell.CreateShortCut(shortcut_path)
-        shortcut.Targetpath = autostart_file
-        shortcut.WorkingDirectory = working_directory
-        shortcut.Description = "Shortcut to yasb.exe"
-        shortcut.save()
-        logging.info(f"Created shortcut at {shortcut_path}")
-        print(f"Created shortcut at {shortcut_path}")
+        with _open_startup_registry(winreg.KEY_SET_VALUE) as key:
+            winreg.SetValueEx(key, app_name, 0, winreg.REG_SZ, f'{executable_path}')
+        logging.info(f"{app_name} added to startup")
+        return True
     except Exception as e:
-        logging.error(f"Failed to create startup shortcut: {e}")
-        print(f"Failed to create startup shortcut: {e}")
+        logging.error(f"Failed to add {app_name} to startup: {e}")
+        return False
+
+
+def disable_autostart(app_name: str) -> bool:
+    """Remove application from Windows startup."""
+    try:
+        with _open_startup_registry(winreg.KEY_ALL_ACCESS) as key:
+            winreg.DeleteValue(key, app_name)
+        logging.info(f"{app_name} removed from startup")
+        return True
+    except FileNotFoundError:
+        logging.info(f"Startup entry for {app_name} not found")
+        return True
+    except Exception as e:
+        logging.error(f"Failed to remove {app_name} from startup: {e}")
+        return False
+
+
+def is_autostart_enabled(app_name: str) -> bool:
+    """Check if application is in Windows startup."""
+    try:
+        with _open_startup_registry(winreg.KEY_READ) as key:
+            winreg.QueryValueEx(key, app_name)
+        return True
+    except FileNotFoundError:
+        return False
+    except Exception as e:
+        logging.error(f"Failed to check startup status for {app_name}: {e}")
         return False

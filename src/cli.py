@@ -16,6 +16,7 @@ import getpass
 import json
 import os
 import subprocess
+import winreg
 import sys
 import tempfile
 import textwrap
@@ -36,19 +37,16 @@ from core.utils.win32.bindings import (
     WriteFile,
 )
 from core.utils.win32.constants import INVALID_HANDLE_VALUE
-from settings import BUILD_VERSION, CLI_VERSION, RELEASE_CHANNEL
+from settings import BUILD_VERSION, CLI_VERSION, RELEASE_CHANNEL, APP_NAME
 
 BUFSIZE = 65536
 YASB_VERSION = BUILD_VERSION
 YASB_CLI_VERSION = CLI_VERSION
 YASB_RELEASE_CHANNEL = RELEASE_CHANNEL
 
-OS_STARTUP_FOLDER = os.path.join(os.environ["APPDATA"], r"Microsoft\Windows\Start Menu\Programs\Startup")
 INSTALLATION_PATH = os.path.abspath(os.path.join(__file__, "../../.."))
 EXE_PATH = os.path.join(INSTALLATION_PATH, "yasb.exe")
-SHORTCUT_FILENAME = "yasb.lnk"
 AUTOSTART_FILE = EXE_PATH if os.path.exists(EXE_PATH) else None
-WORKING_DIRECTORY = INSTALLATION_PATH if os.path.exists(EXE_PATH) else None
 
 CLI_SERVER_PIPE_NAME = r"\\.\pipe\yasb_pipe_cli"
 LOG_SERVER_PIPE_NAME = r"\\.\pipe\yasb_pipe_log"
@@ -61,24 +59,6 @@ def is_process_running(process_name: str) -> bool:
         if proc.info["name"] == process_name:
             return True
     return False
-
-
-def create_shortcut(shortcut_path: str, autostart_file: str, working_directory: str):
-    try:
-        import pythoncom
-        import win32com.client
-
-        pythoncom.CoInitialize()
-        shell = win32com.client.Dispatch("WScript.Shell")
-        shortcut = shell.CreateShortCut(shortcut_path)
-        shortcut.Targetpath = autostart_file
-        shortcut.WorkingDirectory = working_directory
-        shortcut.Description = "Shortcut to yasb.exe"
-        shortcut.save()
-        print(f"Created shortcut at {shortcut_path}")
-    except Exception as e:
-        print(f"Failed to create startup shortcut: {e}")
-        return False
 
 
 def write_message(handle: int, msg_dict: dict[str, str]):
@@ -189,21 +169,43 @@ class CLIHandler:
         except Exception as e:
             print(f"Error: {e}")
 
-    def _enable_startup(self):
-        shortcut_path = os.path.join(OS_STARTUP_FOLDER, SHORTCUT_FILENAME)
-        if not AUTOSTART_FILE or not WORKING_DIRECTORY:
-            print("Failed to enable autostart. Autostart file or working directory not found.")
-            return
-        create_shortcut(shortcut_path, AUTOSTART_FILE, WORKING_DIRECTORY)
+    def _open_startup_registry(self, access_flag: int):
+        """Helper function to open the startup registry key."""
+        registry_path = r"SOFTWARE\Microsoft\Windows\CurrentVersion\Run"
+        return winreg.OpenKey(winreg.HKEY_CURRENT_USER, registry_path, 0, access_flag)
 
-    def _disable_startup(self):
-        shortcut_path = os.path.join(OS_STARTUP_FOLDER, SHORTCUT_FILENAME)
-        if os.path.exists(shortcut_path):
-            try:
-                os.remove(shortcut_path)
-                print(f"Removed shortcut from {shortcut_path}")
-            except Exception as e:
-                print(f"Failed to remove startup shortcut: {e}")
+    def is_autostart_enabled(self, app_name: str) -> bool:
+        """Check if application is in Windows startup."""
+        try:
+            with self._open_startup_registry(winreg.KEY_READ) as key:
+                winreg.QueryValueEx(key, APP_NAME)
+            return True
+        except FileNotFoundError:
+            return False
+        except Exception as e:
+            print(f"Failed to check startup status for {app_name}: {e}")
+            return False
+    
+    def enable_startup(self):
+        if self.is_autostart_enabled(APP_NAME):
+            print(f"{APP_NAME} is already set to start on boot.")
+            return
+        try:
+            with self._open_startup_registry(winreg.KEY_SET_VALUE) as key:
+                winreg.SetValueEx(key, APP_NAME, 0, winreg.REG_SZ, f'{AUTOSTART_FILE}')
+            print(f"{APP_NAME} added to startup.")
+        except Exception as e:
+            print(f"Failed to add {APP_NAME} to startup: {e}")
+
+    def disable_startup(self):
+        try:
+            with self._open_startup_registry(winreg.KEY_ALL_ACCESS) as key:
+                winreg.DeleteValue(key, APP_NAME)
+            print(f"{APP_NAME} removed from startup.")
+        except FileNotFoundError:
+            print(f"Startup entry for {APP_NAME} not found.")
+        except Exception as e:
+            print(f"Failed to remove {APP_NAME} from startup: {e}")
 
     def parse_arguments(self):
         parser = CustomArgumentParser(description="The command-line interface for YASB Reborn.", add_help=False)
@@ -309,7 +311,7 @@ class CLIHandler:
                 else:
                     self.task_handler.create_task()
             else:
-                self._enable_startup()
+                self.enable_startup()
             sys.exit(0)
 
         elif args.command == "disable-autostart":
@@ -319,7 +321,7 @@ class CLIHandler:
                 else:
                     self.task_handler.delete_task()
             else:
-                self._disable_startup()
+                self.disable_startup()
             sys.exit(0)
 
         elif args.command == "log":
