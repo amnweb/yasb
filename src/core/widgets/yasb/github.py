@@ -122,6 +122,7 @@ class GithubWidget(BaseWidget):
         self._container_shadow = container_shadow
 
         self._notification_label: NotificationLabel | None = None
+        self._notification_label_alt: NotificationLabel | None = None
         self._notification_dot: dict[str, Any] = notification_dot
 
         self._github_data = []
@@ -187,8 +188,11 @@ class GithubWidget(BaseWidget):
                         color=self._notification_dot["color"],
                         margin=self._notification_dot["margin"]
                     )
-                    label.setProperty("class", class_result)
-                    self._notification_label = label
+                    label.setProperty("class", class_result)    
+                    if is_alt:
+                        self._notification_label_alt = label
+                    else:
+                        self._notification_label = label
                 else:
                     label = QLabel(part)
                     label.setProperty("class", "label")
@@ -214,8 +218,11 @@ class GithubWidget(BaseWidget):
         label_parts = [part.strip() for part in re.split(r'(<span.*?>.*?</span>)', active_label_content) if part]
 
         # Setting the notification dot if enabled and the label exists
-        if self._notification_dot["enabled"] and self._notification_label is not None:
-            self._notification_label.show_dot(notification_count > 0)
+        if self._notification_dot["enabled"]:
+            if not self._show_alt_label and self._notification_label is not None:
+                self._notification_label.show_dot(notification_count > 0)
+            if self._show_alt_label and self._notification_label_alt is not None:
+                self._notification_label_alt.show_dot(notification_count > 0)
 
         for widget_index, part in enumerate(label_parts):
             if widget_index >= len(active_widgets) or not isinstance(active_widgets[widget_index], QLabel):
@@ -268,6 +275,7 @@ class GithubWidget(BaseWidget):
         req = urllib.request.Request(url, headers=headers, method='PATCH')
         try:
             with urllib.request.urlopen(req) as response:
+                QTimer.singleShot(0, self._update_label)
                 if DEBUG:
                     logging.info(f"Notification {notification_id} marked as read on GitHub.")
         except urllib.error.HTTPError as e:
