@@ -229,6 +229,17 @@ class KomorebiClient:
         except (KeyError, TypeError):
             return None
 
+    def get_floating_windows(self, workspace: dict) -> list:
+        floating_windows = workspace['floating_windows']['elements']
+        return [add_index(window, i) for i, window in enumerate(floating_windows)]
+
+    def get_focused_floating_window(self, workspace: dict) -> Optional[dict]:
+        try:
+            focused_window_index = workspace['floating_windows']['focused']
+            return self.get_floating_windows(workspace)[focused_window_index]
+        except (KeyError, TypeError, IndexError):
+            return None
+
     def focus_stack_window(self, w_idx: int) -> None:
         try:
             subprocess.Popen([self._komorebic_path, "focus-stack-window", str(w_idx)], shell=True)
