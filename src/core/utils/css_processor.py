@@ -2,9 +2,8 @@ import logging
 import os
 from pathlib import Path
 import re
-import sys
 from typing import Dict, Set
-from PyQt6.QtWidgets import QMessageBox, QCheckBox, QApplication
+from PyQt6.QtWidgets import QMessageBox, QCheckBox
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFontDatabase, QIcon
 from settings import SCRIPT_PATH, DEBUG
@@ -97,8 +96,27 @@ class CSSProcessor:
             return root_vars.get(var_name, match.group(0))
 
         css = re.sub(r'var\((--[\w-]+)\)', var_replacer, css)
+
+        css = self._css_to_qt_hex_alpha(css)
+        
         return css
 
+    def _css_to_qt_hex_alpha(self, css: str) -> str:
+        """
+        Converts CSS hex colors with alpha (#RRGGBBAA) to Qt format (#AARRGGBB).
+        """
+        def hex_alpha_replacer(match):
+            hex_color = match.group(1)
+            if len(hex_color) == 8: 
+                rr = hex_color[0:2]
+                gg = hex_color[2:4]
+                bb = hex_color[4:6]
+                aa = hex_color[6:8]
+                return f'#{aa}{rr}{gg}{bb}'
+            return match.group(0)
+        
+        # Match hex colors with # followed by exactly 8 hex digits
+        return re.sub(r'#([0-9a-fA-F]{8})\b', hex_alpha_replacer, css)
 
     def _check_font_families(self, css: str):
         """
