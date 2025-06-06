@@ -13,21 +13,22 @@ from core.validation.widgets.yasb.language import VALIDATION_SCHEMA
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.utilities import add_shadow, build_widget_label, PopupWidget
 
-# Constants
-LOCALE_NAME_MAX_LENGTH = 85
-LOCALE_SISO639LANGNAME = 0x59
-LOCALE_SISO639LANGNAME2 = 0x67
-LOCALE_SISO3166CTRYNAME = 0x5A
-LOCALE_SLANGUAGE = 0x2
-LOCALE_SCOUNTRY = 0x6
-LOCALE_SNAME = 0x5c
-LOCALE_SNATIVECTRYNAME = 0x07
-LOCALE_SNATIVELANGNAME = 0x04
-LOCALE_SABBREVLANGNAME = 0x3
+from core.utils.win32.constants import (
+    LOCALE_NAME_MAX_LENGTH,
+    LOCALE_SISO639LANGNAME,
+    LOCALE_SISO639LANGNAME2,
+    LOCALE_SISO3166CTRYNAME,
+    LOCALE_SLANGUAGE,
+    LOCALE_SCOUNTRY,
+    LOCALE_SNAME,
+    LOCALE_SNATIVECTRYNAME,
+    LOCALE_SNATIVELANGNAME,
+)
+from core.utils.win32.bindings import (
+    user32,
+    kernel32,
+)
 
-# Define necessary ctypes structures and functions
-user32 = ctypes.WinDLL('user32', use_last_error=True)
-kernel32 = ctypes.WinDLL('kernel32', use_last_error=True)
 
 class LanguageWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
