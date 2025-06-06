@@ -112,7 +112,7 @@ def enable_autostart(app_name: str, executable_path: str) -> bool:
     """Add application to Windows startup."""
     try:
         with _open_startup_registry(winreg.KEY_SET_VALUE) as key:
-            winreg.SetValueEx(key, app_name, 0, winreg.REG_SZ, f'{executable_path}')
+            winreg.SetValueEx(key, app_name, 0, winreg.REG_SZ, executable_path)
         logging.info(f"{app_name} added to startup")
         return True
     except Exception as e:
@@ -123,12 +123,13 @@ def enable_autostart(app_name: str, executable_path: str) -> bool:
 def disable_autostart(app_name: str) -> bool:
     """Remove application from Windows startup."""
     try:
-        with _open_startup_registry(winreg.KEY_ALL_ACCESS) as key:
-            winreg.DeleteValue(key, app_name)
-        logging.info(f"{app_name} removed from startup")
-        return True
-    except FileNotFoundError:
-        logging.info(f"Startup entry for {app_name} not found")
+        # First check if the entry exists
+        if is_autostart_enabled(app_name):
+            with _open_startup_registry(winreg.KEY_ALL_ACCESS) as key:
+                winreg.DeleteValue(key, app_name)
+            logging.info(f"{app_name} removed from startup")
+        else:
+            logging.info(f"Startup entry for {app_name} not found")
         return True
     except Exception as e:
         logging.error(f"Failed to remove {app_name} from startup: {e}")
@@ -141,7 +142,7 @@ def is_autostart_enabled(app_name: str) -> bool:
         with _open_startup_registry(winreg.KEY_READ) as key:
             winreg.QueryValueEx(key, app_name)
         return True
-    except FileNotFoundError:
+    except WindowsError:
         return False
     except Exception as e:
         logging.error(f"Failed to check startup status for {app_name}: {e}")
