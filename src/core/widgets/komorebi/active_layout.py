@@ -41,6 +41,7 @@ layout_snake_case = {
     "RightMainVerticalStack": "right_main_vertical_stack"
 }
 
+
 class ActiveLayoutWidget(BaseWidget):
     k_signal_connect = pyqtSignal(dict)
     k_signal_disconnect = pyqtSignal()
@@ -56,6 +57,7 @@ class ActiveLayoutWidget(BaseWidget):
             layouts: list[str],
             layout_icons: dict[str, str],
             layout_menu: dict[str, str],
+            tooltip: bool,
             hide_if_offline: bool,
             container_padding: dict,
             animation: dict[str, str],
@@ -68,6 +70,7 @@ class ActiveLayoutWidget(BaseWidget):
         self._layout_icons = layout_icons
         self._layout_menu = layout_menu
         self._layouts_config = layouts
+        self._tooltip = tooltip
         self._padding = container_padding
         self._label_shadow = label_shadow
         self._container_shadow = container_shadow
@@ -96,9 +99,9 @@ class ActiveLayoutWidget(BaseWidget):
         add_shadow(self._widget_container, self._container_shadow)
         # Add the container to the main widget layout
         self.widget_layout.addWidget(self._widget_container)
-        
+
         self._widget_container_layout.addWidget(self._active_layout_text)
-  
+
         self.callback_left = callbacks['on_left']
         self.callback_right = callbacks['on_right']
         self.callback_middle = callbacks['on_middle']
@@ -124,7 +127,7 @@ class ActiveLayoutWidget(BaseWidget):
         if self._animation['enabled']:
             AnimationManager.animate(self, self._animation['type'], self._animation['duration'])
         self._show_layout_menu()
-    
+
     def _show_layout_menu(self):
         self._menu = PopupWidget(
             self,
@@ -165,6 +168,7 @@ class ActiveLayoutWidget(BaseWidget):
         for layout in self._layouts_config:
             icon = self._layout_icons[layout]
             text = layout.replace('_', ' ').title()
+
             def handler(event, l=layout):
                 self._on_layout_menu_selected(l)
             main_layout.addWidget(create_menu_item(icon, text, handler))
@@ -272,7 +276,7 @@ class ActiveLayoutWidget(BaseWidget):
         self._update_active_layout(state, is_connect_event=True)
         if self.isHidden():
             self.show()
- 
+
     def _on_komorebi_layout_change_event(self, _event: dict, state: dict) -> None:
         self._update_active_layout(state)
 
@@ -322,6 +326,9 @@ class ActiveLayoutWidget(BaseWidget):
         else:
             layout_name = self._focused_workspace['layout']['Default']
             layout_icon = self._layout_icons.get(layout_snake_case[layout_name], 'unknown layout')
+
+        if self._tooltip:
+            self.setToolTip(layout_name)
 
         return layout_name, layout_icon
 

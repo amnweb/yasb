@@ -29,6 +29,7 @@ DEFAULTS = {
         'offset_left': 0,
         'show_layout_icons': True,
     },
+    'tooltip': True,
     'container_padding': {'top': 0, 'left': 0, 'bottom': 0, 'right': 0},
     'animation': {
         'enabled': True,
@@ -178,6 +179,11 @@ VALIDATION_SCHEMA = {
             }
         },
         'default': DEFAULTS['layout_menu']
+    },
+    'tooltip': {
+        'type': 'boolean',
+        'required': False,
+        'default': DEFAULTS['tooltip']
     },
     'container_padding': {
         'type': 'dict',
