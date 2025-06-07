@@ -2,9 +2,19 @@
 
 import ctypes as ct
 import uuid
-from ctypes import WINFUNCTYPE
+from ctypes import (
+    POINTER,
+    WINFUNCTYPE,
+    c_char_p,
+    c_ubyte,
+    c_ulonglong,
+    c_void_p,
+    c_wchar_p,
+    sizeof,
+)
 from ctypes.wintypes import (
     BOOL,
+    BOOLEAN,
     BYTE,
     DWORD,
     HANDLE,
@@ -21,6 +31,7 @@ from ctypes.wintypes import (
     UINT,
     ULONG,
     USHORT,
+    WCHAR,
     WORD,
     WPARAM,
 )
@@ -175,3 +186,179 @@ class RGBQUAD(ct.Structure):
 
 class BITMAPINFO(ct.Structure):
     _fields_ = [("bmiHeader", BITMAPINFOHEADER), ("bmiColors", RGBQUAD * 1)]
+
+
+class WLAN_INTERFACE_INFO(ct.Structure):
+    _fields_ = [
+        ("InterfaceGuid", GUID),
+        ("strInterfaceDescription", WCHAR * 256),
+        ("isState", DWORD),
+    ]
+
+
+class WLAN_INTERFACE_INFO_LIST(ct.Structure):
+    _fields_ = [
+        ("dwNumberOfItems", DWORD),
+        ("dwIndex", DWORD),
+        ("InterfaceInfo", WLAN_INTERFACE_INFO * 1),
+    ]
+
+
+class DOT11_SSID(ct.Structure):
+    _fields_ = [
+        ("uSSIDLength", ULONG),
+        ("ucSSID", BYTE * 32),
+    ]
+
+    def __str__(self) -> str:
+        # Slice the byte array to the length specified and decode
+        return bytes(self.ucSSID[: self.uSSIDLength]).decode("utf-8", errors="replace")
+
+
+class WLAN_AVAILABLE_NETWORK(ct.Structure):
+    _fields_ = [
+        ("strProfileName", WCHAR * 256),
+        ("dot11Ssid", DOT11_SSID),
+        ("dot11BssType", DWORD),
+        ("uNumberOfBssids", ULONG),
+        ("bNetworkConnectable", BOOL),
+        ("wlanNotConnectableReason", DWORD),
+        ("uNumberOfPhyTypes", ULONG),
+        ("dot11PhyTypes", DWORD * 8),
+        ("bMorePhyTypes", BOOL),
+        ("wlanSignalQuality", ULONG),
+        ("bSecurityEnabled", BOOL),
+        ("dot11DefaultAuthAlgorithm", DWORD),
+        ("dot11DefaultCipherAlgorithm", DWORD),
+        ("dwFlags", DWORD),
+        ("dwReserved", DWORD),
+    ]
+
+
+class WLAN_AVAILABLE_NETWORK_LIST(ct.Structure):
+    _fields_ = [
+        ("dwNumberOfItems", DWORD),
+        ("dwIndex", DWORD),
+        ("Network", WLAN_AVAILABLE_NETWORK * 1),
+    ]
+
+
+# Function prototypes for IP Helper API
+# We define it beforehand to use it in the 'Next' field later (linked list)
+class IP_ADAPTER_ADDRESSES(ct.Structure):
+    pass
+
+
+IP_ADAPTER_ADDRESSES._fields_ = [
+    ("Length", ULONG),
+    ("IfIndex", DWORD),
+    ("Next", POINTER(IP_ADAPTER_ADDRESSES)),
+    ("AdapterName", c_char_p),
+    ("FirstUnicastAddress", c_void_p),
+    ("FirstAnycastAddress", c_void_p),
+    ("FirstMulticastAddress", c_void_p),
+    ("FirstDnsServerAddress", c_void_p),
+    ("DnsSuffix", c_wchar_p),
+    ("Description", c_wchar_p),
+    ("FriendlyName", c_wchar_p),
+    # There are more fields, but we don't need them for our purpose
+]
+
+
+class WLAN_PROFILE_INFO(ct.Structure):
+    _fields_ = [
+        ("strProfileName", WCHAR * 256),
+        ("dwFlags", DWORD),
+    ]
+
+
+class WLAN_PROFILE_INFO_LIST(ct.Structure):
+    _fields_ = [
+        ("dwNumberOfItems", DWORD),
+        ("dwIndex", DWORD),
+        # ("ProfileInfo", WLAN_PROFILE_INFO * 10), # Dynamically allocated later
+    ]
+
+
+class WLAN_RATE_SET(ct.Structure):
+    _fields_ = [
+        ("uRateSetLength", ULONG),
+        ("usRateSet", USHORT * 126),
+    ]
+
+
+class WLAN_BSS_ENTRY(ct.Structure):
+    _fields_ = [
+        ("dot11Ssid", DOT11_SSID),
+        ("uPhyId", ULONG),
+        ("dot11Bssid", c_ubyte * 6),
+        ("dot11BssType", DWORD),
+        ("dot11BssPhyType", DWORD),
+        ("lRssi", LONG),
+        ("uLinkQuality", ULONG),
+        ("bInRegDomain", BOOLEAN),
+        ("usBeaconPeriod", USHORT),
+        ("ullTimestamp", c_ulonglong),
+        ("ullHostTimestamp", c_ulonglong),
+        ("usCapabilityInformation", USHORT),
+        ("ulChCenterFrequency", ULONG),
+        ("wlanRateSet", WLAN_RATE_SET),
+        ("ulIeOffset", ULONG),
+        ("ulIeSize", ULONG),
+    ]
+
+
+class WLAN_BSS_LIST(ct.Structure):
+    _fields_ = [
+        ("dwTotalSize", DWORD),
+        ("dwNumberOfItems", DWORD),
+        ("wlanBssEntries", WLAN_BSS_ENTRY * 1),  # temporary, will cast later
+    ]
+
+
+class NDIS_OBJECT_HEADER(ct.Structure):
+    _fields_ = [
+        ("Type", ct.c_ubyte),
+        ("Revision", ct.c_ubyte),
+        ("Size", ct.c_ushort),
+    ]
+
+
+DOT11_MAC_ADDRESS = ct.c_ubyte * 6
+
+
+class DOT11_BSSID_LIST(ct.Structure):
+    _fields_ = [
+        ("Header", NDIS_OBJECT_HEADER),
+        ("uNumOfEntries", ct.c_ulong),
+        ("uTotalNumOfEntries", ct.c_ulong),
+        ("BSSIDs", DOT11_MAC_ADDRESS * 64),  # We support up to 64 BSSIDs
+    ]
+
+    def from_strings(self, bssids: list[str]):
+        """Convert list of MAC address strings to stored BSSIDs."""
+        self.Header.Type = 2
+        self.Header.Revision = 1
+        self.Header.Size = sizeof(NDIS_OBJECT_HEADER)
+        self.uNumOfEntries = len(bssids)
+        self.uTotalNumOfEntries = len(bssids)
+        for i, bssid in enumerate(bssids):
+            if len(bssid) != 17:  # '00:00:00:00:00:00'
+                raise ValueError(f"Invalid MAC address: {bssid}")
+            self.BSSIDs[i][:] = bytes(int(b, 16) for b in bssid.split(":"))
+
+    def to_strings(self) -> list[str]:
+        """Convert stored BSSIDs to list of MAC address strings."""
+        r = range(min(self.uNumOfEntries, 64))  # We support up to 64 BSSIDs
+        return [":".join(f"{byte:02x}" for byte in self.BSSIDs[i]) for i in r]
+
+
+class WLAN_CONNECTION_PARAMETERS(ct.Structure):
+    _fields_ = [
+        ("wlanConnectionMode", DWORD),
+        ("strProfile", c_wchar_p),
+        ("pDot11Ssid", POINTER(DOT11_SSID)),
+        ("pDesiredBssidList", POINTER(DOT11_BSSID_LIST)),
+        ("dot11BssType", DWORD),
+        ("dwFlags", DWORD),
+    ]
