@@ -107,6 +107,7 @@ https://github.com/user-attachments/assets/aab8d8e8-248f-46a1-919c-9b0601236ac1
 - **[Notifications](https://github.com/amnweb/yasb/wiki/(Widget)-Notifications)**: Shows the number of notifications from Windows.
 - **[Notes](https://github.com/amnweb/yasb/wiki/(Widget)-Notes)**: A simple notes widget that allows you to add, delete, and view notes.
 - **[OBS](https://github.com/amnweb/yasb/wiki/(Widget)-Obs)**: Integrates with OBS Studio to show recording status.
+- **[Power Plan](https://github.com/amnweb/yasb/wiki/(Widget)-Power-Plan)**: Displays the current power plan and allows switching between plans.
 - **[Server Monitor](https://github.com/amnweb/yasb/wiki/(Widget)-Server-Monitor)**: Monitors server status.
 - **[Systray](https://github.com/amnweb/yasb/wiki/(Widget)-Systray)**: Displays system tray icons.
 - **[Traffic](https://github.com/amnweb/yasb/wiki/(Widget)-Traffic)**: Displays network traffic information.

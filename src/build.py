@@ -39,6 +39,7 @@ build_options = {
         'core.widgets.yasb.notes',
         'core.widgets.yasb.recycle_bin',
         'core.widgets.yasb.vscode',
+        'core.widgets.yasb.power_plan',
         'core.widgets.komorebi.control',
         'core.widgets.komorebi.active_layout',
         'core.widgets.komorebi.stack',
@@ -92,7 +93,7 @@ msi_data = {
     "Registry": [
         ("AppUserModelId", -1, 
         f"Software\\Classes\\AppUserModelId\\{APP_ID}", 
-        "DisplayName", "Yasb", "TARGETDIR"),
+        "DisplayName", "YASB", "TARGETDIR"),
         
         ("AppUserModelIdIcon", -1, 
         f"Software\\Classes\\AppUserModelId\\{APP_ID}", 
@@ -106,7 +107,7 @@ bdist_msi_options = {
     "upgrade_code": "{3f620cf5-07b5-47fd-8e37-9ca8ad14b608}",
     "add_to_path": True,
     "dist_dir": "dist/out",
-    "initial_target_dir": r'[ProgramFiles64Folder]\Yasb',
+    "initial_target_dir": r'[ProgramFiles64Folder]\YASB',
     "all_users": True,
     "summary_data": {
         "author": "AmN",
