@@ -2,6 +2,7 @@ BAR_DEFAULTS = {
     'enabled': True,
     'screens': ['*'],
     'class_name': 'yasb-bar',
+    'context_menu': True,
     'alignment': {'position': 'top', 'center': False},
     'blur_effect': {'enabled': False, 'dark_mode': False, 'acrylic': False,'round_corners': False,'round_corners_type':'normal','border_color': "System"},
     'animation': {'enabled': True, 'duration': 500},
@@ -32,6 +33,10 @@ BAR_SCHEMA = {
         'class_name': {
             'type': 'string',
             'default': BAR_DEFAULTS['class_name']
+        },
+        'context_menu': {
+            'type': 'boolean',
+            'default': BAR_DEFAULTS['context_menu']
         },
         'alignment': {
             'type': 'dict',
