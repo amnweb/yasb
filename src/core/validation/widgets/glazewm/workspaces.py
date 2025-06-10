@@ -48,7 +48,7 @@ VALIDATION_SCHEMA = {
     "hide_if_offline": {
         "type": "boolean",
         "default": DEFAULTS["hide_if_offline"],
-    }, 
+    },
     "container_padding": { 
         "type": "dict",
         "default": DEFAULTS["container_padding"],
