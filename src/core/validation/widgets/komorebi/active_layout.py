@@ -34,6 +34,7 @@ DEFAULTS = {
         'enabled': True,
         'type': 'fadeInOut',
         'duration': 200
+    "generate_layout_icons": False,
     },
     'callbacks': {
         'on_left': 'next_layout',
@@ -178,6 +179,10 @@ VALIDATION_SCHEMA = {
             }
         },
         'default': DEFAULTS['layout_menu']
+    },
+    "generate_layout_icons": {
+        "type": "boolean",
+        "default": DEFAULTS["generate_layout_icons"],
     },
     'container_padding': {
         'type': 'dict',
