@@ -93,7 +93,7 @@ traffic:
 - **label_shadow:** Label shadow options.
 - **menu:** A dictionary specifying the menu options for the widget. See **Menu Options** above for details.
 
-> [!INFO]  
+> [!NOTE]  
 > YASB stores traffic data in the `%LOCALAPPDATA%\Yasb` directory, including all-time upload/download statistics and daily totals. Session data is temporary and resets when YASB restarts.
 
 
