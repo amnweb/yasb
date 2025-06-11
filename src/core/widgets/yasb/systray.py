@@ -14,7 +14,6 @@ from PyQt6.QtCore import (
     QTimer,
     pyqtSlot,  # pyright: ignore [reportUnknownVariableType]
 )
-from PyQt6.QtGui import QShowEvent
 from PyQt6.QtWidgets import (
     QApplication,
     QHBoxLayout,
@@ -224,6 +223,7 @@ class SystrayWidget(BaseWidget):
         self.unpinned_vis_btn.setVisible(self.show_unpinned_button)
 
         QTimer.singleShot(0, self.setup_client)  # pyright: ignore [reportUnknownMemberType]
+        QTimer.singleShot(0, self.set_containers_visibility)  # pyright: ignore [reportUnknownMemberType]
 
     def show_context_menu(self, pos: QPoint):
         """Show the context menu for the unpinned visibility button"""
@@ -268,10 +268,8 @@ class SystrayWidget(BaseWidget):
             if tasks_service is not None and tasks_thread is not None:
                 tasks_thread.start()
 
-    @override
-    def showEvent(self, a0: QShowEvent | None) -> None:
-        """Called when the widget is shown on the screen"""
-        super().showEvent(a0)
+    def set_containers_visibility(self):
+        """Update the containers visibility based on the show_unpinned_button setting"""
         self.unpinned_vis_btn.setChecked(self.show_unpinned)
         self.unpinned_vis_btn.setText(self.label_expanded if self.show_unpinned else self.label_collapsed)
         self.unpinned_widget.setVisible(self.show_unpinned or not self.show_unpinned_button)

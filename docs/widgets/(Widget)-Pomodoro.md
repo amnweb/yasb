@@ -29,7 +29,7 @@ This widget implements a Pomodoro timer, which is a time management method that 
 pomodoro:
   type: "yasb.pomodoro.PomodoroWidget"
   options:
-    label: "<span>\uf252</span> {remaining}"
+    label: "<span>{icon}</span> {remaining}"
     label_alt: "<span>{icon}</span> {session}/{total_sessions} - {status}"
     work_duration: 25
     break_duration: 5
