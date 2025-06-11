@@ -29,12 +29,12 @@ DEFAULTS = {
         'offset_left': 0,
         'show_layout_icons': True,
     },
+    "generate_layout_icons": False,
     'container_padding': {'top': 0, 'left': 0, 'bottom': 0, 'right': 0},
     'animation': {
         'enabled': True,
         'type': 'fadeInOut',
         'duration': 200
-    "generate_layout_icons": False,
     },
     'callbacks': {
         'on_left': 'next_layout',
