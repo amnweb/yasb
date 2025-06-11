@@ -34,6 +34,7 @@
     - [Taskbar](./(Widget)-Taskbar)
     - [Pomodoro](./(Widget)-Pomodoro)
     - [Power Menu](./(Widget)-Power-Menu)
+    - [Power Plan](./(Widget)-Power-Plan)
     - [Recycle Bin](./(Widget)-Recycle-Bin)
     - [Update Check](./(Widget)-Update-Check)
     - [Visual Studio Code](./(Widget)-VSCode)

@@ -21,11 +21,11 @@ Displays the name of the current Windows power plan and lets you switch between 
 |----------------------|---------|------------|--------------------------------------------------------------|
 | `blur`               | bool    | `False`    | Blur background behind the popup.                            |
 | `round_corners`      | bool    | `True`     | Enable rounded corners on the popup.                         |
-| `round_corners_type` | string  | `"normal"` | Rounding style: `"small"`, `"normal"`, or `"large"`.         |
-| `border_color`       | string  | `"system"` | Border color for the popup (CSS var, e.g. `--crust`).        |
-| `alignment`          | string  | `"left"`   | Horizontal alignment relative to the widget.                 |
+| `round_corners_type` | string  | `"normal"` | Rounding style: `"small"`, `"normal"`.         |
+| `border_color`       | string  | `"system"` | Border color can be `None`, `system` or `Hex Color` `"#ff0000"`       |
+| `alignment`          | string  | `"left"`   | Horizontal alignment of the menu relative to the widget (e.g., left, right, center)                 |
 | `direction`          | string  | `"down"`   | Vertical opening direction: `"up"` or `"down"`.              |
-| `offset_top`         | int     | `0`        | Vertical offset in pixels.                                   |
+| `offset_top`         | int     | `6`        | Vertical offset in pixels.                                   |
 | `offset_left`        | int     | `0`        | Horizontal offset in pixels.                                 |
 
 ## Example Configuration
