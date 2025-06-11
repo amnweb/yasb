@@ -1,42 +1,60 @@
 DEFAULTS = {
-    "label": "\ueb01 \ueab4 {download_speed} | \ueab7 {upload_speed}",
-    "label_alt": "\ueb01 \ueab4 {upload_speed} | \ueab7 {download_speed}",
-    "interface": "Auto",
-    "update_interval": 1000,
-    "hide_if_offline": False,
-    "max_label_length": 0,
-    "hide_decimal": False,
-    "animation": {
+    'label': '\ueb01 \ueab4 {download_speed} | \ueab7 {upload_speed}',
+    'label_alt': '\ueb01 \ueab4 {upload_speed} | \ueab7 {download_speed}',
+    'interface': 'auto',
+    'update_interval': 1000,
+    'hide_if_offline': False,
+    'max_label_length': 0,
+    "max_label_length_align": 'left',
+    'speed_unit': 'bits',
+    'hide_decimal': False,
+    'speed_threshold': {
+        'min_upload': 1000,
+        'min_download': 1000
+    },   
+    'menu': {
+        'blur': True,
+        'round_corners': True,
+        'round_corners_type': 'normal',
+        'border_color': 'system',
+        'alignment': 'left',
+        'direction': 'down',
+        'offset_top': 6,
+        'offset_left': 0,
+        'show_interface_name': True,
+        'show_internet_info': True,
+    },
+    'animation': {
         'enabled': True,
         'type': 'fadeInOut',
         'duration': 200
     },
     'container_padding': {'top': 0, 'left': 0, 'bottom': 0, 'right': 0},
-    "callbacks": {
-        "on_left": "toggle_label",
-        "on_middle": "do_nothing",
-        "on_right": "do_nothing",
+    'callbacks': {
+        'on_left': 'toggle_label',
+        'on_middle': 'do_nothing',
+        'on_right': 'do_nothing',
     },
 }
 
 VALIDATION_SCHEMA = {
-    "label": {"type": "string", "default": DEFAULTS["label"]},
-    "label_alt": {"type": "string", "default": DEFAULTS["label_alt"]},
-    "interface": {
-        "type": "string",
-        "required": False,
-        "default": DEFAULTS["interface"]
+    'label': {'type': 'string', 'default': DEFAULTS['label']},
+    'label_alt': {'type': 'string', 'default': DEFAULTS['label_alt']},
+    'interface': {
+        'type': 'string',
+        'required': False,
+        'default': DEFAULTS['interface']
     },
-    "update_interval": {
-        "type": "integer",
-        "default": DEFAULTS["update_interval"],
-        "min": 0,
-        "max": 60000,
+    'update_interval': {
+        'type': 'integer',
+        'default': DEFAULTS['update_interval'],
+        'min': 1000,
+        'max': 60000,
     },
-    "hide_if_offline": {
-        "type": "boolean",
-        "required": False,
-        "default": DEFAULTS["hide_if_offline"],
+    'hide_if_offline': {
+        'type': 'boolean',
+        'required': False,
+        'default': DEFAULTS['hide_if_offline'],
     },
     'max_label_length': {
         'type': 'integer',
@@ -44,10 +62,84 @@ VALIDATION_SCHEMA = {
         'default': DEFAULTS['max_label_length'],
         'min': 0
     },
-    "hide_decimal": {
-        "type": "boolean",
-        "required": False,
-        "default": DEFAULTS["hide_decimal"],
+    'max_label_length_align': {
+        'type': 'string',
+        'required': False,
+        'default': DEFAULTS['max_label_length_align'],
+        'allowed': ['left', 'center', 'right'],
+    },
+    'speed_unit': {
+        'type': 'string',
+        'required': False,
+        'default': DEFAULTS['speed_unit'],
+        'allowed': ['bits', 'bytes'],
+    },
+    'hide_decimal': {
+        'type': 'boolean',
+        'required': False,
+        'default': DEFAULTS['hide_decimal'],
+    },
+    'speed_threshold': {
+        'type': 'dict',
+        'required': False,
+        'schema': {
+            'min_upload': {
+                'type': 'integer',
+                'default': DEFAULTS['speed_threshold']['min_upload']
+            },
+            'min_download': {
+                'type': 'integer', 
+                'default': DEFAULTS['speed_threshold']['min_download']
+           }
+        },
+        'default': DEFAULTS['speed_threshold']
+    },
+    'menu': {
+        'type': 'dict',
+        'required': False,
+        'schema': {
+            'blur': {
+                'type': 'boolean',
+                'default': DEFAULTS['menu']['blur']
+            },
+            'round_corners': {
+                'type': 'boolean',
+                'default': DEFAULTS['menu']['round_corners']
+            },
+            'round_corners_type': {
+                'type': 'string',
+                'default': DEFAULTS['menu']['round_corners_type']
+            },
+            'border_color': {
+                'type': 'string',
+                'default': DEFAULTS['menu']['border_color']
+            },
+            'alignment': {
+                'type': 'string',
+                'default': DEFAULTS['menu']['alignment']
+            },
+            'direction': {
+                'type': 'string',
+                'default': DEFAULTS['menu']['direction']
+            },
+            'offset_top': {
+                'type': 'integer',
+                'default': DEFAULTS['menu']['offset_top']
+            },
+            'offset_left': {
+                'type': 'integer',
+                'default': DEFAULTS['menu']['offset_left']
+            },
+            'show_interface_name': {
+                'type': 'boolean',
+                'default': DEFAULTS['menu']['show_interface_name']
+            },
+            'show_internet_info': {
+                'type': 'boolean',
+                'default': DEFAULTS['menu']['show_internet_info']
+            }
+        },
+        'default': DEFAULTS['menu']
     },
     'animation': {
         'type': 'dict',
@@ -113,22 +205,22 @@ VALIDATION_SCHEMA = {
         },
         'default': {'enabled': False, 'color': 'black', 'offset': [1, 1], 'radius': 3}
     },
-    "callbacks": {
-        "type": "dict",
-        "schema": {
-            "on_left": {
-                "type": "string",
-                "default": DEFAULTS["callbacks"]["on_left"],
+    'callbacks': {
+        'type': 'dict',
+        'schema': {
+            'on_left': {
+                'type': 'string',
+                'default': DEFAULTS['callbacks']['on_left'],
             },
-            "on_middle": {
-                "type": "string",
-                "default": DEFAULTS["callbacks"]["on_middle"],
+            'on_middle': {
+                'type': 'string',
+                'default': DEFAULTS['callbacks']['on_middle'],
             },
-            "on_right": {
-                "type": "string",
-                "default": DEFAULTS["callbacks"]["on_right"],
+            'on_right': {
+                'type': 'string',
+                'default': DEFAULTS['callbacks']['on_right'],
             },
         },
-        "default": DEFAULTS["callbacks"],
+        'default': DEFAULTS['callbacks'],
     },
 }
