@@ -51,47 +51,33 @@ class LayoutIconWidget(QWidget):
     def __init__(
         self,
         layout_name: str = "bsp",
-        alignment: Qt.AlignmentFlag = Qt.AlignmentFlag.AlignCenter,
     ):
         super().__init__()
         self.layout_name = layout_name
-        self._alignment = alignment
 
     def sizeHint(self):
         size = self.font().pixelSize()
         return QSize(size, size)
 
-    def setAlignment(self, alignment: Qt.AlignmentFlag):
-        self._alignment = alignment
-        self.updateGeometry()
-        self.update()
+    def setAlignment(self, a0):
+        pass
 
     def paintEvent(self, a0):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
 
         size = self.font().pixelSize()
-        width, height = size, size
-        stroke_width = 1.5
+        stroke_width = max(1.0, size * 0.08)
 
         pen = painter.pen()
         pen.setWidthF(stroke_width)
         painter.setPen(pen)
 
         rect = self.rect()
-        icon_rect = QRectF(0, 0, width, height)
-
-        if self._alignment & Qt.AlignmentFlag.AlignHCenter:
-            icon_rect.moveLeft((rect.width() - width) / 2)
-        elif self._alignment & Qt.AlignmentFlag.AlignRight:
-            icon_rect.moveLeft(rect.width() - width)
-        # else: default is AlignLeft, so no need to move
-
-        if self._alignment & Qt.AlignmentFlag.AlignVCenter:
-            icon_rect.moveTop((rect.height() - height) / 2)
-        elif self._alignment & Qt.AlignmentFlag.AlignBottom:
-            icon_rect.moveTop(rect.height() - height)
-        # else: default is AlignTop, so no need to move
+        x = (rect.width() - size) / 2
+        y = (rect.height() - size) / 2
+        icon_rect = QRectF(x, y, size, size)
 
         r = (icon_rect.width() / 2) - stroke_width
         c = icon_rect.center()
