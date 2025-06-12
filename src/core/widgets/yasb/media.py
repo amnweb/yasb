@@ -377,6 +377,8 @@ class MediaWidget(BaseWidget):
             "Chrome": "Chrome",
             "chrome.exe": "Chrome",
             "opera.exe": "Opera",
+            "Brave": "Brave",
+            "Brave.Q2QWMKZ4RMMIMDZ2JQ2NKBXFT4": "Brave",
             "Microsoft.ZuneMusic_8wekyb3d8bbwe!Microsoft.ZuneMusic": "Media Player",
             "foobar2000.exe": "Foobar2000",
             "MusicBee.exe": "MusicBee",
