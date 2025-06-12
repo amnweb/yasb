@@ -72,7 +72,11 @@ class LayoutIconWidget(QWidget):
 
         size = self.font().pixelSize()
         width, height = size, size
-        stroke_width = 1
+        stroke_width = 1.5
+
+        pen = painter.pen()
+        pen.setWidthF(stroke_width)
+        painter.setPen(pen)
 
         rect = self.rect()
         icon_rect = QRectF(0, 0, width, height)
@@ -91,7 +95,8 @@ class LayoutIconWidget(QWidget):
 
         r = (icon_rect.width() / 2) - stroke_width
         c = icon_rect.center()
-        icon_rect = icon_rect.adjusted(stroke_width, stroke_width, -stroke_width, -stroke_width)
+        adjusted_width = stroke_width - 0.5
+        icon_rect = icon_rect.adjusted(adjusted_width, adjusted_width, -adjusted_width, -adjusted_width)
         rounding = icon_rect.width() * 0.1
         painter.drawRoundedRect(icon_rect, rounding, rounding)
 
@@ -156,14 +161,11 @@ class LayoutIconWidget(QWidget):
             rect_right.setWidth(rect_left.width())
             rect_right.setHeight(rect_left.height())
 
-            rect_left.moveTopLeft(icon_rect.topLeft() + vec(icon_rect.width() * 0.2, icon_rect.width() * 0.1))
-
+            rect_left.moveTopLeft(
+                icon_rect.topLeft() + vec(icon_rect.width() * 0.2, icon_rect.width() * 0.1)
+            )
             rect_right.moveTopLeft(
-                icon_rect.topLeft()
-                + vec(
-                    icon_rect.width() * 0.55,
-                    icon_rect.width() * 0.1,
-                )
+                icon_rect.topLeft() + vec(icon_rect.width() * 0.55, icon_rect.width() * 0.1)
             )
 
             color = self.palette().color(self.foregroundRole())
