@@ -107,7 +107,7 @@ class LayoutIconWidget(QWidget):
         if self.layout_name == "bsp":
             line(c - vec(0, r), c + vec(0, r))
             line(c, c + vec(r, 0))
-            line(c + vec(r / 2, 0), c + vec(r / 2, r))
+            line(c + vec(r / 2 + 0.25, 0.25), c + vec(r / 2 + 0.25, r))
         elif self.layout_name == "columns":
             line(c - vec(r / 2, r), c + vec(-r / 2, r))
             line(c - vec(0, r), c + vec(0, r))
@@ -158,15 +158,15 @@ class LayoutIconWidget(QWidget):
             rect_right = QRectF(rect_left)
 
             rect_left.setWidth(icon_rect.width() * 0.25)
-            rect_left.setHeight(icon_rect.height() * 0.8)
+            rect_left.setHeight(icon_rect.height() * 0.7)
             rect_right.setWidth(rect_left.width())
             rect_right.setHeight(rect_left.height())
 
             rect_left.moveTopLeft(
-                icon_rect.topLeft() + vec(icon_rect.width() * 0.2, icon_rect.width() * 0.1)
+                icon_rect.topLeft() + vec(icon_rect.width() * 0.2, icon_rect.width() * 0.15)
             )
             rect_right.moveTopLeft(
-                icon_rect.topLeft() + vec(icon_rect.width() * 0.55, icon_rect.width() * 0.1)
+                icon_rect.topLeft() + vec(icon_rect.width() * 0.55, icon_rect.width() * 0.15)
             )
 
             color = self.palette().color(self.foregroundRole())
