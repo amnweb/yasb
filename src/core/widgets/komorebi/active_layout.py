@@ -138,6 +138,21 @@ class LayoutIconWidget(QWidget):
             line(c - vec(-r / 2, r), c + vec(r / 2, r))
         elif self.layout_name == "monocle" or self.layout_name == "maximised":
             pass
+        elif self.layout_name == "tiling":
+            rect_left = QRectF(icon_rect)
+            rect_left.setWidth(icon_rect.width() * 0.5)
+            rect_left.setHeight(icon_rect.height() * 0.5)
+            rect_right = QRectF(rect_left)
+
+            rect_left.moveTopLeft(
+                icon_rect.topLeft() + vec(icon_rect.width() * 0.1, icon_rect.height() * 0.1)
+            )
+            rect_right.moveTopLeft(
+                icon_rect.topLeft() + vec(icon_rect.width() * 0.35, icon_rect.height() * 0.35)
+            )
+    
+            painter.fillRect(rect_left, self.palette().color(self.foregroundRole()))
+            painter.drawRect(rect_right)
         elif self.layout_name == "paused":
             rect_left = QRectF(icon_rect)
             rect_right = QRectF(rect_left)
