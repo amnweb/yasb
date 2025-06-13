@@ -210,6 +210,8 @@ class TrafficWidget(BaseWidget):
             return {
                 'upload_speed': '0 Kbps',
                 'download_speed': '0 Kbps',
+                'raw_upload_speed': '0',
+                'raw_download_speed': '0',
                 'today_uploaded': '< 1 MB',
                 'today_downloaded': '< 1 MB',
                 'session_uploaded': '< 1 MB',
@@ -235,7 +237,7 @@ class TrafficWidget(BaseWidget):
         # Update menu if visible
         if self._is_menu_visible():
             net_data = (
-                shared_data['upload_speed'], shared_data['download_speed'], 
+                shared_data['raw_upload_speed'], shared_data['raw_download_speed'],
                 shared_data['today_uploaded'], shared_data['today_downloaded'],
                 shared_data['session_uploaded'], shared_data['session_downloaded'],
                 shared_data['alltime_uploaded'], shared_data['alltime_downloaded'],
@@ -510,16 +512,22 @@ class TrafficWidget(BaseWidget):
                     if self._interface in TrafficWidget._shared_data and TrafficWidget._shared_data[self._interface] is not None:
                         shared_data = TrafficWidget._shared_data[self._interface]
                         data = (
-                            shared_data['upload_speed'], shared_data['download_speed'],
+                            shared_data['raw_upload_speed'], shared_data['raw_download_speed'],
                             shared_data['today_uploaded'], shared_data['today_downloaded'],
                             shared_data['session_uploaded'], shared_data['session_downloaded'],
                             shared_data['alltime_uploaded'], shared_data['alltime_downloaded'],
                             shared_data['session_duration']
                         )
                     else:
-                        data = ("0 Kbps", "0 Kbps", "< 1 MB", "< 1 MB", "< 1 MB", "< 1 MB", "< 1 MB", "< 1 MB", "just now")
+                        data = (
+                            "0", "0", 
+                            "< 1 MB", "< 1 MB",
+                            "< 1 MB", "< 1 MB",
+                            "< 1 MB", "< 1 MB",
+                            "just now"
+                        )
                 
-                upload_speed, download_speed, today_uploaded, today_downloaded, session_uploaded, session_downloaded, alltime_uploaded, alltime_downloaded, session_duration = data
+                raw_upload_speed, raw_download_speed, today_uploaded, today_downloaded, session_uploaded, session_downloaded, alltime_uploaded, alltime_downloaded, session_duration = data
 
                 # Helper function to split speed and unit
                 def split_speed_unit(speed_str):
@@ -529,8 +537,8 @@ class TrafficWidget(BaseWidget):
                     return speed_str, ""
 
                 # Update speed columns
-                upload_value, upload_unit_text = split_speed_unit(upload_speed)
-                download_value, download_unit_text = split_speed_unit(download_speed)
+                upload_value, upload_unit_text = split_speed_unit(raw_upload_speed)
+                download_value, download_unit_text = split_speed_unit(raw_download_speed)
                 
                 self.menu_labels["upload-speed-value"].setText(upload_value)
                 self.menu_labels["upload-speed-unit"].setText(upload_unit_text)

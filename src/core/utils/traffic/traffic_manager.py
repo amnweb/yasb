@@ -227,6 +227,9 @@ class TrafficDataManager:
             upload_speed = cls.format_speed(upload_speed_per_sec, speed_unit, hide_decimal, upload_threshold)
             download_speed = cls.format_speed(download_speed_per_sec, speed_unit, hide_decimal, download_threshold)
             
+            raw_upload_speed = cls.format_speed(upload_speed_per_sec, speed_unit, False, upload_threshold)
+            raw_download_speed = cls.format_speed(download_speed_per_sec, speed_unit, False, download_threshold)
+            
             # Get today totals
             today_sent, today_recv = cls.get_today_totals(interface)
             today_uploaded = cls.format_data_size(today_sent)
@@ -249,6 +252,8 @@ class TrafficDataManager:
             return {
                 'upload_speed': cls._apply_alignment(upload_speed, max_label_length, max_label_length_align),
                 'download_speed': cls._apply_alignment(download_speed, max_label_length, max_label_length_align),
+                'raw_upload_speed': raw_upload_speed,
+                'raw_download_speed': raw_download_speed,
                 'today_uploaded': cls._apply_alignment(today_uploaded, max_label_length, max_label_length_align),
                 'today_downloaded': cls._apply_alignment(today_downloaded, max_label_length, max_label_length_align),
                 'session_uploaded': cls._apply_alignment(session_uploaded, max_label_length, max_label_length_align),
