@@ -152,7 +152,14 @@ class PopupWidget(QWidget):
         resizeEvent(event): Handle the resize event for the popup.
     """
 
-    def __init__(self, parent=None, blur=False, round_corners=False, round_corners_type="normal", border_color="None"):
+    def __init__(
+        self,
+        parent: QWidget,
+        blur: bool = False,
+        round_corners: bool = False,
+        round_corners_type: str = "normal",
+        border_color: str = "None",
+    ):
         super().__init__(parent)
 
         self.setWindowFlags(
