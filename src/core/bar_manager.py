@@ -129,6 +129,7 @@ class BarManager(QObject):
             "bar_screen": screen,
             "stylesheet": self.stylesheet,
             "widgets": bar_widgets,
+            "widget_config": bar_config.get("widgets", {}),
             "init": init,
         }
 

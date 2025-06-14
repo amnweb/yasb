@@ -2,6 +2,7 @@ BAR_DEFAULTS = {
     "enabled": True,
     "screens": ["*"],
     "class_name": "yasb-bar",
+    "context_menu": True,
     "alignment": {"position": "top", "center": False},
     "blur_effect": {
         "enabled": False,
@@ -30,6 +31,7 @@ BAR_SCHEMA = {
         "enabled": {"type": "boolean", "required": True, "default": BAR_DEFAULTS["enabled"]},
         "screens": {"type": "list", "schema": {"type": "string"}, "default": BAR_DEFAULTS["screens"]},
         "class_name": {"type": "string", "default": BAR_DEFAULTS["class_name"]},
+        "context_menu": {"type": "boolean", "default": BAR_DEFAULTS["context_menu"]},
         "alignment": {
             "type": "dict",
             "schema": {
