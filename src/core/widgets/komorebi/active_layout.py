@@ -1,16 +1,25 @@
 import logging
 from collections import deque
-from PyQt6.QtGui import QCursor
-from PyQt6.QtWidgets import QWidget, QLabel, QHBoxLayout, QVBoxLayout, QFrame, QSizePolicy
-from PyQt6.QtCore import Qt, pyqtSignal
-from core.utils.win32.utilities import get_monitor_hwnd
-from core.event_service import EventService
+
+from PyQt6.QtCore import QPointF, QRectF, QSize, Qt, pyqtSignal
+from PyQt6.QtGui import QCursor, QPainter
+from PyQt6.QtWidgets import (
+    QFrame,
+    QHBoxLayout,
+    QLabel,
+    QSizePolicy,
+    QVBoxLayout,
+    QWidget,
+)
+
 from core.event_enums import KomorebiEvent
-from core.widgets.base import BaseWidget
+from core.event_service import EventService
 from core.utils.komorebi.client import KomorebiClient
-from core.validation.widgets.komorebi.active_layout import VALIDATION_SCHEMA
+from core.utils.utilities import PopupWidget, add_shadow
 from core.utils.widgets.animation_manager import AnimationManager
-from core.utils.utilities import add_shadow, PopupWidget
+from core.utils.win32.utilities import get_monitor_hwnd
+from core.validation.widgets.komorebi.active_layout import VALIDATION_SCHEMA
+from core.widgets.base import BaseWidget
 
 try:
     from core.utils.komorebi.event_listener import KomorebiEventListener
@@ -27,7 +36,7 @@ layout_cmds = {
     "VerticalStack": "vertical-stack",
     "HorizontalStack": "horizontal-stack",
     "UltrawideVerticalStack": "ultrawide-vertical-stack",
-    "RightMainVerticalStack": "right-main-vertical-stack"
+    "RightMainVerticalStack": "right-main-vertical-stack",
 }
 layout_snake_case = {
     "BSP": "bsp",
@@ -38,8 +47,155 @@ layout_snake_case = {
     "VerticalStack": "vertical_stack",
     "HorizontalStack": "horizontal_stack",
     "UltrawideVerticalStack": "ultrawide_vertical_stack",
-    "RightMainVerticalStack": "right_main_vertical_stack"
+    "RightMainVerticalStack": "right_main_vertical_stack",
+    "Floating": "floating",
+    "Monocle": "monocle",
+    "Maximised": "maximised",
+    "Paused": "paused",
 }
+
+
+class LayoutIconWidget(QWidget):
+    def __init__(
+        self,
+        layout_name: str = "bsp",
+    ):
+        super().__init__()
+        self.layout_name = layout_name
+
+    def sizeHint(self):
+        size = self.font().pixelSize()
+        return QSize(size, size)
+
+    def setAlignment(self, a0):
+        pass
+
+    def paintEvent(self, a0):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        
+        size = self.font().pixelSize()
+        stroke_width = max(1.0, size * 0.08)
+
+        pen = painter.pen()
+        pen.setWidthF(stroke_width)
+        painter.setPen(pen)
+
+        rect = self.rect()
+        x = (rect.width() - size) / 2
+        y = (rect.height() - size) / 2
+        icon_rect = QRectF(x, y, size, size)
+
+        r = (icon_rect.width() / 2) - stroke_width
+        c = icon_rect.center()
+        
+        adjusted_width = stroke_width * 0.8
+        icon_rect = icon_rect.adjusted(adjusted_width, adjusted_width, -adjusted_width, -adjusted_width)
+        
+        corner_radius = icon_rect.width() * 0.1
+        painter.drawRoundedRect(icon_rect, corner_radius, corner_radius)
+        
+        self._draw_icon(painter, icon_rect, r, c)
+        painter.end()
+
+    def _draw_icon(
+        self,
+        painter: QPainter,
+        icon_rect: QRectF,
+        r: float,
+        c: QPointF,
+    ):
+        # helper functions to draw lines and vectors
+        def vec(dx, dy):
+            return QPointF(dx, dy)
+
+        def line(start, end):
+            painter.drawLine(start, end)
+
+        # draw layout icons
+        if self.layout_name == "bsp":
+            line(c - vec(0, r), c + vec(0, r))
+            line(c, c + vec(r, 0))
+            line(c + vec(r / 2 + 0.2, 0.2), c + vec(r / 2 + 0.2, r))
+        elif self.layout_name == "columns":
+            line(c - vec(r / 2, r), c + vec(-r / 2, r))
+            line(c - vec(0, r), c + vec(0, r))
+            line(c - vec(-r / 2, r), c + vec(r / 2, r))
+        elif self.layout_name == "rows":
+            line(c - vec(r, r / 2), c + vec(r, -r / 2))
+            line(c - vec(r, 0), c + vec(r, 0))
+            line(c - vec(r, -r / 2), c + vec(r, r / 2))
+        elif self.layout_name == "vertical_stack":
+            line(c - vec(0, r), c + vec(0, r))
+            line(c, c + vec(r, 0))
+        elif self.layout_name == "right_main_vertical_stack":
+            line(c - vec(0, r), c + vec(0, r))
+            line(c - vec(r, 0), c)
+        elif self.layout_name == "horizontal_stack":
+            line(c - vec(r, 0), c + vec(r, 0))
+            line(c, c + vec(0, r))
+        elif self.layout_name == "ultrawide_vertical_stack":
+            line(c - vec(r / 2, r), c + vec(-r / 2, r))
+            line(c + vec(r / 2, 0), c + vec(r, 0))
+            line(c - vec(-r / 2, r), c + vec(r / 2, r))
+        elif self.layout_name == "grid":
+            line(c - vec(r, 0), c + vec(r, 0))
+            line(c - vec(0, r), c + vec(0, r))
+        elif self.layout_name == "scrolling":
+            line(c - vec(r / 2, r), c + vec(-r / 2, r))
+            line(c - vec(0, r), c + vec(0, r))
+            line(c - vec(-r / 2, r), c + vec(r / 2, r))
+        elif self.layout_name == "monocle" or self.layout_name == "maximised":
+            pass
+        elif self.layout_name == "tiling" or self.layout_name == "floating":
+            rect_left = QRectF(icon_rect)
+            rect_left.setWidth(icon_rect.width() * 0.5)
+            rect_left.setHeight(icon_rect.height() * 0.5)
+            rect_right = QRectF(rect_left)
+
+            rect_left.moveTopLeft(
+                icon_rect.topLeft() + vec(icon_rect.width() * 0.15, icon_rect.height() * 0.15)
+            )
+            rect_right.moveTopLeft(
+                icon_rect.topLeft() + vec(icon_rect.width() * 0.3, icon_rect.height() * 0.3)
+            )
+    
+            corner_radius = icon_rect.width() * 0.1
+
+            painter.setBrush(self.palette().brush(self.foregroundRole()))
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.drawRoundedRect(rect_left, corner_radius, corner_radius)
+            
+            painter.setBrush(Qt.BrushStyle.NoBrush)
+            painter.setPen(self.palette().color(self.foregroundRole()))
+            painter.drawRoundedRect(rect_right, corner_radius, corner_radius)
+        elif self.layout_name == "paused":
+            rect_left = QRectF(icon_rect)
+            rect_right = QRectF(rect_left)
+
+            rect_left.setWidth(icon_rect.width() * 0.25)
+            rect_left.setHeight(icon_rect.height() * 0.7)
+            rect_right.setWidth(rect_left.width())
+            rect_right.setHeight(rect_left.height())
+
+            rect_left.moveTopLeft(
+                icon_rect.topLeft() + vec(icon_rect.width() * 0.2, icon_rect.width() * 0.15)
+            )
+            rect_right.moveTopLeft(
+                icon_rect.topLeft() + vec(icon_rect.width() * 0.55, icon_rect.width() * 0.15)
+            )
+
+            painter.setBrush(self.palette().brush(self.foregroundRole()))
+            painter.setPen(Qt.PenStyle.NoPen)
+
+            corner_radius = icon_rect.width() * 0.1
+            painter.drawRoundedRect(rect_left, corner_radius, corner_radius)
+            painter.drawRoundedRect(rect_right, corner_radius, corner_radius)
+        else:
+            line(c - vec(0, r), c + vec(0, r))
+            line(c + vec(0, r / 2), c + vec(r, r / 2))
+            line(c - vec(0, r / 3), c - vec(r, r / 3))
+
 
 class ActiveLayoutWidget(BaseWidget):
     k_signal_connect = pyqtSignal(dict)
@@ -56,18 +212,20 @@ class ActiveLayoutWidget(BaseWidget):
             layouts: list[str],
             layout_icons: dict[str, str],
             layout_menu: dict[str, str],
+            generate_layout_icons: bool,
             hide_if_offline: bool,
             container_padding: dict,
             animation: dict[str, str],
             callbacks: dict[str, str],
             label_shadow: dict = None,
-            container_shadow: dict = None
+            container_shadow: dict = None,
         ):
         super().__init__(class_name="komorebi-active-layout")
         self._label = label
         self._layout_icons = layout_icons
         self._layout_menu = layout_menu
         self._layouts_config = layouts
+        self._generate_layout_icons = generate_layout_icons
         self._padding = container_padding
         self._label_shadow = label_shadow
         self._container_shadow = container_shadow
@@ -80,6 +238,8 @@ class ActiveLayoutWidget(BaseWidget):
         self._focused_workspace = {}
         # Set the cursor to be a pointer when hovering over the button
         self.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self._active_layout_icon = LayoutIconWidget()
+        self._active_layout_icon.setProperty("class", "icon")
         self._active_layout_text = QLabel()
         self._active_layout_text.setProperty("class", "label")
         self._active_layout_text.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -96,7 +256,9 @@ class ActiveLayoutWidget(BaseWidget):
         add_shadow(self._widget_container, self._container_shadow)
         # Add the container to the main widget layout
         self.widget_layout.addWidget(self._widget_container)
-        
+
+        if self._generate_layout_icons:
+            self._widget_container_layout.addWidget(self._active_layout_icon)
         self._widget_container_layout.addWidget(self._active_layout_text)
   
         self.callback_left = callbacks['on_left']
@@ -124,7 +286,7 @@ class ActiveLayoutWidget(BaseWidget):
         if self._animation['enabled']:
             AnimationManager.animate(self, self._animation['type'], self._animation['duration'])
         self._show_layout_menu()
-    
+
     def _show_layout_menu(self):
         self._menu = PopupWidget(
             self,
@@ -146,10 +308,12 @@ class ActiveLayoutWidget(BaseWidget):
             item_layout.setContentsMargins(0, 0, 0, 0)
 
             if self._layout_menu['show_layout_icons']:
-                icon_label = QLabel(icon)
-                icon_label.setProperty("class", "menu-item-icon")
+                icon_label = QLabel(icon) if isinstance(icon, str) else icon
+
                 icon_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
                 icon_label.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+
+                icon_label.setProperty("class", "menu-item-icon")
                 item_layout.addWidget(icon_label)
 
             text_label = QLabel(text)
@@ -163,10 +327,15 @@ class ActiveLayoutWidget(BaseWidget):
             return item
 
         for layout in self._layouts_config:
-            icon = self._layout_icons[layout]
+            if self._generate_layout_icons:
+                icon = LayoutIconWidget(layout)
+            else:
+                icon = self._layout_icons[layout]
             text = layout.replace('_', ' ').title()
+
             def handler(event, l=layout):
                 self._on_layout_menu_selected(l)
+
             main_layout.addWidget(create_menu_item(icon, text, handler))
 
         self._menu._add_separator(main_layout)
@@ -175,23 +344,31 @@ class ActiveLayoutWidget(BaseWidget):
             def handler(event):
                 func()
                 self._menu.hide()
+
             return handler
 
-        toggle_icons = {
-            "Toggle Tiling": self._layout_icons["tiling"],
-            "Toggle Monocle": self._layout_icons["monocle"],
-            "Toggle Pause": self._layout_icons["paused"]
-        }
+        if self._generate_layout_icons:
+            toggle_icons = {
+                "Toggle Tiling": LayoutIconWidget("tiling"),
+                "Toggle Monocle": LayoutIconWidget("monocle"),
+                "Toggle Pause": LayoutIconWidget("paused"),
+            }
+        else:
+            toggle_icons = {
+                "Toggle Tiling": self._layout_icons["tiling"],
+                "Toggle Monocle": self._layout_icons["monocle"],
+                "Toggle Pause": self._layout_icons["paused"],
+            }
         toggle_actions = [
             ("Toggle Tiling", lambda: self._komorebic.toggle("tiling")),
             ("Toggle Monocle", lambda: self._komorebic.toggle("monocle")),
-            ("Toggle Pause", lambda: self._komorebic.toggle("pause"))
+            ("Toggle Pause", lambda: self._komorebic.toggle("pause")),
         ]
         for label, func in toggle_actions:
             main_layout.addWidget(
                 create_menu_item(
-                    toggle_icons.get(label, ""),
-                    label,
+                    toggle_icons.get(label, ""), 
+                    label, 
                     make_toggle_handler(func)
                 )
             )
@@ -229,14 +406,14 @@ class ActiveLayoutWidget(BaseWidget):
             self.change_layout(self._layouts[0])
             if self._animation['enabled']:
                 AnimationManager.animate(self, self._animation['type'], self._animation['duration'])
-            
+
     def _prev_layout(self):
         if self._is_shift_layout_allowed():
             self._layouts.rotate(-1)
             self.change_layout(self._layouts[0])
             if self._animation['enabled']:
                 AnimationManager.animate(self, self._animation['type'], self._animation['duration'])
-            
+
     def _is_shift_layout_allowed(self):
         return not bool(
             not self._focused_workspace.get('tile', False) or
@@ -253,7 +430,7 @@ class ActiveLayoutWidget(BaseWidget):
             KomorebiEvent.TogglePause,
             KomorebiEvent.ToggleTiling,
             KomorebiEvent.ToggleMonocle,
-            KomorebiEvent.ToggleMaximise
+            KomorebiEvent.ToggleMaximise,
         ]
 
         self.k_signal_connect.connect(self._on_komorebi_connect_event)
@@ -261,10 +438,10 @@ class ActiveLayoutWidget(BaseWidget):
         self.k_signal_layout_change.connect(self._on_komorebi_layout_change_event)
         self.k_signal_update.connect(self._on_komorebi_layout_change_event)
 
-        self._event_service.register_event(KomorebiEvent.KomorebiConnect,  self.k_signal_connect)
+        self._event_service.register_event(KomorebiEvent.KomorebiConnect, self.k_signal_connect)
         self._event_service.register_event(KomorebiEvent.KomorebiDisconnect, self.k_signal_disconnect)
         self._event_service.register_event(KomorebiEvent.KomorebiUpdate, self.k_signal_update)
-        
+
         for event_type in active_layout_change_event_watchlist:
             self._event_service.register_event(event_type, self.k_signal_layout_change)
 
@@ -272,7 +449,7 @@ class ActiveLayoutWidget(BaseWidget):
         self._update_active_layout(state, is_connect_event=True)
         if self.isHidden():
             self.show()
- 
+
     def _on_komorebi_layout_change_event(self, _event: dict, state: dict) -> None:
         self._update_active_layout(state)
 
@@ -297,9 +474,11 @@ class ActiveLayoutWidget(BaseWidget):
                     while self._layouts[0] != conn_layout_cmd:
                         self._layouts.rotate(1)
 
-                self._active_layout_text.setText(
-                    self._label.replace("{icon}", layout_icon).replace("{layout_name}", layout_name)
-                )
+                if self._generate_layout_icons:
+                    self._active_layout_icon.layout_name = layout_snake_case.get(layout_name, "unknown layout")
+                    self._active_layout_icon.update()
+
+                self._active_layout_text.setText(self._label.replace("{icon}", layout_icon).replace("{layout_name}", layout_name))
 
                 if self._active_layout_text.isHidden():
                     self.show()

@@ -29,6 +29,7 @@ DEFAULTS = {
         'offset_left': 0,
         'show_layout_icons': True,
     },
+    "generate_layout_icons": False,
     'container_padding': {'top': 0, 'left': 0, 'bottom': 0, 'right': 0},
     'animation': {
         'enabled': True,
@@ -178,6 +179,10 @@ VALIDATION_SCHEMA = {
             }
         },
         'default': DEFAULTS['layout_menu']
+    },
+    "generate_layout_icons": {
+        "type": "boolean",
+        "default": DEFAULTS["generate_layout_icons"],
     },
     'container_padding': {
         'type': 'dict',
