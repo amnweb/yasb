@@ -1,11 +1,8 @@
 import ctypes
 import logging
 import time
-import typing
 
-import PyQt6.sip
-from PyQt6.QtCore import QAbstractNativeEventFilter, QThread
-from PyQt6.QtWidgets import QApplication, QWidget
+from PyQt6.QtCore import QThread
 from win32gui import GetForegroundWindow
 
 from core.event_service import EventService
@@ -13,7 +10,6 @@ from core.utils.win32.windows import WinEvent, WinEventProcType, msg, ole32, use
 
 
 class SystemEventListener(QThread):
-
     def __init__(self):
         super().__init__()
         self._hook = None
@@ -23,16 +19,7 @@ class SystemEventListener(QThread):
     def __str__(self):
         return "Win32 System Event Listener"
 
-    def _event_handler(
-        self,
-        _win_event_hook,
-        event,
-        hwnd,
-        _id_object,
-        _id_child,
-        _event_thread,
-        _event_time
-    ) -> None:
+    def _event_handler(self, _win_event_hook, event, hwnd, _id_object, _id_child, _event_thread, _event_time) -> None:
         if event in WinEvent:
             event_type = WinEvent._value2member_map_[event]
             try:
@@ -48,7 +35,7 @@ class SystemEventListener(QThread):
             self._win_event_process,
             0,
             0,
-            WinEvent.WinEventOutOfContext.value
+            WinEvent.WinEventOutOfContext.value,
         )
 
     def _emit_foreground_window_event(self):

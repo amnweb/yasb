@@ -3,7 +3,7 @@ import contextlib
 import ctypes
 import logging
 import sys
-from sys import argv, exit
+from sys import argv
 
 import qasync
 from PyQt6.QtWidgets import QApplication
@@ -18,7 +18,8 @@ from core.utils.controller import start_cli_server
 from core.watcher import create_observer
 from env_loader import load_env, set_font_engine
 
-logging.getLogger('asyncio').setLevel(logging.WARNING)
+logging.getLogger("asyncio").setLevel(logging.WARNING)
+
 
 @contextlib.contextmanager
 def single_instance_lock(name="yasb_reborn"):
@@ -38,7 +39,7 @@ def single_instance_lock(name="yasb_reborn"):
     finally:
         ctypes.windll.kernel32.ReleaseMutex(mutex)
         ctypes.windll.kernel32.CloseHandle(mutex)
-   
+
 
 def main():
     # Application instance should be created first
@@ -48,7 +49,7 @@ def main():
     # Initialize configuration early after the single instance check
     config, stylesheet = get_config_and_stylesheet()
 
-    if config['debug']:
+    if config["debug"]:
         settings.DEBUG = True
         logging.info("Debug mode enabled.")
 
@@ -61,7 +62,7 @@ def main():
     manager.initialize_bars(init=True)
 
     # Initialise file watcher if needed
-    observer = create_observer(manager) if config['watch_config'] or config['watch_stylesheet'] else None
+    observer = create_observer(manager) if config["watch_config"] or config["watch_stylesheet"] else None
     if observer:
         observer.start()
 
@@ -69,14 +70,16 @@ def main():
         if observer:
             observer.stop()
             observer.join()
+
     app.aboutToQuit.connect(stop_observer)
 
     # Build system tray icon
     tray_manager = SystemTrayManager(manager)
     tray_manager.show()
-    
+
     with loop:
         loop.run_forever()
+
 
 if __name__ == "__main__":
     init_logger()
@@ -88,7 +91,8 @@ if __name__ == "__main__":
         EventService().clear()
         logging.error("Unhandled exception", exc_info=value)
         sys.exit(1)
-    sys.excepthook = exception_hook 
+
+    sys.excepthook = exception_hook
 
     try:
         # Acquire the single instance lock before doing any heavy initialization
