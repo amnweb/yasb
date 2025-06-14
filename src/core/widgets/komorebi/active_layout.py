@@ -229,14 +229,18 @@ class ActiveLayoutWidget(BaseWidget):
             self.change_layout(self._layouts[0])
             if self._animation['enabled']:
                 AnimationManager.animate(self, self._animation['type'], self._animation['duration'])
-            
+        else:
+            self._toggle_blocking_state()
+
     def _prev_layout(self):
         if self._is_shift_layout_allowed():
             self._layouts.rotate(-1)
             self.change_layout(self._layouts[0])
             if self._animation['enabled']:
                 AnimationManager.animate(self, self._animation['type'], self._animation['duration'])
-            
+        else:
+            self._toggle_blocking_state()
+
     def _is_shift_layout_allowed(self):
         return not bool(
             not self._focused_workspace.get('tile', False) or
@@ -244,6 +248,16 @@ class ActiveLayoutWidget(BaseWidget):
             self._focused_workspace.get('maximized_window', None) or
             self._komorebi_state.get('is_paused', False)
         )
+
+    def _toggle_blocking_state(self):
+        if self._komorebi_state.get('is_paused', False):
+            self._komorebic.toggle("pause")
+        elif not self._focused_workspace.get('tile', False):
+            self._komorebic.toggle("tiling")
+        elif self._focused_workspace.get('monocle_container', None):
+            self._komorebic.toggle("monocle")
+        elif self._focused_workspace.get('maximized_window', None):
+            self._komorebic.toggle("maximise")
 
     def _register_signals_and_events(self):
         active_layout_change_event_watchlist = [
