@@ -3,7 +3,14 @@ from collections import deque
 
 from PyQt6.QtCore import QPointF, QRectF, QSize, Qt, pyqtSignal
 from PyQt6.QtGui import QCursor, QPainter
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QSizePolicy, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import (
+    QFrame,
+    QHBoxLayout,
+    QLabel,
+    QSizePolicy,
+    QVBoxLayout,
+    QWidget,
+)
 
 from core.event_enums import KomorebiEvent
 from core.event_service import EventService
@@ -41,6 +48,7 @@ layout_snake_case = {
     "HorizontalStack": "horizontal_stack",
     "UltrawideVerticalStack": "ultrawide_vertical_stack",
     "RightMainVerticalStack": "right_main_vertical_stack",
+    "Floating": "floating",
     "Monocle": "monocle",
     "Maximised": "maximised",
     "Paused": "paused",
@@ -65,8 +73,7 @@ class LayoutIconWidget(QWidget):
     def paintEvent(self, a0):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
-
+        
         size = self.font().pixelSize()
         stroke_width = max(1.0, size * 0.08)
 
@@ -81,11 +88,13 @@ class LayoutIconWidget(QWidget):
 
         r = (icon_rect.width() / 2) - stroke_width
         c = icon_rect.center()
-        adjusted_width = stroke_width - 0.5
+        
+        adjusted_width = stroke_width * 0.8
         icon_rect = icon_rect.adjusted(adjusted_width, adjusted_width, -adjusted_width, -adjusted_width)
-        rounding = icon_rect.width() * 0.1
-        painter.drawRoundedRect(icon_rect, rounding, rounding)
-
+        
+        corner_radius = icon_rect.width() * 0.1
+        painter.drawRoundedRect(icon_rect, corner_radius, corner_radius)
+        
         self._draw_icon(painter, icon_rect, r, c)
         painter.end()
 
@@ -107,7 +116,7 @@ class LayoutIconWidget(QWidget):
         if self.layout_name == "bsp":
             line(c - vec(0, r), c + vec(0, r))
             line(c, c + vec(r, 0))
-            line(c + vec(r / 2 + 0.25, 0.25), c + vec(r / 2 + 0.25, r))
+            line(c + vec(r / 2 + 0.2, 0.2), c + vec(r / 2 + 0.2, r))
         elif self.layout_name == "columns":
             line(c - vec(r / 2, r), c + vec(-r / 2, r))
             line(c - vec(0, r), c + vec(0, r))
@@ -138,21 +147,28 @@ class LayoutIconWidget(QWidget):
             line(c - vec(-r / 2, r), c + vec(r / 2, r))
         elif self.layout_name == "monocle" or self.layout_name == "maximised":
             pass
-        elif self.layout_name == "tiling":
+        elif self.layout_name == "tiling" or self.layout_name == "floating":
             rect_left = QRectF(icon_rect)
             rect_left.setWidth(icon_rect.width() * 0.5)
             rect_left.setHeight(icon_rect.height() * 0.5)
             rect_right = QRectF(rect_left)
 
             rect_left.moveTopLeft(
-                icon_rect.topLeft() + vec(icon_rect.width() * 0.1, icon_rect.height() * 0.1)
+                icon_rect.topLeft() + vec(icon_rect.width() * 0.15, icon_rect.height() * 0.15)
             )
             rect_right.moveTopLeft(
-                icon_rect.topLeft() + vec(icon_rect.width() * 0.35, icon_rect.height() * 0.35)
+                icon_rect.topLeft() + vec(icon_rect.width() * 0.3, icon_rect.height() * 0.3)
             )
     
-            painter.fillRect(rect_left, self.palette().color(self.foregroundRole()))
-            painter.drawRect(rect_right)
+            corner_radius = icon_rect.width() * 0.1
+
+            painter.setBrush(self.palette().brush(self.foregroundRole()))
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.drawRoundedRect(rect_left, corner_radius, corner_radius)
+            
+            painter.setBrush(Qt.BrushStyle.NoBrush)
+            painter.setPen(self.palette().color(self.foregroundRole()))
+            painter.drawRoundedRect(rect_right, corner_radius, corner_radius)
         elif self.layout_name == "paused":
             rect_left = QRectF(icon_rect)
             rect_right = QRectF(rect_left)
@@ -169,9 +185,12 @@ class LayoutIconWidget(QWidget):
                 icon_rect.topLeft() + vec(icon_rect.width() * 0.55, icon_rect.width() * 0.15)
             )
 
-            color = self.palette().color(self.foregroundRole())
-            painter.fillRect(rect_left, color)
-            painter.fillRect(rect_right, color)
+            painter.setBrush(self.palette().brush(self.foregroundRole()))
+            painter.setPen(Qt.PenStyle.NoPen)
+
+            corner_radius = icon_rect.width() * 0.1
+            painter.drawRoundedRect(rect_left, corner_radius, corner_radius)
+            painter.drawRoundedRect(rect_right, corner_radius, corner_radius)
         else:
             line(c - vec(0, r), c + vec(0, r))
             line(c + vec(0, r / 2), c + vec(r, r / 2))
