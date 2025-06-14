@@ -33,6 +33,7 @@ class Monitor:
     hwnd: int
     workspaces: list[Workspace]
 
+
 @dataclass
 class BindingMode:
     name: str
@@ -43,10 +44,12 @@ class MessageType(StrEnum):
     EVENT_SUBSCRIPTION = auto()
     CLIENT_RESPONSE = auto()
 
+
 class QueryType(StrEnum):
     MONITORS = "query monitors"
     TILING_DIRECTION = "query tiling-direction"
     BINDING_MODES = "query binding-modes"
+
 
 class TilingDirection(StrEnum):
     HORIZONTAL = auto()
@@ -120,7 +123,7 @@ class GlazewmClient(QObject):
         except json.JSONDecodeError:
             logger.warning("Received invalid JSON data.")
             return
-        
+
         if response.get("messageType") == MessageType.EVENT_SUBSCRIPTION:
             self._websocket.sendTextMessage(QueryType.MONITORS)
             self._websocket.sendTextMessage(QueryType.TILING_DIRECTION)

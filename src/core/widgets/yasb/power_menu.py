@@ -18,9 +18,11 @@ class BaseStyledWidget(QWidget):
     def apply_stylesheet(self):
         stylesheet = get_stylesheet()
         self.setStyleSheet(stylesheet)
-            
+
+
 class ClickableLabel(QLabel):
     clicked = pyqtSignal()
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -28,6 +30,7 @@ class ClickableLabel(QLabel):
         if event.button() == Qt.MouseButton.LeftButton:
             self.clicked.emit()
         super().mouseReleaseEvent(event)
+
 
 class AnimatedWidget(QWidget):
     def __init__(self, animation_duration, *args, **kwargs):
@@ -51,25 +54,25 @@ class AnimatedWidget(QWidget):
     def on_fade_out_finished(self):
         self.hide()
 
-class OverlayWidget(BaseStyledWidget,AnimatedWidget):
-    def __init__(self, animation_duration,uptime):
+
+class OverlayWidget(BaseStyledWidget, AnimatedWidget):
+    def __init__(self, animation_duration, uptime):
         super().__init__(animation_duration)
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.Tool)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         if uptime:
             self.boot_time()
-            
- 
+
     def update_geometry(self, screen_geometry):
         self.setGeometry(screen_geometry)
-        
+
     def paintEvent(self, event):
         painter = QtGui.QPainter(self)
         painter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing)
         # Disable clicks behind overlay
         overlay_color = QtGui.QColor(0, 0, 0, 50)
         painter.fillRect(self.rect(), overlay_color)
-        
+
     def boot_time(self):
         self.label_boot = QLabel(self)
         self.label_boot.setProperty("class", "uptime")
@@ -85,7 +88,7 @@ class OverlayWidget(BaseStyledWidget,AnimatedWidget):
         # Start timer for live updates
         self.timer = QtCore.QTimer(self)
         self.timer.timeout.connect(self.update_uptime_display)
-        self.timer.start(500)  
+        self.timer.start(500)
 
     def update_uptime_display(self):
         boot_time = datetime.datetime.fromtimestamp(psutil.boot_time())
@@ -102,10 +105,10 @@ class OverlayWidget(BaseStyledWidget,AnimatedWidget):
             uptime_parts.append(f"{minutes} minute{'s' if minutes > 1 else ''}")
         if seconds > 0:
             uptime_parts.append(f"{seconds} second{'s' if seconds > 1 else ''}")
-        formatted_uptime = ' '.join(uptime_parts)
-        self.label_boot.setText(f'Uptime {formatted_uptime}')
- 
-        
+        formatted_uptime = " ".join(uptime_parts)
+        self.label_boot.setText(f"Uptime {formatted_uptime}")
+
+
 class PowerMenuWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
 
@@ -120,10 +123,10 @@ class PowerMenuWidget(BaseWidget):
         container_padding: dict[str, int],
         buttons: dict[str, list[str]],
         label_shadow: dict = None,
-        container_shadow: dict = None
-        ):
+        container_shadow: dict = None,
+    ):
         super().__init__(0, class_name="power-menu-widget")
-        
+
         self.buttons = buttons
         self.blur = blur
         self.uptime = uptime
@@ -142,9 +145,11 @@ class PowerMenuWidget(BaseWidget):
         # Construct container
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(self._padding['left'],self._padding['top'],self._padding['right'],self._padding['bottom'])
+        self._widget_container_layout.setContentsMargins(
+            self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
+        )
         # Initialize container
-        
+
         self._widget_container: QWidget = QWidget()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
@@ -152,7 +157,6 @@ class PowerMenuWidget(BaseWidget):
         # Add the container to the main widget layout
         self.widget_layout.addWidget(self._widget_container)
         self._widget_container_layout.addWidget(self._button)
-        
 
         self._button.clicked.connect(self.show_main_window)
         self.main_window = None
@@ -162,22 +166,30 @@ class PowerMenuWidget(BaseWidget):
             self.main_window.fade_out()
             self.main_window.overlay.fade_out()
         else:
-            self.main_window = MainWindow(self._button, self.uptime, self.blur, self.blur_background, self.animation_duration, self.button_row, self.buttons)
+            self.main_window = MainWindow(
+                self._button,
+                self.uptime,
+                self.blur,
+                self.blur_background,
+                self.animation_duration,
+                self.button_row,
+                self.buttons,
+            )
             self.main_window.overlay.fade_in()
             self.main_window.overlay.show()
             self.main_window.show()
             self.main_window.activateWindow()
             self.main_window.setFocus()
-            
 
-class MainWindow(BaseStyledWidget,AnimatedWidget):
+
+class MainWindow(BaseStyledWidget, AnimatedWidget):
     def __init__(self, parent_button, uptime, blur, blur_background, animation_duration, button_row, buttons):
         super(MainWindow, self).__init__(animation_duration)
 
-        self.overlay = OverlayWidget(animation_duration,uptime)
+        self.overlay = OverlayWidget(animation_duration, uptime)
         self.parent_button = parent_button
         self.button_row = button_row  # Store button_row as instance attribute
-        
+
         # Add focus policy to allow keyboard focus
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
@@ -189,10 +201,10 @@ class MainWindow(BaseStyledWidget,AnimatedWidget):
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.Tool)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setWindowModality(Qt.WindowModality.ApplicationModal)
- 
+
         self.buttons_info = []
         for button_name, button_info in buttons.items():
-            action_method_name = f'{button_name}_action'
+            action_method_name = f"{button_name}_action"
             if hasattr(self, action_method_name):
                 action_method = getattr(self, action_method_name)
             else:
@@ -205,7 +217,7 @@ class MainWindow(BaseStyledWidget,AnimatedWidget):
         button_layout2 = QHBoxLayout()
         button_layout3 = QHBoxLayout()
         button_layout4 = QHBoxLayout()
-         
+
         self.power_operations = PowerOperations(self, self.overlay)
 
         for i, (icon, label, action, class_name) in enumerate(self.buttons_info):
@@ -218,7 +230,7 @@ class MainWindow(BaseStyledWidget,AnimatedWidget):
 
             # Only add icon label if icon is not empty or None
             if icon:
-                icon_label = QLabel(f'{icon}', self)
+                icon_label = QLabel(f"{icon}", self)
                 icon_label.setProperty("class", "icon")
                 icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
                 icon_label.setTextFormat(Qt.TextFormat.RichText)
@@ -237,10 +249,9 @@ class MainWindow(BaseStyledWidget,AnimatedWidget):
                 button_layout3.addWidget(button)
             else:
                 button_layout4.addWidget(button)
-            
+
             button.clicked.connect(action)
             button.installEventFilter(self)
- 
 
         main_layout.addLayout(button_layout1)
         main_layout.addLayout(button_layout2)
@@ -257,7 +268,7 @@ class MainWindow(BaseStyledWidget,AnimatedWidget):
                 Acrylic=True if is_windows_10() else False,
                 DarkMode=False,
                 RoundCorners=False,
-                BorderColor="None"
+                BorderColor="None",
             )
         if blur_background:
             Blur(
@@ -265,9 +276,9 @@ class MainWindow(BaseStyledWidget,AnimatedWidget):
                 Acrylic=True if is_windows_10() else False,
                 DarkMode=False,
                 RoundCorners=False,
-                BorderColor="None"
+                BorderColor="None",
             )
- 
+
         self.fade_in()
 
     def center_on_screen(self):
@@ -280,7 +291,7 @@ class MainWindow(BaseStyledWidget,AnimatedWidget):
         y = (screen_geometry.height() - window_geometry.height()) // 2 + screen_geometry.y()
         self.move(x, y)
         self.overlay.update_geometry(screen_geometry)  # Update overlay geometry to match screen
- 
+
     def paintEvent(self, event):
         option = QStyleOption()
         option.initFrom(self)
@@ -303,7 +314,7 @@ class MainWindow(BaseStyledWidget,AnimatedWidget):
                 child.style().unpolish(child)
                 child.style().polish(child)
         return super(MainWindow, self).eventFilter(source, event)
-    
+
     def keyPressEvent(self, event):
         if event.key() == Qt.Key.Key_Escape:
             self.cancel_action()
@@ -334,7 +345,7 @@ class MainWindow(BaseStyledWidget,AnimatedWidget):
             return
 
         total_buttons = len(self.buttons_list)
-        
+
         # If no button is currently focused, start with the appropriate first button
         if self.current_focus_index < 0 or self.current_focus_index >= total_buttons:
             if step > 0:
@@ -349,7 +360,7 @@ class MainWindow(BaseStyledWidget,AnimatedWidget):
         else:
             # Normal navigation with existing selection
             current = self.current_focus_index
-            
+
             if step == 1:  # Right
                 new_index = (current + 1) % total_buttons
             elif step == -1:  # Left
@@ -358,20 +369,20 @@ class MainWindow(BaseStyledWidget,AnimatedWidget):
                 # Calculate the current row and column
                 current_row = current // self.button_row
                 current_col = current % self.button_row
-                
+
                 # Determine total rows
                 total_rows = (total_buttons + self.button_row - 1) // self.button_row
-                
+
                 if step == self.button_row:  # Down
                     # Move to next row, same column
                     new_row = (current_row + 1) % total_rows
                 else:  # Up
                     # Move to previous row, same column
                     new_row = (current_row - 1) % total_rows
-                    
+
                 # Calculate new index
                 new_index = new_row * self.button_row + current_col
-                
+
                 # If we've moved to a partial row and the column is beyond its bounds
                 if new_index >= total_buttons:
                     if step == self.button_row:
@@ -385,36 +396,36 @@ class MainWindow(BaseStyledWidget,AnimatedWidget):
 
         new_index = max(0, min(new_index, total_buttons - 1))
         self.set_focused_button(new_index)
-    
+
     def set_focused_button(self, index):
         """Set focus to the button at the given index."""
         if not self.buttons_list:
             return
-            
+
         # Safety check - ensure index is valid
         if index < 0 or index >= len(self.buttons_list):
             return
-        
+
         # Update our internal tracking
         self.current_focus_index = index
-        
+
         # First, remove hover from all buttons
         for i, button in enumerate(self.buttons_list):
             # Parse class components
-            class_parts = button.property('class').split()
+            class_parts = button.property("class").split()
             # Remove any hover class if present
-            if 'hover' in class_parts:
-                class_parts.remove('hover')
+            if "hover" in class_parts:
+                class_parts.remove("hover")
             # Set class without hover
-            clean_class = ' '.join(class_parts)
+            clean_class = " ".join(class_parts)
             button.setProperty("class", clean_class)
             button.style().unpolish(button)
             button.style().polish(button)
-        
+
         # Then apply hover to the selected button
         current_button = self.buttons_list[self.current_focus_index]
-        current_class = current_button.property('class')
-        
+        current_class = current_button.property("class")
+
         # Add hover class
         hover_class = f"{current_class} hover"
         current_button.setProperty("class", hover_class)
@@ -422,15 +433,14 @@ class MainWindow(BaseStyledWidget,AnimatedWidget):
         current_button.style().polish(current_button)
 
         self.setFocus()
-    
+
     def showEvent(self, event):
         """Override show event to set focus."""
         super(MainWindow, self).showEvent(event)
         # Set focus to the window and first button when shown
         self.setFocus()
         self.current_focus_index = -1
- 
-    
+
     def signout_action(self):
         self.power_operations.signout()
 

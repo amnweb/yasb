@@ -10,7 +10,7 @@ from core.widgets.base import BaseWidget
 from settings import DEBUG
 
 # Set OBS WebSocket logger to WARNING
-obs_logger = logging.getLogger('obswebsocket')
+obs_logger = logging.getLogger("obswebsocket")
 
 if DEBUG:
     obs_logger.setLevel(logging.INFO)
@@ -21,7 +21,7 @@ else:
 class ObsWorker(QThread):
     connection_signal = pyqtSignal(bool)
     state_signal = pyqtSignal(dict)
-    
+
     def __init__(self, connection_params, parent=None):
         super().__init__(parent)
         self._connection = connection_params
@@ -32,10 +32,7 @@ class ObsWorker(QThread):
         while self.running:
             try:
                 self.ws = obsws(
-                    self._connection['host'], 
-                    self._connection['port'], 
-                    self._connection['password'], 
-                    authreconnect=2
+                    self._connection["host"], self._connection["port"], self._connection["password"], authreconnect=2
                 )
                 self.ws.connect()
                 self.connection_signal.emit(True)
@@ -61,17 +58,18 @@ class ObsWorker(QThread):
     def on_event(self, event):
         if isinstance(event, events.RecordStateChanged):
             self.state_signal.emit(event.datain)
-            
+
+
 class ObsWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
 
     def __init__(
-            self,
-            icons: dict[str, str],
-            connection: dict[str, str],
-            hide_when_not_recording: bool,
-            blinking_icon: bool,
-            container_padding: dict
+        self,
+        icons: dict[str, str],
+        connection: dict[str, str],
+        hide_when_not_recording: bool,
+        blinking_icon: bool,
+        container_padding: dict,
     ):
         super().__init__(class_name="obs-widget")
         self._icons = icons
@@ -80,27 +78,29 @@ class ObsWidget(BaseWidget):
         self._blinking_icon = blinking_icon
         self._padding = container_padding
         self.is_recording = False
-        
+
         # Construct container
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(self._padding['left'],self._padding['top'],self._padding['right'],self._padding['bottom'])
-        
+        self._widget_container_layout.setContentsMargins(
+            self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
+        )
+
         # Initialize container
         self._widget_container: QWidget = QWidget()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
-        
+
         self.record_button = QLabel()
         self.record_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.record_button.setText(self._icons["stopped"])
         self.record_button.setProperty("class", "stopped")
-        
+
         self.opacity_effect = QGraphicsOpacityEffect()
         self.record_button.setGraphicsEffect(self.opacity_effect)
-        
+
         self._widget_container_layout.addWidget(self.record_button)
-        
+
         self.widget_layout.addWidget(self._widget_container)
         self.hide_widget()
         # Connect button click to slot
@@ -113,19 +113,17 @@ class ObsWidget(BaseWidget):
         if self._blinking_icon:
             self.blink_timer.timeout.connect(self.blink_record_button)
         self.blink_state = False
-        
- 
+
     def update_button_state(self):
         try:
             response = self.ws.call(requests.GetRecordStatus())
-            if 'outputState' in response.datain:
-                self.update_button(response.datain['outputState'])
+            if "outputState" in response.datain:
+                self.update_button(response.datain["outputState"])
             else:
                 self.update_button(False)
         except Exception as e:
             if DEBUG:
                 logging.error("Error while updating OBS button state")
-
 
     def update_button(self, state):
         if state in {"OBS_WEBSOCKET_OUTPUT_STARTED", "OBS_WEBSOCKET_OUTPUT_RESUMED"}:
@@ -133,7 +131,7 @@ class ObsWidget(BaseWidget):
             self.record_button.setText(self._icons["recording"])
             self.record_button.setProperty("class", "recording")
             self.show_widget()
-            QMetaObject.invokeMethod(self.blink_timer, "start", Q_ARG(int, 200)) 
+            QMetaObject.invokeMethod(self.blink_timer, "start", Q_ARG(int, 200))
         elif state == "OBS_WEBSOCKET_OUTPUT_PAUSED":
             self.is_recording = False
             self.record_button.setText(self._icons["paused"])
@@ -145,8 +143,8 @@ class ObsWidget(BaseWidget):
             self.record_button.setText(self._icons["stopped"])
             self.record_button.setProperty("class", "stopped")
             self.hide_widget()
-            QMetaObject.invokeMethod(self.blink_timer, "stop") 
-        
+            QMetaObject.invokeMethod(self.blink_timer, "stop")
+
         self.record_button.style().unpolish(self.record_button)
         self.record_button.style().polish(self.record_button)
         self.record_button.update()
@@ -164,7 +162,6 @@ class ObsWidget(BaseWidget):
         else:
             self.opacity_effect.setOpacity(1.0)
 
- 
     def stop_recording(self):
         if self.worker and self.worker.ws:
             try:
@@ -180,7 +177,7 @@ class ObsWidget(BaseWidget):
         self.worker.connection_signal.connect(self.handle_connection)
         self.worker.state_signal.connect(self.handle_state_change)
         self.worker.start()
- 
+
     def handle_connection(self, connected):
         if connected:
             if DEBUG:
@@ -188,20 +185,18 @@ class ObsWidget(BaseWidget):
             self.update_button_state()
         else:
             self.hide_widget()
-            
+
     def handle_state_change(self, event_data):
-        if 'outputState' in event_data:
-            self.update_button(event_data['outputState'])
+        if "outputState" in event_data:
+            self.update_button(event_data["outputState"])
         else:
             self.update_button(False)
 
-            
     def closeEvent(self, event):
         if self.worker:
             self.worker.stop()
         event.accept()
-        
-         
+
     def on_record_button_click(self, event):
         if self.is_recording:
             self.stop_recording()

@@ -249,9 +249,9 @@ class CliPipeHandler:
         full_command = data.decode("utf-8").strip()
         # Get just the base command for comparison
         command = full_command.split()[0].lower() if full_command else ""
-        
+
         logger.info(f"CLI server received command: {full_command}")
-        
+
         if command in ["stop", "reload", "show-bar", "hide-bar", "toggle-bar"]:
             success = WriteFile(pipe, b"ACK")
             if not success:

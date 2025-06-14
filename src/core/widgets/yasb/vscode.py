@@ -71,8 +71,10 @@ class VSCodeWidget(BaseWidget):
 
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(self._padding['left'],self._padding['top'],self._padding['right'],self._padding['bottom'])
-       
+        self._widget_container_layout.setContentsMargins(
+            self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
+        )
+
         self._widget_container: QWidget = QWidget()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
@@ -85,21 +87,21 @@ class VSCodeWidget(BaseWidget):
         self.register_callback("toggle_label", self._toggle_label)
         self.register_callback("toggle_menu", self._toggle_menu)
 
-        self.callback_left = callbacks['on_left']
-        self.callback_right = callbacks['on_right']
-        self.callback_middle = callbacks['on_middle']
+        self.callback_left = callbacks["on_left"]
+        self.callback_right = callbacks["on_right"]
+        self.callback_middle = callbacks["on_middle"]
 
     def _uri_to_windows_path(self, uri):
         parsed = urllib.parse.urlparse(uri)
         path = urllib.parse.unquote(parsed.path)
-        if path.startswith('/'):
+        if path.startswith("/"):
             path = path[1:]
-        if ':' in path:
-            drive_part, rest = path.split(':', 1)
+        if ":" in path:
+            drive_part, rest = path.split(":", 1)
             drive_part = drive_part.capitalize()
             path = f"{drive_part}:{rest}"
         return path
-    
+
     def _load_recent_workspaces(self) -> List[dict]:
         try:
             conn = sqlite3.connect(self._state_file_path)
@@ -108,15 +110,15 @@ class VSCodeWidget(BaseWidget):
             result = cursor.fetchone()
             result_list = []
             if result:
-                paths_data = json.loads(result[0]).get('entries', [])
+                paths_data = json.loads(result[0]).get("entries", [])
                 for path in paths_data:
                     if isinstance(path, dict):
-                        if path.get('folderUri'):
-                            folder_path = self._uri_to_windows_path(path.get('folderUri'))
+                        if path.get("folderUri"):
+                            folder_path = self._uri_to_windows_path(path.get("folderUri"))
                             if os.path.exists(folder_path):
-                                result_list.append({"folder":  folder_path})
-                        if path.get('fileUri'):
-                            file_path = self._uri_to_windows_path(path.get('fileUri'))
+                                result_list.append({"folder": folder_path})
+                        if path.get("fileUri"):
+                            file_path = self._uri_to_windows_path(path.get("fileUri"))
                             if os.path.exists(file_path):
                                 result_list.append({"file": file_path})
                     else:
@@ -130,13 +132,13 @@ class VSCodeWidget(BaseWidget):
             return []
 
     def _toggle_menu(self):
-        if self._animation['enabled']:
-            AnimationManager.animate(self, self._animation['type'], self._animation['duration'])
+        if self._animation["enabled"]:
+            AnimationManager.animate(self, self._animation["type"], self._animation["duration"])
         self.show_menu()
 
     def _toggle_label(self):
-        if self._animation['enabled']:
-            AnimationManager.animate(self, self._animation['type'], self._animation['duration'])
+        if self._animation["enabled"]:
+            AnimationManager.animate(self, self._animation["type"], self._animation["duration"])
         self._show_alt_label = not self._show_alt_label
         for widget in self._widgets:
             widget.setVisible(not self._show_alt_label)
@@ -147,15 +149,15 @@ class VSCodeWidget(BaseWidget):
     def _update_label(self):
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
         active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
-        label_parts = re.split('(<span.*?>.*?</span>)', active_label_content)
+        label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
         label_parts = [part for part in label_parts if part]
         widget_index = 0
 
         for part in label_parts:
             part = part.strip()
             if part and widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
-                if '<span' in part and '</span>' in part:
-                    icon = re.sub(r'<span.*?>|</span>', '', part).strip()
+                if "<span" in part and "</span>" in part:
+                    icon = re.sub(r"<span.*?>|</span>", "", part).strip()
                     active_widgets[widget_index].setText(icon)
                 else:
                     active_widgets[widget_index].setText(part)
@@ -173,6 +175,7 @@ class VSCodeWidget(BaseWidget):
     def _create_container_mouse_press_event(self, folder):
         def mouse_press_event(event):
             self._handle_mouse_press_event(event, folder)
+
         return mouse_press_event
 
     def show_menu(self):
@@ -182,13 +185,13 @@ class VSCodeWidget(BaseWidget):
 
     def _create_popup_menu(self):
         menu = PopupWidget(
-            self, 
-            self._menu_popup['blur'], 
-            self._menu_popup['round_corners'], 
-            self._menu_popup['round_corners_type'], 
-            self._menu_popup['border_color']
+            self,
+            self._menu_popup["blur"],
+            self._menu_popup["round_corners"],
+            self._menu_popup["round_corners_type"],
+            self._menu_popup["border_color"],
         )
-        menu.setProperty('class', 'vscode-menu')
+        menu.setProperty("class", "vscode-menu")
         return menu
 
     def _create_menu_header(self, layout):
@@ -224,24 +227,24 @@ class VSCodeWidget(BaseWidget):
         container.setProperty("class", "item")
         container.setContentsMargins(0, 0, 8, 0)
         container.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        
+
         container_layout = QHBoxLayout(container)
         container_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
         container_layout.setContentsMargins(0, 0, 0, 0)
         container_layout.setSpacing(0)
-        
-        is_folder = 'folder' in workspace_data
-        
+
+        is_folder = "folder" in workspace_data
+
         if (is_folder and not self._hide_folder_icon) or (not is_folder and not self._hide_file_icon):
             icon_label = QLabel(self._folder_icon if is_folder else self._file_icon)
             icon_label.setProperty("class", "folder-icon" if is_folder else "file-icon")
             container_layout.addWidget(icon_label)
-        
-        path = workspace_data.get('folder' if is_folder else 'file')
+
+        path = workspace_data.get("folder" if is_folder else "file")
         display_path = path.split("/")[-1] if self._truncate_to_root_dir else path
         if len(display_path) > self._max_field_size:
-            display_path = "..." + display_path[-self._max_field_size + 3:]
-        
+            display_path = "..." + display_path[-self._max_field_size + 3 :]
+
         title_label = QLabel(display_path)
         title_label.setProperty("class", "title")
 
@@ -262,22 +265,22 @@ class VSCodeWidget(BaseWidget):
         text_content_layout.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         text_content_layout.setContentsMargins(0, 0, 0, 0)
         text_content_layout.setSpacing(0)
-        
+
         container_layout.addWidget(text_content, 1)
         container.mousePressEvent = self._create_container_mouse_press_event(path)
-        
+
         return container
 
     def _populate_menu_content(self):
         main_layout = QVBoxLayout(self._menu)
         main_layout.setSpacing(0)
         main_layout.setContentsMargins(0, 0, 0, 0)
-        
+
         self._create_menu_header(main_layout)
-        
+
         scroll_area = self._create_scroll_area()
         main_layout.addWidget(scroll_area)
-        
+
         scroll_widget = QWidget()
         scroll_widget.setProperty("class", "contents")
         scroll_layout = QVBoxLayout(scroll_widget)
@@ -285,16 +288,16 @@ class VSCodeWidget(BaseWidget):
         scroll_layout.setContentsMargins(0, 0, 0, 0)
         scroll_layout.setSpacing(0)
         scroll_area.setWidget(scroll_widget)
-        
+
         recent_workspaces = self._load_recent_workspaces()
-        
+
         if not recent_workspaces:
             scroll_layout.addWidget(self._create_no_recents_label())
         else:
-            folders = [ws for ws in recent_workspaces if 'folder' in ws][:self._max_number_of_folders]
-            files = [ws for ws in recent_workspaces if 'file' in ws][:self._max_number_of_files]
+            folders = [ws for ws in recent_workspaces if "folder" in ws][: self._max_number_of_folders]
+            files = [ws for ws in recent_workspaces if "file" in ws][: self._max_number_of_files]
             workspaces_to_show = folders + files
-            
+
             for workspace in workspaces_to_show:
                 item = self._create_workspace_item(workspace)
                 scroll_layout.addWidget(item)
@@ -302,9 +305,9 @@ class VSCodeWidget(BaseWidget):
     def _position_and_show_menu(self):
         self._menu.adjustSize()
         self._menu.setPosition(
-            alignment=self._menu_popup['alignment'],
-            direction=self._menu_popup['direction'],
-            offset_left=self._menu_popup['offset_left'],
-            offset_top=self._menu_popup['offset_top']
+            alignment=self._menu_popup["alignment"],
+            direction=self._menu_popup["direction"],
+            offset_left=self._menu_popup["offset_left"],
+            offset_top=self._menu_popup["offset_top"],
         )
         self._menu.show()

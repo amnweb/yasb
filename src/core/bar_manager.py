@@ -18,7 +18,7 @@ from core.utils.widget_builder import WidgetBuilder
 class BarManager(QObject):
     styles_modified = pyqtSignal()
     config_modified = pyqtSignal()
-    
+
     def __init__(self, config: dict, stylesheet: str):
         super().__init__()
         self.config = config
@@ -26,10 +26,10 @@ class BarManager(QObject):
         self.event_service = EventService()
         self.widget_event_listeners = set()
         self.bars: list[Bar] = list()
-        self.config['bars'] = {n: bar for n, bar in self.config['bars'].items() if bar['enabled']}
+        self.config["bars"] = {n: bar for n, bar in self.config["bars"].items() if bar["enabled"]}
         self._threads = {}
         self._active_listeners = {}
-        self._widget_builder = WidgetBuilder(self.config['widgets'])
+        self._widget_builder = WidgetBuilder(self.config["widgets"])
         self._prev_listeners = set()
 
         self.styles_modified.connect(self.on_styles_modified)
@@ -53,7 +53,7 @@ class BarManager(QObject):
             logging.error(f"Error loading config: {e}")
             return
         if config and (config != self.config):
-            if any(config[key] != self.config[key] for key in ['bars', 'widgets', 'komorebi', 'debug', 'env_file']):
+            if any(config[key] != self.config[key] for key in ["bars", "widgets", "komorebi", "debug", "env_file"]):
                 self.config = config
                 reload_application("Reloading Application because of config change.")
             else:
@@ -81,31 +81,31 @@ class BarManager(QObject):
                 self._threads[listener].wait(500)
         self._threads.clear()
         self.widget_event_listeners.clear()
- 
+
     def initialize_bars(self, init=False) -> None:
-        self._widget_builder = WidgetBuilder(self.config['widgets'])
+        self._widget_builder = WidgetBuilder(self.config["widgets"])
         primary_screen = QApplication.primaryScreen()
         primary_screen_name = primary_screen.name() if primary_screen else None
         available_screen_names = [screen.name() for screen in QApplication.screens()]
- 
+
         assigned_screens = set()
-        for bar_config in self.config['bars'].values():
-            if bar_config['screens'] != ['*']:
-                for screen in bar_config['screens']:
+        for bar_config in self.config["bars"].values():
+            if bar_config["screens"] != ["*"]:
+                for screen in bar_config["screens"]:
                     resolved_name = primary_screen_name if screen == "primary" else screen
                     if resolved_name not in available_screen_names:
                         logging.warning(f"Screen '{resolved_name}' from config not found among connected screens.")
                         continue
                     assigned_screens.add(resolved_name)
 
-        for bar_name, bar_config in self.config['bars'].items():
-            if bar_config['screens'] == ['*']:
+        for bar_name, bar_config in self.config["bars"].items():
+            if bar_config["screens"] == ["*"]:
                 for screen in QApplication.screens():
                     if screen.name() in assigned_screens:
                         continue
                     self.create_bar(bar_config, bar_name, screen, init)
             else:
-                for screen_name in bar_config['screens']:
+                for screen_name in bar_config["screens"]:
                     resolved_name = primary_screen_name if screen_name == "primary" else screen_name
                     if resolved_name not in available_screen_names:
                         logging.warning(f"Screen '{resolved_name}' from config not found among connected screens.")
@@ -118,22 +118,22 @@ class BarManager(QObject):
         self._widget_builder.raise_alerts_if_errors_present()
 
     def create_bar(self, config: dict, name: str, screen: QScreen, init=False) -> None:
-        screen_name = screen.name().replace('\\', '').replace('.', '')
+        screen_name = screen.name().replace("\\", "").replace(".", "")
         bar_id = f"{name}_{screen_name}_{str(uuid.uuid4())[:8]}"
         bar_config = deepcopy(config)
-        bar_widgets, widget_event_listeners = self._widget_builder.build_widgets(bar_config.get('widgets', {}))
+        bar_widgets, widget_event_listeners = self._widget_builder.build_widgets(bar_config.get("widgets", {}))
         bar_options = {
             **bar_config,
-            'bar_id': bar_id,
-            'bar_name': name,
-            'bar_screen': screen,
-            'stylesheet': self.stylesheet,
-            'widgets': bar_widgets,
-            'init': init
+            "bar_id": bar_id,
+            "bar_name": name,
+            "bar_screen": screen,
+            "stylesheet": self.stylesheet,
+            "widgets": bar_widgets,
+            "init": init,
         }
 
-        del bar_options['enabled']
-        del bar_options['screens']
+        del bar_options["enabled"]
+        del bar_options["screens"]
 
         self.widget_event_listeners = self.widget_event_listeners.union(widget_event_listeners)
         self.bars.append(Bar(**bar_options))
