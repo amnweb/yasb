@@ -7,9 +7,8 @@ from PyQt6.QtCore import (
     Qt,
     pyqtSlot,  # type: ignore
 )
-from PyQt6.QtGui import QCursor, QShowEvent
+from PyQt6.QtGui import QCursor, QShowEvent, QWheelEvent
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QWidget
-from PyQt6.QtGui import QWheelEvent
 
 from core.utils.glazewm.client import GlazewmClient, Monitor
 from core.utils.utilities import add_shadow

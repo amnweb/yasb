@@ -1,8 +1,9 @@
-import subprocess
-import logging
 import json
+import logging
+import subprocess
 from contextlib import suppress
 from typing import Optional
+
 
 def add_index(dictionary: dict, dictionary_index: int) -> dict:
     dictionary['index'] = dictionary_index

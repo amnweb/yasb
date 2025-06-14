@@ -1,18 +1,21 @@
 """
 This is very experimental and may not work as expected. It uses ctypes to interact with the Windows Bluetooth API. We need to test this on more systems to ensure it works as expected.
 """
-import re
 import ctypes
-from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget
-from PyQt6.QtCore import Qt, QThread, pyqtSignal, QTimer
-from ctypes import wintypes
-from core.widgets.base import BaseWidget
-from core.validation.widgets.yasb.bluetooth import VALIDATION_SCHEMA
-import os
-from settings import DEBUG
 import logging
-from core.utils.widgets.animation_manager import AnimationManager
+import os
+import re
+from ctypes import wintypes
+
+from PyQt6.QtCore import Qt, QThread, QTimer, pyqtSignal
+from PyQt6.QtWidgets import QHBoxLayout, QLabel, QWidget
+
 from core.utils.utilities import add_shadow, build_widget_label
+from core.utils.widgets.animation_manager import AnimationManager
+from core.validation.widgets.yasb.bluetooth import VALIDATION_SCHEMA
+from core.widgets.base import BaseWidget
+from settings import DEBUG
+
 
 def get_bluetooth_api():
     """Get Bluetooth API with fallbacks since the DLL may not be in the same location on all systems."""

@@ -1,16 +1,14 @@
 import asyncio
+import contextlib
 import ctypes
 import logging
 import sys
 from sys import argv, exit
-import contextlib
 
 import qasync
 from PyQt6.QtWidgets import QApplication
 
 import settings
-from env_loader import load_env, set_font_engine
-
 from core.bar_manager import BarManager
 from core.config import get_config_and_stylesheet
 from core.event_service import EventService
@@ -18,6 +16,7 @@ from core.log import init_logger
 from core.tray import SystemTrayManager
 from core.utils.controller import start_cli_server
 from core.watcher import create_observer
+from env_loader import load_env, set_font_engine
 
 logging.getLogger('asyncio').setLevel(logging.WARNING)
 

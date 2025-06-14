@@ -1,7 +1,8 @@
 import logging
 import socket
-from PyQt6.QtCore import QObject, QTimer, QThread, pyqtSignal
+
 import psutil
+from PyQt6.QtCore import QObject, QThread, QTimer, pyqtSignal
 
 
 class ConnectionTestWorker(QThread):

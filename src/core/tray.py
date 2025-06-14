@@ -7,16 +7,22 @@ import webbrowser
 from pathlib import Path
 
 from PyQt6.QtCore import QEvent, QSize, Qt
-from PyQt6.QtGui import QIcon, QCursor
+from PyQt6.QtGui import QCursor, QIcon
 from PyQt6.QtWidgets import QMenu, QMessageBox, QSystemTrayIcon
 
 from core.bar_manager import BarManager
 from core.config import get_config
 from core.utils.controller import exit_application, reload_application
-from core.utils.win32.utilities import enable_autostart, disable_autostart, is_autostart_enabled
-from settings import (APP_NAME, APP_NAME_FULL, BUILD_VERSION,
-                     DEFAULT_CONFIG_DIRECTORY, GITHUB_THEME_URL,
-                     GITHUB_URL, SCRIPT_PATH)
+from core.utils.win32.utilities import disable_autostart, enable_autostart, is_autostart_enabled
+from settings import (
+    APP_NAME,
+    APP_NAME_FULL,
+    BUILD_VERSION,
+    DEFAULT_CONFIG_DIRECTORY,
+    GITHUB_THEME_URL,
+    GITHUB_URL,
+    SCRIPT_PATH,
+)
 
 OS_STARTUP_FOLDER = os.path.join(os.environ['APPDATA'], r'Microsoft\Windows\Start Menu\Programs\Startup')
 VBS_PATH = os.path.join(SCRIPT_PATH, 'yasb.vbs')

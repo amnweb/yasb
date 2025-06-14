@@ -1,26 +1,29 @@
-import os
 import ctypes
+import logging
+import os
 import random
 import re
-import logging
 import subprocess
+import threading
+from typing import List
+
 import pythoncom
 import pywintypes
-from core.widgets.base import BaseWidget
-from core.validation.widgets.yasb.wallpapers import VALIDATION_SCHEMA
-from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget, QGraphicsOpacityEffect
+import win32gui
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QCursor
-from typing import List
-import win32gui
+from PyQt6.QtWidgets import QGraphicsOpacityEffect, QHBoxLayout, QLabel, QWidget
 from win32comext.shell import shell, shellcon
-from settings import DEBUG
-import threading
+
 from core.event_service import EventService
-from core.utils.widgets.wallpapers_gallery import ImageGallery
 from core.utils.alert_dialog import raise_info_alert
-from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.utilities import add_shadow
+from core.utils.widgets.animation_manager import AnimationManager
+from core.utils.widgets.wallpapers_gallery import ImageGallery
+from core.validation.widgets.yasb.wallpapers import VALIDATION_SCHEMA
+from core.widgets.base import BaseWidget
+from settings import DEBUG
+
 
 class WallpapersWidget(BaseWidget):
     set_wallpaper_signal = pyqtSignal(str) 

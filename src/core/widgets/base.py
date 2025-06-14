@@ -1,11 +1,14 @@
 import logging
 import re
 import subprocess
-from PyQt6.QtWidgets import QWidget, QHBoxLayout, QFrame
-from PyQt6.QtGui import QMouseEvent
-from PyQt6.QtCore import QTimer, QThread, Qt
 from typing import Union
+
+from PyQt6.QtCore import Qt, QThread, QTimer
+from PyQt6.QtGui import QMouseEvent
+from PyQt6.QtWidgets import QFrame, QHBoxLayout, QWidget
+
 from core.utils.win32.system_function import function_map
+
 
 class BaseWidget(QWidget):
     validation_schema: dict = None

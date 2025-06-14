@@ -4,30 +4,29 @@ import os
 import re
 import winreg
 
-from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget, QVBoxLayout, QFrame
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QCursor
+from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
-from core.widgets.base import BaseWidget
-from core.validation.widgets.yasb.language import VALIDATION_SCHEMA
+from core.utils.utilities import PopupWidget, add_shadow, build_widget_label
 from core.utils.widgets.animation_manager import AnimationManager
-from core.utils.utilities import add_shadow, build_widget_label, PopupWidget
-
+from core.utils.win32.bindings import (
+    kernel32,
+    user32,
+)
 from core.utils.win32.constants import (
     LOCALE_NAME_MAX_LENGTH,
+    LOCALE_SCOUNTRY,
     LOCALE_SISO639LANGNAME,
     LOCALE_SISO639LANGNAME2,
     LOCALE_SISO3166CTRYNAME,
     LOCALE_SLANGUAGE,
-    LOCALE_SCOUNTRY,
     LOCALE_SNAME,
     LOCALE_SNATIVECTRYNAME,
     LOCALE_SNATIVELANGNAME,
 )
-from core.utils.win32.bindings import (
-    user32,
-    kernel32,
-)
+from core.validation.widgets.yasb.language import VALIDATION_SCHEMA
+from core.widgets.base import BaseWidget
 
 
 class LanguageWidget(BaseWidget):

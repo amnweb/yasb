@@ -1,16 +1,18 @@
 # Create a Task Scheduler task to run the status bar on user logon.
 # Command line arguments are used to create, delete, enable, or disable the task.
 # example: python task.py create
-import win32com.client
-import datetime
-import os
-import getpass
-import win32api
-import win32security
-import ctypes
-import sys
-import shutil
 import argparse
+import ctypes
+import datetime
+import getpass
+import os
+import shutil
+import sys
+
+import win32api
+import win32com.client
+import win32security
+
 
 def is_admin():
     try:

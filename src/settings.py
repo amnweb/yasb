@@ -1,5 +1,6 @@
 import os
 import sys
+
 # Application Settings
 APP_NAME = "YASB"
 APP_NAME_FULL = "Yet Another Status Bar"

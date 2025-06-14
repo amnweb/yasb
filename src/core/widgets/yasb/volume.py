@@ -1,23 +1,31 @@
-import re
-import comtypes
-from comtypes import COMMETHOD, GUID
-from comtypes import CLSCTX_ALL, CoInitialize, CoUninitialize, COMObject
-import logging
-import enum
 import ctypes
+import enum
+import logging
+import re
 from ctypes import HRESULT, POINTER
 from ctypes import c_int as enum
 from ctypes.wintypes import BOOL, INT, LPCWSTR, WORD
-from core.widgets.base import BaseWidget
-from core.validation.widgets.yasb.volume import VALIDATION_SCHEMA
-from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget, QVBoxLayout, QSlider, QPushButton
+
+import comtypes
+from comtypes import CLSCTX_ALL, COMMETHOD, GUID, CoInitialize, COMObject, CoUninitialize
+from pycaw.callbacks import MMNotificationClient
+from pycaw.pycaw import (
+    AudioUtilities,
+    EDataFlow,
+    IAudioEndpointVolume,
+    IAudioEndpointVolumeCallback,
+    IMMDeviceEnumerator,
+)
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QWheelEvent
-from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume, IAudioEndpointVolumeCallback, EDataFlow, IMMDeviceEnumerator
-from pycaw.callbacks import MMNotificationClient
-from core.utils.win32.system_function import KEYEVENTF_KEYUP, VK_VOLUME_UP, VK_VOLUME_DOWN
-from core.utils.widgets.animation_manager import AnimationManager
+from PyQt6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QSlider, QVBoxLayout, QWidget
+
 from core.utils.utilities import PopupWidget, add_shadow, build_widget_label
+from core.utils.widgets.animation_manager import AnimationManager
+from core.utils.win32.system_function import KEYEVENTF_KEYUP, VK_VOLUME_DOWN, VK_VOLUME_UP
+from core.validation.widgets.yasb.volume import VALIDATION_SCHEMA
+from core.widgets.base import BaseWidget
+
 # Disable comtypes logging
 logging.getLogger('comtypes').setLevel(logging.CRITICAL)
 

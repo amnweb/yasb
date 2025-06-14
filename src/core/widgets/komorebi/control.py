@@ -1,16 +1,18 @@
-import re
 import logging
+import re
 import subprocess
 from typing import Optional
-from core.widgets.base import BaseWidget
-from core.validation.widgets.komorebi.control import VALIDATION_SCHEMA
+
+from PyQt6.QtCore import QEvent, Qt, QThread, pyqtSignal
+from PyQt6.QtWidgets import QHBoxLayout, QLabel, QSizePolicy, QVBoxLayout, QWidget
+
+from core.event_enums import KomorebiEvent
+from core.event_service import EventService
+from core.utils.komorebi.client import KomorebiClient
 from core.utils.utilities import PopupWidget, add_shadow, build_widget_label
 from core.utils.widgets.animation_manager import AnimationManager
-from core.event_service import EventService
-from core.event_enums import KomorebiEvent
-from core.utils.komorebi.client import KomorebiClient
-from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget, QVBoxLayout, QSizePolicy
-from PyQt6.QtCore import Qt, pyqtSignal, QThread, QEvent
+from core.validation.widgets.komorebi.control import VALIDATION_SCHEMA
+from core.widgets.base import BaseWidget
 
 try:
     from core.utils.komorebi.event_listener import KomorebiEventListener

@@ -1,22 +1,23 @@
+import asyncio
+import io
 import logging
-from settings import DEBUG 
+import threading
 from typing import Any, Callable
 
-import asyncio
-
-import threading
-from winrt.windows.storage.streams import Buffer, InputStreamOptions, IRandomAccessStreamReference
 from PIL import Image, ImageFile
-import io
+from PyQt6.QtCore import QDateTime, QTimer
+from winrt.windows.media.control import GlobalSystemMediaTransportControlsSession as Session
+from winrt.windows.media.control import GlobalSystemMediaTransportControlsSessionManager as SessionManager
+from winrt.windows.media.control import (
+    MediaPropertiesChangedEventArgs,
+    PlaybackInfoChangedEventArgs,
+    SessionsChangedEventArgs,
+    TimelinePropertiesChangedEventArgs,
+)
+from winrt.windows.storage.streams import Buffer, InputStreamOptions, IRandomAccessStreamReference
 
 from core.utils.utilities import Singleton
-
-from winrt.windows.media.control import (GlobalSystemMediaTransportControlsSessionManager as SessionManager,
-                                          GlobalSystemMediaTransportControlsSession as Session,
-                                          SessionsChangedEventArgs, MediaPropertiesChangedEventArgs,
-                                          TimelinePropertiesChangedEventArgs, PlaybackInfoChangedEventArgs)
-
-from PyQt6.QtCore import QTimer, QDateTime
+from settings import DEBUG
 
 VK_MEDIA_PLAY_PAUSE = 0xB3
 VK_MEDIA_PREV_TRACK = 0xB1

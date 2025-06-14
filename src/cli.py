@@ -16,11 +16,11 @@ import getpass
 import json
 import os
 import subprocess
-import winreg
 import sys
 import tempfile
 import textwrap
 import time
+import winreg
 from ctypes import GetLastError
 
 from packaging.version import Version
@@ -37,7 +37,7 @@ from core.utils.win32.bindings import (
     WriteFile,
 )
 from core.utils.win32.constants import INVALID_HANDLE_VALUE
-from settings import BUILD_VERSION, CLI_VERSION, RELEASE_CHANNEL, APP_NAME
+from settings import APP_NAME, BUILD_VERSION, CLI_VERSION, RELEASE_CHANNEL
 
 BUFSIZE = 65536
 YASB_VERSION = BUILD_VERSION

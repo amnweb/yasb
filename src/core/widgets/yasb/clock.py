@@ -1,15 +1,18 @@
-import re
-import pytz
-from core.widgets.base import BaseWidget
-from core.validation.widgets.yasb.clock import VALIDATION_SCHEMA
-from PyQt6.QtWidgets import QLabel, QHBoxLayout, QVBoxLayout, QWidget, QCalendarWidget, QSizePolicy, QTableView
-from PyQt6.QtCore import Qt, QDate, QLocale
-from datetime import datetime
-from tzlocal import get_localzone_name
-from itertools import cycle
-from core.utils.widgets.animation_manager import AnimationManager
 import locale
+import re
+from datetime import datetime
+from itertools import cycle
+
+import pytz
+from PyQt6.QtCore import QDate, QLocale, Qt
+from PyQt6.QtWidgets import QCalendarWidget, QHBoxLayout, QLabel, QSizePolicy, QTableView, QVBoxLayout, QWidget
+from tzlocal import get_localzone_name
+
 from core.utils.utilities import PopupWidget, add_shadow, build_widget_label
+from core.utils.widgets.animation_manager import AnimationManager
+from core.validation.widgets.yasb.clock import VALIDATION_SCHEMA
+from core.widgets.base import BaseWidget
+
 
 class CustomCalendar(QCalendarWidget):
     def __init__(self, parent=None, timezone=None):

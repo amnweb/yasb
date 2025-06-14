@@ -1,6 +1,7 @@
 import ctypes
 import logging
 from ctypes.wintypes import HWND
+
 user32 = ctypes.windll.user32
 dwm = ctypes.windll.dwmapi
 

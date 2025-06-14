@@ -1,12 +1,15 @@
 import logging
 import os
-from pathlib import Path
 import re
+from pathlib import Path
 from typing import Dict, Set
-from PyQt6.QtWidgets import QMessageBox, QCheckBox
+
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFontDatabase, QIcon
-from settings import SCRIPT_PATH, DEBUG
+from PyQt6.QtWidgets import QCheckBox, QMessageBox
+
+from settings import DEBUG, SCRIPT_PATH
+
 
 class CSSProcessor:
     """

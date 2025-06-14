@@ -3,14 +3,29 @@ import re
 import shutil
 import subprocess
 import sys
-from typing import Dict
 import urllib.request
-from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
-                             QLabel, QScrollArea, QFrame, QHBoxLayout, QPushButton, QMessageBox, QDialog)
-from PyQt6.QtGui import QPixmap, QFont, QDesktopServices, QIcon, QFontDatabase
-from PyQt6.QtCore import Qt, QThread, pyqtSignal, QUrl, QTimer, QPropertyAnimation
-from PyQt6.QtWidgets import QGraphicsOpacityEffect, QSizePolicy
+from typing import Dict
+
+from PyQt6.QtCore import QPropertyAnimation, Qt, QThread, QTimer, QUrl, pyqtSignal
+from PyQt6.QtGui import QDesktopServices, QFont, QFontDatabase, QIcon, QPixmap
+from PyQt6.QtWidgets import (
+    QApplication,
+    QDialog,
+    QFrame,
+    QGraphicsOpacityEffect,
+    QHBoxLayout,
+    QLabel,
+    QMainWindow,
+    QMessageBox,
+    QPushButton,
+    QScrollArea,
+    QSizePolicy,
+    QVBoxLayout,
+    QWidget,
+)
+
 from settings import SCRIPT_PATH
+
 
 class ImageLoader(QThread):
     finished = pyqtSignal(str, bytes)

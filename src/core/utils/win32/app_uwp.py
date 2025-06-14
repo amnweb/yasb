@@ -1,7 +1,6 @@
 import ctypes
 import ctypes.wintypes
 
-
 ERROR_SUCCESS = 0x0
 ERROR_INSUFFICIENT_BUFFER = 0x7A
 APPMODEL_ERROR_NO_PACKAGE = 15700

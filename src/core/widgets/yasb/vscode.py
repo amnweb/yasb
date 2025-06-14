@@ -1,22 +1,22 @@
 import datetime
 import json
 import logging
+import os
+import re
 import sqlite3
 import subprocess
-from typing import Any, List
-import re
-import os
-
 import urllib.parse
+from typing import Any, List
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QHBoxLayout, QLabel, QScrollArea, QVBoxLayout, QWidget
 from PyQt6.QtGui import QCursor
+from PyQt6.QtWidgets import QHBoxLayout, QLabel, QScrollArea, QVBoxLayout, QWidget
 
+from core.utils.utilities import PopupWidget, add_shadow, build_widget_label
 from core.utils.widgets.animation_manager import AnimationManager
-from core.utils.utilities import add_shadow, build_widget_label, PopupWidget
 from core.validation.widgets.yasb.vscode import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
+
 
 class VSCodeWidget(BaseWidget):
     validation_schema: dict[str, Any] = VALIDATION_SCHEMA

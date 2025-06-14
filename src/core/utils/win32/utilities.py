@@ -1,13 +1,13 @@
-import winreg
-import psutil
 import ctypes
 import ctypes.wintypes
 import logging
-from win32process import GetWindowThreadProcessId
-from win32gui import GetWindowText, GetClassName, GetWindowRect, GetWindowPlacement
-from win32api import MonitorFromWindow, GetMonitorInfo
+import winreg
 from contextlib import suppress
 
+import psutil
+from win32api import GetMonitorInfo, MonitorFromWindow
+from win32gui import GetClassName, GetWindowPlacement, GetWindowRect, GetWindowText
+from win32process import GetWindowThreadProcessId
 
 SW_MAXIMIZE = 3
 DWMWA_EXTENDED_FRAME_BOUNDS = 9

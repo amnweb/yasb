@@ -1,12 +1,14 @@
 import logging
-from PyQt6.QtWidgets import QPushButton, QWidget, QHBoxLayout, QVBoxLayout, QInputDialog, QFileDialog, QLabel
-from PyQt6.QtCore import pyqtSignal, Qt, QTimer
+
+from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QCursor
-from core.widgets.base import BaseWidget
-from core.validation.widgets.yasb.windows_desktops import VALIDATION_SCHEMA
-from core.event_service import EventService
+from PyQt6.QtWidgets import QFileDialog, QHBoxLayout, QInputDialog, QLabel, QPushButton, QVBoxLayout, QWidget
 from pyvda import VirtualDesktop, get_virtual_desktops, set_wallpaper_for_all_desktops
-from core.utils.utilities import PopupWidget, is_windows_10, add_shadow
+
+from core.event_service import EventService
+from core.utils.utilities import PopupWidget, add_shadow, is_windows_10
+from core.validation.widgets.yasb.windows_desktops import VALIDATION_SCHEMA
+from core.widgets.base import BaseWidget
 
 
 class WorkspaceButton(QPushButton):

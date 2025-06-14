@@ -1,11 +1,13 @@
 import hashlib
 import logging
 from os.path import basename
-from core.config import get_config_dir
-from settings import DEFAULT_STYLES_FILENAME, DEFAULT_CONFIG_FILENAME
+
+from watchdog.events import FileModifiedEvent, PatternMatchingEventHandler
 from watchdog.observers import Observer
-from watchdog.events import PatternMatchingEventHandler, FileModifiedEvent
+
 from core.bar_manager import BarManager
+from core.config import get_config_dir
+from settings import DEFAULT_CONFIG_FILENAME, DEFAULT_STYLES_FILENAME
 
 
 class FileModifiedEventHandler(PatternMatchingEventHandler):

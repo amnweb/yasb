@@ -1,14 +1,17 @@
-import os
-from core.widgets.base import BaseWidget
-from core.validation.widgets.yasb.applications import VALIDATION_SCHEMA
-from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget
-from PyQt6.QtGui import QCursor, QPixmap
-from PyQt6.QtCore import Qt, QTimer
-import subprocess
 import logging
-from core.utils.win32.system_function import function_map
-from core.utils.widgets.animation_manager import AnimationManager
+import os
+import subprocess
+
+from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtGui import QCursor, QPixmap
+from PyQt6.QtWidgets import QHBoxLayout, QLabel, QWidget
+
 from core.utils.utilities import add_shadow
+from core.utils.widgets.animation_manager import AnimationManager
+from core.utils.win32.system_function import function_map
+from core.validation.widgets.yasb.applications import VALIDATION_SCHEMA
+from core.widgets.base import BaseWidget
+
 
 class ApplicationsWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA

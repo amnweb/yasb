@@ -1,12 +1,13 @@
 import re
 
-from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget
+from PyQt6.QtWidgets import QHBoxLayout, QLabel, QWidget
 
-from core.widgets.base import BaseWidget
-from core.validation.widgets.yasb.recycle_bin import VALIDATION_SCHEMA
-from core.utils.widgets.recycle_bin_monitor import RecycleBinMonitor
-from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.utilities import add_shadow, build_widget_label
+from core.utils.widgets.animation_manager import AnimationManager
+from core.utils.widgets.recycle_bin_monitor import RecycleBinMonitor
+from core.validation.widgets.yasb.recycle_bin import VALIDATION_SCHEMA
+from core.widgets.base import BaseWidget
+
 
 class RecycleBinWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA

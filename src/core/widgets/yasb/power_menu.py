@@ -1,15 +1,18 @@
-from PyQt6.QtWidgets import QApplication, QWidget, QPushButton, QVBoxLayout, QHBoxLayout, QLabel, QStyleOption, QStyle
-from PyQt6 import QtCore, QtGui
-from PyQt6.QtGui import QCursor
-from PyQt6.QtCore import Qt, QPropertyAnimation, pyqtSignal
-from core.utils.win32.blurWindow import Blur
-from core.widgets.base import BaseWidget
-from core.validation.widgets.yasb.power_menu import VALIDATION_SCHEMA
-from core.config import get_stylesheet
-from core.utils.widgets.power import PowerOperations
 import datetime
+
 import psutil
-from core.utils.utilities import is_windows_10, add_shadow
+from PyQt6 import QtCore, QtGui
+from PyQt6.QtCore import QPropertyAnimation, Qt, pyqtSignal
+from PyQt6.QtGui import QCursor
+from PyQt6.QtWidgets import QApplication, QHBoxLayout, QLabel, QPushButton, QStyle, QStyleOption, QVBoxLayout, QWidget
+
+from core.config import get_stylesheet
+from core.utils.utilities import add_shadow, is_windows_10
+from core.utils.widgets.power import PowerOperations
+from core.utils.win32.blurWindow import Blur
+from core.validation.widgets.yasb.power_menu import VALIDATION_SCHEMA
+from core.widgets.base import BaseWidget
+
 
 class BaseStyledWidget(QWidget):
     def apply_stylesheet(self):

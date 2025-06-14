@@ -1,8 +1,10 @@
+import ctypes
 import subprocess
+
 import win32api
 import win32security
 from PyQt6.QtCore import QCoreApplication
-import ctypes
+
 
 class PowerOperations:
     def __init__(self, main_window=None, overlay=None):

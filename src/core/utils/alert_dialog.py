@@ -1,8 +1,10 @@
 import sys
 import traceback
-from settings import APP_NAME
-from PyQt6.QtWidgets import QMessageBox, QTextEdit, QSizePolicy
+
 from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import QMessageBox, QSizePolicy, QTextEdit
+
+from settings import APP_NAME
 
 
 class AlertDialog(QMessageBox):

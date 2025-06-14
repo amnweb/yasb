@@ -4,19 +4,19 @@ from typing import Any, Optional
 
 from PIL import Image, ImageChops
 from PIL.ImageDraw import ImageDraw
-from PIL.ImageQt import QPixmap
+from PIL.ImageQt import ImageQt, QPixmap
 from PyQt6 import QtCore
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QWheelEvent
-from PIL.ImageQt import ImageQt
+from PyQt6.QtWidgets import QGridLayout, QHBoxLayout, QLabel, QSlider, QVBoxLayout, QWidget
 from winrt.windows.media.control import GlobalSystemMediaTransportControlsSessionPlaybackInfo
 
-from core.utils.win32.media import WindowsMedia
-from core.widgets.base import BaseWidget
-from core.validation.widgets.yasb.media import VALIDATION_SCHEMA
-from PyQt6.QtWidgets import QLabel, QGridLayout, QHBoxLayout, QVBoxLayout, QWidget, QSlider
-from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.utilities import PopupWidget, add_shadow
+from core.utils.widgets.animation_manager import AnimationManager
+from core.utils.win32.media import WindowsMedia
+from core.validation.widgets.yasb.media import VALIDATION_SCHEMA
+from core.widgets.base import BaseWidget
+
 
 class MediaWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA

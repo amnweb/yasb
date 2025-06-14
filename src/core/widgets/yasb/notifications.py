@@ -1,13 +1,16 @@
 import logging
 import re
-from PyQt6.QtWidgets import QWidget, QLabel, QHBoxLayout
+
 from PyQt6.QtCore import pyqtSignal
-from core.widgets.base import BaseWidget
+from PyQt6.QtWidgets import QHBoxLayout, QLabel, QWidget
+
 from core.event_service import EventService
-from core.validation.widgets.yasb.notifications import VALIDATION_SCHEMA
+from core.utils.utilities import add_shadow, build_widget_label, is_windows_10
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.win32.system_function import notification_center, quick_settings
-from core.utils.utilities import is_windows_10, add_shadow, build_widget_label
+from core.validation.widgets.yasb.notifications import VALIDATION_SCHEMA
+from core.widgets.base import BaseWidget
+
 try:
     from core.utils.widgets.windows_notification import WindowsNotificationEventListener
 except ImportError:

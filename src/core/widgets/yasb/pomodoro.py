@@ -1,15 +1,18 @@
-import os
-import time
 import logging
+import os
 import re
-from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget, QVBoxLayout, QPushButton
-from PyQt6.QtCore import Qt, QTimer, QRectF, pyqtProperty, QPropertyAnimation
-from PyQt6.QtGui import QCursor, QPainter, QPen, QColor
+import time
+
+from PyQt6.QtCore import QPropertyAnimation, QRectF, Qt, QTimer, pyqtProperty
+from PyQt6.QtGui import QColor, QCursor, QPainter, QPen
+from PyQt6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
+
 from core.utils.utilities import PopupWidget, ToastNotifier, add_shadow, build_widget_label
-from core.widgets.base import BaseWidget
-from core.validation.widgets.yasb.pomodoro import VALIDATION_SCHEMA
 from core.utils.widgets.animation_manager import AnimationManager
+from core.validation.widgets.yasb.pomodoro import VALIDATION_SCHEMA
+from core.widgets.base import BaseWidget
 from settings import SCRIPT_PATH
+
 
 class PomodoroWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA

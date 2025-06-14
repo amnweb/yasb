@@ -1,4 +1,5 @@
 import ctypes.wintypes
+
 from core.event_enums import Event
 
 user32 = ctypes.windll.user32

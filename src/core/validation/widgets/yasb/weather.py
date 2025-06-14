@@ -1,6 +1,5 @@
 from typing import Any
 
-
 DEFAULTS = {
     'label': '0',
     'label_alt': '0',

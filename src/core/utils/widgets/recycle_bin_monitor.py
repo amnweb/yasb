@@ -1,13 +1,13 @@
-import os
-import time
+import ctypes
 import logging
+import os
 import string
 import threading
-
-import ctypes
+import time
 from ctypes import wintypes
 
-from PyQt6.QtCore import QObject, pyqtSignal, QThread
+from PyQt6.QtCore import QObject, QThread, pyqtSignal
+
 from settings import DEBUG
 
 # Windows API constants

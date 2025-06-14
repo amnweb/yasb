@@ -1,6 +1,9 @@
-from PyQt6.QtWidgets import QGraphicsOpacityEffect
-from PyQt6.QtCore import QTimer
 import logging
+
+from PyQt6.QtCore import QTimer
+from PyQt6.QtWidgets import QGraphicsOpacityEffect
+
+
 class AnimationManager:
     _instances = {}
     ALLOWED_ANIMATIONS = ['fadeInOut']

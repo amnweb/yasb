@@ -1,11 +1,14 @@
 import re
-import psutil
 from collections import deque
-from core.widgets.base import BaseWidget
-from core.validation.widgets.yasb.cpu import VALIDATION_SCHEMA
-from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget
-from core.utils.widgets.animation_manager import AnimationManager
+
+import psutil
+from PyQt6.QtWidgets import QHBoxLayout, QLabel, QWidget
+
 from core.utils.utilities import add_shadow, build_widget_label
+from core.utils.widgets.animation_manager import AnimationManager
+from core.validation.widgets.yasb.cpu import VALIDATION_SCHEMA
+from core.widgets.base import BaseWidget
+
 
 class CpuWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA

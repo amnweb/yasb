@@ -1,17 +1,19 @@
-import re
 import ctypes
 import logging
-from settings import DEBUG
-from core.widgets.base import BaseWidget
-from core.validation.widgets.yasb.brightness import VALIDATION_SCHEMA
-from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget, QSlider, QVBoxLayout
+import re
+from datetime import datetime
+
+import screen_brightness_control as sbc
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QWheelEvent
-from core.utils.win32.utilities import get_monitor_info
-import screen_brightness_control as sbc
-from datetime import datetime
-from core.utils.widgets.animation_manager import AnimationManager
+from PyQt6.QtWidgets import QHBoxLayout, QLabel, QSlider, QVBoxLayout, QWidget
+
 from core.utils.utilities import PopupWidget, add_shadow, build_widget_label
+from core.utils.widgets.animation_manager import AnimationManager
+from core.utils.win32.utilities import get_monitor_info
+from core.validation.widgets.yasb.brightness import VALIDATION_SCHEMA
+from core.widgets.base import BaseWidget
+from settings import DEBUG
 
 if DEBUG:
     logging.getLogger("screen_brightness_control").setLevel(logging.INFO)

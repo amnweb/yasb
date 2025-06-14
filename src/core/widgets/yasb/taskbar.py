@@ -1,26 +1,25 @@
+import atexit
 import logging
 import os
 import time
-import atexit
 from typing import Optional
 
-from PIL import Image
-import win32gui
 import win32con
+import win32gui
+from PIL import Image
+from PyQt6.QtCore import Qt, QTimer, pyqtSignal
+from PyQt6.QtGui import QCursor, QImage, QPixmap
+from PyQt6.QtWidgets import QApplication, QGraphicsOpacityEffect, QHBoxLayout, QLabel, QWidget
 
-from PyQt6.QtCore import Qt, pyqtSignal, QTimer
-from PyQt6.QtGui import QPixmap, QImage, QCursor
-from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget, QGraphicsOpacityEffect, QApplication
-
-from settings import DEBUG
-from core.widgets.base import BaseWidget
-from core.utils.win32.windows import WinEvent
 from core.event_service import EventService
-from core.validation.widgets.yasb.taskbar import VALIDATION_SCHEMA
-from core.utils.win32.utilities import get_hwnd_info
-from core.utils.win32.app_icons import get_window_icon
-from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.utilities import add_shadow
+from core.utils.widgets.animation_manager import AnimationManager
+from core.utils.win32.app_icons import get_window_icon
+from core.utils.win32.utilities import get_hwnd_info
+from core.utils.win32.windows import WinEvent
+from core.validation.widgets.yasb.taskbar import VALIDATION_SCHEMA
+from core.widgets.base import BaseWidget
+from settings import DEBUG
 
 try:
     from core.utils.win32.event_listener import SystemEventListener

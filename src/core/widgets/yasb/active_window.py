@@ -1,22 +1,24 @@
+import atexit
 import logging
 import os
 import re
 from sys import flags
-from settings import APP_BAR_TITLE, DEBUG
-from core.utils.win32.windows import WinEvent
-from core.widgets.base import BaseWidget
-from core.event_service import EventService
-from PyQt6.QtCore import pyqtSignal, QTimer, Qt, QElapsedTimer
-from PyQt6.QtGui import QPixmap, QImage
-from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget
-from core.validation.widgets.yasb.active_window import VALIDATION_SCHEMA
-from core.utils.win32.utilities import get_hwnd_info
-from PIL import Image
+
 import win32gui
-from core.utils.win32.app_icons import get_window_icon
-from core.utils.widgets.animation_manager import AnimationManager
+from PIL import Image
+from PyQt6.QtCore import QElapsedTimer, Qt, QTimer, pyqtSignal
+from PyQt6.QtGui import QImage, QPixmap
+from PyQt6.QtWidgets import QHBoxLayout, QLabel, QWidget
+
+from core.event_service import EventService
 from core.utils.utilities import add_shadow
-import atexit
+from core.utils.widgets.animation_manager import AnimationManager
+from core.utils.win32.app_icons import get_window_icon
+from core.utils.win32.utilities import get_hwnd_info
+from core.utils.win32.windows import WinEvent
+from core.validation.widgets.yasb.active_window import VALIDATION_SCHEMA
+from core.widgets.base import BaseWidget
+from settings import APP_BAR_TITLE, DEBUG
 
 # Get the current process ID to exclude our own windows
 CURRENT_PROCESS_ID = os.getpid()

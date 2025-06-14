@@ -1,23 +1,31 @@
+import datetime
+import json
 import logging
 import os
 import re
-import json
-import datetime
-from typing import List, Dict
-from PyQt6.QtWidgets import (
-    QWidget, QLabel, QHBoxLayout, QVBoxLayout,
-    QPushButton, QScrollArea, QTextEdit,
-    QSpacerItem, QSizePolicy
-)
+from typing import Dict, List
+
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QCursor
+from PyQt6.QtWidgets import (
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QScrollArea,
+    QSizePolicy,
+    QSpacerItem,
+    QTextEdit,
+    QVBoxLayout,
+    QWidget,
+)
 
-from core.widgets.base import BaseWidget
-from core.utils.utilities import PopupWidget, add_shadow, build_widget_label
-from core.validation.widgets.yasb.notes import VALIDATION_SCHEMA
-from core.utils.widgets.animation_manager import AnimationManager
 from core.config import HOME_CONFIGURATION_DIR
+from core.utils.utilities import PopupWidget, add_shadow, build_widget_label
+from core.utils.widgets.animation_manager import AnimationManager
+from core.validation.widgets.yasb.notes import VALIDATION_SCHEMA
+from core.widgets.base import BaseWidget
 from settings import DEBUG
+
 
 class NotesWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA

@@ -1,17 +1,19 @@
-import re
 import ctypes
 import logging
-from core.widgets.base import BaseWidget
-from core.validation.widgets.yasb.microphone import VALIDATION_SCHEMA
-from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget
+import re
+
+from comtypes import CLSCTX_ALL, CoInitialize, COMObject, CoUninitialize
+from pycaw.callbacks import MMNotificationClient
+from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume, IAudioEndpointVolumeCallback
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtGui import QWheelEvent
-from comtypes import CLSCTX_ALL, CoInitialize, CoUninitialize, COMObject
-from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume, IAudioEndpointVolumeCallback
-from pycaw.callbacks import MMNotificationClient
-from core.utils.win32.system_function import KEYEVENTF_KEYUP
-from core.utils.widgets.animation_manager import AnimationManager
+from PyQt6.QtWidgets import QHBoxLayout, QLabel, QWidget
+
 from core.utils.utilities import add_shadow, build_widget_label
+from core.utils.widgets.animation_manager import AnimationManager
+from core.utils.win32.system_function import KEYEVENTF_KEYUP
+from core.validation.widgets.yasb.microphone import VALIDATION_SCHEMA
+from core.widgets.base import BaseWidget
 
 # Disable comtypes logging
 logging.getLogger('comtypes').setLevel(logging.CRITICAL)

@@ -5,19 +5,13 @@ from ctypes import wintypes
 
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QCursor
-from PyQt6.QtWidgets import (
-    QFrame, QHBoxLayout, QLabel, QPushButton,
-    QVBoxLayout, QWidget
-)
+from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
 
-from core.widgets.base import BaseWidget
-from core.validation.widgets.yasb.power_plan import VALIDATION_SCHEMA
 from core.utils.utilities import PopupWidget, add_shadow, build_widget_label
+from core.utils.win32.bindings import PowerEnumerate, PowerGetActiveScheme, PowerReadFriendlyName, PowerSetActiveScheme
 from core.utils.win32.structs import GUID
-from core.utils.win32.bindings import (
-    PowerEnumerate, PowerReadFriendlyName,
-    PowerGetActiveScheme, PowerSetActiveScheme
-)
+from core.validation.widgets.yasb.power_plan import VALIDATION_SCHEMA
+from core.widgets.base import BaseWidget
 
 
 class PowerPlanWidget(BaseWidget):

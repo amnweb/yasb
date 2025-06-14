@@ -1,9 +1,12 @@
 import asyncio
 import logging
 from enum import IntFlag
+
 import winrt.windows.ui.notifications.management as management
 from PyQt6.QtCore import QThread, pyqtSignal
+
 from core.event_service import EventService
+
 
 class NotificationKinds(IntFlag):
     """

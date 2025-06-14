@@ -2,11 +2,12 @@ import logging
 import os
 import sys
 
-from PyQt6.QtCore import QProcess, QCoreApplication
+from PyQt6.QtCore import QCoreApplication, QProcess
 from PyQt6.QtWidgets import QApplication
 
-from core.utils.cli_server import CliPipeHandler
 from core.event_service import EventService
+from core.utils.cli_server import CliPipeHandler
+
 
 def reload_application(msg="Reloading Application...", forced=False):
     try:

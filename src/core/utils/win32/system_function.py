@@ -1,4 +1,5 @@
 import ctypes
+
 # Constants for key events
 KEYEVENTF_EXTENDEDKEY = 0x1
 KEYEVENTF_KEYUP = 0x2

@@ -1,18 +1,29 @@
+import logging
 import os
 import re
-import logging
-from PyQt6.QtWidgets import (
-    QLabel, QHBoxLayout, QWidget, QApplication, QSizePolicy,
-    QVBoxLayout, QScrollArea, QPushButton, QLineEdit, QDialog
-)
+
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon
+from PyQt6.QtWidgets import (
+    QApplication,
+    QDialog,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QScrollArea,
+    QSizePolicy,
+    QVBoxLayout,
+    QWidget,
+)
+
 from core.utils.alert_dialog import raise_info_alert
-from core.widgets.base import BaseWidget
-from core.validation.widgets.yasb.whkd import VALIDATION_SCHEMA
-from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.utilities import add_shadow, build_widget_label
+from core.utils.widgets.animation_manager import AnimationManager
+from core.validation.widgets.yasb.whkd import VALIDATION_SCHEMA
+from core.widgets.base import BaseWidget
 from settings import SCRIPT_PATH
+
 
 class KeybindsDialog(QDialog):
     def __init__(

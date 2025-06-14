@@ -1,21 +1,22 @@
 import logging
-from PyQt6.QtWidgets import QWidget, QHBoxLayout, QLabel, QFrame
-from PyQt6.QtCore import Qt, pyqtSignal, QTimer
-from PyQt6.QtGui import QCursor, QPixmap, QImage, QMouseEvent
-from typing import Literal
 from contextlib import suppress
-from core.utils.win32.utilities import get_monitor_hwnd
-from core.utils.utilities import add_shadow
-from core.event_service import EventService
-from core.event_enums import KomorebiEvent
-from core.widgets.base import BaseWidget
-from core.utils.komorebi.client import KomorebiClient
-from core.validation.widgets.komorebi.stack import VALIDATION_SCHEMA
-from core.utils.win32.app_icons import get_window_icon
-from core.utils.win32.utilities import get_process_info
-from settings import DEBUG
-from PIL import Image
+from typing import Literal
+
 import win32gui
+from PIL import Image
+from PyQt6.QtCore import Qt, QTimer, pyqtSignal
+from PyQt6.QtGui import QCursor, QImage, QMouseEvent, QPixmap
+from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QWidget
+
+from core.event_enums import KomorebiEvent
+from core.event_service import EventService
+from core.utils.komorebi.client import KomorebiClient
+from core.utils.utilities import add_shadow
+from core.utils.win32.app_icons import get_window_icon
+from core.utils.win32.utilities import get_monitor_hwnd, get_process_info
+from core.validation.widgets.komorebi.stack import VALIDATION_SCHEMA
+from core.widgets.base import BaseWidget
+from settings import DEBUG
 
 try:
     from core.utils.komorebi.event_listener import KomorebiEventListener

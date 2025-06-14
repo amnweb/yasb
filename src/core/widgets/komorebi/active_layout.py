@@ -1,16 +1,18 @@
 import logging
 from collections import deque
-from PyQt6.QtGui import QCursor
-from PyQt6.QtWidgets import QWidget, QLabel, QHBoxLayout, QVBoxLayout, QFrame, QSizePolicy
+
 from PyQt6.QtCore import Qt, pyqtSignal
-from core.utils.win32.utilities import get_monitor_hwnd
-from core.event_service import EventService
+from PyQt6.QtGui import QCursor
+from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QSizePolicy, QVBoxLayout, QWidget
+
 from core.event_enums import KomorebiEvent
-from core.widgets.base import BaseWidget
+from core.event_service import EventService
 from core.utils.komorebi.client import KomorebiClient
-from core.validation.widgets.komorebi.active_layout import VALIDATION_SCHEMA
+from core.utils.utilities import PopupWidget, add_shadow
 from core.utils.widgets.animation_manager import AnimationManager
-from core.utils.utilities import add_shadow, PopupWidget
+from core.utils.win32.utilities import get_monitor_hwnd
+from core.validation.widgets.komorebi.active_layout import VALIDATION_SCHEMA
+from core.widgets.base import BaseWidget
 
 try:
     from core.utils.komorebi.event_listener import KomorebiEventListener

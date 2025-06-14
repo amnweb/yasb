@@ -1,16 +1,6 @@
 """Wrappers for win32 API functions to make them easier to use and have proper types"""
 
-from ctypes import (
-    POINTER,
-    Array,
-    byref,
-    c_int,
-    c_long,
-    c_wchar,
-    create_string_buffer,
-    windll,
-    wintypes
-)
+from ctypes import POINTER, Array, byref, c_int, c_long, c_wchar, create_string_buffer, windll, wintypes
 from ctypes.wintypes import (
     BOOL,
     DWORD,
@@ -31,12 +21,7 @@ from ctypes.wintypes import (
 )
 from typing import TYPE_CHECKING, Any
 
-from core.utils.win32.structs import (
-    BITMAPINFO,
-    HBITMAP,
-    ICONINFO,
-    GUID
-)
+from core.utils.win32.structs import BITMAPINFO, GUID, HBITMAP, ICONINFO
 
 if TYPE_CHECKING:
     # NOTE: this is an internal ctypes type that does not exist during runtime

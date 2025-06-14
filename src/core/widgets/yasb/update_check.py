@@ -3,13 +3,16 @@ import re
 import shutil
 import subprocess
 import threading
-from core.widgets.base import BaseWidget
-from core.validation.widgets.yasb.update_check import VALIDATION_SCHEMA
-from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget
-from PyQt6.QtCore import Qt, QThread, pyqtSignal
+
 import win32com.client
+from PyQt6.QtCore import Qt, QThread, pyqtSignal
+from PyQt6.QtWidgets import QHBoxLayout, QLabel, QWidget
+
 from core.utils.utilities import add_shadow
+from core.validation.widgets.yasb.update_check import VALIDATION_SCHEMA
+from core.widgets.base import BaseWidget
 from settings import DEBUG
+
 
 class UpdateWorker(QThread):
     windows_update_signal = pyqtSignal(dict)

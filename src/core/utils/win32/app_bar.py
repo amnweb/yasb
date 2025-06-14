@@ -1,8 +1,10 @@
 import ctypes
-from ctypes import wintypes, Structure, POINTER, sizeof, windll, c_ulong
-from PyQt6.QtGui import QScreen
-import win32con
 import logging
+from ctypes import POINTER, Structure, c_ulong, sizeof, windll, wintypes
+
+import win32con
+from PyQt6.QtGui import QScreen
+
 import settings
 
 shell32 = windll.shell32

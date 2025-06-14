@@ -1,10 +1,12 @@
-import yaml
 import logging
-from PyQt6.QtWidgets import QWidget
-from PyQt6.QtCore import QObject
-from typing import Optional
-from cerberus import Validator
 from importlib import import_module
+from typing import Optional
+
+import yaml
+from cerberus import Validator
+from PyQt6.QtCore import QObject
+from PyQt6.QtWidgets import QWidget
+
 from core.utils.alert_dialog import raise_info_alert
 from settings import DEFAULT_CONFIG_FILENAME
 

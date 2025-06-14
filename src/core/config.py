@@ -3,18 +3,20 @@ import os
 import re
 import shutil
 import sys
-import settings
-from os import path, makedirs
-from sys import argv, exit
+from os import makedirs, path
 from pathlib import Path
+from sys import argv, exit
 from typing import Union
-from core.validation.config import CONFIG_SCHEMA
-from core.utils.alert_dialog import raise_info_alert
-from cerberus import Validator, schema
-from yaml.parser import ParserError
-from yaml import safe_load, dump
 from xml.dom import SyntaxErr
+
+from cerberus import Validator, schema
+from yaml import dump, safe_load
+from yaml.parser import ParserError
+
+import settings
+from core.utils.alert_dialog import raise_info_alert
 from core.utils.css_processor import CSSProcessor
+from core.validation.config import CONFIG_SCHEMA
 
 SRC_CONFIGURATION_DIR = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.path.dirname(argv[0])
 HOME_CONFIGURATION_DIR = path.join(Path.home(), settings.DEFAULT_CONFIG_DIRECTORY)

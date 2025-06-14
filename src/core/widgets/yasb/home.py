@@ -1,14 +1,16 @@
+import logging
 import os
 import subprocess
-from core.widgets.base import BaseWidget
-from core.validation.widgets.yasb.home import VALIDATION_SCHEMA
-from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget, QVBoxLayout
+
 from PyQt6.QtCore import Qt
-import os
-from core.utils.widgets.power import PowerOperations
+from PyQt6.QtWidgets import QHBoxLayout, QLabel, QVBoxLayout, QWidget
+
 from core.utils.utilities import PopupWidget, add_shadow, build_widget_label
 from core.utils.widgets.animation_manager import AnimationManager
-import logging
+from core.utils.widgets.power import PowerOperations
+from core.validation.widgets.yasb.home import VALIDATION_SCHEMA
+from core.widgets.base import BaseWidget
+
 
 class HomeWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA

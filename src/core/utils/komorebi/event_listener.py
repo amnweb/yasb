@@ -1,15 +1,17 @@
+import json
 import logging
 import time
-import json
 import uuid
-import win32pipe
-import win32file
+
 import pywintypes
+import win32file
+import win32pipe
 from PyQt6.QtCore import QThread
-from settings import DEBUG
+
 from core.event_enums import KomorebiEvent
 from core.event_service import EventService
 from core.utils.komorebi.client import KomorebiClient
+from settings import DEBUG
 
 KOMOREBI_PIPE_BUFF_SIZE = 64 * 1024
 KOMOREBI_PIPE_NAME = "yasb"

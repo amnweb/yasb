@@ -1,18 +1,14 @@
-from functools import lru_cache
 import platform
 import re
+from functools import lru_cache
 from typing import Any, cast
-
-from winrt.windows.data.xml.dom import XmlDocument
-from winrt.windows.ui.notifications import (
-    ToastNotification,
-    ToastNotificationManager
-)
 
 import psutil
 from PyQt6.QtCore import QEvent, QPoint, Qt
 from PyQt6.QtGui import QColor, QScreen
 from PyQt6.QtWidgets import QApplication, QFrame, QGraphicsDropShadowEffect, QLabel, QWidget
+from winrt.windows.data.xml.dom import XmlDocument
+from winrt.windows.ui.notifications import ToastNotification, ToastNotificationManager
 
 from core.utils.win32.blurWindow import Blur
 
@@ -101,10 +97,11 @@ def build_widget_label(self, content: str, content_alt: str = None, content_shad
 @lru_cache(maxsize=1)
 def get_app_identifier():
     """Returns AppUserModelID regardless of installation location"""
-    import winreg
-    import sys
     import os
+    import sys
+    import winreg
     from pathlib import Path
+
     from settings import APP_ID
 
     try:

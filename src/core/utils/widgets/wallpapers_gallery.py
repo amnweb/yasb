@@ -1,12 +1,38 @@
 import os
 import re
-from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QScrollArea, QGraphicsOpacityEffect, QSizePolicy
-from PyQt6.QtGui import QPixmap, QKeySequence, QShortcut, QPainter, QPainterPath, QImageReader
-from PyQt6.QtCore import Qt, QTimer, QPropertyAnimation, pyqtProperty, QRectF, QSize, QRunnable, QThreadPool, pyqtSignal, QObject, QRect
-from core.utils.win32.blurWindow import Blur
-from core.event_service import EventService
+
+from PyQt6.QtCore import (
+    QObject,
+    QPropertyAnimation,
+    QRect,
+    QRectF,
+    QRunnable,
+    QSize,
+    Qt,
+    QThreadPool,
+    QTimer,
+    pyqtProperty,
+    pyqtSignal,
+)
+from PyQt6.QtGui import QImageReader, QKeySequence, QPainter, QPainterPath, QPixmap, QShortcut
+from PyQt6.QtWidgets import (
+    QApplication,
+    QGraphicsOpacityEffect,
+    QHBoxLayout,
+    QLabel,
+    QMainWindow,
+    QPushButton,
+    QScrollArea,
+    QSizePolicy,
+    QVBoxLayout,
+    QWidget,
+)
+
 from core.config import get_stylesheet
+from core.event_service import EventService
 from core.utils.utilities import is_windows_10
+from core.utils.win32.blurWindow import Blur
+
 
 class BaseStyledWidget(QWidget):
     """BaseStyledWidget applies filtered styles to the widget from a given stylesheet."""

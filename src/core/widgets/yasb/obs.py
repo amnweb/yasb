@@ -1,10 +1,12 @@
 import logging
-from core.widgets.base import BaseWidget
-from core.validation.widgets.yasb.obs import VALIDATION_SCHEMA
-from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget, QGraphicsOpacityEffect
+
+from obswebsocket import events, obsws, requests
+from PyQt6.QtCore import Q_ARG, QMetaObject, Qt, QThread, QTimer, pyqtSignal
 from PyQt6.QtGui import QCursor
-from PyQt6.QtCore import Qt, QTimer, QMetaObject, Q_ARG, QThread, pyqtSignal
-from obswebsocket import obsws, requests, events
+from PyQt6.QtWidgets import QGraphicsOpacityEffect, QHBoxLayout, QLabel, QWidget
+
+from core.validation.widgets.yasb.obs import VALIDATION_SCHEMA
+from core.widgets.base import BaseWidget
 from settings import DEBUG
 
 # Set OBS WebSocket logger to WARNING

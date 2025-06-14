@@ -1,17 +1,20 @@
+import atexit
+import logging
 import os
-from pathlib import Path
+import shutil
 import struct
 import subprocess
 import textwrap
-import logging
-import shutil
 import threading
-from core.widgets.base import BaseWidget
-from core.validation.widgets.yasb.cava import VALIDATION_SCHEMA
-from PyQt6.QtWidgets import QHBoxLayout, QWidget, QLabel, QApplication
-from PyQt6.QtGui import QLinearGradient, QPainter, QColor
+from pathlib import Path
+
 from PyQt6.QtCore import QTimer, pyqtSignal
-import atexit
+from PyQt6.QtGui import QColor, QLinearGradient, QPainter
+from PyQt6.QtWidgets import QApplication, QHBoxLayout, QLabel, QWidget
+
+from core.validation.widgets.yasb.cava import VALIDATION_SCHEMA
+from core.widgets.base import BaseWidget
+
 
 class CavaBar(QWidget):
     def __init__(self, cava_widget):

@@ -1,21 +1,22 @@
-from datetime import datetime
 import logging
 import os
 import re
 import socket
 import ssl
-from urllib.parse import urlparse
 import urllib.error
 import urllib.request
+from datetime import datetime
+from urllib.parse import urlparse
 
-from PyQt6.QtCore import Qt, pyqtSignal, QThread, QTimer, QPropertyAnimation, QEasingCurve
-from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget, QVBoxLayout, QScrollArea, QGraphicsOpacityEffect
+from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, Qt, QThread, QTimer, pyqtSignal
+from PyQt6.QtWidgets import QGraphicsOpacityEffect, QHBoxLayout, QLabel, QScrollArea, QVBoxLayout, QWidget
 
 from core.utils.utilities import PopupWidget, ToastNotifier, add_shadow, build_widget_label
 from core.utils.widgets.animation_manager import AnimationManager
 from core.validation.widgets.yasb.server_monitor import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
 from settings import DEBUG, SCRIPT_PATH
+
 
 # Add new worker class
 class ServerCheckWorker(QThread):

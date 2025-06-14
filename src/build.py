@@ -1,6 +1,8 @@
-from cx_Freeze import setup, Executable
-from settings import BUILD_VERSION, APP_ID
 import datetime
+
+from cx_Freeze import Executable, setup
+
+from settings import APP_ID, BUILD_VERSION
 
 build_options = {
     "packages": [
