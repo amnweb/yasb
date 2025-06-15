@@ -47,7 +47,7 @@ class AutoHideManager(QObject):
         self._hide_timer = None
         self._is_enabled = False
 
-    def setup_autohide(self, alignment, padding):
+    def setup_autohide(self):
         """Initialize autohide functionality"""
         self._is_enabled = True
         # Set fixed 1px detection zone height
@@ -536,7 +536,7 @@ class BarContextMenu:
         except Exception as e:
             logging.error(f"Failed to take screenshot: {e}")
 
-    def _enable_autohide(self, delay):
+    def _enable_autohide(self):
         """Enable autohide functionality for the bar"""
         try:
             if not hasattr(self.parent, "_autohide_manager") or not self.parent._autohide_manager:
@@ -545,7 +545,7 @@ class BarContextMenu:
 
             # Setup autohide if not already enabled
             if not self.parent._autohide_manager.is_enabled():
-                self.parent._autohide_manager.setup_autohide(self.parent._alignment, self.parent._padding)
+                self.parent._autohide_manager.setup_autohide()
 
         except Exception as e:
             logging.error(f"Failed to enable autohide: {e}")

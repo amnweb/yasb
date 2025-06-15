@@ -124,7 +124,7 @@ class Bar(QWidget):
         # Initialize autohide manager
         if self._window_flags["auto_hide"]:
             self._autohide_manager = AutoHideManager(self, self)
-            self._autohide_manager.setup_autohide(self._alignment, self._padding)
+            self._autohide_manager.setup_autohide()
 
         self.show()
 
