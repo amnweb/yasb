@@ -48,6 +48,14 @@ scoop install extras/yasb
 
 ***
 
+### Chocolatey
+Install YASB using Chocolatey:
+```powershell
+choco install yasb
+```
+
+***
+
 ### Using Python
 - Install Python 3.12
 - Install required Python Modules:
@@ -99,6 +107,7 @@ https://github.com/user-attachments/assets/aab8d8e8-248f-46a1-919c-9b0601236ac1
 - **[Notifications](https://github.com/amnweb/yasb/wiki/(Widget)-Notifications)**: Shows the number of notifications from Windows.
 - **[Notes](https://github.com/amnweb/yasb/wiki/(Widget)-Notes)**: A simple notes widget that allows you to add, delete, and view notes.
 - **[OBS](https://github.com/amnweb/yasb/wiki/(Widget)-Obs)**: Integrates with OBS Studio to show recording status.
+- **[Power Plan](https://github.com/amnweb/yasb/wiki/(Widget)-Power-Plan)**: Displays the current power plan and allows switching between plans.
 - **[Server Monitor](https://github.com/amnweb/yasb/wiki/(Widget)-Server-Monitor)**: Monitors server status.
 - **[Systray](https://github.com/amnweb/yasb/wiki/(Widget)-Systray)**: Displays system tray icons.
 - **[Traffic](https://github.com/amnweb/yasb/wiki/(Widget)-Traffic)**: Displays network traffic information.
@@ -107,6 +116,7 @@ https://github.com/user-attachments/assets/aab8d8e8-248f-46a1-919c-9b0601236ac1
 - **[Power Menu](https://github.com/amnweb/yasb/wiki/(Widget)-Power-Menu)**: A menu for power options.
 - **[Recycle Bin](https://github.com/amnweb/yasb/wiki/(Widget)-Recycle-Bin)**: Shows the status of the recycle bin. 
 - **[Update Checker](https://github.com/amnweb/yasb/wiki/(Widget)-Update-Check)**: Checks for available updates using Windows Update and Winget.
+- **[Visual Studio Code](https://github.com/amnweb/yasb/wiki/(Widget)-VSCode)**: Shows recently opened folders in Visual Studio Code.
 - **[Volume](https://github.com/amnweb/yasb/wiki/(Widget)-Volume)**: Shows and controls the system volume.
 - **[Wallpapers](https://github.com/amnweb/yasb/wiki/(Widget)-Wallpapers)**: Allows changing wallpapers.
 - **[Weather](https://github.com/amnweb/yasb/wiki/(Widget)-Weather)**: Displays current weather information.

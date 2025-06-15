@@ -1,32 +1,35 @@
-import os
-from core.widgets.base import BaseWidget
-from core.validation.widgets.yasb.applications import VALIDATION_SCHEMA
-from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget
-from PyQt6.QtGui import QCursor, QPixmap
-from PyQt6.QtCore import Qt, QTimer
-import subprocess
 import logging
-from core.utils.win32.system_function import function_map
-from core.utils.widgets.animation_manager import AnimationManager
+import os
+import subprocess
+
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QCursor, QPixmap
+from PyQt6.QtWidgets import QHBoxLayout, QLabel, QWidget
+
 from core.utils.utilities import add_shadow
+from core.utils.widgets.animation_manager import AnimationManager
+from core.utils.win32.system_function import function_map
+from core.validation.widgets.yasb.applications import VALIDATION_SCHEMA
+from core.widgets.base import BaseWidget
+
 
 class ApplicationsWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
 
     def __init__(
-            self,
-            label: str,
-            class_name: str,
-            app_list:  list[str, dict[str]],
-            image_icon_size: int,
-            animation: dict[str, str],
-            container_padding: dict[str, int],
-            label_shadow: dict = None,
-            container_shadow: dict = None,
-        ):
+        self,
+        label: str,
+        class_name: str,
+        app_list: list[str, dict[str]],
+        image_icon_size: int,
+        animation: dict[str, str],
+        container_padding: dict[str, int],
+        label_shadow: dict = None,
+        container_shadow: dict = None,
+    ):
         super().__init__(class_name=f"apps-widget {class_name}")
         self._label = label
-        
+
         self._apps = app_list
         self._padding = container_padding
         self._image_icon_size = image_icon_size
@@ -36,7 +39,9 @@ class ApplicationsWidget(BaseWidget):
         # Construct container
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(self._padding['left'],self._padding['top'],self._padding['right'],self._padding['bottom'])
+        self._widget_container_layout.setContentsMargins(
+            self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
+        )
         # Initialize container
         self._widget_container: QWidget = QWidget()
         self._widget_container.setLayout(self._widget_container_layout)
@@ -50,7 +55,7 @@ class ApplicationsWidget(BaseWidget):
     def _update_label(self):
         if isinstance(self._apps, list):
             for app_data in self._apps:
-                if 'icon' in app_data and 'launch' in app_data:
+                if "icon" in app_data and "launch" in app_data:
                     # Create a container widget for each label
                     label_container = QWidget()
                     label_layout = QHBoxLayout(label_container)
@@ -61,26 +66,29 @@ class ApplicationsWidget(BaseWidget):
                     label = ClickableLabel(self)
                     label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
                     label.setProperty("class", "label")
-                    
+
                     # Set icon
-                    icon = app_data['icon']
+                    icon = app_data["icon"]
                     if os.path.isfile(icon):
-                        pixmap = QPixmap(icon).scaled(self._image_icon_size, self._image_icon_size, 
-                                                    Qt.AspectRatioMode.KeepAspectRatio, 
-                                                    Qt.TransformationMode.SmoothTransformation)
+                        pixmap = QPixmap(icon).scaled(
+                            self._image_icon_size,
+                            self._image_icon_size,
+                            Qt.AspectRatioMode.KeepAspectRatio,
+                            Qt.TransformationMode.SmoothTransformation,
+                        )
                         label.setPixmap(pixmap)
                     else:
                         label.setText(icon)
-                    
-                    label.data = app_data['launch']
+
+                    label.data = app_data["launch"]
                     label.container = label_container  # Store reference to container
-                    
+
                     # Add shadow to the label
                     add_shadow(label, self._label_shadow)
-                    
+
                     # Add label to its container
                     label_layout.addWidget(label)
-                    
+
                     # Add container to main layout
                     self._widget_container_layout.addWidget(label_container)
         else:
@@ -90,27 +98,27 @@ class ApplicationsWidget(BaseWidget):
         try:
             if data in function_map:
                 function_map[data]()
-            else:    
+            else:
                 try:
-                    if not any(param in data for param in ['-new-tab', '-new-window','-private-window']):
+                    if not any(param in data for param in ["-new-tab", "-new-window", "-private-window"]):
                         data = data.split()
                     subprocess.Popen(data, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, shell=True)
                 except Exception as e:
                     logging.error(f"Error starting app: {str(e)}")
         except Exception as e:
-            logging.error(f"Exception occurred: {str(e)} \"{data}\"")
- 
-        
+            logging.error(f'Exception occurred: {str(e)} "{data}"')
+
+
 class ClickableLabel(QLabel):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.parent_widget = parent
-        self.data = None 
+        self.data = None
 
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton and self.data:
-            if self.parent_widget._animation['enabled']:
-                AnimationManager.animate(self.container, self.parent_widget._animation['type'], self.parent_widget._animation['duration'])
+            if self.parent_widget._animation["enabled"]:
+                AnimationManager.animate(
+                    self.container, self.parent_widget._animation["type"], self.parent_widget._animation["duration"]
+                )
             self.parent_widget.execute_code(self.data)
- 
-            

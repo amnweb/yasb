@@ -384,7 +384,7 @@ class WeatherWidget(BaseWidget):
                     label.hide()
                 else:
                     label = QLabel(part)
-                    label.setProperty("class", "label")
+                    label.setProperty("class", "label alt" if is_alt else "label")
                     label.setText("weather update...")
                 label.setAlignment(Qt.AlignmentFlag.AlignCenter)
                 label.setCursor(Qt.CursorShape.PointingHandCursor)

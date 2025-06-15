@@ -20,6 +20,7 @@ import sys
 import tempfile
 import textwrap
 import time
+import winreg
 from ctypes import GetLastError
 
 from packaging.version import Version
@@ -36,18 +37,16 @@ from core.utils.win32.bindings import (
     WriteFile,
 )
 from core.utils.win32.constants import INVALID_HANDLE_VALUE
-from settings import BUILD_VERSION, CLI_VERSION
+from settings import APP_NAME, BUILD_VERSION, CLI_VERSION, RELEASE_CHANNEL
 
 BUFSIZE = 65536
 YASB_VERSION = BUILD_VERSION
 YASB_CLI_VERSION = CLI_VERSION
+YASB_RELEASE_CHANNEL = RELEASE_CHANNEL
 
-OS_STARTUP_FOLDER = os.path.join(os.environ["APPDATA"], r"Microsoft\Windows\Start Menu\Programs\Startup")
 INSTALLATION_PATH = os.path.abspath(os.path.join(__file__, "../../.."))
 EXE_PATH = os.path.join(INSTALLATION_PATH, "yasb.exe")
-SHORTCUT_FILENAME = "yasb.lnk"
 AUTOSTART_FILE = EXE_PATH if os.path.exists(EXE_PATH) else None
-WORKING_DIRECTORY = INSTALLATION_PATH if os.path.exists(EXE_PATH) else None
 
 CLI_SERVER_PIPE_NAME = r"\\.\pipe\yasb_pipe_cli"
 LOG_SERVER_PIPE_NAME = r"\\.\pipe\yasb_pipe_log"
@@ -60,24 +59,6 @@ def is_process_running(process_name: str) -> bool:
         if proc.info["name"] == process_name:
             return True
     return False
-
-
-def create_shortcut(shortcut_path: str, autostart_file: str, working_directory: str):
-    try:
-        import pythoncom
-        import win32com.client
-
-        pythoncom.CoInitialize()
-        shell = win32com.client.Dispatch("WScript.Shell")
-        shortcut = shell.CreateShortCut(shortcut_path)
-        shortcut.Targetpath = autostart_file
-        shortcut.WorkingDirectory = working_directory
-        shortcut.Description = "Shortcut to yasb.exe"
-        shortcut.save()
-        print(f"Created shortcut at {shortcut_path}")
-    except Exception as e:
-        print(f"Failed to create startup shortcut: {e}")
-        return False
 
 
 def write_message(handle: int, msg_dict: dict[str, str]):
@@ -138,7 +119,20 @@ class CLIHandler:
         self.task_handler = CLITaskHandler()
         self.update_handler = CLIUpdateHandler()
 
-    def stop_or_reload_application(self, reload: bool = False):
+    def send_command_to_application(self, command: str):
+        """
+        Send a command to the running YASB application through the pipe.
+
+        Commands can be:
+        - "stop" - Stop the application
+        - "reload" - Reload the application
+        - "show-bar [screen]" - Show the bar on a specific screen
+        - "hide-bar [screen]" - Hide the bar on a specific screen
+        - "toggle-bar [screen]" - Toggle the bar on a specific screen
+
+        Args:
+            command: The command to send
+        """
         try:
             pipe_handle = CreateFile(
                 CLI_SERVER_PIPE_NAME,
@@ -152,9 +146,10 @@ class CLIHandler:
             if pipe_handle == INVALID_HANDLE_VALUE:
                 print("Failed to connect to YASB. Pipe not found. It may not be running.")
                 return
-            cmd = b"reload" if reload else b"stop"
 
-            success = WriteFile(pipe_handle, cmd)
+            # Send the command as bytes
+            command_bytes = command.encode("utf-8")
+            success = WriteFile(pipe_handle, command_bytes)
             if not success:
                 print(f"Failed to write command. Err: {GetLastError()}")
                 CloseHandle(pipe_handle)
@@ -165,27 +160,52 @@ class CLIHandler:
                 print(f"Failed to read response. Err: {GetLastError()}")
                 CloseHandle(pipe_handle)
                 return
-            if response.decode("utf-8").strip() != "ACK":
-                print(f"Received unexpected response: {response.decode('utf-8').strip()}")
+
+            response_text = response.decode("utf-8").strip()
+            if response_text != "ACK":
+                print(f"Received unexpected response: {response_text}")
+
             CloseHandle(pipe_handle)
         except Exception as e:
             print(f"Error: {e}")
 
-    def _enable_startup(self):
-        shortcut_path = os.path.join(OS_STARTUP_FOLDER, SHORTCUT_FILENAME)
-        if not AUTOSTART_FILE or not WORKING_DIRECTORY:
-            print("Failed to enable autostart. Autostart file or working directory not found.")
-            return
-        create_shortcut(shortcut_path, AUTOSTART_FILE, WORKING_DIRECTORY)
+    def _open_startup_registry(self, access_flag: int):
+        """Helper function to open the startup registry key."""
+        registry_path = r"SOFTWARE\Microsoft\Windows\CurrentVersion\Run"
+        return winreg.OpenKey(winreg.HKEY_CURRENT_USER, registry_path, 0, access_flag)
 
-    def _disable_startup(self):
-        shortcut_path = os.path.join(OS_STARTUP_FOLDER, SHORTCUT_FILENAME)
-        if os.path.exists(shortcut_path):
-            try:
-                os.remove(shortcut_path)
-                print(f"Removed shortcut from {shortcut_path}")
-            except Exception as e:
-                print(f"Failed to remove startup shortcut: {e}")
+    def is_autostart_enabled(self, app_name: str) -> bool:
+        """Check if application is in Windows startup."""
+        try:
+            with self._open_startup_registry(winreg.KEY_READ) as key:
+                winreg.QueryValueEx(key, APP_NAME)
+            return True
+        except FileNotFoundError:
+            return False
+        except Exception as e:
+            print(f"Failed to check startup status for {app_name}: {e}")
+            return False
+
+    def enable_startup(self):
+        if self.is_autostart_enabled(APP_NAME):
+            print(f"{APP_NAME} is already set to start on boot.")
+            return
+        try:
+            with self._open_startup_registry(winreg.KEY_SET_VALUE) as key:
+                winreg.SetValueEx(key, APP_NAME, 0, winreg.REG_SZ, f"{AUTOSTART_FILE}")
+            print(f"{APP_NAME} added to startup.")
+        except Exception as e:
+            print(f"Failed to add {APP_NAME} to startup: {e}")
+
+    def disable_startup(self):
+        try:
+            with self._open_startup_registry(winreg.KEY_ALL_ACCESS) as key:
+                winreg.DeleteValue(key, APP_NAME)
+            print(f"{APP_NAME} removed from startup.")
+        except FileNotFoundError:
+            print(f"Startup entry for {APP_NAME} not found.")
+        except Exception as e:
+            print(f"Failed to remove {APP_NAME} from startup: {e}")
 
     def parse_arguments(self):
         parser = CustomArgumentParser(description="The command-line interface for YASB Reborn.", add_help=False)
@@ -196,6 +216,7 @@ class CLIHandler:
 
         stop_parser = subparsers.add_parser("stop", help="Stop the application")
         stop_parser.add_argument("-s", "--silent", action="store_true", help="Silence print messages")
+        stop_parser.add_argument("-f", "--force", action="store_true", help="Force stop the application")
 
         reload_parser = subparsers.add_parser("reload", help="Reload the application")
         reload_parser.add_argument("-s", "--silent", action="store_true", help="Silence print messages")
@@ -211,6 +232,15 @@ class CLIHandler:
         )
 
         subparsers.add_parser("monitor-information", help="Show information about connected monitors")
+
+        show_bar_parser = subparsers.add_parser("show-bar", help="Show the bar on a specific screen")
+        show_bar_parser.add_argument("-s", "--screen", type=str, help="Screen name (optional)")
+
+        hide_bar_parser = subparsers.add_parser("hide-bar", help="Hide the bar on a specific screen")
+        hide_bar_parser.add_argument("-s", "--screen", type=str, help="Screen name (optional)")
+
+        toggle_bar_parser = subparsers.add_parser("toggle-bar", help="Toggle the bar on a specific screen")
+        toggle_bar_parser.add_argument("-s", "--screen", type=str, help="Screen name (optional)")
 
         subparsers.add_parser("reset", help="Restore default config files and clear cache")
 
@@ -239,16 +269,38 @@ class CLIHandler:
             sys.exit(0)
 
         elif args.command == "stop":
-            self.stop_or_reload_application()
+            if args.force:
+                for proc in ["yasb.exe", "yasb_themes.exe"]:
+                    if is_process_running(proc):
+                        subprocess.run(["taskkill", "/f", "/im", proc], creationflags=subprocess.CREATE_NO_WINDOW)
+            else:
+                self.send_command_to_application("stop")
             sys.exit(0)
 
         elif args.command == "reload":
             if is_process_running("yasb.exe"):
                 if not args.silent:
                     print("Reload YASB...")
-                self.stop_or_reload_application(reload=True)
+                self.send_command_to_application("reload")
             else:
                 print("YASB is not running. Reload aborted.")
+            sys.exit(0)
+
+        elif args.command == "show-bar":
+            screen_arg = f" --screen {args.screen}" if args.screen else ""
+            self.send_command_to_application(f"show-bar{screen_arg}")
+            sys.exit(0)
+
+        # For hide-bar command
+        elif args.command == "hide-bar":
+            screen_arg = f" --screen {args.screen}" if args.screen else ""
+            self.send_command_to_application(f"hide-bar{screen_arg}")
+            sys.exit(0)
+
+        # For toggle-bar command
+        elif args.command == "toggle-bar":
+            screen_arg = f" --screen {args.screen}" if args.screen else ""
+            self.send_command_to_application(f"toggle-bar{screen_arg}")
             sys.exit(0)
 
         elif args.command == "update":
@@ -261,7 +313,7 @@ class CLIHandler:
                 else:
                     self.task_handler.create_task()
             else:
-                self._enable_startup()
+                self.enable_startup()
             sys.exit(0)
 
         elif args.command == "disable-autostart":
@@ -271,7 +323,7 @@ class CLIHandler:
                 else:
                     self.task_handler.delete_task()
             else:
-                self._disable_startup()
+                self.disable_startup()
             sys.exit(0)
 
         elif args.command == "log":
@@ -408,6 +460,9 @@ class CLIHandler:
                   enable-autostart          Enable autostart on system boot
                   disable-autostart         Disable autostart on system boot
                   monitor-information       Show information about connected monitors
+                  show-bar                  Show the bar on all or a specific screen
+                  hide-bar                  Hide the bar on all or a specific screen
+                  toggle-bar                Toggle the bar on all or a specific screen
                   update                    Update the application
                   log                       Tail yasb process logs (cancel with Ctrl-C)
                   reset                     Restore default config files and clear cache
@@ -421,7 +476,7 @@ class CLIHandler:
             sys.exit(0)
 
         elif args.version:
-            version_message = f"YASB Reborn v{YASB_VERSION}\nYASB-CLI v{YASB_CLI_VERSION}"
+            version_message = f"YASB Reborn v{YASB_VERSION} ({YASB_RELEASE_CHANNEL})\nYASB-CLI v{YASB_CLI_VERSION}"
             print(version_message)
         else:
             print("Unknown command. Use --help for available options.")

@@ -2,13 +2,12 @@
 
 import atexit
 import logging
+import os
 from ctypes import (
     POINTER,
-    byref,
     cast,
     windll,
 )
-from ctypes.wintypes import MSG
 from dataclasses import dataclass
 from pathlib import Path
 from uuid import UUID
@@ -31,25 +30,21 @@ from win32con import (
     WM_DESTROY,
     WM_TIMER,
     WM_USER,
-    WS_DISABLED,
-    WS_EX_APPWINDOW,
-    WS_EX_TOOLWINDOW,
-    WS_EX_TOPMOST,
 )
 
 import core.utils.systray.utils as utils
 from core.utils.systray.utils import (
+    NativeWindowEx,
     array_to_str,
     get_exe_path_from_hwnd,
     pack_i32,
 )
 from core.utils.win32.app_icons import hicon_to_image
 from core.utils.win32.bindings import (
-    CreateWindowEx,
     DefWindowProc,
     DestroyWindow,
-    FindWindow,
     FindWindowEx,
+    IsWindow,
     PostMessage,
     RegisterWindowMessage,
     SendMessage,
@@ -74,17 +69,9 @@ from core.utils.win32.structs import (
     NOTIFYICONDATA,
     SHELLTRAYDATA,
     WINNOTIFYICONIDENTIFIER,
-    WNDCLASS,
-    WNDPROC,
 )
-from settings import DEBUG
 
 logger = logging.getLogger("systray_widget")
-
-if DEBUG:
-    logger.setLevel(logging.DEBUG)
-else:
-    logger.setLevel(logging.CRITICAL)
 
 # Load necessary Windows functions
 user32 = windll.user32
@@ -124,40 +111,13 @@ class TrayMonitor(QObject):
     def __init__(self, parent: QObject | None = None):
         super().__init__(parent)
         self.hwnd: int = 0
-        self.wc: WNDCLASS | None = None
+        self.real_tray_hwnd: int = 0
         atexit.register(self.destroy)
 
     def run(self):
-        # Register the window class
-        wnd_class_name = "Shell_TrayWnd"
-        self.wc = WNDCLASS()
-        self.wc.lpfnWndProc = WNDPROC(self._window_proc)
-        self.wc.hInstance = kernel32.GetModuleHandleW(None)
-        self.wc.lpszClassName = wnd_class_name
-
-        if not user32.RegisterClassW(byref(self.wc)):
-            logger.debug("Window registration failed")
-            return
-
-        # Create the window
-        self.hwnd = CreateWindowEx(
-            WS_EX_TOOLWINDOW | WS_EX_APPWINDOW | WS_EX_TOPMOST,
-            wnd_class_name,
-            wnd_class_name,
-            WS_DISABLED,
-            0,
-            0,
-            0,
-            0,
-            None,
-            None,
-            self.wc.hInstance,
-            None,
-        )
-
-        if not self.hwnd:
-            logger.critical("Window creation failed")
-            return
+        # Create native win32 window
+        self.tray_monitor_window = NativeWindowEx(self._window_proc, "Shell_TrayWnd")
+        self.hwnd = self.tray_monitor_window.hwnd
 
         # Set the window as the foreground window
         SetWindowPos(self.hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE)
@@ -165,11 +125,7 @@ class TrayMonitor(QObject):
         # Set a timer to keep the window as a foreground window to keep receiving messages
         SetTimer(self.hwnd, 1, 100, None)
 
-        # Run the message loop
-        msg = MSG()
-        while user32.GetMessageW(byref(msg), None, 0, 0) > 0:
-            user32.TranslateMessage(byref(msg))
-            user32.DispatchMessageW(byref(msg))
+        self.tray_monitor_window.start_message_loop()
 
     def __del__(self):
         """Ensure proper cleanup"""
@@ -177,10 +133,8 @@ class TrayMonitor(QObject):
 
     def destroy(self):
         """Clean up window and unregister class"""
-        if self.hwnd != 0:
-            logger.debug(f"Destroying window {self.hwnd}")
-            PostMessage(self.hwnd, WM_CLOSE, 0, 0)
-            self.hwnd = 0
+        if self.tray_monitor_window:
+            self.tray_monitor_window.destroy()
 
     @staticmethod
     def send_taskbar_created():
@@ -248,25 +202,30 @@ class TrayMonitor(QObject):
         else:
             return self.forward_message(hwnd, uMsg, wParam, lParam)
 
-    def forward_message(self, hwnd: int, uMsg: int, wParam: int, lParam: int):
-        """Forward messages to real tray window"""
-        real_tray = self.find_tray_window(hwnd)
-        if not real_tray:
-            logger.critical("Could not find the real systray window")
-            return DefWindowProc(hwnd, uMsg, wParam, lParam)
-        if uMsg > WM_USER:
-            PostMessage(real_tray, uMsg, wParam, lParam)
-            return DefWindowProc(hwnd, uMsg, wParam, lParam)
-        else:
-            return SendMessage(real_tray, uMsg, wParam, lParam)
+    def forward_message(self, hwnd: int, msg: int, wParam: int, lParam: int):
+        """Forward messages to the real tray window"""
+        if not self.real_tray_hwnd or not IsWindow(self.real_tray_hwnd):
+            logger.debug("Finding real tray hwnd")
+            self.real_tray_hwnd = self.find_real_tray_hwnd(hwnd)
+        if self.real_tray_hwnd:
+            if msg in {WM_USER + 372}:  # Specific async tray messages
+                PostMessage(self.real_tray_hwnd, msg, wParam, lParam)
+                return DefWindowProc(hwnd, msg, wParam, lParam)
+            return SendMessage(self.real_tray_hwnd, msg, wParam, lParam)
+        return DefWindowProc(hwnd, msg, wParam, lParam)
 
-    def find_tray_window(self, hwnd_ignore: int) -> int:
-        """Find the real tray window to forward messages to"""
-        taskbar_hwnd = FindWindow("Shell_TrayWnd", None)
-        if taskbar_hwnd != 0:
-            while taskbar_hwnd == hwnd_ignore:
-                taskbar_hwnd = FindWindowEx(0, taskbar_hwnd, "Shell_TrayWnd", None)
-        return taskbar_hwnd
+    def find_real_tray_hwnd(self, hwnd_ignore: int | None = None):
+        hwnd = 0
+        while True:
+            hwnd = FindWindowEx(0, hwnd, "Shell_TrayWnd", None)
+            if hwnd == 0:
+                break
+            if hwnd == hwnd_ignore:
+                continue
+            exe = get_exe_path_from_hwnd(hwnd)
+            if exe and os.path.basename(exe) == "explorer.exe":
+                return hwnd
+        return 0
 
     def validate_icon_data(self, data: NOTIFYICONDATA) -> IconData:
         """Validates and processes raw icon data"""

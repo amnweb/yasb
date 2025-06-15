@@ -1,10 +1,12 @@
-import yaml
 import logging
-from PyQt6.QtWidgets import QWidget
-from PyQt6.QtCore import QObject
-from typing import Optional
-from cerberus import Validator
 from importlib import import_module
+from typing import Optional
+
+import yaml
+from cerberus import Validator
+from PyQt6.QtCore import QObject
+from PyQt6.QtWidgets import QWidget
+
 from core.utils.alert_dialog import raise_info_alert
 from settings import DEFAULT_CONFIG_FILENAME
 
@@ -38,11 +40,11 @@ class WidgetBuilder(QObject):
             logging.warning(f"No widget config could be found for widget '{widget_name}")
         else:
             try:
-                widget_module_str, widget_class_str = widget_config['type'].rsplit('.', 1)
+                widget_module_str, widget_class_str = widget_config["type"].rsplit(".", 1)
                 widget_module = import_module(f"core.widgets.{widget_module_str}")
                 widget_cls = getattr(widget_module, widget_class_str)
-                widget_schema = getattr(widget_cls, 'validation_schema')
-                widget_event_listener = getattr(widget_cls, 'event_listener')
+                widget_schema = getattr(widget_cls, "validation_schema")
+                widget_event_listener = getattr(widget_cls, "event_listener")
 
                 if type(widget_schema) != dict and not widget_schema:
                     raise Exception(f"The widget {widget_cls.__name__} has no validation_schema")
@@ -51,7 +53,7 @@ class WidgetBuilder(QObject):
                     self._widget_event_listeners.add(widget_event_listener)
 
                 widget_options_validator = Validator(widget_schema)
-                widget_options = widget_config.get('options', {})
+                widget_options = widget_config.get("options", {})
 
                 if not widget_options_validator.validate(widget_options, widget_schema):
                     validation_errors = yaml.dump(widget_options_validator.errors)
@@ -62,7 +64,7 @@ class WidgetBuilder(QObject):
                     return widget_cls(**normalized_options)
             except (AttributeError, ValueError, ModuleNotFoundError):
                 logging.exception(f"Failed to import widget with type {widget_config['type']}")
-                self._invalid_widget_types[widget_name] = widget_config['type']
+                self._invalid_widget_types[widget_name] = widget_config["type"]
             except KeyError:
                 logging.exception(f"No type specified for widget '{widget_name}'")
                 self._missing_widget_types.add(widget_name)
@@ -71,39 +73,44 @@ class WidgetBuilder(QObject):
 
     def raise_alerts_if_errors_present(self):
         if self._invalid_widget_names:
-            undefined_widgets = "\n".join([
-                f" - The widget \"{widget_name}\" is undefined." for widget_name in self._invalid_widget_names
-            ])
+            undefined_widgets = "\n".join(
+                [f' - The widget "{widget_name}" is undefined.' for widget_name in self._invalid_widget_names]
+            )
             logging.error(f"Failed to add undefined widget(s) {undefined_widgets}")
             raise_info_alert(
                 title=f"Failed to add undefined widget(s) in {DEFAULT_CONFIG_FILENAME}",
                 msg="Failed to add undefined widget(s) to bar.",
                 informative_msg="Please click 'Show Details' to find out more.",
-                additional_details=undefined_widgets
+                additional_details=undefined_widgets,
             )
         if self._invalid_widget_options:
-            additional_details = "\n".join([(
-                f" - {widget_name}{validation_errors}"
-            ) for widget_name, validation_errors in self._invalid_widget_options.items()])
+            additional_details = "\n".join(
+                [
+                    (f" - {widget_name}{validation_errors}")
+                    for widget_name, validation_errors in self._invalid_widget_options.items()
+                ]
+            )
             logging.error(f"Failed to validate widget(s) due to invalid options {additional_details}")
             raise_info_alert(
                 title=f"Failed to validate widget(s) in {DEFAULT_CONFIG_FILENAME}",
                 msg="Failed to validate widget(s) due to invalid options",
                 informative_msg="Please click 'Show Details' to find out more.",
-                additional_details=additional_details
+                additional_details=additional_details,
             )
-            
+
         if self._invalid_widget_types:
-            widget_names_and_types = "\n".join([
-                f" - {widget_name} has unknown type \"{widget_type}\""
-                for widget_name, widget_type in self._invalid_widget_types.items()
-            ])
+            widget_names_and_types = "\n".join(
+                [
+                    f' - {widget_name} has unknown type "{widget_type}"'
+                    for widget_name, widget_type in self._invalid_widget_types.items()
+                ]
+            )
             logging.error(f"Failed to build widget(s) due to unknown widget type(s) {widget_names_and_types}")
             raise_info_alert(
                 title=f"Failed to build widget(s) in {DEFAULT_CONFIG_FILENAME}",
                 msg="Failed to build widget(s) of unknown widget type(s)",
                 informative_msg="Click 'Show Details' to find out more.",
-                additional_details=widget_names_and_types
+                additional_details=widget_names_and_types,
             )
         if self._missing_widget_types:
             widget_names = "\n".join([f" - {widget_name}" for widget_name in self._missing_widget_types])
@@ -112,5 +119,5 @@ class WidgetBuilder(QObject):
                 title=f"Failed to import widget(s) in {DEFAULT_CONFIG_FILENAME}",
                 msg="Failed to import widget(s) with missing widget type(s)",
                 informative_msg="Please click 'Show Details' to find out more.",
-                additional_details=f"The following widget(s) have no widget type defined:\n{widget_names}"
+                additional_details=f"The following widget(s) have no widget type defined:\n{widget_names}",
             )

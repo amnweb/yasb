@@ -33,6 +33,26 @@ jobs:
         python -m venv venv
       shell: pwsh
 
+    - name: Get App Info
+      id: get_info
+      run: |
+        .\venv\Scripts\Activate
+        $currentDateTime = Get-Date -Format "yyyy-MM-dd HH:mm:ss UTC"
+        echo "BUILD_DATETIME=$currentDateTime" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        $commitHash = git rev-parse --short HEAD
+        echo "COMMIT_HASH=$commitHash" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+      shell: pwsh
+
+    - name: Update Release Channel for Dev Build
+      run: |
+        .\venv\Scripts\Activate
+        $settingsPath = "src/settings.py"
+        $content = Get-Content $settingsPath -Raw
+        $content = $content -replace 'RELEASE_CHANNEL = "stable"', 'RELEASE_CHANNEL = "dev-${{ env.COMMIT_HASH }}"'
+        Set-Content -Path $settingsPath -Value $content -NoNewline
+        echo "Updated RELEASE_CHANNEL to dev-${{ env.COMMIT_HASH }}"
+      shell: pwsh
+
     - name: Activate virtual environment and install dependencies
       run: |
         .\venv\Scripts\Activate
@@ -55,16 +75,6 @@ jobs:
         Copy-Item -Path $sourceMsi -Destination $targetMsi -Force
         Remove-Item -Path $sourceMsi
         echo "FILENAME=yasb-dev-win64.msi" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-      shell: pwsh
-
-    - name: Get App Info
-      id: get_info
-      run: |
-        .\venv\Scripts\Activate
-        $currentDateTime = Get-Date -Format "yyyy-MM-dd HH:mm:ss UTC"
-        echo "BUILD_DATETIME=$currentDateTime" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-        $commitHash = git rev-parse --short HEAD
-        echo "COMMIT_HASH=$commitHash" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
       shell: pwsh
 
     - name: Generate Changelog

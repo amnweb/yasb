@@ -1,0 +1,27 @@
+line-length = 120
+indent-width = 4
+target-version = "py312"
+
+exclude = [
+    ".git",
+    ".venv",
+    "venv",
+    "build",
+    "dist",
+    "__pycache__",
+    "docs",
+    "demo",
+    ".vscode",
+    ".github",
+]
+
+[format]
+docstring-code-format = true
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+
+[lint]
+ignore = ["F405", "F401", "F403", "E741"]
+select = ["I"]
+fixable = ["ALL"]

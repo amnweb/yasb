@@ -1,158 +1,96 @@
 DEFAULTS = {
-    'label_offline': 'Komorebi Offline',
-    'label_workspace_btn': '{index}',
-    'label_workspace_active_btn': '{index}',
-    'label_workspace_populated_btn': '{index}',
-    'label_default_name': '',
-    'label_float_override': 'Override Active',
-    'toggle_workspace_layer': {'enabled': False, 'tiling_label': "Tiling", 'floating_label': "Floating"},
-    'hide_if_offline': False,
-    'label_zero_index': False,
-    'hide_empty_workspaces': False,
-    'app_icons': {'enabled_populated': False, 'enabled_active': False, 'size': 16, 'max_icons': 0, 'hide_label': False, 'hide_duplicates': False, 'hide_floating': False},
-    'animation': False,
-    'enable_scroll_switching': False,
-    'reverse_scroll_direction': False,
-    'container_padding': {'top': 0, 'left': 0, 'bottom': 0, 'right': 0},
+    "label_offline": "Komorebi Offline",
+    "label_workspace_btn": "{index}",
+    "label_workspace_active_btn": "{index}",
+    "label_workspace_populated_btn": "{index}",
+    "label_default_name": "",
+    "label_float_override": "Override Active",
+    "toggle_workspace_layer": {"enabled": False, "tiling_label": "Tiling", "floating_label": "Floating"},
+    "hide_if_offline": False,
+    "label_zero_index": False,
+    "hide_empty_workspaces": False,
+    "app_icons": {
+        "enabled_populated": False,
+        "enabled_active": False,
+        "size": 16,
+        "max_icons": 0,
+        "hide_label": False,
+        "hide_duplicates": False,
+        "hide_floating": False,
+    },
+    "animation": False,
+    "enable_scroll_switching": False,
+    "reverse_scroll_direction": False,
+    "container_padding": {"top": 0, "left": 0, "bottom": 0, "right": 0},
 }
 
 VALIDATION_SCHEMA = {
-    'label_offline': {
-        'type': 'string',
-        'default': DEFAULTS['label_offline']
-    },
-    'label_workspace_btn': {
-        'type': 'string',
-        'default': DEFAULTS['label_workspace_btn']
-    },
-    'label_workspace_active_btn': {
-        'type': 'string',
-        'default': DEFAULTS['label_workspace_active_btn']
-    },
-    'label_workspace_populated_btn': {
-        'type': 'string',
-        'default': DEFAULTS['label_workspace_populated_btn']
-    },
-    'label_default_name': {
-        'type': 'string',
-        'default': DEFAULTS['label_default_name']
-    },
-    'label_float_override': {
-        'type': 'string',
-        'default': DEFAULTS['label_float_override']
-    },
-    'toggle_workspace_layer': {
-        'type': 'dict',
-        'default': DEFAULTS['toggle_workspace_layer'],
-        'schema': {
-            'enabled': {
-                'type': 'boolean',
-                'default': DEFAULTS['toggle_workspace_layer']['enabled']
-            },
-            'tiling_label': {
-                'type': 'string',
-                'default': DEFAULTS['toggle_workspace_layer']['tiling_label']
-            },
-            'floating_label': {
-                'type': 'string',
-                'default': DEFAULTS['toggle_workspace_layer']['floating_label']
-            }
-        }
-    },
-    'hide_if_offline': {
-        'type': 'boolean',
-        'default': DEFAULTS['hide_if_offline']
-    },
-    'label_zero_index': {
-        'type': 'boolean',
-        'default': DEFAULTS['label_zero_index']
-    },
-    'hide_empty_workspaces': {
-        'type': 'boolean',
-        'default': DEFAULTS['hide_empty_workspaces']
-    },
-    'app_icons': {
-        'type': 'dict',
-        'default': DEFAULTS['app_icons'],
-        'schema': {
-            'enabled_populated': {
-                'type': 'boolean',
-                'default': DEFAULTS['app_icons']['enabled_populated']
-            },
-            'enabled_active': {
-                'type': 'boolean',
-                'default': DEFAULTS['app_icons']['enabled_active']
-            },
-            'size': {
-                'type': 'integer',
-                'default': DEFAULTS['app_icons']['size']
-            },
-            'max_icons': {
-                'type': 'integer',
-                'default': DEFAULTS['app_icons']['max_icons']
-            },
-            'hide_label': {
-                'type': 'boolean',
-                'default': DEFAULTS['app_icons']['hide_label']
-            },
-            'hide_duplicates': {
-                'type': 'boolean',
-                'default': DEFAULTS['app_icons']['hide_duplicates']
-            },
-            'hide_floating': {
-                'type': 'boolean',
-                'default': DEFAULTS['app_icons']['hide_floating']
-            }
-        }
-    },
-    'animation': {
-        'type': 'boolean',
-        'default': DEFAULTS['animation']
-    },
-    'enable_scroll_switching': {
-        'type': 'boolean',
-        'default': DEFAULTS['enable_scroll_switching']
-    },
-    'reverse_scroll_direction': {
-        'type': 'boolean',
-        'default': DEFAULTS['reverse_scroll_direction']
-    },
-    'container_padding': {
-        'type': 'dict',
-        'default': DEFAULTS['container_padding'],
-        'required': False
-    },
-    'btn_shadow': {
-        'type': 'dict',
-        'required': False,
-        'schema': {
-            'enabled': {'type': 'boolean', 'default': False},
-            'color': {'type': 'string', 'default': 'black'},
-            'offset': {'type': 'list', 'default': [1, 1]},
-            'radius': {'type': 'integer', 'default': 3},
+    "label_offline": {"type": "string", "default": DEFAULTS["label_offline"]},
+    "label_workspace_btn": {"type": "string", "default": DEFAULTS["label_workspace_btn"]},
+    "label_workspace_active_btn": {"type": "string", "default": DEFAULTS["label_workspace_active_btn"]},
+    "label_workspace_populated_btn": {"type": "string", "default": DEFAULTS["label_workspace_populated_btn"]},
+    "label_default_name": {"type": "string", "default": DEFAULTS["label_default_name"]},
+    "label_float_override": {"type": "string", "default": DEFAULTS["label_float_override"]},
+    "toggle_workspace_layer": {
+        "type": "dict",
+        "default": DEFAULTS["toggle_workspace_layer"],
+        "schema": {
+            "enabled": {"type": "boolean", "default": DEFAULTS["toggle_workspace_layer"]["enabled"]},
+            "tiling_label": {"type": "string", "default": DEFAULTS["toggle_workspace_layer"]["tiling_label"]},
+            "floating_label": {"type": "string", "default": DEFAULTS["toggle_workspace_layer"]["floating_label"]},
         },
-        'default': {'enabled': False, 'color': 'black', 'offset': [1, 1], 'radius': 3}
     },
-    'label_shadow': {
-        'type': 'dict',
-        'required': False,
-        'schema': {
-            'enabled': {'type': 'boolean', 'default': False},
-            'color': {'type': 'string', 'default': 'black'},
-            'offset': {'type': 'list', 'default': [1, 1]},
-            'radius': {'type': 'integer', 'default': 3},
+    "hide_if_offline": {"type": "boolean", "default": DEFAULTS["hide_if_offline"]},
+    "label_zero_index": {"type": "boolean", "default": DEFAULTS["label_zero_index"]},
+    "hide_empty_workspaces": {"type": "boolean", "default": DEFAULTS["hide_empty_workspaces"]},
+    "app_icons": {
+        "type": "dict",
+        "default": DEFAULTS["app_icons"],
+        "schema": {
+            "enabled_populated": {"type": "boolean", "default": DEFAULTS["app_icons"]["enabled_populated"]},
+            "enabled_active": {"type": "boolean", "default": DEFAULTS["app_icons"]["enabled_active"]},
+            "size": {"type": "integer", "default": DEFAULTS["app_icons"]["size"]},
+            "max_icons": {"type": "integer", "default": DEFAULTS["app_icons"]["max_icons"]},
+            "hide_label": {"type": "boolean", "default": DEFAULTS["app_icons"]["hide_label"]},
+            "hide_duplicates": {"type": "boolean", "default": DEFAULTS["app_icons"]["hide_duplicates"]},
+            "hide_floating": {"type": "boolean", "default": DEFAULTS["app_icons"]["hide_floating"]},
         },
-        'default': {'enabled': False, 'color': 'black', 'offset': [1, 1], 'radius': 3}
     },
-    'container_shadow': {
-        'type': 'dict',
-        'required': False,
-        'schema': {
-            'enabled': {'type': 'boolean', 'default': False},
-            'color': {'type': 'string', 'default': 'black'},
-            'offset': {'type': 'list', 'default': [1, 1]},
-            'radius': {'type': 'integer', 'default': 3},
+    "animation": {"type": "boolean", "default": DEFAULTS["animation"]},
+    "enable_scroll_switching": {"type": "boolean", "default": DEFAULTS["enable_scroll_switching"]},
+    "reverse_scroll_direction": {"type": "boolean", "default": DEFAULTS["reverse_scroll_direction"]},
+    "container_padding": {"type": "dict", "default": DEFAULTS["container_padding"], "required": False},
+    "btn_shadow": {
+        "type": "dict",
+        "required": False,
+        "schema": {
+            "enabled": {"type": "boolean", "default": False},
+            "color": {"type": "string", "default": "black"},
+            "offset": {"type": "list", "default": [1, 1]},
+            "radius": {"type": "integer", "default": 3},
         },
-        'default': {'enabled': False, 'color': 'black', 'offset': [1, 1], 'radius': 3}
-    }
+        "default": {"enabled": False, "color": "black", "offset": [1, 1], "radius": 3},
+    },
+    "label_shadow": {
+        "type": "dict",
+        "required": False,
+        "schema": {
+            "enabled": {"type": "boolean", "default": False},
+            "color": {"type": "string", "default": "black"},
+            "offset": {"type": "list", "default": [1, 1]},
+            "radius": {"type": "integer", "default": 3},
+        },
+        "default": {"enabled": False, "color": "black", "offset": [1, 1], "radius": 3},
+    },
+    "container_shadow": {
+        "type": "dict",
+        "required": False,
+        "schema": {
+            "enabled": {"type": "boolean", "default": False},
+            "color": {"type": "string", "default": "black"},
+            "offset": {"type": "list", "default": [1, 1]},
+            "radius": {"type": "integer", "default": 3},
+        },
+        "default": {"enabled": False, "color": "black", "offset": [1, 1], "radius": 3},
+    },
 }

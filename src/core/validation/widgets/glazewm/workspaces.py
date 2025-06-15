@@ -48,12 +48,8 @@ VALIDATION_SCHEMA = {
     "hide_if_offline": {
         "type": "boolean",
         "default": DEFAULTS["hide_if_offline"],
-    }, 
-    "container_padding": { 
-        "type": "dict",
-        "default": DEFAULTS["container_padding"],
-        "required": False
     },
+    "container_padding": {"type": "dict", "default": DEFAULTS["container_padding"], "required": False},
     "glazewm_server_uri": {
         "type": "string",
         "default": DEFAULTS["glazewm_server_uri"],

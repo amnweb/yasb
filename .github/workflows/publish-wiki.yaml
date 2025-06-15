@@ -1,9 +1,8 @@
 name: Publish wiki
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths: [docs/**, .github/workflows/publish-wiki.yaml]
+  release:
+    types: [released]
 concurrency:
   group: wiki
   cancel-in-progress: true

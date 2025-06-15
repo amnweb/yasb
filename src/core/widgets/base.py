@@ -1,21 +1,20 @@
 import logging
 import re
 import subprocess
-from PyQt6.QtWidgets import QWidget, QHBoxLayout, QFrame
-from PyQt6.QtGui import QMouseEvent
-from PyQt6.QtCore import QTimer, QThread, Qt
 from typing import Union
+
+from PyQt6.QtCore import Qt, QThread, QTimer
+from PyQt6.QtGui import QMouseEvent
+from PyQt6.QtWidgets import QFrame, QHBoxLayout, QWidget
+
 from core.utils.win32.system_function import function_map
+
 
 class BaseWidget(QWidget):
     validation_schema: dict = None
     event_listener: QThread = None
 
-    def __init__(
-            self,
-            timer_interval: int = None,
-            class_name: str = ""
-    ):
+    def __init__(self, timer_interval: int = None, class_name: str = ""):
         super().__init__()
         self._widget_frame = QFrame()
         self._widget_frame_layout = QHBoxLayout()
@@ -73,7 +72,7 @@ class BaseWidget(QWidget):
 
     def _run_callback(self, callback_str: Union[str, list]):
         if " " in callback_str:
-            callback_args = list(map(lambda x: x.strip('\"'), re.findall(r'".+?"|[^ ]+', callback_str)))
+            callback_args = list(map(lambda x: x.strip('"'), re.findall(r'".+?"|[^ ]+', callback_str)))
             callback_type = callback_args[0]
             callback_args = callback_args[1:]
         else:
@@ -81,7 +80,7 @@ class BaseWidget(QWidget):
             callback_args = []
 
         is_valid_callback = callback_type in self.callbacks.keys()
-        self.callback = self.callbacks[callback_type if is_valid_callback else 'default']
+        self.callback = self.callbacks[callback_type if is_valid_callback else "default"]
 
         try:
             self.callbacks[callback_type](*callback_args)

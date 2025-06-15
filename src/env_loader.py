@@ -1,5 +1,6 @@
-import os
 import logging
+import os
+
 from dotenv import load_dotenv
 
 
@@ -20,14 +21,14 @@ def load_env():
             logging.warning(f"Failed to load environment variables from {env_path}")
         else:
             logging.info(f"Loaded environment variables from {env_path}")
-            
+
 
 def set_font_engine():
     """
     Set the font engine for the application based on the YASB_FONT_ENGINE environment variable.
     """
-    font_engine = os.getenv('YASB_FONT_ENGINE')
-    if font_engine == 'native':
+    font_engine = os.getenv("YASB_FONT_ENGINE")
+    if font_engine == "native":
         os.environ["QT_QPA_PLATFORM"] = "windows:fontengine=native"
     else:
         os.environ["QT_QPA_PLATFORM"] = "windows:fontengine=gdi"

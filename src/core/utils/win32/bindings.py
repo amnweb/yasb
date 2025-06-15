@@ -1,15 +1,6 @@
 """Wrappers for win32 API functions to make them easier to use and have proper types"""
 
-from ctypes import (
-    POINTER,
-    Array,
-    byref,
-    c_int,
-    c_long,
-    c_wchar,
-    create_string_buffer,
-    windll,
-)
+from ctypes import POINTER, Array, byref, c_int, c_long, c_wchar, create_string_buffer, windll, wintypes
 from ctypes.wintypes import (
     BOOL,
     DWORD,
@@ -30,11 +21,7 @@ from ctypes.wintypes import (
 )
 from typing import TYPE_CHECKING, Any
 
-from core.utils.win32.structs import (
-    BITMAPINFO,
-    HBITMAP,
-    ICONINFO,
-)
+from core.utils.win32.structs import BITMAPINFO, GUID, HBITMAP, ICONINFO
 
 if TYPE_CHECKING:
     # NOTE: this is an internal ctypes type that does not exist during runtime
@@ -45,6 +32,7 @@ else:
 user32 = windll.user32
 gdi32 = windll.gdi32
 kernel32 = windll.kernel32
+powrprof = windll.powrprof
 
 # --- Function prototypes (argtypes/restype) ---
 user32.DefWindowProcW.argtypes = [HWND, UINT, WPARAM, LPARAM]
@@ -66,7 +54,6 @@ user32.CreateWindowExW.argtypes = [
 ]
 user32.CreateWindowExW.restype = HWND
 
-user32.SetWindowPos.restype = c_int
 user32.SetWindowPos.argtypes = [
     HWND,
     HWND,
@@ -76,39 +63,55 @@ user32.SetWindowPos.argtypes = [
     INT,
     UINT,
 ]
+user32.SetWindowPos.restype = c_int
 
-user32.DestroyWindow.restype = c_int
 user32.DestroyWindow.argtypes = [HWND]
+user32.DestroyWindow.restype = c_int
 
-user32.RegisterWindowMessageW.restype = UINT
 user32.RegisterWindowMessageW.argtypes = [LPCWSTR]
+user32.RegisterWindowMessageW.restype = UINT
 
-user32.SendNotifyMessageW.restype = c_int
+user32.RegisterShellHookWindow.argtypes = [HWND]
+user32.RegisterShellHookWindow.restype = BOOL
+
+user32.DeregisterShellHookWindow.argtypes = [HWND]
+user32.DeregisterShellHookWindow.restype = BOOL
+
+user32.SetPropW.argtypes = [HWND, LPCWSTR, HANDLE]
+user32.SetPropW.restype = BOOL
+
+user32.RemovePropW.argtypes = [HWND, LPCWSTR]
+user32.RemovePropW.restype = BOOL
+
+user32.SetTaskmanWindow.argtypes = [HWND]
+user32.SetTaskmanWindow.restype = BOOL
+
 user32.SendNotifyMessageW.argtypes = [HWND, UINT, WPARAM, LPARAM]
+user32.SendNotifyMessageW.restype = c_int
 
-user32.PostMessageW.restype = c_int
 user32.PostMessageW.argtypes = [HWND, UINT, WPARAM, LPARAM]
+user32.PostMessageW.restype = c_int
 
-user32.SetTimer.restype = c_int
 user32.SetTimer.argtypes = [HWND, UINT, UINT, LPVOID]
+user32.SetTimer.restype = c_int
 
-user32.FindWindowW.restype = HWND
 user32.FindWindowW.argtypes = [LPCWSTR, LPCWSTR]
+user32.FindWindowW.restype = HWND
 
-user32.FindWindowExW.restype = HWND
 user32.FindWindowExW.argtypes = [HWND, HWND, LPCWSTR, LPCWSTR]
+user32.FindWindowExW.restype = HWND
 
-user32.SendMessageW.restype = c_int
 user32.SendMessageW.argtypes = [HWND, UINT, WPARAM, LPARAM]
+user32.SendMessageW.restype = c_int
 
-user32.IsWindow.restype = BOOL
 user32.IsWindow.argtypes = [HWND]
+user32.IsWindow.restype = BOOL
 
-user32.GetWindowThreadProcessId.restype = DWORD
 user32.GetWindowThreadProcessId.argtypes = [HWND, LPDWORD]
+user32.GetWindowThreadProcessId.restype = DWORD
 
-user32.AllowSetForegroundWindow.restype = BOOL
 user32.AllowSetForegroundWindow.argtypes = [DWORD]
+user32.AllowSetForegroundWindow.restype = BOOL
 
 user32.GetIconInfo.argtypes = [HICON, POINTER(ICONINFO)]
 user32.GetIconInfo.restype = BOOL
@@ -119,14 +122,14 @@ user32.GetDC.restype = HDC
 user32.ReleaseDC.argtypes = [HANDLE, HDC]
 user32.ReleaseDC.restype = c_int
 
-kernel32.OpenProcess.restype = HANDLE
 kernel32.OpenProcess.argtypes = [DWORD, BOOL, DWORD]
+kernel32.OpenProcess.restype = HANDLE
 
-kernel32.QueryFullProcessImageNameW.restype = BOOL
 kernel32.QueryFullProcessImageNameW.argtypes = [HANDLE, DWORD, LPWSTR, LPDWORD]
+kernel32.QueryFullProcessImageNameW.restype = BOOL
 
-kernel32.CloseHandle.restype = BOOL
 kernel32.CloseHandle.argtypes = [HANDLE]
+kernel32.CloseHandle.restype = BOOL
 
 kernel32.CreateNamedPipeW.argtypes = [
     LPCWSTR,
@@ -265,6 +268,26 @@ def RegisterWindowMessage(lpString: str):
     return user32.RegisterWindowMessageW(lpString)
 
 
+def RegisterShellHookWindow(hwnd: int) -> bool:
+    return user32.RegisterShellHookWindow(hwnd)
+
+
+def DeregisterShellHookWindow(hwnd: int) -> bool:
+    return user32.DeregisterShellHookWindow(hwnd)
+
+
+def SetProp(hwnd: int, lpString: str, hData: int) -> bool:
+    return user32.SetPropW(hwnd, lpString, hData)
+
+
+def RemoveProp(hwnd: int, lpString: str) -> bool:
+    return user32.RemovePropW(hwnd, lpString)
+
+
+def SetTaskmanWindow(hwnd: int) -> bool:
+    return user32.SetTaskmanWindow(hwnd)
+
+
 def SendNotifyMessage(hwnd: int, msg: int, wParam: int, lParam: int) -> int:
     return user32.SendNotifyMessageW(hwnd, msg, wParam, lParam)
 
@@ -382,8 +405,8 @@ def CreateNamedPipe(
     )
 
 
-def ConnectNamedPipe(hNamedPipe: int, lpOverlapped: int | None = None) -> None:
-    return(kernel32.ConnectNamedPipe(hNamedPipe, lpOverlapped))
+def ConnectNamedPipe(hNamedPipe: int, lpOverlapped: int | None = None) -> bool:
+    return bool(kernel32.ConnectNamedPipe(hNamedPipe, lpOverlapped))
 
 
 def DisconnectNamedPipe(hNamedPipe: int) -> bool:
@@ -391,7 +414,7 @@ def DisconnectNamedPipe(hNamedPipe: int) -> bool:
 
 
 def WaitNamedPipe(hNamedPipe: str, nTimeOut: int) -> bool:
-    return kernel32.WaitNamedPipeW(hNamedPipe, nTimeOut)
+    return bool(kernel32.WaitNamedPipeW(hNamedPipe, nTimeOut))
 
 
 def CreateEvent(
@@ -451,3 +474,74 @@ def CreateFile(
         dwFlagsAndAttributes,
         hTemplateFile,
     )
+
+
+# -- Power management function prototypes -- #
+powrprof.PowerEnumerate.argtypes = [
+    wintypes.HANDLE,
+    POINTER(GUID),
+    POINTER(GUID),
+    wintypes.DWORD,
+    wintypes.ULONG,
+    wintypes.LPBYTE,
+    POINTER(wintypes.DWORD),
+]
+powrprof.PowerEnumerate.restype = wintypes.DWORD
+
+powrprof.PowerReadFriendlyName.argtypes = [
+    wintypes.HANDLE,
+    POINTER(GUID),
+    POINTER(GUID),
+    POINTER(wintypes.DWORD),
+    wintypes.LPBYTE,
+    POINTER(wintypes.DWORD),
+]
+powrprof.PowerReadFriendlyName.restype = wintypes.DWORD
+
+powrprof.PowerGetActiveScheme.argtypes = [wintypes.HANDLE, POINTER(POINTER(GUID))]
+powrprof.PowerGetActiveScheme.restype = wintypes.DWORD
+
+powrprof.PowerSetActiveScheme.argtypes = [wintypes.HANDLE, POINTER(GUID)]
+powrprof.PowerSetActiveScheme.restype = wintypes.DWORD
+
+
+# -- Power management function wrappers -- #
+def PowerEnumerate(
+    RootPowerKey,
+    SchemeGuid,
+    SubGroupOfPowerSettingsGuid,
+    AccessFlags,
+    Index,
+    Buffer,
+    BufferSize,
+):
+    return powrprof.PowerEnumerate(
+        RootPowerKey, SchemeGuid, SubGroupOfPowerSettingsGuid, AccessFlags, Index, Buffer, BufferSize
+    )
+
+
+def PowerReadFriendlyName(
+    RootPowerKey,
+    SchemeGuid,
+    SubGroupOfPowerSettingsGuid,
+    PowerSettingGuid,
+    Buffer,
+    BufferSize,
+):
+    return powrprof.PowerReadFriendlyName(
+        RootPowerKey, SchemeGuid, SubGroupOfPowerSettingsGuid, PowerSettingGuid, Buffer, BufferSize
+    )
+
+
+def PowerGetActiveScheme(
+    UserRootPowerKey,
+    ActivePolicyGuid,
+):
+    return powrprof.PowerGetActiveScheme(UserRootPowerKey, ActivePolicyGuid)
+
+
+def PowerSetActiveScheme(
+    UserRootPowerKey,
+    SchemeGuid,
+):
+    return powrprof.PowerSetActiveScheme(UserRootPowerKey, SchemeGuid)

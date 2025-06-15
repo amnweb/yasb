@@ -1,16 +1,17 @@
 # Create a Task Scheduler task to run the status bar on user logon.
 # Command line arguments are used to create, delete, enable, or disable the task.
 # example: python task.py create
-import win32com.client
-import datetime
-import os
-import getpass
-import win32api
-import win32security
-import ctypes
-import sys
-import shutil
 import argparse
+import ctypes
+import datetime
+import getpass
+import os
+import shutil
+import sys
+
+import win32com.client
+import win32security
+
 
 def is_admin():
     try:
@@ -18,12 +19,14 @@ def is_admin():
     except:
         return False
 
+
 def get_current_user_sid():
     username = getpass.getuser()
-    domain = os.environ['USERDOMAIN']
+    domain = os.environ["USERDOMAIN"]
     user, domain, type = win32security.LookupAccountName(None, username)
     sid = win32security.ConvertSidToStringSid(user)
     return sid
+
 
 def find_pythonw_exe():
     pythonw_path = shutil.which("pythonw.exe")
@@ -32,12 +35,15 @@ def find_pythonw_exe():
         sys.exit(1)
     return pythonw_path
 
+
 def create_logon_task(task_name, script_path, working_directory):
-    scheduler = win32com.client.Dispatch('Schedule.Service')
+    scheduler = win32com.client.Dispatch("Schedule.Service")
     scheduler.Connect()
-    root_folder = scheduler.GetFolder('\\')
+    root_folder = scheduler.GetFolder("\\")
     task_def = scheduler.NewTask(0)
-    task_def.RegistrationInfo.Description = 'A highly configurable cross-platform (Windows) status bar written in Python.'
+    task_def.RegistrationInfo.Description = (
+        "A highly configurable cross-platform (Windows) status bar written in Python."
+    )
     task_def.RegistrationInfo.Author = "AmN"
     trigger = task_def.Triggers.Create(9)
     trigger.Enabled = True
@@ -50,7 +56,7 @@ def create_logon_task(task_name, script_path, working_directory):
     settings.Enabled = True
     settings.StartWhenAvailable = True
     settings.AllowHardTerminate = True
-    settings.ExecutionTimeLimit = 'PT0S'
+    settings.ExecutionTimeLimit = "PT0S"
     settings.Priority = 7
     settings.MultipleInstances = 0
     settings.DisallowStartIfOnBatteries = False
@@ -69,23 +75,16 @@ def create_logon_task(task_name, script_path, working_directory):
     action.Arguments = script_path
     action.WorkingDirectory = working_directory
     try:
-        root_folder.RegisterTaskDefinition(
-            task_name,
-            task_def,
-            6,
-            None,
-            None,
-            3,
-            None
-        )
+        root_folder.RegisterTaskDefinition(task_name, task_def, 6, None, None, 3, None)
         print(f"Task '{task_name}' created successfully.")
     except Exception as e:
         print(f"Failed to create task '{task_name}'. Error: {e}")
 
+
 def delete_task(task_name):
-    scheduler = win32com.client.Dispatch('Schedule.Service')
+    scheduler = win32com.client.Dispatch("Schedule.Service")
     scheduler.Connect()
-    root_folder = scheduler.GetFolder('\\')
+    root_folder = scheduler.GetFolder("\\")
     try:
         root_folder.DeleteTask(task_name, 0)
     except Exception as e:
@@ -93,10 +92,11 @@ def delete_task(task_name):
         ctypes.windll.user32.MessageBoxW(0, message, "Error", 0x10)
         print(message)
 
+
 def enable_task(task_name, enable):
-    scheduler = win32com.client.Dispatch('Schedule.Service')
+    scheduler = win32com.client.Dispatch("Schedule.Service")
     scheduler.Connect()
-    root_folder = scheduler.GetFolder('\\')
+    root_folder = scheduler.GetFolder("\\")
     try:
         task = root_folder.GetTask(task_name)
         task.Enabled = enable
@@ -107,14 +107,15 @@ def enable_task(task_name, enable):
         ctypes.windll.user32.MessageBoxW(0, message, "Error", 0x10)
         print(message)
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Manage Windows Task Scheduler tasks.")
-    parser.add_argument("action", choices=["create", "delete", "enable", "disable"], help="Action to perform on the task.")
+    parser.add_argument(
+        "action", choices=["create", "delete", "enable", "disable"], help="Action to perform on the task."
+    )
     args = parser.parse_args()
     if not is_admin():
-        ctypes.windll.shell32.ShellExecuteW(
-            None, "runas", sys.executable, " ".join(sys.argv), None, 1
-        )
+        ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, " ".join(sys.argv), None, 1)
     else:
         task_name = "YASB"
         script_path = r"src\main.py"

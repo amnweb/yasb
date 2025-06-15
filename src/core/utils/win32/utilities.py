@@ -1,14 +1,13 @@
-import psutil
 import ctypes
 import ctypes.wintypes
-import pythoncom
 import logging
-from win32process import GetWindowThreadProcessId
-from win32gui import GetWindowText, GetClassName, GetWindowRect, GetWindowPlacement
-from win32api import MonitorFromWindow, GetMonitorInfo
-from win32com.client import Dispatch
+import winreg
 from contextlib import suppress
 
+import psutil
+from win32api import GetMonitorInfo, MonitorFromWindow
+from win32gui import GetClassName, GetWindowPlacement, GetWindowRect, GetWindowText
+from win32process import GetWindowThreadProcessId
 
 SW_MAXIMIZE = 3
 DWMWA_EXTENDED_FRAME_BOUNDS = 9
@@ -22,20 +21,20 @@ def get_monitor_hwnd(window_hwnd: int) -> int:
 def get_monitor_info(monitor_hwnd: int) -> dict:
     monitor_info = GetMonitorInfo(monitor_hwnd)
     return {
-        'rect': {
-            'x': monitor_info['Monitor'][0],
-            'y': monitor_info['Monitor'][1],
-            'width': monitor_info['Monitor'][2],
-            'height': monitor_info['Monitor'][3]
+        "rect": {
+            "x": monitor_info["Monitor"][0],
+            "y": monitor_info["Monitor"][1],
+            "width": monitor_info["Monitor"][2],
+            "height": monitor_info["Monitor"][3],
         },
-        'rect_work_area': {
-            'x': monitor_info['Work'][0],
-            'y': monitor_info['Work'][1],
-            'width': monitor_info['Work'][2],
-            'height': monitor_info['Work'][3]
+        "rect_work_area": {
+            "x": monitor_info["Work"][0],
+            "y": monitor_info["Work"][1],
+            "width": monitor_info["Work"][2],
+            "height": monitor_info["Work"][3],
         },
-        'flags': monitor_info['Flags'],
-        'device': monitor_info['Device']
+        "flags": monitor_info["Flags"],
+        "device": monitor_info["Device"],
     }
 
 
@@ -43,14 +42,14 @@ def get_process_info(hwnd: int) -> dict:
     process_id = GetWindowThreadProcessId(hwnd)
     process = psutil.Process(process_id[-1])
     return {
-        'name': process.name(),
-        'pid': process.pid,
-        'ppid': process.ppid(),
-        'cpu_percent': process.cpu_percent(),
-        'mem_percent': process.memory_percent(),
-        'num_threads': process.num_threads(),
-        'username': process.username(),
-        'status': process.status()
+        "name": process.name(),
+        "pid": process.pid,
+        "ppid": process.ppid(),
+        "cpu_percent": process.cpu_percent(),
+        "mem_percent": process.memory_percent(),
+        "num_threads": process.num_threads(),
+        "username": process.username(),
+        "status": process.status(),
     }
 
 
@@ -61,24 +60,19 @@ def get_window_extended_frame_bounds(hwnd: int) -> dict:
         ctypes.wintypes.HWND(hwnd),
         ctypes.wintypes.DWORD(DWMWA_EXTENDED_FRAME_BOUNDS),
         ctypes.byref(rect),
-        ctypes.sizeof(rect)
+        ctypes.sizeof(rect),
     )
 
-    return {
-        'x': rect.left,
-        'y': rect.top,
-        'width': rect.right - rect.left,
-        'height': rect.bottom - rect.top
-    }
+    return {"x": rect.left, "y": rect.top, "width": rect.right - rect.left, "height": rect.bottom - rect.top}
 
 
 def get_window_rect(hwnd: int) -> dict:
     window_rect = GetWindowRect(hwnd)
     return {
-        'x': window_rect[0],
-        'y': window_rect[1],
-        'width': window_rect[2] - window_rect[0],
-        'height': window_rect[3] - window_rect[1],
+        "x": window_rect[0],
+        "y": window_rect[1],
+        "width": window_rect[2] - window_rect[0],
+        "height": window_rect[3] - window_rect[1],
     }
 
 
@@ -93,28 +87,58 @@ def get_hwnd_info(hwnd: int) -> dict:
         monitor_info = get_monitor_info(monitor_hwnd)
 
         return {
-            'hwnd': hwnd,
-            'title': GetWindowText(hwnd),
-            'class_name': GetClassName(hwnd),
-            'process': get_process_info(hwnd),
-            'monitor_hwnd': monitor_hwnd,
-            'monitor_info': monitor_info,
-            'rect': get_window_rect(hwnd)
+            "hwnd": hwnd,
+            "title": GetWindowText(hwnd),
+            "class_name": GetClassName(hwnd),
+            "process": get_process_info(hwnd),
+            "monitor_hwnd": monitor_hwnd,
+            "monitor_info": monitor_info,
+            "rect": get_window_rect(hwnd),
         }
 
 
-def create_shortcut(shortcut_path: str, autostart_file: str, working_directory: str):
+def _open_startup_registry(access_flag: int):
+    """Helper function to open the startup registry key."""
+    registry_path = r"SOFTWARE\Microsoft\Windows\CurrentVersion\Run"
+    return winreg.OpenKey(winreg.HKEY_CURRENT_USER, registry_path, 0, access_flag)
+
+
+def enable_autostart(app_name: str, executable_path: str) -> bool:
+    """Add application to Windows startup."""
     try:
-        pythoncom.CoInitialize()
-        shell = Dispatch("WScript.Shell")
-        shortcut = shell.CreateShortCut(shortcut_path)
-        shortcut.Targetpath = autostart_file
-        shortcut.WorkingDirectory = working_directory
-        shortcut.Description = "Shortcut to yasb.exe"
-        shortcut.save()
-        logging.info(f"Created shortcut at {shortcut_path}")
-        print(f"Created shortcut at {shortcut_path}")
+        with _open_startup_registry(winreg.KEY_SET_VALUE) as key:
+            winreg.SetValueEx(key, app_name, 0, winreg.REG_SZ, executable_path)
+        logging.info(f"{app_name} added to startup")
+        return True
     except Exception as e:
-        logging.error(f"Failed to create startup shortcut: {e}")
-        print(f"Failed to create startup shortcut: {e}")
+        logging.error(f"Failed to add {app_name} to startup: {e}")
+        return False
+
+
+def disable_autostart(app_name: str) -> bool:
+    """Remove application from Windows startup."""
+    try:
+        # First check if the entry exists
+        if is_autostart_enabled(app_name):
+            with _open_startup_registry(winreg.KEY_ALL_ACCESS) as key:
+                winreg.DeleteValue(key, app_name)
+            logging.info(f"{app_name} removed from startup")
+        else:
+            logging.info(f"Startup entry for {app_name} not found")
+        return True
+    except Exception as e:
+        logging.error(f"Failed to remove {app_name} from startup: {e}")
+        return False
+
+
+def is_autostart_enabled(app_name: str) -> bool:
+    """Check if application is in Windows startup."""
+    try:
+        with _open_startup_registry(winreg.KEY_READ) as key:
+            winreg.QueryValueEx(key, app_name)
+        return True
+    except WindowsError:
+        return False
+    except Exception as e:
+        logging.error(f"Failed to check startup status for {app_name}: {e}")
         return False

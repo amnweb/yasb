@@ -1,8 +1,10 @@
 import ctypes
 import logging
 from ctypes.wintypes import HWND
+
 user32 = ctypes.windll.user32
 dwm = ctypes.windll.dwmapi
+
 
 # Define the ACCENTPOLICY structure
 class ACCENTPOLICY(ctypes.Structure):
@@ -10,16 +12,14 @@ class ACCENTPOLICY(ctypes.Structure):
         ("AccentState", ctypes.c_uint),
         ("AccentFlags", ctypes.c_uint),
         ("GradientColor", ctypes.c_uint),
-        ("AnimationId", ctypes.c_uint)
+        ("AnimationId", ctypes.c_uint),
     ]
+
 
 # Define the WINDOWCOMPOSITIONATTRIBDATA structure
 class WINDOWCOMPOSITIONATTRIBDATA(ctypes.Structure):
-    _fields_ = [
-        ("Attribute", ctypes.c_int),
-        ("Data", ctypes.POINTER(ctypes.c_int)),
-        ("SizeOfData", ctypes.c_size_t)
-    ]
+    _fields_ = [("Attribute", ctypes.c_int), ("Data", ctypes.POINTER(ctypes.c_int)), ("SizeOfData", ctypes.c_size_t)]
+
 
 SetWindowCompositionAttribute = user32.SetWindowCompositionAttribute
 SetWindowCompositionAttribute.argtypes = (HWND, ctypes.POINTER(WINDOWCOMPOSITIONATTRIBDATA))
@@ -44,6 +44,7 @@ DWMWCP_DONOTROUND = 1
 DWMWCP_ROUND = 2
 DWMWCP_ROUNDSMALL = 3
 
+
 def HEXtoRGBAint(HEX: str) -> int:
     """Convert HEX color to RGBA integer."""
     alpha = HEX[7:]
@@ -52,6 +53,7 @@ def HEXtoRGBAint(HEX: str) -> int:
     red = HEX[1:3]
     gradientColor = alpha + blue + green + red
     return int(gradientColor, base=16)
+
 
 def set_accent_policy(hwnd, accent_state, gradient_color=0, accent_flags=0):
     """Set the accent policy for a window."""
@@ -69,6 +71,7 @@ def set_accent_policy(hwnd, accent_state, gradient_color=0, accent_flags=0):
     if result == 0:
         raise ctypes.WinError()
 
+
 def set_dark_mode(hwnd):
     """Enable dark mode for a window."""
     data = WINDOWCOMPOSITIONATTRIBDATA()
@@ -80,10 +83,13 @@ def set_dark_mode(hwnd):
     if result == 0:
         raise ctypes.WinError()
 
+
 def set_window_corner_preference(hwnd, preference, border_color):
     """Set the window corner preference and border color."""
     preference_value = ctypes.c_int(preference)
-    result = dwm.DwmSetWindowAttribute(hwnd, DWMWA_WINDOW_CORNER_PREFERENCE, ctypes.byref(preference_value), ctypes.sizeof(preference_value))
+    result = dwm.DwmSetWindowAttribute(
+        hwnd, DWMWA_WINDOW_CORNER_PREFERENCE, ctypes.byref(preference_value), ctypes.sizeof(preference_value)
+    )
     if result != 0:
         raise ctypes.WinError()
 
@@ -94,16 +100,19 @@ def set_window_corner_preference(hwnd, preference, border_color):
     else:
         border_color_value = ctypes.c_int(HEXtoRGBAint(border_color))
 
-    result = dwm.DwmSetWindowAttribute(hwnd, DWMWA_BORDER_COLOR, ctypes.byref(border_color_value), ctypes.sizeof(border_color_value))
+    result = dwm.DwmSetWindowAttribute(
+        hwnd, DWMWA_BORDER_COLOR, ctypes.byref(border_color_value), ctypes.sizeof(border_color_value)
+    )
     if result != 0:
         raise ctypes.WinError()
+
 
 def Blur(hwnd, Acrylic=False, DarkMode=False, RoundCorners=False, RoundCornersType="normal", BorderColor="System"):
     """Apply blur, dark mode, and corner preferences to a window."""
     hwnd = int(hwnd)
     try:
         if Acrylic:
-            set_accent_policy(hwnd, ACCENT_ENABLE_ACRYLICBLURBEHIND, HEXtoRGBAint('#ff000000'), 2)
+            set_accent_policy(hwnd, ACCENT_ENABLE_ACRYLICBLURBEHIND, HEXtoRGBAint("#ff000000"), 2)
         else:
             set_accent_policy(hwnd, ACCENT_ENABLE_BLURBEHIND)
 
@@ -111,6 +120,8 @@ def Blur(hwnd, Acrylic=False, DarkMode=False, RoundCorners=False, RoundCornersTy
             set_dark_mode(hwnd)
 
         if RoundCorners:
-            set_window_corner_preference(hwnd, DWMWCP_ROUND if RoundCornersType == "normal" else DWMWCP_ROUNDSMALL, BorderColor)
+            set_window_corner_preference(
+                hwnd, DWMWCP_ROUND if RoundCornersType == "normal" else DWMWCP_ROUNDSMALL, BorderColor
+            )
     except Exception as e:
         logging.debug(f"Failed to apply settings: {e}")

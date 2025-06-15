@@ -1,6 +1,6 @@
 # Cava Widget Configuration
 
-> NOTE: This widget requires the `cava` version >= 0.10.4 to be installed on your system. You can install it using winget `winget install karlstav.cava` or from the [official repository](https://github.com/karlstav/cava/releases). Cava need to be accessible in the system path. YASB will create temporary configuration files for cava in the `%temp%` directory.
+> NOTE: This widget requires the `cava` version >= 0.10.4 to be installed on your system. You can install it using winget `winget install karlstav.cava` or from the [official repository](https://github.com/karlstav/cava/releases). Cava need to be accessible in the system path. YASB will create temporary configuration files for cava in the `%LOCALAPPDATA%\Yasb` directory.
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
@@ -19,6 +19,9 @@
 | `channels` | string | "stereo" | Visual channels. Can be 'stereo' or 'mono' |
 | `mono_option` | string | "average" | Set mono to take input from 'left', 'right' or 'average' |
 | `reverse` | integer | 0 | Set to 1 to display frequencies the other way around |
+| `waveform` | integer | 0 | Show waveform instead of frequency spectrum, 1 = on, 0 = off |
+| `monstercat` | integer | 0 | Disables or enables the so-called "Monstercat smoothing" with or without "waves". Set to 0 to disable. |
+| `waves` | integer | 0 | Related to monstercat, 1 = on, 0 = off |
 | `foreground` | string | "#ffffff" | Foreground color in hex format |
 | `gradient` | integer | 1 | Gradient mode, 1 = on, 0 = off |
 | `gradient_color_1` | string | "#74c7ec" | First gradient color in hex format |
@@ -26,6 +29,7 @@
 | `gradient_color_3` | string | "#cba6f7" | Third gradient color in hex format |
 | `hide_empty` | boolean | false | Hide widget when no audio is playing (requires `sleep_timer` to be enabled) |
 | `container_padding` | object | {top: 0, left: 0, bottom: 0, right: 0} | Padding of the widget container |
+| `callbacks`         | dict    | `{'on_left': 'do_nothing', 'on_middle': 'do_nothing', 'on_right': 'reload_cava'}` | Callbacks for mouse events on the widget. |
 
 ## Example Configuration
 
@@ -44,7 +48,6 @@
       bars_number: 8
       bar_spacing: 2
       bar_width: 4
-      sleep_timer: 2
       hide_empty: true
       container_padding:
         top: 0
@@ -70,6 +73,9 @@
 - **channels**: Visual channels. Can be 'stereo' or 'mono'.
 - **mono_option**: Set mono to take input from 'left', 'right' or 'average'.
 - **reverse**: Set to 1 to display frequencies the other way around.
+- **waveform**: Show waveform instead of frequency spectrum, 1 = on, 0 = off.
+- **monstercat**: Disables or enables the so-called "Monstercat smoothing" with or without "waves". Set to 0 to disable.
+- **waves**: Related to monstercat, 1 = on, 0 = off.
 - **foreground**: Foreground color in hex format.
 - **gradient**: Gradient mode, 1 = on, 0 = off.
 - **gradient_color_1**: First gradient color in hex format.
@@ -77,6 +83,7 @@
 - **gradient_color_3**: Third gradient color in hex format.
 - **hide_empty**: Hide widget when no audio is playing (requires `sleep_timer` to be enabled).
 - **container_padding**: Explicitly set padding inside widget container.
+- **callbacks**: A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions.
 
 More information on this option is documented in the [example config file](https://github.com/karlstav/cava/blob/master/example_files/config)
 

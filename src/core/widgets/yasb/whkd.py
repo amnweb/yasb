@@ -1,42 +1,45 @@
-import os
-import re
 import logging
-from PyQt6.QtWidgets import (
-    QLabel, QHBoxLayout, QWidget, QApplication, QSizePolicy,
-    QVBoxLayout, QScrollArea, QPushButton, QLineEdit, QDialog
-)
+import os
+
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon
+from PyQt6.QtWidgets import (
+    QApplication,
+    QDialog,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QScrollArea,
+    QSizePolicy,
+    QVBoxLayout,
+    QWidget,
+)
+
 from core.utils.alert_dialog import raise_info_alert
-from core.widgets.base import BaseWidget
-from core.validation.widgets.yasb.whkd import VALIDATION_SCHEMA
-from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.utilities import add_shadow, build_widget_label
+from core.utils.widgets.animation_manager import AnimationManager
+from core.validation.widgets.yasb.whkd import VALIDATION_SCHEMA
+from core.widgets.base import BaseWidget
 from settings import SCRIPT_PATH
 
+
 class KeybindsDialog(QDialog):
-    def __init__(
-            self,
-            content,
-            file_path,
-            animation,
-            special_keys,
-            parent=None
-        ):
+    def __init__(self, content, file_path, animation, special_keys, parent=None):
         super().__init__(parent)
 
         self.file_path = file_path
         self.original_content = content
         self.animation = animation
         self.special_keys = special_keys or {}
-        self.setWindowTitle('WHKD Keybinds')
+        self.setWindowTitle("WHKD Keybinds")
         self.setProperty("class", "whkd-popup")
 
         self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint)
         self.setWindowModality(Qt.WindowModality.WindowModal)
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
 
-        icon_path = os.path.join(SCRIPT_PATH,'assets', 'images', 'app_icon.png')
+        icon_path = os.path.join(SCRIPT_PATH, "assets", "images", "app_icon.png")
         icon = QIcon(icon_path)
         self.setWindowIcon(QIcon(icon.pixmap(48, 48)))
         self.setMinimumHeight(800)
@@ -98,8 +101,7 @@ class KeybindsDialog(QDialog):
 
         self.container = QWidget()
         self.container.setObjectName("whkd_container_area")
-        self.container.setStyleSheet(
-            'QWidget#whkd_container_area{background-color: transparent;border:none;}')
+        self.container.setStyleSheet("QWidget#whkd_container_area{background-color: transparent;border:none;}")
         self.container_layout = QVBoxLayout(self.container)
         self.container_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.scroll_area.setWidget(self.container)
@@ -130,7 +132,7 @@ class KeybindsDialog(QDialog):
                 min_width = max(min_width, row_width + 50)
 
                 # If this is a keybind row with buttons and command, check their widths too
-                if isinstance(item.widget(), QWidget) and hasattr(item.widget(), 'layout'):
+                if isinstance(item.widget(), QWidget) and hasattr(item.widget(), "layout"):
                     row_layout = item.widget().layout()
                     if row_layout:
                         width_sum = 0
@@ -158,7 +160,11 @@ class KeybindsDialog(QDialog):
 
         filter_text = self.filter_input.text().lower()
         for keybind, command in self.original_content:
-            if filter_text and filter_text not in (keybind.lower() if keybind else '') and filter_text not in command.lower():
+            if (
+                filter_text
+                and filter_text not in (keybind.lower() if keybind else "")
+                and filter_text not in command.lower()
+            ):
                 continue
 
             if keybind is None:
@@ -180,8 +186,7 @@ class KeybindsDialog(QDialog):
                 # Create a container widget for buttons
                 # Create a container widget for buttons
                 buttons_container = QWidget(self.row)
-                buttons_container.setProperty(
-                    "class", "keybind-buttons-container")
+                buttons_container.setProperty("class", "keybind-buttons-container")
 
                 buttons_layout = QHBoxLayout(buttons_container)
                 buttons_layout.setContentsMargins(0, 0, 0, 0)
@@ -189,20 +194,19 @@ class KeybindsDialog(QDialog):
                 buttons_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
 
                 def create_key_button(key_text):
-                    btn = QPushButton(
-                        self._friendly_key_text(key_text.lower()))
+                    btn = QPushButton(self._friendly_key_text(key_text.lower()))
                     if key_text.lower() in self.special_keys:
                         btn.setProperty("class", "keybind-button special")
                     else:
                         btn.setProperty("class", "keybind-button")
                     btn.setFixedHeight(28)
                     btn.setMinimumWidth(28)
-                    btn.setSizePolicy(QSizePolicy.Policy.Fixed,
-                                      QSizePolicy.Policy.Fixed)
+                    btn.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
                     buttons_layout.addWidget(btn)
                     btn.style().unpolish(btn)
                     btn.style().polish(btn)
                     return btn
+
                 if " + " in keybind:
                     groups = keybind.split(" + ")
                     for idx, group in enumerate(groups):
@@ -213,17 +217,20 @@ class KeybindsDialog(QDialog):
                         # Add plus button between groups if needed
                         if idx < len(groups) - 1:
                             next_keys = groups[idx + 1].split()
-                            if not (keys and next_keys and
-                                    (keys[-1].lower() in no_plus_modifiers and
-                                     next_keys[0].lower() in no_plus_modifiers)):
+                            if not (
+                                keys
+                                and next_keys
+                                and (
+                                    keys[-1].lower() in no_plus_modifiers and next_keys[0].lower() in no_plus_modifiers
+                                )
+                            ):
                                 plus_btn = QPushButton("+")
                                 plus_btn.setEnabled(False)
                                 plus_btn.setProperty("class", "plus-separator")
-                                plus_btn.setSizePolicy(
-                                    QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+                                plus_btn.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
                                 buttons_layout.addWidget(plus_btn)
                 else:
-                    keys = [k.strip() for k in keybind.split('+')]
+                    keys = [k.strip() for k in keybind.split("+")]
                     for key in keys:
                         create_key_button(key)
 
@@ -247,15 +254,15 @@ class WhkdWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
 
     def __init__(
-            self,
-            label: str,
-            animation: dict[str, str],
-            special_keys: list = None,
-            container_padding: dict = None,
-            callbacks: dict = None,
-            label_shadow: dict = None,
-            container_shadow: dict = None
-        ):
+        self,
+        label: str,
+        animation: dict[str, str],
+        special_keys: list = None,
+        container_padding: dict = None,
+        callbacks: dict = None,
+        label_shadow: dict = None,
+        container_shadow: dict = None,
+    ):
         super().__init__(class_name="whkd-widget")
         self._label_content = label
         self._padding = container_padding
@@ -264,16 +271,12 @@ class WhkdWidget(BaseWidget):
         self._container_shadow = container_shadow
         # Handle the case where special_keys is not provided - initialize as empty
         special_keys = special_keys or []
-        self._special_keys = {item['key']: item['key_replace']
-                              for item in special_keys}
+        self._special_keys = {item["key"]: item["key_replace"] for item in special_keys}
         # Construct container
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
         self._widget_container_layout.setContentsMargins(
-            self._padding['left'],
-            self._padding['top'],
-            self._padding['right'],
-            self._padding['bottom']
+            self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
         )
         # Initialize container
         self._widget_container: QWidget = QWidget()
@@ -287,41 +290,40 @@ class WhkdWidget(BaseWidget):
         build_widget_label(self, self._label_content, None, self._label_shadow)
 
         self.register_callback("open_popup", self._open_popup)
-        callbacks = {
-            "on_left": "open_popup"
-        }
-        self.callback_left = callbacks['on_left']
+        callbacks = {"on_left": "open_popup"}
+        self.callback_left = callbacks["on_left"]
 
     def _open_popup(self):
-        if self._animation.get('enabled'):
-            AnimationManager.animate(self, self._animation.get(
-                'type'), self._animation.get('duration'))
+        if self._animation.get("enabled"):
+            AnimationManager.animate(self, self._animation.get("type"), self._animation.get("duration"))
 
         # Determine config file location
-        whkd_config_home = os.getenv('WHKD_CONFIG_HOME')
-        file_path = os.path.join(whkd_config_home, 'whkdrc') if whkd_config_home \
-            else os.path.join(os.path.expanduser('~'), '.config', 'whkdrc')
+        whkd_config_home = os.getenv("WHKD_CONFIG_HOME")
+        file_path = (
+            os.path.join(whkd_config_home, "whkdrc")
+            if whkd_config_home
+            else os.path.join(os.path.expanduser("~"), ".config", "whkdrc")
+        )
         if not os.path.exists(file_path):
             logging.error(f"File not found: {file_path}")
             raise_info_alert(
                 title="Error",
                 msg=f"The specified file does not exist\n{file_path}",
                 informative_msg="Please make sure the file exists and try again.",
-                rich_text=True
+                rich_text=True,
             )
             return
 
         # Read and process the configuration file
         try:
-            with open(file_path, 'r') as f:
+            with open(file_path, "r") as f:
                 raw_lines = f.readlines()
         except Exception as e:
             logging.error(f"Error reading file: {e}")
             return
 
         content = self._process_file(raw_lines)
-        dialog = KeybindsDialog(
-            content, file_path, self._animation, self._special_keys, self)
+        dialog = KeybindsDialog(content, file_path, self._animation, self._special_keys, self)
         dialog.exec()
 
     def _process_file(self, lines):
@@ -331,9 +333,9 @@ class WhkdWidget(BaseWidget):
             stripped = line.strip()
             if stripped.startswith("##"):
                 filtered_lines.append(stripped)
-            elif not (stripped.startswith('#') or stripped.startswith('.shell')):
+            elif not (stripped.startswith("#") or stripped.startswith(".shell")):
                 # Remove inline comments; only add non-empty lines
-                line_no_comment = line.split('#')[0].strip()
+                line_no_comment = line.split("#")[0].strip()
                 if line_no_comment:
                     filtered_lines.append(line_no_comment)
 
@@ -342,9 +344,9 @@ class WhkdWidget(BaseWidget):
         for line in filtered_lines:
             # Check if line is a header
             if line.startswith("##"):
-                header_text = line.lstrip('#').strip()
+                header_text = line.lstrip("#").strip()
                 formatted_lines.append((None, header_text))
-            elif ':' in line:
-                keybind, command = line.split(':', 1)
+            elif ":" in line:
+                keybind, command = line.split(":", 1)
                 formatted_lines.append((keybind.strip(), command.strip()))
         return formatted_lines

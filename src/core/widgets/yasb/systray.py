@@ -14,7 +14,6 @@ from PyQt6.QtCore import (
     QTimer,
     pyqtSlot,  # pyright: ignore [reportUnknownVariableType]
 )
-from PyQt6.QtGui import QShowEvent
 from PyQt6.QtWidgets import (
     QApplication,
     QHBoxLayout,
@@ -25,6 +24,7 @@ from PyQt6.QtWidgets import (
 )
 
 from core.utils.systray.systray_widget import DropWidget, IconState, IconWidget
+from core.utils.systray.tasks_service import TasksService
 from core.utils.systray.tray_monitor import IconData, TrayMonitor
 from core.utils.utilities import add_shadow
 from core.utils.win32.bindings import IsWindow
@@ -38,14 +38,8 @@ from core.utils.win32.constants import (
 )
 from core.validation.widgets.yasb.systray import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
-from settings import DEBUG
 
 logger = logging.getLogger("systray_widget")
-
-if DEBUG:
-    logger.setLevel(logging.DEBUG)
-else:
-    logger.setLevel(logging.CRITICAL)
 
 LOCALDATA_FOLDER = Path(os.environ["LOCALAPPDATA"]) / "Yasb"
 
@@ -63,15 +57,31 @@ class TrayMonitorThread(QThread):
 
     @override
     def run(self):
-        threading.current_thread().name = "TrayMonitorThread"
+        threading.current_thread().name = "TrayMonitor"
         logger.debug("Systray thread is starting...")
+        self.client.run()
+
+
+class TaskbarServiceThread(QThread):
+    """Thread to handle Taskbar related messages"""
+
+    def __init__(self, client: TasksService):
+        super().__init__()
+        self.client = client
+
+    @override
+    def run(self):
+        threading.current_thread().name = "TaskbarService"
+        logger.debug("TaskbarService thread is starting...")
         self.client.run()
 
 
 class SystrayWidget(BaseWidget):
     validation_schema: dict[str, Any] = VALIDATION_SCHEMA
-    _instance = None
-    _thread = None
+    _systray_instance = None
+    _systray_thread = None
+    _tasks_service_instance = None
+    _tasks_thread = None
 
     @classmethod
     def get_client_instance(cls):
@@ -80,11 +90,18 @@ class SystrayWidget(BaseWidget):
         as they will just bounce messages between each other and cause issues,
         we create a single instance of the TrayMonitor and use it for all widgets.
         """
-        if cls._instance is None:
-            cls._instance = TrayMonitor()
-            cls._thread = TrayMonitorThread(cls._instance)
+        if cls._systray_instance is None:
+            cls._systray_instance = TrayMonitor()
+            cls._systray_thread = TrayMonitorThread(cls._systray_instance)
+            cls._tasks_service_instance = TasksService()
+            cls._tasks_thread = TaskbarServiceThread(cls._tasks_service_instance)
 
-        return cls._instance, cls._thread
+        return (
+            cls._systray_instance,
+            cls._systray_thread,
+            cls._tasks_service_instance,
+            cls._tasks_thread,
+        )
 
     def __init__(
         self,
@@ -206,6 +223,7 @@ class SystrayWidget(BaseWidget):
         self.unpinned_vis_btn.setVisible(self.show_unpinned_button)
 
         QTimer.singleShot(0, self.setup_client)  # pyright: ignore [reportUnknownMemberType]
+        QTimer.singleShot(0, self.set_containers_visibility)  # pyright: ignore [reportUnknownMemberType]
 
     def show_context_menu(self, pos: QPoint):
         """Show the context menu for the unpinned visibility button"""
@@ -236,22 +254,22 @@ class SystrayWidget(BaseWidget):
     def setup_client(self):
         """Setup the tray monitor client and connect signals"""
         self.load_state()
-        client, thread = SystrayWidget.get_client_instance()
-        client.icon_modified.connect(self.on_icon_modified)  # type: ignore
-        client.icon_deleted.connect(self.on_icon_deleted)  # type: ignore
+        systray_client, systray_thread, tasks_service, tasks_thread = SystrayWidget.get_client_instance()
+        systray_client.icon_modified.connect(self.on_icon_modified)  # type: ignore
+        systray_client.icon_deleted.connect(self.on_icon_deleted)  # type: ignore
 
         app_inst = QApplication.instance()
         if app_inst is not None:
             app_inst.aboutToQuit.connect(self.save_state)  # type: ignore
 
-        if thread is not None and not thread.isRunning():
-            thread.start()
-            thread.started.connect(self.on_thread_started)  # type: ignore
+        if systray_thread is not None and not systray_thread.isRunning():
+            systray_thread.start()
+            systray_thread.started.connect(self.on_thread_started)  # type: ignore
+            if tasks_service is not None and tasks_thread is not None:
+                tasks_thread.start()
 
-    @override
-    def showEvent(self, a0: QShowEvent | None) -> None:
-        """Called when the widget is shown on the screen"""
-        super().showEvent(a0)
+    def set_containers_visibility(self):
+        """Update the containers visibility based on the show_unpinned_button setting"""
         self.unpinned_vis_btn.setChecked(self.show_unpinned)
         self.unpinned_vis_btn.setText(self.label_expanded if self.show_unpinned else self.label_collapsed)
         self.unpinned_widget.setVisible(self.show_unpinned or not self.show_unpinned_button)

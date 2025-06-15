@@ -1,65 +1,78 @@
-import re
-import comtypes
-from comtypes import COMMETHOD, GUID
-from comtypes import CLSCTX_ALL, CoInitialize, CoUninitialize, COMObject
-import logging
-import enum
 import ctypes
+import enum
+import logging
+import re
 from ctypes import HRESULT, POINTER
 from ctypes import c_int as enum
 from ctypes.wintypes import BOOL, INT, LPCWSTR, WORD
-from core.widgets.base import BaseWidget
-from core.validation.widgets.yasb.volume import VALIDATION_SCHEMA
-from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget, QVBoxLayout, QSlider, QPushButton
+
+import comtypes
+from comtypes import CLSCTX_ALL, COMMETHOD, GUID, CoInitialize, COMObject, CoUninitialize
+from pycaw.callbacks import MMNotificationClient
+from pycaw.pycaw import (
+    AudioUtilities,
+    EDataFlow,
+    IAudioEndpointVolume,
+    IAudioEndpointVolumeCallback,
+    IMMDeviceEnumerator,
+)
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QWheelEvent
-from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume, IAudioEndpointVolumeCallback, EDataFlow, IMMDeviceEnumerator
-from pycaw.callbacks import MMNotificationClient
-from core.utils.win32.system_function import KEYEVENTF_KEYUP, VK_VOLUME_UP, VK_VOLUME_DOWN
-from core.utils.widgets.animation_manager import AnimationManager
-from core.utils.utilities import PopupWidget, add_shadow, build_widget_label
-# Disable comtypes logging
-logging.getLogger('comtypes').setLevel(logging.CRITICAL)
+from PyQt6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QSlider, QVBoxLayout, QWidget
 
-IID_IPolicyConfig = GUID('{f8679f50-850a-41cf-9c72-430f290290c8}')
-CLSID_PolicyConfigClient = GUID('{870af99c-171d-4f9e-af0d-e63df40c2bc9}')
-IID_AudioSes = ('{00000000-0000-0000-0000-000000000000}')
+from core.utils.utilities import PopupWidget, add_shadow, build_widget_label
+from core.utils.widgets.animation_manager import AnimationManager
+from core.utils.win32.system_function import KEYEVENTF_KEYUP, VK_VOLUME_DOWN, VK_VOLUME_UP
+from core.validation.widgets.yasb.volume import VALIDATION_SCHEMA
+from core.widgets.base import BaseWidget
+
+# Disable comtypes logging
+logging.getLogger("comtypes").setLevel(logging.CRITICAL)
+
+IID_IPolicyConfig = GUID("{f8679f50-850a-41cf-9c72-430f290290c8}")
+CLSID_PolicyConfigClient = GUID("{870af99c-171d-4f9e-af0d-e63df40c2bc9}")
+IID_AudioSes = "{00000000-0000-0000-0000-000000000000}"
 
 REFERENCE_TIME = ctypes.c_longlong
 # LPCGUID = POINTER(GUID)
 LPREFERENCE_TIME = POINTER(REFERENCE_TIME)
 
+
 class DeviceSharedMode(ctypes.Structure):
-    _fields_ = [
-        ('dummy_', INT)
-    ]
+    _fields_ = [("dummy_", INT)]
+
 
 PDeviceSharedMode = POINTER(DeviceSharedMode)
 
+
 class WAVEFORMATEX(ctypes.Structure):
     _fields_ = [
-        ('wFormatTag', WORD),
-        ('nChannels', WORD),
-        ('nSamplesPerSec', WORD),
-        ('nAvgBytesPerSec', WORD),
-        ('nBlockAlign', WORD),
-        ('wBitsPerSample', WORD),
-        ('cbSize', WORD),
+        ("wFormatTag", WORD),
+        ("nChannels", WORD),
+        ("nSamplesPerSec", WORD),
+        ("nAvgBytesPerSec", WORD),
+        ("nBlockAlign", WORD),
+        ("wBitsPerSample", WORD),
+        ("cbSize", WORD),
     ]
 
 
 PWAVEFORMATEX = POINTER(WAVEFORMATEX)
 
+
 class _tagpropertykey(ctypes.Structure):
     pass
+
 
 class tag_inner_PROPVARIANT(ctypes.Structure):
     pass
 
+
 PROPVARIANT = tag_inner_PROPVARIANT
 PPROPVARIANT = POINTER(PROPVARIANT)
-#PROPERTYKEY = _tagpropertykey
+# PROPERTYKEY = _tagpropertykey
 PPROPERTYKEY = POINTER(_tagpropertykey)
+
 
 class ERole(enum):
     eConsole = 0
@@ -75,119 +88,99 @@ class IPolicyConfig(comtypes.IUnknown):
         COMMETHOD(
             [],
             HRESULT,
-            'GetMixFormat',
-            (['in'], LPCWSTR, 'pwstrDeviceId'),
-            (['out'], POINTER(PWAVEFORMATEX), 'pFormat')
+            "GetMixFormat",
+            (["in"], LPCWSTR, "pwstrDeviceId"),
+            (["out"], POINTER(PWAVEFORMATEX), "pFormat"),
         ),
         COMMETHOD(
             [],
             HRESULT,
-            'GetDeviceFormat',
-            (['in'], LPCWSTR, 'pwstrDeviceId'),
-            (['in'], BOOL, 'bDefault'),
-            (['out'], POINTER(PWAVEFORMATEX), 'pFormat')
+            "GetDeviceFormat",
+            (["in"], LPCWSTR, "pwstrDeviceId"),
+            (["in"], BOOL, "bDefault"),
+            (["out"], POINTER(PWAVEFORMATEX), "pFormat"),
+        ),
+        COMMETHOD([], HRESULT, "ResetDeviceFormat", (["in"], LPCWSTR, "pwstrDeviceId")),
+        COMMETHOD(
+            [],
+            HRESULT,
+            "SetDeviceFormat",
+            (["in"], LPCWSTR, "pwstrDeviceId"),
+            (["in"], PWAVEFORMATEX, "pEndpointFormat"),
+            (["in"], PWAVEFORMATEX, "pMixFormat"),
         ),
         COMMETHOD(
             [],
             HRESULT,
-            'ResetDeviceFormat',
-            (['in'], LPCWSTR, 'pwstrDeviceId')
+            "GetProcessingPeriod",
+            (["in"], LPCWSTR, "pwstrDeviceId"),
+            (["in"], BOOL, "bDefault"),
+            (["out"], LPREFERENCE_TIME, "hnsDefaultDevicePeriod"),
+            (["out"], LPREFERENCE_TIME, "hnsMinimumDevicePeriod"),
         ),
         COMMETHOD(
             [],
             HRESULT,
-            'SetDeviceFormat',
-            (['in'], LPCWSTR, 'pwstrDeviceId'),
-            (['in'], PWAVEFORMATEX, 'pEndpointFormat'),
-            (['in'], PWAVEFORMATEX, 'pMixFormat')
+            "SetProcessingPeriod",
+            (["in"], LPCWSTR, "pwstrDeviceId"),
+            (["in"], LPREFERENCE_TIME, "hnsDevicePeriod"),
         ),
-
         COMMETHOD(
-            [],
-            HRESULT,
-            'GetProcessingPeriod',
-            (['in'], LPCWSTR, 'pwstrDeviceId'),
-            (['in'], BOOL, 'bDefault'),
-            (['out'], LPREFERENCE_TIME, 'hnsDefaultDevicePeriod'),
-            (['out'], LPREFERENCE_TIME, 'hnsMinimumDevicePeriod')
+            [], HRESULT, "GetShareMode", (["in"], LPCWSTR, "pwstrDeviceId"), (["out"], PDeviceSharedMode, "pMode")
+        ),
+        COMMETHOD(
+            [], HRESULT, "SetShareMode", (["in"], LPCWSTR, "pwstrDeviceId"), (["in"], PDeviceSharedMode, "pMode")
         ),
         COMMETHOD(
             [],
             HRESULT,
-            'SetProcessingPeriod',
-            (['in'], LPCWSTR, 'pwstrDeviceId'),
-            (['in'], LPREFERENCE_TIME, 'hnsDevicePeriod')
+            "GetPropertyValue",
+            (["in"], LPCWSTR, "pwstrDeviceId"),
+            (["in"], PPROPERTYKEY, "key"),
+            (["out"], PPROPVARIANT, "pValue"),
         ),
         COMMETHOD(
             [],
             HRESULT,
-            'GetShareMode',
-            (['in'], LPCWSTR, 'pwstrDeviceId'),
-            (['out'], PDeviceSharedMode, 'pMode')
+            "SetPropertyValue",
+            (["in"], LPCWSTR, "pwstrDeviceId"),
+            (["in"], PPROPERTYKEY, "key"),
+            (["in"], PPROPVARIANT, "pValue"),
         ),
-        COMMETHOD(
-            [],
-            HRESULT,
-            'SetShareMode',
-            (['in'], LPCWSTR, 'pwstrDeviceId'),
-            (['in'], PDeviceSharedMode, 'pMode')
-        ),
-        COMMETHOD(
-            [],
-            HRESULT,
-            'GetPropertyValue',
-            (['in'], LPCWSTR, 'pwstrDeviceId'),
-            (['in'], PPROPERTYKEY, 'key'),
-            (['out'], PPROPVARIANT, 'pValue')
-        ),
-        COMMETHOD(
-            [],
-            HRESULT,
-            'SetPropertyValue',
-            (['in'], LPCWSTR, 'pwstrDeviceId'),
-            (['in'], PPROPERTYKEY, 'key'),
-            (['in'], PPROPVARIANT, 'pValue')
-        ),
-        COMMETHOD(
-            [],
-            HRESULT,
-            'SetDefaultEndpoint',
-            (['in'], LPCWSTR, 'pwstrDeviceId'),
-            (['in'], ERole, 'ERole')
-        ),
-        COMMETHOD(
-            [],
-            HRESULT,
-            'SetEndpointVisibility',
-            (['in'], LPCWSTR, 'pwstrDeviceId'),
-            (['in'], BOOL, 'bVisible')
-        )
+        COMMETHOD([], HRESULT, "SetDefaultEndpoint", (["in"], LPCWSTR, "pwstrDeviceId"), (["in"], ERole, "ERole")),
+        COMMETHOD([], HRESULT, "SetEndpointVisibility", (["in"], LPCWSTR, "pwstrDeviceId"), (["in"], BOOL, "bVisible")),
     )
 
-#PIPolicyConfig = POINTER(IPolicyConfig)
+
+# PIPolicyConfig = POINTER(IPolicyConfig)
 class AudioSes(object):
-    name = u'AudioSes'
+    name = "AudioSes"
     _reg_typelib_ = (IID_AudioSes, 1, 0)
 
-class CPolicyConfigClient (comtypes.CoClass):
+
+class CPolicyConfigClient(comtypes.CoClass):
     _reg_clsid_ = CLSID_PolicyConfigClient
     _idlflags_ = []
     _reg_typelib_ = (IID_AudioSes, 1, 0)
     _com_interfaces_ = [IPolicyConfig]
 
+
 class AudioEndpointChangeCallback(MMNotificationClient):
-    def __init__(self,parent):
+    def __init__(self, parent):
         super().__init__()
         self.parent = parent
 
     def on_property_value_changed(self, device_id, property_struct, fmtid, pid):
         self.parent.update_label_signal.emit()
 
+
 class AudioEndpointVolumeCallback(COMObject):
     _com_interfaces_ = [IAudioEndpointVolumeCallback]
+
     def __init__(self, parent):
         super().__init__()
         self.parent = parent
+
     def OnNotify(self, pNotify):
         self.parent.update_label_signal.emit()
 
@@ -208,7 +201,7 @@ class VolumeWidget(BaseWidget):
         container_padding: dict[str, int],
         callbacks: dict[str, str],
         label_shadow: dict = None,
-        container_shadow: dict = None
+        container_shadow: dict = None,
     ):
         super().__init__(class_name="volume-widget")
         self._show_alt_label = False
@@ -223,10 +216,12 @@ class VolumeWidget(BaseWidget):
         self._container_shadow = container_shadow
         self.volume = None
         self._volume_icons = volume_icons
-        
+
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(self._padding['left'],self._padding['top'],self._padding['right'],self._padding['bottom'])
+        self._widget_container_layout.setContentsMargins(
+            self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
+        )
         self._widget_container: QWidget = QWidget()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
@@ -240,7 +235,7 @@ class VolumeWidget(BaseWidget):
         self.register_callback("toggle_mute", self.toggle_mute)
         self.register_callback("toggle_volume_menu", self._toggle_volume_menu)
 
-        self.callback_left = callbacks['on_left']
+        self.callback_left = callbacks["on_left"]
         self.callback_right = callbacks["on_right"]
         self.callback_middle = callbacks["on_middle"]
 
@@ -255,10 +250,9 @@ class VolumeWidget(BaseWidget):
         self._update_label()
 
     def _toggle_volume_menu(self):
-        if self._animation['enabled']:
-            AnimationManager.animate(self, self._animation['type'], self._animation['duration'])
+        if self._animation["enabled"]:
+            AnimationManager.animate(self, self._animation["type"], self._animation["duration"])
         self.show_volume_menu()
-
 
     def _on_slider_value_changed(self, value):
         if self.volume is not None:
@@ -268,7 +262,6 @@ class VolumeWidget(BaseWidget):
             except Exception as e:
                 logging.error(f"Failed to set volume: {e}")
 
-
     def _list_audio_devices(self):
         CLSID_MMDeviceEnumerator = GUID("{BCDE0395-E52F-467C-8E3D-C4579291692E}")
         devices = []
@@ -276,9 +269,8 @@ class VolumeWidget(BaseWidget):
         comtypes.CoInitialize()
         try:
             deviceEnumerator = comtypes.CoCreateInstance(
-                CLSID_MMDeviceEnumerator,
-                IMMDeviceEnumerator,
-                comtypes.CLSCTX_INPROC_SERVER)
+                CLSID_MMDeviceEnumerator, IMMDeviceEnumerator, comtypes.CLSCTX_INPROC_SERVER
+            )
 
             if deviceEnumerator is None:
                 return devices
@@ -301,7 +293,7 @@ class VolumeWidget(BaseWidget):
 
     def _update_slider_value(self):
         """Helper method to update slider value based on current volume"""
-        if hasattr(self, 'volume_slider') and self.volume is not None:
+        if hasattr(self, "volume_slider") and self.volume is not None:
             try:
                 current_volume = round(self.volume.GetMasterVolumeLevelScalar() * 100)
                 self.volume_slider.setValue(current_volume)
@@ -318,21 +310,16 @@ class VolumeWidget(BaseWidget):
             btn.style().unpolish(btn)
             btn.style().polish(btn)
 
-
     def _set_default_device(self, device_id: str):
         """Set default audio device with error handling and multiple interface attempts"""
         CoInitialize()
 
         sender = self.sender()
-        device_id = sender.property('device_id')
+        device_id = sender.property("device_id")
 
         try:
             logging.debug(f"Attempting PolicyConfig interface with device: {device_id}")
-            pc = comtypes.CoCreateInstance(
-                CLSID_PolicyConfigClient,
-                interface=IPolicyConfig,
-                clsctx=CLSCTX_ALL
-            )
+            pc = comtypes.CoCreateInstance(CLSID_PolicyConfigClient, interface=IPolicyConfig, clsctx=CLSCTX_ALL)
             # eConsole = 0, eMultimedia = 1, eCommunications = 2
             pc.SetDefaultEndpoint(device_id, 0)
             # Re-initialize volume interface for new device
@@ -348,10 +335,14 @@ class VolumeWidget(BaseWidget):
             CoUninitialize()
             self._update_label()
 
-
-
     def show_volume_menu(self):
-        self.dialog = PopupWidget(self, self._audio_menu['blur'], self._audio_menu['round_corners'], self._audio_menu['round_corners_type'], self._audio_menu['border_color'])
+        self.dialog = PopupWidget(
+            self,
+            self._audio_menu["blur"],
+            self._audio_menu["round_corners"],
+            self._audio_menu["round_corners_type"],
+            self._audio_menu["border_color"],
+        )
         self.dialog.setProperty("class", "audio-menu")
 
         # Create vertical layout for the dialog
@@ -406,20 +397,19 @@ class VolumeWidget(BaseWidget):
         layout.addWidget(self.volume_slider)
         self.dialog.setLayout(layout)
 
-
         # Position the dialog
         self.dialog.adjustSize()
         self.dialog.setPosition(
-            alignment=self._audio_menu['alignment'],
-            direction=self._audio_menu['direction'],
-            offset_left=self._audio_menu['offset_left'],
-            offset_top=self._audio_menu['offset_top']
+            alignment=self._audio_menu["alignment"],
+            direction=self._audio_menu["direction"],
+            offset_left=self._audio_menu["offset_left"],
+            offset_top=self._audio_menu["offset_top"],
         )
         self.dialog.show()
 
     def _toggle_label(self):
-        if self._animation['enabled']:
-            AnimationManager.animate(self, self._animation['type'], self._animation['duration'])
+        if self._animation["enabled"]:
+            AnimationManager.animate(self, self._animation["type"], self._animation["duration"])
         self._show_alt_label = not self._show_alt_label
         for widget in self._widgets:
             widget.setVisible(not self._show_alt_label)
@@ -430,21 +420,20 @@ class VolumeWidget(BaseWidget):
     def _update_label(self):
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
         active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
-        label_parts = re.split('(<span.*?>.*?</span>)', active_label_content)
+        label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
         label_parts = [part for part in label_parts if part]
         widget_index = 0
         try:
             self._initialize_volume_interface()
             mute_status = self.volume.GetMute()
             icon_volume = self._get_volume_icon()
-            level_volume = self._mute_text if mute_status == 1 else f'{round(self.volume.GetMasterVolumeLevelScalar() * 100)}%'
+            level_volume = (
+                self._mute_text if mute_status == 1 else f"{round(self.volume.GetMasterVolumeLevelScalar() * 100)}%"
+            )
         except Exception:
             icon_volume, level_volume = "", "No Device"
 
-        label_options = {
-            "{icon}": icon_volume,
-            "{level}": level_volume
-        }
+        label_options = {"{icon}": icon_volume, "{level}": level_volume}
 
         for part in label_parts:
             part = part.strip()
@@ -452,7 +441,7 @@ class VolumeWidget(BaseWidget):
                 formatted_text = part
                 for option, value in label_options.items():
                     formatted_text = formatted_text.replace(option, str(value))
-                if '<span' in part and '</span>' in part:
+                if "<span" in part and "</span>" in part:
                     if widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
                         active_widgets[widget_index].setText(formatted_text)
                 else:
@@ -464,7 +453,7 @@ class VolumeWidget(BaseWidget):
         current_mute_status = self.volume.GetMute()
         current_volume_level = round(self.volume.GetMasterVolumeLevelScalar() * 100)
         if self._tooltip:
-            self.setToolTip(f'Volume {current_volume_level}')
+            self.setToolTip(f"Volume {current_volume_level}")
         if current_mute_status == 1:
             volume_icon = self._volume_icons[0]
         elif 0 <= current_volume_level < 11:
@@ -507,10 +496,9 @@ class VolumeWidget(BaseWidget):
         elif event.angleDelta().y() < 0:
             self._decrease_volume()
 
-
     def toggle_mute(self):
-        if self._animation['enabled']:
-            AnimationManager.animate(self, self._animation['type'], self._animation['duration'])
+        if self._animation["enabled"]:
+            AnimationManager.animate(self, self._animation["type"], self._animation["duration"])
         if self.volume is None:
             logging.warning("Cannot toggle mute: No audio device connected.")
             return
@@ -520,7 +508,6 @@ class VolumeWidget(BaseWidget):
             self._update_label()
         except Exception as e:
             logging.error(f"Failed to toggle mute: {e}")
-
 
     def _initialize_volume_interface(self):
         CoInitialize()

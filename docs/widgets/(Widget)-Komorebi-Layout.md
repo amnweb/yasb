@@ -3,8 +3,8 @@
 |-----------------|---------|-------------------------------------------------------------------------|-----------------------------------------------------------------------------|
 | `hide_if_offline` | boolean | `true`                                                                  | Whether to hide the widget if offline.                                      |
 | `label`         | string  | `"{icon}"`                                                              | The label format string for the widget.                                     |
-| `layouts`       | list    | `['bsp', 'columns', 'rows', 'grid', 'vertical_stack', 'horizontal_stack', 'ultrawide_vertical_stack', 'right_main_vertical_stack']` | The list of layouts available for the widget.                              |
-| `layout_icons`  | dict    | `{ 'bsp': 'BSP', 'columns': 'COLS', 'rows': 'ROWS', 'grid': 'GRID', 'vertical_stack': 'V-STACK', 'horizontal_stack': 'H-STACK', 'ultrawide_vertical_stack': 'W-STACK', 'right_main_vertical_stack': 'RMV-STACK', 'monocle': 'MONOCLE', 'maximised': 'MAX', 'floating': 'FLOATING', 'paused': 'PAUSED' }` | The icons for each layout.                                                 |
+| `layouts`       | list    | `['bsp', 'columns', 'rows', 'grid', 'scrolling', 'vertical_stack', 'horizontal_stack', 'ultrawide_vertical_stack', 'right_main_vertical_stack']` | The list of layouts available for the widget.                              |
+| `layout_icons`  | dict    | `{ 'bsp': 'BSP', 'columns': 'COLS', 'rows': 'ROWS', 'grid': 'GRID', 'scrolling': 'SC', 'vertical_stack': 'V-STACK', 'horizontal_stack': 'H-STACK', 'ultrawide_vertical_stack': 'W-STACK', 'right_main_vertical_stack': 'RMV-STACK', 'monocle': 'MONOCLE', 'maximised': 'MAX', 'floating': 'FLOATING', 'paused': 'PAUSED' }` | The icons for each layout.                                                 |
 | `callbacks`     | dict    | `{ 'on_left': 'next_layout', 'on_middle': 'toggle_monocle', 'on_right': 'prev_layout' }` | Callbacks for mouse events on the widget.                                   |
 | `container_padding`  | dict | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}`      | Explicitly set padding inside widget container.                            |
 | `animation`         | dict    | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
@@ -35,12 +35,13 @@ komorebi_active_layout:
   options:
     hide_if_offline: true
     label: "{icon} {layout_name}"
-    layouts: ['bsp', 'columns', 'rows', 'grid', 'vertical_stack', 'horizontal_stack', 'ultrawide_vertical_stack','right_main_vertical_stack']
+    layouts: ['bsp', 'columns', 'rows', 'grid', 'scrolling', 'vertical_stack', 'horizontal_stack', 'ultrawide_vertical_stack','right_main_vertical_stack']
     layout_icons:
       bsp: "\uebeb"
       columns: "\uebf7"
       rows: "\uec01"
       grid: "\udb81\udf58"
+      scrolling: "\uebf7"
       vertical_stack: "\uebee"
       horizontal_stack: "\uebf0"
       ultrawide_vertical_stack: "\uebee"
