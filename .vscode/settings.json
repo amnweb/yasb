@@ -1,11 +1,19 @@
 {
-    "files.exclude": {
-        "**/__pycache__": true
-    },
-    "search.exclude": {
-        "**/__pycache__": true
-    },
-    "files.watcherExclude": {
-        "**/__pycache__": true
-    }
+	"files.exclude": {
+		"**/__pycache__": true
+	},
+	"search.exclude": {
+		"**/__pycache__": true
+	},
+	"files.watcherExclude": {
+		"**/__pycache__": true
+	},
+	"[python]": {
+		"editor.codeActionsOnSave": {
+			"source.fixAll": "explicit",
+			"source.organizeImports": "explicit"
+		},
+		"editor.formatOnSave": true,
+		"editor.defaultFormatter": "charliermarsh.ruff"
+	}
 }

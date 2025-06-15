@@ -1,29 +1,30 @@
+import asyncio
+import io
 import logging
-from settings import DEBUG 
+import threading
 from typing import Any, Callable
 
-import asyncio
-
-import threading
-from winrt.windows.storage.streams import Buffer, InputStreamOptions, IRandomAccessStreamReference
 from PIL import Image, ImageFile
-import io
+from PyQt6.QtCore import QDateTime, QTimer
+from winrt.windows.media.control import GlobalSystemMediaTransportControlsSession as Session
+from winrt.windows.media.control import GlobalSystemMediaTransportControlsSessionManager as SessionManager
+from winrt.windows.media.control import (
+    MediaPropertiesChangedEventArgs,
+    PlaybackInfoChangedEventArgs,
+    SessionsChangedEventArgs,
+    TimelinePropertiesChangedEventArgs,
+)
+from winrt.windows.storage.streams import Buffer, InputStreamOptions, IRandomAccessStreamReference
 
 from core.utils.utilities import Singleton
-
-from winrt.windows.media.control import (GlobalSystemMediaTransportControlsSessionManager as SessionManager,
-                                          GlobalSystemMediaTransportControlsSession as Session,
-                                          SessionsChangedEventArgs, MediaPropertiesChangedEventArgs,
-                                          TimelinePropertiesChangedEventArgs, PlaybackInfoChangedEventArgs)
-
-from PyQt6.QtCore import QTimer, QDateTime
+from settings import DEBUG
 
 VK_MEDIA_PLAY_PAUSE = 0xB3
 VK_MEDIA_PREV_TRACK = 0xB1
 VK_MEDIA_NEXT_TRACK = 0xB0
 
 # Make PIL logger not pollute logs
-pil_logger = logging.getLogger('PIL')
+pil_logger = logging.getLogger("PIL")
 pil_logger.setLevel(logging.INFO)
 
 
@@ -50,8 +51,10 @@ class WindowsMedia(metaclass=Singleton):
         self._timeline_info_lock = threading.RLock()
         self._timeline_info = None
 
-        self._subscription_channels = {channel: [] for channel in ['media_info', 'playback_info', 'timeline_info',
-                                                                   'session_status', 'timeline_interpolated']}
+        self._subscription_channels = {
+            channel: []
+            for channel in ["media_info", "playback_info", "timeline_info", "session_status", "timeline_interpolated"]
+        }
         self._subscription_channels_lock = threading.RLock()
         self._registration_tokens = {}
 
@@ -64,7 +67,7 @@ class WindowsMedia(metaclass=Singleton):
 
         # Create a timer for interpolation
         self._interpolation_timer = QTimer()
-        self._interpolation_timer.setInterval(200) 
+        self._interpolation_timer.setInterval(200)
         self._interpolation_timer.timeout.connect(self._interpolate_timeline)
         self._interpolation_timer.start()
 
@@ -78,15 +81,14 @@ class WindowsMedia(metaclass=Singleton):
             try:
                 self._subscription_channels[channel].append(callback)
             except KeyError:
-                raise ValueError(f'Incorrect channel subscription type provided ({channel}). '
-                                 f'Valid options are {list(self._subscription_channels.keys())}')
+                raise ValueError(
+                    f"Incorrect channel subscription type provided ({channel}). "
+                    f"Valid options are {list(self._subscription_channels.keys())}"
+                )
 
         # Auto-send current data if available
-        if channel == 'timeline_interpolated' and hasattr(self, '_last_position'):
-            callback({
-                'position': self._last_position,
-                'duration': self._duration
-            })
+        if channel == "timeline_interpolated" and hasattr(self, "_last_position"):
+            callback({"position": self._last_position, "duration": self._duration})
 
     def stop(self):
         # Clear subscriptions
@@ -98,15 +100,21 @@ class WindowsMedia(metaclass=Singleton):
 
         # Remove all our subscriptions
         if session is not None:
-            session.remove_media_properties_changed(self._registration_tokens['media_info'])
-            session.remove_timeline_properties_changed(self._registration_tokens['timeline_info'])
-            session.remove_playback_info_changed(self._registration_tokens['playback_info'])
+            session.remove_media_properties_changed(self._registration_tokens["media_info"])
+            session.remove_timeline_properties_changed(self._registration_tokens["timeline_info"])
+            session.remove_playback_info_changed(self._registration_tokens["playback_info"])
 
     def _register_session_callbacks(self):
         with self._current_session_lock:
-            self._registration_tokens['playback_info'] = self._current_session.add_playback_info_changed(self._on_playback_info_changed)
-            self._registration_tokens['timeline_info'] = self._current_session.add_timeline_properties_changed(self._on_timeline_properties_changed)
-            self._registration_tokens['media_info'] = self._current_session.add_media_properties_changed(self._on_media_properties_changed)
+            self._registration_tokens["playback_info"] = self._current_session.add_playback_info_changed(
+                self._on_playback_info_changed
+            )
+            self._registration_tokens["timeline_info"] = self._current_session.add_timeline_properties_changed(
+                self._on_timeline_properties_changed
+            )
+            self._registration_tokens["media_info"] = self._current_session.add_media_properties_changed(
+                self._on_media_properties_changed
+            )
 
     async def _get_session_manager(self):
         return await SessionManager.request_async()
@@ -130,7 +138,6 @@ class WindowsMedia(metaclass=Singleton):
                 self._current_session = manager.get_current_session()
 
             if self._current_session is not None:
-
                 # If the current session is not None, register callbacks
                 self._register_session_callbacks()
 
@@ -146,30 +153,33 @@ class WindowsMedia(metaclass=Singleton):
                 self._last_position = 0
                 self._duration = 0
                 if DEBUG:
-                    logging.debug('MediaCallback: No active session')
+                    logging.debug("MediaCallback: No active session")
             # Get subscribers
             with self._subscription_channels_lock:
-                callbacks = self._subscription_channels['session_status']
+                callbacks = self._subscription_channels["session_status"]
 
             for callback in callbacks:
                 callback(self._current_session is not None)
-    
+
     def _current_session_only(fn):
         """
         Decorator to ensure that the function is only called if the session is the same as the current session
         """
         if asyncio.iscoroutinefunction(fn):
+
             async def wrapper(self: "WindowsMedia", session: Session, *args, **kwargs):
                 with self._current_session_lock:
                     if self._are_same_sessions(session, self._current_session):
                         return await fn(self, session, *args, **kwargs)
                     return None  # Return None without awaiting
         else:
+
             def wrapper(self: "WindowsMedia", session: Session, *args, **kwargs):
                 with self._current_session_lock:
                     if self._are_same_sessions(session, self._current_session):
                         return fn(self, session, *args, **kwargs)
                     return None
+
         return wrapper
         # def wrapper(self: "WindowsMedia", session: Session, *args, **kwargs):
         #     with self._current_session_lock:
@@ -181,13 +191,13 @@ class WindowsMedia(metaclass=Singleton):
     def _on_playback_info_changed(self, session: Session, args: PlaybackInfoChangedEventArgs):
         with self._playback_info_lock:
             self._playback_info = session.get_playback_info()
-            
+
             # Track play state for interpolation
             self._is_playing = self._playback_info.playback_status == 4  # 4 = Playing
 
             # Get subscribers
             with self._subscription_channels_lock:
-                callbacks = self._subscription_channels['playback_info']
+                callbacks = self._subscription_channels["playback_info"]
 
             # Perform callbacks
             for callback in callbacks:
@@ -204,7 +214,7 @@ class WindowsMedia(metaclass=Singleton):
 
             # Get subscribers
             with self._subscription_channels_lock:
-                callbacks = self._subscription_channels['timeline_info']
+                callbacks = self._subscription_channels["timeline_info"]
 
             # Perform callbacks
             for callback in callbacks:
@@ -216,24 +226,29 @@ class WindowsMedia(metaclass=Singleton):
             try:
                 try:
                     running_loop = asyncio.get_running_loop()
+
                     async def process_media_and_check():
                         await self._update_media_properties(session)
                         if self._media_info and self._is_media_info_empty(self._media_info):
                             sessions = self._session_manager.get_sessions()
-                            if not any(self._are_same_sessions(sessions[i], self._current_session) for i in range(sessions.size)):
+                            if not any(
+                                self._are_same_sessions(sessions[i], self._current_session)
+                                for i in range(sessions.size)
+                            ):
                                 self.switch_session(1)
-                    
-                    running_loop.create_task(process_media_and_check())
-                    
-                except RuntimeError:
 
+                    running_loop.create_task(process_media_and_check())
+
+                except RuntimeError:
                     self._event_loop.run_until_complete(self._update_media_properties(session))
-                    
+
                     if self._media_info and self._is_media_info_empty(self._media_info):
                         sessions = self._session_manager.get_sessions()
-                        if not any(self._are_same_sessions(sessions[i], self._current_session) for i in range(sessions.size)):
+                        if not any(
+                            self._are_same_sessions(sessions[i], self._current_session) for i in range(sessions.size)
+                        ):
                             self.switch_session(1)
-                            
+
             except Exception as e:
                 self._log.error(f"Error in _on_media_properties_changed: {e}")
 
@@ -244,18 +259,18 @@ class WindowsMedia(metaclass=Singleton):
 
             media_info = self._properties_2_dict(media_info)
 
-            if media_info['thumbnail'] is not None:
-                media_info['thumbnail'] = await self.get_thumbnail(media_info['thumbnail'])
+            if media_info["thumbnail"] is not None:
+                media_info["thumbnail"] = await self.get_thumbnail(media_info["thumbnail"])
 
         except Exception as e:
-            self._log.error(f'MediaCallback: Error occurred whilst fetching media properties and thumbnail: {e}')
+            self._log.error(f"MediaCallback: Error occurred whilst fetching media properties and thumbnail: {e}")
             return
 
         self._media_info = media_info
 
         # Get subscribers
         with self._subscription_channels_lock:
-            callbacks = self._subscription_channels['media_info']
+            callbacks = self._subscription_channels["media_info"]
 
         # Perform callbacks
         for callback in callbacks:
@@ -263,7 +278,7 @@ class WindowsMedia(metaclass=Singleton):
 
     @staticmethod
     def _properties_2_dict(obj) -> dict[str, Any]:
-        return {name: getattr(obj, name) for name in dir(obj) if not name.startswith('_')}
+        return {name: getattr(obj, name) for name in dir(obj) if not name.startswith("_")}
 
     @staticmethod
     async def get_thumbnail(thumbnail_stream_reference: IRandomAccessStreamReference) -> ImageFile:
@@ -279,7 +294,9 @@ class WindowsMedia(metaclass=Singleton):
             thumb_read_buffer = Buffer(readable_stream.size)
 
             # Read stream into buffer
-            await readable_stream.read_async(thumb_read_buffer, thumb_read_buffer.capacity, InputStreamOptions.READ_AHEAD)
+            await readable_stream.read_async(
+                thumb_read_buffer, thumb_read_buffer.capacity, InputStreamOptions.READ_AHEAD
+            )
 
             # Convert bytearray to pillow image
             pillow_image = Image.open(io.BytesIO(thumb_read_buffer))
@@ -289,23 +306,32 @@ class WindowsMedia(metaclass=Singleton):
 
             return pillow_image
         except Exception as e:
-            logging.error(f'get_thumbnail(): Error occurred when loading the thumbnail: {e}')
+            logging.error(f"get_thumbnail(): Error occurred when loading the thumbnail: {e}")
             return None
         finally:
             # Close the stream
             readable_stream.close()
-    
+
     @staticmethod
     def _is_media_info_empty(media_info: dict[str, Any]) -> bool:
-        keys = ['album_artist', 'album_title', 'album_track_count', 'artist', 'playback_type', 'subtitle', 'title', 'track_number']
+        keys = [
+            "album_artist",
+            "album_title",
+            "album_track_count",
+            "artist",
+            "playback_type",
+            "subtitle",
+            "title",
+            "track_number",
+        ]
         # Check if all keys have 'zero' values
         return all(not media_info.get(key) for key in keys)
-    
+
     def _are_same_sessions(self, session1: Session, session2: Session) -> bool:
         if session1 is None or session2 is None:
             return session1 is session2
         return session1.source_app_user_model_id == session2.source_app_user_model_id
-    
+
     def switch_session(self, direction: int):
         sessions = self._session_manager.get_sessions()
         if len(sessions) == 0:
@@ -317,7 +343,7 @@ class WindowsMedia(metaclass=Singleton):
                 if self._current_session is None or self._are_same_sessions(session, self._current_session):
                     current_session_idx = i
                     break
-            
+
             idx = (current_session_idx + direction) % len(sessions)
             if self._are_same_sessions(sessions[idx], self._current_session):
                 return
@@ -346,32 +372,29 @@ class WindowsMedia(metaclass=Singleton):
         """Interpolate timeline between official updates from the Windows API."""
         if not self._is_playing or self._last_update_time == 0 or self._timeline_info is None:
             return
-            
+
         # Calculate elapsed time since last update
         elapsed = (QDateTime.currentMSecsSinceEpoch() - self._last_update_time) / 1000
-        
+
         # Estimate current position
         estimated_position = self._last_position + elapsed
-        
+
         # Don't go beyond duration
         if self._duration > 0 and estimated_position > self._duration:
             estimated_position = self._duration
-            
+
         # Create a new timeline info object with interpolated values
         interpolated_timeline = self._timeline_info
-            
+
         # Notify subscribers with interpolated timeline data
         if interpolated_timeline is not None:
             # Get subscribers
             with self._subscription_channels_lock:
-                callbacks = self._subscription_channels.get('timeline_interpolated', [])
+                callbacks = self._subscription_channels.get("timeline_interpolated", [])
 
             # Perform callbacks
             for callback in callbacks:
-                callback({
-                    'position': estimated_position,
-                    'duration': self._duration
-                })
+                callback({"position": estimated_position, "duration": self._duration})
 
     def seek_to_position(self, position: float):
         """Seek to specific position in seconds."""
@@ -389,6 +412,6 @@ class WindowsMedia(metaclass=Singleton):
 
     def is_seek_supported(self):
         with self._playback_info_lock:
-            if self._playback_info and hasattr(self._playback_info, 'controls'):
+            if self._playback_info and hasattr(self._playback_info, "controls"):
                 return self._playback_info.controls.is_playback_position_enabled
         return False

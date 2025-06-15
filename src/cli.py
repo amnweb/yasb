@@ -16,11 +16,11 @@ import getpass
 import json
 import os
 import subprocess
-import winreg
 import sys
 import tempfile
 import textwrap
 import time
+import winreg
 from ctypes import GetLastError
 
 from packaging.version import Version
@@ -37,7 +37,7 @@ from core.utils.win32.bindings import (
     WriteFile,
 )
 from core.utils.win32.constants import INVALID_HANDLE_VALUE
-from settings import BUILD_VERSION, CLI_VERSION, RELEASE_CHANNEL, APP_NAME
+from settings import APP_NAME, BUILD_VERSION, CLI_VERSION, RELEASE_CHANNEL
 
 BUFSIZE = 65536
 YASB_VERSION = BUILD_VERSION
@@ -122,14 +122,14 @@ class CLIHandler:
     def send_command_to_application(self, command: str):
         """
         Send a command to the running YASB application through the pipe.
-        
+
         Commands can be:
         - "stop" - Stop the application
         - "reload" - Reload the application
         - "show-bar [screen]" - Show the bar on a specific screen
         - "hide-bar [screen]" - Hide the bar on a specific screen
         - "toggle-bar [screen]" - Toggle the bar on a specific screen
-        
+
         Args:
             command: The command to send
         """
@@ -146,9 +146,9 @@ class CLIHandler:
             if pipe_handle == INVALID_HANDLE_VALUE:
                 print("Failed to connect to YASB. Pipe not found. It may not be running.")
                 return
-                
+
             # Send the command as bytes
-            command_bytes = command.encode('utf-8')
+            command_bytes = command.encode("utf-8")
             success = WriteFile(pipe_handle, command_bytes)
             if not success:
                 print(f"Failed to write command. Err: {GetLastError()}")
@@ -160,11 +160,11 @@ class CLIHandler:
                 print(f"Failed to read response. Err: {GetLastError()}")
                 CloseHandle(pipe_handle)
                 return
-                
+
             response_text = response.decode("utf-8").strip()
             if response_text != "ACK":
                 print(f"Received unexpected response: {response_text}")
-            
+
             CloseHandle(pipe_handle)
         except Exception as e:
             print(f"Error: {e}")
@@ -185,14 +185,14 @@ class CLIHandler:
         except Exception as e:
             print(f"Failed to check startup status for {app_name}: {e}")
             return False
-    
+
     def enable_startup(self):
         if self.is_autostart_enabled(APP_NAME):
             print(f"{APP_NAME} is already set to start on boot.")
             return
         try:
             with self._open_startup_registry(winreg.KEY_SET_VALUE) as key:
-                winreg.SetValueEx(key, APP_NAME, 0, winreg.REG_SZ, f'{AUTOSTART_FILE}')
+                winreg.SetValueEx(key, APP_NAME, 0, winreg.REG_SZ, f"{AUTOSTART_FILE}")
             print(f"{APP_NAME} added to startup.")
         except Exception as e:
             print(f"Failed to add {APP_NAME} to startup: {e}")
@@ -227,16 +227,18 @@ class CLIHandler:
         enable_autostart_parser.add_argument("--task", action="store_true", help="Enable autostart as a scheduled task")
 
         disable_autostart_parser = subparsers.add_parser("disable-autostart", help="Disable autostart on system boot")
-        disable_autostart_parser.add_argument("--task", action="store_true", help="Disable autostart as a scheduled task")
+        disable_autostart_parser.add_argument(
+            "--task", action="store_true", help="Disable autostart as a scheduled task"
+        )
 
         subparsers.add_parser("monitor-information", help="Show information about connected monitors")
 
         show_bar_parser = subparsers.add_parser("show-bar", help="Show the bar on a specific screen")
         show_bar_parser.add_argument("-s", "--screen", type=str, help="Screen name (optional)")
-        
+
         hide_bar_parser = subparsers.add_parser("hide-bar", help="Hide the bar on a specific screen")
         hide_bar_parser.add_argument("-s", "--screen", type=str, help="Screen name (optional)")
-        
+
         toggle_bar_parser = subparsers.add_parser("toggle-bar", help="Toggle the bar on a specific screen")
         toggle_bar_parser.add_argument("-s", "--screen", type=str, help="Screen name (optional)")
 
@@ -300,7 +302,7 @@ class CLIHandler:
             screen_arg = f" --screen {args.screen}" if args.screen else ""
             self.send_command_to_application(f"toggle-bar{screen_arg}")
             sys.exit(0)
-    
+
         elif args.command == "update":
             self.update_handler.update_yasb(YASB_VERSION)
 

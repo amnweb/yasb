@@ -1,21 +1,22 @@
 import sys
 import traceback
-from settings import APP_NAME
-from PyQt6.QtWidgets import QMessageBox, QTextEdit, QSizePolicy
+
 from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import QMessageBox, QSizePolicy, QTextEdit
+
+from settings import APP_NAME
 
 
 class AlertDialog(QMessageBox):
-
     def __init__(
-            self,
-            title: str,
-            message: str,
-            informative_message: str = None,
-            additional_details: str = None,
-            icon: QMessageBox.Icon = QMessageBox.Icon.Information,
-            show_quit: bool = False,
-            show_ok: bool = False,
+        self,
+        title: str,
+        message: str,
+        informative_message: str = None,
+        additional_details: str = None,
+        icon: QMessageBox.Icon = QMessageBox.Icon.Information,
+        show_quit: bool = False,
+        show_ok: bool = False,
     ):
         super().__init__()
         self.setWindowTitle(title)
@@ -31,9 +32,9 @@ class AlertDialog(QMessageBox):
             self.setDetailedText(additional_details)
 
         self.setFixedSize(500, 500)
-        self.setStyleSheet('QTextEdit QLabel {min-height: 300px;}')
-        self.ok_button = self.addButton('Ok', QMessageBox.ButtonRole.AcceptRole) if show_ok else None
-        self.quit_button = self.addButton('Quit', QMessageBox.ButtonRole.DestructiveRole) if show_quit else None
+        self.setStyleSheet("QTextEdit QLabel {min-height: 300px;}")
+        self.ok_button = self.addButton("Ok", QMessageBox.ButtonRole.AcceptRole) if show_ok else None
+        self.quit_button = self.addButton("Quit", QMessageBox.ButtonRole.DestructiveRole) if show_quit else None
         self.setSizeGripEnabled(True)
 
     def event(self, e):
@@ -64,12 +65,12 @@ class AlertDialog(QMessageBox):
 
 
 def raise_error_alert(
-        title: str,
-        msg: str,
-        informative_msg: str,
-        additional_details: str = None,
-        rich_text: bool = False,
-        exit_on_close: bool = True
+    title: str,
+    msg: str,
+    informative_msg: str,
+    additional_details: str = None,
+    rich_text: bool = False,
+    exit_on_close: bool = True,
 ):
     alert = AlertDialog(
         icon=QMessageBox.Icon.Critical,
@@ -77,7 +78,7 @@ def raise_error_alert(
         message=msg,
         informative_message=informative_msg,
         additional_details=additional_details if additional_details else traceback.format_exc(),
-        show_quit=True
+        show_quit=True,
     )
 
     if rich_text:
@@ -90,19 +91,19 @@ def raise_error_alert(
 
 
 def raise_info_alert(
-        title: str,
-        msg: str,
-        informative_msg: str,
-        additional_details: str = None,
-        rich_text: bool = False,
-        exit_on_close: bool = False
+    title: str,
+    msg: str,
+    informative_msg: str,
+    additional_details: str = None,
+    rich_text: bool = False,
+    exit_on_close: bool = False,
 ):
     alert = AlertDialog(
         icon=QMessageBox.Icon.Information,
         title=f"{APP_NAME}: {title}",
         message=msg,
         informative_message=informative_msg,
-        additional_details=additional_details
+        additional_details=additional_details,
     )
 
     if rich_text:

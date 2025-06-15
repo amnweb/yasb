@@ -1,27 +1,28 @@
 import re
 
-from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget
+from PyQt6.QtWidgets import QHBoxLayout, QLabel, QWidget
 
-from core.widgets.base import BaseWidget
-from core.validation.widgets.yasb.recycle_bin import VALIDATION_SCHEMA
-from core.utils.widgets.recycle_bin_monitor import RecycleBinMonitor
-from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.utilities import add_shadow, build_widget_label
+from core.utils.widgets.animation_manager import AnimationManager
+from core.utils.widgets.recycle_bin_monitor import RecycleBinMonitor
+from core.validation.widgets.yasb.recycle_bin import VALIDATION_SCHEMA
+from core.widgets.base import BaseWidget
+
 
 class RecycleBinWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
 
     def __init__(
-            self,
-            label: str,
-            label_alt: str,
-            icons: dict[str, str],
-            tooltip: bool,
-            animation: dict[str, str],
-            callbacks: dict[str, str],
-            container_padding: dict[str, int],
-            label_shadow: dict = None,
-            container_shadow: dict = None
+        self,
+        label: str,
+        label_alt: str,
+        icons: dict[str, str],
+        tooltip: bool,
+        animation: dict[str, str],
+        callbacks: dict[str, str],
+        container_padding: dict[str, int],
+        label_shadow: dict = None,
+        container_shadow: dict = None,
     ):
         super().__init__(class_name="recycle-bin-widget")
         self._label_content = label
@@ -47,10 +48,7 @@ class RecycleBinWidget(BaseWidget):
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
         self._widget_container_layout.setContentsMargins(
-            self._padding['left'],
-            self._padding['top'],
-            self._padding['right'],
-            self._padding['bottom']
+            self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
         )
         self._widget_container: QWidget = QWidget()
         self._widget_container.setLayout(self._widget_container_layout)
@@ -64,18 +62,17 @@ class RecycleBinWidget(BaseWidget):
         self.register_callback("empty_bin", self._empty_bin)
         self.register_callback("open_bin", self._open_bin)
 
-        self.callback_left = callbacks['on_left']
-        self.callback_right = callbacks['on_right']
-        self.callback_middle = callbacks['on_middle']
+        self.callback_left = callbacks["on_left"]
+        self.callback_right = callbacks["on_right"]
+        self.callback_middle = callbacks["on_middle"]
 
         # Get initial bin info
         self._bin_info = self.monitor.get_recycle_bin_info()
         self._update_label()
 
     def _toggle_label(self):
-        if self._animation['enabled']:
-            AnimationManager.animate(
-                self, self._animation['type'], self._animation['duration'])
+        if self._animation["enabled"]:
+            AnimationManager.animate(self, self._animation["type"], self._animation["duration"])
         self._show_alt_label = not self._show_alt_label
         for widget in self._widgets:
             widget.setVisible(not self._show_alt_label)
@@ -86,7 +83,7 @@ class RecycleBinWidget(BaseWidget):
     def _update_label(self):
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
         active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
-        label_parts = re.split('(<span.*?>.*?</span>)', active_label_content)
+        label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
         label_parts = [part for part in label_parts if part]
         widget_index = 0
 
@@ -95,7 +92,7 @@ class RecycleBinWidget(BaseWidget):
         label_options = {
             "{items_count}": self._bin_info["num_items"],
             "{items_size}": self._format_size(self._bin_info["size_bytes"]),
-            "{icon}": self._get_current_icon()
+            "{icon}": self._get_current_icon(),
         }
 
         for part in label_parts:
@@ -104,32 +101,31 @@ class RecycleBinWidget(BaseWidget):
                 formatted_text = part
                 for option, value in label_options.items():
                     formatted_text = formatted_text.replace(option, str(value))
-                if '<span' in part and '</span>' in part:
+                if "<span" in part and "</span>" in part:
                     if widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
                         active_widgets[widget_index].setText(formatted_text)
-                        base_class = active_widgets[widget_index].property("class").split()[
-                            0]
-                        active_widgets[widget_index].setProperty(
-                            "class", f"{base_class} {class_name}")
-                        active_widgets[widget_index].setStyleSheet('')
+                        base_class = active_widgets[widget_index].property("class").split()[0]
+                        active_widgets[widget_index].setProperty("class", f"{base_class} {class_name}")
+                        active_widgets[widget_index].setStyleSheet("")
                 else:
                     if widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
                         alt_class = "alt" if self._show_alt_label else ""
                         active_widgets[widget_index].setText(formatted_text)
                         base_class = "label"
-                        active_widgets[widget_index].setProperty(
-                            "class", f"{base_class} {alt_class} {class_name}")
-                        active_widgets[widget_index].setStyleSheet('')
+                        active_widgets[widget_index].setProperty("class", f"{base_class} {alt_class} {class_name}")
+                        active_widgets[widget_index].setStyleSheet("")
                 widget_index += 1
         if self._tooltip:
-            self._widget_container.setToolTip(f"Items: {self._bin_info['num_items']} ({self._format_size(self._bin_info['size_bytes'])})")
+            self._widget_container.setToolTip(
+                f"Items: {self._bin_info['num_items']} ({self._format_size(self._bin_info['size_bytes'])})"
+            )
 
     def _get_current_icon(self):
         """Get the icon based on the bin state"""
         if self._bin_info["num_items"] > 0:
-            return self._icons['bin_filled']
+            return self._icons["bin_filled"]
         else:
-            return self._icons['bin_empty']
+            return self._icons["bin_empty"]
 
     def _on_bin_update(self, bin_info):
         self._bin_info = bin_info
@@ -137,8 +133,8 @@ class RecycleBinWidget(BaseWidget):
 
     def _format_size(self, size_bytes):
         """Format bytes into a human-readable format"""
-        for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
-            if size_bytes < 1024 or unit == 'TB':
+        for unit in ["B", "KB", "MB", "GB", "TB"]:
+            if size_bytes < 1024 or unit == "TB":
                 return f"{size_bytes:.2f} {unit}"
             size_bytes /= 1024
 
@@ -147,9 +143,8 @@ class RecycleBinWidget(BaseWidget):
         if self._is_emptying:
             return
 
-        if self._animation['enabled']:
-            AnimationManager.animate(
-                self, self._animation['type'], self._animation['duration'])
+        if self._animation["enabled"]:
+            AnimationManager.animate(self, self._animation["type"], self._animation["duration"])
 
         self._is_emptying = True
 
@@ -169,9 +164,8 @@ class RecycleBinWidget(BaseWidget):
 
     def _open_bin(self):
         """Open the recycle bin"""
-        if self._animation['enabled']:
-            AnimationManager.animate(
-                self, self._animation['type'], self._animation['duration'])
+        if self._animation["enabled"]:
+            AnimationManager.animate(self, self._animation["type"], self._animation["duration"])
         self.monitor.open_recycle_bin()
 
     def shutdown(self):

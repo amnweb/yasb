@@ -1,7 +1,6 @@
 import ctypes
 import ctypes.wintypes
 
-
 ERROR_SUCCESS = 0x0
 ERROR_INSUFFICIENT_BUFFER = 0x7A
 APPMODEL_ERROR_NO_PACKAGE = 15700
@@ -12,17 +11,14 @@ PACKAGE_INFORMATION_FULL = 0x00000100
 PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
 
 PROCESS_QUERY_INFORMATION = 0x0400
-PROCESS_VM_READ =  0x0010
+PROCESS_VM_READ = 0x0010
 
 
 class PACKAGE_INFO_REFERENCE(ctypes.Structure):
-    _fields_ = [
-        ("reserved", ctypes.c_void_p)
-    ]
+    _fields_ = [("reserved", ctypes.c_void_p)]
 
 
 class PACKAGE_SUBVERSION(ctypes.Structure):
-
     _fields_ = [
         ("Revision", ctypes.wintypes.USHORT),
         ("Build", ctypes.wintypes.USHORT),
@@ -39,14 +35,13 @@ class PACKAGE_VERSION_U(ctypes.Union):
 
 
 class PACKAGE_VERSION(ctypes.Structure):
-    _anonymous_ = ("u", )
+    _anonymous_ = ("u",)
     _fields_ = [
         ("u", PACKAGE_VERSION_U),
     ]
 
 
 class PACKAGE_ID(ctypes.Structure):
-
     _fields_ = [
         ("reserved", ctypes.c_uint32),
         ("processorArchitecture", ctypes.c_uint32),
@@ -59,7 +54,6 @@ class PACKAGE_ID(ctypes.Structure):
 
 
 class PACKAGE_INFO(ctypes.Structure):
-
     _fields_ = [
         ("reserved", ctypes.c_uint32),
         ("flags", ctypes.c_uint32),
@@ -75,7 +69,7 @@ _get_windows_thread_process_id = _user32.GetWindowThreadProcessId
 _get_windows_thread_process_id.argtypes = (ctypes.wintypes.HWND, ctypes.POINTER(ctypes.wintypes.DWORD))
 _get_windows_thread_process_id.restype = ctypes.wintypes.DWORD
 
-WNDENUMPROC  = ctypes.WINFUNCTYPE(ctypes.wintypes.BOOL, ctypes.wintypes.HWND, ctypes.wintypes.LPARAM)
+WNDENUMPROC = ctypes.WINFUNCTYPE(ctypes.wintypes.BOOL, ctypes.wintypes.HWND, ctypes.wintypes.LPARAM)
 
 _enum_child_windows = _user32.EnumChildWindows
 _enum_child_windows.argtypes = (ctypes.wintypes.HWND, WNDENUMPROC, ctypes.wintypes.LPARAM)
@@ -91,7 +85,7 @@ _open_process.argtypes = (ctypes.wintypes.DWORD, ctypes.wintypes.BOOL, ctypes.wi
 _open_process.restype = ctypes.wintypes.HANDLE
 
 _close_handle = _kernel32.CloseHandle
-_close_handle.argtypes = (ctypes.wintypes.HANDLE, )
+_close_handle.argtypes = (ctypes.wintypes.HANDLE,)
 _close_handle.restype = ctypes.wintypes.BOOL
 
 _get_package_info = _kernel32.GetPackageInfo
@@ -100,7 +94,7 @@ _get_package_info.argtypes = (
     ctypes.c_uint32,
     ctypes.POINTER(ctypes.c_uint32),
     ctypes.POINTER(ctypes.c_uint8),
-    ctypes.POINTER(ctypes.c_uint32)
+    ctypes.POINTER(ctypes.c_uint32),
 )
 _get_package_info.restype = ctypes.wintypes.LONG
 
@@ -109,34 +103,37 @@ _get_package_full_name.argtypes = (ctypes.wintypes.HANDLE, ctypes.POINTER(ctypes
 _get_package_full_name.restype = ctypes.wintypes.LONG
 
 _get_package_path_by_full_name = _kernel32.GetPackagePathByFullName
-_get_package_path_by_full_name.argtypes = (ctypes.wintypes.LPCWSTR, ctypes.POINTER(ctypes.c_uint32), ctypes.wintypes.LPCWSTR)
+_get_package_path_by_full_name.argtypes = (
+    ctypes.wintypes.LPCWSTR,
+    ctypes.POINTER(ctypes.c_uint32),
+    ctypes.wintypes.LPCWSTR,
+)
 _get_package_path_by_full_name.restype = ctypes.wintypes.LONG
 
 _package_family_name_from_full_name = _kernel32.PackageFamilyNameFromFullName
 _package_family_name_from_full_name.argtypes = (
     ctypes.wintypes.LPCWSTR,
     ctypes.POINTER(ctypes.c_uint32),
-    ctypes.wintypes.LPCWSTR)
+    ctypes.wintypes.LPCWSTR,
+)
 _package_family_name_from_full_name.restype = ctypes.wintypes.LONG
 
 _open_package_info_by_full_name = _kernel32.OpenPackageInfoByFullName
 _open_package_info_by_full_name.argtypes = (
     ctypes.wintypes.LPCWSTR,
     ctypes.c_uint32,
-    ctypes.POINTER(PACKAGE_INFO_REFERENCE)
+    ctypes.POINTER(PACKAGE_INFO_REFERENCE),
 )
 _open_package_info_by_full_name.restype = ctypes.wintypes.LONG
 
 _close_package_info = _kernel32.ClosePackageInfo
-_close_package_info.argtypes = (
-    PACKAGE_INFO_REFERENCE,
-)
+_close_package_info.argtypes = (PACKAGE_INFO_REFERENCE,)
 _close_package_info.restype = ctypes.wintypes.LONG
-
 
 
 def get_children(hwnd):
     children = []
+
     def append_to_collection(element, param):
         children.append(element)
         return True
@@ -157,7 +154,7 @@ def package_full_name_from_handle(handle):
     full_name = ctypes.create_unicode_buffer(length.value + 1)
     ret_val = _get_package_full_name(handle, ctypes.byref(length), full_name)
     if ret_val != ERROR_SUCCESS:
-        err =  ctypes.WinError(ctypes.get_last_error())
+        err = ctypes.WinError(ctypes.get_last_error())
         # print(f"package_full_name_from_handle: error -> {str(err)}")
         return None
 
@@ -229,6 +226,7 @@ def package_info_buffer_from_reference(package_info_reference):
 
     return buffer, length
 
+
 class PackageInfo:
     def __init__(self, full_name, package_path, family_name, package_info, package_info_reference):
         self.full_name = full_name
@@ -241,19 +239,17 @@ class PackageInfo:
     def __del__(self):
         _close_package_info(self.package_info_reference.contents)
 
+
 def get_package(hwnd):
     pid = ctypes.wintypes.DWORD()
-    _get_windows_thread_process_id(
-        hwnd,
-        ctypes.byref(pid)
-    )
+    _get_windows_thread_process_id(hwnd, ctypes.byref(pid))
 
     hprocess = _open_process(PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
     full_name = package_full_name_from_handle(hprocess)
     if not full_name:
         return
 
-    '''
+    """
     children = get_children(hwnd)
     for child in children:
         child_pid = ctypes.wintypes.DWORD(0)
@@ -271,12 +267,11 @@ def get_package(hwnd):
 
     if not ("Microsoft.MicrosoftEdge" in full_name.value or "Microsoft.WindowsStore" in full_name.value):
     return None
-    '''
+    """
 
     package_path = package_path_from_full_name(full_name)
     family_name = package_family_name_from_full_name(full_name)
     package_info_reference = package_info_reference_from_full_name(full_name)
-
 
     package_info_buffer, length = package_info_buffer_from_reference(package_info_reference)
     # size_package_info = ctypes.sizeof(PACKAGE_INFO)
@@ -290,11 +285,14 @@ def get_package(hwnd):
     # _close_package_info(package_info_reference.contents)
     return pinfo
 
+
 def get_windows():
     hwnds = []
+
     def append_to_collection(element, param):
         hwnds.append(element)
         return True
+
     func = WNDENUMPROC(append_to_collection)
     _enum_windows(func, 0)
     return hwnds

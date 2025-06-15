@@ -1,7 +1,8 @@
 import logging
 import socket
-from PyQt6.QtCore import QObject, QTimer, QThread, pyqtSignal
+
 import psutil
+from PyQt6.QtCore import QObject, QThread, QTimer, pyqtSignal
 
 
 class ConnectionTestWorker(QThread):
@@ -32,8 +33,8 @@ class ConnectionTestWorker(QThread):
     def _test_connection(self):
         """Test connectivity using multiple fallback servers"""
         test_servers = [
-            ("8.8.8.8", 53),        # Google DNS
-            ("1.1.1.1", 53),        # Cloudflare DNS (standard)
+            ("8.8.8.8", 53),  # Google DNS
+            ("1.1.1.1", 53),  # Cloudflare DNS (standard)
             # ("208.67.222.222", 53), # OpenDNS
         ]
 
@@ -97,7 +98,7 @@ class InternetChecker(QObject):
 
     def stop(self):
         """Stop the connection monitoring"""
-        if hasattr(self, 'timer') and self.timer:
+        if hasattr(self, "timer") and self.timer:
             self.timer.stop()
             self.timer = None
 

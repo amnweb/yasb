@@ -1,23 +1,31 @@
+import datetime
+import json
 import logging
 import os
 import re
-import json
-import datetime
-from typing import List, Dict
-from PyQt6.QtWidgets import (
-    QWidget, QLabel, QHBoxLayout, QVBoxLayout,
-    QPushButton, QScrollArea, QTextEdit,
-    QSpacerItem, QSizePolicy
-)
+from typing import Dict, List
+
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QCursor
+from PyQt6.QtWidgets import (
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QScrollArea,
+    QSizePolicy,
+    QSpacerItem,
+    QTextEdit,
+    QVBoxLayout,
+    QWidget,
+)
 
-from core.widgets.base import BaseWidget
-from core.utils.utilities import PopupWidget, add_shadow, build_widget_label
-from core.validation.widgets.yasb.notes import VALIDATION_SCHEMA
-from core.utils.widgets.animation_manager import AnimationManager
 from core.config import HOME_CONFIGURATION_DIR
+from core.utils.utilities import PopupWidget, add_shadow, build_widget_label
+from core.utils.widgets.animation_manager import AnimationManager
+from core.validation.widgets.yasb.notes import VALIDATION_SCHEMA
+from core.widgets.base import BaseWidget
 from settings import DEBUG
+
 
 class NotesWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
@@ -33,7 +41,7 @@ class NotesWidget(BaseWidget):
         icons: dict,
         callbacks: dict,
         label_shadow: dict = None,
-        container_shadow: dict = None
+        container_shadow: dict = None,
     ):
         super().__init__(class_name="notes-widget")
         NotesWidget._instances.append(self)
@@ -55,10 +63,7 @@ class NotesWidget(BaseWidget):
         self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
         self._widget_container_layout.setContentsMargins(
-            self._padding['left'],
-            self._padding['top'],
-            self._padding['right'],
-            self._padding['bottom']
+            self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
         )
 
         # Initialize container widget
@@ -69,14 +74,14 @@ class NotesWidget(BaseWidget):
         self.widget_layout.addWidget(self._widget_container)
 
         build_widget_label(self, self._label_content, self._label_alt_content, self._label_shadow)
-        
+
         self.register_callback("toggle_label", self._toggle_label)
         self.register_callback("toggle_menu", self._toggle_menu)
         self.register_callback("update_label", self._update_label)
 
-        self.callback_left = callbacks['on_left']
-        self.callback_right = callbacks['on_right']
-        self.callback_middle = callbacks['on_middle']
+        self.callback_left = callbacks["on_left"]
+        self.callback_right = callbacks["on_right"]
+        self.callback_middle = callbacks["on_middle"]
         self.callback_timer = "update_label"
 
         self._update_label()
@@ -92,13 +97,12 @@ class NotesWidget(BaseWidget):
     def update_all(cls):
         """Update all instances of NotesWidget"""
         for instance in cls._instances:
-            instance._notes = instance._load_notes() 
+            instance._notes = instance._load_notes()
             instance._update_label()
 
     def _toggle_label(self):
-        if self._animation['enabled']:
-            AnimationManager.animate(
-                self, self._animation['type'], self._animation['duration'])
+        if self._animation["enabled"]:
+            AnimationManager.animate(self, self._animation["type"], self._animation["duration"])
 
         self._show_alt_label = not self._show_alt_label
 
@@ -111,16 +115,15 @@ class NotesWidget(BaseWidget):
         self._update_label()
 
     def _toggle_menu(self):
-        if self._animation['enabled']:
-            AnimationManager.animate(
-                self, self._animation['type'], self._animation['duration'])
+        if self._animation["enabled"]:
+            AnimationManager.animate(self, self._animation["type"], self._animation["duration"])
         self._show_menu()
 
     def _update_label(self):
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
         active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
 
-        label_parts = re.split('(<span.*?>.*?</span>)', active_label_content)
+        label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
         label_parts = [part for part in label_parts if part]
 
         notes_count = len(self._notes)
@@ -131,8 +134,8 @@ class NotesWidget(BaseWidget):
 
             current_widget = active_widgets[widget_index]
 
-            if '<span' in part and '</span>' in part:
-                icon = re.sub(r'<span.*?>|</span>', '', part).strip()
+            if "<span" in part and "</span>" in part:
+                icon = re.sub(r"<span.*?>|</span>", "", part).strip()
                 current_widget.setText(icon)
             else:
                 formatted_text = part.format(count=notes_count)
@@ -142,12 +145,12 @@ class NotesWidget(BaseWidget):
     def _show_menu(self):
         self._menu = PopupWidget(
             self,
-            self._menu_config['blur'],
-            self._menu_config['round_corners'],
-            self._menu_config['round_corners_type'],
-            self._menu_config['border_color']
+            self._menu_config["blur"],
+            self._menu_config["round_corners"],
+            self._menu_config["round_corners_type"],
+            self._menu_config["border_color"],
         )
-        self._menu.setProperty('class', 'notes-menu')
+        self._menu.setProperty("class", "notes-menu")
 
         # Create main layout
         main_layout = QVBoxLayout(self._menu)
@@ -162,8 +165,7 @@ class NotesWidget(BaseWidget):
 
         # Text input field
         self._note_input = NoteTextEdit(self)
-        self._note_input.setContextMenuPolicy(
-            Qt.ContextMenuPolicy.NoContextMenu)
+        self._note_input.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
         self._note_input.setPlaceholderText("Type your note here...")
         self._note_input.setProperty("class", "note-input")
         input_layout.addWidget(self._note_input)
@@ -184,8 +186,7 @@ class NotesWidget(BaseWidget):
         # Cancel button (hidden by default)
         self.cancel_button = QPushButton("Cancel")
         self.cancel_button.setProperty("class", "cancel-button")
-        self.cancel_button.setCursor(
-            QCursor(Qt.CursorShape.PointingHandCursor))
+        self.cancel_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.cancel_button.clicked.connect(self._cancel_editing)
         self.cancel_button.hide()
         button_layout.addWidget(self.cancel_button)
@@ -196,8 +197,7 @@ class NotesWidget(BaseWidget):
         # Create scroll area for notes
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
-        scroll_area.setHorizontalScrollBarPolicy(
-            Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         scroll_area.setProperty("class", "scroll-area")
 
         # Style the scrollbar
@@ -237,10 +237,10 @@ class NotesWidget(BaseWidget):
 
         self._menu.adjustSize()
         self._menu.setPosition(
-            alignment=self._menu_config['alignment'],
-            direction=self._menu_config['direction'],
-            offset_left=self._menu_config['offset_left'],
-            offset_top=self._menu_config['offset_top']
+            alignment=self._menu_config["alignment"],
+            direction=self._menu_config["direction"],
+            offset_left=self._menu_config["offset_left"],
+            offset_top=self._menu_config["offset_top"],
         )
         self._menu.show()
         self._note_input.setFocus()
@@ -251,10 +251,7 @@ class NotesWidget(BaseWidget):
         if not note_text:
             return
 
-        note_data = {
-            "title": note_text,
-            "timestamp": datetime.datetime.now().isoformat()
-        }
+        note_data = {"title": note_text, "timestamp": datetime.datetime.now().isoformat()}
 
         if self._editing_note:
             # Update existing note
@@ -273,7 +270,7 @@ class NotesWidget(BaseWidget):
         NotesWidget.update_all()  # Update all widget instances
         self._note_input.clear()
 
-        if hasattr(self, '_menu'):
+        if hasattr(self, "_menu"):
             self._menu.hide()
             self._show_menu()
 
@@ -289,7 +286,7 @@ class NotesWidget(BaseWidget):
         container_layout.setSpacing(5)
 
         # Note icon
-        icon_label = QLabel(self._icons['note'])
+        icon_label = QLabel(self._icons["note"])
         icon_label.setProperty("class", "icon")
         container_layout.addWidget(icon_label)
 
@@ -300,10 +297,9 @@ class NotesWidget(BaseWidget):
         text_layout.setSpacing(6)
 
         # Title
-        display_title = re.sub(r'[\n\t\r]+', '', note['title'])
-        if len(display_title) > self._menu_config['max_title_size']:
-            display_title = display_title[:(
-                self._menu_config['max_title_size'] - 3)] + "..."
+        display_title = re.sub(r"[\n\t\r]+", "", note["title"])
+        if len(display_title) > self._menu_config["max_title_size"]:
+            display_title = display_title[: (self._menu_config["max_title_size"] - 3)] + "..."
         title_label = QLabel(display_title)
         title_label.setProperty("class", "title")
         title_label.setWordWrap(True)
@@ -311,9 +307,9 @@ class NotesWidget(BaseWidget):
         text_layout.addWidget(title_label)
 
         # Date under title
-        if 'timestamp' in note and self._menu_config['show_date_time']:
+        if "timestamp" in note and self._menu_config["show_date_time"]:
             try:
-                timestamp = datetime.datetime.fromisoformat(note['timestamp'])
+                timestamp = datetime.datetime.fromisoformat(note["timestamp"])
                 date_str = timestamp.strftime("%Y-%m-%d %H:%M")
                 date_label = QLabel(date_str)
                 date_label.setProperty("class", "date")
@@ -334,13 +330,13 @@ class NotesWidget(BaseWidget):
         buttons_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)  # Center the buttons vertically
 
         # Copy button on top
-        copy_button = QPushButton(self._icons['copy'])
+        copy_button = QPushButton(self._icons["copy"])
         copy_button.setProperty("class", "copy-button")
         copy_button.clicked.connect(lambda: self._copy_note(note))
         buttons_layout.addWidget(copy_button, 0, Qt.AlignmentFlag.AlignCenter)
 
         # Delete button on bottom
-        delete_button = QPushButton(self._icons['delete'])
+        delete_button = QPushButton(self._icons["delete"])
         delete_button.setProperty("class", "delete-button")
         delete_button.clicked.connect(lambda: self._delete_note(note))
         buttons_layout.addWidget(delete_button, 0, Qt.AlignmentFlag.AlignCenter)
@@ -360,7 +356,7 @@ class NotesWidget(BaseWidget):
         self._editing_note = note
 
         # Load note content into the input field
-        self._note_input.setText(note['title'])
+        self._note_input.setText(note["title"])
         self._note_input.setFocus()
 
         # Update UI to show we're in edit mode
@@ -374,7 +370,7 @@ class NotesWidget(BaseWidget):
             self._save_notes()
             NotesWidget.update_all()  # Update all widget instances
 
-            if hasattr(self, '_menu'):
+            if hasattr(self, "_menu"):
                 self._menu.hide()
                 self._show_menu()
 
@@ -388,8 +384,9 @@ class NotesWidget(BaseWidget):
     def _copy_note(self, note):
         """Copy note content to clipboard"""
         from PyQt6.QtWidgets import QApplication
+
         clipboard = QApplication.clipboard()
-        clipboard.setText(note['title'])
+        clipboard.setText(note["title"])
 
     def _load_notes(self) -> List[Dict]:
         """Load notes from JSON file"""
@@ -397,7 +394,7 @@ class NotesWidget(BaseWidget):
             if os.path.exists(self._notes_file):
                 if DEBUG:
                     logging.debug(f"Loading notes from {self._notes_file}")
-                with open(self._notes_file, 'r', encoding='utf-8') as f:
+                with open(self._notes_file, "r", encoding="utf-8") as f:
                     return list(json.load(f))
         except Exception as e:
             logging.error(f"Error loading notes: {e}")
@@ -409,7 +406,7 @@ class NotesWidget(BaseWidget):
         try:
             if DEBUG:
                 logging.debug(f"Saving notes to {self._notes_file}")
-            with open(self._notes_file, 'w', encoding='utf-8') as f:
+            with open(self._notes_file, "w", encoding="utf-8") as f:
                 json.dump(self._notes, f, indent=2, ensure_ascii=False)
         except Exception as e:
             logging.error(f"Error saving notes: {e}")
@@ -421,10 +418,13 @@ class NoteTextEdit(QTextEdit):
     Captures Enter/Return key presses to trigger note addition in the parent widget,
     while allowing multiline input using Shift+Enter.
     """
+
     def keyPressEvent(self, event):
-        if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter) and not (event.modifiers() & Qt.KeyboardModifier.ShiftModifier):
+        if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter) and not (
+            event.modifiers() & Qt.KeyboardModifier.ShiftModifier
+        ):
             parent = self.parent()
-            while parent and not hasattr(parent, '_add_note_from_input'):
+            while parent and not hasattr(parent, "_add_note_from_input"):
                 parent = parent.parent()
             if parent:
                 parent._add_note_from_input()

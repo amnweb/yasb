@@ -1,14 +1,13 @@
 import logging
-from typing import Any, cast
 import re
+from typing import Any, cast
 
 from PyQt6.QtCore import pyqtSlot
+from PyQt6.QtWidgets import QHBoxLayout, QLabel, QStyle, QWidget
 
-from PyQt6.QtWidgets import QHBoxLayout, QWidget, QLabel, QStyle
-
-from core.utils.widgets.animation_manager import AnimationManager
-from core.utils.glazewm.client import GlazewmClient, BindingMode
+from core.utils.glazewm.client import BindingMode, GlazewmClient
 from core.utils.utilities import add_shadow, build_widget_label
+from core.utils.widgets.animation_manager import AnimationManager
 from core.validation.widgets.glazewm.binding_mode import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
 from settings import DEBUG
@@ -19,6 +18,7 @@ if DEBUG:
     logger.setLevel(logging.DEBUG)
 else:
     logger.setLevel(logging.CRITICAL)
+
 
 class GlazewmBindingModeWidget(BaseWidget):
     validation_schema: dict[str, Any] = VALIDATION_SCHEMA
@@ -56,8 +56,10 @@ class GlazewmBindingModeWidget(BaseWidget):
 
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(self._padding['left'],self._padding['top'],self._padding['right'],self._padding['bottom'])
-       
+        self._widget_container_layout.setContentsMargins(
+            self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
+        )
+
         self._widget_container: QWidget = QWidget()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
@@ -82,15 +84,15 @@ class GlazewmBindingModeWidget(BaseWidget):
         self.register_callback("disable_binding_mode", self._disable_binding_mode)
         self.register_callback("next_binding_mode", lambda: self._cycle_through_binding_modes(1))
         self.register_callback("prev_binding_mode", lambda: self._cycle_through_binding_modes(-1))
-        self.callback_left = callbacks['on_left']
-        self.callback_right = callbacks['on_right']
-        self.callback_middle = callbacks['on_middle']
+        self.callback_left = callbacks["on_left"]
+        self.callback_right = callbacks["on_right"]
+        self.callback_middle = callbacks["on_middle"]
 
         self.hide()
 
     def _toggle_label(self):
-        if self._animation['enabled']:
-            AnimationManager.animate(self, self._animation['type'], self._animation['duration'])
+        if self._animation["enabled"]:
+            AnimationManager.animate(self, self._animation["type"], self._animation["duration"])
         self._show_alt_label = not self._show_alt_label
         for widget in self._widgets:
             widget.setVisible(not self._show_alt_label)
@@ -107,12 +109,14 @@ class GlazewmBindingModeWidget(BaseWidget):
     def _update_label(self):
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
         active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
-        label_parts = re.split('(<span.*?>.*?</span>)', active_label_content)
+        label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
         label_parts = [part for part in label_parts if part]
         widget_index = 0
 
         label_options = {
-            "{binding_mode}": self._active_binding_mode.display_name or self._active_binding_mode.name or self._label_if_no_active,
+            "{binding_mode}": self._active_binding_mode.display_name
+            or self._active_binding_mode.name
+            or self._label_if_no_active,
             "{icon}": self._icons.get(self._active_binding_mode.name or "none", self._default_icon),
         }
         for part in label_parts:
@@ -121,10 +125,12 @@ class GlazewmBindingModeWidget(BaseWidget):
                 formatted_text = part
                 for option, value in label_options.items():
                     formatted_text = formatted_text.replace(option, str(value))
-                if '<span' in part and '</span>' in part:
-                    icon = re.sub(r'<span.*?>|</span>', '', part).strip()
+                if "<span" in part and "</span>" in part:
+                    icon = re.sub(r"<span.*?>|</span>", "", part).strip()
                     if icon in label_options:
-                        active_widgets[widget_index].setProperty("class", f"icon {self._active_binding_mode.name or "none"}")
+                        active_widgets[widget_index].setProperty(
+                            "class", f"icon {self._active_binding_mode.name or 'none'}"
+                        )
                         active_widgets[widget_index].setText(formatted_text)
                     else:
                         active_widgets[widget_index].setText(icon)
@@ -163,20 +169,19 @@ class GlazewmBindingModeWidget(BaseWidget):
     def _update_connection_status(self, status: bool):
         if not status:
             self.hide()
-    
+
     @pyqtSlot(BindingMode)
     def _update_binding_mode(self, binding_mode: BindingMode):
-        if not binding_mode.name and 'none' in self._binding_modes_to_cycle_through:
+        if not binding_mode.name and "none" in self._binding_modes_to_cycle_through:
             self._current_binding_mode_index = self._binding_modes_to_cycle_through.index("none")
 
         if self._hide_if_no_active and not binding_mode.name:
             self.hide()
             return
-        
+
         if binding_mode.name in self._binding_modes_to_cycle_through:
             self._current_binding_mode_index = self._binding_modes_to_cycle_through.index(binding_mode.name)
 
         self.show()
         self._active_binding_mode = binding_mode
         self._update_label()
-    

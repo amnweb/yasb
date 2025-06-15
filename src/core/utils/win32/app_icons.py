@@ -36,7 +36,7 @@ def get_window_icon(hwnd: int, smooth_level: int = 0):
             hicon = win32gui.SendMessage(hwnd, win32con.WM_GETICON, win32con.ICON_SMALL, 0)
         if hicon == 0:
             # If both small and big icons are not available, get the class icon
-            if hasattr(win32gui, 'GetClassLongPtr'):
+            if hasattr(win32gui, "GetClassLongPtr"):
                 hicon = win32gui.GetClassLongPtr(hwnd, win32con.GCLP_HICON)
             else:
                 hicon = win32gui.GetClassLong(hwnd, win32con.GCL_HICON)
@@ -57,23 +57,21 @@ def get_window_icon(hwnd: int, smooth_level: int = 0):
                 hbmp.CreateCompatibleBitmap(hdc, bitmap_size, bitmap_size)
                 memdc = hdc.CreateCompatibleDC()
                 # Select the bitmap into the memory device context
-                memdc.SelectObject(hbmp)   
-                try:            
+                memdc.SelectObject(hbmp)
+                try:
                     memdc.DrawIcon((0, 0), hicon)
                 except Exception:
                     return None
- 
+
                 bmpinfo = hbmp.GetInfo()
                 bmpstr = hbmp.GetBitmapBits(True)
-                
+
                 raw_data = bytes(bmpstr)
                 img = Image.frombuffer(
-                    'RGBA',
-                    (bmpinfo['bmWidth'], bmpinfo['bmHeight']),
-                    raw_data, 'raw', 'BGRA', 0, 1
-                ).convert('RGBA')
-                #target_size = 48  # target size (48x48) wihout DPI, most of uwps are also 48x48
-                #img = img.resize((target_size, target_size), Image.LANCZOS)
+                    "RGBA", (bmpinfo["bmWidth"], bmpinfo["bmHeight"]), raw_data, "raw", "BGRA", 0, 1
+                ).convert("RGBA")
+                # target_size = 48  # target size (48x48) wihout DPI, most of uwps are also 48x48
+                # img = img.resize((target_size, target_size), Image.LANCZOS)
                 if smooth_level == 1:
                     img = img.filter(ImageFilter.SMOOTH)
                 elif smooth_level == 2:
@@ -81,36 +79,36 @@ def get_window_icon(hwnd: int, smooth_level: int = 0):
                 return img
             finally:
                 # Cleaning up resources
-                #logging.debug("Cleaning up")
+                # logging.debug("Cleaning up")
                 try:
                     win32gui.DestroyIcon(hicon)
-                    #logging.debug("Destroyed hicon")
+                    # logging.debug("Destroyed hicon")
                 except Exception as e:
-                    #logging.debug(f"Error destroying hicon: {e}")
+                    # logging.debug(f"Error destroying hicon: {e}")
                     pass
                 try:
                     memdc.DeleteDC()
-                    #logging.debug("Deleted memory device context.")
+                    # logging.debug("Deleted memory device context.")
                 except Exception as e:
-                    #logging.debug(f"Error deleting memory device context: {e}")
+                    # logging.debug(f"Error deleting memory device context: {e}")
                     pass
                 try:
                     hdc.DeleteDC()
-                    #logging.debug("Deleted device context.")
+                    # logging.debug("Deleted device context.")
                 except Exception as e:
-                    #logging.debug(f"Error deleting device context: {e}")
+                    # logging.debug(f"Error deleting device context: {e}")
                     pass
                 try:
                     win32gui.DeleteObject(hbmp.GetHandle())
-                    #logging.debug("Deleted bitmap object.")
+                    # logging.debug("Deleted bitmap object.")
                 except Exception as e:
-                    #logging.debug(f"Error deleting bitmap object: {e}")
+                    # logging.debug(f"Error deleting bitmap object: {e}")
                     pass
                 try:
                     win32gui.ReleaseDC(0, hdc_handle)
-                    #logging.debug("Released device context handle.")
+                    # logging.debug("Released device context handle.")
                 except Exception as e:
-                    #logging.debug(f"Error releasing device context handle: {e}")
+                    # logging.debug(f"Error releasing device context handle: {e}")
                     pass
         else:
             try:
@@ -156,11 +154,12 @@ def get_window_icon(hwnd: int, smooth_level: int = 0):
             package_path = Path(package.package_path)
             # logopath = Path(package.package_path) / (velement.attrib["Square44x44Logo"])
             logofile = Path(velement.attrib["Square44x44Logo"])
-            logopattern = str(logofile.parent / '**') + '\\' + str(logofile.stem) + '*' + str(logofile.suffix)
+            logopattern = str(logofile.parent / "**") + "\\" + str(logofile.stem) + "*" + str(logofile.suffix)
             logofiles = glob(logopattern, recursive=True, root_dir=package_path)
             logofiles = [x.lower() for x in logofiles]
             if len(logofiles) == 0:
                 return None
+
             def filter_logos(logofiles, qualifiers, values):
                 for qualifier in qualifiers:
                     for value in values:
@@ -172,8 +171,8 @@ def get_window_icon(hwnd: int, smooth_level: int = 0):
             langs = []
             current_lang_code = ctypes.windll.kernel32.GetUserDefaultUILanguage()
             if current_lang_code in locale.windows_locale:
-                current_lang = locale.windows_locale[current_lang_code].lower().replace('_', '-')
-                current_lang_short = current_lang.split('-', 1)[0]
+                current_lang = locale.windows_locale[current_lang_code].lower().replace("_", "-")
+                current_lang_short = current_lang.split("-", 1)[0]
                 langs += [current_lang, current_lang_short]
             if "en" not in langs:
                 langs += ["en", "en-us"]
@@ -193,7 +192,7 @@ def get_window_icon(hwnd: int, smooth_level: int = 0):
                 if m:
                     size = int(m.group(1))
                     if size < 48:
-                        return 5000-size
+                        return 5000 - size
                     return size - 48
                 return 10000
 

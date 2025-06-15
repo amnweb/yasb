@@ -1,4 +1,5 @@
 import ctypes.wintypes
+
 from core.event_enums import Event
 
 user32 = ctypes.windll.user32
@@ -15,8 +16,9 @@ WinEventProcType = ctypes.WINFUNCTYPE(
     ctypes.wintypes.LONG,
     ctypes.wintypes.LONG,
     ctypes.wintypes.DWORD,
-    ctypes.wintypes.DWORD
+    ctypes.wintypes.DWORD,
 )
+
 
 class WinEvent(Event):
     """
@@ -24,6 +26,7 @@ class WinEvent(Event):
 
     More information: https://docs.microsoft.com/en-us/windows/win32/winauto/event-constants
     """
+
     EventMin = 0x00000001
     EventMax = 0x7FFFFFFF
     EventSystemEnd = 0x00FF

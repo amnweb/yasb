@@ -1,9 +1,11 @@
 import functools
 import logging
-from PyQt6.QtCore import QObject, pyqtSignal
-from typing import Any
-from core.event_enums import Event
 from threading import RLock
+from typing import Any
+
+from PyQt6.QtCore import QObject, pyqtSignal
+
+from core.event_enums import Event
 
 
 @functools.lru_cache()

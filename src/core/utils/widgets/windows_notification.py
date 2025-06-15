@@ -1,18 +1,23 @@
 import asyncio
 import logging
 from enum import IntFlag
+
 import winrt.windows.ui.notifications.management as management
 from PyQt6.QtCore import QThread, pyqtSignal
+
 from core.event_service import EventService
+
 
 class NotificationKinds(IntFlag):
     """
     Enum for notification kinds (toast, tile, badge, proto)
     """
+
     toast = 1
     tile = 2
     badge = 4
     proto = 8
+
 
 def get_all_kinds():
     """
@@ -21,9 +26,10 @@ def get_all_kinds():
     """
     return NotificationKinds.toast | NotificationKinds.tile | NotificationKinds.badge | NotificationKinds.proto
 
+
 class WindowsNotificationEventListener(QThread):
     clear_notifications = pyqtSignal(str)
-    
+
     def __init__(self):
         super().__init__()
         self.running = True
@@ -34,10 +40,10 @@ class WindowsNotificationEventListener(QThread):
 
         self.clear_notifications.connect(self._clear_notifications)
         self.event_service.register_event("WindowsNotificationClear", self.clear_notifications)
-        
+
     def _clear_notifications(self):
         asyncio.run_coroutine_threadsafe(self.clear_all_notifications(), self.loop)
- 
+
     async def update_count(self, listener):
         try:
             notifications = await listener.get_notifications_async(get_all_kinds())
@@ -70,7 +76,6 @@ class WindowsNotificationEventListener(QThread):
         except Exception as e:
             logging.error(f"Error in notification listener: {e}")
             await asyncio.sleep(10)
-
 
     async def clear_all_notifications(self):
         """

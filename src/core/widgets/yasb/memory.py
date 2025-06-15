@@ -1,26 +1,30 @@
 import logging
 import re
+
 import psutil
 from humanize import naturalsize
-from core.widgets.base import BaseWidget
-from core.validation.widgets.yasb.memory import VALIDATION_SCHEMA
-from PyQt6.QtWidgets import QLabel,QHBoxLayout,QWidget
-from core.utils.widgets.animation_manager import AnimationManager
+from PyQt6.QtWidgets import QHBoxLayout, QLabel, QWidget
+
 from core.utils.utilities import add_shadow, build_widget_label
+from core.utils.widgets.animation_manager import AnimationManager
+from core.validation.widgets.yasb.memory import VALIDATION_SCHEMA
+from core.widgets.base import BaseWidget
+
 
 class MemoryWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
+
     def __init__(
-            self,
-            label: str,
-            label_alt: str,
-            update_interval: int,
-            animation: dict[str, str],
-            callbacks: dict[str, str],
-            memory_thresholds: dict[str, int],
-            container_padding: dict[str, int],
-            label_shadow: dict = None,
-            container_shadow: dict = None
+        self,
+        label: str,
+        label_alt: str,
+        update_interval: int,
+        animation: dict[str, str],
+        callbacks: dict[str, str],
+        memory_thresholds: dict[str, int],
+        container_padding: dict[str, int],
+        label_shadow: dict = None,
+        container_shadow: dict = None,
     ):
         super().__init__(update_interval, class_name="memory-widget")
         self._memory_thresholds = memory_thresholds
@@ -34,7 +38,9 @@ class MemoryWidget(BaseWidget):
         # Construct container
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(self._padding['left'],self._padding['top'],self._padding['right'],self._padding['bottom'])
+        self._widget_container_layout.setContentsMargins(
+            self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
+        )
         # Initialize container
         self._widget_container: QWidget = QWidget()
         self._widget_container.setLayout(self._widget_container_layout)
@@ -48,27 +54,27 @@ class MemoryWidget(BaseWidget):
         self.register_callback("toggle_label", self._toggle_label)
         self.register_callback("update_label", self._update_label)
 
-        self.callback_left = callbacks['on_left']
-        self.callback_right = callbacks['on_right']
-        self.callback_middle = callbacks['on_middle']
+        self.callback_left = callbacks["on_left"]
+        self.callback_right = callbacks["on_right"]
+        self.callback_middle = callbacks["on_middle"]
         self.callback_timer = "update_label"
 
         self.start_timer()
-        
+
     def _toggle_label(self):
-        if self._animation['enabled']:
-            AnimationManager.animate(self, self._animation['type'], self._animation['duration'])
+        if self._animation["enabled"]:
+            AnimationManager.animate(self, self._animation["type"], self._animation["duration"])
         self._show_alt_label = not self._show_alt_label
         for widget in self._widgets:
             widget.setVisible(not self._show_alt_label)
         for widget in self._widgets_alt:
             widget.setVisible(self._show_alt_label)
         self._update_label()
-    
+
     def _update_label(self):
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
         active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
-        label_parts = re.split('(<span.*?>.*?</span>)', active_label_content)
+        label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
         label_parts = [part for part in label_parts if part]
         widget_index = 0
 
@@ -92,18 +98,18 @@ class MemoryWidget(BaseWidget):
                     part = part.replace(fmt_str, str(value))
 
                 if part and widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
-                    if '<span' in part and '</span>' in part:
-                        icon = re.sub(r'<span.*?>|</span>', '', part).strip()
+                    if "<span" in part and "</span>" in part:
+                        icon = re.sub(r"<span.*?>|</span>", "", part).strip()
                         active_widgets[widget_index].setText(icon)
                     else:
                         active_widgets[widget_index].setText(part)
                         # Set memory threshold as property
                         label_class = "label alt" if self._show_alt_label else "label"
-                        active_widgets[widget_index].setProperty("class", f"{label_class} status-{self._get_virtual_memory_threshold(virtual_mem.percent)}")
-                        active_widgets[widget_index].setStyleSheet('')
+                        active_widgets[widget_index].setProperty(
+                            "class", f"{label_class} status-{self._get_virtual_memory_threshold(virtual_mem.percent)}"
+                        )
+                        active_widgets[widget_index].setStyleSheet("")
                     widget_index += 1
-
-
 
         except Exception:
             logging.exception("Failed to retrieve updated memory info")
@@ -112,11 +118,11 @@ class MemoryWidget(BaseWidget):
                 widget_index += 1
 
     def _get_virtual_memory_threshold(self, virtual_memory_percent) -> str:
-        if virtual_memory_percent <= self._memory_thresholds['low']:
+        if virtual_memory_percent <= self._memory_thresholds["low"]:
             return "low"
-        elif self._memory_thresholds['low'] < virtual_memory_percent <= self._memory_thresholds['medium']:
+        elif self._memory_thresholds["low"] < virtual_memory_percent <= self._memory_thresholds["medium"]:
             return "medium"
-        elif self._memory_thresholds['medium'] < virtual_memory_percent <= self._memory_thresholds['high']:
+        elif self._memory_thresholds["medium"] < virtual_memory_percent <= self._memory_thresholds["high"]:
             return "high"
-        elif self._memory_thresholds['high'] < virtual_memory_percent:
+        elif self._memory_thresholds["high"] < virtual_memory_percent:
             return "critical"

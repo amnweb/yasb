@@ -1,24 +1,29 @@
+import atexit
+import logging
 import os
-from pathlib import Path
+import shutil
 import struct
 import subprocess
 import textwrap
-import logging
-import shutil
 import threading
-from core.widgets.base import BaseWidget
-from core.validation.widgets.yasb.cava import VALIDATION_SCHEMA
-from PyQt6.QtWidgets import QHBoxLayout, QWidget, QLabel, QApplication
-from PyQt6.QtGui import QLinearGradient, QPainter, QColor
+from pathlib import Path
+
 from PyQt6.QtCore import QTimer, pyqtSignal
-import atexit
+from PyQt6.QtGui import QColor, QLinearGradient, QPainter
+from PyQt6.QtWidgets import QApplication, QHBoxLayout, QLabel, QWidget
+
+from core.validation.widgets.yasb.cava import VALIDATION_SCHEMA
+from core.widgets.base import BaseWidget
+
 
 class CavaBar(QWidget):
     def __init__(self, cava_widget):
         super().__init__()
         self._cava_widget = cava_widget
         self.setFixedHeight(self._cava_widget._height)
-        self.setFixedWidth(self._cava_widget._bars_number * (self._cava_widget._bar_width + self._cava_widget._bar_spacing))
+        self.setFixedWidth(
+            self._cava_widget._bars_number * (self._cava_widget._bar_width + self._cava_widget._bar_spacing)
+        )
         self.setContentsMargins(0, 0, 0, 0)
 
     def paintEvent(self, event):
@@ -41,39 +46,40 @@ class CavaBar(QWidget):
                 else:
                     painter.fillRect(x, y, self._cava_widget._bar_width, height, self._cava_widget.foreground_color)
 
+
 class CavaWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
     samplesUpdated = pyqtSignal(list)
 
     def __init__(
-            self,
-            bar_height: int,
-            min_bar_height: int,
-            bars_number: int,
-            output_bit_format: str,
-            orientation: str,
-            bar_spacing: int,
-            bar_width: int,
-            sleep_timer: int,
-            sensitivity: int,
-            lower_cutoff_freq: int,
-            higher_cutoff_freq: int,
-            framerate: int,
-            noise_reduction: float,
-            mono_option: str,
-            reverse: int,
-            waveform: int,
-            channels: str,
-            foreground: str,
-            gradient: bool,
-            gradient_color_1: str,
-            gradient_color_2: str,
-            gradient_color_3: str,
-            monstercat: int,
-            waves: int,
-            hide_empty: bool,
-            container_padding: dict[str, int],
-            callbacks: dict[str, str],
+        self,
+        bar_height: int,
+        min_bar_height: int,
+        bars_number: int,
+        output_bit_format: str,
+        orientation: str,
+        bar_spacing: int,
+        bar_width: int,
+        sleep_timer: int,
+        sensitivity: int,
+        lower_cutoff_freq: int,
+        higher_cutoff_freq: int,
+        framerate: int,
+        noise_reduction: float,
+        mono_option: str,
+        reverse: int,
+        waveform: int,
+        channels: str,
+        foreground: str,
+        gradient: bool,
+        gradient_color_1: str,
+        gradient_color_2: str,
+        gradient_color_3: str,
+        monstercat: int,
+        waves: int,
+        hide_empty: bool,
+        container_padding: dict[str, int],
+        callbacks: dict[str, str],
     ):
         super().__init__(class_name="cava-widget")
         # Widget configuration
@@ -104,8 +110,8 @@ class CavaWidget(BaseWidget):
         self._hide_empty = hide_empty
         self._padding = container_padding
         self._hide_cava_widget = True
-        self._stop_cava = False 
-        
+        self._stop_cava = False
+
         # Set up samples and colors
         self.samples = [0] * self._bars_number
         self.colors = []
@@ -114,10 +120,7 @@ class CavaWidget(BaseWidget):
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
         self._widget_container_layout.setContentsMargins(
-            self._padding['left'],
-            self._padding['top'],
-            self._padding['right'],
-            self._padding['bottom']
+            self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
         )
         self._widget_container = QWidget()
         self._widget_container.setLayout(self._widget_container_layout)
@@ -129,17 +132,17 @@ class CavaWidget(BaseWidget):
             error_label = QLabel("Cava not installed")
             self._widget_container_layout.addWidget(error_label)
             return
-        
+
         # Add the custom bar frame
         self._bar_frame = CavaBar(self)
         self._widget_container_layout.addWidget(self._bar_frame)
 
         self.register_callback("reload_cava", self._reload_cava)
- 
-        self.callback_left = callbacks['on_left']
-        self.callback_right = callbacks['on_right']
-        self.callback_middle = callbacks['on_middle']
-        
+
+        self.callback_left = callbacks["on_left"]
+        self.callback_right = callbacks["on_right"]
+        self.callback_middle = callbacks["on_middle"]
+
         # Connect signal and start audio processing
         self.samplesUpdated.connect(self.on_samples_updated)
         self.destroyed.connect(self.stop_cava)
@@ -154,8 +157,7 @@ class CavaWidget(BaseWidget):
 
         if QApplication.instance():
             QApplication.instance().aboutToQuit.connect(self.stop_cava)
-        atexit.register(self.stop_cava)   
-
+        atexit.register(self.stop_cava)
 
     def _reload_cava(self):
         """Stop current cava process and start a new one"""
@@ -167,7 +169,7 @@ class CavaWidget(BaseWidget):
             QTimer.singleShot(500, self.start_cava)
 
             if self._hide_empty and self._sleep_timer > 0:
-                if hasattr(self, '_hide_timer'):
+                if hasattr(self, "_hide_timer"):
                     self._hide_timer.stop()
                 self._hide_cava_widget = True
                 self.show()
@@ -215,11 +217,10 @@ class CavaWidget(BaseWidget):
         self.hide()
         self._hide_cava_widget = True
 
-
     def start_cava(self) -> None:
         # Reset stop flag to allow new process to start
         self._stop_cava = False
-        
+
         # Build configuration file, temp config file will be created in %temp% directory
         config_template = textwrap.dedent(f"""\
         # Cava config auto-generated by YASB
@@ -261,7 +262,6 @@ class CavaWidget(BaseWidget):
             bytetype, bytesize, bytenorm = ("B", 1, 255)
 
         def process_audio():
-
             LOCALDATA_FOLDER = Path(os.environ["LOCALAPPDATA"]) / "Yasb"
             if not LOCALDATA_FOLDER.exists():
                 LOCALDATA_FOLDER.mkdir(parents=True, exist_ok=True)
@@ -272,17 +272,17 @@ class CavaWidget(BaseWidget):
                 with open(cava_config_path, "w") as config_file:
                     config_file.write(config_template)
                     config_file.flush()
-                
+
                 self._cava_process = subprocess.Popen(
                     ["cava", "-p", cava_config_path],
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
-                    creationflags=subprocess.CREATE_NO_WINDOW
+                    creationflags=subprocess.CREATE_NO_WINDOW,
                 )
-                
+
                 chunk = bytesize * self._bars_number
                 fmt = bytetype * self._bars_number
-                
+
                 while not self._stop_cava:
                     try:
                         data = self._cava_process.stdout.read(chunk)
@@ -293,7 +293,7 @@ class CavaWidget(BaseWidget):
                     except Exception as e:
                         logging.error(f"Error reading cava data: {e}")
                         break
-                        
+
             except Exception as e:
                 logging.error(f"Error starting cava process: {e}")
             finally:
@@ -305,8 +305,8 @@ class CavaWidget(BaseWidget):
                         pass
 
         # Wait for previous thread to finish if it exists
-        if hasattr(self, 'thread_cava') and self.thread_cava.is_alive():
+        if hasattr(self, "thread_cava") and self.thread_cava.is_alive():
             self.thread_cava.join(timeout=1)
-        
+
         self.thread_cava = threading.Thread(target=process_audio, daemon=True)
         self.thread_cava.start()

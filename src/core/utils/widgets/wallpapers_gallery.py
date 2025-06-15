@@ -1,36 +1,66 @@
 import os
 import re
-from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QScrollArea, QGraphicsOpacityEffect, QSizePolicy
-from PyQt6.QtGui import QPixmap, QKeySequence, QShortcut, QPainter, QPainterPath, QImageReader
-from PyQt6.QtCore import Qt, QTimer, QPropertyAnimation, pyqtProperty, QRectF, QSize, QRunnable, QThreadPool, pyqtSignal, QObject, QRect
-from core.utils.win32.blurWindow import Blur
-from core.event_service import EventService
+
+from PyQt6.QtCore import (
+    QObject,
+    QPropertyAnimation,
+    QRect,
+    QRectF,
+    QRunnable,
+    QSize,
+    Qt,
+    QThreadPool,
+    QTimer,
+    pyqtProperty,
+    pyqtSignal,
+)
+from PyQt6.QtGui import QImageReader, QKeySequence, QPainter, QPainterPath, QPixmap, QShortcut
+from PyQt6.QtWidgets import (
+    QApplication,
+    QGraphicsOpacityEffect,
+    QHBoxLayout,
+    QLabel,
+    QMainWindow,
+    QPushButton,
+    QScrollArea,
+    QSizePolicy,
+    QVBoxLayout,
+    QWidget,
+)
+
 from core.config import get_stylesheet
+from core.event_service import EventService
 from core.utils.utilities import is_windows_10
+from core.utils.win32.blurWindow import Blur
+
 
 class BaseStyledWidget(QWidget):
     """BaseStyledWidget applies filtered styles to the widget from a given stylesheet."""
+
     def apply_stylesheet(self):
         stylesheet = get_stylesheet()
         classes_to_include = [
-            'wallpapers-gallery-window',
-            'wallpapers-gallery-buttons',
-            'wallpapers-gallery-buttons:hover',
-            'wallpapers-gallery-image',
-            'wallpapers-gallery-image.focused',
-            'wallpapers-gallery-image:hover'
+            "wallpapers-gallery-window",
+            "wallpapers-gallery-buttons",
+            "wallpapers-gallery-buttons:hover",
+            "wallpapers-gallery-image",
+            "wallpapers-gallery-image.focused",
+            "wallpapers-gallery-image:hover",
         ]
         filtered_stylesheet = self.extract_class_styles(stylesheet, classes_to_include)
         self.setStyleSheet(filtered_stylesheet)
 
     def extract_class_styles(self, stylesheet, classes):
-        pattern = re.compile(r'(\.({})\s*\{{[^}}]*\}})'.format('|'.join(re.escape(cls) for cls in classes)), re.MULTILINE)
+        pattern = re.compile(
+            r"(\.({})\s*\{{[^}}]*\}})".format("|".join(re.escape(cls) for cls in classes)), re.MULTILINE
+        )
         matches = pattern.findall(stylesheet)
-        return '\n'.join(match[0] for match in matches)
+        return "\n".join(match[0] for match in matches)
 
 
 class HoverLabel(QLabel, BaseStyledWidget):
     """HoverLabel: QLabel with hover, focus, and opacity effects for a wallpapers gallery."""
+
     def __init__(self, parent, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -93,12 +123,12 @@ class ImageLoader(QRunnable):
         self.corner_radius = corner_radius
         self.index = index
         self.signals = ImageSignals()
-    
+
     def run(self):
         # Get original image dimensions first
         reader = QImageReader(self.image_path)
         original_size = reader.size()
-        
+
         if not original_size.isValid():
             # Fallback if we can't determine original size
             reader.setScaledSize(QSize(self.target_width, self.target_height))
@@ -107,7 +137,7 @@ class ImageLoader(QRunnable):
             # Calculate dimensions to FILL the target area (may crop edges)
             orig_aspect = original_size.width() / original_size.height()
             target_aspect = self.target_width / self.target_height
-            
+
             if orig_aspect > target_aspect:
                 # Image is wider than target - scale to match height and crop width
                 scaled_height = self.target_height
@@ -116,81 +146,79 @@ class ImageLoader(QRunnable):
                 # Image is taller than target - scale to match width and crop height
                 scaled_width = self.target_width
                 scaled_height = int(scaled_width / orig_aspect)
-                
+
             reader.setScaledSize(QSize(scaled_width, scaled_height))
             image = reader.read()
-        
+
         # Create a transparent pixmap of the target size
         pixmap = QPixmap(self.target_width, self.target_height)
         pixmap.fill(Qt.GlobalColor.transparent)
-        
+
         # Paint the image centered within the target area
         painter = QPainter(pixmap)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        
+
         # Create rounded rectangle for clipping
         path = QPainterPath()
-        path.addRoundedRect(
-            QRectF(0, 0, self.target_width, self.target_height), 
-            self.corner_radius, self.corner_radius
-        )
+        path.addRoundedRect(QRectF(0, 0, self.target_width, self.target_height), self.corner_radius, self.corner_radius)
         painter.setClipPath(path)
-        
+
         # Calculate position to center the image (may crop edges)
         x = (self.target_width - image.width()) // 2
         y = (self.target_height - image.height()) // 2
-        
+
         # Create source rectangle that ensures the image fills the target area
         source_x = max(0, -x)
         source_y = max(0, -y)
         source_width = min(image.width() - source_x, self.target_width)
         source_height = min(image.height() - source_y, self.target_height)
-        
+
         # Draw only the visible portion of the image
         painter.drawImage(
             QRect(max(0, x), max(0, y), source_width, source_height),
             image,
-            QRect(source_x, source_y, source_width, source_height)
+            QRect(source_x, source_y, source_width, source_height),
         )
         painter.end()
-        
+
         self.signals.loaded.emit(self.image_path, pixmap, self.index)
 
 
 class ImageGallery(QMainWindow, BaseStyledWidget):
     """ImageGallery displays a gallery of images with navigation and lazy loading features."""
+
     def __init__(self, image_folder, gallery):
         super().__init__()
- 
+
         self.gallery = gallery
         self._event_service = EventService()
         self.image_folder = image_folder
         all_files = []
         for root, dirs, files in os.walk(self.image_folder):
             for f in files:
-                if f.lower().endswith(('png', 'jpg', 'jpeg', 'gif', 'bmp')):
+                if f.lower().endswith(("png", "jpg", "jpeg", "gif", "bmp")):
                     all_files.append(os.path.join(root, f))
 
         self.image_files = sorted(all_files)  # or any ordering you prefer
         self.current_index = 0
-        self.images_per_page = self.gallery['image_per_page']
-        self.orientation = self.gallery['orientation']
-        
+        self.images_per_page = self.gallery["image_per_page"]
+        self.orientation = self.gallery["orientation"]
+
         # Calculate dimensions based on orientation
         if self.orientation == "landscape":
-            self.image_width = self.gallery['image_width']
+            self.image_width = self.gallery["image_width"]
             self.image_height = int(self.image_width * 9) // 16
         else:  # portrait
-            self.image_width = self.gallery['image_width']  # Keep width as specified
+            self.image_width = self.gallery["image_width"]  # Keep width as specified
             self.image_height = int(self.image_width * 16) // 9  # Make height taller
-        
-        self.show_button = self.gallery['show_buttons']
+
+        self.show_button = self.gallery["show_buttons"]
         self.window_height = self.image_height + 20
-        self.blur = self.gallery['blur']
-        self.image_spacing = self.gallery['image_spacing']
-        self.lazy_load = self.gallery['lazy_load']
-        self.lazy_load_fadein = self.gallery['lazy_load_fadein']
-        self.corner_radius = self.gallery['image_corner_radius']
+        self.blur = self.gallery["blur"]
+        self.image_spacing = self.gallery["image_spacing"]
+        self.lazy_load = self.gallery["lazy_load"]
+        self.lazy_load_fadein = self.gallery["lazy_load_fadein"]
+        self.corner_radius = self.gallery["image_corner_radius"]
         self.focused_index = None
         self.is_loading = False
         self.threadpool = QThreadPool()
@@ -203,7 +231,7 @@ class ImageGallery(QMainWindow, BaseStyledWidget):
             screen = parent.screen()
         else:
             screen = QApplication.primaryScreen()
-        
+
         screen_geometry = screen.geometry()
         screen_width = screen_geometry.width()
         screen_height = screen_geometry.height()
@@ -211,7 +239,7 @@ class ImageGallery(QMainWindow, BaseStyledWidget):
             screen_geometry.x() + (screen_width - (screen_width - 60)) // 2,
             screen_geometry.y() + (screen_height - self.window_height) // 2,
             screen_width - 60,
-            self.window_height
+            self.window_height,
         )
         self.setWindowFlags(Qt.WindowType.Tool | Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
@@ -223,9 +251,9 @@ class ImageGallery(QMainWindow, BaseStyledWidget):
                 Acrylic=True if is_windows_10() else False,
                 DarkMode=True,
                 RoundCorners=True,
-                BorderColor="System"
+                BorderColor="System",
             )
-            
+
         # Set up the layout
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
@@ -233,7 +261,7 @@ class ImageGallery(QMainWindow, BaseStyledWidget):
         self.setContentsMargins(0, 0, 0, 0)
         layout = QVBoxLayout()
         central_widget.setLayout(layout)
-        
+
         # Set up the scroll area
         self.scroll_area = QScrollArea()
         self.scroll_area.setStyleSheet("background-color:transparent;border:0")
@@ -243,36 +271,38 @@ class ImageGallery(QMainWindow, BaseStyledWidget):
         self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         layout.addWidget(self.scroll_area)
-        
+
         # Set up the image container
         self.image_container = QWidget()
         self.scroll_area.setWidget(self.image_container)
         self.image_layout = QHBoxLayout()
         self.image_container.setLayout(self.image_layout)
         self.image_container.setContentsMargins(0, 0, 0, 0)
-        self.image_container.setFixedWidth(int(self.image_width * self.images_per_page + self.image_spacing * (self.images_per_page - 1)))
-        
+        self.image_container.setFixedWidth(
+            int(self.image_width * self.images_per_page + self.image_spacing * (self.images_per_page - 1))
+        )
+
         # Add navigation buttons if needed
         if self.show_button:
             button_layout = QHBoxLayout()
             button_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            
-            self.prev_button = QPushButton('Prev')
+
+            self.prev_button = QPushButton("Prev")
             self.prev_button.setProperty("class", "wallpapers-gallery-buttons")
             self.prev_button.setCursor(Qt.CursorShape.PointingHandCursor)
             self.prev_button.clicked.connect(self.load_prev_images)
             button_layout.addWidget(self.prev_button)
-            
-            self.next_button = QPushButton('Next')
+
+            self.next_button = QPushButton("Next")
             self.next_button.setProperty("class", "wallpapers-gallery-buttons")
             self.next_button.setCursor(Qt.CursorShape.PointingHandCursor)
             self.next_button.clicked.connect(self.load_next_images)
             button_layout.addWidget(self.next_button)
-            
+
             layout.addLayout(button_layout)
             layout.setSpacing(0)
             layout.setContentsMargins(0, 0, 0, 0)
-            
+
         # Set up keyboard shortcuts
         central_widget.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         QShortcut(QKeySequence(Qt.Key.Key_Left), self, self.handle_left_arrow)
@@ -285,7 +315,7 @@ class ImageGallery(QMainWindow, BaseStyledWidget):
         self.is_loading = True
         for i in reversed(range(self.image_layout.count())):
             self.image_layout.itemAt(i).widget().setParent(None)
-        
+
         # Create placeholder labels first
         for i in range(min(self.images_per_page, len(self.image_files) - self.current_index)):
             index = self.current_index + i
@@ -294,17 +324,17 @@ class ImageGallery(QMainWindow, BaseStyledWidget):
             label.setAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignVCenter)
             label.mousePressEvent = self.create_mouse_press_event(index)
             self.image_layout.addWidget(label)
-            
+
             # Start loading the actual image in background
             image_path = os.path.join(self.image_folder, self.image_files[index])
             loader = ImageLoader(image_path, self.image_width, self.image_height, self.corner_radius, i)
             loader.signals.loaded.connect(self.update_image_label)
             self.threadpool.start(loader)
-        
+
         self.image_layout.setSpacing(self.image_spacing)
         self.image_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
         self.image_layout.setContentsMargins(0, 0, 0, 0)
-        
+
         if self.focused_index is None and self.image_files:
             self.focused_index = self.current_index
         self.update_focus()
@@ -318,16 +348,18 @@ class ImageGallery(QMainWindow, BaseStyledWidget):
                 label.fade_in(self.lazy_load_fadein)
             else:
                 label.opacity = 1.0
-            
+
         # Check if all images are loaded
         if index == self.images_per_page - 1 or index == len(self.image_files) - self.current_index - 1:
             self.is_loading = False
 
     def create_mouse_press_event(self, index):
         """Create a mouse press event handler for a specific image index."""
+
         def mouse_press_event(event):
             self.focused_index = index
             self.update_focus()
+
         return mouse_press_event
 
     def update_focus(self):
@@ -419,7 +451,7 @@ class ImageGallery(QMainWindow, BaseStyledWidget):
         """Handle key press events for gallery navigation."""
         if self.is_loading:
             return
-            
+
         if event.key() == Qt.Key.Key_Escape:
             self.fade_out_and_close_gallery()
         elif event.key() == Qt.Key.Key_Return and self.focused_index is not None:
@@ -456,11 +488,12 @@ class ImageGallery(QMainWindow, BaseStyledWidget):
     def fade_in_gallery(self, parent=None):
         """Show the gallery with a fade-in animation."""
         # Close any existing galleries
-        existing_galleries = [widget for widget in QApplication.topLevelWidgets() 
-                             if isinstance(widget, type(self)) and widget.isVisible()]
+        existing_galleries = [
+            widget for widget in QApplication.topLevelWidgets() if isinstance(widget, type(self)) and widget.isVisible()
+        ]
         for gallery in existing_galleries:
             gallery.fade_out_and_close_gallery()
-        
+
         self.initUI(parent)
         self.fade_in_animation = QPropertyAnimation(self, b"windowOpacity")
         self.fade_in_animation.setDuration(200)
@@ -477,7 +510,7 @@ class ImageGallery(QMainWindow, BaseStyledWidget):
         self.fade_out_animation.setEndValue(0)
         self.fade_out_animation.finished.connect(self._on_fade_out_finished)
         self.fade_out_animation.start()
-        
+
     def _on_fade_out_finished(self):
         """
         Handles the event when the fade-out animation is finished.
@@ -485,4 +518,5 @@ class ImageGallery(QMainWindow, BaseStyledWidget):
         """
         self.destroy()
         import gc
+
         gc.collect()

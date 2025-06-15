@@ -1,204 +1,92 @@
 DEFAULTS = {
-    'bar_height': 20,
-    'min_bar_height': 0,
-    'bars_number': 10,
-    'output_bit_format': "16bit",
-    'orientation': 'bottom',
-    'bar_spacing': 1,
-    'bar_width': 3,
-    'min_bar_height': 1,
-    'sleep_timer': 0,
-    'sensitivity': 100,
-    'lower_cutoff_freq': 50,
-    'higher_cutoff_freq': 10000,
-    'framerate': 60,
-    'noise_reduction': 0.77,
-    'channels': 'stereo',
-    'mono_option': 'average',
-    'reverse': 0,
-    'waveform': 0,
-    'foreground': '#ffffff',
-    'gradient': 1,
-    'gradient_color_1': '#74c7ec',
-    'gradient_color_2': '#89b4fa',
-    'gradient_color_3': '#cba6f7',
-    'monstercat': 0,
-    'waves': 0,
-    'hide_empty': False,
-    'container_padding': {'top': 0, 'left': 0, 'bottom': 0, 'right': 0},
-    'callbacks': {
-        'on_left': 'do_nothing',
-        'on_middle': 'do_nothing',
-        'on_right': 'reload_cava'
-    }
+    "bar_height": 20,
+    "min_bar_height": 0,
+    "bars_number": 10,
+    "output_bit_format": "16bit",
+    "orientation": "bottom",
+    "bar_spacing": 1,
+    "bar_width": 3,
+    "min_bar_height": 1,
+    "sleep_timer": 0,
+    "sensitivity": 100,
+    "lower_cutoff_freq": 50,
+    "higher_cutoff_freq": 10000,
+    "framerate": 60,
+    "noise_reduction": 0.77,
+    "channels": "stereo",
+    "mono_option": "average",
+    "reverse": 0,
+    "waveform": 0,
+    "foreground": "#ffffff",
+    "gradient": 1,
+    "gradient_color_1": "#74c7ec",
+    "gradient_color_2": "#89b4fa",
+    "gradient_color_3": "#cba6f7",
+    "monstercat": 0,
+    "waves": 0,
+    "hide_empty": False,
+    "container_padding": {"top": 0, "left": 0, "bottom": 0, "right": 0},
+    "callbacks": {"on_left": "do_nothing", "on_middle": "do_nothing", "on_right": "reload_cava"},
 }
 
 VALIDATION_SCHEMA = {
-    'bar_height': {
-        'type': 'integer',
-        'required': False,
-        'default': DEFAULTS['bar_height']
+    "bar_height": {"type": "integer", "required": False, "default": DEFAULTS["bar_height"]},
+    "min_bar_height": {"type": "integer", "required": False, "default": DEFAULTS["min_bar_height"]},
+    "bars_number": {"type": "integer", "required": False, "default": DEFAULTS["bars_number"]},
+    "output_bit_format": {"type": "string", "required": False, "default": DEFAULTS["output_bit_format"]},
+    "orientation": {
+        "type": "string",
+        "required": False,
+        "allowed": ["top", "bottom"],
+        "default": DEFAULTS["orientation"],
     },
-    'min_bar_height': {
-        'type': 'integer',
-        'required': False,
-        'default': DEFAULTS['min_bar_height']
-    },
-    'bars_number': {
-        'type': 'integer',
-        'required': False,
-        'default': DEFAULTS['bars_number']
-    },
-    'output_bit_format': {
-        'type': 'string',
-        'required': False,
-        'default': DEFAULTS['output_bit_format']
-    },
-    'orientation': {
-        'type': 'string',
-        'required': False,
-        'allowed': ['top', 'bottom'],
-        'default': DEFAULTS['orientation']
-    },
-    'bar_spacing': {
-        'type': 'integer',
-        'required': False,
-        'default': DEFAULTS['bar_spacing']
-    },
-    'bar_width': {
-        'type': 'integer',
-        'required': False,
-        'default': DEFAULTS['bar_width']
-    },
-    'sleep_timer': {
-        'type': 'integer',
-        'required': False,
-        'default': DEFAULTS['sleep_timer']
-    },
-    'sensitivity': {
-        'type': 'integer',
-        'required': False,
-        'default': DEFAULTS['sensitivity']
-    },
-    'lower_cutoff_freq': {
-        'type': 'integer',
-        'required': False,
-        'default': DEFAULTS['lower_cutoff_freq']
-    },
-    'higher_cutoff_freq': {
-        'type': 'integer',
-        'required': False,
-        'default': DEFAULTS['higher_cutoff_freq']
-    },
-    'framerate': {
-        'type': 'integer',
-        'required': False,
-        'default': DEFAULTS['framerate']
-    },
-    'noise_reduction': {
-        'type': 'float',
-        'required': False,
-        'default': DEFAULTS['noise_reduction']
-    },
-    'channels': {
-        'type': 'string',
-        'required': False,
-        'default': DEFAULTS['channels']
-    },
-    'mono_option': {
-        'type': 'string',
-        'required': False,
-        'default': DEFAULTS['mono_option']
-    },
-    'reverse': {
-        'type': 'integer',
-        'required': False,
-        'default': DEFAULTS['reverse']
-    },
-    'waveform': {
-        'type': 'integer',
-        'required': False,
-        'default': DEFAULTS['waveform']
-    },
-    'foreground': {
-        'type': 'string',
-        'required': False,
-        'default': DEFAULTS['foreground']
-    },
-    'gradient': {
-        'type': 'integer',
-        'required': False,
-        'default': DEFAULTS['gradient']
-    },
-    'gradient_color_1': {
-        'type': 'string',
-        'required': False,
-        'default': DEFAULTS['gradient_color_1']
-    },
-    'gradient_color_2': {
-        'type': 'string',
-        'required': False,
-        'default': DEFAULTS['gradient_color_2']
-    },
-    'gradient_color_3': {
-        'type': 'string',
-        'required': False,
-        'default': DEFAULTS['gradient_color_3']
-    },
-    'monstercat': {
-        'type': 'integer',
-        'required': False,
-        'default': DEFAULTS['monstercat']
-    },
-    'waves': {
-        'type': 'integer',
-        'required': False,
-        'default': DEFAULTS['waves']
-    },
-    'hide_empty': {
-        'type': 'boolean',
-        'required': False,
-        'default': DEFAULTS['hide_empty']
-    },
-    'container_padding': {
-        'type': 'dict',
-        'required': False,
-        'schema': {
-            'top': {
-                'type': 'integer',
-                'default': DEFAULTS['container_padding']['top']
-            },
-            'left': {
-                'type': 'integer',
-                'default': DEFAULTS['container_padding']['left']
-            },
-            'bottom': {
-                'type': 'integer',
-                'default': DEFAULTS['container_padding']['bottom']
-            },
-            'right': {
-                'type': 'integer',
-                'default': DEFAULTS['container_padding']['right']
-            }
+    "bar_spacing": {"type": "integer", "required": False, "default": DEFAULTS["bar_spacing"]},
+    "bar_width": {"type": "integer", "required": False, "default": DEFAULTS["bar_width"]},
+    "sleep_timer": {"type": "integer", "required": False, "default": DEFAULTS["sleep_timer"]},
+    "sensitivity": {"type": "integer", "required": False, "default": DEFAULTS["sensitivity"]},
+    "lower_cutoff_freq": {"type": "integer", "required": False, "default": DEFAULTS["lower_cutoff_freq"]},
+    "higher_cutoff_freq": {"type": "integer", "required": False, "default": DEFAULTS["higher_cutoff_freq"]},
+    "framerate": {"type": "integer", "required": False, "default": DEFAULTS["framerate"]},
+    "noise_reduction": {"type": "float", "required": False, "default": DEFAULTS["noise_reduction"]},
+    "channels": {"type": "string", "required": False, "default": DEFAULTS["channels"]},
+    "mono_option": {"type": "string", "required": False, "default": DEFAULTS["mono_option"]},
+    "reverse": {"type": "integer", "required": False, "default": DEFAULTS["reverse"]},
+    "waveform": {"type": "integer", "required": False, "default": DEFAULTS["waveform"]},
+    "foreground": {"type": "string", "required": False, "default": DEFAULTS["foreground"]},
+    "gradient": {"type": "integer", "required": False, "default": DEFAULTS["gradient"]},
+    "gradient_color_1": {"type": "string", "required": False, "default": DEFAULTS["gradient_color_1"]},
+    "gradient_color_2": {"type": "string", "required": False, "default": DEFAULTS["gradient_color_2"]},
+    "gradient_color_3": {"type": "string", "required": False, "default": DEFAULTS["gradient_color_3"]},
+    "monstercat": {"type": "integer", "required": False, "default": DEFAULTS["monstercat"]},
+    "waves": {"type": "integer", "required": False, "default": DEFAULTS["waves"]},
+    "hide_empty": {"type": "boolean", "required": False, "default": DEFAULTS["hide_empty"]},
+    "container_padding": {
+        "type": "dict",
+        "required": False,
+        "schema": {
+            "top": {"type": "integer", "default": DEFAULTS["container_padding"]["top"]},
+            "left": {"type": "integer", "default": DEFAULTS["container_padding"]["left"]},
+            "bottom": {"type": "integer", "default": DEFAULTS["container_padding"]["bottom"]},
+            "right": {"type": "integer", "default": DEFAULTS["container_padding"]["right"]},
         },
-        'default': DEFAULTS['container_padding']
+        "default": DEFAULTS["container_padding"],
     },
-    'callbacks': {
-        'type': 'dict',
-        'schema': {
-            'on_left': {
-                'type': 'string',
-                'default': DEFAULTS['callbacks']['on_left'],
+    "callbacks": {
+        "type": "dict",
+        "schema": {
+            "on_left": {
+                "type": "string",
+                "default": DEFAULTS["callbacks"]["on_left"],
             },
-            'on_middle': {
-                'type': 'string',
-                'default': DEFAULTS['callbacks']['on_middle'],
+            "on_middle": {
+                "type": "string",
+                "default": DEFAULTS["callbacks"]["on_middle"],
             },
-            'on_right': {
-                'type': 'string',
-                'default': DEFAULTS['callbacks']['on_right'],
-            }
+            "on_right": {
+                "type": "string",
+                "default": DEFAULTS["callbacks"]["on_right"],
+            },
         },
-        'default': DEFAULTS['callbacks']
-    }
+        "default": DEFAULTS["callbacks"],
+    },
 }

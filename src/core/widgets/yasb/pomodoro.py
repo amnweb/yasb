@@ -1,40 +1,43 @@
-import os
-import time
 import logging
+import os
 import re
-from PyQt6.QtWidgets import QLabel, QHBoxLayout, QWidget, QVBoxLayout, QPushButton
-from PyQt6.QtCore import Qt, QTimer, QRectF, pyqtProperty, QPropertyAnimation
-from PyQt6.QtGui import QCursor, QPainter, QPen, QColor
+import time
+
+from PyQt6.QtCore import QPropertyAnimation, QRectF, Qt, QTimer, pyqtProperty
+from PyQt6.QtGui import QColor, QCursor, QPainter, QPen
+from PyQt6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
+
 from core.utils.utilities import PopupWidget, ToastNotifier, add_shadow, build_widget_label
-from core.widgets.base import BaseWidget
-from core.validation.widgets.yasb.pomodoro import VALIDATION_SCHEMA
 from core.utils.widgets.animation_manager import AnimationManager
+from core.validation.widgets.yasb.pomodoro import VALIDATION_SCHEMA
+from core.widgets.base import BaseWidget
 from settings import SCRIPT_PATH
+
 
 class PomodoroWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
 
     def __init__(
-            self,
-            label: str,
-            label_alt: str,
-            work_duration: int,
-            break_duration: int,
-            long_break_duration: int,
-            long_break_interval: int,
-            auto_start_breaks: bool,
-            auto_start_work: bool,
-            sound_notification: bool,
-            show_notification: bool,
-            session_target: int,
-            hide_on_break: bool,
-            icons: dict,
-            animation: dict,
-            container_padding: dict,
-            callbacks: dict,
-            menu: dict,
-            label_shadow: dict = None,
-            container_shadow: dict = None
+        self,
+        label: str,
+        label_alt: str,
+        work_duration: int,
+        break_duration: int,
+        long_break_duration: int,
+        long_break_interval: int,
+        auto_start_breaks: bool,
+        auto_start_work: bool,
+        sound_notification: bool,
+        show_notification: bool,
+        session_target: int,
+        hide_on_break: bool,
+        icons: dict,
+        animation: dict,
+        container_padding: dict,
+        callbacks: dict,
+        menu: dict,
+        label_shadow: dict = None,
+        container_shadow: dict = None,
     ):
         super().__init__(class_name="pomodoro-widget")
 
@@ -69,13 +72,14 @@ class PomodoroWidget(BaseWidget):
 
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._update_timer)
- 
+
         self._last_update_time = None
 
         self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
         self._widget_container_layout.setContentsMargins(
-            self._padding['left'], self._padding['top'], self._padding['right'], self._padding['bottom'])
+            self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
+        )
 
         # Initialize container
         self._widget_container = QWidget()
@@ -91,16 +95,15 @@ class PomodoroWidget(BaseWidget):
         self.register_callback("toggle_label", self._toggle_label)
         self.register_callback("toggle_menu", self._toggle_menu)
 
-        self.callback_left = callbacks['on_left']
-        self.callback_right = callbacks['on_right']
-        self.callback_middle = callbacks['on_middle']
+        self.callback_left = callbacks["on_left"]
+        self.callback_right = callbacks["on_right"]
+        self.callback_middle = callbacks["on_middle"]
 
         self._update_label()
 
     def _toggle_label(self):
-        if self._animation['enabled']:
-            AnimationManager.animate(
-                self, self._animation['type'], self._animation['duration'])
+        if self._animation["enabled"]:
+            AnimationManager.animate(self, self._animation["type"], self._animation["duration"])
         self._show_alt_label = not self._show_alt_label
         for widget in self._widgets:
             widget.setVisible(not self._show_alt_label)
@@ -111,7 +114,7 @@ class PomodoroWidget(BaseWidget):
     def _update_label(self):
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
         active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
-        label_parts = re.split('(<span.*?>.*?</span>)', active_label_content)
+        label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
         label_parts = [part for part in label_parts if part]
         widget_index = 0
 
@@ -124,7 +127,7 @@ class PomodoroWidget(BaseWidget):
             "{status}": status,
             "{session}": str(self._session_count + 1),
             "{total_sessions}": str(self._session_target) if self._session_target > 0 else "∞",
-            "{icon}": self._get_current_icon()
+            "{icon}": self._get_current_icon(),
         }
 
         for part in label_parts:
@@ -133,31 +136,28 @@ class PomodoroWidget(BaseWidget):
                 formatted_text = part
                 for option, value in label_options.items():
                     formatted_text = formatted_text.replace(option, str(value))
-                if '<span' in part and '</span>' in part:
+                if "<span" in part and "</span>" in part:
                     if widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
                         active_widgets[widget_index].setText(formatted_text)
-                        base_class = active_widgets[widget_index].property("class").split()[
-                            0]
-                        active_widgets[widget_index].setProperty(
-                            "class", f"{base_class} {class_name}")
-                        active_widgets[widget_index].setStyleSheet('')
+                        base_class = active_widgets[widget_index].property("class").split()[0]
+                        active_widgets[widget_index].setProperty("class", f"{base_class} {class_name}")
+                        active_widgets[widget_index].setStyleSheet("")
                 else:
                     if widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
                         alt_class = "alt" if self._show_alt_label else ""
                         active_widgets[widget_index].setText(formatted_text)
                         base_class = "label"
-                        active_widgets[widget_index].setProperty(
-                            "class", f"{base_class} {alt_class} {class_name}")
-                        active_widgets[widget_index].setStyleSheet('')
+                        active_widgets[widget_index].setProperty("class", f"{base_class} {alt_class} {class_name}")
+                        active_widgets[widget_index].setStyleSheet("")
                 widget_index += 1
 
     def _get_current_icon(self):
         if self._is_paused:
-            return self._icons['paused']
+            return self._icons["paused"]
         elif self._is_break:
-            return self._icons['break']
+            return self._icons["break"]
         else:
-            return self._icons['work']
+            return self._icons["work"]
 
     def _toggle_timer(self):
         if self._is_running:
@@ -173,7 +173,7 @@ class PomodoroWidget(BaseWidget):
         self._update_label()
 
         try:
-            if hasattr(self, '_dialog') and self._dialog is not None and self._dialog.isVisible():
+            if hasattr(self, "_dialog") and self._dialog is not None and self._dialog.isVisible():
                 self._toggle_button.setText("Pause")
                 self._toggle_button.setProperty("class", "button pause")
                 self._toggle_button.style().unpolish(self._toggle_button)
@@ -188,13 +188,12 @@ class PomodoroWidget(BaseWidget):
         self._update_label()
 
         try:
-            if hasattr(self, '_dialog') and self._dialog is not None and self._dialog.isVisible():
+            if hasattr(self, "_dialog") and self._dialog is not None and self._dialog.isVisible():
                 self._toggle_button.setText("Start")
                 self._toggle_button.setProperty("class", "button start")
                 self._toggle_button.style().unpolish(self._toggle_button)
                 self._toggle_button.style().polish(self._toggle_button)
-                self._progress_gauge.setStatusText(
-                    f"Paused\n{self._format_time(self._remaining_time)}")
+                self._progress_gauge.setStatusText(f"Paused\n{self._format_time(self._remaining_time)}")
         except RuntimeError:
             pass
 
@@ -207,12 +206,11 @@ class PomodoroWidget(BaseWidget):
         self._elapsed_time = 0
         self._update_label()
         try:
-            if hasattr(self, '_dialog') and self._dialog is not None and self._dialog.isVisible():
+            if hasattr(self, "_dialog") and self._dialog is not None and self._dialog.isVisible():
                 self._progress_gauge.setBreakMode(False)
                 self._progress_gauge.setMaximum(self._work_duration)
                 self._progress_gauge.setValue(0, skip_animation=True)
-                self._progress_gauge.setStatusText(
-                    f"Work\n{self._format_time(self._work_duration)}")
+                self._progress_gauge.setStatusText(f"Work\n{self._format_time(self._work_duration)}")
 
                 self._toggle_button.setText("Start")
                 self._toggle_button.setProperty("class", "button start")
@@ -232,7 +230,7 @@ class PomodoroWidget(BaseWidget):
         self._update_label()
 
         try:
-            if hasattr(self, '_dialog') and self._dialog is not None and self._dialog.isVisible():
+            if hasattr(self, "_dialog") and self._dialog is not None and self._dialog.isVisible():
                 if self._is_break:
                     max_value = self._long_break_duration if self._is_long_break else self._break_duration
                     current_value = max_value - self._remaining_time
@@ -240,16 +238,16 @@ class PomodoroWidget(BaseWidget):
                     max_value = self._work_duration
                     current_value = max_value - self._remaining_time
 
-                if hasattr(self, '_progress_gauge'):
+                if hasattr(self, "_progress_gauge"):
                     self._progress_gauge.setMaximum(max_value)
                     self._progress_gauge.setValue(int(current_value))
                     self._progress_gauge.setBreakMode(self._is_break)
                     status_text = "Break" if self._is_break else "Work"
-                    self._progress_gauge.setStatusText(
-                        f"{status_text}\n{self._format_time(self._remaining_time)}")
+                    self._progress_gauge.setStatusText(f"{status_text}\n{self._format_time(self._remaining_time)}")
                     self._session_label.setText(
-                        f"Session: {self._session_count + 1}" +
-                        (f"/{self._session_target}" if self._session_target > 0 else ""))
+                        f"Session: {self._session_count + 1}"
+                        + (f"/{self._session_target}" if self._session_target > 0 else "")
+                    )
         except RuntimeError:
             pass
 
@@ -274,12 +272,11 @@ class PomodoroWidget(BaseWidget):
             self._update_label()
 
             try:
-                if hasattr(self, '_dialog') and self._dialog is not None and self._dialog.isVisible():
+                if hasattr(self, "_dialog") and self._dialog is not None and self._dialog.isVisible():
                     self._progress_gauge.setBreakMode(False)
                     self._progress_gauge.setMaximum(self._work_duration)
                     self._progress_gauge.setValue(0, skip_animation=True)
-                    self._progress_gauge.setStatusText(
-                        f"Work\n{self._format_time(self._work_duration)}")
+                    self._progress_gauge.setStatusText(f"Work\n{self._format_time(self._work_duration)}")
             except RuntimeError:
                 pass
 
@@ -300,13 +297,12 @@ class PomodoroWidget(BaseWidget):
             self._update_label()
 
             try:
-                if hasattr(self, '_dialog') and self._dialog is not None and self._dialog.isVisible():
+                if hasattr(self, "_dialog") and self._dialog is not None and self._dialog.isVisible():
                     max_value = self._long_break_duration if self._is_long_break else self._break_duration
                     self._progress_gauge.setBreakMode(True)
                     self._progress_gauge.setMaximum(max_value)
                     self._progress_gauge.setValue(0, skip_animation=True)
-                    self._progress_gauge.setStatusText(
-                        f"Break\n{self._format_time(self._remaining_time)}")
+                    self._progress_gauge.setStatusText(f"Break\n{self._format_time(self._remaining_time)}")
             except RuntimeError:
                 pass
 
@@ -319,16 +315,15 @@ class PomodoroWidget(BaseWidget):
     def _play_notification_sound(self):
         try:
             import winsound
-            sound = os.path.join(SCRIPT_PATH, 'assets', 'sound', 'notification01.wav')
-            winsound.PlaySound(
-                sound, winsound.SND_FILENAME | winsound.SND_ASYNC)
+
+            sound = os.path.join(SCRIPT_PATH, "assets", "sound", "notification01.wav")
+            winsound.PlaySound(sound, winsound.SND_FILENAME | winsound.SND_ASYNC)
         except Exception as e:
             logging.error(f"Failed to play notification sound: {e}")
 
     def _show_desktop_notification(self):
         try:
-            
-            self._icon_path = os.path.join(SCRIPT_PATH, 'assets', 'images', 'app_transparent.png')
+            self._icon_path = os.path.join(SCRIPT_PATH, "assets", "images", "app_transparent.png")
             title = "Pomodoro Timer"
             message = "Break time!" if not self._is_break else "Work time!"
             toaster = ToastNotifier()
@@ -340,9 +335,13 @@ class PomodoroWidget(BaseWidget):
         self.show_menu()
 
     def show_menu(self):
-
-        self._dialog = PopupWidget(self, self._menu_config['blur'], self._menu_config['round_corners'],
-                                   self._menu_config['round_corners_type'], self._menu_config['border_color'])
+        self._dialog = PopupWidget(
+            self,
+            self._menu_config["blur"],
+            self._menu_config["round_corners"],
+            self._menu_config["round_corners_type"],
+            self._menu_config["border_color"],
+        )
 
         self._dialog.setProperty("class", "pomodoro-menu")
 
@@ -359,8 +358,7 @@ class PomodoroWidget(BaseWidget):
 
         # Add header title
         title_label = QLabel("Pomodoro Timer")
-        title_label.setAlignment(
-            Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignCenter)
+        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignCenter)
         title_label.setProperty("class", "header")
         header_layout.addWidget(title_label)
 
@@ -381,9 +379,8 @@ class PomodoroWidget(BaseWidget):
 
         # Set the status text directly on the circular widget
         status_text = "Paused" if self._is_paused else ("Break" if self._is_break else "Work")
- 
-        self._progress_gauge.setStatusText(
-            f"{status_text}\n{self._format_time(self._remaining_time)}")
+
+        self._progress_gauge.setStatusText(f"{status_text}\n{self._format_time(self._remaining_time)}")
         self._status_label = self._progress_gauge._status_label
 
         layout.addWidget(self._progress_gauge)
@@ -396,8 +393,9 @@ class PomodoroWidget(BaseWidget):
         info_widget.setLayout(info_layout)
 
         # Session count
-        self._session_label = QLabel(f"Session: {self._session_count + 1}" +
-                                     (f"/{self._session_target}" if self._session_target > 0 else ""))
+        self._session_label = QLabel(
+            f"Session: {self._session_count + 1}" + (f"/{self._session_target}" if self._session_target > 0 else "")
+        )
         self._session_label.setProperty("class", "session")
         self._session_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         info_layout.addWidget(self._session_label)
@@ -410,12 +408,9 @@ class PomodoroWidget(BaseWidget):
         button_widget.setLayout(button_layout)
 
         # Start/Pause button
-        self._toggle_button = QPushButton(
-            "Pause" if self._is_running else "Start")
-        self._toggle_button.setCursor(
-            QCursor(Qt.CursorShape.PointingHandCursor))
-        self._toggle_button.setProperty(
-            "class", "button " + ("pause" if self._is_running else "start"))
+        self._toggle_button = QPushButton("Pause" if self._is_running else "Start")
+        self._toggle_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self._toggle_button.setProperty("class", "button " + ("pause" if self._is_running else "start"))
         self._toggle_button.clicked.connect(self._toggle_timer)
         button_layout.addWidget(self._toggle_button)
 
@@ -439,10 +434,10 @@ class PomodoroWidget(BaseWidget):
 
         self._dialog.adjustSize()
         self._dialog.setPosition(
-            alignment=self._menu_config['alignment'],
-            direction=self._menu_config['direction'],
-            offset_left=self._menu_config['offset_left'],
-            offset_top=self._menu_config['offset_top']
+            alignment=self._menu_config["alignment"],
+            direction=self._menu_config["direction"],
+            offset_left=self._menu_config["offset_left"],
+            offset_top=self._menu_config["offset_top"],
         )
         self._dialog.show()
 
@@ -468,14 +463,14 @@ class CircularProgressWidget(QWidget):
         self._value = 0
         self._maximum = 0
 
-        self._background_color = config['circle_background_color']
-        self._progress_color = config['circle_work_progress_color']
-        self._break_color = config['circle_break_progress_color']
-        self._thickness = config['circle_thickness']
-        self._size = config['circle_size']
+        self._background_color = config["circle_background_color"]
+        self._progress_color = config["circle_work_progress_color"]
+        self._break_color = config["circle_break_progress_color"]
+        self._thickness = config["circle_thickness"]
+        self._size = config["circle_size"]
         self._animation_duration = 400
 
-        self._is_break = False # Default to work mode
+        self._is_break = False  # Default to work mode
 
         self._layout = QVBoxLayout(self)
         self._layout.setContentsMargins(0, 0, 0, 0)
@@ -535,8 +530,7 @@ class CircularProgressWidget(QWidget):
         height = self.height()
 
         draw_size = min(width, height) - (self._thickness * 2)
-        rect = QRectF((width - draw_size) / 2, (height -
-                      draw_size) / 2, draw_size, draw_size)
+        rect = QRectF((width - draw_size) / 2, (height - draw_size) / 2, draw_size, draw_size)
 
         background_pen = QPen(QColor(self._background_color), self._thickness)
         background_pen.setCapStyle(Qt.PenCapStyle.RoundCap)

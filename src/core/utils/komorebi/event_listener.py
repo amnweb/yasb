@@ -1,26 +1,24 @@
+import json
 import logging
 import time
-import json
 import uuid
-import win32pipe
-import win32file
+
 import pywintypes
+import win32file
+import win32pipe
 from PyQt6.QtCore import QThread
-from settings import DEBUG
+
 from core.event_enums import KomorebiEvent
 from core.event_service import EventService
 from core.utils.komorebi.client import KomorebiClient
+from settings import DEBUG
 
 KOMOREBI_PIPE_BUFF_SIZE = 64 * 1024
 KOMOREBI_PIPE_NAME = "yasb"
 
-class KomorebiEventListener(QThread):
 
-    def __init__(
-            self,
-            pipe_name: str = KOMOREBI_PIPE_NAME,
-            buffer_size: int = KOMOREBI_PIPE_BUFF_SIZE
-    ):
+class KomorebiEventListener(QThread):
+    def __init__(self, pipe_name: str = KOMOREBI_PIPE_NAME, buffer_size: int = KOMOREBI_PIPE_BUFF_SIZE):
         super().__init__()
         self._komorebic = KomorebiClient()
         self._app_running = True
@@ -48,7 +46,7 @@ class KomorebiEventListener(QThread):
             buffer_size_in,
             buffer_size_out,
             default_timeout_ms,
-            security_attributes
+            security_attributes,
         )
         logging.info(f"Created named pipe {self.pipe_name}")
 
@@ -72,8 +70,8 @@ class KomorebiEventListener(QThread):
 
                         try:
                             event_message = json.loads(data.decode("utf-8"))
-                            event = event_message['event']
-                            state = event_message['state']
+                            event = event_message["event"]
+                            state = event_message["state"]
 
                             if event and state:
                                 self._emit_event(event, state)
@@ -102,8 +100,8 @@ class KomorebiEventListener(QThread):
             return
         self.event_service.emit_event(KomorebiEvent.KomorebiUpdate, event, state)
 
-        if event['type'] in KomorebiEvent:
-            self.event_service.emit_event(KomorebiEvent[event['type']], event, state)
+        if event["type"] in KomorebiEvent:
+            self.event_service.emit_event(KomorebiEvent[event["type"]], event, state)
 
     def _wait_until_komorebi_online(self):
         if DEBUG:
@@ -111,15 +109,15 @@ class KomorebiEventListener(QThread):
         stderr, proc = self._komorebic.wait_until_subscribed_to_pipe(self.pipe_name)
 
         if stderr and DEBUG:
-            stderr_str = ' '.join(stderr.decode('utf-8').replace('\n', ' ').replace('\r', ' ').split())
-            
+            stderr_str = " ".join(stderr.decode("utf-8").replace("\n", " ").replace("\r", " ").split())
+
             if "(os error 10061)" in stderr_str:
                 error_message = "Komorebi is not running, please start Komorebi."
-                logging.warning(f"Komorebi failed to subscribe named pipe. {error_message}") 
+                logging.warning(f"Komorebi failed to subscribe named pipe. {error_message}")
             else:
                 logging.warning(f"Komorebi failed to subscribe named pipe. {stderr_str}")
 
-        while self._app_running and proc.returncode != 0: 
+        while self._app_running and proc.returncode != 0:
             time.sleep(5)
             stderr, proc = self._komorebic.wait_until_subscribed_to_pipe(self.pipe_name)
 

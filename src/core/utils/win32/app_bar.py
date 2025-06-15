@@ -1,8 +1,10 @@
 import ctypes
-from ctypes import wintypes, Structure, POINTER, sizeof, windll, c_ulong
-from PyQt6.QtGui import QScreen
-import win32con
 import logging
+from ctypes import POINTER, Structure, c_ulong, sizeof, windll, wintypes
+
+import win32con
+from PyQt6.QtGui import QScreen
+
 import settings
 
 shell32 = windll.shell32
@@ -20,6 +22,7 @@ class AppBarEdge:
     A value that specifies the edge of the screen.
     Documentation: https://docs.microsoft.com/en-us/windows/win32/api/shellapi/ns-shellapi-appbardata#members
     """
+
     Left = 0
     Top = 1
     Right = 2
@@ -31,6 +34,7 @@ class AppBarMessage:
     SHAppBarMessage App Bar Messages
     Documentation: https://docs.microsoft.com/en-us/windows/win32/api/shellapi/nf-shellapi-shappbarmessage
     """
+
     New = 0
     Remove = 1
     QueryPos = 2
@@ -51,6 +55,7 @@ class AppBarData(Structure):
     AppBarData struct
     Documentation: https://docs.microsoft.com/en-us/windows/win32/api/shellapi/ns-shellapi-appbardata#syntax
     """
+
     _fields_ = [
         ("cbSize", wintypes.DWORD),
         ("hWnd", wintypes.HWND),
@@ -65,16 +70,13 @@ P_APPBAR_DATA = POINTER(AppBarData)
 
 
 class Win32AppBar:
-    def __init__(self, ):
+    def __init__(
+        self,
+    ):
         self.app_bar_data = None
 
     def create_appbar(
-            self,
-            hwnd: int,
-            edge: AppBarEdge,
-            app_bar_height: int,
-            screen: QScreen,
-            scale_screen: bool = False
+        self, hwnd: int, edge: AppBarEdge, app_bar_height: int, screen: QScreen, scale_screen: bool = False
     ):
         self.app_bar_data = AppBarData()
         self.app_bar_data.cbSize = wintypes.DWORD(sizeof(self.app_bar_data))
@@ -85,7 +87,9 @@ class Win32AppBar:
         self.set_position()
 
         exStyle = windll.user32.GetWindowLongPtrW(hwnd, win32con.GWL_EXSTYLE)
-        windll.user32.SetWindowLongPtrW(hwnd, win32con.GWL_EXSTYLE, exStyle | win32con.WS_EX_NOACTIVATE | win32con.WS_EX_TOPMOST)
+        windll.user32.SetWindowLongPtrW(
+            hwnd, win32con.GWL_EXSTYLE, exStyle | win32con.WS_EX_NOACTIVATE | win32con.WS_EX_TOPMOST
+        )
 
     def position_bar(self, app_bar_height: int, screen: QScreen, scale_screen: bool = False) -> None:
         geometry = screen.geometry()
@@ -102,7 +106,9 @@ class Win32AppBar:
             self.app_bar_data.rc.top = screen.geometry().y() + screen_height - bar_height
             self.app_bar_data.rc.bottom = screen.geometry().y() + screen_height
         if settings.DEBUG:
-            logging.info(f"Bar Created on Screen: {screen.name()} [Bar Height: {app_bar_height}px, DPI Scale: {screen.devicePixelRatio()}, Scale Screen: {scale_screen}, Screen Geometry: X: {screen.geometry().x()}, Y: {screen.geometry().y()}, Screen Width: {screen.geometry().width()}, Screen Height: {screen.geometry().height()}]")
+            logging.info(
+                f"Bar Created on Screen: {screen.name()} [Bar Height: {app_bar_height}px, DPI Scale: {screen.devicePixelRatio()}, Scale Screen: {scale_screen}, Screen Geometry: X: {screen.geometry().x()}, Y: {screen.geometry().y()}, Screen Width: {screen.geometry().width()}, Screen Height: {screen.geometry().height()}]"
+            )
 
     def register_new(self):
         shell32.SHAppBarMessage(AppBarMessage.New, P_APPBAR_DATA(self.app_bar_data))
