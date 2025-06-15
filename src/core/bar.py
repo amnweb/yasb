@@ -88,9 +88,9 @@ class Bar(QWidget):
         self.setWindowFlag(Qt.WindowType.Tool)
         self.setWindowFlag(Qt.WindowType.FramelessWindowHint)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose) 
 
-        if self._window_flags["always_on_top"]:
+        if self._window_flags['always_on_top']:
             self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint)
 
         self._bar_frame = QFrame(self)
@@ -101,7 +101,7 @@ class Bar(QWidget):
         self.monitor_hwnd = get_monitor_hwnd(int(self.winId()))
         self._add_widgets(widgets)
 
-        if blur_effect["enabled"]:
+        if blur_effect['enabled']:
             Blur(
                 self.winId(),
                 Acrylic=blur_effect["acrylic"],
@@ -197,6 +197,9 @@ class Bar(QWidget):
         if self._alignment["position"] == "top":
             bar_y = bar_y + self._padding["top"]
 
+        if self._alignment['position'] == "top":
+            bar_y = bar_y + self._padding['top']
+
         self.setGeometry(bar_x, bar_y, bar_width, bar_height)
         self._bar_frame.setGeometry(0, 0, bar_width, bar_height)
         self.try_add_app_bar(scale_screen_height=scale_state)
@@ -216,10 +219,24 @@ class Bar(QWidget):
 
             # Add widgets
             if layout_type in widgets:
-                for widget in widgets[layout_type]:
+                widget_list = widgets[layout_type]
+                total_widgets = len(widget_list)
+
+                for i, widget in enumerate(widget_list):
                     widget.parent_layout_type = layout_type
                     widget.bar_id = self.bar_id
                     widget.monitor_hwnd = self.monitor_hwnd
+
+                    current_class = widget.children()[2].property("class") or ""
+                    class_parts = [cls for cls in current_class.split() if cls not in ("first-child", "last-child")]
+
+                    if i == 0:
+                        class_parts.append("first-child")
+                    if i == total_widgets - 1:
+                        class_parts.append("last-child")
+
+                    widget.children()[2].setProperty("class", " ".join(class_parts))
+                    widget.bar = self
                     layout.addWidget(widget, 0)
 
             if config["alignment"] == "left" and config["stretch"]:
@@ -236,8 +253,46 @@ class Bar(QWidget):
             bar_layout.addWidget(layout_container, 0, column_num)
 
         self._bar_frame.setLayout(bar_layout)
+        update_styles(self._bar_frame)
 
-    def show_bar(self):
+    def update_layout_classes(self):
+        for layout_type in ["left", "center", "right"]:
+            layout = None
+            for i in range(self._bar_frame.layout().count()):
+                container = self._bar_frame.layout().itemAt(i).widget()
+                if container and container.property("class").endswith(f"container-{layout_type}"):
+                    layout = container.layout()
+                    break
+            if not layout:
+                return
+            visible_widgets = [
+                layout.itemAt(i).widget() for i in range(layout.count()) 
+                if layout.itemAt(i).widget() and layout.itemAt(i).widget().isVisible()
+            ]
+            for i in range(layout.count()):
+                widget = layout.itemAt(i).widget()
+                if widget:
+                    frame = widget.children()[2]
+                    current_class = frame.property("class") or ""
+                    class_parts = [cls for cls in current_class.split() if cls not in ("first-child", "last-child")]
+                    frame.setProperty("class", " ".join(class_parts))
+            if visible_widgets:
+                first_widget = visible_widgets[0].children()[2]
+                first_class = first_widget.property("class") or ""
+                first_widget.setProperty("class", f"{first_class} first-child")
+                last_widget = visible_widgets[-1].children()[2]
+                last_class = last_widget.property("class") or ""
+                last_widget.setProperty("class", f"{last_class} last-child")
+        update_styles(self._bar_frame)
+
+    def animation_bar(self):
+        # Store final state values
+        self.final_pos = self.pos()
+        self.final_height = self.height()
+        self.final_width = self.width()
+        # Set initial state for animations
+        self.move(self.final_pos)
+        self.resize(self.final_width, 0)
         self.setWindowOpacity(0.0)
         self.opacity_animation = QPropertyAnimation(self, b"windowOpacity")
         self.opacity_animation.setDuration(self._animation["duration"])
