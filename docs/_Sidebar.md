@@ -4,6 +4,8 @@
 - [Styling](./Styling)
 - [YASB CLI](./CLI)
 - [FAQ](./FAQ)
+- [Contributing](./Contributing)
+- [Writing Widget](./Writing-Widget)
 - Widgets:
     - [Active Windows Title](./(Widget)-Active-Windows-Title)
     - [Applications](./(Widget)-Applications)
@@ -48,4 +50,3 @@
     - [Komorebi Layout](./(Widget)-Komorebi-Layout)
     - [Komorebi Stack](./(Widget)-Komorebi-Stack)
     - [Komorebi Workspaces](./(Widget)-Komorebi-Workspaces)
-- [Writing Widget](./Writing-Widget)

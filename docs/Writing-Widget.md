@@ -142,7 +142,16 @@ my_widget:
             duration: 200
 ```
 
-## 9. Test your widget:
+### 9. Python Code Style
+
+-  Follow PEP 8 guidelines
+-  Use type hints where applicable
+-  Write docstrings for classes and methods
+-  Keep methods focused and concise
+-  Comment complex logic
+-  Include TODOs for future improvements
+
+## 10. Test your widget:
 
 -   Ensure it behaves as expected in the application.
 -   Check for any errors or issues in the console.
@@ -152,14 +161,20 @@ my_widget:
 -   Use thread-safe methods for any background tasks or long-running processes.
 -   Ensure that the widget does not block the main thread and remains responsive to user interactions.
 
-## 10. Document your widget:
+## 11. Document your widget:
 
 -   Write clear documentation for your widget, including its purpose, options, and styling.
 -   Doc file should be located in `docs/` folder and linked in the main documentation and readme.
 
-## 11. Submit PR:
+## 12. Submit PR:
 
 -   Once your widget is complete and tested, submit a pull request to the main repository.
 -   Ensure that your code follows the project's coding standards and guidelines.
 -   Include a description of your changes and any relevant information for reviewers.
 -   Address any feedback or changes requested by reviewers.
+-   Use clear, descriptive commit messages
+-   Ensure your code is well-documented and follows the project's coding standards.
+-   Include tests for your widget if applicable.
+-   If your PR contains multiple commits, they should be squashed into a single commit before merging
+-   The final commit message should summarize the entire change, not individual development steps
+-   Be responsive to feedback and make requested changes promptly.
