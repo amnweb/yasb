@@ -1,6 +1,20 @@
 # Ignore Python cache directories
 __pycache__/
-# Ignore the src/yasb.log file
+*.pyc
+*.pyo
+*.pyd
+# Ignore Python bytecode files
+*.py[cod]
+*$py.class
+# Ignore Lock files for package managers
+*.lock
+# Ignore virtual environment directories
+.venv/
+venv/
+# Application specific
 src/yasb.log
-src/dist/
-src/build/
+dist/
+build/
+# Temporary files
+*.tmp
+*.temp

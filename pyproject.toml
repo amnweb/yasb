@@ -1,0 +1,88 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "YASB"
+dynamic = ["version"]
+description = "Yet Another Status Bar - A highly configurable Windows status bar written in Python."
+authors = [
+    { name = "AmN" },
+]
+license = { file = "LICENSE" }
+readme = "README.md"
+requires-python = "==3.12.*"
+dependencies = [
+    "PyQt6",
+    "PyQt6_sip",
+    "cerberus",
+    "humanize",
+    "psutil",
+    "pytz",
+    "pywin32",
+    "PyYAML",
+    "tzlocal",
+    "watchdog",
+    "pycaw",
+    "pillow==11.1",
+    "qasync",
+    "obs-websocket-py",
+    "pyvda",
+    "python-dotenv",
+    "winrt.windows.foundation",
+    "winrt.windows.foundation.collections",
+    "winrt.windows.data.xml.dom",
+    "winrt.windows.media",
+    "winrt.windows.media.control",
+    "winrt.windows.networking",
+    "winrt.windows.networking.connectivity",
+    "winrt.windows.storage",
+    "winrt.windows.storage.streams",
+    "winrt.windows.ui.notifications",
+    "winrt.windows.ui.notifications.management",
+    "screen_brightness_control @ git+https://github.com/amnweb/screen_brightness_control.git",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pre-commit",
+    "ruff",
+    "cx_Freeze==7.2.10"
+]
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.version]
+path = "src/settings.py"
+pattern = "BUILD_VERSION = \"(?P<version>[^\"]+)\""
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/core"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+extend-exclude = [
+    "__pycache__",
+    ".github",
+    ".vscode",
+    "build",
+    "docs",
+    "demo"   
+]
+
+[tool.ruff.lint]
+ignore = [
+    "F405",
+    "F403",
+    "E741",
+]
+select = ["I", "F"]
+fixable = ["ALL"]
+
+[tool.ruff.format]
+docstring-code-format     = true
+quote-style               = "double"
+indent-style              = "space"
+skip-magic-trailing-comma = false
