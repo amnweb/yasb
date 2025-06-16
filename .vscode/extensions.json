@@ -1,8 +1,8 @@
 {
-    "recommendations": [
-        "charliermarsh.ruff",
-        "ms-python.python",
-        "ms-python.vscode-pylance",
-        "ms-python.debugpy"
-    ]
+	"recommendations": [
+		"charliermarsh.ruff",
+		"ms-python.python",
+		"ms-python.vscode-pylance",
+		"ms-python.debugpy"
+	]
 }
