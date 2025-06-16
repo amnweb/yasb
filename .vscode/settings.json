@@ -13,7 +13,6 @@
 			"source.fixAll": "explicit",
 			"source.organizeImports": "explicit"
 		},
-		"editor.formatOnSave": true,
 		"editor.defaultFormatter": "charliermarsh.ruff"
 	}
 }
