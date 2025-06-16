@@ -15,8 +15,4 @@ First of all, **YASB** needs to run ONLY under **Windows**
 
 ## How to contribute?
 
-- Fork the Repository.
-- Make Your Changes: Implement your feature or bug fix.
-- Create a Pull Request
-
-Thank you for your contributions!
+Please read the [Contributing](https://github.com/amnweb/yasb/wiki/Contributing) guide.

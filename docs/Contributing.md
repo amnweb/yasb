@@ -82,13 +82,13 @@ yasb/
 │   ├── core/
 │   │   ├── widgets/         # Widget implementations
 │   │   └── validation/      # Widget validation schemas
-│   ├── config.yaml         # Default configuration
-│   ├── styles.css          # Default styles
-│   └── main.py            # Application entry point
-├── docs/                   # Documentation
-├── demo/                   # Demo images
-├── .github/               # GitHub workflows and templates
-├── pyproject.toml         # Project configuration
+│   ├── config.yaml          # Default configuration
+│   ├── styles.css           # Default styles
+│   └── main.py              # Application entry point
+├── docs/                    # Documentation
+├── demo/                    # Demo images
+├── .github/                 # GitHub workflows and templates
+├── pyproject.toml           # Project configuration
 └── README.md
 ```
 
@@ -104,4 +104,4 @@ yasb/
 
 
 ### Creating a New Widget
-Follow the [Writing Widget](Writing-Widget.md) guide for detailed instructions.
+Follow the [Writing Widget](https://github.com/amnweb/yasb/wiki/Writing-Widget) guide for detailed instructions.
