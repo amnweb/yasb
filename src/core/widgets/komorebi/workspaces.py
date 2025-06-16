@@ -45,7 +45,7 @@ class WorkspaceButton(QPushButton):
         self.workspace_index = workspace_index
         self.parent_widget = parent_widget
         self.status = WORKSPACE_STATUS_EMPTY
-        self.setProperty("class", f"ws-btn")
+        self.setProperty("class", "ws-btn")
         self.default_label = label if label else str(workspace_index + 1)
         self.active_label = active_label if active_label else self.default_label
         self.populated_label = populated_label if populated_label else self.default_label
@@ -132,7 +132,7 @@ class WorkspaceButtonWithIcons(QFrame):
         self.workspace_index = workspace_index
         self.parent_widget = parent_widget
         self.status = WORKSPACE_STATUS_EMPTY
-        self.setProperty("class", f"ws-btn")
+        self.setProperty("class", "ws-btn")
         self.default_label = label if label else str(workspace_index + 1)
         self.active_label = active_label if active_label else self.default_label
         self.populated_label = populated_label if populated_label else self.default_label

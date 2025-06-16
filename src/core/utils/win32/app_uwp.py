@@ -154,7 +154,7 @@ def package_full_name_from_handle(handle):
     full_name = ctypes.create_unicode_buffer(length.value + 1)
     ret_val = _get_package_full_name(handle, ctypes.byref(length), full_name)
     if ret_val != ERROR_SUCCESS:
-        err = ctypes.WinError(ctypes.get_last_error())
+        _ = ctypes.WinError(ctypes.get_last_error())
         # print(f"package_full_name_from_handle: error -> {str(err)}")
         return None
 

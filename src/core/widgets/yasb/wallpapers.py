@@ -117,13 +117,13 @@ class WallpapersWidget(BaseWidget):
                     label = QLabel(icon)
                     label.setProperty("class", class_result)
                     if self._tooltip:
-                        label.setToolTip(f"Change Wallaper")
+                        label.setToolTip("Change Wallaper")
                     label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
                 else:
                     label = QLabel(part)
                     label.setProperty("class", "label")
                     if self._tooltip:
-                        label.setToolTip(f"Change Wallaper")
+                        label.setToolTip("Change Wallaper")
                     label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
 
                 label.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -215,9 +215,9 @@ class WallpapersWidget(BaseWidget):
 
         if not os.path.exists(self._image_path):
             raise_info_alert(
-                title=f"Error",
+                title="Error",
                 msg=f"The specified directory does not exist\n{self._image_path}",
-                informative_msg=f"Please check the path and set a valid directory in the configuration.",
+                informative_msg="Please check the path and set a valid directory in the configuration.",
                 rich_text=True,
             )
             return

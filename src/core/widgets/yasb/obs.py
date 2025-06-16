@@ -121,7 +121,7 @@ class ObsWidget(BaseWidget):
                 self.update_button(response.datain["outputState"])
             else:
                 self.update_button(False)
-        except Exception as e:
+        except Exception:
             if DEBUG:
                 logging.error("Error while updating OBS button state")
 

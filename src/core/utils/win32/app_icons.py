@@ -83,31 +83,31 @@ def get_window_icon(hwnd: int, smooth_level: int = 0):
                 try:
                     win32gui.DestroyIcon(hicon)
                     # logging.debug("Destroyed hicon")
-                except Exception as e:
+                except Exception:
                     # logging.debug(f"Error destroying hicon: {e}")
                     pass
                 try:
                     memdc.DeleteDC()
                     # logging.debug("Deleted memory device context.")
-                except Exception as e:
+                except Exception:
                     # logging.debug(f"Error deleting memory device context: {e}")
                     pass
                 try:
                     hdc.DeleteDC()
                     # logging.debug("Deleted device context.")
-                except Exception as e:
+                except Exception:
                     # logging.debug(f"Error deleting device context: {e}")
                     pass
                 try:
                     win32gui.DeleteObject(hbmp.GetHandle())
                     # logging.debug("Deleted bitmap object.")
-                except Exception as e:
+                except Exception:
                     # logging.debug(f"Error deleting bitmap object: {e}")
                     pass
                 try:
                     win32gui.ReleaseDC(0, hdc_handle)
                     # logging.debug("Released device context handle.")
-                except Exception as e:
+                except Exception:
                     # logging.debug(f"Error releasing device context handle: {e}")
                     pass
         else:

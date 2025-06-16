@@ -268,7 +268,7 @@ class CavaWidget(BaseWidget):
 
             cava_config_path = None
             try:
-                cava_config_path = LOCALDATA_FOLDER / Path(f"yasb_cava_config")
+                cava_config_path = LOCALDATA_FOLDER / Path("yasb_cava_config")
                 with open(cava_config_path, "w") as config_file:
                     config_file.write(config_template)
                     config_file.flush()

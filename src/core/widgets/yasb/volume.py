@@ -1,5 +1,4 @@
 import ctypes
-import enum
 import logging
 import re
 from ctypes import HRESULT, POINTER

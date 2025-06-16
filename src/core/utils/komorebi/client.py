@@ -32,7 +32,7 @@ class KomorebiClient:
         try:
             output = subprocess.check_output([self._komorebic_path, "state"], timeout=self._timeout_secs, shell=True)
             return json.loads(output)
-        except subprocess.TimeoutExpired as e:
+        except subprocess.TimeoutExpired:
             logging.error(f"Komorebi state query timed out in {self._timeout_secs} seconds")
         except (json.JSONDecodeError, subprocess.CalledProcessError):
             return None

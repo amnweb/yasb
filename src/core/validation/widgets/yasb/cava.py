@@ -1,12 +1,11 @@
 DEFAULTS = {
     "bar_height": 20,
-    "min_bar_height": 0,
+    "min_bar_height": 1,
     "bars_number": 10,
     "output_bit_format": "16bit",
     "orientation": "bottom",
     "bar_spacing": 1,
     "bar_width": 3,
-    "min_bar_height": 1,
     "sleep_timer": 0,
     "sensitivity": 100,
     "lower_cutoff_freq": 50,

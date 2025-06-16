@@ -98,6 +98,6 @@ if __name__ == "__main__":
         # Acquire the single instance lock before doing any heavy initialization
         with single_instance_lock():
             main()
-    except Exception as e:
+    except Exception:
         logging.exception("Exception during application startup")
         sys.exit(1)

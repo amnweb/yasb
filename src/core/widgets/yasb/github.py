@@ -274,7 +274,7 @@ class GithubWidget(BaseWidget):
         url = f"https://api.github.com/notifications/threads/{notification_id}"
         req = urllib.request.Request(url, headers=headers, method="PATCH")
         try:
-            with urllib.request.urlopen(req) as response:
+            with urllib.request.urlopen(req):
                 QTimer.singleShot(0, self._update_label)
                 if DEBUG:
                     logging.info(f"Notification {notification_id} marked as read on GitHub.")
@@ -314,7 +314,7 @@ class GithubWidget(BaseWidget):
         main_layout.setSpacing(0)
         main_layout.setContentsMargins(0, 0, 0, 0)
 
-        header_label = QLabel(f"<span style='font-weight:bold'>GitHub</span> Notifications")
+        header_label = QLabel("<span style='font-weight:bold'>GitHub</span> Notifications")
         header_label.setProperty("class", "header")
         main_layout.addWidget(header_label)
 
