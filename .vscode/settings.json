@@ -1,12 +1,18 @@
 {
 	"files.exclude": {
-		"**/__pycache__": true
+		"**/__pycache__": true,
+        "src/build": true,
+        "src/dist": true,
 	},
 	"search.exclude": {
-		"**/__pycache__": true
+		"**/__pycache__": true,
+        "src/build": true,
+        "src/dist": true
 	},
 	"files.watcherExclude": {
-		"**/__pycache__": true
+		"**/__pycache__": true,
+        "src/build": true,
+        "src/dist": true
 	},
 	"[python]": {
 		"editor.codeActionsOnSave": {
