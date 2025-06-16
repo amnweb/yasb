@@ -30,7 +30,7 @@ jobs:
       run: |
         .\venv\Scripts\Activate
         python -m pip install --upgrade pip
-        pip install --force --no-cache -r requirements.txt
+        pip install --force --no-cache .
         pip install --force --no-cache --upgrade cx_Freeze==7.2.10
       shell: pwsh
 
