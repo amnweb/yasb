@@ -58,8 +58,9 @@ choco install yasb
 
 ### Using Python
 - Install Python 3.12
-- Install required Python Modules:
-  - `pip install -r requirements.txt`
+- Install the application and its dependencies:
+  - `pip install .` (for regular installation)
+  - `pip install -e .[dev]` (for development installation)
 - Start the application:
   - run `python src/main.py` in your terminal (or click [yasb.vbs](src/yasb.vbs))
   - Configure [styles.css](src/styles.css) and [config.yaml](src/config.yaml) to your liking.
