@@ -120,7 +120,7 @@ class ActiveLayoutWidget(BaseWidget):
         self.register_callback("toggle_tiling", lambda: self._komorebic.toggle("tiling"))
         self.register_callback("toggle_float", lambda: self._komorebic.toggle("float"))
         self.register_callback("toggle_monocle", lambda: self._komorebic.toggle("monocle"))
-        self.register_callback("toggle_maximise", lambda: self._komorebic.toggle("maximise"))
+        self.register_callback("toggle_maximize", lambda: self._komorebic.toggle("maximize"))
         self.register_callback("toggle_pause", lambda: self._komorebic.toggle("pause"))
         self.register_callback("toggle_layout_menu", self._toggle_layout_menu)
 
@@ -261,7 +261,7 @@ class ActiveLayoutWidget(BaseWidget):
         elif self._focused_workspace.get('monocle_container', None):
             self._komorebic.toggle("monocle")
         elif self._focused_workspace.get('maximized_window', None):
-            self._komorebic.toggle("maximise")
+            self._komorebic.toggle("maximize")
 
     def _register_signals_and_events(self):
         active_layout_change_event_watchlist = [
@@ -271,7 +271,7 @@ class ActiveLayoutWidget(BaseWidget):
             KomorebiEvent.TogglePause,
             KomorebiEvent.ToggleTiling,
             KomorebiEvent.ToggleMonocle,
-            KomorebiEvent.ToggleMaximise,
+            KomorebiEvent.ToggleMaximize,
         ]
 
         self.k_signal_connect.connect(self._on_komorebi_connect_event)
@@ -332,8 +332,8 @@ class ActiveLayoutWidget(BaseWidget):
             layout_name = "Floating"
             layout_icon = self._layout_icons["floating"]
         elif self._focused_workspace.get("maximized_window", None):
-            layout_name = "Maximised"
-            layout_icon = self._layout_icons["maximised"]
+            layout_name = "Maximized"
+            layout_icon = self._layout_icons["maximized"]
         elif self._focused_workspace.get("monocle_container", None):
             layout_name = "Monocle"
             layout_icon = self._layout_icons["monocle"]

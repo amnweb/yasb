@@ -24,7 +24,7 @@ class KomorebiEvent(Event):
     ChangeLayout = "ChangeLayout"
     ToggleTiling = "ToggleTiling"
     ToggleMonocle = "ToggleMonocle"
-    ToggleMaximise = "ToggleMaximise"
+    ToggleMaximize = "ToggleMaximize"
     TogglePause = "TogglePause"
     ToggleWorkspaceLayer = "ToggleWorkspaceLayer"
     EnsureWorkspaces = "EnsureWorkspaces"
