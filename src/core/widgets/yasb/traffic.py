@@ -2,7 +2,7 @@ import logging
 import re
 
 from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
 
 from core.utils.traffic.connection_monitor import InternetChecker
 from core.utils.traffic.traffic_manager import TrafficDataManager
@@ -103,6 +103,7 @@ class TrafficWidget(BaseWidget):
         self.register_callback("toggle_label", self._toggle_label)
         self.register_callback("update_label", self._update_label)
         self.register_callback("toggle_menu", self._toggle_menu)
+        self.register_callback("reset_data", self._reset_traffic_data)
 
         self.callback_left = callbacks["on_left"]
         self.callback_right = callbacks["on_right"]
@@ -391,11 +392,28 @@ class TrafficWidget(BaseWidget):
 
             return column_container, speed_value, speed_unit
 
-        # Header
+        # Header with reset button
+        header_container = QWidget()
+        header_container.setProperty("class", "header")
+        header_layout = QHBoxLayout(header_container)
+        header_layout.setContentsMargins(0, 0, 0, 0)
+        header_layout.setSpacing(0)
+
         header_label = QLabel("Network Traffic")
-        header_label.setProperty("class", "header")
+        header_label.setProperty("class", "title")
         header_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
-        layout.addWidget(header_label)
+        header_layout.addWidget(header_label)
+
+        header_layout.addStretch()
+
+        reset_button = QPushButton("Reset All")
+        reset_button.setProperty("class", "reset-button")
+        reset_button.setToolTip("Reset all traffic data")
+        reset_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        reset_button.clicked.connect(self._reset_traffic_data)
+        header_layout.addWidget(reset_button)
+
+        layout.addWidget(header_container)
 
         # Store label references for updates
         self.menu_labels = {}
@@ -572,6 +590,28 @@ class TrafficWidget(BaseWidget):
                 pass
             except Exception as e:
                 logging.error(f"Error updating menu content: {e}")
+
+    def _reset_traffic_data(self):
+        """Reset all traffic data to zero"""
+        try:
+            # Reset data in TrafficDataManager
+            TrafficDataManager.reset_interface_data(self._interface)
+
+            # Reset instance counters
+            current_io = TrafficDataManager.get_interface_io_counters(self._interface)
+            if current_io:
+                self.bytes_sent = current_io.bytes_sent
+                self.bytes_recv = current_io.bytes_recv
+                self.session_bytes_sent = current_io.bytes_sent
+                self.session_bytes_recv = current_io.bytes_recv
+
+            TrafficWidget._update_interface_data(self._interface)
+
+            if self._is_menu_visible():
+                self._update_menu_content()
+
+        except Exception as e:
+            logging.error(f"Error resetting traffic data: {e}")
 
     def _is_menu_visible(self):
         """Check if the popup menu is visible"""

@@ -451,6 +451,34 @@ class TrafficDataManager:
         ]
 
     @classmethod
+    def reset_interface_data(cls, interface: str):
+        """Reset all data for a specific interface"""
+        try:
+            if interface not in cls._interface_data:
+                return
+
+            # Get current IO counters for new baseline
+            current_io = cls.get_interface_io_counters(interface)
+            if not current_io:
+                return
+
+            # Reset all tracked data
+            cls._interface_data[interface]["total_bytes_sent"] = 0
+            cls._interface_data[interface]["total_bytes_recv"] = 0
+            cls._interface_data[interface]["today_sent"] = 0
+            cls._interface_data[interface]["today_recv"] = 0
+            cls._interface_data[interface]["session_start_sent"] = current_io.bytes_sent
+            cls._interface_data[interface]["session_start_recv"] = current_io.bytes_recv
+            cls._interface_data[interface]["today_start_sent"] = current_io.bytes_sent
+            cls._interface_data[interface]["today_start_recv"] = current_io.bytes_recv
+            cls._interface_data[interface]["today_date"] = datetime.now().strftime("%Y-%m-%d")
+
+            cls.save_interface_data(interface)
+
+        except Exception as e:
+            logging.error(f"Error resetting interface data for {interface}: {e}")
+
+    @classmethod
     def should_save_data(cls, interface: str):
         """Check if data should be saved for a specific interface (every 10 seconds per interface)"""
         current_time = time.time()

@@ -37,6 +37,7 @@
 ## Available Callbacks
 - `toggle_label`: Toggles the label between the main and alternative formats.
 - `toggle_menu`: Toggles the visibility of the menu.
+- `reset_data`: Resets all traffic data.
 
 ## Available Placeholders
 - `{download_speed}` - Current download speed
@@ -111,6 +112,8 @@ traffic:
 /* Menu styling */
 .traffic-menu { }
 .traffic-menu .header { }
+.traffic-menu .header .title { }
+.traffic-menu .header .resset-button { }
 .traffic-menu .interface-info { }
 .traffic-menu .internet-info { }
 .traffic-menu .internet-info.checking { }
@@ -170,14 +173,35 @@ traffic:
 }
 .traffic-menu .header {
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    padding: 8px;
     background-color: rgba(24, 25, 27, 0.8);
+}
+.traffic-menu .header .title {
+    padding: 8px;
     font-size: 16px;
     font-weight: 600;
     font-family: 'Segoe UI';
     color: #ffffff
 }
-
+.traffic-menu .header .reset-button {
+    font-size: 11px;
+    padding: 4px 8px;
+    margin-right: 8px;
+    font-family: 'Segoe UI';
+    border-radius: 4px;
+    font-weight: 600;
+    background-color: transparent;
+    border: none;
+}
+.traffic-menu .reset-button:hover {
+    color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.traffic-menu .reset-button:pressed {
+    color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
 /* Speed column styles */
 .traffic-menu .download-speed,
 .traffic-menu .upload-speed {
