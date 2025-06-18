@@ -98,3 +98,14 @@ class BaseWidget(QWidget):
 
     def _cb_do_nothing(self):
         pass
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        logging.debug(f"Widget {self.__class__.__name__} shown. Bar={self.bar._bar_name}")
+        if self.bar:
+            self.bar.update_layout_classes()
+    def hideEvent(self, event):
+        super().hideEvent(event)
+        logging.debug(f"Widget {self.__class__.__name__} hidden. Bar={self.bar._bar_name}")
+        if self.bar:
+            self.bar.update_layout_classes()
