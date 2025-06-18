@@ -1,7 +1,9 @@
+import logging
 import re
 from collections import deque
 
 import psutil
+from PyQt6.QtCore import QTimer
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QWidget
 
 from core.utils.utilities import add_shadow, build_widget_label
@@ -12,6 +14,10 @@ from core.widgets.base import BaseWidget
 
 class CpuWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
+
+    # Class-level shared data and timer
+    _instances: list["CpuWidget"] = []
+    _shared_timer: QTimer | None = None
 
     def __init__(
         self,
@@ -54,68 +60,56 @@ class CpuWidget(BaseWidget):
         build_widget_label(self, self._label_content, self._label_alt_content, self._label_shadow)
 
         self.register_callback("toggle_label", self._toggle_label)
-        self.register_callback("update_label", self._update_label)
+
         self.callback_left = callbacks["on_left"]
         self.callback_right = callbacks["on_right"]
         self.callback_middle = callbacks["on_middle"]
-        self.callback_timer = "update_label"
-        self.start_timer()
 
-    def _toggle_label(self):
-        if self._animation["enabled"]:
-            AnimationManager.animate(self, self._animation["type"], self._animation["duration"])
-        self._show_alt_label = not self._show_alt_label
-        for widget in self._widgets:
-            widget.setVisible(not self._show_alt_label)
-        for widget in self._widgets_alt:
-            widget.setVisible(self._show_alt_label)
-        self._update_label()
+        # Add this instance to the shared instances list
+        if self not in CpuWidget._instances:
+            CpuWidget._instances.append(self)
 
-    def _update_label(self):
-        active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
-        active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
-        label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
-        label_parts = [part for part in label_parts if part]
-        widget_index = 0
+        if update_interval > 0 and CpuWidget._shared_timer is None:
+            CpuWidget._shared_timer = QTimer(self)
+            CpuWidget._shared_timer.setInterval(update_interval)
+            CpuWidget._shared_timer.timeout.connect(CpuWidget._notify_instances)
+            CpuWidget._shared_timer.start()
+
+        # Initial data fetch
+        CpuWidget._notify_instances()
+
+    @classmethod
+    def _notify_instances(cls):
+        """Fetch CPU data and update all instances."""
+        if not cls._instances:
+            return
 
         try:
-            info = self._get_cpu_info()
-        except Exception:
-            info = None
+            cpu_freq = psutil.cpu_freq()
+            cpu_stats = psutil.cpu_stats()
+            current_perc = psutil.cpu_percent()
+            cores_perc = psutil.cpu_percent(percpu=True)
+            cpu_cores = {"physical": psutil.cpu_count(logical=False), "total": psutil.cpu_count(logical=True)}
 
-        for part in label_parts:
-            part = part.strip()
-            if part and widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
-                if "<span" in part and "</span>" in part:
-                    # Ensure the icon is correctly set
-                    icon = re.sub(r"<span.*?>|</span>", "", part).strip()
-                    active_widgets[widget_index].setText(icon)
-                else:
-                    # Update label with formatted content
-                    formatted_text = part.format(info=info) if info else part
-                    active_widgets[widget_index].setText(formatted_text)
-                widget_index += 1
+            # Update each instance using the shared data
+            for inst in cls._instances[:]:
+                try:
+                    inst._update_label(cpu_freq, cpu_stats, current_perc, cores_perc, cpu_cores)
+                except RuntimeError:
+                    cls._instances.remove(inst)
 
-    def _get_histogram_bar(self, num, num_min, num_max):
-        bar_index = int((num - num_min) / (num_max - num_min) * 10)
-        bar_index = 8 if bar_index > 8 else bar_index
-        return self._histogram_icons[bar_index]
+        except Exception as e:
+            logging.error(f"Error updating shared CPU data: {e}")
 
-    def _get_cpu_info(self) -> dict:
-        cpu_freq = psutil.cpu_freq()
-        cpu_stats = psutil.cpu_stats()
-        min_freq = cpu_freq.min
-        max_freq = cpu_freq.max
-        current_freq = cpu_freq.current
-        current_perc = psutil.cpu_percent()
-        cores_perc = psutil.cpu_percent(percpu=True)
+    def _update_label(self, cpu_freq, cpu_stats, current_perc, cores_perc, cpu_cores):
+        """Update the label with CPU data."""
 
-        self._cpu_freq_history.append(current_freq)
+        self._cpu_freq_history.append(cpu_freq.current)
         self._cpu_perc_history.append(current_perc)
 
-        return {
-            "cores": {"physical": psutil.cpu_count(logical=False), "total": psutil.cpu_count(logical=True)},
-            "freq": {"min": min_freq, "max": max_freq, "current": current_freq},
+        cpu_info = {
+            "cores": cpu_cores,
+            "freq": {"min": cpu_freq.min, "max": cpu_freq.max, "current": cpu_freq.current},
             "percent": {"core": cores_perc, "total": current_perc},
             "stats": {
                 "context_switches": cpu_stats.ctx_switches,
@@ -125,7 +119,7 @@ class CpuWidget(BaseWidget):
             },
             "histograms": {
                 "cpu_freq": "".join(
-                    [self._get_histogram_bar(freq, min_freq, max_freq) for freq in self._cpu_freq_history]
+                    [self._get_histogram_bar(freq, cpu_freq.min, cpu_freq.max) for freq in self._cpu_freq_history]
                 )
                 .encode("utf-8")
                 .decode("unicode_escape"),
@@ -137,3 +131,40 @@ class CpuWidget(BaseWidget):
                 .decode("unicode_escape"),
             },
         }
+
+        active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
+        active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
+        label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
+        label_parts = [part for part in label_parts if part]
+        widget_index = 0
+
+        for part in label_parts:
+            part = part.strip()
+            if part and widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
+                if "<span" in part and "</span>" in part:
+                    icon = re.sub(r"<span.*?>|</span>", "", part).strip()
+                    active_widgets[widget_index].setText(icon)
+                else:
+                    label_class = "label alt" if self._show_alt_label else "label"
+                    formatted_text = part.format(info=cpu_info)
+                    active_widgets[widget_index].setText(formatted_text)
+                    active_widgets[widget_index].setProperty("class", label_class)
+                    active_widgets[widget_index].setStyleSheet("")
+                widget_index += 1
+
+    def _toggle_label(self):
+        if self._animation["enabled"]:
+            AnimationManager.animate(self, self._animation["type"], self._animation["duration"])
+        self._show_alt_label = not self._show_alt_label
+        for widget in self._widgets:
+            widget.setVisible(not self._show_alt_label)
+        for widget in self._widgets_alt:
+            widget.setVisible(self._show_alt_label)
+        CpuWidget._notify_instances()
+
+    def _get_histogram_bar(self, num, num_min, num_max):
+        if num_max == num_min:
+            return self._histogram_icons[0]
+        bar_index = int((num - num_min) / (num_max - num_min) * (len(self._histogram_icons) - 1))
+        bar_index = min(max(bar_index, 0), len(self._histogram_icons) - 1)
+        return self._histogram_icons[bar_index]
