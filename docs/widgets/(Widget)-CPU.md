@@ -46,14 +46,40 @@ cpu:
 
 - **label**: The format string for the CPU usage label. You can use placeholders like `{info[percent][total]}` to dynamically insert CPU information.
 - **label_alt**: The alternative format string for the CPU usage label. Useful for displaying additional CPU details.
-- **update_interval**: The interval in milliseconds at which the widget updates its information.
-- **histogram_icons**: A list of icons representing different levels of CPU usage in the histogram.
+- **update_interval**: The interval in milliseconds at which the widget updates its information. Minimum is 1000 ms (1 second).
+- **histogram_icons**: A list of icons representing different levels of CPU usage in the histogram. 8 icons are typically used, representing usage from 0% to 80%+.
 - **histogram_num_columns**: The number of columns to display in the CPU usage histogram.
 - **callbacks**: A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions.
 - **animation:** A dictionary specifying the animation settings for the widget. It contains three keys: `enabled`, `type`, and `duration`. The `type` can be `fadeInOut` and the `duration` is the animation duration in milliseconds.
 - **container_padding**: Explicitly set padding inside widget container. Use this option to set padding inside the widget container. You can set padding for top, left, bottom and right sides of the widget container.
 - **container_shadow:** Container shadow options.
 - **label_shadow:** Label shadow options.
+
+## Available Placeholders
+
+#### Core Information
+- `{info[cores][physical]}` - Number of physical CPU cores
+- `{info[cores][total]}` - Total number of CPU cores (including logical/hyperthreaded cores)
+
+#### Frequency Information
+- `{info[freq][min]}` - Minimum CPU frequency in MHz
+- `{info[freq][max]}` - Maximum CPU frequency in MHz  
+- `{info[freq][current]}` - Current CPU frequency in MHz
+
+#### Usage Percentages
+- `{info[percent][total]}` - Total CPU usage percentage
+- `{info[percent][core]}` - List of per-core CPU usage percentages
+
+#### CPU Statistics
+- `{info[stats][context_switches]}` - Number of context switches
+- `{info[stats][interrupts]}` - Number of interrupts
+- `{info[stats][soft_interrupts]}` - Number of soft interrupts
+- `{info[stats][sys_calls]}` - Number of system calls
+
+#### Histograms
+- `{info[histograms][cpu_freq]}` - CPU frequency histogram using configured icons
+- `{info[histograms][cpu_percent]}` - CPU percentage histogram using configured icons
+- `{info[histograms][cores]}` - Per-core usage histogram using configured icons
 
 ## Example Style
 ```css

@@ -31,7 +31,7 @@ class PowerPlanWidget(BaseWidget):
         label_shadow: dict = None,
         container_shadow: dict = None,
     ):
-        super().__init__(update_interval, class_name="power-plan-widget")
+        super().__init__(class_name="power-plan-widget")
 
         self._label = label
         self._label_alt = label_alt

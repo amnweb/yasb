@@ -30,7 +30,7 @@ class MemoryWidget(BaseWidget):
         label_shadow: dict = None,
         container_shadow: dict = None,
     ):
-        super().__init__(update_interval, class_name="memory-widget")
+        super().__init__(class_name="memory-widget")
         self._memory_thresholds = memory_thresholds
         self._show_alt_label = False
         self._label_content = label

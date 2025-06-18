@@ -32,7 +32,7 @@ class CpuWidget(BaseWidget):
         label_shadow: dict = None,
         container_shadow: dict = None,
     ):
-        super().__init__(update_interval, class_name="cpu-widget")
+        super().__init__(class_name="cpu-widget")
         self._histogram_icons = histogram_icons
         self._cpu_freq_history = deque([0] * histogram_num_columns, maxlen=histogram_num_columns)
         self._cpu_perc_history = deque([0] * histogram_num_columns, maxlen=histogram_num_columns)
@@ -75,7 +75,6 @@ class CpuWidget(BaseWidget):
             CpuWidget._shared_timer.timeout.connect(CpuWidget._notify_instances)
             CpuWidget._shared_timer.start()
 
-        # Initial data fetch
         CpuWidget._notify_instances()
 
     @classmethod
