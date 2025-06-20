@@ -236,36 +236,8 @@ class GlazewmWorkspacesWidget(BaseWidget):
                 return btn
         return None
 
-    def _get_next_workspace(self) -> GlazewmWorkspaceButton | None:
-        active_workspace = self._get_active_workspace()
-        if not active_workspace:
-            return None
-        active_index = list(self.workspaces.keys()).index(active_workspace.workspace_name)
-        next_index = (active_index + 1) % len(self.workspaces)
-        return self.workspaces[list(self.workspaces.keys())[next_index]]
-
-    def _get_prev_workspace(self) -> GlazewmWorkspaceButton | None:
-        active_workspace = self._get_active_workspace()
-        if not active_workspace:
-            return None
-        active_index = list(self.workspaces.keys()).index(active_workspace.workspace_name)
-        prev_index = (active_index - 1) % len(self.workspaces)
-        return self.workspaces[list(self.workspaces.keys())[prev_index]]
-
-    def _focus_next_workspace(self):
-        next_workspace = self._get_next_workspace()
-        if not next_workspace:
-            return
-        self.glazewm_client.activate_workspace(next_workspace.workspace_name)
-
-    def _focus_prev_workspace(self):
-        prev_workspace = self._get_prev_workspace()
-        if not prev_workspace:
-            return
-        self.glazewm_client.activate_workspace(prev_workspace.workspace_name)
-
     def wheelEvent(self, event: QWheelEvent):
         if event.angleDelta().y() > 0:
-            self._focus_next_workspace()
+            self.glazewm_client.focus_next_workspace()
         elif event.angleDelta().y() < 0:
-            self._focus_prev_workspace()
+            self.glazewm_client.focus_prev_workspace()
