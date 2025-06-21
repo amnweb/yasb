@@ -94,6 +94,12 @@ class GlazewmClient(QObject):
     def enable_binding_mode(self, binding_mode_name: str):
         self._websocket.sendTextMessage(f"command wm-enable-binding-mode --name {binding_mode_name}")
 
+    def focus_next_workspace(self):
+        self._websocket.sendTextMessage("command focus --next-active-workspace-on-monitor")
+
+    def focus_prev_workspace(self):
+        self._websocket.sendTextMessage("command focus --prev-active-workspace-on-monitor")
+
     def connect(self):
         if self._websocket.state() == QAbstractSocket.SocketState.ConnectedState:
             return
