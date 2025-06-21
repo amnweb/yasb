@@ -20,6 +20,7 @@
     - [GlazeWM Binding Mode](./(Widget)-GlazeWM-Binding-Mode)
     - [GlazeWM Tiling Direction](./(Widget)-GlazeWM-Tiling-Direction)
     - [GlazeWM Workspaces](./(Widget)-GlazeWM-Workspaces)
+    - [Grouper](./(Widget)-Grouper)
     - [Home](./(Widget)-Home)
     - [Disk](./(Widget)-Disk)
     - [Language](./(Widget)-Language)
