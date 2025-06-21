@@ -151,7 +151,7 @@ widgets:
         ultrawide_vertical_stack: "W-STACK"
         right_main_vertical_stack: "RMV-STACK"
         monocle: "MONOCLE"
-        maximised: "MAX"
+        maximized: "MAX"
         floating: "FLOATING"
         paused: "PAUSED"
       container_padding:

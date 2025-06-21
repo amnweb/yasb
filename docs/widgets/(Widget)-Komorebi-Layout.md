@@ -4,7 +4,7 @@
 | `hide_if_offline` | boolean | `true`                                                                  | Whether to hide the widget if offline.                                      |
 | `label`         | string  | `"{icon}"`                                                              | The label format string for the widget.                                     |
 | `layouts`       | list    | `['bsp', 'columns', 'rows', 'grid', 'scrolling', 'vertical_stack', 'horizontal_stack', 'ultrawide_vertical_stack', 'right_main_vertical_stack']` | The list of layouts available for the widget.                              |
-| `layout_icons`  | dict    | `{ 'bsp': 'BSP', 'columns': 'COLS', 'rows': 'ROWS', 'grid': 'GRID', 'scrolling': 'SC', 'vertical_stack': 'V-STACK', 'horizontal_stack': 'H-STACK', 'ultrawide_vertical_stack': 'W-STACK', 'right_main_vertical_stack': 'RMV-STACK', 'monocle': 'MONOCLE', 'maximised': 'MAX', 'floating': 'FLOATING', 'paused': 'PAUSED' }` | The icons for each layout.                                                 |
+| `layout_icons`  | dict    | `{ 'bsp': 'BSP', 'columns': 'COLS', 'rows': 'ROWS', 'grid': 'GRID', 'scrolling': 'SC', 'vertical_stack': 'V-STACK', 'horizontal_stack': 'H-STACK', 'ultrawide_vertical_stack': 'W-STACK', 'right_main_vertical_stack': 'RMV-STACK', 'monocle': 'MONOCLE', 'maximized': 'MAX', 'floating': 'FLOATING', 'paused': 'PAUSED' }` | The icons for each layout.                                                 |
 | `callbacks`     | dict    | `{ 'on_left': 'next_layout', 'on_middle': 'toggle_monocle', 'on_right': 'prev_layout' }` | Callbacks for mouse events on the widget.                                   |
 | `container_padding`  | dict | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}`      | Explicitly set padding inside widget container.                            |
 | `animation`         | dict    | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
@@ -47,7 +47,7 @@ komorebi_active_layout:
       ultrawide_vertical_stack: "\uebee"
       right_main_vertical_stack: "\uebf1"
       monocle: "\uf06f"
-      maximised: "\uf06f"
+      maximized: "\uf06f"
       floating: "\uf2d2"
       paused: "\udb83\udf89"
       tiling: "\udb81\ude40"
@@ -111,7 +111,7 @@ komorebi_active_layout:
 "toggle_tiling"
 "toggle_float"
 "toggle_monocle"
-"toggle_maximise"
+"toggle_maximize"
 "toggle_pause"
 "toggle_layout_menu"
 ```

@@ -76,7 +76,7 @@ def get_window_rect(hwnd: int) -> dict:
     }
 
 
-def is_window_maximised(hwnd: int) -> bool:
+def is_window_maximized(hwnd: int) -> bool:
     window_placement = GetWindowPlacement(hwnd)
     return window_placement[1] == SW_MAXIMIZE
 
