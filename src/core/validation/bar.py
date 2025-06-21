@@ -2,7 +2,8 @@ BAR_DEFAULTS = {
     "enabled": True,
     "screens": ["*"],
     "class_name": "yasb-bar",
-    "alignment": {"position": "top", "center": False},
+    "context_menu": True,
+    "alignment": {"position": "top", "center": False, "align": "center"},
     "blur_effect": {
         "enabled": False,
         "dark_mode": False,
@@ -30,6 +31,7 @@ BAR_SCHEMA = {
         "enabled": {"type": "boolean", "required": True, "default": BAR_DEFAULTS["enabled"]},
         "screens": {"type": "list", "schema": {"type": "string"}, "default": BAR_DEFAULTS["screens"]},
         "class_name": {"type": "string", "default": BAR_DEFAULTS["class_name"]},
+        "context_menu": {"type": "boolean", "default": BAR_DEFAULTS["context_menu"]},
         "alignment": {
             "type": "dict",
             "schema": {
@@ -38,7 +40,12 @@ BAR_SCHEMA = {
                     "allowed": ["top", "bottom"],
                     "default": BAR_DEFAULTS["alignment"]["position"],
                 },
-                "center": {"type": "boolean", "default": BAR_DEFAULTS["alignment"]["center"]},
+                "center": {"type": "boolean", "default": BAR_DEFAULTS["alignment"]["center"]},  # deprecated
+                "align": {
+                    "type": "string",
+                    "allowed": ["left", "center", "right"],
+                    "default": BAR_DEFAULTS["alignment"]["align"],
+                },
             },
             "default": BAR_DEFAULTS["alignment"],
         },
