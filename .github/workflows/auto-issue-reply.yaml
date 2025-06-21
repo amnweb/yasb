@@ -1,0 +1,121 @@
+name: Auto Reply to Issues
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  issues: write
+
+jobs:
+  auto-reply:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v2.0.6
+        with:
+          app-id: ${{ secrets.YASB_APP_ID }}
+          private-key: ${{ secrets.YASB_APP_PRIVATE_KEY }}
+
+      - uses: actions/github-script@v7
+        with:
+          github-token: ${{ steps.app-token.outputs.token }}
+          script: |
+            // --- Keyword-based replies ---
+            const rules = [
+              {
+                regex: /parser.*error/i,
+                reply: [
+                  "It looks like your config contains a syntax error.",
+                  "",
+                  "Please double-check your YAML formatting using a linter or validator. A missing comma, incorrect indentation, or brace is often the culprit.",
+                  "",
+                  "You can find more information on how to configure YASB properly here:",
+                  "👉 [YASB Wiki - Configuration](https://github.com/amnweb/yasb/wiki/Configuration)",
+                  "",
+                  "_YASB Support Bot_"
+                ].join('\n')
+              },
+              {
+                regex: /(?:won'?t|will not) start|\bcrash/i,
+                reply: [
+                  "If YASB won't start or crashes on launch, try the following:",
+                  "",
+                  "1. Make sure your configuration file is valid YAML.",
+                  "2. Try deleting the config folder located at:",
+                  "   - Windows: C:\\Users\\$YourUser\\.config\\yasb",
+                  "3. Reinstall or update YASB if the problem persists.",
+                  "",
+                  "For help configuring your setup correctly:",
+                  "👉 [YASB Wiki - Configuration](https://github.com/amnweb/yasb/wiki/Configuration)",
+                  "",
+                  "_YASB Support Bot_"
+                ].join('\n')
+              }
+            ];
+
+            const body = context.payload.issue.body || '';
+            let replied = false;
+
+            // Check for keywords first
+            for (const rule of rules) {
+              if (rule.regex.test(body)) {
+                await github.rest.issues.createComment({
+                  issue_number: context.issue.number,
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  body: rule.reply
+                });
+                replied = true;
+                break;
+              }
+            }
+
+            // If no keyword matched, check for version
+            if (!replied) {
+              function isOlderVersion(user, latest) {
+                const u = user.split('.').map(Number);
+                const l = latest.split('.').map(Number);
+                for (let i = 0; i < Math.max(u.length, l.length); i++) {
+                  if ((u[i] || 0) < (l[i] || 0)) return true;
+                  if ((u[i] || 0) > (l[i] || 0)) return false;
+                }
+                return false;
+              }
+
+              // Fetch latest release tag
+              let latestVersion = null;
+              try {
+                const { data: latestRelease } = await github.rest.repos.getLatestRelease({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo
+                });
+                latestVersion = latestRelease.tag_name.replace(/^v/, '');
+                core.info(`Latest version from repo: ${latestVersion}`);
+              } catch (e) {
+                core.info(`Error fetching latest release: ${e}`);
+              }
+
+              // Extract version from "YASB version installed" section
+              let userVersion = null;
+              const versionSection = body.match(/YASB version installed\s*\n([^\n]+)/i);
+              if (versionSection && versionSection[1]) {
+                const versionMatch = versionSection[1].match(/\b\d+\.\d+\.\d+\b/);
+                if (versionMatch) {
+                  userVersion = versionMatch[0];
+                }
+              }
+              core.info(`Extracted user version: ${userVersion}`);
+
+              if (latestVersion && userVersion) {
+                if (isOlderVersion(userVersion, latestVersion)) {
+                  await github.rest.issues.createComment({
+                    issue_number: context.issue.number,
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    body: `Thanks for creating this issue! It looks like you may be using an old version of YASB (\`${userVersion}\`). The latest stable release is \`${latestVersion}\`. Please try upgrading to the latest version and checking whether this issue remains.\n\n_YASB Support Bot_`
+                  });
+                }
+              }
+            }
