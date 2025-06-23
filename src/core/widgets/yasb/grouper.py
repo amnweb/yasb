@@ -5,9 +5,10 @@ from PyQt6.QtWidgets import QHBoxLayout, QWidget
 
 from core.config import get_config
 from core.utils.utilities import add_shadow
+from core.utils.widget_builder import WidgetBuilder
 from core.validation.widgets.yasb.grouper import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
-from core.utils.widget_builder import WidgetBuilder
+
 
 class GrouperWidget(BaseWidget):
     validation_schema: dict[str, Any] = VALIDATION_SCHEMA
