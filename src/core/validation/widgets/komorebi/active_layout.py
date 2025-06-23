@@ -24,6 +24,7 @@ DEFAULTS = {
         "right_main_vertical_stack": "=||",
         "monocle": "[M]",
         "maximized": "[X]",
+        "maximised": "[X]",  # deprecated, use "maximized" instead
         "floating": "><>",
         "paused": "[P]",
         "tiling": "[T]",
@@ -84,6 +85,7 @@ VALIDATION_SCHEMA = {
             },
             "monocle": {"type": "string", "default": DEFAULTS["layout_icons"]["monocle"]},
             "maximized": {"type": "string", "default": DEFAULTS["layout_icons"]["maximized"]},
+            "maximised": {"type": "string", "default": DEFAULTS["layout_icons"]["maximised"]},  # deprecated
             "floating": {"type": "string", "default": DEFAULTS["layout_icons"]["floating"]},
             "paused": {"type": "string", "default": DEFAULTS["layout_icons"]["paused"]},
             "tiling": {"type": "string", "default": DEFAULTS["layout_icons"]["tiling"]},
