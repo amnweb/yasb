@@ -23,10 +23,10 @@ from ctypes.wintypes import (
     WPARAM,
 )
 
-from core.utils.win32.typecheck import CArgObject
 from core.utils.win32.structs import (
     ICONINFO,
 )
+from core.utils.win32.typecheck import CArgObject
 
 user32 = windll.user32
 

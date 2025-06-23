@@ -40,6 +40,8 @@ dependencies = [
     "winrt.windows.storage.streams",
     "winrt.windows.ui.notifications",
     "winrt.windows.ui.notifications.management",
+    "winrt.windows.devices.wifi",
+    "winrt.windows.security.credentials",
     "screen_brightness_control @ git+https://github.com/amnweb/screen_brightness_control.git",
 ]
 

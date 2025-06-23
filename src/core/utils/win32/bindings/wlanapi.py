@@ -12,21 +12,18 @@ from ctypes.wintypes import (
     BOOL,
     DWORD,
     HANDLE,
-    ULONG,
+    LPCWSTR,
+    LPWSTR,
 )
 from typing import Any
 
-from core.utils.win32.typecheck import CArgObject, CPointer
 from core.utils.win32.structs import (
     DOT11_SSID,
     GUID,
-    IP_ADAPTER_ADDRESSES,
     WLAN_AVAILABLE_NETWORK_LIST,
-    WLAN_BSS_LIST,
-    WLAN_CONNECTION_PARAMETERS,
     WLAN_INTERFACE_INFO_LIST,
-    WLAN_PROFILE_INFO_LIST,
 )
+from core.utils.win32.typecheck import CArgObject, CFunctionType, CPointer
 
 wlanapi = windll.wlanapi
 iphlpapi = windll.iphlpapi
@@ -75,20 +72,23 @@ wlanapi.WlanQueryInterface.argtypes = [
 ]
 wlanapi.WlanQueryInterface.restype = DWORD
 
-wlanapi.WlanGetProfileList.argtypes = [
+wlanapi.WlanGetProfile.argtypes = [
     HANDLE,
     POINTER(GUID),
+    LPCWSTR,
     c_void_p,
-    POINTER(POINTER(WLAN_PROFILE_INFO_LIST)),
+    POINTER(LPWSTR),
+    POINTER(DWORD),
+    POINTER(DWORD),
 ]
-wlanapi.WlanGetProfileList.restype = DWORD
+wlanapi.WlanGetProfile.restype = DWORD
 
 wlanapi.WlanSetProfile.argtypes = [
     HANDLE,
     POINTER(GUID),
     DWORD,
-    c_wchar_p,
-    c_wchar_p,
+    LPCWSTR,
+    LPCWSTR,
     BOOL,
     c_void_p,
     POINTER(DWORD),
@@ -103,45 +103,24 @@ wlanapi.WlanReasonCodeToString.argtypes = [
 ]
 wlanapi.WlanReasonCodeToString.restype = c_wchar_p
 
-wlanapi.WlanConnect.argtypes = [
-    HANDLE,
-    POINTER(GUID),
-    POINTER(WLAN_CONNECTION_PARAMETERS),
-    c_void_p,
-]
-wlanapi.WlanConnect.restype = DWORD
 
-wlanapi.WlanDisconnect.argtypes = [
-    HANDLE,
-    POINTER(GUID),
-    c_void_p,
-]
-wlanapi.WlanDisconnect.restype = DWORD
-
-wlanapi.WlanGetNetworkBssList.argtypes = [
-    HANDLE,
-    POINTER(GUID),
-    POINTER(DOT11_SSID),
-    DWORD,
-    BOOL,
-    c_void_p,
-    POINTER(POINTER(WLAN_BSS_LIST)),
-]
-wlanapi.WlanGetNetworkBssList.restype = DWORD
+wlanapi.WlanDeleteProfile.restype = DWORD
 
 wlanapi.WlanFreeMemory.argtypes = [c_void_p]
 
 wlanapi.WlanCloseHandle.argtypes = [HANDLE, c_void_p]
 wlanapi.WlanCloseHandle.restype = DWORD
 
-iphlpapi.GetAdaptersAddresses.argtypes = [
-    ULONG,
-    ULONG,
+wlanapi.WlanRegisterNotification.argtypes = [
+    HANDLE,
+    DWORD,
+    BOOL,
     c_void_p,
-    POINTER(IP_ADAPTER_ADDRESSES),
-    POINTER(ULONG),
+    c_void_p,
+    c_void_p,
+    POINTER(DWORD),
 ]
-iphlpapi.GetAdaptersAddresses.restype = ULONG
+wlanapi.WlanRegisterNotification.restype = DWORD
 
 
 def WlanOpenHandle(
@@ -222,40 +201,6 @@ def WlanQueryInterface(
     )
 
 
-def WlanGetProfileList(
-    hClientHandle: HANDLE,
-    pInterfaceGuid: CArgObject | None,
-    pReserved: int | None,
-    ppProfileList: CArgObject | None,
-) -> int:
-    return wlanapi.WlanGetProfileList(
-        hClientHandle,
-        pInterfaceGuid,
-        pReserved,
-        ppProfileList,
-    )
-
-
-def WlanGetNetworkBssList(
-    clientHandle: HANDLE,
-    pInterfaceGuid: CArgObject | None,
-    pDot11Ssid: CArgObject | None,
-    dot11BssType: int,
-    bSecurityEnabled: bool,
-    pReserved: c_void_p | None,
-    ppWlanBssList: CArgObject | None,
-):
-    return wlanapi.WlanGetNetworkBssList(
-        clientHandle,
-        pInterfaceGuid,
-        pDot11Ssid,
-        dot11BssType,
-        bSecurityEnabled,
-        pReserved,
-        ppWlanBssList,
-    )
-
-
 def WlanReasonCodeToString(
     dwReasonCode: int,
     dwBufferSize: int,
@@ -267,6 +212,26 @@ def WlanReasonCodeToString(
         dwBufferSize,
         pStringBuffer,
         pReserved,
+    )
+
+
+def WlanGetProfile(
+    hClientHandle: HANDLE,
+    pInterfaceGuid: CArgObject | None,
+    strProfileName: str,
+    pReserved: c_void_p | None,
+    ppProfileXml: CArgObject | None,
+    pdwFlags: CArgObject | None,
+    pdwGrantedAccess: CArgObject | None,
+) -> int:
+    return wlanapi.WlanGetProfile(
+        hClientHandle,
+        pInterfaceGuid,
+        strProfileName,
+        pReserved,
+        ppProfileXml,
+        pdwFlags,
+        pdwGrantedAccess,
     )
 
 
@@ -292,44 +257,16 @@ def WlanSetProfile(
     )
 
 
-def GetAdaptersAddresses(
-    Family: int,
-    Flags: int,
-    Reserved: int | None,
-    AdapterAddresses: CPointer[Any] | c_void_p | None,
-    SizePointer: CArgObject | None,
-) -> int:
-    return iphlpapi.GetAdaptersAddresses(
-        Family,
-        Flags,
-        Reserved,
-        AdapterAddresses,
-        SizePointer,
-    )
-
-
-def WlanConnect(
+def WlanDeleteProfile(
     hClientHandle: HANDLE,
     pInterfaceGuid: CArgObject | None,
-    pConnectionParameters: CArgObject | None,
+    pProfileName: str,
     pReserved: c_void_p | None = None,
 ) -> int:
-    return wlanapi.WlanConnect(
+    return wlanapi.WlanDeleteProfile(
         hClientHandle,
         pInterfaceGuid,
-        pConnectionParameters,
-        pReserved,
-    )
-
-
-def WlanDisconnect(
-    hClientHandle: HANDLE,
-    pInterfaceGuid: CArgObject | None,
-    pReserved: c_void_p | None = None,
-) -> int:
-    return wlanapi.WlanDisconnect(
-        hClientHandle,
-        pInterfaceGuid,
+        pProfileName,
         pReserved,
     )
 
@@ -340,3 +277,23 @@ def WlanFreeMemory(pMemory: CPointer[Any] | c_void_p) -> None:
 
 def WlanCloseHandle(clientHandle: HANDLE, pReserved: None = None) -> int:
     return wlanapi.WlanCloseHandle(clientHandle, pReserved)
+
+
+def WlanRegisterNotification(
+    hClientHandle: HANDLE,
+    dwNotifSource: int,
+    bIgnoreDuplicate: bool,
+    pNotifCallback: CFunctionType | None,
+    pCallbackContext: c_void_p | None,
+    pReserved: CArgObject | None,
+    pdwPrevNotifSource: CArgObject | None,
+) -> int:
+    return wlanapi.WlanRegisterNotification(
+        hClientHandle,
+        dwNotifSource,
+        bIgnoreDuplicate,
+        pNotifCallback,
+        pCallbackContext,
+        pReserved,
+        pdwPrevNotifSource,
+    )

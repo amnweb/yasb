@@ -13,11 +13,11 @@ from ctypes.wintypes import (
     LPVOID,
 )
 
-from core.utils.win32.typecheck import CArgObject
 from core.utils.win32.structs import (
     BITMAPINFO,
     HBITMAP,
 )
+from core.utils.win32.typecheck import CArgObject
 
 gdi32 = windll.gdi32
 

@@ -10,7 +10,6 @@ from ctypes import (
     c_ulonglong,
     c_void_p,
     c_wchar_p,
-    sizeof,
 )
 from ctypes.wintypes import (
     BOOL,
@@ -204,6 +203,23 @@ class WLAN_INTERFACE_INFO_LIST(ct.Structure):
     ]
 
 
+class WLAN_NOTIFICATION_DATA(ct.Structure):
+    _fields_ = [
+        ("NotificationSource", DWORD),
+        ("NotificationCode", DWORD),
+        ("InterfaceGuid", GUID),
+        ("dwDataSize", DWORD),
+        ("pData", c_void_p),
+    ]
+
+
+WLAN_NOTIFICATION_CALLBACK = WINFUNCTYPE(
+    None,
+    POINTER(WLAN_NOTIFICATION_DATA),
+    c_void_p,
+)
+
+
 class DOT11_SSID(ct.Structure):
     _fields_ = [
         ("uSSIDLength", ULONG),
@@ -213,6 +229,12 @@ class DOT11_SSID(ct.Structure):
     def __str__(self) -> str:
         # Slice the byte array to the length specified and decode
         return bytes(self.ucSSID[: self.uSSIDLength]).decode("utf-8", errors="replace")
+
+    def set_ssid(self, ssid: bytes) -> None:
+        if len(ssid) > 32:
+            raise ValueError("SSID too long (max 32 bytes)")
+        self.uSSIDLength = len(ssid)
+        ct.memmove(self.ucSSID, ssid, self.uSSIDLength)
 
 
 class WLAN_AVAILABLE_NETWORK(ct.Structure):
@@ -324,41 +346,14 @@ class NDIS_OBJECT_HEADER(ct.Structure):
     ]
 
 
-DOT11_MAC_ADDRESS = ct.c_ubyte * 6
-
-
-class DOT11_BSSID_LIST(ct.Structure):
-    _fields_ = [
-        ("Header", NDIS_OBJECT_HEADER),
-        ("uNumOfEntries", ct.c_ulong),
-        ("uTotalNumOfEntries", ct.c_ulong),
-        ("BSSIDs", DOT11_MAC_ADDRESS * 64),  # We support up to 64 BSSIDs
-    ]
-
-    def from_strings(self, bssids: list[str]):
-        """Convert list of MAC address strings to stored BSSIDs."""
-        self.Header.Type = 2
-        self.Header.Revision = 1
-        self.Header.Size = sizeof(NDIS_OBJECT_HEADER)
-        self.uNumOfEntries = len(bssids)
-        self.uTotalNumOfEntries = len(bssids)
-        for i, bssid in enumerate(bssids):
-            if len(bssid) != 17:  # '00:00:00:00:00:00'
-                raise ValueError(f"Invalid MAC address: {bssid}")
-            self.BSSIDs[i][:] = bytes(int(b, 16) for b in bssid.split(":"))
-
-    def to_strings(self) -> list[str]:
-        """Convert stored BSSIDs to list of MAC address strings."""
-        r = range(min(self.uNumOfEntries, 64))  # We support up to 64 BSSIDs
-        return [":".join(f"{byte:02x}" for byte in self.BSSIDs[i]) for i in r]
-
-
-class WLAN_CONNECTION_PARAMETERS(ct.Structure):
+class WLAN_CONNECTION_NOTIFICATION_DATA(ct.Structure):
     _fields_ = [
         ("wlanConnectionMode", DWORD),
-        ("strProfile", c_wchar_p),
-        ("pDot11Ssid", POINTER(DOT11_SSID)),
-        ("pDesiredBssidList", POINTER(DOT11_BSSID_LIST)),
+        ("strProfileName", WCHAR * 256),
+        ("dot11Ssid", DOT11_SSID),
         ("dot11BssType", DWORD),
+        ("bSecurityEnabled", BOOL),
+        ("wlanReasonCode", DWORD),
         ("dwFlags", DWORD),
+        ("strProfileXml", WCHAR * 1),
     ]

@@ -70,6 +70,8 @@ build_options = {
         "winrt.windows.storage.streams",
         "winrt.windows.foundation",
         "winrt.windows.foundation.collections",
+        "winrt.windows.devices.wifi",
+        "winrt.windows.security.credentials",
     ],
     "optimize": 1,
     "include_files": [

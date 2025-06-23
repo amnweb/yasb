@@ -105,6 +105,18 @@ kernel32.CloseHandle.argtypes = [
 kernel32.CloseHandle.restype = BOOL
 
 
+kernel32.FormatMessageW.argtypes = [
+    DWORD,
+    LPCVOID,
+    DWORD,
+    DWORD,
+    LPWSTR,
+    DWORD,
+    POINTER(DWORD),
+]
+kernel32.FormatMessageW.restype = DWORD
+
+
 # --- Python-friendly typed wrapper functions ---
 
 
@@ -215,4 +227,24 @@ def CreateFile(
         dwCreationDisposition,
         dwFlagsAndAttributes,
         hTemplateFile,
+    )
+
+
+def FormatMessage(
+    dwFlags: int,
+    lpSource: int | None,
+    dwMessageId: int,
+    dwLanguageId: int,
+    lpBuffer: Array[c_wchar],
+    nSize: int,
+    Arguments: int | None,
+) -> int:
+    return kernel32.FormatMessageW(
+        dwFlags,
+        lpSource,
+        dwMessageId,
+        dwLanguageId,
+        lpBuffer,
+        nSize,
+        Arguments,
     )
