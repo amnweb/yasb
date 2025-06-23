@@ -1,10 +1,10 @@
 import logging
 
-import win32gui
-from PyQt6.QtCore import QEasingCurve, QEvent, QPropertyAnimation, QRect, Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import QCursor, QScreen
+from PyQt6.QtCore import QEasingCurve, QEvent, QPropertyAnimation, QRect, Qt, pyqtSignal
+from PyQt6.QtGui import QScreen
 from PyQt6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QWidget
 
+from core.bar_helper import AutoHideManager, BarContextMenu, FullscreenManager, OsThemeManager
 from core.event_service import EventService
 from core.utils.utilities import is_valid_percentage_str, percent_to_float
 from core.utils.win32.blurWindow import Blur
@@ -20,25 +20,6 @@ except ImportError:
     IMPORT_APP_BAR_MANAGER_SUCCESSFUL = False
 
 
-class AutoHideZone(QFrame):
-    """A transparent zone at the edge of the screen to detect when to show the bar"""
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setWindowFlags(
-            Qt.WindowType.Tool
-            | Qt.WindowType.FramelessWindowHint
-            | Qt.WindowType.WindowStaysOnTopHint
-            | Qt.WindowType.NoDropShadowWindowHint
-        )
-        self.setWindowOpacity(0.01)
-
-    def enterEvent(self, event):
-        # Show the parent bar when mouse enters detection zone
-        if self.parent():
-            self.parent()._show_bar()
-
-
 class Bar(QWidget):
     handle_bar_management = pyqtSignal(str, str)
 
@@ -50,8 +31,10 @@ class Bar(QWidget):
         stylesheet: str,
         widgets: dict[str, list],
         layouts: dict[str, dict[str, bool | str]],
+        widget_config: dict = None,
         init: bool = False,
         class_name: str = BAR_DEFAULTS["class_name"],
+        context_menu: bool = BAR_DEFAULTS["context_menu"],
         alignment: dict = BAR_DEFAULTS["alignment"],
         blur_effect: dict = BAR_DEFAULTS["blur_effect"],
         animation: dict = BAR_DEFAULTS["animation"],
@@ -66,12 +49,20 @@ class Bar(QWidget):
         self._bar_id = bar_id
         self._bar_name = bar_name
         self._alignment = alignment
+        self._align = self._alignment["align"]
         self._window_flags = window_flags
         self._dimensions = dimensions
         self._padding = padding
         self._animation = animation
-        self._is_dark_theme = None
+        self._context_menu = context_menu
         self._layouts = layouts
+        self._autohide_bar = self._window_flags["auto_hide"]
+        self._widgets = widgets  # Store widgets reference for context menu
+        self._widget_config_map = widget_config or {}
+
+        self._os_theme_manager = None
+        self._fullscreen_manager = None
+        self._autohide_manager = None
 
         self.screen_name = self.screen().name()
         self.app_bar_edge = (
@@ -95,7 +86,22 @@ class Bar(QWidget):
 
         self._bar_frame = QFrame(self)
         self._bar_frame.setProperty("class", f"bar {class_name}")
-        self.update_theme_class()
+
+        # Initialize the OS theme manager
+        try:
+            self._os_theme_manager = OsThemeManager(self._bar_frame, self)
+            self._os_theme_manager.update_theme_class()
+        except Exception as e:
+            logging.error(f"Failed to initialize theme manager: {e}")
+            self._os_theme_manager = None
+
+        # Initialize fullscreen manager
+        if self._window_flags["hide_on_fullscreen"] and self._window_flags["always_on_top"]:
+            try:
+                self._fullscreen_manager = FullscreenManager(self, self)
+            except Exception as e:
+                logging.error(f"Failed to initialize fullscreen manager: {e}")
+                self._fullscreen_manager = None
 
         self.position_bar(init)
         self.monitor_hwnd = get_monitor_hwnd(int(self.winId()))
@@ -116,23 +122,10 @@ class Bar(QWidget):
         self.handle_bar_management.connect(self._handle_bar_management)
         self._event_service.register_event("handle_bar_cli", self.handle_bar_management)
 
-        self._autohide_bar = self._window_flags["auto_hide"]
-
-        if self._autohide_bar:
-            self._autohide_delay = 400  # default delay before hiding the bar
-            self._detection_zone_height = (
-                1 + self._padding["top"] if self._alignment["position"] == "top" else 1 + self._padding["bottom"]
-            )
-
-            self._detection_zone = AutoHideZone(self)
-
-            self._hide_timer = QTimer(self)
-            self._hide_timer.setSingleShot(True)
-            self._hide_timer.timeout.connect(self._hide_bar)
-
-            self.installEventFilter(self)
-            # If the bar is initialized with auto-hide, set up the detection zone after a short delay
-            QTimer.singleShot(1000, self._setup_autohide_zone)
+        # Initialize autohide manager
+        if self._window_flags["auto_hide"]:
+            self._autohide_manager = AutoHideManager(self, self)
+            self._autohide_manager.setup_autohide()
 
         self.show()
 
@@ -144,8 +137,8 @@ class Bar(QWidget):
         logging.info(f"Screen geometry changed. Updating position for bar ({self.bar_id})")
         self.position_bar()
 
-        if self._autohide_bar:
-            self._setup_autohide_zone()
+        if self._autohide_manager and self._autohide_manager.is_enabled():
+            self._autohide_manager.setup_detection_zone()
 
     def try_add_app_bar(self, scale_screen_height=False) -> None:
         if self.app_bar_manager:
@@ -157,9 +150,6 @@ class Bar(QWidget):
                 scale_screen_height,
             )
 
-    def closeEvent(self, event):
-        self.try_remove_app_bar()
-
     def try_remove_app_bar(self) -> None:
         if self.app_bar_manager:
             self.app_bar_manager.remove_appbar()
@@ -167,12 +157,29 @@ class Bar(QWidget):
     def bar_pos(self, bar_w: int, bar_h: int, screen_w: int, screen_h: int) -> tuple[int, int]:
         screen_x = self.screen().geometry().x()
         screen_y = self.screen().geometry().y()
-        x = int(screen_x + (screen_w / 2) - (bar_w / 2)) if self._alignment["center"] else screen_x
+
+        if self._align == "center" or self._alignment.get("center", False):
+            available_x = screen_x + self._padding["left"]
+            available_width = screen_w - self._padding["left"] - self._padding["right"]
+            if bar_w >= available_width:
+                x = available_x
+            else:
+                x = int(available_x + (available_width - bar_w) / 2)
+        elif self._align == "right":
+            x = int(screen_x + screen_w - bar_w - self._padding["right"])
+            min_x = screen_x + self._padding["left"]
+            if x < min_x:
+                x = min_x
+        else:
+            x = int(screen_x + self._padding["left"])
+            max_x = screen_x + screen_w - bar_w - self._padding["right"]
+            if x > max_x:
+                x = max_x
 
         if self._alignment["position"] == "bottom":
             y = int(screen_y + screen_h - bar_h - self._padding["bottom"])
         else:
-            y = screen_y
+            y = int(screen_y + self._padding["top"])
 
         return x, y
 
@@ -186,16 +193,15 @@ class Bar(QWidget):
         scale_state = self.screen().devicePixelRatio() > 1.0
 
         if is_valid_percentage_str(str(self._dimensions["width"])):
-            bar_width = int(
-                screen_width * percent_to_float(self._dimensions["width"])
-                - self._padding["left"]
-                - self._padding["right"]
-            )
-        bar_x, bar_y = self.bar_pos(bar_width, bar_height, screen_width, screen_height)
-        bar_x = bar_x + self._padding["left"]
+            percent = percent_to_float(self._dimensions["width"])
+            bar_width = int(screen_width * percent)
 
-        if self._alignment["position"] == "top":
-            bar_y = bar_y + self._padding["top"]
+        # Ensure bar width does not exceed screen width
+        available_width = screen_width - self._padding["left"] - self._padding["right"]
+        if bar_width > available_width:
+            bar_width = available_width
+
+        bar_x, bar_y = self.bar_pos(bar_width, bar_height, screen_width, screen_height)
 
         self.setGeometry(bar_x, bar_y, bar_width, bar_height)
         self._bar_frame.setGeometry(0, 0, bar_width, bar_height)
@@ -264,83 +270,32 @@ class Bar(QWidget):
         if self._animation["enabled"]:
             try:
                 self.show_bar()
-
             except AttributeError:
                 logging.error("Animation not initialized.")
-        if (
-            not hasattr(self, "_fullscreen_timer")
-            and self._window_flags["hide_on_fullscreen"]
-            and self._window_flags["always_on_top"]
-        ):
-            self._fullscreen_timer = QTimer(self)
-            self._fullscreen_timer.setInterval(500)
-            self._fullscreen_timer.timeout.connect(self.is_foreground_fullscreen)
-            self._fullscreen_timer.start()
+
+        # Start fullscreen monitoring when bar is shown
+        if self._fullscreen_manager and not hasattr(self, "_fullscreen_monitoring_started"):
+            self._fullscreen_manager.start_monitoring()
+            self._fullscreen_monitoring_started = True
+
+    def closeEvent(self, event):
+        if self._fullscreen_manager:
+            self._fullscreen_manager.stop_monitoring()
+        if self._autohide_manager:
+            self._autohide_manager.cleanup()
+        self.try_remove_app_bar()
+
+    def changeEvent(self, event: QEvent) -> None:
+        if event.type() == QEvent.Type.PaletteChange:
+            if self._os_theme_manager:
+                self._os_theme_manager.update_theme_class()
+        super().changeEvent(event)
 
     def hide(self):
         if self.isVisible() and self._animation["enabled"]:
             self.hide_bar()
         else:
             super().hide()
-
-    def is_foreground_fullscreen(self):
-        """Check if the active foreground window is in fullscreen mode."""
-        hwnd = win32gui.GetForegroundWindow()
-        if not hwnd:
-            return
-
-        class_name = win32gui.GetClassName(hwnd)
-        if class_name in ("Progman", "WorkerW", "XamlWindow"):
-            return
-        left, top, right, bottom = win32gui.GetWindowRect(hwnd)
-        window_rect = (left, top, right - left, bottom - top)
-
-        screen_geometry = self.screen().geometry()
-        screen_rect = (screen_geometry.x(), screen_geometry.y(), screen_geometry.width(), screen_geometry.height())
-
-        self.dpi = self.screen().devicePixelRatio()
-        scaled_screen_rect = screen_rect[:2] + tuple(round(dim * self.dpi) for dim in screen_rect[2:])
-        is_fullscreen = window_rect == scaled_screen_rect
-        if getattr(self, "_prev_fullscreen_state", None) == is_fullscreen:
-            return
-
-        self._prev_fullscreen_state = is_fullscreen
-        if is_fullscreen and self.isVisible():
-            self.hide()
-        elif not is_fullscreen and not self.isVisible():
-            self.show()
-
-    def detect_os_theme(self) -> bool:
-        try:
-            import winreg
-
-            with winreg.ConnectRegistry(None, winreg.HKEY_CURRENT_USER) as registry:
-                with winreg.OpenKey(registry, r"SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize") as key:
-                    value, _ = winreg.QueryValueEx(key, "AppsUseLightTheme")
-                    return value == 0
-        except Exception as e:
-            logging.error(f"Failed to determine Windows theme: {e}")
-            return False
-
-    def update_theme_class(self):
-        if not hasattr(self, "_bar_frame"):
-            return
-
-        is_dark_theme = self.detect_os_theme()
-        if is_dark_theme != self._is_dark_theme:
-            class_property = self._bar_frame.property("class")
-            if is_dark_theme:
-                class_property += " dark"
-            else:
-                class_property = class_property.replace(" dark", "")
-            self._bar_frame.setProperty("class", class_property)
-            update_styles(self._bar_frame)
-            self._is_dark_theme = is_dark_theme
-
-    def changeEvent(self, event: QEvent) -> None:
-        if event.type() == QEvent.Type.PaletteChange:
-            self.update_theme_class()
-        super().changeEvent(event)
 
     def _handle_bar_management(self, action, screen_name):
         current_screen_matches = not screen_name or self.screen().name() == screen_name
@@ -355,56 +310,25 @@ class Bar(QWidget):
                 else:
                     self.show()
 
-    def _setup_autohide_zone(self):
-        """Position and configure the autohide detection zone"""
-        screen_geometry = self.screen().geometry()
+    def contextMenuEvent(self, event):
+        """Handle right-click context menu"""
+        if not self._context_menu:
+            return
 
-        if self._alignment["position"] == "top":
-            self._detection_zone.setGeometry(
-                screen_geometry.x(), screen_geometry.y(), screen_geometry.width(), self._detection_zone_height
-            )
-        else:
-            self._detection_zone.setGeometry(
-                screen_geometry.x(),
-                screen_geometry.y() + screen_geometry.height() - self._detection_zone_height,
-                screen_geometry.width(),
-                self._detection_zone_height,
-            )
+        widget_at_pos = self.childAt(event.pos())
+        # If the click is on a widget, ignore the context menu
+        if widget_at_pos and widget_at_pos != self._bar_frame and widget_at_pos != self:
+            parent_widget = widget_at_pos
+            while parent_widget and parent_widget != self:
+                if hasattr(parent_widget, "parent_layout_type"):
+                    event.ignore()
+                    return
+                parent_widget = parent_widget.parent()
 
-        # Start autohide timer
-        self._hide_timer.start(self._autohide_delay)
-
-    def _show_bar(self):
-        """Show the bar when mouse hovers over detection zone"""
-        if not self.isVisible() and self._autohide_bar:
-            self.show()
-
-    def _hide_bar(self):
-        """Hide the bar and show detection zone"""
-        if self._autohide_bar and self.isVisible():
-            self.hide()
-            self._detection_zone.show()
-            self._detection_zone.raise_()
-
-    def eventFilter(self, watched, event):
-        """Filter events to detect mouse movement"""
-        if watched == self and self._autohide_bar:
-            if event.type() == QEvent.Type.Enter:
-                # Mouse entered the bar, stop hide timer
-                self._hide_timer.stop()
-            elif event.type() == QEvent.Type.Leave:
-                # Mouse left the bar, start hide timer
-                cursor_pos = QCursor.pos()
-                bar_geometry = self.geometry()
-                # Only start timer if mouse is really outside the bar
-                if not bar_geometry.contains(cursor_pos):
-                    self._hide_timer.start(self._autohide_delay)
-        return super().eventFilter(watched, event)
-
-
-def update_styles(widget):
-    widget.style().unpolish(widget)
-    widget.style().polish(widget)
-    for child in widget.findChildren(QWidget):
-        child.style().unpolish(child)
-        child.style().polish(child)
+        BarContextMenu(
+            parent=self,
+            bar_name=self._bar_name,
+            widgets=self._widgets,
+            widget_config_map=self._widget_config_map,
+            autohide_bar=self._autohide_bar,
+        ).show(event.pos())

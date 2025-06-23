@@ -260,16 +260,17 @@ class PopupWidget(QWidget):
             while bar_el and not hasattr(bar_el, "_autohide_bar"):
                 bar_el = bar_el.parent()
 
-            if bar_el:
+            if bar_el and bar_el._autohide_manager and bar_el._autohide_manager.is_enabled():
                 # Check if parent needs autohide
-                if bar_el._autohide_bar:
+                if bar_el._autohide_manager.is_enabled():
                     # Get current cursor position
                     from PyQt6.QtGui import QCursor
 
                     cursor_pos = QCursor.pos()
                     # If mouse is outside the bar, start the hide timer
                     if not bar_el.geometry().contains(cursor_pos):
-                        bar_el._hide_timer.start(bar_el._autohide_delay)
+                        if bar_el._autohide_manager._hide_timer:
+                            bar_el._autohide_manager._hide_timer.start(bar_el._autohide_manager._autohide_delay)
         except Exception:
             pass
 
