@@ -21,7 +21,7 @@ from PyQt6.QtWidgets import (
 
 from core.event_service import EventService
 from core.utils.controller import exit_application, reload_application
-from core.utils.win32.utilities import get_window_rect
+from core.utils.win32.utilities import get_window_rect, qmenu_rounded_corners
 from core.utils.win32.windows import WinEvent
 
 
@@ -285,39 +285,6 @@ class OsThemeManager(QObject):
 class BarContextMenu:
     """A class to handle the context menu for a bar."""
 
-    MENU_STYLE = """
-        QMenu {
-            background-color: #26292b; color: #fff; border: 1px solid #373b3e;
-            padding: 5px 0; margin: 0; border-radius: 4px;
-        }
-        QMenu::item {
-            margin: 0 4px; padding: 4px 24px 5px 24px; border-radius: 4px;
-            font-size: 12px; font-family: 'Segoe UI'; font-weight: 600;
-        }
-        QMenu::item:disabled { color: #999; }
-        QMenu::item:selected { background-color: #373b3e; }
-        QMenu::separator { height: 1px; background: #373b3e; margin: 5px 0; }
-        QMenu::right-arrow {width: 8px;height: 8px;padding-right:24px;}
-    """
-    MENU_STYLE_OVERRIDE = """
-        QMenu::item:disabled {
-            color: #999999;margin:0;padding-left: 16px;margin:4px 0;font-size: 12px
-        }
-    """
-    CHECKBOX_STYLE = """
-        QCheckBox {
-            background: transparent; border: none; padding: 4px 16px 5px 16px;
-            font-size: 12px; margin: 0; color: #fff;font-family: 'Segoe UI';font-weight: 600;
-        }
-        QCheckBox:unchecked { color: #999 }
-        QCheckBox::indicator {
-            width: 12px; height: 12px; margin-left: 0px; margin-right: 8px;
-        }
-        QCheckBox::indicator:unchecked { background: #444444; border-radius: 2px; }
-        QCheckBox::indicator:checked { background: #007acc; border-radius: 2px; }
-        QCheckBox:focus { outline: none; }
-    """
-
     def __init__(self, parent, bar_name, widgets, widget_config_map, autohide_bar):
         self.parent = parent
         self._bar_name = bar_name
@@ -327,8 +294,9 @@ class BarContextMenu:
 
     def show(self, position):
         self._menu = QMenu(self.parent)
-        self._menu.setStyleSheet(self.MENU_STYLE)
+        self._menu.setProperty("class", "context-menu")
         self._menu.aboutToHide.connect(self._on_menu_about_to_hide)
+        qmenu_rounded_corners(self._menu)
 
         # Bar info
         bar_info = self._menu.addAction(f"Bar: {self._bar_name}")
@@ -336,6 +304,8 @@ class BarContextMenu:
 
         # Widgets menu
         widgets_menu = self._menu.addMenu("Active Widgets")
+        widgets_menu.setProperty("class", "context-menu submenu")
+        widgets_menu.aboutToShow.connect(lambda: qmenu_rounded_corners(widgets_menu))
         self._populate_widgets_menu(widgets_menu)
 
         self._menu.addSeparator()
@@ -390,7 +360,6 @@ class BarContextMenu:
             logging.error(f"Failed to restart autohide timer: {e}")
 
     def _populate_widgets_menu(self, widgets_menu):
-        widgets_menu.setStyleSheet(self.MENU_STYLE_OVERRIDE)
         if not any(self._widgets.get(layout) for layout in ["left", "center", "right"]):
             no_widgets = widgets_menu.addAction("No active widgets")
             no_widgets.setEnabled(False)
@@ -415,12 +384,12 @@ class BarContextMenu:
     def _add_widget_checkbox(self, menu, widget):
         checkbox = QCheckBox(self._get_widget_display_name(widget))
         checkbox.setChecked(widget.isVisible())
-        checkbox.setStyleSheet(self.CHECKBOX_STYLE)
+        checkbox.setProperty("class", "checkbox")
         checkbox.stateChanged.connect(partial(self._toggle_widget, widget))
 
         # Container with hover effects
         container = QWidget()
-        container.setStyleSheet("border-radius:4px;margin:0 4px")
+        container.setProperty("class", "menu-checkbox")
         layout = QHBoxLayout(container)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(checkbox)
@@ -428,11 +397,7 @@ class BarContextMenu:
 
         # Event filter for hover and click
         def event_filter(obj, event):
-            if event.type() == QEvent.Type.Enter:
-                container.setStyleSheet("background:#373b3e;border-radius:4px;margin:0 4px")
-            elif event.type() == QEvent.Type.Leave:
-                container.setStyleSheet("background:transparent;border-radius:4px;margin:0 4px")
-            elif event.type() == QEvent.Type.MouseButtonPress and event.button() == Qt.MouseButton.LeftButton:
+            if event.type() == QEvent.Type.MouseButtonPress and event.button() == Qt.MouseButton.LeftButton:
                 checkbox.toggle()
                 return True
             return False
