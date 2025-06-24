@@ -1,8 +1,8 @@
 # Disk Widget Configuration
 | Option            | Type    | Default                                                                 | Description                                                                 |
 |-------------------|---------|-------------------------------------------------------------------------|-----------------------------------------------------------------------------|
-| `label`           | string  | `'{volume_label} {space[used][percent]}'`                        | The format string for the memory widget. Displays free and total virtual memory. |
-| `label_alt`       | string  | `'{volume_label} {space[used][gb]} / {space[total][gb]}'`        | The alternative format string for the memory widget. Displays virtual and swap memory percentages. |
+| `label`           | string  | `'{volume_label} {space[used][percent]}'`                        | The format string for the disk widget. |
+| `label_alt`       | string  | `'{volume_label} {space[used][gb]} / {space[total][gb]}'`        | The alternative format string for the disk widget. |
 | `volume_label`       | string  | `'C'`        | Partition which you want to show in the bar |
 | `decimal_display` | integer | `1`                                                                  | The number of decimal to show, defaul 1 (min 0 max 3) |
 | `update_interval` | integer | `60`                                                                  | The interval in seconds to update the disk widget. Must be between 0 and 3600. |

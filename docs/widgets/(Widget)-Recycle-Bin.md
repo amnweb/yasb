@@ -42,7 +42,7 @@ Recycle Bin widget is simple widget that shows the status of the recycle bin. It
 
 ## Description of Options
 
-- **label**: Format for displaying timer information. Available variables: `{remaining}`, `{elapsed}`, `{session}`, `{total_sessions}`, `{session_type}`.
+- **label**: Format for displaying recycle bin information. Available variables: `{icon}`, `{items_count}`, `{items_size}`.
 - **label_alt**: Alternative label format that can be toggled with right-click (or configured callback).
 - **icons**: Customize icons used for different recycle bin states. The default icons are:
     - **bin_empty**: Icon when the recycle bin is empty.
