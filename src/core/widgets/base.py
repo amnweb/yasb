@@ -1,7 +1,7 @@
 import logging
 import re
 import subprocess
-from typing import Union
+from typing import Callable, Union
 
 from PyQt6.QtCore import Qt, QThread, QTimer
 from PyQt6.QtGui import QMouseEvent
@@ -53,7 +53,7 @@ class BaseWidget(QWidget):
         self.callback_middle: Union[str, list[str]] = self.callback_default
         self.callback_right: Union[str, list[str]] = self.callback_default
 
-    def register_callback(self, callback_name, fn):
+    def register_callback(self, callback_name: str, fn: Callable[[], None]):
         self.callbacks[callback_name] = fn
 
     def start_timer(self):
