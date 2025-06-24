@@ -97,6 +97,30 @@ def get_hwnd_info(hwnd: int) -> dict:
         }
 
 
+def qmenu_rounded_corners(qwidget):
+    """
+    Set default Windows 11 rounded corners for a QMenu
+    This function uses the DWM API to set the window corner preference for a QMenu.
+    Windows 10 is not supported, as it does not have the DWM API for rounded corners.
+    """
+    try:
+        hwnd = int(qwidget.winId())
+        DWMWA_WINDOW_CORNER_PREFERENCE = 33
+        DWMWCP_ROUND = 2
+
+        preference = ctypes.wintypes.DWORD(DWMWCP_ROUND)
+        dwmapi.DwmSetWindowAttribute(
+            ctypes.wintypes.HWND(hwnd),
+            ctypes.wintypes.DWORD(DWMWA_WINDOW_CORNER_PREFERENCE),
+            ctypes.byref(preference),
+            ctypes.sizeof(preference),
+        )
+    except Exception:
+        # If we can't set the rounded corners, we just ignore the error
+        # This can happen if the DWM API is not available
+        pass
+
+
 def _open_startup_registry(access_flag: int):
     """Helper function to open the startup registry key."""
     registry_path = r"SOFTWARE\Microsoft\Windows\CurrentVersion\Run"
