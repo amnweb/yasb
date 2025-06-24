@@ -6,7 +6,7 @@ from typing import Any, cast
 import psutil
 from PyQt6.QtCore import QEvent, QPoint, Qt
 from PyQt6.QtGui import QColor, QScreen
-from PyQt6.QtWidgets import QApplication, QFrame, QGraphicsDropShadowEffect, QLabel, QWidget
+from PyQt6.QtWidgets import QApplication, QFrame, QGraphicsDropShadowEffect, QLabel, QMenu, QWidget
 from winrt.windows.data.xml.dom import XmlDocument
 from winrt.windows.ui.notifications import ToastNotification, ToastNotificationManager
 
@@ -252,6 +252,22 @@ class PopupWidget(QWidget):
     def eventFilter(self, obj, event):
         if event.type() == QEvent.Type.MouseButtonPress:
             global_pos = event.globalPosition().toPoint()
+
+            # Check if click is inside popup
+            if self.geometry().contains(global_pos):
+                return super().eventFilter(obj, event)
+
+            # Check if click is inside any visible QMenu child
+            for menu in self.findChildren(QMenu):
+                menu_global_geom = menu.geometry().translated(menu.mapToGlobal(QPoint(0, 0)))
+                if menu.isVisible() and menu_global_geom.contains(global_pos):
+                    return super().eventFilter(obj, event)
+
+            # Otherwise, close all open QMenus first
+            for menu in self.findChildren(QMenu):
+                if menu.isVisible():
+                    menu.close()
+
             if not self.geometry().contains(global_pos):
                 self.hide()
                 self.deleteLater()
