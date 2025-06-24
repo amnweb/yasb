@@ -25,6 +25,7 @@ build_options = {
         "core.widgets.yasb.traffic",
         "core.widgets.yasb.wifi",
         "core.widgets.yasb.language",
+        "core.widgets.yasb.launchpad",
         "core.widgets.yasb.disk",
         "core.widgets.yasb.obs",
         "core.widgets.yasb.whkd",

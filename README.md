@@ -102,6 +102,7 @@ https://github.com/user-attachments/assets/aab8d8e8-248f-46a1-919c-9b0601236ac1
 - **[Home](https://github.com/amnweb/yasb/wiki/(Widget)-Home)**: A customizable home widget menu.
 - **[Disk](https://github.com/amnweb/yasb/wiki/(Widget)-Disk)**: Displays disk usage information.
 - **[Language](https://github.com/amnweb/yasb/wiki/(Widget)-Language)**: Shows the current input language.
+- **[Launchpad](https://github.com/amnweb/yasb/wiki/(Widget)-Launchpad)**: A customizable launchpad for quick access to applications.
 - **[Libre Hardware Monitor](https://github.com/amnweb/yasb/wiki/(Widget)-Libre-HW-Monitor)**: Connects to Libre Hardware Monitor to get sensor data.
 - **[Media](https://github.com/amnweb/yasb/wiki/(Widget)-Media)**: Displays media controls and information.
 - **[Memory](https://github.com/amnweb/yasb/wiki/(Widget)-Memory)**: Shows current memory usage.

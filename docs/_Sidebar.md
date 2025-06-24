@@ -24,6 +24,7 @@
     - [Home](./(Widget)-Home)
     - [Disk](./(Widget)-Disk)
     - [Language](./(Widget)-Language)
+    - [Launcpad](./(Widget)-Launchpad)
     - [Libre Hardware Monitor](./(Widget)-Libre-HW-Monitor)
     - [Media](./(Widget)-Media)
     - [Memory](./(Widget)-Memory)
