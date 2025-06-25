@@ -7,6 +7,7 @@ import winreg
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QCursor
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout, QWidget
+from win32con import WM_INPUTLANGCHANGEREQUEST
 
 from core.utils.utilities import PopupWidget, add_shadow, build_widget_label
 from core.utils.widgets.animation_manager import AnimationManager
@@ -82,6 +83,9 @@ class LanguageWidget(BaseWidget):
 
         # Cache for available languages
         self._available_languages = None
+
+        # Focused window info for activating the layout from the menu
+        self._focused_window_hwnd: int | None = None
 
         self.start_timer()
 
@@ -179,6 +183,10 @@ class LanguageWidget(BaseWidget):
             offset_left=self._menu_config["offset_left"],
             offset_top=self._menu_config["offset_top"],
         )
+
+        # Focused widnow handle
+        self._focused_window_hwnd = user32.GetForegroundWindow()
+
         self._menu.show()
 
     def _create_language_item(self, layout, lang_info, is_current=False):
@@ -342,6 +350,20 @@ class LanguageWidget(BaseWidget):
         except:
             return 0
 
+    def _activate_layout(self, focus_window: int | None, target_layout: int):
+        """Activate the specified keyboard layout returning focus to the specified window"""
+        if focus_window:
+            user32.SetFocus(focus_window)
+            user32.SetActiveWindow(focus_window)
+            user32.SetForegroundWindow(focus_window)
+            result = user32.ActivateKeyboardLayout(ctypes.c_void_p(target_layout), 0)
+            # Post the message to the focus window to activate the layout
+            user32.PostMessageW(focus_window, WM_INPUTLANGCHANGEREQUEST, 0, target_layout)
+        else:
+            # No focus window, just activate the layout
+            result = user32.ActivateKeyboardLayout(ctypes.c_void_p(target_layout), 0)
+        return result
+
     def _switch_to_language(self, target_lang_id):
         """Switch to the specified language"""
         try:
@@ -357,10 +379,7 @@ class LanguageWidget(BaseWidget):
             if target_layout is None:
                 return False
 
-            user32.ActivateKeyboardLayout.argtypes = [ctypes.c_void_p, ctypes.c_uint]
-            user32.ActivateKeyboardLayout.restype = ctypes.c_void_p
-
-            result = user32.ActivateKeyboardLayout(ctypes.c_void_p(target_layout), 0)
+            result = self._activate_layout(self._focused_window_hwnd, target_layout)
 
             if result == 0:
                 # If activation failed, try loading the layout by string
@@ -371,7 +390,7 @@ class LanguageWidget(BaseWidget):
                     0x00000001,  # KLF_ACTIVATE
                 )
                 if loaded_layout:
-                    user32.ActivateKeyboardLayout(ctypes.c_void_p(loaded_layout), 0)
+                    self._activate_layout(self._focused_window_hwnd, loaded_layout)
 
             # Clear the language cache to force refresh
             self._available_languages = None
