@@ -39,10 +39,11 @@ from PyQt6.QtWidgets import (
 )
 
 from core.config import HOME_CONFIGURATION_DIR
+from core.event_service import EventService
 from core.utils.utilities import add_shadow, build_widget_label
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.win32.blurWindow import Blur
-from core.utils.win32.utilities import qmenu_rounded_corners
+from core.utils.win32.utilities import get_foreground_hwnd, qmenu_rounded_corners, set_foreground_hwnd
 from core.validation.widgets.yasb.launchpad import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
 
@@ -346,6 +347,7 @@ class TransparentOverlay(QWidget):
 
 class LaunchpadWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
+    handle_widget_cli = pyqtSignal(str, str)
 
     def __init__(
         self,
@@ -414,6 +416,20 @@ class LaunchpadWidget(BaseWidget):
         self.callback_right = callbacks["on_right"]
         self.callback_middle = callbacks["on_middle"]
 
+        self._previous_hwnd = None
+
+        self._event_service = EventService()
+        self.handle_widget_cli.connect(self._handle_widget_cli)
+        self._event_service.register_event("handle_widget_cli", self.handle_widget_cli)
+
+    def _handle_widget_cli(self, widget: str, screen: str):
+        """Handle widget CLI commands"""
+        if widget == "launchpad":
+            current_screen = self.window().screen() if self.window() else None
+            current_screen_name = current_screen.name() if current_screen else None
+            if not screen or (current_screen_name and screen.lower() == current_screen_name.lower()):
+                self._toggle_launchpad()
+
     def _toggle_launchpad(self):
         if self._animation["enabled"]:
             AnimationManager.animate(self, self._animation["type"], self._animation["duration"])
@@ -428,6 +444,7 @@ class LaunchpadWidget(BaseWidget):
         if not self._overlay:
             self._overlay = self._create_overlay()
 
+        self._previous_hwnd = get_foreground_hwnd()
         self._center_popup_on_screen()
         self._overlay.show()
         self._launchpad_popup.show()
@@ -1034,6 +1051,9 @@ class LaunchpadWidget(BaseWidget):
             self._app_icons.clear()
             self._all_apps.clear()
             self._is_closing = False
+        if self._previous_hwnd:
+            set_foreground_hwnd(self._previous_hwnd)
+            self._previous_hwnd = None
 
     def _cleanup_overlay(self):
         if self._overlay:

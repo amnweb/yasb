@@ -20,6 +20,7 @@ from core.utils.alert_dialog import raise_info_alert
 from core.utils.utilities import add_shadow
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.widgets.wallpapers_gallery import ImageGallery
+from core.utils.win32.utilities import get_foreground_hwnd, set_foreground_hwnd
 from core.validation.widgets.yasb.wallpapers import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
 from settings import DEBUG
@@ -27,6 +28,7 @@ from settings import DEBUG
 
 class WallpapersWidget(BaseWidget):
     set_wallpaper_signal = pyqtSignal(str)
+    handle_widget_cli = pyqtSignal(str, str)
 
     user32 = ctypes.windll.user32
     validation_schema = VALIDATION_SCHEMA
@@ -90,6 +92,30 @@ class WallpapersWidget(BaseWidget):
         self.callback_timer = "change_background"
         if self._change_automatically:
             self.start_timer()
+
+        self._previous_hwnd = None
+        self.handle_widget_cli.connect(self._handle_widget_cli)
+        self._event_service.register_event("handle_widget_cli", self.handle_widget_cli)
+
+    def _handle_widget_cli(self, widget: str, screen: str):
+        """Handle widget CLI commands"""
+        if widget == "wallpaper":
+            current_screen = self.window().screen() if self.window() else None
+            current_screen_name = current_screen.name() if current_screen else None
+            if not screen or (current_screen_name and screen.lower() == current_screen_name.lower()):
+                self._toggle_widget()
+
+    def _toggle_widget(self):
+        """Toggle the visibility of the widget."""
+        if self._image_gallery is not None and self._image_gallery.isVisible():
+            self._image_gallery.fade_out_and_close_gallery()
+            if self._previous_hwnd:
+                set_foreground_hwnd(self._previous_hwnd)
+                self._previous_hwnd = None
+        else:
+            self._previous_hwnd = get_foreground_hwnd()
+            self._image_gallery = ImageGallery(self._image_path, self._gallery)
+            self._image_gallery.fade_in_gallery(parent=self)
 
     def start_timer(self):
         """Start the timer for automatic wallpaper changes."""
