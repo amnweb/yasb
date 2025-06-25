@@ -52,30 +52,31 @@ _ICON_CACHE = {}
 
 
 @lru_cache(maxsize=128)
-def load_and_scale_icon(icon_path: str, size: int) -> QPixmap:
+def load_and_scale_icon(icon_path: str, size: int, dpr=1.0) -> QPixmap:
     """Load and scale icon with caching, supports SVG"""
     try:
         ext = os.path.splitext(icon_path)[1].lower()
+        target_size = int(size * dpr)
         if ext == ".svg":
             renderer = QSvgRenderer(icon_path)
-            pixmap = QPixmap(size, size)
+            pixmap = QPixmap(target_size, target_size)
             pixmap.fill(Qt.GlobalColor.transparent)
             painter = QPainter(pixmap)
             renderer.render(painter)
             painter.end()
+            pixmap.setDevicePixelRatio(dpr)
             return pixmap
         else:
             pixmap = QPixmap(icon_path)
             if pixmap.isNull():
                 return QPixmap()
-            if pixmap.width() != size or pixmap.height() != size:
-                scaled_pixmap = pixmap.scaled(
-                    QSize(size, size),
-                    Qt.AspectRatioMode.KeepAspectRatio,
-                    Qt.TransformationMode.SmoothTransformation,
-                )
-                return scaled_pixmap
-            return pixmap
+            scaled_pixmap = pixmap.scaled(
+                QSize(target_size, target_size),
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation,
+            )
+            scaled_pixmap.setDevicePixelRatio(dpr)
+            return scaled_pixmap
     except Exception as e:
         logging.error(f"Failed to load icon {icon_path}: {e}")
         return QPixmap()
@@ -91,9 +92,9 @@ class IconLoadWorker(QThread):
         self.icon_requests = icon_requests
 
     def run(self):
-        for icon_path, size in self.icon_requests:
+        for icon_path, size, dpr in self.icon_requests:
             if os.path.isfile(icon_path):
-                pixmap = load_and_scale_icon(icon_path, size)
+                pixmap = load_and_scale_icon(icon_path, size, dpr)
                 if not pixmap.isNull():
                     self.icon_loaded.emit(icon_path, pixmap)
 
@@ -379,7 +380,7 @@ class LaunchpadWidget(BaseWidget):
         self._container_shadow = container_shadow
         self._app_title_shadow = app_title_shadow
         self._app_icon_shadow = app_icon_shadow
-
+        self._dpr = 1.0
         # Setup directories and files
         self._launchpad_dir = os.path.join(HOME_CONFIGURATION_DIR, "launchpad")
         self._icons_dir = os.path.join(self._launchpad_dir, "icons")
@@ -439,6 +440,7 @@ class LaunchpadWidget(BaseWidget):
             self._show_launchpad()
 
     def _show_launchpad(self):
+        self._dpr = self.screen().devicePixelRatio()
         if not self._launchpad_popup:
             self._launchpad_popup = self._create_launchpad_popup()
         if not self._overlay:
@@ -590,14 +592,14 @@ class LaunchpadWidget(BaseWidget):
             app_icon.icon_label.setText("")
             app_icon._icon_loaded = True
             return
-        cache_key = f"{icon_path}_{self._app_icon_size}"
+        cache_key = f"{icon_path}_{self._app_icon_size}_{self._dpr}"
         if cache_key in _ICON_CACHE:
             app_icon.icon_label.setPixmap(_ICON_CACHE[cache_key])
             app_icon.icon_label.setStyleSheet("")
             app_icon._icon_loaded = True
             return
         try:
-            pixmap = load_and_scale_icon(icon_path, self._app_icon_size)
+            pixmap = load_and_scale_icon(icon_path, self._app_icon_size, self._dpr)
             if not pixmap.isNull():
                 _ICON_CACHE[cache_key] = pixmap
                 app_icon.icon_label.setPixmap(pixmap)
@@ -981,7 +983,7 @@ class LaunchpadWidget(BaseWidget):
             if icon_path and os.path.isfile(icon_path):
                 cache_key = f"{icon_path}_{self._app_icon_size}"
                 if cache_key not in _ICON_CACHE:
-                    icon_requests.append((icon_path, self._app_icon_size))
+                    icon_requests.append((icon_path, self._app_icon_size, self._dpr))
         if icon_requests:
             self._start_background_loading(icon_requests)
 
