@@ -20,7 +20,7 @@ from PyQt6.QtCore import (
     QTimer,
     pyqtSignal,
 )
-from PyQt6.QtGui import QAction, QColor, QCursor, QDrag, QPainter, QPixmap, QWheelEvent
+from PyQt6.QtGui import QAction, QColor, QCursor, QDrag, QIcon, QPainter, QPixmap, QWheelEvent
 from PyQt6.QtSvg import QSvgRenderer
 from PyQt6.QtWidgets import (
     QApplication,
@@ -135,6 +135,7 @@ class AppDialog(QDialog):
 
         # Title field
         self.title_edit = QLineEdit()
+        self.lineedit_context_menu(self.title_edit)
         self.title_edit.setPlaceholderText("Enter application title...")
         self.title_edit.setText(self.app_data.get("title", ""))
         self.title_edit.setProperty("class", "title-field")
@@ -145,6 +146,7 @@ class AppDialog(QDialog):
         # App Path field
         h1 = QHBoxLayout()
         self.path_edit = QLineEdit()
+        self.lineedit_context_menu(self.path_edit)
         self.path_edit.setPlaceholderText("Application executable, command or url...")
         self.path_edit.setText(self.app_data.get("path", ""))
         self.path_edit.setProperty("class", "path-field")
@@ -161,6 +163,7 @@ class AppDialog(QDialog):
         # Icon field
         h2 = QHBoxLayout()
         self.icon_edit = QLineEdit()
+        self.lineedit_context_menu(self.icon_edit)
         self.icon_edit.setPlaceholderText("Icon file path...")
         self.icon_edit.setText(self.app_data.get("icon", ""))
         self.icon_edit.setProperty("class", "icon-field")
@@ -193,6 +196,19 @@ class AppDialog(QDialog):
         button_layout.addWidget(add_btn)
         layout.addWidget(button_container)
         self.setLayout(layout)
+
+    def lineedit_context_menu(self, lineedit: QLineEdit):
+        def show_custom_menu(point):
+            menu = lineedit.createStandardContextMenu()
+            qmenu_rounded_corners(menu)
+            menu.setProperty("class", "context-menu")
+            for action in menu.actions():
+                action.setIconVisibleInMenu(False)
+                action.setIcon(QIcon())
+            menu.exec(lineedit.mapToGlobal(point))
+
+        lineedit.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        lineedit.customContextMenuRequested.connect(show_custom_menu)
 
     def _show_warning(self, message):
         """Show warning message with animation"""
