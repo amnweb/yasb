@@ -164,6 +164,7 @@ class PowerMenuWidget(BaseWidget):
         self._button.clicked.connect(self.show_main_window)
         self.main_window = None
 
+        self._popup_from_cli = False
         self._previous_hwnd = None
 
         self._event_service = EventService()
@@ -176,7 +177,7 @@ class PowerMenuWidget(BaseWidget):
             current_screen = self.window().screen() if self.window() else None
             current_screen_name = current_screen.name() if current_screen else None
             if not screen or (current_screen_name and screen.lower() == current_screen_name.lower()):
-                # If no screen specified or current screen matches, show the main window
+                self._popup_from_cli = True
                 self.show_main_window()
 
     def show_main_window(self):
@@ -187,7 +188,9 @@ class PowerMenuWidget(BaseWidget):
                 set_foreground_hwnd(self._previous_hwnd)
                 self._previous_hwnd = None
         else:
-            self._previous_hwnd = get_foreground_hwnd()
+            if getattr(self, "_popup_from_cli", False):
+                self._previous_hwnd = get_foreground_hwnd()
+                self._popup_from_cli = False
             self.main_window = MainWindow(
                 self._button,
                 self.uptime,
