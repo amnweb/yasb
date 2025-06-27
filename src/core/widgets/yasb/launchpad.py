@@ -8,6 +8,8 @@ import webbrowser
 from functools import lru_cache
 from typing import Any, Dict, List
 
+from icoextract import IconExtractor
+from PIL import Image
 from PyQt6.QtCore import (
     QAbstractAnimation,
     QEasingCurve,
@@ -47,7 +49,9 @@ from core.utils.win32.utilities import get_foreground_hwnd, qmenu_rounded_corner
 from core.validation.widgets.yasb.launchpad import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
 
-# Global icon cache to persist across widget instances
+logging.getLogger("icoextract").setLevel(logging.ERROR)
+
+
 _ICON_CACHE = {}
 
 
@@ -392,11 +396,14 @@ class LaunchpadWidget(BaseWidget):
         # Initialize properties
         self._launchpad_popup = None
         self._overlay = None
+        self._drop_overlay = None
         self._is_closing = False
+        self._popup_from_cli = False
         self._app_icons = []
         self._all_apps = []
         self._icon_worker = None
         self._grid_columns = 0
+        self._num_drag_items = 0
 
         # Create a container widget for layout
         self._widget_container_layout = QHBoxLayout()
@@ -429,6 +436,7 @@ class LaunchpadWidget(BaseWidget):
             current_screen = self.window().screen() if self.window() else None
             current_screen_name = current_screen.name() if current_screen else None
             if not screen or (current_screen_name and screen.lower() == current_screen_name.lower()):
+                self._popup_from_cli = True
                 self._toggle_launchpad()
 
     def _toggle_launchpad(self):
@@ -443,12 +451,16 @@ class LaunchpadWidget(BaseWidget):
         self._dpr = self.screen().devicePixelRatio()
         if not self._launchpad_popup:
             self._launchpad_popup = self._create_launchpad_popup()
-        if not self._overlay:
+        if not self._overlay and not self._window["fullscreen"] and self._window["overlay_block"]:
             self._overlay = self._create_overlay()
 
-        self._previous_hwnd = get_foreground_hwnd()
+        if getattr(self, "_popup_from_cli", False):
+            self._previous_hwnd = get_foreground_hwnd()
+            self._popup_from_cli = False
+
         self._center_popup_on_screen()
-        self._overlay.show()
+        if self._overlay:
+            self._overlay.show()
         self._launchpad_popup.show()
         self._populate_grid()
         self._launchpad_popup.raise_()
@@ -547,7 +559,11 @@ class LaunchpadWidget(BaseWidget):
         app_icon.mouseReleaseEvent = mouseReleaseEvent
 
         def dragEnterEvent(event):
-            if event.mimeData().hasText():
+            if event.mimeData().hasUrls():
+                self._show_drop_overlay()
+                event.acceptProposedAction()
+
+            elif event.mimeData().hasText():
                 event.acceptProposedAction()
                 app_icon._drop_highlight = True
                 app_icon.setProperty("isDropTarget", True)
@@ -558,10 +574,14 @@ class LaunchpadWidget(BaseWidget):
                     }
                 """)
                 app_icon.update()
+            else:
+                event.ignore()
 
         app_icon.dragEnterEvent = dragEnterEvent
 
         def dragLeaveEvent(event):
+            if self._overlay and self._overlay.isVisible():
+                self._hide_drop_overlay()
             app_icon._drop_highlight = False
             app_icon.setProperty("isDropTarget", False)
             app_icon.setStyleSheet("")
@@ -692,6 +712,35 @@ class LaunchpadWidget(BaseWidget):
         """Handle app context menu shown event"""
         qmenu_rounded_corners(self._menu)
 
+    def _show_drop_overlay(self):
+        """Show the drop overlay when dragging items over the launchpad"""
+        if self._num_drag_items > 1:
+            overlay_label = f"Drop {self._num_drag_items} Apps Here"
+        else:
+            overlay_label = "Drop App Here"
+
+        if hasattr(self, "_drop_overlay") and self._drop_overlay:
+            # Update label text if overlay already exists
+            label = self._drop_overlay.findChild(QLabel)
+            if label:
+                label.setText(overlay_label)
+            self._drop_overlay.show()
+            return
+
+        overlay = QWidget(self._launchpad_popup)
+        overlay.setStyleSheet("background: rgba(0,0,0,0.4);")
+        overlay.setGeometry(self._launchpad_popup.rect())
+        label = QLabel(overlay_label, overlay)
+        label.setStyleSheet("color: white; font-size: 32px; font-weight: 600;")
+        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        label.setGeometry(0, 0, overlay.width(), overlay.height())
+        overlay.show()
+        self._drop_overlay = overlay
+
+    def _hide_drop_overlay(self):
+        if hasattr(self, "_drop_overlay") and self._drop_overlay:
+            self._drop_overlay.hide()
+
     def _create_launchpad_popup(self):
         """Create the launchpad popup window"""
         self.popup = QWidget(self)
@@ -801,10 +850,14 @@ class LaunchpadWidget(BaseWidget):
         self.popup.grid_container = grid_container
         self.popup.grid_layout = grid_layout
 
+        self.popup.setAcceptDrops(True)
         self.popup.mousePressEvent = lambda event: self._handle_popup_mouse_press(self.popup, event)
         self.popup.keyPressEvent = lambda event: self._handle_popup_key_press(event)
         self.popup.showEvent = self._popup_show_event
         self.popup.closeEvent = self._popup_close_event
+        self.popup.dropEvent = self._popup_drop_event
+        self.popup.dragEnterEvent = self._popup_drag_enter_event
+        self.popup.dragLeaveEvent = self._popup_drag_leave_event
 
         return self.popup
 
@@ -827,6 +880,167 @@ class LaunchpadWidget(BaseWidget):
         self._overlay = TransparentOverlay()
         self._overlay.overlay_clicked.connect(self._hide_launchpad)
         return self._overlay
+
+    def _extract_icon_from_path(self, file_path):
+        """
+        Extract the icon from a file (ico, exe, dll) and save as PNG in the icons dir.
+        Returns the PNG path or None.
+        """
+        ext = os.path.splitext(file_path)[1].lower()
+        base = os.path.splitext(os.path.basename(file_path))[0]
+        temp_png = os.path.join(self._icons_dir, f"{base}_{int(time.time() * 1000)}.png")
+
+        if ext == ".ico":
+            try:
+                im = Image.open(file_path)
+                largest = im
+                max_size = im.width * im.height
+                for frame in range(getattr(im, "n_frames", 1)):
+                    im.seek(frame)
+                    size = im.width * im.height
+                    if size > max_size:
+                        largest = im.copy()
+                        max_size = size
+                largest.save(temp_png, format="PNG")
+                return temp_png
+            except Exception:
+                return None
+
+        mun_candidate = None
+        system32 = os.path.join(os.environ.get("WINDIR", r"C:\Windows"), "System32")
+        sysres = os.path.join(os.environ.get("WINDIR", r"C:\Windows"), "SystemResources")
+        basename = os.path.basename(file_path)
+        if file_path.lower().startswith(system32.lower()) and basename.lower().endswith(".exe"):
+            mun_candidate = os.path.join(sysres, f"{basename}.mun")
+
+        # Try extracting from the original file first
+        try:
+            extractor = IconExtractor(file_path)
+            data = extractor.get_icon(num=0)
+            img = Image.open(data)
+            img.save(temp_png, format="PNG")
+            return temp_png
+        except Exception:
+            if mun_candidate and os.path.exists(mun_candidate):
+                try:
+                    extractor = IconExtractor(mun_candidate)
+                    data = extractor.get_icon(num=0)
+                    img = Image.open(data)
+                    img.save(temp_png, format="PNG")
+                    return temp_png
+                except Exception:
+                    return None
+            return None
+
+    def _get_file_description(self, path):
+        """Get the file description from Windows file properties."""
+        import win32api
+
+        try:
+            language, codepage = win32api.GetFileVersionInfo(path, "\\VarFileInfo\\Translation")[0]
+            stringFileInfo = "\\StringFileInfo\\%04X%04X\\%s" % (language, codepage, "FileDescription")
+            description = win32api.GetFileVersionInfo(path, stringFileInfo)
+        except:
+            description = "unknown"
+
+        return description
+
+    def _resolve_lnk_target(self, lnk_path):
+        """Resolve the target path, icon location, and display name from a .lnk file."""
+        try:
+            import win32com.client
+
+            shell = win32com.client.Dispatch("WScript.Shell")
+            shortcut = shell.CreateShortcut(lnk_path)
+            target_path = shortcut.TargetPath
+            arguments = shortcut.Arguments
+            icon_path = shortcut.IconLocation
+            app_name = os.path.splitext(os.path.basename(lnk_path))[0]
+            # Combine target and arguments for the real launch command
+            if arguments:
+                full_command = f'"{target_path}" {arguments}'
+            else:
+                full_command = target_path
+            if icon_path:
+                icon_path = icon_path.split(",")[0]
+            if icon_path and os.path.isfile(icon_path):
+                return full_command, icon_path, app_name
+            elif target_path and os.path.isfile(target_path):
+                return full_command, target_path, app_name
+            else:
+                return full_command, None, app_name
+        except Exception as e:
+            self._warning_dialog(f"Failed to resolve shortcut: {lnk_path}<br>Error: {e}")
+            return None, None, None
+
+    def _handle_file_drop(self, file_path, refresh_grid=True):
+        ext = os.path.splitext(file_path)[1].lower()
+        app_data = None
+
+        if ext == ".lnk":
+            target_path, icon_path, app_name = self._resolve_lnk_target(file_path)
+            if not app_name or not target_path:
+                self._warning_dialog(f"Failed to resolve shortcut: {file_path}")
+                return
+            if not icon_path:
+                icon_path = target_path
+            icon_png = self._extract_icon_from_path(icon_path)
+            if not icon_png:
+                self._warning_dialog(
+                    f"Failed to extract icon for application<br><b>{file_path}</b><br>Please select an icon manually."
+                )
+
+            app_data = (app_name, target_path, icon_png or "")
+
+        elif ext == ".exe":
+            title = self._get_file_description(file_path)
+            if not title:
+                self._warning_dialog(f"Failed to get description for executable: {file_path}")
+                return
+            icon_png = self._extract_icon_from_path(file_path)
+            if not icon_png:
+                self._warning_dialog(
+                    f"Failed to extract icon for application<br><b>{file_path}</b><br>Please select an icon manually."
+                )
+
+            app_data = (title, file_path, icon_png or "")
+
+        if app_data:
+            app_dict = {
+                "title": app_data[0],
+                "path": app_data[1],
+                "icon": app_data[2],
+                "id": int(time.time() * 1000),
+            }
+            apps = self._load_apps()
+            apps.append(app_dict)
+            self._save_apps(apps)
+            if self._launchpad_popup and refresh_grid:
+                self._populate_grid()
+
+    def _popup_drag_enter_event(self, event):
+        if event.mimeData().hasUrls():
+            urls = event.mimeData().urls()
+            self._num_drag_items = len(urls)
+            self._show_drop_overlay()
+            event.acceptProposedAction()
+        else:
+            event.ignore()
+
+    def _popup_drag_leave_event(self, event):
+        self._hide_drop_overlay()
+        event.accept()
+
+    def _popup_drop_event(self, event):
+        self._hide_drop_overlay()
+        if event.mimeData().hasUrls():
+            file_paths = [url.toLocalFile() for url in event.mimeData().urls()]
+            for file_path in file_paths:
+                self._handle_file_drop(file_path, refresh_grid=False)
+            self._populate_grid()  # Refresh only once after all files are added
+            event.acceptProposedAction()
+        else:
+            event.ignore()
 
     def _handle_popup_mouse_press(self, popup, event):
         if event.button() == Qt.MouseButton.LeftButton:
@@ -925,9 +1139,6 @@ class LaunchpadWidget(BaseWidget):
             return
         grid_layout = self._launchpad_popup.grid_layout
         grid_container = self._launchpad_popup.grid_container
-        grid_container.setAcceptDrops(True)
-        grid_container.dragEnterEvent = lambda event: self._grid_drag_enter_event(event)
-        grid_container.dropEvent = lambda event: self._grid_drop_event(event)
         for i in reversed(range(grid_layout.count())):
             child = grid_layout.itemAt(i).widget()
             if child:
@@ -987,30 +1198,6 @@ class LaunchpadWidget(BaseWidget):
         if icon_requests:
             self._start_background_loading(icon_requests)
 
-    def _grid_drag_enter_event(self, event):
-        if event.mimeData().hasText():
-            event.acceptProposedAction()
-
-    def _grid_drop_event(self, event):
-        if event.mimeData().hasText():
-            source_app_id = event.mimeData().text()
-            try:
-                apps = self._load_apps()
-                source_app = None
-                for i, app in enumerate(apps):
-                    if str(app.get("id", "")) == source_app_id:
-                        source_app = apps.pop(i)
-                        break
-                if source_app:
-                    apps.append(source_app)
-                    self._save_apps(apps)
-                    if self._launchpad_popup:
-                        current_search = self._launchpad_popup.search_input.text()
-                        self._populate_grid(current_search)
-            except Exception as e:
-                logging.error(f"Failed to move app to end: {e}")
-            event.acceptProposedAction()
-
     def _fade_in_popup(self):
         if self._window_animation["fade_in_duration"] > 0 and self._launchpad_popup:
             self._launchpad_popup.fade_in_animation.start()
@@ -1047,12 +1234,14 @@ class LaunchpadWidget(BaseWidget):
 
     def _cleanup_popup(self):
         if self._launchpad_popup:
+            self._cleanup_drop_overlay()
             self._launchpad_popup.hide()
             self._launchpad_popup.deleteLater()
             self._launchpad_popup = None
             self._app_icons.clear()
             self._all_apps.clear()
             self._is_closing = False
+
         if self._previous_hwnd:
             set_foreground_hwnd(self._previous_hwnd)
             self._previous_hwnd = None
@@ -1062,6 +1251,15 @@ class LaunchpadWidget(BaseWidget):
             self._overlay.hide()
             self._overlay.deleteLater()
             self._overlay = None
+
+    def _cleanup_drop_overlay(self):
+        if hasattr(self, "_drop_overlay") and self._drop_overlay:
+            try:
+                self._drop_overlay.hide()
+                self._drop_overlay.deleteLater()
+            except Exception:
+                pass
+            self._drop_overlay = None
 
     def _focus_first_icon(self):
         if self._app_icons and len(self._app_icons) > 0:
@@ -1178,6 +1376,51 @@ class LaunchpadWidget(BaseWidget):
                     del _ICON_CACHE[cache_key]
             if self._launchpad_popup:
                 self._populate_grid()
+
+    def _warning_dialog(self, message: str):
+        """Show a warning dialog with a message"""
+        dialog = QDialog(self._launchpad_popup if self._launchpad_popup else None)
+        dialog.setWindowTitle("Warning")
+        dialog.setMinimumSize(400, 150)
+        dialog.setWindowFlags(
+            Qt.WindowType.Dialog
+            | Qt.WindowType.WindowStaysOnTopHint
+            | Qt.WindowType.WindowTitleHint
+            | Qt.WindowType.CustomizeWindowHint
+            | Qt.WindowType.MSWindowsFixedSizeDialogHint
+        )
+        dialog.setProperty("class", "app-dialog")
+
+        layout = QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+
+        content_container = QWidget()
+        content_layout = QVBoxLayout(content_container)
+        content_layout.setContentsMargins(20, 20, 20, 0)
+        content_layout.setSpacing(0)
+
+        message_label = QLabel(message)
+        message_label.setWordWrap(True)
+        message_label.setProperty("class", "message")
+        message_label.setTextFormat(Qt.TextFormat.RichText)
+        content_layout.addWidget(message_label)
+        layout.addWidget(content_container)
+
+        button_container = QFrame()
+        button_container.setProperty("class", "buttons-container")
+        button_layout = QHBoxLayout(button_container)
+        button_layout.setContentsMargins(0, 0, 0, 0)
+
+        ok_btn = QPushButton("OK")
+        ok_btn.setProperty("class", "button")
+        ok_btn.clicked.connect(dialog.accept)
+        button_layout.addWidget(ok_btn)
+
+        layout.addWidget(button_container)
+        dialog.setLayout(layout)
+
+        dialog.exec()
 
     def _delete_app(self, app_data: Dict[str, Any]):
         """Delete an app with modern styled confirmation dialog"""

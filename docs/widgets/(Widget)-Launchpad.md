@@ -9,7 +9,7 @@ The Launchpad widget provides a customizable application launcher grid, similar 
 | `label`               | string   | `'<span>\udb85\udcde</span>'`| The label/icon for the widget on the bar.                                   |
 | `search_placeholder`  | string   | `"Search applications..."`     | Placeholder text for the search field.                                      |
 | `app_icon_size`       | int      | `64`                   | Size of application icons in pixels.                                        |
-| `window`              | dict     | `{fullscreen: False, width: 800, height: 600}`                | Popup window size and fullscreen options.                                   |
+| `window`              | dict     | `{fullscreen: False, width: 800, height: 600, overlay_block: true}`                | Popup window size and fullscreen options.                                   |
 | `window_style`        | dict     | `{enable_blur: True, round_corners: True, round_corners_type: "normal", border_color: "system"}`                | Popup window styling (blur, corners, border, etc).                          |
 | `window_animation`    | dict     | `{fade_in_duration: 400, fade_out_duration: 400}`                | Animation settings for showing/hiding the popup.                            |
 | `animation`           | dict     | `{enabled: True, type: "fadeInOut", duration: 200}`                | Widget animation settings.                                                  |
@@ -33,6 +33,7 @@ launchpad:
       fullscreen: false
       width: 800
       height: 600
+      overlay_block: true
     window_style:
       enable_blur: true
       round_corners: true
@@ -64,12 +65,43 @@ launchpad:
 - **label_shadow:** Shadow options for the label.
 - **container_shadow:** Shadow options for the widget container.
 - **window:** Popup window size and fullscreen options.
+  - ***fullscreen:*** Whether the popup should be fullscreen.
+  - ***width:*** Width of the popup window.
+  - ***height:*** Height of the popup window.
+  - ***overlay_block:*** Whether the popup should block interaction with the main window.
 - **window_style:** Popup window styling (blur, round corners, border, etc).
+  - ***enable_blur:*** Whether to enable background blur for the popup.
+  - ***round_corners:*** Whether to round the corners of the popup window.
+  - ***round_corners_type:*** Type of corner rounding ("normal" or "small").
+  - ***border_color:*** Color of the popup window border (can be "system" HEX or None).
 - **window_animation:** Animation settings for showing/hiding the popup.
-- **animation:** Widget animation settings.
+  - ***fade_in_duration:*** Duration of the fade-in animation in milliseconds.
+  - ***fade_out_duration:*** Duration of the fade-out animation in milliseconds.
+- **animation:** Widget label animation settings.
+  - ***enabled:*** Whether animations are enabled.
+  - ***type:*** Type of animation ("fadeInOut").
+  - ***duration:*** Duration of the animation in milliseconds.
 - **callbacks:** Mouse event callbacks (`on_left`, `on_middle`, `on_right`).
 - **app_title_shadow:** Shadow options for app titles.
+  - ***enabled:*** Whether to enable shadow for app titles.
+  - ***color:*** Color of the shadow (HEX, HEX with alpha or name).
+  - ***offset:*** Offset of the shadow in pixels (x, y).
+  - ***radius:*** Radius of the shadow blur.
 - **app_icon_shadow:** Shadow options for app icons.
+  - ***enabled:*** Whether to enable shadow for app icons.
+  - ***color:*** Color of the shadow (HEX, HEX with alpha or name).
+  - ***offset:*** Offset of the shadow in pixels (x, y).
+  - ***radius:*** Radius of the shadow blur.
+- **label_shadow**: Shadow options for the widget label.
+  - ***enabled:*** Whether to enable shadow for the label.
+  - ***color:*** Color of the shadow (HEX, HEX with alpha or name).
+  - ***offset:*** Offset of the shadow in pixels (x, y).
+  - ***radius:*** Radius of the shadow blur.
+- **container_shadow**: Shadow options for the widget container.
+  - ***enabled:*** Whether to enable shadow for the container.
+  - ***color:*** Color of the shadow (HEX, HEX with alpha or name).
+  - ***offset:*** Offset of the shadow in pixels (x, y).
+  - ***radius:*** Radius of the shadow blur.
 
 ---
 
@@ -80,13 +112,12 @@ The Launchpad widget is a powerful and user-friendly application launcher design
 - **App Grid:** Displays your applications as icons with titles in a grid layout.
 - **Quick Launch:** Click any icon to instantly launch the associated executable, script, or open a URL in your default browser.
 - **Search:** Filter your apps in real-time using the search bar.
-- **Drag & Drop:** Reorder apps by dragging icons, or move them to the end of the list.
+- **Drag & Drop:** Drag and drop shortcut icons or executables into the grid to add them to your launchpad. Reorder apps by dragging them around.
 - **Context Menu:** Right-click any app for options to edit, delete, or change the order of your apps (A-Z, Z-A, recent, oldest).
 - **Add/Edit Apps:** Easily add new apps or edit existing ones, including setting a custom icon and title.
 - **Customizable Appearance:** Supports custom icon sizes, window blur, rounded corners, shadows, and more via configuration.
 - **Keyboard Navigation:** Navigate the grid and launch apps using arrow keys and Enter.
 - **Animations:** Smooth fade-in and fade-out animations for the popup window.
-
 
 
 ## Example Style

@@ -2,7 +2,7 @@ DEFAULTS = {
     "label": "\udb85\udcde",
     "search_placeholder": "Search applications...",
     "app_icon_size": 64,
-    "window": {"fullscreen": False, "width": 800, "height": 600},
+    "window": {"fullscreen": False, "width": 800, "height": 600, "overlay_block": True},
     "window_animation": {"fade_in_duration": 400, "fade_out_duration": 400},
     "window_style": {
         "enable_blur": True,
@@ -25,6 +25,7 @@ VALIDATION_SCHEMA = {
             "fullscreen": {"type": "boolean", "default": DEFAULTS["window"]["fullscreen"]},
             "width": {"type": "integer", "default": DEFAULTS["window"]["width"]},
             "height": {"type": "integer", "default": DEFAULTS["window"]["height"]},
+            "overlay_block": {"type": "boolean", "default": DEFAULTS["window"]["overlay_block"]},
         },
         "default": DEFAULTS["window"],
     },
