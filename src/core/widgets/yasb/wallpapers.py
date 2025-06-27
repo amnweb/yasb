@@ -66,6 +66,7 @@ class WallpapersWidget(BaseWidget):
 
         self._last_image = None
         self._is_running = False
+        self._popup_from_cli = False
 
         # Construct container
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
@@ -103,6 +104,7 @@ class WallpapersWidget(BaseWidget):
             current_screen = self.window().screen() if self.window() else None
             current_screen_name = current_screen.name() if current_screen else None
             if not screen or (current_screen_name and screen.lower() == current_screen_name.lower()):
+                self._popup_from_cli = True
                 self._toggle_widget()
 
     def _toggle_widget(self):
@@ -113,7 +115,9 @@ class WallpapersWidget(BaseWidget):
                 set_foreground_hwnd(self._previous_hwnd)
                 self._previous_hwnd = None
         else:
-            self._previous_hwnd = get_foreground_hwnd()
+            if getattr(self, "_popup_from_cli", False):
+                self._previous_hwnd = get_foreground_hwnd()
+                self._popup_from_cli = False
             self._image_gallery = ImageGallery(self._image_path, self._gallery)
             self._image_gallery.fade_in_gallery(parent=self)
 
