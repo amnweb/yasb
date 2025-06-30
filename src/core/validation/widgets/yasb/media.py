@@ -1,4 +1,6 @@
-DEFAULTS = {
+from typing import Any
+
+DEFAULTS: dict[str, Any] = {
     "label": "{title}",
     "label_alt": "{artist} - {title}",
     "animation": {"enabled": True, "type": "fadeInOut", "duration": 200},
@@ -25,6 +27,16 @@ DEFAULTS = {
     },
     "media_menu_icons": {"play": "\ue768", "pause": "\ue769", "prev_track": "\ue892", "next_track": "\ue893"},
     "container_padding": {"top": 0, "left": 0, "bottom": 0, "right": 0},
+    "scrolling_label": {
+        "enabled": False,
+        "update_interval_ms": 33,
+        "style": "left",
+        "separator": " ",
+        "label_padding": 1,
+        "ease_slope": 20,
+        "ease_pos": 0.8,
+        "ease_min": 0.5,
+    },
     "callbacks": {"on_left": "toggle_label", "on_middle": "do_nothing", "on_right": "do_nothing"},
 }
 
@@ -124,6 +136,25 @@ VALIDATION_SCHEMA = {
             "right": {"type": "integer", "default": DEFAULTS["container_padding"]["right"]},
         },
         "default": DEFAULTS["container_padding"],
+    },
+    "scrolling_label": {
+        "type": "dict",
+        "required": False,
+        "schema": {
+            "enabled": {"type": "boolean", "default": DEFAULTS["scrolling_label"]["enabled"]},
+            "update_interval_ms": {"type": "integer", "default": DEFAULTS["scrolling_label"]["update_interval_ms"]},
+            "style": {
+                "type": "string",
+                "default": DEFAULTS["scrolling_label"]["style"],
+                "allowed": ["left", "right", "bounce", "bounce-ease"],
+            },
+            "separator": {"type": "string", "default": DEFAULTS["scrolling_label"]["separator"]},
+            "label_padding": {"type": "integer", "default": DEFAULTS["scrolling_label"]["label_padding"]},
+            "ease_slope": {"type": "integer", "default": DEFAULTS["scrolling_label"]["ease_slope"]},
+            "ease_pos": {"type": "float", "default": DEFAULTS["scrolling_label"]["ease_pos"]},
+            "ease_min": {"type": "float", "default": DEFAULTS["scrolling_label"]["ease_min"]},
+        },
+        "default": DEFAULTS["scrolling_label"],
     },
     "callbacks": {
         "type": "dict",
