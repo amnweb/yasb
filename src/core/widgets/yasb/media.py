@@ -13,7 +13,7 @@ from winrt.windows.media.control import GlobalSystemMediaTransportControlsSessio
 
 from core.utils.utilities import PopupWidget, add_shadow
 from core.utils.widgets.animation_manager import AnimationManager
-from core.utils.win32.media import WindowsMedia
+from core.utils.widgets.media.media import WindowsMedia
 from core.validation.widgets.yasb.media import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
 

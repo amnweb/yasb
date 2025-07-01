@@ -19,7 +19,7 @@ from core.event_service import EventService
 from core.utils.alert_dialog import raise_info_alert
 from core.utils.utilities import add_shadow
 from core.utils.widgets.animation_manager import AnimationManager
-from core.utils.widgets.wallpapers_gallery import ImageGallery
+from core.utils.widgets.wallpapers.wallpapers_gallery import ImageGallery
 from core.utils.win32.utilities import get_foreground_hwnd, set_foreground_hwnd
 from core.validation.widgets.yasb.wallpapers import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget

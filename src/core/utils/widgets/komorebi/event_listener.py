@@ -10,7 +10,7 @@ from PyQt6.QtCore import QThread
 
 from core.event_enums import KomorebiEvent
 from core.event_service import EventService
-from core.utils.komorebi.client import KomorebiClient
+from core.utils.widgets.komorebi.client import KomorebiClient
 from settings import DEBUG
 
 KOMOREBI_PIPE_BUFF_SIZE = 64 * 1024

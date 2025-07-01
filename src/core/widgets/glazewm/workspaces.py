@@ -10,8 +10,8 @@ from PyQt6.QtCore import (
 from PyQt6.QtGui import QCursor, QShowEvent, QWheelEvent
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QWidget
 
-from core.utils.glazewm.client import GlazewmClient, Monitor
 from core.utils.utilities import add_shadow
+from core.utils.widgets.glazewm.client import GlazewmClient, Monitor
 from core.utils.win32.utilities import get_monitor_hwnd
 from core.validation.widgets.glazewm.workspaces import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget

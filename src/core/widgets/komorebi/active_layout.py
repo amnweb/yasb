@@ -7,15 +7,15 @@ from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QSizePolicy, QVBoxLayou
 
 from core.event_enums import KomorebiEvent
 from core.event_service import EventService
-from core.utils.komorebi.client import KomorebiClient
 from core.utils.utilities import PopupWidget, add_shadow
 from core.utils.widgets.animation_manager import AnimationManager
+from core.utils.widgets.komorebi.client import KomorebiClient
 from core.utils.win32.utilities import get_monitor_hwnd
 from core.validation.widgets.komorebi.active_layout import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
 
 try:
-    from core.utils.komorebi.event_listener import KomorebiEventListener
+    from core.utils.widgets.komorebi.event_listener import KomorebiEventListener
 except ImportError:
     KomorebiEventListener = None
     logging.warning("Failed to load Komorebi Event Listener")
@@ -231,8 +231,8 @@ class ActiveLayoutWidget(BaseWidget):
         if self._is_shift_layout_allowed():
             self._layouts.rotate(1)
             self.change_layout(self._layouts[0])
-            if self._animation['enabled']:
-                AnimationManager.animate(self, self._animation['type'], self._animation['duration'])
+            if self._animation["enabled"]:
+                AnimationManager.animate(self, self._animation["type"], self._animation["duration"])
         else:
             self._toggle_blocking_state()
 
@@ -240,8 +240,8 @@ class ActiveLayoutWidget(BaseWidget):
         if self._is_shift_layout_allowed():
             self._layouts.rotate(-1)
             self.change_layout(self._layouts[0])
-            if self._animation['enabled']:
-                AnimationManager.animate(self, self._animation['type'], self._animation['duration'])
+            if self._animation["enabled"]:
+                AnimationManager.animate(self, self._animation["type"], self._animation["duration"])
         else:
             self._toggle_blocking_state()
 
@@ -254,13 +254,13 @@ class ActiveLayoutWidget(BaseWidget):
         )
 
     def _toggle_blocking_state(self):
-        if self._komorebi_state.get('is_paused', False):
+        if self._komorebi_state.get("is_paused", False):
             self._komorebic.toggle("pause")
-        elif not self._focused_workspace.get('tile', False):
+        elif not self._focused_workspace.get("tile", False):
             self._komorebic.toggle("tiling")
-        elif self._focused_workspace.get('monocle_container', None):
+        elif self._focused_workspace.get("monocle_container", None):
             self._komorebic.toggle("monocle")
-        elif self._focused_workspace.get('maximized_window', None):
+        elif self._focused_workspace.get("maximized_window", None):
             self._komorebic.toggle("maximize")
 
     def _register_signals_and_events(self):

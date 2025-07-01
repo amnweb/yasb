@@ -23,10 +23,10 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from core.utils.systray.systray_widget import DropWidget, IconState, IconWidget
-from core.utils.systray.tasks_service import TasksService
-from core.utils.systray.tray_monitor import IconData, TrayMonitor
 from core.utils.utilities import add_shadow
+from core.utils.widgets.systray.systray_widget import DropWidget, IconState, IconWidget
+from core.utils.widgets.systray.tasks_service import TasksService
+from core.utils.widgets.systray.tray_monitor import IconData, TrayMonitor
 from core.utils.win32.bindings import IsWindow
 from core.utils.win32.constants import (
     NIF_GUID,

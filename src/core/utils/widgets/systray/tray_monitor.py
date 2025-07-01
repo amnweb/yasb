@@ -32,8 +32,8 @@ from win32con import (
     WM_USER,
 )
 
-import core.utils.systray.utils as utils
-from core.utils.systray.utils import (
+import core.utils.widgets.systray.utils as utils
+from core.utils.widgets.systray.utils import (
     NativeWindowEx,
     array_to_str,
     get_exe_path_from_hwnd,

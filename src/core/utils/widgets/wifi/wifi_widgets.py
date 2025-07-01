@@ -32,7 +32,7 @@ from PyQt6.QtWidgets import (
 from winrt.windows.devices.wifi import WiFiConnectionStatus
 
 from core.utils.utilities import PopupWidget
-from core.utils.wifi.wifi_managers import (
+from core.utils.widgets.wifi.wifi_managers import (
     NetworkInfo,
     ScanResultStatus,
     WiFiConnectWorker,

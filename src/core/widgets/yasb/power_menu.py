@@ -9,7 +9,7 @@ from PyQt6.QtWidgets import QApplication, QHBoxLayout, QLabel, QPushButton, QSty
 from core.config import get_stylesheet
 from core.event_service import EventService
 from core.utils.utilities import add_shadow, is_windows_10
-from core.utils.widgets.power import PowerOperations
+from core.utils.widgets.power_menu.power_commands import PowerOperations
 from core.utils.win32.blurWindow import Blur
 from core.utils.win32.utilities import get_foreground_hwnd, set_foreground_hwnd
 from core.validation.widgets.yasb.power_menu import VALIDATION_SCHEMA

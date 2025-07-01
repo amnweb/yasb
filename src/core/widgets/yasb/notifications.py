@@ -12,7 +12,7 @@ from core.validation.widgets.yasb.notifications import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
 
 try:
-    from core.utils.widgets.windows_notification import WindowsNotificationEventListener
+    from core.utils.widgets.notifications.windows_notification import WindowsNotificationEventListener
 except ImportError:
     WindowsNotificationEventListener = None
     logging.warning("Failed to load Windows Notification Event Listener")

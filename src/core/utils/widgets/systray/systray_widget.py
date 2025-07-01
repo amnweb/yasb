@@ -37,9 +37,9 @@ from win32con import (
     WM_RBUTTONUP,
 )
 
-import core.utils.systray.utils as utils
-from core.utils.systray.tray_monitor import IconData
-from core.utils.systray.utils import pack_i32
+import core.utils.widgets.systray.utils as utils
+from core.utils.widgets.systray.tray_monitor import IconData
+from core.utils.widgets.systray.utils import pack_i32
 from core.utils.win32.bindings import (
     AllowSetForegroundWindow,
     GetWindowThreadProcessId,

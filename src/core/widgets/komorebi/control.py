@@ -8,14 +8,14 @@ from PyQt6.QtWidgets import QHBoxLayout, QLabel, QSizePolicy, QVBoxLayout, QWidg
 
 from core.event_enums import KomorebiEvent
 from core.event_service import EventService
-from core.utils.komorebi.client import KomorebiClient
 from core.utils.utilities import PopupWidget, add_shadow, build_widget_label
 from core.utils.widgets.animation_manager import AnimationManager
+from core.utils.widgets.komorebi.client import KomorebiClient
 from core.validation.widgets.komorebi.control import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
 
 try:
-    from core.utils.komorebi.event_listener import KomorebiEventListener
+    from core.utils.widgets.komorebi.event_listener import KomorebiEventListener
 except ImportError:
     KomorebiEventListener = None
     logging.warning("Failed to load Komorebi Event Listener")

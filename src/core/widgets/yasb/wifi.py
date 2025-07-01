@@ -13,8 +13,8 @@ from winrt.windows.networking.connectivity import NetworkConnectivityLevel, Netw
 
 from core.utils.utilities import add_shadow
 from core.utils.widgets.animation_manager import AnimationManager
-from core.utils.wifi.wifi_managers import NetworkInfo
-from core.utils.wifi.wifi_widgets import WifiMenu
+from core.utils.widgets.wifi.wifi_managers import NetworkInfo
+from core.utils.widgets.wifi.wifi_widgets import WifiMenu
 from core.validation.widgets.yasb.wifi import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
 

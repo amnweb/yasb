@@ -5,7 +5,7 @@ import os
 from PyQt6.QtCore import QObject
 from win32con import WM_USER
 
-from core.utils.systray.utils import NativeWindowEx, get_exe_path_from_hwnd
+from core.utils.widgets.systray.utils import NativeWindowEx, get_exe_path_from_hwnd
 from core.utils.win32.bindings import (
     DefWindowProc,
     FindWindowEx,

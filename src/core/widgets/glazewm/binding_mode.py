@@ -5,9 +5,9 @@ from typing import Any, cast
 from PyQt6.QtCore import pyqtSlot
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QStyle, QWidget
 
-from core.utils.glazewm.client import BindingMode, GlazewmClient
 from core.utils.utilities import add_shadow, build_widget_label
 from core.utils.widgets.animation_manager import AnimationManager
+from core.utils.widgets.glazewm.client import BindingMode, GlazewmClient
 from core.validation.widgets.glazewm.binding_mode import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
 from settings import DEBUG
