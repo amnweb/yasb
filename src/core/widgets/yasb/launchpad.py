@@ -268,10 +268,20 @@ class AppDialog(QDialog):
                                 f"Select-Object -ExpandProperty InstallLocation"
                             )
                             result = subprocess.run(
-                                ["powershell", "-NoProfile", "-Command", ps_get_location],
+                                [
+                                    "powershell",
+                                    "-NoProfile",
+                                    "-NonInteractive",
+                                    "-NoLogo",
+                                    "-ExecutionPolicy",
+                                    "Bypass",
+                                    "-Command",
+                                    ps_get_location,
+                                ],
                                 capture_output=True,
                                 text=True,
                                 timeout=5,
+                                creationflags=subprocess.CREATE_NO_WINDOW,
                             )
                             if result.returncode == 0:
                                 install_location = result.stdout.strip()
