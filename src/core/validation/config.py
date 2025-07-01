@@ -19,6 +19,11 @@ CONFIG_SCHEMA = {
         "required": False,
         "default": None,
     },
+    "update_check": {
+        "type": "boolean",
+        "default": False,
+        "required": False,
+    },
     "komorebi": {
         "type": "dict",
         "schema": {

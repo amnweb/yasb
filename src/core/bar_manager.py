@@ -54,7 +54,10 @@ class BarManager(QObject):
             logging.error(f"Error loading config: {e}")
             return
         if config and (config != self.config):
-            if any(config[key] != self.config[key] for key in ["bars", "widgets", "komorebi", "debug", "env_file"]):
+            if any(
+                config[key] != self.config[key]
+                for key in ["bars", "widgets", "komorebi", "debug", "env_file", "update_check"]
+            ):
                 self.config = config
                 reload_application("Reloading Application because of config change.")
             else:

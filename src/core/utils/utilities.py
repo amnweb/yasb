@@ -319,11 +319,32 @@ class ToastNotifier:
         self.manager = ToastNotificationManager.get_default()
         self.toaster = self.manager.create_toast_notifier_with_id(get_app_identifier())
 
-    def show(self, icon_path: str, title: str, message: str, duration: str = "short") -> None:
+    def show(
+        self,
+        icon_path: str,
+        title: str,
+        message: str,
+        duration: str = "short",
+        launch_url: str = None,
+        scenario: str = None,
+    ) -> None:
         # refer to https://learn.microsoft.com/en-us/uwp/schemas/tiles/toastschema/schema-root
+        scenario = ' scenario="reminder"' if scenario else ""
+        actions = (
+            f"""
+            <actions>
+                <action
+                    content="Download &amp; Install"
+                    activationType="protocol"
+                    arguments="{launch_url}"/>
+            </actions>
+            """
+            if launch_url
+            else ""
+        )
         xml = XmlDocument()
         xml.load_xml(f"""
-        <toast activationType="protocol" duration="{duration}">
+        <toast activationType="protocol" duration="{duration}"{scenario}>
             <visual>
                 <binding template="ToastGeneric">
                     <image placement="appLogoOverride" hint-crop="circle" src="{icon_path}"/>
@@ -331,6 +352,7 @@ class ToastNotifier:
                     <text>{message}</text>
                 </binding>
             </visual>
+            {actions}
         </toast>
         """)
         notification = ToastNotification(xml)

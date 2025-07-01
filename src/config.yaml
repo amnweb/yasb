@@ -3,6 +3,7 @@
 watch_stylesheet: true
 watch_config: true
 debug: false
+update_check: true # Enable automatic update check.
 komorebi:
   start_command: "komorebic start --whkd"
   stop_command: "komorebic stop --whkd"
