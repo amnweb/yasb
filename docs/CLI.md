@@ -15,6 +15,7 @@ The YASB CLI is a command line interface that allows you to interact with the YA
 - `hide-bar` - Hide the status bar.
 - `show-bar` - Show the status bar.
 - `toggle-bar` - Toggle the visibility of the status bar.
+- `toggle-widget` - Toggle the visibility of specific widget.
 - `update` - Update aplicattion to the latest version.
 - `log` - Show the status bar logs in the terminal.
 - `reset` - Restore default config files and clear cache
@@ -76,3 +77,18 @@ To toggle the visibility of the status bar on a specific screen, use the followi
 yasbc toggle-bar --screen <screen_name>
 ```
 
+## Toggle Widget Visibility
+To toggle the visibility of a specific widget on screen, use the following command:
+```bash
+yasbc toggle-widget launchpad --screen 'DELL P2419H (2)'
+```
+To toggle the visibility of a specific widget on screen where is mouse cursor, use the following command:
+```bash
+yasbc toggle-widget launchpad --follow-mouse
+```
+To toggle the visibility of a specific widget on screens where is focused window, use the following command:
+```bash
+yasbc toggle-widget launchpad --follow-focused
+```
+> [!NOTE]
+> The `toggle-widget` command is not available for all widgets, it is only available for widgets that support toggling visibility. On each widget page, you can find information about the widget and whether it supports toggling visibility.

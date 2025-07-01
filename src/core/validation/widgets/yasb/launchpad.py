@@ -2,7 +2,7 @@ DEFAULTS = {
     "label": "\udb85\udcde",
     "search_placeholder": "Search applications...",
     "app_icon_size": 64,
-    "window": {"fullscreen": False, "width": 800, "height": 600},
+    "window": {"fullscreen": False, "width": 800, "height": 600, "overlay_block": True},
     "window_animation": {"fade_in_duration": 400, "fade_out_duration": 400},
     "window_style": {
         "enable_blur": True,
@@ -11,6 +11,7 @@ DEFAULTS = {
         "border_color": "system",
     },
     "animation": {"enabled": True, "type": "fadeInOut", "duration": 200},
+    "shortcuts": {"add_app": "Ctrl+N", "edit_app": "F2", "show_context_menu": "Shift+F10", "delete_app": "Delete"},
     "container_padding": {"top": 0, "left": 0, "bottom": 0, "right": 0},
     "callbacks": {"on_left": "toggle_launchpad", "on_right": "do_nothing", "on_middle": "do_nothing"},
 }
@@ -25,6 +26,7 @@ VALIDATION_SCHEMA = {
             "fullscreen": {"type": "boolean", "default": DEFAULTS["window"]["fullscreen"]},
             "width": {"type": "integer", "default": DEFAULTS["window"]["width"]},
             "height": {"type": "integer", "default": DEFAULTS["window"]["height"]},
+            "overlay_block": {"type": "boolean", "default": DEFAULTS["window"]["overlay_block"]},
         },
         "default": DEFAULTS["window"],
     },
@@ -59,6 +61,16 @@ VALIDATION_SCHEMA = {
             "duration": {"type": "integer", "default": DEFAULTS["animation"]["duration"]},
         },
         "default": DEFAULTS["animation"],
+    },
+    "shortcuts": {
+        "type": "dict",
+        "schema": {
+            "add_app": {"type": "string", "default": DEFAULTS["shortcuts"]["add_app"]},
+            "edit_app": {"type": "string", "default": DEFAULTS["shortcuts"]["edit_app"]},
+            "show_context_menu": {"type": "string", "default": DEFAULTS["shortcuts"]["show_context_menu"]},
+            "delete_app": {"type": "string", "default": DEFAULTS["shortcuts"]["delete_app"]},
+        },
+        "default": DEFAULTS["shortcuts"],
     },
     "container_padding": {
         "type": "dict",

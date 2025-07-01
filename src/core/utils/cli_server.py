@@ -252,7 +252,7 @@ class CliPipeHandler:
 
         logger.info(f"CLI server received command: {full_command}")
 
-        if command in ["stop", "reload", "show-bar", "hide-bar", "toggle-bar"]:
+        if command in ["stop", "reload", "show-bar", "hide-bar", "toggle-bar", "toggle-widget"]:
             success = WriteFile(pipe, b"ACK")
             if not success:
                 logger.error(f"Write ACK failed. Err: {GetLastError()}")

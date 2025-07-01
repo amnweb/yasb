@@ -121,6 +121,67 @@ def qmenu_rounded_corners(qwidget):
         pass
 
 
+def get_foreground_hwnd():
+    """Get HWND of the current foreground window"""
+    return ctypes.windll.user32.GetForegroundWindow()
+
+
+def set_foreground_hwnd(hwnd):
+    """Set focus to the given HWND"""
+    if hwnd and hwnd != 0:
+        ctypes.windll.user32.SetForegroundWindow(hwnd)
+
+
+def find_focused_screen(follow_mouse, follow_window, screens=None):
+    """Find the screen that should be focused based on mouse position or active window."""
+    import win32api
+    import win32gui
+    from PyQt6.QtGui import QCursor
+    from PyQt6.QtWidgets import QApplication
+
+    qt_screens = QApplication.screens()
+    primary_screen = QApplication.primaryScreen()
+
+    def is_valid(name):
+        return screens is None or any(name in s for s in screens)
+
+    # Map device names to Qt screen names for window focus
+    device_to_screen = {
+        win32api.GetMonitorInfo(win32api.MonitorFromRect((geo.left(), geo.top(), geo.right(), geo.bottom()))).get(
+            "Device"
+        ): screen.name()
+        for screen in qt_screens
+        for geo in [screen.geometry()]
+    }
+
+    if follow_mouse:
+        try:
+            pos = QCursor.pos()
+            for screen in qt_screens:
+                if screen.geometry().contains(pos) and is_valid(screen.name()):
+                    return screen.name()
+        except Exception as e:
+            logging.error(f"Exception in follow_mouse: {e}")
+
+    if follow_window:
+        hwnd = win32gui.GetForegroundWindow()
+        if hwnd:
+            monitor = get_monitor_hwnd(hwnd)
+            device_name = win32api.GetMonitorInfo(monitor).get("Device")
+            screen_name = device_to_screen.get(device_name)
+            if screen_name and is_valid(screen_name):
+                return screen_name
+
+    # Fallback to primary screen
+    if primary_screen is not None and is_valid(primary_screen.name()):
+        return primary_screen.name()
+    # Final fallback to first available screen from the list if no other screen is valid
+    for screen in qt_screens:
+        if is_valid(screen.name()):
+            return screen.name()
+    return None
+
+
 def _open_startup_registry(access_flag: int):
     """Helper function to open the startup registry key."""
     registry_path = r"SOFTWARE\Microsoft\Windows\CurrentVersion\Run"

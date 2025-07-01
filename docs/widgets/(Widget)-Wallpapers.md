@@ -75,6 +75,9 @@ wallpapers:
 
 > Gallery options above fit screen for 1920x1080 resolution. You may need to adjust the values for other resolutions.
 
+> [!NOTE]
+> Wallapers widget supports toggle visibility using the `toggle-widget wallpapers` command in the CLI. More information about the CLI commands can be found in the [CLI documentation](https://github.com/amnweb/yasb/wiki/CLI#toggle-widget-visibility).
+
 ## Example Style
 ```css
 .wallpapers-widget {

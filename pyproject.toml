@@ -25,6 +25,7 @@ dependencies = [
     "watchdog",
     "pycaw",
     "pillow==11.1",
+    "icoextract",
     "qasync",
     "obs-websocket-py",
     "pyvda",
