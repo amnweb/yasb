@@ -35,7 +35,7 @@ QT_SCALE_FACTOR_ROUNDING_POLICY="PassThrough"
 | `watch_stylesheet`         | boolean | `true`        | Reload bar when style is changed. |
 | `watch_config`         | boolean    | `true`        | Reload bar when config is changed. |
 | `debug`      | boolean  | `false`   | Enable debug mode to see more logs |
-
+| `update_check`      | boolean  | `true`   | Enable automatic update check. This works only if the application is installed. |
 
 ## Komorebi settings for tray menu
 | Option            | Type    | Default       | Description |

@@ -15,6 +15,7 @@ from core.event_service import EventService
 from core.log import init_logger
 from core.tray import SystemTrayManager
 from core.utils.controller import start_cli_server
+from core.utils.update_check import UpdateCheckService
 from core.watcher import create_observer
 from env_loader import load_env, set_font_engine
 
@@ -76,6 +77,14 @@ def main():
     # Build system tray icon
     tray_manager = SystemTrayManager(manager)
     tray_manager.show()
+
+    # Initialize auto update service
+    if config["update_check"] and getattr(sys, "frozen", False):
+        try:
+            auto_update_service = UpdateCheckService()
+            app.auto_update_service = auto_update_service
+        except Exception as e:
+            logging.error(f"Failed to start auto update service: {e}")
 
     with loop:
         loop.run_forever()
