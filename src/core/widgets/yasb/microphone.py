@@ -1,17 +1,24 @@
-import ctypes
 import logging
 import re
 
-from comtypes import CLSCTX_ALL, CoInitialize, COMObject, CoUninitialize
+from comtypes import (
+    CLSCTX_ALL,
+    CoInitialize,
+    COMObject,
+    CoUninitialize,
+)
 from pycaw.callbacks import MMNotificationClient
-from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume, IAudioEndpointVolumeCallback
-from PyQt6.QtCore import pyqtSignal
+from pycaw.pycaw import (
+    AudioUtilities,
+    IAudioEndpointVolume,
+    IAudioEndpointVolumeCallback,  # import the public enumerator
+)
+from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QWheelEvent
-from PyQt6.QtWidgets import QHBoxLayout, QLabel, QWidget
+from PyQt6.QtWidgets import QHBoxLayout, QLabel, QSlider, QVBoxLayout, QWidget
 
-from core.utils.utilities import add_shadow, build_widget_label
+from core.utils.utilities import PopupWidget, add_shadow, build_widget_label
 from core.utils.widgets.animation_manager import AnimationManager
-from core.utils.win32.system_function import KEYEVENTF_KEYUP
 from core.validation.widgets.yasb.microphone import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
 
@@ -47,8 +54,11 @@ class MicrophoneWidget(BaseWidget):
         self,
         label: str,
         label_alt: str,
+        mute_text: str,
         tooltip: bool,
+        scroll_step: int,
         icons: dict[str, str],
+        mic_menu: dict[str, str],
         animation: dict[str, str],
         container_padding: dict[str, int],
         callbacks: dict[str, str],
@@ -63,8 +73,11 @@ class MicrophoneWidget(BaseWidget):
         self._show_alt_label = False
         self._label_content = label
         self._label_alt_content = label_alt
+        self._mute_text = mute_text
         self._tooltip = tooltip
+        self._scroll_step = int(scroll_step) / 100
         self._icons = icons
+        self._mic_menu = mic_menu
         self._padding = container_padding
         self._animation = animation
         self._label_shadow = label_shadow
@@ -85,6 +98,7 @@ class MicrophoneWidget(BaseWidget):
 
         self.register_callback("toggle_label", self._toggle_label)
         self.register_callback("toggle_mute", self.toggle_mute)
+        self.register_callback("toggle_mic_menu", self.show_menu)
 
         self.callback_left = callbacks["on_left"]
         self.callback_right = callbacks["on_right"]
@@ -124,11 +138,12 @@ class MicrophoneWidget(BaseWidget):
         try:
             self._initialize_microphone_interface()
             mute_status = self.audio_endpoint.GetMute() if self.audio_endpoint else None
+            mic_level = round(self.audio_endpoint.GetMasterVolumeLevelScalar() * 100) if self.audio_endpoint else None
             min_icon = self._get_mic_icon()
             min_level = (
-                "mute"
-                if mute_status == 1
-                else f"{round(self.audio_endpoint.GetMasterVolumeLevelScalar() * 100)}%"
+                self._mute_text
+                if mute_status == 1 or mic_level == 0
+                else f"{mic_level}%"
                 if self.audio_endpoint
                 else "N/A"
             )
@@ -170,7 +185,7 @@ class MicrophoneWidget(BaseWidget):
             return self._icons["normal"]
         current_mute_status = self.audio_endpoint.GetMute()
         current_level = round(self.audio_endpoint.GetMasterVolumeLevelScalar() * 100)
-        if current_mute_status == 1:
+        if current_mute_status == 1 or current_level == 0:
             mic_icon = self._icons["muted"]
             tooltip = f"Muted: Volume {current_level}"
         else:
@@ -188,21 +203,17 @@ class MicrophoneWidget(BaseWidget):
             self.audio_endpoint.SetMute(not current_mute_status, None)
             self._update_label()
 
-    def _simulate_key_press(self, vk_code):
-        ctypes.windll.user32.keybd_event(vk_code, 0, 0, 0)
-        ctypes.windll.user32.keybd_event(vk_code, 0, KEYEVENTF_KEYUP, 0)
-
     def _increase_volume(self):
         if self.audio_endpoint:
             current_volume = self.audio_endpoint.GetMasterVolumeLevelScalar()
-            new_volume = min(current_volume + 0.05, 1.0)
+            new_volume = min(current_volume + self._scroll_step, 1.0)
             self.audio_endpoint.SetMasterVolumeLevelScalar(new_volume, None)
             self._update_label()
 
     def _decrease_volume(self):
         if self.audio_endpoint:
             current_volume = self.audio_endpoint.GetMasterVolumeLevelScalar()
-            new_volume = max(current_volume - 0.05, 0.0)
+            new_volume = max(current_volume - self._scroll_step, 0.0)
             self.audio_endpoint.SetMasterVolumeLevelScalar(new_volume, None)
             self._update_label()
 
@@ -211,3 +222,48 @@ class MicrophoneWidget(BaseWidget):
             self._increase_volume()
         elif event.angleDelta().y() < 0:
             self._decrease_volume()
+
+    def show_menu(self):
+        self.dialog = PopupWidget(
+            self,
+            self._mic_menu["blur"],
+            self._mic_menu["round_corners"],
+            self._mic_menu["round_corners_type"],
+            self._mic_menu["border_color"],
+        )
+        self.dialog.setProperty("class", "microphone-menu")
+
+        layout = QVBoxLayout()
+        layout.setSpacing(0)
+        layout.setContentsMargins(10, 10, 10, 10)
+
+        self.volume_slider = QSlider(Qt.Orientation.Horizontal)
+        self.volume_slider.setProperty("class", "microphone-slider")
+        self.volume_slider.setMinimum(0)
+        self.volume_slider.setMaximum(100)
+        try:
+            if self.audio_endpoint:
+                current_volume = round(self.audio_endpoint.GetMasterVolumeLevelScalar() * 100)
+                self.volume_slider.setValue(current_volume)
+        except Exception:
+            self.volume_slider.setValue(0)
+        self.volume_slider.valueChanged.connect(self._on_slider_value_changed)
+        layout.addWidget(self.volume_slider)
+
+        self.dialog.setLayout(layout)
+        self.dialog.adjustSize()
+        self.dialog.setPosition(
+            alignment=self._mic_menu["alignment"],
+            direction=self._mic_menu["direction"],
+            offset_left=self._mic_menu["offset_left"],
+            offset_top=self._mic_menu["offset_top"],
+        )
+        self.dialog.show()
+
+    def _on_slider_value_changed(self, value):
+        if self.audio_endpoint:
+            try:
+                self.audio_endpoint.SetMasterVolumeLevelScalar(value / 100, None)
+                self._update_label()
+            except Exception as e:
+                logging.error(f"Failed to set microphone volume: {e}")
