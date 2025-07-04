@@ -44,6 +44,7 @@ build_options = {
         "core.widgets.yasb.vscode",
         "core.widgets.yasb.power_plan",
         "core.widgets.yasb.grouper",
+        "core.widgets.yasb.todo",
         "core.widgets.komorebi.control",
         "core.widgets.komorebi.active_layout",
         "core.widgets.komorebi.stack",
