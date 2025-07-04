@@ -1,6 +1,7 @@
 DEFAULTS = {
     "label": "\uf017 {%H:%M:%S}",
     "label_alt": "\uf017 {%d-%m-%y %H:%M:%S}",
+    "class_name": "",
     "update_interval": 1000,
     "locale": "",
     "tooltip": True,
@@ -24,6 +25,7 @@ DEFAULTS = {
 VALIDATION_SCHEMA = {
     "label": {"type": "string", "default": DEFAULTS["label"]},
     "label_alt": {"type": "string", "default": DEFAULTS["label_alt"]},
+    "class_name": {"type": "string", "required": False, "default": DEFAULTS["class_name"]},
     "locale": {"required": False, "type": "string", "default": DEFAULTS["locale"]},
     "tooltip": {"type": "boolean", "required": False, "default": DEFAULTS["tooltip"]},
     "update_interval": {"type": "integer", "default": 1000, "min": 0, "max": 60000},

@@ -4,6 +4,7 @@
 | ------------------- | ------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
 | `label`             | string  | `'\uf017 {%H:%M:%S}'`                                                                 | The format string for the clock. You can use placeholders like `{%H:%M:%S}` to dynamically insert time information. |
 | `label_alt`         | string  | `'\uf017 {%d-%m-%y %H:%M:%S}'`                                                        | The alternative format string for the clock. Useful for displaying additional time details.                         |
+| `class_name`        | string  | `""`                                                                                  | Additional CSS class name for the widget.                                    |
 | `tooltip`           | boolean | `True`                                                                                | Whether to show the tooltip on hover.                                                                               |
 | `locale`            | string  | `""`                                                                                  | The locale to use for the clock. If not specified, it defaults to an empty string.                                  |
 | `update_interval`   | integer | `1000`                                                                                | The interval in milliseconds to update the clock. Must be between 0 and 60000.                                      |
@@ -48,6 +49,7 @@ clock:
 
 - **label:** The format string for the clock. You can use placeholders like `{%H:%M:%S}` to dynamically insert time information.
 - **label_alt:** The alternative format string for the clock. Useful for displaying additional time details.
+- **class_name:** Additional CSS class name for the widget. This can be used to apply custom styles.
 - **locale:** The locale to use for the clock. If not specified, it defaults to an empty string.
 - **tooltip:** Whether to show the tooltip on hover.
 - **update_interval:** The interval in milliseconds to update the clock. Must be between 0 and 60000.
@@ -73,6 +75,9 @@ Clock format https://docs.python.org/3/library/time.html#time.strftime
 
 ```css
 .clock-widget {
+}
+/* If you suing class_name option, you can add custom styles here */
+.clock-widget.your_class {
 }
 .clock-widget .widget-container {
 }

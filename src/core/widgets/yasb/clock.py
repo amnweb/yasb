@@ -55,6 +55,7 @@ class ClockWidget(BaseWidget):
         self,
         label: str,
         label_alt: str,
+        class_name: str,
         locale: str,
         tooltip: bool,
         update_interval: int,
@@ -66,7 +67,7 @@ class ClockWidget(BaseWidget):
         label_shadow: dict = None,
         container_shadow: dict = None,
     ):
-        super().__init__(update_interval, class_name="clock-widget")
+        super().__init__(update_interval, class_name=f"clock-widget {class_name}")
         self._locale = locale
 
         self._tooltip = tooltip
