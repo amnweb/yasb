@@ -4,14 +4,17 @@ from typing import Any, Optional
 
 from PIL import Image, ImageChops
 from PIL.ImageDraw import ImageDraw
-from PIL.ImageQt import ImageQt, QPixmap
+from PIL.ImageQt import ImageQt
 from PyQt6 import QtCore
 from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtGui import QWheelEvent
+from PyQt6.QtGui import (
+    QPixmap,
+    QWheelEvent,
+)
 from PyQt6.QtWidgets import QGridLayout, QHBoxLayout, QLabel, QSlider, QVBoxLayout, QWidget
 from winrt.windows.media.control import GlobalSystemMediaTransportControlsSessionPlaybackInfo
 
-from core.utils.utilities import PopupWidget, add_shadow
+from core.utils.utilities import PopupWidget, ScrollingLabel, add_shadow
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.widgets.media.media import WindowsMedia
 from core.validation.widgets.yasb.media import VALIDATION_SCHEMA
@@ -50,6 +53,7 @@ class MediaWidget(BaseWidget):
         container_padding: dict[str, int],
         media_menu: dict[str, Any],
         media_menu_icons: dict[str, str],
+        scrolling_label: dict[str, Any],
         label_shadow: dict = None,
         container_shadow: dict = None,
     ):
@@ -75,6 +79,7 @@ class MediaWidget(BaseWidget):
         self._menu_config_icons = media_menu_icons
         self._label_shadow = label_shadow
         self._container_shadow = container_shadow
+        self._scrolling_label = scrolling_label
         # Construct container
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
@@ -102,17 +107,33 @@ class MediaWidget(BaseWidget):
                 self._widget_container_layout.addLayout(self.thumbnail_box)
             self._prev_label, self._play_label, self._next_label = self._create_media_buttons()
 
-        self._label = QLabel()
+        # Label
+        if self._scrolling_label["enabled"]:
+            self._label = ScrollingLabel(
+                self,
+                max_width=self._max_field_size["label"],
+                options=self._scrolling_label,
+            )
+        else:
+            self._label = QLabel(self)
         self._label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._label.setCursor(Qt.CursorShape.PointingHandCursor)
         add_shadow(self._label, self._label_shadow)
 
-        self._label_alt = QLabel()
+        # Label Alt
+        if self._scrolling_label["enabled"]:
+            self._label_alt = ScrollingLabel(
+                self,
+                max_width=self._max_field_size["label_alt"],
+                options=self._scrolling_label,
+            )
+        else:
+            self._label_alt = QLabel(self)
         self._label_alt.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._label.setCursor(Qt.CursorShape.PointingHandCursor)
         add_shadow(self._label_alt, self._label_shadow)
 
-        self._thumbnail_label = QLabel()
+        self._thumbnail_label = QLabel(self)
         self._thumbnail_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self._label.setProperty("class", "label")
@@ -899,11 +920,13 @@ class MediaWidget(BaseWidget):
             logging.error(f"Error creating square thumbnail: {e}")
             return None
 
-    def _crop_thumbnail(self, thumbnail: Image, active_label_width: int) -> Image:
+    def _crop_thumbnail(self, thumbnail: Image.Image, active_label_width: int) -> Image.Image:
         """Process an image thumbnail for proper display."""
         # Calculate dimensions while respecting container padding
         available_width = active_label_width - (self._padding["left"] + self._padding["right"])
-        new_width = available_width + self._thumbnail_padding
+        new_width = available_width
+        if not self._scrolling_label["enabled"]:
+            new_width = available_width + self._thumbnail_padding
 
         # Preserve aspect ratio during resize
         aspect_ratio = thumbnail.width / thumbnail.height
@@ -996,6 +1019,9 @@ class MediaWidget(BaseWidget):
         elif field_type == "popup_artist":
             max_size = self._menu_config["max_artist_size"]
         else:
+            # If we are using scrolling labels, return the original text without formatting
+            if self._scrolling_label["enabled"]:
+                return text
             max_size = self._max_field_size["label_alt" if self._show_alt_label else "label"]
 
         if len(text) > max_size:

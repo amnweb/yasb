@@ -1,35 +1,36 @@
 # Media Widget Options
 
-| Option                  | Type    | Default | Description                                                                 |
-|-------------------------|---------|---------|-----------------------------------------------------------------------------|
-| `label`                 | string  |         | The main label format for the media widget.                                 |
-| `label_alt`             | string  |         | The alternative label format for the media widget.                          |
-| `label_shadow`         | boolean | false    | Whether to show a shadow effect on the label.                               |
-| `max_field_size`        | dict    |         | Maximum field sizes for labels.                                             |
-| `max_field_size.label`  | integer | 20      | Maximum size for the main label.                                            |
-| `max_field_size.label_alt` | integer | 30   | Maximum size for the alternative label.                                     |
-| `max_field_size.truncate_whole_label` | boolean | false | Whether to truncate the whole label if it exceeds the maximum size.        |
-| `show_thumbnail`        | boolean | true    | Whether to show the media thumbnail.                                        |
-| `controls_only`         | boolean | false   | Whether to show only the media controls.                                    |
-| `controls_left`         | boolean | true    | Whether to position the controls on the left.                               |
-| `controls_hide`         | boolean | false   | Whether to hide the media controls buttons                                  |
-| `hide_empty`            | boolean | true    | Whether to hide the widget when there is no media information.              |
-| `thumbnail_alpha`       | integer | 50      | The alpha transparency value for the thumbnail.                             |
-| `thumbnail_padding`     | integer | 8       | The padding around the thumbnail.                                           |
-| `thumbnail_corner_radius` | integer | 0     | The corner radius for the thumbnail.                                        |
-| `symmetric_corner_radius` | boolean | false | Whether to use symmetric corner radius for the thumbnail.                   |
-| `thumbnail_edge_fade` | boolean | false      | Whether to apply an edge fade effect to the thumbnail.                     |
-| `icons`                 | dict    |         | Icons for media controls.                                                   |
-| `icons.prev_track`      | string  | `\uf048`| Icon for the previous track button.                                         |
-| `icons.next_track`      | string  | `\uf051`| Icon for the next track button.                                             |
-| `icons.play`            | string  | `\uf04b`| Icon for the play button.                                                   |
-| `icons.pause`           | string  | `\uf04c`| Icon for the pause button.                                                  |
-| `animation`         | dict    | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
-| `container_padding`  | dict | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}`      | Explicitly set padding inside widget container. |
-| `container_shadow`   | dict   | `None`                  | Container shadow options.                       |
-| `label_shadow`         | dict   | `None`                  | Label shadow options.                 |
-| `media_menu`         | dict   | `None`                  | Media menu popup.                 |
-| `media_menu_icons`         | dict   | `None`                  | Media menu icons for popup.                 |
+| Option                                | Type      | Default                                                   | Description                                                        |
+| -------------------------             | --------- | ---------                                                 | -------------------------------------                              |
+| `label`                               | string    |                                                           | The main label format for the media widget.                        |
+| `label_alt`                           | string    |                                                           | The alternative label format for the media widget.                 |
+| `label_shadow`                        | boolean   | false                                                     | Whether to show a shadow effect on the label.                      |
+| `max_field_size`                      | dict      |                                                           | Maximum field sizes for labels.                                    |
+| `max_field_size.label`                | integer   | 20                                                        | Maximum size for the main label.                                   |
+| `max_field_size.label_alt`            | integer   | 30                                                        | Maximum size for the alternative label.                            |
+| `max_field_size.truncate_whole_label` | boolean   | false                                                     | Whether to truncate the whole label if it exceeds the maximum size.|
+| `show_thumbnail`                      | boolean   | true                                                      | Whether to show the media thumbnail.                               |
+| `controls_only`                       | boolean   | false                                                     | Whether to show only the media controls.                           |
+| `controls_left`                       | boolean   | true                                                      | Whether to position the controls on the left.                      |
+| `controls_hide`                       | boolean   | false                                                     | Whether to hide the media controls buttons                         |
+| `hide_empty`                          | boolean   | true                                                      | Whether to hide the widget when there is no media information.     |
+| `thumbnail_alpha`                     | integer   | 50                                                        | The alpha transparency value for the thumbnail.                    |
+| `thumbnail_padding`                   | integer   | 8                                                         | The padding around the thumbnail.                                  |
+| `thumbnail_corner_radius`             | integer   | 0                                                         | The corner radius for the thumbnail.                               |
+| `symmetric_corner_radius`             | boolean   | false                                                     | Whether to use symmetric corner radius for the thumbnail.          |
+| `thumbnail_edge_fade`                 | boolean   | false                                                     | Whether to apply an edge fade effect to the thumbnail.             |
+| `icons`                               | dict      |                                                           | Icons for media controls.                                          |
+| `icons.prev_track`                    | string    | `\uf048`                                                  | Icon for the previous track button.                                |
+| `icons.next_track`                    | string    | `\uf051`                                                  | Icon for the next track button.                                    |
+| `icons.play`                          | string    | `\uf04b`                                                  | Icon for the play button.                                          |
+| `icons.pause`                         | string    | `\uf04c`                                                  | Icon for the pause button.                                         |
+| `animation`                           | dict      | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}` | Animation settings for the widget.                                 |
+| `container_padding`                   | dict      | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}`          | Explicitly set padding inside widget container.                    |
+| `container_shadow`                    | dict      | `None`                                                    | Container shadow options.                                          |
+| `label_shadow`                        | dict      | `None`                                                    | Label shadow options.                                              |
+| `media_menu`                          | dict      | `None`                                                    | Media menu popup.                                                  |
+| `media_menu_icons`                    | dict      | `None`                                                    | Media menu icons for popup.                                        |
+| `scrolling_label`                     | dict      | `None`                                                    | Widget label scrolling options                                     |
 
 ## Example Configuration
 
@@ -54,6 +55,16 @@ media:
     thumbnail_alpha: 80
     thumbnail_padding: 8
     thumbnail_corner_radius: 16
+    scrolling_label:
+      enabled: false
+      update_interval_ms: 33
+      style: "left"  # can be "left", "right", "bounce", "bounce-ease"
+      separator: " | "
+      label_padding: 1
+      # Easing curve params: https://www.desmos.com/calculator/j7eamemxzi
+      ease_slope: 20
+      ease_pos: 0.8
+      ease_min: 0.5
     icons:
       prev_track: "\ue892"
       next_track: "\ue893"
@@ -110,6 +121,15 @@ media:
 - **thumbnail_padding:** The padding around the media thumbnail.
 - **thumbnail_corner_radius:** The corner radius for the media thumbnail. Set to 0 for square corners.
 - **symmetric_corner_radius:** Whether to use symmetric corner radius for the thumbnail. If set to true, the corner radius will be applied equally on all corners.
+- **scrolling_label:** A dictionary specifying the scrolling label options for the widget.
+  - **enabled:** Whether to enable the scrolling label.
+  - **update_interval_ms:** The update interval for the scrolling label in milliseconds. Min 4 max 1000.
+  - **style:** The style of the scrolling label. Can be `left`, `right`, `bounce`, or `bounce-ease`.
+  - **separator:** The separator between repeating text in `left` or `rignt` scrolling style.
+  - **label_padding:** The padding around the label in `bounce` and `bounce-ease` style. By default it's one character on each side.
+  - **ease_slope:** The easing slope for the bounce effect. Easing curve params: https://www.desmos.com/calculator/j7eamemxzi
+  - **ease_pos:** The easing curve position for the bounce effect.
+  - **ease_min:** The minimum value for the bounce effect easing curve.
 - **thumbnail_edge_fade:** Whether to apply an edge fade effect to the thumbnail. This can create a smoother transition between the thumbnail and the background.
 - **icons:** Icons for the media controls.
 - **animation:** A dictionary specifying the animation settings for the widget. It contains three keys: `enabled`, `type`, and `duration`. The `type` can be `fadeInOut` and the `duration` is the animation duration in milliseconds.
@@ -118,6 +138,11 @@ media:
 - **label_shadow:** Label shadow options.
 - **media_menu:** A dictionary specifying the media menu popup options. It contains keys for blur, round corners, border color, alignment, direction, offsets, thumbnail corner radius, thumbnail size, max title size, max artist size, and show source.
 - **media_menu_icons:** Icons for the media menu popup. It contains keys for play, pause, previous track, and next track icons.
+
+
+## Scrolling Label Notes
+- The scrolling label uses `max_field_size` to limit its size.
+- The scrolling label will disable `thumbnail_padding` option and `.media-widget .label { margin: ... }` should be used instead.
 
 ## Available Styles
 ```css
