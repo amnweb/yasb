@@ -1,12 +1,14 @@
+import ctypes
 import logging
 import os
 import subprocess
 import winreg
+from ctypes import wintypes
 from datetime import datetime
 from functools import partial
 
 import win32gui
-from PyQt6.QtCore import QEvent, QObject, QPropertyAnimation, Qt, QTimer, pyqtSignal
+from PyQt6.QtCore import QEvent, QObject, QPropertyAnimation, Qt, QTimer
 from PyQt6.QtGui import QCursor
 from PyQt6.QtWidgets import (
     QCheckBox,
@@ -19,10 +21,11 @@ from PyQt6.QtWidgets import (
     QWidgetAction,
 )
 
-from core.event_service import EventService
 from core.utils.controller import exit_application, reload_application
-from core.utils.win32.utilities import get_window_rect, qmenu_rounded_corners
-from core.utils.win32.windows import WinEvent
+from core.utils.win32.utilities import dwmapi, get_window_rect, qmenu_rounded_corners
+
+DWMWA_CLOAKED = 14
+S_OK = 0
 
 
 class AutoHideZone(QFrame):
@@ -168,27 +171,53 @@ class AutoHideManager(QObject):
 class FullscreenManager(QObject):
     """Manages fullscreen detection and bar visibility"""
 
-    window_event_signal = pyqtSignal(int, object)
-
     def __init__(self, bar_widget: QWidget, parent=None):
         super().__init__(parent)
         self.bar_widget = bar_widget
         self._prev_fullscreen_state = None
-        self._event_service = EventService()
+        self._timer = QTimer(self)
+        self._timer.setInterval(400)
+        self._timer.timeout.connect(self._check_fullscreen_for_window)
+
+        try:
+            dwmapi.DwmGetWindowAttribute
+            self._dwm_available = True
+        except (AttributeError, OSError):
+            self._dwm_available = False
 
     def start_monitoring(self):
         try:
-            self.window_event_signal.connect(self._check_fullscreen_for_window)
-            self._event_service.register_event(WinEvent.EventObjectLocationChange, self.window_event_signal)
+            self._timer.start()
         except Exception as e:
-            logging.error(f"Failed to start monitoring fullscreen applications: {e}")
+            logging.error(f"Failed to start fullscreen polling: {e}")
 
     def stop_monitoring(self):
         """Stop monitoring for fullscreen applications"""
         try:
-            self._event_service.clear()
+            self._timer.stop()
         except Exception as e:
-            logging.error(f"Failed to clear event service: {e}")
+            logging.error(f"Failed to stop fullscreen polling: {e}")
+
+    def is_window_cloaked(self, hwnd):
+        """Check if a window is cloaked (hidden by DWM)"""
+        if not self._dwm_available:
+            return False
+
+        try:
+            is_cloaked = wintypes.DWORD(0)  # Initialize with 0
+            result = dwmapi.DwmGetWindowAttribute(
+                wintypes.HWND(hwnd),
+                wintypes.DWORD(DWMWA_CLOAKED),
+                ctypes.byref(is_cloaked),
+                ctypes.sizeof(is_cloaked),
+            )
+
+            if result != S_OK:
+                return False
+
+            return is_cloaked.value != 0
+        except (OSError, AttributeError):
+            return False
 
     def _check_fullscreen_for_window(self):
         """Check if any window is fullscreen on the bar's screen"""
@@ -205,17 +234,21 @@ class FullscreenManager(QObject):
             # Ignore invisible/minimized windows
             if not win32gui.IsWindowVisible(hwnd) or win32gui.IsIconic(hwnd):
                 return False
-            # Ignore desktop and bar windows
             try:
                 class_name = win32gui.GetClassName(hwnd)
             except Exception:
                 return False
+            # Ignore specific system windows that should not be considered fullscreen
             if class_name in ("Progman", "WorkerW", "XamlWindow"):
+                return False
+
+                # Check if window is cloaked
+            if self.is_window_cloaked(hwnd):
                 return False
             # Get window rect
             rect = get_window_rect(hwnd)
             window_rect = (rect["x"], rect["y"], rect["width"], rect["height"])
-            # Check if window covers the screen
+
             return window_rect == scaled_screen_rect
 
         # Enumerate all top-level windows
