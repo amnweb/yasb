@@ -3,6 +3,7 @@
 |--------------|--------|-------------------------------------------------------------------------|-----------------------------------------------------------------------------|
 | `label`      | string | `'{volume[percent]}%'`                                                  | The format string for the volume label. You can use placeholders like `{volume[percent]}` to dynamically insert volume information. |
 | `label_alt`  | string | `'{volume[percent]}%'`                                                  | The alternative format string for the volume label. Useful for displaying additional volume details. |
+| `scroll_step`     | int     | `2`                  | The step size for volume adjustment when scrolling. The value is in percentage points (0-100). |
 | `mute_text` | string  | `'mute'` | Text used by `{level}` to indicate muted volume |
 | `tooltip`  | boolean  | `True`        | Whether to show the tooltip on hover. |
 | `volume_icons` | list  | `['\ueee8', '\uf026', '\uf027', '\uf027', '\uf028']`                    | A list of icons representing different volume levels. The icons are used based on the current volume percentage. |
@@ -50,6 +51,7 @@ volume:
 - **label_alt**: The alternative format string for the volume label. Useful for displaying additional volume details.
 - **mute_text**: The text for `{level}` to display when the volume is muted. Default: "mute".
 - **tooltip**: Whether to show the tooltip on hover.
+- **scroll_step**: The step size for volume adjustment when scrolling. The value is in percentage points (0-100).
 - **volume_icons**: A list of icons representing different volume levels. The icons are used based on the current volume percentage.
 - **audio_menu**: A dictionary specifying the menu settings for the widget. It contains the following keys:
   - **blur**: Enable blur effect for the menu.

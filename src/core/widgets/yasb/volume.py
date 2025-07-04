@@ -21,7 +21,6 @@ from PyQt6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QSlider, QVBoxLayo
 
 from core.utils.utilities import PopupWidget, add_shadow, build_widget_label
 from core.utils.widgets.animation_manager import AnimationManager
-from core.utils.win32.system_function import KEYEVENTF_KEYUP, VK_VOLUME_DOWN, VK_VOLUME_UP
 from core.validation.widgets.yasb.volume import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
 
@@ -194,6 +193,7 @@ class VolumeWidget(BaseWidget):
         label_alt: str,
         mute_text: str,
         tooltip: bool,
+        scroll_step: int,
         volume_icons: list[str],
         audio_menu: dict[str, str],
         animation: dict[str, str],
@@ -208,6 +208,7 @@ class VolumeWidget(BaseWidget):
         self._label_alt_content = label_alt
         self._mute_text = mute_text
         self._tooltip = tooltip
+        self._scroll_step = int(scroll_step) / 100
         self._audio_menu = audio_menu
         self._animation = animation
         self._padding = container_padding
@@ -465,17 +466,16 @@ class VolumeWidget(BaseWidget):
             volume_icon = self._volume_icons[4]
         return volume_icon
 
-    def _simulate_key_press(self, vk_code):
-        ctypes.windll.user32.keybd_event(vk_code, 0, 0, 0)
-        ctypes.windll.user32.keybd_event(vk_code, 0, KEYEVENTF_KEYUP, 0)
-
     def _increase_volume(self):
         if self.volume is None:
             logging.warning("Cannot increase volume: No audio device connected.")
             return
         try:
-            self._simulate_key_press(VK_VOLUME_UP)
+            current_volume = self.volume.GetMasterVolumeLevelScalar()
+            new_volume = min(current_volume + self._scroll_step, 1.0)
+            self.volume.SetMasterVolumeLevelScalar(new_volume, None)
             self._update_label()
+            self._update_slider_value()
         except Exception as e:
             logging.error(f"Failed to increase volume: {e}")
 
@@ -484,8 +484,11 @@ class VolumeWidget(BaseWidget):
             logging.warning("Cannot decrease volume: No audio device connected.")
             return
         try:
-            self._simulate_key_press(VK_VOLUME_DOWN)
+            current_volume = self.volume.GetMasterVolumeLevelScalar()
+            new_volume = max(current_volume - self._scroll_step, 0.0)
+            self.volume.SetMasterVolumeLevelScalar(new_volume, None)
             self._update_label()
+            self._update_slider_value()
         except Exception as e:
             logging.error(f"Failed to decrease volume: {e}")
 

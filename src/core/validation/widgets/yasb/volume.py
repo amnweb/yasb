@@ -3,6 +3,7 @@ DEFAULTS = {
     "label_alt": "{volume[percent]}%",
     "mute_text": "mute",
     "tooltip": True,
+    "scroll_step": 2,
     "volume_icons": [
         "\ueee8",  # Icon for muted
         "\uf026",  # Icon for 0-10% volume
@@ -31,6 +32,13 @@ VALIDATION_SCHEMA = {
     "label_alt": {"type": "string", "default": DEFAULTS["label_alt"]},
     "mute_text": {"type": "string", "required": False, "default": DEFAULTS["mute_text"]},
     "tooltip": {"type": "boolean", "required": False, "default": DEFAULTS["tooltip"]},
+    "scroll_step": {
+        "type": "integer",
+        "required": False,
+        "default": DEFAULTS["scroll_step"],
+        "min": 1,
+        "max": 100,
+    },
     "volume_icons": {
         "type": "list",
         "default": DEFAULTS["volume_icons"],
