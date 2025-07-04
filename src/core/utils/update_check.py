@@ -1,10 +1,18 @@
 import json
 import logging
+import os
 import threading
+import time
 import urllib.request
+from pathlib import Path
 
 from core.utils.utilities import ToastNotifier
 from settings import BUILD_VERSION, SCRIPT_PATH
+
+LOCALDATA_FOLDER = Path(os.environ["LOCALAPPDATA"]) / "Yasb"
+LOCALDATA_FOLDER.mkdir(parents=True, exist_ok=True)
+LAST_CHECK_FILE = LOCALDATA_FOLDER / "last_update_check"
+CHECK_INTERVAL = 30 * 60  # 30 minutes
 
 
 class UpdateCheckService:
@@ -24,6 +32,8 @@ class UpdateCheckService:
         threading.Thread(target=self.check_for_update, daemon=True).start()
 
     def check_for_update(self):
+        if not self.should_check():
+            return
         try:
             url = "https://api.github.com/repos/amnweb/yasb/releases/latest"
             with urllib.request.urlopen(url, timeout=10) as response:
@@ -39,7 +49,24 @@ class UpdateCheckService:
                     launch_url="https://github.com/amnweb/yasb/releases/latest",
                     scenario="reminder",
                 )
+            self.update_last_check()
         except urllib.error.URLError:
             logging.warning("UpdateCheckService Failed to check for updates: Network error.")
         except Exception as e:
             logging.warning(f"UpdateCheckService Failed to check for updates: {e}")
+
+    def should_check(self):
+        try:
+            if LAST_CHECK_FILE.exists():
+                last_check = float(LAST_CHECK_FILE.read_text().strip())
+                if time.time() - last_check < CHECK_INTERVAL:
+                    return False
+        except Exception:
+            pass
+        return True
+
+    def update_last_check(self):
+        try:
+            LAST_CHECK_FILE.write_text(str(time.time()))
+        except Exception:
+            pass
