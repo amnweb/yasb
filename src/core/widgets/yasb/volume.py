@@ -474,6 +474,8 @@ class VolumeWidget(BaseWidget):
             current_volume = self.volume.GetMasterVolumeLevelScalar()
             new_volume = min(current_volume + self._scroll_step, 1.0)
             self.volume.SetMasterVolumeLevelScalar(new_volume, None)
+            if self.volume.GetMute() and new_volume > 0.0:
+                self.volume.SetMute(False, None)
             self._update_label()
             self._update_slider_value()
         except Exception as e:
@@ -487,6 +489,8 @@ class VolumeWidget(BaseWidget):
             current_volume = self.volume.GetMasterVolumeLevelScalar()
             new_volume = max(current_volume - self._scroll_step, 0.0)
             self.volume.SetMasterVolumeLevelScalar(new_volume, None)
+            if new_volume == 0.0:
+                self.volume.SetMute(True, None)
             self._update_label()
             self._update_slider_value()
         except Exception as e:
