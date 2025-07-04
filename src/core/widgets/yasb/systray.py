@@ -1,9 +1,7 @@
 import json
 import logging
-import os
 import re
 import threading
-from pathlib import Path
 from typing import Any, override
 from uuid import UUID
 
@@ -23,7 +21,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from core.utils.utilities import add_shadow
+from core.utils.utilities import add_shadow, app_data_path
 from core.utils.widgets.systray.systray_widget import DropWidget, IconState, IconWidget
 from core.utils.widgets.systray.tasks_service import TasksService
 from core.utils.widgets.systray.tray_monitor import IconData, TrayMonitor
@@ -41,8 +39,6 @@ from core.validation.widgets.yasb.systray import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
 
 logger = logging.getLogger("systray_widget")
-
-LOCALDATA_FOLDER = Path(os.environ["LOCALAPPDATA"]) / "Yasb"
 
 BATTERY_ICON_GUID = UUID("7820ae75-23e3-4229-82c1-e41cb67d5b9c")
 VOLUME_ICON_GUID = UUID("7820ae73-23e3-4229-82c1-e41cb67d5b9c")
@@ -497,11 +493,9 @@ class SystrayWidget(BaseWidget):
         """Save the current icon position and pinned state to disk."""
         self.update_current_state()
         logger.debug("Saving state to disk")
-        if not LOCALDATA_FOLDER.exists():
-            LOCALDATA_FOLDER.mkdir(parents=True, exist_ok=True)
 
         self.get_screen_id()
-        file_path = LOCALDATA_FOLDER / Path(f"systray_state_{self.screen_id}.json")
+        file_path = app_data_path(f"systray_state_{self.screen_id}.json")
         logger.debug(f"Saving state to {file_path}")
         saved_state: dict[str, Any] = {}
         try:
@@ -519,7 +513,7 @@ class SystrayWidget(BaseWidget):
     def load_state(self):
         """Load the saved icon position and pinned state from disk."""
         self.get_screen_id()
-        file_path = LOCALDATA_FOLDER / Path(f"systray_state_{self.screen_id}.json")
+        file_path = app_data_path(f"systray_state_{self.screen_id}.json")
         logger.debug(f"Loading state from {file_path}")
         self.current_state = {}
         try:

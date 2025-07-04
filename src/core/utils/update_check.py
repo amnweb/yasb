@@ -1,17 +1,13 @@
 import json
 import logging
-import os
 import threading
 import time
 import urllib.request
-from pathlib import Path
 
-from core.utils.utilities import ToastNotifier
+from core.utils.utilities import ToastNotifier, app_data_path
 from settings import BUILD_VERSION, SCRIPT_PATH
 
-LOCALDATA_FOLDER = Path(os.environ["LOCALAPPDATA"]) / "Yasb"
-LOCALDATA_FOLDER.mkdir(parents=True, exist_ok=True)
-LAST_CHECK_FILE = LOCALDATA_FOLDER / "last_update_check"
+LAST_CHECK_FILE = app_data_path("last_update_check")
 CHECK_INTERVAL = 30 * 60  # 30 minutes
 
 

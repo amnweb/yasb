@@ -1,13 +1,13 @@
 import json
 import logging
-import os
 import re
 import time
 from datetime import datetime
-from pathlib import Path
 
 import psutil
 from PyQt6.QtWidgets import QApplication
+
+from core.utils.utilities import app_data_path
 
 
 class TrafficDataManager:
@@ -28,11 +28,7 @@ class TrafficDataManager:
             return
 
         try:
-            LOCALDATA_FOLDER = Path(os.environ["LOCALAPPDATA"]) / "Yasb"
-            if not LOCALDATA_FOLDER.exists():
-                LOCALDATA_FOLDER.mkdir(parents=True, exist_ok=True)
-
-            cls._global_data_folder = LOCALDATA_FOLDER
+            cls._global_data_folder = app_data_path()
 
             # Register quit handler once when data storage is set up
             cls._register_cleanup_handlers()

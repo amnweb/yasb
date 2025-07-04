@@ -1,13 +1,13 @@
 import logging
 import os
 import re
-from pathlib import Path
 from typing import Dict, Set
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFontDatabase, QIcon
 from PyQt6.QtWidgets import QCheckBox, QMessageBox
 
+from core.utils.utilities import app_data_path
 from settings import DEBUG, SCRIPT_PATH
 
 
@@ -16,14 +16,10 @@ class CSSProcessor:
     Processes CSS files: handles @import, CSS variables, and removes comments.
     """
 
-    LOCALDATA_FOLDER = Path(os.environ["LOCALAPPDATA"]) / "Yasb"
-    SKIP_FONT_CHECK = LOCALDATA_FOLDER / "skip_font_check"
+    SKIP_FONT_CHECK = app_data_path("skip_font_check")
     _localdata_initialized = False
 
     def __init__(self, css_path: str):
-        if not CSSProcessor._localdata_initialized:
-            CSSProcessor.LOCALDATA_FOLDER.mkdir(parents=True, exist_ok=True)
-            CSSProcessor._localdata_initialized = True
         self.css_path = css_path
         self.base_path = os.path.dirname(css_path)
         self.imported_files: Set[str] = set()

@@ -6,12 +6,12 @@ import struct
 import subprocess
 import textwrap
 import threading
-from pathlib import Path
 
 from PyQt6.QtCore import QTimer, pyqtSignal
 from PyQt6.QtGui import QColor, QLinearGradient, QPainter
 from PyQt6.QtWidgets import QApplication, QHBoxLayout, QLabel, QWidget
 
+from core.utils.utilities import app_data_path
 from core.validation.widgets.yasb.cava import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
 
@@ -262,13 +262,9 @@ class CavaWidget(BaseWidget):
             bytetype, bytesize, bytenorm = ("B", 1, 255)
 
         def process_audio():
-            LOCALDATA_FOLDER = Path(os.environ["LOCALAPPDATA"]) / "Yasb"
-            if not LOCALDATA_FOLDER.exists():
-                LOCALDATA_FOLDER.mkdir(parents=True, exist_ok=True)
-
             cava_config_path = None
             try:
-                cava_config_path = LOCALDATA_FOLDER / Path("yasb_cava_config")
+                cava_config_path = app_data_path("yasb_cava_config")
                 with open(cava_config_path, "w") as config_file:
                     config_file.write(config_template)
                     config_file.flush()

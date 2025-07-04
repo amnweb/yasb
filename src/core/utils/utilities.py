@@ -1,8 +1,10 @@
 import math
+import os
 import platform
 import re
 from enum import StrEnum
 from functools import lru_cache
+from pathlib import Path
 from typing import Any, cast, override
 
 import psutil
@@ -22,6 +24,18 @@ from winrt.windows.data.xml.dom import XmlDocument
 from winrt.windows.ui.notifications import ToastNotification, ToastNotificationManager
 
 from core.utils.win32.blurWindow import Blur
+
+
+def app_data_path(filename: str = None) -> Path:
+    """
+    Get the Yasb local data folder (creating it if it doesn't exist),
+    or a file path inside it if filename is provided.
+    """
+    folder = Path(os.environ["LOCALAPPDATA"]) / "YASB"
+    folder.mkdir(parents=True, exist_ok=True)
+    if filename is not None:
+        return folder / filename
+    return folder
 
 
 def is_windows_10() -> bool:

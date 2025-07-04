@@ -30,6 +30,7 @@ from win32con import (
     OPEN_EXISTING,
 )
 
+from core.utils.utilities import app_data_path
 from core.utils.win32.bindings import (
     CloseHandle,
     CreateFile,
@@ -451,10 +452,10 @@ class CLIHandler:
                     except Exception as e:
                         print(f"Failed to delete {fpath}: {e}")
 
-            # Clear all files in LOCALDATA_FOLDER if it exists
-            LOCALDATA_FOLDER = Path(os.environ["LOCALAPPDATA"]) / "Yasb"
-            if LOCALDATA_FOLDER.exists() and LOCALDATA_FOLDER.is_dir():
-                for child in LOCALDATA_FOLDER.iterdir():
+            # Clear all files in app_data_folder if it exists
+            app_data_folder = app_data_path()
+            if app_data_folder.exists() and app_data_folder.is_dir():
+                for child in app_data_folder.iterdir():
                     try:
                         if child.is_file() or child.is_symlink():
                             child.unlink()
