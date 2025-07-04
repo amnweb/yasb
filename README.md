@@ -114,6 +114,7 @@ https://github.com/user-attachments/assets/aab8d8e8-248f-46a1-919c-9b0601236ac1
 - **[Server Monitor](https://github.com/amnweb/yasb/wiki/(Widget)-Server-Monitor)**: Monitors server status.
 - **[Systray](https://github.com/amnweb/yasb/wiki/(Widget)-Systray)**: Displays system tray icons.
 - **[Traffic](https://github.com/amnweb/yasb/wiki/(Widget)-Traffic)**: Displays network traffic information.
+- **[Todo](https://github.com/amnweb/yasb/wiki/(Widget)-Todo)**: Organizes your tasks and to-do lists.
 - **[Taskbar](https://github.com/amnweb/yasb/wiki/(Widget)-Taskbar)**: A customizable taskbar for launching applications.
 - **[Pomodoro](https://github.com/amnweb/yasb/wiki/(Widget)-Pomodoro)**: A Pomodoro timer widget.
 - **[Power Menu](https://github.com/amnweb/yasb/wiki/(Widget)-Power-Menu)**: A menu for power options.

@@ -34,6 +34,7 @@
     - [OBS](./(Widget)-Obs)
     - [Server Monitor](./(Widget)-Server-Monitor)
     - [Systray](./(Widget)-Systray)
+    - [Todo](./(Widget)-Todo)
     - [Traffic](./(Widget)-Traffic)
     - [Taskbar](./(Widget)-Taskbar)
     - [Pomodoro](./(Widget)-Pomodoro)

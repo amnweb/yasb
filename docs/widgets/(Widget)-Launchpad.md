@@ -148,8 +148,12 @@ The Launchpad widget is a powerful and user-friendly application launcher design
 - **Keyboard Navigation:** Navigate the grid and launch apps using arrow keys and Enter.
 - **Animations:** Smooth fade-in and fade-out animations for the popup window.
 
-> **Note:**  
+> **Note:**
 > The Launchpad widget supports autocomplete for application names when adding or editing apps. In most cases, the icon will be extracted automatically for executables and shortcuts. However, for some applications (especially certain UWP apps or unusual shortcuts), icon extraction may not always succeed. If this happens, you can manually select an icon file.
+
+> [!IMPORTANT]  
+> Launchpad widget uses the `QMenu` for the context menu, which supports various styles. You can customize the appearance of the menu using CSS styles. For more information on styling, refer to the [Context Menu Styling](https://github.com/amnweb/yasb/wiki/Styling#context-menu-styling
+If you want to use different styles for the context menu, you can target the `.launchpad .context-menu` class to customize the appearance of the Launchpad widget menu.
 
 ## Example Style
 
@@ -372,6 +376,10 @@ The Launchpad widget is a powerful and user-friendly application launcher design
 /* App icon .launchpad .app-icon or URL icon .launchpad .app-icon.url */
 .launchpad .app-icon.url .title{
     color: #52f1d2;
+}
+.launchpad .app-icon .icon {
+    padding: 0;
+    margin: 0
 }
 ```
 > [!NOTE]
