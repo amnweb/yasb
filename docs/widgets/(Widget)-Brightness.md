@@ -5,6 +5,7 @@
 | `label`         | string  | `"{icon}"`                                                   | The format string for the brightness widget. |
 | `label_alt`     | string  | `"Brightness {percent}%"`                                          | The alternative format string for the brightness widget. |
 | `tooltip`  | boolean  | `True`        | Whether to show the tooltip on hover. |
+| `scroll_step`   | integer | `1`                                                                       | The step size for scrolling the brightness level. This value must be between 1 and 100. |
 | `brightness_icons` | list  | `['\udb80\udcde', '\udb80\udcdd', '\udb80\udcdf', '\udb80\udce0']`                    | A list of icons representing different brightness levels. The icons are used based on the current brightness percentage. |
 | `hide_unsupported` | boolean | `True` | Whether to hide the widget if the current system does not support brightness control. |
 | `brightness_toggle_level` | `[int, int]` | `[0, ,50, 100]` | The brightness level to set when the widget is clicked. |
@@ -69,6 +70,7 @@
 - **label:** The format string for the label. You can use placeholders like `{icon}` or `{percent}` to dynamically insert information.
 - **label_alt:** The alternative format string for the brightness widget. Useful for displaying additional information like percentage.
 - **tooltip:** Whether to show the tooltip on hover.
+- **scroll_step:** The step size for scrolling the brightness level. This value must be between 1 and 100.
 - **brightness_icons:** A list of icons representing different brightness levels. The icons are used based on the current brightness percentage.
 - **hide_unsupported:** Whether to hide the widget if the current system does not support brightness control.
 - **brightness_toggle_level:** The brightness level to set when the widget is clicked.

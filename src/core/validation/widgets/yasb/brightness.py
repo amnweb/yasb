@@ -2,6 +2,7 @@ DEFAULTS = {
     "label": "{icon}",
     "label_alt": "Brightness {percent}%",
     "tooltip": True,
+    "scroll_step": 1,
     "brightness_icons": [
         "\udb80\udcde",  # Icon for 0-25% brightness
         "\udb80\udcdd",  # Icon for 26-50% brightness
@@ -36,6 +37,13 @@ VALIDATION_SCHEMA = {
     "label": {"type": "string", "default": DEFAULTS["label"]},
     "label_alt": {"type": "string", "default": DEFAULTS["label_alt"]},
     "tooltip": {"type": "boolean", "required": False, "default": DEFAULTS["tooltip"]},
+    "scroll_step": {
+        "type": "integer",
+        "required": False,
+        "default": DEFAULTS["scroll_step"],
+        "min": 1,
+        "max": 100,
+    },
     "brightness_icons": {
         "type": "list",
         "default": DEFAULTS["brightness_icons"],

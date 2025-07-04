@@ -31,6 +31,7 @@ class BrightnessWidget(BaseWidget):
         label: str,
         label_alt: str,
         tooltip: bool,
+        scroll_step: int,
         brightness_icons: list[str],
         brightness_toggle_level: list[int],
         brightness_menu: dict[str, str],
@@ -64,7 +65,7 @@ class BrightnessWidget(BaseWidget):
         self._auto_light_night_start = datetime.strptime(auto_light_night_start_time, "%H:%M").time()
         self._auto_light_night_end = datetime.strptime(auto_light_night_end_time, "%H:%M").time()
         self._auto_light_day_level = auto_light_day_level
-        self._step = 1
+        self._step = scroll_step
         self._current_mode = None
         self._animation = animation
         self._label_shadow = label_shadow
