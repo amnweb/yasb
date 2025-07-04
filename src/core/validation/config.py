@@ -21,7 +21,7 @@ CONFIG_SCHEMA = {
     },
     "update_check": {
         "type": "boolean",
-        "default": False,
+        "default": True,
         "required": False,
     },
     "komorebi": {
