@@ -429,6 +429,7 @@ class ScrollingLabel(QLabel):
 
         self._scroll_timer = QTimer(self)
         self._scroll_timer.timeout.connect(self._scroll_text)  # pyright: ignore[reportUnknownMemberType]
+        self._update_text_metrics()
         self._scroll_timer.start(self._update_interval)
 
     def _ease(
@@ -457,7 +458,7 @@ class ScrollingLabel(QLabel):
             self._static_text = QStaticText(self._text)
             self._static_text.prepare(QTransform(), self.font())
         self._update_text_metrics()
-        self._scroll_text() # scroll once to avoid flickering
+        self._scroll_text()  # scroll once to avoid flickering
 
     @pyqtSlot()
     def _scroll_text(self):
@@ -467,7 +468,7 @@ class ScrollingLabel(QLabel):
             self._offset -= 1
         elif self._style in {ScrollingLabel.Style.BOUNCE, ScrollingLabel.Style.BOUNCE_EASE}:
             label_width = self.width() - self._margin.left() - self._margin.right()
-            if self._text_width - self._font_metrics.maxWidth() * 2 <= label_width:
+            if self._text_bb_width <= label_width:
                 self._offset = (self._text_width - label_width) // 2  # center the text
             else:
                 max_offset = self._text_width - label_width
@@ -497,6 +498,7 @@ class ScrollingLabel(QLabel):
         self._margin = self.contentsMargins()
         self._font_metrics = QFontMetrics(self.font())
         self._text_width = max(self._font_metrics.horizontalAdvance(self._text), 1)
+        self._text_bb_width = self._font_metrics.boundingRect(self._text).width()
         self._text_y = (self.height() + self._font_metrics.ascent() - self._font_metrics.descent() + 1) // 2
         if self._max_width:
             self.setMaximumWidth(self._font_metrics.averageCharWidth() * self._max_width)
