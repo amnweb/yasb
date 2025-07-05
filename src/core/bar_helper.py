@@ -204,7 +204,7 @@ class FullscreenManager(QObject):
             return False
 
         try:
-            is_cloaked = wintypes.DWORD(0)  # Initialize with 0
+            is_cloaked = wintypes.DWORD(0)
             result = dwmapi.DwmGetWindowAttribute(
                 wintypes.HWND(hwnd),
                 wintypes.DWORD(DWMWA_CLOAKED),
@@ -239,7 +239,7 @@ class FullscreenManager(QObject):
             except Exception:
                 return False
             # Ignore specific system windows that should not be considered fullscreen
-            if class_name in ("Progman", "WorkerW", "XamlWindow"):
+            if class_name in ("Progman", "WorkerW", "XamlWindow", "CEF-OSC-WIDGET"):
                 return False
 
                 # Check if window is cloaked
