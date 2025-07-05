@@ -35,6 +35,7 @@ todo:
       offset_left: 0
     icons:
       add: "\uf501 New Task"
+      edi": "Edit"
       delete: "Delete"
       date: "\ue641"
       category: "\uf412"
@@ -46,9 +47,9 @@ todo:
       default:
         label: "General"
       soon:
-        label: "Complete Soon"
+        label: "Complete soon"
       today:
-        label: "End of Day"
+        label: "End of day"
       urgent:
         label: "Urgent"
       important:
@@ -76,6 +77,7 @@ todo:
   - **offset_left**: Horizontal offset for the menu.
 - **icons**: Customize icons for actions:
   - **add**: Icon or text for adding tasks button
+  - **edit**: Icon or text for editing tasks button   
   - **delete** Icon or text for deleting tasks button
   - **date** Icon for date label
   - **category** Icon for category label
@@ -115,6 +117,7 @@ If you want to use different styles for the context menu, you can target the `.t
 .todo-menu .no-tasks-icon {}
 /* todo-menu task item styles */
 .todo-menu .task-item {}
+.todo-menu .task-item.expanded {}
 /* todo-menu task item styles based on category */
 .todo-menu .task-item.important {}
 .todo-menu .task-item.urgent {}
@@ -262,6 +265,10 @@ If you want to use different styles for the context menu, you can target the `.t
     margin: 0px 12px 8px 12px;
     border: 1px solid rgba(255, 255, 255, 0.1);
     padding: 8px 0;
+}
+.todo-menu .task-item.expanded {
+    background-color: rgba(211, 214, 219, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
 }
 .todo-menu .task-item.drop-highlight,
 .todo-menu .task-item.drop-highlight:hover,

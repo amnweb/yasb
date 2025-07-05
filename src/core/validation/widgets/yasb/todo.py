@@ -15,6 +15,7 @@ DEFAULTS = {
     },
     "icons": {
         "add": "New Task",
+        "edit": "Edit",
         "delete": "Delete",
         "date": "\ue641",
         "category": "\uf412",
@@ -27,8 +28,8 @@ DEFAULTS = {
         "default": {"label": "General"},
         "urgent": {"label": "Urgent"},
         "important": {"label": "Important"},
-        "soon": {"label": "Complete Soon"},
-        "today": {"label": "End of Day"},
+        "soon": {"label": "Complete soon"},
+        "today": {"label": "End of day"},
     },
     "callbacks": {"on_left": "toggle_menu", "on_middle": "do_nothing", "on_right": "toggle_label"},
 }
@@ -81,6 +82,7 @@ VALIDATION_SCHEMA = {
         "required": False,
         "schema": {
             "add": {"type": "string", "default": DEFAULTS["icons"]["add"]},
+            "edit": {"type": "string", "default": DEFAULTS["icons"]["edit"]},
             "delete": {"type": "string", "default": DEFAULTS["icons"]["delete"]},
             "date": {"type": "string", "default": DEFAULTS["icons"]["date"]},
             "category": {"type": "string", "default": DEFAULTS["icons"]["category"]},

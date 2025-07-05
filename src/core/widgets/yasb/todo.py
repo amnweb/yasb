@@ -124,8 +124,8 @@ class TodoWidget(BaseWidget):
 
     def _add_new_task(self, dialog):
         title = self._title_input.text().strip()
-        description = self._desc_input.toPlainText().strip()
-        if not title or not description:
+        description = self._desc_input.toPlainText().strip() if self._desc_input else ""
+        if not title:
             return
         task_data = {
             "id": int(datetime.datetime.now().timestamp()),
@@ -140,6 +140,110 @@ class TodoWidget(BaseWidget):
         self._save_tasks()
         TodoWidget.update_all()
         dialog.accept()
+        self._show_completed = False
+        self._show_menu()
+
+    def _edit_task(self, dialog, task):
+        title = self._title_input.text().strip()
+        description = self._desc_input.toPlainText().strip() if self._desc_input else ""
+        if not title:
+            return
+        for t in self._tasks:
+            if t["id"] == task["id"]:
+                t["title"] = title
+                t["description"] = description
+                t["category"] = self._selected_category
+                break
+        self._save_tasks()
+        TodoWidget.update_all()
+        dialog.accept()
+        self._show_completed = False
+        self._expanded_task_id = task["id"]
+        self._show_menu()
+
+    def _show_task_dialog(self, dialog_title, save_button_text, on_save, task=None):
+        self._selected_category = task.get("category", "default") if task else "default"
+        dialog = QDialog(self._menu)
+        dialog.setWindowTitle(dialog_title)
+        dialog.setMinimumSize(500, 200)
+        dialog.setProperty("class", "app-dialog")
+        dialog.setWindowFlags(
+            Qt.WindowType.Dialog
+            | Qt.WindowType.WindowStaysOnTopHint
+            | Qt.WindowType.WindowTitleHint
+            | Qt.WindowType.CustomizeWindowHint
+            | Qt.WindowType.MSWindowsFixedSizeDialogHint
+        )
+
+        dialog_layout = QVBoxLayout(dialog)
+        dialog_layout.setSpacing(0)
+        dialog_layout.setContentsMargins(0, 0, 0, 0)
+
+        content_container = QWidget()
+        content_layout = QVBoxLayout(content_container)
+        content_layout.setSpacing(0)
+        content_layout.setContentsMargins(20, 0, 20, 0)
+
+        self._title_input = QLineEdit()
+        self.widget_context_menu(self._title_input)
+        self._title_input.setPlaceholderText("Task title... (max 100 characters, required)")
+        self._title_input.setProperty("class", "title-field")
+        if task:
+            self._title_input.setText(task["title"])
+        self._title_input.textChanged.connect(lambda: self._limit_text_length("title", 100))
+        content_layout.addWidget(self._title_input)
+
+        self._desc_input = QTextEdit()
+        self._desc_input.insertFromMimeData = lambda source: self._desc_input.insertPlainText(source.text())
+        self.widget_context_menu(self._desc_input)
+        self._desc_input.setPlaceholderText("Task description... (max 500 characters)")
+        if task:
+            self._desc_input.setText(task.get("description", ""))
+        self._desc_input.textChanged.connect(lambda: self._limit_text_length("description", 500))
+        self._desc_input.setProperty("class", "desc-field")
+        content_layout.addWidget(self._desc_input)
+
+        category_container = QFrame()
+        category_layout = QHBoxLayout(category_container)
+        category_layout.setContentsMargins(0, 0, 0, 0)
+        category_container.setProperty("class", "category-container")
+        self._category_buttons = []
+        for category_name, category_config in self._categories.items():
+            category_btn = QPushButton(category_config["label"])
+            category_btn.setProperty("class", f"category-button {category_name}")
+            category_btn.setCheckable(True)
+            category_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+            category_btn.clicked.connect(partial(self._select_category, category_name))
+            category_layout.addWidget(category_btn)
+            self._category_buttons.append((category_name, category_btn))
+
+        for cat_name, btn in self._category_buttons:
+            btn.setChecked(cat_name == self._selected_category)
+
+        content_layout.addWidget(category_container)
+        dialog_layout.addWidget(content_container)
+
+        button_container = QFrame()
+        button_container.setProperty("class", "buttons-container")
+        button_layout = QHBoxLayout(button_container)
+        button_layout.setContentsMargins(0, 0, 0, 0)
+
+        cancel_button = QPushButton("Cancel")
+        cancel_button.setProperty("class", "button cancel")
+        cancel_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        cancel_button.clicked.connect(dialog.reject)
+        button_layout.addWidget(cancel_button)
+
+        save_button = QPushButton(save_button_text)
+        save_button.setProperty("class", "button add")
+        save_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        save_button.clicked.connect(lambda: on_save(dialog, task) if task else on_save(dialog))
+        button_layout.addWidget(save_button)
+
+        dialog_layout.addWidget(button_container)
+
+        self._title_input.setFocus()
+        dialog.exec()
 
     def _toggle_label(self):
         if self._animation["enabled"]:
@@ -155,6 +259,15 @@ class TodoWidget(BaseWidget):
 
         self._update_label()
 
+    def _get_filtered_tasks(self, completed=None, category=None):
+        """Return tasks filtered by completed status and/or category."""
+        tasks = self._tasks
+        if completed is not None:
+            tasks = [t for t in tasks if t.get("completed", False) == completed]
+        if category:
+            tasks = [t for t in tasks if t.get("category") == category]
+        return tasks
+
     def _update_label(self):
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
         active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
@@ -162,8 +275,8 @@ class TodoWidget(BaseWidget):
         label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
         label_parts = [part for part in label_parts if part]
 
-        active_tasks = [task for task in self._tasks if not task.get("completed", False)]
-        completed_tasks = [task for task in self._tasks if task.get("completed", False)]
+        active_tasks = self._get_filtered_tasks(completed=False)
+        completed_tasks = self._get_filtered_tasks(completed=True)
         total_tasks = len(self._tasks)
         active_count = len(active_tasks)
         completed_count = len(completed_tasks)
@@ -189,6 +302,8 @@ class TodoWidget(BaseWidget):
     def _toggle_menu(self):
         if self._animation["enabled"]:
             AnimationManager.animate(self, self._animation["type"], self._animation["duration"])
+        self._show_completed = False
+        self._expanded_task_id = None
         self._show_menu()
 
     def _show_menu(self):
@@ -217,7 +332,6 @@ class TodoWidget(BaseWidget):
         add_task_button.clicked.connect(self._show_add_task_dialog)
 
         header_layout.addWidget(add_task_button, alignment=Qt.AlignmentFlag.AlignLeft)
-
         header_layout.addStretch()
 
         self._in_progress_btn = QPushButton("In Progress")
@@ -268,13 +382,11 @@ class TodoWidget(BaseWidget):
         scroll_layout.setContentsMargins(0, 0, 0, 0)
         scroll_layout.setSpacing(0)
 
-        if not self._show_completed:
-            tasks = [task for task in self._tasks if not task.get("completed", False)]
-        else:
-            tasks = [task for task in self._tasks if task.get("completed", False)]
-        self._expanded_task_id = tasks[0]["id"] if tasks else None
+        tasks = self._get_filtered_tasks(completed=False, category=self._category_filter)
+        if self._expanded_task_id is None and tasks:
+            self._expanded_task_id = tasks[0]["id"]
 
-        self._refresh_task_list(scroll_layout)
+        self._refresh_task_list(scroll_layout, tasks)
 
         scroll_area.setWidget(scroll_widget)
         main_layout.addWidget(scroll_area)
@@ -295,18 +407,17 @@ class TodoWidget(BaseWidget):
             QMenu::indicator:checked { background: transparent;color:transparent }
         """)
         qmenu_rounded_corners(menu)
-        sort_by_date = QAction("Sort by Date (Newest)", self)
-        sort_by_title = QAction("Sort by Title (A-Z)", self)
-        sort_by_category = QAction("Sort by Category", self)
+        sort_by_date = QAction("Sort by date (Newest)", self)
+        sort_by_date_old = QAction("Sort by date (Oldest)", self)
+        sort_reset = QAction("Reset sorting", self)
 
         menu.addAction(sort_by_date)
-        menu.addAction(sort_by_title)
-        menu.addAction(sort_by_category)
+        menu.addAction(sort_by_date_old)
+        menu.addAction(sort_reset)
 
         sort_by_date.triggered.connect(lambda: self._sort_and_filter_tasks(sort_mode="date"))
-        sort_by_title.triggered.connect(lambda: self._sort_and_filter_tasks(sort_mode="title"))
-        sort_by_category.triggered.connect(lambda: self._sort_and_filter_tasks(sort_mode="category"))
-
+        sort_by_date_old.triggered.connect(lambda: self._sort_and_filter_tasks(sort_mode="date", reverse=True))
+        sort_reset.triggered.connect(lambda: self._sort_and_filter_tasks(sort_mode="default"))
         menu.addSeparator()
 
         show_all_action = QAction("Show all categories", self)
@@ -326,18 +437,20 @@ class TodoWidget(BaseWidget):
         pos = button_pos - QPoint(menu_width - self._order_btn.sizeHint().width(), -6)
         menu.exec(pos)
 
-    def _sort_and_filter_tasks(self, sort_mode=None, category_key=None):
-        # Set filter if provided
+    def _sort_and_filter_tasks(self, sort_mode=None, category_key=None, reverse=False):
         if category_key is not None:
             self._category_filter = category_key
 
-        # Sort if requested
-        if sort_mode == "date":
+        if sort_mode == "date" and not reverse:
             self._tasks.sort(key=lambda t: t.get("created_at", ""), reverse=True)
-        elif sort_mode == "title":
-            self._tasks.sort(key=lambda t: t.get("title", "").lower())
-        elif sort_mode == "category":
-            self._tasks.sort(key=lambda t: t.get("category", ""))
+        elif sort_mode == "date" and reverse:
+            self._tasks.sort(key=lambda t: t.get("created_at", ""), reverse=False)
+        elif sort_mode == "default":
+            self._tasks.sort(key=lambda t: t.get("order", ""), reverse=True)
+            self._category_filter = None
+
+        # Reset expanded task ID when sorting or filtering
+        self._expanded_task_id = None
 
         self._refresh_menu_task_list()
 
@@ -348,12 +461,13 @@ class TodoWidget(BaseWidget):
 
     def _set_show_completed(self, show_completed):
         self._show_completed = show_completed
-
         self._in_progress_btn.setChecked(not show_completed)
         self._completed_btn.setChecked(show_completed)
+        if show_completed:
+            self._expanded_task_id = None  # Collapse all when switching to completed
         self._refresh_menu_task_list()
 
-    def _refresh_task_list(self, layout):
+    def _refresh_task_list(self, layout, tasks=None):
         """Refresh the task list."""
         while layout.count():
             item = layout.takeAt(0)
@@ -361,26 +475,21 @@ class TodoWidget(BaseWidget):
             if widget is not None:
                 widget.setParent(None)
 
-        if not self._show_completed:
-            tasks = [task for task in self._tasks if not task.get("completed", False)]
-        else:
-            tasks = [task for task in self._tasks if task.get("completed", False)]
-
-        if getattr(self, "_category_filter", None):
-            tasks = [task for task in tasks if task.get("category") == self._category_filter]
-
-        if tasks and (self._expanded_task_id not in [task["id"] for task in tasks]):
-            self._expanded_task_id = tasks[0]["id"]
+        if tasks is None:
+            if not self._show_completed:
+                tasks = self._get_filtered_tasks(completed=False, category=self._category_filter)
+            else:
+                tasks = self._get_filtered_tasks(completed=True, category=self._category_filter)
 
         if tasks:
             for task in tasks:
                 self._add_task_to_menu(task, layout, completed=self._show_completed)
         else:
             category_label = ""
-            if getattr(self, "_category_filter", None):
+            if self._category_filter:
                 cat_key = self._category_filter
                 cat_conf = self._categories.get(cat_key, {})
-                category_label = f" in <b>{cat_conf.get('label', cat_key).capitalize()}</b>"
+                category_label = f" in <b>{cat_conf.get('label', cat_key)}</b>"
 
             if not self._show_completed:
                 msg = (
@@ -412,93 +521,24 @@ class TodoWidget(BaseWidget):
                 scroll_area = scroll_areas[0]
                 scroll_widget = scroll_area.widget()
                 if scroll_widget:
-                    self._refresh_task_list(scroll_widget.layout())
+                    # Use filtered tasks for refresh
+                    if not self._show_completed:
+                        tasks = self._get_filtered_tasks(completed=False, category=self._category_filter)
+                    else:
+                        tasks = self._get_filtered_tasks(completed=True, category=self._category_filter)
+                    self._refresh_task_list(scroll_widget.layout(), tasks)
 
     def _expand_task(self, task_id):
         self._expanded_task_id = task_id
         self._refresh_menu_task_list()
 
     def _show_add_task_dialog(self):
-        self._selected_category = "default"
-        dialog = QDialog(self._menu)
-        dialog.setWindowTitle("Add New Task")
-        dialog.setMinimumSize(500, 200)
-        dialog.setProperty("class", "app-dialog")
-        dialog.setWindowFlags(
-            Qt.WindowType.Dialog
-            | Qt.WindowType.WindowStaysOnTopHint
-            | Qt.WindowType.WindowTitleHint
-            | Qt.WindowType.CustomizeWindowHint
-            | Qt.WindowType.MSWindowsFixedSizeDialogHint
+        self._show_task_dialog(dialog_title="Add New Task", save_button_text="Add Task", on_save=self._add_new_task)
+
+    def _show_edit_task_dialog(self, task):
+        self._show_task_dialog(
+            dialog_title="Edit Task", save_button_text="Save Changes", on_save=self._edit_task, task=task
         )
-        self._dialog = dialog
-
-        dialog_layout = QVBoxLayout(dialog)
-        dialog_layout.setSpacing(0)
-        dialog_layout.setContentsMargins(0, 0, 0, 0)
-
-        content_container = QWidget()
-        content_layout = QVBoxLayout(content_container)
-        content_layout.setSpacing(0)
-        content_layout.setContentsMargins(20, 0, 20, 0)
-
-        self._title_input = QLineEdit()
-        self.widget_context_menu(self._title_input)
-        self._title_input.setPlaceholderText("Task title... (max 100 characters)")
-        self._title_input.setProperty("class", "title-field")
-        self._title_input.textChanged.connect(lambda: self._limit_text_length("title", 100))
-        content_layout.addWidget(self._title_input)
-
-        self._desc_input = QTextEdit()
-        self._desc_input.insertFromMimeData = lambda source: self._desc_input.insertPlainText(source.text())
-        self.widget_context_menu(self._desc_input)
-        self._desc_input.setPlaceholderText("Task description... (max 500 characters)")
-        self._desc_input.textChanged.connect(lambda: self._limit_text_length("description", 500))
-        self._desc_input.setProperty("class", "desc-field")
-        content_layout.addWidget(self._desc_input)
-
-        category_container = QFrame()
-        category_layout = QHBoxLayout(category_container)
-        category_layout.setContentsMargins(0, 0, 0, 0)
-        category_container.setProperty("class", "category-container")
-        self._category_buttons = []
-        for category_name, category_config in self._categories.items():
-            category_btn = QPushButton(category_config["label"])
-            category_btn.setProperty("class", f"category-button {category_name}")
-            category_btn.setCheckable(True)
-            category_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-            category_btn.clicked.connect(partial(self._select_category, category_name))
-            category_layout.addWidget(category_btn)
-            self._category_buttons.append((category_name, category_btn))
-
-        for cat_name, btn in self._category_buttons:
-            btn.setChecked(cat_name == self._selected_category)
-
-        content_layout.addWidget(category_container)
-        dialog_layout.addWidget(content_container)
-
-        button_container = QFrame()
-        button_container.setProperty("class", "buttons-container")
-        button_layout = QHBoxLayout(button_container)
-        button_layout.setContentsMargins(0, 0, 0, 0)
-
-        cancel_button = QPushButton("Cancel")
-        cancel_button.setProperty("class", "button cancel")
-        cancel_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        cancel_button.clicked.connect(dialog.reject)
-        button_layout.addWidget(cancel_button)
-
-        save_button = QPushButton("Add Task")
-        save_button.setProperty("class", "button add")
-        save_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        save_button.clicked.connect(lambda: self._add_new_task(dialog))
-        button_layout.addWidget(save_button)
-
-        dialog_layout.addWidget(button_container)
-
-        self._title_input.setFocus()
-
-        dialog.exec()
 
     def widget_context_menu(self, widget):
         def show_custom_menu(point):
@@ -545,9 +585,14 @@ class TodoWidget(BaseWidget):
             delete_callback=self._delete_task,
             reorder_callback=self._reorder_tasks,
         )
-        container.setProperty(
-            "class", f"task-item{' completed' if completed else ''} {task.get('category', 'default')}"
-        )
+        expanded = self._expanded_task_id == task["id"]
+        class_list = [
+            "task-item",
+            "completed" if completed else "",
+            task.get("category", "default"),
+            "expanded" if expanded else "",
+        ]
+        container.setProperty("class", " ".join(filter(None, class_list)))
         container.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         container.setContentsMargins(0, 0, 0, 0)
         container_layout = QHBoxLayout(container)
@@ -561,7 +606,11 @@ class TodoWidget(BaseWidget):
         if completed:
             checkbox.setCheckable(True)
             checkbox.setChecked(True)
-            checkbox.setEnabled(False)
+
+            def uncomplete_task():
+                self._uncomplete_task(task)
+
+            checkbox.clicked.connect(uncomplete_task)
         if not completed:
             checkbox.setCheckable(True)
             checkbox.setChecked(False)
@@ -573,7 +622,21 @@ class TodoWidget(BaseWidget):
                 container.style().unpolish(container)
                 container.style().polish(container)
                 checkbox.setText(self._icons["checked"])
-                QTimer.singleShot(1000, lambda: self._archive_task(t))
+
+                def do_archive():
+                    for i, existing_task in enumerate(self._tasks):
+                        if existing_task["id"] == t["id"]:
+                            self._tasks[i]["completed"] = True
+                            break
+                    self._save_tasks()
+                    TodoWidget.update_all()
+                    try:
+                        if hasattr(self, "_menu") and self._menu and self._menu.isVisible():
+                            self._refresh_menu_task_list()
+                    except RuntimeError:
+                        pass
+
+                QTimer.singleShot(200, do_archive)
 
             checkbox.clicked.connect(delayed_archive)
         container_layout.addWidget(checkbox, alignment=Qt.AlignmentFlag.AlignTop)
@@ -614,15 +677,20 @@ class TodoWidget(BaseWidget):
             try:
                 created_at = datetime.datetime.fromisoformat(task["created_at"])
                 now = datetime.datetime.now()
-                created_date = created_at.date()
-                now_date = now.date()
-                delta_days = (now_date - created_date).days
-                if delta_days == 0:
-                    friendly_date = "Today"
-                elif delta_days == 1:
+                delta = now - created_at
+                if delta.days == 0:
+                    if delta.seconds < 60:
+                        friendly_date = "Just now"
+                    elif delta.seconds < 3600:
+                        minutes = delta.seconds // 60
+                        friendly_date = f"{minutes} min ago"
+                    else:
+                        hours = delta.seconds // 3600
+                        friendly_date = f"{hours} hour{'s' if hours != 1 else ''} ago"
+                elif delta.days == 1:
                     friendly_date = "Yesterday"
-                elif 1 < delta_days < 30:
-                    friendly_date = f"{delta_days} days ago"
+                elif 1 < delta.days < 30:
+                    friendly_date = f"{delta.days} days ago"
                 else:
                     friendly_date = created_at.strftime("%Y-%m-%d")
                 date_label_icon = QLabel(self._icons["date"])
@@ -636,6 +704,11 @@ class TodoWidget(BaseWidget):
                 cat_label_icon.setProperty("class", f"category-icon {category}")
                 cat_label = QLabel(category_config["label"])
                 cat_label.setProperty("class", f"category-text {category}")
+
+                edit_btn = QPushButton(self._icons["edit"])
+                edit_btn.setProperty("class", "edit-task-button")
+                edit_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+                edit_btn.clicked.connect(lambda _, t=task: self._show_edit_task_dialog(t))
 
                 delete_btn = QPushButton(self._icons["delete"])
                 delete_btn.setProperty("class", "delete-task-button")
@@ -652,6 +725,7 @@ class TodoWidget(BaseWidget):
                 info_layout.addWidget(cat_label_icon)
                 info_layout.addWidget(cat_label)
                 info_layout.addStretch()
+                info_layout.addWidget(edit_btn)
                 info_layout.addWidget(delete_btn)
                 text_layout.addWidget(info_row)
             except (ValueError, TypeError) as e:
@@ -665,6 +739,15 @@ class TodoWidget(BaseWidget):
 
         layout.addWidget(container)
 
+    def _uncomplete_task(self, task):
+        for i, existing_task in enumerate(self._tasks):
+            if existing_task["id"] == task["id"]:
+                self._tasks[i]["completed"] = False
+                break
+        self._save_tasks()
+        TodoWidget.update_all()
+        self._refresh_menu_task_list()
+
     def _archive_task(self, task):
         for i, existing_task in enumerate(self._tasks):
             if existing_task["id"] == task["id"]:
@@ -672,29 +755,16 @@ class TodoWidget(BaseWidget):
                 break
         self._save_tasks()
         TodoWidget.update_all()
-        if hasattr(self, "_menu") and self._menu:
-            scroll_areas = self._menu.findChildren(QScrollArea)
-            if scroll_areas:
-                scroll_area = scroll_areas[0]
-                scroll_widget = scroll_area.widget()
-                if scroll_widget:
-                    layout = scroll_widget.layout()
-                    widget_to_remove = next(
-                        (
-                            layout.itemAt(i).widget()
-                            for i in range(layout.count())
-                            if hasattr(layout.itemAt(i).widget(), "_task_id")
-                            and layout.itemAt(i).widget()._task_id == task["id"]
-                        ),
-                        None,
-                    )
-                    if widget_to_remove:
-                        widget_to_remove.setParent(None)
+        self._remove_task_widget_from_menu(task["id"])
 
     def _delete_task(self, task):
         self._tasks = [t for t in self._tasks if t["id"] != task["id"]]
         self._save_tasks()
         TodoWidget.update_all()
+        self._remove_task_widget_from_menu(task["id"])
+
+    def _remove_task_widget_from_menu(self, task_id):
+        """Remove the widget for a given task_id from the menu, and refresh if needed."""
         if hasattr(self, "_menu") and self._menu:
             scroll_areas = self._menu.findChildren(QScrollArea)
             if scroll_areas:
@@ -702,17 +772,22 @@ class TodoWidget(BaseWidget):
                 scroll_widget = scroll_area.widget()
                 if scroll_widget:
                     layout = scroll_widget.layout()
-                    widget_to_remove = next(
-                        (
-                            layout.itemAt(i).widget()
-                            for i in range(layout.count())
-                            if hasattr(layout.itemAt(i).widget(), "_task_id")
-                            and layout.itemAt(i).widget()._task_id == task["id"]
-                        ),
-                        None,
-                    )
+                    widget_to_remove = None
+                    for i in range(layout.count()):
+                        w = layout.itemAt(i).widget()
+                        if hasattr(w, "_task_id") and w._task_id == task_id:
+                            widget_to_remove = w
+                            break
                     if widget_to_remove:
                         widget_to_remove.setParent(None)
+                    # Only refresh if no task items left after removal
+                    task_items_left = [
+                        layout.itemAt(i).widget()
+                        for i in range(layout.count())
+                        if hasattr(layout.itemAt(i).widget(), "_task_id")
+                    ]
+                    if len(task_items_left) == 0:
+                        self._refresh_menu_task_list()
 
     def _reorder_tasks(self, source_id, target_id):
         try:
