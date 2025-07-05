@@ -93,8 +93,6 @@ class CustomWidget(BaseWidget):
         # Add the container to the main widget layout
         self.widget_layout.addWidget(self._widget_container)
 
-        self._create_dynamically_label(self._label_content, self._label_alt_content)
-
         self.register_callback("toggle_label", self._toggle_label)
         self.register_callback("exec_custom", self._exec_callback)
 
@@ -103,10 +101,16 @@ class CustomWidget(BaseWidget):
         self.callback_middle = callbacks["on_middle"]
         self.callback_timer = "exec_custom"
 
+        self._create_dynamically_label(self._label_content, self._label_alt_content)
+
         if exec_options["run_once"]:
             self._exec_callback()
         else:
             self.start_timer()
+
+    def _set_cursor(self, label):
+        if any(cb != "do_nothing" for cb in [self.callback_left, self.callback_right, self.callback_middle]):
+            label.setCursor(Qt.CursorShape.PointingHandCursor)
 
     def _toggle_label(self):
         if self._animation["enabled"]:
@@ -137,6 +141,7 @@ class CustomWidget(BaseWidget):
                     label.setProperty("class", "label")
                     label.setText("Loading...")
                 label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                self._set_cursor(label)
                 add_shadow(label, self._label_shadow)
                 self._widget_container_layout.addWidget(label)
                 widgets.append(label)
