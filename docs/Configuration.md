@@ -51,17 +51,25 @@ QT_SCALE_FACTOR_ROUNDING_POLICY="PassThrough"
 | `enabled`         | boolean | `true`        | Whether the status bar is enabled. |
 | `screens`         | list    | `['*']`       | The screens on which the status bar should be displayed. |
 | `class_name`      | string  | `"yasb-bar"`  | The CSS class name for the status bar. |
-| `alignment`       | object  | `{position: "top", center: false}` | The alignment settings for the status bar. |
+| `alignment`       | object  | [See below](#bar-alignment) | The alignment settings for the status bar. |
 | `blur_effect`     | object  | [See below](#blur-effect-configuration) | The blur effect settings for the status bar. |
 | `window_flags`    | object  | [See below](#window-flags-configuration) | The window flags for the status bar. |
 | `dimensions`      | object  | `{width: "100%", height: 36}` | The dimensions of the status bar. |
 | `padding`         | object  | `{top: 4, left: 0, bottom: 4, right: 0}` | The padding for the status bar. |
-| `animation`       | object  | `{enabled: true, duration: 500}` | The animation settings for the status bar. Duration is in milliseconds. |
+| `animation`       | object  | `{enabled: true, duration: 500}` | The animation settings for the status bar. Duration is in milliseconds. Animation is used to show/hide the bar smoothly. |
 | `widgets`         | list  | `left[], center[], right[]` | Active widgets and position. |
 | `layouts`         | object  | [See below](#layouts-configuration) | Configuration for widget layouts in each section (left, center, right). |
 
 > **Note:**
 > `screens` can be specified as a list of monitor names. If you want the bar to appear on all screens, use `['*']`. To specify a single screen, use `['DELL P2419H (1)']` or a similar name based on your monitor setup. To show the bar only and always on the primary screen, use `['primary']`.
+
+
+### Bar Alignment
+| Option            | Type    | Default       | Description |
+|-------------------|---------|---------------|-------------|
+| `position`        | string  | `"top"`       | The position of the status bar, can be `"top"` or `"bottom"` |
+| `align`          | string |  `"center"` | The alignment of the status bar, can be `"left"`, `"center"`, or `"right"` |
+
 
 ### Blur Effect Configuration
 | Option            | Type    | Default       | Description |

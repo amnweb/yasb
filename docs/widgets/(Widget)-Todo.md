@@ -238,11 +238,6 @@ If you want to use different styles for the context menu, you can target the `.t
 .todo-menu .header .tab-buttons.sort:pressed {
     background-color: rgba(255, 255, 255, 0.2);
 }
-.todo-menu .header .toggle-tab.in-progress {
-    background-color: #3498db;
-    color: #ffffff;
-    border-radius: 4px;
-}
 .todo-menu .no-tasks {
     font-family: 'Segoe UI';
     font-size: 18px;
