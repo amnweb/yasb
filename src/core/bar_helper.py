@@ -22,7 +22,7 @@ from PyQt6.QtWidgets import (
 )
 
 from core.utils.controller import exit_application, reload_application
-from core.utils.win32.utilities import dwmapi, get_window_rect, qmenu_rounded_corners
+from core.utils.win32.utilities import dwmapi, get_monitor_hwnd, get_window_rect, qmenu_rounded_corners
 
 DWMWA_CLOAKED = 14
 S_OK = 0
@@ -171,10 +171,24 @@ class AutoHideManager(QObject):
 class FullscreenManager(QObject):
     """Manages fullscreen detection and bar visibility"""
 
+    # System window classes that should not hide the bar and should be ignored
+    # CEF-OSC-WIDGET is added to handle NVIDIA Overlay
+    WINDOW_CLASSES = frozenset(
+        [
+            "Progman",
+            "WorkerW",
+            "XamlWindow",
+            "Shell_TrayWnd",
+            "XamlExplorerHostIslandWindow",
+            "CEF-OSC-WIDGET",
+        ]
+    )
+
     def __init__(self, bar_widget: QWidget, parent=None):
         super().__init__(parent)
         self.bar_widget = bar_widget
         self._prev_fullscreen_state = None
+        self._cached_screen_data = {}
         self._timer = QTimer(self)
         self._timer.setInterval(400)
         self._timer.timeout.connect(self._check_fullscreen_for_window)
@@ -220,55 +234,154 @@ class FullscreenManager(QObject):
             return False
 
     def _check_fullscreen_for_window(self):
-        """Check if any window is fullscreen on the bar's screen"""
+        """Check if the focused window is fullscreen on the bar's screen"""
         if not self.bar_widget:
             return
 
-        screen = self.bar_widget.screen()
-        screen_geometry = screen.geometry()
-        screen_rect = (screen_geometry.x(), screen_geometry.y(), screen_geometry.width(), screen_geometry.height())
-        dpi = screen.devicePixelRatio()
-        scaled_screen_rect = screen_rect[:2] + tuple(round(dim * dpi) for dim in screen_rect[2:])
-
-        def is_window_fullscreen_on_screen(hwnd):
-            # Ignore invisible/minimized windows
-            if not win32gui.IsWindowVisible(hwnd) or win32gui.IsIconic(hwnd):
-                return False
-            try:
-                class_name = win32gui.GetClassName(hwnd)
-            except Exception:
-                return False
-            # Ignore specific system windows that should not be considered fullscreen
-            if class_name in ("Progman", "WorkerW", "XamlWindow", "CEF-OSC-WIDGET"):
-                return False
-
-                # Check if window is cloaked
-            if self.is_window_cloaked(hwnd):
-                return False
-            # Get window rect
-            rect = get_window_rect(hwnd)
-            window_rect = (rect["x"], rect["y"], rect["width"], rect["height"])
-
-            return window_rect == scaled_screen_rect
-
-        # Enumerate all top-level windows
-        found_fullscreen = False
-
-        def enum_handler(hwnd, _):
-            nonlocal found_fullscreen
-            if is_window_fullscreen_on_screen(hwnd):
-                found_fullscreen = True
-
-        win32gui.EnumWindows(enum_handler, None)
-
-        if self._prev_fullscreen_state == found_fullscreen:
+        # Get the currently focused window first
+        focused_hwnd = win32gui.GetForegroundWindow()
+        if not focused_hwnd:
+            # No focused window, show bar if hidden
+            self._prev_fullscreen_state = False
+            if not self.bar_widget.isVisible():
+                self.bar_widget.show()
             return
 
-        self._prev_fullscreen_state = found_fullscreen
-        if found_fullscreen and self.bar_widget.isVisible():
-            self.bar_widget.hide()
-        elif not found_fullscreen and not self.bar_widget.isVisible():
-            self.bar_widget.show()
+        # Early exit if focused window is invisible/minimized
+        if not win32gui.IsWindowVisible(focused_hwnd) or win32gui.IsIconic(focused_hwnd):
+            self._prev_fullscreen_state = False
+            if not self.bar_widget.isVisible():
+                self.bar_widget.show()
+            return
+
+        # Check monitor early to avoid unnecessary calculations
+        try:
+            focused_window_monitor = get_monitor_hwnd(focused_hwnd)
+            bar_monitor = get_monitor_hwnd(int(self.bar_widget.winId()))
+
+            # If focused window is on different monitor, check if there's a fullscreen window on this monitor
+            if focused_window_monitor != bar_monitor:
+                # Check if there's any fullscreen window on the bar's monitor
+                found_fullscreen = self._check_fullscreen_on_bar_monitor(bar_monitor)
+
+                # Only update visibility if state changed
+                if self._prev_fullscreen_state != found_fullscreen:
+                    self._prev_fullscreen_state = found_fullscreen
+                    if found_fullscreen and self.bar_widget.isVisible():
+                        self.bar_widget.hide()
+                    elif not found_fullscreen and not self.bar_widget.isVisible():
+                        self.bar_widget.show()
+                return
+
+            # Use monitor handle as cache key
+            cache_key = bar_monitor
+        except Exception:
+            # If monitor check fails, use screen name as fallback cache key
+            cache_key = self.bar_widget.screen().name()
+
+        # Check window class early to filter out system windows
+        try:
+            class_name = win32gui.GetClassName(focused_hwnd)
+            if class_name in self.WINDOW_CLASSES:
+                self._prev_fullscreen_state = False
+                if not self.bar_widget.isVisible():
+                    self.bar_widget.show()
+                return
+        except Exception:
+            # If class name check fails, continue
+            pass
+
+        # Check if window is cloaked
+        if self.is_window_cloaked(focused_hwnd):
+            self._prev_fullscreen_state = False
+            if not self.bar_widget.isVisible():
+                self.bar_widget.show()
+            return
+
+        # Get or calculate cached screen rect for this specific screen
+        screen = self.bar_widget.screen()
+        screen_geometry = screen.geometry()
+        dpi = screen.devicePixelRatio()
+        # Check if we have cached data for this screen
+        if cache_key not in self._cached_screen_data or self._cached_screen_data[cache_key]["dpi"] != dpi:
+            # Calculate and cache screen rect for this screen
+            screen_rect = (screen_geometry.x(), screen_geometry.y(), screen_geometry.width(), screen_geometry.height())
+            scaled_screen_rect = screen_rect[:2] + tuple(round(dim * dpi) for dim in screen_rect[2:])
+
+            self._cached_screen_data[cache_key] = {"scaled_rect": scaled_screen_rect, "dpi": dpi}
+
+        # Use cached screen rect
+        scaled_screen_rect = self._cached_screen_data[cache_key]["scaled_rect"]
+
+        # Get window rect and check if fullscreen
+        try:
+            rect = get_window_rect(focused_hwnd)
+            window_rect = (rect["x"], rect["y"], rect["width"], rect["height"])
+            found_fullscreen = window_rect == scaled_screen_rect
+        except Exception:
+            found_fullscreen = False
+
+        # Only update visibility if state changed
+        if self._prev_fullscreen_state != found_fullscreen:
+            self._prev_fullscreen_state = found_fullscreen
+            if found_fullscreen and self.bar_widget.isVisible():
+                self.bar_widget.hide()
+            elif not found_fullscreen and not self.bar_widget.isVisible():
+                self.bar_widget.show()
+
+    def _check_fullscreen_on_bar_monitor(self, bar_monitor):
+        """
+        Check if there's any fullscreen window on the bar's monitor (regardless of focus)
+        This is used when the focused window is on a different monitor.
+        It enumerates all windows and checks if any are fullscreen on the bar's monitor.
+        """
+        screen = self.bar_widget.screen()
+        screen_geometry = screen.geometry()
+        dpi = screen.devicePixelRatio()
+
+        # Calculate screen rect for comparison
+        screen_rect = (screen_geometry.x(), screen_geometry.y(), screen_geometry.width(), screen_geometry.height())
+        scaled_screen_rect = screen_rect[:2] + tuple(round(dim * dpi) for dim in screen_rect[2:])
+
+        def enum_windows_proc(hwnd, lparam):
+            try:
+                # Skip invisible/minimized windows
+                if not win32gui.IsWindowVisible(hwnd) or win32gui.IsIconic(hwnd):
+                    return True
+
+                # Check if window is on THIS bar's monitor
+                window_monitor = get_monitor_hwnd(hwnd)
+                if window_monitor != bar_monitor:
+                    return True
+
+                # Skip system windows
+                class_name = win32gui.GetClassName(hwnd)
+                if class_name in self.WINDOW_CLASSES:
+                    return True
+
+                # Skip cloaked windows
+                if self.is_window_cloaked(hwnd):
+                    return True
+
+                # Check if window is fullscreen
+                rect = get_window_rect(hwnd)
+                window_rect = (rect["x"], rect["y"], rect["width"], rect["height"])
+
+                if window_rect == scaled_screen_rect:
+                    # Found a fullscreen window on this bar's monitor and stopping enumeration
+                    return False
+
+            except Exception:
+                pass
+
+            return True
+
+        try:
+            # Enumerate all windows to find fullscreen ones on this bar's monitor
+            win32gui.EnumWindows(enum_windows_proc, None)
+            return False
+        except Exception:
+            return True
 
 
 class OsThemeManager(QObject):
