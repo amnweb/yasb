@@ -1,7 +1,6 @@
 import logging
 import os
 import re
-import time
 
 from PyQt6.QtCore import QPropertyAnimation, QRectF, Qt, QTimer, pyqtProperty
 from PyQt6.QtGui import QColor, QCursor, QPainter, QPen
@@ -16,6 +15,19 @@ from settings import SCRIPT_PATH
 
 class PomodoroWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
+
+    # Shared state for all PomodoroWidget instances
+    _instances: list["PomodoroWidget"] = []
+    _shared_timer: QTimer | None = None
+    _shared_state = {
+        "is_running": False,
+        "is_break": False,
+        "is_paused": False,
+        "is_long_break": False,
+        "remaining_time": None,
+        "elapsed_time": 0,
+        "session_count": 0,
+    }
 
     def __init__(
         self,
@@ -61,19 +73,13 @@ class PomodoroWidget(BaseWidget):
         self._label_shadow = label_shadow
         self._container_shadow = container_shadow
 
-        # Initialize state
-        self._is_running = False
-        self._is_break = False
-        self._is_paused = False
-        self._is_long_break = False
-        self._remaining_time = self._work_duration
-        self._elapsed_time = 0
-        self._session_count = 0
+        # Add this instance to the shared instances list
+        if self not in PomodoroWidget._instances:
+            PomodoroWidget._instances.append(self)
 
-        self._timer = QTimer(self)
-        self._timer.timeout.connect(self._update_timer)
-
-        self._last_update_time = None
+        # Initialize shared state if first instance
+        if PomodoroWidget._shared_state["remaining_time"] is None:
+            PomodoroWidget._shared_state["remaining_time"] = self._work_duration
 
         self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
@@ -99,7 +105,72 @@ class PomodoroWidget(BaseWidget):
         self.callback_right = callbacks["on_right"]
         self.callback_middle = callbacks["on_middle"]
 
+        # Start shared timer if not already running
+        if PomodoroWidget._shared_timer is None:
+            PomodoroWidget._shared_timer = QTimer(self)
+            PomodoroWidget._shared_timer.setInterval(1000)
+            PomodoroWidget._shared_timer.timeout.connect(PomodoroWidget._update_all_instances)
+            PomodoroWidget._shared_timer.start()
+
+        self._update_from_shared_state()
+
+    @classmethod
+    def _update_all_instances(cls):
+        # Only update timer if running
+        if cls._shared_state["is_running"]:
+            cls._shared_state["remaining_time"] = max(0, cls._shared_state["remaining_time"] - 1)
+            cls._shared_state["elapsed_time"] += 1
+
+            if cls._shared_state["remaining_time"] <= 0:
+                # Timer completed, handle transition
+                # Only the first instance should handle the transition!
+                if cls._instances:
+                    try:
+                        cls._instances[0]._timer_completed()
+                    except RuntimeError:
+                        cls._instances.pop(0)
+                return
+
+        # Update all instances' UI
+        for inst in cls._instances[:]:
+            try:
+                inst._update_from_shared_state()
+            except RuntimeError:
+                cls._instances.remove(inst)
+
+    def _update_from_shared_state(self):
+        # Sync instance state from shared state
+        s = PomodoroWidget._shared_state
+        self._is_running = s["is_running"]
+        self._is_break = s["is_break"]
+        self._is_paused = s["is_paused"]
+        self._is_long_break = s["is_long_break"]
+        self._remaining_time = s["remaining_time"]
+        self._elapsed_time = s["elapsed_time"]
+        self._session_count = s["session_count"]
         self._update_label()
+        # Update menu if open
+        try:
+            if hasattr(self, "_dialog") and self._dialog is not None and self._dialog.isVisible():
+                if self._is_break:
+                    max_value = self._long_break_duration if self._is_long_break else self._break_duration
+                    current_value = max_value - self._remaining_time
+                else:
+                    max_value = self._work_duration
+                    current_value = max_value - self._remaining_time
+
+                if hasattr(self, "_progress_gauge"):
+                    self._progress_gauge.setMaximum(max_value)
+                    self._progress_gauge.setValue(int(current_value))
+                    self._progress_gauge.setBreakMode(self._is_break)
+                    status_text = "Paused" if self._is_paused else ("Break" if self._is_break else "Work")
+                    self._progress_gauge.setStatusText(f"{status_text}\n{self._format_time(self._remaining_time)}")
+                    self._session_label.setText(
+                        f"Session: {self._session_count + 1}"
+                        + (f"/{self._session_target}" if self._session_target > 0 else "")
+                    )
+        except RuntimeError:
+            pass
 
     def _toggle_label(self):
         if self._animation["enabled"]:
@@ -160,155 +231,134 @@ class PomodoroWidget(BaseWidget):
             return self._icons["work"]
 
     def _toggle_timer(self):
-        if self._is_running:
+        if PomodoroWidget._shared_state["is_running"]:
             self._pause_timer()
         else:
             self._start_timer()
 
     def _start_timer(self):
-        self._is_running = True
-        self._is_paused = False
-        self._last_update_time = time.time()
-        self._timer.start(1000)
-        self._update_label()
-
+        s = PomodoroWidget._shared_state
+        s["is_running"] = True
+        s["is_paused"] = False
+        PomodoroWidget._update_all_instances()
         try:
-            if hasattr(self, "_dialog") and self._dialog is not None and self._dialog.isVisible():
-                self._toggle_button.setText("Pause")
-                self._toggle_button.setProperty("class", "button pause")
-                self._toggle_button.style().unpolish(self._toggle_button)
-                self._toggle_button.style().polish(self._toggle_button)
+            for inst in PomodoroWidget._instances:
+                if hasattr(inst, "_dialog") and inst._dialog is not None and inst._dialog.isVisible():
+                    inst._toggle_button.setText("Pause")
+                    inst._toggle_button.setProperty("class", "button pause")
+                    inst._toggle_button.style().unpolish(inst._toggle_button)
+                    inst._toggle_button.style().polish(inst._toggle_button)
         except RuntimeError:
             pass
 
     def _pause_timer(self):
-        self._is_running = False
-        self._is_paused = True
-        self._timer.stop()
-        self._update_label()
-
+        s = PomodoroWidget._shared_state
+        s["is_running"] = False
+        s["is_paused"] = True
+        PomodoroWidget._update_all_instances()
         try:
-            if hasattr(self, "_dialog") and self._dialog is not None and self._dialog.isVisible():
-                self._toggle_button.setText("Start")
-                self._toggle_button.setProperty("class", "button start")
-                self._toggle_button.style().unpolish(self._toggle_button)
-                self._toggle_button.style().polish(self._toggle_button)
-                self._progress_gauge.setStatusText(f"Paused\n{self._format_time(self._remaining_time)}")
+            for inst in PomodoroWidget._instances:
+                if hasattr(inst, "_dialog") and inst._dialog is not None and inst._dialog.isVisible():
+                    inst._toggle_button.setText("Start")
+                    inst._toggle_button.setProperty("class", "button start")
+                    inst._toggle_button.style().unpolish(inst._toggle_button)
+                    inst._toggle_button.style().polish(inst._toggle_button)
+                    inst._progress_gauge.setStatusText(f"Paused\n{inst._format_time(inst._remaining_time)}")
         except RuntimeError:
             pass
 
     def _reset_timer(self):
-        self._is_running = False
-        self._is_paused = False
-        self._is_break = False
-        self._timer.stop()
-        self._remaining_time = self._work_duration
-        self._elapsed_time = 0
-        self._update_label()
+        s = PomodoroWidget._shared_state
+        s["is_running"] = False
+        s["is_paused"] = False
+        s["is_break"] = False
+        s["is_long_break"] = False
+        s["remaining_time"] = self._work_duration
+        s["elapsed_time"] = 0
+        PomodoroWidget._update_all_instances()
         try:
-            if hasattr(self, "_dialog") and self._dialog is not None and self._dialog.isVisible():
-                self._progress_gauge.setBreakMode(False)
-                self._progress_gauge.setMaximum(self._work_duration)
-                self._progress_gauge.setValue(0, skip_animation=True)
-                self._progress_gauge.setStatusText(f"Work\n{self._format_time(self._work_duration)}")
+            for inst in PomodoroWidget._instances:
+                if hasattr(inst, "_dialog") and inst._dialog is not None and inst._dialog.isVisible():
+                    inst._progress_gauge.setBreakMode(False)
+                    inst._progress_gauge.setMaximum(self._work_duration)
+                    inst._progress_gauge.setValue(0, skip_animation=True)
+                    inst._progress_gauge.setStatusText(f"Work\n{inst._format_time(self._work_duration)}")
 
-                self._toggle_button.setText("Start")
-                self._toggle_button.setProperty("class", "button start")
-                self._toggle_button.style().unpolish(self._toggle_button)
-                self._toggle_button.style().polish(self._toggle_button)
-        except RuntimeError:
-            pass
-
-    def _update_timer(self):
-        if self._is_running:
-            self._remaining_time = max(0, self._remaining_time - 1)
-            self._elapsed_time += 1
-
-        if self._remaining_time <= 0:
-            self._timer_completed()
-
-        self._update_label()
-
-        try:
-            if hasattr(self, "_dialog") and self._dialog is not None and self._dialog.isVisible():
-                if self._is_break:
-                    max_value = self._long_break_duration if self._is_long_break else self._break_duration
-                    current_value = max_value - self._remaining_time
-                else:
-                    max_value = self._work_duration
-                    current_value = max_value - self._remaining_time
-
-                if hasattr(self, "_progress_gauge"):
-                    self._progress_gauge.setMaximum(max_value)
-                    self._progress_gauge.setValue(int(current_value))
-                    self._progress_gauge.setBreakMode(self._is_break)
-                    status_text = "Break" if self._is_break else "Work"
-                    self._progress_gauge.setStatusText(f"{status_text}\n{self._format_time(self._remaining_time)}")
-                    self._session_label.setText(
-                        f"Session: {self._session_count + 1}"
-                        + (f"/{self._session_target}" if self._session_target > 0 else "")
-                    )
+                    inst._toggle_button.setText("Start")
+                    inst._toggle_button.setProperty("class", "button start")
+                    inst._toggle_button.style().unpolish(inst._toggle_button)
+                    inst._toggle_button.style().polish(inst._toggle_button)
         except RuntimeError:
             pass
 
     def _timer_completed(self, notification=True):
-        self._timer.stop()
-        self._is_running = False
+        s = PomodoroWidget._shared_state
+        s["is_running"] = False  # Always stop timer on phase change
 
-        if self._sound_notification and notification:
+        # Only the first instance shows notification
+        is_primary = PomodoroWidget._instances and PomodoroWidget._instances[0] is self
+
+        if self._sound_notification and notification and is_primary:
             self._play_notification_sound()
 
-        if self._show_notification and notification:
+        if self._show_notification and notification and is_primary:
             self._show_desktop_notification()
 
-        if self._is_break:
+        if s["is_break"]:
             # Break completed, start work session
-            self._is_break = False
-            self._remaining_time = self._work_duration
+            s["is_break"] = False
+            s["is_long_break"] = False
+            s["remaining_time"] = self._work_duration
 
             if self._hide_on_break:
-                self.setVisible(True)
+                for inst in PomodoroWidget._instances:
+                    inst.setVisible(True)
 
-            self._update_label()
+            PomodoroWidget._update_all_instances()
 
             try:
-                if hasattr(self, "_dialog") and self._dialog is not None and self._dialog.isVisible():
-                    self._progress_gauge.setBreakMode(False)
-                    self._progress_gauge.setMaximum(self._work_duration)
-                    self._progress_gauge.setValue(0, skip_animation=True)
-                    self._progress_gauge.setStatusText(f"Work\n{self._format_time(self._work_duration)}")
+                for inst in PomodoroWidget._instances:
+                    if hasattr(inst, "_dialog") and inst._dialog is not None and inst._dialog.isVisible():
+                        inst._progress_gauge.setBreakMode(False)
+                        inst._progress_gauge.setMaximum(self._work_duration)
+                        inst._progress_gauge.setValue(0, skip_animation=True)
+                        inst._progress_gauge.setStatusText(f"Work\n{inst._format_time(self._work_duration)}")
             except RuntimeError:
                 pass
 
+            # Only auto-start work if enabled
             if self._auto_start_work:
                 self._start_timer()
         else:
             # Work completed, increment session count
-            self._session_count += 1
+            s["session_count"] += 1
 
-            if self._session_count > 0 and self._session_count % self._long_break_interval == 0:
-                self._is_long_break = True
-                self._remaining_time = self._long_break_duration
+            if s["session_count"] > 0 and s["session_count"] % self._long_break_interval == 0:
+                s["is_long_break"] = True
+                s["remaining_time"] = self._long_break_duration
             else:
-                self._is_long_break = False
-                self._remaining_time = self._break_duration
+                s["is_long_break"] = False
+                s["remaining_time"] = self._break_duration
 
-            self._is_break = True
-            self._update_label()
+            s["is_break"] = True
+            PomodoroWidget._update_all_instances()
 
             try:
-                if hasattr(self, "_dialog") and self._dialog is not None and self._dialog.isVisible():
-                    max_value = self._long_break_duration if self._is_long_break else self._break_duration
-                    self._progress_gauge.setBreakMode(True)
-                    self._progress_gauge.setMaximum(max_value)
-                    self._progress_gauge.setValue(0, skip_animation=True)
-                    self._progress_gauge.setStatusText(f"Break\n{self._format_time(self._remaining_time)}")
+                for inst in PomodoroWidget._instances:
+                    if hasattr(inst, "_dialog") and inst._dialog is not None and inst._dialog.isVisible():
+                        max_value = self._long_break_duration if s["is_long_break"] else self._break_duration
+                        inst._progress_gauge.setBreakMode(True)
+                        inst._progress_gauge.setMaximum(max_value)
+                        inst._progress_gauge.setValue(0, skip_animation=True)
+                        inst._progress_gauge.setStatusText(f"Break\n{inst._format_time(s['remaining_time'])}")
             except RuntimeError:
                 pass
 
             if self._hide_on_break:
-                self.setVisible(False)
+                for inst in PomodoroWidget._instances:
+                    inst.setVisible(False)
 
+            # Only auto-start break if enabled
             if self._auto_start_breaks:
                 self._start_timer()
 
@@ -453,8 +503,31 @@ class PomodoroWidget(BaseWidget):
             return f"{int(hours):02d}:{int(minutes):02d}"
 
     def _skip_to_next_phase(self):
-        self._remaining_time = 0
-        self._timer_completed(notification=False)
+        # Force phase transition for all widgets, regardless of running/paused state
+        s = PomodoroWidget._shared_state
+        if s["is_break"]:
+            # End break, start work
+            s["is_running"] = False
+            s["is_break"] = False
+            s["is_long_break"] = False
+            s["remaining_time"] = self._work_duration
+            PomodoroWidget._update_all_instances()
+            if self._auto_start_work:
+                self._start_timer()
+        else:
+            # End work, start break
+            s["is_running"] = False
+            s["session_count"] += 1
+            if s["session_count"] > 0 and s["session_count"] % self._long_break_interval == 0:
+                s["is_long_break"] = True
+                s["remaining_time"] = self._long_break_duration
+            else:
+                s["is_long_break"] = False
+                s["remaining_time"] = self._break_duration
+            s["is_break"] = True
+            PomodoroWidget._update_all_instances()
+            if self._auto_start_breaks:
+                self._start_timer()
 
 
 class CircularProgressWidget(QWidget):
