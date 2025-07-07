@@ -140,13 +140,7 @@ class MicrophoneWidget(BaseWidget):
             mute_status = self.audio_endpoint.GetMute() if self.audio_endpoint else None
             mic_level = round(self.audio_endpoint.GetMasterVolumeLevelScalar() * 100) if self.audio_endpoint else None
             min_icon = self._get_mic_icon()
-            min_level = (
-                self._mute_text
-                if mute_status == 1 or mic_level == 0
-                else f"{mic_level}%"
-                if self.audio_endpoint
-                else "N/A"
-            )
+            min_level = self._mute_text if mute_status == 1 else f"{mic_level}%" if self.audio_endpoint else "N/A"
         except Exception:
             min_icon, min_level = "N/A", "N/A"
         label_options = {"{icon}": min_icon, "{level}": min_level}
@@ -160,9 +154,11 @@ class MicrophoneWidget(BaseWidget):
                 if "<span" in part and "</span>" in part:
                     if widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
                         active_widgets[widget_index].setText(formatted_text)
+                        self._set_muted_class(active_widgets[widget_index], mute_status == 1)
                 else:
                     if widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
                         active_widgets[widget_index].setText(formatted_text)
+                        self._set_muted_class(active_widgets[widget_index], mute_status == 1)
                 widget_index += 1
 
     def _initialize_microphone_interface(self):
@@ -180,12 +176,24 @@ class MicrophoneWidget(BaseWidget):
         finally:
             CoUninitialize()
 
+    def _set_muted_class(self, widget, muted: bool):
+        """Set or remove the 'muted' class on the widget."""
+        current_class = widget.property("class") or ""
+        classes = set(current_class.split())
+        if muted:
+            classes.add("muted")
+        else:
+            classes.discard("muted")
+        widget.setProperty("class", " ".join(classes))
+        widget.style().unpolish(widget)
+        widget.style().polish(widget)
+
     def _get_mic_icon(self):
         if not self.audio_endpoint:
             return self._icons["normal"]
         current_mute_status = self.audio_endpoint.GetMute()
         current_level = round(self.audio_endpoint.GetMasterVolumeLevelScalar() * 100)
-        if current_mute_status == 1 or current_level == 0:
+        if current_mute_status == 1:
             mic_icon = self._icons["muted"]
             tooltip = f"Muted: Volume {current_level}"
         else:
@@ -208,6 +216,8 @@ class MicrophoneWidget(BaseWidget):
             current_volume = self.audio_endpoint.GetMasterVolumeLevelScalar()
             new_volume = min(current_volume + self._scroll_step, 1.0)
             self.audio_endpoint.SetMasterVolumeLevelScalar(new_volume, None)
+            if self.audio_endpoint.GetMute() and new_volume > 0.0:
+                self.audio_endpoint.SetMute(False, None)
             self._update_label()
 
     def _decrease_volume(self):
@@ -215,6 +225,8 @@ class MicrophoneWidget(BaseWidget):
             current_volume = self.audio_endpoint.GetMasterVolumeLevelScalar()
             new_volume = max(current_volume - self._scroll_step, 0.0)
             self.audio_endpoint.SetMasterVolumeLevelScalar(new_volume, None)
+            if new_volume == 0.0:
+                self.audio_endpoint.SetMute(True, None)
             self._update_label()
 
     def wheelEvent(self, event: QWheelEvent):

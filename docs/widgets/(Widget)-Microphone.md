@@ -75,7 +75,8 @@ microphone:
 .microphone-widget .label {}
 .microphone-widget .label.alt {}
 .microphone-widget .icon {}
-
+.microphone-widget .label.muted {}
+.microphone-widget .icon.muted {}
 .microphone-slider {
     border: none;
 }

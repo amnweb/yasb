@@ -444,10 +444,24 @@ class VolumeWidget(BaseWidget):
                 if "<span" in part and "</span>" in part:
                     if widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
                         active_widgets[widget_index].setText(formatted_text)
+                        self._set_muted_class(active_widgets[widget_index], mute_status == 1)
                 else:
                     if widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
                         active_widgets[widget_index].setText(formatted_text)
+                        self._set_muted_class(active_widgets[widget_index], mute_status == 1)
                 widget_index += 1
+
+    def _set_muted_class(self, widget, muted: bool):
+        """Set or remove the 'muted' class on the widget."""
+        current_class = widget.property("class") or ""
+        classes = set(current_class.split())
+        if muted:
+            classes.add("muted")
+        else:
+            classes.discard("muted")
+        widget.setProperty("class", " ".join(classes))
+        widget.style().unpolish(widget)
+        widget.style().polish(widget)
 
     def _get_volume_icon(self):
         current_mute_status = self.volume.GetMute()

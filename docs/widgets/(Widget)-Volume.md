@@ -73,7 +73,10 @@ volume:
 .volume-widget {}
 .volume-widget .widget-container {}
 .volume-widget .label {}
+.volume-widget .label.alt {}
 .volume-widget .icon {}
+.volume-widget .label.muted {}
+.volume-widget .icon.muted {}
 ```
 
 ## Style for the Audio Menu
