@@ -190,6 +190,23 @@ Example of context menu styling:
 }
 ```
 
+## Tooltip Styling
+Tooltips can be styled using the `.tooltip` class. This allows you to customize the appearance of tooltips within YASB.
+
+Example of tooltip styling:
+```css
+.tooltip {
+    background-color: #18191a;
+    border: 1px solid #36383a;
+    border-radius: 4px;
+    color: #a6adc8;
+    padding: 6px 12px;
+    font-size: 13px;
+    font-family: 'Segoe UI';
+    font-weight: 600;
+    margin-top: 4px;
+}
+```
 
 ## Icons
 There is a nice app at [Character Map UWP](https://github.com/character-map-uwp/Character-Map-UWP) where you can select a font, click on icons, and copy the UTF-16 value. Alternatively, you can visit the Nerd Fonts site and do the same under the icons section.

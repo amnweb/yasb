@@ -17,6 +17,7 @@ from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QWheelEvent
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QSlider, QVBoxLayout, QWidget
 
+from core.utils.tooltip import set_tooltip
 from core.utils.utilities import PopupWidget, add_shadow, build_widget_label
 from core.utils.widgets.animation_manager import AnimationManager
 from core.validation.widgets.yasb.microphone import VALIDATION_SCHEMA
@@ -200,7 +201,7 @@ class MicrophoneWidget(BaseWidget):
             mic_icon = self._icons["normal"]
             tooltip = f"Volume {current_level}"
         if self._tooltip:
-            self.setToolTip(tooltip)
+            set_tooltip(self, tooltip)
         return mic_icon
 
     def toggle_mute(self):

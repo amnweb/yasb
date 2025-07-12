@@ -8,6 +8,7 @@ from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QWheelEvent
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QSlider, QVBoxLayout, QWidget
 
+from core.utils.tooltip import set_tooltip
 from core.utils.utilities import PopupWidget, add_shadow, build_widget_label
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.win32.utilities import get_monitor_info
@@ -164,7 +165,7 @@ class BrightnessWidget(BaseWidget):
             if percent is not None:
                 icon = self.get_brightness_icon(percent)
                 if self._tooltip:
-                    self.setToolTip(f"Brightness {percent}%")
+                    set_tooltip(self, f"Brightness {percent}%")
             else:
                 percent, icon = 0, "not supported"
         except Exception:

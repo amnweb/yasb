@@ -4,6 +4,7 @@ import re
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
 
+from core.utils.tooltip import set_tooltip
 from core.utils.utilities import PopupWidget, add_shadow, build_widget_label
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.widgets.traffic.connection_monitor import InternetChecker
@@ -408,7 +409,7 @@ class TrafficWidget(BaseWidget):
 
         reset_button = QPushButton("Reset All")
         reset_button.setProperty("class", "reset-button")
-        reset_button.setToolTip("Reset all traffic data")
+        set_tooltip(reset_button, "Reset all traffic data")
         reset_button.setCursor(Qt.CursorShape.PointingHandCursor)
         reset_button.clicked.connect(self._reset_traffic_data)
         header_layout.addWidget(reset_button)

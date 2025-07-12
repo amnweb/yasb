@@ -11,6 +11,7 @@ from ctypes import wintypes
 from PyQt6.QtCore import QThread, QTimer, pyqtSignal
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QWidget
 
+from core.utils.tooltip import set_tooltip
 from core.utils.utilities import add_shadow, build_widget_label
 from core.utils.widgets.animation_manager import AnimationManager
 from core.validation.widgets.yasb.bluetooth import VALIDATION_SCHEMA
@@ -354,7 +355,7 @@ class BluetoothWidget(BaseWidget):
                 widget_index += 1
 
         if self._tooltip:
-            self._widget_container.setToolTip(tooltip_text)
+            set_tooltip(self._widget_container, tooltip_text)
 
     def _update_state(self, status):
         self.current_status = status

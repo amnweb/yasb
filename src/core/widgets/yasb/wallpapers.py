@@ -17,6 +17,7 @@ from win32comext.shell import shell, shellcon
 
 from core.event_service import EventService
 from core.utils.alert_dialog import raise_info_alert
+from core.utils.tooltip import set_tooltip
 from core.utils.utilities import add_shadow
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.widgets.wallpapers.wallpapers_gallery import ImageGallery
@@ -146,17 +147,15 @@ class WallpapersWidget(BaseWidget):
                     icon = re.sub(r"<span.*?>|</span>", "", part).strip()
                     label = QLabel(icon)
                     label.setProperty("class", class_result)
-                    if self._tooltip:
-                        label.setToolTip("Change Wallaper")
                     label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
                 else:
                     label = QLabel(part)
                     label.setProperty("class", "label")
-                    if self._tooltip:
-                        label.setToolTip("Change Wallaper")
                     label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
 
                 label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                if self._tooltip:
+                    set_tooltip(label, "Change Wallpaper")
                 add_shadow(label, self._label_shadow)
                 self._widget_container_layout.addWidget(label)
                 widgets.append(label)

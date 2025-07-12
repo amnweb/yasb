@@ -2,6 +2,7 @@ import re
 
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QWidget
 
+from core.utils.tooltip import set_tooltip
 from core.utils.utilities import add_shadow, build_widget_label
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.widgets.recycle_bin.recycle_bin_monitor import RecycleBinMonitor
@@ -116,8 +117,9 @@ class RecycleBinWidget(BaseWidget):
                         active_widgets[widget_index].setStyleSheet("")
                 widget_index += 1
         if self._tooltip:
-            self._widget_container.setToolTip(
-                f"Items: {self._bin_info['num_items']} ({self._format_size(self._bin_info['size_bytes'])})"
+            set_tooltip(
+                self._widget_container,
+                f"Items: {self._bin_info['num_items']} ({self._format_size(self._bin_info['size_bytes'])})",
             )
 
     def _get_current_icon(self):

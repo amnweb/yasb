@@ -19,6 +19,7 @@ from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QWheelEvent
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QSlider, QVBoxLayout, QWidget
 
+from core.utils.tooltip import set_tooltip
 from core.utils.utilities import PopupWidget, add_shadow, build_widget_label
 from core.utils.widgets.animation_manager import AnimationManager
 from core.validation.widgets.yasb.volume import VALIDATION_SCHEMA
@@ -467,7 +468,7 @@ class VolumeWidget(BaseWidget):
         current_mute_status = self.volume.GetMute()
         current_volume_level = round(self.volume.GetMasterVolumeLevelScalar() * 100)
         if self._tooltip:
-            self.setToolTip(f"Volume {current_volume_level}")
+            set_tooltip(self, f"Volume {current_volume_level}")
         if current_mute_status == 1:
             volume_icon = self._volume_icons[0]
         elif 0 <= current_volume_level < 11:

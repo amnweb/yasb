@@ -8,6 +8,7 @@ from PyQt6.QtCore import QDate, QLocale, Qt
 from PyQt6.QtWidgets import QCalendarWidget, QHBoxLayout, QLabel, QSizePolicy, QTableView, QVBoxLayout, QWidget
 from tzlocal import get_localzone_name
 
+from core.utils.tooltip import set_tooltip
 from core.utils.utilities import PopupWidget, add_shadow, build_widget_label
 from core.utils.widgets.animation_manager import AnimationManager
 from core.validation.widgets.yasb.clock import VALIDATION_SCHEMA
@@ -174,7 +175,7 @@ class ClockWidget(BaseWidget):
     def _next_timezone(self):
         self._active_tz = next(self._timezones)
         if self._tooltip:
-            self.setToolTip(self._active_tz)
+            set_tooltip(self, self._active_tz)
         self._update_label()
 
     def update_month_label(self, year, month):

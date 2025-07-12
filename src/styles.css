@@ -20,15 +20,6 @@ For more information about configuration options, please visit the Wiki https://
     --base: #1e1e2e;
     --crust: rgba(32, 32, 43, 0.92);
 }
-/* Global styles for ToolTip */
-QToolTip {
-    padding: 6px;
-    color: #cdd6f4;
-    font-size: 12px;
-    background-color: #1e1e2e;
-    border: 0px solid #313244;
-    border-radius: 6px;
-}
 * {
     font-size: 12px;
     color: var(--text);
@@ -43,6 +34,18 @@ QToolTip {
     background-color: var(--crust);
     border-radius: 8px;
     border: 1px solid #313244;
+}
+/* Global styles for ToolTip */
+.tooltip {
+    background-color: #18191a;
+    border: 1px solid #36383a;
+    border-radius: 4px;
+    color: #a6adc8;
+    padding: 6px 12px;
+    font-size: 13px;
+    font-family: 'Segoe UI';
+    font-weight: 600;
+    margin-top: 4px;
 }
 /* Global context menu style */
 .context-menu,
