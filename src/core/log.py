@@ -49,11 +49,11 @@ class ColoredFormatter(logging.Formatter):
 def init_logger():
     # File handler should be without colors
     file_handler = RotatingFileHandler(
-        join(get_config_dir(), DEFAULT_LOG_FILENAME), maxBytes=1024 * 1024, backupCount=5
+        join(get_config_dir(), DEFAULT_LOG_FILENAME), maxBytes=1024 * 1024, backupCount=5, encoding="utf-8"
     )
     file_handler.setFormatter(logging.Formatter(LOG_FORMAT, datefmt=LOG_DATETIME))
     # Configure logging with colors
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(ColoredFormatter(CONSOLE_FORMAT, datefmt=CONSOLE_DATETIME))
-    logging.basicConfig(level=logging.DEBUG, handlers=[file_handler, console_handler])
+    logging.basicConfig(level=logging.DEBUG, handlers=[file_handler, console_handler], encoding="utf-8")
     logging.info(f"{APP_NAME} v{BUILD_VERSION}")
