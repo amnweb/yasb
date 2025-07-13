@@ -22,6 +22,7 @@ class CustomCalendar(QCalendarWidget):
         self.setVerticalHeaderFormat(QCalendarWidget.VerticalHeaderFormat.NoVerticalHeader)
         self.setNavigationBarVisible(False)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setAutoFillBackground(False)
 
         format = self.weekdayTextFormat(Qt.DayOfWeek.Monday)
         for day in range(Qt.DayOfWeek.Monday.value, Qt.DayOfWeek.Sunday.value + 1):
