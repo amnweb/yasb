@@ -136,7 +136,7 @@ This widget is ideal for integrating any LLM service that follows the OpenAI API
 
 > [!IMPORTANT]  
 > Ai Chat widget uses the `QMenu` for the context menu, which supports various styles. You can customize the appearance of the menu using CSS styles. For more information on styling, refer to the [Context Menu Styling](https://github.com/amnweb/yasb/wiki/Styling#context-menu-styling
-If you want to use different styles for the context menu, you can target the `.ai-chat-popup .context-menu` class to customize the appearance of the Todo widget menu.
+If you want to use different styles for the context menu, you can target the `.ai-chat-popup .context-menu` class to customize the appearance of the Ai Chat widget menu.
 
 ## Available Styles
 ```css
