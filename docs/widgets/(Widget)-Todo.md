@@ -35,7 +35,7 @@ todo:
       offset_left: 0
     icons:
       add: "\uf501 New Task"
-      edit": "Edit"
+      edit: "Edit"
       delete: "Delete"
       date: "\ue641"
       category: "\uf412"

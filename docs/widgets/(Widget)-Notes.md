@@ -55,9 +55,9 @@ notes:
       max_title_size: 150
       show_date_time: true
     icons:
-      note: "udb82\udd0c"
+      note: "\udb82\udd0c"
       delete: "\ueab8"
-      copy: "uebcc"
+      copy: "\uebcc"
     callbacks:
       on_left: "toggle_menu"
       on_middle: "do_nothing"
