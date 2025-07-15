@@ -8,6 +8,7 @@ import win32com.client
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QWidget
 
+from core.utils.tooltip import set_tooltip
 from core.utils.utilities import add_shadow
 from core.validation.widgets.yasb.update_check import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
@@ -408,11 +409,11 @@ class UpdateCheckWidget(BaseWidget):
                     formatted_text = part.format(count=data)
                     active_widgets[widget_index].setText(formatted_text)
                 active_widgets[widget_index].setCursor(Qt.CursorShape.PointingHandCursor)
-                if widget_type == "windows" and self._windows_update_tooltip:
-                    active_widgets[widget_index].setToolTip("\n".join(names))
-                elif widget_type == "winget" and self._winget_update_tooltip:
-                    active_widgets[widget_index].setToolTip("\n".join(names))
                 widget_index += 1
+        if widget_type == "windows" and self._windows_update_tooltip:
+            set_tooltip(container, "\n".join(names))
+        elif widget_type == "winget" and self._winget_update_tooltip:
+            set_tooltip(container, "\n".join(names))
 
     def handle_mouse_events(self, label_type):
         def event_handler(event):

@@ -12,6 +12,7 @@ from PyQt6.QtGui import QCursor, QImage, QPixmap
 from PyQt6.QtWidgets import QApplication, QGraphicsOpacityEffect, QHBoxLayout, QLabel, QWidget
 
 from core.event_service import EventService
+from core.utils.tooltip import set_tooltip
 from core.utils.utilities import add_shadow
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.win32.app_icons import get_window_icon
@@ -326,7 +327,7 @@ class TaskbarWidget(BaseWidget):
             # Update tooltip if title changed and tooltip is enabled
             if self._tooltip and hwnd in updated_titles:
                 title = updated_titles[hwnd]
-                widget.setToolTip(self._format_title(title))
+                set_tooltip(widget, title, delay=0)
 
             if widget != self.icon_label:
                 if hwnd in removed_hwnds:
@@ -344,7 +345,7 @@ class TaskbarWidget(BaseWidget):
                 icon_label.setFixedWidth(0)
             icon_label.setPixmap(icon)
             if self._tooltip:
-                icon_label.setToolTip(self._format_title(title))
+                set_tooltip(icon_label, title, delay=0)
             icon_label.setProperty("hwnd", hwnd)
             icon_label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
             self._widget_container_layout.addWidget(icon_label)
@@ -355,7 +356,7 @@ class TaskbarWidget(BaseWidget):
                 title_label.setProperty("hwnd", hwnd)
                 title_label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
                 if self._tooltip:
-                    title_label.setToolTip(self._format_title(title))
+                    set_tooltip(title_label, title, delay=0)
                 add_shadow(title_label, self._label_shadow)
                 self._widget_container_layout.addWidget(title_label)
                 if self._title_label["show"] == "focused":
@@ -577,7 +578,7 @@ class TaskbarWidget(BaseWidget):
                     icon_label.setProperty("class", "app-icon")
                     icon_label.setPixmap(icon)
                     if self._tooltip:
-                        icon_label.setToolTip(self._format_title(title))
+                        set_tooltip(icon_label, title, delay=0)
                     icon_label.setProperty("hwnd", hwnd)
                     icon_label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
                     add_shadow(icon_label, self._label_shadow)
@@ -590,7 +591,7 @@ class TaskbarWidget(BaseWidget):
                         title_label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
                         add_shadow(title_label, self._label_shadow)
                         if self._tooltip:
-                            title_label.setToolTip(self._format_title(title))
+                            set_tooltip(title_label, title, delay=0)
                         self._widget_container_layout.addWidget(title_label)
                         if self._title_label["show"] == "focused":
                             title_label.setVisible(self._get_title_visibility(hwnd))

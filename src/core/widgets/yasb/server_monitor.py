@@ -11,6 +11,7 @@ from urllib.parse import urlparse
 from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, Qt, QThread, QTimer, pyqtSignal
 from PyQt6.QtWidgets import QGraphicsOpacityEffect, QHBoxLayout, QLabel, QScrollArea, QVBoxLayout, QWidget
 
+from core.utils.tooltip import set_tooltip
 from core.utils.utilities import PopupWidget, ToastNotifier, add_shadow, build_widget_label
 from core.utils.widgets.animation_manager import AnimationManager
 from core.validation.widgets.yasb.server_monitor import VALIDATION_SCHEMA
@@ -311,15 +312,14 @@ class ServerMonitor(BaseWidget):
                     # Ensure the icon is correctly set
                     icon = re.sub(r"<span.*?>|</span>", "", part).strip()
                     active_widgets[widget_index].setText(icon)
-                    if self._tooltip:
-                        active_widgets[widget_index].setToolTip(f"{online_count} online, {offline_count} offline")
                 else:
-                    # Update label with formatted content
                     formatted_text = part.format(online=online_count, offline=offline_count, total=total_count)
                     active_widgets[widget_index].setText(formatted_text)
-                    if self._tooltip:
-                        active_widgets[widget_index].setToolTip(f"{online_count} online, {offline_count} offline")
                 widget_index += 1
+        if self._tooltip:
+            set_tooltip(
+                self._widget_container, f"{online_count} online, {offline_count} offline of {total_count} servers"
+            )
 
     def _send_notification(self):
         try:

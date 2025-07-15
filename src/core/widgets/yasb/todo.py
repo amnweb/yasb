@@ -24,6 +24,7 @@ from PyQt6.QtWidgets import (
 )
 
 from core.config import HOME_CONFIGURATION_DIR
+from core.utils.tooltip import set_tooltip
 from core.utils.utilities import PopupWidget, add_shadow, build_widget_label
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.win32.utilities import qmenu_rounded_corners
@@ -298,6 +299,19 @@ class TodoWidget(BaseWidget):
                 )
                 current_widget.setText(formatted_text)
             widget_index += 1
+
+        # Tooltip: show number of tasks per category, skip 0s
+        category_counts = {}
+        for cat_key, cat_conf in self._categories.items():
+            count = len([t for t in self._tasks if t.get("category") == cat_key and not t.get("completed", False)])
+            if count > 0:
+                category_counts[cat_conf["label"]] = count
+        if category_counts:
+            tooltip_lines = [f"{label}: {count}" for label, count in category_counts.items()]
+            tooltip_text = "\n".join(tooltip_lines)
+        else:
+            tooltip_text = "No tasks."
+        set_tooltip(self._widget_container, tooltip_text)
 
     def _toggle_menu(self):
         if self._animation["enabled"]:

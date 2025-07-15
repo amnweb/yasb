@@ -38,6 +38,7 @@ from win32con import (
 )
 
 import core.utils.widgets.systray.utils as utils
+from core.utils.tooltip import set_tooltip
 from core.utils.widgets.systray.tray_monitor import IconData
 from core.utils.widgets.systray.utils import pack_i32
 from core.utils.win32.bindings import (
@@ -198,7 +199,7 @@ class IconWidget(QPushButton):
         """Update the icon and tooltip of the icon widget"""
         if not self.data or self.data.hIcon == 0:
             return
-        self.setToolTip(self.data.szTip or self.data.exe)
+        set_tooltip(self, self.data.szTip or self.data.exe, delay=0)
         icon = self.data.icon_image
         if icon:
             self.setIcon(QIcon(icon))

@@ -13,6 +13,7 @@ from PyQt6.QtCore import QPoint, Qt, QTimer, QUrl
 from PyQt6.QtGui import QColor, QCursor, QDesktopServices, QPainter, QPaintEvent
 from PyQt6.QtWidgets import QGraphicsOpacityEffect, QHBoxLayout, QLabel, QScrollArea, QVBoxLayout, QWidget
 
+from core.utils.tooltip import set_tooltip
 from core.utils.utilities import PopupWidget, add_shadow
 from core.utils.widgets.animation_manager import AnimationManager
 from core.validation.widgets.yasb.github import VALIDATION_SCHEMA
@@ -241,7 +242,7 @@ class GithubWidget(BaseWidget):
                 icon = re.sub(r"<span.*?>|</span>", "", part).strip()
                 current_widget.setText(icon)
                 if self._tooltip:
-                    current_widget.setToolTip(f"Notifications {notification_count}")
+                    set_tooltip(current_widget, f"Notifications {notification_count}")
                 # Update class based on notification count
                 current_classes = current_widget.property("class").split()
                 notification_class = "new-notification"
