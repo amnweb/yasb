@@ -21,13 +21,26 @@ This allows you to securely store sensitive information (such as API keys or tok
 
 **Example `.env` file:**
 ```
+YASB_FONT_ENGINE=native
 YASB_WEATHER_API_KEY=your_api_key_here
 YASB_GITHUB_TOKEN=your_github_token_here
 YASB_WEATHER_LOCATION=your_location_here
 # Some Qt settings
 QT_SCREEN_SCALE_FACTORS="1.25;1"
 QT_SCALE_FACTOR_ROUNDING_POLICY="PassThrough"
+# OpenGL settings, Use "desktop" for hardware acceleration, "software" for software rendering
+QT_OPENGL="desktop" 
+QT_OPENGL="software"
 ```
+
+## YASB Font Engine
+YASB supports different font engines to improve text rendering quality.
+You can set the font engine by defining the `YASB_FONT_ENGINE` environment variable in your `.env` file or in OS environment variables.
+Valid options are:
+- `native`: Uses the DirectWrite font rendering engine.
+- `gdi`: Uses the GDI font rendering engine.
+- `freetype`: Uses the FreeType font rendering engine.
+
 
 ## Status Bar Root Configuration
 | Option            | Type    | Default       | Description |
@@ -36,6 +49,7 @@ QT_SCALE_FACTOR_ROUNDING_POLICY="PassThrough"
 | `watch_config`         | boolean    | `true`        | Reload bar when config is changed. |
 | `debug`      | boolean  | `false`   | Enable debug mode to see more logs |
 | `update_check`      | boolean  | `true`   | Enable automatic update check. This works only if the application is installed. |
+
 
 ## Komorebi settings for tray menu
 | Option            | Type    | Default       | Description |

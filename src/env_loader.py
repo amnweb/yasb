@@ -30,5 +30,7 @@ def set_font_engine():
     font_engine = os.getenv("YASB_FONT_ENGINE")
     if font_engine == "native":
         os.environ["QT_QPA_PLATFORM"] = "windows:fontengine=native"
+    elif font_engine == "freetype":
+        os.environ["QT_QPA_PLATFORM"] = "windows:fontengine=freetype"
     else:
         os.environ["QT_QPA_PLATFORM"] = "windows:fontengine=gdi"
