@@ -21,7 +21,7 @@
 | `animation`         | dict    | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
 | `container_shadow`   | dict   | `None`                  | Container shadow options.                       |
 | `label_shadow`         | dict   | `None`                  | Label shadow options.                 |
-
+| `progress_bar`       | dict    | `{'enabled': False, 'position': 'left', 'size': 14, 'thickness': 2, 'color': '#57948a'}` | Progress bar settings.    |
 ## Example Configuration
 
 ```yaml
@@ -94,6 +94,13 @@
 - **animation:** A dictionary specifying the animation settings for the widget. It contains three keys: `enabled`, `type`, and `duration`. The `type` can be `fadeInOut` and the `duration` is the animation duration in milliseconds.
 - **container_shadow:** Container shadow options.
 - **label_shadow:** Label shadow options.
+- **progress_bar**: A dictionary containing settings for the progress bar. It includes:
+  - **enabled**: Whether the progress bar is enabled.
+  - **position**: The position of the progress bar, either "left" or "right".
+  - **size**: The size of the progress bar.
+  - **thickness**: The thickness of the progress bar.
+  - **color**: The color of the progress bar. Color can be single color or gradient. For example, `color: "#57948a"` or `color: ["#57948a", "#ff0000"]"` for a gradient.
+  - **background_color**: The background color of the progress bar.
 
 ## Example Style
 ```css
@@ -114,4 +121,6 @@
 .brightness-slider::groove {}
 .brightness-slider::handle{} 
 
+/* Brightness progress bar styles if enabled */
+.brightness-widget .progress-circle {} 
 ```

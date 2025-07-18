@@ -22,6 +22,7 @@ This widget implements a Pomodoro timer, which is a time management method that 
 | `menu` | dict | See below | Configure the appearance and behavior of the timer menu. |
 | `container_shadow`   | dict   | `None`                  | Container shadow options.                       |
 | `label_shadow`         | dict   | `None`                  | Label shadow options.                 |
+| `progress_bar`       | dict    | `{'enabled': False, 'position': 'left', 'size': 14, 'thickness': 2, 'color': '#57948a'}` | Progress bar settings.    |
 
 ## Example Configuration
 
@@ -111,6 +112,13 @@ pomodoro:
     - **circle_thickness:** Thickness of the circular progress indicator.
 - **container_shadow:** Container shadow options.
 - **label_shadow:** Label shadow options.
+- **progress_bar**: A dictionary containing settings for the progress bar. It includes:
+  - **enabled**: Whether the progress bar is enabled.
+  - **position**: The position of the progress bar, either "left" or "right".
+  - **size**: The size of the progress bar.
+  - **thickness**: The thickness of the progress bar.
+  - **color**: The color of the progress bar. Color can be single color or gradient. For example, `color: "#57948a"` or `color: ["#57948a", "#ff0000"]"` for a gradient.
+  - **background_color**: The background color of the progress bar.
 
 ## Available Callbacks
 
@@ -144,6 +152,9 @@ pomodoro:
 .pomodoro-menu .button.pause {} /*Style for pause button.*/
 .pomodoro-menu .button:hover {} /*Style for button hover effect.*/
 .pomodoro-menu .button:pressed {} /*Style for button pressed effect.*/
+
+/* Pomodoro progress bar styles if enabled */
+.pomodoro-widget .progress-circle {} 
 ```
 
 ## Example CSS

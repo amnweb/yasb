@@ -6,7 +6,7 @@ import psutil
 from PyQt6.QtCore import QTimer
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QWidget
 
-from core.utils.utilities import add_shadow, build_widget_label
+from core.utils.utilities import add_shadow, build_progress_widget, build_widget_label
 from core.utils.widgets.animation_manager import AnimationManager
 from core.validation.widgets.yasb.cpu import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
@@ -31,6 +31,7 @@ class CpuWidget(BaseWidget):
         callbacks: dict[str, str],
         label_shadow: dict = None,
         container_shadow: dict = None,
+        progress_bar: dict = None,
     ):
         super().__init__(class_name="cpu-widget")
         self._histogram_icons = histogram_icons
@@ -43,7 +44,11 @@ class CpuWidget(BaseWidget):
         self._padding = container_padding
         self._label_shadow = label_shadow
         self._container_shadow = container_shadow
-        # Construct container
+        self._progress_bar = progress_bar
+
+        self.progress_widget = None
+        self.progress_widget = build_progress_widget(self, self._progress_bar)
+
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
         self._widget_container_layout.setContentsMargins(
@@ -136,6 +141,14 @@ class CpuWidget(BaseWidget):
         label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
         label_parts = [part for part in label_parts if part]
         widget_index = 0
+
+        if self._progress_bar["enabled"] and self.progress_widget:
+            if self._widget_container_layout.indexOf(self.progress_widget) == -1:
+                self._widget_container_layout.insertWidget(
+                    0 if self._progress_bar["position"] == "left" else self._widget_container_layout.count(),
+                    self.progress_widget,
+                )
+            self.progress_widget.set_value(current_perc)
 
         for part in label_parts:
             part = part.strip()

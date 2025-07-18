@@ -18,7 +18,7 @@ from PyQt6.QtGui import QWheelEvent
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QSlider, QVBoxLayout, QWidget
 
 from core.utils.tooltip import set_tooltip
-from core.utils.utilities import PopupWidget, add_shadow, build_widget_label
+from core.utils.utilities import PopupWidget, add_shadow, build_progress_widget, build_widget_label
 from core.utils.widgets.animation_manager import AnimationManager
 from core.validation.widgets.yasb.microphone import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
@@ -65,6 +65,7 @@ class MicrophoneWidget(BaseWidget):
         callbacks: dict[str, str],
         label_shadow: dict = None,
         container_shadow: dict = None,
+        progress_bar: dict = None,
     ):
         super().__init__(class_name="microphone-widget")
 
@@ -83,6 +84,10 @@ class MicrophoneWidget(BaseWidget):
         self._animation = animation
         self._label_shadow = label_shadow
         self._container_shadow = container_shadow
+        self._progress_bar = progress_bar
+
+        self.progress_widget = None
+        self.progress_widget = build_progress_widget(self, self._progress_bar)
 
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
@@ -145,6 +150,15 @@ class MicrophoneWidget(BaseWidget):
         except Exception:
             min_icon, min_level = "N/A", "N/A"
         label_options = {"{icon}": min_icon, "{level}": min_level}
+
+        if self._progress_bar["enabled"] and self.progress_widget:
+            if self._widget_container_layout.indexOf(self.progress_widget) == -1:
+                self._widget_container_layout.insertWidget(
+                    0 if self._progress_bar["position"] == "left" else self._widget_container_layout.count(),
+                    self.progress_widget,
+                )
+            numeric_value = int(re.search(r"\d+", min_level).group()) if re.search(r"\d+", min_level) else 0
+            self.progress_widget.set_value(numeric_value)
 
         for part in label_parts:
             part = part.strip()

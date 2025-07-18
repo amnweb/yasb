@@ -12,6 +12,7 @@
 | `container_padding`  | dict | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}`      | Explicitly set padding inside widget container. |
 | `container_shadow`   | dict   | `None`                  | Container shadow options.                       |
 | `label_shadow`         | dict   | `None`                  | Label shadow options.                 |
+| `progress_bar`       | dict    | `{'enabled': False, 'position': 'left', 'size': 14, 'thickness': 2, 'color': '#57948a'}` | Progress bar settings.                                                      |
 
 ## Example Configuration
 
@@ -54,6 +55,13 @@ cpu:
 - **container_padding**: Explicitly set padding inside widget container. Use this option to set padding inside the widget container. You can set padding for top, left, bottom and right sides of the widget container.
 - **container_shadow:** Container shadow options.
 - **label_shadow:** Label shadow options.
+- **progress_bar**: A dictionary containing settings for the progress bar. It includes:
+  - **enabled**: Whether the progress bar is enabled.
+  - **position**: The position of the progress bar, either "left" or "right".
+  - **size**: The size of the progress bar.
+  - **thickness**: The thickness of the progress bar.
+  - **color**: The color of the progress bar. Color can be single color or gradient. For example, `color: "#57948a"` or `color: ["#57948a", "#ff0000"]"` for a gradient.
+  - **background_color**: The background color of the progress bar.
 
 ## Available Placeholders
 
@@ -88,4 +96,6 @@ cpu:
 .cpu-widget .widget-container .label {}
 .cpu-widget .widget-container .label.alt {}
 .cpu-widget .widget-container .icon {}
+/* CPU progress bar styles if enabled */
+.cpu-widget .progress-circle {} 
 ```

@@ -20,7 +20,7 @@ from PyQt6.QtGui import QWheelEvent
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QSlider, QVBoxLayout, QWidget
 
 from core.utils.tooltip import set_tooltip
-from core.utils.utilities import PopupWidget, add_shadow, build_widget_label
+from core.utils.utilities import PopupWidget, add_shadow, build_progress_widget, build_widget_label
 from core.utils.widgets.animation_manager import AnimationManager
 from core.validation.widgets.yasb.volume import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
@@ -202,6 +202,7 @@ class VolumeWidget(BaseWidget):
         callbacks: dict[str, str],
         label_shadow: dict = None,
         container_shadow: dict = None,
+        progress_bar: dict = None,
     ):
         super().__init__(class_name="volume-widget")
         self._show_alt_label = False
@@ -217,6 +218,10 @@ class VolumeWidget(BaseWidget):
         self._container_shadow = container_shadow
         self.volume = None
         self._volume_icons = volume_icons
+        self._progress_bar = progress_bar
+
+        self.progress_widget = None
+        self.progress_widget = build_progress_widget(self, self._progress_bar)
 
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
@@ -435,6 +440,15 @@ class VolumeWidget(BaseWidget):
             icon_volume, level_volume = "", "No Device"
 
         label_options = {"{icon}": icon_volume, "{level}": level_volume}
+
+        if self._progress_bar["enabled"] and self.progress_widget:
+            if self._widget_container_layout.indexOf(self.progress_widget) == -1:
+                self._widget_container_layout.insertWidget(
+                    0 if self._progress_bar["position"] == "left" else self._widget_container_layout.count(),
+                    self.progress_widget,
+                )
+            numeric_value = int(re.search(r"\d+", level_volume).group()) if re.search(r"\d+", level_volume) else 0
+            self.progress_widget.set_value(numeric_value)
 
         for part in label_parts:
             part = part.strip()

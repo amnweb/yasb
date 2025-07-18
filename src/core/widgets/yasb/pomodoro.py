@@ -6,7 +6,7 @@ from PyQt6.QtCore import QPropertyAnimation, QRectF, Qt, QTimer, pyqtProperty
 from PyQt6.QtGui import QColor, QCursor, QPainter, QPen
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
 
-from core.utils.utilities import PopupWidget, ToastNotifier, add_shadow, build_widget_label
+from core.utils.utilities import PopupWidget, ToastNotifier, add_shadow, build_progress_widget, build_widget_label
 from core.utils.widgets.animation_manager import AnimationManager
 from core.validation.widgets.yasb.pomodoro import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
@@ -50,6 +50,7 @@ class PomodoroWidget(BaseWidget):
         menu: dict,
         label_shadow: dict = None,
         container_shadow: dict = None,
+        progress_bar: dict = None,
     ):
         super().__init__(class_name="pomodoro-widget")
 
@@ -72,7 +73,10 @@ class PomodoroWidget(BaseWidget):
         self._menu_config = menu
         self._label_shadow = label_shadow
         self._container_shadow = container_shadow
+        self._progress_bar = progress_bar
 
+        self.progress_widget = None
+        self.progress_widget = build_progress_widget(self, self._progress_bar)
         # Add this instance to the shared instances list
         if self not in PomodoroWidget._instances:
             PomodoroWidget._instances.append(self)
@@ -200,6 +204,22 @@ class PomodoroWidget(BaseWidget):
             "{total_sessions}": str(self._session_target) if self._session_target > 0 else "∞",
             "{icon}": self._get_current_icon(),
         }
+
+        if self._progress_bar["enabled"] and self.progress_widget:
+            if self._widget_container_layout.indexOf(self.progress_widget) == -1:
+                self._widget_container_layout.insertWidget(
+                    0 if self._progress_bar["position"] == "left" else self._widget_container_layout.count(),
+                    self.progress_widget,
+                )
+
+            if self._is_break:
+                max_value = self._long_break_duration if self._is_long_break else self._break_duration
+            else:
+                max_value = self._work_duration
+
+            elapsed = max_value - self._remaining_time
+            percent = (elapsed / max_value) * 100 if max_value > 0 else 0
+            self.progress_widget.set_value(percent)
 
         for part in label_parts:
             part = part.strip()

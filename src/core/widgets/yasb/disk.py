@@ -6,7 +6,7 @@ import win32api
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QProgressBar, QVBoxLayout, QWidget
 
-from core.utils.utilities import PopupWidget, add_shadow, build_widget_label
+from core.utils.utilities import PopupWidget, add_shadow, build_progress_widget, build_widget_label
 from core.utils.widgets.animation_manager import AnimationManager
 from core.validation.widgets.yasb.disk import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
@@ -41,6 +41,7 @@ class DiskWidget(BaseWidget):
         callbacks: dict[str, str],
         label_shadow: dict = None,
         container_shadow: dict = None,
+        progress_bar: dict = None,
     ):
         super().__init__(int(update_interval * 1000), class_name="disk-widget")
         self._decimal_display = decimal_display
@@ -53,7 +54,11 @@ class DiskWidget(BaseWidget):
         self._animation = animation
         self._label_shadow = label_shadow
         self._container_shadow = container_shadow
-        # Construct container
+        self._progress_bar = progress_bar
+
+        self.progress_widget = None
+        self.progress_widget = build_progress_widget(self, self._progress_bar)
+
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
         self._widget_container_layout.setContentsMargins(
@@ -104,6 +109,21 @@ class DiskWidget(BaseWidget):
             disk_space = self._get_space()
         except Exception:
             disk_space = None
+
+        if self._progress_bar["enabled"] and self.progress_widget:
+            if self._widget_container_layout.indexOf(self.progress_widget) == -1:
+                self._widget_container_layout.insertWidget(
+                    0 if self._progress_bar["position"] == "left" else self._widget_container_layout.count(),
+                    self.progress_widget,
+                )
+            percent_value = 0
+            if disk_space:
+                percent_str = disk_space["used"]["percent"]
+                if isinstance(percent_str, str) and percent_str.endswith("%"):
+                    percent_value = float(percent_str.strip("%"))
+                else:
+                    percent_value = float(percent_str)
+            self.progress_widget.set_value(percent_value)
 
         for part in label_parts:
             part = part.strip()

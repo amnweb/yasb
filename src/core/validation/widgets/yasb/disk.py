@@ -93,6 +93,22 @@ VALIDATION_SCHEMA = {
         },
         "default": {"enabled": False, "color": "black", "offset": [1, 1], "radius": 3},
     },
+    "progress_bar": {
+        "type": "dict",
+        "default": {"enabled": False},
+        "required": False,
+        "schema": {
+            "enabled": {"type": "boolean", "default": False},
+            "size": {"type": "integer", "default": 18, "min": 8, "max": 64},
+            "thickness": {"type": "integer", "default": 3, "min": 1, "max": 10},
+            "color": {
+                "anyof": [{"type": "string"}, {"type": "list", "schema": {"type": "string"}}],
+                "default": "#00C800",
+            },
+            "background_color": {"type": "string", "default": "#3C3C3C"},
+            "position": {"type": "string", "allowed": ["left", "right"], "default": "left"},
+        },
+    },
     "callbacks": {
         "type": "dict",
         "schema": {

@@ -126,6 +126,24 @@ def build_widget_label(self, content: str, content_alt: str = None, content_shad
         self._widgets_alt = process_content(content_alt, is_alt=True)
 
 
+def build_progress_widget(self, options: dict[str, Any]) -> None:
+    """Builds a circular progress widget based on the provided options."""
+    if not options["enabled"]:
+        return
+
+    from core.utils.widgets.circular_progress_bar import CircularProgressBar, CircularProgressWidget
+
+    self.progress_data = CircularProgressBar(
+        parent=self,
+        size=options["size"],
+        thickness=options["thickness"],
+        color=options["color"],
+        background_color=options["background_color"],
+    )
+    self.progress_widget = CircularProgressWidget(self.progress_data)
+    return self.progress_widget
+
+
 @lru_cache(maxsize=1)
 def get_app_identifier():
     """Returns AppUserModelID regardless of installation location"""

@@ -15,6 +15,8 @@
 | `container_shadow`   | dict   | `None`                  | Container shadow options.                       |
 | `label_shadow`         | dict   | `None`                  | Label shadow options.                 |
 | `mic_menu` | dict | `{'blur': True, 'round_corners': True, 'round_corners_type': 'normal', 'border_color': 'system', 'alignment': 'right', 'direction': 'down', 'offset_top': 6, 'offset_left': 0}` | Menu settings for the widget. |
+| `progress_bar`       | dict    | `{'enabled': False, 'position': 'left', 'size': 14, 'thickness': 2, 'color': '#57948a'}` | Progress bar settings.    |
+
 
 ## Example Configuration
 
@@ -67,6 +69,13 @@ microphone:
   - **direction:** Set the direction of the menu (up, down).
   - **offset_top:** Set the top offset of the menu.
   - **offset_left:** Set the left offset of the menu.
+- **progress_bar**: A dictionary containing settings for the progress bar. It includes:
+  - **enabled**: Whether the progress bar is enabled.
+  - **position**: The position of the progress bar, either "left" or "right".
+  - **size**: The size of the progress bar.
+  - **thickness**: The thickness of the progress bar.
+  - **color**: The color of the progress bar. Color can be single color or gradient. For example, `color: "#57948a"` or `color: ["#57948a", "#ff0000"]"` for a gradient.
+  - **background_color**: The background color of the progress bar.
 
 ## Example Style
 ```css
@@ -85,4 +94,7 @@ microphone:
 .microphone-menu {
     background-color:rgba(17, 17, 27, 0.4); 
 }
+
+/* Microphone progress bar styles if enabled */
+.microphone-widget .progress-circle {} 
 ```

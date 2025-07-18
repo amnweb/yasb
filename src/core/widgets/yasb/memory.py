@@ -6,7 +6,7 @@ from humanize import naturalsize
 from PyQt6.QtCore import QTimer
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QWidget
 
-from core.utils.utilities import add_shadow, build_widget_label
+from core.utils.utilities import add_shadow, build_progress_widget, build_widget_label
 from core.utils.widgets.animation_manager import AnimationManager
 from core.validation.widgets.yasb.memory import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
@@ -29,6 +29,7 @@ class MemoryWidget(BaseWidget):
         container_padding: dict[str, int],
         label_shadow: dict = None,
         container_shadow: dict = None,
+        progress_bar: dict = None,
     ):
         super().__init__(class_name="memory-widget")
         self._memory_thresholds = memory_thresholds
@@ -39,6 +40,10 @@ class MemoryWidget(BaseWidget):
         self._padding = container_padding
         self._label_shadow = label_shadow
         self._container_shadow = container_shadow
+        self._progress_bar = progress_bar
+
+        self.progress_widget = None
+        self.progress_widget = build_progress_widget(self, self._progress_bar)
         # Construct container
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
@@ -113,6 +118,15 @@ class MemoryWidget(BaseWidget):
             "{swap_mem_percent}": swap_mem.percent,
             "{swap_mem_total}": naturalsize(swap_mem.total, True, True),
         }
+
+        if self._progress_bar["enabled"] and self.progress_widget:
+            if self._widget_container_layout.indexOf(self.progress_widget) == -1:
+                self._widget_container_layout.insertWidget(
+                    0 if self._progress_bar["position"] == "left" else self._widget_container_layout.count(),
+                    self.progress_widget,
+                )
+            self.progress_widget.set_value(virtual_mem.percent)
+
         for part in label_parts:
             part = part.strip()
             for fmt_str, value in label_options.items():

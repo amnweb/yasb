@@ -53,36 +53,36 @@ battery:
 
 ## Description of Options
 
-- `label`: The primary label format for the battery widget. You can use placeholders like `{icon}` to dynamically insert the battery icon.
-- `label_alt`: The alternative label format for the battery widget. Useful for displaying additional battery details such as `{percent}%` and `remaining: {time_remaining}`.
-- `update_interval`: The interval in milliseconds to update the widget.
-- `time_remaining_natural`: A boolean indicating whether to display the remaining time in a natural format.
-- `hide_unsupported`: A boolean indicating whether to hide the widget if the current system does not have battery information.
-- `charging_options`: A dictionary specifying options for displaying the charging state. It contains:
-  - `icon_format`: The format string for the charging icon. You can use placeholders like `{charging_icon}` and `{icon}`.
-  - `blink_charging_icon`: A boolean indicating whether to blink the charging icon when the battery is charging. (to create a blinking effect use class `blink` in CSS)
-  - `blink_interval`: The interval in milliseconds for the blinking effect.
-- `status_thresholds`: A dictionary specifying the thresholds for different battery statuses. It contains:
-  - `critical`: The battery percentage threshold for critical status.
-  - `low`: The battery percentage threshold for low status.
-  - `medium`: The battery percentage threshold for medium status.
-  - `high`: The battery percentage threshold for high status.
-  - `full`: The battery percentage threshold for full status.
-- `status_icons`: A dictionary specifying the icons for different battery statuses. It contains:
-  - `icon_charging`: The icon for charging status.
-  - `icon_critical`: The icon for critical status.
-  - `icon_low`: The icon for low status.
-  - `icon_medium`: The icon for medium status.
-  - `icon_high`: The icon for high status.
-  - `icon_full`: The icon for full status.
-- `callbacks`: A dictionary specifying the callbacks for mouse events. It contains:
-  - `on_left`: The name of the callback function for left mouse button click.
-  - `on_middle`: The name of the callback function for middle mouse button click.
-  - `on_right`: The name of the callback function for right mouse button click.
-- `animation`: A dictionary specifying the animation settings for the widget. It contains three keys: `enabled`, `type`, and `duration`. The `type` can be `fadeInOut` and the `duration` is the animation duration in milliseconds.
-- `container_padding`: Explicitly set padding inside widget container. Use this option to set padding inside the widget container. You can set padding for top, left, bottom and right sides of the widget container.
-- `container_shadow:` Container shadow options.
-- `label_shadow:` Label shadow options.
+- **label**: The primary label format for the battery widget. You can use placeholders like `{icon}` to dynamically insert the battery icon.
+- **label_alt**: The alternative label format for the battery widget. Useful for displaying additional battery details such as `{percent}%` and `remaining: {time_remaining}`.
+- **update_interval**: The interval in milliseconds to update the widget.
+- **time_remaining_natural**: A boolean indicating whether to display the remaining time in a natural format.
+- **hide_unsupported**: A boolean indicating whether to hide the widget if the current system does not have battery information.
+- **charging_options**: A dictionary specifying options for displaying the charging state. It contains:
+  - **icon_format**: The format string for the charging icon. You can use placeholders like `{charging_icon}` and `{icon}`.
+  - **blink_charging_icon**: A boolean indicating whether to blink the charging icon when the battery is charging. (to create a blinking effect use class `blink` in CSS)
+  - **blink_interval**: The interval in milliseconds for the blinking effect.
+- **status_thresholds**: A dictionary specifying the thresholds for different battery statuses. It contains:
+  - **critical**: The battery percentage threshold for critical status.
+  - **low**: The battery percentage threshold for low status.
+  - **medium**: The battery percentage threshold for medium status.
+  - **high**: The battery percentage threshold for high status.
+  - **full**: The battery percentage threshold for full status.
+- **status_icons**: A dictionary specifying the icons for different battery statuses. It contains:
+  - **icon_charging**: The icon for charging status.
+  - **icon_critical**: The icon for critical status.
+  - **icon_low**: The icon for low status.
+  - **icon_medium**: The icon for medium status.
+  - **icon_high**: The icon for high status.
+  - **icon_full**: The icon for full status.
+- **callbacks**: A dictionary specifying the callbacks for mouse events. It contains:
+  - **on_left**: The name of the callback function for left mouse button click.
+  - **on_middle**: The name of the callback function for middle mouse button click.
+  - **on_right**: The name of the callback function for right mouse button click.
+- **animation**: A dictionary specifying the animation settings for the widget. It contains three keys: `enabled`, `type`, and `duration`. The `type` can be `fadeInOut` and the `duration` is the animation duration in milliseconds.
+- **container_padding**: Explicitly set padding inside widget container. Use this option to set padding inside the widget container. You can set padding for top, left, bottom and right sides of the widget container.
+- **container_shadow**: Container shadow options.
+- **label_shadow**: Label shadow options.
 
 ## Example Style
 ```css
