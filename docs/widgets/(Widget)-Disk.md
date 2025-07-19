@@ -8,6 +8,7 @@
 | `update_interval` | integer | `60`                                                                  | The interval in seconds to update the disk widget. Must be between 0 and 3600. |
 | `group_label` | dict | `{'volume_labels': ["C"], 'show_label_name': True, 'blur': True, 'round_corners': True, 'round_corners_type': 'normal','border_color': 'System', 'alignment': 'right', 'direction': 'down', 'offset_top': 6, 'offset_left': 0}` | Group labels for multiple disks. This will show the labels of multiple disks in a popup window. |
 | `callbacks`       | dict    | `{'on_left': 'do_nothing', 'on_middle': 'do_nothing', 'on_right': "exec explorer C:\\"}` | Callbacks for mouse events. |
+| `disk_thresholds` | dict  | `{'low': 25, 'medium': 50, 'high': 90}`                                 | Thresholds for Disk usage levels. |
 | `container_padding`  | dict | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}`      | Explicitly set padding inside widget container. |
 | `animation`         | dict    | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
 | `container_shadow`   | dict   | `None`                  | Container shadow options.                       |
@@ -42,6 +43,10 @@ disk:
         color: "black"
         radius: 3
         offset: [ 1, 1 ]
+      disk_thresholds:
+          low: 25
+          medium: 50
+          high: 90
 ```
 
 ## Description of Options
@@ -51,6 +56,7 @@ disk:
 - **volume_label:** Partition/volume which you want to show in the bar.
 - **decimal_display:** The number of decimal to show, defaul 1 (min 0 max 3).
 - **update_interval:** The interval in seconds to update the disk widget. Must be between 0 and 3600.
+- **disk_thresholds:** A dictionary specifying the thresholds for disk usage levels. The keys are `low`, `medium`, and `high`, and the values are the percentage thresholds.
 - **group_label:** Group labels for multiple disks. This will show the labels of multiple disks in a popup window.
   - **volume_labels:** List of volume labels to show in the group label.
   - **show_label_name:** Show the label name in the group label.

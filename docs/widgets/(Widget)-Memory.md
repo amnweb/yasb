@@ -5,6 +5,7 @@
 | `label_alt`       | string  | `'\uf4bc VIRT: {virtual_mem_percent}% SWAP: {swap_mem_percent}%'`        | The alternative format string for the memory widget. Displays virtual and swap memory percentages. |
 | `update_interval` | integer | `5000`                                                                  | The interval in milliseconds to update the memory widget. Must be between 0 and 60000. |
 | `callbacks`       | dict    | `{'on_left': 'toggle_label', 'on_middle': 'do_nothing', 'on_right': 'do_nothing'}` | Callbacks for mouse events on the memory widget. |
+| `histogram_icons`     | list    | `['\u2581', '\u2581', '\u2582', '\u2583', '\u2584', '\u2585', '\u2586', '\u2587', '\u2588']` | Icons representing RAM usage histograms.                                    |
 | `memory_thresholds` | dict  | `{'low': 25, 'medium': 50, 'high': 90}`                                 | Thresholds for memory usage levels. |
 | `animation`         | dict    | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
 | `container_padding`  | dict | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}`      | Explicitly set padding inside widget container.                            |
@@ -29,6 +30,16 @@ memory:
       low: 25
       medium: 50
       high: 90
+    histogram_icons:
+      - '\u2581' # 0%
+      - '\u2581' # 10%
+      - '\u2582' # 20%
+      - '\u2583' # 30%
+      - '\u2584' # 40%
+      - '\u2585' # 50%
+      - '\u2586' # 60%
+      - '\u2587' # 70%
+      - '\u2588' # 80%+
     label_shadow:
       enabled: true
       color: "black"
@@ -43,6 +54,7 @@ memory:
 - **update_interval:** The interval in milliseconds to update the memory widget. Must be between 0 and 60000.
 - **callbacks:** A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions.
 - **memory_thresholds:** A dictionary specifying the thresholds for memory usage levels. The keys are `low`, `medium`, and `high`, and the values are the percentage thresholds.
+- **histogram_icons**: A list of icons representing different levels of Memory usage in the histogram. 8 icons are typically used, representing usage from 0% to 80%+ cam be used by puttinh `{histogram}` in label.
 - **animation:** A dictionary specifying the animation settings for the widget. It contains three keys: `enabled`, `type`, and `duration`. The `type` can be `fadeInOut` and the `duration` is the animation duration in milliseconds.
 - **container_padding**: Explicitly set padding inside widget container. Use this option to set padding inside the widget container. You can set padding for top, left, bottom and right sides of the widget container.
 - **container_shadow:** Container shadow options.
