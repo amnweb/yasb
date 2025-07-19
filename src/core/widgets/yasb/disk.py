@@ -39,6 +39,7 @@ class DiskWidget(BaseWidget):
         container_padding: dict[str, int],
         animation: dict[str, str],
         callbacks: dict[str, str],
+        disk_thresholds: dict[str, int],
         label_shadow: dict = None,
         container_shadow: dict = None,
         progress_bar: dict = None,
@@ -54,6 +55,7 @@ class DiskWidget(BaseWidget):
         self._animation = animation
         self._label_shadow = label_shadow
         self._container_shadow = container_shadow
+        self._disk_thresholds = disk_thresholds
         self._progress_bar = progress_bar
 
         self.progress_widget = None
@@ -110,19 +112,21 @@ class DiskWidget(BaseWidget):
         except Exception:
             disk_space = None
 
+        percent_value = 0
+        if disk_space:
+            percent_str = disk_space["used"]["percent"]
+            if isinstance(percent_str, str) and percent_str.endswith("%"):
+                percent_value = float(percent_str.strip("%"))
+            else:
+                percent_value = float(percent_str)
+        
         if self._progress_bar["enabled"] and self.progress_widget:
             if self._widget_container_layout.indexOf(self.progress_widget) == -1:
                 self._widget_container_layout.insertWidget(
                     0 if self._progress_bar["position"] == "left" else self._widget_container_layout.count(),
                     self.progress_widget,
                 )
-            percent_value = 0
-            if disk_space:
-                percent_str = disk_space["used"]["percent"]
-                if isinstance(percent_str, str) and percent_str.endswith("%"):
-                    percent_value = float(percent_str.strip("%"))
-                else:
-                    percent_value = float(percent_str)
+            
             self.progress_widget.set_value(percent_value)
 
         for part in label_parts:
@@ -134,10 +138,15 @@ class DiskWidget(BaseWidget):
                     active_widgets[widget_index].setText(icon)
                 else:
                     # Update label with formatted content
+                    label_class = "label alt" if self._show_alt_label else "label"
                     formatted_text = (
                         part.format(space=disk_space, volume_label=self._volume_label) if disk_space else part
                     )
+                    active_widgets[widget_index].setProperty(
+                        "class", f"{label_class} status-{self._get_disk_threshold(percent_value)}"
+                    )
                     active_widgets[widget_index].setText(formatted_text)
+                    active_widgets[widget_index].setStyleSheet("")
                 widget_index += 1
 
     def _get_volume_label(self, drive_letter):
@@ -264,3 +273,12 @@ class DiskWidget(BaseWidget):
                 },
             }
         return None
+    def _get_disk_threshold(self, disk_percent) -> str:
+        if disk_percent <= self._disk_thresholds["low"]:
+            return "low"
+        elif self._disk_thresholds["low"] < disk_percent <= self._disk_thresholds["medium"]:
+            return "medium"
+        elif self._disk_thresholds["medium"] < disk_percent <= self._disk_thresholds["high"]:
+            return "high"
+        elif self._disk_thresholds["high"] < disk_percent:
+            return "critical"

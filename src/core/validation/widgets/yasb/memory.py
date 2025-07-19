@@ -2,6 +2,7 @@ DEFAULTS = {
     "label": "\uf4bc {virtual_mem_free}/{virtual_mem_total}",
     "label_alt": "\uf4bc VIRT: {virtual_mem_percent}% SWAP: {swap_mem_percent}%",
     "update_interval": 5000,
+    "histogram_icons": ["\u2581", "\u2581", "\u2582", "\u2583", "\u2584", "\u2585", "\u2586", "\u2587", "\u2588"],
     "animation": {"enabled": True, "type": "fadeInOut", "duration": 200},
     "container_padding": {"top": 0, "left": 0, "bottom": 0, "right": 0},
     "callbacks": {"on_left": "toggle_label", "on_middle": "do_nothing", "on_right": "do_nothing"},
@@ -16,6 +17,14 @@ VALIDATION_SCHEMA = {
     "label": {"type": "string", "default": DEFAULTS["label"]},
     "label_alt": {"type": "string", "default": DEFAULTS["label_alt"]},
     "update_interval": {"type": "integer", "default": DEFAULTS["update_interval"], "min": 1000, "max": 60000},
+    "histogram_icons": {
+        "type": "list",
+        "required": False,
+        "default": DEFAULTS["histogram_icons"],
+        "minlength": 9,
+        "maxlength": 9,
+        "schema": {"type": "string"},
+    },
     "memory_thresholds": {
         "type": "dict",
         "required": False,

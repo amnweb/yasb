@@ -8,6 +8,7 @@
 | `histogram_icons`     | list    | `['\u2581', '\u2581', '\u2582', '\u2583', '\u2584', '\u2585', '\u2586', '\u2587', '\u2588']` | Icons representing CPU usage histograms.                                    |
 | `histogram_num_columns` | integer | `10`                                                                    | The number of columns in the histogram.                                     |
 | `callbacks`           | dict    | `{'on_left': 'toggle_label', 'on_middle': 'do_nothing', 'on_right': 'do_nothing'}` | Callback functions for different mouse button actions.                      |
+| `cpu_thresholds` | dict  | `{'low': 25, 'medium': 50, 'high': 90}`                                 | Thresholds for Cpu usage levels. |
 | `animation`         | dict    | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
 | `container_padding`  | dict | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}`      | Explicitly set padding inside widget container. |
 | `container_shadow`   | dict   | `None`                  | Container shadow options.                       |
@@ -23,6 +24,10 @@ cpu:
     label: "<span>\uf4bc</span> {info[percent][total]}%"
     label_alt: "<span>\uf437</span> {info[histograms][cpu_percent]}"
     update_interval: 2000
+    cpu_thresholds:
+      low: 25
+      medium: 50
+      high: 90
     histogram_icons:
       - '\u2581' # 0%
       - '\u2581' # 10%
@@ -48,6 +53,7 @@ cpu:
 - **label**: The format string for the CPU usage label. You can use placeholders like `{info[percent][total]}` to dynamically insert CPU information.
 - **label_alt**: The alternative format string for the CPU usage label. Useful for displaying additional CPU details.
 - **update_interval**: The interval in milliseconds at which the widget updates its information. Minimum is 1000 ms (1 second).
+- **cpu_thresholds:** A dictionary specifying the thresholds for cpu usage levels. The keys are `low`, `medium`, and `high`, and the values are the percentage thresholds.
 - **histogram_icons**: A list of icons representing different levels of CPU usage in the histogram. 8 icons are typically used, representing usage from 0% to 80%+.
 - **histogram_num_columns**: The number of columns to display in the CPU usage histogram.
 - **callbacks**: A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions.
@@ -96,6 +102,10 @@ cpu:
 .cpu-widget .widget-container .label {}
 .cpu-widget .widget-container .label.alt {}
 .cpu-widget .widget-container .icon {}
+.cpu-widget .label.status-low {}
+.cpu-widget .label.status-medium {}
+.cpu-widget .label.status-high {}
+.cpu-widget .label.status-critical {}
 /* CPU progress bar styles if enabled */
 .cpu-widget .progress-circle {} 
 ```
