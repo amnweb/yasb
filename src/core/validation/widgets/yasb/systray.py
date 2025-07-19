@@ -10,6 +10,7 @@ DEFAULTS = {
     "show_battery": False,
     "show_volume": False,
     "show_network": False,
+    "tooltip": True,
     "container_padding": {"left": 0, "top": 0, "right": 0, "bottom": 0},
     "default_shadow": {
         "enabled": False,
@@ -77,6 +78,7 @@ VALIDATION_SCHEMA = {
         "required": False,
         "default": DEFAULTS["show_network"],
     },
+    "tooltip": {"type": "boolean", "required": False, "default": DEFAULTS["tooltip"]},
     "container_padding": {
         "type": "dict",
         "required": False,

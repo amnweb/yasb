@@ -113,6 +113,7 @@ class SystrayWidget(BaseWidget):
         show_battery: bool,
         show_volume: bool,
         show_network: bool,
+        tooltip: bool,
         container_padding: dict[str, int],
         container_shadow: dict[str, Any],
         unpinned_shadow: dict[str, Any],
@@ -143,6 +144,7 @@ class SystrayWidget(BaseWidget):
             self.filtered_guids.add(NETWORK_GUID)
 
         IconWidget.icon_size = icon_size
+        IconWidget.enable_tooltips = tooltip
         IconWidget.pin_modifier_key = {
             "ctrl": Qt.KeyboardModifier.ControlModifier,
             "alt": Qt.KeyboardModifier.AltModifier,

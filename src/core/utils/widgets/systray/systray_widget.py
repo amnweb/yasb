@@ -71,6 +71,7 @@ class IconWidget(QPushButton):
     icon_moved = pyqtSignal(object)
     pin_modifier_key = Qt.KeyboardModifier.AltModifier
     icon_size = 16
+    enable_tooltips = True
 
     def __init__(self):
         super().__init__()
@@ -199,7 +200,8 @@ class IconWidget(QPushButton):
         """Update the icon and tooltip of the icon widget"""
         if not self.data or self.data.hIcon == 0:
             return
-        set_tooltip(self, self.data.szTip or self.data.exe, delay=0)
+        if self.enable_tooltips:
+            set_tooltip(self, self.data.szTip or self.data.exe, delay=0)
         icon = self.data.icon_image
         if icon:
             self.setIcon(QIcon(icon))

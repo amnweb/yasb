@@ -12,6 +12,7 @@
 | `show_battery`            | boolean | `false`     | Whether to show battery icon (from the original systray).                               |
 | `show_volume`             | boolean | `false`     | Whether to show volume icon (from the original systray).                                |
 | `show_network`            | boolean | `false`     | Whether to show network icon (from the original systray).                               |
+| `tooltip`                 | boolean | `true`      | Whether to show tooltips when hovering over systray icons.                              |
 | `container_padding`       | dict    | `None`      | Container padding.                                                                      |
 | `container_shadow`        | dict    | `None`      | Container shadow options.                                                               |
 | `unpinned_shadow`         | dict    | `None`      | Unpinned container shadow options.                                                      |
@@ -71,6 +72,7 @@ There are some limitations with the systray widget:
 - **show_battery:** Whether to show battery icon (from the original systray).
 - **show_volume:** Whether to show volume icon (from the original systray).
 - **show_network:** Whether to show network icon (from the original systray).
+- **tooltip:** Whether to show tooltips when hovering over systray icons.
 - **container_padding:** Padding for the widget container.
 - **container_shadow:** Container shadow options.
 - **unpinned_shadow:** Unpinned container shadow options.
