@@ -6,6 +6,7 @@ DEFAULTS = {
     "locale": "",
     "tooltip": True,
     "timezones": [],
+    "icons": {},
     "calendar": {
         "blur": True,
         "round_corners": True,
@@ -30,6 +31,13 @@ VALIDATION_SCHEMA = {
     "tooltip": {"type": "boolean", "required": False, "default": DEFAULTS["tooltip"]},
     "update_interval": {"type": "integer", "default": 1000, "min": 0, "max": 60000},
     "timezones": {"type": "list", "default": DEFAULTS["timezones"], "schema": {"type": "string", "required": False}},
+    "icons": {
+        "type": "dict",
+        "required": False,
+        "default": {},
+        "keysrules": {"type": "string", "regex": "^clock_\\d{2}$"},
+        "valuesrules": {"type": "string"},
+    },
     "calendar": {
         "type": "dict",
         "required": False,
