@@ -87,6 +87,7 @@ https://github.com/user-attachments/assets/aab8d8e8-248f-46a1-919c-9b0601236ac1
 
 - **[Active Windows Title](https://github.com/amnweb/yasb/wiki/(Widget)-Active-Windows-Title)**: Displays the title of the currently active window.
 - **[Applications](https://github.com/amnweb/yasb/wiki/(Widget)-Applications)**: Shows a list of predefined applications.
+- **[Ai Chat](https://github.com/amnweb/yasb/wiki/(Widget)-Ai-Chat)**: A chat widget that allows you to interact with AI models.
 - **[Battery](https://github.com/amnweb/yasb/wiki/(Widget)-Battery)**: Displays the current battery status.
 - **[Bluetooth](https://github.com/amnweb/yasb/wiki/(Widget)-Bluetooth)**: Shows the current Bluetooth status and connected devices.
 - **[Brightness](https://github.com/amnweb/yasb/wiki/(Widget)-Brightness)**: Displays and change the current brightness level.

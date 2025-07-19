@@ -28,6 +28,7 @@ dependencies = [
     "icoextract",
     "qasync",
     "obs-websocket-py",
+    "openai",
     "pyvda",
     "python-dotenv",
     "winrt.windows.foundation",
