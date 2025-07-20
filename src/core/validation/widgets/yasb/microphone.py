@@ -115,6 +115,10 @@ VALIDATION_SCHEMA = {
             },
             "background_color": {"type": "string", "default": "#3C3C3C"},
             "position": {"type": "string", "allowed": ["left", "right"], "default": "left"},
+            "animation": {
+                "type": "boolean",
+                "default": True,
+            },
         },
     },
     "callbacks": {

@@ -1,10 +1,10 @@
-from PyQt6.QtCore import QPointF, Qt, pyqtProperty, pyqtSlot
+from PyQt6.QtCore import QEasingCurve, QPointF, QPropertyAnimation, Qt, pyqtProperty
 from PyQt6.QtGui import QColor, QConicalGradient, QPainter, QPen
-from PyQt6.QtWidgets import QFrame, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import QFrame, QVBoxLayout
 
 
-class CircularProgressBar(QWidget):
-    """A circular progress bar widget."""
+class CircularProgressBar(QFrame):
+    """A circular progress bar widget"""
 
     def __init__(
         self,
@@ -14,6 +14,7 @@ class CircularProgressBar(QWidget):
         value: float = 0.0,
         color="#00C800",
         background_color: str = "#3C3C3C",
+        animation: bool = True,
     ):
         super().__init__(parent)
 
@@ -21,9 +22,27 @@ class CircularProgressBar(QWidget):
         self._thickness = thickness
         self._value = value
         self._color_config = color
+        self.setContentsMargins(0, 0, 0, 0)
         self._background_color = QColor(background_color)
+        self._animation_enabled = animation
+        self._animation = QPropertyAnimation(self, b"animatedValue")
+        self._animation.setDuration(400)
+        self._animation.setEasingCurve(QEasingCurve.Type.OutCubic)
+
         self.setFixedSize(self._size, self._size)
         self._update_angles()
+
+    @pyqtProperty(float)
+    def animatedValue(self):
+        """Get the current animated value."""
+        return self._value
+
+    @animatedValue.setter
+    def animatedValue(self, value: float):
+        """Set the animated value and trigger a repaint."""
+        self._value = value
+        self._update_angles()
+        self.update()
 
     def _update_angles(self):
         """Update the angle calculations based on current value."""
@@ -32,15 +51,11 @@ class CircularProgressBar(QWidget):
     def _create_progress_brush(self, rect):
         """Create a brush for the progress arc (solid color or gradient)."""
         if isinstance(self._color_config, list) and len(self._color_config) > 1:
-            # Create gradient
             center = QPointF(rect.center())
             gradient = QConicalGradient(center, 90)
-
-            # Distribute colors evenly across the gradient
             step = 1.0 / (len(self._color_config) - 1)
             for i, color in enumerate(self._color_config):
                 gradient.setColorAt(i * step, QColor(color))
-
             return gradient
         else:
             color = self._color_config[0] if isinstance(self._color_config, list) else self._color_config
@@ -51,43 +66,40 @@ class CircularProgressBar(QWidget):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
-        # Calculate drawing rectangle
-        margin = self._thickness // 2
-        rect = self.rect().adjusted(margin, margin, -margin, -margin)
+        # Calculate margin based on thickness and ensure it is at least 2
+        # Maybe is there better solution for margin calculation but I'm not sure how to do it
+        margin = (self._thickness + 1) // 2 + 1
+        rect = self.contentsRect().adjusted(margin, margin, -margin, -margin)
 
-        # Draw background circle
-        painter.setPen(QPen(self._background_color, self._thickness, Qt.PenStyle.SolidLine))
+        if rect.width() <= 0 or rect.height() <= 0:
+            return
+
+        painter.setPen(QPen(self._background_color, self._thickness, Qt.PenStyle.SolidLine, Qt.PenCapStyle.FlatCap))
         painter.setBrush(Qt.BrushStyle.NoBrush)
-        painter.drawEllipse(rect)
+        painter.drawArc(rect, 0, 360 * 16)
 
-        # Draw progress arc
         if self._value > 0:
             progress_brush = self._create_progress_brush(rect)
             painter.setPen(QPen(progress_brush, self._thickness, Qt.PenStyle.SolidLine, Qt.PenCapStyle.FlatCap))
             painter.drawArc(rect, 90 * 16, -int(self._angle_span * 16))
 
-    @pyqtSlot(float)
     def set_value(self, value: float):
         """Set the current value and update the display."""
-        self._value = max(0, min(value, 100.0))
-        self._update_angles()
-        self.update()
+        new_value = max(0, min(value, 100.0))
+        # If value hasn't changed significantly, no need to animate
+        if abs(new_value - self._value) < 0.9:
+            return
+        if self._animation_enabled:
+            if self._animation.state() == QPropertyAnimation.State.Running:
+                self._animation.stop()
 
-    def get_value(self) -> float:
-        """Get the current value."""
-        return self._value
-
-    value = pyqtProperty(float, get_value, set_value)
-
-    def set_color(self, color):
-        """Set the progress color (can be a single color string or list of colors for gradient)."""
-        self._color_config = color
-        self.update()
-
-    def set_background_color(self, color: str):
-        """Set the background color."""
-        self._background_color = QColor(color)
-        self.update()
+            self._animation.setStartValue(self._value)
+            self._animation.setEndValue(new_value)
+            self._animation.start()
+        else:
+            self._value = new_value
+            self._update_angles()
+            self.update()
 
 
 class CircularProgressWidget(QFrame):
