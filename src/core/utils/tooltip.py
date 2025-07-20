@@ -21,6 +21,8 @@ class CustomToolTip(QFrame):
 
     _tooltip_stylesheet = None  # Class-level cache for tooltip CSS
     _active_tooltip = None  # Class-level reference to the currently visible tooltip
+    _tooltip_pool = []  # Pool of reusable tooltip instances
+    _pool_size_limit = 5  # Maximum number of tooltips to keep in pool
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -30,6 +32,8 @@ class CustomToolTip(QFrame):
         self._opacity = 0.0
         self._slide_offset = 0
         self._base_pos = None
+        self._is_destroyed = False
+
         # Create label for text content
         self.label = QLabel()
         self.label.setProperty("class", "tooltip")
@@ -39,41 +43,93 @@ class CustomToolTip(QFrame):
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.layout.addWidget(self.label)
         self.apply_stylesheet()
-        # Fade animation
-        self.fade_in_animation = QPropertyAnimation(self, b"opacity")
-        self.fade_in_animation.setDuration(200)
-        self.fade_in_animation.setStartValue(0.0)
-        self.fade_in_animation.setEndValue(1.0)
-        self.fade_in_animation.setEasingCurve(QEasingCurve.Type.OutCubic)
 
-        self.fade_out_animation = QPropertyAnimation(self, b"opacity")
-        self.fade_out_animation.setDuration(200)
-        self.fade_out_animation.setStartValue(1.0)
-        self.fade_out_animation.setEndValue(0.0)
-        self.fade_out_animation.setEasingCurve(QEasingCurve.Type.InCubic)
-        self.fade_out_animation.finished.connect(self._on_fade_out_anim_finished)
+        self.fade_in_animation = None
+        self.fade_out_animation = None
+        self.slide_in_animation = None
+        self.slide_out_animation = None
 
-        # Slide animation
-        self.slide_in_animation = QPropertyAnimation(self, b"slide_offset")
-        self.slide_in_animation.setDuration(200)
-        self.slide_in_animation.setStartValue(10)
-        self.slide_in_animation.setEndValue(0)
-        self.slide_in_animation.setEasingCurve(QEasingCurve.Type.OutCubic)
-
-        self.slide_out_animation = QPropertyAnimation(self, b"slide_offset")
-        self.slide_out_animation.setDuration(200)
-        self.slide_out_animation.setStartValue(0)
-        self.slide_out_animation.setEndValue(10)
-        self.slide_out_animation.setEasingCurve(QEasingCurve.Type.InCubic)
-        self.slide_out_animation.finished.connect(self._on_slide_out_anim_finished)
-
-        # Timer to auto-hide tooltip
         self.hide_timer = QTimer(self)
         self.hide_timer.setSingleShot(True)
         self.hide_timer.timeout.connect(self.start_fade_out)
 
         self._fade_out_done = False
         self._slide_out_done = False
+
+    def _ensure_animations_created(self):
+        """Lazy initialization of animation objects to reduce memory usage."""
+        if self.fade_in_animation is None:
+            # Fade animation
+            self.fade_in_animation = QPropertyAnimation(self, b"opacity")
+            self.fade_in_animation.setDuration(200)
+            self.fade_in_animation.setStartValue(0.0)
+            self.fade_in_animation.setEndValue(1.0)
+            self.fade_in_animation.setEasingCurve(QEasingCurve.Type.OutCubic)
+
+            self.fade_out_animation = QPropertyAnimation(self, b"opacity")
+            self.fade_out_animation.setDuration(200)
+            self.fade_out_animation.setStartValue(1.0)
+            self.fade_out_animation.setEndValue(0.0)
+            self.fade_out_animation.setEasingCurve(QEasingCurve.Type.InCubic)
+            self.fade_out_animation.finished.connect(self._on_fade_out_anim_finished)
+
+            # Slide animation
+            self.slide_in_animation = QPropertyAnimation(self, b"slide_offset")
+            self.slide_in_animation.setDuration(200)
+            self.slide_in_animation.setStartValue(10)
+            self.slide_in_animation.setEndValue(0)
+            self.slide_in_animation.setEasingCurve(QEasingCurve.Type.OutCubic)
+
+            self.slide_out_animation = QPropertyAnimation(self, b"slide_offset")
+            self.slide_out_animation.setDuration(200)
+            self.slide_out_animation.setStartValue(0)
+            self.slide_out_animation.setEndValue(10)
+            self.slide_out_animation.setEasingCurve(QEasingCurve.Type.InCubic)
+            self.slide_out_animation.finished.connect(self._on_slide_out_anim_finished)
+
+    def cleanup_animations(self):
+        """Clean up animation objects to free memory."""
+        if self.fade_in_animation is not None:
+            self.fade_in_animation.stop()
+            self.fade_in_animation.deleteLater()
+            self.fade_in_animation = None
+
+        if self.fade_out_animation is not None:
+            self.fade_out_animation.stop()
+            self.fade_out_animation.deleteLater()
+            self.fade_out_animation = None
+
+        if self.slide_in_animation is not None:
+            self.slide_in_animation.stop()
+            self.slide_in_animation.deleteLater()
+            self.slide_in_animation = None
+
+        if self.slide_out_animation is not None:
+            self.slide_out_animation.stop()
+            self.slide_out_animation.deleteLater()
+            self.slide_out_animation = None
+
+    @classmethod
+    def get_or_create_tooltip(cls):
+        """Get a tooltip from the pool or create a new one."""
+        if cls._tooltip_pool:
+            tooltip = cls._tooltip_pool.pop()
+            tooltip._is_destroyed = False
+            return tooltip
+        return cls()
+
+    @classmethod
+    def return_to_pool(cls, tooltip):
+        """Return a tooltip to the pool for reuse."""
+        if len(cls._tooltip_pool) < cls._pool_size_limit and not tooltip._is_destroyed:
+            tooltip.hide()
+            tooltip.cleanup_animations()
+            tooltip._is_destroyed = False
+            cls._tooltip_pool.append(tooltip)
+        else:
+            tooltip._is_destroyed = True
+            tooltip.cleanup_animations()
+            tooltip.deleteLater()
 
     def apply_stylesheet(self):
         """Apply the tooltip stylesheet from the cached class-level variable."""
@@ -111,7 +167,6 @@ class CustomToolTip(QFrame):
     def set_opacity(self, opacity):
         self._opacity = opacity
         self.setWindowOpacity(opacity)
-        self.update()
 
     opacity = pyqtProperty(float, get_opacity, set_opacity)
 
@@ -125,101 +180,71 @@ class CustomToolTip(QFrame):
 
     slide_offset = pyqtProperty(float, get_slide_offset, set_slide_offset)
 
-    def show_tooltip(self, text, pos, widget_geometry=None, duration=None):
+    def update_content(self, text):
+        """Update tooltip content without hiding it."""
+        if self.label.text() != text:
+            self.label.setText(text)
+            self.adjustSize()
+            if self.isVisible() and self._base_pos:
+                self.move(self._base_pos.x(), self._base_pos.y() + int(self._slide_offset))
+
+    def _calculate_position(self, widget_geometry):
+        """Calculate tooltip position based on widget geometry and screen bounds."""
+        screen = QGuiApplication.screenAt(widget_geometry.center()) or QGuiApplication.primaryScreen()
+        screen_geometry = screen.geometry()
+
+        # Center horizontally on widget
+        x = widget_geometry.center().x() - (self.width() // 2)
+
+        # Position vertically (prefer below, but above if no space)
+        space_below = screen_geometry.bottom() - widget_geometry.bottom()
+        space_above = widget_geometry.top() - screen_geometry.top()
+
+        if space_below >= self.height() + 5:
+            y = widget_geometry.bottom() + 5
+        elif space_above >= self.height() + 5:
+            y = widget_geometry.top() - self.height() - 5
+        else:
+            y = widget_geometry.bottom() + 5  # Default to below
+
+        # Clamp to screen bounds
+        x = max(screen_geometry.left(), min(x, screen_geometry.right() - self.width()))
+        y = max(screen_geometry.top(), min(y, screen_geometry.bottom() - self.height()))
+
+        return QPoint(x, y)
+
+    def show_tooltip(self, text, widget_geometry=None, duration=None):
         """Show tooltip centered below or above the widget."""
-        # Hide any previous tooltip immediately
         if CustomToolTip._active_tooltip and CustomToolTip._active_tooltip is not self:
             CustomToolTip._active_tooltip.hide()
         CustomToolTip._active_tooltip = self
+
         self.label.setText(text)
         self.adjustSize()
+
         if widget_geometry:
-            screen = QGuiApplication.screenAt(widget_geometry.center())
-            if not screen:
-                screen = QGuiApplication.primaryScreen()
-            screen_geometry = screen.geometry()
-            tooltip_width = self.width()
-            tooltip_height = self.height()
-            bar_top = widget_geometry.top()
-            bar_bottom = widget_geometry.bottom()
-            bar_center_x = widget_geometry.center().x()
-            # Center tooltip horizontally to widget
-            x = bar_center_x - (tooltip_width // 2)
-            # Decide above or below bar
-            if abs(bar_top - screen_geometry.top()) < 10:
-                y = bar_bottom + 5
-            elif abs(bar_bottom - screen_geometry.bottom()) < 10:
-                y = bar_top - tooltip_height - 5
-            else:
-                space_below = screen_geometry.bottom() - bar_bottom
-                space_above = bar_top - screen_geometry.top()
-                if space_below >= tooltip_height + 5:
-                    y = bar_bottom + 5
-                elif space_above >= tooltip_height + 5:
-                    y = bar_top - tooltip_height - 5
-                else:
-                    y = bar_bottom + 5
-            # Clamp x to screen
-            if x + tooltip_width > screen_geometry.right():
-                x = screen_geometry.right() - tooltip_width
-            if x < screen_geometry.left():
-                x = screen_geometry.left()
-            # Clamp y to screen
-            if y + tooltip_height > screen_geometry.bottom():
-                y = screen_geometry.bottom() - tooltip_height
-            if y < screen_geometry.top():
-                y = screen_geometry.top()
-            self._base_pos = QPoint(x, y)
-            self.move(x, y)
+            self._base_pos = self._calculate_position(widget_geometry)
+            self.move(self._base_pos.x(), self._base_pos.y())
         else:
-            # if widget_geometry is not provided or we not able to calculate a valid position
             return
+
         self._start_animations(fade_in=True)
         self.show()
-        # Start the hide timer if a duration is specified
+
         if duration:
             self.hide_timer.start(duration)
-
-    def calculate_optimal_position(self, cursor_pos, widget_geometry=None):
-        """Calculate optimal tooltip position based on screen boundaries, cursor position, and widget geometry."""
-        screen = QGuiApplication.screenAt(cursor_pos)
-        if not screen:
-            screen = QGuiApplication.primaryScreen()
-        screen_geometry = screen.geometry()
-        tooltip_size = self.size()
-        # Default: below cursor
-        x = cursor_pos.x() - (tooltip_size.width() // 2)
-        y = cursor_pos.y() + 20
-        if widget_geometry:
-            if cursor_pos.y() >= widget_geometry.bottom():
-                y = widget_geometry.bottom() + 5
-            elif cursor_pos.y() <= widget_geometry.top():
-                y = widget_geometry.top() - tooltip_size.height() - 5
-            else:
-                space_below = screen_geometry.bottom() - widget_geometry.bottom()
-                space_above = widget_geometry.top() - screen_geometry.top()
-                if space_below >= tooltip_size.height() or space_below > space_above:
-                    y = widget_geometry.bottom() + 5
-                else:
-                    y = widget_geometry.top() - tooltip_size.height() - 5
-        # Clamp x within screen
-        if x + tooltip_size.width() > screen_geometry.right():
-            x = screen_geometry.right() - tooltip_size.width()
-        if x < screen_geometry.left():
-            x = screen_geometry.left()
-        # Clamp y within screen, always prefer below if not enough space above
-        if y + tooltip_size.height() > screen_geometry.bottom():
-            y = cursor_pos.y() - tooltip_size.height() - 20
-        if y < screen_geometry.top():
-            # If not enough space above, force below
-            y = min(cursor_pos.y() + 20, screen_geometry.bottom() - tooltip_size.height())
-        return QPoint(x, y)
 
     def start_fade_out(self):
         self._start_animations(fade_in=False)
 
     def _start_animations(self, fade_in=True):
         """Helper to start both fade and slide animations together."""
+        if self._is_destroyed:
+            return
+
+        # Ensure animations are created before using them
+        self._ensure_animations_created()
+
         if fade_in:
             self.fade_out_animation.stop()
             self.slide_out_animation.stop()
@@ -240,23 +265,20 @@ class CustomToolTip(QFrame):
             self.fade_out_animation.start()
             self.slide_out_animation.start()
 
-    def show(self):
-        super().show()
-
-    def hide(self):
-        super().hide()
-
     def _on_fade_out_anim_finished(self):
         self._fade_out_done = True
-        self._maybe_hide()
+        self._check_hide_complete()
 
     def _on_slide_out_anim_finished(self):
         self._slide_out_done = True
-        self._maybe_hide()
+        self._check_hide_complete()
 
-    def _maybe_hide(self):
+    def _check_hide_complete(self):
         if self._fade_out_done and self._slide_out_done:
             self.hide()
+            if CustomToolTip._active_tooltip is self:
+                CustomToolTip._active_tooltip = None
+            CustomToolTip.return_to_pool(self)
 
 
 class TooltipEventFilter(QObject):
@@ -266,7 +288,7 @@ class TooltipEventFilter(QObject):
         super().__init__(parent)
         self.widget = widget
         self.tooltip_text = tooltip_text
-        self.tooltip = CustomToolTip()
+        self.tooltip = None
         self.hover_delay = delay
         self.hide_timer = QTimer(self)
         self.hide_timer.setSingleShot(True)
@@ -280,19 +302,43 @@ class TooltipEventFilter(QObject):
         self.hover_timer.setSingleShot(True)
         self.hover_timer.timeout.connect(self._on_hover_timer)
 
+    def cleanup(self):
+        """Clean up resources when the event filter is no longer needed."""
+        self.hide_timer.stop()
+        self.poll_timer.stop()
+        self.hover_timer.stop()
+
+        if self._app_event_filter_installed:
+            QGuiApplication.instance().removeEventFilter(self)
+            self._app_event_filter_installed = False
+
+        if self.tooltip and self.tooltip.isVisible():
+            self.tooltip.start_fade_out()
+        self.tooltip = None
+
     def _on_hover_timer(self):
         if self._mouse_inside:
             self.show_tooltip()
 
     def show_tooltip(self):
-        widget_rect = self.widget.rect()
-        widget_global_top_left = self.widget.mapToGlobal(QPoint(0, 0))
-        global_geometry = widget_rect.translated(widget_global_top_left)
-        if not self.widget.isVisible() or widget_rect.width() == 0 or widget_rect.height() == 0:
-            cursor_pos = QCursor.pos()
-            self.tooltip.show_tooltip(self.tooltip_text, cursor_pos, None)
+        if not self.tooltip:
+            self.tooltip = CustomToolTip.get_or_create_tooltip()
+
+        # Update content if tooltip is visible, otherwise show it
+        if self.tooltip.isVisible():
+            self.tooltip.update_content(self.tooltip_text)
         else:
-            self.tooltip.show_tooltip(self.tooltip_text, global_geometry.center(), global_geometry)
+            widget_rect = self.widget.rect()
+            widget_global_pos = self.widget.mapToGlobal(QPoint(0, 0))
+            global_geometry = widget_rect.translated(widget_global_pos)
+
+            geometry = (
+                global_geometry
+                if (self.widget.isVisible() and widget_rect.width() > 0 and widget_rect.height() > 0)
+                else None
+            )
+            self.tooltip.show_tooltip(self.tooltip_text, geometry)
+
         self.hide_timer.stop()
         if not self._app_event_filter_installed:
             QGuiApplication.instance().installEventFilter(self)
@@ -300,24 +346,32 @@ class TooltipEventFilter(QObject):
         self._mouse_inside = True
         self.poll_timer.start()
 
+    def update_tooltip_text(self, new_text):
+        """Update tooltip text without hiding the tooltip if it's currently shown."""
+        self.tooltip_text = new_text
+        # If tooltip is currently visible, update its content immediately
+        if self.tooltip and self.tooltip.isVisible():
+            self.tooltip.update_content(new_text)
+
     def _hide_tooltip(self):
-        if self.tooltip.isVisible():
+        if self.tooltip and self.tooltip.isVisible():
             self.tooltip.start_fade_out()
         if self._app_event_filter_installed:
             QGuiApplication.instance().removeEventFilter(self)
             self._app_event_filter_installed = False
         self._mouse_inside = False
         self.poll_timer.stop()
+        # Clear reference to tooltip so it can be returned to pool
+        self.tooltip = None
 
     def _poll_mouse(self):
         pos = QCursor.pos()
         widget_rect = self.widget.rect()
-        widget_global_top_left = self.widget.mapToGlobal(QPoint(0, 0))
-        global_geometry = widget_rect.translated(widget_global_top_left)
-        inside = global_geometry.contains(pos)
-        if inside:
-            if self.hide_timer.isActive():
-                self.hide_timer.stop()
+        widget_global_pos = self.widget.mapToGlobal(QPoint(0, 0))
+        global_geometry = widget_rect.translated(widget_global_pos)
+
+        if global_geometry.contains(pos):
+            self.hide_timer.stop()
             self._mouse_inside = True
         else:
             if not self.hide_timer.isActive():
@@ -340,7 +394,7 @@ class TooltipEventFilter(QObject):
                 self.hide_timer.stop()
                 self._hide_tooltip()
         # Application-wide mouse move
-        if event.type() == QEvent.Type.MouseMove and self.tooltip.isVisible():
+        if event.type() == QEvent.Type.MouseMove and self.tooltip and self.tooltip.isVisible():
             self._poll_mouse()
         return super().eventFilter(obj, event)
 
@@ -355,10 +409,11 @@ def set_tooltip(widget, text, delay=400):
     """
     if not text:
         return
-    # Remove any existing tooltip event filter
+
     if hasattr(widget, "_tooltip_filter"):
-        widget.removeEventFilter(widget._tooltip_filter)
-    event_filter = TooltipEventFilter(widget, text, delay, widget)
-    widget.setMouseTracking(True)
-    widget.installEventFilter(event_filter)
-    widget._tooltip_filter = event_filter
+        widget._tooltip_filter.update_tooltip_text(text)
+    else:
+        event_filter = TooltipEventFilter(widget, text, delay, widget)
+        widget.setMouseTracking(True)
+        widget.installEventFilter(event_filter)
+        widget._tooltip_filter = event_filter
