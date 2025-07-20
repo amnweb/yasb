@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any, cast, override
 
 import psutil
-from PyQt6.QtCore import QEvent, QPoint, QRect, QSize, Qt, QTimer, pyqtSlot
+from PyQt6.QtCore import QEvent, QParallelAnimationGroup, QPoint, QPropertyAnimation, QRect, QSize, Qt, QTimer, pyqtSlot
 from PyQt6.QtGui import (
     QColor,
     QFontMetrics,
@@ -221,6 +221,25 @@ class PopupWidget(QWidget):
         # Create the inner frame
         self._popup_content = QFrame(self)
 
+        # Animation setup - both fade and slide animations
+        self._animation_group = QParallelAnimationGroup(self)
+
+        # Fade animation
+        self._fade_animation = QPropertyAnimation(self, b"windowOpacity")
+        self._fade_animation.setDuration(100)
+
+        # Slide animation
+        self._slide_animation = QPropertyAnimation(self, b"geometry")
+        self._slide_animation.setDuration(100)
+
+        # Add both animations to the group
+        self._animation_group.addAnimation(self._fade_animation)
+        self._animation_group.addAnimation(self._slide_animation)
+        self._animation_group.finished.connect(self._on_animation_finished)
+
+        self._is_closing = False
+        self._original_geometry = None
+
         QApplication.instance().installEventFilter(self)
 
     def setProperty(self, name, value):
@@ -280,6 +299,80 @@ class PopupWidget(QWidget):
         separator.setStyleSheet("border:none")
         layout.addWidget(separator)
 
+    def _on_animation_finished(self):
+        """Handle animation completion."""
+        if self._is_closing:
+            super().hide()
+            self.deleteLater()
+
+    def hide_animated(self):
+        """Hide the popup with fade-out and slide animation."""
+        if self._is_closing:
+            return
+
+        # Stop any ongoing animation
+        if self._animation_group.state() == QParallelAnimationGroup.State.Running:
+            self._animation_group.stop()
+
+        # Ensure we have a valid opacity value to start from
+        current_opacity = self.windowOpacity()
+        if current_opacity <= 0.0:
+            current_opacity = 1.0
+            self.setWindowOpacity(1.0)
+
+        # Store current geometry if not already stored
+        if self._original_geometry is None:
+            self._original_geometry = self.geometry()
+
+        # Calculate slide-out geometry based on popup direction
+        current_geometry = self.geometry()
+
+        # Determine slide direction based on popup position relative to parent
+        parent_widget = cast(QWidget, self.parent())
+        if parent_widget:
+            parent_global_pos = parent_widget.mapToGlobal(QPoint(0, 0))
+            popup_center_y = current_geometry.y() + current_geometry.height() // 2
+            parent_center_y = parent_global_pos.y() + parent_widget.height() // 2
+
+            if popup_center_y < parent_center_y:
+                # Popup is above parent - slide up and out
+                slide_offset = -20
+            else:
+                # Popup is below parent - slide down and out
+                slide_offset = 20
+        else:
+            # Default to slide up and out
+            slide_offset = -20
+
+        slide_out_geometry = QRect(
+            current_geometry.x(),
+            current_geometry.y() + slide_offset,
+            current_geometry.width(),
+            current_geometry.height(),
+        )
+
+        self._is_closing = True
+
+        # Setup fade animation
+        self._fade_animation.setStartValue(current_opacity)
+        self._fade_animation.setEndValue(0.0)
+
+        # Setup slide animation
+        self._slide_animation.setStartValue(current_geometry)
+        self._slide_animation.setEndValue(slide_out_geometry)
+
+        # Start both animations together
+        self._animation_group.start()
+
+    def closeEvent(self, event):
+        """Override close event to use animation."""
+        event.ignore()  # Ignore the default close behavior
+        self.hide_animated()
+
+    def hide(self):
+        """Override hide to use animated version."""
+        self.hide_animated()
+
     def showEvent(self, event):
         if self._blur:
             Blur(
@@ -290,8 +383,54 @@ class PopupWidget(QWidget):
                 RoundCornersType=self._round_corners_type,
                 BorderColor=self._border_color,
             )
-        self.activateWindow()
+
+        # Reset closing state and stop any ongoing animation
+        self._is_closing = False
+        if self._animation_group.state() == QParallelAnimationGroup.State.Running:
+            self._animation_group.stop()
+
+        # Store the final geometry for the slide animation
+        final_geometry = self.geometry()
+        self._original_geometry = final_geometry
+
+        # Calculate slide-in start position based on popup direction
+        # Try to determine if popup is above or below parent
+        parent_widget = cast(QWidget, self.parent())
+        if parent_widget:
+            parent_global_pos = parent_widget.mapToGlobal(QPoint(0, 0))
+            popup_center_y = final_geometry.y() + final_geometry.height() // 2
+            parent_center_y = parent_global_pos.y() + parent_widget.height() // 2
+
+            if popup_center_y < parent_center_y:
+                # Popup is above parent - slide down from above
+                slide_offset = -20
+            else:
+                # Popup is below parent - slide up from below
+                slide_offset = 20
+        else:
+            # Default to slide down from above
+            slide_offset = -20
+
+        slide_in_start = QRect(
+            final_geometry.x(), final_geometry.y() + slide_offset, final_geometry.width(), final_geometry.height()
+        )
+
+        # Set initial states
+        self.setWindowOpacity(0.0)
+        self.setGeometry(slide_in_start)
+
         super().showEvent(event)
+        self.activateWindow()
+
+        # Setup animations for slide-in + fade-in
+        self._fade_animation.setStartValue(0.0)
+        self._fade_animation.setEndValue(1.0)
+
+        self._slide_animation.setStartValue(slide_in_start)
+        self._slide_animation.setEndValue(final_geometry)
+
+        # Start both animations together
+        self._animation_group.start()
 
     def eventFilter(self, obj, event):
         if event.type() == QEvent.Type.MouseButtonPress:
@@ -312,34 +451,36 @@ class PopupWidget(QWidget):
                 if menu.isVisible():
                     menu.close()
 
-            if not self.geometry().contains(global_pos):
-                self.hide()
-                self.deleteLater()
-                return True
+            # Click is outside popup - start fade out animation
+            self.hide_animated()
+            return True
         return super().eventFilter(obj, event)
 
     def hideEvent(self, event):
-        QApplication.instance().removeEventFilter(self)
+        # Only handle autohide logic if we're actually closing (not just animating)
+        if self._is_closing:
+            QApplication.instance().removeEventFilter(self)
+
+            try:
+                bar_el = self.parent()
+                while bar_el and not hasattr(bar_el, "_autohide_bar"):
+                    bar_el = bar_el.parent()
+
+                if bar_el and bar_el._autohide_manager and bar_el._autohide_manager.is_enabled():
+                    # Check if parent needs autohide
+                    if bar_el._autohide_manager.is_enabled():
+                        # Get current cursor position
+                        from PyQt6.QtGui import QCursor
+
+                        cursor_pos = QCursor.pos()
+                        # If mouse is outside the bar, start the hide timer
+                        if not bar_el.geometry().contains(cursor_pos):
+                            if bar_el._autohide_manager._hide_timer:
+                                bar_el._autohide_manager._hide_timer.start(bar_el._autohide_manager._autohide_delay)
+            except Exception:
+                pass
+
         super().hideEvent(event)
-
-        try:
-            bar_el = self.parent()
-            while bar_el and not hasattr(bar_el, "_autohide_bar"):
-                bar_el = bar_el.parent()
-
-            if bar_el and bar_el._autohide_manager and bar_el._autohide_manager.is_enabled():
-                # Check if parent needs autohide
-                if bar_el._autohide_manager.is_enabled():
-                    # Get current cursor position
-                    from PyQt6.QtGui import QCursor
-
-                    cursor_pos = QCursor.pos()
-                    # If mouse is outside the bar, start the hide timer
-                    if not bar_el.geometry().contains(cursor_pos):
-                        if bar_el._autohide_manager._hide_timer:
-                            bar_el._autohide_manager._hide_timer.start(bar_el._autohide_manager._autohide_delay)
-        except Exception:
-            pass
 
     def resizeEvent(self, event):
         # reset geometry
