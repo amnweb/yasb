@@ -1,139 +1,26 @@
-import json
 import logging
 import os
 import re
 import urllib.parse
 from datetime import datetime
-from random import randint
 from typing import Any, cast
 
-from PyQt6.QtCore import QObject, Qt, QTimer, QUrl, pyqtSignal
+from PyQt6.QtCore import Qt, QTimer, QUrl
 from PyQt6.QtGui import QPixmap
-from PyQt6.QtNetwork import QNetworkAccessManager, QNetworkReply, QNetworkRequest
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QStyle, QVBoxLayout, QWidget
 
+from core.utils.tooltip import set_tooltip
 from core.utils.utilities import PopupWidget, add_shadow
 from core.utils.widgets.animation_manager import AnimationManager
+from core.utils.widgets.weather.api import IconFetcher, WeatherDataFetcher
+from core.utils.widgets.weather.widgets import (
+    ClickableWidget,
+    HourlyData,
+    HourlyTemperatureLineWidget,
+    HourlyTemperatureScrollArea,
+)
 from core.validation.widgets.yasb.weather import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
-
-HEADER = (b"User-Agent", b"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:129.0) Gecko/20100101 Firefox/129.0")
-CACHE_CONTROL = (b"Cache-Control", b"no-cache")
-
-
-class WeatherDataFetcher(QObject):
-    """Fetches and processes weather data from a URL."""
-
-    finished = pyqtSignal(dict)
-
-    _cached_url = None
-    _instance: "WeatherDataFetcher|None" = None
-
-    @classmethod
-    def get_instance(cls, parent: QObject, url: QUrl, timeout: int):
-        if cls._cached_url == url and cls._instance is not None:
-            return cls._instance
-        cls._cached_url = url
-        cls._instance = WeatherDataFetcher(parent, url, timeout)
-        return cls._instance
-
-    def __init__(self, parent: QObject, url: QUrl, timeout: int):
-        super().__init__(parent)
-        self.started = False
-        self._manager = QNetworkAccessManager(self)
-        self._manager.finished.connect(self.handle_response)  # type: ignore[reportUnknownMemberType]
-        self._fetch_weather_data_timer = QTimer(self)
-        self._fetch_weather_data_timer.timeout.connect(self.make_request)  # type: ignore[reportUnknownMemberType]
-        self._url = url
-        self._timeout = timeout
-        self._weather_cache: dict[str, Any] = {}
-
-    def start(self):
-        # To not make two or more requests at the same time
-        QTimer.singleShot(randint(200, 600), self.make_request)  # type: ignore[reportUnknownMemberType]
-        self._fetch_weather_data_timer.start(self._timeout)
-        self.started = True
-
-    def make_request(self, url: QUrl | None = None):
-        if url is None:
-            url = self._url
-        request = QNetworkRequest(url)
-        request.setRawHeader(*HEADER)
-        request.setRawHeader(*CACHE_CONTROL)
-        self._manager.get(request)
-
-    def handle_response(self, reply: QNetworkReply):
-        if reply.error() == QNetworkReply.NetworkError.NoError:
-            logging.info(f"Fetching new weather data at {datetime.now()}")
-            try:
-                self.finished.emit(json.loads(reply.readAll().data().decode()))
-            except json.JSONDecodeError as e:
-                logging.error(f"Weather response error. Weather data is not a valid JSON: {e}")
-                self.finished.emit({})
-            except Exception as e:
-                logging.error(f"Weather response error: {e}")
-                self.finished.emit({})
-        else:
-            logging.error(f"Weather response error: {reply.error().name} {reply.error().value}.")
-            self.finished.emit({})
-            reply.deleteLater()
-
-
-class IconFetcher(QObject):
-    """Fetches and caches icons from a list of URLs."""
-
-    finished = pyqtSignal()
-
-    _instance: "IconFetcher|None" = None
-
-    @classmethod
-    def get_instance(cls, parent: QObject):
-        if cls._instance is not None:
-            return cls._instance
-        cls._instance = IconFetcher(parent)
-        return cls._instance
-
-    def __init__(self, parent: QObject):
-        super().__init__(parent)
-        self._manager = QNetworkAccessManager(self)
-        self._pending_icons: set[str] = set()
-        self._icon_cache: dict[str, bytes] = {}
-
-    def fetch_icons(self, icon_urls: list[str]):
-        for url in icon_urls:
-            if url in self._icon_cache and self._icon_cache[url]:
-                continue
-            self._pending_icons.add(url)
-            request = QNetworkRequest(QUrl(url))
-            request.setRawHeader(*HEADER)
-            request.setRawHeader(*CACHE_CONTROL)
-            reply = self._manager.get(request)
-            reply.finished.connect(lambda reply=reply, url=url: self._handle_reply(reply, url))  # type: ignore
-        if len(self._pending_icons) == 0:
-            self.finished.emit()
-
-    def _handle_reply(self, reply: QNetworkReply, url: str):
-        try:
-            if reply.error() == QNetworkReply.NetworkError.NoError:
-                data = reply.readAll().data()
-                if not data:
-                    raise Exception(f"Failed to fetch icon {url}: No data received")
-                self._icon_cache[url] = data
-                self._pending_icons.discard(url)
-            else:
-                raise Exception(f"Failed to fetch icon {url}: {reply.error().name} {reply.error().value}")
-        except Exception as e:
-            logging.warning(e)
-        finally:
-            if len(self._pending_icons) == 0:
-                self.finished.emit()
-            reply.deleteLater()
-
-    def get_icon(self, url: str) -> bytes:
-        return self._icon_cache.get(url, b"")
-
-    def set_icon(self, url: str, data: bytes):
-        self._icon_cache[url] = data
 
 
 class WeatherWidget(BaseWidget):
@@ -151,6 +38,7 @@ class WeatherWidget(BaseWidget):
         show_alerts: bool,
         weather_card: dict[str, str],
         callbacks: dict[str, str],
+        tooltip: bool,
         icons: dict[str, str],
         container_padding: dict[str, int],
         animation: dict[str, str],
@@ -163,24 +51,25 @@ class WeatherWidget(BaseWidget):
         self._location = location if location != "env" else os.getenv("YASB_WEATHER_LOCATION")
         self._hide_decimal = hide_decimal
         self._icons = icons
+        self._tooltip = tooltip
         self._api_key = api_key if api_key != "env" else os.getenv("YASB_WEATHER_API_KEY")
         if not self._api_key or not self._location:
             logging.error("API key or location is missing. Please provide a valid API key and location.")
             self.hide()
             return
 
-        self.api_url = f"http://api.weatherapi.com/v1/forecast.json?key={self._api_key}&q={urllib.parse.quote(self._location)}&days=3&aqi=no&alerts=yes"
+        self._api_url = f"http://api.weatherapi.com/v1/forecast.json?key={self._api_key}&q={urllib.parse.quote(self._location)}&days=3&aqi=no&alerts=yes"
 
         # Create network manager, request and timer
-        self.weather_fetcher = WeatherDataFetcher.get_instance(self, QUrl(self.api_url), update_interval * 1000)
-        self.weather_fetcher.finished.connect(self.process_weather_data)  # type: ignore[reportUnknownMemberType]
-        self.weather_fetcher.finished.connect(lambda *_: self._update_label(True))  # type: ignore[reportUnknownMemberType]
-        self.icon_fetcher = IconFetcher.get_instance(self)
+        self._weather_fetcher = WeatherDataFetcher.get_instance(self, QUrl(self._api_url), update_interval * 1000)
+        self._weather_fetcher.finished.connect(self.process_weather_data)  # type: ignore[reportUnknownMemberType]
+        self._weather_fetcher.finished.connect(lambda *_: self._update_label(True))  # type: ignore[reportUnknownMemberType]
+        self._icon_fetcher = IconFetcher.get_instance(self)
 
         # Retry timer
-        self.retry_timer = QTimer(self)
-        self.retry_timer.setSingleShot(True)
-        self.retry_timer.timeout.connect(self.weather_fetcher.make_request)  # type: ignore[reportUnknownMemberType]
+        self._retry_timer = QTimer(self)
+        self._retry_timer.setSingleShot(True)
+        self._retry_timer.timeout.connect(self._weather_fetcher.make_request)  # type: ignore[reportUnknownMemberType]
 
         # Set weather data formatting
         self._units = units
@@ -190,10 +79,15 @@ class WeatherWidget(BaseWidget):
         self._container_shadow = container_shadow
 
         # Store weather data
-        self.weather_data: dict[str, Any] | None = None
+        self._weather_data: dict[str, Any] | None = None
+        self._hourly_data_today: list[dict[str, Any]] = []
+        self._hourly_data_2: list[dict[str, Any]] = []
+        self._hourly_data_3: list[dict[str, Any]] = []
+        self._current_time: datetime | None = None
         self._show_alt_label = False
         self._animation = animation
         self._weather_card: dict[str, Any] = weather_card
+        self._weather_card_daily_widgets: list[ClickableWidget] = []
 
         # Construct container
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
@@ -223,8 +117,8 @@ class WeatherWidget(BaseWidget):
         self.callback_right = callbacks["on_right"]
         self.callback_middle = callbacks["on_middle"]
 
-        if not self.weather_fetcher.started:
-            self.weather_fetcher.start()
+        if not self._weather_fetcher.started:
+            self._weather_fetcher.start()
 
     def _toggle_label(self):
         if self._animation["enabled"]:
@@ -242,7 +136,7 @@ class WeatherWidget(BaseWidget):
         self._popup_card()
 
     def _popup_card(self):
-        if self.weather_data is None:
+        if self._weather_data is None:
             logging.warning("Weather data is not yet available.")
             return
 
@@ -260,20 +154,20 @@ class WeatherWidget(BaseWidget):
         frame_today.setProperty("class", "weather-card-today")
         layout_today = QVBoxLayout(frame_today)
 
-        today_label0 = QLabel(f"{self.weather_data['{location}']} {self.weather_data['{temp}']}")
+        today_label0 = QLabel(f"{self._weather_data['{location}']} {self._weather_data['{temp}']}")
         today_label0.setProperty("class", "label location")
         today_label0.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         today_label1 = QLabel(
-            f"Feels like {self.weather_data['{feelslike}']} - {self.weather_data['{condition_text}']} - Humidity {self.weather_data['{humidity}']}\nPressure {self.weather_data['{pressure}']} - Visibility {self.weather_data['{vis}']} - Cloud {self.weather_data['{cloud}']}%"
+            f"Feels like {self._weather_data['{feelslike}']} - {self._weather_data['{condition_text}']} - Humidity {self._weather_data['{humidity}']}\nPressure {self._weather_data['{pressure}']} - Visibility {self._weather_data['{vis}']} - Cloud {self._weather_data['{cloud}']}%"
         )
         today_label1.setProperty("class", "label")
         today_label1.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         today_label2 = QLabel(
-            f"{self.weather_data['{alert_title}']}"
-            f"{'<br>Alert expires ' + self.weather_data['{alert_end_date}'] if self.weather_data['{alert_end_date}'] else ''}"
-            f"<br>{self.weather_data['{alert_desc}']}"
+            f"{self._weather_data['{alert_title}']}"
+            f"{'<br>Alert expires ' + self._weather_data['{alert_end_date}'] if self._weather_data['{alert_end_date}'] else ''}"
+            f"<br>{self._weather_data['{alert_desc}']}"
         )
         today_label2.setProperty("class", "label alert")
         today_label2.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -281,48 +175,103 @@ class WeatherWidget(BaseWidget):
 
         layout_today.addWidget(today_label0)
         layout_today.addWidget(today_label1)
-        if self._show_alerts and self.weather_data["{alert_title}"] and self.weather_data["{alert_desc}"]:
+        if self._show_alerts and self._weather_data["{alert_title}"] and self._weather_data["{alert_desc}"]:
             layout_today.addWidget(today_label2)
 
-        day_widgets: list[QWidget] = []
+        # Create hourly layout and add frames (before the daily widget to pass it to press event)
+        hourly_temperature_widget = HourlyTemperatureLineWidget(
+            units=self._units,
+            config=self._weather_card,
+        )
+        hourly_temperature_widget.setProperty("class", "hourly-data")
+        hourly_temperature_scroll_area = HourlyTemperatureScrollArea()
+        hourly_temperature_scroll_area.setWidget(hourly_temperature_widget)
+        hourly_temperature_scroll_area.setProperty("class", "hourly-container")
+
+        def switch_hourly_data(day_idx: int):
+            combined_data = []
+            current_time = None
+            if day_idx == 0:
+                combined_data = self._hourly_data_today + self._hourly_data_2
+                current_time = self._current_time
+            elif day_idx == 1:
+                combined_data = self._hourly_data_2
+                current_time = None
+            elif day_idx == 2:
+                combined_data = self._hourly_data_3
+                current_time = None
+            else:
+                raise ValueError(f"Invalid day index: {day_idx}")
+            parsed_data: list[HourlyData] = []
+            for h in combined_data:
+                temp = h["temp_c"] if self._units == "metric" else h["temp_f"]
+                if self._hide_decimal:
+                    temp = round(temp)
+                parsed_data.append(
+                    HourlyData(
+                        temp=temp,
+                        wind=h["wind_kph"] if self._units == "metric" else h["wind_mph"],
+                        icon_url=f"http:{h['condition']['icon']}",
+                        time=datetime.strptime(h["time"], "%Y-%m-%d %H:%M"),
+                    )
+                )
+            hourly_temperature_widget.update_weather(parsed_data, current_time)
+            for i, w in enumerate(self._weather_card_daily_widgets):
+                if i == day_idx:
+                    w.setProperty("class", "weather-card-day active")
+                else:
+                    w.setProperty("class", "weather-card-day")
+
         # Create frames for each day
+        day_widgets: list[QWidget] = []
         failed_icons: list[tuple[QLabel, str]] = []
+        self._weather_card_daily_widgets = []
         for i in range(3):
-            frame_day = QWidget()
-            day_widgets.append(frame_day)
+            frame_day = ClickableWidget()
+            self._weather_card_daily_widgets.append(frame_day)
+            if self._hourly_data_today:
+                frame_day.clicked.connect(lambda i=i: switch_hourly_data(i))  # pyright: ignore[reportUnknownMemberType]
             frame_day.setProperty("class", "weather-card-day")
-            layout_day = QHBoxLayout(frame_day)
             if i == 0:
                 name = "Today"
-                min_temp = self.weather_data["{min_temp}"]
-                max_temp = self.weather_data["{max_temp}"]
+                min_temp = self._weather_data["{min_temp}"]
+                max_temp = self._weather_data["{max_temp}"]
             else:
-                name = self.weather_data[f"{{day{i}_name}}"]
-                min_temp = self.weather_data[f"{{day{i}_min_temp}}"]
-                max_temp = self.weather_data[f"{{day{i}_max_temp}}"]
-            row_day_label = QLabel(f"{name}\nMin: {min_temp}\nMax: {max_temp}")
+                name = self._weather_data[f"{{day{i}_name}}"]
+                min_temp = self._weather_data[f"{{day{i}_min_temp}}"]
+                max_temp = self._weather_data[f"{{day{i}_max_temp}}"]
+            row_day_label = QLabel(f"{name}\nMin: {min_temp}\nMax: {max_temp}", frame_day)
             row_day_label.setProperty("class", "label")
 
             # Create the icon label and pixmap
-            row_day_icon_label = QLabel()
-            icon_url = self.weather_data[f"{{day{i}_icon}}"]
-            icon_data_day = self.icon_fetcher.get_icon(icon_url)
+            row_day_icon_label = QLabel(frame_day)
+            icon_url = self._weather_data[f"{{day{i}_icon}}"]
+            icon_data_day = self._icon_fetcher.get_icon(icon_url)
             if bool(icon_data_day):
                 self._set_pixmap(row_day_icon_label, icon_data_day)
             else:
                 failed_icons.append((row_day_icon_label, icon_url))
             # Add widgets to frame layouts
+            layout_day = QHBoxLayout()
+            frame_day.setLayout(layout_day)
             layout_day.addWidget(row_day_label)
             layout_day.addWidget(row_day_icon_label)
+            day_widgets.append(frame_day)
 
         # Create days layout and add frames
         days_layout = QHBoxLayout()
         for widget in day_widgets:
             days_layout.addWidget(widget)
 
+        switch_hourly_data(0)
+
         # Add the "Current" label on top, days on bottom
         main_layout.addWidget(frame_today)
         main_layout.addLayout(days_layout)
+
+        # If we have no data just don't add the widget at all
+        if self._hourly_data_today:
+            main_layout.addWidget(hourly_temperature_scroll_area)
 
         self.dialog.setLayout(main_layout)
 
@@ -334,6 +283,10 @@ class WeatherWidget(BaseWidget):
             offset_top=self._weather_card["offset_top"],
         )
         self.dialog.show()
+
+        # Scroll to the current hour. Must be done after the window is shown.
+        if hsb := hourly_temperature_scroll_area.horizontalScrollBar():
+            hsb.setValue(self._weather_card["hourly_point_spacing"] // 2 - 5)
 
         # If any icons failed to load, try to fetch them again once
         if failed_icons:
@@ -348,7 +301,7 @@ class WeatherWidget(BaseWidget):
                         new_icon = temp_icon_fetcher.get_icon(icon_url)
                         if not bool(new_icon):
                             continue
-                        self.icon_fetcher.set_icon(icon_url, new_icon)
+                        self._icon_fetcher.set_icon(icon_url, new_icon)
                         self._set_pixmap(label, temp_icon_fetcher.get_icon(icon_url))
                     # Cleanup
                     temp_icon_fetcher.deleteLater()
@@ -405,7 +358,7 @@ class WeatherWidget(BaseWidget):
         label.update()
 
     def _update_label(self, update_class: bool = True):
-        if self.weather_data is None:
+        if self._weather_data is None:
             logging.warning("Weather data is not yet available.")
             return
 
@@ -414,12 +367,18 @@ class WeatherWidget(BaseWidget):
         label_parts = re.split(r"(<span.*?>.*?</span>)", active_label_content)
         label_parts = [part for part in label_parts if part]
 
+        if self._tooltip:
+            set_tooltip(
+                self,
+                f"{self._weather_data['{location}']}\nMin {self._weather_data['{min_temp}']}\nMax {self._weather_data['{max_temp}']}",
+            )
+
         widget_index = 0
 
         try:
             for part in label_parts:
                 part = part.strip()
-                for option, value in self.weather_data.items():
+                for option, value in self._weather_data.items():
                     part = part.replace(option, str(value))
                 if not part or widget_index >= len(active_widgets):
                     continue
@@ -432,7 +391,7 @@ class WeatherWidget(BaseWidget):
                     if update_class:
                         # Retrieve current class and append new class based on weather conditions
                         current_class = active_widgets[widget_index].property("class") or ""
-                        append_class_icon = self.weather_data.get("{icon_class}", "")
+                        append_class_icon = self._weather_data.get("{icon_class}", "")
                         # Create the new class string
                         new_class = f"{current_class} {append_class_icon}"
                         active_widgets[widget_index].setProperty("class", new_class)
@@ -457,10 +416,10 @@ class WeatherWidget(BaseWidget):
         dt = datetime.fromisoformat(iso_datetime)
         return dt.strftime("%B %d, %Y at %H:%M")
 
-    def _format_temp(self, temp_f: str, temp_c: str) -> str:
+    def _format_temp(self, temp_f: float, temp_c: float) -> str:
         temp = temp_f if self._units == "imperial" else temp_c
-        value = int(temp) if self._hide_decimal else temp
         unit = "°F" if self._units == "imperial" else "°C"
+        value = round(temp) if self._hide_decimal else temp
         return f"{value}{unit}"
 
     def _format_measurement(self, imperial_val: str, imperial_unit: str, metric_val: str, metric_unit: str) -> str:
@@ -477,6 +436,12 @@ class WeatherWidget(BaseWidget):
             forecast1 = weather_data["forecast"]["forecastday"][1]
             forecast2 = weather_data["forecast"]["forecastday"][2]
 
+            self._hourly_data_today = weather_data["forecast"]["forecastday"][0]["hour"]
+            self._hourly_data_2 = forecast1["hour"]
+            self._hourly_data_3 = forecast2["hour"]
+            self._current_time = datetime.strptime(weather_data["location"]["localtime"], "%Y-%m-%d %H:%M")
+            all_hourly_data = self._hourly_data_today + self._hourly_data_2 + self._hourly_data_3
+
             current: dict[str, Any] = weather_data["current"]
             conditions_data = current["condition"]["text"]
             conditions_code = current["condition"]["code"]
@@ -486,11 +451,12 @@ class WeatherWidget(BaseWidget):
 
             # Load icons images into cache for current and future forecasts if not already cached
             img_icon_keys = [
-                f"http:{day['condition']['icon']}" for day in [forecast] + [forecast1["day"], forecast2["day"]]
+                f"http:{day['condition']['icon']}"
+                for day in [forecast] + [forecast1["day"], forecast2["day"]] + all_hourly_data
             ]
-            self.icon_fetcher.fetch_icons(img_icon_keys)
+            self._icon_fetcher.fetch_icons(list(set(img_icon_keys)))
 
-            self.weather_data = {
+            self._weather_data = {
                 # Current conditions
                 "{temp}": self._format_temp(current["temp_f"], current["temp_c"]),
                 "{feelslike}": self._format_temp(current["feelslike_f"], current["feelslike_c"]),
@@ -540,11 +506,11 @@ class WeatherWidget(BaseWidget):
                 else None,
             }
         except Exception as e:
-            if not self.retry_timer.isActive():
+            if not self._retry_timer.isActive():
                 logging.warning(f"Error processing weather data: {e}. Retrying fetch in 10 seconds.")
-                self.retry_timer.start(10000)
-            if self.weather_data is None:
-                self.weather_data = {
+                self._retry_timer.start(10000)
+            if self._weather_data is None:
+                self._weather_data = {
                     "{temp}": "N/A",
                     "{min_temp}": "N/A",
                     "{max_temp}": "N/A",
