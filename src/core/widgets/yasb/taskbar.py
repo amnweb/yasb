@@ -48,6 +48,7 @@ EXCLUDED_CLASSES = {
     "msctls_statusbar32",
     "DirectUIHWND",
     "SHELLDLL_DefView",
+    "Windows.UI.Core.CoreWindow",
 }
 
 
@@ -344,7 +345,7 @@ class TaskbarWidget(BaseWidget):
             if self._animation["enabled"]:
                 icon_label.setFixedWidth(0)
             icon_label.setPixmap(icon)
-            if self._tooltip:
+            if self._tooltip and not self._title_label["enabled"]:
                 set_tooltip(icon_label, title, delay=0)
             icon_label.setProperty("hwnd", hwnd)
             icon_label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
@@ -577,7 +578,7 @@ class TaskbarWidget(BaseWidget):
                     icon_label = QLabel()
                     icon_label.setProperty("class", "app-icon")
                     icon_label.setPixmap(icon)
-                    if self._tooltip:
+                    if self._tooltip and not self._title_label["enabled"]:
                         set_tooltip(icon_label, title, delay=0)
                     icon_label.setProperty("hwnd", hwnd)
                     icon_label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
