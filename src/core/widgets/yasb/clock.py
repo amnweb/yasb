@@ -2,10 +2,11 @@ import locale
 import re
 from datetime import datetime
 from itertools import cycle
+from typing import cast
 
 import pytz
 from PyQt6.QtCore import QDate, QLocale, Qt
-from PyQt6.QtWidgets import QCalendarWidget, QHBoxLayout, QLabel, QSizePolicy, QTableView, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import QCalendarWidget, QHBoxLayout, QLabel, QSizePolicy, QStyle, QTableView, QVBoxLayout, QWidget
 from tzlocal import get_localzone_name
 
 from core.utils.tooltip import set_tooltip
@@ -66,6 +67,7 @@ class ClockWidget(BaseWidget):
         animation: dict[str, str],
         container_padding: dict[str, int],
         callbacks: dict[str, str],
+        icons: dict[str, str] = None,
         label_shadow: dict = None,
         container_shadow: dict = None,
     ):
@@ -84,6 +86,8 @@ class ClockWidget(BaseWidget):
         self._label_alt_content = label_alt
         self._label_shadow = label_shadow
         self._container_shadow = container_shadow
+        self._icons = icons or {}
+        self._current_hour = None
         # Construct container
         self._widget_container_layout: QHBoxLayout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
@@ -131,12 +135,31 @@ class ClockWidget(BaseWidget):
             widget.setVisible(self._show_alt_label)
         self._update_label()
 
+    def _get_icon_for_hour(self, hour: int) -> str:
+        key = f"clock_{hour:02d}"
+        icon = self._icons.get(key)
+        if icon is None and 13 <= hour <= 23:
+            fallback_key = f"clock_{hour - 12:02d}"
+            icon = self._icons.get(fallback_key, "")
+        return icon or ""
+    
+    def _reload_css(self, label: QLabel):
+        style = cast(QStyle, label.style())
+        style.unpolish(label)
+        style.polish(label)
+        label.update()
+
     def _update_label(self):
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
         active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
         label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
         label_parts = [part for part in label_parts if part]
         widget_index = 0
+        now = datetime.now(pytz.timezone(self._active_tz))
+        current_hour = f"{now.hour:02d}"
+        hour_changed = (self._current_hour != current_hour)
+        if hour_changed:
+            self._current_hour = current_hour
         if self._locale:
             org_locale_time = locale.getlocale(locale.LC_TIME)
             try:
@@ -147,8 +170,16 @@ class ClockWidget(BaseWidget):
             part = part.strip()
             if part and widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
                 if "<span" in part and "</span>" in part:
-                    icon = re.sub(r"<span.*?>|</span>", "", part).strip()
-                    active_widgets[widget_index].setText(icon)
+                    icon_placeholder = re.sub(r"<span.*?>|</span>", "", part).strip()
+                    if icon_placeholder == "{icon}":
+                        if hour_changed:
+                            icon = self._get_icon_for_hour(now.hour)
+                            active_widgets[widget_index].setText(icon)
+                            hour_class = f"clock_{current_hour}"
+                            active_widgets[widget_index].setProperty("class", f"icon {hour_class}")
+                            self._reload_css(active_widgets[widget_index])
+                    else:
+                        active_widgets[widget_index].setText(icon_placeholder)
                 else:
                     try:
                         if self._locale:
@@ -165,6 +196,10 @@ class ClockWidget(BaseWidget):
                     except Exception:
                         format_label_content = part
                     active_widgets[widget_index].setText(format_label_content)
+                    if hour_changed:
+                        hour_class = f"clock_{current_hour}"
+                        active_widgets[widget_index].setProperty("class", f"label {hour_class}")
+                        self._reload_css(active_widgets[widget_index])
                 widget_index += 1
         if self._locale:
             locale.setlocale(locale.LC_TIME, org_locale_time)

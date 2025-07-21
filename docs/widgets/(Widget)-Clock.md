@@ -2,13 +2,14 @@
 
 | Option              | Type    | Default                                                                               | Description                                                                                                         |
 | ------------------- | ------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| `label`             | string  | `'\uf017 {%H:%M:%S}'`                                                                 | The format string for the clock. You can use placeholders like `{%H:%M:%S}` to dynamically insert time information. |
+| `label`             | string  | `'\uf017 {%H:%M:%S}'`                                                                 | The format string for the clock. You can use placeholders like `{%H:%M:%S}` or `{icon}` to dynamically insert time information. |
 | `label_alt`         | string  | `'\uf017 {%d-%m-%y %H:%M:%S}'`                                                        | The alternative format string for the clock. Useful for displaying additional time details.                         |
 | `class_name`        | string  | `""`                                                                                  | Additional CSS class name for the widget.                                    |
 | `tooltip`           | boolean | `True`                                                                                | Whether to show the tooltip on hover.                                                                               |
 | `locale`            | string  | `""`                                                                                  | The locale to use for the clock. If not specified, it defaults to an empty string.                                  |
 | `update_interval`   | integer | `1000`                                                                                | The interval in milliseconds to update the clock. Must be between 0 and 60000.                                      |
 | `timezones`         | list    | `[]`                                                                                  | A list of timezones to cycle through. Each timezone should be a valid timezone string.                              |
+| `icons`         | dict    | `{ 'clock_01': '\udb85\udc3f', ..., 'clock_12': '\udb85\udc4a'[, 'clock_13': '\udb85\udc3f', ..., 'clock_22': '\udb85\udc48','clock_23': '\udb85\udc49']}` | A dictionary of icons for the different times of day. |
 | `calendar` | dict | `{'blur': True, 'round_corners': True, 'round_corners_type': 'normal', 'border_color': 'System', 'alignment': 'right', 'direction': 'down', 'offset_top': 6, 'offset_left': 0}` | Calendar settings for the widget. |
 | `callbacks`         | dict    | `{'on_left': 'toggle_calendar', 'on_middle': 'next_timezone', 'on_right': 'toggle_label'}` | Callbacks for mouse events on the clock widget.                                                                     |
 | `animation`         | dict    | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}`                             | Animation settings for the widget.                                                                                  |
@@ -22,11 +23,28 @@
 clock:
   type: "yasb.clock.ClockWidget"
   options:
-    label: "\uf017 {%H:%M:%S}"
+    label: "<span>icon</span> {%H:%M:%S}"
     label_alt: "\uf017 {%d-%m-%y %H:%M:%S}"
     locale: ""
     update_interval: 1000
     timezones: []
+    icons:
+      clock_01 : "\udb85\udc3f"
+      clock_02 : "\udb85\udc40"
+      clock_03 : "\udb85\udc41"
+      clock_04 : "\udb85\udc42"
+      clock_05 : "\udb85\udc43"
+      clock_06 : "\udb85\udc44"
+      clock_07 : "\udb85\udc45"
+      clock_08 : "\udb85\udc46"
+      clock_09 : "\udb85\udc47"
+      clock_10 : "\udb85\udc48"
+      clock_11 : "\udb85\udc49"
+      clock_12 : "\udb85\udc4a"
+      clock_16 : "SNACK TIME !"
+      clock_21 : "Zzz..."
+      clock_22 : "Zzz..."
+      clock_23 : "Zzz..."
     calendar: 
       blur: True
       round_corners: True
@@ -47,13 +65,14 @@ clock:
 
 ## Description of Options
 
-- **label:** The format string for the clock. You can use placeholders like `{%H:%M:%S}` to dynamically insert time information.
+- **label:** The format string for the clock. You can use placeholders like `{%H:%M:%S}` or `{icon}` to dynamically insert time information.
 - **label_alt:** The alternative format string for the clock. Useful for displaying additional time details.
 - **class_name:** Additional CSS class name for the widget. This can be used to apply custom styles.
 - **locale:** The locale to use for the clock. If not specified, it defaults to an empty string.
 - **tooltip:** Whether to show the tooltip on hover.
 - **update_interval:** The interval in milliseconds to update the clock. Must be between 0 and 60000.
 - **timezones:** A list of timezones to cycle through. If value is empty YASB will looking up time zone info from registry
+- **icons:** A dictionary mapping clock hours to icons. Keys are in the format clock_HH where HH is the hour in 24h format (00–23). By default, `clock_13` to `clock_23` reuse the icons from `clock_01` to `clock_11`, unless explicitly defined.
 - **calendar:** A dictionary specifying the calendar settings for the widget. It contains the following keys:
   - **blur:** Enable blur effect for the calendar.
   - **round_corners:** Enable round corners for the calendar (this option is not supported on Windows 10).
@@ -86,6 +105,12 @@ Clock format https://docs.python.org/3/library/time.html#time.strftime
 .clock-widget .widget-container .label.alt {
 }
 .clock-widget .widget-container .icon {
+}
+.clock-widget .icon {
+}
+.clock-widget .icon.clock_02 {
+}
+.clock-widget .label.clock_15 {
 }
 ```
 
