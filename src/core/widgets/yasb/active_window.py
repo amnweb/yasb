@@ -23,8 +23,14 @@ from settings import APP_BAR_TITLE, DEBUG
 CURRENT_PROCESS_ID = os.getpid()
 # Define ignored titles, classes, and processes
 IGNORED_TITLES = ["", " ", "FolderView", "Program Manager", "python3", "pythonw3", "YasbBar", "Search", "Start"]
-IGNORED_CLASSES = ["WorkerW", "TopLevelWindowForOverflowXamlIsland", "Shell_TrayWnd", "Shell_SecondaryTrayWnd"]
-IGNORED_PROCESSES = ["SearchHost.exe", "komorebi.exe", "yasb.exe"]
+IGNORED_CLASSES = [
+    "WorkerW",
+    "TopLevelWindowForOverflowXamlIsland",
+    "Shell_TrayWnd",
+    "Shell_SecondaryTrayWnd",
+    "Windows.UI.Core.CoreWindow",
+]
+IGNORED_PROCESSES = ["SearchHost.exe", "komorebi.exe", "yasb.exe", "Flow.Launcher.exe"]
 IGNORED_YASB_TITLES = [APP_BAR_TITLE]
 DEBOUNCE_CLASSES = ["OperationStatusWindow"]
 try:
@@ -307,7 +313,8 @@ class ActiveWindowWidget(BaseWidget):
                 or class_name in self._ignore_window["classes"]
                 or process["name"] in self._ignore_window["processes"]
             ):
-                return
+                win_info["title"] = ""
+                return win_info["title"]
             else:
                 if "title" in win_info and len(win_info["title"]) > 0:
                     win_info["title"] = self._rewrite_filter(win_info["title"])
