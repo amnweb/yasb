@@ -9,6 +9,7 @@ from PyQt6.QtCore import Qt, QTimer, QUrl
 from PyQt6.QtGui import QPixmap
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QStyle, QVBoxLayout, QWidget
 
+from core.utils.tooltip import set_tooltip
 from core.utils.utilities import PopupWidget, add_shadow
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.widgets.weather.api import IconFetcher, WeatherDataFetcher
@@ -37,6 +38,7 @@ class WeatherWidget(BaseWidget):
         show_alerts: bool,
         weather_card: dict[str, str],
         callbacks: dict[str, str],
+        tooltip: bool,
         icons: dict[str, str],
         container_padding: dict[str, int],
         animation: dict[str, str],
@@ -49,6 +51,7 @@ class WeatherWidget(BaseWidget):
         self._location = location if location != "env" else os.getenv("YASB_WEATHER_LOCATION")
         self._hide_decimal = hide_decimal
         self._icons = icons
+        self._tooltip = tooltip
         self._api_key = api_key if api_key != "env" else os.getenv("YASB_WEATHER_API_KEY")
         if not self._api_key or not self._location:
             logging.error("API key or location is missing. Please provide a valid API key and location.")
@@ -363,6 +366,12 @@ class WeatherWidget(BaseWidget):
         active_label_content = self._show_alt_label and self._label_alt_content or self._label_content
         label_parts = re.split(r"(<span.*?>.*?</span>)", active_label_content)
         label_parts = [part for part in label_parts if part]
+
+        if self._tooltip:
+            set_tooltip(
+                self,
+                f"{self._weather_data['{location}']}\nMin {self._weather_data['{min_temp}']}\nMax {self._weather_data['{max_temp}']}",
+            )
 
         widget_index = 0
 

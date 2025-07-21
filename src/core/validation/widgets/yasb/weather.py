@@ -9,6 +9,7 @@ DEFAULTS: dict[str, Any] = {
     "api_key": "0",
     "units": "metric",
     "show_alerts": False,
+    "tooltip": True,
     "icons": {
         "sunnyDay": "\ue30d",
         "clearNight": "\ue32b",
@@ -60,6 +61,7 @@ VALIDATION_SCHEMA: dict[str, Any] = {
     "api_key": {"type": "string", "default": DEFAULTS["api_key"]},
     "units": {"type": "string", "default": DEFAULTS["units"], "allowed": ["metric", "imperial"]},
     "show_alerts": {"type": "boolean", "default": DEFAULTS["show_alerts"]},
+    "tooltip": {"type": "boolean", "default": DEFAULTS["tooltip"]},
     "icons": {
         "type": "dict",
         "required": False,

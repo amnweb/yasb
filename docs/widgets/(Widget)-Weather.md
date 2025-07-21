@@ -27,6 +27,7 @@ weather:
     label_alt: "{location}: Min {min_temp}, Max {max_temp}, Humidity {humidity}"
     api_key: "3bf4cf9a7c3f40d6b31174128242807" # Get your free API key from https://www.weatherapi.com/
     show_alerts: true
+    tooltip: true
     update_interval: 600 # Update interval in seconds, Min 600 seconds
     hide_decimal: true
     units: "metric" # Can be 'metric' or 'imperial'
@@ -83,6 +84,7 @@ weather:
 - **location:** The location for which to fetch the weather data. You can use example "USA Los Angeles 90006" {COUNTRY CITY ZIP_CODE}, or just city. Location can be set to `env`, this means you have to set `YASB_WEATHER_LOCATION` in environment variable or you can set it directly in the configuration file.
 - **api_key:** The API key for accessing the weather service. You can get free API key `weatherapi.com`. API key can be set to `env`, this means you have to set `YASB_WEATHER_API_KEY` in environment variable or you can set it directly in the configuration file.
 - **show_alerts:** Whether to show weather alerts.
+- **tooltip:** Whether to show a tooltip with the min and max temperatures.
 - **units:** The units for the weather data. Can be `'metric'` or `'imperial'`.
 - **icons:** A dictionary of icons for different weather conditions `sunnyDay`, `sunnyNight`, `clearDay`, `clearNight`, `cloudyDay`, `cloudyNight`, `rainyDay`, `rainyNight`, `snowyIcyDay`, `snowyIcyNight`, `blizzard`, `default`.
 - **weather_card:** Configuration for the weather card popup display. Controls visibility, appearance, and positioning.
