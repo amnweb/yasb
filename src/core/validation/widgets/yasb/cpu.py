@@ -7,6 +7,11 @@ DEFAULTS = {
     "animation": {"enabled": True, "type": "fadeInOut", "duration": 200},
     "container_padding": {"top": 0, "left": 0, "bottom": 0, "right": 0},
     "callbacks": {"on_left": "toggle_label", "on_middle": "do_nothing", "on_right": "do_nothing"},
+    "cpu_thresholds": {
+        "low": 25,
+        "medium": 50,
+        "high": 90,
+    },
 }
 
 VALIDATION_SCHEMA = {
@@ -101,5 +106,15 @@ VALIDATION_SCHEMA = {
             },
         },
         "default": DEFAULTS["callbacks"],
+    },
+    "cpu_thresholds": {
+        "type": "dict",
+        "required": False,
+        "schema": {
+            "low": {"type": "integer", "default": DEFAULTS["cpu_thresholds"]["low"], "min": 0, "max": 100},
+            "medium": {"type": "integer", "default": DEFAULTS["cpu_thresholds"]["medium"], "min": 0, "max": 100},
+            "high": {"type": "integer", "default": DEFAULTS["cpu_thresholds"]["high"], "min": 0, "max": 100},
+        },
+        "default": DEFAULTS["cpu_thresholds"],
     },
 }

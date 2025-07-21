@@ -23,6 +23,7 @@ class MemoryWidget(BaseWidget):
         label: str,
         label_alt: str,
         update_interval: int,
+        histogram_icons: list[str],
         animation: dict[str, str],
         callbacks: dict[str, str],
         memory_thresholds: dict[str, int],
@@ -33,6 +34,7 @@ class MemoryWidget(BaseWidget):
     ):
         super().__init__(class_name="memory-widget")
         self._memory_thresholds = memory_thresholds
+        self._histogram_icons = histogram_icons
         self._show_alt_label = False
         self._label_content = label
         self._label_alt_content = label_alt
@@ -117,6 +119,9 @@ class MemoryWidget(BaseWidget):
             "{swap_mem_free}": naturalsize(swap_mem.free, True, True),
             "{swap_mem_percent}": swap_mem.percent,
             "{swap_mem_total}": naturalsize(swap_mem.total, True, True),
+            "{histogram}": "".join([self._get_histogram_bar(virtual_mem.percent, 0, 100)])
+                .encode("utf-8")
+                .decode("unicode_escape")
         }
 
         if self._progress_bar["enabled"] and self.progress_widget:
@@ -165,3 +170,9 @@ class MemoryWidget(BaseWidget):
             return "high"
         elif self._memory_thresholds["high"] < virtual_memory_percent:
             return "critical"
+    def _get_histogram_bar(self, num, num_min, num_max):
+        if num_max == num_min:
+            return self._histogram_icons[0]
+        bar_index = int((num - num_min) / (num_max - num_min) * (len(self._histogram_icons) - 1))
+        bar_index = min(max(bar_index, 0), len(self._histogram_icons) - 1)
+        return self._histogram_icons[bar_index]

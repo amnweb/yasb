@@ -29,6 +29,7 @@ class CpuWidget(BaseWidget):
         animation: dict[str, str],
         container_padding: dict[str, int],
         callbacks: dict[str, str],
+        cpu_thresholds: dict[str, int],
         label_shadow: dict = None,
         container_shadow: dict = None,
         progress_bar: dict = None,
@@ -44,6 +45,7 @@ class CpuWidget(BaseWidget):
         self._padding = container_padding
         self._label_shadow = label_shadow
         self._container_shadow = container_shadow
+        self._cpu_thresholds = cpu_thresholds
         self._progress_bar = progress_bar
 
         self.progress_widget = None
@@ -161,6 +163,9 @@ class CpuWidget(BaseWidget):
                     formatted_text = part.format(info=cpu_info)
                     active_widgets[widget_index].setText(formatted_text)
                     active_widgets[widget_index].setProperty("class", label_class)
+                    active_widgets[widget_index].setProperty(
+                        "class", f"{label_class} status-{self._get_cpu_threshold(current_perc)}"
+                    )
                     active_widgets[widget_index].setStyleSheet("")
                 widget_index += 1
 
@@ -180,3 +185,13 @@ class CpuWidget(BaseWidget):
         bar_index = int((num - num_min) / (num_max - num_min) * (len(self._histogram_icons) - 1))
         bar_index = min(max(bar_index, 0), len(self._histogram_icons) - 1)
         return self._histogram_icons[bar_index]
+
+    def _get_cpu_threshold(self, cpu_percent) -> str:
+        if cpu_percent <= self._cpu_thresholds["low"]:
+            return "low"
+        elif self._cpu_thresholds["low"] < cpu_percent <= self._cpu_thresholds["medium"]:
+            return "medium"
+        elif self._cpu_thresholds["medium"] < cpu_percent <= self._cpu_thresholds["high"]:
+            return "high"
+        elif self._cpu_thresholds["high"] < cpu_percent:
+            return "critical"
