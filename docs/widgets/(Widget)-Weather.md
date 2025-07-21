@@ -59,6 +59,14 @@ weather:
       alignment: "right"
       direction: "down"
       icon_size: 64
+      time_format: "24h" # can be 12h or 24h
+      hourly_point_spacing: 76
+      hourly_icon_size: 32 # better to set 16, 32 or 64 for better quality
+      icon_smoothing: true # should be true for smoother icon or false for sharper icon if using 16, 32 or 64 for hourly_icon_size
+      temp_line_width: 2 # can be 0 to hide the temperature line
+      current_line_color: "#8EAEE8"
+      current_line_width: 1 # can be 0 to hide the current hour line
+      current_line_style: "dot"
     label_shadow:
       enabled: true
       color: "black"
@@ -87,6 +95,14 @@ weather:
   - **offset_top:** Offset from the top of the widget in pixels.
   - **offset_left:** Offset from the left of the widget in pixels.
   - **icon_size:** Size of the weather icon in pixels.
+  - **time_format:** Time format for the weather card. Possible values are `12h` and `24h`.
+  - **hourly_point_spacing:** Spacing between hourly points on a curve.
+  - **hourly_icon_size:** Size of the hourly icon. Better to set 16, 32 or 64 for better quality. Icon smoothing should be enabled if using different scaling.
+  - **icon_smoothing:** Whether to smooth the icon on hourly view. Can be set to `false` for better sharpness.
+  - **temp_line_width:** Width of the temperature line. Setting this to `0` will hide the temperature line.
+  - **current_line_color:** Color of the current hour line.
+  - **current_line_width:** Width of the current hour line. Setting this to `0` will hide the current hour line.
+  - **current_line_style:** Style of the current hour line. Possible values are `solid`, `dash`, `dot`, `dashDot`, `dashDotDot`.
 - **callbacks:** A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions.
 - **animation:** A dictionary specifying the animation settings for the widget. It contains three keys: `enabled`, `type`, and `duration`. The `type` can be `fadeInOut` and the `duration` is the animation duration in milliseconds.
 - **container_padding**: Explicitly set padding inside widget container. Use this option to set padding inside the widget container. You can set padding for top, left, bottom and right sides of the widget container.
@@ -148,8 +164,33 @@ weather:
     border-radius: 8px;
     background-color:  rgba(17, 17, 27, 0.2);
 }
+
+.weather-card-day.active {
+    background-color: rgba(40, 40, 60, 0.6);
+    border: 1px solid rgba(50, 50, 75, 1);
+}
+
+.weather-card-day:hover {
+    background-color: rgba(40, 40, 60, 0.6);
+}
+
 .weather-card-day .label {
     font-size: 12px;
+}
+
+.weather-card .hourly-container {
+    border: 1px solid #282936;
+    background-color: #3c5fa0;
+    border-radius: 8px;
+    min-height: 150px;
+}
+
+.weather-card .hourly-data {
+    /* font-family: 'Segoe UI';*/
+    /* color: cyan;*/ /* <- Font color */
+    background-color: #FAE93F; /* <- Curve color */
+    font-size: 12px;
+    font-weight: bold;
 }
 ```
 
