@@ -1,6 +1,6 @@
 from typing import Any
 
-DEFAULTS = {
+DEFAULTS: dict[str, Any] = {
     "label": "0",
     "label_alt": "0",
     "update_interval": 3600,
@@ -37,6 +37,14 @@ DEFAULTS = {
         "offset_top": 6,
         "offset_left": 0,
         "icon_size": 64,
+        "time_format": "24h",
+        "hourly_point_spacing": 76,
+        "hourly_icon_size": 32,
+        "icon_smoothing": True,
+        "temp_line_width": 2,
+        "current_line_color": "#8EAEE8",
+        "current_line_width": 1,
+        "current_line_style": "dot",
     },
     "animation": {"enabled": True, "type": "fadeInOut", "duration": 200},
     "container_padding": {"top": 0, "left": 0, "bottom": 0, "right": 0},
@@ -137,6 +145,37 @@ VALIDATION_SCHEMA: dict[str, Any] = {
             "offset_top": {"type": "integer", "default": DEFAULTS["weather_card"]["offset_top"]},
             "offset_left": {"type": "integer", "default": DEFAULTS["weather_card"]["offset_left"]},
             "icon_size": {"type": "integer", "default": DEFAULTS["weather_card"]["icon_size"]},
+            "icon_smoothing": {"type": "boolean", "default": DEFAULTS["weather_card"]["icon_smoothing"]},
+            "time_format": {
+                "type": "string",
+                "allowed": ["12h", "24h"],
+                "default": DEFAULTS["weather_card"]["time_format"],
+            },
+            "hourly_point_spacing": {"type": "integer", "default": DEFAULTS["weather_card"]["hourly_point_spacing"]},
+            "hourly_icon_size": {
+                "type": "integer",
+                "min": 8,
+                "max": 64,
+                "default": DEFAULTS["weather_card"]["hourly_icon_size"],
+            },
+            "temp_line_width": {
+                "type": "integer",
+                "min": 0,
+                "max": 10,
+                "default": DEFAULTS["weather_card"]["temp_line_width"],
+            },
+            "current_line_color": {"type": "string", "default": DEFAULTS["weather_card"]["current_line_color"]},
+            "current_line_width": {
+                "type": "integer",
+                "min": 0,
+                "max": 10,
+                "default": DEFAULTS["weather_card"]["current_line_width"],
+            },
+            "current_line_style": {
+                "type": "string",
+                "allowed": ["solid", "dash", "dot", "dashDot", "dashDotDot"],
+                "default": DEFAULTS["weather_card"]["current_line_style"],
+            },
         },
         "default": DEFAULTS["weather_card"],
     },
