@@ -314,6 +314,8 @@ class WeatherWidget(BaseWidget):
         """Set the pixmap for the day icon label."""
         pixmap = QPixmap()
         pixmap.loadFromData(icon_bytes)
+        dpr = label.devicePixelRatioF()
+        pixmap.setDevicePixelRatio(dpr)
         scaled_pixmap_day = pixmap.scaledToHeight(
             self._weather_card["icon_size"], Qt.TransformationMode.SmoothTransformation
         )
