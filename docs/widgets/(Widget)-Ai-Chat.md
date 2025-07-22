@@ -179,6 +179,7 @@ If you want to use different styles for the context menu, you can target the `.a
 
 ## Example CSS
 ```css
+
 .ai-chat-widget {
     padding: 0 6px 0 6px;
 }
@@ -295,7 +296,64 @@ If you want to use different styles for the context menu, you can target the `.a
     font-family: 'Segoe UI';
     font-size: 14px;
 }
-.ai-chat-
+.ai-chat-popup .chat-content .user-message {
+    margin-left: 26px;
+}
+.ai-chat-popup .chat-content .assistant-message {
+    background-color: rgba(162, 168, 187, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.ai-chat-popup .chat-content .assistant-icon {
+    font-size: 24px;
+    color: #8c8d92;
+    margin-right: 8px;
+    font-family: "JetBrainsMono NFP";
+}
+
+.ai-chat-popup .chat-footer .chat-input {
+    background-color: rgba(24, 25, 27, 0.6);
+    border: 2px solid  #2d2d2d;
+    border-radius: 4px;
+    padding: 0 8px;
+    font-family: 'Segoe UI';
+    font-size: 14px;
+    color: #ffffff;
+    margin-top: 8px;
+    max-height: 28px;
+    min-height: 28px;
+}
+.ai-chat-popup .chat-footer .chat-input:focus {
+    border-color: #0078d7;
+}
+.ai-chat-popup .chat-footer .clear-button,
+.ai-chat-popup .chat-footer .send-button,
+.ai-chat-popup .chat-footer .stop-button {
+    background-color: #2d2d2d;
+    color: #ffffff;
+    font-size: 12px;
+    max-width: 30px;
+    min-width: 30px;
+    max-height: 30px;
+    min-height: 30px;
+    border-radius: 4px;
+    margin-top: 8px;
+    border: none;
+    font-family: "JetBrainsMono NFP";
+}
+.ai-chat-popup .chat-footer .stop-button {
+    background-color: #0078d7;
+}
+.ai-chat-popup .chat-footer .clear-button:hover,
+.ai-chat-popup .chat-footer .send-button:hover,
+.ai-chat-popup .chat-footer .stop-button:hover {
+    background-color: #464646;
+}
+.ai-chat-popup .chat-footer .clear-button:disabled,
+.ai-chat-popup .chat-footer .send-button:disabled,
+.ai-chat-popup .chat-footer .stop-button:disabled {
+    background-color: #2d2d2d;
+    color: #818181;
+}
 ```
 ## Troubleshooting & Best Practices
 
