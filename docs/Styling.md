@@ -207,8 +207,38 @@ Example of tooltip styling:
     margin-top: 4px;
 }
 ```
+## Shadow Options
+
+Most widgets support `label_shadow` and `container_shadow`, but you should check the widget documentation to confirm support before configuring shadows.
+
+### How to Configure Shadows
+
+Add the following to your per-widget configuration (YAML):
+
+```yaml
+label_shadow:
+  enabled: true
+  offset: [0, 2]        # [x, y] offset in pixels
+  radius: 3             # Blur radius
+  color: "#000000"    # Hex color (with optional alpha) or color name
+container_shadow:
+  enabled: true
+  offset: [0, 2]
+  radius: 3
+  color: "#00000080"
+```
+
+- `enabled`: Set to `true` to enable the shadow.
+- `offset`: List or tuple of two numbers for the shadow's x and y offset.
+- `radius`: Blur radius for the shadow.
+- `color`: Color of the shadow. Supports hex (with or without alpha) or named colors (e.g., "black").
+
+> **Note**:
+> If the container is transparent, the shadow will be applied to the child container and buttons instead. This can cause double shadows if you also apply shadows to those child elements. To avoid this, only apply shadows to the container that is actually visible.
 
 ## Icons
 There is a nice app at [Character Map UWP](https://github.com/character-map-uwp/Character-Map-UWP) where you can select a font, click on icons, and copy the UTF-16 value. Alternatively, you can visit the Nerd Fonts site and do the same under the icons section.
 
 ![Character Map UWP](assets/361286571-e6e1654b-34c7-484f-961c-ace25cb50286.png)
+
+
