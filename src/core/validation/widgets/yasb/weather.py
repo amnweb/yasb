@@ -38,6 +38,7 @@ DEFAULTS: dict[str, Any] = {
         "offset_top": 6,
         "offset_left": 0,
         "icon_size": 64,
+        "show_hourly_forecast": False,
         "time_format": "24h",
         "hourly_point_spacing": 76,
         "hourly_icon_size": 32,
@@ -148,6 +149,10 @@ VALIDATION_SCHEMA: dict[str, Any] = {
             "offset_left": {"type": "integer", "default": DEFAULTS["weather_card"]["offset_left"]},
             "icon_size": {"type": "integer", "default": DEFAULTS["weather_card"]["icon_size"]},
             "icon_smoothing": {"type": "boolean", "default": DEFAULTS["weather_card"]["icon_smoothing"]},
+            "show_hourly_forecast": {
+                "type": "boolean",
+                "default": DEFAULTS["weather_card"]["show_hourly_forecast"],
+            },
             "time_format": {
                 "type": "string",
                 "allowed": ["12h", "24h"],

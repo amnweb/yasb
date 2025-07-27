@@ -229,7 +229,7 @@ class WeatherWidget(BaseWidget):
         for i in range(3):
             frame_day = ClickableWidget()
             self._weather_card_daily_widgets.append(frame_day)
-            if self._hourly_data_today:
+            if self._hourly_data_today and self._weather_card["show_hourly_forecast"]:
                 frame_day.clicked.connect(lambda i=i: switch_hourly_data(i))  # pyright: ignore[reportUnknownMemberType]
             frame_day.setProperty("class", "weather-card-day")
             if i == 0:
@@ -270,7 +270,7 @@ class WeatherWidget(BaseWidget):
         main_layout.addLayout(days_layout)
 
         # If we have no data just don't add the widget at all
-        if self._hourly_data_today:
+        if self._hourly_data_today and self._weather_card["show_hourly_forecast"]:
             main_layout.addWidget(hourly_temperature_scroll_area)
 
         self.dialog.setLayout(main_layout)

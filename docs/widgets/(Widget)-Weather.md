@@ -60,6 +60,7 @@ weather:
       alignment: "right"
       direction: "down"
       icon_size: 64
+      show_hourly_forecast: True # Set to False to disable hourly forecast
       time_format: "24h" # can be 12h or 24h
       hourly_point_spacing: 76
       hourly_icon_size: 32 # better to set 16, 32 or 64 for better quality
@@ -97,6 +98,7 @@ weather:
   - **offset_top:** Offset from the top of the widget in pixels.
   - **offset_left:** Offset from the left of the widget in pixels.
   - **icon_size:** Size of the weather icon in pixels.
+  - **show_hourly_forecast:** Whether to show the hourly forecast in the weather card. Set to `False` to disable hourly forecast.
   - **time_format:** Time format for the weather card. Possible values are `12h` and `24h`.
   - **hourly_point_spacing:** Spacing between hourly points on a curve.
   - **hourly_icon_size:** Size of the hourly icon. Better to set 16, 32 or 64 for better quality. Icon smoothing should be enabled if using different scaling.
