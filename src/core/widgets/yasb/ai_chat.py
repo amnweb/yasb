@@ -1,21 +1,12 @@
 import functools
+import logging
 import os
 import re
 from enum import StrEnum
 from typing import Any
 
-from PyQt6.QtCore import (
-    QAbstractAnimation,
-    QEasingCurve,
-    QObject,
-    QPoint,
-    QPropertyAnimation,
-    Qt,
-    QThread,
-    QTimer,
-    pyqtSignal,
-)
-from PyQt6.QtGui import QColor, QContextMenuEvent, QKeyEvent, QMouseEvent, QPainter, QPaintEvent, QWheelEvent
+from PyQt6.QtCore import QEvent, QObject, QPoint, QPropertyAnimation, Qt, QThread, QTimer, pyqtSignal
+from PyQt6.QtGui import QColor, QContextMenuEvent, QKeyEvent, QMouseEvent, QPainter, QPaintEvent
 from PyQt6.QtWidgets import (
     QApplication,
     QFrame,
@@ -33,12 +24,52 @@ from PyQt6.QtWidgets import (
 
 from core.utils.utilities import PopupWidget, add_shadow
 from core.utils.widgets.ai_chat.client import AiChatClient
+from core.utils.widgets.ai_chat.client_helper import format_chat_text
+from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.win32.utilities import qmenu_rounded_corners
 from core.validation.widgets.yasb.ai_chat import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
 
 
-class ChatInputEdit(QTextEdit):
+class ContextMenuMixin:
+    """Mixin class to provide shared context menu functionality for chat widgets"""
+
+    def _init_context_menu(self, is_input_widget=False):
+        """Initialize context menu setup."""
+        self._parent_widget = None
+        self._is_input_widget = is_input_widget
+        self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.customContextMenuRequested.connect(self._handle_context_menu)
+
+    def set_parent_widget(self, parent_widget):
+        """Set the parent widget that contains the context menu handler"""
+        self._parent_widget = parent_widget
+
+    def _handle_context_menu(self, pos):
+        """Handle custom context menu request"""
+        if self._parent_widget and hasattr(self._parent_widget, "_show_context_menu"):
+            self._parent_widget._show_context_menu(self, pos, is_input=self._is_input_widget)
+
+    def mousePressEvent(self, event: QMouseEvent):
+        """Handle mouse press events to show context menu on right click"""
+        if event.button() == Qt.MouseButton.RightButton:
+            if self._parent_widget and hasattr(self._parent_widget, "_show_context_menu"):
+                self._parent_widget._show_context_menu(self, event.pos(), is_input=self._is_input_widget)
+                event.accept()
+                return
+        super().mousePressEvent(event)
+
+    def contextMenuEvent(self, event: QContextMenuEvent):
+        """Override context menu event to show our custom menu"""
+        if self._parent_widget and hasattr(self._parent_widget, "_show_context_menu"):
+            local_pos = self.mapFromGlobal(event.globalPos())
+            self._parent_widget._show_context_menu(self, local_pos, is_input=self._is_input_widget)
+            event.accept()
+        else:
+            super().contextMenuEvent(event)
+
+
+class ChatInputEdit(ContextMenuMixin, QTextEdit):
     """Custom text edit for chat input with enter key handling and signal for sending messages"""
 
     send_message = pyqtSignal()
@@ -47,15 +78,9 @@ class ChatInputEdit(QTextEdit):
     def __init__(self, parent=None):
         super().__init__(parent)
         self._is_streaming = False
-        self._parent_widget = None
         self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        self.customContextMenuRequested.connect(self._handle_context_menu)
+        self._init_context_menu(is_input_widget=True)
         self.textChanged.connect(self.text_changed.emit)
-
-    def set_parent_widget(self, parent_widget):
-        """Set the parent widget that contains the context menu handler"""
-        self._parent_widget = parent_widget
 
     def set_streaming(self, value: bool):
         self._is_streaming = value
@@ -73,107 +98,59 @@ class ChatInputEdit(QTextEdit):
     def insertFromMimeData(self, source):
         self.insertPlainText(source.text())
 
-    def _handle_context_menu(self, pos):
-        """Handle custom context menu request"""
-        if self._parent_widget and hasattr(self._parent_widget, "_show_context_menu"):
-            self._parent_widget._show_context_menu(self, pos, is_input=True)
 
-    def mousePressEvent(self, event: QMouseEvent):
-        """Handle mouse press events to show context menu on right click"""
-        if event.button() == Qt.MouseButton.RightButton:
-            if self._parent_widget and hasattr(self._parent_widget, "_show_context_menu"):
-                self._parent_widget._show_context_menu(self, event.pos(), is_input=True)
-                event.accept()
-                return
-        super().mousePressEvent(event)
-
-    def contextMenuEvent(self, event: QContextMenuEvent):
-        """Override context menu event to show our custom menu"""
-        if self._parent_widget and hasattr(self._parent_widget, "_show_context_menu"):
-            local_pos = self.mapFromGlobal(event.globalPos())
-            self._parent_widget._show_context_menu(self, local_pos, is_input=True)
-            event.accept()
-        else:
-            super().contextMenuEvent(event)
-
-
-class ChatMessageLabel(QLabel):
-    """Custom label for chat messages with context menu support"""
+class ChatMessageLabel(ContextMenuMixin, QLabel):
+    """Custom label for chat messages with context menu support and proper word breaking"""
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self._parent_widget = None
-        self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        self.customContextMenuRequested.connect(self._handle_context_menu)
+        self.setWordWrap(True)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+        self.setTextFormat(Qt.TextFormat.RichText)
+        self.setTextInteractionFlags(
+            Qt.TextInteractionFlag.TextSelectableByMouse | Qt.TextInteractionFlag.LinksAccessibleByMouse
+        )
+        self.setOpenExternalLinks(True)
+        self._init_context_menu(is_input_widget=False)
 
-    def set_parent_widget(self, parent_widget):
-        """Set the parent widget that contains the context menu handler"""
-        self._parent_widget = parent_widget
-
-    def _handle_context_menu(self, pos):
-        """Handle custom context menu request"""
-        if self._parent_widget and hasattr(self._parent_widget, "_show_context_menu"):
-            self._parent_widget._show_context_menu(self, pos, is_input=False)
-
-    def mousePressEvent(self, event: QMouseEvent):
-        """Handle mouse press events to show context menu on right click"""
-        if event.button() == Qt.MouseButton.RightButton:
-            if self._parent_widget and hasattr(self._parent_widget, "_show_context_menu"):
-                self._parent_widget._show_context_menu(self, event.pos(), is_input=False)
-                event.accept()
-                return
-        super().mousePressEvent(event)
-
-    def contextMenuEvent(self, event: QContextMenuEvent):
-        """Override context menu event to show our custom menu"""
-        if self._parent_widget and hasattr(self._parent_widget, "_show_context_menu"):
-            local_pos = self.mapFromGlobal(event.globalPos())
-            self._parent_widget._show_context_menu(self, local_pos, is_input=False)
-            event.accept()
+    def setText(self, text):
+        """Override setText to handle long words and make URLs clickable, and store original HTML"""
+        if text:
+            processed_text = format_chat_text(text)
+            processed_text = self._insert_break_opportunities(processed_text)
+            super().setText(processed_text)
         else:
-            super().contextMenuEvent(event)
+            super().setText(text)
 
+    def _insert_break_opportunities(self, text):
+        """Insert zero-width spaces to enable breaking of very long words, while preserving HTML and all original whitespace."""
 
-class SmoothScrollArea(QScrollArea):
-    """Custom scroll area with smooth scrolling on wheel events"""
+        def process_text_parts(text):
+            # Split by HTML tags to avoid breaking them
+            parts = re.split(r"(<[^>]+>)", text)
+            processed_parts = []
 
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.scroll_animation = None
-        self.scroll_speed = 300
-        self.animation_duration = 400
+            def break_long_word(match):
+                word = match.group(0)
+                if len(word) > 50 and "&" not in word and "<" not in word:
+                    # Insert zero-width space every 30 characters
+                    return "".join(
+                        char + ("\u200b" if (i + 1) % 30 == 0 and i + 1 < len(word) else "")
+                        for i, char in enumerate(word)
+                    )
+                return word
 
-    def wheelEvent(self, event: QWheelEvent):
-        delta = event.angleDelta().y()
-        scroll_amount = -delta // 8 * self.scroll_speed // 15
-        scrollbar = self.verticalScrollBar()
-        current_value = scrollbar.value()
-        target_value = current_value + scroll_amount
-        target_value = max(scrollbar.minimum(), min(scrollbar.maximum(), target_value))
-        if self.scroll_animation and self.scroll_animation.state() == QAbstractAnimation.State.Running:
-            self.scroll_animation.stop()
-        self.scroll_animation = QPropertyAnimation(scrollbar, b"value")
-        self.scroll_animation.setDuration(self.animation_duration)
-        self.scroll_animation.setStartValue(current_value)
-        self.scroll_animation.setEndValue(target_value)
-        self.scroll_animation.setEasingCurve(QEasingCurve.Type.OutCubic)
-        self.scroll_animation.start()
-        event.accept()
+            for part in parts:
+                if part.startswith("<") and part.endswith(">"):
+                    # This is an HTML tag, don't modify it
+                    processed_parts.append(part)
+                else:
+                    # This is regular text, process for long words but preserve all whitespace
+                    processed_parts.append(re.sub(r"\S+", break_long_word, part))
 
-    def smooth_scroll_to_bottom(self):
-        scrollbar = self.verticalScrollBar()
-        current_value = scrollbar.value()
-        target_value = scrollbar.maximum()
-        if current_value == target_value:
-            return
-        if self.scroll_animation and self.scroll_animation.state() == QAbstractAnimation.State.Running:
-            self.scroll_animation.stop()
-        self.scroll_animation = QPropertyAnimation(scrollbar, b"value")
-        self.scroll_animation.setDuration(self.animation_duration)
-        self.scroll_animation.setStartValue(current_value)
-        self.scroll_animation.setEndValue(target_value)
-        self.scroll_animation.setEasingCurve(QEasingCurve.Type.OutCubic)
-        self.scroll_animation.start()
+            return "".join(processed_parts)
+
+        return process_text_parts(text)
 
 
 class Corner(StrEnum):
@@ -278,7 +255,7 @@ class AiChatWidget(BaseWidget):
         self._label_shadow = label_shadow
         self._container_shadow = container_shadow
         self._notification_label: NotificationLabel | None = None
-
+        self._input_draft = ""
         self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
         self._widget_container_layout.setContentsMargins(
@@ -302,45 +279,38 @@ class AiChatWidget(BaseWidget):
         self._new_notification = False
 
     def _create_dynamically_label(self, content: str):
-        def process_content(content):
-            label_parts = re.split("(<span.*?>.*?</span>)", content)
-            label_parts = [part for part in label_parts if part]
-            widgets = []
-            for part in label_parts:
-                part = part.strip()
-                if not part:
-                    continue
-                if "<span" in part and "</span>" in part:
-                    class_name = re.search(r'class=(["\'])([^"\']+?)\1', part)
-                    class_result = class_name.group(2) if class_name else "icon"
-                    icon = re.sub(r"<span.*?>|</span>", "", part).strip()
-                    label = NotificationLabel(
-                        icon,
-                        corner=self._notification_dot["corner"],
-                        color=self._notification_dot["color"],
-                        margin=self._notification_dot["margin"],
-                    )
-                    label.setProperty("class", class_result)
-                    self._notification_label = label
-                else:
-                    label = NotificationLabel(
-                        part,
-                        corner=self._notification_dot["corner"],
-                        color=self._notification_dot["color"],
-                        margin=self._notification_dot["margin"],
-                    )
-                    label.setProperty("class", "label")
-                    self._notification_label = label
-                label.setCursor(Qt.CursorShape.PointingHandCursor)
-                label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                add_shadow(label, self._label_shadow)
-                self._widget_container_layout.addWidget(label)
-
-                widgets.append(label)
-                label.show()
-            return widgets
-
-        self._widgets = process_content(content)
+        label_parts = re.split("(<span.*?>.*?</span>)", content)
+        label_parts = [part for part in label_parts if part]
+        for part in label_parts:
+            part = part.strip()
+            if not part:
+                continue
+            if "<span" in part and "</span>" in part:
+                class_name = re.search(r'class=(["\'])([^"\']+?)\1', part)
+                class_result = class_name.group(2) if class_name else "icon"
+                icon = re.sub(r"<span.*?>|</span>", "", part).strip()
+                label = NotificationLabel(
+                    icon,
+                    corner=self._notification_dot["corner"],
+                    color=self._notification_dot["color"],
+                    margin=self._notification_dot["margin"],
+                )
+                label.setProperty("class", class_result)
+                self._notification_label = label
+            else:
+                label = NotificationLabel(
+                    part,
+                    corner=self._notification_dot["corner"],
+                    color=self._notification_dot["color"],
+                    margin=self._notification_dot["margin"],
+                )
+                label.setProperty("class", "label")
+                self._notification_label = label
+            label.setCursor(Qt.CursorShape.PointingHandCursor)
+            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            add_shadow(label, self._label_shadow)
+            self._widget_container_layout.addWidget(label)
+            label.show()
 
     def _update_label(self):
         """Update the label content and notification dot state."""
@@ -349,10 +319,6 @@ class AiChatWidget(BaseWidget):
 
         if self._notification_label is not None:
             self._notification_label.show_dot(self._new_notification)
-
-    def _get_history_key(self):
-        """Generate a key for the current provider/model combination"""
-        return (self._provider, self._model)
 
     def _update_send_button_state(self):
         """Update send button state based on provider and model selection and input text"""
@@ -404,41 +370,64 @@ class AiChatWidget(BaseWidget):
         self.stop_btn.setVisible(True)
         self.send_btn.setVisible(False)
 
+        # Ensure model and provider buttons are disabled during streaming
+        self.provider_btn.setEnabled(False)
+        self.model_btn.setEnabled(False)
+        if hasattr(self, "clear_btn"):
+            self.clear_btn.setEnabled(False)
+
         # Enable stop button only if AI has already started responding (has partial text)
         partial_text = self._streaming_state.get("partial_text", "")
         self.stop_btn.setEnabled(bool(partial_text))
 
         # Find or create assistant message label
-        row_widget = self.chat_layout.itemAt(self.chat_layout.count() - 2).widget() if self._is_popup_valid() else None
+        row_widget = None
         msg_label = None
+        # Check last message role
+        last_idx = self.chat_layout.count() - 2
+        if self._is_popup_valid() and last_idx >= 0:
+            item = self.chat_layout.itemAt(last_idx)
+            if item:
+                row_widget = item.widget()
+        last_role = None
         if row_widget and isinstance(row_widget, QWidget):
+            # Try to detect role by QLabel property
             for i in range(row_widget.layout().count()):
                 child = row_widget.layout().itemAt(i).widget()
-                if isinstance(child, QLabel) and child.property("class") == "assistant-message":
-                    msg_label = child
-                    break
-
-        # If not found, create a new assistant message label
+                if isinstance(child, QLabel):
+                    if child.property("class") == "assistant-message":
+                        msg_label = child
+                        last_role = "assistant"
+                        break
+                    elif child.property("class") == "user-message":
+                        last_role = "user"
         partial = self._streaming_state.get("partial_text", "")
         if not partial:
             partial = "thinking ..."
-        if msg_label is None:
+        # Only append assistant message if last message is user
+        if last_role == "user":
             self._append_message("assistant", partial)
-            row_widget = (
-                self.chat_layout.itemAt(self.chat_layout.count() - 2).widget() if self._is_popup_valid() else None
-            )
+            # Get the new row_widget
+            row_widget = None
+            last_idx = self.chat_layout.count() - 2
+            if self._is_popup_valid() and last_idx >= 0:
+                item = self.chat_layout.itemAt(last_idx)
+                if item:
+                    row_widget = item.widget()
             if row_widget and isinstance(row_widget, QWidget):
                 for i in range(row_widget.layout().count()):
                     child = row_widget.layout().itemAt(i).widget()
                     if isinstance(child, QLabel) and child.property("class") == "assistant-message":
                         msg_label = child
                         break
-
-        if msg_label is not None:
+        elif last_role == "assistant" and msg_label is not None:
+            # Just update the label
             try:
                 msg_label.setText(partial)
             except RuntimeError:
                 pass
+        # If not found, fallback to previous logic
+        if msg_label is not None:
             self._streaming_state["msg_label"] = msg_label
             # Ensure only one handler is connected
             if hasattr(self, "_worker"):
@@ -454,16 +443,16 @@ class AiChatWidget(BaseWidget):
     def _toggle_chat(self):
         # If popup is not visible or doesn't exist, open it
         if self._popup_chat is None or not (self._popup_chat and self._popup_chat.isVisible()):
+            if self._animation["enabled"]:
+                AnimationManager.animate(self, self._animation["type"], self._animation["duration"])
             self._show_chat()
         else:
-            # Hide and immediately set to None for robust state reset
             self._popup_chat.hide()
             self._popup_chat.deleteLater()
             self._popup_chat = None
 
     def _show_chat(self):
         """Show the AI chat popup with all components initialized."""
-        # First we reset the notification count
         self._new_notification = False
         self._update_label()
 
@@ -483,13 +472,12 @@ class AiChatWidget(BaseWidget):
         layout.setSpacing(0)
         layout.setContentsMargins(0, 0, 0, 0)
 
-        # Header section
         header_widget = QFrame()
         header_widget.setProperty("class", "chat-header")
         header_layout = QVBoxLayout(header_widget)
         header_layout.setSpacing(0)
         header_layout.setContentsMargins(0, 0, 0, 0)
-        # Provider and model selection in one row, vertically centered
+
         selection_row = QHBoxLayout()
         selection_row.setAlignment(Qt.AlignmentFlag.AlignVCenter)
         provider_label = QLabel("Provider")
@@ -507,7 +495,9 @@ class AiChatWidget(BaseWidget):
         self.provider_menu.setProperty("class", "context-menu")
         self.provider_menu.setStyleSheet("QMenu::indicator { width: 0px; height: 0px; }")
         self.provider_menu.aboutToShow.connect(lambda: qmenu_rounded_corners(self.provider_menu))
-        self.provider_btn.clicked.connect(self._show_provider_menu)
+        self.provider_btn.clicked.connect(
+            lambda: self.provider_menu.exec(self.provider_btn.mapToGlobal(self.provider_btn.rect().bottomLeft()))
+        )
         self._populate_provider_menu()
         model_label = QLabel("Model")
         model_label.setProperty("class", "model-label")
@@ -541,7 +531,9 @@ class AiChatWidget(BaseWidget):
                 ],
             )
         )
-        self.model_btn.setMenu(self.model_menu)
+        self.model_btn.clicked.connect(
+            lambda: self.model_menu.exec(self.model_btn.mapToGlobal(self.model_btn.rect().bottomLeft()))
+        )
         self._populate_model_menu()
 
         selection_row.addWidget(provider_label, 0, Qt.AlignmentFlag.AlignVCenter)
@@ -551,9 +543,10 @@ class AiChatWidget(BaseWidget):
         header_layout.addLayout(selection_row)
         layout.addWidget(header_widget)
 
-        self.chat_scroll = SmoothScrollArea()
+        self.chat_scroll = QScrollArea()
         self.chat_scroll.setWidgetResizable(True)
         self.chat_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.chat_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self.chat_scroll.setProperty("class", "chat-content")
         self.chat_scroll.setStyleSheet("""
             QScrollBar:vertical { border: none; background:transparent; width: 4px; }
@@ -563,13 +556,17 @@ class AiChatWidget(BaseWidget):
             QScrollBar::sub-line:vertical, QScrollBar::add-line:vertical { height: 0px; }
             QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: transparent; }
         """)
+
         self.chat_widget = QWidget()
         self.chat_widget.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        self.chat_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         self.chat_layout = QVBoxLayout(self.chat_widget)
+        self.chat_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.chat_layout.addSpacerItem(QSpacerItem(1, 1, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding))
         self.chat_scroll.setWidget(self.chat_widget)
         layout.addWidget(self.chat_scroll, stretch=1)
-
+        v_scrollbar = self.chat_scroll.verticalScrollBar()
+        v_scrollbar.setSingleStep(6)
         # Restore chat history
         self._render_chat_history()
 
@@ -611,12 +608,8 @@ class AiChatWidget(BaseWidget):
             offset_top=self._chat["offset_top"],
         )
         self._popup_chat.show()
-
         self._reconnect_streaming_if_needed()
-
         self._update_send_button_state()
-
-        QTimer.singleShot(0, self.chat_scroll.smooth_scroll_to_bottom)
 
     def _populate_provider_menu(self):
         self.provider_menu.clear()
@@ -630,63 +623,184 @@ class AiChatWidget(BaseWidget):
             action.triggered.connect(functools.partial(self._on_provider_changed, provider_name))
 
     def _render_chat_history(self):
-        # Remove all widgets except the bottom spacer
-        for i in reversed(range(self.chat_layout.count() - 1)):
+        """Render chat history for the current provider and model asynchronously."""
+        if hasattr(self, "_history_to_load"):
+            del self._history_to_load
+        if hasattr(self, "_streaming_partial_to_load"):
+            del self._streaming_partial_to_load
+        if hasattr(self, "_message_batch_index"):
+            del self._message_batch_index
+        # Clear existing widgets
+        for i in reversed(range(self.chat_layout.count())):  # Remove all widgets
             item = self.chat_layout.itemAt(i)
             if item and item.widget():
-                item.widget().deleteLater()
+                widget = item.widget()
+                self.chat_layout.removeWidget(widget)
+                widget.setParent(None)
+                widget.deleteLater()
 
-        # Load chat history for current provider and model
         history = self._get_current_history()
+
         streaming_partial = None
         if hasattr(self, "_streaming_state") and self._streaming_state.get("in_progress"):
             streaming_partial = self._streaming_state.get("partial_text", None)
         if not history and not streaming_partial:
-            from datetime import datetime
-
-            hour = datetime.now().hour
-            greeting = "Good morning" if 5 <= hour < 12 else "Good afternoon" if 12 <= hour < 18 else "Good evening"
-            placeholder = QWidget()
-            placeholder.setProperty("class", "empty-chat")
-            layout = QVBoxLayout(placeholder)
-            layout.setContentsMargins(0, 0, 0, 0)
-            layout.setAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignVCenter)
-            label1 = QLabel(greeting)
-            label1.setProperty("class", "greeting")
-            label1.setAlignment(Qt.AlignmentFlag.AlignHCenter)
-            label2 = QLabel("How can I help you today?")
-            label2.setProperty("class", "message")
-            label2.setAlignment(Qt.AlignmentFlag.AlignHCenter)
-            layout.addWidget(label1)
-            layout.addWidget(label2)
-            self.chat_layout.insertWidget(self.chat_layout.count() - 1, placeholder, stretch=1)
+            self._show_empty_chat_placeholder()
         else:
-            for idx, msg in enumerate(history):
-                # If this is the last message and streaming is in progress, show partial text
-                if streaming_partial and idx == len(history) - 1 and msg["role"] == "assistant":
-                    self._append_message(msg["role"], streaming_partial)
-                else:
-                    self._append_message(msg["role"], msg["content"])
-            # If streaming and no assistant message yet, append the partial
-            if streaming_partial and (not history or history[-1]["role"] != "assistant"):
-                self._append_message("assistant", streaming_partial)
-            QApplication.processEvents()
-            QTimer.singleShot(0, self.chat_scroll.smooth_scroll_to_bottom)
-        QApplication.processEvents()
+            QTimer.singleShot(10, lambda: self._load_all_messages_async(history, streaming_partial))
+        self.chat_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+
+    def _append_message(self, role, text):
+        """Append a message to the chat layout"""
+        self._remove_placeholder()
+        row = QFrame()
+        row.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        row_layout = QHBoxLayout(row)
+        row_layout.setContentsMargins(0, 0, 0, 0)
+        row_layout.setSpacing(0)
+        icon_label = QLabel()
+        icon_label.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
+        msg_label = ChatMessageLabel()
+        msg_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        msg_label.set_parent_widget(self)
+        msg_label.setTextInteractionFlags(
+            Qt.TextInteractionFlag.TextSelectableByMouse | Qt.TextInteractionFlag.LinksAccessibleByMouse
+        )
+        msg_label.setOpenExternalLinks(True)
+        if role == "user":
+            msg_label.setText(text)
+            msg_label.setProperty("class", "user-message")
+            msg_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        else:
+            icon_label.setText(self._icons["assistant"])
+            icon_label.setProperty("class", "assistant-icon")
+            icon_label.setAlignment(Qt.AlignmentFlag.AlignTop)
+            msg_label.setText(text)
+            msg_label.setProperty("class", "assistant-message")
+            msg_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        row_layout.addWidget(icon_label)
+        row_layout.addWidget(msg_label)
+
+        insert_pos = self.chat_layout.count() - 1
+        self.chat_layout.insertWidget(insert_pos, row)
+
+    def _show_empty_chat_placeholder(self):
+        """Show the empty chat placeholder with greeting."""
+        self._remove_placeholder()  # Ensure only one placeholder exists
+        from datetime import datetime
+
+        hour = datetime.now().hour
+        greeting = "Good morning" if 5 <= hour < 12 else "Good afternoon" if 12 <= hour < 18 else "Good evening"
+        placeholder = QWidget()
+        placeholder.setProperty("class", "empty-chat")
+        layout = QVBoxLayout(placeholder)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignVCenter)
+        label1 = QLabel(greeting)
+        label1.setProperty("class", "greeting")
+        label1.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+        label2 = QLabel("How can I help you today?")
+        label2.setProperty("class", "message")
+        label2.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+        layout.addWidget(label1)
+        layout.addWidget(label2)
+        self.chat_layout.insertWidget(self.chat_layout.count() - 1, placeholder, stretch=1)
+
+    def _load_all_messages_async(self, history, streaming_partial):
+        """Load all messages asynchronously in batches to prevent UI blocking."""
+        # Always exclude the last assistant message if streaming is in progress
+        filtered_history = list(history)
+        if streaming_partial and filtered_history:
+            last_msg = filtered_history[-1]
+            if last_msg["role"] == "assistant":
+                filtered_history = filtered_history[:-1]
+        self._message_batch_index = 0
+        self._history_to_load = filtered_history
+        self._streaming_partial_to_load = streaming_partial
+        self._batch_size = 2  # Load 2 messages at a time
+        self._load_next_message_batch()
+
+    def _load_next_message_batch(self):
+        """Load the next batch of messages and update loading percent."""
+        if not hasattr(self, "chat_layout"):
+            return
+        chat_layout = self.chat_layout
+        try:
+            parent = chat_layout.parentWidget()
+        except RuntimeError:
+            return
+        if parent is None or not isinstance(parent, QWidget) or parent is not self.chat_widget:
+            return
+        if not hasattr(self, "_history_to_load"):
+            return
+
+        total = len(self._history_to_load)
+
+        start_idx = self._message_batch_index
+        end_idx = min(start_idx + self._batch_size, total)
+
+        for idx in range(start_idx, end_idx):
+            msg = self._history_to_load[idx]
+            self._append_message(msg["role"], msg["content"])
+
+        self._message_batch_index = end_idx
+
+        if self._message_batch_index < total:
+            QTimer.singleShot(10, self._load_next_message_batch)
+        else:
+            # After all history is loaded, if streaming is in progress, append a single assistant message for partial text
+            if self._streaming_partial_to_load is not None:
+                partial = self._streaming_partial_to_load or "thinking ..."
+                self._append_message("assistant", partial)
+                # Set streaming label reference for real-time updates
+                last_idx = self.chat_layout.count() - 2
+                row_widget = None
+                if self._is_popup_valid() and last_idx >= 0:
+                    item = self.chat_layout.itemAt(last_idx)
+                    if item:
+                        row_widget = item.widget()
+                msg_label = None
+                if row_widget and isinstance(row_widget, QWidget):
+                    for i in range(row_widget.layout().count()):
+                        child = row_widget.layout().itemAt(i).widget()
+                        if isinstance(child, QLabel) and child.property("class") == "assistant-message":
+                            msg_label = child
+                            break
+                if hasattr(self, "_streaming_state") and msg_label is not None:
+                    self._streaming_state["msg_label"] = msg_label
+                    # Ensure only one handler is connected
+                    if hasattr(self, "_worker"):
+                        try:
+                            self._worker.chunk_signal.disconnect(self._streaming_chunk_handler)
+                        except Exception:
+                            pass
+                        self._worker.chunk_signal.connect(self._streaming_chunk_handler)
+                    # If partial is empty, start thinking animation
+                    if not self._streaming_partial_to_load:
+                        self._start_thinking_animation(msg_label)
+            # Clean up batch loading variables
+            for attr in ("_history_to_load", "_streaming_partial_to_load", "_message_batch_index"):
+                if hasattr(self, attr):
+                    delattr(self, attr)
 
     def _on_clear_chat(self):
         key = self._get_history_key()
-        AiChatWidget._persistent_chat_history[key] = []
+        if key in AiChatWidget._persistent_chat_history:
+            del AiChatWidget._persistent_chat_history[key]
         self._render_chat_history()
 
     def _on_popup_destroyed(self, *args):
-        # Save input draft before destroying popup
         if hasattr(self, "input_edit"):
             self._input_draft = self.input_edit.toPlainText()
         else:
             self._input_draft = ""
+        if hasattr(self, "_loading_label"):
+            del self._loading_label
         self._popup_chat = None
         self._stop_thinking_animation()
+        for attr in ("_history_to_load", "_streaming_partial_to_load", "_message_batch_index"):
+            if hasattr(self, attr):
+                delattr(self, attr)
 
     def _on_provider_changed(self, provider_name):
         # Save current history before switching
@@ -696,17 +810,12 @@ class AiChatWidget(BaseWidget):
             self.provider_btn.setText(provider_name)
             # Find provider config
             self._provider_config = next((p for p in self._providers if p["provider"] == provider_name), None)
-
             self._populate_model_menu()
             self._render_chat_history()
-            # Update send button state after provider change
             self._update_send_button_state()
 
         for action in self.provider_menu.actions():
             action.setChecked(action.text() == provider_name)
-
-    def _show_provider_menu(self):
-        self.provider_menu.exec(self.provider_btn.mapToGlobal(self.provider_btn.rect().bottomLeft()))
 
     def _populate_model_menu(self):
         self.model_menu.clear()
@@ -760,35 +869,32 @@ class AiChatWidget(BaseWidget):
             return
         self.input_edit.clear()
         self._append_message("user", user_text)
-        key = self._get_history_key()
-        if key not in AiChatWidget._persistent_chat_history:
-            AiChatWidget._persistent_chat_history[key] = []
-        AiChatWidget._persistent_chat_history[key].append({"role": "user", "content": user_text})
+        self._add_to_history("user", user_text)
         self._set_ui_state(streaming=True)
         self.stop_btn.setEnabled(False)
         self._stop_event = False
         self._send_to_api()
+        self.chat_widget.layout().activate()
+        QTimer.singleShot(0, self._scroll_to_bottom)
 
     def _on_stop_clicked(self):
         self._stop_event = True
-        # Try to stop the client
+
         if hasattr(self, "_worker") and hasattr(self._worker, "client") and self._worker.client:
             try:
                 self._worker.client.stop()
             except Exception:
+                logging.error("Failed to stop the AI chat client gracefully.")
                 pass
+
         if hasattr(self, "_streaming_state") and self._streaming_state.get("partial_text"):
-            key = self._get_history_key()
-            if key not in AiChatWidget._persistent_chat_history:
-                AiChatWidget._persistent_chat_history[key] = []
-            # Check if last message is already assistant
-            history = AiChatWidget._persistent_chat_history[key]
+            # Use history management
+            history = AiChatWidget._persistent_chat_history.get(self._get_history_key(), [])
             if not history or history[-1]["role"] != "assistant":
-                AiChatWidget._persistent_chat_history[key].append(
-                    {"role": "assistant", "content": self._streaming_state["partial_text"]}
-                )
+                self._add_to_history("assistant", self._streaming_state["partial_text"])
             else:
                 history[-1]["content"] = self._streaming_state["partial_text"]
+
         self._set_ui_state(streaming=False)
         if hasattr(self, "_streaming_state"):
             self._streaming_state["in_progress"] = False
@@ -809,6 +915,7 @@ class AiChatWidget(BaseWidget):
         chunk_signal = pyqtSignal(str)
         done_signal = pyqtSignal(str)
         error_signal = pyqtSignal(str)
+        finished_signal = pyqtSignal()
 
         def __init__(
             self,
@@ -843,6 +950,8 @@ class AiChatWidget(BaseWidget):
                 self.done_signal.emit(full_text)
             except Exception as e:
                 self.error_signal.emit(str(e))
+            finally:
+                self.finished_signal.emit()
 
     def _start_thinking_animation(self, msg_label):
         self._thinking_label = msg_label
@@ -874,21 +983,26 @@ class AiChatWidget(BaseWidget):
         msg_label = None
         instructions = None
 
-        self._append_message("assistant", "thinking ...")
-        QApplication.processEvents()
-        row_widget = self.chat_layout.itemAt(self.chat_layout.count() - 2).widget() if self._is_popup_valid() else None
+        self._cleanup_previous_worker()
 
-        if row_widget and isinstance(row_widget, QWidget):
-            for i in range(row_widget.layout().count()):
-                child = row_widget.layout().itemAt(i).widget()
-                if isinstance(child, QLabel) and child.property("class") == "assistant-message":
-                    msg_label = child
+        self._append_message("assistant", "thinking ...")
+        # Find the last assistant message label in the layout
+        msg_label = None
+        for i in reversed(range(self.chat_layout.count())):
+            item = self.chat_layout.itemAt(i)
+            widget = item.widget()
+            if widget and isinstance(widget, QWidget):
+                layout = widget.layout()
+                for j in range(layout.count()):
+                    child = layout.itemAt(j).widget()
+                    if isinstance(child, QLabel) and child.property("class") == "assistant-message":
+                        msg_label = child
+                        break
+                if msg_label:
                     break
         if not self._is_popup_valid() or msg_label is None:
             return
         self._start_thinking_animation(msg_label)
-        QTimer.singleShot(0, self.chat_scroll.smooth_scroll_to_bottom)
-        QApplication.processEvents()
 
         # Disable provider and model selection while streaming
         self.provider_btn.setEnabled(False)
@@ -913,13 +1027,16 @@ class AiChatWidget(BaseWidget):
                             instructions = f.read()
                     except Exception:
                         instructions = None
+                        logging.error(f"Failed to read instructions from {file_path}")
                 else:
                     instructions = None
+                    logging.error(f"Instructions file {file_path} does not exist")
 
         chat_history = list(self._get_current_history())
         if instructions:
             if not (chat_history and chat_history[0]["role"] == "system"):
                 chat_history = [{"role": "system", "content": instructions}] + chat_history
+
         # Setup streaming state for reconnection
         self._streaming_state = {
             "in_progress": True,
@@ -939,130 +1056,128 @@ class AiChatWidget(BaseWidget):
             top_p,
         )
         self._worker.moveToThread(self._thread)
-        self._worker.chunk_signal.connect(self._streaming_chunk_handler)
-        self._worker.done_signal.connect(self._streaming_done_handler)
-        self._worker.error_signal.connect(self._streaming_error_handler)
+        self._worker.chunk_signal.connect(self._streaming_chunk_handler, Qt.ConnectionType.QueuedConnection)
+        self._worker.done_signal.connect(self._streaming_done_handler, Qt.ConnectionType.QueuedConnection)
+        self._worker.error_signal.connect(self._streaming_error_handler, Qt.ConnectionType.QueuedConnection)
+        self._worker.finished_signal.connect(self._thread.quit, Qt.ConnectionType.QueuedConnection)
         self._thread.started.connect(self._worker.run)
         self._thread.finished.connect(self._thread.deleteLater)
         self._thread.start()
 
     def _streaming_chunk_handler(self, text):
         """Handle streaming text chunks from the worker"""
+        if not hasattr(self, "_streaming_state") or not self._streaming_state:
+            return
 
-        msg_label = self._streaming_state.get("msg_label") if hasattr(self, "_streaming_state") else None
+        msg_label = self._streaming_state.get("msg_label")
+        if not msg_label:
+            return
+
         self._streaming_state["partial_text"] = text
         self._stop_thinking_animation()
-
-        # Enable stop button now that AI has started responding
         if self._is_popup_valid():
             try:
                 self.stop_btn.setEnabled(True)
             except RuntimeError:
                 pass
+        try:
+            msg_label.setText(text)
+        except RuntimeError:
+            pass
 
-        if self._is_popup_valid() and msg_label is not None:
+    def _cleanup_previous_worker(self):
+        """Clean up previous worker and thread before starting new one"""
+        if hasattr(self, "_worker") and self._worker:
             try:
-                msg_label.setText(text)
-                self.chat_scroll.smooth_scroll_to_bottom()
-                QApplication.processEvents()
-            except RuntimeError:
+                # Disconnect all signals
+                self._worker.chunk_signal.disconnect()
+                self._worker.done_signal.disconnect()
+                self._worker.error_signal.disconnect()
+                self._worker.finished_signal.disconnect()
+            except Exception:
                 pass
+            self._worker = None
+
+        if hasattr(self, "_thread") and self._thread:
+            try:
+                # Check if thread still exists and is running
+                if not self._thread.isFinished():
+                    self._thread.quit()
+                    if self._thread.isRunning():
+                        self._thread.terminate()
+            except (RuntimeError, AttributeError):
+                # Thread object has been deleted or is invalid
+                pass
+            # Clear the reference
+            self._thread = None
 
     def _streaming_done_handler(self, text):
-        """Handle the final text after streaming is done"""
         if hasattr(self, "_streaming_state"):
             self._streaming_state["in_progress"] = False
         msg_label = self._streaming_state.get("msg_label") if hasattr(self, "_streaming_state") else None
         self._stop_thinking_animation()
+
+        # Update chat history
         key = self._get_history_key()
-        # Always update persistent chat history, even if popup is closed
-        if key not in AiChatWidget._persistent_chat_history:
-            AiChatWidget._persistent_chat_history[key] = []
-        # If last message is assistant, update it, else append
-        history = AiChatWidget._persistent_chat_history[key]
+        history = AiChatWidget._persistent_chat_history.get(key, [])
         if history and history[-1]["role"] == "assistant":
             history[-1]["content"] = text
         else:
-            history.append({"role": "assistant", "content": text})
+            self._add_to_history("assistant", text)
+
         if self._is_popup_valid() and msg_label is not None:
             try:
-                QTimer.singleShot(50, self.chat_scroll.smooth_scroll_to_bottom)
+                msg_label.setText(text)
                 self._set_ui_state(streaming=False)
             except RuntimeError:
                 pass
         else:
-            # Popup is closed, set notification dot
             self._new_notification = True
             self._update_label()
-        if hasattr(self, "_thread"):
-            self._thread.quit()
+
+        # Thread will quit automatically via finished signal, just clear reference when safe
+        if hasattr(self, "_thread") and self._thread:
+            # Schedule cleanup after thread finishes naturally
+            QTimer.singleShot(50, self._clear_thread_reference)
 
     def _streaming_error_handler(self, err):
-        """Handle errors during streaming"""
         if hasattr(self, "_streaming_state"):
             self._streaming_state["in_progress"] = False
         msg_label = self._streaming_state.get("msg_label") if hasattr(self, "_streaming_state") else None
         self._stop_thinking_animation()
         reply = f"[Error: {err}]"
+
+        # Update chat history
         key = self._get_history_key()
-        # Always update persistent chat history, even if popup is closed
-        if key not in AiChatWidget._persistent_chat_history:
-            AiChatWidget._persistent_chat_history[key] = []
-        history = AiChatWidget._persistent_chat_history[key]
+        history = AiChatWidget._persistent_chat_history.get(key, [])
         if history and history[-1]["role"] == "assistant":
             history[-1]["content"] = reply
         else:
-            history.append({"role": "assistant", "content": reply})
+            self._add_to_history("assistant", reply)
+
         if self._is_popup_valid() and msg_label is not None:
             try:
                 self._remove_last_message()
                 self._append_message("assistant", reply)
-                self.chat_scroll.smooth_scroll_to_bottom()
                 self._set_ui_state(streaming=False)
             except RuntimeError:
                 pass
-        if hasattr(self, "_thread"):
-            self._thread.quit()
+
+        # Thread will quit automatically via finished signal, just clear reference when safe
+        if hasattr(self, "_thread") and self._thread:
+            # Schedule cleanup after thread finishes naturally
+            QTimer.singleShot(50, self._clear_thread_reference)
 
     def _remove_placeholder(self):
-        """Remove the empty-chat widget if it exists"""
-        for i in range(self.chat_layout.count() - 1):
+        """Remove all empty-chat widgets if they exist with immediate cleanup"""
+        for i in reversed(range(self.chat_layout.count())):
             item = self.chat_layout.itemAt(i)
             widget = item.widget()
             if widget and widget.property("class") == "empty-chat":
+                self.chat_layout.removeWidget(widget)
+                widget.setParent(None)
                 widget.deleteLater()
                 break
-
-    def _append_message(self, role, text):
-        """Append a message to the chat layout"""
-        self._remove_placeholder()
-        row = QWidget()
-        row_layout = QHBoxLayout(row)
-        row_layout.setContentsMargins(0, 0, 0, 0)
-        row_layout.setSpacing(0)
-        icon_label = QLabel()
-        msg_label = ChatMessageLabel()
-        msg_label.set_parent_widget(self)
-        msg_label.setWordWrap(True)
-        msg_label.setTextInteractionFlags(
-            Qt.TextInteractionFlag.TextSelectableByMouse | Qt.TextInteractionFlag.LinksAccessibleByMouse
-        )
-        msg_label.setOpenExternalLinks(True)
-        if role == "user":
-            msg_label.setText(text)
-            msg_label.setProperty("class", "user-message")
-            msg_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
-        else:
-            icon_label.setText(self._icons["assistant"])
-            icon_label.setProperty("class", "assistant-icon")
-            icon_label.setAlignment(Qt.AlignmentFlag.AlignTop)
-            msg_label.setText(text)
-            msg_label.setProperty("class", "assistant-message")
-            msg_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
-        row_layout.addWidget(icon_label, 0, Qt.AlignmentFlag.AlignTop)
-        row_layout.addWidget(msg_label, 1)
-        self.chat_layout.insertWidget(self.chat_layout.count() - 1, row)
-        QApplication.processEvents()
 
     def _show_context_menu(self, widget, pos, is_input=False):
         """Show context menu for messages and input field"""
@@ -1103,15 +1218,27 @@ class AiChatWidget(BaseWidget):
         else:
             label = widget
             selected_text = label.selectedText()
-            full_text = label.text()
-
-            select_all_action = context_menu.addAction("Select All")
-            select_all_action.triggered.connect(lambda: label.setSelection(0, len(full_text)))
 
             if selected_text:
                 copy_selected_action = context_menu.addAction("Copy")
-                copy_selected_action.triggered.connect(lambda: QApplication.clipboard().setText(selected_text))
 
+                def copy_selected():
+                    try:
+                        self._simulate_shortcut(label, Qt.Key.Key_C)
+                    except Exception:
+                        QApplication.clipboard().setText(selected_text)
+
+                copy_selected_action.triggered.connect(copy_selected)
+
+            select_all_action = context_menu.addAction("Select All")
+
+            def select_all():
+                try:
+                    self._simulate_shortcut(label, Qt.Key.Key_A)
+                except Exception:
+                    pass
+
+            select_all_action.triggered.connect(select_all)
         context_menu.aboutToShow.connect(lambda: qmenu_rounded_corners(context_menu))
 
         global_pos = widget.mapToGlobal(pos)
@@ -1129,12 +1256,22 @@ class AiChatWidget(BaseWidget):
         else:
             context_menu.exec(global_pos)
 
+    def _simulate_shortcut(self, widget, key):
+        """Simulate a Ctrl+<key> keyboard shortcut on the given widget."""
+        press_event = QKeyEvent(QEvent.Type.KeyPress, key, Qt.KeyboardModifier.ControlModifier)
+        release_event = QKeyEvent(QEvent.Type.KeyRelease, key, Qt.KeyboardModifier.ControlModifier)
+        QApplication.sendEvent(widget, press_event)
+        QApplication.sendEvent(widget, release_event)
+
     def _remove_last_message(self):
+        """Remove the last message from chat layout with immediate cleanup"""
         if self.chat_layout.count() > 1:
             item = self.chat_layout.itemAt(self.chat_layout.count() - 2)
             if item:
                 widget = item.widget()
                 if widget:
+                    self.chat_layout.removeWidget(widget)
+                    widget.setParent(None)
                     widget.deleteLater()
 
     def _get_model_label(self):
@@ -1142,6 +1279,14 @@ class AiChatWidget(BaseWidget):
             return "Select model"
         model_config = self._get_model_config()
         return model_config.get("label", self._model) if model_config else self._model
+
+    def _get_history_key(self):
+        """
+        Generate a unique key for the chat history based on bar_id, provider, and model
+        We will use id(self) to ensure uniqueness across instances
+        In that way, we can have different chat histories for the same provider and model
+        """
+        return (id(self), self._provider, self._model)
 
     def _save_current_history(self):
         """Save the current chat history to persistent storage"""
@@ -1152,4 +1297,39 @@ class AiChatWidget(BaseWidget):
     def _get_current_history(self):
         """Get the current chat history for the active provider and model"""
         key = self._get_history_key()
-        return AiChatWidget._persistent_chat_history.get(key, [])
+        history = AiChatWidget._persistent_chat_history.get(key, [])
+        return history
+
+    def _add_to_history(self, role: str, content: str):
+        """Add a message to chat history"""
+        key = self._get_history_key()
+        if key not in AiChatWidget._persistent_chat_history:
+            AiChatWidget._persistent_chat_history[key] = []
+
+        history = AiChatWidget._persistent_chat_history[key]
+        history.append({"role": role, "content": content})
+
+    def _scroll_to_bottom(self):
+        """Smoothly scroll chat area to bottom"""
+        if hasattr(self, "chat_scroll") and self.chat_scroll:
+            scrollbar = self.chat_scroll.verticalScrollBar()
+            end_value = scrollbar.maximum()
+            if scrollbar.value() == end_value:
+                return
+            animation = QPropertyAnimation(scrollbar, b"value", self)
+            animation.setDuration(200)
+            animation.setStartValue(scrollbar.value())
+            animation.setEndValue(end_value)
+            animation.start()
+            self._scroll_animation = animation
+
+    def _clear_thread_reference(self):
+        """Safely clear thread reference after it has finished"""
+        if hasattr(self, "_thread") and self._thread:
+            try:
+                if self._thread.isFinished():
+                    self._thread = None
+                else:
+                    QTimer.singleShot(50, self._clear_thread_reference)
+            except (RuntimeError, AttributeError):
+                self._thread = None

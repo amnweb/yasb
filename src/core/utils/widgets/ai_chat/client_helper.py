@@ -55,3 +55,66 @@ def maybe_answer_yasb_question(messages):
             answer += f'<br><b>New version available:</b> {latest_tag} <a href="{latest_url}">Download here</a>'
         return answer
     return None
+
+
+def format_chat_text(text):
+    """
+    Format chat text to HTML with basic Markdown support.
+    NOTE: This function is still a work in progress and may not cover all edge cases.
+    """
+    if not text:
+        return text
+
+    def repl(match):
+        # Preprocess markdown links: [label](url) or [url](url) to just url if label is a url, else 'label: url'
+        label, url = match.group(1), match.group(2)
+        label_stripped = label.strip()
+        if label_stripped.startswith("[") and label_stripped.endswith("]"):
+            label_stripped = label_stripped[1:-1]
+        if label_stripped == url or re.match(r"https?://", label_stripped):
+            return url
+        else:
+            return f"{label_stripped} {url}"
+
+    text = re.sub(r"\[([^\]]+)]\((https?://[^)]+)\)", repl, text)
+
+    # Remove zero-width spaces
+    # text = text.replace("\u200b", "")
+    # Escape HTML characters
+    text = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    # Convert **bold** to <b>
+    text = re.sub(r"\*\*(.*?)\*\*", r"<b>\1</b>", text)
+    # Convert *italic* to <i>, but not bullet points
+    text = re.sub(r"(?<!^)\s\*((?!\*)[^*\n]+?)\*(?!\*)", r" <i>\1</i>", text, flags=re.MULTILINE)
+
+    # Replace inline code with <code>...</code>
+    def inline_code_repl(match):
+        code = match.group(1)
+        return f'<code style="background-color:rgba(0,0,0,0.2);white-space:pre-wrap;">{code}</code>'
+
+    text = re.sub(r"`([^`\n]+)`", inline_code_repl, text)
+
+    # Replace triple backtick code blocks with <pre>...</pre>
+    def code_repl(match):
+        code = match.group(1)
+        return f'<pre style="background-color:rgba(0,0,0,0.2);white-space:pre-wrap">{code}</pre>'
+
+    text = re.sub(r"```(?:[a-zA-Z0-9]*)[ \t]*\r?\n([\s\S]*?)```", code_repl, text)
+
+    # Split by <pre>...</pre> blocks
+    parts = re.split(r"(<pre[\s\S]*?>[\s\S]*?<\/pre>)", text)
+
+    def replace_url(match):
+        url = match.group(1)
+        href = "http://" + url if url.startswith("www.") else url
+        display_url = url.rstrip(".,;:!?)")
+        href = href.rstrip(".,;:!?)")
+        return f'<a href="{href}" style="color: #4A9EFF; text-decoration: underline;">{display_url}</a>'
+
+    # Only apply URL replacement to non-<pre> parts (even indices)
+    for i in range(0, len(parts), 2):
+        parts[i] = re.sub(r'((?:https?://|ftp://|www\.)[^\s<>"&]+)(?=\s|$|&(?:amp|lt|gt);)', replace_url, parts[i])
+
+    text = "".join(parts)
+    text = text.replace("\n", "<br>")
+    return text
