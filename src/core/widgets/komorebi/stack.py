@@ -76,6 +76,8 @@ class WindowButton(QFrame):
     def mousePressEvent(self, event: QMouseEvent):
         if event.button() == Qt.MouseButton.LeftButton:
             self.focus_stack_window()
+        elif event.button() == Qt.MouseButton.MiddleButton:
+            self.kill_stack_window()
 
     def update_visible_buttons(self):
         visible_buttons = [btn for btn in self.parent_widget._window_buttons if btn.isVisible()]
@@ -115,6 +117,17 @@ class WindowButton(QFrame):
                 # self.animate_buttons()
         except Exception:
             logging.exception(f"Failed to focus stack window at index {self.window_index}")
+
+    def kill_stack_window(self):
+        try:
+            hwnd = self.parent_widget._komorebi_windows[self.window_index]["hwnd"]
+            process = get_process_info(hwnd)
+            pid = process["pid"]
+            self.komorebic.kill_window_by_pid(pid)
+            if self._animation:
+                pass
+        except Exception:
+            logging.exception(f"Failed to kill stack window at index {self.window_index}")
 
     def animate_buttons(self, duration=200, step=30):
         # Store the initial width if not already stored (to enable reverse animations)
@@ -533,7 +546,10 @@ class StackWidget(BaseWidget):
     def _get_app_icon(self, window_index: int, ignore_cache: bool) -> QPixmap | None:
         try:
             hwnd = self._komorebi_windows[window_index]["hwnd"]
-            process = get_process_info(hwnd)
+            try:
+                process = get_process_info(hwnd)
+            except Exception:
+                return None
             pid = process["pid"]
             self.dpi = self.screen().devicePixelRatio()
             cache_key = (hwnd, pid, self.dpi)

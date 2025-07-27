@@ -234,6 +234,12 @@ class KomorebiClient:
         except subprocess.SubprocessError:
             logging.exception("Failed to focus stack window")
 
+    def kill_window_by_pid(self, pid: int) -> None:
+        try:
+            subprocess.run(["taskkill", "/PID", str(pid)], check=True, capture_output=True, shell=True)
+        except subprocess.SubprocessError:
+            logging.exception("Failed to kill window")
+
     def next_stack_window(self) -> None:
         try:
             subprocess.Popen([self._komorebic_path, "cycle-stack", "next"], shell=True)
