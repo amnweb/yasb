@@ -16,7 +16,7 @@ from core.utils.tooltip import set_tooltip
 from core.utils.utilities import add_shadow
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.win32.app_icons import get_window_icon
-from core.utils.win32.utilities import get_hwnd_info
+from core.utils.win32.utilities import close_application, get_hwnd_info
 from core.utils.win32.windows import WinEvent
 from core.validation.widgets.yasb.taskbar import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
@@ -156,7 +156,7 @@ class TaskbarWidget(BaseWidget):
 
         # Check if the window is valid before attempting to close it
         if win32gui.IsWindow(hwnd):
-            win32gui.PostMessage(hwnd, win32con.WM_CLOSE, 0, 0)
+            close_application(hwnd)
         else:
             logging.warning(f"Invalid window handle: {hwnd}")
 

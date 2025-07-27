@@ -4,7 +4,6 @@ import logging
 import winreg
 from contextlib import suppress
 
-import psutil
 from win32api import GetMonitorInfo, MonitorFromWindow
 from win32gui import GetClassName, GetWindowPlacement, GetWindowRect, GetWindowText
 from win32process import GetWindowThreadProcessId
@@ -39,6 +38,8 @@ def get_monitor_info(monitor_hwnd: int) -> dict:
 
 
 def get_process_info(hwnd: int) -> dict:
+    import psutil
+
     process_id = GetWindowThreadProcessId(hwnd)
     process = psutil.Process(process_id[-1])
     return {
@@ -79,6 +80,22 @@ def get_window_rect(hwnd: int) -> dict:
 def is_window_maximized(hwnd: int) -> bool:
     window_placement = GetWindowPlacement(hwnd)
     return window_placement[1] == SW_MAXIMIZE
+
+
+def close_application(hwnd: int):
+    """
+    Close the application associated with the given HWND.
+    This function attempts to close the window gracefully using WM_CLOSE.
+    """
+    try:
+        if not hwnd or hwnd == 0:
+            logging.warning(f"Invalid HWND: {hwnd}")
+            return
+        result = ctypes.windll.user32.PostMessageW(hwnd, 0x0010, 0, 0)
+        if not result:
+            logging.warning(f"PostMessageW failed for HWND: {hwnd}")
+    except Exception as e:
+        logging.error(f"Failed to close window {hwnd}: {e}")
 
 
 def get_hwnd_info(hwnd: int) -> dict:
