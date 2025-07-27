@@ -22,6 +22,7 @@
     - [GlazeWM Tiling Direction](./(Widget)-GlazeWM-Tiling-Direction)
     - [GlazeWM Workspaces](./(Widget)-GlazeWM-Workspaces)
     - [Grouper](./(Widget)-Grouper)
+    - [GPU](./(Widget)-GPU)
     - [Home](./(Widget)-Home)
     - [Disk](./(Widget)-Disk)
     - [Language](./(Widget)-Language)
