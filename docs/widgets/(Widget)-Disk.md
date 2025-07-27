@@ -146,7 +146,6 @@ disk:
         label: "<span>\uf473</span>"
         label_alt: "<span>\uf473</span>"
         group_label:
-          enabled: true
           volume_labels: ["C", "D", "E", "F"]
           show_label_name: true 
           blur: True

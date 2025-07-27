@@ -2,7 +2,6 @@ import logging
 import re
 from collections import deque
 
-import psutil
 from PyQt6.QtCore import QTimer
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QWidget
 
@@ -82,7 +81,30 @@ class CpuWidget(BaseWidget):
             CpuWidget._shared_timer.timeout.connect(CpuWidget._notify_instances)
             CpuWidget._shared_timer.start()
 
-        CpuWidget._notify_instances()
+        self._show_placeholder()
+
+    def _show_placeholder(self):
+        """Display placeholder (zero/default) CPU data without any psutil calls."""
+
+        class DummyFreq:
+            min = 0
+            max = 0
+            current = 0
+
+        class DummyStats:
+            ctx_switches = 0
+            interrupts = 0
+            soft_interrupts = 0
+            syscalls = 0
+
+        cpu_freq = DummyFreq()
+        cpu_stats = DummyStats()
+        current_perc = 0
+        logical = 1  # Assume at least 1 core for placeholder
+        cores_perc = [0] * logical
+        cpu_cores = {"physical": 1, "total": 1}
+
+        self._update_label(cpu_freq, cpu_stats, current_perc, cores_perc, cpu_cores)
 
     @classmethod
     def _notify_instances(cls):
@@ -91,6 +113,8 @@ class CpuWidget(BaseWidget):
             return
 
         try:
+            import psutil
+
             cpu_freq = psutil.cpu_freq()
             cpu_stats = psutil.cpu_stats()
             current_perc = psutil.cpu_percent()
@@ -126,15 +150,11 @@ class CpuWidget(BaseWidget):
             "histograms": {
                 "cpu_freq": "".join(
                     [self._get_histogram_bar(freq, cpu_freq.min, cpu_freq.max) for freq in self._cpu_freq_history]
-                )
-                .encode("utf-8")
-                .decode("unicode_escape"),
-                "cpu_percent": "".join([self._get_histogram_bar(percent, 0, 100) for percent in self._cpu_perc_history])
-                .encode("utf-8")
-                .decode("unicode_escape"),
-                "cores": "".join([self._get_histogram_bar(percent, 0, 100) for percent in cores_perc])
-                .encode("utf-8")
-                .decode("unicode_escape"),
+                ),
+                "cpu_percent": "".join(
+                    [self._get_histogram_bar(percent, 0, 100) for percent in self._cpu_perc_history]
+                ),
+                "cores": "".join([self._get_histogram_bar(percent, 0, 100) for percent in cores_perc]),
             },
         }
 

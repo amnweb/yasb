@@ -1,7 +1,6 @@
 import logging
 import re
 
-import psutil
 from humanize import naturalsize
 from PyQt6.QtCore import QTimer
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QWidget
@@ -78,7 +77,22 @@ class MemoryWidget(BaseWidget):
             MemoryWidget._shared_timer.timeout.connect(MemoryWidget._notify_instances)
             MemoryWidget._shared_timer.start()
 
-        MemoryWidget._notify_instances()
+        self._show_placeholder()
+
+    def _show_placeholder(self):
+        """Display placeholder (zero/default) memory data without any psutil calls."""
+
+        class DummyMem:
+            free = 0
+            percent = 0
+            total = 0
+            available = 0
+            used = 0
+
+        virtual_mem = DummyMem()
+        swap_mem = DummyMem()
+
+        self._update_label(virtual_mem, swap_mem)
 
     @classmethod
     def _notify_instances(cls):
@@ -87,6 +101,8 @@ class MemoryWidget(BaseWidget):
             return
 
         try:
+            import psutil
+
             virtual_mem = psutil.virtual_memory()
             swap_mem = psutil.swap_memory()
 
@@ -119,9 +135,7 @@ class MemoryWidget(BaseWidget):
             "{swap_mem_free}": naturalsize(swap_mem.free, True, True),
             "{swap_mem_percent}": swap_mem.percent,
             "{swap_mem_total}": naturalsize(swap_mem.total, True, True),
-            "{histogram}": "".join([self._get_histogram_bar(virtual_mem.percent, 0, 100)])
-                .encode("utf-8")
-                .decode("unicode_escape")
+            "{histogram}": "".join([self._get_histogram_bar(virtual_mem.percent, 0, 100)]),
         }
 
         if self._progress_bar["enabled"] and self.progress_widget:
@@ -170,6 +184,7 @@ class MemoryWidget(BaseWidget):
             return "high"
         elif self._memory_thresholds["high"] < virtual_memory_percent:
             return "critical"
+
     def _get_histogram_bar(self, num, num_min, num_max):
         if num_max == num_min:
             return self._histogram_icons[0]

@@ -119,14 +119,14 @@ class DiskWidget(BaseWidget):
                 percent_value = float(percent_str.strip("%"))
             else:
                 percent_value = float(percent_str)
-        
+
         if self._progress_bar["enabled"] and self.progress_widget:
             if self._widget_container_layout.indexOf(self.progress_widget) == -1:
                 self._widget_container_layout.insertWidget(
                     0 if self._progress_bar["position"] == "left" else self._widget_container_layout.count(),
                     self.progress_widget,
                 )
-            
+
             self.progress_widget.set_value(percent_value)
 
         for part in label_parts:
@@ -273,6 +273,7 @@ class DiskWidget(BaseWidget):
                 },
             }
         return None
+
     def _get_disk_threshold(self, disk_percent) -> str:
         if disk_percent <= self._disk_thresholds["low"]:
             return "low"

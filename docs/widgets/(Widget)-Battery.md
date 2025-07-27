@@ -25,7 +25,7 @@ battery:
     label_alt: "<span>{icon}</span> {percent}% | time: {time_remaining}"
     update_interval: 5000
     time_remaining_natural: False
-    hide_unsupported': True
+    hide_unsupported: True
     charging_options:
       icon_format: "{charging_icon}"
       blink_charging_icon: true
