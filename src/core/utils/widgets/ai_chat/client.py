@@ -72,17 +72,20 @@ class AiChatClient:
             for chunk in response:
                 if self._cancelled:
                     break
-                content = getattr(chunk.choices[0].delta, "content", None)
+                if not chunk.choices:
+                    continue
+                choice = chunk.choices[0]
+                content = getattr(choice.delta, "content", None)
                 if content:
                     chunk_buffer += content
                     chunk_count += 1
-
-                    # Send buffered content every 10 chunks
+                    # Send buffered content every 50 chunks
                     if chunk_count >= 50:
                         yield chunk_buffer
                         chunk_buffer = ""
                         chunk_count = 0
-
+                if getattr(choice, "finish_reason", None) == "stop":
+                    break
             # Send any remaining buffered content at the end
             if chunk_buffer:
                 yield chunk_buffer
