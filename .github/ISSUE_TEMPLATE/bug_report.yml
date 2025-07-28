@@ -26,27 +26,6 @@ body:
       validations:
           required: true
 
-    - type: dropdown
-      id: yasb-running
-      attributes:
-          label: YASB installed or from source
-          description: Installed YASB or if you are running it from source.
-          options:
-              - Installed
-              - Source
-          default: 0
-      validations:
-          required: true
-
-    - type: input
-      id: python-version
-      attributes:
-          label: Python Version
-          description: If running from source, what version of Python are you using?
-          placeholder: e.g. Python 3.9.0
-      validations:
-          required: false
-
     - type: input
       id: yasb-version
       attributes:
