@@ -7,6 +7,8 @@ DEFAULTS = {
     "hide_empty_workspaces": True,
     "hide_if_offline": False,
     "glazewm_server_uri": "ws://localhost:6123",
+    "enable_scroll_switching": True,
+    "reverse_scroll_direction": False,
     "default_shadow": {
         "enabled": False,
         "color": "black",
@@ -53,6 +55,14 @@ VALIDATION_SCHEMA = {
     "glazewm_server_uri": {
         "type": "string",
         "default": DEFAULTS["glazewm_server_uri"],
+    },
+    "enable_scroll_switching": {
+        "type": "boolean",
+        "default": DEFAULTS["enable_scroll_switching"],
+    },
+    "reverse_scroll_direction": {
+        "type": "boolean",
+        "default": DEFAULTS["reverse_scroll_direction"],
     },
     "container_shadow": {
         "type": "dict",

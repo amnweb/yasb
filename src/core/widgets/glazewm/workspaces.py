@@ -128,6 +128,8 @@ class GlazewmWorkspacesWidget(BaseWidget):
         hide_if_offline: bool,
         container_padding: dict,
         glazewm_server_uri: str,
+        enable_scroll_switching: bool,
+        reverse_scroll_direction: bool,
         container_shadow: dict[str, Any],
         btn_shadow: dict[str, Any],
     ):
@@ -145,7 +147,8 @@ class GlazewmWorkspacesWidget(BaseWidget):
         self.btn_shadow = btn_shadow
         self.workspaces: dict[str, GlazewmWorkspaceButton] = {}
         self.monitor_handle: int | None = None
-
+        self._enable_scroll_switching = enable_scroll_switching
+        self._reverse_scroll_direction = reverse_scroll_direction
         self.workspace_container_layout = QHBoxLayout()
         self.workspace_container_layout.setSpacing(0)
         self.workspace_container_layout.setContentsMargins(
@@ -237,7 +240,12 @@ class GlazewmWorkspacesWidget(BaseWidget):
         return None
 
     def wheelEvent(self, event: QWheelEvent):
-        if event.angleDelta().y() > 0:
+        if not self._enable_scroll_switching:
+            return
+        direction = event.angleDelta().y()
+        if self._reverse_scroll_direction:
+            direction = -direction
+        if direction < 0:
             self.glazewm_client.focus_next_workspace()
-        elif event.angleDelta().y() < 0:
+        elif direction > 0:
             self.glazewm_client.focus_prev_workspace()
