@@ -107,17 +107,14 @@ class GpuWidget(BaseWidget):
     @classmethod
     def _get_nvidia_smi_path(cls):
         if cls._nvidia_smi_path is not None:
-            print(f"Using cached nvidia-smi path: {cls._nvidia_smi_path}")
             return cls._nvidia_smi_path
         path = shutil.which("nvidia-smi")
         if path:
             cls._nvidia_smi_path = path
-            print(f"Found nvidia-smi at: {cls._nvidia_smi_path}")
         else:
             cls._nvidia_smi_path = os.path.join(
                 os.environ["SystemDrive"] + "\\", "Program Files", "NVIDIA Corporation", "NVSMI", "nvidia-smi.exe"
             )
-            print(f"Using default nvidia-smi path: {cls._nvidia_smi_path}")
         return cls._nvidia_smi_path
 
     @classmethod
