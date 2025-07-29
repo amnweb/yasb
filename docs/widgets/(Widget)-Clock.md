@@ -23,7 +23,7 @@
 clock:
   type: "yasb.clock.ClockWidget"
   options:
-    label: "<span>icon</span> {%H:%M:%S}"
+    label: "<span>{icon}</span> {%H:%M:%S}"
     label_alt: "\uf017 {%d-%m-%y %H:%M:%S}"
     locale: ""
     update_interval: 1000
