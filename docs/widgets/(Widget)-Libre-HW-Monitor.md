@@ -19,7 +19,7 @@
 | `server_port`            | integer | `8085`                                                                                         | Libre Hardware Monitor server port.                                                                                                          |
 | `server_username`        | string  | `""`                                                                                           | Libre Hardware Monitor username. Only needed if auth is enabled.                                                                             |
 | `server_password`        | string  | `""`                                                                                           | Libre Hardware Monitor password. Only needed if auth is enabled.                                                                             |
-| `histogram_icons`        | list    | `['\u2581', '\u2581', '\u2582', '\u2583', '\u2584', '\u2585', '\u2586', '\u2587', '\u2588']`   | Icons representing CPU usage histograms.                                                                                                     |
+| `histogram_icons`        | list    | `["\u2581", "\u2581", "\u2582", "\u2583", "\u2584", "\u2585", "\u2586", "\u2587", "\u2588"]`   | Icons representing CPU usage histograms.                                                                                                     |
 | `callbacks`              | dict    | `{'on_left': 'toggle_label', 'on_middle': 'do_nothing', 'on_right': 'toggle_menu'}`             | Callback functions for different mouse button actions.                                                                                       |
 | `animation`         | dict    | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
 | `container_padding`  | dict | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}`      | Explicitly set padding inside widget container.                            |
@@ -42,15 +42,15 @@
 
       history_size: 60
       histogram_icons:
-        - '\u2581' # 0%
-        - '\u2581' # 10%
-        - '\u2582' # 20%
-        - '\u2583' # 30%
-        - '\u2584' # 40%
-        - '\u2585' # 50%
-        - '\u2586' # 60%
-        - '\u2587' # 70%
-        - '\u2588' # 80%+
+        - "\u2581" # 0%
+        - "\u2581" # 10%
+        - "\u2582" # 20%
+        - "\u2583" # 30%
+        - "\u2584" # 40%
+        - "\u2585" # 50%
+        - "\u2586" # 60%
+        - "\u2587" # 70%
+        - "\u2588" # 80%+
 
       # histogram_fixed_min: 0.0
       # histogram_fixed_max: 100.0
