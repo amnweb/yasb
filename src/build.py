@@ -62,6 +62,7 @@ build_options = {
     "build_exe": "dist",
     "include_msvcr": True,
     "includes": [
+        "holidays.countries",
         "winrt.windows.ui.notifications",
         "winrt.windows.ui.notifications.management",
         "winrt.windows.data.xml.dom",

@@ -17,6 +17,12 @@ DEFAULTS = {
         "distance": 6,  # deprecated
         "offset_top": 6,
         "offset_left": 0,
+        "country_code": None,
+        "subdivision": None,
+        "show_holidays": False,
+        "holiday_color": "#FF6464",
+        "show_week_numbers": False,
+        # NEW: configurable holiday color
     },
     "animation": {"enabled": True, "type": "fadeInOut", "duration": 200},
     "container_padding": {"top": 0, "left": 0, "bottom": 0, "right": 0},
@@ -51,6 +57,31 @@ VALIDATION_SCHEMA = {
             "distance": {"type": "integer", "default": DEFAULTS["calendar"]["distance"]},
             "offset_top": {"type": "integer", "default": DEFAULTS["calendar"]["offset_top"]},
             "offset_left": {"type": "integer", "default": DEFAULTS["calendar"]["offset_left"]},
+            "country_code": {
+                "type": "string",
+                "required": False,
+                "nullable": True,
+                "default": DEFAULTS["calendar"]["country_code"],
+            },
+            "subdivision": {
+                "type": "string",
+                "required": False,
+                "nullable": True,
+                "default": DEFAULTS["calendar"]["subdivision"],
+            },
+            "show_holidays": {
+                "type": "boolean",
+                "default": DEFAULTS["calendar"]["show_holidays"],
+            },
+            "holiday_color": {
+                "type": "string",
+                "required": False,
+                "default": DEFAULTS["calendar"]["holiday_color"],
+            },
+            "show_week_numbers": {
+                "type": "boolean",
+                "default": DEFAULTS["calendar"]["show_week_numbers"],
+            },
         },
         "default": DEFAULTS["calendar"],
     },
