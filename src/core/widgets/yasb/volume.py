@@ -449,6 +449,7 @@ class VolumeWidget(BaseWidget):
                 )
             numeric_value = int(re.search(r"\d+", level_volume).group()) if re.search(r"\d+", level_volume) else 0
             self.progress_widget.set_value(numeric_value)
+            self.progress_widget.set_icon(icon_volume)
 
         for part in label_parts:
             part = part.strip()
