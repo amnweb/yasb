@@ -160,6 +160,7 @@ def build_progress_widget(self, options: dict[str, Any]) -> None:
         thickness=options["thickness"],
         color=options["color"],
         background_color=options["background_color"],
+        center_label=options["center_label"],
         animation=options["animation"],
     )
     self.progress_widget = CircularProgressWidget(self.progress_data)

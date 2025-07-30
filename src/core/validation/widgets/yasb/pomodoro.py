@@ -117,6 +117,7 @@ VALIDATION_SCHEMA = {
                 "default": "#00C800",
             },
             "background_color": {"type": "string", "default": "#3C3C3C"},
+            "center_label": {"type": "string", "default": ""},
             "position": {"type": "string", "allowed": ["left", "right"], "default": "left"},
             "animation": {
                 "type": "boolean",
