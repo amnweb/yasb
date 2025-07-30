@@ -52,6 +52,8 @@ clock:
       border_color: "System"
       alignment: "center"
       direction: "down"
+      show_holidays: False
+      show_week_numbers: True
       country_code: "AR"
       holiday_color: "#FF6464"
     callbacks:
@@ -86,6 +88,7 @@ clock:
   - **offset_left:** Set the offset from the left of the widget container.
   - **country_code:** The country code for holidays (e.g., "US", "AR").
   - **subdivision:** The subdivision code for holidays (e.g., "CA" for California, "Z" for Buenos Aires).
+  - **show_holidays:** Whether to show holidays in the calendar.
   - **holiday_color:** The color used to highlight holidays in the calendar (hex format, e.g., "#00A300").
   - **show_week_numbers:** Whether to show week numbers in the calendar.
 - **callbacks:** A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions.
