@@ -1,6 +1,7 @@
 import logging
 import os
 import re
+import traceback
 import urllib.parse
 from datetime import datetime
 from typing import Any, cast
@@ -509,7 +510,10 @@ class WeatherWidget(BaseWidget):
             }
         except Exception as e:
             if not self._retry_timer.isActive():
-                logging.warning(f"Error processing weather data: {e}. Retrying fetch in 10 seconds.")
+                err = f"Error processing weather data: {e}. Retrying fetch in 10 seconds."
+                if isinstance(e, (IndexError, KeyError, TypeError)):
+                    err += f"\n{traceback.format_exc()}"
+                logging.warning(err)
                 self._retry_timer.start(10000)
             if self._weather_data is None:
                 self._weather_data = {
