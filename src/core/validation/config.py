@@ -46,6 +46,11 @@ CONFIG_SCHEMA = {
             "reload_command": "komorebic reload-configuration",
         },
     },
+    "show_systray": {
+    "type": "boolean",
+    "default": True,
+    "required": False,
+    },
     "bars": {
         "type": "dict",
         "keysrules": {"type": "string"},
