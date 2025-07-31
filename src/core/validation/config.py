@@ -47,9 +47,9 @@ CONFIG_SCHEMA = {
         },
     },
     "show_systray": {
-    "type": "boolean",
-    "default": True,
-    "required": False,
+        "type": "boolean",
+        "default": True,
+        "required": False,
     },
     "bars": {
         "type": "dict",
