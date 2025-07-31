@@ -316,7 +316,6 @@ class ClockWidget(BaseWidget):
             self.holiday_label.setText("")
 
     def get_country_code(self):
-        print("Retrieving country code based on locale or system settings.")
         """Retrieve the country code based on the user's locale or system settings."""
         if not self._calendar["show_holidays"]:
             return None
