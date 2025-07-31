@@ -75,8 +75,9 @@ def main():
     app.aboutToQuit.connect(stop_observer)
 
     # Build system tray icon
-    tray_manager = SystemTrayManager(manager)
-    tray_manager.show()
+    if config.get("show_systray", True):
+        tray_manager = SystemTrayManager(manager)
+        tray_manager.show()
 
     # Initialize auto update service
     if config["update_check"] and getattr(sys, "frozen", False):
