@@ -4,9 +4,8 @@ from datetime import date, datetime
 from itertools import cycle
 from typing import cast
 
-import holidays
 import pytz
-from PyQt6.QtCore import QDate, QLocale, Qt
+from PyQt6.QtCore import QDate, QLocale, Qt, QTimer
 from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import QCalendarWidget, QHBoxLayout, QLabel, QSizePolicy, QStyle, QTableView, QVBoxLayout, QWidget
 from tzlocal import get_localzone_name
@@ -16,6 +15,36 @@ from core.utils.utilities import PopupWidget, add_shadow, build_widget_label
 from core.utils.widgets.animation_manager import AnimationManager
 from core.validation.widgets.yasb.clock import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
+
+_holidays_cache = {"module": None, "supported_countries": None, "country_holidays": {}}
+
+
+def _get_holidays_module():
+    """
+    Lazy load the holidays module and cache it.
+    This function ensures that the module is only loaded once and caches the supported countries.
+    If the module is already loaded, it returns the cached module.
+    """
+    import importlib
+
+    if _holidays_cache["module"] is None:
+        _holidays_cache["module"] = importlib.import_module("holidays")
+        _holidays_cache["supported_countries"] = set(_holidays_cache["module"].list_supported_countries())
+    return _holidays_cache["module"]
+
+
+def _get_cached_country_holidays(country, year, subdivision=None):
+    """Get cached country holidays or fetch and cache them."""
+    cache_key = f"{country}_{year}_{subdivision}"
+    if cache_key not in _holidays_cache["country_holidays"]:
+        holidays_module = _get_holidays_module()
+        try:
+            _holidays_cache["country_holidays"][cache_key] = holidays_module.country_holidays(
+                country, years=[year], subdiv=subdivision
+            )
+        except Exception:
+            _holidays_cache["country_holidays"][cache_key] = {}
+    return _holidays_cache["country_holidays"][cache_key]
 
 
 class CustomCalendar(QCalendarWidget):
@@ -60,21 +89,19 @@ class CustomCalendar(QCalendarWidget):
     def _update_holidays_for_year(self, year):
         self._holidays = set()
         self._current_year = year
-        supported = set(holidays.list_supported_countries())
+        if _holidays_cache["supported_countries"] is None:
+            return
         country = None
         if (
             self.country_code
             and re.fullmatch(r"[A-Z]{2}", self.country_code.upper())
-            and self.country_code.upper() in supported
+            and self.country_code.upper() in _holidays_cache["supported_countries"]
         ):
             country = self.country_code.upper()
         if not country:
             return
-        try:
-            h = holidays.country_holidays(country, years=[year], subdiv=self.subdivision)
-            self._holidays = set(h.keys())
-        except Exception:
-            self._holidays = set()
+        h = _get_cached_country_holidays(country, year, self.subdivision)
+        self._holidays = set(h.keys())
 
     def _on_page_changed(self, year, month):
         if year != self._current_year:
@@ -169,6 +196,8 @@ class ClockWidget(BaseWidget):
         self._next_timezone()
         self._update_label()
         self.start_timer()
+        if self._calendar["show_holidays"]:
+            QTimer.singleShot(0, _get_holidays_module)
 
     def _toggle_calendar(self):
         if self._animation["enabled"]:
@@ -293,26 +322,25 @@ class ClockWidget(BaseWidget):
         self.week_label.setText(f"Week {week_number}")
 
     def update_holiday_label(self, qdate: QDate):
-        supported = set(holidays.list_supported_countries())
+        if _holidays_cache["supported_countries"] is None:
+            self.holiday_label.setText("")
+            return
         country = None
         if (
             self._country_code
             and re.fullmatch(r"[A-Z]{2}", self._country_code.upper())
-            and self._country_code.upper() in supported
+            and self._country_code.upper() in _holidays_cache["supported_countries"]
         ):
             country = self._country_code.upper()
         if not country:
             self.holiday_label.setText("")
             return
-        try:
-            h = holidays.country_holidays(country, subdiv=self._subdivision)
-            dt = date(qdate.year(), qdate.month(), qdate.day())
-            holiday_name = h.get(dt)
-            if holiday_name:
-                self.holiday_label.setText(holiday_name)
-            else:
-                self.holiday_label.setText("")
-        except Exception:
+        h = _get_cached_country_holidays(country, qdate.year(), self._subdivision)
+        dt = date(qdate.year(), qdate.month(), qdate.day())
+        holiday_name = h.get(dt)
+        if holiday_name:
+            self.holiday_label.setText(holiday_name)
+        else:
             self.holiday_label.setText("")
 
     def get_country_code(self):
