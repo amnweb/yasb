@@ -49,6 +49,7 @@ Valid options are:
 | `watch_config`         | boolean    | `true`        | Reload bar when config is changed. |
 | `debug`      | boolean  | `false`   | Enable debug mode to see more logs |
 | `update_check`      | boolean  | `true`   | Enable automatic update check. This works only if the application is installed. |
+| `show_systray`      | boolean  | `true`   | Enable the YASB systray icon. |
 
 
 ## Komorebi settings for tray menu
