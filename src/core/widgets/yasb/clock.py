@@ -110,16 +110,24 @@ class CustomCalendar(QCalendarWidget):
     def paintCell(self, painter, rect, date):
         if date < self.minimumDate() or date > self.maximumDate():
             return
-        super().paintCell(painter, rect, date)
         pydate = date.toPyDate()
-        if self.show_holidays and pydate in self._holidays:
-            painter.save()
-            color = QColor(self.holiday_color)
-            painter.setPen(color)
-            font = painter.font()
-            painter.setFont(font)
-            painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, str(date.day()))
-            painter.restore()
+        is_holiday = self.show_holidays and pydate in self._holidays
+        if is_holiday:
+            # For holidays, we need to handle selection state manually
+            is_selected = date == self.selectedDate()
+            if is_selected:
+                # Selected holiday use default selection style form styles.css
+                painter.save()
+                super().paintCell(painter, rect, date)
+                painter.restore()
+            else:
+                # Non-selected holiday just paint holiday text with holiday color
+                painter.save()
+                painter.setPen(QColor(self.holiday_color))
+                painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, str(date.day()))
+                painter.restore()
+        else:
+            super().paintCell(painter, rect, date)
 
     def update_calendar_display(self):
         if self.timezone:
