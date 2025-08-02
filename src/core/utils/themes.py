@@ -25,7 +25,7 @@ from PyQt6.QtWidgets import (
 )
 
 from settings import SCRIPT_PATH
-
+from env_loader import load_env, set_font_engine
 
 class ImageLoader(QThread):
     finished = pyqtSignal(str, bytes)
@@ -366,7 +366,7 @@ class ThemeCard(QFrame):
             with urllib.request.urlopen(styles_url, timeout=5) as resp:
                 css = resp.read().decode("utf-8")
             css = self._extract_and_replace_variables(css)
-            available_fonts = set(QFontDatabase.families())
+            available_fonts = set(font.lower() for font in QFontDatabase.families())
             font_families = set()
             missing_fonts = set()
             matches = re.findall(r"font-family\s*:\s*([^;}\n]+)\s*[;}]+", css, flags=re.IGNORECASE)
@@ -375,7 +375,7 @@ class ThemeCard(QFrame):
                 for font in fonts:
                     if font:
                         font_families.add(font)
-                        if font not in available_fonts:
+                        if font.lower() not in available_fonts:
                             missing_fonts.add(font)
 
             if missing_fonts:
@@ -743,6 +743,8 @@ class ThemeViewer(QMainWindow):
 
 
 if __name__ == "__main__":
+    load_env()
+    set_font_engine()
     app = QApplication(sys.argv)
     viewer = ThemeViewer()
 
