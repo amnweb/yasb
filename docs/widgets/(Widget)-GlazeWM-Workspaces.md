@@ -9,7 +9,7 @@
 | `hide_empty_workspaces`  | boolean | `true`                                           | Whether to hide empty workspaces.                                           |
 | `hide_if_offline`        | boolean | `false`                                          | Whether to hide workspaces widget if GlazeWM is offline.                    |
 | `glazewm_server_uri`     | string  | `'ws://localhost:6123'`                          | Optional GlazeWM server uri.                                                |
-| `enable_scroll_switching` | boolean | `false`      | Enable scroll switching between workspaces.                                 |
+| `enable_scroll_switching` | boolean | `true`      | Enable scroll switching between workspaces.                                 |
 | `reverse_scroll_direction` | boolean | `false`      | Reverse scroll direction.                                                  |
 | `container_padding`      | dict    | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}` | Explicitly set padding inside widget container.                             |
 | `container_shadow`       | dict    | `None`                                           | Container shadow options.                                                   |
