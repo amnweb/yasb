@@ -25,7 +25,8 @@ from PyQt6.QtWidgets import (
 )
 
 from settings import SCRIPT_PATH
-from env_loader import load_env, set_font_engine
+from env_loader import load_env ,get_font_engine, set_font_engine
+import core.utils.font_family_util.font_family_util as font_family_util
 
 class ImageLoader(QThread):
     finished = pyqtSignal(str, bytes)
@@ -366,17 +367,29 @@ class ThemeCard(QFrame):
             with urllib.request.urlopen(styles_url, timeout=5) as resp:
                 css = resp.read().decode("utf-8")
             css = self._extract_and_replace_variables(css)
-            available_fonts = set(font.lower() for font in QFontDatabase.families())
+            available_fonts = set(QFontDatabase.families())
+            available_fonts_lower = set(font.lower() for font in QFontDatabase.families())
             font_families = set()
             missing_fonts = set()
             matches = re.findall(r"font-family\s*:\s*([^;}\n]+)\s*[;}]+", css, flags=re.IGNORECASE)
             for match in matches:
                 fonts = [f.strip(" '\"\t\r\n") for f in match.split(",")]
                 for font in fonts:
-                    if font:
-                        font_families.add(font)
-                        if font.lower() not in available_fonts:
-                            missing_fonts.add(font)
+                    if font is None:
+                        continue
+
+                    font_families.add(font)
+                   
+                    # Doing a case-insensitive comparsion to a directwrite family name 
+                    # won't make sense since it might not even be English
+                    if get_font_engine != "native":
+                        if font.lower() in available_fonts_lower:
+                            continue
+                    else: # A case-sensitive comparsion here
+                        if font_family_util.get_directwrite_family_from_gdi(font) in available_fonts:
+                                continue
+
+                    missing_fonts.add(font)
 
             if missing_fonts:
                 missing_fonts_label = "Some theme fonts are missing from your system"
@@ -745,8 +758,11 @@ class ThemeViewer(QMainWindow):
 if __name__ == "__main__":
     load_env()
     set_font_engine()
+    font_family_util.init()
     app = QApplication(sys.argv)
     viewer = ThemeViewer()
 
     viewer.show()
+
+    font_family_util.cleanup()
     sys.exit(app.exec())

@@ -16,6 +16,7 @@ from core.log import init_logger
 from core.tray import SystemTrayManager
 from core.utils.controller import start_cli_server
 from core.utils.update_check import UpdateCheckService
+from core.utils.font_family_util import font_family_util
 from core.watcher import create_observer
 from env_loader import load_env, set_font_engine
 
@@ -95,6 +96,7 @@ if __name__ == "__main__":
     start_cli_server()
     load_env()
     set_font_engine()
+    font_family_util.init()
 
     def exception_hook(exctype, value, traceback):
         EventService().clear()

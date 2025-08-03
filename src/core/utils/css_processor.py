@@ -9,7 +9,8 @@ from PyQt6.QtWidgets import QCheckBox, QMessageBox
 
 from core.utils.utilities import app_data_path
 from settings import DEBUG, SCRIPT_PATH
-
+from env_loader import get_font_engine
+import core.utils.font_family_util.font_family_util as font_family_util
 
 class CSSProcessor:
     """
@@ -39,6 +40,8 @@ class CSSProcessor:
         css = self._remove_comments(css)
         # Extract and replace CSS variables
         css = self._extract_and_replace_variables(css)
+        # Replace font families if the current font engine is native(directwrite)
+        css = self._replace_font_families(css)
         # Check for missing fonts and warn the user
         self._check_font_families(css)
         return css
@@ -165,7 +168,9 @@ class CSSProcessor:
         if missing_fonts:
             details = [
                 f'<a href="https://www.nerdfonts.com/font-downloads">{font}</a>'
-                if ("nerd font" in font.lower() or font.lower().endswith(" nf") or font.lower().endswith(" nfp"))
+                if ("nerd font" in font.lower() or font.lower().endswith(" nf") or font.lower().endswith(" nerd font")
+                    or font.lower().endswith(" nfp") 
+                    or font.lower().endswith(" nerd font propo"))
                 else font
                 for font in missing_fonts
             ]
@@ -174,6 +179,27 @@ class CSSProcessor:
         if DEBUG:
             logging.debug(f"Missing fonts: {missing_fonts}")
         return font_families, font_status
+
+    def _replace_font_families(self, css : str) -> str:
+        """
+            Replaces gdi font families to directwrite one
+            if the current font engine is set to directwrite(native)
+        """
+        
+        if get_font_engine() != "native":
+            return css
+
+        matches = re.findall(r"font-family\s*:\s*([^;}\n]+)\s*[;}]+", css, flags=re.IGNORECASE)
+        for match in matches:
+            fonts = [f.strip(" '\"\t\r\n") for f in match.split(",")]
+            for font in fonts:
+                converted_font = font_family_util.get_directwrite_family_from_gdi(font)
+                if converted_font is None:
+                    continue
+
+                css = css.replace(font, converted_font)
+
+        return css
 
     def _set_skip_font_check(self):
         try:

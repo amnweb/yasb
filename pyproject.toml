@@ -65,6 +65,11 @@ pattern = "BUILD_VERSION = \"(?P<version>[^\"]+)\""
 [tool.hatch.build.targets.wheel]
 packages = ["src/core"]
 
+[tool.hatch.build.targets.sdist]
+include = [
+	".src/core/utils/font_family_util"
+]
+
 [tool.ruff]
 line-length = 120
 target-version = "py312"
@@ -91,3 +96,9 @@ docstring-code-format     = true
 quote-style               = "double"
 indent-style              = "space"
 skip-magic-trailing-comma = false
+
+[tool.hatch.build.hooks.custom]
+path = "font_family_util_build.py"
+
+[tool.hatch.build.sources]
+"src/core/utils/font-family-util" = "yasb"
