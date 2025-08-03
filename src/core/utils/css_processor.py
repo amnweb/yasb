@@ -185,7 +185,11 @@ class CSSProcessor:
             Replaces gdi font families to directwrite one
             if the current font engine is set to directwrite(native)
         """
-        
+       
+        if not font_family_util.is_init_succeeded():
+            logging.warning("The initalization of font_family_util failed. It will be not used")
+            return css 
+
         if get_font_engine() != "native":
             return css
 

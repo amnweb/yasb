@@ -32,6 +32,9 @@ dependencies = [
     "openai",
     "pyvda",
     "python-dotenv",
+    "hatchling",
+    "cmake",
+    "clang",
     "winrt.windows.foundation",
     "winrt.windows.foundation.collections",
     "winrt.windows.data.xml.dom",
@@ -98,7 +101,7 @@ indent-style              = "space"
 skip-magic-trailing-comma = false
 
 [tool.hatch.build.hooks.custom]
-path = "font_family_util_build.py"
+path = "./font_family_util_build.py"
 
 [tool.hatch.build.sources]
 "src/core/utils/font-family-util" = "yasb"

@@ -372,6 +372,7 @@ class ThemeCard(QFrame):
             font_families = set()
             missing_fonts = set()
             matches = re.findall(r"font-family\s*:\s*([^;}\n]+)\s*[;}]+", css, flags=re.IGNORECASE)
+
             for match in matches:
                 fonts = [f.strip(" '\"\t\r\n") for f in match.split(",")]
                 for font in fonts:
@@ -386,7 +387,7 @@ class ThemeCard(QFrame):
                         if font.lower() in available_fonts_lower:
                             continue
                     else: # A case-sensitive comparsion here
-                        if font_family_util.get_directwrite_family_from_gdi(font) in available_fonts:
+                        if font_family_util.is_init_succeeded() and font_family_util.get_directwrite_family_from_gdi(font) in available_fonts:
                                 continue
 
                     missing_fonts.add(font)

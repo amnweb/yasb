@@ -17,12 +17,14 @@ class CustomBuildHook(BuildHookInterface):
         build_dir.mkdir(parents=True, exist_ok=True)
 
         print("--- Running CMake configuration ---")
+
         subprocess.run(
             ["cmake", "-S", str(cmake_source_dir), "-B", str(build_dir)],
             check=True,
         )
 
         print("--- Running CMake build ---")
+
         subprocess.run(
             ["cmake", "--build", str(build_dir), "--config", "Debug"],
             check=True,
