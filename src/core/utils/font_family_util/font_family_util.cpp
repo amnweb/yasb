@@ -37,7 +37,7 @@ namespace
 
 		if (!GetUserDefaultLocaleName(locale_name, LOCALE_NAME_MAX_LENGTH))
 		{
-			logger.log_warning("Failed to get the default locale. "
+			logger.log_debug("Failed to get the default locale. "
 				"Defaulting to en_us");
 			std::wcscpy(locale_name, L"en_us");
 		}
@@ -47,7 +47,7 @@ namespace
 
 		if (FAILED(hr))
 		{
-			logger.log_error("Getting family names failed" +
+			logger.log_debug("Getting family names failed" +
 				std::string(logging::get_win_error_msg(hr)));
 			return std::nullopt;
 		}
@@ -58,7 +58,7 @@ namespace
 
 		if (FAILED(hr))
 		{
-			logger.log_error("Getting a family name of the current locale "
+			logger.log_debug("Getting a family name of the current locale "
 				"failed : " +
 				std::string(logging::get_win_error_msg(hr)));
 			return std::nullopt;
@@ -70,7 +70,7 @@ namespace
 
 		if (FAILED(hr))
 		{
-			logger.log_error("Getting the length of the family name failed : " +
+			logger.log_debug("Getting the length of the family name failed : " +
 				std::string(logging::get_win_error_msg(hr)));
 			return std::nullopt;
 		}
@@ -83,7 +83,7 @@ namespace
 		}
 		catch (std::exception& e)
 		{
-			logger.log_error("Heap allocation failed : " + std::string(e.what()));
+			logger.log_debug("Heap allocation failed : " + std::string(e.what()));
 			return std::nullopt;
 		}
 
@@ -91,7 +91,7 @@ namespace
 
 		if (FAILED(hr))
 		{
-			logger.log_error("Getting the string of the family name(object) "
+			logger.log_debug("Getting the string of the family name(object) "
 				"failed : " +
 				std::string(logging::get_win_error_msg(hr)));
 
@@ -114,7 +114,7 @@ namespace
 
 		if (!get_family_name_of_cur_locale_result.has_value())
 		{
-			logger.log_error("get_family_name_of_"
+			logger.log_debug("get_family_name_of_"
 				"cur_locale() failed");
 			return std::nullopt;
 		}
@@ -128,7 +128,7 @@ namespace
 
 		if (FAILED(hr))
 		{
-			logger.log_error("GetFirstMatchingFont() failed : " +
+			logger.log_debug("GetFirstMatchingFont() failed : " +
 				logging::get_win_error_msg(hr));
 			return std::nullopt;
 		}
@@ -138,7 +138,7 @@ namespace
 
 		if (FAILED(hr))
 		{
-			logger.log_error("GetGdiInterop() failed : " + logging::get_win_error_msg(hr));
+			logger.log_debug("GetGdiInterop() failed : " + logging::get_win_error_msg(hr));
 			return std::nullopt;
 		}
 
@@ -149,7 +149,7 @@ namespace
 
 		if (FAILED(hr))
 		{
-			logger.log_error("ConvertFontToLOGFONT() failed : " +
+			logger.log_debug("ConvertFontToLOGFONT() failed : " +
 				logging::get_win_error_msg(hr));
 			return std::nullopt;
 		}
@@ -163,7 +163,7 @@ namespace
 		}
 		catch (std::exception& e)
 		{
-			logger.log_error("Encoding converter failed : " + std::string(e.what()));
+			logger.log_debug("Encoding converter failed : " + std::string(e.what()));
 			return std::nullopt;
 		}
 
