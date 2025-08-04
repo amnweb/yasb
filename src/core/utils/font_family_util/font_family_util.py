@@ -83,12 +83,7 @@ def get_directwrite_family_from_gdi(gdi_family : str) -> str | None:
 
     return directwrite_family.decode('UTF-8')
 
-def cleanup():
-    family_util.cleanup()
-
 if __name__ == "__main__":
     init()
     print(get_directwrite_family_from_gdi('JetBrainsMono NFP'))
     print(get_gdi_family_from_directwrite('JetBrainsMono Nerd Font Propo'))
-    cleanup()
-
