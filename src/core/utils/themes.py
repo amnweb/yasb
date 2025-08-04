@@ -759,7 +759,10 @@ class ThemeViewer(QMainWindow):
 if __name__ == "__main__":
     load_env()
     set_font_engine()
-    font_family_util.init()
+
+    if get_font_engine() == "native":
+        font_family_util.init()
+
     app = QApplication(sys.argv)
     viewer = ThemeViewer()
 

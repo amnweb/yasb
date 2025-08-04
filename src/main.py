@@ -18,7 +18,7 @@ from core.utils.controller import start_cli_server
 from core.utils.update_check import UpdateCheckService
 from core.utils.font_family_util import font_family_util
 from core.watcher import create_observer
-from env_loader import load_env, set_font_engine
+from env_loader import load_env, get_font_engine, set_font_engine
 
 logging.getLogger("asyncio").setLevel(logging.WARNING)
 
@@ -96,7 +96,9 @@ if __name__ == "__main__":
     start_cli_server()
     load_env()
     set_font_engine()
-    font_family_util.init()
+
+    if get_font_engine() == "native":
+        font_family_util.init()
 
     def exception_hook(exctype, value, traceback):
         EventService().clear()
