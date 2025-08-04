@@ -22,7 +22,6 @@ DEFAULTS = {
         "show_holidays": False,
         "holiday_color": "#FF6464",
         "show_week_numbers": False,
-        # NEW: configurable holiday color
     },
     "animation": {"enabled": True, "type": "fadeInOut", "duration": 200},
     "container_padding": {"top": 0, "left": 0, "bottom": 0, "right": 0},

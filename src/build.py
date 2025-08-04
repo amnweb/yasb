@@ -84,6 +84,7 @@ build_options = {
         ("assets/sound/notification01.wav", "assets/sound/notification01.wav"),
         ("config.yaml", "config.yaml"),
         ("styles.css", "styles.css"),
+        ("core/utils/font_family_util/Release/font_family_util.dll", "lib/core/utils/font_family_util/Release/font_family_util.dll")
     ],
 }
 
