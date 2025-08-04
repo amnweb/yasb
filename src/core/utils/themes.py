@@ -767,6 +767,4 @@ if __name__ == "__main__":
     viewer = ThemeViewer()
 
     viewer.show()
-
-    font_family_util.cleanup()
     sys.exit(app.exec())
