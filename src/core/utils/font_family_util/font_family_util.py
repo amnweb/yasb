@@ -8,19 +8,29 @@ import logging
 logger = logging.getLogger(__name__)
 logging.basicConfig(stream=sys.stdout, level=logging.WARNING)
 
+is_init_succeeded_flag = False
+
 def init() -> bool:
     global family_util 
+    global is_init_succeeded_flag
 
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    dll_path = os.path.join(script_dir, 'Release', 'font_family_util.dll')
+    dll_name = 'font_family_util.dll'
+    dll_path = os.path.join(script_dir, 'Release', dll_name) 
 
-    family_util = ctypes.CDLL(
-            winmode=0 # LOAD_WITH_ALTERED_SEARCH_PATH
-            ,name=dll_path # should be an absolute path
-            )
+    try:
+        family_util = ctypes.CDLL(
+                winmode=0 # LOAD_WITH_ALTERED_SEARCH_PATH
+                ,name=dll_path # should be an absolute path
+                )
+    except Exception as e:
+        logger.debug(f'Failed to load {dll_name}')
+        is_init_succeeded_flag = False
+        return False
 
     if family_util is None:
-        logger.debug('The family_util dll is not loaded correctly')
+        logger.debug(f'{dll_name} is not loaded correctly')
+        is_init_succeeded_flag = False
         return False
 
     try:
@@ -29,14 +39,21 @@ def init() -> bool:
         family_util.get_directwrite_family_from_gdi.restype = ctypes.c_char_p
     except Exception as e:
         logger.debug(f'An error occured while setting restypes : {e}')
+        is_init_succeeded_flag = False
         return False
 
     ir = family_util.init()
 
     if not ir:
         logger.debug('family_util.init() returned False')
+        is_init_succeeded_flag = False
+    else:
+        is_init_succeeded_flag = True
 
     return ir
+
+def is_init_succeeded() -> bool:
+    return is_init_succeeded_flag
 
 def get_gdi_family_from_directwrite(direct_write_family : str) -> str | None:
     '''
