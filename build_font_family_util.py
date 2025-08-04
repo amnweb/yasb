@@ -3,11 +3,8 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from hatchling.builders.hooks.plugin.interface import BuildHookInterface
-
-class CustomBuildHook(BuildHookInterface):
-    def initialize(self, version, build_data):
-        project_root = Path(self.root)
+if __name__ == "__main__":
+        project_root = Path(os.curdir)
         cmake_source_dir = project_root / "src" / "core" / "utils" / "font_family_util"
         build_dir = cmake_source_dir / "Release"
 
