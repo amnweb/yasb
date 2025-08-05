@@ -6,6 +6,8 @@ from ctypes import c_int as enum
 from ctypes.wintypes import BOOL, INT, LPCWSTR, WORD
 
 import comtypes
+import time
+import winsound
 from comtypes import CLSCTX_ALL, COMMETHOD, GUID, CoInitialize, COMObject, CoUninitialize
 from pycaw.callbacks import MMNotificationClient
 from pycaw.pycaw import (
@@ -15,7 +17,7 @@ from pycaw.pycaw import (
     IAudioEndpointVolumeCallback,
     IMMDeviceEnumerator,
 )
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import Qt, pyqtSignal, QTimer
 from PyQt6.QtGui import QWheelEvent
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QSlider, QVBoxLayout, QWidget
 
@@ -33,16 +35,12 @@ CLSID_PolicyConfigClient = GUID("{870af99c-171d-4f9e-af0d-e63df40c2bc9}")
 IID_AudioSes = "{00000000-0000-0000-0000-000000000000}"
 
 REFERENCE_TIME = ctypes.c_longlong
-# LPCGUID = POINTER(GUID)
 LPREFERENCE_TIME = POINTER(REFERENCE_TIME)
-
 
 class DeviceSharedMode(ctypes.Structure):
     _fields_ = [("dummy_", INT)]
 
-
 PDeviceSharedMode = POINTER(DeviceSharedMode)
-
 
 class WAVEFORMATEX(ctypes.Structure):
     _fields_ = [
@@ -55,30 +53,23 @@ class WAVEFORMATEX(ctypes.Structure):
         ("cbSize", WORD),
     ]
 
-
 PWAVEFORMATEX = POINTER(WAVEFORMATEX)
-
 
 class _tagpropertykey(ctypes.Structure):
     pass
 
-
 class tag_inner_PROPVARIANT(ctypes.Structure):
     pass
 
-
 PROPVARIANT = tag_inner_PROPVARIANT
 PPROPVARIANT = POINTER(PROPVARIANT)
-# PROPERTYKEY = _tagpropertykey
 PPROPERTYKEY = POINTER(_tagpropertykey)
-
 
 class ERole(enum):
     eConsole = 0
     eMultimedia = 1
     eCommunications = 2
     ERole_enum_count = 3
-
 
 class IPolicyConfig(comtypes.IUnknown):
     _case_insensitive_ = True
@@ -150,19 +141,15 @@ class IPolicyConfig(comtypes.IUnknown):
         COMMETHOD([], HRESULT, "SetEndpointVisibility", (["in"], LPCWSTR, "pwstrDeviceId"), (["in"], BOOL, "bVisible")),
     )
 
-
-# PIPolicyConfig = POINTER(IPolicyConfig)
 class AudioSes(object):
     name = "AudioSes"
     _reg_typelib_ = (IID_AudioSes, 1, 0)
-
 
 class CPolicyConfigClient(comtypes.CoClass):
     _reg_clsid_ = CLSID_PolicyConfigClient
     _idlflags_ = []
     _reg_typelib_ = (IID_AudioSes, 1, 0)
     _com_interfaces_ = [IPolicyConfig]
-
 
 class AudioEndpointChangeCallback(MMNotificationClient):
     def __init__(self, parent):
@@ -171,7 +158,6 @@ class AudioEndpointChangeCallback(MMNotificationClient):
 
     def on_property_value_changed(self, device_id, property_struct, fmtid, pid):
         self.parent.update_label_signal.emit()
-
 
 class AudioEndpointVolumeCallback(COMObject):
     _com_interfaces_ = [IAudioEndpointVolumeCallback]
@@ -182,7 +168,6 @@ class AudioEndpointVolumeCallback(COMObject):
 
     def OnNotify(self, pNotify):
         self.parent.update_label_signal.emit()
-
 
 class VolumeWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
@@ -219,6 +204,11 @@ class VolumeWidget(BaseWidget):
         self.volume = None
         self._volume_icons = volume_icons
         self._progress_bar = progress_bar
+
+        # Inicjalizacja timera do opóźnionego odtwarzania dźwięku
+        self.sound_timer = QTimer(self)
+        self.sound_timer.setSingleShot(True)
+        self.sound_timer.timeout.connect(self._play_volume_sound)
 
         self.progress_widget = None
         self.progress_widget = build_progress_widget(self, self._progress_bar)
@@ -263,8 +253,16 @@ class VolumeWidget(BaseWidget):
     def _on_slider_value_changed(self, value):
         if self.volume is not None:
             try:
-                self.volume.SetMasterVolumeLevelScalar(value / 100, None)
+                new_volume = value / 100
+                self.volume.SetMasterVolumeLevelScalar(new_volume, None)
+                if new_volume > 0.0 and self.volume.GetMute():
+                    self.volume.SetMute(False, None)
+                elif new_volume == 0.0 and not self.volume.GetMute():
+                    self.volume.SetMute(True, None)
                 self._update_label()
+                if self.sound_timer.isActive():
+                    self.sound_timer.stop()
+                self.sound_timer.start(350)
             except Exception as e:
                 logging.error(f"Failed to set volume: {e}")
 
@@ -326,13 +324,9 @@ class VolumeWidget(BaseWidget):
         try:
             logging.debug(f"Attempting PolicyConfig interface with device: {device_id}")
             pc = comtypes.CoCreateInstance(CLSID_PolicyConfigClient, interface=IPolicyConfig, clsctx=CLSCTX_ALL)
-            # eConsole = 0, eMultimedia = 1, eCommunications = 2
             pc.SetDefaultEndpoint(device_id, 0)
-            # Re-initialize volume interface for new device
             self._initialize_volume_interface()
-            # Update the slider value
             self._update_slider_value()
-            # Update the device buttons
             self._update_device_buttons(device_id)
             return
         except Exception as e:
@@ -351,12 +345,10 @@ class VolumeWidget(BaseWidget):
         )
         self.dialog.setProperty("class", "audio-menu")
 
-        # Create vertical layout for the dialog
         layout = QVBoxLayout()
         layout.setSpacing(0)
         layout.setContentsMargins(10, 10, 10, 10)
 
-        # Create a container widget and layout
         self.container = QWidget()
         self.container.setProperty("class", "audio-container")
         self.container_layout = QVBoxLayout()
@@ -383,27 +375,22 @@ class VolumeWidget(BaseWidget):
 
         layout.addWidget(self.container)
 
-        # Create volume slider
         self.volume_slider = QSlider(Qt.Orientation.Horizontal)
         self.volume_slider.setProperty("class", "volume-slider")
         self.volume_slider.setMinimum(0)
         self.volume_slider.setMaximum(100)
 
-        # Set current volume
         try:
             current_volume = round(self.volume.GetMasterVolumeLevelScalar() * 100)
             self.volume_slider.setValue(current_volume)
         except:
             self.volume_slider.setValue(0)
 
-        # Connect slider value change to volume control
         self.volume_slider.valueChanged.connect(self._on_slider_value_changed)
 
-        # Add slider to layout
         layout.addWidget(self.volume_slider)
         self.dialog.setLayout(layout)
 
-        # Position the dialog
         self.dialog.adjustSize()
         self.dialog.setPosition(
             alignment=self._audio_menu["alignment"],
@@ -495,6 +482,16 @@ class VolumeWidget(BaseWidget):
             volume_icon = self._volume_icons[4]
         return volume_icon
 
+    def _play_volume_sound(self):
+        if self.volume is not None:
+            try:
+                current_volume = self.volume.GetMasterVolumeLevelScalar()
+                mute_status = self.volume.GetMute()
+                if current_volume > 0.0 and not mute_status:
+                    winsound.MessageBeep(winsound.MB_ICONASTERISK)
+            except Exception as e:
+                logging.error(f"Failed to play sound: {e}")
+
     def _increase_volume(self):
         if self.volume is None:
             logging.warning("Cannot increase volume: No audio device connected.")
@@ -507,6 +504,9 @@ class VolumeWidget(BaseWidget):
                 self.volume.SetMute(False, None)
             self._update_label()
             self._update_slider_value()
+            if self.sound_timer.isActive():
+                self.sound_timer.stop()
+            self.sound_timer.start(500)
         except Exception as e:
             logging.error(f"Failed to increase volume: {e}")
 
@@ -522,6 +522,9 @@ class VolumeWidget(BaseWidget):
                 self.volume.SetMute(True, None)
             self._update_label()
             self._update_slider_value()
+            if self.sound_timer.isActive():
+                self.sound_timer.stop()
+            self.sound_timer.start(500)
         except Exception as e:
             logging.error(f"Failed to decrease volume: {e}")
 
