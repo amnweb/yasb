@@ -35,6 +35,7 @@ CLSID_PolicyConfigClient = GUID("{870af99c-171d-4f9e-af0d-e63df40c2bc9}")
 IID_AudioSes = "{00000000-0000-0000-0000-000000000000}"
 
 REFERENCE_TIME = ctypes.c_longlong
+# LPCGUID = POINTER(GUID)
 LPREFERENCE_TIME = POINTER(REFERENCE_TIME)
 
 class DeviceSharedMode(ctypes.Structure):
@@ -63,6 +64,7 @@ class tag_inner_PROPVARIANT(ctypes.Structure):
 
 PROPVARIANT = tag_inner_PROPVARIANT
 PPROPVARIANT = POINTER(PROPVARIANT)
+# PROPERTYKEY = _tagpropertykey
 PPROPERTYKEY = POINTER(_tagpropertykey)
 
 class ERole(enum):
@@ -141,6 +143,7 @@ class IPolicyConfig(comtypes.IUnknown):
         COMMETHOD([], HRESULT, "SetEndpointVisibility", (["in"], LPCWSTR, "pwstrDeviceId"), (["in"], BOOL, "bVisible")),
     )
 
+# PIPolicyConfig = POINTER(IPolicyConfig)
 class AudioSes(object):
     name = "AudioSes"
     _reg_typelib_ = (IID_AudioSes, 1, 0)
@@ -205,7 +208,7 @@ class VolumeWidget(BaseWidget):
         self._volume_icons = volume_icons
         self._progress_bar = progress_bar
 
-        # Inicjalizacja timera do opóźnionego odtwarzania dźwięku
+        # Initialize debounce timer
         self.sound_timer = QTimer(self)
         self.sound_timer.setSingleShot(True)
         self.sound_timer.timeout.connect(self._play_volume_sound)
@@ -324,9 +327,13 @@ class VolumeWidget(BaseWidget):
         try:
             logging.debug(f"Attempting PolicyConfig interface with device: {device_id}")
             pc = comtypes.CoCreateInstance(CLSID_PolicyConfigClient, interface=IPolicyConfig, clsctx=CLSCTX_ALL)
+            # eConsole = 0, eMultimedia = 1, eCommunications = 2
             pc.SetDefaultEndpoint(device_id, 0)
+            # Re-initialize volume interface for new device
             self._initialize_volume_interface()
+            # Update the slider value
             self._update_slider_value()
+            # Update the device buttons
             self._update_device_buttons(device_id)
             return
         except Exception as e:
@@ -345,10 +352,12 @@ class VolumeWidget(BaseWidget):
         )
         self.dialog.setProperty("class", "audio-menu")
 
+        # Create vertical layout for the dialog
         layout = QVBoxLayout()
         layout.setSpacing(0)
         layout.setContentsMargins(10, 10, 10, 10)
 
+        # Create a container widget and layout
         self.container = QWidget()
         self.container.setProperty("class", "audio-container")
         self.container_layout = QVBoxLayout()
@@ -375,22 +384,27 @@ class VolumeWidget(BaseWidget):
 
         layout.addWidget(self.container)
 
+        # Create volume slider
         self.volume_slider = QSlider(Qt.Orientation.Horizontal)
         self.volume_slider.setProperty("class", "volume-slider")
         self.volume_slider.setMinimum(0)
         self.volume_slider.setMaximum(100)
 
+        # Set current volume
         try:
             current_volume = round(self.volume.GetMasterVolumeLevelScalar() * 100)
             self.volume_slider.setValue(current_volume)
         except:
             self.volume_slider.setValue(0)
 
+        # Connect slider value change to volume control
         self.volume_slider.valueChanged.connect(self._on_slider_value_changed)
 
+        # Add slider to layout
         layout.addWidget(self.volume_slider)
         self.dialog.setLayout(layout)
 
+        # Position the dialog
         self.dialog.adjustSize()
         self.dialog.setPosition(
             alignment=self._audio_menu["alignment"],
