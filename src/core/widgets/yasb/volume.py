@@ -1,13 +1,12 @@
 import ctypes
 import logging
 import re
+import winsound
 from ctypes import HRESULT, POINTER
 from ctypes import c_int as enum
 from ctypes.wintypes import BOOL, INT, LPCWSTR, WORD
 
 import comtypes
-import time
-import winsound
 from comtypes import CLSCTX_ALL, COMMETHOD, GUID, CoInitialize, COMObject, CoUninitialize
 from pycaw.callbacks import MMNotificationClient
 from pycaw.pycaw import (
@@ -17,7 +16,7 @@ from pycaw.pycaw import (
     IAudioEndpointVolumeCallback,
     IMMDeviceEnumerator,
 )
-from PyQt6.QtCore import Qt, pyqtSignal, QTimer
+from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QWheelEvent
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QSlider, QVBoxLayout, QWidget
 
@@ -38,10 +37,13 @@ REFERENCE_TIME = ctypes.c_longlong
 # LPCGUID = POINTER(GUID)
 LPREFERENCE_TIME = POINTER(REFERENCE_TIME)
 
+
 class DeviceSharedMode(ctypes.Structure):
     _fields_ = [("dummy_", INT)]
 
+
 PDeviceSharedMode = POINTER(DeviceSharedMode)
+
 
 class WAVEFORMATEX(ctypes.Structure):
     _fields_ = [
@@ -54,24 +56,30 @@ class WAVEFORMATEX(ctypes.Structure):
         ("cbSize", WORD),
     ]
 
+
 PWAVEFORMATEX = POINTER(WAVEFORMATEX)
+
 
 class _tagpropertykey(ctypes.Structure):
     pass
 
+
 class tag_inner_PROPVARIANT(ctypes.Structure):
     pass
+
 
 PROPVARIANT = tag_inner_PROPVARIANT
 PPROPVARIANT = POINTER(PROPVARIANT)
 # PROPERTYKEY = _tagpropertykey
 PPROPERTYKEY = POINTER(_tagpropertykey)
 
+
 class ERole(enum):
     eConsole = 0
     eMultimedia = 1
     eCommunications = 2
     ERole_enum_count = 3
+
 
 class IPolicyConfig(comtypes.IUnknown):
     _case_insensitive_ = True
@@ -143,16 +151,19 @@ class IPolicyConfig(comtypes.IUnknown):
         COMMETHOD([], HRESULT, "SetEndpointVisibility", (["in"], LPCWSTR, "pwstrDeviceId"), (["in"], BOOL, "bVisible")),
     )
 
+
 # PIPolicyConfig = POINTER(IPolicyConfig)
 class AudioSes(object):
     name = "AudioSes"
     _reg_typelib_ = (IID_AudioSes, 1, 0)
+
 
 class CPolicyConfigClient(comtypes.CoClass):
     _reg_clsid_ = CLSID_PolicyConfigClient
     _idlflags_ = []
     _reg_typelib_ = (IID_AudioSes, 1, 0)
     _com_interfaces_ = [IPolicyConfig]
+
 
 class AudioEndpointChangeCallback(MMNotificationClient):
     def __init__(self, parent):
@@ -161,6 +172,7 @@ class AudioEndpointChangeCallback(MMNotificationClient):
 
     def on_property_value_changed(self, device_id, property_struct, fmtid, pid):
         self.parent.update_label_signal.emit()
+
 
 class AudioEndpointVolumeCallback(COMObject):
     _com_interfaces_ = [IAudioEndpointVolumeCallback]
@@ -171,6 +183,7 @@ class AudioEndpointVolumeCallback(COMObject):
 
     def OnNotify(self, pNotify):
         self.parent.update_label_signal.emit()
+
 
 class VolumeWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
