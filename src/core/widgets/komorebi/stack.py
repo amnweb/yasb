@@ -13,7 +13,7 @@ from core.event_service import EventService
 from core.utils.utilities import add_shadow
 from core.utils.widgets.komorebi.client import KomorebiClient
 from core.utils.win32.app_icons import get_window_icon
-from core.utils.win32.utilities import get_monitor_hwnd, get_process_info
+from core.utils.win32.utilities import close_application, get_monitor_hwnd, get_process_info
 from core.validation.widgets.komorebi.stack import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
 from settings import DEBUG
@@ -76,6 +76,8 @@ class WindowButton(QFrame):
     def mousePressEvent(self, event: QMouseEvent):
         if event.button() == Qt.MouseButton.LeftButton:
             self.focus_stack_window()
+        elif event.button() == Qt.MouseButton.MiddleButton:
+            self.close_stack_window()
 
     def update_visible_buttons(self):
         visible_buttons = [btn for btn in self.parent_widget._window_buttons if btn.isVisible()]
@@ -115,6 +117,10 @@ class WindowButton(QFrame):
                 # self.animate_buttons()
         except Exception:
             logging.exception(f"Failed to focus stack window at index {self.window_index}")
+
+    def close_stack_window(self):
+        hwnd = self.parent_widget._komorebi_windows[self.window_index]["hwnd"]
+        close_application(hwnd)
 
     def animate_buttons(self, duration=200, step=30):
         # Store the initial width if not already stored (to enable reverse animations)

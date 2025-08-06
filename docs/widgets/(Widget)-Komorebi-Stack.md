@@ -80,6 +80,9 @@ komorebi_stack:
 - **label_shadow:** Label shadow options for labels, including icons and labels within each window button.
 - **btn_shadow:** Window button shadow options.
 
+> Note:
+> Left click on window title switches to the window, and Middle click closes the window.
+
 ## Style
 ```css
 .komorebi-stack {} /*Style for widget.*/
