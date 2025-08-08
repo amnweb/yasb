@@ -4,6 +4,7 @@
 | -------------------------             | --------- | ---------                                                 | -------------------------------------                              |
 | `label`                               | string    |                                                           | The main label format for the media widget.                        |
 | `label_alt`                           | string    |                                                           | The alternative label format for the media widget.                 |
+| `class_name`                          | string  | `""`                                                        | The custom CSS class name for the widget.                          |
 | `label_shadow`                        | boolean   | false                                                     | Whether to show a shadow effect on the label.                      |
 | `max_field_size`                      | dict      |                                                           | Maximum field sizes for labels.                                    |
 | `max_field_size.label`                | integer   | 20                                                        | Maximum size for the main label.                                   |
@@ -106,6 +107,7 @@ media:
 ## Description of Options
 - **label:** The format string for the media label. You can use placeholders like `{title}` and `{artist}` to dynamically insert media information.
 - **label_alt:** The alternative format string for the media label. Useful for displaying additional media details.
+- **class_name:** The CSS class name for the widget. This allows you to apply custom styles to the widget. (optional)
 - **label_shadow:** Whether to show a shadow effect on the label. This can enhance the visibility of the label against different backgrounds.
 - **hide_empty:** Whether to hide the widget when there is no media information available.
 - **callbacks:** A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, `on_right`. Available callbacks are `toggle_label`, `do_nothing`, and `toggle_play_pause`.

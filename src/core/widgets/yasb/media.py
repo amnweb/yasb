@@ -36,6 +36,7 @@ class MediaWidget(BaseWidget):
         self,
         label: str,
         label_alt: str,
+        class_name: str,
         hide_empty: bool,
         callbacks: dict[str, str],
         max_field_size: dict[str, int],
@@ -57,7 +58,7 @@ class MediaWidget(BaseWidget):
         label_shadow: dict = None,
         container_shadow: dict = None,
     ):
-        super().__init__(class_name="media-widget")
+        super().__init__(class_name=f"media-widget {class_name}")
         self._label_content = label
         self._label_alt_content = label_alt
 
