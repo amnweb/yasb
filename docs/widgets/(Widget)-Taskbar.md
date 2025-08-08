@@ -19,8 +19,6 @@ taskbar:
     icon_size: 16
     animation:
       enabled: true
-      duration: 200
-      type: "fadeInOut"
     title_label:
       enabled: false
       show: "focused"
@@ -43,34 +41,42 @@ taskbar:
 - **tooltip:** Whether to show the tooltip on hover.
 - **title_label:** A dictionary specifying the configuration for window title labels. It includes:
   - enabled: A boolean flag to enable or disable title labels.
-  - show: A string that determines the display behavior (either "focused" or "always").
+  - show: A string that determines the display behavior (either `"focused"` or `"always"`).
   - min_length: The minimum length of the title label.
   - max_length: The maximum length of the title label.
 - **monitor_exclusive:** A boolean indicating whether the application should be exclusive to the monitor. If set to `True`, the taskbar will only show applications on the monitor where the application is running.
 - **container_padding:** Explicitly set padding inside widget container.
 - **ignore_apps:** A dictionary that allows you to specify which applications should be ignored by the taskbar widget. It includes:
-- processes: A list of process names to ignore.
-- titles: A list of window titles to ignore.
-- classes: A list of window classes to ignore.
+  - processes: A list of process names to ignore.
+  - titles: A list of window titles to ignore.
+  - classes: A list of window classes to ignore.
 - **callbacks:** A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions, which can be `toggle_window`, `do_nothing`, or `close_app`.
-- **animation:** A dictionary specifying the animation settings for the widget. It contains three keys: `enabled`, `type`, and `duration`. The `type` can be `fadeInOut` and the `duration` is the animation duration in milliseconds.
+- **animation:** A dictionary specifying the animation settings for the widget. It contains three keys: `enabled`, `type`, and `duration`. The `type` can be `fadeInOut` and the `duration` is the animation duration in milliseconds. When animation is enabled, it will be used both for click effects and for animating the addition or removal of applications in the taskbar (such as when apps are opened or closed).
 
 ## Style
 ```css
-.taskbar-widget {
-    padding: 0;
-    margin: 0;
-}
-.taskbar-widget .app-icon {
-    padding:0 6px;
-}
-.taskbar-widget .app-icon.foreground{
-    background-color: rgba(0, 0, 0, 0.4);
-}
-/* if title_label is enabled: */
-.taskbar-widget .app-title {}
-.taskbar-widget .app-title.foreground {}
+.taskbar-widget {} /* Main container for the taskbar widget */
+.taskbar-widget .widget-container {} /* Container for the widget */
+/* Application containers */
+.taskbar-widget .app-container {} /* container for each app */
+.taskbar-widget .app-container.foreground {} /* container for the focused app */
+.taskbar-widget .app-container .app-icon {} /* Icon inside the container */
+.taskbar-widget .app-container .app-title {} /* Label inside the container */
 ```
 
-> [!IMPORTANT]  
-> The title label is disabled by default. If you decide to enable it, keep in mind that it may result in slightly higher CPU usage.
+## Style Example
+```css
+.taskbar-widget .app-container {
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    margin: 3px;
+    border-radius: 4px;
+    padding: 0 4px;
+}
+.taskbar-widget .app-container.foreground {
+    background-color: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+.taskbar-widget .app-container .app-title {
+    padding-left: 4px;
+}
+```
