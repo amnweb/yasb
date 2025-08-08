@@ -159,6 +159,7 @@ class MicrophoneWidget(BaseWidget):
                 )
             numeric_value = int(re.search(r"\d+", min_level).group()) if re.search(r"\d+", min_level) else 0
             self.progress_widget.set_value(numeric_value)
+            self.progress_widget.set_icon(min_icon)
 
         for part in label_parts:
             part = part.strip()

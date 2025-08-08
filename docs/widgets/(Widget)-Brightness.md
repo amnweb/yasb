@@ -21,7 +21,7 @@
 | `animation`         | dict    | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
 | `container_shadow`   | dict   | `None`                  | Container shadow options.                       |
 | `label_shadow`         | dict   | `None`                  | Label shadow options.                 |
-| `progress_bar`       | dict    | `{'enabled': False, 'position': 'left', 'size': 14, 'thickness': 2, 'color': '#57948a', animation: True}` | Progress bar settings.    |
+| `progress_bar`       | dict    | `{'enabled': False, 'position': 'left', 'size': 14, 'thickness': 2, 'color': '#57948a', animation: True, 'center_label': ''}` | Progress bar settings.    |
 ## Example Configuration
 
 ```yaml
@@ -102,6 +102,7 @@
   - **color**: The color of the progress bar. Color can be single color or gradient. For example, `color: "#57948a"` or `color: ["#57948a", "#ff0000"]"` for a gradient.
   - **background_color**: The background color of the progress bar.
   - **animation**: Whether to enable smooth change of the progress bar value.
+  - **center_label**: The label that will be centered inside the progress bar (can be styled using `.progress-circle`)
 
 ## Example Style
 ```css
@@ -109,6 +110,7 @@
 .brightness-widget .widget-container {}
 .brightness-widget .widget-container .label {}
 .brightness-widget .widget-container .icon {}
+.brightness-widget .progress-circle {}
 ```
 
 ## Style for the brightness menu

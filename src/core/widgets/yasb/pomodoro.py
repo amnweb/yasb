@@ -220,7 +220,9 @@ class PomodoroWidget(BaseWidget):
             elapsed = max_value - self._remaining_time
             percent = (elapsed / max_value) * 100 if max_value > 0 else 0
             self.progress_widget.set_value(percent)
-
+            self.progress_widget.set_icon(label_options["{icon}"])
+            self.progress_widget.set_class(class_name)
+            
         for part in label_parts:
             part = part.strip()
             if part:
