@@ -22,15 +22,27 @@ def load_env():
         else:
             logging.info(f"Loaded environment variables from {env_path}")
 
+def get_font_engine():
+    """
+    Get the font engine name for the application based on the YASB_FONT_ENGINE environment variable.
+    """
+    font_engine = os.getenv("YASB_FONT_ENGINE")
+    if font_engine == "native":
+        return "native" 
+    elif font_engine == "freetype":
+        return "freetype"
+    else:
+        return "gdi"
 
 def set_font_engine():
     """
     Set the font engine for the application based on the YASB_FONT_ENGINE environment variable.
     """
     font_engine = os.getenv("YASB_FONT_ENGINE")
-    if font_engine == "native":
+    engine_name = get_font_engine()
+    if engine_name == "native":
         os.environ["QT_QPA_PLATFORM"] = "windows:fontengine=native"
-    elif font_engine == "freetype":
+    elif engine_name == "freetype":
         os.environ["QT_QPA_PLATFORM"] = "windows:fontengine=freetype"
     else:
         os.environ["QT_QPA_PLATFORM"] = "windows:fontengine=gdi"
