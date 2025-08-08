@@ -5,6 +5,7 @@
 | `label`         | string  | `"{data}"`                                | The format string for data |
 | `label_alt`     | string  | `"{data}"`    | Example of label alt. |
 | `label_max_length`          | int     | `None`                                                                     | The maximum length of the label. |
+| `lable_placeholder` | string  | `"Loading..."`                                                          | Placeholder text when data is not available. |
 | `class_name`    | string  | `"custom-widget"`                                                      | The CSS class name for the widget. |
 | `exec_options`  | dict    | `{'run_cmd': None, 'run_interval': 120000, 'return_format': 'json', 'hide_empty: False', use_shell: True, encoding: None}` | Execution options for custom widget. |
 | `callbacks`     | dict    | `{'on_left': 'toggle_label', 'on_middle': 'do_nothing', 'on_right': 'do_nothing'}` | Callbacks for mouse events. |
@@ -75,6 +76,7 @@ nvidia_temp:
 
 - **label**: The format string.
 - **label_alt**: The alternative format string.
+- **lable_placeholder**: Placeholder text when data is not available. Default is `"Loading..."`.
 - **label_max_length**: The maximum length of the label. Minimum value is 1. Default is `None`.
 - **class_name**: The CSS class name for the widget.
 - **exec_options**: A dictionary specifying the execution options. The keys are `run_cmd` command to run, `run_interval` (in milliseconds), `return_format` can be `json` or `string`, `hide_empty` (boolean) hide widget if output is empty, `use_shell` use shell to run command, `encoding` encoding for the command output, can be utf-8, cp1252, etc.

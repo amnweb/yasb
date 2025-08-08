@@ -55,6 +55,7 @@ class CustomWidget(BaseWidget):
         self,
         label: str,
         label_alt: str,
+        lable_placeholder: str,
         label_max_length: int,
         exec_options: dict,
         callbacks: dict,
@@ -75,6 +76,7 @@ class CustomWidget(BaseWidget):
         self._show_alt_label = False
         self._label_content = label
         self._label_alt_content = label_alt
+        self._lable_placeholder = lable_placeholder
         self._animation = animation
         self._padding = container_padding
         self._label_shadow = label_shadow
@@ -139,7 +141,7 @@ class CustomWidget(BaseWidget):
                 else:
                     label = QLabel(part)
                     label.setProperty("class", "label")
-                    label.setText("Loading...")
+                    label.setText(self._lable_placeholder)
                 label.setAlignment(Qt.AlignmentFlag.AlignCenter)
                 self._set_cursor(label)
                 add_shadow(label, self._label_shadow)
