@@ -1,25 +1,30 @@
-import ctypes
-import locale
+# import ctypes
+# import locale
 import logging
-import os
+
+# import os
 import re
 import struct
-import xml.etree.ElementTree as ET
-from ctypes import byref, create_string_buffer, sizeof
-from glob import glob
-from pathlib import Path
 
+# import xml.etree.ElementTree as ET
+from ctypes import byref, create_string_buffer, sizeof
+
+# from glob import glob
+# from pathlib import Path
 import win32api
 import win32con
 import win32gui
 import win32ui
-from PIL import Image, ImageFilter
+from PIL import Image
 from win32con import DIB_RGB_COLORS
 
-from core.utils.win32.app_uwp import get_package
+from core.utils.win32.app_aumid import get_aumid_for_window, get_icon_for_aumid
+
+# from core.utils.win32.app_uwp import get_package
 from core.utils.win32.bindings import DeleteObject, GetDC, GetDIBits, GetIconInfo, GetObject, ReleaseDC
 from core.utils.win32.structs import BITMAP, BITMAPINFO, BITMAPINFOHEADER, ICONINFO
-from settings import DEBUG
+
+# from settings import DEBUG
 
 pil_logger = logging.getLogger("PIL")
 pil_logger.setLevel(logging.INFO)
@@ -27,7 +32,7 @@ pil_logger.setLevel(logging.INFO)
 TARGETSIZE_REGEX = re.compile(r"targetsize-([0-9]+)")
 
 
-def get_window_icon(hwnd: int, smooth_level: int = 0):
+def get_window_icon(hwnd: int):
     """Fetch the icon of the window."""
     try:
         hicon = win32gui.SendMessage(hwnd, win32con.WM_GETICON, win32con.ICON_BIG, 0)
@@ -72,10 +77,6 @@ def get_window_icon(hwnd: int, smooth_level: int = 0):
                 ).convert("RGBA")
                 # target_size = 48  # target size (48x48) wihout DPI, most of uwps are also 48x48
                 # img = img.resize((target_size, target_size), Image.LANCZOS)
-                if smooth_level == 1:
-                    img = img.filter(ImageFilter.SMOOTH)
-                elif smooth_level == 2:
-                    img = img.filter(ImageFilter.SMOOTH_MORE)
                 return img
             finally:
                 # Cleaning up resources
@@ -111,97 +112,106 @@ def get_window_icon(hwnd: int, smooth_level: int = 0):
                     # logging.debug(f"Error releasing device context handle: {e}")
                     pass
         else:
-            try:
-                class_name = win32gui.GetClassName(hwnd)
-            except:
-                return None
-            actual_hwnd = 1
+            # try:
+            #     class_name = win32gui.GetClassName(hwnd)
+            # except:
+            #     return None
+            # actual_hwnd = hwnd
 
-            def cb(hwnd, b):
-                nonlocal actual_hwnd
-                try:
-                    class_name = win32gui.GetClassName(hwnd)
-                except:
-                    class_name = ""
-                if "ApplicationFrame" in class_name:
-                    return True
-                actual_hwnd = hwnd
-                return False
+            # def cb(hwnd, b):
+            #     nonlocal actual_hwnd
+            #     try:
+            #         class_name = win32gui.GetClassName(hwnd)
+            #     except:
+            #         class_name = ""
+            #     if "ApplicationFrame" in class_name:
+            #         return True
+            #     actual_hwnd = hwnd
+            #     return False
 
-            if class_name == "ApplicationFrameWindow":
-                win32gui.EnumChildWindows(hwnd, cb, False)
-            else:
-                actual_hwnd = hwnd
+            # if class_name == "ApplicationFrameWindow":
+            #     win32gui.EnumChildWindows(hwnd, cb, False)
+            # else:
+            #     actual_hwnd = hwnd
 
-            package = get_package(actual_hwnd)
-            if package is None:
-                return None
-            if package.package_path is None:
-                return None
-            manifest_path = os.path.join(package.package_path, "AppXManifest.xml")
-            if not os.path.exists(manifest_path):
-                if DEBUG:
-                    logging.error(f"manifest not found {manifest_path}")
-                return None
-            root = ET.parse(manifest_path)
-            velement = root.find(".//VisualElements")
-            if velement is None:
-                velement = root.find(".//{http://schemas.microsoft.com/appx/manifest/uap/windows10}VisualElements")
-            if not velement:
-                return None
-            if "Square44x44Logo" not in velement.attrib:
-                return None
-            package_path = Path(package.package_path)
-            # logopath = Path(package.package_path) / (velement.attrib["Square44x44Logo"])
-            logofile = Path(velement.attrib["Square44x44Logo"])
-            logopattern = str(logofile.parent / "**") + "\\" + str(logofile.stem) + "*" + str(logofile.suffix)
-            logofiles = glob(logopattern, recursive=True, root_dir=package_path)
-            logofiles = [x.lower() for x in logofiles]
-            if len(logofiles) == 0:
-                return None
+            # Try to get the AUMID
+            aumid = get_aumid_for_window(hwnd)
+            if aumid:
+                img = get_icon_for_aumid(aumid)
+                if img is not None:
+                    return img
 
-            def filter_logos(logofiles, qualifiers, values):
-                for qualifier in qualifiers:
-                    for value in values:
-                        filtered_files = list(filter(lambda x: (qualifier + "-" + value in x), logofiles))
-                        if len(filtered_files) > 0:
-                            return filtered_files
-                return logofiles
+            # Fallback: parse Appx manifest using package path
+            # Probably we don't need this anymore, but let's keep it for now
+            # package = get_package(actual_hwnd)
+            # if package is None:
+            #     return None
+            # if package.package_path is None:
+            #     return None
+            # manifest_path = os.path.join(package.package_path, "AppXManifest.xml")
+            # if not os.path.exists(manifest_path):
+            #     if DEBUG:
+            #         logging.error(f"manifest not found {manifest_path}")
+            #     return None
+            # root = ET.parse(manifest_path)
+            # velement = root.find(".//VisualElements")
+            # if velement is None:
+            #     velement = root.find(".//{http://schemas.microsoft.com/appx/manifest/uap/windows10}VisualElements")
+            # if not velement:
+            #     return None
+            # if "Square44x44Logo" not in velement.attrib:
+            #     return None
+            # package_path = Path(package.package_path)
+            # # logopath = Path(package.package_path) / (velement.attrib["Square44x44Logo"])
+            # logofile = Path(velement.attrib["Square44x44Logo"])
+            # logopattern = str(logofile.parent / "**") + "\\" + str(logofile.stem) + "*" + str(logofile.suffix)
+            # logofiles = glob(logopattern, recursive=True, root_dir=package_path)
+            # logofiles = [x.lower() for x in logofiles]
+            # if len(logofiles) == 0:
+            #     return None
 
-            langs = []
-            current_lang_code = ctypes.windll.kernel32.GetUserDefaultUILanguage()
-            if current_lang_code in locale.windows_locale:
-                current_lang = locale.windows_locale[current_lang_code].lower().replace("_", "-")
-                current_lang_short = current_lang.split("-", 1)[0]
-                langs += [current_lang, current_lang_short]
-            if "en" not in langs:
-                langs += ["en", "en-us"]
+            # def filter_logos(logofiles, qualifiers, values):
+            #     for qualifier in qualifiers:
+            #         for value in values:
+            #             filtered_files = list(filter(lambda x: (qualifier + "-" + value in x), logofiles))
+            #             if len(filtered_files) > 0:
+            #                 return filtered_files
+            #     return logofiles
 
-            # filter_logos will try to select only the files matching the qualifier values
-            # if nothing matches, the list is unchanged
-            if langs:
-                logofiles = filter_logos(logofiles, ["lang", "language"], langs)
-            logofiles = filter_logos(logofiles, ["contrast"], ["standard"])
-            logofiles = filter_logos(logofiles, ["alternateform", "altform"], ["unplated"])
-            logofiles = filter_logos(logofiles, ["contrast"], ["standard"])
-            logofiles = filter_logos(logofiles, ["scale"], ["100", "150", "200"])
+            # langs = []
+            # current_lang_code = ctypes.windll.kernel32.GetUserDefaultUILanguage()
+            # if current_lang_code in locale.windows_locale:
+            #     current_lang = locale.windows_locale[current_lang_code].lower().replace("_", "-")
+            #     current_lang_short = current_lang.split("-", 1)[0]
+            #     langs += [current_lang, current_lang_short]
+            # if "en" not in langs:
+            #     langs += ["en", "en-us"]
 
-            # find the one closest to 48, but bigger
-            def target_size_sort(s):
-                m = TARGETSIZE_REGEX.search(s)
-                if m:
-                    size = int(m.group(1))
-                    if size < 48:
-                        return 5000 - size
-                    return size - 48
-                return 10000
+            # # filter_logos will try to select only the files matching the qualifier values
+            # # if nothing matches, the list is unchanged
+            # if langs:
+            #     logofiles = filter_logos(logofiles, ["lang", "language"], langs)
+            # logofiles = filter_logos(logofiles, ["contrast"], ["standard"])
+            # logofiles = filter_logos(logofiles, ["alternateform", "altform"], ["unplated"])
+            # logofiles = filter_logos(logofiles, ["contrast"], ["standard"])
+            # logofiles = filter_logos(logofiles, ["scale"], ["100", "150", "200"])
 
-            logofiles.sort(key=target_size_sort)
+            # # find the one closest to 48, but bigger
+            # def target_size_sort(s):
+            #     m = TARGETSIZE_REGEX.search(s)
+            #     if m:
+            #         size = int(m.group(1))
+            #         if size < 48:
+            #             return 5000 - size
+            #         return size - 48
+            #     return 10000
 
-            img = Image.open(package_path / logofiles[0])
-            if not img:
-                return None
-            return img
+            # logofiles.sort(key=target_size_sort)
+
+            # img = Image.open(package_path / logofiles[0])
+            # if not img:
+            #     return None
+            # return img
     except Exception as e:
         logging.error(f"Error fetching icon: {e}")
         return None
