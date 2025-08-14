@@ -13,7 +13,8 @@ from core.event_service import EventService
 from core.utils.utilities import add_shadow
 from core.utils.widgets.komorebi.client import KomorebiClient
 from core.utils.win32.app_icons import get_window_icon
-from core.utils.win32.utilities import close_application, get_monitor_hwnd, get_process_info
+from core.utils.win32.utilities import get_monitor_hwnd, get_process_info
+from core.utils.win32.window_actions import close_application
 from core.validation.widgets.komorebi.stack import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
 from settings import DEBUG

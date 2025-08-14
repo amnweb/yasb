@@ -82,22 +82,6 @@ def is_window_maximized(hwnd: int) -> bool:
     return window_placement[1] == SW_MAXIMIZE
 
 
-def close_application(hwnd: int):
-    """
-    Close the application associated with the given HWND.
-    This function attempts to close the window gracefully using WM_CLOSE.
-    """
-    try:
-        if not hwnd or hwnd == 0:
-            logging.warning(f"Invalid HWND: {hwnd}")
-            return
-        result = ctypes.windll.user32.PostMessageW(hwnd, 0x0010, 0, 0)
-        if not result:
-            logging.warning(f"PostMessageW failed for HWND: {hwnd}")
-    except Exception as e:
-        logging.error(f"Failed to close window {hwnd}: {e}")
-
-
 def get_hwnd_info(hwnd: int) -> dict:
     with suppress(Exception):
         monitor_hwnd = get_monitor_hwnd(hwnd)
