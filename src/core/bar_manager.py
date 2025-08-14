@@ -26,7 +26,7 @@ class BarManager(QObject):
         self.stylesheet = stylesheet
         self.event_service = EventService()
         self.widget_event_listeners = set()
-        self.bars: list[Bar] = list()
+        self.bars: list[Bar] = []
         self.config["bars"] = {n: bar for n, bar in self.config["bars"].items() if bar["enabled"]}
         self._threads = {}
         self._active_listeners = {}
@@ -35,8 +35,10 @@ class BarManager(QObject):
 
         self.styles_modified.connect(self.on_styles_modified)
         self.config_modified.connect(self.on_config_modified)
-        QApplication.instance().screenAdded.connect(self.on_screens_update)
-        QApplication.instance().screenRemoved.connect(self.on_screens_update)
+        app = QApplication.instance()
+        app.screenAdded.connect(self.on_screens_update)
+        app.screenRemoved.connect(self.on_screens_update)
+        app.aboutToQuit.connect(self.stop_listener_threads)
 
     @pyqtSlot()
     def on_styles_modified(self):
@@ -67,7 +69,7 @@ class BarManager(QObject):
     @pyqtSlot(QScreen)
     def on_screens_update(self, _screen: QScreen) -> None:
         logging.info("Screens updated. Re-initialising all bars.")
-        reload_application("Reloading Application because of screen update.", forced=True)
+        reload_application("Reloading Application because of screen update.")
 
     def run_listeners_in_threads(self):
         for listener in self.widget_event_listeners:
@@ -80,9 +82,18 @@ class BarManager(QObject):
         for listener in self.widget_event_listeners:
             logging.info(f"Stopping {listener.__name__}...")
             with suppress(KeyError):
-                self._threads[listener].stop()
-                self._threads[listener].quit()
-                self._threads[listener].wait(500)
+                thread = self._threads[listener]
+                if hasattr(thread, "stop"):
+                    try:
+                        thread.stop()
+                    except Exception as e:
+                        logging.debug(f"Thread stop() raised for {listener.__name__}: {e}")
+                if hasattr(thread, "quit"):
+                    try:
+                        thread.quit()
+                    except Exception:
+                        pass
+                # thread.wait(1500)
         self._threads.clear()
         self.widget_event_listeners.clear()
 

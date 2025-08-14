@@ -16,7 +16,12 @@ def reload_application(msg="Reloading Application...", forced=False):
         if hasattr(sys, "_cli_pipe_handler") and sys._cli_pipe_handler is not None:
             sys._cli_pipe_handler.stop_cli_pipe_server()
         QApplication.processEvents()
-        QProcess.startDetached(sys.executable, sys.argv)
+
+        args = list(sys.argv)
+        if "--restart-wait" not in args:
+            args.append("--restart-wait")
+
+        QProcess.startDetached(sys.executable, args)
         if forced:
             os._exit(0)
         else:
