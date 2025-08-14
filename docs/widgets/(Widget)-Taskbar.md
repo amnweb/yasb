@@ -21,7 +21,7 @@ taskbar:
       enabled: true
     title_label:
       enabled: false
-      show: "focused"
+      show: "always"
       min_length: 10
       max_length: 30
     ignore_apps:
@@ -60,6 +60,7 @@ taskbar:
 /* Application containers */
 .taskbar-widget .app-container {} /* container for each app */
 .taskbar-widget .app-container.foreground {} /* container for the focused app */
+.taskbar-widget .app-container.flashing {} /* flashing container for the app (window is flashing) */
 .taskbar-widget .app-container .app-icon {} /* Icon inside the container */
 .taskbar-widget .app-container .app-title {} /* Label inside the container */
 ```
@@ -67,14 +68,15 @@ taskbar:
 ## Style Example
 ```css
 .taskbar-widget .app-container {
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    margin: 3px;
+    margin: 4px 2px;
     border-radius: 4px;
     padding: 0 4px;
 }
 .taskbar-widget .app-container.foreground {
-    background-color: rgba(255, 255, 255, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    background-color: rgba(255, 255, 255, 0.1);
+}
+.taskbar-widget .app-container.flashing {
+    background-color: rgba(255, 106, 106, 0.63);
 }
 .taskbar-widget .app-container .app-title {
     padding-left: 4px;
