@@ -539,6 +539,7 @@ class StackWidget(BaseWidget):
 
     def _get_app_icon(self, window_index: int, ignore_cache: bool) -> QPixmap | None:
         try:
+            hwnd = None
             hwnd = self._komorebi_windows[window_index]["hwnd"]
             process = get_process_info(hwnd)
             pid = process["pid"]
@@ -573,5 +574,5 @@ class StackWidget(BaseWidget):
 
         except Exception:
             if DEBUG:
-                logging.exception(f"Failed to get icons for window with HWND {hwnd}")
+                logging.exception(f"Failed to get icons for window with HWND {hwnd if hwnd is not None else 'unknown'}")
             return None

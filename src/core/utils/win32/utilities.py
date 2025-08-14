@@ -40,17 +40,31 @@ def get_monitor_info(monitor_hwnd: int) -> dict:
 def get_process_info(hwnd: int) -> dict:
     import psutil
 
-    process_id = GetWindowThreadProcessId(hwnd)
-    process = psutil.Process(process_id[-1])
+    _, pid = GetWindowThreadProcessId(hwnd)
+    pid = int(pid) & 0xFFFFFFFF  # coerce to unsigned 32-bit
+
+    if pid <= 0:
+        return {
+            "name": None,
+            "pid": 0,
+            "ppid": None,
+            "cpu_percent": 0.0,
+            "mem_percent": 0.0,
+            "num_threads": 0,
+            "username": None,
+            "status": None,
+        }
+
+    p = psutil.Process(pid)
     return {
-        "name": process.name(),
-        "pid": process.pid,
-        "ppid": process.ppid(),
-        "cpu_percent": process.cpu_percent(),
-        "mem_percent": process.memory_percent(),
-        "num_threads": process.num_threads(),
-        "username": process.username(),
-        "status": process.status(),
+        "name": p.name(),
+        "pid": p.pid if pid > 0 else 0,
+        "ppid": p.ppid(),
+        "cpu_percent": p.cpu_percent(),
+        "mem_percent": p.memory_percent(),
+        "num_threads": p.num_threads(),
+        "username": p.username(),
+        "status": p.status(),
     }
 
 
