@@ -16,6 +16,16 @@ DEFAULTS = {
         "radius": 3,
     },
     "container_padding": {"top": 0, "left": 0, "bottom": 0, "right": 0},
+    "app_icons": {
+        "enabled_populated": False,
+        "enabled_active": False,
+        "size": 16,
+        "max_icons": 0,
+        "hide_label": False,
+        "hide_duplicates": False,
+        "hide_floating": False,
+    },
+    "animation": False,
 }
 
 VALIDATION_SCHEMA = {
@@ -85,5 +95,30 @@ VALIDATION_SCHEMA = {
             "radius": {"type": "integer", "default": 3},
         },
         "default": DEFAULTS["default_shadow"],
+    },
+    "app_icons": {
+        "type": "dict",
+        "default": DEFAULTS["app_icons"],
+        "schema": {
+            "enabled_populated": {"type": "boolean", "default": DEFAULTS["app_icons"]["enabled_populated"]},
+            "enabled_active": {"type": "boolean", "default": DEFAULTS["app_icons"]["enabled_active"]},
+            "size": {"type": "integer", "default": DEFAULTS["app_icons"]["size"]},
+            "max_icons": {"type": "integer", "default": DEFAULTS["app_icons"]["max_icons"]},
+            "hide_label": {"type": "boolean", "default": DEFAULTS["app_icons"]["hide_label"]},
+            "hide_duplicates": {"type": "boolean", "default": DEFAULTS["app_icons"]["hide_duplicates"]},
+            "hide_floating": {"type": "boolean", "default": DEFAULTS["app_icons"]["hide_floating"]},
+        },
+    },
+    "animation": {"type": "boolean", "default": DEFAULTS["animation"]},
+    "label_shadow": {
+        "type": "dict",
+        "required": False,
+        "schema": {
+            "enabled": {"type": "boolean", "default": False},
+            "color": {"type": "string", "default": "black"},
+            "offset": {"type": "list", "default": [1, 1]},
+            "radius": {"type": "integer", "default": 3},
+        },
+        "default": {"enabled": False, "color": "black", "offset": [1, 1], "radius": 3},
     },
 }
