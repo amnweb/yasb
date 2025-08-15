@@ -112,6 +112,12 @@ class TrayMonitor(QObject):
         super().__init__(parent)
         self.hwnd: int = 0
         self.real_tray_hwnd: int = 0
+        self._is_destroyed: bool = False
+
+        try:
+            self.destroyed.connect(lambda: setattr(self, "_is_destroyed", True))  # type: ignore
+        except Exception:
+            pass
         atexit.register(self.destroy)
 
     def run(self):
@@ -133,8 +139,12 @@ class TrayMonitor(QObject):
 
     def destroy(self):
         """Clean up window and unregister class"""
-        if self.tray_monitor_window:
-            self.tray_monitor_window.destroy()
+        self._is_destroyed = True
+        if getattr(self, "tray_monitor_window", None):
+            try:
+                self.tray_monitor_window.destroy()
+            except Exception:
+                pass
 
     @staticmethod
     def send_taskbar_created():
@@ -145,6 +155,8 @@ class TrayMonitor(QObject):
 
     def _window_proc(self, hwnd: int, uMsg: int, wParam: int, lParam: int) -> int:
         """Main window procedure for handling window messages"""
+        if self._is_destroyed:
+            return DefWindowProc(hwnd, uMsg, wParam, lParam)
         if uMsg == WM_CLOSE:
             logger.debug(f"WM_CLOSE received, destroying window {hwnd}")
             DestroyWindow(hwnd)
@@ -176,15 +188,23 @@ class TrayMonitor(QObject):
             if tray_message.message_type in {NIM_ADD, NIM_MODIFY, NIM_SETVERSION}:
                 validated_data = self.validate_icon_data(icon_data)
                 validated_data.message_type = tray_message.message_type
-                self.icon_modified.emit(validated_data)
+                if not self._is_destroyed:
+                    try:
+                        self.icon_modified.emit(validated_data)
+                    except RuntimeError:
+                        return 0
             elif tray_message.message_type == NIM_DELETE:
-                self.icon_deleted.emit(
-                    IconData(
-                        hWnd=icon_data.hWnd,
-                        uID=icon_data.uID,
-                        guid=icon_data.guidItem.to_uuid() if icon_data.uFlags & NIF_GUID else None,
-                    )
-                )
+                if not self._is_destroyed:
+                    try:
+                        self.icon_deleted.emit(
+                            IconData(
+                                hWnd=icon_data.hWnd,
+                                uID=icon_data.uID,
+                                guid=icon_data.guidItem.to_uuid() if icon_data.uFlags & NIF_GUID else None,
+                            )
+                        )
+                    except RuntimeError:
+                        return 0
             return self.forward_message(hwnd, uMsg, wParam, lParam)
         elif copy_data.dwData == 3 and copy_data.lpData:
             icon_identifier = cast(copy_data.lpData, POINTER(WINNOTIFYICONIDENTIFIER)).contents
