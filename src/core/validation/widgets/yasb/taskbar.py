@@ -2,6 +2,7 @@ DEFAULTS = {
     "icon_size": 16,
     "tooltip": False,
     "monitor_exclusive": False,
+    "show_only_visible": False,
     "ignore_apps": {"classes": [], "processes": [], "titles": []},
     "animation": {"enabled": True, "type": "fadeInOut", "duration": 200},
     "title_label": {"enabled": False, "show": "focused", "min_length": 10, "max_length": 30},
@@ -13,6 +14,11 @@ VALIDATION_SCHEMA = {
     "icon_size": {"type": "integer", "default": DEFAULTS["icon_size"]},
     "tooltip": {"type": "boolean", "required": False, "default": DEFAULTS["tooltip"]},
     "monitor_exclusive": {"type": "boolean", "required": False, "default": DEFAULTS["monitor_exclusive"]},
+    "show_only_visible": {
+        "type": "boolean",
+        "required": False,
+        "default": DEFAULTS["show_only_visible"],
+    },
     "ignore_apps": {
         "type": "dict",
         "schema": {
