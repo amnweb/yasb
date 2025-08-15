@@ -105,6 +105,18 @@ class KomorebiControlWidget(BaseWidget):
         # Register for events
         self._event_service.register_event(KomorebiEvent.KomorebiConnect, self.k_signal_connect)
         self._event_service.register_event(KomorebiEvent.KomorebiDisconnect, self.k_signal_disconnect)
+        # Ensure we unregister on destruction to prevent late emits hitting deleted objects
+        try:
+            self.destroyed.connect(self._on_destroyed)  # type: ignore[attr-defined]
+        except Exception:
+            pass
+
+    def _on_destroyed(self, *args):
+        try:
+            self._event_service.unregister_event(KomorebiEvent.KomorebiConnect, self.k_signal_connect)
+            self._event_service.unregister_event(KomorebiEvent.KomorebiDisconnect, self.k_signal_disconnect)
+        except Exception:
+            pass
 
     def _start_version_check(self):
         """Starts a background thread to retrieve the Komorebi version."""

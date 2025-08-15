@@ -13,7 +13,7 @@ from core.event_service import EventService
 from core.utils.utilities import add_shadow
 from core.utils.widgets.komorebi.client import KomorebiClient
 from core.utils.win32.app_icons import get_window_icon
-from core.utils.win32.utilities import get_monitor_hwnd, get_process_info
+from core.utils.win32.utilities import get_monitor_hwnd
 from core.utils.win32.window_actions import close_application
 from core.validation.widgets.komorebi.stack import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
@@ -261,7 +261,6 @@ class StackWidget(BaseWidget):
         self._reverse_scroll_direction = reverse_scroll_direction
         self._icon_cache = dict()
         self.dpi = None
-        self._icon_update_retry_count = 0
 
         self._hide_no_window_text()
         self._register_signals_and_events()
@@ -273,6 +272,19 @@ class StackWidget(BaseWidget):
         self._event_service.register_event(KomorebiEvent.KomorebiConnect, self.k_signal_connect)
         self._event_service.register_event(KomorebiEvent.KomorebiDisconnect, self.k_signal_disconnect)
         self._event_service.register_event(KomorebiEvent.KomorebiUpdate, self.k_signal_update)
+        # Unregister on widget destruction to prevent late emits
+        try:
+            self.destroyed.connect(self._on_destroyed)  # type: ignore[attr-defined]
+        except Exception:
+            pass
+
+    def _on_destroyed(self, *args):
+        try:
+            self._event_service.unregister_event(KomorebiEvent.KomorebiConnect, self.k_signal_connect)
+            self._event_service.unregister_event(KomorebiEvent.KomorebiDisconnect, self.k_signal_disconnect)
+            self._event_service.unregister_event(KomorebiEvent.KomorebiUpdate, self.k_signal_update)
+        except Exception:
+            pass
 
     def _reset(self):
         self._komorebi_state = None
@@ -541,28 +553,20 @@ class StackWidget(BaseWidget):
         try:
             hwnd = None
             hwnd = self._komorebi_windows[window_index]["hwnd"]
-            process = get_process_info(hwnd)
-            pid = process["pid"]
             self.dpi = self.screen().devicePixelRatio()
-            cache_key = (hwnd, pid, self.dpi)
+            cache_key = (hwnd, self.dpi)
 
             if cache_key in self._icon_cache and not ignore_cache:
                 icon_img = self._icon_cache[cache_key]
             else:
                 icon_img = get_window_icon(hwnd)
                 if icon_img:
-                    self._icon_update_retry_count = 0
                     icon_img = icon_img.resize(
                         (int(self._icon_size * self.dpi), int(self._icon_size * self.dpi)), Image.LANCZOS
                     ).convert("RGBA")
                     self._icon_cache[cache_key] = icon_img
-                elif process["name"] == "ApplicationFrameHost.exe" and window_index == self._curr_window_index:
-                    if self._icon_update_retry_count < 10:
-                        self._icon_update_retry_count += 1
-                        QTimer.singleShot(100, lambda: self._get_app_icon(window_index, ignore_cache))
-                    else:
-                        self._icon_update_retry_count = 0
-
+            if not icon_img:
+                return None
             if icon_img:
                 qimage = QImage(icon_img.tobytes(), icon_img.width, icon_img.height, QImage.Format.Format_RGBA8888)
                 pixmap = QPixmap.fromImage(qimage)
