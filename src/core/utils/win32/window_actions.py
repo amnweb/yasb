@@ -2,8 +2,10 @@ import ctypes
 import logging
 
 import win32con
-import win32gui
 import win32process
+
+from core.utils.win32.bindings import kernel32 as k32
+from core.utils.win32.bindings import user32 as u32
 
 # --- Resolution helpers ---
 
@@ -14,14 +16,14 @@ def resolve_base_and_focus(hwnd: int) -> tuple[int, int]:
     GA_ROOTOWNER = 3
     base = hwnd
     try:
-        base = win32gui.GetAncestor(hwnd, GA_ROOTOWNER) or win32gui.GetAncestor(hwnd, GA_ROOT) or hwnd
+        base = u32.GetAncestor(hwnd, GA_ROOTOWNER) or u32.GetAncestor(hwnd, GA_ROOT) or hwnd
     except Exception:
         base = hwnd
 
     focus_target = base
     try:
-        last = win32gui.GetLastActivePopup(base)
-        if last and win32gui.IsWindowVisible(last):
+        last = u32.GetLastActivePopup(base)
+        if last and u32.IsWindowVisible(last):
             focus_target = last
     except Exception:
         pass
@@ -32,11 +34,11 @@ def is_owner_root_active(base: int) -> bool:
     """Check if the owner-root of the current foreground window matches base."""
     GA_ROOT = 2
     GA_ROOTOWNER = 3
-    fg = win32gui.GetForegroundWindow()
+    fg = u32.GetForegroundWindow()
     if not fg:
         return False
     try:
-        fg_top = win32gui.GetAncestor(fg, GA_ROOTOWNER) or win32gui.GetAncestor(fg, GA_ROOT) or fg
+        fg_top = u32.GetAncestor(fg, GA_ROOTOWNER) or u32.GetAncestor(fg, GA_ROOT) or fg
     except Exception:
         fg_top = fg
     return int(fg_top) == int(base)
@@ -44,8 +46,8 @@ def is_owner_root_active(base: int) -> bool:
 
 def can_minimize(base: int) -> bool:
     try:
-        style = win32gui.GetWindowLong(base, win32con.GWL_STYLE)
-        return bool(style & win32con.WS_MINIMIZEBOX) and bool(win32gui.IsWindowEnabled(base))
+        style = u32.GetWindowLong(base, win32con.GWL_STYLE)
+        return bool(style & win32con.WS_MINIMIZEBOX) and bool(u32.IsWindowEnabled(base))
     except Exception:
         return True
 
@@ -56,10 +58,9 @@ def can_minimize(base: int) -> bool:
 def send_sys_command(hwnd: int, cmd: int) -> bool:
     """Send WM_SYSCOMMAND to a window with a short timeout. Returns True on success."""
     try:
-        user32 = ctypes.windll.user32
         SMTO_ABORTIFHUNG = 0x0002
         result = ctypes.c_ulong()
-        ret = user32.SendMessageTimeoutW(
+        ret = u32.SendMessageTimeoutW(
             int(hwnd),
             int(win32con.WM_SYSCOMMAND),
             int(cmd),
@@ -76,24 +77,24 @@ def send_sys_command(hwnd: int, cmd: int) -> bool:
 def restore_window(hwnd: int) -> None:
     if not send_sys_command(hwnd, win32con.SC_RESTORE):
         try:
-            ctypes.windll.user32.ShowWindowAsync(int(hwnd), win32con.SW_RESTORE)
+            u32.ShowWindowAsync(int(hwnd), win32con.SW_RESTORE)
         except Exception:
-            win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
+            u32.ShowWindow(hwnd, win32con.SW_RESTORE)
 
 
 def minimize_window(hwnd: int) -> None:
     if not send_sys_command(hwnd, win32con.SC_MINIMIZE):
         try:
-            ctypes.windll.user32.ShowWindowAsync(int(hwnd), win32con.SW_MINIMIZE)
+            u32.ShowWindowAsync(int(hwnd), win32con.SW_MINIMIZE)
         except Exception:
-            win32gui.ShowWindow(hwnd, win32con.SW_FORCEMINIMIZE)
+            u32.ShowWindow(hwnd, win32con.SW_FORCEMINIMIZE)
 
 
 def show_window(hwnd: int) -> None:
     try:
-        ctypes.windll.user32.ShowWindowAsync(int(hwnd), win32con.SW_SHOW)
+        u32.ShowWindowAsync(int(hwnd), win32con.SW_SHOW)
     except Exception:
-        win32gui.ShowWindow(hwnd, win32con.SW_SHOW)
+        u32.ShowWindow(hwnd, win32con.SW_SHOW)
 
 
 # --- Foreground helper ---
@@ -101,33 +102,32 @@ def show_window(hwnd: int) -> None:
 
 def set_foreground(hwnd: int) -> None:
     """Attempt to set foreground reliably by attaching input to the target thread."""
-    user32 = ctypes.windll.user32
     try:
         tgt_tid, _ = win32process.GetWindowThreadProcessId(hwnd)
     except Exception:
         tgt_tid = 0
-    cur_tid = ctypes.windll.kernel32.GetCurrentThreadId()
+    cur_tid = k32.GetCurrentThreadId()
 
     attached = False
     if tgt_tid and cur_tid and tgt_tid != cur_tid:
         try:
-            attached = bool(user32.AttachThreadInput(cur_tid, tgt_tid, True))
+            attached = bool(u32.AttachThreadInput(cur_tid, tgt_tid, True))
         except Exception:
             attached = False
     try:
         try:
-            win32gui.BringWindowToTop(hwnd)
+            u32.BringWindowToTop(hwnd)
         except Exception:
             pass
-        user32.SetForegroundWindow(int(hwnd))
+        u32.SetForegroundWindow(int(hwnd))
         try:
-            user32.SetActiveWindow(int(hwnd))
+            u32.SetActiveWindow(int(hwnd))
         except Exception:
             pass
     finally:
         if attached:
             try:
-                user32.AttachThreadInput(cur_tid, tgt_tid, False)
+                u32.AttachThreadInput(cur_tid, tgt_tid, False)
             except Exception:
                 pass
 
@@ -148,17 +148,15 @@ def close_application(hwnd: int):
             logging.warning(f"Invalid HWND: {hwnd}")
             return
 
-        user32 = ctypes.windll.user32
-
         # Resolve a better target: prefer GA_ROOTOWNER, then GA_ROOT
         GA_ROOT = 2
         GA_ROOTOWNER = 3
         try:
-            root_owner = user32.GetAncestor(ctypes.wintypes.HWND(hwnd), ctypes.wintypes.UINT(GA_ROOTOWNER))
+            root_owner = u32.GetAncestor(int(hwnd), GA_ROOTOWNER)
         except Exception:
             root_owner = 0
         try:
-            root = user32.GetAncestor(ctypes.wintypes.HWND(hwnd), ctypes.wintypes.UINT(GA_ROOT))
+            root = u32.GetAncestor(int(hwnd), GA_ROOT)
         except Exception:
             root = 0
         target_hwnd = int(root_owner or root or hwnd)
@@ -168,18 +166,14 @@ def close_application(hwnd: int):
         SC_CLOSE = 0xF060
         SMTO_ABORTIFHUNG = 0x0002
 
-        try:
-            ULONG_PTR = ctypes.wintypes.ULONG_PTR  # type: ignore[attr-defined]
-            lpdw_result = ULONG_PTR()
-        except AttributeError:
-            lpdw_result = ctypes.wintypes.DWORD()
-        sent = user32.SendMessageTimeoutW(
-            ctypes.wintypes.HWND(target_hwnd),
-            ctypes.wintypes.UINT(WM_SYSCOMMAND),
-            ctypes.wintypes.WPARAM(SC_CLOSE),
-            ctypes.wintypes.LPARAM(0),
-            ctypes.wintypes.UINT(SMTO_ABORTIFHUNG),
-            ctypes.wintypes.UINT(2000),
+        lpdw_result = ctypes.c_ulong()
+        sent = u32.SendMessageTimeoutW(
+            int(target_hwnd),
+            int(WM_SYSCOMMAND),
+            int(SC_CLOSE),
+            0,
+            int(SMTO_ABORTIFHUNG),
+            int(2000),
             ctypes.byref(lpdw_result),
         )
 
@@ -188,16 +182,14 @@ def close_application(hwnd: int):
 
         # Fallback: WM_CLOSE via PostMessage
         WM_CLOSE = 0x0010
-        posted = user32.PostMessageW(ctypes.wintypes.HWND(target_hwnd), ctypes.wintypes.UINT(WM_CLOSE), 0, 0)
+        posted = u32.PostMessage(int(target_hwnd), int(WM_CLOSE), 0, 0)
         if posted:
             return
 
         # Last resort: EndTask (graceful attempt, not forced)
         # BOOL EndTask(HWND hWnd, BOOL fShutDown, BOOL fForce)
         try:
-            endtask_ok = user32.EndTask(
-                ctypes.wintypes.HWND(target_hwnd), ctypes.wintypes.BOOL(False), ctypes.wintypes.BOOL(False)
-            )
+            endtask_ok = u32.EndTask(int(target_hwnd), False, False)
             if not endtask_ok:
                 logging.warning(f"EndTask failed for HWND: {target_hwnd}")
         except Exception as et_ex:

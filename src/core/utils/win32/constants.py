@@ -7,6 +7,8 @@ from enum import IntEnum
 ERROR_SUCCESS = 0
 ACCESS_DENIED = 5
 ERROR_NOT_FOUND = 0x490
+ERROR_INVALID_HANDLE = 6
+ERROR_INVALID_PARAMETER = 87
 
 # FormatMessage constants
 FORMAT_MESSAGE_FROM_SYSTEM = 0x00001000
@@ -33,6 +35,13 @@ NIN_SELECT = 0x400
 NIN_CONTEXTMENU = 0x7B
 
 INVALID_HANDLE_VALUE = ctypes.c_void_p(-1).value
+
+# Common process/query flags
+PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+
+# DWM and window constants
+SW_MAXIMIZE = 3
+DWMWA_EXTENDED_FRAME_BOUNDS = 9
 
 # Constants for locale information
 LOCALE_NAME_MAX_LENGTH = 85

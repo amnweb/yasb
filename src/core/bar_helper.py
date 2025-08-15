@@ -22,7 +22,8 @@ from PyQt6.QtWidgets import (
 )
 
 from core.utils.controller import exit_application, reload_application
-from core.utils.win32.utilities import dwmapi, get_monitor_hwnd, get_window_rect, qmenu_rounded_corners
+from core.utils.win32.bindings import DwmGetWindowAttribute
+from core.utils.win32.utilities import get_monitor_hwnd, get_window_rect, qmenu_rounded_corners
 
 DWMWA_CLOAKED = 14
 S_OK = 0
@@ -194,7 +195,7 @@ class FullscreenManager(QObject):
         self._timer.timeout.connect(self._check_fullscreen_for_window)
 
         try:
-            dwmapi.DwmGetWindowAttribute
+            DwmGetWindowAttribute  # presence check
             self._dwm_available = True
         except (AttributeError, OSError):
             self._dwm_available = False
@@ -219,7 +220,7 @@ class FullscreenManager(QObject):
 
         try:
             is_cloaked = wintypes.DWORD(0)
-            result = dwmapi.DwmGetWindowAttribute(
+            result = DwmGetWindowAttribute(
                 wintypes.HWND(hwnd),
                 wintypes.DWORD(DWMWA_CLOAKED),
                 ctypes.byref(is_cloaked),

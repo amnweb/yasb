@@ -4,6 +4,7 @@ from ctypes import (
     POINTER,
     c_int,
     c_long,
+    c_ulong,
     windll,
 )
 from ctypes.wintypes import (
@@ -12,6 +13,7 @@ from ctypes.wintypes import (
     HANDLE,
     HDC,
     HICON,
+    HINSTANCE,
     HMENU,
     HWND,
     INT,
@@ -29,6 +31,23 @@ from core.utils.win32.structs import (
 from core.utils.win32.typecheck import CArgObject
 
 user32 = windll.user32
+user32.GetForegroundWindow.argtypes = []
+user32.GetForegroundWindow.restype = HWND
+
+user32.SetWinEventHook.argtypes = [
+    DWORD,  # eventMin
+    DWORD,  # eventMax
+    HINSTANCE,  # hmodWinEventProc (HMODULE/HINSTANCE)
+    LPVOID,  # lpfnWinEventProc (callback)
+    DWORD,  # idProcess
+    DWORD,  # idThread
+    DWORD,  # dwFlags
+]
+user32.SetWinEventHook.restype = HANDLE
+
+user32.UnhookWinEvent.argtypes = [HANDLE]
+user32.UnhookWinEvent.restype = BOOL
+
 
 user32.DefWindowProcW.argtypes = [HWND, UINT, WPARAM, LPARAM]
 user32.DefWindowProcW.restype = c_long
@@ -102,6 +121,9 @@ user32.SendMessageW.restype = c_int
 user32.IsWindow.argtypes = [HWND]
 user32.IsWindow.restype = BOOL
 
+user32.IsWindowEnabled.argtypes = [HWND]
+user32.IsWindowEnabled.restype = BOOL
+
 user32.GetWindowThreadProcessId.argtypes = [HWND, LPDWORD]
 user32.GetWindowThreadProcessId.restype = DWORD
 
@@ -116,6 +138,50 @@ user32.GetDC.restype = HDC
 
 user32.ReleaseDC.argtypes = [HANDLE, HDC]
 user32.ReleaseDC.restype = c_int
+
+user32.EnumWindows.argtypes = [LPVOID, LPARAM]
+user32.EnumWindows.restype = BOOL
+
+user32.SetForegroundWindow.argtypes = [HWND]
+user32.SetForegroundWindow.restype = BOOL
+
+# Using LPVOID for the data pointer to avoid hard dependency on struct definition here
+user32.SetWindowCompositionAttribute.argtypes = [HWND, LPVOID]
+user32.SetWindowCompositionAttribute.restype = c_int
+
+# Additional user32 APIs commonly used across the codebase
+user32.GetAncestor.argtypes = [HWND, UINT]
+user32.GetAncestor.restype = HWND
+
+user32.GetLastActivePopup.argtypes = [HWND]
+user32.GetLastActivePopup.restype = HWND
+
+user32.IsWindowVisible.argtypes = [HWND]
+user32.IsWindowVisible.restype = BOOL
+
+user32.GetWindowLongW.argtypes = [HWND, INT]
+user32.GetWindowLongW.restype = c_long
+
+user32.ShowWindowAsync.argtypes = [HWND, INT]
+user32.ShowWindowAsync.restype = BOOL
+
+user32.ShowWindow.argtypes = [HWND, INT]
+user32.ShowWindow.restype = BOOL
+
+user32.BringWindowToTop.argtypes = [HWND]
+user32.BringWindowToTop.restype = BOOL
+
+user32.SetActiveWindow.argtypes = [HWND]
+user32.SetActiveWindow.restype = HWND
+
+user32.AttachThreadInput.argtypes = [DWORD, DWORD, BOOL]
+user32.AttachThreadInput.restype = BOOL
+
+user32.SendMessageTimeoutW.argtypes = [HWND, UINT, WPARAM, LPARAM, UINT, UINT, LPVOID]
+user32.SendMessageTimeoutW.restype = c_int
+
+user32.EndTask.argtypes = [HWND, BOOL, BOOL]
+user32.EndTask.restype = BOOL
 
 
 def DefWindowProc(hwnd: int, uMsg: int, wParam: int, lParam: int) -> int:
@@ -230,6 +296,10 @@ def IsWindow(hwnd: int) -> bool:
     return user32.IsWindow(hwnd)
 
 
+def IsWindowEnabled(hwnd: int) -> bool:
+    return user32.IsWindowEnabled(hwnd)
+
+
 def GetWindowThreadProcessId(hwnd: int, lpdwProcessId: CArgObject) -> int:
     return user32.GetWindowThreadProcessId(hwnd, lpdwProcessId)
 
@@ -248,3 +318,106 @@ def GetDC(hwnd: int | None) -> int:
 
 def ReleaseDC(hwnd: int | None, hdc: int) -> int:
     return user32.ReleaseDC(hwnd, hdc)
+
+
+def GetForegroundWindow() -> int:
+    return user32.GetForegroundWindow()
+
+
+def SetWinEventHook(
+    eventMin: int,
+    eventMax: int,
+    hmodWinEventProc: int | None,
+    lpfnWinEventProc: LPVOID,
+    idProcess: int,
+    idThread: int,
+    dwFlags: int,
+) -> int:
+    return user32.SetWinEventHook(eventMin, eventMax, hmodWinEventProc, lpfnWinEventProc, idProcess, idThread, dwFlags)
+
+
+def UnhookWinEvent(hWinEventHook: int) -> bool:
+    return bool(user32.UnhookWinEvent(hWinEventHook))
+
+
+def EnumWindows(lpEnumFunc: LPVOID, lParam: int) -> bool:
+    return bool(user32.EnumWindows(lpEnumFunc, lParam))
+
+
+def SetForegroundWindow(hwnd: int) -> bool:
+    return bool(user32.SetForegroundWindow(hwnd))
+
+
+def SetWindowCompositionAttribute(hwnd: int, data: LPVOID) -> int:
+    return user32.SetWindowCompositionAttribute(hwnd, data)
+
+
+def GetAncestor(hwnd: int, ga_flags: int) -> int:
+    return user32.GetAncestor(hwnd, ga_flags)
+
+
+def GetLastActivePopup(hwnd: int) -> int:
+    return user32.GetLastActivePopup(hwnd)
+
+
+def IsWindowVisible(hwnd: int) -> bool:
+    return bool(user32.IsWindowVisible(hwnd))
+
+
+def GetWindowLong(hwnd: int, index: int) -> int:
+    return int(user32.GetWindowLongW(hwnd, index))
+
+
+def ShowWindowAsync(hwnd: int, cmd_show: int) -> bool:
+    return bool(user32.ShowWindowAsync(hwnd, cmd_show))
+
+
+def ShowWindow(hwnd: int, cmd_show: int) -> bool:
+    return bool(user32.ShowWindow(hwnd, cmd_show))
+
+
+def BringWindowToTop(hwnd: int) -> bool:
+    return bool(user32.BringWindowToTop(hwnd))
+
+
+def SetActiveWindow(hwnd: int) -> int:
+    return user32.SetActiveWindow(hwnd)
+
+
+def AttachThreadInput(id_attach: int, id_attach_to: int, attach: bool) -> bool:
+    return bool(user32.AttachThreadInput(id_attach, id_attach_to, attach))
+
+
+def SendMessageTimeout(
+    hwnd: int,
+    msg: int,
+    wParam: int,
+    lParam: int,
+    fuFlags: int,
+    uTimeout: int,
+    lpdwResult: int | None,
+) -> int:
+    # Accept None for lpdwResult and provide a dummy buffer
+    if lpdwResult is None:
+        tmp = c_ulong()
+        from ctypes import byref as _byref  # local import to avoid polluting namespace
+
+        return user32.SendMessageTimeoutW(hwnd, msg, wParam, lParam, fuFlags, uTimeout, _byref(tmp))
+    return user32.SendMessageTimeoutW(hwnd, msg, wParam, lParam, fuFlags, uTimeout, lpdwResult)
+
+
+def EndTask(hwnd: int, fShutDown: bool, fForce: bool) -> bool:
+    return bool(user32.EndTask(hwnd, fShutDown, fForce))
+
+
+def SendMessageTimeoutW(
+    hwnd: int,
+    msg: int,
+    wParam: int,
+    lParam: int,
+    fuFlags: int,
+    uTimeout: int,
+    lpdwResult,
+) -> int:
+    """Direct wrapper with the wide-character entrypoint name for robustness."""
+    return user32.SendMessageTimeoutW(hwnd, msg, wParam, lParam, fuFlags, uTimeout, lpdwResult)
