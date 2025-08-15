@@ -64,7 +64,8 @@ class ApplicationWindow:
         # Get monitor handle for this window
         monitor_handle = None
         try:
-            monitor_handle = win32api.MonitorFromWindow(self.hwnd, 0)
+            mh = win32api.MonitorFromWindow(self.hwnd, 0)
+            monitor_handle = int(mh) if mh is not None else None
         except Exception:
             pass
 

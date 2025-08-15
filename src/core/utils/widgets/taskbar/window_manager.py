@@ -5,6 +5,7 @@ from typing import Dict, Optional
 from PyQt6.QtCore import QAbstractNativeEventFilter, QCoreApplication, QObject, QTimer, pyqtSignal
 
 from core.utils.widgets.taskbar.application_window import ApplicationWindow
+from core.utils.win32 import constants as WCONST
 from core.utils.win32.bindings import (
     DeregisterShellHookWindow,
     EnumWindows,
@@ -15,9 +16,8 @@ from core.utils.win32.bindings import (
     SetWinEventHook,
     UnhookWinEvent,
 )
-from core.utils.win32.bindings import (
-    user32 as _user32_raw,
-)
+from core.utils.win32.bindings import user32 as _user32_raw
+from core.utils.win32.structs import MSG
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -106,20 +106,6 @@ class _ShellHookEventFilter(QAbstractNativeEventFilter):
             if eventType != "windows_generic_MSG":
                 return False, 0
 
-            import ctypes
-            from ctypes import wintypes
-
-            class MSG(ctypes.Structure):
-                _fields_ = [
-                    ("hwnd", wintypes.HWND),
-                    ("message", wintypes.UINT),
-                    ("wParam", wintypes.WPARAM),
-                    ("lParam", wintypes.LPARAM),
-                    ("time", wintypes.DWORD),
-                    ("pt_x", wintypes.LONG),
-                    ("pt_y", wintypes.LONG),
-                ]
-
             msg = ctypes.cast(int(message), ctypes.POINTER(MSG)).contents
             manager = self._get_manager()
             if not manager or manager.WM_SHELLHOOKMESSAGE is None:
@@ -149,25 +135,6 @@ class TaskbarWindowManager(QObject):
 
     # Windows constants (subset)
     WM_SHELLHOOKMESSAGE = None
-
-    HSHELL_WINDOWCREATED = 1
-    HSHELL_WINDOWDESTROYED = 2
-    HSHELL_WINDOWACTIVATED = 4
-    HSHELL_REDRAW = 6
-    HSHELL_ENDTASK = 10
-    HSHELL_WINDOWREPLACED = 13
-    HSHELL_WINDOWREPLACING = 14
-    HSHELL_RUDEAPPACTIVATED = 32772
-    HSHELL_FLASH = 32774
-    # Windows 8+ fullscreen notifications
-    HSHELL_FULLSCREENENTER = 53
-    HSHELL_FULLSCREENEXIT = 54
-
-    # WinEvent constants for cloak detection
-    EVENT_OBJECT_CLOAKED = 0x8017
-    EVENT_OBJECT_UNCLOAKED = 0x8018
-    WINEVENT_OUTOFCONTEXT = 0x0000
-    WINEVENT_SKIPOWNPROCESS = 0x0002
 
     def __init__(self, excluded_classes=None, ignored_processes=None, ignored_titles=None):
         super().__init__()
@@ -290,9 +257,9 @@ class TaskbarWindowManager(QObject):
                     if hWnd and idObject == 0 and idChild == 0:
                         hwnd_int = int(hWnd)
 
-                        if eventType == self.EVENT_OBJECT_UNCLOAKED:
+                        if eventType == WCONST.EVENT_OBJECT_UNCLOAKED:
                             QTimer.singleShot(100, lambda: self._on_window_uncloaked(hwnd_int))
-                        elif eventType == self.EVENT_OBJECT_CLOAKED:
+                        elif eventType == WCONST.EVENT_OBJECT_CLOAKED:
                             QTimer.singleShot(50, lambda: self._on_window_cloaked(hwnd_int))
                         else:
                             if hwnd_int in self._windows:
@@ -302,10 +269,10 @@ class TaskbarWindowManager(QObject):
 
             self._cloak_callback = WinEventProcType(cloak_event_callback)
 
-            flags = self.WINEVENT_OUTOFCONTEXT | self.WINEVENT_SKIPOWNPROCESS
+            flags = WCONST.WINEVENT_OUTOFCONTEXT | WCONST.WINEVENT_SKIPOWNPROCESS
 
             cloak_hook = SetWinEventHook(
-                self.EVENT_OBJECT_CLOAKED, self.EVENT_OBJECT_UNCLOAKED, 0, self._cloak_callback, 0, 0, flags
+                WCONST.EVENT_OBJECT_CLOAKED, WCONST.EVENT_OBJECT_UNCLOAKED, 0, self._cloak_callback, 0, 0, flags
             )
 
             if cloak_hook:
@@ -324,31 +291,29 @@ class TaskbarWindowManager(QObject):
             event = wparam
             hwnd_int = int(lparam) if lparam else 0
 
-            if event == self.HSHELL_WINDOWCREATED:
+            if event == WCONST.HSHELL_WINDOWCREATED:
                 self._on_window_created(hwnd_int)
-            elif event == self.HSHELL_WINDOWDESTROYED:
+            elif event == WCONST.HSHELL_WINDOWDESTROYED:
                 self._on_window_destroyed(hwnd_int)
-            elif event in (self.HSHELL_WINDOWACTIVATED, self.HSHELL_RUDEAPPACTIVATED):
+            elif event in (WCONST.HSHELL_WINDOWACTIVATED, WCONST.HSHELL_RUDEAPPACTIVATED):
                 self._on_window_activated(hwnd_int)
-            elif event == self.HSHELL_REDRAW:
+            elif event == WCONST.HSHELL_REDRAW:
                 self._on_window_redraw(hwnd_int)
-            elif event == self.HSHELL_FLASH:
+            elif event == WCONST.HSHELL_FLASH:
                 self._on_window_flash(hwnd_int)
-            # elif event == self.HSHELL_FULLSCREENENTER:
-            #     # The window entered fullscreen; mark it active and refresh its visuals
+            # elif event == WCONST.HSHELL_FULLSCREENENTER:
             #     if hwnd_int:
             #         self._on_window_activated(hwnd_int)
             #         self._on_window_redraw(hwnd_int)
-            elif event == self.HSHELL_FULLSCREENEXIT:
-                # After exiting fullscreen, allow the actual foreground window to dictate focus
+            elif event == WCONST.HSHELL_FULLSCREENEXIT:
                 QTimer.singleShot(50, lambda: self._on_window_activated(0))
-            elif event == self.HSHELL_ENDTASK:
+            elif event == WCONST.HSHELL_ENDTASK:
                 self._on_window_destroyed(hwnd_int)
-            elif event == self.HSHELL_WINDOWREPLACING:
+            elif event == WCONST.HSHELL_WINDOWREPLACING:
                 self._on_window_replacing(hwnd_int)
-            elif event == self.HSHELL_WINDOWREPLACED:
+            elif event == WCONST.HSHELL_WINDOWREPLACED:
                 self._on_window_replaced(hwnd_int)
-            elif event == 16:  # HSHELL_MONITORCHANGED (Windows 8+)
+            elif event == WCONST.HSHELL_MONITORCHANGED:
                 self._on_window_monitor_changed(hwnd_int)
             else:
                 pass
@@ -360,7 +325,7 @@ class TaskbarWindowManager(QObject):
             return 0
 
     def _on_window_created(self, hwnd):
-        """Add or update a window on creation."""
+        """Create or update immediately; rely on HSHELL_MONITORCHANGED for monitor updates."""
         try:
             if hwnd in self._windows:
                 self._update_window(hwnd)
@@ -370,7 +335,7 @@ class TaskbarWindowManager(QObject):
             logger.error(f"Error handling window created for {hwnd}: {e}")
 
     def _on_window_destroyed(self, hwnd):
-        """Remove a window when it’s destroyed."""
+        """Remove a window when it's destroyed."""
         try:
             if hwnd in self._windows:
                 self._remove_window(hwnd)
@@ -693,6 +658,8 @@ class TaskbarWindowManager(QObject):
 
         except Exception as e:
             logger.error(f"Error enumerating existing windows: {e}")
+
+    # Removed helper: simplified to call _on_window_monitor_changed after creation
 
     def _cleanup_win_event_hooks(self):
         """Uninstall WinEvent hooks."""

@@ -441,7 +441,10 @@ class TaskbarWidget(BaseWidget):
             if hwnd in self._window_buttons:
                 self._remove_window_ui(hwnd, window_data)
             return
-        self._update_window_ui(hwnd, window_data)
+        if hwnd not in self._window_buttons:
+            self._add_window_ui(hwnd, window_data)
+        else:
+            self._update_window_ui(hwnd, window_data)
 
     def _on_window_monitor_changed(self, hwnd, window_data):
         """Handle window monitor changed signal from task manager"""
@@ -457,7 +460,10 @@ class TaskbarWidget(BaseWidget):
                     self._remove_window_ui(hwnd, window_data)
         else:
             # If not monitor exclusive, treat as regular update
-            self._update_window_ui(hwnd, window_data)
+            if hwnd not in self._window_buttons and self._should_show_window(hwnd, window_data):
+                self._add_window_ui(hwnd, window_data)
+            else:
+                self._update_window_ui(hwnd, window_data)
 
     def _get_widget_monitor_handle(self):
         """Get the monitor handle for this widget using win32 utilities."""
