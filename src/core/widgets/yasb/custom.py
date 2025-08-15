@@ -1,9 +1,8 @@
 import json
 import re
 import subprocess
-import threading
 
-from PyQt6.QtCore import QObject, Qt, pyqtSignal
+from PyQt6.QtCore import QObject, Qt, QThread, pyqtSignal
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QWidget
 
 from core.utils.utilities import add_shadow
@@ -28,22 +27,24 @@ class CustomWorker(QObject):
     def run(self):
         exec_data = None
         if self.cmd:
-            proc = subprocess.Popen(
+            # We use text mode so stdout is str; encoding controls decoding
+            result = subprocess.run(
                 self.cmd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.DEVNULL,
                 creationflags=subprocess.CREATE_NO_WINDOW,
                 shell=self.use_shell,
+                text=True,
                 encoding=self.encoding,
             )
-            output = proc.stdout.read()
+            output = result.stdout or ""
             if self.return_type == "json":
                 try:
                     exec_data = json.loads(output)
                 except json.JSONDecodeError:
                     exec_data = None
             else:
-                exec_data = output.decode("utf-8").strip()
+                exec_data = output.strip()
         self.data_ready.emit(exec_data)
         self.finished.emit()
 
@@ -104,6 +105,10 @@ class CustomWidget(BaseWidget):
         self.callback_timer = "exec_custom"
 
         self._create_dynamically_label(self._label_content, self._label_alt_content)
+
+        self._worker = None
+        self._thread = None
+        self._worker_running = False
 
         if exec_options["run_once"]:
             self._exec_callback()
@@ -188,16 +193,32 @@ class CustomWidget(BaseWidget):
             active_widgets[widget_index].setText(self._truncate_label(part))
 
     def _exec_callback(self):
-        if self._exec_cmd:
-            worker = CustomWorker(
-                self._exec_cmd, self._exec_shell, self._exec_encoding, self._exec_return_type, self._hide_empty
-            )
-            worker_thread = threading.Thread(target=worker.run)
-            worker.data_ready.connect(self._handle_exec_data)
-            worker.finished.connect(worker.deleteLater)
-            worker_thread.start()
-        else:
+        if not self._exec_cmd:
             self._update_label()
+            return
+
+        # Prevent overlapping runs
+        if self._worker_running:
+            return
+
+        self._worker_running = True
+        self._worker = CustomWorker(
+            self._exec_cmd, self._exec_shell, self._exec_encoding, self._exec_return_type, self._hide_empty
+        )
+        self._thread = QThread(self)
+        self._worker.moveToThread(self._thread)
+        self._thread.started.connect(self._worker.run)
+        self._worker.data_ready.connect(self._handle_exec_data)
+        self._worker.finished.connect(self._thread.quit)
+        self._worker.finished.connect(self._worker.deleteLater)
+        self._thread.finished.connect(self._on_worker_finished)
+        self._thread.finished.connect(self._thread.deleteLater)
+        self._thread.start()
+
+    def _on_worker_finished(self):
+        self._worker_running = False
+        self._worker = None
+        self._thread = None
 
     def _handle_exec_data(self, exec_data):
         self._exec_data = exec_data
