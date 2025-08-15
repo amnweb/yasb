@@ -1,11 +1,23 @@
 import ctypes
 import logging
-from ctypes import wintypes
 from typing import Dict, Optional
 
 from PyQt6.QtCore import QAbstractNativeEventFilter, QCoreApplication, QObject, QTimer, pyqtSignal
 
 from core.utils.widgets.taskbar.application_window import ApplicationWindow
+from core.utils.win32.bindings import (
+    DeregisterShellHookWindow,
+    EnumWindows,
+    GetForegroundWindow,
+    IsWindow,
+    RegisterShellHookWindow,
+    RegisterWindowMessage,
+    SetWinEventHook,
+    UnhookWinEvent,
+)
+from core.utils.win32.bindings import (
+    user32 as _user32_raw,
+)
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -59,6 +71,13 @@ def connect_taskbar(widget):
             hwnd = int(top.winId())
     except Exception as e:
         logger.warning(f"Unable to obtain Qt window handle for shell hook: {e}")
+
+    # Propagate preference: keep cloaked tasks only when show_only_visible is False
+    try:
+        keep_cloaked = bool(getattr(widget, "_show_only_visible", True) is False)
+        setattr(task_manager, "_keep_cloaked_tasks", keep_cloaked)
+    except Exception:
+        setattr(task_manager, "_keep_cloaked_tasks", False)
 
     # Start the task manager using the Qt hwnd
     task_manager.start(hwnd)
@@ -140,6 +159,9 @@ class TaskbarWindowManager(QObject):
     HSHELL_WINDOWREPLACING = 14
     HSHELL_RUDEAPPACTIVATED = 32772
     HSHELL_FLASH = 32774
+    # Windows 8+ fullscreen notifications
+    HSHELL_FULLSCREENENTER = 53
+    HSHELL_FULLSCREENEXIT = 54
 
     # WinEvent constants for cloak detection
     EVENT_OBJECT_CLOAKED = 0x8017
@@ -164,12 +186,8 @@ class TaskbarWindowManager(QObject):
         self._ignored_titles = ignored_titles or set()
 
         # Windows API setup
-        self._user32 = ctypes.windll.user32
+        self._user32 = _user32_raw
         self._ole32 = ctypes.windll.ole32
-
-        # Setup API function signatures
-        self._user32.GetForegroundWindow.restype = wintypes.HWND
-        self._user32.GetForegroundWindow.argtypes = []
 
         # COM initialization
         try:
@@ -239,10 +257,10 @@ class TaskbarWindowManager(QObject):
             if not hwnd:
                 raise ValueError("Invalid hwnd for shell hook registration")
 
-            if not self._user32.RegisterShellHookWindow(hwnd):
+            if not RegisterShellHookWindow(hwnd):
                 raise RuntimeError("Failed to register shell hook on provided hwnd")
 
-            self.WM_SHELLHOOKMESSAGE = self._user32.RegisterWindowMessageW("SHELLHOOK")
+            self.WM_SHELLHOOKMESSAGE = RegisterWindowMessage("SHELLHOOK")
             if not self.WM_SHELLHOOKMESSAGE:
                 raise RuntimeError("Failed to register SHELLHOOK message")
 
@@ -286,7 +304,7 @@ class TaskbarWindowManager(QObject):
 
             flags = self.WINEVENT_OUTOFCONTEXT | self.WINEVENT_SKIPOWNPROCESS
 
-            cloak_hook = self._user32.SetWinEventHook(
+            cloak_hook = SetWinEventHook(
                 self.EVENT_OBJECT_CLOAKED, self.EVENT_OBJECT_UNCLOAKED, 0, self._cloak_callback, 0, 0, flags
             )
 
@@ -316,6 +334,14 @@ class TaskbarWindowManager(QObject):
                 self._on_window_redraw(hwnd_int)
             elif event == self.HSHELL_FLASH:
                 self._on_window_flash(hwnd_int)
+            # elif event == self.HSHELL_FULLSCREENENTER:
+            #     # The window entered fullscreen; mark it active and refresh its visuals
+            #     if hwnd_int:
+            #         self._on_window_activated(hwnd_int)
+            #         self._on_window_redraw(hwnd_int)
+            elif event == self.HSHELL_FULLSCREENEXIT:
+                # After exiting fullscreen, allow the actual foreground window to dictate focus
+                QTimer.singleShot(50, lambda: self._on_window_activated(0))
             elif event == self.HSHELL_ENDTASK:
                 self._on_window_destroyed(hwnd_int)
             elif event == self.HSHELL_WINDOWREPLACING:
@@ -354,7 +380,7 @@ class TaskbarWindowManager(QObject):
     def _on_window_activated(self, hwnd):
         """Mark activated window active and clear flashing; emit updates for state changes."""
         try:
-            foreground_hwnd = self._user32.GetForegroundWindow()
+            foreground_hwnd = GetForegroundWindow()
 
             if not hwnd and foreground_hwnd:
                 hwnd = foreground_hwnd
@@ -467,20 +493,27 @@ class TaskbarWindowManager(QObject):
             logger.error(f"Error handling monitor change for {hwnd}: {e}")
 
     def _on_window_cloaked(self, hwnd):
-        """Remove cloaked window from tracking."""
+        """Cloaked: keep or remove based on preference (_keep_cloaked_tasks)."""
         try:
             if hwnd in self._windows:
-                self._remove_window(hwnd)
+                if getattr(self, "_keep_cloaked_tasks", False):
+                    # Keep and refresh so widgets can react
+                    self._schedule_window_update(hwnd)
+                else:
+                    # Remove when not keeping cloaked tasks
+                    self._remove_window(hwnd)
         except Exception as e:
             logger.error(f"Error handling window cloaked for {hwnd}: {e}")
 
     def _on_window_uncloaked(self, hwnd):
-        """Add or update window when it becomes visible again."""
+        """Uncloaked: ensure tracking and refresh UI."""
         try:
-            if hwnd not in self._windows:
-                self._add_window(hwnd)
+            if hwnd in self._windows:
+                # Already tracked; just refresh
+                self._schedule_window_update(hwnd)
             else:
-                self._update_window(hwnd)
+                # Was removed while cloaked; add it back now that it's visible
+                self._add_window(hwnd)
         except Exception as e:
             logger.error(f"Error handling window uncloaked for {hwnd}: {e}")
 
@@ -488,7 +521,7 @@ class TaskbarWindowManager(QObject):
         """Create and track a window if it should be on the taskbar."""
         try:
             # Validate the handle is a real window
-            if not ctypes.windll.user32.IsWindow(hwnd):
+            if not IsWindow(hwnd):
                 return
 
             # Create ApplicationWindow instance with exclusion lists
@@ -527,7 +560,7 @@ class TaskbarWindowManager(QObject):
             if hwnd in self._windows:
                 return
 
-            if not ctypes.windll.user32.IsWindow(hwnd):
+            if not IsWindow(hwnd):
                 return
 
             app_window = ApplicationWindow(hwnd, self._excluded_classes, self._ignored_processes, self._ignored_titles)
@@ -546,7 +579,7 @@ class TaskbarWindowManager(QObject):
                 if hwnd in self._windows:
                     return
 
-                if not ctypes.windll.user32.IsWindow(hwnd):
+                if not IsWindow(hwnd):
                     return
 
                 app_window = ApplicationWindow(
@@ -583,6 +616,18 @@ class TaskbarWindowManager(QObject):
                 app_window.update()
 
                 if not app_window.is_taskbar_window():
+                    # If cloaked and preference says keep cloaked tasks, keep and emit
+                    try:
+                        is_cloaked = bool(app_window._is_cloaked())
+                    except Exception:
+                        is_cloaked = False
+
+                    if is_cloaked and getattr(self, "_keep_cloaked_tasks", False):
+                        new_data = app_window.as_dict()
+                        self.window_updated.emit(hwnd, new_data)
+                        return
+
+                    # Otherwise remove
                     self._remove_window(hwnd)
                     return
 
@@ -638,9 +683,9 @@ class TaskbarWindowManager(QObject):
             EnumWindowsProc = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.wintypes.HWND, ctypes.POINTER(ctypes.c_long))
             enum_callback = EnumWindowsProc(enum_proc)
 
-            self._user32.EnumWindows(enum_callback, 0)
+            EnumWindows(enum_callback, 0)
 
-            foreground_hwnd = self._user32.GetForegroundWindow()
+            foreground_hwnd = GetForegroundWindow()
             if foreground_hwnd and foreground_hwnd in self._windows:
                 window = self._windows[foreground_hwnd]
                 if hasattr(window, "is_active"):
@@ -653,7 +698,7 @@ class TaskbarWindowManager(QObject):
         """Uninstall WinEvent hooks."""
         for hook in self._win_event_hooks:
             try:
-                self._user32.UnhookWinEvent(hook)
+                UnhookWinEvent(hook)
             except:
                 pass
         self._win_event_hooks.clear()
@@ -662,7 +707,7 @@ class TaskbarWindowManager(QObject):
         """Unregister shell hook window."""
         if self._shell_hook_registered and self._shell_hook_hwnd:
             try:
-                self._user32.DeregisterShellHookWindow(self._shell_hook_hwnd)
+                DeregisterShellHookWindow(self._shell_hook_hwnd)
                 self._shell_hook_registered = False
                 self._shell_hook_hwnd = None
             except Exception as e:

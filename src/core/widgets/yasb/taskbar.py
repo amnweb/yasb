@@ -357,6 +357,7 @@ class TaskbarWidget(BaseWidget):
         animation: dict[str, str] | bool,
         title_label: dict[str, str],
         monitor_exclusive: bool,
+        show_only_visible: bool,
         tooltip: bool,
         ignore_apps: dict[str, list[str]],
         container_padding: dict,
@@ -375,6 +376,7 @@ class TaskbarWidget(BaseWidget):
         self._title_label = title_label
         self._tooltip = tooltip
         self._monitor_exclusive = monitor_exclusive
+        self._show_only_visible = show_only_visible
         self._ignore_apps = ignore_apps
         self._padding = container_padding
         self._label_shadow = label_shadow
@@ -427,13 +429,17 @@ class TaskbarWidget(BaseWidget):
 
     def _on_window_removed(self, hwnd, window_data):
         """Handle window removed signal from task manager"""
-        self._remove_window_ui(hwnd, window_data)
+        # Skip if we don't currently show this hwnd to avoid duplicate removals
+        if hwnd in self._window_buttons:
+            self._remove_window_ui(hwnd, window_data)
 
     def _on_window_updated(self, hwnd, window_data):
         """Handle window updated signal from task manager"""
         # Apply filtering - remove if no longer should be shown
         if not self._should_show_window(hwnd, window_data):
-            self._remove_window_ui(hwnd, window_data)
+            # Avoid duplicate removals if the button is already gone
+            if hwnd in self._window_buttons:
+                self._remove_window_ui(hwnd, window_data)
             return
         self._update_window_ui(hwnd, window_data)
 
@@ -523,9 +529,8 @@ class TaskbarWidget(BaseWidget):
 
         title = window_data.get("title", "")
         process = window_data.get("process_name", "")
-
-        icon = self._get_app_icon(hwnd, title)
-        # Store window info
+        # If process is explorer.exe (e.g. file explorer), we use the title for caching the icon.
+        icon = self._get_app_icon(hwnd, title if process == "explorer.exe" else "")
         self._window_buttons[hwnd] = (title, icon, hwnd, process)
 
         # Create UI container
@@ -573,7 +578,8 @@ class TaskbarWidget(BaseWidget):
             return
         title = window_data.get("title", "")
         process = window_data.get("process_name", "")
-        icon = self._get_app_icon(hwnd, title)
+        # If process is explorer.exe (e.g. file explorer), we use the title for caching the icon.
+        icon = self._get_app_icon(hwnd, title if process == "explorer.exe" else "")
         self._window_buttons[hwnd] = (title, icon, hwnd, process)
 
         # Direct lookup for the widget

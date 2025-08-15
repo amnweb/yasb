@@ -2,7 +2,8 @@
 | Option            | Type    | Default                                                                 | Description                                                                 |
 |-------------------|---------|-------------------------------------------------------------------------|-----------------------------------------------------------------------------|
 | `icon_size`           | integer  | 16                        | The size of icons |
-| `ignore_apps`       | dict    | `processes:[],titles[],classes:[]` | Ignore some apps. |
+| `show_only_visible` | boolean | `False` | Whether to show only visible applications in the taskbar. |
+| `ignore_apps`       | dict    | `processes:[], titles[], classes:[]` | Ignore applications by process name, title, or class. |
 | `tooltip`  | boolean  | `True`        | Whether to show the tooltip on hover. |
 | `title_label`       | dict    | `{'enabled': False, 'show': 'focused', 'min_length': 10, 'max_length': 30}`                     | Title label configuration for displaying window titles.                     |
 | `monitor_exclusive` | boolean | `False` | Whether the application should be exclusive to the monitor. |
@@ -38,6 +39,7 @@ taskbar:
 ## Description of Options
 
 - **icon_size:** The size of icons which will show in the widget.
+- **show_only_visible:** If set to `True`, the taskbar will only show applications that are currently visible on the screen.
 - **tooltip:** Whether to show the tooltip on hover.
 - **title_label:** A dictionary specifying the configuration for window title labels. It includes:
   - enabled: A boolean flag to enable or disable title labels.

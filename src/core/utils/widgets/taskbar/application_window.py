@@ -1,10 +1,12 @@
 import ctypes
 import logging
-import os
 
 import win32api
 import win32con
 import win32gui
+
+from core.utils.win32.bindings import DwmGetWindowAttribute, IsWindowEnabled
+from core.utils.win32.utilities import get_process_info
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.WARNING)
@@ -93,9 +95,7 @@ class ApplicationWindow:
         try:
             DWMWA_CLOAKED = 14
             cloaked = ctypes.c_uint(0)
-            res = ctypes.windll.dwmapi.DwmGetWindowAttribute(
-                int(self.hwnd), DWMWA_CLOAKED, ctypes.byref(cloaked), ctypes.sizeof(cloaked)
-            )
+            res = DwmGetWindowAttribute(int(self.hwnd), DWMWA_CLOAKED, ctypes.byref(cloaked), ctypes.sizeof(cloaked))
             return res == 0 and cloaked.value > 0
         except Exception:
             return False
@@ -172,7 +172,7 @@ class ApplicationWindow:
             try:
                 is_enabled = bool(win32gui.IsWindowEnabled(self.hwnd))
             except AttributeError:
-                is_enabled = bool(ctypes.windll.user32.IsWindowEnabled(int(self.hwnd)))
+                is_enabled = bool(IsWindowEnabled(int(self.hwnd)))
             return has_minimize_box and is_enabled
         except Exception:
             return False
@@ -239,23 +239,7 @@ class ApplicationWindow:
     def _get_process_name(self):
         """Return the owning process filename (e.g., 'explorer.exe') or None on failure."""
         try:
-            process_id = ctypes.c_ulong()
-            ctypes.windll.user32.GetWindowThreadProcessId(self.hwnd, ctypes.byref(process_id))
-
-            # Open process with minimal rights needed for name query
-            process_handle = ctypes.windll.kernel32.OpenProcess(
-                0x0400, False, process_id.value
-            )  # PROCESS_QUERY_INFORMATION
-            if process_handle:
-                try:
-                    # Get process name
-                    module_name = ctypes.create_unicode_buffer(260)
-                    size = ctypes.c_ulong(260)
-                    if ctypes.windll.psapi.GetModuleFileNameExW(process_handle, None, module_name, size):
-                        full_path = module_name.value
-                        return os.path.basename(full_path)
-                finally:
-                    ctypes.windll.kernel32.CloseHandle(process_handle)
-            return None
+            info = get_process_info(self.hwnd)
+            return info.get("name")
         except Exception:
             return None
