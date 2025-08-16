@@ -437,7 +437,7 @@ class VolumeWidget(BaseWidget):
                 self._mute_text if mute_status == 1 else f"{round(self.volume.GetMasterVolumeLevelScalar() * 100)}%"
             )
         except Exception:
-            icon_volume, level_volume = "", "No Device"
+            mute_status, icon_volume, level_volume = None, "", "No Device"
 
         label_options = {"{icon}": icon_volume, "{level}": level_volume}
 
