@@ -42,7 +42,7 @@ battery:
       icon_low: "\uf243"
       icon_medium: "\uf242"
       icon_high: "\uf241"
-      icon_full: "uf240"
+      icon_full: "\uf240"
     label_shadow:
       enabled: true
       color: "black"
