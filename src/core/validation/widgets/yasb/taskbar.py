@@ -3,6 +3,7 @@ DEFAULTS = {
     "tooltip": False,
     "monitor_exclusive": False,
     "show_only_visible": False,
+    "strict_filtering": True,
     "ignore_apps": {"classes": [], "processes": [], "titles": []},
     "animation": {"enabled": True, "type": "fadeInOut", "duration": 200},
     "title_label": {"enabled": False, "show": "focused", "min_length": 10, "max_length": 30},
@@ -19,6 +20,7 @@ VALIDATION_SCHEMA = {
         "required": False,
         "default": DEFAULTS["show_only_visible"],
     },
+    "strict_filtering": {"type": "boolean", "required": False, "default": DEFAULTS["strict_filtering"]},
     "ignore_apps": {
         "type": "dict",
         "schema": {

@@ -26,11 +26,13 @@ _shared_task_manager = None
 _shellhook_event_filter = None
 
 
-def get_shared_task_manager(excluded_classes=None, ignored_processes=None, ignored_titles=None):
+def get_shared_task_manager(excluded_classes=None, ignored_processes=None, ignored_titles=None, strict_filtering=False):
     """Return the singleton TaskbarWindowManager instance, creating it if needed."""
     global _shared_task_manager
     if _shared_task_manager is None:
-        _shared_task_manager = TaskbarWindowManager(excluded_classes, ignored_processes, ignored_titles)
+        _shared_task_manager = TaskbarWindowManager(
+            excluded_classes, ignored_processes, ignored_titles, strict_filtering
+        )
     return _shared_task_manager
 
 
@@ -46,7 +48,12 @@ def connect_taskbar(widget):
         ignored_processes.update(widget._ignore_apps.get("processes", []))
         ignored_titles.update(widget._ignore_apps.get("titles", []))
 
-    task_manager = get_shared_task_manager(excluded_classes, ignored_processes, ignored_titles)
+    try:
+        strict_filtering = bool(getattr(widget, "_strict_filtering", False))
+    except Exception:
+        strict_filtering = False
+
+    task_manager = get_shared_task_manager(excluded_classes, ignored_processes, ignored_titles, strict_filtering)
 
     # Connect signals
     task_manager.window_added.connect(widget._on_window_added)
@@ -136,7 +143,7 @@ class TaskbarWindowManager(QObject):
     # Windows constants (subset)
     WM_SHELLHOOKMESSAGE = None
 
-    def __init__(self, excluded_classes=None, ignored_processes=None, ignored_titles=None):
+    def __init__(self, excluded_classes=None, ignored_processes=None, ignored_titles=None, strict_filtering=False):
         super().__init__()
         self._windows = {}
         self._initialized = False
@@ -144,6 +151,7 @@ class TaskbarWindowManager(QObject):
         self._shell_hook_hwnd = None
         self._win_event_hooks = []
         self._com_initialized = False
+        self._strict_filtering = strict_filtering
         # Debounce timers for per-hwnd coalesced updates (e.g., Explorer icon settling)
         self._pending_updates = {}
 
@@ -239,7 +247,7 @@ class TaskbarWindowManager(QObject):
             raise
 
     def _set_win_event_hooks(self):
-        """Install WinEvent hooks for cloak/uncloak notifications."""
+        """Install WinEvent hooks for cloak/uncloak and, when not strict, show/hide."""
         try:
             WinEventProcType = ctypes.WINFUNCTYPE(
                 None,
@@ -261,11 +269,17 @@ class TaskbarWindowManager(QObject):
                             QTimer.singleShot(100, lambda: self._on_window_uncloaked(hwnd_int))
                         elif eventType == WCONST.EVENT_OBJECT_CLOAKED:
                             QTimer.singleShot(50, lambda: self._on_window_cloaked(hwnd_int))
+                        elif eventType == WCONST.EVENT_OBJECT_SHOW:
+                            if not self._strict_filtering:
+                                QTimer.singleShot(0, lambda: self._on_window_show(hwnd_int))
+                        elif eventType == WCONST.EVENT_OBJECT_HIDE:
+                            if not self._strict_filtering:
+                                QTimer.singleShot(0, lambda: self._on_window_hide(hwnd_int))
                         else:
                             if hwnd_int in self._windows:
                                 self._schedule_window_update(hwnd_int)
-                except Exception as e:
-                    logger.error(f"Error in cloak event callback: {e}")
+                except BaseException:
+                    return
 
             self._cloak_callback = WinEventProcType(cloak_event_callback)
 
@@ -280,10 +294,18 @@ class TaskbarWindowManager(QObject):
             else:
                 logger.warning("Failed to set cloak/uncloak event hooks")
 
+            # SHOW/HIDE hooks only when not using strict filtering
+            if not self._strict_filtering:
+                show_hide_hook = SetWinEventHook(
+                    WCONST.EVENT_OBJECT_SHOW, WCONST.EVENT_OBJECT_HIDE, 0, self._cloak_callback, 0, 0, flags
+                )
+                if show_hide_hook:
+                    self._win_event_hooks.append(show_hide_hook)
+                else:
+                    logger.warning("Failed to set show/hide event hooks")
+
         except Exception as e:
             logger.error(f"Failed to set WinEvent hooks: {e}")
-
-    # Hidden window WndProc removed in favor of Qt native event filter
 
     def _handle_shell_hook_message(self, wparam, lparam):
         """Handle shell hook messages and schedule appropriate updates."""
@@ -301,12 +323,6 @@ class TaskbarWindowManager(QObject):
                 self._on_window_redraw(hwnd_int)
             elif event == WCONST.HSHELL_FLASH:
                 self._on_window_flash(hwnd_int)
-            # elif event == WCONST.HSHELL_FULLSCREENENTER:
-            #     if hwnd_int:
-            #         self._on_window_activated(hwnd_int)
-            #         self._on_window_redraw(hwnd_int)
-            elif event == WCONST.HSHELL_FULLSCREENEXIT:
-                QTimer.singleShot(50, lambda: self._on_window_activated(0))
             elif event == WCONST.HSHELL_ENDTASK:
                 self._on_window_destroyed(hwnd_int)
             elif event == WCONST.HSHELL_WINDOWREPLACING:
@@ -461,12 +477,31 @@ class TaskbarWindowManager(QObject):
         """Cloaked: keep or remove based on preference (_keep_cloaked_tasks)."""
         try:
             if hwnd in self._windows:
+                app_window = self._windows[hwnd]
                 if getattr(self, "_keep_cloaked_tasks", False):
                     # Keep and refresh so widgets can react
                     self._schedule_window_update(hwnd)
                 else:
-                    # Remove when not keeping cloaked tasks
-                    self._remove_window(hwnd)
+                    # When strict filtering is off, tolerate transient UWP cloaks by keeping and refreshing
+                    # We only need this when we have fullscreen UWP apps and using tiling manager
+                    is_uwp = False
+                    if not self._strict_filtering:
+                        try:
+                            cls = (app_window.class_name or "").strip()
+                            pname = (app_window._get_process_name() or "").strip()
+                            is_uwp = (
+                                cls in ("Windows.UI.Core.CoreWindow", "ApplicationFrameWindow")
+                                or pname == "ApplicationFrameHost.exe"
+                            )
+                        except Exception:
+                            is_uwp = False
+
+                    if is_uwp:
+                        # Keep and refresh _update_window has the UWP transient-keep heuristic
+                        self._schedule_window_update(hwnd)
+                    else:
+                        # Remove when not keeping cloaked tasks
+                        self._remove_window(hwnd)
         except Exception as e:
             logger.error(f"Error handling window cloaked for {hwnd}: {e}")
 
@@ -482,6 +517,24 @@ class TaskbarWindowManager(QObject):
         except Exception as e:
             logger.error(f"Error handling window uncloaked for {hwnd}: {e}")
 
+    def _on_window_show(self, hwnd):
+        """SHOW event add or refresh the window."""
+        try:
+            if hwnd in self._windows:
+                self._update_window(hwnd)
+            else:
+                self._add_window(hwnd)
+        except Exception as e:
+            logger.error(f"Error handling window show for {hwnd}: {e}")
+
+    def _on_window_hide(self, hwnd):
+        """HIDE event remove from taskbar tracking."""
+        try:
+            if hwnd in self._windows:
+                self._remove_window(hwnd)
+        except Exception as e:
+            logger.error(f"Error handling window hide for {hwnd}: {e}")
+
     def _add_window(self, hwnd, is_active=False, is_flashing=False):
         """Create and track a window if it should be on the taskbar."""
         try:
@@ -490,7 +543,9 @@ class TaskbarWindowManager(QObject):
                 return
 
             # Create ApplicationWindow instance with exclusion lists
-            app_window = ApplicationWindow(hwnd, self._excluded_classes, self._ignored_processes, self._ignored_titles)
+            app_window = ApplicationWindow(
+                hwnd, self._excluded_classes, self._ignored_processes, self._ignored_titles, self._strict_filtering
+            )
 
             # Check if window should be shown in taskbar
             if not app_window.is_taskbar_window():
@@ -528,7 +583,9 @@ class TaskbarWindowManager(QObject):
             if not IsWindow(hwnd):
                 return
 
-            app_window = ApplicationWindow(hwnd, self._excluded_classes, self._ignored_processes, self._ignored_titles)
+            app_window = ApplicationWindow(
+                hwnd, self._excluded_classes, self._ignored_processes, self._ignored_titles, self._strict_filtering
+            )
             if app_window.is_taskbar_window():
                 self._windows[hwnd] = app_window
                 window_data = app_window.as_dict()
@@ -548,7 +605,7 @@ class TaskbarWindowManager(QObject):
                     return
 
                 app_window = ApplicationWindow(
-                    hwnd, self._excluded_classes, self._ignored_processes, self._ignored_titles
+                    hwnd, self._excluded_classes, self._ignored_processes, self._ignored_titles, self._strict_filtering
                 )
                 if app_window.is_taskbar_window():
                     self._windows[hwnd] = app_window
@@ -581,6 +638,22 @@ class TaskbarWindowManager(QObject):
                 app_window.update()
 
                 if not app_window.is_taskbar_window():
+                    # Keep UWP windows through transient transitions only when not using strict filtering
+                    # We only need this when we have fullscreen UWP apps and using tiling manager
+                    if not self._strict_filtering:
+                        try:
+                            cls = (app_window.class_name or "").strip()
+                            pname = (app_window._get_process_name() or "").strip()
+                            is_uwp = (
+                                cls in ("Windows.UI.Core.CoreWindow", "ApplicationFrameWindow")
+                                or pname == "ApplicationFrameHost.exe"
+                            )
+                            if is_uwp:
+                                new_data = app_window.as_dict()
+                                self.window_updated.emit(hwnd, new_data)
+                                return
+                        except Exception:
+                            pass
                     # If cloaked and preference says keep cloaked tasks, keep and emit
                     try:
                         is_cloaked = bool(app_window._is_cloaked())

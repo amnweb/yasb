@@ -18,13 +18,15 @@ class ApplicationWindow:
     Holds identity (hwnd) and metadata used for filtering and UI state.
     """
 
-    def __init__(self, hwnd, excluded_classes=None, ignored_processes=None, ignored_titles=None):
+    def __init__(
+        self, hwnd, excluded_classes=None, ignored_processes=None, ignored_titles=None, strict_filtering=False
+    ):
         self.hwnd = hwnd
         self.title = self._get_title()
         self.class_name = self._get_class_name()
         self.is_active = False
         self.is_flashing = False
-
+        self._strict_filtering = strict_filtering
         # Store exclusion lists (combine with defaults if provided)
         self.excluded_classes = set(excluded_classes) if excluded_classes else set()
         self.ignored_processes = set(ignored_processes) if ignored_processes else set()
@@ -160,7 +162,7 @@ class ApplicationWindow:
                 and ((not is_noactivate) or is_appwindow)
                 and (not is_toolwindow)
                 and (not is_deleted)
-                and self.can_minimize()
+                and ((not self._strict_filtering) or self.can_minimize())
             )
         except Exception:
             return False

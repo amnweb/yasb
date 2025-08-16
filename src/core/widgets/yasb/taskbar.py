@@ -357,6 +357,7 @@ class TaskbarWidget(BaseWidget):
         animation: dict[str, str] | bool,
         title_label: dict[str, str],
         monitor_exclusive: bool,
+        strict_filtering: bool,
         show_only_visible: bool,
         tooltip: bool,
         ignore_apps: dict[str, list[str]],
@@ -376,6 +377,7 @@ class TaskbarWidget(BaseWidget):
         self._title_label = title_label
         self._tooltip = tooltip
         self._monitor_exclusive = monitor_exclusive
+        self._strict_filtering = strict_filtering
         self._show_only_visible = show_only_visible
         self._ignore_apps = ignore_apps
         self._padding = container_padding
@@ -439,7 +441,7 @@ class TaskbarWidget(BaseWidget):
         if not self._should_show_window(hwnd, window_data):
             # Avoid duplicate removals if the button is already gone
             if hwnd in self._window_buttons:
-                self._remove_window_ui(hwnd, window_data)
+                self._remove_window_ui(hwnd, window_data, immediate=True)
             return
         if hwnd not in self._window_buttons:
             self._add_window_ui(hwnd, window_data)
@@ -457,7 +459,7 @@ class TaskbarWidget(BaseWidget):
             else:
                 # Window moved away from our monitor - remove if present
                 if hwnd in self._window_buttons:
-                    self._remove_window_ui(hwnd, window_data)
+                    self._remove_window_ui(hwnd, window_data, immediate=True)
         else:
             # If not monitor exclusive, treat as regular update
             if hwnd not in self._window_buttons and self._should_show_window(hwnd, window_data):
@@ -554,8 +556,8 @@ class TaskbarWidget(BaseWidget):
         else:
             self._widget_container_layout.addWidget(container)
 
-    def _remove_window_ui(self, hwnd, window_data):
-        """Remove window UI element"""
+    def _remove_window_ui(self, hwnd, window_data, *, immediate: bool = False):
+        """Remove window UI element. If immediate=True, bypass animations to prevent duplicates across monitors."""
         if self._suspend_updates:
             return
         # Prefer direct lookup, fallback to scan once
@@ -567,7 +569,7 @@ class TaskbarWidget(BaseWidget):
                     widget = w
                     break
         if widget is not None:
-            if self._animation["enabled"]:
+            if self._animation["enabled"] and not immediate:
                 self._animate_container(widget, start_width=widget.width(), end_width=0)
             else:
                 try:
@@ -894,11 +896,6 @@ class TaskbarWidget(BaseWidget):
             if win32gui.IsIconic(base):
                 restore_window(base)
                 set_foreground(focus_target)
-                # After successful raise, reflect expected focus immediately
-                # try:
-                #     self._clear_others_set_foreground(base)
-                # except Exception:
-                #     pass
                 return
 
             if is_active and can_minimize(base):
@@ -907,11 +904,7 @@ class TaskbarWidget(BaseWidget):
 
             show_window(base)
             set_foreground(focus_target)
-            # After successful raise, reflect expected focus immediately
-            # try:
-            #     self._clear_others_set_foreground(base)
-            # except Exception:
-            #     pass
+
         except Exception as e:
             try:
                 win32gui.ShowWindow(hwnd, win32con.SW_SHOW)
