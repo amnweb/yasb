@@ -3,14 +3,30 @@ import ctypes.wintypes
 import logging
 import winreg
 from contextlib import suppress
+from ctypes import GetLastError
+from functools import lru_cache
 
 from win32api import GetMonitorInfo, MonitorFromWindow
 from win32gui import GetClassName, GetWindowPlacement, GetWindowRect, GetWindowText
-from win32process import GetWindowThreadProcessId
 
-SW_MAXIMIZE = 3
-DWMWA_EXTENDED_FRAME_BOUNDS = 9
-dwmapi = ctypes.WinDLL("dwmapi")
+from core.utils.win32.bindings import (
+    CloseHandle,
+    DwmGetWindowAttribute,
+    DwmSetWindowAttribute,
+    GetForegroundWindow,
+    GetWindowThreadProcessId,
+    OpenProcess,
+    QueryFullProcessImageNameW,
+    SetForegroundWindow,
+)
+from core.utils.win32.constants import (
+    ACCESS_DENIED,
+    DWMWA_EXTENDED_FRAME_BOUNDS,
+    ERROR_INVALID_HANDLE,
+    ERROR_INVALID_PARAMETER,
+    PROCESS_QUERY_LIMITED_INFORMATION,
+    SW_MAXIMIZE,
+)
 
 
 def get_monitor_hwnd(window_hwnd: int) -> int:
@@ -37,27 +53,67 @@ def get_monitor_info(monitor_hwnd: int) -> dict:
     }
 
 
-def get_process_info(hwnd: int) -> dict:
-    import psutil
+@lru_cache(maxsize=4096)
+def _pid_to_name(pid: int) -> str | None:
+    """Return the executable file name for a PID or None on failure."""
+    h_process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
+    if not h_process:
+        return None
+    try:
+        size = ctypes.c_ulong(1024)
+        buf = ctypes.create_unicode_buffer(size.value)
+        if QueryFullProcessImageNameW(h_process, 0, buf, ctypes.byref(size)):
+            val = buf.value
+            i = val.rfind("\\")
+            return val[i + 1 :] if i != -1 else val
+        return None
+    finally:
+        CloseHandle(h_process)
 
-    process_id = GetWindowThreadProcessId(hwnd)
-    process = psutil.Process(process_id[-1])
-    return {
-        "name": process.name(),
-        "pid": process.pid,
-        "ppid": process.ppid(),
-        "cpu_percent": process.cpu_percent(),
-        "mem_percent": process.memory_percent(),
-        "num_threads": process.num_threads(),
-        "username": process.username(),
-        "status": process.status(),
-    }
+
+def get_process_info(hwnd: int) -> dict:
+    """Get process info { name, pid }.
+
+    - Returns pid=0 when no valid PID is associated or process is gone.
+    - Returns name=None when access is denied or name can't be resolved.
+    """
+    try:
+        pid_c = ctypes.c_ulong(0)
+        GetWindowThreadProcessId(hwnd, ctypes.byref(pid_c))
+        pid = int(pid_c.value)
+    except Exception:
+        return {"name": None, "pid": 0}
+
+    if pid <= 0:
+        return {"name": None, "pid": 0}
+
+    name = _pid_to_name(pid)
+    if name is not None:
+        return {"name": name, "pid": pid}
+
+    # Disambiguate failure: try opening to check error cause
+    h_process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
+    if not h_process:
+        # Determine why it failed
+        err = GetLastError()
+        if err in (ERROR_INVALID_PARAMETER, ERROR_INVALID_HANDLE, 0):
+            # Process likely no longer exists
+            return {"name": None, "pid": 0}
+        if err == ACCESS_DENIED:
+            # Access denied: process exists but protected
+            return {"name": None, "pid": pid}
+        # Unknown: keep pid but no name
+        return {"name": None, "pid": pid}
+    else:
+        CloseHandle(h_process)
+        # Handle opened but name lookup failed: keep pid without name
+        return {"name": None, "pid": pid}
 
 
 def get_window_extended_frame_bounds(hwnd: int) -> dict:
     rect = ctypes.wintypes.RECT()
 
-    dwmapi.DwmGetWindowAttribute(
+    DwmGetWindowAttribute(
         ctypes.wintypes.HWND(hwnd),
         ctypes.wintypes.DWORD(DWMWA_EXTENDED_FRAME_BOUNDS),
         ctypes.byref(rect),
@@ -80,22 +136,6 @@ def get_window_rect(hwnd: int) -> dict:
 def is_window_maximized(hwnd: int) -> bool:
     window_placement = GetWindowPlacement(hwnd)
     return window_placement[1] == SW_MAXIMIZE
-
-
-def close_application(hwnd: int):
-    """
-    Close the application associated with the given HWND.
-    This function attempts to close the window gracefully using WM_CLOSE.
-    """
-    try:
-        if not hwnd or hwnd == 0:
-            logging.warning(f"Invalid HWND: {hwnd}")
-            return
-        result = ctypes.windll.user32.PostMessageW(hwnd, 0x0010, 0, 0)
-        if not result:
-            logging.warning(f"PostMessageW failed for HWND: {hwnd}")
-    except Exception as e:
-        logging.error(f"Failed to close window {hwnd}: {e}")
 
 
 def get_hwnd_info(hwnd: int) -> dict:
@@ -126,7 +166,7 @@ def qmenu_rounded_corners(qwidget):
         DWMWCP_ROUND = 2
 
         preference = ctypes.wintypes.DWORD(DWMWCP_ROUND)
-        dwmapi.DwmSetWindowAttribute(
+        DwmSetWindowAttribute(
             ctypes.wintypes.HWND(hwnd),
             ctypes.wintypes.DWORD(DWMWA_WINDOW_CORNER_PREFERENCE),
             ctypes.byref(preference),
@@ -140,13 +180,13 @@ def qmenu_rounded_corners(qwidget):
 
 def get_foreground_hwnd():
     """Get HWND of the current foreground window"""
-    return ctypes.windll.user32.GetForegroundWindow()
+    return GetForegroundWindow()
 
 
 def set_foreground_hwnd(hwnd):
     """Set focus to the given HWND"""
     if hwnd and hwnd != 0:
-        ctypes.windll.user32.SetForegroundWindow(hwnd)
+        SetForegroundWindow(int(hwnd))
 
 
 def find_focused_screen(follow_mouse, follow_window, screens=None):

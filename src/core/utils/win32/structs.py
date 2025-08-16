@@ -357,3 +357,16 @@ class WLAN_CONNECTION_NOTIFICATION_DATA(ct.Structure):
         ("dwFlags", DWORD),
         ("strProfileXml", WCHAR * 1),
     ]
+
+
+# Win32 message structure used by Qt native event filter and other components
+class MSG(ct.Structure):
+    _fields_ = [
+        ("hwnd", HWND),
+        ("message", UINT),
+        ("wParam", WPARAM),
+        ("lParam", LPARAM),
+        ("time", DWORD),
+        ("pt_x", LONG),
+        ("pt_y", LONG),
+    ]

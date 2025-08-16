@@ -137,7 +137,8 @@ class ActiveWindowWidget(BaseWidget):
         self.focus_change_workspaces.connect(self._on_focus_change_workspaces)
         self._event_service.register_event("workspace_update", self.focus_change_workspaces)
 
-        self._window_update_timer = QTimer()
+        # Parent timer to widget so it auto-stops/cleans up on deletion
+        self._window_update_timer = QTimer(self)
         self._window_update_timer.setSingleShot(True)
         self._window_update_timer.timeout.connect(self._process_debounced_update)
         self._pending_window_update = None
@@ -147,6 +148,21 @@ class ActiveWindowWidget(BaseWidget):
         self._update_throttle_ms = 250  # Minimum ms between updates for high-frequency classes
 
         atexit.register(self._stop_events)
+        try:
+            self.destroyed.connect(self._on_destroyed)  # type: ignore[attr-defined]
+        except Exception:
+            pass
+
+    def _on_destroyed(self, *args):
+        try:
+            # Unregister all events we registered
+            self._event_service.unregister_event(WinEvent.EventSystemForeground, self.foreground_change)
+            self._event_service.unregister_event(WinEvent.EventSystemMoveSizeEnd, self.foreground_change)
+            self._event_service.unregister_event(WinEvent.EventObjectNameChange, self.window_name_change)
+            self._event_service.unregister_event(WinEvent.EventObjectStateChange, self.window_name_change)
+            self._event_service.unregister_event("workspace_update", self.focus_change_workspaces)
+        except Exception:
+            pass
 
     def _rewrite_filter(self, text: str) -> str:
         """Applies rewrite rules to the given text."""

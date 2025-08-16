@@ -2,7 +2,9 @@
 | Option            | Type    | Default                                                                 | Description                                                                 |
 |-------------------|---------|-------------------------------------------------------------------------|-----------------------------------------------------------------------------|
 | `icon_size`           | integer  | 16                        | The size of icons |
-| `ignore_apps`       | dict    | `processes:[],titles[],classes:[]` | Ignore some apps. |
+| `show_only_visible` | boolean | `False` | Whether to show only visible applications in the taskbar. |
+| `strict_filtering` | boolean | `True` | Whether to enforce strict filtering of applications based on their properties. |
+| `ignore_apps`       | dict    | `processes:[], titles[], classes:[]` | Ignore applications by process name, title, or class. |
 | `tooltip`  | boolean  | `True`        | Whether to show the tooltip on hover. |
 | `title_label`       | dict    | `{'enabled': False, 'show': 'focused', 'min_length': 10, 'max_length': 30}`                     | Title label configuration for displaying window titles.                     |
 | `monitor_exclusive` | boolean | `False` | Whether the application should be exclusive to the monitor. |
@@ -21,7 +23,7 @@ taskbar:
       enabled: true
     title_label:
       enabled: false
-      show: "focused"
+      show: "always"
       min_length: 10
       max_length: 30
     ignore_apps:
@@ -38,6 +40,8 @@ taskbar:
 ## Description of Options
 
 - **icon_size:** The size of icons which will show in the widget.
+- **show_only_visible:** If set to `True`, the taskbar will only show applications that are currently visible on the screen.
+- **strict_filtering:** If set to `True`, the taskbar will enforce strict filtering of applications based on their properties, such as whether they can be minimized or are tool windows, splash screens, etc. This is useful for ensuring that only valid applications are displayed in the taskbar.
 - **tooltip:** Whether to show the tooltip on hover.
 - **title_label:** A dictionary specifying the configuration for window title labels. It includes:
   - enabled: A boolean flag to enable or disable title labels.
@@ -60,6 +64,7 @@ taskbar:
 /* Application containers */
 .taskbar-widget .app-container {} /* container for each app */
 .taskbar-widget .app-container.foreground {} /* container for the focused app */
+.taskbar-widget .app-container.flashing {} /* flashing container for the app (window is flashing) */
 .taskbar-widget .app-container .app-icon {} /* Icon inside the container */
 .taskbar-widget .app-container .app-title {} /* Label inside the container */
 ```
@@ -67,14 +72,15 @@ taskbar:
 ## Style Example
 ```css
 .taskbar-widget .app-container {
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    margin: 3px;
+    margin: 4px 2px;
     border-radius: 4px;
     padding: 0 4px;
 }
 .taskbar-widget .app-container.foreground {
-    background-color: rgba(255, 255, 255, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    background-color: rgba(255, 255, 255, 0.1);
+}
+.taskbar-widget .app-container.flashing {
+    background-color: rgba(255, 106, 106, 0.63);
 }
 .taskbar-widget .app-container .app-title {
     padding-left: 4px;

@@ -1,9 +1,7 @@
 import ctypes
 import logging
-from ctypes.wintypes import HWND
 
-user32 = ctypes.windll.user32
-dwm = ctypes.windll.dwmapi
+from core.utils.win32.bindings import DwmSetWindowAttribute, SetWindowCompositionAttribute
 
 
 # Define the ACCENTPOLICY structure
@@ -21,9 +19,7 @@ class WINDOWCOMPOSITIONATTRIBDATA(ctypes.Structure):
     _fields_ = [("Attribute", ctypes.c_int), ("Data", ctypes.POINTER(ctypes.c_int)), ("SizeOfData", ctypes.c_size_t)]
 
 
-SetWindowCompositionAttribute = user32.SetWindowCompositionAttribute
-SetWindowCompositionAttribute.argtypes = (HWND, ctypes.POINTER(WINDOWCOMPOSITIONATTRIBDATA))
-SetWindowCompositionAttribute.restype = ctypes.c_int
+_SCA = SetWindowCompositionAttribute
 
 # Define constants for DwmSetWindowAttribute
 DWMWA_WINDOW_CORNER_PREFERENCE = 33
@@ -67,7 +63,7 @@ def set_accent_policy(hwnd, accent_state, gradient_color=0, accent_flags=0):
     data.SizeOfData = ctypes.sizeof(accent)
     data.Data = ctypes.cast(ctypes.pointer(accent), ctypes.POINTER(ctypes.c_int))
 
-    result = SetWindowCompositionAttribute(hwnd, ctypes.byref(data))
+    result = _SCA(hwnd, ctypes.byref(data))
     if result == 0:
         raise ctypes.WinError()
 
@@ -79,7 +75,7 @@ def set_dark_mode(hwnd):
     data.SizeOfData = ctypes.sizeof(ctypes.c_int)
     data.Data = ctypes.cast(ctypes.pointer(ctypes.c_int(1)), ctypes.POINTER(ctypes.c_int))
 
-    result = SetWindowCompositionAttribute(hwnd, ctypes.byref(data))
+    result = _SCA(hwnd, ctypes.byref(data))
     if result == 0:
         raise ctypes.WinError()
 
@@ -87,7 +83,7 @@ def set_dark_mode(hwnd):
 def set_window_corner_preference(hwnd, preference, border_color):
     """Set the window corner preference and border color."""
     preference_value = ctypes.c_int(preference)
-    result = dwm.DwmSetWindowAttribute(
+    result = DwmSetWindowAttribute(
         hwnd, DWMWA_WINDOW_CORNER_PREFERENCE, ctypes.byref(preference_value), ctypes.sizeof(preference_value)
     )
     if result != 0:
@@ -100,7 +96,7 @@ def set_window_corner_preference(hwnd, preference, border_color):
     else:
         border_color_value = ctypes.c_int(HEXtoRGBAint(border_color))
 
-    result = dwm.DwmSetWindowAttribute(
+    result = DwmSetWindowAttribute(
         hwnd, DWMWA_BORDER_COLOR, ctypes.byref(border_color_value), ctypes.sizeof(border_color_value)
     )
     if result != 0:

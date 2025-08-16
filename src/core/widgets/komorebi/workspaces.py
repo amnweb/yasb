@@ -401,7 +401,6 @@ class WorkspaceWidget(BaseWidget):
         self._reverse_scroll_direction = reverse_scroll_direction
         self._icon_cache = dict()
         self.dpi = None
-        self._icon_update_retry_count = 0
 
         self._register_signals_and_events()
 
@@ -412,6 +411,18 @@ class WorkspaceWidget(BaseWidget):
         self._event_service.register_event(KomorebiEvent.KomorebiConnect, self.k_signal_connect)
         self._event_service.register_event(KomorebiEvent.KomorebiDisconnect, self.k_signal_disconnect)
         self._event_service.register_event(KomorebiEvent.KomorebiUpdate, self.k_signal_update)
+        try:
+            self.destroyed.connect(self._on_destroyed)  # type: ignore[attr-defined]
+        except Exception:
+            pass
+
+    def _on_destroyed(self, *args):
+        try:
+            self._event_service.unregister_event(KomorebiEvent.KomorebiConnect, self.k_signal_connect)
+            self._event_service.unregister_event(KomorebiEvent.KomorebiDisconnect, self.k_signal_disconnect)
+            self._event_service.unregister_event(KomorebiEvent.KomorebiUpdate, self.k_signal_update)
+        except Exception:
+            pass
 
     def _reset(self):
         self._komorebi_state = None
@@ -723,7 +734,7 @@ class WorkspaceWidget(BaseWidget):
                     return None
 
             self.dpi = self.screen().devicePixelRatio()
-            cache_key = (hwnd, pid, self.dpi)
+            cache_key = (hwnd, self.dpi)
 
             if cache_key in self._icon_cache and not ignore_cache:
                 icon_img = self._icon_cache[cache_key]
@@ -731,7 +742,6 @@ class WorkspaceWidget(BaseWidget):
                 icon_img = get_window_icon(hwnd)
 
             if icon_img:
-                self._icon_update_retry_count = 0
                 icon_img = icon_img.resize(
                     (
                         int(self._workspace_app_icons["size"] * self.dpi),
@@ -743,20 +753,9 @@ class WorkspaceWidget(BaseWidget):
                 qimage = QImage(icon_img.tobytes(), icon_img.width, icon_img.height, QImage.Format.Format_RGBA8888)
                 pixmap = QPixmap.fromImage(qimage)
                 pixmap.setDevicePixelRatio(self.dpi)
-                if process["name"] == "ApplicationFrameHost.exe":
-                    try:
-                        self._workspace_buttons[workspace_index].update_icons(icons={hwnd: pixmap})
-                    except IndexError:
-                        return pixmap
-                else:
-                    return pixmap
-            elif process["name"] == "ApplicationFrameHost.exe":
-                if self._icon_update_retry_count < 10:
-                    self._icon_update_retry_count += 1
-                    QTimer.singleShot(100, lambda: self._get_app_icon(hwnd, workspace_index, ignore_cache))
-                else:
-                    self._icon_update_retry_count = 0
-
+                return pixmap
+            else:
+                return None
         except Exception:
             if DEBUG:
                 logging.exception(f"Failed to get icons for window with HWND {hwnd}")

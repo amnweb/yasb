@@ -109,7 +109,8 @@ class WindowsNotificationEventListener(QThread):
 
     def stop(self):
         self.running = False
-        if self.loop and self.loop.is_running():
-            self.loop.stop()
-            self.loop.close()
-        self.wait()
+        try:
+            if self.loop and self.loop.is_running():
+                self.loop.call_soon_threadsafe(lambda: None)
+        except Exception:
+            pass
