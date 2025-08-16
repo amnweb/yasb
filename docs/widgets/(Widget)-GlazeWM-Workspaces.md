@@ -14,6 +14,8 @@
 | `container_padding`      | dict    | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}` | Explicitly set padding inside widget container.                             |
 | `container_shadow`       | dict    | `None`                                           | Container shadow options.                                                   |
 | `btn_shadow`             | dict    | `None`                                           | Workspace button shadow options.                                            |
+| `app_icons`    | dict    | `{'enabled_populated': False, 'enabled_active': False, 'size': 16, 'max_icons': 0, 'hide_label': False, 'hide_duplicates': False, 'hide_floating': False}` | Controls the display of opened app icons per workspace. |
+| `animation`  | boolean | `false`      | Buttons animation.    
 
 ## Example Configuration
 
@@ -35,6 +37,15 @@ glazewm_workspaces:
       left: 8
       bottom: 0
       right: 8
+    app_icons: 
+      enabled_populated: false
+      enabled_active: false
+      size: 16
+      max_icons: 0
+      hide_label: false
+      hide_duplicates: false
+      hide_floating: false
+    animation: false
 
     # By default workspace names are fetched from GlazeWM and "display_name" option takes priority over "name".
     # However, you can customize populated and empty labels here using {name} and {display_name} placeholders if needed.
@@ -59,6 +70,16 @@ glazewm_workspaces:
 - **container_padding:** Explicitly set padding inside widget container.
 - **container_shadow:** Container shadow options.
 - **btn_shadow:** Workspace button shadow options.
+- **app_icons:** Controls the display of opened app icons per workspace.
+  - **enabled_populated:** Whether to show app icons in populated workspaces.
+  - **enabled_active:** Whether to show app icons in the active workspace.
+  - **size:** The size of the app icons.
+  - **max_icons:** The maximum number of app icons to display (0 for no limit).
+  - **hide_label:** Whether to hide the label of the workspace buttons that app icons are displayed.
+  - **hide_duplicates:** Whether to hide duplicate app icons.
+  - **hide_floating:** Whether to hide floating window app icons.
+- **label_shadow:** Label shadow options for labels.
+- **animation:** Buttons animation (used only when app_icons is enabled)
 
 ## Note on Shadows
 `container_shadow` is applied to the container if it's not transparent.
@@ -93,6 +114,15 @@ workspaces:
 .glazewm-workspaces .ws-btn.populated {} /*Style for populated workspace button.*/
 .glazewm-workspaces .ws-btn.empty {} /*Style for empty workspace button.*/
 .glazewm-workspaces .offline-status {} /*Style for offline status label.*/
+```
+
+If `app_icons` is enabled is enabled (either `enabled_populated` or `enabled_active`), the following styles are available:
+```css
+.glazewm-workspaces .ws-btn .label {} /*Style for workspace label in buttons.*/
+.glazewm-workspaces .ws-btn .icon {} /*Style for icon in buttons.*/
+.glazewm-workspaces .ws-btn .icon-1 {} /*Style for icon in first button in a workspace.*/
+.glazewm-workspaces .ws-btn .icon-2 {} /*Style for icon in second button in a workspace.*/
+...
 ```
 
 ## Example CSS
