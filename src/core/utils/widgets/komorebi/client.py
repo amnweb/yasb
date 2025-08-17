@@ -88,7 +88,7 @@ class KomorebiClient:
 
     def get_workspace_by_window_hwnd(self, workspaces: list[Optional[dict]], window_hwnd: int) -> Optional[dict]:
         for i, workspace in enumerate(workspaces):
-            for floating_window in workspace["floating_windows"]:
+            for floating_window in self.get_floating_windows(workspace):
                 if floating_window["hwnd"] == window_hwnd:
                     return add_index(workspace, i)
 
@@ -233,8 +233,16 @@ class KomorebiClient:
         except (KeyError, TypeError):
             return None
 
-    def get_windows(self, container: dict) -> list:
-        return [add_index(window, i) for i, window in enumerate(container["windows"]["elements"])]
+    def get_windows(self, container: Optional[dict]) -> list:
+        if not isinstance(container, dict):
+            return []
+        windows = container.get("windows")
+        if not isinstance(windows, dict):
+            return []
+        elements = windows.get("elements")
+        if not isinstance(elements, list):
+            return []
+        return [add_index(window, i) for i, window in enumerate(elements)]
 
     def get_window_by_index(self, container: dict, window_index: int) -> Optional[dict]:
         try:
@@ -252,8 +260,13 @@ class KomorebiClient:
             return None
 
     def get_floating_windows(self, workspace: dict) -> list:
-        floating_windows = workspace["floating_windows"]["elements"]
-        return [add_index(window, i) for i, window in enumerate(floating_windows)]
+        floating = workspace.get("floating_windows")
+        if not isinstance(floating, dict):
+            return []
+        elements = floating.get("elements")
+        if not isinstance(elements, list):
+            return []
+        return [add_index(window, i) for i, window in enumerate(elements)]
 
     def get_focused_floating_window(self, workspace: dict) -> Optional[dict]:
         try:
