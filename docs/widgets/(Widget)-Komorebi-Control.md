@@ -7,6 +7,7 @@
 | `icons`           | dict  | `'{'start': "\uead3",'stop': "\uead7",'reload': "\uead2",}'`        | Button icons. |
 | `run_ahk`         | boolean | `false`                                                                  | Whether to run AutoHotKey.                                          |
 | `run_whkd`        | boolean | `false`                                                                  | Whether to run WHKD.                                                |
+| `config_path`     | string  | `None`                                                                   | Path to the Komorebi configuration file. If not set, uses default location. |
 | `show_version`    | boolean | `false`                                                                  | Whether to show the komorebi version.                                          |
 | `komorebi_menu`   | dict | `{'blur': True, 'round_corners': True, 'round_corners_type': 'normal','border_color': 'System', 'alignment': 'right', 'direction': 'down', 'offset_top': 6, 'offset_left': 0}` | Settings for the Komorebi menu. |
 | `callbacks`       | dict    | `{'on_left': 'toggle_menu', 'on_middle': 'do_nothing', 'on_right': 'do_nothing'}` | Callbacks for mouse events. |
@@ -54,6 +55,7 @@
   - **reload:** Icon for the reload button.
 - **run_ahk:** Whether to run AutoHotKey.
 - **run_whkd:** Whether to run WHKD.
+- **config_path:** Path to the Komorebi configuration file. If not set, uses the default location. (e.g., `C:/Users/username/.config/komorebi.json`).
 - **show_version:** Whether to show the komorebi version.
 - **komorebi_menu:** Settings for the Komorebi menu.
   - **blur:** Whether to enable blur effect.

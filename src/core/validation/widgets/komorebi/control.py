@@ -7,6 +7,7 @@ DEFAULTS = {
     },
     "run_ahk": False,
     "run_whkd": False,
+    "config_path": None,
     "show_version": True,
     "komorebi_menu": {
         "blur": True,
@@ -37,6 +38,12 @@ VALIDATION_SCHEMA = {
     },
     "run_ahk": {"type": "boolean", "default": DEFAULTS["run_ahk"]},
     "run_whkd": {"type": "boolean", "default": DEFAULTS["run_whkd"]},
+    "config_path": {
+        "type": "string",
+        "required": False,
+        "default": DEFAULTS["config_path"],
+        "nullable": True,
+    },
     "show_version": {"type": "boolean", "default": DEFAULTS["show_version"]},
     "komorebi_menu": {
         "type": "dict",
