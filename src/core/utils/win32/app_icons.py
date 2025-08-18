@@ -18,27 +18,29 @@ pil_logger.setLevel(logging.INFO)
 
 
 def get_window_icon(hwnd: int):
-    """Fetch the icon of the window."""
-    try:
-        hicon = win32gui.SendMessage(hwnd, win32con.WM_GETICON, win32con.ICON_BIG, 0)
-        if hicon == 0:
-            # If big icon is not available, try to get the small icon
-            hicon = win32gui.SendMessage(hwnd, win32con.WM_GETICON, win32con.ICON_SMALL, 0)
-        if hicon == 0:
-            # If both small and big icons are not available, get the class icon
-            if hasattr(win32gui, "GetClassLongPtr"):
-                hicon = win32gui.GetClassLongPtr(hwnd, win32con.GCLP_HICON)
-            else:
-                hicon = win32gui.GetClassLong(hwnd, win32con.GCL_HICON)
+    """Get the icon for a window handle (HWND).
 
-        if hicon:
+    - WM_GETICON: ICON_BIG, ICON_SMALL, ICON_SMALL2
+    - Class icons: GCLP_HICONSM, GCLP_HICON
+    - App User Model ID icon (UWP) via AUMID
+    - OS default application icon (IDI_APPLICATION)
+    """
+    try:
+
+        def _image_from_hicon(hicon: int) -> Image.Image | None:
+            if not hicon:
+                return None
             img = hicon_to_image(hicon)
             if img is not None:
                 return img
 
+            # Fallback draw the icon into a compatible bitmap
             hdc_handle = win32gui.GetDC(0)
             if not hdc_handle:
-                raise Exception("Failed to get DC handle")
+                return None
+            memdc = None
+            hdc = None
+            hbmp = None
             try:
                 hdc = win32ui.CreateDCFromHandle(hdc_handle)
                 hbmp = win32ui.CreateBitmap()
@@ -54,41 +56,98 @@ def get_window_icon(hwnd: int):
 
                 bmpinfo = hbmp.GetInfo()
                 bmpstr = hbmp.GetBitmapBits(True)
-
                 raw_data = bytes(bmpstr)
-                img = Image.frombuffer(
-                    "RGBA", (bmpinfo["bmWidth"], bmpinfo["bmHeight"]), raw_data, "raw", "BGRA", 0, 1
+                return Image.frombuffer(
+                    "RGBA",
+                    (bmpinfo["bmWidth"], bmpinfo["bmHeight"]),
+                    raw_data,
+                    "raw",
+                    "BGRA",
+                    0,
+                    1,
                 ).convert("RGBA")
-                return img
             finally:
-                # Cleaning up resources
                 try:
-                    win32gui.DestroyIcon(hicon)
+                    if memdc is not None:
+                        memdc.DeleteDC()
                 except Exception:
                     pass
                 try:
-                    memdc.DeleteDC()
+                    if hdc is not None:
+                        hdc.DeleteDC()
                 except Exception:
                     pass
                 try:
-                    hdc.DeleteDC()
-                except Exception:
-                    pass
-                try:
-                    win32gui.DeleteObject(hbmp.GetHandle())
+                    if hbmp is not None:
+                        win32gui.DeleteObject(hbmp.GetHandle())
                 except Exception:
                     pass
                 try:
                     win32gui.ReleaseDC(0, hdc_handle)
                 except Exception:
                     pass
-        else:
-            aumid = get_aumid_for_window(hwnd)
-            if aumid:
-                img = get_icon_for_aumid(aumid)
+
+        # Ask the window for its icons
+        for which in (win32con.ICON_BIG, win32con.ICON_SMALL, getattr(win32con, "ICON_SMALL2", 2)):
+            try:
+                hicon = win32gui.SendMessage(hwnd, win32con.WM_GETICON, which, 0)
+            except Exception:
+                hicon = 0
+            if hicon:
+                img = _image_from_hicon(hicon)
+                # WM_GETICON returns an icon handle we should destroy
+                try:
+                    win32gui.DestroyIcon(hicon)
+                except Exception:
+                    pass
                 if img is not None:
                     return img
 
+        # Fall back to class icons
+        class_hicon = 0
+        try:
+            if hasattr(win32gui, "GetClassLongPtr"):
+                # Try small icon first, then big
+                class_hicon = win32gui.GetClassLongPtr(hwnd, getattr(win32con, "GCLP_HICONSM", 0)) or 0
+                if not class_hicon:
+                    class_hicon = win32gui.GetClassLongPtr(hwnd, win32con.GCLP_HICON) or 0
+            else:
+                class_hicon = win32gui.GetClassLong(hwnd, getattr(win32con, "GCL_HICONSM", -34)) or 0
+                if not class_hicon:
+                    class_hicon = win32gui.GetClassLong(hwnd, win32con.GCL_HICON) or 0
+        except Exception:
+            class_hicon = 0
+
+        if class_hicon:
+            img = _image_from_hicon(class_hicon)
+            if img is not None:
+                return img
+
+        # AppUserModelID icon for UWP apps
+        aumid = get_aumid_for_window(hwnd)
+        if aumid:
+            img = get_icon_for_aumid(aumid)
+            if img is not None:
+                return img
+
+        # OS default application icon
+        try:
+            size = win32api.GetSystemMetrics(win32con.SM_CXICON)
+            default_hicon = win32gui.LoadImage(
+                0,
+                win32con.IDI_APPLICATION,
+                win32con.IMAGE_ICON,
+                size,
+                size,
+                win32con.LR_SHARED,
+            )
+        except Exception:
+            default_hicon = 0
+
+        if default_hicon:
+            return _image_from_hicon(default_hicon)
+
+        return None
     except Exception as e:
         logging.error(f"Error fetching icon: {e}")
         return None
