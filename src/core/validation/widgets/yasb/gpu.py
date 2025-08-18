@@ -9,6 +9,7 @@ DEFAULTS = {
     "container_padding": {"top": 0, "left": 0, "bottom": 0, "right": 0},
     "callbacks": {"on_left": "toggle_label", "on_middle": "do_nothing", "on_right": "do_nothing"},
     "gpu_thresholds": {"low": 30, "medium": 60, "high": 90},
+    "hide_decimal": False,
 }
 
 VALIDATION_SCHEMA = {
@@ -120,4 +121,5 @@ VALIDATION_SCHEMA = {
         },
         "default": DEFAULTS["gpu_thresholds"],
     },
+    "hide_decimal": {"type": "boolean", "default": DEFAULTS["hide_decimal"]},
 }

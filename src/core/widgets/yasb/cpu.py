@@ -32,6 +32,7 @@ class CpuWidget(BaseWidget):
         label_shadow: dict = None,
         container_shadow: dict = None,
         progress_bar: dict = None,
+        hide_decimal: bool = False,
     ):
         super().__init__(class_name="cpu-widget")
         self._histogram_icons = histogram_icons
@@ -46,6 +47,7 @@ class CpuWidget(BaseWidget):
         self._container_shadow = container_shadow
         self._cpu_thresholds = cpu_thresholds
         self._progress_bar = progress_bar
+        self._hide_decimal = hide_decimal
 
         self.progress_widget = None
         self.progress_widget = build_progress_widget(self, self._progress_bar)
@@ -137,10 +139,11 @@ class CpuWidget(BaseWidget):
         self._cpu_freq_history.append(cpu_freq.current)
         self._cpu_perc_history.append(current_perc)
 
+        _round = lambda value: round(value) if self._hide_decimal else value
         cpu_info = {
             "cores": cpu_cores,
-            "freq": {"min": cpu_freq.min, "max": cpu_freq.max, "current": cpu_freq.current},
-            "percent": {"core": cores_perc, "total": current_perc},
+            "freq": {"min": _round(cpu_freq.min), "max": _round(cpu_freq.max), "current": _round(cpu_freq.current)},
+            "percent": {"core": [ _round(core) for core in cores_perc], "total": _round(current_perc)},
             "stats": {
                 "context_switches": cpu_stats.ctx_switches,
                 "interrupts": cpu_stats.interrupts,

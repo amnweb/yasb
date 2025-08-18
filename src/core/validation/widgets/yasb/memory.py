@@ -11,6 +11,7 @@ DEFAULTS = {
         "medium": 50,
         "high": 90,
     },
+    "hide_decimal": False,
 }
 
 VALIDATION_SCHEMA = {
@@ -25,6 +26,7 @@ VALIDATION_SCHEMA = {
         "maxlength": 9,
         "schema": {"type": "string"},
     },
+    "hide_decimal": {"type": "boolean", "default": DEFAULTS["hide_decimal"]},
     "memory_thresholds": {
         "type": "dict",
         "required": False,

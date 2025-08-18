@@ -12,6 +12,7 @@ DEFAULTS = {
         "medium": 50,
         "high": 90,
     },
+    "hide_decimal": False,
 }
 
 VALIDATION_SCHEMA = {
@@ -117,4 +118,5 @@ VALIDATION_SCHEMA = {
         },
         "default": DEFAULTS["cpu_thresholds"],
     },
+    "hide_decimal": {"type": "boolean", "default": DEFAULTS["hide_decimal"]},
 }
