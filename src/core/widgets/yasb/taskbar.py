@@ -6,7 +6,7 @@ import win32gui
 from PIL import Image
 from PyQt6.QtCore import QEasingCurve, QMimeData, QPropertyAnimation, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QCursor, QDrag, QImage, QMouseEvent, QPixmap
-from PyQt6.QtWidgets import QApplication, QFrame, QHBoxLayout, QLabel, QWidget
+from PyQt6.QtWidgets import QApplication, QFrame, QHBoxLayout, QLabel, QSizePolicy, QWidget
 
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import add_shadow
@@ -384,6 +384,7 @@ class TaskbarWidget(BaseWidget):
         self._label_shadow = label_shadow
         self._container_shadow = container_shadow
         self._widget_monitor_handle = None
+        self._icon_retry_counts = {}
 
         self._ignore_apps["classes"] = list(set(self._ignore_apps.get("classes", [])))
         self._ignore_apps["processes"] = list(set(self._ignore_apps.get("processes", [])))
@@ -512,10 +513,12 @@ class TaskbarWidget(BaseWidget):
 
         if self._monitor_exclusive:
             window_monitor = window_data.get("monitor_handle")
-            if window_monitor is not None:
-                widget_monitor = self._get_widget_monitor_handle()
-                if widget_monitor is not None and window_monitor != widget_monitor:
-                    return False
+            # If monitor is unknown (transient), keep existing items but do not add new ones
+            if window_monitor is None:
+                return hwnd in self._window_buttons
+            widget_monitor = self._get_widget_monitor_handle()
+            if widget_monitor is not None and window_monitor != widget_monitor:
+                return False
 
         return True
 
@@ -603,18 +606,6 @@ class TaskbarWidget(BaseWidget):
         if widget is None:
             return
 
-        if self._tooltip and title:
-            set_tooltip(widget, title, delay=0)
-
-        # Apply class based on state
-        try:
-            widget.setProperty("class", self._get_container_class(hwnd))
-            if style := widget.style():
-                style.unpolish(widget)
-                style.polish(widget)
-        except Exception:
-            pass
-
         layout = widget.layout()
         if not layout:
             return
@@ -628,16 +619,17 @@ class TaskbarWidget(BaseWidget):
 
         try:
             if self._title_label["enabled"] and layout.count() > 1:
-                title_label = layout.itemAt(1).widget()
+                title_wrapper = layout.itemAt(1).widget()
+                title_label = self._get_title_label(title_wrapper)
                 if title_label:
                     formatted_title = self._format_title(title)
                     if title_label.text() != formatted_title:
                         title_label.setText(formatted_title)
-                    if self._title_label["show"] == "focused":
-                        desired_visible = self._get_title_visibility(hwnd)
-                        if desired_visible != title_label.isVisible():
-                            title_label.setVisible(desired_visible)
-                            layout.activate()
+                if self._title_label["show"] == "focused" and title_wrapper:
+                    desired_visible = self._get_title_visibility(hwnd)
+                    if desired_visible != title_wrapper.isVisible():
+                        self._animate_or_set_title_visible(title_wrapper, desired_visible)
+                        layout.activate()
         except Exception:
             pass
 
@@ -649,6 +641,19 @@ class TaskbarWidget(BaseWidget):
                 self._clear_others_set_foreground(hwnd)
         except Exception:
             pass
+
+        # Repolish the widget to apply any style changes
+        try:
+            widget.setProperty("class", self._get_container_class(hwnd))
+            if style := widget.style():
+                style.unpolish(widget)
+                style.polish(widget)
+        except Exception:
+            pass
+
+        # Update the tooltip if enabled
+        if self._tooltip and title:
+            set_tooltip(widget, title, delay=0)
 
     def _stop_events(self) -> None:
         """Stop the task manager and clean up"""
@@ -673,10 +678,15 @@ class TaskbarWidget(BaseWidget):
         if win32gui.IsWindow(hwnd):
             close_application(hwnd)
         else:
-            logging.warning(f"Invalid window handle: {hwnd}")
+            logging.warning(f"Invalid window handle: {hwnd}, removing stale UI.")
+            # Proactively remove any stale UI for this invalid handle
+            try:
+                self._remove_window_ui(hwnd, {}, immediate=True)
+            except Exception:
+                pass
 
     def _get_title_visibility(self, hwnd: int) -> bool:
-        """Should title be visible when show=="focused"? Normalize to base owner and use robust active check."""
+        """Should title be visible when show=="focused"? Normalize to base owner."""
         try:
             base, _ = resolve_base_and_focus(hwnd)
         except Exception:
@@ -742,20 +752,36 @@ class TaskbarWidget(BaseWidget):
         layout.addWidget(icon_label)
 
         if self._title_label["enabled"]:
+            # Wrap the label to animate only wrapper width and reduce reflow
+            title_wrapper = QFrame()
+            title_wrapper.setProperty("hwnd", hwnd)
+            tw_layout = QHBoxLayout(title_wrapper)
+            tw_layout.setContentsMargins(0, 0, 0, 0)
+            tw_layout.setSpacing(0)
+            try:
+                title_wrapper.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Preferred)
+            except Exception:
+                pass
+
             title_label = QLabel(self._format_title(title))
             title_label.setProperty("class", "app-title")
             title_label.setProperty("hwnd", hwnd)
-
             try:
-                title_label.setSizePolicy(
-                    title_label.sizePolicy().horizontalPolicy(), title_label.sizePolicy().verticalPolicy()
-                )
+                title_label.setSizePolicy(QSizePolicy.Policy.Preferred, title_label.sizePolicy().verticalPolicy())
             except Exception:
                 pass
-            layout.addWidget(title_label)
-            if self._title_label["show"] == "focused":
-                title_label.setVisible(self._get_title_visibility(hwnd))
 
+            tw_layout.addWidget(title_label)
+            layout.addWidget(title_wrapper)
+
+            if self._title_label["show"] == "focused":
+                initial_visible = self._get_title_visibility(hwnd)
+                title_wrapper.setVisible(initial_visible)
+                if not initial_visible:
+                    try:
+                        title_wrapper.setMaximumWidth(0)
+                    except Exception:
+                        pass
         if self._tooltip:
             set_tooltip(container, title, delay=0)
 
@@ -791,9 +817,21 @@ class TaskbarWidget(BaseWidget):
                 icon_img = get_window_icon(hwnd)
                 if icon_img:
                     self._dpi = self.screen().devicePixelRatio()
-                    icon_img = icon_img.resize(
+                    rgba = icon_img.convert("RGBA")
+                    if rgba.getbbox() is None:
+                        count = self._icon_retry_counts.get(hwnd, 0)
+                        if count < 10:
+                            self._icon_retry_counts[hwnd] = count + 1
+                            QTimer.singleShot(300, lambda h=hwnd, t=title: self._retry_get_and_set_icon(h, t))
+                            return None
+                        else:
+                            self._icon_retry_counts.pop(hwnd, None)
+                            return None
+
+                    self._dpi = self.screen().devicePixelRatio()
+                    icon_img = rgba.resize(
                         (int(self._label_icon_size * self._dpi), int(self._label_icon_size * self._dpi)), Image.LANCZOS
-                    ).convert("RGBA")
+                    )
                     self._icon_cache[cache_key] = icon_img
 
             if not icon_img:
@@ -808,6 +846,24 @@ class TaskbarWidget(BaseWidget):
             if DEBUG:
                 logging.exception(f"Failed to get icons for window with HWND {hwnd} ")
             return None
+
+    def _retry_get_and_set_icon(self, hwnd: int, title: str) -> None:
+        """Retry fetch and, if ready, set the pixmap on the window's icon label."""
+        try:
+            pix = self._get_app_icon(hwnd, title)
+            if not pix:
+                return
+            widget = self._hwnd_to_widget.get(hwnd)
+            if not widget:
+                return
+            layout = widget.layout()
+            if not layout:
+                return
+            lbl = layout.itemAt(0).widget()
+            if isinstance(lbl, QLabel):
+                lbl.setPixmap(pix)
+        except Exception:
+            pass
 
     def _perform_action(self, action: str) -> None:
         widget = QApplication.instance().widgetAt(QCursor.pos())
@@ -831,54 +887,9 @@ class TaskbarWidget(BaseWidget):
     def _set_dragging(self, active: bool) -> None:
         """Temporarily suspend updates/animations to reduce flicker during drag."""
         self._suspend_updates = active
-        try:
-            # Expose a dynamic property usable in QSS: .taskbar-widget[dragging="true"]
-            self.setProperty("dragging", bool(active))
-            if hasattr(self, "_widget_container") and self._widget_container:
-                self._widget_container.setProperty("dragging", bool(active))
-                # Repolish container to apply QSS that depends on [dragging]
-                if style := self._widget_container.style():
-                    style.unpolish(self._widget_container)
-                    style.polish(self._widget_container)
-            # Repolish self as well in case styles cascade from the root widget
-            if style := self.style():
-                style.unpolish(self)
-                style.polish(self)
-        except Exception:
-            pass
-
-    def _animate_container(self, container, start_width=0, end_width=0, duration=300) -> None:
-        """Animate the width of a container widget."""
-
-        animation = QPropertyAnimation(container, b"maximumWidth", container)
-        animation.setStartValue(start_width)
-        animation.setEndValue(end_width)
-        animation.setDuration(duration)
-        animation.setEasingCurve(QEasingCurve.Type.OutCirc)
-
-        if end_width > start_width and not container.graphicsEffect():
-            add_shadow(container, self._label_shadow)
-
-        def on_finished():
-            if end_width == 0:
-                container.setParent(None)
-                self._widget_container_layout.removeWidget(container)
-                container.deleteLater()
-            else:
-                # Clear width constraint so future content changes (e.g., focused title show/hide)
-                # can naturally resize the container without animations.
-                try:
-                    container.setMaximumWidth(16777215)
-                    container.adjustSize()
-                    container.updateGeometry()
-                except Exception:
-                    pass
-
-        animation.finished.connect(on_finished)
-        animation.start()
 
     def bring_to_foreground(self, hwnd):
-        # Defer UI class changes until after the action succeeds
+        """Bring the specified window to the foreground, restoring if minimized."""
         if not win32gui.IsWindow(hwnd):
             return
         try:
@@ -895,7 +906,11 @@ class TaskbarWidget(BaseWidget):
 
             if win32gui.IsIconic(base):
                 restore_window(base)
-                set_foreground(focus_target)
+                set_foreground(base)
+                try:
+                    QTimer.singleShot(0, lambda h=focus_target or base: set_foreground(h))
+                except Exception:
+                    pass
                 return
 
             if is_active and can_minimize(base):
@@ -903,7 +918,7 @@ class TaskbarWidget(BaseWidget):
                 return
 
             show_window(base)
-            set_foreground(focus_target)
+            set_foreground(base)
 
         except Exception as e:
             try:
@@ -919,7 +934,7 @@ class TaskbarWidget(BaseWidget):
                         logging.error(f"Failed to show window {hwnd}: {final_e}")
 
     def ensure_foreground(self, hwnd):
-        # Defer UI class changes until after the action succeeds
+        """When we use dragging file ensure the window is in foreground."""
         if not win32gui.IsWindow(hwnd):
             return
         try:
@@ -972,11 +987,11 @@ class TaskbarWidget(BaseWidget):
                     if self._title_label.get("enabled") and self._title_label.get("show") == "focused":
                         lay = w.layout()
                         if lay and lay.count() > 1:
-                            tlabel = lay.itemAt(1).widget()
-                            if tlabel:
+                            title_wrapper = lay.itemAt(1).widget()
+                            if title_wrapper:
                                 want_visible = target_hwnd is not None and hwnd == target_hwnd
-                                if tlabel.isVisible() != want_visible:
-                                    tlabel.setVisible(want_visible)
+                                if title_wrapper.isVisible() != want_visible:
+                                    self._animate_or_set_title_visible(title_wrapper, want_visible)
                                     lay.activate()
                     st = w.style()
                     if st:
@@ -984,3 +999,107 @@ class TaskbarWidget(BaseWidget):
                         st.polish(w)
         except Exception:
             pass
+
+    def _get_title_label(self, container: QWidget) -> QLabel | None:
+        try:
+            lay = container.layout()
+            if lay and lay.count() > 0:
+                lbl = lay.itemAt(0).widget()
+                if isinstance(lbl, QLabel):
+                    return lbl
+        except Exception:
+            pass
+        return None
+
+    def _animate_container(self, container, start_width=0, end_width=0, duration=300) -> None:
+        """Animate the width of a container widget."""
+        animation = QPropertyAnimation(container, b"maximumWidth", container)
+        animation.setStartValue(start_width)
+        animation.setEndValue(end_width)
+        animation.setDuration(duration)
+
+        animation.setEasingCurve(QEasingCurve.Type.InOutQuad)
+        if end_width > start_width and not container.graphicsEffect():
+            add_shadow(container, self._label_shadow)
+
+        def on_finished():
+            if end_width == 0:
+                container.setParent(None)
+                self._widget_container_layout.removeWidget(container)
+                container.deleteLater()
+            else:
+                # Clear width constraint so future content changes (e.g., focused title)
+                try:
+                    container.setMaximumWidth(16777215)
+                    container.adjustSize()
+                    container.updateGeometry()
+                except Exception:
+                    pass
+
+        animation.finished.connect(on_finished)
+        animation.start()
+
+    def _animate_or_set_title_visible(self, label: QWidget, visible: bool, duration: int = 200) -> None:
+        """Animate the title label's width when toggling visibility."""
+        try:
+            if not self._animation["enabled"]:
+                label.setVisible(visible)
+                label.setMaximumWidth(16777215 if visible else 0)
+                parent = label.parentWidget()
+                if parent and parent.layout():
+                    parent.layout().activate()
+                return
+
+            # Cancel any running animation on this label
+            try:
+                running = getattr(label, "_yasb_title_anim", None)
+                if running is not None:
+                    running.stop()
+                    running.deleteLater()
+            except Exception:
+                pass
+
+            start_width = label.maximumWidth() if label.maximumWidth() != 16777215 else label.width()
+            end_width = label.sizeHint().width() if visible else 0
+
+            # Ensure label is visible before animating in
+            if visible and not label.isVisible():
+                label.setVisible(True)
+
+            anim = QPropertyAnimation(label, b"maximumWidth", label)
+            anim.setStartValue(start_width)
+            anim.setEndValue(end_width)
+            anim.setDuration(duration)
+            anim.setEasingCurve(QEasingCurve.Type.InOutQuad)
+
+            def _finish():
+                try:
+                    if not visible:
+                        label.setVisible(False)
+                        label.setMaximumWidth(0)
+                    else:
+                        # Clear width constraint to allow natural resizing later
+                        label.setMaximumWidth(16777215)
+                    setattr(label, "_yasb_title_anim", None)
+                    parent = label.parentWidget()
+                    if parent and parent.layout():
+                        parent.layout().activate()
+                except Exception:
+                    pass
+
+            anim.finished.connect(_finish)
+            setattr(label, "_yasb_title_anim", anim)
+            anim.start()
+        except Exception:
+            # Fallback to immediate toggle
+            try:
+                label.setVisible(visible)
+                if not visible:
+                    label.setMaximumWidth(0)
+                else:
+                    label.setMaximumWidth(16777215)
+                parent = label.parentWidget()
+                if parent and parent.layout():
+                    parent.layout().activate()
+            except Exception:
+                pass
