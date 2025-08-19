@@ -115,63 +115,69 @@ class ImageSignals(QObject):
 
 
 class ImageLoader(QRunnable):
-    def __init__(self, image_path, width, height, corner_radius, index):
+    def __init__(self, image_path, width, height, corner_radius, index, dpr: float = 1.0):
         super().__init__()
         self.image_path = image_path
         self.target_width = width
         self.target_height = height
         self.corner_radius = corner_radius
         self.index = index
+        self.dpr = float(dpr) if dpr else 1.0
         self.signals = ImageSignals()
 
     def run(self):
+        target_w = int(self.target_width * self.dpr)
+        target_h = int(self.target_height * self.dpr)
+
         # Get original image dimensions first
         reader = QImageReader(self.image_path)
         original_size = reader.size()
 
         if not original_size.isValid():
             # Fallback if we can't determine original size
-            reader.setScaledSize(QSize(self.target_width, self.target_height))
+            reader.setScaledSize(QSize(target_w, target_h))
             image = reader.read()
         else:
             # Calculate dimensions to FILL the target area (may crop edges)
             orig_aspect = original_size.width() / original_size.height()
-            target_aspect = self.target_width / self.target_height
+            target_aspect = target_w / target_h if target_h != 0 else 1.0
 
             if orig_aspect > target_aspect:
                 # Image is wider than target - scale to match height and crop width
-                scaled_height = self.target_height
+                scaled_height = target_h
                 scaled_width = int(scaled_height * orig_aspect)
             else:
                 # Image is taller than target - scale to match width and crop height
-                scaled_width = self.target_width
-                scaled_height = int(scaled_width / orig_aspect)
+                scaled_width = target_w
+                scaled_height = int(scaled_width / orig_aspect) if orig_aspect != 0 else target_h
 
             reader.setScaledSize(QSize(scaled_width, scaled_height))
             image = reader.read()
 
         # Create a transparent pixmap of the target size
-        pixmap = QPixmap(self.target_width, self.target_height)
+        pixmap = QPixmap(target_w, target_h)
         pixmap.fill(Qt.GlobalColor.transparent)
 
         # Paint the image centered within the target area
         painter = QPainter(pixmap)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+        painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, True)
 
         # Create rounded rectangle for clipping
         path = QPainterPath()
-        path.addRoundedRect(QRectF(0, 0, self.target_width, self.target_height), self.corner_radius, self.corner_radius)
+        radius = float(self.corner_radius) * self.dpr
+        path.addRoundedRect(QRectF(0, 0, target_w, target_h), radius, radius)
         painter.setClipPath(path)
 
         # Calculate position to center the image (may crop edges)
-        x = (self.target_width - image.width()) // 2
-        y = (self.target_height - image.height()) // 2
+        x = (target_w - image.width()) // 2
+        y = (target_h - image.height()) // 2
 
         # Create source rectangle that ensures the image fills the target area
         source_x = max(0, -x)
         source_y = max(0, -y)
-        source_width = min(image.width() - source_x, self.target_width)
-        source_height = min(image.height() - source_y, self.target_height)
+        source_width = min(image.width() - source_x, target_w)
+        source_height = min(image.height() - source_y, target_h)
 
         # Draw only the visible portion of the image
         painter.drawImage(
@@ -180,6 +186,8 @@ class ImageLoader(QRunnable):
             QRect(source_x, source_y, source_width, source_height),
         )
         painter.end()
+
+        pixmap.setDevicePixelRatio(self.dpr)
 
         self.signals.loaded.emit(self.image_path, pixmap, self.index)
 
@@ -244,6 +252,11 @@ class ImageGallery(QMainWindow, BaseStyledWidget):
         self.setWindowFlags(Qt.WindowType.Tool | Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+
+        try:
+            self.dpr = float(screen.devicePixelRatio())
+        except Exception:
+            self.dpr = 1.0
 
         if self.blur:
             Blur(
@@ -327,7 +340,14 @@ class ImageGallery(QMainWindow, BaseStyledWidget):
 
             # Start loading the actual image in background
             image_path = os.path.join(self.image_folder, self.image_files[index])
-            loader = ImageLoader(image_path, self.image_width, self.image_height, self.corner_radius, i)
+            loader = ImageLoader(
+                image_path,
+                self.image_width,
+                self.image_height,
+                self.corner_radius,
+                i,
+                dpr=getattr(self, "dpr", 1.0),
+            )
             loader.signals.loaded.connect(self.update_image_label)
             self.threadpool.start(loader)
 
