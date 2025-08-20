@@ -21,8 +21,8 @@ def get_window_icon(hwnd: int):
     """Get the icon for a window handle (HWND).
 
     - WM_GETICON: ICON_BIG, ICON_SMALL, ICON_SMALL2
-    - Class icons: GCLP_HICONSM, GCLP_HICON
     - App User Model ID icon (UWP) via AUMID
+    - Class icons: GCLP_HICONSM, GCLP_HICON
     - OS default application icon (IDI_APPLICATION)
     """
     try:
@@ -87,6 +87,15 @@ def get_window_icon(hwnd: int):
                 except Exception:
                     pass
 
+        def _is_fully_transparent(img: Image.Image) -> bool:
+            try:
+                if img.mode != "RGBA":
+                    img = img.convert("RGBA")
+                alpha = img.getchannel("A")
+                return alpha.getbbox() is None
+            except Exception:
+                return False
+
         # Ask the window for its icons
         for which in (win32con.ICON_BIG, win32con.ICON_SMALL, getattr(win32con, "ICON_SMALL2", 2)):
             try:
@@ -100,8 +109,15 @@ def get_window_icon(hwnd: int):
                     win32gui.DestroyIcon(hicon)
                 except Exception:
                     pass
-                if img is not None:
+                if img is not None and not _is_fully_transparent(img):
                     return img
+
+        # AppUserModelID icon for UWP apps
+        aumid = get_aumid_for_window(hwnd)
+        if aumid:
+            img = get_icon_for_aumid(aumid)
+            if img is not None:
+                return img
 
         # Fall back to class icons
         class_hicon = 0
@@ -120,13 +136,6 @@ def get_window_icon(hwnd: int):
 
         if class_hicon:
             img = _image_from_hicon(class_hicon)
-            if img is not None:
-                return img
-
-        # AppUserModelID icon for UWP apps
-        aumid = get_aumid_for_window(hwnd)
-        if aumid:
-            img = get_icon_for_aumid(aumid)
             if img is not None:
                 return img
 
