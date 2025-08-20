@@ -17,7 +17,7 @@ from core.utils.win32.utilities import get_hwnd_info
 from core.utils.win32.windows import WinEvent
 from core.validation.widgets.yasb.active_window import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
-from settings import APP_BAR_TITLE, DEBUG
+from settings import APP_BAR_TITLE
 
 # Get the current process ID to exclude our own windows
 CURRENT_PROCESS_ID = os.getpid()
@@ -284,13 +284,11 @@ class ActiveWindowWidget(BaseWidget):
                 return
             title = win_info["title"]
             process = win_info["process"]
-            pid = process["pid"]
             class_name = win_info["class_name"]
-            cache_key = (hwnd, title, pid, self.dpi)
 
             if self._label_icon:
-                if event != WinEvent.WinEventOutOfContext:
-                    self._update_retry_count = 0
+                cache_key = (hwnd, title, self.dpi)
+
                 if cache_key in self._icon_cache:
                     icon_img = self._icon_cache[cache_key]
                 else:
@@ -301,21 +299,8 @@ class ActiveWindowWidget(BaseWidget):
                             (int(self._label_icon_size * self.dpi), int(self._label_icon_size * self.dpi)),
                             Image.LANCZOS,
                         ).convert("RGBA")
-                    else:
-                        # UWP apps might need a moment to start under ApplicationFrameHost
-                        # So we delay the detection, but only do it once.
-                        if process["name"] == "ApplicationFrameHost.exe":
-                            if self._update_retry_count < 10:
-                                self._update_retry_count += 1
-                                QTimer.singleShot(
-                                    500,
-                                    lambda: self._update_window_title(hwnd, win_info, WinEvent.WinEventOutOfContext),
-                                )
-                                return
-                            else:
-                                self._update_retry_count = 0
-
-                    if not DEBUG:
+                    if not process["name"] == "explorer.exe":
+                        # Do not cache icons for explorer.exe windows
                         self._icon_cache[cache_key] = icon_img
                 if icon_img:
                     qimage = QImage(icon_img.tobytes(), icon_img.width, icon_img.height, QImage.Format.Format_RGBA8888)
