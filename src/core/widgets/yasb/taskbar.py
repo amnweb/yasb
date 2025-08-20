@@ -521,7 +521,6 @@ class TaskbarWidget(BaseWidget):
         if old is not None:
             try:
                 self._widget_container_layout.removeWidget(old)
-                old.setParent(None)
                 old.deleteLater()
             except Exception:
                 pass

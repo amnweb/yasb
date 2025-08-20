@@ -123,6 +123,8 @@ class _ShellHookEventFilter(QAbstractNativeEventFilter):
                 manager._handle_shell_hook_message(int(msg.wParam), int(msg.lParam))
                 return True, 0
 
+        except (KeyboardInterrupt, SystemExit):
+            raise
         except Exception:
             pass
         return False, 0
@@ -278,7 +280,9 @@ class TaskbarWindowManager(QObject):
                         else:
                             if hwnd_int in self._windows:
                                 self._schedule_window_update(hwnd_int)
-                except BaseException:
+                except (KeyboardInterrupt, SystemExit):
+                    raise
+                except Exception:
                     return
 
             self._cloak_callback = WinEventProcType(cloak_event_callback)
