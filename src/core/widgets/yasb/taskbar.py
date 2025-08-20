@@ -384,7 +384,6 @@ class TaskbarWidget(BaseWidget):
         self._label_shadow = label_shadow
         self._container_shadow = container_shadow
         self._widget_monitor_handle = None
-        self._icon_retry_counts = {}
 
         self._ignore_apps["classes"] = list(set(self._ignore_apps.get("classes", [])))
         self._ignore_apps["processes"] = list(set(self._ignore_apps.get("processes", [])))
@@ -413,15 +412,30 @@ class TaskbarWidget(BaseWidget):
         self.callback_right = callbacks["on_right"]
         self.callback_middle = callbacks["on_middle"]
 
-        if connect_taskbar:
-            self._task_manager = connect_taskbar(self)
-            QTimer.singleShot(0, self._refresh_monitor_handle)  # Get monitor handle for this widget
-        else:
-            logging.error("Shared task manager not available - taskbar functionality will be limited")
-
         if QApplication.instance():
             QApplication.instance().aboutToQuit.connect(self._stop_events)
         atexit.register(self._stop_events)
+
+        if connect_taskbar:
+            self._task_manager = None
+            self._task_manager_connected = False
+        else:
+            logging.error("Shared task manager not available - taskbar functionality will be limited")
+
+    def showEvent(self, event):
+        try:
+            if connect_taskbar and not getattr(self, "_task_manager_connected", False):
+                try:
+                    self._task_manager = connect_taskbar(self)
+                    self._task_manager_connected = True
+                except Exception as e:
+                    logging.error(f"Failed to connect taskbar manager from showEvent: {e}")
+        except Exception:
+            pass
+        try:
+            super().showEvent(event)
+        except Exception:
+            pass
 
     def _on_window_added(self, hwnd, window_data):
         """Handle window added signal from task manager"""
@@ -480,30 +494,6 @@ class TaskbarWidget(BaseWidget):
             except Exception:
                 self._widget_monitor_handle = None
         return self._widget_monitor_handle
-
-    def _refresh_monitor_handle(self):
-        """Re-check monitor handle after widget is positioned and refresh window list if changed"""
-        if not self._monitor_exclusive:
-            return
-
-        old_handle = self._widget_monitor_handle
-        self._widget_monitor_handle = None  # Force re-detection
-        new_handle = self._get_widget_monitor_handle()
-
-        if old_handle != new_handle:
-            # Trigger a refresh of the window list with the new monitor handle
-            if hasattr(self, "_task_manager") and self._task_manager and hasattr(self._task_manager, "_windows"):
-                # Clear current UI
-                while self._widget_container_layout.count():
-                    child = self._widget_container_layout.takeAt(0)
-                    if child.widget():
-                        child.widget().setParent(None)
-                self._window_buttons.clear()
-
-                # Re-add windows with new monitor filtering
-                for hwnd, window in self._task_manager._windows.items():
-                    window_data = window.as_dict()
-                    self._on_window_added(hwnd, window_data)
 
     def _should_show_window(self, hwnd, window_data):
         """Determine if a window should be shown based on widget configuration"""
@@ -817,21 +807,9 @@ class TaskbarWidget(BaseWidget):
                 icon_img = get_window_icon(hwnd)
                 if icon_img:
                     self._dpi = self.screen().devicePixelRatio()
-                    rgba = icon_img.convert("RGBA")
-                    if rgba.getbbox() is None:
-                        count = self._icon_retry_counts.get(hwnd, 0)
-                        if count < 10:
-                            self._icon_retry_counts[hwnd] = count + 1
-                            QTimer.singleShot(300, lambda h=hwnd, t=title: self._retry_get_and_set_icon(h, t))
-                            return None
-                        else:
-                            self._icon_retry_counts.pop(hwnd, None)
-                            return None
-
-                    self._dpi = self.screen().devicePixelRatio()
-                    icon_img = rgba.resize(
+                    icon_img = icon_img.resize(
                         (int(self._label_icon_size * self._dpi), int(self._label_icon_size * self._dpi)), Image.LANCZOS
-                    )
+                    ).convert("RGBA")
                     self._icon_cache[cache_key] = icon_img
 
             if not icon_img:
