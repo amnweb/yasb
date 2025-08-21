@@ -90,13 +90,36 @@ class CSSProcessor:
 
         css = re.sub(r":root\s*{([^}]*)}", root_replacer, css, flags=re.DOTALL)
 
-        # Replace var(--name) with value
-        def var_replacer(match):
+        # Resolve variables recursively
+        resolved_vars = root_vars.copy()
+        max_iterations = 10  # Make sure we never get stuck in a loop.
+        for iteration in range(max_iterations):
+            changed = False
+
+            for var_name, var_value in resolved_vars.items():
+
+                def var_replacer(match):
+                    nonlocal changed
+                    nested_var_name = match.group(1).strip()
+                    if nested_var_name in resolved_vars:
+                        changed = True
+                        return resolved_vars[nested_var_name]
+                    return match.group(0)
+
+                # Replace var(--name) with their value until it's no longer another variable
+                new_value = re.sub(r"var\((--[\w-]+)\)", var_replacer, var_value)
+                if new_value != var_value:
+                    resolved_vars[var_name] = new_value
+                    changed = True
+            if not changed:
+                break  # No more changes, resolution complete
+
+        def final_var_replacer(match):
             var_name = match.group(1).strip()
-            return root_vars.get(var_name, match.group(0))
+            return resolved_vars.get(var_name, match.group(0))
 
-        css = re.sub(r"var\((--[\w-]+)\)", var_replacer, css)
-
+        # Replace final var(--name) with resolved CSS value
+        css = re.sub(r"var\((--[\w-]+)\)", final_var_replacer, css)
         css = self._css_to_qt_hex_alpha(css)
 
         return css
