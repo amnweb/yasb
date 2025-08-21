@@ -38,6 +38,7 @@ class GpuWidget(BaseWidget):
         label_shadow: dict = None,
         container_shadow: dict = None,
         progress_bar: dict = None,
+        hide_decimal: bool = False,
     ):
         super().__init__(class_name="gpu-widget")
         self._gpu_index = gpu_index
@@ -53,6 +54,7 @@ class GpuWidget(BaseWidget):
         self._container_shadow = container_shadow
         self._gpu_thresholds = gpu_thresholds
         self._progress_bar = progress_bar
+        self._hide_decimal = hide_decimal
 
         self.progress_widget = None
         self.progress_widget = build_progress_widget(self, self._progress_bar)
@@ -169,12 +171,13 @@ class GpuWidget(BaseWidget):
         self._gpu_util_history.append(gpu_data.utilization)
         self._gpu_mem_history.append(gpu_data.mem_used)
 
+        _naturalsize = lambda value: naturalsize(value, True, True, "%.0f" if self._hide_decimal else "%.1f")
         gpu_info = {
             "index": gpu_data.index,
             "utilization": gpu_data.utilization,
-            "mem_total": naturalsize(gpu_data.mem_total * 1024 * 1024, True, True),
-            "mem_used": naturalsize(gpu_data.mem_used * 1024 * 1024, True, True),
-            "mem_free": naturalsize(gpu_data.mem_free * 1024 * 1024, True, True),
+            "mem_total": _naturalsize(gpu_data.mem_total * 1024 * 1024),
+            "mem_used": _naturalsize(gpu_data.mem_used * 1024 * 1024),
+            "mem_free": _naturalsize(gpu_data.mem_free * 1024 * 1024),
             "temp": gpu_data.temp,
             "histograms": {
                 "utilization": "".join([self._get_histogram_bar(val, 0, 100) for val in self._gpu_util_history]),

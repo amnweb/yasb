@@ -12,6 +12,7 @@
 | `container_shadow`   | dict   | `None`                  | Container shadow options.                       |
 | `label_shadow`         | dict   | `None`                  | Label shadow options.                 |
 | `progress_bar`       | dict    | `{'enabled': False, 'position': 'left', 'size': 14, 'thickness': 2, 'color': '#57948a', animation: True}` | Progress bar settings.    |
+| `hide_decimal`       | bool    | `False`                                                                 | Whether to hide decimal places in the memory widget. |
 
 ## Example Configuration
 
@@ -54,6 +55,7 @@ memory:
 - **update_interval:** The interval in milliseconds to update the memory widget. Must be between 0 and 60000.
 - **callbacks:** A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions.
 - **memory_thresholds:** A dictionary specifying the thresholds for memory usage levels. The keys are `low`, `medium`, and `high`, and the values are the percentage thresholds.
+- **hide_decimal:** Whether to hide decimal places in the memory widget.
 - **histogram_icons**: A list of icons representing different levels of Memory usage in the histogram. 8 icons are typically used, representing usage from 0% to 80%+ cam be used by puttinh `{histogram}` in label.
 - **animation:** A dictionary specifying the animation settings for the widget. It contains three keys: `enabled`, `type`, and `duration`. The `type` can be `fadeInOut` and the `duration` is the animation duration in milliseconds.
 - **container_padding**: Explicitly set padding inside widget container. Use this option to set padding inside the widget container. You can set padding for top, left, bottom and right sides of the widget container.

@@ -14,6 +14,7 @@
 | `container_shadow`   | dict   | `None`                  | Container shadow options.                       |
 | `label_shadow`         | dict   | `None`                  | Label shadow options.                 |
 | `progress_bar`       | dict    | `{'enabled': False, 'position': 'left', 'size': 14, 'thickness': 2, 'color': '#57948a', animation: True}` | Progress bar settings.                                                      |
+| `hide_decimal`       | bool    | `False`                                                                 | Whether to hide decimal places in the CPU widget.                          |
 
 ## Example Configuration
 
@@ -54,6 +55,7 @@ cpu:
 - **label_alt**: The alternative format string for the CPU usage label. Useful for displaying additional CPU details.
 - **update_interval**: The interval in milliseconds at which the widget updates its information. Minimum is 1000 ms (1 second).
 - **cpu_thresholds:** A dictionary specifying the thresholds for cpu usage levels. The keys are `low`, `medium`, and `high`, and the values are the percentage thresholds.
+- **hide_decimal**: Whether to hide decimal places in the CPU widget.
 - **histogram_icons**: A list of icons representing different levels of CPU usage in the histogram. 8 icons are typically used, representing usage from 0% to 80%+.
 - **histogram_num_columns**: The number of columns to display in the CPU usage histogram.
 - **callbacks**: A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions.

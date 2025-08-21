@@ -27,6 +27,7 @@ If you see a table with your GPU information, `nvidia-smi` is available. If you 
 | `container_shadow`    | dict    | `{"enabled": False, "color": "black", "offset": [1, 1], "radius": 3}`                                                                  | Container shadow options.                                                   |
 | `label_shadow`        | dict    | `{"enabled": False, "color": "black", "offset": [1, 1], "radius": 3}`                                                                  | Label shadow options.                                                       |
 | `progress_bar`        | dict    | `{'enabled': False, 'position': 'left', 'size': 14, 'thickness': 2, 'color': '#57948a', animation: True}` | Progress bar settings.                                                      |
+| `hide_decimal`        | bool    | `False`                                                                 | Whether to hide decimal places in the GPU widget.                          |
 
 > **About `index`:** If you have multiple NVIDIA GPUs, you can set the `index` option to select which GPU to monitor. Create multiple GPU widgets with different `index` values (e.g., 0, 1, 2, ...) to display stats for each card separately.
 
@@ -64,6 +65,7 @@ gpu:
 - **label_alt**: The alternative format string for the GPU usage label. Useful for displaying additional GPU details, such as a histogram.
 - **update_interval**: The interval in milliseconds at which the widget updates its information. Minimum is 1000 ms (1 second).
 - **gpu_thresholds:** A dictionary specifying the thresholds for GPU utilization levels. The keys are `low`, `medium`, and `high`, and the values are the percentage thresholds.
+- **hide_decimal**: Whether to hide decimal places in the GPU widget.
 - **histogram_icons**: A list of icons representing different levels of GPU utilization in the histogram. 8 or 9 icons are typically used, representing usage from 0% to 80%+.
 - **histogram_num_columns**: The number of columns to display in the GPU utilization histogram.
 - **callbacks**: A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions.
