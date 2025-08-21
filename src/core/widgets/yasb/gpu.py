@@ -102,6 +102,7 @@ class GpuWidget(BaseWidget):
             mem_used = 0
             mem_free = 0
             temp = 0
+            fan_speed = 0
 
         gpu_data = DummyGpu()
         self._update_label(gpu_data)
@@ -129,7 +130,7 @@ class GpuWidget(BaseWidget):
             gpu = Popen(
                 [
                     nvidia_smi,
-                    "--query-gpu=index,utilization.gpu,memory.total,memory.used,memory.free,temperature.gpu",
+                    "--query-gpu=index,utilization.gpu,memory.total,memory.used,memory.free,temperature.gpu,fan.speed",
                     "--format=csv,noheader,nounits",
                 ],
                 stdout=PIPE,
@@ -155,6 +156,7 @@ class GpuWidget(BaseWidget):
                             mem_used = int(fields[3])
                             mem_free = int(fields[4])
                             temp = int(fields[5])
+                            fan_speed = int(fields[6])
 
                         inst._update_label(GpuData)
                     else:
@@ -179,6 +181,7 @@ class GpuWidget(BaseWidget):
             "mem_used": _naturalsize(gpu_data.mem_used * 1024 * 1024),
             "mem_free": _naturalsize(gpu_data.mem_free * 1024 * 1024),
             "temp": gpu_data.temp,
+            "fan_speed": gpu_data.fan_speed,
             "histograms": {
                 "utilization": "".join([self._get_histogram_bar(val, 0, 100) for val in self._gpu_util_history]),
                 "mem_used": "".join(
