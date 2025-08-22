@@ -156,7 +156,7 @@ class GpuWidget(BaseWidget):
                             mem_used = int(fields[3])
                             mem_free = int(fields[4])
                             temp = int(fields[5])
-                            fan_speed = int(fields[6])
+                            fan_speed = int(fields[6]) if fields[6].isdigit() else 0
 
                         inst._update_label(GpuData)
                     else:
