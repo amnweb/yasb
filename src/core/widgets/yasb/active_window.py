@@ -7,7 +7,7 @@ import win32gui
 from PIL import Image
 from PyQt6.QtCore import QElapsedTimer, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QImage, QPixmap
-from PyQt6.QtWidgets import QHBoxLayout, QLabel, QWidget
+from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel
 
 from core.event_service import EventService
 from core.utils.utilities import add_shadow
@@ -51,6 +51,7 @@ class ActiveWindowWidget(BaseWidget):
         self,
         label: str,
         label_alt: str,
+        class_name: str,
         callbacks: dict[str, str],
         label_no_window: str,
         label_icon: bool,
@@ -65,7 +66,7 @@ class ActiveWindowWidget(BaseWidget):
         container_shadow: dict = None,
         rewrite: list[dict] = None,
     ):
-        super().__init__(class_name="active-window-widget")
+        super().__init__(class_name=f"active-window-widget {class_name}")
         self.dpi = None
         self._win_info = None
         self._show_alt = False
@@ -86,13 +87,13 @@ class ActiveWindowWidget(BaseWidget):
         self._container_shadow = container_shadow
         self._rewrite_rules = rewrite
         # Construct container
-        self._widget_container_layout: QHBoxLayout = QHBoxLayout()
+        self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
         self._widget_container_layout.setContentsMargins(
             self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
         )
         # Initialize container
-        self._widget_container: QWidget = QWidget()
+        self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
         add_shadow(self._widget_container, self._container_shadow)

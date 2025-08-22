@@ -2,7 +2,7 @@ import logging
 
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QCursor
-from PyQt6.QtWidgets import QFileDialog, QHBoxLayout, QInputDialog, QLabel, QPushButton, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import QFileDialog, QFrame, QHBoxLayout, QInputDialog, QLabel, QPushButton, QVBoxLayout
 from pyvda import VirtualDesktop, get_virtual_desktops, set_wallpaper_for_all_desktops
 
 from core.event_service import EventService
@@ -221,12 +221,12 @@ class WorkspaceWidget(BaseWidget):
         self.mousePressEvent = None
 
         # Construct container which holds workspace buttons
-        self._workspace_container_layout: QHBoxLayout = QHBoxLayout()
+        self._workspace_container_layout = QHBoxLayout()
         self._workspace_container_layout.setSpacing(0)
         self._workspace_container_layout.setContentsMargins(
             self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
         )
-        self._workspace_container: QWidget = QWidget()
+        self._workspace_container = QFrame()
         self._workspace_container.setLayout(self._workspace_container_layout)
         self._workspace_container.setProperty("class", "widget-container")
         add_shadow(self._workspace_container, self._container_shadow)

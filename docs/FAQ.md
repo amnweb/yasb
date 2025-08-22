@@ -44,10 +44,10 @@ Required files:
 **A:** Run `yasbc update` in the terminal to check for updates.
 
 ### Q: How to change the bar size?
-**A:** Adjust the bar `height` value in `config.yaml` to change the bar size.
+**A:** Adjust the bar `width` and `height` value in `config.yaml` to change the bar size.
 
 ### Q: How to check logs for errors?
-**A:** Check the `yasb.log` file in the config directory for errors. or run `yasbc logs` in the terminal.
+**A:** Check the `yasb.log` file in the config directory for errors, or run `yasbc logs` in the terminal.
 
 
 ## Widget Issues
@@ -60,9 +60,8 @@ Required files:
 
 ### Q: Missing applications in Taskbar widget?
 **A:** Note:
-- Only shows minimized windows
-- System tray apps won't appear
-- Check `window_class` filters in config
+- Only shows running applications with visible windows
+- Check filter settings in `config.yaml`
 
 ## Performance Issues
 
@@ -70,7 +69,6 @@ Required files:
 **A:** Common causes:
 - Low `update_interval` values
 - Too many real-time widgets
-- Both `watch_config` and `watch_stylesheet` enabled
 
 ### Q: Delayed startup?
 **A:** Solutions:

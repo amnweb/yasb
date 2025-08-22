@@ -1,6 +1,7 @@
 DEFAULTS = {
     "label": "\uf0e7 {active_plan}",
     "label_alt": "\uf0e7 Power Plan",
+    "class_name": "",
     "update_interval": 5000,
     "menu": {
         "blur": True,
@@ -19,6 +20,7 @@ DEFAULTS = {
 VALIDATION_SCHEMA = {
     "label": {"type": "string", "default": DEFAULTS["label"]},
     "label_alt": {"type": "string", "default": DEFAULTS["label_alt"]},
+    "class_name": {"type": "string", "required": False, "default": DEFAULTS["class_name"]},
     "update_interval": {"type": "integer", "default": DEFAULTS["update_interval"], "min": 0},
     "menu": {
         "type": "dict",

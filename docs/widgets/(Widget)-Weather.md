@@ -3,19 +3,22 @@
 |-----------------|---------|-------------------------------------------------------------------------|-----------------------------------------------------------------------------|
 | `label`         | string  | `'<span>{icon}</span> {temp}'`                                        | The format string for the weather label. You can use placeholders like `{temp}`, `{icon}`, etc. |
 | `label_alt`     | string  | `'{location}: Min {min_temp}, Max {max_temp}, Humidity {humidity}'` | The alternative format string for the weather label. Useful for displaying additional weather details. |
+| `class_name`    | string  | `""`                                                                                  | Additional CSS class name for the widget.                                    |
+| `tooltip`      | boolean | `true`                                                                  | Whether to show a tooltip with the min and max temperatures.                |
 | `update_interval` | integer | `3600`                                                                 | The interval in seconds to update the weather data. Must be between 60 and 36000000. |
-| `hide_decimal`  | boolean | `False`                                                                 | Whether to hide the decimal part of the temperature. |
+| `hide_decimal`  | boolean | `false`                                                                 | Whether to hide the decimal part of the temperature. |
 | `location`      | string  | `'London'`                                                              | The location for which to fetch the weather data. |
-| `show_alerts`   | boolean | `False`                                                                 | Whether to show weather alerts. |
+| `show_alerts`   | boolean | `false`                                                                 | Whether to show weather alerts. |
 | `units`         | string  | `'metric'`                                                              | The units for the weather data. Can be `'metric'` or `'imperial'`. |
 | `api_key`       | string  | `'0'`                                                                   | The API key for accessing the weather service. |
 | `icons`         | dict    | `{ 'sunnyDay': '\ue30d', 'clearNight': '\ue32b', 'cloudyDay': '\ue312', 'cloudyNight': '\ue311', 'rainyDay': '\udb81\ude7e', 'rainyNight': '\udb81\ude7e', 'snowyIcyDay': '\udb81\udd98', 'snowyIcyNight': '\udb81\udd98', 'blizzardDay': '\uebaa', 'default': '\uebaa' }` | A dictionary of icons for different weather conditions. |
 | `callbacks`     | dict    | `{ 'on_left': 'do_nothing', 'on_middle': 'do_nothing', 'on_right': 'do_nothing' }` | Callbacks for mouse events on the weather widget. |
-| `weather_card`  | dict    | `{ blur': True, 'round_corners': True, 'round_corners_type': 'normal', 'border_color': 'System', 'alignment': 'right', 'direction': 'down', 'offset_top': 6, 'offset_left': 0, 'icon_size': 64 }` | Configuration for the weather card popup display. Controls visibility, appearance, and positioning. |
-| `animation`         | dict    | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
-| `container_padding`  | dict | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}`      | Explicitly set padding inside widget container. |
+| `weather_card`  | dict    | `{ 'blur': True, 'round_corners': True, 'round_corners_type': 'normal', 'border_color': 'System', 'alignment': 'right', 'direction': 'down', 'offset_top': 6, 'offset_left': 0, 'icon_size': 64 }` | Configuration for the weather card popup display. Controls visibility, appearance, and positioning. |
+| `animation`         | dict    | `{'enabled': true, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
 | `container_shadow`   | dict   | `None`                  | Container shadow options.                       |
 | `label_shadow`         | dict   | `None`                  | Label shadow options.                 |
+
+> **note**: To use the weather widget, you need to obtain a free API key from [weatherapi.com](https://www.weatherapi.com/) and set it in the `api_key` option.
 
 ## Example Configuration
 
@@ -53,14 +56,14 @@ weather:
       thunderstormNight: "\ue338"
       default: "\uebaa"
     weather_card:
-      blur: True
-      round_corners: True
+      blur: true
+      round_corners: true
       round_corners_type: "normal"
-      border_color: "System"
+      border_color: "system"
       alignment: "right"
       direction: "down"
       icon_size: 64
-      show_hourly_forecast: True # Set to False to disable hourly forecast
+      show_hourly_forecast: true # Set to False to disable hourly forecast
       time_format: "24h" # can be 12h or 24h
       hourly_point_spacing: 76
       hourly_icon_size: 32 # better to set 16, 32 or 64 for better quality
@@ -80,6 +83,7 @@ weather:
 
 - **label:** The format string for the weather label. You can use placeholders like `{temp}`, `{min_temp}`, `{max_temp}`, `{feelslike}`, `{location}`, `{humidity}`, `{icon}`, `{conditions}`, `{wind}`, `{wind_dir}`, `{wind_degree}`, `{pressure}`, `{precip}`, `{uv}`, `{vis}`, `{cloud}`.
 - **label_alt:** The alternative format string for the weather label. Useful for displaying additional weather details.
+- **class_name:** Additional CSS class name for the widget. This allows for custom styling.
 - **update_interval:** The interval in seconds to update the weather data. Must be between 60 and 36000000.
 - **hide_decimal:** Whether to hide the decimal part of the temperature.
 - **location:** The location for which to fetch the weather data. You can use example "USA Los Angeles 90006" {COUNTRY CITY ZIP_CODE}, or just city. Location can be set to `env`, this means you have to set `YASB_WEATHER_LOCATION` in environment variable or you can set it directly in the configuration file.
@@ -109,13 +113,13 @@ weather:
   - **current_line_style:** Style of the current hour line. Possible values are `solid`, `dash`, `dot`, `dashDot`, `dashDotDot`.
 - **callbacks:** A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions.
 - **animation:** A dictionary specifying the animation settings for the widget. It contains three keys: `enabled`, `type`, and `duration`. The `type` can be `fadeInOut` and the `duration` is the animation duration in milliseconds.
-- **container_padding**: Explicitly set padding inside widget container. Use this option to set padding inside the widget container. You can set padding for top, left, bottom and right sides of the widget container.
 - **container_shadow:** Container shadow options.
 - **label_shadow:** Label shadow options.
 
 ## Example Style
 ```css
 .weather-widget {}
+.weather-widget.your_class {} /* If you are using class_name option */
 .weather-widget .widget-container {}
 .weather-widget .label {}
 .weather-widget .label.alt {}

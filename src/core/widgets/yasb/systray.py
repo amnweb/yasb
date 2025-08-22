@@ -14,11 +14,11 @@ from PyQt6.QtCore import (
 )
 from PyQt6.QtWidgets import (
     QApplication,
+    QFrame,
     QHBoxLayout,
     QLayout,
     QMenu,
     QPushButton,
-    QWidget,
 )
 
 from core.utils.utilities import add_shadow, app_data_path
@@ -177,7 +177,7 @@ class SystrayWidget(BaseWidget):
             self.container_padding["bottom"],
         )
 
-        self.widget_container = QWidget(self)
+        self.widget_container = QFrame(self)
         self.widget_container.setLayout(self.widget_container_layout)
         self.widget_container.setProperty("class", "widget-container")
 

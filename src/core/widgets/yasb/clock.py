@@ -7,7 +7,7 @@ from typing import cast
 import pytz
 from PyQt6.QtCore import QDate, QLocale, Qt, QTimer
 from PyQt6.QtGui import QColor
-from PyQt6.QtWidgets import QCalendarWidget, QHBoxLayout, QLabel, QSizePolicy, QStyle, QTableView, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import QCalendarWidget, QFrame, QHBoxLayout, QLabel, QSizePolicy, QStyle, QTableView, QVBoxLayout
 from tzlocal import get_localzone_name
 
 from core.utils.tooltip import set_tooltip
@@ -174,13 +174,13 @@ class ClockWidget(BaseWidget):
         self._country_code = self._calendar["country_code"] or self.get_country_code()
         self._subdivision = self._calendar.get("subdivision")
         # Construct container
-        self._widget_container_layout: QHBoxLayout = QHBoxLayout()
+        self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
         self._widget_container_layout.setContentsMargins(
             self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
         )
         # Initialize container
-        self._widget_container: QWidget = QWidget()
+        self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
         add_shadow(self._widget_container, self._container_shadow)

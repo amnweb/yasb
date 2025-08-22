@@ -5,9 +5,9 @@ from typing import Any
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
+    QFrame,
     QHBoxLayout,
     QLabel,
-    QWidget,
 )
 from winrt.windows.networking.connectivity import NetworkConnectivityLevel, NetworkInformation
 
@@ -30,6 +30,7 @@ class WifiWidget(BaseWidget):
         label: str,
         label_alt: str,
         update_interval: int,
+        class_name: str,
         wifi_icons: list[str],
         ethernet_label: str,
         ethernet_label_alt: str,
@@ -43,7 +44,7 @@ class WifiWidget(BaseWidget):
         label_shadow: dict[str, str],
         container_shadow: dict[str, str],
     ):
-        super().__init__(update_interval, class_name="wifi-widget")
+        super().__init__(update_interval, class_name=f"wifi-widget {class_name}")
         self._wifi_menu = WifiMenu(self, menu_config)
 
         self._wifi_icons = wifi_icons
@@ -62,7 +63,7 @@ class WifiWidget(BaseWidget):
         self._label_shadow = label_shadow
         self._container_shadow = container_shadow
         # Construct container
-        self._widget_container_layout: QHBoxLayout = QHBoxLayout()
+        self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
         self._widget_container_layout.setContentsMargins(
             self._padding["left"],
@@ -71,7 +72,7 @@ class WifiWidget(BaseWidget):
             self._padding["bottom"],
         )
         # Initialize container
-        self._widget_container: QWidget = QWidget()
+        self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
         add_shadow(self._widget_container, self._container_shadow)

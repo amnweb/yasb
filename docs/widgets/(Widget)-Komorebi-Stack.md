@@ -9,16 +9,15 @@ This widget displays information about each window in the currently active Komor
 | `label_zero_index`        | boolean | `false`    | Whether to use zero-based indexing for window labels.                    |
 | `show_icons`        | string | `never`                                                                  | Whether to display app icons.                                  |
 | `icon_size`   | integer | `16`                                                                    | The size of the icon displayed.                              |
-| `max_length`        | integer | `None`    | 	The maximum length of the label text.              |
-| `max_length_active`        | integer | `None`    | 	The maximum length of the label text for the active window.              |
-| `max_length_overall`        | integer | `None`    | 	If specified, `max_length` will be calculated as `max_length_overall` divided by the number of inactive windows.       |
-| `max_length_ellipsis`        | string | `'...'`    | 		The ellipsis to use when the label text exceeds the maximum length.              |
+| `max_length`        | integer | `None`    | The maximum length of the label text.              |
+| `max_length_active`        | integer | `None`    | The maximum length of the label text for the active window.              |
+| `max_length_overall`        | integer | `None`    | If specified, `max_length` will be calculated as `max_length_overall` divided by the number of inactive windows.       |
+| `max_length_ellipsis`        | string | `'...'`    | The ellipsis to use when the label text exceeds the maximum length.              |
 | `hide_if_offline`       | boolean | `false`         | Whether to hide the widget if Komorebi is offline.                          |
 | `show_only_stack`       | boolean | `false`         | Whether to hide the widget if no stacked windows in focus.                |
 | `enable_scroll_switching` | boolean | `false`      | Enable scroll switching between windows.                                 |
 | `reverse_scroll_direction` | boolean | `false`      | Reverse scroll direction.                                                  |
 | `animation`  | boolean | `false`      | Buttons animation.                                           |
-| `container_padding`  | dict | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}`      | Explicitly set padding inside widget container.
 | `container_shadow`      | dict    | `None`                  | Container shadow options.                                |
 | `label_shadow`            | dict    | `None`                  | Label shadow options.                       |
 | `btn_shadow`            | dict    | `None`                  | Window button shadow options.                         |
@@ -65,7 +64,7 @@ komorebi_stack:
 - **label_window:** The format string for window buttons, can be {title}, {index}, {process}, or {hwnd}.
 - **label_window_active:** The format string for the active window button, can be {title}, {index}, {process}, or {hwnd}.
 - **label_no_window:** The label to display when no window is in focus.  
-- **label_zero_index:** Whether to use zero-based indexing for workspace labels.
+- **label_zero_index:** Whether to use zero-based indexing for window labels.
 - **show_icons:** Whether to display app icons. Options are `always`, `never`, or `focused`.
 - **max_length:** The maximum number of characters to display for the label. If the title exceeds this length, it will be truncated.
 - **max_length_active:** The maximum number of characters to display for the active window label. If the title exceeds this length, it will be truncated.
@@ -75,7 +74,6 @@ komorebi_stack:
 - **enable_scroll_switching:** Enable scroll switching between workspaces.
 - **reverse_scroll_direction:** Reverse scroll direction.
 - **animation:** Buttons animation.
-- **container_padding:** Explicitly set padding inside widget container.
 - **container_shadow:** Container shadow options.
 - **label_shadow:** Label shadow options for labels, including icons and labels within each window button.
 - **btn_shadow:** Window button shadow options.

@@ -1,6 +1,6 @@
 import re
 
-from PyQt6.QtWidgets import QHBoxLayout, QLabel, QWidget
+from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel
 
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import add_shadow, build_widget_label
@@ -17,6 +17,7 @@ class RecycleBinWidget(BaseWidget):
         self,
         label: str,
         label_alt: str,
+        class_name: str,
         icons: dict[str, str],
         tooltip: bool,
         animation: dict[str, str],
@@ -25,7 +26,7 @@ class RecycleBinWidget(BaseWidget):
         label_shadow: dict = None,
         container_shadow: dict = None,
     ):
-        super().__init__(class_name="recycle-bin-widget")
+        super().__init__(class_name=f"recycle-bin-widget {class_name}")
         self._label_content = label
         self._label_alt_content = label_alt
         self._icons = icons
@@ -46,12 +47,12 @@ class RecycleBinWidget(BaseWidget):
         self.monitor.bin_updated.connect(self._on_bin_update)
 
         # Construct container
-        self._widget_container_layout: QHBoxLayout = QHBoxLayout()
+        self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
         self._widget_container_layout.setContentsMargins(
             self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
         )
-        self._widget_container: QWidget = QWidget()
+        self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
         add_shadow(self._widget_container, self._container_shadow)

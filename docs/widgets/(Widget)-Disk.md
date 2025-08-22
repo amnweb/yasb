@@ -3,17 +3,17 @@
 |-------------------|---------|-------------------------------------------------------------------------|-----------------------------------------------------------------------------|
 | `label`           | string  | `'{volume_label} {space[used][percent]}'`                        | The format string for the disk widget. |
 | `label_alt`       | string  | `'{volume_label} {space[used][gb]} / {space[total][gb]}'`        | The alternative format string for the disk widget. |
+| `class_name`      | string  | `""`                                                                                  | Additional CSS class name for the widget.                                    |
 | `volume_label`       | string  | `'C'`        | Partition which you want to show in the bar |
-| `decimal_display` | integer | `1`                                                                  | The number of decimal to show, defaul 1 (min 0 max 3) |
+| `decimal_display` | integer | `1`                                                                  | The number of decimal places to show, default 1 (min 0 max 3) |
 | `update_interval` | integer | `60`                                                                  | The interval in seconds to update the disk widget. Must be between 0 and 3600. |
-| `group_label` | dict | `{'volume_labels': ["C"], 'show_label_name': True, 'blur': True, 'round_corners': True, 'round_corners_type': 'normal','border_color': 'System', 'alignment': 'right', 'direction': 'down', 'offset_top': 6, 'offset_left': 0}` | Group labels for multiple disks. This will show the labels of multiple disks in a popup window. |
+| `group_label` | dict | `{'volume_labels': ["C"], 'show_label_name': true, 'blur': true, 'round_corners': true, 'round_corners_type': 'normal','border_color': 'System', 'alignment': 'right', 'direction': 'down', 'offset_top': 6, 'offset_left': 0}` | Group labels for multiple disks. This will show the labels of multiple disks in a popup window. |
 | `callbacks`       | dict    | `{'on_left': 'do_nothing', 'on_middle': 'do_nothing', 'on_right': "exec explorer C:\\"}` | Callbacks for mouse events. |
 | `disk_thresholds` | dict  | `{'low': 25, 'medium': 50, 'high': 90}`                                 | Thresholds for Disk usage levels. |
-| `container_padding`  | dict | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}`      | Explicitly set padding inside widget container. |
-| `animation`         | dict    | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
+| `animation`         | dict    | `{'enabled': true, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
 | `container_shadow`   | dict   | `None`                  | Container shadow options.                       |
 | `label_shadow`         | dict   | `None`                  | Label shadow options.                 |
-| `progress_bar`       | dict    | `{'enabled': False, 'position': 'left', 'size': 14, 'thickness': 2, 'color': '#57948a', animation: True}` | Progress bar settings.    |
+| `progress_bar`       | dict    | `{'enabled': false, 'position': 'left', 'size': 14, 'thickness': 2, 'color': '#57948a', 'animation': false}` | Progress bar settings.    |
 
 ## Example Configuration
 
@@ -53,8 +53,9 @@ disk:
 
 - **label:** The format string for the disk widget. Displays free space in percent.
 - **label_alt:** The alternative format string for the disk widget.
+- **class_name:** Additional CSS class name for the widget. This allows for custom styling.
 - **volume_label:** Partition/volume which you want to show in the bar.
-- **decimal_display:** The number of decimal to show, defaul 1 (min 0 max 3).
+- **decimal_display:** The number of decimal places to show, default 1 (min 0 max 3).
 - **update_interval:** The interval in seconds to update the disk widget. Must be between 0 and 3600.
 - **disk_thresholds:** A dictionary specifying the thresholds for disk usage levels. The keys are `low`, `medium`, and `high`, and the values are the percentage thresholds.
 - **group_label:** Group labels for multiple disks. This will show the labels of multiple disks in a popup window.
@@ -69,7 +70,6 @@ disk:
   - **offset_top:** Offset from the top of the screen.
   - **offset_left:** Offset from the left of the screen.
 - **callbacks:** A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions.
-- **container_padding:** Explicitly set padding inside widget container.
 - **animation:** A dictionary specifying the animation settings for the widget. It contains three keys: `enabled`, `type`, and `duration`. The `type` can be `fadeInOut` and the `duration` is the animation duration in milliseconds.
 - **container_shadow:** Container shadow options.
 - **label_shadow:** Label shadow options.
@@ -85,6 +85,7 @@ disk:
 ## Widget Style
 ```css
 .disk-widget {}
+.disk-widget.your_class {} /* If you are using class_name option */
 .disk-widget .widget-container {}
 .disk-widget .widget-container .label {}
 .disk-widget .widget-container .label.alt {}

@@ -4,7 +4,7 @@ import re
 import psutil
 import win32api
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtWidgets import QHBoxLayout, QLabel, QProgressBar, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QProgressBar, QVBoxLayout, QWidget
 
 from core.utils.utilities import PopupWidget, add_shadow, build_progress_widget, build_widget_label
 from core.utils.widgets.animation_manager import AnimationManager
@@ -32,6 +32,7 @@ class DiskWidget(BaseWidget):
         self,
         label: str,
         label_alt: str,
+        class_name: str,
         volume_label: str,
         decimal_display: int,
         update_interval: int,
@@ -44,7 +45,7 @@ class DiskWidget(BaseWidget):
         container_shadow: dict = None,
         progress_bar: dict = None,
     ):
-        super().__init__(int(update_interval * 1000), class_name="disk-widget")
+        super().__init__(int(update_interval * 1000), class_name=f"disk-widget {class_name}")
         self._decimal_display = decimal_display
         self._show_alt_label = False
         self._label_content = label
@@ -61,13 +62,13 @@ class DiskWidget(BaseWidget):
         self.progress_widget = None
         self.progress_widget = build_progress_widget(self, self._progress_bar)
 
-        self._widget_container_layout: QHBoxLayout = QHBoxLayout()
+        self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
         self._widget_container_layout.setContentsMargins(
             self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
         )
         # Initialize container
-        self._widget_container: QWidget = QWidget()
+        self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
         add_shadow(self._widget_container, self._container_shadow)

@@ -1,6 +1,6 @@
 # Cava Widget Configuration
 
-> NOTE: This widget requires the `cava` version >= 0.10.4 to be installed on your system. You can install it using winget `winget install karlstav.cava` or from the [official repository](https://github.com/karlstav/cava/releases). Cava need to be accessible in the system path. YASB will create temporary configuration files for cava in the `%LOCALAPPDATA%\Yasb` directory.
+> NOTE: This widget requires `cava` version >= 0.10.4 to be installed on your system. You can install it using winget (`winget install karlstav.cava`) or from the [official repository](https://github.com/karlstav/cava/releases). Cava needs to be accessible in the system PATH. YASB will create temporary configuration files for cava in the `%LOCALAPPDATA%\YASB` directory.
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
@@ -28,7 +28,6 @@
 | `gradient_color_2` | string | "#89b4fa" | Second gradient color in hex format |
 | `gradient_color_3` | string | "#cba6f7" | Third gradient color in hex format |
 | `hide_empty` | boolean | false | Hide widget when no audio is playing (requires `sleep_timer` to be enabled) |
-| `container_padding` | object | {top: 0, left: 0, bottom: 0, right: 0} | Padding of the widget container |
 | `callbacks`         | dict    | `{'on_left': 'do_nothing', 'on_middle': 'do_nothing', 'on_right': 'reload_cava'}` | Callbacks for mouse events on the widget. |
 
 ## Example Configuration
@@ -49,11 +48,6 @@
       bar_spacing: 2
       bar_width: 4
       hide_empty: true
-      container_padding:
-        top: 0
-        left: 8
-        bottom: 0
-        right: 8
 ```
 
 ## Description of Options
@@ -82,7 +76,6 @@
 - **gradient_color_2**: Second gradient color in hex format.
 - **gradient_color_3**: Third gradient color in hex format.
 - **hide_empty**: Hide widget when no audio is playing (requires `sleep_timer` to be enabled).
-- **container_padding**: Explicitly set padding inside widget container.
 - **callbacks**: A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions.
 
 More information on this option is documented in the [example config file](https://github.com/karlstav/cava/blob/master/example_files/config)

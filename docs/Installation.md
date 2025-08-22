@@ -9,7 +9,7 @@
 ***
 
 ### Winget
-Install the YASB using [winget](https://learn.microsoft.com/en-us/windows/package-manager/winget/) install
+Install YASB using [winget](https://learn.microsoft.com/en-us/windows/package-manager/winget/):
 ```
 winget install --id AmN.yasb
 ```

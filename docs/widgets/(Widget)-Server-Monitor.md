@@ -12,11 +12,10 @@
 | `desktop_notifications`  | dict | `{'ssl': false, 'offline': false}` | Desktop notification settings. Show desktop notifications for SSL warnings and offline servers. |
 | `timeout`         | integer | `5`                                                                 | The timeout in seconds for server checks. Must be between 1 and 30. |
 | `servers`         | list    | `[]`                                                                   | A list of server dictionaries. |
-| `menu` | dict | `{'blur': True, 'round_corners': True, 'round_corners_type': 'normal', 'border_color': 'System', 'alignment': 'right', 'direction': 'down', 'offset_top': 6, 'offset_left': 0}` | Menu settings for the widget. |
+| `menu` | dict | `{'blur': true, 'round_corners': true, 'round_corners_type': 'normal', 'border_color': 'System', 'alignment': 'right', 'direction': 'down', 'offset_top': 6, 'offset_left': 0}` | Menu settings for the widget. |
 | `icons`          | dict     | `{'online': '\uf444', 'offline': '\uf4c3', 'warning': '\uf4c3', 'reload': '\udb81\udc50'}` | Icons for different server states and actions. |
-| `callbacks`       | dict    | `{'on_left': 'toggle_label', 'on_middle': 'do_nothing', 'on_right': 'do_nothing'}` | Callbacks for mouse events on the memory widget. |
+| `callbacks`       | dict    | `{'on_left': 'toggle_label', 'on_middle': 'do_nothing', 'on_right': 'do_nothing'}` | Callbacks for mouse events on the server monitor widget. |
 | `animation`         | dict    | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
-| `container_padding`  | dict | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}`      | Explicitly set padding inside widget container.                            |
 | `container_shadow`   | dict   | `None`                  | Container shadow options.                       |
 | `label_shadow`         | dict   | `None`                  | Label shadow options.                 |
 
@@ -82,7 +81,6 @@
 - **icons:** Icons for different server states and actions.
 - **callbacks:** Callbacks for mouse events on the memory widget.
 - **animation:** Animation settings for the widget.
-- **container_padding**: Explicitly set padding inside widget container. Use this option to set padding inside the widget container. You can set padding for top, left, bottom and right sides of the widget container.
 - **container_shadow:** Container shadow options.
 - **label_shadow:** Label shadow options.
 
@@ -92,6 +90,7 @@
 .server-widget {
     padding: 0 6px 0 6px
 }
+.server-widget .widget-container {}
 .server-widget .label {}
 .server-widget .icon {
     font-size: 14px

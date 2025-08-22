@@ -2,14 +2,13 @@
 | Option               | Type     | Default        | Description                                                                 |
 |----------------------|----------|----------------|-----------------------------------------------------------------------------|
 | `label`           | string   | `"{icon}"`     | The format string for the wallpaper widget label. |
-| `tooltip`  | boolean  | `True`        | Whether to show the tooltip on hover. |
+| `tooltip`  | boolean  | `true`        | Whether to show the tooltip on hover. |
 | `update_interval`  | integer  | 60        | The interval in seconds to update the wallpaper. Must be between 60 and 86400. |
-| `change_automatically` | boolean | `False`       | Whether to automatically change the wallpaper. |
+| `change_automatically` | boolean | `false`       | Whether to automatically change the wallpaper. |
 | `image_path`      | string   | `""`        | The path to the folder containing images for the wallpaper. This field is required. |
 | `gallery`         | object   | `{}`        | The gallery options for the wallpaper widget. |
 | `run_after`       | list     | `[]`        | A list of functions to run after the wallpaper is updated. |
-| `animation`         | dict    | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
-| `container_padding`  | dict | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}`      | Explicitly set padding inside widget container. |
+| `animation`         | dict    | `{'enabled': true, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
 | `container_shadow`   | dict   | `None`                  | Container shadow options.                       |
 | `label_shadow`         | dict   | `None`                  | Label shadow options.                 |
 
@@ -67,7 +66,6 @@ wallpapers:
   - **enable_cache:** Whether to enable caching of images in the gallery. (Note: Images are cached in memory and not saved to disk.)
 - **run_after:** A list of functions to run after the wallpaper is updated.
 - **animation:** A dictionary specifying the animation settings for the widget. It contains three keys: `enabled`, `type`, and `duration`. The `type` can be `fadeInOut` and the `duration` is the animation duration in milliseconds.
-- **container_padding**: Explicitly set padding inside widget container. Use this option to set padding inside the widget container. You can set padding for top, left, bottom and right sides of the widget container.
 - **container_shadow:** Container shadow options.
 - **label_shadow:** Label shadow options.
 
@@ -76,13 +74,14 @@ wallpapers:
 > Gallery options above fit screen for 1920x1080 resolution. You may need to adjust the values for other resolutions.
 
 > [!NOTE]
-> Wallapers widget supports toggle visibility using the `toggle-widget wallpapers` command in the CLI. More information about the CLI commands can be found in the [CLI documentation](https://github.com/amnweb/yasb/wiki/CLI#toggle-widget-visibility).
+> Wallpapers widget supports toggle visibility using the `toggle-widget wallpapers` command in the CLI. More information about the CLI commands can be found in the [CLI documentation](https://github.com/amnweb/yasb/wiki/CLI#toggle-widget-visibility).
 
 ## Example Style
 ```css
 .wallpapers-widget {
     padding: 0 6px 0 6px;
 }
+.wallpapers-widget .widget-container {}
 .wallpapers-gallery-window {
     background-color: rgba(85, 42, 240, 0.01);
     border: 0;

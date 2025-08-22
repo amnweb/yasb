@@ -1,6 +1,7 @@
 DEFAULTS = {
     "label": "{volume_label} {space[used][percent]}",
     "label_alt": "{volume_label} {space[used][gb]} / {space[total][gb]}",
+    "class_name": "",
     "volume_label": "C",
     "update_interval": 60,
     "decimal_display": 1,
@@ -30,6 +31,7 @@ DEFAULTS = {
 VALIDATION_SCHEMA = {
     "label": {"type": "string", "default": DEFAULTS["label"]},
     "label_alt": {"type": "string", "default": DEFAULTS["label_alt"]},
+    "class_name": {"type": "string", "required": False, "default": DEFAULTS["class_name"]},
     "volume_label": {"type": "string", "default": DEFAULTS["volume_label"]},
     "update_interval": {"type": "integer", "default": DEFAULTS["update_interval"], "min": 0, "max": 3600},
     "decimal_display": {
@@ -145,5 +147,5 @@ VALIDATION_SCHEMA = {
             "high": {"type": "integer", "default": DEFAULTS["disk_thresholds"]["high"], "min": 0, "max": 100},
         },
         "default": DEFAULTS["disk_thresholds"],
-    }
+    },
 }

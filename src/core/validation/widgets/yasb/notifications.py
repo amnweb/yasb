@@ -1,6 +1,7 @@
 DEFAULTS = {
     "label": "{count} new notifications",
     "label_alt": "{count} new notifications",
+    "class_name": "",
     "hide_empty": False,
     "tooltip": True,
     "animation": {"enabled": True, "type": "fadeInOut", "duration": 200},
@@ -11,6 +12,7 @@ DEFAULTS = {
 VALIDATION_SCHEMA = {
     "label": {"type": "string", "default": DEFAULTS["label"]},
     "label_alt": {"type": "string", "default": DEFAULTS["label_alt"]},
+    "class_name": {"type": "string", "required": False, "default": DEFAULTS["class_name"]},
     "hide_empty": {"type": "boolean", "default": DEFAULTS["hide_empty"]},
     "tooltip": {"type": "boolean", "required": False, "default": DEFAULTS["tooltip"]},
     "animation": {

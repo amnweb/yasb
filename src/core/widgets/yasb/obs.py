@@ -3,7 +3,7 @@ import logging
 from obswebsocket import events, obsws, requests
 from PyQt6.QtCore import Q_ARG, QMetaObject, Qt, QThread, QTimer, pyqtSignal
 from PyQt6.QtGui import QCursor
-from PyQt6.QtWidgets import QGraphicsOpacityEffect, QHBoxLayout, QLabel, QWidget
+from PyQt6.QtWidgets import QFrame, QGraphicsOpacityEffect, QHBoxLayout, QLabel
 
 from core.validation.widgets.yasb.obs import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
@@ -80,14 +80,14 @@ class ObsWidget(BaseWidget):
         self.is_recording = False
 
         # Construct container
-        self._widget_container_layout: QHBoxLayout = QHBoxLayout()
+        self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
         self._widget_container_layout.setContentsMargins(
             self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
         )
 
         # Initialize container
-        self._widget_container: QWidget = QWidget()
+        self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
 

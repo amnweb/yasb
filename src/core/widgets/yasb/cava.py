@@ -9,7 +9,7 @@ import threading
 
 from PyQt6.QtCore import QTimer, pyqtSignal
 from PyQt6.QtGui import QColor, QLinearGradient, QPainter
-from PyQt6.QtWidgets import QApplication, QHBoxLayout, QLabel, QWidget
+from PyQt6.QtWidgets import QApplication, QFrame, QHBoxLayout, QLabel, QWidget
 
 from core.utils.utilities import app_data_path
 from core.validation.widgets.yasb.cava import VALIDATION_SCHEMA
@@ -117,12 +117,12 @@ class CavaWidget(BaseWidget):
         self.colors = []
 
         # Construct container layout
-        self._widget_container_layout: QHBoxLayout = QHBoxLayout()
+        self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
         self._widget_container_layout.setContentsMargins(
             self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
         )
-        self._widget_container = QWidget()
+        self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
         self.widget_layout.addWidget(self._widget_container)

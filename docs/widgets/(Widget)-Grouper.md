@@ -4,7 +4,6 @@
 |---------------------|---------|-----------------------------------------------------------|-----------------------------------------------------------------------|
 | `class_name`              | string  | `'grouper'`                                               | The name identifier for the grouper widget instance.                 |
 | `widgets`           | list    | `[]`                                                      | List of widget names to group together inside this container.        |
-| `container_padding` | dict    | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}`        | Explicitly set padding inside widget container.                      |
 | `container_shadow`  | dict    | `None`                                                    | Container shadow options.                                             |
 
 ## Example Configuration
@@ -33,7 +32,7 @@ glazewm-grouper:
 
 ## Note on usage
 
-In the widgets config only add the grouper widget, not the widgets that are defined in the grouper widget. The widgets defined in the grouper widget will be displayed inside the grouper widget container. If you add them seperatly as well they will be displayed twice.
+In the widgets config, only add the grouper widget, not the widgets that are defined in the grouper widget. The widgets defined in the grouper widget will be displayed inside the grouper widget container. If you add them separately as well, they will be displayed twice.
 
 ```yaml
 widgets:
@@ -55,7 +54,6 @@ widgets:
 
 - **class_name:** A unique identifier for the grouper widget instance. This is used for CSS styling.
 - **widgets:** A list of widget names that should be grouped together inside this container. The widgets are referenced by their configuration names defined elsewhere in the config file. The widgets will be displayed horizontally in the order specified.
-- **container_padding:** Explicitly set padding inside widget container.
 - **container_shadow:** Container shadow options.
 
 ## Style

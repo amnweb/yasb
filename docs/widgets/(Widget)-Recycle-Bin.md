@@ -5,10 +5,10 @@ Recycle Bin widget is simple widget that shows the status of the recycle bin. It
 |------------|--------|---------|-----------------------------------------------------------------------------|
 | `label`   | string | `{icon} {items_count} {items_size}` | Format for displaying recycle bin information. Available variables: `{icon}`, `{items_count}`, `{items_size}`. |
 | `label_alt`   | string | `{icon} {items_count} {items_size}` | Alternative label format that can be toggled with right-click (or configured callback). |
+| `class_name`      | string  | `""`                                                                                  | Additional CSS class name for the widget.                                    |
 | `icons` | dict | `{"bin_empty": "\udb82\ude7a","bin_filled": "\udb82\ude79"}` | Customize icons used for different recycle bin states. |
 | `tooltip`  | boolean  | `True`        | Whether to show the tooltip on hover. |
 | `animation` | dict | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}` | Animation settings for the widget. |
-| `container_padding` | dict | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}` | Explicitly set padding inside widget container. |
 | `callbacks` | dict | See below | Configure widget interaction callbacks. |
 | `container_shadow`   | dict   | `None`                  | Container shadow options.                       |
 | `label_shadow`         | dict   | `None`                  | Label shadow options.                 |
@@ -24,11 +24,6 @@ Recycle Bin widget is simple widget that shows the status of the recycle bin. It
       icons:
         bin_empty: "\udb82\ude7a"
         bin_filled: "\udb82\ude79"
-      container_padding:
-        left: 0
-        top: 0
-        right: 0
-        bottom: 0
       callbacks:
         on_left: "open_bin"
         on_right: "toggle_label"
@@ -44,11 +39,11 @@ Recycle Bin widget is simple widget that shows the status of the recycle bin. It
 
 - **label**: Format for displaying recycle bin information. Available variables: `{icon}`, `{items_count}`, `{items_size}`.
 - **label_alt**: Alternative label format that can be toggled with right-click (or configured callback).
+- **class_name**: Additional CSS class name for the widget. This allows for custom styling.
 - **icons**: Customize icons used for different recycle bin states. The default icons are:
-    - **bin_empty**: Icon when the recycle bin is empty.
-    - **bin_filled**: Icon when the recycle bin has items.
+  - **bin_empty**: Icon when the recycle bin is empty.
+  - **bin_filled**: Icon when the recycle bin has items.
 - **tooltip**: Whether to show the tooltip on hover.
-- **container_padding**: Set padding inside widget container for top, left, bottom and right sides.  
 - **animation**: Animation settings including type and duration.
 - **callbacks**: Configure what happens when clicking the widget.
 - **container_shadow:** Container shadow options.
@@ -65,6 +60,7 @@ Recycle Bin widget is simple widget that shows the status of the recycle bin. It
 
 ```css
 .recycle-bin-widget {} /*Style for widget.*/
+.recycle-bin-widget.your_class {} /* If you are using class_name option */
 .recycle-bin-widget .widget-container {} /*Style for widget container.*/
 .recycle-bin-widget .label {} /*Style for label.*/
 .recycle-bin-widget .icon {} /*Style for icon.*/

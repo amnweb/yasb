@@ -8,14 +8,13 @@
 | `power_menu`    | boolean | `true`                                                                 | Show power menu. |
 | `blur`          | boolean | `true`                                                                 | Blur background. |
 | `round_corners` | boolean | `true`                                                                 | Round corners. |
-| `round_corners_type`        | boolean | `'normal'`                                                  | Round corners type. Possible values: `'normal'`, `'small'`. |
+| `round_corners_type`        | string | `'normal'`                                                  | Round corners type. Possible values: `'normal'`, `'small'`. |
 | `border_color`  | string  | `'System'`                                                          |  Border color. |
 | `alignment`     | string  | `"left"`                                                               | Alignment of the menu. Possible values: `"left"`, `"center"`, `"right"`. |
 | `direction`     | string  | `"down"`                                                           | Direction of the menu. Possible values: `"up"`, `"down"`. |
 | `offset_top`      | int     | `6`                                                                     | Distance from the top or bottom edge of the bar. |
 | `offset_left`     | int     | `0`                                                                     | Distance from the left or right edge of the bar. |
 | `menu_labels`   | dict | `{'shutdown': 'Shutdown', 'restart': 'Restart', 'logout': 'Logout', 'lock': 'Lock', 'sleep': 'Sleep', 'system': 'System Settings', 'about': 'About This PC', 'task_manager': 'Task Manager'}` | Custom label names for system and power items. | 
-| `container_padding`  | dict | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}`      | Explicitly set padding inside widget container. |
 | `animation`         | dict    | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
 | `container_shadow`   | dict   | `None`                  | Container shadow options.                       |
 | `label_shadow`         | dict   | `None`                  | Label shadow options.                 |
@@ -40,11 +39,6 @@ home:
     border_color: "System"
     offset_top: 6
     offset_left: 0
-    container_padding: 
-      top: 0
-      left: 0
-      bottom: 0
-      right: 0
     alignment: "left"
     direction: "down"
     menu_labels:
@@ -67,7 +61,7 @@ home:
 ## Description of Options
 
 - **label**: Icon or text for button.
-- **menu_list**: List of menu items. title and path. Use this list only for directories, do not use it for applications or files.
+- **menu_list**: List of menu items (title and path). Use this list only for directories; do not use it for applications or files.
 - **system_menu**: Show system menu. Enabling this option will show system menu items like settings, task manager and About this PC.
 - **power_menu**: Show power menu. Enabling this option will show power menu items like shutdown, restart, sleep, lock and sign out.
 - **blur**: Blur background. Enabling this option will blur the background and add default OS radius and border to the widget.
@@ -79,7 +73,6 @@ home:
 - **offset_top**: Distance from the top or bottom edge of the bar.
 - **offset_left**: Distance from the left or right edge of the bar.
 - **menu_labels**: Custom label names for system and power items. Use this option to change the default labels for system and power menu items.
-- **container_padding**: Explicitly set padding inside widget container. Use this option to set padding inside the widget container. You can set padding for top, left, bottom and right sides of the widget container.
 - **animation:** A dictionary specifying the animation settings for the widget. It contains three keys: `enabled`, `type`, and `duration`. The `type` can be `fadeInOut` and the `duration` is the animation duration in milliseconds.
 - **container_shadow:** Container shadow options.
 - **label_shadow:** Label shadow options.

@@ -19,8 +19,8 @@ class MyWidget(BaseWidget):
 
 ```py
 self._widget_container_layout = QHBoxLayout()
-self._widget_container_layout.setContentsMargins(self._padding['left'], self._padding['top'], self._padding['right'], self._padding['bottom'])
-self._widget_container = QWidget()
+self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
+self._widget_container = QFrame()
 self._widget_container.setLayout(self._widget_container_layout)
 self.widget_layout.addWidget(self._widget_container)
 ```
@@ -33,7 +33,7 @@ self.widget_layout.addWidget(self._widget_container)
 from core.utils.utilities import build_widget_label
 build_widget_label(self, self._label_content, self._label_alt_content, self._label_shadow)
 ```
-of without shadow and alt label:
+or without shadow and alt label:
 ```py
 from core.utils.utilities import build_widget_label
 build_widget_label(self, self._label_content, None, None)
@@ -131,11 +131,6 @@ my_widget:
     type: "yasb.my_widget.MyWidget"
     options:
         label: "<span>\ue71a</span>"
-        container_padding:
-            top: 0
-            left: 0
-            bottom: 0
-            right: 0
         animation:
             enabled: true
             type: "fadeInOut"

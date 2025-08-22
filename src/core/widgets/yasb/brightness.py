@@ -6,7 +6,7 @@ from datetime import datetime
 import screen_brightness_control as sbc
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QWheelEvent
-from PyQt6.QtWidgets import QHBoxLayout, QLabel, QSlider, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QSlider, QVBoxLayout
 
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import PopupWidget, add_shadow, build_progress_widget, build_widget_label
@@ -77,12 +77,12 @@ class BrightnessWidget(BaseWidget):
         self.progress_widget = None
         self.progress_widget = build_progress_widget(self, self._progress_bar)
 
-        self._widget_container_layout: QHBoxLayout = QHBoxLayout()
+        self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
         self._widget_container_layout.setContentsMargins(
             self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
         )
-        self._widget_container: QWidget = QWidget()
+        self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
         add_shadow(self._widget_container, self._container_shadow)

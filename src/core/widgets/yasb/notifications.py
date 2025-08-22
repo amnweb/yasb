@@ -2,7 +2,7 @@ import logging
 import re
 
 from PyQt6.QtCore import pyqtSignal
-from PyQt6.QtWidgets import QHBoxLayout, QLabel, QWidget
+from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel
 
 from core.event_service import EventService
 from core.utils.utilities import add_shadow, build_widget_label, is_windows_10
@@ -27,6 +27,7 @@ class NotificationsWidget(BaseWidget):
         self,
         label: str,
         label_alt: str,
+        class_name: str,
         hide_empty: bool,
         tooltip: bool,
         container_padding: dict,
@@ -35,7 +36,7 @@ class NotificationsWidget(BaseWidget):
         label_shadow: dict = None,
         container_shadow: dict = None,
     ):
-        super().__init__(class_name="notification-widget")
+        super().__init__(class_name=f"notification-widget {class_name}")
         self._show_alt_label = False
         self._label_content = label
         self._label_alt_content = label_alt
@@ -49,13 +50,13 @@ class NotificationsWidget(BaseWidget):
         self._label_shadow = label_shadow
         self._container_shadow = container_shadow
 
-        self._widget_container_layout: QHBoxLayout = QHBoxLayout()
+        self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
         self._widget_container_layout.setContentsMargins(
             self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
         )
         # Initialize container
-        self._widget_container: QWidget = QWidget()
+        self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
         add_shadow(self._widget_container, self._container_shadow)

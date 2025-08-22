@@ -12,7 +12,7 @@ import pywintypes
 import win32gui
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QCursor
-from PyQt6.QtWidgets import QGraphicsOpacityEffect, QHBoxLayout, QLabel, QWidget
+from PyQt6.QtWidgets import QFrame, QGraphicsOpacityEffect, QHBoxLayout, QLabel
 from win32comext.shell import shell, shellcon
 
 from core.event_service import EventService
@@ -70,13 +70,13 @@ class WallpapersWidget(BaseWidget):
         self._popup_from_cli = False
 
         # Construct container
-        self._widget_container_layout: QHBoxLayout = QHBoxLayout()
+        self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
         self._widget_container_layout.setContentsMargins(
             self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
         )
         # Initialize container
-        self._widget_container: QWidget = QWidget()
+        self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
         add_shadow(self._widget_container, self._container_shadow)

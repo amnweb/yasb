@@ -11,9 +11,9 @@ This widget checks for available updates using Windows Update and Winget.
 
 | Option          | Type    | Default    | Description                                                  |
 |-----------------|---------|------------|--------------------------------------------------------------|
-| `enabled`       | boolean | `False`    | Enable Windows Update checking.                              |
+| `enabled`       | boolean | `false`    | Enable Windows Update checking.                              |
 | `label`         | string  | `'{count}'`| Format string for the widget label. `{count}` shows update count. |
-| `tooltip`  | boolean  | `True`        | Whether to show the tooltip on hover. |
+| `tooltip`  | boolean  | `true`        | Whether to show the tooltip on hover. |
 | `interval`      | integer | `1440`     | Check interval in minutes (30 to 10080).                     |
 | `exclude`       | list    | `[]`       | List of updates to exclude from checking.                    |
 
@@ -47,12 +47,12 @@ update_check:
   type: "yasb.update_check.UpdateCheckWidget"
   options:
     windows_update:
-      enabled: True
+      enabled: true
       label: "<span>\uf0ab</span> {count}"
       interval: 240
       exclude: []
     winget_update:
-      enabled: True
+      enabled: true
       label: "<span>\uf0ab</span> {count}"
       interval: 60
       exclude: []

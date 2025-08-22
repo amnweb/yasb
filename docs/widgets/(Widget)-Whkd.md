@@ -6,8 +6,7 @@ Whkd is a simple hotkey daemon for Windows that reacts to input events by execut
 |------------------|----------|--------------------------------|-----------------------------------------------------------------------------|
 | `label`          | string   | `"\uf11c"`                       | The string for the label button.  |
 | `special_keys`   | list     | `None`                           | A list of special keys to be used as hotkeys.  |
-| `container_padding`  | dict | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}`      | Explicitly set padding inside widget container.      |
-| `animation`         | dict    | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
+| `animation`         | dict    | `{'enabled': true, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
 | `container_shadow`   | dict   | `None`                  | Container shadow options.                       |
 | `label_shadow`         | dict   | `None`                  | Label shadow options.                 |
 
@@ -47,7 +46,6 @@ Whkd is a simple hotkey daemon for Windows that reacts to input events by execut
 - **special_keys:** A list of special keys to be used as hotkeys. The list contains dictionaries with two keys: `key` and `key_replace`. The `key` is the special key to be used as a hotkey and the `key_replace` is the string to replace the special key with.
   - **key:** The special key to be used as a hotkey.
   - **key_replace:** The string to replace the special key with.
-- **container_padding:** Explicitly set padding inside widget container.
 - **animation:** A dictionary specifying the animation settings for the widget. It contains three keys: `enabled`, `type`, and `duration`. The `type` can be `fadeInOut` and the `duration` is the animation duration in milliseconds.
 - **container_shadow:** Container shadow options.
 - **label_shadow:** Label shadow options.

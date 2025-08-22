@@ -1,6 +1,7 @@
 DEFAULTS = {
     "label": "{icon} {items_count} {items_size}",
     "label_alt": "{icon} {items_count} {items_size}",
+    "class_name": "",
     "icons": {"bin_empty": "\udb82\ude7a", "bin_filled": "\udb82\ude79"},
     "tooltip": True,
     "animation": {"enabled": True, "type": "fadeInOut", "duration": 200},
@@ -15,6 +16,7 @@ DEFAULTS = {
 VALIDATION_SCHEMA = {
     "label": {"type": "string", "default": DEFAULTS["label"]},
     "label_alt": {"type": "string", "default": DEFAULTS["label_alt"]},
+    "class_name": {"type": "string", "required": False, "default": DEFAULTS["class_name"]},
     "icons": {
         "type": "dict",
         "schema": {

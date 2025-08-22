@@ -2,7 +2,7 @@
 
 Styling is done using the CSS file format and with a file named `styles.css`.
 
-Defaul directories for this file are `C:/Users/{username}/.config/yasb/` or ENV variable `YASB_CONFIG_HOME` if set. A good starting point is the [default style](https://github.com/amnweb/yasb/blob/main/src/styles.css).
+Default directories for this file are `C:/Users/{username}/.config/yasb/` or the ENV variable `YASB_CONFIG_HOME` if set. A good starting point is the [default style](https://github.com/amnweb/yasb/blob/main/src/styles.css).
 
 ## Bar styling
 
@@ -19,7 +19,7 @@ Each widget group can be styled individually with the following:
 ## Generic Widget Style
 
 A style with the `.widget` selector would affect all the widgets. In practice, you may prefer to use more specific `.*-widget` selectors.
-Example how to target clock widget
+Example: how to target the clock widget
 ```
 .clock-widget {
 	border-top-left-radius: 18px;

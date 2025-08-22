@@ -13,7 +13,6 @@
 | `show_volume`             | boolean | `false`     | Whether to show volume icon (from the original systray).                                |
 | `show_network`            | boolean | `false`     | Whether to show network icon (from the original systray).                               |
 | `tooltip`                 | boolean | `true`      | Whether to show tooltips when hovering over systray icons.                              |
-| `container_padding`       | dict    | `None`      | Container padding.                                                                      |
 | `container_shadow`        | dict    | `None`      | Container shadow options.                                                               |
 | `unpinned_shadow`         | dict    | `None`      | Unpinned container shadow options.                                                      |
 | `pinned_shadow`           | dict    | `None`      | Pinned container shadow options.                                                        |
@@ -37,11 +36,6 @@ systray:
     show_battery: false
     show_volume: false
     show_network: false
-    container_padding:
-        left: 0
-        top: 0
-        right: 0
-        bottom: 0
     btn_shadow:
       enabled: true
       color: "black"
@@ -73,7 +67,6 @@ There are some limitations with the systray widget:
 - **show_volume:** Whether to show volume icon (from the original systray).
 - **show_network:** Whether to show network icon (from the original systray).
 - **tooltip:** Whether to show tooltips when hovering over systray icons.
-- **container_padding:** Padding for the widget container.
 - **container_shadow:** Container shadow options.
 - **unpinned_shadow:** Unpinned container shadow options.
 - **pinned_shadow:** Pinned container shadow options.
@@ -99,7 +92,7 @@ Show unpinned button has a right click menu that allows you to refresh the systr
 ```css
 .systray {
     background: transparent;
-    border: None;
+    border: none;
     margin: 0;
 }
 

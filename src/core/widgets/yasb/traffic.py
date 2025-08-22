@@ -25,6 +25,7 @@ class TrafficWidget(BaseWidget):
         self,
         label: str,
         label_alt: str,
+        class_name: str,
         interface: str,
         update_interval: int,
         hide_if_offline: bool,
@@ -40,7 +41,7 @@ class TrafficWidget(BaseWidget):
         label_shadow: dict,
         container_shadow: dict,
     ):
-        super().__init__(class_name="traffic-widget")
+        super().__init__(class_name=f"traffic-widget {class_name}")
 
         self.interval = update_interval / 1000
         self._show_alt_label = False
@@ -64,13 +65,13 @@ class TrafficWidget(BaseWidget):
         # Initialize session bytes sent and received
         self.session_bytes_sent, self.session_bytes_recv = TrafficDataManager.initialize_interface(self._interface)
 
-        self._widget_container_layout: QHBoxLayout = QHBoxLayout()
+        self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
         self._widget_container_layout.setContentsMargins(
             self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
         )
 
-        self._widget_container: QWidget = QWidget()
+        self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
 
