@@ -43,6 +43,7 @@ except ImportError:
 class ActiveWindowWidget(BaseWidget):
     foreground_change = pyqtSignal(int, WinEvent)
     window_name_change = pyqtSignal(int, WinEvent)
+    window_destroy = pyqtSignal(int, WinEvent)
     focus_change_workspaces = pyqtSignal(str)
     validation_schema = VALIDATION_SCHEMA
     event_listener = SystemEventListener
@@ -69,6 +70,7 @@ class ActiveWindowWidget(BaseWidget):
         super().__init__(class_name=f"active-window-widget {class_name}")
         self.dpi = None
         self._win_info = None
+        self._tracked_hwnd = None
         self._show_alt = False
         self._label = label
         self._label_alt = label_alt
@@ -135,6 +137,9 @@ class ActiveWindowWidget(BaseWidget):
         self._event_service.register_event(WinEvent.EventObjectNameChange, self.window_name_change)
         self._event_service.register_event(WinEvent.EventObjectStateChange, self.window_name_change)
 
+        self.window_destroy.connect(self._on_window_destroy_event)
+        self._event_service.register_event(WinEvent.EventObjectDestroy, self.window_destroy)
+
         self.focus_change_workspaces.connect(self._on_focus_change_workspaces)
         self._event_service.register_event("workspace_update", self.focus_change_workspaces)
 
@@ -190,6 +195,7 @@ class ActiveWindowWidget(BaseWidget):
         return result
 
     def _set_no_window_or_hide(self) -> None:
+        self._tracked_hwnd = None
         if self._label_no_window:
             self._window_title_text.setText(self._label_no_window)
             if self._label_icon:
@@ -216,6 +222,35 @@ class ActiveWindowWidget(BaseWidget):
                 self._update_retry_count = 0
         else:
             self._set_no_window_or_hide()
+
+    def _on_window_destroy_event(self, hwnd: int, event: WinEvent) -> None:
+        """Handle top-level window destruction. Only react when the destroyed HWND matches the tracked window."""
+        try:
+            # If we don't have a tracked HWND or this destroy event doesn't match it ignore immediately
+            if self._tracked_hwnd is None or hwnd != self._tracked_hwnd:
+                return
+
+            try:
+                parent = win32gui.GetParent(hwnd)
+                if parent and parent != 0:
+                    return
+            except Exception:
+                pass
+
+            fg = win32gui.GetForegroundWindow()
+            if fg and fg != 0 and fg != hwnd:
+                try:
+                    fg_info = get_hwnd_info(fg)
+                    if fg_info and fg_info.get("title") and fg_info.get("process"):
+                        if fg_info["process"].get("pid") != CURRENT_PROCESS_ID:
+                            self._on_focus_change_event(fg, WinEvent.WinEventOutOfContext)
+                            return
+                except Exception:
+                    pass
+
+            self._set_no_window_or_hide()
+        except Exception:
+            logging.exception(f"Failed handling destroy event for HWND {hwnd}")
 
     def _toggle_title_text(self) -> None:
         if self._animation["enabled"]:
@@ -331,6 +366,10 @@ class ActiveWindowWidget(BaseWidget):
                         self._window_icon_label.hide()
 
                 self._win_info = win_info
+                try:
+                    self._tracked_hwnd = int(hwnd) if hwnd else None
+                except Exception:
+                    self._tracked_hwnd = None
                 self._update_text()
 
                 if self._window_title_text.isHidden():
