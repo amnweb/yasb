@@ -1,5 +1,6 @@
 import logging
 
+import win32con
 from PyQt6.QtCore import QEasingCurve, QEvent, QPropertyAnimation, QRect, Qt, pyqtSignal
 from PyQt6.QtGui import QScreen
 from PyQt6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QWidget
@@ -7,6 +8,7 @@ from PyQt6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QWidget
 from core.bar_helper import AutoHideManager, BarContextMenu, FullscreenManager, OsThemeManager
 from core.event_service import EventService
 from core.utils.utilities import is_valid_percentage_str, percent_to_float
+from core.utils.win32.bindings import user32
 from core.utils.win32.blurWindow import Blur
 from core.utils.win32.utilities import get_monitor_hwnd
 from core.validation.bar import BAR_DEFAULTS
@@ -106,6 +108,14 @@ class Bar(QWidget):
         self.position_bar(init)
         self.monitor_hwnd = get_monitor_hwnd(int(self.winId()))
         self._add_widgets(widgets)
+
+        if not self._window_flags["windows_app_bar"]:
+            try:
+                hwnd = int(self.winId())
+                exStyle = user32.GetWindowLongPtrW(hwnd, win32con.GWL_EXSTYLE)
+                user32.SetWindowLongPtrW(hwnd, win32con.GWL_EXSTYLE, exStyle | win32con.WS_EX_NOACTIVATE)
+            except Exception:
+                pass
 
         if blur_effect["enabled"]:
             Blur(
