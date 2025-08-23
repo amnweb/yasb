@@ -5,15 +5,14 @@
 | `label`             | string  | `'\uf017 {%H:%M:%S}'`                                                                 | The format string for the clock. You can use placeholders like `{%H:%M:%S}` or `{icon}` to dynamically insert time information. |
 | `label_alt`         | string  | `'\uf017 {%d-%m-%y %H:%M:%S}'`                                                        | The alternative format string for the clock. Useful for displaying additional time details.                         |
 | `class_name`        | string  | `""`                                                                                  | Additional CSS class name for the widget.                                    |
-| `tooltip`           | boolean | `True`                                                                                | Whether to show the tooltip on hover.                                                                               |
+| `tooltip`           | boolean | `true`                                                                                | Whether to show the tooltip on hover.                                                                               |
 | `locale`            | string  | `""`                                                                                  | The locale to use for the clock. If not specified, it defaults to an empty string.                                  |
 | `update_interval`   | integer | `1000`                                                                                | The interval in milliseconds to update the clock. Must be between 0 and 60000.                                      |
 | `timezones`         | list    | `[]`                                                                                  | A list of timezones to cycle through. Each timezone should be a valid timezone string.                              |
 | `icons`         | dict    | `{ 'clock_01': '\udb85\udc3f', ..., 'clock_12': '\udb85\udc4a'[, 'clock_13': '\udb85\udc3f', ..., 'clock_22': '\udb85\udc48','clock_23': '\udb85\udc49']}` | A dictionary of icons for the different times of day. |
-| `calendar` | dict | `{'blur': True, 'round_corners': True, 'round_corners_type': 'normal', 'border_color': 'System', 'alignment': 'right', 'direction': 'down', 'offset_top': 6, 'offset_left': 0, 'country_code': None, 'subdivision': None, 'show_holidays': False: 'holiday_color': "#FF6464", 'show_week_numbers': False}` | Calendar settings for the widget. |
+| `calendar` | dict | `{'blur': True, 'round_corners': True, 'round_corners_type': 'normal', 'border_color': 'System', 'alignment': 'right', 'direction': 'down', 'offset_top': 6, 'offset_left': 0, 'country_code': None, 'subdivision': None, 'show_holidays': False, 'holiday_color': "#FF6464", 'show_week_numbers': False}` | Calendar settings for the widget. |
 | `callbacks`         | dict    | `{'on_left': 'toggle_calendar', 'on_middle': 'next_timezone', 'on_right': 'toggle_label'}` | Callbacks for mouse events on the clock widget.                                                                     |
 | `animation`         | dict    | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}`                             | Animation settings for the widget.                                                                                  |
-| `container_padding` | dict    | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}`                                      | Explicitly set padding inside widget container.                                                                     |
 | `container_shadow`   | dict   | `None`                  | Container shadow options.                       |
 | `label_shadow`         | dict   | `None`                  | Label shadow options.                 |
 
@@ -46,14 +45,14 @@ clock:
       clock_22 : "Zzz..."
       clock_23 : "Zzz..."
     calendar: 
-      blur: True
-      round_corners: True
+      blur: true
+      round_corners: true
       round_corners_type: "normal"
-      border_color: "System"
+      border_color: "system"
       alignment: "center"
       direction: "down"
-      show_holidays: False
-      show_week_numbers: True
+      show_holidays: false
+      show_week_numbers: true
       country_code: "AR"
       holiday_color: "#FF6464"
     callbacks:
@@ -75,7 +74,7 @@ clock:
 - **locale:** The locale to use for the clock. If not specified, it defaults to an empty string.
 - **tooltip:** Whether to show the tooltip on hover.
 - **update_interval:** The interval in milliseconds to update the clock. Must be between 0 and 60000.
-- **timezones:** A list of timezones to cycle through. If value is empty YASB will looking up time zone info from registry
+- **timezones:** A list of timezones to cycle through. If the value is empty, YASB will look up time zone info from the registry.
 - **icons:** A dictionary mapping clock hours to icons. Keys are in the format clock_HH where HH is the hour in 24h format (00–23). By default, `clock_13` to `clock_23` reuse the icons from `clock_01` to `clock_11`, unless explicitly defined.
 - **calendar:** A dictionary specifying the calendar settings for the widget. It contains the following keys:
   - **blur:** Enable blur effect for the calendar.
@@ -93,7 +92,6 @@ clock:
   - **show_week_numbers:** Whether to show week numbers in the calendar.
 - **callbacks:** A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions.
 - **animation:** A dictionary specifying the animation settings for the widget. It contains three keys: `enabled`, `type`, and `duration`. The `type` can be `fadeInOut` and the `duration` is the animation duration in milliseconds.
-- **container_padding**: Explicitly set padding inside widget container. Use this option to set padding inside the widget container. You can set padding for top, left, bottom and right sides of the widget container.
 - **container_shadow:** Container shadow options.
 - **label_shadow:** Label shadow options.
 
@@ -108,7 +106,7 @@ Clock format https://docs.python.org/3/library/time.html#time.strftime
 
 ```css
 .clock-widget {}
-/* If you suing class_name option, you can add custom styles here */
+/* If you are using class_name option, you can add custom styles here */
 .clock-widget.your_class {}
 .clock-widget .widget-container {}
 .clock-widget .widget-container .label {}

@@ -1,9 +1,10 @@
 import json
 import re
 import subprocess
+import threading
 
-from PyQt6.QtCore import QObject, Qt, QThread, pyqtSignal
-from PyQt6.QtWidgets import QHBoxLayout, QLabel, QWidget
+from PyQt6.QtCore import QObject, Qt, pyqtSignal
+from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel
 
 from core.utils.utilities import add_shadow
 from core.utils.widgets.animation_manager import AnimationManager
@@ -27,24 +28,22 @@ class CustomWorker(QObject):
     def run(self):
         exec_data = None
         if self.cmd:
-            # We use text mode so stdout is str; encoding controls decoding
-            result = subprocess.run(
+            proc = subprocess.Popen(
                 self.cmd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.DEVNULL,
                 creationflags=subprocess.CREATE_NO_WINDOW,
                 shell=self.use_shell,
-                text=True,
                 encoding=self.encoding,
             )
-            output = result.stdout or ""
+            output = proc.stdout.read()
             if self.return_type == "json":
                 try:
                     exec_data = json.loads(output)
                 except json.JSONDecodeError:
                     exec_data = None
             else:
-                exec_data = output.strip()
+                exec_data = output.decode("utf-8").strip()
         self.data_ready.emit(exec_data)
         self.finished.emit()
 
@@ -83,13 +82,13 @@ class CustomWidget(BaseWidget):
         self._label_shadow = label_shadow
         self._container_shadow = container_shadow
         # Construct container
-        self._widget_container_layout: QHBoxLayout = QHBoxLayout()
+        self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
         self._widget_container_layout.setContentsMargins(
             self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
         )
         # Initialize container
-        self._widget_container: QWidget = QWidget()
+        self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
         add_shadow(self._widget_container, self._container_shadow)
@@ -105,10 +104,6 @@ class CustomWidget(BaseWidget):
         self.callback_timer = "exec_custom"
 
         self._create_dynamically_label(self._label_content, self._label_alt_content)
-
-        self._worker = None
-        self._thread = None
-        self._worker_running = False
 
         if exec_options["run_once"]:
             self._exec_callback()
@@ -193,32 +188,16 @@ class CustomWidget(BaseWidget):
             active_widgets[widget_index].setText(self._truncate_label(part))
 
     def _exec_callback(self):
-        if not self._exec_cmd:
+        if self._exec_cmd:
+            worker = CustomWorker(
+                self._exec_cmd, self._exec_shell, self._exec_encoding, self._exec_return_type, self._hide_empty
+            )
+            worker_thread = threading.Thread(target=worker.run)
+            worker.data_ready.connect(self._handle_exec_data)
+            worker.finished.connect(worker.deleteLater)
+            worker_thread.start()
+        else:
             self._update_label()
-            return
-
-        # Prevent overlapping runs
-        if self._worker_running:
-            return
-
-        self._worker_running = True
-        self._worker = CustomWorker(
-            self._exec_cmd, self._exec_shell, self._exec_encoding, self._exec_return_type, self._hide_empty
-        )
-        self._thread = QThread(self)
-        self._worker.moveToThread(self._thread)
-        self._thread.started.connect(self._worker.run)
-        self._worker.data_ready.connect(self._handle_exec_data)
-        self._worker.finished.connect(self._thread.quit)
-        self._worker.finished.connect(self._worker.deleteLater)
-        self._thread.finished.connect(self._on_worker_finished)
-        self._thread.finished.connect(self._thread.deleteLater)
-        self._thread.start()
-
-    def _on_worker_finished(self):
-        self._worker_running = False
-        self._worker = None
-        self._thread = None
 
     def _handle_exec_data(self, exec_data):
         self._exec_data = exec_data

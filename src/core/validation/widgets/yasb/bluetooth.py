@@ -1,6 +1,7 @@
 DEFAULTS = {
     "label": "\udb80\udcb1",
     "label_alt": "\uf293",
+    "class_name": "",
     "label_no_device": "No devices connected",
     "label_device_separator": ", ",
     "max_length": None,
@@ -20,6 +21,7 @@ DEFAULTS = {
 VALIDATION_SCHEMA = {
     "label": {"type": "string", "default": DEFAULTS["label"]},
     "label_alt": {"type": "string", "default": DEFAULTS["label_alt"]},
+    "class_name": {"type": "string", "required": False, "default": DEFAULTS["class_name"]},
     "label_no_device": {"type": "string", "default": DEFAULTS["label_no_device"]},
     "label_device_separator": {"type": "string", "default": DEFAULTS["label_device_separator"]},
     "max_length": {"type": "integer", "min": 1, "nullable": True, "default": DEFAULTS["max_length"]},

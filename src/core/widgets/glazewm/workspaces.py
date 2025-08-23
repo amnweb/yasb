@@ -400,7 +400,7 @@ class GlazewmWorkspacesWidget(BaseWidget):
             self._padding["bottom"],
         )
 
-        self.workspace_container: QWidget = QWidget()
+        self.workspace_container = QFrame()
         self.workspace_container.setLayout(self.workspace_container_layout)
         self.workspace_container.setProperty("class", "widget-container")
         self.workspace_container.setVisible(False)

@@ -1,6 +1,7 @@
 DEFAULTS = {
     "label": "{icon}",
     "label_alt": "{percent}% | remaining: {time_remaining}",
+    "class_name": "",
     "update_interval": 5000,
     "time_remaining_natural": False,
     "hide_unsupported": True,
@@ -28,6 +29,7 @@ DEFAULTS = {
 VALIDATION_SCHEMA = {
     "label": {"type": "string", "default": DEFAULTS["label"]},
     "label_alt": {"type": "string", "default": DEFAULTS["label_alt"]},
+    "class_name": {"type": "string", "required": False, "default": DEFAULTS["class_name"]},
     "update_interval": {"type": "integer", "min": 0, "max": 60000, "default": DEFAULTS["update_interval"]},
     "time_remaining_natural": {"type": "boolean", "default": DEFAULTS["time_remaining_natural"]},
     "hide_unsupported": {"type": "boolean", "default": DEFAULTS["hide_unsupported"]},

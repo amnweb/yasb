@@ -89,13 +89,13 @@ class ActiveLayoutWidget(BaseWidget):
         add_shadow(self._active_layout_text, self._label_shadow)
         self._animation = animation
         # Construct container
-        self._widget_container_layout: QHBoxLayout = QHBoxLayout()
+        self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
         self._widget_container_layout.setContentsMargins(
             self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
         )
         # Initialize container
-        self._widget_container: QWidget = QWidget()
+        self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
         add_shadow(self._widget_container, self._container_shadow)

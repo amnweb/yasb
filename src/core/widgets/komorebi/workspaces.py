@@ -304,13 +304,13 @@ class WorkspaceWidget(BaseWidget):
         add_shadow(self._offline_text, self._label_shadow)
         self._offline_text.setProperty("class", "offline-status")
         # Construct container which holds workspace buttons
-        self._workspace_container_layout: QHBoxLayout = QHBoxLayout()
+        self._workspace_container_layout = QHBoxLayout()
         self._workspace_container_layout.setSpacing(0)
         self._workspace_container_layout.setContentsMargins(
             self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
         )
         self._workspace_container_layout.addWidget(self._offline_text)
-        self._workspace_container: QWidget = QWidget()
+        self._workspace_container = QFrame()
         self._workspace_container.setLayout(self._workspace_container_layout)
         self._workspace_container.setProperty("class", "widget-container")
         add_shadow(self._workspace_container, self._container_shadow)

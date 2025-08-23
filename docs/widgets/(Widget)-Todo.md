@@ -6,8 +6,7 @@ The Todo widget provides a simple task management interface directly in your YAS
 |----------------|---------|----------------------------------------------|-----------------------------------------------------------------------------|
 | `label`        | string  | `\uf4a0 {count}`                 | Main label format.  Use `{count}` for total tasks, `{completed}` for completed tasks, {total} for total tasks. |
 | `label_alt`    | string  | `\uf4a0 Tasks: {count}`                      | Alternative label format.                                                    |
-| `container_padding` | dict | `{top: 0, left: 0, bottom: 0, right: 0}`   | Padding inside the widget container.                                         |
-| `animation`    | dict    | `{enabled: True, type: "fadeInOut", duration: 200}` | Animation settings for the widget.                                          |
+| `animation`    | dict    | `{enabled: true, type: "fadeInOut", duration: 200}` | Animation settings for the widget.                                          |
 | `menu`         | dict    | See example below                                    | Popup menu settings.                                                         |
 | `icons`        | dict    | See example below                                    | Icons for add, delete, check, etc.                                           |
 | `categories`   | dict    | See example below                                    | Task categories and their labels.                                            |
@@ -64,7 +63,6 @@ todo:
 
 - **label**:  Main label format, supports `{count}` for total tasks, `{completed}` for completed tasks, and `{total}` for total tasks.
 - **label_alt**: Alternative label format.
-- **container_padding**: Padding inside the widget container.
 - **animation**: Controls widget animation (enable, type, duration).
 - **menu**: Popup menu appearance and behavior:
   - **blur**: Enable blur effect.
@@ -92,8 +90,8 @@ todo:
 
 
 > [!IMPORTANT]  
-> Todo widget uses the `QMenu` for the context menu, which supports various styles. You can customize the appearance of the menu using CSS styles. For more information on styling, refer to the [Context Menu Styling](https://github.com/amnweb/yasb/wiki/Styling#context-menu-styling
-If you want to use different styles for the context menu, you can target the `.todo-menu .context-menu` class to customize the appearance of the Todo widget menu.
+> Todo widget uses the `QMenu` for the context menu, which supports various styles. You can customize the appearance of the menu using CSS styles. For more information on styling, refer to the [Context Menu Styling](https://github.com/amnweb/yasb/wiki/Styling#context-menu-styling).
+> If you want to use different styles for the context menu, you can target the `.todo-menu .context-menu` class to customize the appearance of the Todo widget menu.
 
 ## Available Styles
 

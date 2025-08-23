@@ -6,6 +6,7 @@ from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import (
     QApplication,
     QDialog,
+    QFrame,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -273,13 +274,13 @@ class WhkdWidget(BaseWidget):
         special_keys = special_keys or []
         self._special_keys = {item["key"]: item["key_replace"] for item in special_keys}
         # Construct container
-        self._widget_container_layout: QHBoxLayout = QHBoxLayout()
+        self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
         self._widget_container_layout.setContentsMargins(
             self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
         )
         # Initialize container
-        self._widget_container: QWidget = QWidget()
+        self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
         add_shadow(self._widget_container, self._container_shadow)

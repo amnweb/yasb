@@ -11,7 +11,7 @@ from PyQt6.QtGui import (
     QPixmap,
     QWheelEvent,
 )
-from PyQt6.QtWidgets import QGridLayout, QHBoxLayout, QLabel, QSlider, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QLabel, QSlider, QVBoxLayout, QWidget
 from winrt.windows.media.control import GlobalSystemMediaTransportControlsSessionPlaybackInfo
 
 from core.utils.utilities import PopupWidget, ScrollingLabel, add_shadow
@@ -82,13 +82,13 @@ class MediaWidget(BaseWidget):
         self._container_shadow = container_shadow
         self._scrolling_label = scrolling_label
         # Construct container
-        self._widget_container_layout: QHBoxLayout = QHBoxLayout()
+        self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
         self._widget_container_layout.setContentsMargins(
             self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
         )
         # Initialize container
-        self._widget_container: QWidget = QWidget()
+        self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
         add_shadow(self._widget_container, self._container_shadow)

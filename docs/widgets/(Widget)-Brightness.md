@@ -8,7 +8,7 @@
 | `scroll_step`   | integer | `1`                                                                       | The step size for scrolling the brightness level. This value must be between 1 and 100. |
 | `brightness_icons` | list  | `['\udb80\udcde', '\udb80\udcdd', '\udb80\udcdf', '\udb80\udce0']`                    | A list of icons representing different brightness levels. The icons are used based on the current brightness percentage. |
 | `hide_unsupported` | boolean | `True` | Whether to hide the widget if the current system does not support brightness control. |
-| `brightness_toggle_level` | `[int, int]` | `[0, ,50, 100]` | The brightness level to set when the widget is clicked. |
+| `brightness_toggle_level` | list | `[0, 50, 100]` | The brightness levels to cycle through when the widget is clicked. |
 | `auto_light` | boolean | `False` | Whether to automatically adjust the brightness icon based on the current brightness level. |
 | `auto_light_icon` | string | `"\udb80\udce1"` | The icon to use when the auto_light option is enabled. |
 | `auto_light_night_level` | int | `50` | The brightness level at which the widget switches to the night. |
@@ -17,7 +17,6 @@
 | `auto_light_night_end_time` | string | `"06:30"` | The time at which the night ends. |
 | `brightness_menu` | dict | `{'blur': True, 'round_corners': True, 'round_corners_type': 'normal', 'border_color': 'System', 'alignment': 'right', 'direction': 'down', 'offset_top': 6, 'offset_left': 0}` | Menu settings for the widget. |
 | `callbacks`     | dict    | `{'on_left': 'toggle_label', 'on_middle': 'do_nothing', 'on_right': 'do_nothing'}` | Callbacks for mouse events on the brightness widget. |
-| `container_padding`  | dict | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}`      | Explicitly set padding inside widget container.      |
 | `animation`         | dict    | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
 | `container_shadow`   | dict   | `None`                  | Container shadow options.                       |
 | `label_shadow`         | dict   | `None`                  | Label shadow options.                 |
@@ -54,11 +53,6 @@
         direction: "down"
       callbacks:
           on_left: "toggle_label"
-      container_padding:
-        top: 0
-        left: 8
-        bottom: 0
-        right: 8
       label_shadow:
         enabled: true
         color: "black"
@@ -90,7 +84,6 @@
 - **auto_light_night_start_time:** The time at which the night starts.
 - **auto_light_night_end_time:** The time at which the night ends.
 - **callbacks:** Callbacks for mouse events on the brightness widget. can be `toggle_brightness_menu`, `toggle_label`, `toggle_level_next`, `toggle_level_prev`, `do_nothing`.
-- **container_padding:** Explicitly set padding inside widget container.
 - **animation:** A dictionary specifying the animation settings for the widget. It contains three keys: `enabled`, `type`, and `duration`. The `type` can be `fadeInOut` and the `duration` is the animation duration in milliseconds.
 - **container_shadow:** Container shadow options.
 - **label_shadow:** Label shadow options.

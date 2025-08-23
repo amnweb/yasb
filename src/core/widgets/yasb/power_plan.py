@@ -5,7 +5,7 @@ from ctypes import wintypes
 
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QCursor
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QVBoxLayout
 
 from core.utils.utilities import PopupWidget, add_shadow, build_widget_label
 from core.utils.win32.bindings import PowerEnumerate, PowerGetActiveScheme, PowerReadFriendlyName, PowerSetActiveScheme
@@ -24,6 +24,7 @@ class PowerPlanWidget(BaseWidget):
         self,
         label: str,
         label_alt: str,
+        class_name: str,
         update_interval: int,
         menu: dict,
         container_padding: dict[str, int],
@@ -31,7 +32,7 @@ class PowerPlanWidget(BaseWidget):
         label_shadow: dict = None,
         container_shadow: dict = None,
     ):
-        super().__init__(class_name="power-plan-widget")
+        super().__init__(class_name=f"power-plan-widget {class_name}")
 
         self._label = label
         self._label_alt = label_alt
@@ -55,7 +56,7 @@ class PowerPlanWidget(BaseWidget):
             self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
         )
 
-        self._widget_container = QWidget()
+        self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
         add_shadow(self._widget_container, self._container_shadow)

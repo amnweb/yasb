@@ -7,7 +7,7 @@ from subprocess import PIPE, Popen
 
 from humanize import naturalsize
 from PyQt6.QtCore import QTimer
-from PyQt6.QtWidgets import QHBoxLayout, QLabel, QWidget
+from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel
 
 from core.utils.utilities import add_shadow, build_progress_widget, build_widget_label
 from core.utils.widgets.animation_manager import AnimationManager
@@ -28,6 +28,7 @@ class GpuWidget(BaseWidget):
         gpu_index: int,
         label: str,
         label_alt: str,
+        class_name: str,
         histogram_icons: list[str],
         histogram_num_columns: int,
         update_interval: int,
@@ -40,7 +41,7 @@ class GpuWidget(BaseWidget):
         progress_bar: dict = None,
         hide_decimal: bool = False,
     ):
-        super().__init__(class_name="gpu-widget")
+        super().__init__(class_name=f"gpu-widget {class_name}")
         self._gpu_index = gpu_index
         self._histogram_icons = histogram_icons
         self._gpu_util_history = deque([0] * histogram_num_columns, maxlen=histogram_num_columns)
@@ -59,13 +60,13 @@ class GpuWidget(BaseWidget):
         self.progress_widget = None
         self.progress_widget = build_progress_widget(self, self._progress_bar)
 
-        self._widget_container_layout: QHBoxLayout = QHBoxLayout()
+        self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
         self._widget_container_layout.setContentsMargins(
             self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
         )
         # Initialize container
-        self._widget_container: QWidget = QWidget()
+        self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
         add_shadow(self._widget_container, self._container_shadow)

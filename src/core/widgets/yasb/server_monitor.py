@@ -9,7 +9,7 @@ from datetime import datetime
 from urllib.parse import urlparse
 
 from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, Qt, QThread, QTimer, pyqtSignal
-from PyQt6.QtWidgets import QGraphicsOpacityEffect, QHBoxLayout, QLabel, QScrollArea, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import QFrame, QGraphicsOpacityEffect, QHBoxLayout, QLabel, QScrollArea, QVBoxLayout, QWidget
 
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import PopupWidget, ToastNotifier, add_shadow, build_widget_label
@@ -192,13 +192,13 @@ class ServerMonitor(BaseWidget):
         self._icon_path = os.path.join(SCRIPT_PATH, "assets", "images", "app_transparent.png")
 
         # Construct container
-        self._widget_container_layout: QHBoxLayout = QHBoxLayout()
+        self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
         self._widget_container_layout.setContentsMargins(
             self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
         )
         # Initialize container
-        self._widget_container: QWidget = QWidget()
+        self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
         add_shadow(self._widget_container, self._container_shadow)

@@ -8,9 +8,9 @@ Displays the name of the current Windows power plan and lets you switch between 
 |---------------------|--------|--------------------------------------------------------------|----------------------------------------------------------------------------------------|
 | `label`             | string | `"\uf0e7 {active_plan}"`                       | Main label template. Use `{active_plan}` to insert the active plan name.               |
 | `label_alt`         | string | `"\uf0e7 Power plan"`                              | Alternate label (e.g. an icon) shown when toggled via `toggle_label`.                 |
+| `class_name`       | string | `""`                                                         | Additional CSS class name for the widget.                                              |
 | `update_interval`   | int    | `5000`                                                          | Refresh interval in milliseconds. Set to `0` to disable periodic updates.              |
 | `menu`              | dict   | `{}`                                                         | Popup menu options (see **Menu Options** below).                                      |
-| `container_padding` | dict   | `{'top':0,'left':0,'bottom':0,'right':0}`                    | Padding inside the widget container.                                                  |
 | `callbacks`         | dict   |  `{'on_left': 'toggle_menu', 'on_middle': 'do_nothing', 'on_right': 'toggle_label'}` | Click handlers: `on_left`, `on_middle`, `on_right`.                                    |
 | `label_shadow`      | dict   | `None`                                                       | Label shadow options.                        |
 | `container_shadow`  | dict   | `None`                                                       | Container shadow options.                    |
@@ -19,8 +19,8 @@ Displays the name of the current Windows power plan and lets you switch between 
 
 | Option               | Type    | Default    | Description                                                  |
 |----------------------|---------|------------|--------------------------------------------------------------|
-| `blur`               | bool    | `False`    | Blur background behind the popup.                            |
-| `round_corners`      | bool    | `True`     | Enable rounded corners on the popup.                         |
+| `blur`               | bool    | `false`    | Blur background behind the popup.                            |
+| `round_corners`      | bool    | `true`     | Enable rounded corners on the popup.                         |
 | `round_corners_type` | string  | `"normal"` | Rounding style: `"small"`, `"normal"`.         |
 | `border_color`       | string  | `"system"` | Border color can be `None`, `system` or `Hex Color` `"#ff0000"`       |
 | `alignment`          | string  | `"left"`   | Horizontal alignment of the menu relative to the widget (e.g., left, right, center)                 |
@@ -46,11 +46,6 @@ power_plan:
       direction: "down"
       offset_top: 6
       offset_left: 0
-    container_padding:
-      top: 0
-      left: 8
-      bottom: 0
-      right: 8
     callbacks:
       on_left: "toggle_menu"
       on_middle: "do_nothing"
@@ -70,9 +65,9 @@ power_plan:
 ## Description of Options
 - **label**: Main label template. Use `{active_plan}` to insert the active plan name.
 - **label_alt**: Alternate label (e.g. an icon) shown when toggled via `toggle_label`.
+- **class_name**: Additional CSS class name for the widget. This allows for custom styling.
 - **update_interval**: Refresh interval in milliseconds. Set to `0` to disable periodic updates.
 - **menu**: Popup menu options.
-- **container_padding**: Padding inside the widget container.
 - **callbacks**: Click handlers for left, middle, and right mouse buttons.
 - **label_shadow**: Label shadow options.
 - **container_shadow**: Container shadow options.
@@ -85,6 +80,7 @@ power_plan:
 ## Available Styles
 ```css
 .power-plan-widget {}
+.power-plan-widget.your_class {} /* If you are using class_name option */
 .power-plan-widget .widget-container {}
 .power-plan-widget .label {}
 .power-plan-widget .icon {}

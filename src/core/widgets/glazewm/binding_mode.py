@@ -3,7 +3,7 @@ import re
 from typing import Any, cast
 
 from PyQt6.QtCore import pyqtSlot
-from PyQt6.QtWidgets import QHBoxLayout, QLabel, QStyle, QWidget
+from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QStyle
 
 from core.utils.utilities import add_shadow, build_widget_label
 from core.utils.widgets.animation_manager import AnimationManager
@@ -54,13 +54,13 @@ class GlazewmBindingModeWidget(BaseWidget):
         self._container_shadow = container_shadow
         self._label_shadow = label_shadow
 
-        self._widget_container_layout: QHBoxLayout = QHBoxLayout()
+        self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
         self._widget_container_layout.setContentsMargins(
             self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
         )
 
-        self._widget_container: QWidget = QWidget()
+        self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
         add_shadow(self._widget_container, self._container_shadow)

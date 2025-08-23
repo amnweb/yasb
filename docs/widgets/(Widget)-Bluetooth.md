@@ -4,16 +4,16 @@
 |-------------------|---------|-------------------------------------------------------------------------|-----------------------------------------------------------------------------|
 | `label`           | string  | `'{icon}'`                        | The format string for the bluetooth widget. Displays icons. |
 | `label_alt`       | string  | `'{device_name}'`        | The alternative format string for the bluetooth widget. Displays list of connected devices. |
+| `class_name`      | string  | `""`                                                                                  | Additional CSS class name for the widget.                                    |
 | `label_no_device`       | string  | `'No devices connected'`        | The string to display `{device_name}` when no devices are connected. |
 | `label_device_separator` | string  | `', '`        | The string to separate multiple device names. |
 | `max_length`        | integer | `None`    | The maximum length of the label text. |
 | `max_length_ellipsis` | string | `"..."`  | The ellipsis to use when the label text exceeds the maximum length.   |
-| `tooltip`  | boolean  | `True`        | Whether to show the tooltip on hover. |
-| `icons`       | dict    | `{'bluetooth_on', 'bluetooth_off', 'bluetooth_connected'` | Icons for bluetooth widget |
+| `tooltip`  | boolean  | `true`        | Whether to show the tooltip on hover. |
+| `icons`       | dict    | `{'bluetooth_on': '\udb80\udcaf', 'bluetooth_off': '\udb80\udcb2', 'bluetooth_connected': '\udb80\udcb1'}` | Icons for bluetooth widget |
 | `device_aliases` | list   | `[]`    | List of device aliases. |
-| `callbacks`       | dict    | `{'on_left': 'toggle_mute', 'on_middle': 'toggle_label', 'on_right': 'do_nothing'}` | Callbacks for mouse events on the memory widget. |
-| `container_padding`  | dict | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}`      | Explicitly set padding inside widget container. |
-| `animation`         | dict    | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
+| `callbacks`       | dict    | `{'on_left': 'toggle_mute', 'on_middle': 'toggle_label', 'on_right': 'do_nothing'}` | Callbacks for mouse events on the bluetooth widget. |
+| `animation`         | dict    | `{'enabled': true, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
 | `container_shadow`   | dict   | `None`                  | Container shadow options.                       |
 | `label_shadow`         | dict   | `None`                  | Label shadow options.                 |
 
@@ -50,6 +50,7 @@ bluetooth:
 
 - **label:** The format string for the bluetooth widget. Displays the bluetooth icon.
 - **label_alt:** The alternative format string for the bluetooth widget. Displays list of connected devices.
+- **class_name:** Additional CSS class name for the widget. This allows for custom styling.
 - **label_no_device:** The string to display `{device_name}` when no devices are connected.
 - **label_device_separator:** The string to separate multiple device names.
 - **max_length:** The maximum number of characters of the label text. If the text exceeds this length, it will be truncated.
@@ -65,6 +66,7 @@ bluetooth:
 ## Example Style
 ```css
 .bluetooth-widget {}
+.bluetooth-widget.your_class {} /* If you are using class_name option */
 .bluetooth-widget .widget-container {}
 .bluetooth-widget .label {}
 .bluetooth-widget .label.alt {}

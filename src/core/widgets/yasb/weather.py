@@ -8,7 +8,7 @@ from typing import Any, cast
 
 from PyQt6.QtCore import Qt, QTimer, QUrl
 from PyQt6.QtGui import QPixmap
-from PyQt6.QtWidgets import QHBoxLayout, QLabel, QStyle, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QStyle, QVBoxLayout, QWidget
 
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import PopupWidget, add_shadow
@@ -31,6 +31,7 @@ class WeatherWidget(BaseWidget):
         self,
         label: str,
         label_alt: str,
+        class_name: str,
         update_interval: int,
         hide_decimal: bool,
         location: str,
@@ -46,7 +47,7 @@ class WeatherWidget(BaseWidget):
         label_shadow: dict[str, Any],
         container_shadow: dict[str, Any],
     ):
-        super().__init__(class_name="weather-widget")
+        super().__init__(class_name=f"weather-widget {class_name}")
         self._label_content = label
         self._label_alt_content = label_alt
         self._location = location if location != "env" else os.getenv("YASB_WEATHER_LOCATION")
@@ -91,7 +92,7 @@ class WeatherWidget(BaseWidget):
         self._weather_card_daily_widgets: list[ClickableWidget] = []
 
         # Construct container
-        self._widget_container_layout: QHBoxLayout = QHBoxLayout()
+        self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
         self._widget_container_layout.setContentsMargins(
             self._padding["left"],
@@ -101,7 +102,7 @@ class WeatherWidget(BaseWidget):
         )
 
         # Initialize container
-        self._widget_container: QWidget = QWidget()
+        self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
         add_shadow(self._widget_container, self._container_shadow)

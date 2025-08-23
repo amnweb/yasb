@@ -9,7 +9,7 @@ import re
 from ctypes import wintypes
 
 from PyQt6.QtCore import QThread, QTimer, pyqtSignal
-from PyQt6.QtWidgets import QHBoxLayout, QLabel, QWidget
+from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel
 
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import add_shadow, build_widget_label
@@ -215,6 +215,7 @@ class BluetoothWidget(BaseWidget):
         self,
         label: str,
         label_alt: str,
+        class_name: str,
         label_no_device: str,
         label_device_separator: str,
         max_length: int,
@@ -228,7 +229,7 @@ class BluetoothWidget(BaseWidget):
         label_shadow: dict = None,
         container_shadow: dict = None,
     ):
-        super().__init__(class_name="bluetooth-widget")
+        super().__init__(class_name=f"bluetooth-widget {class_name}")
         self._show_alt_label = False
         self._label_content = label
         self._label_alt_content = label_alt
@@ -253,12 +254,12 @@ class BluetoothWidget(BaseWidget):
         self.bluetooth_icon = None
         self.connected_devices = None
 
-        self._widget_container_layout: QHBoxLayout = QHBoxLayout()
+        self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
         self._widget_container_layout.setContentsMargins(
             self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
         )
-        self._widget_container: QWidget = QWidget()
+        self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
         add_shadow(self._widget_container, self._container_shadow)

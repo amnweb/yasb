@@ -6,7 +6,7 @@ import winreg
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QCursor
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout
 from win32con import WM_INPUTLANGCHANGEREQUEST
 
 from core.utils.utilities import PopupWidget, add_shadow, build_widget_label
@@ -38,6 +38,7 @@ class LanguageWidget(BaseWidget):
         label: str,
         label_alt: str,
         update_interval: int,
+        class_name: str,
         animation: dict[str, str],
         container_padding: dict[str, int],
         callbacks: dict[str, str],
@@ -45,7 +46,7 @@ class LanguageWidget(BaseWidget):
         label_shadow: dict = None,
         container_shadow: dict = None,
     ):
-        super().__init__(int(update_interval * 1000), class_name="language-widget")
+        super().__init__(int(update_interval * 1000), class_name=f"language-widget {class_name}")
 
         self._show_alt_label = False
         self._label_content = label
@@ -57,13 +58,13 @@ class LanguageWidget(BaseWidget):
         self._menu_config = language_menu
 
         # Construct container
-        self._widget_container_layout: QHBoxLayout = QHBoxLayout()
+        self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
         self._widget_container_layout.setContentsMargins(
             self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
         )
         # Initialize container
-        self._widget_container: QWidget = QWidget()
+        self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
         add_shadow(self._widget_container, self._container_shadow)

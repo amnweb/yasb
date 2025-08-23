@@ -5,7 +5,6 @@
 | `label_workspace_active_btn` | string | `'{index}'`              | The format string for the active workspace button.                          |
 | `switch_workspace_animation` | string | `'true'`                 | The OS animation to use when switching workspaces.                             |
 | `animation`                | bool   | `false`                   | Buttons animation.   |
-| `container_padding`  | dict | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}`      | Explicitly set padding inside widget container.
 | `container_shadow`      | dict    | `None`                  | Container shadow options.                                |
 | `btn_shadow`            | dict    | `None`                  | Workspace button shadow options.                         |
 
@@ -17,11 +16,6 @@ windows_workspaces:
   options:
     label_workspace_btn: "\udb81\udc3d"
     label_workspace_active_btn: "\udb81\udc3e"
-    container_padding: 
-      top: 0
-      left: 8
-      bottom: 0
-      right: 8
     btn_shadow:
       enabled: true
       color: "black"
@@ -34,7 +28,6 @@ windows_workspaces:
 - **label_workspace_active_btn:** The format string for the active workspace button, can be icon, {index} or {name}.
 - **switch_workspace_animation:** The OS animation to use when switching workspaces. (currently unsupported)
 - **animation:** Buttons animation.
-- **container_padding:** Explicitly set padding inside widget container.
 - **container_shadow:** Container shadow options.
 - **btn_shadow:** Workspace button shadow options.
 
