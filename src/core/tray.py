@@ -13,7 +13,7 @@ from PyQt6.QtWidgets import QMenu, QMessageBox, QSystemTrayIcon
 from core.bar_manager import BarManager
 from core.config import get_config
 from core.utils.controller import exit_application, reload_application
-from core.utils.win32.utilities import disable_autostart, enable_autostart, is_autostart_enabled
+from core.utils.win32.utilities import disable_autostart, enable_autostart, is_autostart_enabled, qmenu_rounded_corners
 from settings import (
     APP_NAME,
     APP_NAME_FULL,
@@ -24,7 +24,6 @@ from settings import (
     SCRIPT_PATH,
 )
 
-OS_STARTUP_FOLDER = os.path.join(os.environ["APPDATA"], r"Microsoft\Windows\Start Menu\Programs\Startup")
 VBS_PATH = os.path.join(SCRIPT_PATH, "yasb.vbs")
 EXE_PATH = os.path.join(SCRIPT_PATH, "yasb.exe")
 THEME_EXE_PATH = os.path.join(SCRIPT_PATH, "yasb_themes.exe")
@@ -40,7 +39,6 @@ class SystemTrayManager(QSystemTrayIcon):
         self._load_favicon()
         self.setToolTip(APP_NAME)
         self._load_config()
-        self._remove_shortcut()
         self.activated.connect(self._on_tray_activated)
 
     def eventFilter(self, obj, event):
@@ -80,10 +78,10 @@ class SystemTrayManager(QSystemTrayIcon):
     def _load_context_menu(self):
         self.menu = QMenu()
         self.menu.setWindowModality(Qt.WindowModality.WindowModal)
-
+        qmenu_rounded_corners(self.menu)
         style_sheet = """
         QMenu {
-            background-color: #26292b;
+            background-color: #202020;
             color: #ffffff;
             border:1px solid #373b3e;
             padding:5px 0;
@@ -96,15 +94,15 @@ class SystemTrayManager(QSystemTrayIcon):
             border-radius: 4px;
             font-size: 11px;
             font-weight: 600;
-            font-family: 'Segoe UI', sans-serif;
+            font-family: 'Segoe UI';
         }
         QMenu::item:selected {
-            background-color: #373b3e;
+            background-color: #333333;
         }
         QMenu::separator {
             height: 1px;
-            background: #373b3e;
-            margin:5px 0;
+            background: #404040;
+            margin: 4px 8px;
         }
         QMenu::right-arrow {
             width: 8px;
@@ -113,6 +111,21 @@ class SystemTrayManager(QSystemTrayIcon):
         }
         """
         self.menu.setStyleSheet(style_sheet)
+
+        def _on_menu_about_to_hide():
+            # Restart autohide timers for all registered autohide owners.
+            # Use the central global_state registry so we don't need a widget with a bar_id here.
+            from core.global_state import get_all_autohide_owners
+
+            try:
+                for owner in get_all_autohide_owners():
+                    mgr = getattr(owner, "_autohide_manager", None)
+                    if mgr and getattr(mgr, "_hide_timer", None):
+                        mgr._hide_timer.start(getattr(mgr, "_autohide_delay", 400))
+            except Exception:
+                pass
+
+        self.menu.aboutToHide.connect(_on_menu_about_to_hide)
 
         open_config_action = self.menu.addAction("Open Config")
         open_config_action.triggered.connect(self._open_config)
@@ -135,6 +148,8 @@ class SystemTrayManager(QSystemTrayIcon):
 
             reload_komorebi = komorebi_menu.addAction("Reload Komorebi")
             reload_komorebi.triggered.connect(self._reload_komorebi)
+
+            komorebi_menu.aboutToShow.connect(lambda: qmenu_rounded_corners(komorebi_menu))
 
             self.menu.addSeparator()
 
@@ -162,20 +177,6 @@ class SystemTrayManager(QSystemTrayIcon):
         except Exception as e:
             logging.error(f"Error checking komorebi installation: {e}")
             return False
-
-    def _remove_shortcut(self):
-        # Backward compatibility for old versions, this should be removed in future releases
-        # Check if the shortcut file exists in the startup folder and remove it if it does
-        shortcut_path = os.path.join(OS_STARTUP_FOLDER, SHORTCUT_FILENAME)
-        if os.path.exists(shortcut_path):
-            try:
-                os.remove(shortcut_path)
-            except FileNotFoundError:
-                logging.warning(f"Shortcut file not found: {shortcut_path}")
-            except PermissionError:
-                logging.error(f"Permission denied while trying to remove shortcut: {shortcut_path}")
-            except Exception as e:
-                logging.error(f"An unexpected error occurred while removing shortcut: {e}")
 
     def _enable_startup(self):
         enable_autostart(APP_NAME, AUTOSTART_FILE)
