@@ -18,14 +18,14 @@ bars:
       center: false
     animation:
       enabled: true
-      duration: 600
+      duration: 400
     blur_effect:
       enabled: false
       acrylic: false
       dark_mode: false
       round_corners: false
       round_corners_type: "normal"
-      border_color: "System"
+      border_color: "system"
     window_flags:
       always_on_top: false
       windows_app_bar: true
@@ -76,6 +76,7 @@ widgets:
       show_thumbnail: true
       controls_only: false
       controls_left: true
+      controls_hide: true
       hide_empty: true
       thumbnail_alpha: 100
       thumbnail_padding: 16
@@ -94,7 +95,7 @@ widgets:
         offset_top: 6
         offset_left: 0
         thumbnail_corner_radius: 4
-        thumbnail_size: 80
+        thumbnail_size: 100
         max_title_size: 80
         max_artist_size: 20
         show_source: true
@@ -142,9 +143,9 @@ widgets:
     type: "komorebi.workspaces.WorkspaceWidget"
     options:
       label_offline: "\u23fc Offline"
-      label_workspace_btn: "\udb81\udc3d"
-      label_workspace_active_btn: ""
-      label_workspace_populated_btn: "\udb81\udc3e"
+      label_workspace_btn: "\u000d"
+      label_workspace_active_btn: "\u000d"
+      label_workspace_populated_btn: "\u000d"
       label_default_name: "{index}"
       label_zero_index: false
       hide_empty_workspaces: false
