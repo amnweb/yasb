@@ -23,10 +23,8 @@ from PyQt6.QtWidgets import (
 
 from core.utils.controller import exit_application, reload_application
 from core.utils.win32.bindings import DwmGetWindowAttribute
+from core.utils.win32.constants import DWMWA_CLOAKED, S_OK
 from core.utils.win32.utilities import get_monitor_hwnd, get_window_rect, qmenu_rounded_corners
-
-DWMWA_CLOAKED = 14
-S_OK = 0
 
 
 class AutoHideZone(QFrame):
@@ -76,6 +74,15 @@ class AutoHideManager(QObject):
 
         # Install event filter on the bar
         self.bar_widget.installEventFilter(self)
+
+        # Register this bar_id as autohide owner globally
+        try:
+            from core import global_state
+
+            if hasattr(self.bar_widget, "bar_id"):
+                global_state.set_autohide_owner_for_bar(self.bar_widget.bar_id, self.bar_widget)
+        except Exception:
+            pass
 
         # Set up detection zone after a short delay
         QTimer.singleShot(1000, self.setup_detection_zone)
@@ -167,6 +174,14 @@ class AutoHideManager(QObject):
             self._detection_zone.hide()
             self._detection_zone.deleteLater()
         self._is_enabled = False
+        # Unregister global autohide registration for this bar
+        try:
+            from core.global_state import unset_autohide_owner_for_bar
+
+            if hasattr(self.bar_widget, "bar_id"):
+                unset_autohide_owner_for_bar(self.bar_widget.bar_id)
+        except Exception:
+            pass
 
 
 class FullscreenManager(QObject):
