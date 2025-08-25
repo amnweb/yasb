@@ -12,7 +12,6 @@
 | `keep_aspect_ratio`     | boolean    | `True` | Keep aspect ratio of current image/gif 
 | `callbacks`             | dict    | `{on_left: 'toggle_label', on_middle: 'pause_gif', on_right: 'do_nothing'}` | Callback functions for different mouse button actions.                      |
 | `animation`         | dict    | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
-| `container_padding`  | dict | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}`      | Explicitly set padding inside widget container. |
 | `container_shadow`   | dict   | `None`                  | Container shadow options.                       |
 | `label_shadow`         | dict   | `None`                  | Label shadow options.                 |
 
@@ -29,11 +28,6 @@ gif:
         on_left: "toggle_label"
         on_middle: "pause_gif"
         on_right: "do_nothing"
-      container_padding:
-        top: 0
-        left: 6
-        bottom: 0
-        right: 6
       speed: 100
       height: 24
       width: 24
@@ -55,7 +49,6 @@ gif:
     - **on_middle**: The name of the callback function for middle mouse button click.
     - **on_right**: The name of the callback function for right mouse button click.
 - **animation**: A dictionary specifying the animation settings for the widget. It contains three keys: `enabled`, `type`, and `duration`. The `type` can be `fadeInOut` and the `duration` is the animation duration in milliseconds.
-- **container_padding**: Explicitly set padding inside widget container. Use this option to set padding inside the widget container. You can set padding for top, left, bottom and right sides of the widget container.
 - **container_shadow**: Container shadow options.
 - **label_shadow**: Label shadow options.
 
