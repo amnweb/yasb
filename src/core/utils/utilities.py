@@ -206,13 +206,6 @@ class PopupWidget(QWidget):
     ):
         super().__init__(parent)
 
-        # Inherit bar_id from parent so global autohide lookup works for popup
-        try:
-            self.bar_id = getattr(parent, "bar_id", None)
-        except Exception:
-            self.bar_id = None
-
-        # Window flags and appearance
         self.setWindowFlags(
             Qt.WindowType.Popup
             | Qt.WindowType.FramelessWindowHint
@@ -224,7 +217,9 @@ class PopupWidget(QWidget):
         self._round_corners = round_corners
         self._round_corners_type = round_corners_type
         self._border_color = border_color
-
+        self._parent = parent
+        # We need bar_id for global_state autohide manager
+        self.bar_id = getattr(self._parent, "bar_id", None)
         # Create the inner frame
         self._popup_content = QFrame(self)
 
@@ -296,8 +291,11 @@ class PopupWidget(QWidget):
     def _on_animation_finished(self):
         """Handle animation completion."""
         if self._is_closing:
-            super().hide()
-            self.deleteLater()
+            try:
+                super().hide()
+                self.deleteLater()
+            except Exception:
+                pass
 
     def hide_animated(self):
         """Hide the popup with animation."""
@@ -320,13 +318,24 @@ class PopupWidget(QWidget):
         self._fade_animation.setEndValue(0.0)
         self._fade_animation.start()
 
+    def hide(self):
+        """Hide the popup immediately without animation."""
+        try:
+            if self._fade_animation.state() == QPropertyAnimation.State.Running:
+                self._fade_animation.stop()
+        except Exception:
+            pass
+
+        self._is_closing = True
+        try:
+            super().hide()
+            self.deleteLater()
+        except Exception:
+            pass
+
     def closeEvent(self, event):
         """Override close event to use animation."""
         event.ignore()  # Ignore the default close behavior
-        self.hide_animated()
-
-    def hide(self):
-        """Override hide to use animated version."""
         self.hide_animated()
 
     def showEvent(self, event):
@@ -363,14 +372,22 @@ class PopupWidget(QWidget):
             global_pos = event.globalPosition().toPoint()
 
             # Check if click is inside popup
-            if self.geometry().contains(global_pos):
+            try:
+                popup_global_geom = QRect(self.mapToGlobal(QPoint(0, 0)), self.size())
+            except Exception:
+                popup_global_geom = self.geometry()
+            if popup_global_geom.contains(global_pos):
                 return super().eventFilter(obj, event)
 
-            # Check if click is inside any visible QMenu child
-            for menu in self.findChildren(QMenu):
-                menu_global_geom = menu.geometry().translated(menu.mapToGlobal(QPoint(0, 0)))
-                if menu.isVisible() and menu_global_geom.contains(global_pos):
-                    return super().eventFilter(obj, event)
+            # Check if click is inside any visible QMenu
+            try:
+                for w in QApplication.topLevelWidgets():
+                    if isinstance(w, QMenu) and w.isVisible():
+                        menu_global_geom = QRect(w.mapToGlobal(QPoint(0, 0)), w.size())
+                        if menu_global_geom.contains(global_pos):
+                            return super().eventFilter(obj, event)
+            except Exception:
+                pass
 
             # Otherwise, close all open QMenus first
             for menu in self.findChildren(QMenu):
@@ -386,6 +403,7 @@ class PopupWidget(QWidget):
             QApplication.instance().removeEventFilter(self)
 
             try:
+                # Restart autohide timer if applicable
                 from core.global_state import get_autohide_owner_for_widget
 
                 mgr = get_autohide_owner_for_widget(self)._autohide_manager
