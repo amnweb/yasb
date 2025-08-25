@@ -84,9 +84,7 @@ class MediaWidget(BaseWidget):
         # Construct container
         self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(
-            self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
-        )
+        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
         # Initialize container
         self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
@@ -924,20 +922,19 @@ class MediaWidget(BaseWidget):
     def _crop_thumbnail(self, thumbnail: Image.Image, active_label_width: int) -> Image.Image:
         """Process an image thumbnail for proper display."""
         # Calculate dimensions while respecting container padding
-        available_width = active_label_width - (self._padding["left"] + self._padding["right"])
-        new_width = available_width
-        if not self._scrolling_label["enabled"]:
-            new_width = available_width + self._thumbnail_padding
+        available_width = active_label_width
 
+        if not self._scrolling_label["enabled"]:
+            available_width = available_width + self._thumbnail_padding
         # Preserve aspect ratio during resize
         aspect_ratio = thumbnail.width / thumbnail.height
-        new_height = int(new_width / aspect_ratio)
+        new_height = int(available_width / aspect_ratio)
 
         # Resize with high-quality resampling
-        thumbnail = thumbnail.resize((new_width, new_height), Image.LANCZOS)
+        thumbnail = thumbnail.resize((available_width, new_height), Image.LANCZOS)
 
         # Crop vertically to fit widget height
-        available_height = self._widget_frame.size().height() - (self._padding["top"] + self._padding["bottom"])
+        available_height = max(1, int(self._widget_container.contentsRect().height()))
         if thumbnail.height > available_height:
             y1 = (thumbnail.height - available_height) // 2
             thumbnail = thumbnail.crop((0, y1, thumbnail.width, y1 + available_height))
