@@ -25,6 +25,8 @@ from core.utils.win32.utilities import qmenu_rounded_corners
 from core.validation.widgets.yasb.windows_desktops import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
 
+logging.getLogger("comtypes").setLevel(logging.INFO)
+
 
 class WorkspaceButton(QPushButton):
     def __init__(self, workspace_index: int, label: str = None, active_label: str = None, parent=None):
@@ -50,7 +52,8 @@ class WorkspaceButton(QPushButton):
             new_class = " ".join([cls for cls in current_class.split() if not cls.startswith("button-")])
             new_class = f"{new_class} button-{index + 1}"
             button.setProperty("class", new_class)
-
+            button.style().unpolish(button)
+            button.style().polish(button)
         if self.animation:
             try:
                 parent = self.parent_widget
@@ -227,6 +230,8 @@ class WorkspaceWidget(BaseWidget):
     d_signal_virtual_desktop_changed = pyqtSignal(dict)
     d_signal_virtual_desktop_update = pyqtSignal(dict, dict)
     validation_schema = VALIDATION_SCHEMA
+    _instances: list["WorkspaceWidget"] = []
+    _shared_timer: QTimer | None = None
 
     def __init__(
         self,
@@ -274,10 +279,30 @@ class WorkspaceWidget(BaseWidget):
         add_shadow(self._workspace_container, self._container_shadow)
         self.widget_layout.addWidget(self._workspace_container)
 
-        self.timer_interval = 500  # milliseconds
-        self.callback_timer = "update_desktops"
-        self.register_callback(self.callback_timer, self.on_update_desktops)
-        self.start_timer()
+        self.register_callback("update_desktops", self.on_update_desktops)
+
+        # Register this instance to the class-wide shared timer (one timer per widget class)
+        if self not in WorkspaceWidget._instances:
+            WorkspaceWidget._instances.append(self)
+
+        if WorkspaceWidget._shared_timer is None:
+            WorkspaceWidget._shared_timer = QTimer(self)
+            WorkspaceWidget._shared_timer.setInterval(500)
+            WorkspaceWidget._shared_timer.timeout.connect(WorkspaceWidget._notify_instances)
+            WorkspaceWidget._shared_timer.start()
+
+        try:
+            self.destroyed.connect(
+                lambda _=None: WorkspaceWidget._instances.remove(self) if self in WorkspaceWidget._instances else None
+            )
+        except Exception:
+            pass
+
+        # initial update
+        try:
+            self.on_update_desktops()
+        except Exception:
+            logging.exception("Initial update_desktops failed on register")
 
     def _on_desktop_changed(self, event_data: dict):
         # Keep track of previous index for animation coordination
@@ -314,12 +339,12 @@ class WorkspaceWidget(BaseWidget):
         if (
             self._virtual_desktops != self._virtual_desktops_check
             or self._curr_workspace_index != self._curr_workspace_index_check
+            or update_buttons
         ):
             self._virtual_desktops = self._virtual_desktops_check
             self._curr_workspace_index = self._curr_workspace_index_check
             self._add_or_remove_buttons()
-        # Refresh labels for all buttons; animate label changes when requested
-        self.refresh_workspace_button_labels(animate=update_buttons)
+            self.refresh_workspace_button_labels(animate=update_buttons)
 
     def refresh_workspace_button_labels(self, animate: bool = False):
         for button in self._workspace_buttons:
@@ -341,19 +366,26 @@ class WorkspaceWidget(BaseWidget):
             old_workspace_widget.setParent(None)
 
     def _update_button(self, workspace_btn: WorkspaceButton, schedule_update: bool = True) -> None:
+        existing_class = workspace_btn.property("class") or ""
+        tokens = [t for t in str(existing_class).split() if t.startswith("button-")]
+
+        # Determine base classes explicitly so stale tokens are not preserved
         if workspace_btn.workspace_index == self._curr_workspace_index:
-            workspace_btn.setProperty("class", "ws-btn active")
+            base = "ws-btn active"
             workspace_btn.setText(workspace_btn.active_label)
-            workspace_btn.setStyleSheet("")
         else:
-            workspace_btn.setProperty("class", "ws-btn")
+            base = "ws-btn"
             workspace_btn.setText(workspace_btn.default_label)
-            workspace_btn.setStyleSheet("")
+        if tokens:
+            base = f"{base} {' '.join(tokens)}"
+
+        workspace_btn.setProperty("class", base)
+        workspace_btn.style().unpolish(workspace_btn)
+        workspace_btn.style().polish(workspace_btn)
         if schedule_update:
             QTimer.singleShot(0, workspace_btn.update_visible_buttons)
 
     def _add_or_remove_buttons(self) -> None:
-        changes_made = False
         current_indices = set(self._virtual_desktops)
         existing_indices = set(btn.workspace_index for btn in self._workspace_buttons)
         # Handle removals
@@ -362,7 +394,6 @@ class WorkspaceWidget(BaseWidget):
             self._workspace_buttons = [
                 btn for btn in self._workspace_buttons if btn.workspace_index not in indices_to_remove
             ]
-            changes_made = True
 
         # Handle additions
         for desktop_index in current_indices:
@@ -375,8 +406,6 @@ class WorkspaceWidget(BaseWidget):
             else:
                 new_button = self._try_add_workspace_button(desktop_index)
                 self._update_button(new_button)
-                changes_made = True
-        if changes_made:
             self._workspace_buttons.sort(key=lambda btn: btn.workspace_index)
             self._clear_container_layout()
             for workspace_btn in self._workspace_buttons:
@@ -394,7 +423,10 @@ class WorkspaceWidget(BaseWidget):
                 pass
 
     def _get_workspace_label(self, workspace_index):
-        ws_name = VirtualDesktop(workspace_index).name
+        try:
+            ws_name = VirtualDesktop(workspace_index).name
+        except Exception:
+            ws_name = ""
         if not ws_name or not ws_name.strip():
             ws_name = f"{workspace_index}"
         label = self._label_workspace_btn.format(index=workspace_index, name=ws_name)
@@ -409,3 +441,22 @@ class WorkspaceWidget(BaseWidget):
             self._update_button(workspace_btn)
             self._workspace_buttons.append(workspace_btn)
             return workspace_btn
+
+    @classmethod
+    def _notify_instances(cls):
+        if not cls._instances:
+            return
+        for inst in cls._instances[:]:
+            try:
+                inst.on_update_desktops()
+            except Exception:
+                try:
+                    cls._instances.remove(inst)
+                except Exception:
+                    pass
+        if not cls._instances and cls._shared_timer:
+            try:
+                cls._shared_timer.stop()
+            except Exception:
+                pass
+            cls._shared_timer = None
