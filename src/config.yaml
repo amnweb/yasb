@@ -39,29 +39,30 @@ bars:
       right: 4
     widgets:
       left:
-      - "home"
-      - "komorebi_workspaces"
-      - "komorebi_active_layout"
-      - "active_window"
+        - "home"
+        - "komorebi_workspaces"
+        - "komorebi_active_layout"
+        - "active_window"
+        - "gif"
       center:
-      - "clock"
+        - "clock"
       right:
-      - "media"
-      - "weather"
-      - "microphone"
-      - "volume"
-      - "notifications"
-      - "power_menu"
+        - "media"
+        - "weather"
+        - "microphone"
+        - "volume"
+        - "notifications"
+        - "power_menu"
 widgets:
   home:
     type: "yasb.home.HomeWidget"
     options:
       label: "<span>\udb81\udf17</span>"
       menu_list:
-      - { title: "User Home", path: "~" }
-      - { title: "Download", path: "~\\Downloads" }
-      - { title: "Documents", path: "~\\Documents" }
-      - { title: "Pictures", path: "~\\Pictures" }
+        - { title: "User Home", path: "~" }
+        - { title: "Download", path: "~\\Downloads" }
+        - { title: "Documents", path: "~\\Documents" }
+        - { title: "Pictures", path: "~\\Pictures" }
       system_menu: true
       power_menu: true
       blur: false
@@ -131,7 +132,7 @@ widgets:
       label: "{%a, %d %b %H:%M}"
       label_alt: "{%A, %d %B %Y %H:%M}"
       timezones: []
-      calendar: 
+      calendar:
         blur: false
         round_corners: false
         alignment: "center"
@@ -282,3 +283,23 @@ widgets:
         on_left: "toggle_notification"
         on_right: "do_nothing"
         on_middle: "toggle_label"
+  gif:
+    type: "yasb.image_gif.ImageGifWidget"
+    options:
+      label: ""
+      label_alt: "{file_name}"
+      file_path: "path/your_file.gif"
+      update_interval: 5000
+      callbacks:
+        on_left: "toggle_label"
+        on_middle: "pause_gif"
+        on_right: "do_nothing"
+      container_padding:
+        top: 0
+        left: 6
+        bottom: 0
+        right: 6
+      speed: 100
+      height: 24
+      width: 24
+      keep_aspect_ratio: False
