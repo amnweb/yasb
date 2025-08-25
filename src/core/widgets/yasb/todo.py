@@ -163,6 +163,7 @@ class TodoWidget(BaseWidget):
         self._show_menu()
 
     def _show_task_dialog(self, dialog_title, save_button_text, on_save, task=None):
+        self._menu.hide()
         self._selected_category = task.get("category", "default") if task else "default"
         dialog = QDialog(self._menu)
         dialog.setWindowTitle(dialog_title)
