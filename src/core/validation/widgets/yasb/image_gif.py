@@ -1,6 +1,6 @@
 DEFAULTS = {
     "label": "",
-    "label_alt": "{gif_path}",
+    "label_alt": "{file_path}",
     "file_path": "",
     "width": 24,
     "height": 24,
