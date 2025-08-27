@@ -501,6 +501,10 @@ class TaskbarWidget(BaseWidget):
         if not title.strip():
             return False
 
+        proc = window_data.get("process_name")
+        if proc is None:
+            return False
+
         if self._monitor_exclusive:
             window_monitor = window_data.get("monitor_handle")
             # If monitor is unknown (transient), keep existing items but do not add new ones
