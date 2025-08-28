@@ -6,6 +6,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QCursor, QPixmap
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QWidget
 
+from core.utils.tooltip import set_tooltip
 from core.utils.utilities import add_shadow
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.win32.system_function import function_map
@@ -23,6 +24,7 @@ class ApplicationsWidget(BaseWidget):
         app_list: list[str, dict[str]],
         image_icon_size: int,
         animation: dict[str, str],
+        tooltip: bool,
         container_padding: dict[str, int],
         label_shadow: dict = None,
         container_shadow: dict = None,
@@ -34,6 +36,7 @@ class ApplicationsWidget(BaseWidget):
         self._padding = container_padding
         self._image_icon_size = image_icon_size
         self._animation = animation
+        self._tooltip = tooltip
         self._label_shadow = label_shadow
         self._container_shadow = container_shadow
         # Construct container
@@ -66,6 +69,10 @@ class ApplicationsWidget(BaseWidget):
                     label = ClickableLabel(self)
                     label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
                     label.setProperty("class", "label")
+
+                    app_name = app_data.get("name", "")
+                    if app_name and self._tooltip:
+                        set_tooltip(label, app_name, 0)
 
                     # Set icon
                     icon = app_data["icon"]
