@@ -1,21 +1,21 @@
 # Github Widget Options
 
-| Option              | Type    | Default                                                                                                                                                                         | Description                                                                                                     |
-|---------------------|---------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------|
-| `label`             | string  | `'{icon}'`                                                                                                                                                                      | The format string for the label. You can use placeholders like `{icon}` to dynamically insert icon information. |
-| `label_alt`         | string  | `'{data} Notifications'`                                                                                                                                                        | The alternative format string for the label. Useful for displaying additional notification details.             |
-| `tooltip`           | boolean | `true`                                                                                                                                                                          | Whether to show the tooltip on hover.                                                                           |
-| `update_interval`   | integer | `600`                                                                                                                                                                           | The interval in seconds to update the notifications. Must be between 60 and 3600.                               |
-| `token`             | string  | `""`                                                                                                                                                                            | The GitHub personal access token.                                                                               |
-| `max_notification`  | integer | `20`                                                                                                                                                                            | The maximum number of notifications to display in the menu.                                                     |
-| `notification_dot`  | dict    | `{'enabled': true, 'corner': 'bottom_left', 'color': 'red', 'margin': [1, 1]}`                                                                                                  | A dictionary specifying the notification dot settings for the widget.                                           |
-| `only_unread`       | boolean | `false`                                                                                                                                                                         | Whether to show only unread notifications.                                                                      |
-| `max_field_size`    | integer | `100`                                                                                                                                                                           | The maximum number of characters in the title before truncation.                                                |
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `label`             | string  | `'{icon}'` | The format string for the label. You can use placeholders like `{icon}` to dynamically insert icon information. |
+| `label_alt`         | string  | `'{data} Notifications'` | The alternative format string for the label. Useful for displaying additional notification details.             |
+| `tooltip`           | boolean | `true` | Whether to show the tooltip on hover.                                                                           |
+| `update_interval`   | integer | `600` | The interval in seconds to update the notifications. Must be between 60 and 3600.                               |
+| `token`             | string  | `""` | The GitHub personal access token.                                                                               |
+| `max_notification`  | integer | `20` | The maximum number of notifications to display in the menu.                                                     |
+| `notification_dot`  | dict    | `{'enabled': true, 'corner': 'bottom_left', 'color': 'red', 'margin': [1, 1]}` | A dictionary specifying the notification dot settings for the widget. |
+| `only_unread`       | boolean | `false` | Whether to show only unread notifications.                                                                      |
+| `max_field_size`    | integer | `100` | The maximum number of characters in the title before truncation.                                                |
 | `menu`              | dict    | `{'blur': true, 'round_corners': true, 'round_corners_type': 'normal', 'border_color': 'System', 'alignment': 'right', 'direction': 'down', 'offset_top': 6, 'offset_left': 0}` | Menu settings for the widget.                                                                                   |
-| `icons`             | dict    | `{'issue': '\uf41b', 'pull_request': '\uea64', 'release': '\uea84', 'discussion': '\uf442', 'default': '\uea84', 'github_logo': '\uea84'}`                                      | Icons for different types of notifications in the menu.                                                         |
-| `animation`         | dict    | `{'enabled': true, 'type': 'fadeInOut', 'duration': 200}`                                                                                                                       | Animation settings for the widget.                                                                              |
-| `container_shadow`  | dict    | `None`                                                                                                                                                                          | Container shadow options.                                                                                       |
-| `label_shadow`      | dict    | `None`                                                                                                                                                                          | Label shadow options.                                                                                           |
+| `icons`             | dict    | `{'issue': '\uf41b', 'pull_request': '\uea64', 'release': '\uea84', 'discussion': '\uf442', 'checksuite': '\uf418', 'default': '\uea84', 'github_logo': '\uea84'}` | Icons for different types of notifications in the menu.                                                         |
+| `animation`         | dict    | `{'enabled': true, 'type': 'fadeInOut', 'duration': 200}` | Animation settings for the widget. |
+| `container_shadow`  | dict    | `None` | Container shadow options.                                                                                       |
+| `label_shadow`      | dict    | `None` | Label shadow options.                                                                                           |
 
 ```yaml
 github:
@@ -50,6 +50,14 @@ github:
 
 - **label:** The format string for the label. You can use placeholders like `{icon}` to dynamically insert icon information.
 - **label_alt:** The alternative format string for the label. Useful for displaying additional notification details.
+- **icons:** A dictionary specifying the icons for different types of notifications in the menu. The available keys are:
+  - **issue:** The icon for issue notifications.
+  - **pull_request:** The icon for pull request notifications.
+  - **release:** The icon for release notifications.
+  - **discussion:** The icon for discussion notifications.
+  - **checksuite:** The icon for check suite notifications.
+  - **default:** The default icon for other types of notifications.
+  - **github_logo:** The icon for the GitHub logo.
 - **tooltip:** Whether to show the tooltip on hover.
 - **update_interval:** The interval in seconds to update the notifications. Must be between 60 and 3600.
 - **token:** The GitHub personal access token. GitHub Personal access tokens (classic) https://github.com/settings/tokens you can set `token: env`, this means you have to set YASB_GITHUB_TOKEN in environment variable.
@@ -88,7 +96,12 @@ github:
 .github-menu .contents .item.new {} /* New notification */
 .github-menu .contents .item .title {}
 .github-menu .contents .item .description {}
-.github-menu .contents .item .icon {}
+.github-menu .contents .item .icon {} /* Default icon */
+.github-menu .contents .item .icon.issue {} /* Issue icon */
+.github-menu .contents .item .icon.pullrequest {} /* Pull request icon */
+.github-menu .contents .item .icon.release {} /* Release icon */
+.github-menu .contents .item .icon.discussion {} /* Discussion icon */
+.github-menu .contents .item .icon.checksuite {} /* Check suite icon */
 ```
 
 ## Example Style for the Widget and Menu

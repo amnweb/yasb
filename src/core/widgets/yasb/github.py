@@ -363,6 +363,7 @@ class GithubWidget(BaseWidget):
                     "PullRequest": self._icons["pull_request"],
                     "Release": self._icons["release"],
                     "Discussion": self._icons["discussion"],
+                    "CheckSuite": self._icons["checksuite"],
                 }.get(notification["type"], self._icons["default"])
 
                 new_item_class = "new" if notification["unread"] else ""
@@ -373,8 +374,8 @@ class GithubWidget(BaseWidget):
                 container.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
 
                 icon_label = QLabel(f"{icon_type}")
-                icon_label.setProperty("class", "icon")
-
+                type_class = notification["type"] if "type" in notification else ""
+                icon_label.setProperty("class", f"icon {type_class.lower()}")
                 title_label = QLabel(repo_title)
                 title_label.setProperty("class", "title")
 
