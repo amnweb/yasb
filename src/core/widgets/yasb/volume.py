@@ -1,6 +1,7 @@
 import ctypes
 import logging
 import re
+import winsound
 from ctypes import HRESULT, POINTER
 from ctypes import c_int as enum
 from ctypes.wintypes import BOOL, INT, LPCWSTR, WORD
@@ -15,7 +16,7 @@ from pycaw.pycaw import (
     IAudioEndpointVolumeCallback,
     IMMDeviceEnumerator,
 )
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QWheelEvent
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QSlider, QVBoxLayout, QWidget
 
@@ -221,6 +222,11 @@ class VolumeWidget(BaseWidget):
         self._volume_icons = volume_icons
         self._progress_bar = progress_bar
 
+        # Initialize debounce timer
+        self.sound_timer = QTimer(self)
+        self.sound_timer.setSingleShot(True)
+        self.sound_timer.timeout.connect(self._play_volume_sound)
+
         self.progress_widget = None
         self.progress_widget = build_progress_widget(self, self._progress_bar)
 
@@ -264,8 +270,16 @@ class VolumeWidget(BaseWidget):
     def _on_slider_value_changed(self, value):
         if self.volume is not None:
             try:
-                self.volume.SetMasterVolumeLevelScalar(value / 100, None)
+                new_volume = value / 100
+                self.volume.SetMasterVolumeLevelScalar(new_volume, None)
+                if new_volume > 0.0 and self.volume.GetMute():
+                    self.volume.SetMute(False, None)
+                elif new_volume == 0.0 and not self.volume.GetMute():
+                    self.volume.SetMute(True, None)
                 self._update_label()
+                if self.sound_timer.isActive():
+                    self.sound_timer.stop()
+                self.sound_timer.start(350)
             except Exception as e:
                 logging.error(f"Failed to set volume: {e}")
 
@@ -496,6 +510,16 @@ class VolumeWidget(BaseWidget):
             volume_icon = self._volume_icons[4]
         return volume_icon
 
+    def _play_volume_sound(self):
+        if self.volume is not None:
+            try:
+                current_volume = self.volume.GetMasterVolumeLevelScalar()
+                mute_status = self.volume.GetMute()
+                if current_volume > 0.0 and not mute_status:
+                    winsound.MessageBeep(winsound.MB_ICONASTERISK)
+            except Exception as e:
+                logging.error(f"Failed to play sound: {e}")
+
     def _increase_volume(self):
         if self.volume is None:
             logging.warning("Cannot increase volume: No audio device connected.")
@@ -508,6 +532,9 @@ class VolumeWidget(BaseWidget):
                 self.volume.SetMute(False, None)
             self._update_label()
             self._update_slider_value()
+            if self.sound_timer.isActive():
+                self.sound_timer.stop()
+            self.sound_timer.start(500)
         except Exception as e:
             logging.error(f"Failed to increase volume: {e}")
 
@@ -523,6 +550,9 @@ class VolumeWidget(BaseWidget):
                 self.volume.SetMute(True, None)
             self._update_label()
             self._update_slider_value()
+            if self.sound_timer.isActive():
+                self.sound_timer.stop()
+            self.sound_timer.start(500)
         except Exception as e:
             logging.error(f"Failed to decrease volume: {e}")
 
