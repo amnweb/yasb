@@ -393,6 +393,7 @@ class TaskbarWidget(BaseWidget):
         self._hwnd_to_widget = {}
         self._window_buttons = {}
         self._suspend_updates = False
+        self._animating_widgets = {}
 
         self._widget_container = TaskbarDropWidget(self)
         self._widget_container.setContentsMargins(
@@ -520,6 +521,16 @@ class TaskbarWidget(BaseWidget):
         """Add window UI element"""
         if self._suspend_updates:
             return
+
+        # Cancel any existing animation for this hwnd
+        if hwnd in self._animating_widgets:
+            try:
+                old_animation = self._animating_widgets.pop(hwnd)
+                old_animation.stop()
+                old_animation.deleteLater()
+            except Exception:
+                pass
+
         # Drop any old widget for this hwnd to avoid duplicates
         old = self._hwnd_to_widget.pop(hwnd, None)
         if old is not None:
@@ -545,9 +556,14 @@ class TaskbarWidget(BaseWidget):
         if self._animation["enabled"]:
             container.setFixedWidth(0)
             self._widget_container_layout.addWidget(container)
-            QTimer.singleShot(
-                0,
-                lambda c=container: self._animate_container(c, start_width=0, end_width=container.sizeHint().width()),
+
+            # Create and track the animation for adding
+            self._animate_container(
+                container,
+                start_width=0,
+                end_width=container.sizeHint().width(),
+                duration=300,
+                hwnd=hwnd,
             )
         else:
             self._widget_container_layout.addWidget(container)
@@ -556,6 +572,18 @@ class TaskbarWidget(BaseWidget):
         """Remove window UI element. If immediate=True, bypass animations to prevent duplicates across monitors."""
         if self._suspend_updates:
             return
+
+        # Check if this widget is currently animating in and cancel the animation immediately
+        if hwnd in self._animating_widgets:
+            try:
+                animation = self._animating_widgets.pop(hwnd)
+                animation.stop()
+                animation.deleteLater()
+                # For widgets animating in, force immediate removal to prevent sticking
+                immediate = True
+            except Exception:
+                pass
+
         # Prefer direct lookup, fallback to scan once
         widget = self._hwnd_to_widget.pop(hwnd, None)
         if widget is None:
@@ -650,6 +678,15 @@ class TaskbarWidget(BaseWidget):
 
     def _stop_events(self) -> None:
         """Stop the task manager and clean up"""
+        # Clean up any running animations
+        for hwnd, animation in list(self._animating_widgets.items()):
+            try:
+                animation.stop()
+                animation.deleteLater()
+            except Exception:
+                pass
+        self._animating_widgets.clear()
+
         if hasattr(self, "_task_manager") and self._task_manager:
             try:
                 self._task_manager.stop()
@@ -992,7 +1029,7 @@ class TaskbarWidget(BaseWidget):
             pass
         return None
 
-    def _animate_container(self, container, start_width=0, end_width=0, duration=300) -> None:
+    def _animate_container(self, container, start_width=0, end_width=0, duration=300, hwnd=None) -> None:
         """Animate the width of a container widget."""
         animation = QPropertyAnimation(container, b"maximumWidth", container)
         animation.setStartValue(start_width)
@@ -1003,7 +1040,15 @@ class TaskbarWidget(BaseWidget):
         if end_width > start_width and not container.graphicsEffect():
             add_shadow(container, self._label_shadow)
 
+        # Track animation for add operations
+        if hwnd is not None and end_width > start_width:
+            self._animating_widgets[hwnd] = animation
+
         def on_finished():
+            # Remove from tracking if this was an add animation
+            if hwnd is not None:
+                self._animating_widgets.pop(hwnd, None)
+
             if end_width == 0:
                 container.setParent(None)
                 self._widget_container_layout.removeWidget(container)
