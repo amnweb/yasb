@@ -48,6 +48,37 @@ class CavaBar(QFrame):
         self._dpr = dpr if dpr > 0 else 1.0
         return self._dpr
 
+    def _get_fade_opacity(self, x_position):
+        """Calculate opacity based on position for edge fade effect."""
+        fade_left = self._cava_widget._edge_fade_left
+        fade_right = self._cava_widget._edge_fade_right
+
+        if fade_left <= 0 and fade_right <= 0:
+            return 1.0
+
+        widget_width = self.width()
+
+        if fade_left > 0 and fade_right > 0:
+            # Both sides have fade - cap each to half width to prevent overlap
+            max_fade_width = widget_width / 2
+            effective_fade_left = min(fade_left, max_fade_width)
+            effective_fade_right = min(fade_right, max_fade_width)
+        else:
+            # Only one side has fade - allow it to use full width if needed
+            effective_fade_left = min(fade_left, widget_width) if fade_left > 0 else 0
+            effective_fade_right = min(fade_right, widget_width) if fade_right > 0 else 0
+
+        # Left edge fade (0 to effective_fade_left)
+        if effective_fade_left > 0 and x_position <= effective_fade_left:
+            return max(0.0, x_position / effective_fade_left)
+
+        # Right edge fade (widget_width - effective_fade_right to widget_width)
+        elif effective_fade_right > 0 and x_position >= widget_width - effective_fade_right:
+            return max(0.0, (widget_width - x_position) / effective_fade_right)
+
+        # Middle area - full opacity
+        return 1.0
+
     def paintEvent(self, event):
         """Draw the cava bars according to the selected style."""
         painter = QPainter(self)
@@ -94,8 +125,17 @@ class CavaBar(QFrame):
                     stop_step = 1.0 / (len(self._cava_widget.colors) - 1)
                     for idx, color in enumerate(self._cava_widget.colors):
                         gradient.setColorAt(idx * stop_step, color)
+
+                    if self._cava_widget._edge_fade_left > 0 or self._cava_widget._edge_fade_right > 0:
+                        fade_opacity = self._get_fade_opacity(rx + rw / 2)
+                        painter.setOpacity(fade_opacity)
+
                     painter.fillRect(QRectF(rx, ry, rw, rh), gradient)
                 else:
+                    if self._cava_widget._edge_fade_left > 0 or self._cava_widget._edge_fade_right > 0:
+                        fade_opacity = self._get_fade_opacity(rx + rw / 2)
+                        painter.setOpacity(fade_opacity)
+
                     painter.fillRect(QRectF(rx, ry, rw, rh), self._cava_widget.foreground_color)
 
     def draw_bars_mirrored(self, painter):
@@ -146,6 +186,10 @@ class CavaBar(QFrame):
 
             uy_px = max(0, round(center_y * dpr) - up_px)
             if up_px > 0:
+                if self._cava_widget._edge_fade_left > 0 or self._cava_widget._edge_fade_right > 0:
+                    fade_opacity = self._get_fade_opacity(ux_px / dpr + (band_w_px / dpr) / 2)
+                    painter.setOpacity(fade_opacity)
+
                 painter.fillRect(QRectF(ux_px / dpr, uy_px / dpr, band_w_px / dpr, up_px / dpr), brush_upper)
 
             ly_px = round(center_y * dpr)
@@ -154,6 +198,10 @@ class CavaBar(QFrame):
                 if ly_px + down_px > max_h_px:
                     down_px = max(0, max_h_px - ly_px)
                 if down_px > 0:
+                    if self._cava_widget._edge_fade_left > 0 or self._cava_widget._edge_fade_right > 0:
+                        fade_opacity = self._get_fade_opacity(ux_px / dpr + (band_w_px / dpr) / 2)
+                        painter.setOpacity(fade_opacity)
+
                     painter.fillRect(QRectF(ux_px / dpr, ly_px / dpr, band_w_px / dpr, down_px / dpr), brush_lower)
 
     def draw_waves(self, painter, radius=1):
@@ -206,7 +254,26 @@ class CavaBar(QFrame):
         path.lineTo(points[-1].x(), bottom)
         path.closeSubpath()
 
-        painter.fillPath(path, brush)
+        if self._cava_widget._edge_fade_left > 0 or self._cava_widget._edge_fade_right > 0:
+            # Draw wave in strips with varying opacity
+            widget_width = self.width()
+            widget_height = int(height)  # Convert to int for setClipRect
+            strip_width = 1  # 1 pixel wide strips for smooth fade
+
+            for x in range(int(widget_width)):
+                opacity = self._get_fade_opacity(x)
+                if opacity > 0:
+                    painter.setOpacity(opacity)
+                    # Create a clip rect for this strip
+                    painter.setClipRect(x, 0, strip_width, widget_height)
+                    painter.fillPath(path, brush)
+
+            # Reset clipping and opacity
+            painter.setClipRect(0, 0, int(widget_width), widget_height)
+            painter.setOpacity(1.0)
+        else:
+            # No fade effect - use simple fillPath for efficiency
+            painter.fillPath(path, brush)
 
     def draw_waves_mirrored(self, painter, radius=1):
         """Draw a mirrored wave visualization."""
@@ -267,7 +334,26 @@ class CavaBar(QFrame):
             combined.lineTo(p)
         combined.closeSubpath()
 
-        painter.fillPath(combined, fill_brush)
+        if self._cava_widget._edge_fade_left > 0 or self._cava_widget._edge_fade_right > 0:
+            # Draw wave in strips with varying opacity
+            widget_width = self.width()
+            widget_height = int(height)  # Convert to int for setClipRect
+            strip_width = 1  # 1 pixel wide strips for smooth fade
+
+            for x in range(int(widget_width)):
+                opacity = self._get_fade_opacity(x)
+                if opacity > 0:
+                    painter.setOpacity(opacity)
+                    # Create a clip rect for this strip
+                    painter.setClipRect(x, 0, strip_width, widget_height)
+                    painter.fillPath(combined, fill_brush)
+
+            # Reset clipping and opacity
+            painter.setClipRect(0, 0, int(widget_width), widget_height)
+            painter.setOpacity(1.0)
+        else:
+            # No fade effect - use simple fillPath for efficiency
+            painter.fillPath(combined, fill_brush)
 
 
 class CavaWidget(BaseWidget):
@@ -276,6 +362,7 @@ class CavaWidget(BaseWidget):
 
     def __init__(
         self,
+        class_name: str,
         bar_height: int,
         min_bar_height: int,
         bars_number: int,
@@ -302,10 +389,11 @@ class CavaWidget(BaseWidget):
         waves: int,
         hide_empty: bool,
         bar_type: str,
+        edge_fade: int | list[int],
         container_padding: dict[str, int],
         callbacks: dict[str, str],
     ):
-        super().__init__(class_name="cava-widget")
+        super().__init__(class_name=f"cava-widget {class_name}")
         # Widget configuration
         self._height = bar_height
         self._min_height = min_bar_height
@@ -336,6 +424,15 @@ class CavaWidget(BaseWidget):
         self._hide_cava_widget = True
         self._stop_cava = False
         self._bar_type = bar_type
+
+        # Parse edge_fade parameter - support both integer and [left, right] formats
+        if isinstance(edge_fade, list) and len(edge_fade) == 2:
+            self._edge_fade_left = edge_fade[0]
+            self._edge_fade_right = edge_fade[1]
+        else:
+            # Single value applies to both sides
+            self._edge_fade_left = edge_fade
+            self._edge_fade_right = edge_fade
 
         # Set up samples and colors
         self.samples = [0] * self._bars_number
@@ -403,6 +500,7 @@ class CavaWidget(BaseWidget):
 
     def stop_cava(self) -> None:
         self._stop_cava = True
+        self.colors.clear()
         if hasattr(self, "_cava_process") and self._cava_process.poll() is None:
             try:
                 self._cava_process.terminate()

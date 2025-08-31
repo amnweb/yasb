@@ -4,6 +4,7 @@
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
+| `class_name` | string | "" | Additional CSS class names for the widget container |
 | `bar_height` | integer | 20 | The height of bars in pixels |
 | `min_bar_height` | integer | 0 | The minimum height of bars in pixels |
 | `bars_number` | integer | 10 | The number of bars (0-512). 0 sets it to auto |
@@ -29,6 +30,7 @@
 | `gradient_color_3` | string | "#cba6f7" | Third gradient color in hex format |
 | `hide_empty` | boolean | false | Hide widget when no audio is playing (requires `sleep_timer` to be enabled) |
 | `bar_type`         | string  | `bars`  | Type of bar display. Can be 'bars', 'bars_mirrored', 'waves', or 'waves_mirrored'. |
+| `edge_fade` | integer or array | 0 | Apply fade effect to edges in pixels. Can be a single integer (applies to both sides) or an array `[left, right]` for separate control. 0 to disable. **Note:** When both sides have fade, each is capped to half the widget width to prevent overlap. When only one side has fade, it can use the full widget width |
 | `callbacks`         | dict    | `{'on_left': 'do_nothing', 'on_middle': 'do_nothing', 'on_right': 'reload_cava'}` | Callbacks for mouse events on the widget. |
 
 ## Example Configuration
@@ -54,6 +56,7 @@
 
 ## Description of Options
 
+- **class_name**: Additional CSS class names for the widget container. (optional)
 - **bar_height**: The height of bars in pixels.
 - **min_bar_height**: The minimum height of bars in pixels.
 - **bars_number**: The number of bars to display. Can be between 0 and 512. 0 sets it to auto.
@@ -79,6 +82,10 @@
 - **gradient_color_3**: Third gradient color in hex format. (optional)
 - **hide_empty**: Hide widget when no audio is playing (requires `sleep_timer` to be enabled).
 - **bar_type**: Type of bar display. Can be 'bars', 'bars_mirrored', 'waves', or 'waves_mirrored'.
+- **edge_fade**: Apply fade effect to edges. Creates a smooth fade-out effect on the edges of the visualization. Can be configured in two ways:
+  - **Single value** (e.g., `15`): Applies the same fade width to both left and right edges
+  - **Array format** (e.g., `[10, 20]`): Applies different fade widths - first value for left edge, second for right edge
+  - Set to `0` or `[0, 0]` to disable. **Important:** When both sides have fade, each is automatically capped to half the widget width to prevent overlapping. When only one side has fade (e.g., `[180, 0]`), it can use the full widget width.
 - **callbacks**: A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions.
 
 > **Note:** The `waves` and `waves_mirrored` ignore the `bar_spacing` option.

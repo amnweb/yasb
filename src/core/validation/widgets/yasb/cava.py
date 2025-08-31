@@ -1,4 +1,5 @@
 DEFAULTS = {
+    "class_name": "",
     "bar_height": 20,
     "min_bar_height": 1,
     "bars_number": 10,
@@ -25,11 +26,13 @@ DEFAULTS = {
     "waves": 0,
     "hide_empty": False,
     "bar_type": "bars",
+    "edge_fade": 0,
     "container_padding": {"top": 0, "left": 0, "bottom": 0, "right": 0},
     "callbacks": {"on_left": "do_nothing", "on_middle": "do_nothing", "on_right": "reload_cava"},
 }
 
 VALIDATION_SCHEMA = {
+    "class_name": {"type": "string", "required": False, "default": DEFAULTS["class_name"]},
     "bar_height": {"type": "integer", "required": False, "default": DEFAULTS["bar_height"]},
     "min_bar_height": {"type": "integer", "required": False, "default": DEFAULTS["min_bar_height"]},
     "bars_number": {"type": "integer", "required": False, "default": DEFAULTS["bars_number"]},
@@ -80,6 +83,14 @@ VALIDATION_SCHEMA = {
         "required": False,
         "allowed": ["bars", "bars_mirrored", "waves", "waves_mirrored"],
         "default": DEFAULTS["bar_type"],
+    },
+    "edge_fade": {
+        "anyof": [
+            {"type": "integer"},
+            {"type": "list", "schema": {"type": "integer"}, "minlength": 2, "maxlength": 2},
+        ],
+        "required": False,
+        "default": DEFAULTS["edge_fade"],
     },
     "container_padding": {
         "type": "dict",
