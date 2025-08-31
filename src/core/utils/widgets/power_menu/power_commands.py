@@ -5,6 +5,8 @@ import win32api
 import win32security
 from PyQt6.QtCore import QCoreApplication
 
+from core.utils.controller import exit_application
+
 
 class PowerOperations:
     def __init__(self, main_window=None, overlay=None):
@@ -17,15 +19,43 @@ class PowerOperations:
         if self.overlay:
             self.overlay.hide()
 
+    def _connect_about_to_quit(self, cmd_args: list):
+        """Connect a handler to QCoreApplication.aboutToQuit to run cmd_args."""
+        app = QCoreApplication.instance()
+        if app is None:
+            return
+
+        def _handler():
+            try:
+                subprocess.Popen(
+                    cmd_args,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    creationflags=subprocess.CREATE_NO_WINDOW,
+                )
+            except Exception:
+                pass
+
+        try:
+            app.aboutToQuit.connect(_handler)
+        except Exception:
+            pass
+
     def signout(self):
         self.clear_widget()
-        QCoreApplication.exit(0)
-        subprocess.Popen("shutdown /l", stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True)
+        self._connect_about_to_quit(["shutdown", "/l"])
+        exit_application()
 
     def lock(self):
         self.clear_widget()
         subprocess.Popen(
-            "rundll32.exe user32.dll,LockWorkStation", stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True
+            [
+                "rundll32.exe",
+                "user32.dll,LockWorkStation",
+            ],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            creationflags=subprocess.CREATE_NO_WINDOW,
         )
 
     def sleep(self):
@@ -40,27 +70,28 @@ class PowerOperations:
 
     def restart(self):
         self.clear_widget()
-        QCoreApplication.exit(0)
-        subprocess.Popen("shutdown /r /t 0", stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True)
+        self._connect_about_to_quit(["shutdown", "/r", "/t", "0"])
+        exit_application()
 
     def shutdown(self):
         self.clear_widget()
-        QCoreApplication.exit(0)
-        subprocess.Popen("shutdown /s /hybrid /t 0", stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True)
+        self._connect_about_to_quit(["shutdown", "/s", "/hybrid", "/t", "0"])
+        exit_application()
 
     def force_shutdown(self):
         self.clear_widget()
-        QCoreApplication.exit(0)
-        subprocess.Popen("shutdown /s /f /t 0", stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True)
+        self._connect_about_to_quit(["shutdown", "/s", "/f", "/t", "0"])
+        exit_application()
 
     def force_restart(self):
         self.clear_widget()
-        QCoreApplication.exit(0)
-        subprocess.Popen("shutdown /r /f /t 0", stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True)
+        self._connect_about_to_quit(["shutdown", "/r", "/f", "/t", "0"])
+        exit_application()
 
     def hibernate(self):
         self.clear_widget()
-        subprocess.Popen("shutdown /h", stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True)
+        self._connect_about_to_quit(["shutdown", "/h"])
+        exit_application()
 
     def cancel(self):
         if hasattr(self.overlay, "timer"):
