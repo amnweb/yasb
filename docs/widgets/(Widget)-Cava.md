@@ -28,6 +28,7 @@
 | `gradient_color_2` | string | "#89b4fa" | Second gradient color in hex format |
 | `gradient_color_3` | string | "#cba6f7" | Third gradient color in hex format |
 | `hide_empty` | boolean | false | Hide widget when no audio is playing (requires `sleep_timer` to be enabled) |
+| `bar_type`         | string  | `bars`  | Type of bar display. Can be 'bars', 'bars_mirrored', 'waves', or 'waves_mirrored'. |
 | `callbacks`         | dict    | `{'on_left': 'do_nothing', 'on_middle': 'do_nothing', 'on_right': 'reload_cava'}` | Callbacks for mouse events on the widget. |
 
 ## Example Configuration
@@ -39,7 +40,6 @@
       bar_height: 12
       min_bar_height: 0
       gradient: 1
-      reverse: 0
       foreground: "#89b4fa"
       gradient_color_1: '#74c7ec'
       gradient_color_2: '#89b4fa'
@@ -47,6 +47,8 @@
       bars_number: 8
       bar_spacing: 2
       bar_width: 4
+      bar_type: "bars"
+      framerate: 60
       hide_empty: true
 ```
 
@@ -74,9 +76,20 @@
 - **gradient**: Gradient mode, 1 = on, 0 = off.
 - **gradient_color_1**: First gradient color in hex format.
 - **gradient_color_2**: Second gradient color in hex format.
-- **gradient_color_3**: Third gradient color in hex format.
+- **gradient_color_3**: Third gradient color in hex format. (optional)
 - **hide_empty**: Hide widget when no audio is playing (requires `sleep_timer` to be enabled).
+- **bar_type**: Type of bar display. Can be 'bars', 'bars_mirrored', 'waves', or 'waves_mirrored'.
 - **callbacks**: A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions.
+
+> **Note:** The `waves` and `waves_mirrored` ignore the `bar_spacing` option.
+
+### Allowed Callbacks:
+```
+"reload_cava"
+"do_nothing"
+```
+
+
 
 More information on this option is documented in the [example config file](https://github.com/karlstav/cava/blob/master/example_files/config)
 
