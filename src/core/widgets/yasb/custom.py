@@ -140,7 +140,7 @@ class CustomWidget(BaseWidget):
                     label.setProperty("class", class_result)
                 else:
                     label = QLabel(part)
-                    label.setProperty("class", "label")
+                    label.setProperty("class", "label alt" if is_alt else "label")
                     label.setText(self._lable_placeholder)
                 label.setAlignment(Qt.AlignmentFlag.AlignCenter)
                 self._set_cursor(label)
