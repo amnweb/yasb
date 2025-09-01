@@ -1,4 +1,5 @@
 import ctypes
+import logging
 import subprocess
 
 import win32api
@@ -60,13 +61,31 @@ class PowerOperations:
 
     def sleep(self):
         self.clear_widget()
-        access = win32security.TOKEN_ADJUST_PRIVILEGES | win32security.TOKEN_QUERY
-        htoken = win32security.OpenProcessToken(win32api.GetCurrentProcess(), access)
-        if htoken:
-            priv_id = win32security.LookupPrivilegeValue(None, win32security.SE_SHUTDOWN_NAME)
-            win32security.AdjustTokenPrivileges(htoken, 0, [(priv_id, win32security.SE_PRIVILEGE_ENABLED)])
-            ctypes.windll.powrprof.SetSuspendState(False, True, False)
-            win32api.CloseHandle(htoken)
+        try:
+            access = win32security.TOKEN_ADJUST_PRIVILEGES | win32security.TOKEN_QUERY
+            htoken = win32security.OpenProcessToken(win32api.GetCurrentProcess(), access)
+            if htoken:
+                try:
+                    priv_id = win32security.LookupPrivilegeValue(None, win32security.SE_SHUTDOWN_NAME)
+                    win32security.AdjustTokenPrivileges(htoken, 0, [(priv_id, win32security.SE_PRIVILEGE_ENABLED)])
+                    success = ctypes.windll.powrprof.SetSuspendState(False, True, False)
+                    if not success:
+                        logging.error("Sleep operation failed")
+                finally:
+                    win32api.CloseHandle(htoken)
+            else:
+                logging.error("Sleep operation failed to open process token")
+        except Exception:
+            # Fallback rundll32 method
+            try:
+                subprocess.Popen(
+                    ["rundll32.exe", "powrprof.dll,SetSuspendState", "Sleep"],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    creationflags=subprocess.CREATE_NO_WINDOW,
+                )
+            except Exception:
+                pass
 
     def restart(self):
         self.clear_widget()
@@ -90,8 +109,15 @@ class PowerOperations:
 
     def hibernate(self):
         self.clear_widget()
-        self._connect_about_to_quit(["shutdown", "/h"])
-        exit_application()
+        subprocess.Popen(
+            [
+                "shutdown",
+                "/h",
+            ],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            creationflags=subprocess.CREATE_NO_WINDOW,
+        )
 
     def cancel(self):
         if hasattr(self.overlay, "timer"):
