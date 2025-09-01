@@ -44,6 +44,7 @@ home:
     menu_labels:
       shutdown: "Shutdown"
       restart: "Restart"
+      hibernate: "Hibernate"
       logout: "Logout"
       lock: "Lock"
       sleep: "Sleep"

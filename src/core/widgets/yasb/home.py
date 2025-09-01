@@ -121,6 +121,7 @@ class HomeWidget(BaseWidget):
             self._menu._add_separator(main_layout)
 
         if self._power_menu:
+            self._add_menu_item(main_layout, self._menu_labels["hibernate"], lambda: self.power_operations.hibernate())
             self._add_menu_item(main_layout, self._menu_labels["sleep"], lambda: self.power_operations.sleep())
             self._add_menu_item(main_layout, self._menu_labels["restart"], lambda: self.power_operations.restart())
             self._add_menu_item(main_layout, self._menu_labels["shutdown"], lambda: self.power_operations.shutdown())
