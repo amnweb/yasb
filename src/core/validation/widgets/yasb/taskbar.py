@@ -8,6 +8,7 @@ DEFAULTS = {
     "animation": {"enabled": True, "type": "fadeInOut", "duration": 200},
     "title_label": {"enabled": False, "show": "focused", "min_length": 10, "max_length": 30},
     "container_padding": {"top": 0, "left": 0, "bottom": 0, "right": 0},
+    "preview": {"enabled": False, "width": 240, "delay": 400, "padding": 8, "margin": 8},
     "callbacks": {"on_left": "toggle_window", "on_middle": "do_nothing", "on_right": "do_nothing"},
 }
 
@@ -77,17 +78,23 @@ VALIDATION_SCHEMA = {
         },
         "default": {"enabled": False, "color": "black", "offset": [1, 1], "radius": 3},
     },
+    "preview": {
+        "type": "dict",
+        "required": False,
+        "schema": {
+            "enabled": {"type": "boolean", "default": DEFAULTS["preview"]["enabled"]},
+            "width": {"type": "integer", "min": 100, "default": DEFAULTS["preview"]["width"]},
+            "delay": {"type": "integer", "default": DEFAULTS["preview"]["delay"]},
+            "padding": {"type": ["integer"], "required": False, "default": DEFAULTS["preview"]["padding"]},
+            "margin": {"type": ["integer"], "required": False, "default": DEFAULTS["preview"]["margin"]},
+        },
+        "default": DEFAULTS["preview"],
+    },
     "callbacks": {
         "type": "dict",
         "schema": {
-            "on_left": {
-                "type": "string",
-                "default": DEFAULTS["callbacks"]["on_left"],
-            },
-            "on_middle": {
-                "type": "string",
-                "default": DEFAULTS["callbacks"]["on_middle"],
-            },
+            "on_left": {"type": "string", "default": DEFAULTS["callbacks"]["on_left"]},
+            "on_middle": {"type": "string", "default": DEFAULTS["callbacks"]["on_middle"]},
             "on_right": {"type": "string", "default": DEFAULTS["callbacks"]["on_right"]},
         },
         "default": DEFAULTS["callbacks"],
