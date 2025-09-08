@@ -347,8 +347,6 @@ class WindowsMedia(metaclass=Singleton):
             idx = (current_session_idx + direction) % len(sessions)
             if self._are_same_sessions(sessions[idx], self._current_session):
                 return
-            if DEBUG:
-                self._log.info(f"Switching to session {idx} ({sessions[idx].source_app_user_model_id})")
             self._current_session = sessions[idx]
 
         self._on_current_session_changed(self._session_manager, None, is_overridden=True)
