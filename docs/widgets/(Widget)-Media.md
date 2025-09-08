@@ -322,7 +322,6 @@ media:
     font-size: 13px;
     color: #6c7086;
     margin-top: 0px;
-    margin-bottom: 8px;
 }
 .media-menu .source {
     font-size: 11px;
@@ -336,25 +335,81 @@ media:
 }
 /* The source class name is the same as what you see in the media widget; just replace spaces with dashes and convert it to lowercase. 
 Example: "Windows Media" becomes "windows-media" */
-.media-menu .source.firefox {
-    background-color: #ff583b;
+.media-menu .source.aimp {
+    background-color: #6f42c1;
     color: #ffffff;
 }
-.media-menu .source.spotify {
-    background-color: #199143;
+.media-menu .source.apple-music {
+    background-color: #fa2b56;
+    color: #ffffff;
+}
+.media-menu .source.brave {
+    background-color: #fb542b;
+    color: #ffffff;
+}
+.media-menu .source.chrome {
+    background-color: #4285f4;
     color: #ffffff;
 }
 .media-menu .source.edge {
     background-color: #0078d4;
     color: #ffffff;
 }
-.media-menu .source.windows-media {
+.media-menu .source.firefox {
+    background-color: #ff7139;
+    color: #ffffff;
+}
+.media-menu .source.foobar2000 {
+    background-color: #444444;
+    color: #ffffff;
+}
+.media-menu .source.media-player {
     background-color: #0078d4;
+    color: #ffffff;
+}
+.media-menu .source.murglar {
+    background-color: #8a8a8a;
+    color: #ffffff;
+}
+.media-menu .source.musicbee {
+    background-color: #ffcc00;
+    color: #000000;
+}
+.media-menu .source.nsmusics {
+    background-color: #e64a19;
+    color: #ffffff;
+}
+.media-menu .source.opera {
+    background-color: #ff1b2d;
+    color: #ffffff;
+}
+.media-menu .source.qobuz {
+    background-color: #003a6f;
+    color: #ffffff;
+}
+.media-menu .source.spotify {
+    background-color: #1db954;
+    color: #ffffff;
+}
+.media-menu .source.tidal {
+    background-color: #000000;
+    color: #ffffff;
+}
+.media-menu .source.winamp {
+    background-color: #f1a11b;
+    color: #000000;
+}
+.media-menu .source.youtube {
+    background-color: #ff0000;
     color: #ffffff;
 }
 .media-menu .source.youtube-music {
     background-color: #c51f1f;
     color: #ffffff;
+}
+.media-menu .source.zen {
+    background-color: #2ecc71;
+    color: #000000;
 }
 .media-menu .btn {
     font-family: "Segoe Fluent Icons";

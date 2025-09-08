@@ -16,7 +16,11 @@ from winrt.windows.media.control import GlobalSystemMediaTransportControlsSessio
 from core.utils.utilities import PopupWidget, ScrollingLabel, add_shadow
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.widgets.media.media import WindowsMedia
-from core.utils.widgets.media.source_apps import get_source_app_class_name, get_source_app_display_name
+from core.utils.widgets.media.source_apps import (
+    get_source_app_class_name,
+    get_source_app_display_name,
+    get_source_app_mapping,
+)
 from core.utils.win32.app_aumid import (
     ERROR_INSUFFICIENT_BUFFER,
     PROCESS_QUERY_LIMITED_INFORMATION,
@@ -298,9 +302,8 @@ class MediaWidget(BaseWidget):
                 self._popup_artist_label.setProperty("class", "artist")
                 self._popup_artist_label.setWordWrap(True)
                 self._popup_artist_label.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
-
-                text_layout.addWidget(self._popup_title_label)
-                text_layout.addWidget(self._popup_artist_label)
+                text_layout.addWidget(self._popup_title_label, alignment=Qt.AlignmentFlag.AlignTop)
+                text_layout.addWidget(self._popup_artist_label, alignment=Qt.AlignmentFlag.AlignTop)
 
                 # Add control buttons directly below the slider in the text layout
                 control_layout = QHBoxLayout()
@@ -1153,9 +1156,8 @@ class MediaWidget(BaseWidget):
             self._popup_total_time_label.setText(duration_str)
 
     def _get_current_app_identifier(self) -> tuple[Optional[str], Optional[str]]:
-        """Get the AUMID and friendly name of the current media app."""
+        """Get the AUMID of the current media app."""
         aumid = None
-        friendly = None
 
         # Try to get AUMID from current session
         try:
@@ -1172,13 +1174,7 @@ class MediaWidget(BaseWidget):
         except Exception:
             pass
 
-        # Get friendly name from existing mapping
-        try:
-            friendly, _ = self._get_source_app_name(getattr(self.media, "_media_info", None))
-        except Exception:
-            pass
-
-        return aumid, friendly
+        return aumid
 
     def _get_process_aumid(self, pid: int) -> Optional[str]:
         """Get AUMID for a process using GetApplicationUserModelId."""
@@ -1204,14 +1200,26 @@ class MediaWidget(BaseWidget):
 
         return None
 
-    def _normalize_tokens(self, text: str) -> list[str]:
-        """Normalize text into searchable tokens."""
-        if not text:
-            return []
-        import re
+    def _match_session_by_mapping(self, sessions, aumid: str):
+        """Match session using source app mapping."""
+        if not aumid:
+            return None
 
-        parts = re.split(r"[^a-z0-9]+", text.lower())
-        return [p for p in parts if p]
+        mapping = get_source_app_mapping(aumid)
+        if not mapping:
+            return None
+
+        process_name = mapping.get("process")
+        if process_name:
+            for session in sessions:
+                try:
+                    proc = getattr(session, "Process", None)
+                    if proc and proc.name().lower() == process_name.lower():
+                        return session
+                except Exception:
+                    continue
+
+        return None
 
     def _match_session_by_aumid(self, sessions, aumid: str):
         """Match session by process AUMID."""
@@ -1242,76 +1250,24 @@ class MediaWidget(BaseWidget):
                 continue
         return None
 
-    def _match_session_by_tokens(self, sessions, identifier: str, friendly: str):
-        """Match session using token-based flexible matching."""
-        id_tokens = self._normalize_tokens(identifier)
-        friendly_tokens = self._normalize_tokens(friendly)
-        all_tokens = id_tokens + friendly_tokens
-
-        for session in sessions:
-            try:
-                # Get process name
-                proc = getattr(session, "Process", None)
-                proc_name = proc.name().lower() if proc else ""
-                base_proc = proc_name.replace(".exe", "")
-
-                # Get session identifier
-                sid = str(getattr(session, "InstanceIdentifier", "") or "").lower()
-
-                # Check if any token matches process name or session ID
-                for token in all_tokens:
-                    if token and (token in proc_name or token in base_proc or token in sid):
-                        return session
-            except Exception:
-                continue
-        return None
-
-    def _match_session_by_display_name(self, sessions, identifier: str, friendly: str):
-        """Match session by display name or session identifier."""
-        for session in sessions:
-            try:
-                display_name = (getattr(session, "DisplayName", None) or "").lower()
-                session_id = str(getattr(session, "InstanceIdentifier", "") or "").lower()
-
-                # Check identifier matches
-                if identifier and (identifier in display_name or identifier in session_id):
-                    return session
-
-                # Check friendly name matches
-                if friendly and friendly.lower() in display_name:
-                    return session
-            except Exception:
-                continue
-        return None
-
     def _bind_app_volume_session(self):
         """Locate and bind the audio session corresponding to current media app."""
         self._app_volume_session = None
-        aumid, friendly = self._get_current_app_identifier()
+        aumid = self._get_current_app_identifier()
         identifier = (aumid or "").lower()
 
         try:
             comtypes.CoInitialize()
             sessions = AudioUtilities.GetAllSessions()
-
-            # Try different matching strategies in order of preference
             candidate = None
-
-            # Match by AUMID
             if aumid:
+                candidate = self._match_session_by_mapping(sessions, aumid)
+
+            if not candidate and aumid:
                 candidate = self._match_session_by_aumid(sessions, aumid)
 
-            # Match by executable name
             if not candidate and identifier:
                 candidate = self._match_session_by_executable(sessions, identifier)
-
-            # # Flexible token-based matching
-            if not candidate:
-                candidate = self._match_session_by_tokens(sessions, identifier, friendly or "")
-
-            # Match by display name (fallback)
-            if not candidate:
-                candidate = self._match_session_by_display_name(sessions, identifier, friendly or "")
 
             self._app_volume_session = candidate
 
@@ -1450,6 +1406,15 @@ class WheelEventFilter(QtCore.QObject):
         if event.type() == QtCore.QEvent.Type.Wheel:
             if not self.media_widget._dialog.geometry().contains(event.globalPosition().toPoint()):
                 return False
+
+            if hasattr(self.media_widget, "_app_volume_slider") and self.media_widget._app_volume_slider:
+                slider_global_rect = QtCore.QRect(
+                    self.media_widget._app_volume_slider.mapToGlobal(QtCore.QPoint(0, 0)),
+                    self.media_widget._app_volume_slider.size(),
+                )
+                if slider_global_rect.contains(event.globalPosition().toPoint()):
+                    return False
+
             old_session = getattr(self.media_widget.media, "_current_session", None)
             if event.angleDelta().y() > 0:
                 self.media_widget.media.switch_session(+1)

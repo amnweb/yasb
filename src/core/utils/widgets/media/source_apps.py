@@ -2,11 +2,16 @@
 Media source applications mapping.
 
 This file contains the mapping of source application identifiers to their
-display names for the media widget. This allows easy addition of new media
-applications without modifying the main media widget code.
+display names for the media widget.
+
+For complex applications that have different process names than their AUMID,
+use dictionary format:
+    "aumid": {"name": "Display Name", "process": "executable.exe"}
+
+For simple applications where AUMID matching is sufficient, use string format:
+    "aumid": "Display Name"
 """
 
-# Dictionary mapping source app IDs to their display names
 MEDIA_SOURCE_APPS = {
     # Audio Players
     "AIMP.exe": "AIMP",
@@ -18,23 +23,62 @@ MEDIA_SOURCE_APPS = {
     "SpotifyAB.SpotifyMusic_zpdnekdrzrea0!Spotify": "Spotify",
     "Spotify.exe": "Spotify",
     "AppleInc.AppleMusicWin_nzyj5cx40ttqa!App": "Apple Music",
-    "com.badmanners.murglar": "Murglar",
-    "com.squirrel.TIDAL.TIDAL": "Tidal",
-    "com.squirrel.Qobuz.Qobuz": "Qobuz",
-    "com.squirrel.youtube_music_desktop_app.youtube-music-desktop-app": "YouTube Music",
+    "com.badmanners.murglar": {
+        "name": "Murglar",
+        "process": "Murglar.exe",
+    },
+    "com.squirrel.TIDAL.TIDAL": {
+        "name": "Tidal",
+        "process": "TIDAL.exe",
+    },
+    "com.squirrel.Qobuz.Qobuz": {
+        "name": "Qobuz",
+        "process": "Qobuz.exe",
+    },
+    "com.squirrel.youtube_music_desktop_app.youtube-music-desktop-app": {
+        "name": "YouTube Music",
+        "process": "youtube-music-desktop-app.exe",
+    },
+    "com.github.th-ch.youtube-music": {
+        "name": "YouTube Music",
+        "process": "YouTube Music.exe",
+    },
     # Web Browsers
-    "308046B0AF4A39CB": "FireFox",
+    "308046B0AF4A39CB": {
+        "name": "FireFox",
+        "process": "firefox.exe",
+    },
     "firefox.exe": "FireFox",
-    "F0DC299D809B9700": "Zen",
-    "MSEdge": "Edge",
+    "F0DC299D809B9700": {
+        "name": "Zen",
+        "process": "zen.exe",
+    },
+    "MSEdge": {
+        "name": "Edge",
+        "process": "msedge.exe",
+    },
     "msedge.exe": "Edge",
-    "Chrome": "Chrome",
+    "Chrome": {
+        "name": "Chrome",
+        "process": "chrome.exe",
+    },
     "chrome.exe": "Chrome",
     "opera.exe": "Opera",
-    "Brave": "Brave",
-    "Brave.Q2QWMKZ4RMMIMDZ2JQ2NKBXFT4": "Brave",
+    "Brave": {
+        "name": "Brave",
+        "process": "brave.exe",
+    },
+    "Brave.Q2QWMKZ4RMMIMDZ2JQ2NKBXFT4": {
+        "name": "Brave",
+        "process": "brave.exe",
+    },
     # System Media Players
     "Microsoft.ZuneMusic_8wekyb3d8bbwe!Microsoft.ZuneMusic": "Media Player",
+    # PWA (Progressive Web Apps)
+    "www.youtube.com-54E21B02_pd8mbgmqs65xy!App": {
+        "name": "YouTube",
+        "process": "msedge.exe",
+    },
 }
 
 
@@ -48,7 +92,28 @@ def get_source_app_display_name(source_app_id: str) -> str:
     Returns:
         The display name for the app, or None if not found
     """
-    return MEDIA_SOURCE_APPS.get(source_app_id)
+    entry = MEDIA_SOURCE_APPS.get(source_app_id)
+    if isinstance(entry, dict):
+        return entry.get("name")
+    return entry
+
+
+def get_source_app_mapping(source_app_id: str) -> dict:
+    """
+    Get the complete mapping information for a source application ID.
+
+    Args:
+        source_app_id: The source application identifier
+
+    Returns:
+        Dictionary with 'name' and 'process' keys, or None if not found
+    """
+    entry = MEDIA_SOURCE_APPS.get(source_app_id)
+    if isinstance(entry, dict):
+        return entry
+    elif isinstance(entry, str):
+        return {"name": entry, "process": None}
+    return None
 
 
 def get_source_app_class_name(display_name: str) -> str:
@@ -64,24 +129,3 @@ def get_source_app_class_name(display_name: str) -> str:
     if display_name:
         return display_name.lower().replace(" ", "-")
     return None
-
-
-def add_source_app(source_app_id: str, display_name: str):
-    """
-    Add a new source application mapping.
-
-    Args:
-        source_app_id: The source application identifier
-        display_name: The display name for the app
-    """
-    MEDIA_SOURCE_APPS[source_app_id] = display_name
-
-
-def get_all_source_apps() -> dict:
-    """
-    Get all source application mappings.
-
-    Returns:
-        Dictionary of all source app mappings
-    """
-    return MEDIA_SOURCE_APPS.copy()
