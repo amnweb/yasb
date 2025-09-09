@@ -15,6 +15,7 @@ from winrt.windows.media.control import GlobalSystemMediaTransportControlsSessio
 
 from core.utils.utilities import PopupWidget, ScrollingLabel, add_shadow
 from core.utils.widgets.animation_manager import AnimationManager
+from core.utils.widgets.media.aumid_process import get_process_name_for_aumid
 from core.utils.widgets.media.media import WindowsMedia
 from core.utils.widgets.media.source_apps import (
     get_source_app_class_name,
@@ -796,6 +797,8 @@ class MediaWidget(BaseWidget):
                         if source_name is not None:
                             self._popup_source_label.setText(source_name)
                             self._popup_source_label.setProperty("class", f"source {source_class_name}")
+                            self._popup_source_label.style().unpolish(self._popup_source_label)
+                            self._popup_source_label.style().polish(self._popup_source_label)
 
                 except Exception as e:
                     logging.error(f"Error updating popup content: {e}")
@@ -1268,6 +1271,11 @@ class MediaWidget(BaseWidget):
 
             if not candidate and identifier:
                 candidate = self._match_session_by_executable(sessions, identifier)
+
+            if not candidate and aumid:
+                proc_name = get_process_name_for_aumid(aumid)
+                if proc_name:
+                    candidate = self._match_session_by_executable(sessions, proc_name)
 
             self._app_volume_session = candidate
 

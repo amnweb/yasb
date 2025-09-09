@@ -74,12 +74,34 @@ MEDIA_SOURCE_APPS = {
     },
     # System Media Players
     "Microsoft.ZuneMusic_8wekyb3d8bbwe!Microsoft.ZuneMusic": "Media Player",
-    # PWA (Progressive Web Apps)
-    "www.youtube.com-54E21B02_pd8mbgmqs65xy!App": {
-        "name": "YouTube",
-        "process": "msedge.exe",
-    },
 }
+
+
+def _match_aumid_by_regex(source_app_id: str) -> dict:
+    """
+    Attempt to match common AUMID patterns using regex when an exact
+    dictionary lookup fails.
+
+    Returns a mapping dict with 'name' and optional 'process', or None.
+    """
+    import re
+
+    if not source_app_id:
+        return None
+
+    if re.match(r"^music\.youtube\.com-[^!]+!App$", source_app_id, re.IGNORECASE):
+        return {"name": "YouTube Music", "process": "msedge.exe"}
+
+    if re.match(r"^(?:www\.)?youtube\.com-[^!]+!App$", source_app_id, re.IGNORECASE):
+        return {"name": "YouTube", "process": "msedge.exe"}
+
+    if re.match(r"^Brave\._crx_[A-Za-z0-9_-]+$", source_app_id, re.IGNORECASE):
+        return {"name": "Brave", "process": "brave.exe"}
+
+    if re.match(r"^Chrome\._crx_[A-Za-z0-9_-]+$", source_app_id, re.IGNORECASE):
+        return {"name": "Chrome", "process": "chrome.exe"}
+
+    return None
 
 
 def get_source_app_display_name(source_app_id: str) -> str:
@@ -95,7 +117,13 @@ def get_source_app_display_name(source_app_id: str) -> str:
     entry = MEDIA_SOURCE_APPS.get(source_app_id)
     if isinstance(entry, dict):
         return entry.get("name")
-    return entry
+    if isinstance(entry, str):
+        return entry
+
+    fallback = _match_aumid_by_regex(source_app_id)
+    if fallback:
+        return fallback.get("name")
+    return None
 
 
 def get_source_app_mapping(source_app_id: str) -> dict:
@@ -113,6 +141,11 @@ def get_source_app_mapping(source_app_id: str) -> dict:
         return entry
     elif isinstance(entry, str):
         return {"name": entry, "process": None}
+
+    fallback = _match_aumid_by_regex(source_app_id)
+    if fallback:
+        return fallback
+
     return None
 
 
