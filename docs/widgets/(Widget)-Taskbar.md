@@ -10,6 +10,7 @@
 | `monitor_exclusive` | boolean | `False` | Whether the application should be exclusive to the monitor. |
 | `callbacks`         | dict    | `{'on_left': 'toggle_window', 'on_middle': 'do_nothing', 'on_right': 'close_app'}` | Callbacks for mouse events on the widget.                                   |
 | `animation`         | dict    | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
+| `preview`           | dict    | `{'enabled': False, 'width': 240, 'delay': 400, 'padding': 8, 'margin': 8}` | Configuration for window preview thumbnails.                                |
 
 ## Example Configuration
 
@@ -18,8 +19,18 @@ taskbar:
   type: "yasb.taskbar.TaskbarWidget"
   options:
     icon_size: 16
+    tooltip: true
+    show_only_visible: false
+    strict_filtering: true
+    monitor_exclusive: false
     animation:
       enabled: true
+    preview:
+      enabled: false
+      width: 240
+      delay: 400
+      padding: 8
+      margin: 8
     title_label:
       enabled: false
       show: "always"
@@ -49,6 +60,15 @@ taskbar:
   - classes: A list of window classes to ignore.
 - **callbacks:** A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions, which can be `toggle_window`, `do_nothing`, or `close_app`.
 - **animation:** A dictionary specifying the animation settings for the widget. It contains three keys: `enabled`, `type`, and `duration`. The `type` can be `fadeInOut` and the `duration` is the animation duration in milliseconds. When animation is enabled, it will be used both for click effects and for animating the addition or removal of applications in the taskbar (such as when apps are opened or closed).
+- **preview:** A dictionary specifying the configuration for window preview thumbnails. It includes:
+  - enabled: A boolean flag to enable or disable window previews.
+  - width: The width of the preview thumbnail in pixels. (minimum 100px)
+  - delay: The delay in milliseconds before showing the preview after hovering over an application icon.
+  - padding: The padding around the preview thumbnail in pixels.
+  - margin: The margin between the preview thumbnail and the taskbar in pixels.
+
+> Note:
+> When **preview** is enabled **tooltip** are automatically disabled to avoid overlap.
 
 ## Style
 ```css
@@ -60,6 +80,10 @@ taskbar:
 .taskbar-widget .app-container.flashing {} /* flashing container for the app (window is flashing) */
 .taskbar-widget .app-container .app-icon {} /* Icon inside the container */
 .taskbar-widget .app-container .app-title {} /* Label inside the container */
+/* Taskbar preview popup is very limited in styling options, do not use margins/paddings here */
+.taskbar-preview {}
+.taskbar-preview .header {}
+.taskbar-preview .header .title {}
 ```
 
 ## Style Example
@@ -77,5 +101,20 @@ taskbar:
 }
 .taskbar-widget .app-container .app-title {
     padding-left: 4px;
+}
+/* Taskbar preview popup is very limited in styling options, do not use margins/paddings here */
+.taskbar-preview {
+    border-radius: 8px; 
+    background-color:#2b2c2d; 
+}
+.taskbar-preview .header {
+    padding-bottom: 12px;
+    padding-top: 4px;
+}
+.taskbar-preview .header .title {
+    color: #d6d6d6;
+    font-family: "Segoe UI";
+    font-weight: 600;
+    font-size: 13px;
 }
 ```

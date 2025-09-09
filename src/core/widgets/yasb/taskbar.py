@@ -11,6 +11,7 @@ from PyQt6.QtWidgets import QApplication, QFrame, QHBoxLayout, QLabel, QSizePoli
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import add_shadow
 from core.utils.widgets.animation_manager import AnimationManager
+from core.utils.widgets.taskbar.thumbnail import TaskbarThumbnailManager
 from core.utils.win32.app_icons import get_window_icon
 from core.utils.win32.utilities import get_monitor_hwnd, get_monitor_info
 from core.utils.win32.window_actions import (
@@ -49,12 +50,42 @@ class DraggableAppButton(QFrame):
         self._press_global_pos = None
         self._lmb_pressed = False
         self.setAcceptDrops(False)
+        self.setObjectName(f"yasb-taskbar-btn-{hwnd}")
+
+        # Hover preview timer
+        self._preview_timer = QTimer(self)
+        self._preview_timer.setSingleShot(True)
+        self._preview_timer.setInterval(self._taskbar._preview_delay)
+        self._preview_timer.timeout.connect(self._on_preview_timeout)
+
+    def enterEvent(self, event):
         try:
-            self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+            if self._taskbar._preview_enabled and not self._dragging:
+                self._preview_timer.start()
+
         except Exception:
             pass
         try:
-            self.setObjectName(f"yasb-taskbar-btn-{hwnd}")
+            super().enterEvent(event)
+        except Exception:
+            pass
+
+    def leaveEvent(self, event):
+        try:
+            self._preview_timer.stop()
+            if self._taskbar._preview_enabled:
+                self._taskbar.hide_preview()
+        except Exception:
+            pass
+        try:
+            super().leaveEvent(event)
+        except Exception:
+            pass
+
+    def _on_preview_timeout(self):
+        try:
+            if self._taskbar._preview_enabled and not self._dragging:
+                self._taskbar.show_preview_for_hwnd(self._hwnd, self)
         except Exception:
             pass
 
@@ -73,7 +104,21 @@ class DraggableAppButton(QFrame):
             md = QMimeData()
             md.setText(str(self._hwnd))
             drag.setMimeData(md)
-            drag.exec(Qt.DropAction.MoveAction)
+            try:
+                drag.exec(Qt.DropAction.MoveAction)
+            finally:
+                # Always reset drag state
+                self._dragging = False
+                try:
+                    self._taskbar._set_dragging(False)
+                except Exception:
+                    pass
+                # If cursor still over button after drag, preview again
+                try:
+                    if self.rect().contains(self.mapFromGlobal(QCursor.pos())) and self._taskbar._preview_enabled:
+                        self._preview_timer.start()
+                except Exception:
+                    pass
             return True
         return False
 
@@ -109,6 +154,13 @@ class DraggableAppButton(QFrame):
             if not was_dragging:
                 try:
                     self._taskbar.bring_to_foreground(self._hwnd)
+                except Exception:
+                    pass
+            else:
+                # Drag ended, if pointer still over button, start preview timer
+                try:
+                    if self.rect().contains(self.mapFromGlobal(QCursor.pos())) and self._taskbar._preview_enabled:
+                        self._preview_timer.start()
                 except Exception:
                     pass
             event.accept()
@@ -365,17 +417,15 @@ class TaskbarWidget(BaseWidget):
         callbacks: dict[str, str],
         label_shadow: dict = None,
         container_shadow: dict = None,
+        preview: dict | None = None,
     ):
         super().__init__(class_name="taskbar-widget")
         self._dpi = None
         self._label_icon_size = icon_size
-        if isinstance(animation, bool):
-            # Default animation settings if only a boolean is provided to prevent breaking configurations. this should be removed in the future
-            self._animation = {"enabled": animation, "type": "fadeInOut", "duration": 200}
-        else:
-            self._animation = animation
+        self._animation = (
+            {"enabled": animation, "type": "fadeInOut", "duration": 200} if isinstance(animation, bool) else animation
+        )
         self._title_label = title_label
-        self._tooltip = tooltip
         self._monitor_exclusive = monitor_exclusive
         self._strict_filtering = strict_filtering
         self._show_only_visible = show_only_visible
@@ -385,11 +435,19 @@ class TaskbarWidget(BaseWidget):
         self._container_shadow = container_shadow
         self._widget_monitor_handle = None
 
+        self._preview_enabled = preview["enabled"]
+        self._preview_width = preview["width"]
+        self._preview_delay = preview["delay"]
+        self._preview_padding = preview["padding"]
+        self._preview_margin = preview["margin"]
+
+        self._tooltip = tooltip if not self._preview_enabled else False
+
         self._ignore_apps["classes"] = list(set(self._ignore_apps.get("classes", [])))
         self._ignore_apps["processes"] = list(set(self._ignore_apps.get("processes", [])))
         self._ignore_apps["titles"] = list(set(self._ignore_apps.get("titles", [])))
 
-        self._icon_cache = dict()
+        self._icon_cache = {}
         self._hwnd_to_widget = {}
         self._window_buttons = {}
         self._suspend_updates = False
@@ -422,6 +480,30 @@ class TaskbarWidget(BaseWidget):
             self._task_manager_connected = False
         else:
             logging.error("Shared task manager not available - taskbar functionality will be limited")
+
+        if self._preview_enabled:
+            self._thumbnail_mgr = TaskbarThumbnailManager(
+                self,
+                self._preview_width,
+                self._preview_delay,
+                self._preview_padding,
+                self._preview_margin,
+                self._animation["enabled"],
+            )
+
+    def show_preview_for_hwnd(self, hwnd: int, anchor_widget: QWidget) -> None:
+        try:
+            if self._preview_enabled and getattr(self, "_thumbnail_mgr", None):
+                self._thumbnail_mgr.show_preview_for_hwnd(hwnd, anchor_widget)
+        except Exception:
+            pass
+
+    def hide_preview(self) -> None:
+        try:
+            if getattr(self, "_thumbnail_mgr", None):
+                self._thumbnail_mgr.hide_preview()
+        except Exception:
+            pass
 
     def showEvent(self, event):
         try:
@@ -687,6 +769,12 @@ class TaskbarWidget(BaseWidget):
                 pass
         self._animating_widgets.clear()
 
+        # Clean up preview via manager
+        try:
+            self._thumbnail_mgr.stop()
+        except Exception:
+            pass
+
         if hasattr(self, "_task_manager") and self._task_manager:
             try:
                 self._task_manager.stop()
@@ -694,6 +782,7 @@ class TaskbarWidget(BaseWidget):
                 logging.error(f"Error stopping task manager: {e}")
 
     def _on_close_app(self) -> None:
+        self.hide_preview()
         widget = QApplication.instance().widgetAt(QCursor.pos())
         if not widget:
             logging.warning("No widget found under cursor.")
@@ -905,12 +994,16 @@ class TaskbarWidget(BaseWidget):
     def _set_dragging(self, active: bool) -> None:
         """Temporarily suspend updates/animations to reduce flicker during drag."""
         self._suspend_updates = active
+        if active:
+            self.hide_preview()
 
     def bring_to_foreground(self, hwnd):
         """Bring the specified window to the foreground, restoring if minimized."""
         if not win32gui.IsWindow(hwnd):
             return
         try:
+            self.hide_preview()
+
             base, focus_target = resolve_base_and_focus(hwnd)
             is_active = False
             try:

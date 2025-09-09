@@ -359,6 +359,31 @@ class WLAN_CONNECTION_NOTIFICATION_DATA(ct.Structure):
     ]
 
 
+# Structs for DWM (Desktop Window Manager) API
+class RECT(ct.Structure):
+    _fields_ = [
+        ("left", LONG),
+        ("top", LONG),
+        ("right", LONG),
+        ("bottom", LONG),
+    ]
+
+
+class SIZE(ct.Structure):
+    _fields_ = [("cx", LONG), ("cy", LONG)]
+
+
+class DWM_THUMBNAIL_PROPERTIES(ct.Structure):
+    _fields_ = [
+        ("dwFlags", UINT),
+        ("rcDestination", RECT),
+        ("rcSource", RECT),
+        ("opacity", BYTE),
+        ("fVisible", BOOL),
+        ("fSourceClientAreaOnly", BOOL),
+    ]
+
+
 # Win32 message structure used by Qt native event filter and other components
 class MSG(ct.Structure):
     _fields_ = [
