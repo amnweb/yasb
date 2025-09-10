@@ -1,5 +1,5 @@
 DEFAULTS = {
-    "lable_placeholder": "Loading...",
+    "label_placeholder": "Loading...",
     "label_max_length": None,
     "exec_options": {
         "run_cmd": None,
@@ -27,7 +27,7 @@ VALIDATION_SCHEMA = {
     },
     "label": {"type": "string", "required": True},
     "label_alt": {"type": "string", "default": True},
-    "lable_placeholder": {"type": "string", "required": False, "default": DEFAULTS["lable_placeholder"]},
+    "label_placeholder": {"type": "string", "required": False, "default": DEFAULTS["label_placeholder"]},
     "label_max_length": {"type": "integer", "nullable": True, "default": DEFAULTS["label_max_length"], "min": 1},
     "exec_options": {
         "type": "dict",
