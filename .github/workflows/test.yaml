@@ -1,0 +1,226 @@
+name: Test Release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  PYTHON_VERSION: '3.12'
+
+jobs:
+  build-and-sign:
+    permissions:
+      contents: write
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Create virtual environment
+        run: |
+          python -m venv venv
+        shell: pwsh
+
+      - name: Activate venv and install deps
+        run: |
+          .\venv\Scripts\Activate
+          python -m pip install --upgrade pip
+          pip install --force --no-cache .
+          pip install --force --no-cache --upgrade cx_Freeze==7.2.10
+        shell: pwsh
+
+      - name: Build EXE
+        run: |
+          .\venv\Scripts\Activate
+          cd src
+          python build.py build
+        shell: pwsh
+
+      - name: Upload unsigned EXE artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: unsigned-exes
+          path: |
+            src/dist/yasb.exe
+            src/dist/yasbc.exe
+            src/dist/yasb_themes.exe
+
+      - name: Get unsigned-exes artifact id
+        id: get_exes_artifact
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.PAT }}
+          script: |
+            const { owner, repo } = context.repo;
+            const run_id = context.runId;
+            const res = await github.rest.actions.listWorkflowRunArtifacts({ owner, repo, run_id });
+            const artifact = res.data.artifacts.find(a => a.name === 'unsigned-exes');
+            if (!artifact) throw new Error('unsigned-exes artifact not found');
+            return artifact.id;
+
+      - name: Submit EXE signing request
+        id: sign_exes
+        uses: signpath/github-action-submit-signing-request@v1
+        with:
+          api-token: '${{ secrets.SIGN_TOKEN }}'
+          organization-id: '9efb6764-d1fc-46c5-b050-5ef07bb67a8c'
+          project-slug: 'yasb'
+          signing-policy-slug: 'signing_executable'
+          github-artifact-id: '${{ steps.get_exes_artifact.outputs.result }}'
+          wait-for-completion: 'true'
+          output-artifact-directory: 'src/signed'
+
+      - name: Replace unsigned EXE with signed
+        if: ${{ steps.sign_exes.outcome == 'success' }}
+        run: |
+          .\venv\Scripts\Activate
+          $signedDir = 'src/signed'
+          if (-not (Test-Path $signedDir)) {
+            Write-Host "Signed artifacts directory $signedDir not found. Ensure SignPath places signed files there.";
+            exit 1
+          }
+          # Find zip files (if any) and extract them safely
+          $zips = Get-ChildItem -Path $signedDir -File -Filter '*.zip' -Recurse -ErrorAction SilentlyContinue
+          if ($null -ne $zips -and $zips.Count -gt 0) {
+            Write-Host "Found zip(s) in $signedDir: extracting..."
+            foreach ($z in $zips) {
+              Write-Host "Extracting $($z.FullName)"
+              try {
+                Expand-Archive -LiteralPath $z.FullName -DestinationPath $signedDir -Force
+                Write-Host "Extracted $($z.Name) successfully."
+              } catch {
+                Write-Error "Failed to extract $($z.FullName): $($_.Exception.Message)"
+                throw
+              }
+            }
+          } else {
+            Write-Host "No zip files found in $signedDir — assuming SignPath placed signed EXEs directly."
+          }
+
+          # Copy signed EXEs into the distribution folder; fail if none found
+          $signedExes = Get-ChildItem -Path $signedDir -File -Filter '*.exe' -Recurse -ErrorAction SilentlyContinue
+          if ($null -eq $signedExes -or $signedExes.Count -eq 0) {
+            Write-Error "No signed .exe files found in $signedDir after extraction. Failing the job."
+            exit 1
+          }
+          Write-Host "Copying signed EXEs from $signedDir to src/dist"
+          foreach ($f in $signedExes) {
+            Copy-Item -Path $f.FullName -Destination (Join-Path 'src/dist' $f.Name) -Force
+          }
+          # Clean up signed directory after successful copy
+          try {
+            Get-ChildItem -Path $signedDir -Recurse -Force | Remove-Item -Force -Recurse
+            Write-Host "Cleaned up $signedDir"
+          } catch {
+            Write-Warning "Failed to clean up $signedDir: $($_.Exception.Message)"
+          }
+        shell: pwsh
+
+      - name: Build MSI
+        run: |
+          .\venv\Scripts\Activate
+          cd src
+          python build.py bdist_msi
+        shell: pwsh
+
+      - name: Upload unsigned MSI
+        uses: actions/upload-artifact@v4
+        with:
+          name: unsigned-msi
+          path: src/dist/out/*.msi
+
+      - name: Get unsigned-msi artifact id
+        id: get_msi_artifact
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.PAT }}
+          script: |
+            const { owner, repo } = context.repo;
+            const run_id = context.runId;
+            const res = await github.rest.actions.listWorkflowRunArtifacts({ owner, repo, run_id });
+            const artifact = res.data.artifacts.find(a => a.name === 'unsigned-msi');
+            if (!artifact) throw new Error('unsigned-msi artifact not found');
+            return artifact.id;
+
+      - name: Submit MSI signing request
+        id: sign_msi
+        uses: signpath/github-action-submit-signing-request@v1
+        with:
+          api-token: '${{ secrets.SIGN_TOKEN }}'
+          organization-id: '9efb6764-d1fc-46c5-b050-5ef07bb67a8c'
+          project-slug: 'yasb'
+          signing-policy-slug: 'signing_installer'
+          github-artifact-id: '${{ steps.get_msi_artifact.outputs.result }}'
+          wait-for-completion: 'true'
+          output-artifact-directory: 'src/signed'
+
+      - name: Replace unsigned MSI with signed
+        if: ${{ steps.sign_msi.outcome == 'success' }}
+        run: |
+          .\venv\Scripts\Activate
+          $signedDir = 'src/signed'
+          if (-not (Test-Path $signedDir)) {
+            Write-Host "Signed artifacts directory $signedDir not found. Ensure SignPath places signed files there.";
+            exit 1
+          }
+          # Find zip files (if any) and extract them safely
+          $zips = Get-ChildItem -Path $signedDir -File -Filter '*.zip' -Recurse -ErrorAction SilentlyContinue
+          if ($null -ne $zips -and $zips.Count -gt 0) {
+            Write-Host "Found zip(s) in $signedDir: extracting..."
+            foreach ($z in $zips) {
+              Write-Host "Extracting $($z.FullName)"
+              try {
+                Expand-Archive -LiteralPath $z.FullName -DestinationPath $signedDir -Force
+                Write-Host "Extracted $($z.Name) successfully."
+              } catch {
+                Write-Error "Failed to extract $($z.FullName): $($_.Exception.Message)"
+                throw
+              }
+            }
+          } else {
+            Write-Host "No zip files found in $signedDir — assuming SignPath placed signed MSIs directly."
+          }
+
+          # Copy signed MSIs into the output folder; fail if none found
+          $signedMsis = Get-ChildItem -Path $signedDir -File -Filter '*.msi' -Recurse -ErrorAction SilentlyContinue
+          if ($null -eq $signedMsis -or $signedMsis.Count -eq 0) {
+            Write-Error "No signed .msi files found in $signedDir after extraction. Failing the job."
+            exit 1
+          }
+          Write-Host "Copying signed MSIs from $signedDir to src/dist/out"
+          foreach ($f in $signedMsis) {
+            Copy-Item -Path $f.FullName -Destination (Join-Path 'src/dist/out' $f.Name) -Force
+          }
+          # Clean up signed directory after successful copy
+          try {
+            Get-ChildItem -Path $signedDir -Recurse -Force | Remove-Item -Force -Recurse
+            Write-Host "Cleaned up $signedDir"
+          } catch {
+            Write-Warning "Failed to clean up $signedDir: $($_.Exception.Message)"
+          }
+        shell: pwsh
+
+      - name: Generate checksum for signed MSI
+        run: |
+          .\venv\Scripts\Activate
+          $checksum = Get-FileHash src/dist/out/*.msi -Algorithm SHA256
+          $filename = [System.IO.Path]::GetFileName($checksum.Path)
+          "$($checksum.Hash) $filename" > src/dist/out/checksums.txt
+        shell: pwsh
+
+      - name: Upload signed MSI as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: signed-msi
+          path: |
+            src/dist/out/*.msi
+            src/dist/out/checksums.txt

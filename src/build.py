@@ -121,6 +121,7 @@ bdist_msi_options = {
     "dist_dir": "dist/out",
     "initial_target_dir": r"[ProgramFiles64Folder]\YASB",
     "all_users": True,
+    "skip_build": True,
     "summary_data": {
         "author": "AmN",
         "comments": "A highly configurable Windows status bar",
