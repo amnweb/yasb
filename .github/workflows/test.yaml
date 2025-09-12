@@ -1,4 +1,4 @@
-name: Test Release
+name: Release
 
 on:
   workflow_dispatch:
@@ -74,7 +74,8 @@ jobs:
           api-token: '${{ secrets.SIGN_TOKEN }}'
           organization-id: '9efb6764-d1fc-46c5-b050-5ef07bb67a8c'
           project-slug: 'yasb'
-          signing-policy-slug: 'signing_executable'
+          signing-policy-slug: 'test-signing'
+          artifact-configuration-slug: 'signing_executable'
           github-artifact-id: '${{ steps.get_exes_artifact.outputs.result }}'
           wait-for-completion: 'true'
           output-artifact-directory: 'src/signed'
@@ -158,7 +159,8 @@ jobs:
           api-token: '${{ secrets.SIGN_TOKEN }}'
           organization-id: '9efb6764-d1fc-46c5-b050-5ef07bb67a8c'
           project-slug: 'yasb'
-          signing-policy-slug: 'signing_installer'
+          signing-policy-slug: 'test-signing'
+          artifact-configuration-slug: 'signing_installer'
           github-artifact-id: '${{ steps.get_msi_artifact.outputs.result }}'
           wait-for-completion: 'true'
           output-artifact-directory: 'src/signed'
