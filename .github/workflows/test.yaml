@@ -1,4 +1,4 @@
-name: Release
+name: Test Release
 
 on:
   workflow_dispatch:
@@ -92,7 +92,7 @@ jobs:
           # Find zip files (if any) and extract them safely
           $zips = Get-ChildItem -Path $signedDir -File -Filter '*.zip' -Recurse -ErrorAction SilentlyContinue
           if ($null -ne $zips -and $zips.Count -gt 0) {
-            Write-Host "Found zip(s) in $signedDir: extracting..."
+            Write-Host "Found zip(s) in ${signedDir}: extracting..."
             foreach ($z in $zips) {
               Write-Host "Extracting $($z.FullName)"
               try {
@@ -122,7 +122,7 @@ jobs:
             Get-ChildItem -Path $signedDir -Recurse -Force | Remove-Item -Force -Recurse
             Write-Host "Cleaned up $signedDir"
           } catch {
-            Write-Warning "Failed to clean up $signedDir: $($_.Exception.Message)"
+            Write-Warning "Failed to clean up ${signedDir}: $($_.Exception.Message)"
           }
         shell: pwsh
 
@@ -177,7 +177,7 @@ jobs:
           # Find zip files (if any) and extract them safely
           $zips = Get-ChildItem -Path $signedDir -File -Filter '*.zip' -Recurse -ErrorAction SilentlyContinue
           if ($null -ne $zips -and $zips.Count -gt 0) {
-            Write-Host "Found zip(s) in $signedDir: extracting..."
+            Write-Host "Found zip(s) in ${signedDir}: extracting..."
             foreach ($z in $zips) {
               Write-Host "Extracting $($z.FullName)"
               try {
@@ -207,7 +207,7 @@ jobs:
             Get-ChildItem -Path $signedDir -Recurse -Force | Remove-Item -Force -Recurse
             Write-Host "Cleaned up $signedDir"
           } catch {
-            Write-Warning "Failed to clean up $signedDir: $($_.Exception.Message)"
+            Write-Warning "Failed to clean up ${signedDir}: $($_.Exception.Message)"
           }
         shell: pwsh
 
