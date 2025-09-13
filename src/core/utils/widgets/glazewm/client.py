@@ -173,15 +173,11 @@ class GlazewmClient(QObject):
         for mon in data:
             monitor_name: str | None = mon.get("hardwareId")
             handle: int | None = mon.get("handle")
-            if monitor_name is None or handle is None:
-                logger.warning(f"Monitor name or hwnd not found | name: {monitor_name}, handle: {handle}")
-                continue
-            if not monitor_name:
-                monitor_name = f"Unknown ({handle})"
-                logger.warning(f"Monitor name not found. Replacing with {monitor_name}")
             if not handle:
                 logger.warning("Monitor handle not found")
                 continue
+            if not monitor_name:
+                monitor_name = f"Unknown_{handle}"
             workspaces_data = [
                 Workspace(
                     name=child.get("name", ""),
