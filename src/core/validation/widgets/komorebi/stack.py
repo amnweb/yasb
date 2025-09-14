@@ -10,6 +10,7 @@ DEFAULTS = {
     "max_length_ellipsis": "...",
     "hide_if_offline": False,
     "show_only_stack": False,
+    "rewrite": [],
     "animation": False,
     "enable_scroll_switching": False,
     "reverse_scroll_direction": False,
@@ -31,6 +32,23 @@ VALIDATION_SCHEMA = {
     "max_length_overall": {"type": "integer", "min": 1, "nullable": True, "default": DEFAULTS["max_length"]},
     "max_length_ellipsis": {"type": "string", "default": DEFAULTS["max_length_ellipsis"]},
     "animation": {"type": "boolean", "default": DEFAULTS["animation"]},
+    "rewrite": {
+        "type": "list",
+        "required": False,
+        "schema": {
+            "type": "dict",
+            "schema": {
+                "pattern": {"type": "string", "required": True},
+                "replacement": {"type": "string", "required": True},
+                "case": {
+                    "type": "string",
+                    "required": False,
+                    "allowed": ["lower", "upper", "title", "capitalize"],
+                },
+            },
+        },
+        "default": DEFAULTS["rewrite"],
+    },
     "enable_scroll_switching": {"type": "boolean", "default": DEFAULTS["enable_scroll_switching"]},
     "reverse_scroll_direction": {"type": "boolean", "default": DEFAULTS["reverse_scroll_direction"]},
     "container_padding": {"type": "dict", "default": DEFAULTS["container_padding"], "required": False},
