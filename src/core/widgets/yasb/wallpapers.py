@@ -33,7 +33,8 @@ class WallpapersWidget(BaseWidget):
 
     user32 = ctypes.windll.user32
     validation_schema = VALIDATION_SCHEMA
-    _timer_running = False
+    # Shared state for all Wallpaper instances
+    _shared_timer_running = False
 
     def __init__(
         self,
@@ -124,11 +125,11 @@ class WallpapersWidget(BaseWidget):
 
     def start_timer(self):
         """Start the timer for automatic wallpaper changes."""
-        if not self._timer_running:
+        if not WallpapersWidget._shared_timer_running:
             if self.timer_interval and self.timer_interval > 0:
                 self.timer.timeout.connect(self._timer_callback)
                 self.timer.start(self.timer_interval)
-                self._timer_running = True
+                WallpapersWidget._shared_timer_running = True
 
     def _create_dynamically_label(self, content: str):
         """Create labels dynamically based on the provided content."""
