@@ -33,7 +33,6 @@ class WindowsNotificationEventListener(QThread):
     def __init__(self):
         super().__init__()
         self.running = True
-        self.previous_count = 0
         self.total_notifications = 0
         self.event_service = EventService()
         self.loop = asyncio.new_event_loop()
@@ -60,14 +59,8 @@ class WindowsNotificationEventListener(QThread):
             if access_result == management.UserNotificationListenerAccessStatus.ALLOWED:
                 while self.running:
                     current_count = await self.update_count(listener)
-                    if current_count is not None and current_count != self.previous_count:
-                        if current_count > self.previous_count:
-                            added = current_count - self.previous_count
-                            self.total_notifications += added
-                        elif current_count == 0:
-                            self.total_notifications = 0
-
-                        self.previous_count = current_count
+                    if current_count is not None and current_count != self.total_notifications:
+                        self.total_notifications = current_count
                         self.event_service.emit_event("WindowsNotificationUpdate", self.total_notifications)
 
                     await asyncio.sleep(2)
@@ -88,7 +81,6 @@ class WindowsNotificationEventListener(QThread):
                 # Call without await since it might not be an async method
                 listener.remove_notification(n.id)
             self.total_notifications = 0
-            self.previous_count = 0
             self.event_service.emit_event("WindowsNotificationUpdate", self.total_notifications)
         except Exception as e:
             logging.error(f"Error clearing notifications: {e}")
