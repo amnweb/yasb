@@ -5,10 +5,11 @@ import re
 from enum import StrEnum
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, cast, override
+from typing import Any, TypeGuard, cast, override
 
 import psutil
-from PyQt6.QtCore import QEvent, QPoint, QPropertyAnimation, QRect, QSize, Qt, QTimer, pyqtSlot
+from PyQt6 import sip
+from PyQt6.QtCore import QEvent, QObject, QPoint, QPropertyAnimation, QRect, QSize, Qt, QTimer, pyqtSlot
 from PyQt6.QtGui import (
     QColor,
     QFontMetrics,
@@ -24,6 +25,11 @@ from winrt.windows.data.xml.dom import XmlDocument
 from winrt.windows.ui.notifications import ToastNotification, ToastNotificationManager
 
 from core.utils.win32.blurWindow import Blur
+
+
+def is_valid_qobject[T](obj: T | None) -> TypeGuard[T]:
+    """Check if the object is a valid QObject with specific type"""
+    return obj is not None and isinstance(obj, QObject) and not sip.isdeleted(obj)
 
 
 def app_data_path(filename: str = None) -> Path:
