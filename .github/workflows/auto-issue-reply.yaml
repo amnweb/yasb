@@ -44,7 +44,7 @@ jobs:
                   "",
                   "1. Make sure your configuration file is valid YAML.",
                   "2. Try deleting the config folder located at:",
-                  "   - Windows: C:\\Users\\$YourUser\\.config\\yasb",
+                  "   - Windows: C:\\Users\\{USERNAME}\\.config\\yasb",
                   "3. Reinstall or update YASB if the problem persists.",
                   "",
                   "For help configuring your setup correctly:",
