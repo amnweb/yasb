@@ -414,8 +414,11 @@ class SystrayWidget(BaseWidget):
             "exe_path",
         ]
         for attr in direct_attributes:
+            if attr in ("hWnd", "uID"):
+                continue
             setattr(old_data, attr, getattr(new_data, attr))
-
+        old_data.hWnd = new_data.hWnd or old_data.hWnd
+        old_data.uID = new_data.uID or old_data.uID
         if 0 < new_data.uVersion <= 4:
             old_data.uVersion = new_data.uVersion
 
