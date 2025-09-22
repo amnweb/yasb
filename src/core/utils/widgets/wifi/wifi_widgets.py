@@ -3,7 +3,6 @@ import os
 from dataclasses import replace
 from typing import Any, override
 
-from PyQt6 import sip
 from PyQt6.QtCore import (
     QEvent,
     QObject,
@@ -31,7 +30,7 @@ from PyQt6.QtWidgets import (
 )
 from winrt.windows.devices.wifi import WiFiConnectionStatus
 
-from core.utils.utilities import PopupWidget
+from core.utils.utilities import PopupWidget, is_valid_qobject
 from core.utils.widgets.wifi.wifi_managers import (
     NetworkInfo,
     ScanResultStatus,
@@ -201,7 +200,7 @@ class WifiItem(QFrame):
             def eventFilter(self, a0: QObject | None, a1: QEvent | None) -> bool:
                 if isinstance(a1, QMouseEvent):
                     if a1.type() == QEvent.Type.MouseButtonPress and a1.button() == Qt.MouseButton.LeftButton:
-                        if self.checkbox and not sip.isdeleted(self.checkbox):
+                        if is_valid_qobject(self.checkbox):
                             self.checkbox.toggle()
                         return True
                 return False
@@ -223,14 +222,14 @@ class WifiItem(QFrame):
 
     @pyqtSlot()
     def _enable_auto_connect_checkbox(self):
-        if self.auto_connect_checkbox and not sip.isdeleted(self.auto_connect_checkbox):
+        if is_valid_qobject(self.auto_connect_checkbox):
             self.auto_connect_checkbox.setEnabled(True)
 
     @pyqtSlot()
     def _toggle_auto_connect(self):
         self.data.auto_connect = not self.data.auto_connect
         self.auto_connect_toggled.emit(self.data)
-        if self.auto_connect_checkbox and not sip.isdeleted(self.auto_connect_checkbox):
+        if is_valid_qobject(self.auto_connect_checkbox):
             self.auto_connect_checkbox.setDisabled(True)
             QTimer.singleShot(3000, self._enable_auto_connect_checkbox)  # type: ignore
 
@@ -431,6 +430,8 @@ class WifiMenu(QWidget):
         self.wifi_connection_worker: WiFiConnectWorker | None = None
         self.wifi_disconnect_worker: WifiDisconnectWorker | None = None
 
+        self.popup_window: PopupWidget | None = None
+
         self.list_update_timer = QTimer(self)
         self.list_update_timer.setSingleShot(True)
         self.list_update_timer.timeout.connect(self._update_wifi_items_list)  # pyright: ignore[reportUnknownMemberType]
@@ -515,14 +516,14 @@ class WifiMenu(QWidget):
 
     def show_errror_message_briefly(self, message: str):
         """Shows an error message briefly"""
-        if sip.isdeleted(self.popup_window):
+        if not is_valid_qobject(self.popup_window):
             return
 
         def hide_error_message():
-            if not sip.isdeleted(self.popup_window):
+            if is_valid_qobject(self.popup_window):
                 self.error_message.setVisible(False)
 
-        if not sip.isdeleted(self.popup_window):
+        if is_valid_qobject(self.popup_window):
             self.error_message.clickable = False
             self.error_message.setText(message)
             self.error_message.setVisible(True)
@@ -537,11 +538,7 @@ class WifiMenu(QWidget):
     @pyqtSlot(NetworkInfo, str, str)
     def _connect(self, network: NetworkInfo, password: str, ssid: str = ""):
         """Connect to the currently selected network"""
-        if (
-            self.wifi_connection_worker
-            and not sip.isdeleted(self.wifi_connection_worker)
-            and self.wifi_connection_worker.isRunning()
-        ):
+        if is_valid_qobject(self.wifi_connection_worker) and self.wifi_connection_worker.isRunning():
             logger.debug("Already connecting to a network")
             return
         logger.debug("Connecting to wifi network...")
@@ -551,7 +548,7 @@ class WifiMenu(QWidget):
             self.wifi_connection_worker = WiFiConnectWorker(network, network.ssid, password, False)
         self.wifi_connection_worker.result.connect(self._on_connection_attempt_completed)  # pyright: ignore[reportUnknownMemberType]
         self.wifi_connection_worker.start()
-        if sip.isdeleted(self.popup_window):
+        if not is_valid_qobject(self.popup_window):
             return
         self.menu_progress_bar.setVisible(True)
 
@@ -575,7 +572,7 @@ class WifiMenu(QWidget):
         else:
             self._networks_cache[profile_name] = network
 
-        if sip.isdeleted(self.popup_window):
+        if not is_valid_qobject(self.popup_window):
             return
         menu_wifi_list = self.menu_wifi_list.get_items()
         if item := menu_wifi_list.get(profile_name):
@@ -587,11 +584,7 @@ class WifiMenu(QWidget):
 
     def _disconnect(self, network: NetworkInfo):
         """Disconnect from the currently connected network"""
-        if (
-            self.wifi_disconnect_worker
-            and not sip.isdeleted(self.wifi_disconnect_worker)
-            and self.wifi_disconnect_worker.isRunning()
-        ):
+        if is_valid_qobject(self.wifi_disconnect_worker) and self.wifi_disconnect_worker.isRunning():
             logger.debug("Already disconnecting from a network")
 
         logger.debug("Disconnecting from wifi network")
@@ -611,11 +604,9 @@ class WifiMenu(QWidget):
                 state=self._networks_cache[profile_name].state & ~WifiState.CONNECTED,
             )
 
-        if sip.isdeleted(self.popup_window):
-            return
-        # Update the menu
-        if item := self.menu_wifi_list.get_item(profile_name):
-            item.data = replace(item.data, state=item.data.state & ~WifiState.CONNECTED)
+        if is_valid_qobject(self.popup_window):
+            if item := self.menu_wifi_list.get_item(profile_name):
+                item.data = replace(item.data, state=item.data.state & ~WifiState.CONNECTED)
 
     @pyqtSlot(NetworkInfo)
     def _forget_network(self, network: NetworkInfo):
@@ -630,7 +621,7 @@ class WifiMenu(QWidget):
                 profile_exists=False,
             )
 
-        if sip.isdeleted(self.popup_window):
+        if not is_valid_qobject(self.popup_window):
             return
         # Update the menu
         if item := self.menu_wifi_list.get_item(network.ssid):
@@ -645,14 +636,14 @@ class WifiMenu(QWidget):
         """Trigger a WiFi scan"""
         # This is async and will emit a signal when finished
         self.wifi_manager.scan_available_networks()
-        if not sip.isdeleted(self.popup_window):
+        if is_valid_qobject(self.popup_window):
             self.menu_progress_bar.setVisible(True)
 
     @pyqtSlot(ScanResultStatus, list)
     def _on_wifi_scan_completed(self, result: ScanResultStatus, networks: list[NetworkInfo]):
         """Handle the WiFi scan is completed event"""
         # Check if location services are enabled
-        if not sip.isdeleted(self.popup_window):
+        if is_valid_qobject(self.popup_window):
             if result != ScanResultStatus.SUCCESS:
                 if result == ScanResultStatus.ACCESS_DENIED:
                     self.error_message.setText("Error: Location services are disabled...")
@@ -711,7 +702,7 @@ class WifiMenu(QWidget):
     @pyqtSlot()
     def _update_wifi_items_list(self):
         """Update the WiFi items list"""
-        if sip.isdeleted(self.popup_window):
+        if not is_valid_qobject(self.popup_window):
             return
         self.menu_progress_bar.setVisible(False)
         active_connection = self.wifi_manager.get_current_connection()
