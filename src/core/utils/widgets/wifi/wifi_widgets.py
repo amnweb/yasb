@@ -1,6 +1,7 @@
 import logging
 import os
 from dataclasses import replace
+from functools import partial
 from typing import Any, override
 
 from PyQt6.QtCore import (
@@ -482,7 +483,8 @@ class WifiMenu(QWidget):
         more_settings_button = QPushButton("More Wi-Fi settings")
         more_settings_button.setProperty("class", "settings-button")
         more_settings_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        more_settings_button.clicked.connect(lambda: os.startfile("ms-settings:network-wifi"))  # type: ignore[reportUnknownMemberType]
+
+        more_settings_button.clicked.connect(partial(self._run_and_hide, "ms-settings:network-wifi"))  # pyright: ignore[reportUnknownMemberType]
 
         refresh_icon = QPushButton(self.popup_window)
         refresh_icon.setText("\ue72c")
@@ -651,7 +653,7 @@ class WifiMenu(QWidget):
                     if self.error_connection:
                         self.error_message.disconnect(self.error_connection)
                     self.error_connection = self.error_message.clicked.connect(  # type: ignore[reportUnknownMemberType]
-                        lambda: os.startfile("ms-settings:privacy-location")
+                        partial(self._run_and_hide, "ms-settings:privacy-location"),
                     )
                 elif result == ScanResultStatus.POWER_STATE_INVALID:
                     self.error_message.setText("Error: WiFi adapter is disabled...")
@@ -659,7 +661,7 @@ class WifiMenu(QWidget):
                     if self.error_connection:
                         self.error_message.disconnect(self.error_connection)
                     self.error_connection = self.error_message.clicked.connect(  # type: ignore[reportUnknownMemberType]
-                        lambda: os.startfile("ms-settings:network-wifi")
+                        partial(self._run_and_hide, "ms-settings:network-wifi"),
                     )
                 elif result == ScanResultStatus.ERROR:
                     self.error_message.clickable = False
@@ -751,3 +753,9 @@ class WifiMenu(QWidget):
             return self.menu_config["wifi_icons_secured"][level]
         else:
             return self.menu_config["wifi_icons_unsecured"][level]
+
+    def _run_and_hide(self, command: str) -> None:
+        """Run a command and hide the popup window if exists"""
+        if is_valid_qobject(self.popup_window):
+            self.popup_window.hide()
+        os.startfile(command)
