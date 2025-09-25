@@ -2,7 +2,6 @@ import asyncio
 import contextlib
 import ctypes
 import logging
-import os
 import sys
 import time
 from sys import argv
@@ -28,12 +27,12 @@ logging.getLogger("asyncio").setLevel(logging.WARNING)
 def single_instance_lock(name="yasb_reborn"):
     """Create a Windows mutex to ensure a single instance, with optional restart wait.
 
-    If the process is launched with --restart-wait (or env YASB_RESTART=1),
-    the new instance will wait for the previous instance to exit and release
-    the mutex (bounded wait) instead of exiting immediately.
+    If the process is launched with --restart-wait, the new instance will
+    wait for the previous instance to exit and release the mutex (bounded
+    wait) instead of exiting immediately.
     """
     ERROR_ALREADY_EXISTS = 183
-    wait_for_restart = ("--restart-wait" in sys.argv) or (os.environ.get("YASB_RESTART") == "1")
+    wait_for_restart = "--restart-wait" in sys.argv
 
     # CreateMutexW(bInitialOwner=True) to own the mutex while we run
     mutex = ctypes.windll.kernel32.CreateMutexW(None, True, name)
@@ -50,7 +49,7 @@ def single_instance_lock(name="yasb_reborn"):
             ctypes.windll.kernel32.ReleaseMutex(mutex)
 
             # Loop trying to acquire (CreateMutexW again) until timeout
-            timeout_s = 20
+            timeout_s = 10
             start = time.time()
             acquired = False
             while time.time() - start < timeout_s:
@@ -121,8 +120,9 @@ def main():
     app.aboutToQuit.connect(stop_observer)
 
     # Build system tray icon
-    tray_manager = SystemTrayManager(manager)
-    tray_manager.show()
+    if config["show_systray"]:
+        tray_manager = SystemTrayManager(manager)
+        tray_manager.show()
 
     # Initialize auto update service
     if config["update_check"] and getattr(sys, "frozen", False):

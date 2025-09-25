@@ -58,7 +58,16 @@ class BarManager(QObject):
         if config and (config != self.config):
             if any(
                 config[key] != self.config[key]
-                for key in ["bars", "widgets", "komorebi", "debug", "env_file", "update_check"]
+                for key in [
+                    "bars",
+                    "widgets",
+                    "komorebi",
+                    "glazewm",
+                    "show_systray",
+                    "debug",
+                    "env_file",
+                    "update_check",
+                ]
             ):
                 self.config = config
                 reload_application("Reloading Application because of config change.")

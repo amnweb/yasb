@@ -24,6 +24,11 @@ CONFIG_SCHEMA = {
         "default": True,
         "required": False,
     },
+    "show_systray": {
+        "type": "boolean",
+        "default": True,
+        "required": False,
+    },
     "komorebi": {
         "type": "dict",
         "schema": {
