@@ -4,6 +4,10 @@ DEFAULTS = {
     "class_name": "",
     "hide_empty": False,
     "tooltip": True,
+    "icons": {
+        "new": "\udb80\udc9e",
+        "default": "\udb80\udc9a",
+    },
     "animation": {"enabled": True, "type": "fadeInOut", "duration": 200},
     "container_padding": {"top": 0, "left": 0, "bottom": 0, "right": 0},
     "callbacks": {"on_left": "toggle_label", "on_middle": "do_nothing", "on_right": "do_nothing"},
@@ -15,6 +19,14 @@ VALIDATION_SCHEMA = {
     "class_name": {"type": "string", "required": False, "default": DEFAULTS["class_name"]},
     "hide_empty": {"type": "boolean", "default": DEFAULTS["hide_empty"]},
     "tooltip": {"type": "boolean", "required": False, "default": DEFAULTS["tooltip"]},
+    "icons": {
+        "type": "dict",
+        "schema": {
+            "new": {"type": "string", "default": DEFAULTS["icons"]["new"]},
+            "default": {"type": "string", "default": DEFAULTS["icons"]["default"]},
+        },
+        "default": DEFAULTS["icons"],
+    },
     "animation": {
         "type": "dict",
         "required": False,

@@ -6,6 +6,7 @@
 | `label_alt`       | string  | `"{count} new notifications"`        | The alternative format string for the notifications widget. |
 | `class_name`      | string  | `""`                                                                                  | Additional CSS class name for the widget.                                    |
 | `tooltip`  | boolean  | `true`        | Whether to show the tooltip on hover. |
+| `icons`          | dict    | `{'new': '\udb80\udc9e', 'default': '\udb80\udc9a'}`               | Icons for different notification states.                                    |
 | `hide_empty`       | boolean  | `false`  | Whether to hide the widget when there are no notifications. |
 | `callbacks`       | dict    | `{'on_left': 'toggle_label', 'on_middle': 'do_nothing', 'on_right': 'do_nothing'}` | Callbacks for mouse events on the notifications widget. |
 | `animation`         | dict    | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
@@ -35,10 +36,11 @@
 
 ## Description of Options
 
-- **label:** The format string for the notifications widget. The string can contain the `{count}` placeholder which will be replaced with the number of notifications.
-- **label_alt:** The alternative format string for the notifications widget. The string can contain the `{count}` placeholder which will be replaced with the number of notifications.
+- **label:** The format string for the notifications widget. The string can contain the `{count}` placeholder which will be replaced with the number of notifications and the `{icon}` placeholder which will be replaced with the icon representing the notification state.
+- **label_alt:** The alternative format string for the notifications widget. The string can contain the `{count}` placeholder which will be replaced with the number of notifications and the `{icon}` placeholder which will be replaced with the icon representing the notification state.
 - **class_name:** Additional CSS class name for the widget. This allows for custom styling.
 - **tooltip:** Whether to show the tooltip on hover.
+- **icons:** A dictionary specifying the icons for different notification states. It contains two keys: `new` and `default`. The values are the icons to be used for new notifications and the default state, respectively.
 - **hide_empty:** Whether to hide the widget when there are no notifications.
 - **callbacks:** Callbacks for mouse events on the notifications widget. The following callbacks are available:
   - `on_left`: Callback for left-click event.

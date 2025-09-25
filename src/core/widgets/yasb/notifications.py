@@ -30,6 +30,7 @@ class NotificationsWidget(BaseWidget):
         class_name: str,
         hide_empty: bool,
         tooltip: bool,
+        icons: dict,
         container_padding: dict,
         animation: dict[str, str],
         callbacks: dict[str, str],
@@ -44,6 +45,7 @@ class NotificationsWidget(BaseWidget):
 
         self._hide_empty = hide_empty
         self._tooltip = tooltip
+        self._icons = icons
         self._padding = container_padding
         self._animation = animation
         self._callbacks = callbacks
@@ -121,11 +123,17 @@ class NotificationsWidget(BaseWidget):
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
         active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
 
+        if self._notification_count > 0:
+            icon = self._icons["new"]
+        else:
+            icon = self._icons["default"]
+
         label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
         label_parts = [part for part in label_parts if part]
         widget_index = 0
 
-        label_options = [("{count}", self._notification_count)]
+        # Provide replacements for {count} and {icon}
+        label_options = [("{count}", self._notification_count), ("{icon}", icon)]
 
         for part in label_parts:
             part = part.strip()
