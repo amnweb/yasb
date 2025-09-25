@@ -105,7 +105,10 @@ taskbar:
 /* Taskbar preview popup is very limited in styling options, do not use margins/paddings here */
 .taskbar-preview {
     border-radius: 8px; 
-    background-color:#2b2c2d; 
+    background-color: #2b2c2d; 
+}
+.taskbar-preview.flashing { 
+    background-color: #7f434a;
 }
 .taskbar-preview .header {
     padding-bottom: 12px;

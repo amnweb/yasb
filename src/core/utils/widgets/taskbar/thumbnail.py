@@ -464,8 +464,20 @@ class TaskbarThumbnailManager:
             if data:
                 title, icon = data[0], data[1]
 
+            # Check if window is flashing using existing taskbar logic
+            is_flashing = "flashing" in self._taskbar._get_container_class(hwnd)
+
             # Show popup with initial size calculation
             self._preview_popup.show_for(hwnd, anchor_widget, title=title, icon=icon)
+
+            # Add flashing class to preview content if window is flashing
+            if is_flashing and hasattr(self._preview_popup, "_content"):
+                try:
+                    self._preview_popup._content.setProperty("class", "taskbar-preview flashing")
+                    self._preview_popup._content.style().unpolish(self._preview_popup._content)
+                    self._preview_popup._content.style().polish(self._preview_popup._content)
+                except Exception:
+                    pass
 
             # Set up external thumbnail which may recalculate size with accurate DWM data
             self._show_external_thumbnail(hwnd, self._preview_popup)
