@@ -2,8 +2,8 @@
 
 | Option                                | Type      | Default                                                   | Description                                                        |
 | -------------------------             | --------- | ---------                                                 | -------------------------------------                              |
-| `label`                               | string    |                                                           | The main label format for the media widget.                        |
-| `label_alt`                           | string    |                                                           | The alternative label format for the media widget.                 |
+| `label`                               | string    | `"{title}"`                                               | The main label format for the media widget.                        |
+| `label_alt`                           | string    | `"{artist} - {title}"`                                    | The alternative label format for the media widget.                 |
 | `class_name`                          | string  | `""`                                                        | The custom CSS class name for the widget.                          |
 | `label_shadow`                        | boolean   | false                                                     | Whether to show a shadow effect on the label.                      |
 | `max_field_size`                      | dict      |                                                           | Maximum field sizes for labels.                                    |

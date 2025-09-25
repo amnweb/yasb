@@ -18,6 +18,7 @@ If you see a table with your GPU information, `nvidia-smi` is available. If you 
 | `label`               | string  | `"<span>\uf4bc</span> {info[utilization]}%"`                              | The primary label format.                                                   |
 | `label_alt`           | string  | `"<span>\uf4bc</span> {info[temp]}°C | {info[mem_used]} / {info[mem_total]}"`                 | The alternative label format.                                               |
 | `class_name`        | string  | `""`                                                                                  | Additional CSS class name for the widget.                                    |
+| `gpu_index`          | integer | `0`                                                                     | The index of the GPU to monitor (0 for the first GPU, 1 for the second, etc.). |
 | `update_interval`     | integer | `1000`                                                                  | The interval in milliseconds to update the widget.                          |
 | `histogram_icons`     | list    | `["\u2581", "\u2581", "\u2582", "\u2583", "\u2584", "\u2585", "\u2586", "\u2587", "\u2588"]` | Icons representing GPU utilization histograms.                              |
 | `histogram_num_columns` | integer | `10`                                                                    | The number of columns in the histogram.                                     |
@@ -29,7 +30,7 @@ If you see a table with your GPU information, `nvidia-smi` is available. If you 
 | `progress_bar`        | dict    | `{'enabled': false, 'position': 'left', 'size': 14, 'thickness': 2, 'color': '#57948a', 'animation': false}` | Progress bar settings.                                                      |
 | `hide_decimal`        | bool    | `false`                                                                 | Whether to hide decimal places in the GPU widget.                          |
 
-> **About `index`:** If you have multiple NVIDIA GPUs, you can set the `index` option to select which GPU to monitor. Create multiple GPU widgets with different `index` values (e.g., 0, 1, 2, ...) to display stats for each card separately.
+> **About `index`:** If you have multiple NVIDIA GPUs, you can set the `gpu_index` option to select which GPU to monitor. Create multiple GPU widgets with different `gpu_index` values (e.g., 0, 1, 2, ...) to display stats for each card separately.
 
 ## Example Configuration
 
