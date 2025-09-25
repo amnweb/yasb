@@ -9,10 +9,10 @@ from functools import lru_cache
 from win32api import GetMonitorInfo, MonitorFromWindow
 from win32gui import GetClassName, GetWindowPlacement, GetWindowRect, GetWindowText
 
+from core.utils.utilities import is_windows_10
 from core.utils.win32.bindings import (
     CloseHandle,
     DwmGetWindowAttribute,
-    DwmSetWindowAttribute,
     GetForegroundWindow,
     GetWindowThreadProcessId,
     OpenProcess,
@@ -156,25 +156,23 @@ def get_hwnd_info(hwnd: int) -> dict:
 
 def qmenu_rounded_corners(qwidget):
     """
-    Set default Windows 11 rounded corners for a QMenu
-    This function uses the DWM API to set the window corner preference for a QMenu.
-    Windows 10 is not supported, as it does not have the DWM API for rounded corners.
+    Set blur and rounded corners for a QMenu on Windows 11.
+    Fusion style is required for correct rendering and removing qmenu shadow.
+    If is Windows 10, we will skip this as it is not supported.
     """
+    if is_windows_10():
+        return
     try:
-        hwnd = int(qwidget.winId())
-        DWMWA_WINDOW_CORNER_PREFERENCE = 33
-        DWMWCP_ROUND = 2
+        from PyQt6.QtWidgets import QStyleFactory
 
-        preference = ctypes.wintypes.DWORD(DWMWCP_ROUND)
-        DwmSetWindowAttribute(
-            ctypes.wintypes.HWND(hwnd),
-            ctypes.wintypes.DWORD(DWMWA_WINDOW_CORNER_PREFERENCE),
-            ctypes.byref(preference),
-            ctypes.sizeof(preference),
-        )
+        from core.utils.win32.blurWindow import Blur
+
+        qwidget.setStyle(QStyleFactory.create("Fusion"))
+        hwnd = int(qwidget.winId())
+
+        Blur(hwnd, Acrylic=False, DarkMode=False, RoundCorners=True, RoundCornersType="normal", BorderColor="system")
     except Exception:
-        # If we can't set the rounded corners, we just ignore the error
-        # This can happen if the DWM API is not available
+        # If anything goes wrong, just skip it.
         pass
 
 
