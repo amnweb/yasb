@@ -70,6 +70,11 @@ class SystemTrayManager(QSystemTrayIcon):
             self.komorebi_stop = config["komorebi"]["stop_command"]
             self.komorebi_reload = config["komorebi"]["reload_command"]
 
+        if config["glazewm"]:
+            self.glazewm_start = config["glazewm"]["start_command"]
+            self.glazewm_stop = config["glazewm"]["stop_command"]
+            self.glazewm_reload = config["glazewm"]["reload_command"]
+
     def _load_favicon(self):
         # Get the current directory of the script
         self._icon.addFile(os.path.join(SCRIPT_PATH, "assets", "images", "app_icon.png"), QSize(48, 48))
@@ -138,18 +143,45 @@ class SystemTrayManager(QSystemTrayIcon):
         self.reload_action = reload_action
 
         self.menu.addSeparator()
-        if self.is_komorebi_installed():
+        if self.is_wm_installed("komorebi"):
             komorebi_menu = self.menu.addMenu("Komorebi")
             start_komorebi = komorebi_menu.addAction("Start Komorebi")
-            start_komorebi.triggered.connect(self._start_komorebi)
+            start_komorebi.triggered.connect(
+                lambda checked=False, wm="Komorebi", cmd=self.komorebi_start: self._run_wm_command(wm, cmd)
+            )
 
             stop_komorebi = komorebi_menu.addAction("Stop Komorebi")
-            stop_komorebi.triggered.connect(self._stop_komorebi)
+            stop_komorebi.triggered.connect(
+                lambda checked=False, wm="Komorebi", cmd=self.komorebi_stop: self._run_wm_command(wm, cmd)
+            )
 
             reload_komorebi = komorebi_menu.addAction("Reload Komorebi")
-            reload_komorebi.triggered.connect(self._reload_komorebi)
+            reload_komorebi.triggered.connect(
+                lambda checked=False, wm="Komorebi", cmd=self.komorebi_reload: self._run_wm_command(wm, cmd)
+            )
 
             komorebi_menu.aboutToShow.connect(lambda: qmenu_rounded_corners(komorebi_menu))
+
+            self.menu.addSeparator()
+
+        if self.is_wm_installed("glazewm"):
+            glazewm_menu = self.menu.addMenu("Glazewm")
+            start_glazewm = glazewm_menu.addAction("Start Glazewm")
+            start_glazewm.triggered.connect(
+                lambda checked=False, wm="Glazewm", cmd=self.glazewm_start: self._run_wm_command(wm, cmd)
+            )
+
+            stop_glazewm = glazewm_menu.addAction("Stop Glazewm")
+            stop_glazewm.triggered.connect(
+                lambda checked=False, wm="Glazewm", cmd=self.glazewm_stop: self._run_wm_command(wm, cmd)
+            )
+
+            reload_glazewm = glazewm_menu.addAction("Reload Glazewm")
+            reload_glazewm.triggered.connect(
+                lambda checked=False, wm="Glazewm", cmd=self.glazewm_reload: self._run_wm_command(wm, cmd)
+            )
+
+            glazewm_menu.aboutToShow.connect(lambda: qmenu_rounded_corners(glazewm_menu))
 
             self.menu.addSeparator()
 
@@ -170,12 +202,12 @@ class SystemTrayManager(QSystemTrayIcon):
         exit_action = self.menu.addAction("Exit")
         exit_action.triggered.connect(self._exit_application)
 
-    def is_komorebi_installed(self):
+    def is_wm_installed(self, wm) -> bool:
         try:
-            komorebi_path = shutil.which("komorebi")
-            return komorebi_path is not None
+            wm_path = shutil.which(wm)
+            return wm_path is not None
         except Exception as e:
-            logging.error(f"Error checking komorebi installation: {e}")
+            logging.error(f"Error checking {wm} installation: {e}")
             return False
 
     def _enable_startup(self):
@@ -196,32 +228,20 @@ class SystemTrayManager(QSystemTrayIcon):
         except Exception as e:
             logging.error(f"Failed to open config directory: {e}")
 
-    def _start_komorebi(self):
-        def run_komorebi_start():
+    def _run_wm_command(self, wm, command):
+        def wm_command():
             try:
-                subprocess.run(self.komorebi_start, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True)
+                subprocess.run(
+                    command,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.DEVNULL,
+                    shell=True,
+                    creationflags=subprocess.CREATE_NO_WINDOW,
+                )
             except Exception as e:
-                logging.error(f"Failed to start komorebi: {e}")
+                logging.error(f"Failed to start {wm}: {e}")
 
-        threading.Thread(target=run_komorebi_start).start()
-
-    def _stop_komorebi(self):
-        def run_komorebi_stop():
-            try:
-                subprocess.run(self.komorebi_stop, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True)
-            except Exception as e:
-                logging.error(f"Failed to stop komorebi: {e}")
-
-        threading.Thread(target=run_komorebi_stop).start()
-
-    def _reload_komorebi(self):
-        def run_komorebi_reload():
-            try:
-                subprocess.run(self.komorebi_reload, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True)
-            except Exception as e:
-                logging.error(f"Failed to reload komorebi: {e}")
-
-        threading.Thread(target=run_komorebi_reload).start()
+        threading.Thread(target=wm_command).start()
 
     def _reload_application(self):
         reload_application("Reloading Application from tray...")
