@@ -158,8 +158,8 @@ class HomeWidget(BaseWidget):
         # Add click event
         def mouse_press_handler(event):
             if event.button() == Qt.MouseButton.LeftButton:
-                triggered_func()
                 self._menu.hide()
+                triggered_func()
 
         item.mousePressEvent = mouse_press_handler
         layout.addWidget(item)
