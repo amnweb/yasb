@@ -2,7 +2,7 @@ import logging
 import os
 import sys
 
-from PyQt6.QtCore import QCoreApplication, QProcess
+from PyQt6.QtCore import QMetaObject, QProcess, Qt
 from PyQt6.QtWidgets import QApplication
 
 from core.event_service import EventService
@@ -10,22 +10,22 @@ from core.utils.cli_server import CliPipeHandler
 from core.utils.win32.utilities import find_focused_screen
 
 
-def reload_application(msg="Reloading Application...", forced=False):
+def reload_application(msg="Reloading Application..."):
     try:
         logging.info(msg)
         if hasattr(sys, "_cli_pipe_handler") and sys._cli_pipe_handler is not None:
             sys._cli_pipe_handler.stop_cli_pipe_server()
-        QApplication.processEvents()
+        app = QApplication.instance()
+        if app is not None:
+            app.processEvents()
 
         args = list(sys.argv)
         if "--restart-wait" not in args:
             args.append("--restart-wait")
 
         QProcess.startDetached(sys.executable, args)
-        if forced:
-            os._exit(0)
-        else:
-            QCoreApplication.exit(0)
+        if app is not None:
+            QMetaObject.invokeMethod(app, "quit", Qt.ConnectionType.QueuedConnection)
     except Exception as e:
         logging.error(f"Error during reload: {e}")
         os._exit(0)
@@ -36,8 +36,9 @@ def exit_application(msg="Exiting Application..."):
     try:
         if hasattr(sys, "_cli_pipe_handler") and sys._cli_pipe_handler is not None:
             sys._cli_pipe_handler.stop_cli_pipe_server()
-        QCoreApplication.exit(0)
-        # sys.exit(0)
+        app = QApplication.instance()
+        if app is not None:
+            QMetaObject.invokeMethod(app, "quit", Qt.ConnectionType.QueuedConnection)
     except:
         os._exit(0)
 
