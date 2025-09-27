@@ -15,6 +15,7 @@ This widget displays information about each window in the currently active Komor
 | `max_length_ellipsis`        | string | `'...'`    | The ellipsis to use when the label text exceeds the maximum length.              |
 | `hide_if_offline`       | boolean | `false`         | Whether to hide the widget if Komorebi is offline.                          |
 | `show_only_stack`       | boolean | `false`         | Whether to hide the widget if no stacked windows in focus.                |
+| `rewrite`               | list    | `[]`            | Rewrite options for window titles and process names.                      |
 | `enable_scroll_switching` | boolean | `false`      | Enable scroll switching between windows.                                 |
 | `reverse_scroll_direction` | boolean | `false`      | Reverse scroll direction.                                                  |
 | `animation`  | boolean | `false`      | Buttons animation.                                           |
@@ -40,6 +41,10 @@ komorebi_stack:
     max_length_ellipsis: ".."
     hide_if_offline: false
     show_only_stack: false
+    rewrite:
+      - pattern: "^(.+?)\\.exe$"
+        replacement: "\\1"
+        case: "lower"
     animation: true
     enable_scroll_switching : true
     container_shadow:
@@ -71,6 +76,7 @@ komorebi_stack:
 - **max_length_ellipsis:** The string to append to truncated window titles.  
 - **hide_if_offline:** Whether to hide the widget if Komorebi is offline.
 - **show_only_stack:** Whether to hide the widget if no stacked windows in focus.   
+- **rewrite:** A list of search-and-replace rules to be applied to window titles and process names. See [Rewrite Options](#rewrite-options) below.
 - **enable_scroll_switching:** Enable scroll switching between workspaces.
 - **reverse_scroll_direction:** Reverse scroll direction.
 - **animation:** Buttons animation.
@@ -80,6 +86,39 @@ komorebi_stack:
 
 > Note:
 > Left click on window title switches to the window, and Middle click closes the window.
+
+## Rewrite Options
+
+The `rewrite` option allows you to supply a list of search-and-replace rules to be applied, in order, to window titles and process names. Each rule is a dict with the following schema:
+
+| Field       | Type    | Required | Default | Description                                                                                      |
+|-------------|---------|----------|---------|--------------------------------------------------------------------------------------------------|
+| `pattern`   | string  | yes      | None   | A Python regular expression to match against the window title or process name. [More Info](https://docs.python.org/3/library/re.html)    |
+| `replacement`| string | yes      | None   | The replacement text; can use backrefs like `\1`, `\2`, etc.                                     |
+| `case`      | string  | no       | None   | If specified, the replacement will be converted to the specified case. Allowed values: `lower`, `upper`, `title`, `capitalize` |
+
+### Example
+```yaml
+komorebi_stack:
+  type: "komorebi.stack.StackWidget"
+  options:
+    label_window: "{title}"
+    # …
+    rewrite:
+      # Strip trailing ".exe" (case-insensitive) and lowercase:
+      - pattern: "^(.+?)\\.exe$"
+        replacement: "\\1"
+        case: lower
+
+      # Replace "Microsoft Edge" with "Edge" and uppercase:
+      - pattern: "Microsoft Edge"
+        replacement: "Edge"
+        case: upper
+
+      # Replace "Visual Studio Code" with "VSCode":
+      - pattern: "Visual Studio Code"
+        replacement: "VSCode"
+```
 
 ## Style
 ```css
