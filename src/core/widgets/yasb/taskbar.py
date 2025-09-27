@@ -413,6 +413,7 @@ class TaskbarWidget(BaseWidget):
         show_only_visible: bool,
         tooltip: bool,
         ignore_apps: dict[str, list[str]],
+        hide_empty: bool,
         container_padding: dict,
         callbacks: dict[str, str],
         label_shadow: dict = None,
@@ -430,6 +431,7 @@ class TaskbarWidget(BaseWidget):
         self._strict_filtering = strict_filtering
         self._show_only_visible = show_only_visible
         self._ignore_apps = ignore_apps
+        self._hide_empty = hide_empty
         self._padding = container_padding
         self._label_shadow = label_shadow
         self._container_shadow = container_shadow
@@ -517,6 +519,11 @@ class TaskbarWidget(BaseWidget):
             pass
         try:
             super().showEvent(event)
+        except Exception:
+            pass
+        try:
+            if not self._hwnd_to_widget and self._hide_empty:
+                QTimer.singleShot(0, self._hide_taskbar_widget)
         except Exception:
             pass
 
@@ -650,6 +657,11 @@ class TaskbarWidget(BaseWidget):
         else:
             self._widget_container_layout.addWidget(container)
 
+        if self._hide_empty:
+            hwnd_len = len(self._hwnd_to_widget)
+            if hwnd_len > 0:
+                self._show_taskbar_widget()
+
     def _remove_window_ui(self, hwnd, window_data, *, immediate: bool = False):
         """Remove window UI element. If immediate=True, bypass animations to prevent duplicates across monitors."""
         if self._suspend_updates:
@@ -685,6 +697,11 @@ class TaskbarWidget(BaseWidget):
                 widget.deleteLater()
         # Remove from tracking
         self._window_buttons.pop(hwnd, None)
+
+        if self._hide_empty:
+            hwnd_len = len(self._hwnd_to_widget)
+            if hwnd_len < 1:
+                self._hide_taskbar_widget()
 
     def _update_window_ui(self, hwnd, window_data):
         """Update window UI element (focused on the specific widget, no global sweep)."""
@@ -757,6 +774,40 @@ class TaskbarWidget(BaseWidget):
         # Update the tooltip if enabled
         if self._tooltip and title:
             set_tooltip(widget, title, delay=0)
+
+    def _show_taskbar_widget(self):
+        """Show the taskbar widget if hidden."""
+        try:
+            if self.isVisible():
+                return
+        except Exception:
+            pass
+        try:
+            self.show()
+        except Exception:
+            pass
+
+    def _hide_taskbar_widget(self):
+        """Hide the taskbar widget and its preview if shown."""
+        already_hidden = False
+        try:
+            already_hidden = self.isHidden()
+        except Exception:
+            pass
+        if already_hidden:
+            try:
+                self.hide_preview()
+            except Exception:
+                pass
+            return
+        try:
+            self.hide()
+        except Exception:
+            pass
+        try:
+            self.hide_preview()
+        except Exception:
+            pass
 
     def _stop_events(self) -> None:
         """Stop the task manager and clean up"""

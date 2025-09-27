@@ -7,6 +7,7 @@ DEFAULTS = {
     "ignore_apps": {"classes": [], "processes": [], "titles": []},
     "animation": {"enabled": True, "type": "fadeInOut", "duration": 200},
     "title_label": {"enabled": False, "show": "focused", "min_length": 10, "max_length": 30},
+    "hide_empty": False,
     "container_padding": {"top": 0, "left": 0, "bottom": 0, "right": 0},
     "preview": {"enabled": False, "width": 240, "delay": 400, "padding": 8, "margin": 8},
     "callbacks": {"on_left": "toggle_window", "on_middle": "do_nothing", "on_right": "do_nothing"},
@@ -55,6 +56,7 @@ VALIDATION_SCHEMA = {
         },
         "default": DEFAULTS["animation"],
     },
+    "hide_empty": {"type": "boolean", "required": False, "default": DEFAULTS["hide_empty"]},
     "container_padding": {"type": "dict", "default": DEFAULTS["container_padding"], "required": False},
     "label_shadow": {
         "type": "dict",
