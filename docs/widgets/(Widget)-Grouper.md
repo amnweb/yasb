@@ -5,6 +5,7 @@
 | `class_name`              | string  | `'grouper'`                                               | The name identifier for the grouper widget instance.                 |
 | `widgets`           | list    | `[]`                                                      | List of widget names to group together inside this container.        |
 | `container_shadow`  | dict    | `None`                                                    | Container shadow options.                                             |
+| `hide_empty`       | boolean | `False`                                                   | If true, the grouper widget will be hidden if all its child widgets are hidden. |
 
 ## Example Configuration
 
@@ -55,6 +56,7 @@ widgets:
 - **class_name:** A unique identifier for the grouper widget instance. This is used for CSS styling.
 - **widgets:** A list of widget names that should be grouped together inside this container. The widgets are referenced by their configuration names defined elsewhere in the config file. The widgets will be displayed horizontally in the order specified.
 - **container_shadow:** Container shadow options.
+- **hide_empty:** If set to true, the grouper widget will automatically hide itself if all its child widgets are hidden.
 
 ## Style
 
