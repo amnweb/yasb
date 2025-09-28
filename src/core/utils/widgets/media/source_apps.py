@@ -19,6 +19,7 @@ MEDIA_SOURCE_APPS = {
     "foobar2000.exe": "Foobar2000",
     "MusicBee.exe": "MusicBee",
     "mpv.exe": "NSMusicS",
+    "PotPlayerMini64.exe": "PotPlayer",
     # Streaming Services
     "SpotifyAB.SpotifyMusic_zpdnekdrzrea0!Spotify": "Spotify",
     "Spotify.exe": "Spotify",
@@ -53,6 +54,11 @@ MEDIA_SOURCE_APPS = {
         "name": "Zen",
         "process": "zen.exe",
     },
+    "A5B78042B5B03693": {
+        "name": "Zen",
+        "process": "zen.exe",
+    },
+    "zen.exe": "Zen",
     "MSEdge": {
         "name": "Edge",
         "process": "msedge.exe",
