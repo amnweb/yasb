@@ -3,7 +3,11 @@ name: Build Dev Release
 on:
   workflow_dispatch:
   pull_request:
-    types: [closed]
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - ready_for_review
     branches:
       - main
       - feature/*
@@ -20,13 +24,16 @@ jobs:
     permissions:
       contents: write
     runs-on: windows-latest
-    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' && github.event.action != 'closed')
     
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
+        ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.ref }}
 
     - name: Set up Python
       uses: actions/setup-python@v5
