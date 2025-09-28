@@ -196,6 +196,7 @@ class VolumeWidget(BaseWidget):
         mute_text: str,
         tooltip: bool,
         scroll_step: int,
+        slider_beep: bool,
         volume_icons: list[str],
         audio_menu: dict[str, str],
         animation: dict[str, str],
@@ -212,6 +213,7 @@ class VolumeWidget(BaseWidget):
         self._mute_text = mute_text
         self._tooltip = tooltip
         self._scroll_step = int(scroll_step) / 100
+        self._slider_beep = slider_beep
         self._audio_menu = audio_menu
         self._animation = animation
         self._padding = container_padding
@@ -260,6 +262,12 @@ class VolumeWidget(BaseWidget):
         if self._animation["enabled"]:
             AnimationManager.animate(self, self._animation["type"], self._animation["duration"])
         self.show_volume_menu()
+
+    def _on_slider_released(self):
+        try:
+            ctypes.windll.user32.MessageBeep(0)
+        except Exception as e:
+            logging.debug(f"Failed to play volume sound: {e}")
 
     def _on_slider_value_changed(self, value):
         if self.volume is not None:
@@ -399,7 +407,9 @@ class VolumeWidget(BaseWidget):
 
         # Connect slider value change to volume control
         self.volume_slider.valueChanged.connect(self._on_slider_value_changed)
-
+        # Connect slider release to beep sound
+        if self._slider_beep:
+            self.volume_slider.sliderReleased.connect(self._on_slider_released)
         # Add slider to layout
         layout.addWidget(self.volume_slider)
         self.dialog.setLayout(layout)

@@ -5,6 +5,7 @@ DEFAULTS = {
     "mute_text": "mute",
     "tooltip": True,
     "scroll_step": 2,
+    "slider_beep": True,
     "volume_icons": [
         "\ueee8",  # Icon for muted
         "\uf026",  # Icon for 0-10% volume
@@ -41,6 +42,7 @@ VALIDATION_SCHEMA = {
         "min": 1,
         "max": 100,
     },
+    "slider_beep": {"type": "boolean", "required": False, "default": DEFAULTS["slider_beep"]},
     "volume_icons": {
         "type": "list",
         "default": DEFAULTS["volume_icons"],
