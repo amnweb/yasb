@@ -8,18 +8,16 @@ from pathlib import Path
 
 from PyQt6.QtCore import QEvent, QSize, Qt
 from PyQt6.QtGui import QCursor, QIcon
-from PyQt6.QtWidgets import QMenu, QMessageBox, QSystemTrayIcon
+from PyQt6.QtWidgets import QMenu, QSystemTrayIcon
 
 from core.bar_manager import BarManager
 from core.config import get_config
+from core.ui.windows.about import AboutDialog
 from core.utils.controller import exit_application, reload_application
 from core.utils.win32.utilities import disable_autostart, enable_autostart, is_autostart_enabled, qmenu_rounded_corners
 from settings import (
     APP_NAME,
-    APP_NAME_FULL,
-    BUILD_VERSION,
     DEFAULT_CONFIG_DIRECTORY,
-    GITHUB_THEME_URL,
     GITHUB_URL,
     SCRIPT_PATH,
 )
@@ -256,23 +254,5 @@ class SystemTrayManager(QSystemTrayIcon):
             logging.error(f"Failed to open browser: {e}")
 
     def _show_about_dialog(self):
-        about_box = QMessageBox()
-        about_box.setWindowTitle("About YASB")
-        icon_path = os.path.join(SCRIPT_PATH, "assets", "images", "app_icon.png")
-        icon = QIcon(icon_path)
-        about_box.setStyleSheet("QLabel#qt_msgboxex_icon_label { margin: 10px 10px 10px 20px; }")
-        about_box.setIconPixmap(icon.pixmap(64, 64))
-        about_box.setWindowIcon(icon)
-        about_text = f"""
-        <div style="font-family:'Segoe UI'">
-        <div style="font-size:24px;font-weight:400;margin-right:60px"><span style="font-weight:bold">YASB</span> Reborn</div>
-        <div style="font-size:13px;font-weight:600;margin-top:8px">{APP_NAME_FULL}</div>
-        <div style="font-size:13px;font-weight:600;">Version: {BUILD_VERSION}</div><br>
-        <div style="margin-top:5px;font-size:13px;font-weight:600;"><a style="text-decoration:none" href="{GITHUB_URL}">YASB on GitHub</a></div>
-        <div style="margin-top:5px;font-size:13px;font-weight:600;"><a style="text-decoration:none" href="{GITHUB_THEME_URL}">YASB Themes</a></div>
-        <div style="margin-top:5px;font-size:13px;font-weight:600;"><a style="text-decoration:none" href="https://discord.gg/qkeunvBFgX">Join Discord</a></div>
-        </div>
-        """
-        about_box.setText(about_text)
-        about_box.setStandardButtons(QMessageBox.StandardButton.Close)
-        about_box.exec()
+        dialog = AboutDialog(self)
+        dialog.exec()
