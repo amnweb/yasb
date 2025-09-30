@@ -722,12 +722,9 @@ class MediaWidget(BaseWidget):
                 Qt.CursorShape.PointingHandCursor if is_next_enabled else Qt.CursorShape.PointingHandCursor
             )
 
-            self._prev_label.style().unpolish(self._prev_label)
-            self._prev_label.style().polish(self._prev_label)
-            self._play_label.style().unpolish(self._play_label)
-            self._play_label.style().polish(self._play_label)
-            self._next_label.style().unpolish(self._next_label)
-            self._next_label.style().polish(self._next_label)
+            self._prev_label.setStyleSheet("")
+            self._play_label.setStyleSheet("")
+            self._next_label.setStyleSheet("")
 
         # Update popup if it's currently open
         try:
