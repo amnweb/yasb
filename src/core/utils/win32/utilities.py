@@ -165,7 +165,7 @@ def qmenu_rounded_corners(qwidget):
     try:
         from PyQt6.QtWidgets import QStyleFactory
 
-        from core.utils.win32.blurWindow import Blur
+        from core.utils.win32.win32_accent import Blur
 
         qwidget.setStyle(QStyleFactory.create("Fusion"))
         hwnd = int(qwidget.winId())

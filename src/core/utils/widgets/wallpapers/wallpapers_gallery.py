@@ -31,7 +31,7 @@ from PyQt6.QtWidgets import (
 from core.config import get_stylesheet
 from core.event_service import EventService
 from core.utils.utilities import is_windows_10
-from core.utils.win32.blurWindow import Blur
+from core.utils.win32.win32_accent import Blur
 
 
 class BaseStyledWidget(QWidget):

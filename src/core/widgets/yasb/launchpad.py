@@ -47,8 +47,8 @@ from core.utils.utilities import add_shadow, build_widget_label
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.widgets.launchpad.app_loader import AppListLoader, ShortcutResolver
 from core.utils.widgets.launchpad.icon_extractor import IconExtractorUtil, UrlExtractorUtil
-from core.utils.win32.blurWindow import Blur
 from core.utils.win32.utilities import get_foreground_hwnd, qmenu_rounded_corners, set_foreground_hwnd
+from core.utils.win32.win32_accent import Blur
 from core.validation.widgets.yasb.launchpad import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
 

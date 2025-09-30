@@ -9,8 +9,8 @@ from core.bar_helper import AutoHideManager, BarContextMenu, FullscreenManager, 
 from core.event_service import EventService
 from core.utils.utilities import is_valid_percentage_str, percent_to_float
 from core.utils.win32.bindings import user32
-from core.utils.win32.blurWindow import Blur
 from core.utils.win32.utilities import get_monitor_hwnd
+from core.utils.win32.win32_accent import Blur
 from core.validation.bar import BAR_DEFAULTS
 from settings import APP_BAR_TITLE
 

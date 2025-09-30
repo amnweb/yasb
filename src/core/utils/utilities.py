@@ -24,7 +24,7 @@ from PyQt6.QtWidgets import QApplication, QFrame, QGraphicsDropShadowEffect, QLa
 from winrt.windows.data.xml.dom import XmlDocument
 from winrt.windows.ui.notifications import ToastNotification, ToastNotificationManager
 
-from core.utils.win32.blurWindow import Blur
+from core.utils.win32.win32_accent import Blur
 
 
 def is_valid_qobject[T](obj: T | None) -> TypeGuard[T]:
