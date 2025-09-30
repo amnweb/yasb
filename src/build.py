@@ -140,7 +140,7 @@ executables = [
         target_name="yasb",
     ),
     Executable(
-        "core/utils/themes.py",
+        "core/ui/windows/themes.py",
         base="gui",
         icon="assets/images/app_icon.ico",
         copyright=f"Copyright (C) {datetime.datetime.now().year} AmN",
