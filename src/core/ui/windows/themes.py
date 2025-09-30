@@ -1,11 +1,13 @@
 import os
 import re
 import shutil
+import ssl
 import subprocess
 import sys
 import urllib.request
 from typing import Dict
 
+import certifi
 from PyQt6.QtCore import QPropertyAnimation, Qt, QThread, QTimer, QUrl, pyqtSignal
 from PyQt6.QtGui import QDesktopServices, QFont, QFontDatabase, QIcon, QPixmap
 from PyQt6.QtWidgets import (
@@ -23,7 +25,9 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+from winmica import BackdropType, EnableMica, is_mica_supported
 
+from core.ui.style import apply_button_style
 from settings import SCRIPT_PATH
 
 
@@ -37,7 +41,8 @@ class ImageLoader(QThread):
 
     def run(self):
         try:
-            with urllib.request.urlopen(self.url) as response:
+            context = ssl.create_default_context(cafile=certifi.where())
+            with urllib.request.urlopen(self.url, context=context, timeout=15) as response:
                 data = response.read()
             self.finished.emit(self.theme_id, data)
         except Exception:
@@ -51,7 +56,8 @@ class ThemeLoader(QThread):
     def run(self):
         try:
             url = "https://raw.githubusercontent.com/amnweb/yasb-themes/refs/heads/main/themes.json"
-            with urllib.request.urlopen(url) as response:
+            context = ssl.create_default_context(cafile=certifi.where())
+            with urllib.request.urlopen(url, context=context, timeout=15) as response:
                 import json
 
                 themes = json.loads(response.read().decode("utf-8"))
@@ -94,24 +100,10 @@ class ThemeCard(QFrame):
 
         # Download button (right-aligned)
         download_btn = QPushButton("Download")
+        apply_button_style(download_btn, "secondary")
         download_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        download_btn.setFixedWidth(80)
-        download_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #2c323b;
-                border: 1px solid #363e49;
-                color: white;
-                padding: 3px 5px;
-                margin-top:10px;
-                border-radius: 4px;
-                font-family: 'Segoe UI';
-                font-weight: 600;
-                font-size: 12px;
-            }
-            QPushButton:hover {
-                background-color: #393f47;
-            }
-        """)
+        download_btn.setFixedWidth(100)
+
         top_layout.addWidget(download_btn)
         download_btn.clicked.connect(
             lambda: QDesktopServices.openUrl(
@@ -121,27 +113,10 @@ class ThemeCard(QFrame):
 
         # Install button
         install_btn = QPushButton("Install")
+        apply_button_style(install_btn, "primary")
         install_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        install_btn.setFixedWidth(80)
-        install_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #0078D4;
-                border: 1px solid #0884e2;
-                color: white;
-                padding: 3px 5px;
-                margin-top:10px;
-                border-radius: 4px;
-                font-family: 'Segoe UI';
-                font-weight: 600;
-                font-size: 12px;
-            }
-            QPushButton:hover {
-                background-color: #0884e2;
-            }
-            QPushButton:pressed {
-                background-color: #0f8dee;
-            }
-        """)
+        install_btn.setFixedWidth(100)
+
         top_layout.addWidget(install_btn)
         install_btn.clicked.connect(lambda: self.install_theme())
 
@@ -176,7 +151,7 @@ class ThemeCard(QFrame):
         self.scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.scroll.setWidgetResizable(False)
-
+        self.scroll.setFixedHeight(0)
         layout.addWidget(self.scroll)
 
         # Image container
@@ -229,6 +204,10 @@ class ThemeCard(QFrame):
     def install_theme(self):
         # Create a custom styled dialog for the confirmation
         self.dialog = QDialog(self)
+        if is_mica_supported():
+            self.dialog.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+            hwnd = int(self.dialog.winId())
+            EnableMica(hwnd, BackdropType.MICA)
         self.dialog.setFixedWidth(420)
         self.dialog.setWindowTitle("Install Theme")
         self.dialog.setModal(True)
@@ -259,56 +238,16 @@ class ThemeCard(QFrame):
         # Add Yes and No buttons
         button_layout = QHBoxLayout()
         self.yes_button = QPushButton("Install")
+        apply_button_style(self.yes_button, "primary")
         self.yes_button.setCursor(Qt.CursorShape.PointingHandCursor)
         self.yes_button.clicked.connect(self.dialog.accept)
-        self.yes_button.setStyleSheet("""
-            QPushButton {
-                margin: 10px 0;
-                background-color: #0078D4;
-                border: 1px solid #0884e2;
-                color: white;
-                padding: 4px 16px;
-                border-radius: 4px;
-                font-family: 'Segoe UI';
-                font-size: 12px;
-                font-weight: 600;
-            }
-            QPushButton:hover {
-                background-color: #0884e2;
-            }
-            QPushButton:focus {
-                outline: none;
-            }
-            QPushButton:pressed {
-                background-color: #0f8dee;
-            }
-        """)
+
         no_button = QPushButton("Cancel")
+        apply_button_style(no_button, "secondary")
         no_button.setCursor(Qt.CursorShape.PointingHandCursor)
         no_button.setObjectName("cancelButton")
         no_button.clicked.connect(self.dialog.reject)
-        no_button.setStyleSheet("""
-            QPushButton {
-                margin: 10px 0;
-                background-color: #2c323b;
-                border: 1px solid #363e49;
-                color: white;
-                padding: 4px 16px;
-                border-radius: 4px;
-                font-family: 'Segoe UI';
-                font-size: 12px;
-                font-weight: 600;
-            }
-            QPushButton:hover {
-                background-color: #393f47;
-            }
-            QPushButton:focus {
-                outline: none;
-            }
-            QPushButton:pressed {
-                background-color: #2c323b;
-            }
-        """)
+
         button_layout.addStretch()
         button_layout.addWidget(self.yes_button)
         button_layout.addWidget(no_button)
@@ -340,14 +279,15 @@ class ThemeCard(QFrame):
 
                 os.makedirs(os.path.dirname(config_path), exist_ok=True)
 
+                context = ssl.create_default_context(cafile=certifi.where())
                 # Download and save the styles.css file
-                with urllib.request.urlopen(styles_url) as styles_response:
+                with urllib.request.urlopen(styles_url, context=context) as styles_response:
                     styles_data = styles_response.read()
                 with open(styles_path, "wb") as styles_file:
                     styles_file.write(styles_data)
 
                 # Download and save the config.yaml file
-                with urllib.request.urlopen(config_url) as config_response:
+                with urllib.request.urlopen(config_url, context=context) as config_response:
                     config_data = config_response.read()
                 with open(config_path, "wb") as config_file:
                     config_file.write(config_data)
@@ -363,7 +303,8 @@ class ThemeCard(QFrame):
     def _check_font_families(self, theme_id):
         try:
             styles_url = f"https://raw.githubusercontent.com/amnweb/yasb-themes/main/themes/{theme_id}/styles.css"
-            with urllib.request.urlopen(styles_url, timeout=5) as resp:
+            context = ssl.create_default_context(cafile=certifi.where())
+            with urllib.request.urlopen(styles_url, context=context, timeout=5) as resp:
                 css = resp.read().decode("utf-8")
             css = self._extract_and_replace_variables(css)
             available_fonts = set(QFontDatabase.families())
@@ -384,10 +325,10 @@ class ThemeCard(QFrame):
                     QLabel {
                         font-size: 12px;
                         padding: 10px;
-                        margin: 0px 10px;
+                        margin: 0px 10px 10px 10px;
                         font-family: 'Segoe UI';
                         color: #f1e1c9;
-                        background-color: rgba(132, 73, 10, 0.2);
+                        background-color:#34291c;
                         border: 1px solid #955816;
                         border-radius: 4px
                     }
@@ -453,9 +394,17 @@ class ThemeViewer(QMainWindow):
         y = (screen.height() - height) // 2
         # Set window geometry
         self.setGeometry(x, y, width, height)
+        self.page_size = 10
+        self.loaded_count = 0
+        self.theme_items = []
+        self.load_more_button = None
         self.init_ui()
 
     def init_ui(self):
+        if is_mica_supported():
+            self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+            hwnd = int(self.winId())
+            EnableMica(hwnd, BackdropType.MICA)
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
 
@@ -488,53 +437,15 @@ class ThemeViewer(QMainWindow):
         # Horizontal layout for buttons
         self.backup_restore_layout = QHBoxLayout()
         self.backup_button = QPushButton("Backup")
+        apply_button_style(self.backup_button, "secondary")
         self.backup_button.setCursor(Qt.CursorShape.PointingHandCursor)
         self.backup_button.clicked.connect(self.backup_config)
-        self.backup_button.setStyleSheet("""
-            QPushButton {
-                background-color: #2c323b;
-                border: 1px solid #363e49;
-                color: white;
-                padding: 4px 16px;
-                border-radius: 4px;
-                font-family: 'Segoe UI';
-                font-size: 12px;
-                font-weight: 600;
-            }
-            QPushButton:hover {
-                background-color: #393f47;
-            }
-            QPushButton:focus {
-                outline: none;
-            }
-            QPushButton:pressed {
-                background-color: #2c323b;
-            }
-        """)
+
         self.restore_button = QPushButton("Restore")
+        apply_button_style(self.restore_button, "secondary")
         self.restore_button.setCursor(Qt.CursorShape.PointingHandCursor)
         self.restore_button.clicked.connect(self.restore_config)
-        self.restore_button.setStyleSheet("""
-            QPushButton {
-                background-color: #2c323b;
-                border: 1px solid #363e49;
-                color: white;
-                padding: 4px 16px;
-                border-radius: 4px;
-                font-family: 'Segoe UI';
-                font-size: 12px;
-                font-weight: 600;
-            }
-            QPushButton:hover {
-                background-color: #393f47;
-            }
-            QPushButton:focus {
-                outline: none;
-            }
-            QPushButton:pressed {
-                background-color: #2c323b;
-            }
-        """)
+
         self.backup_restore_layout.addWidget(self.backup_button)
         self.backup_restore_layout.addWidget(self.restore_button)
         row_layout.addLayout(self.backup_restore_layout)
@@ -576,9 +487,25 @@ class ThemeViewer(QMainWindow):
         self.scroll.hide()
 
         container = QWidget()
+        if is_mica_supported():
+            container.setStyleSheet("background-color: transparent;")
         self.container_layout = QVBoxLayout(container)
         self.container_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.scroll.setWidget(container)
+
+        self.cards_container = QWidget()
+        self.cards_layout = QVBoxLayout(self.cards_container)
+        self.cards_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+        self.cards_layout.setContentsMargins(0, 0, 0, 0)
+        self.cards_layout.setSpacing(12)
+        self.container_layout.addWidget(self.cards_container)
+
+        self.load_more_button = QPushButton("Load more themes")
+        apply_button_style(self.load_more_button, "secondary")
+        self.load_more_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.load_more_button.clicked.connect(self.display_next_batch)
+        self.container_layout.addWidget(self.load_more_button, alignment=Qt.AlignmentFlag.AlignHCenter)
+        self.load_more_button.hide()
 
         # Initialize flags for minimum display time
         self.themes_loaded = False
@@ -634,10 +561,70 @@ class ThemeViewer(QMainWindow):
         self.placeholder_label.hide()
         self.row_widget.show()
         self.scroll.show()
+        while self.cards_layout.count():
+            item = self.cards_layout.takeAt(0)
+            widget = item.widget()
+            if widget is not None:
+                widget.deleteLater()
+
+        self.theme_items = []
         for theme_id, theme in self.themes.items():
-            theme["id"] = theme_id
-            theme_card = ThemeCard(theme)
-            self.container_layout.addWidget(theme_card)
+            theme_copy = dict(theme)
+            theme_copy["id"] = theme_id
+            self.theme_items.append(theme_copy)
+
+        self.loaded_count = 0
+        self.load_more_button.setText("Load more themes")
+        if self.theme_items:
+            self.display_next_batch()
+        else:
+            self.load_more_button.hide()
+
+    def display_next_batch(self):
+        if not self.theme_items:
+            self.load_more_button.hide()
+            return
+
+        scrollbar = self.scroll.verticalScrollBar()
+        previous_value = scrollbar.value()
+        previous_max = scrollbar.maximum()
+        previous_ratio = (previous_value / previous_max) if previous_max > 0 else 0
+
+        start_index = self.loaded_count
+        end_index = min(start_index + self.page_size, len(self.theme_items))
+        if start_index >= end_index:
+            self.load_more_button.hide()
+            return
+
+        self.cards_container.setUpdatesEnabled(False)
+        try:
+            for idx in range(start_index, end_index):
+                theme_data = self.theme_items[idx]
+                theme_card = ThemeCard(theme_data)
+                self.cards_layout.addWidget(theme_card)
+        finally:
+            self.cards_container.setUpdatesEnabled(True)
+
+        self.loaded_count = end_index
+        remaining = len(self.theme_items) - self.loaded_count
+
+        if remaining > 0:
+            next_batch = min(self.page_size, remaining)
+            self.load_more_button.setText(f"Load {next_batch} more themes")
+            self.load_more_button.show()
+        else:
+            self.load_more_button.hide()
+
+        def _restore_scroll():
+            new_max = scrollbar.maximum()
+            if previous_max == 0:
+                target_value = previous_value
+            else:
+                target_value = round(previous_ratio * new_max)
+            target_value = max(0, min(new_max, target_value))
+            scrollbar.setValue(target_value)
+
+        QTimer.singleShot(0, _restore_scroll)
 
     def backup_config(self):
         original_style = self.backup_button.styleSheet()
@@ -666,18 +653,7 @@ class ThemeViewer(QMainWindow):
 
             if backup_ok:
                 self.backup_button.setText("Backup complete!")
-                self.backup_button.setStyleSheet("""
-                    QPushButton {
-                    background-color: #0078D4;
-                    border: 1px solid #0884e2;
-                    color: white;
-                    padding: 4px 16px;
-                    border-radius: 4px;
-                    font-family: 'Segoe UI';
-                    font-size: 12px;
-                    font-weight: 600;
-                    }
-                """)
+                apply_button_style(self.backup_button, "primary")
             else:
                 QMessageBox.critical(self, "Error", "Backup failed: Backup file(s) missing.")
                 return
