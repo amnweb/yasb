@@ -5,10 +5,11 @@ import re
 from enum import StrEnum
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, cast, override
+from typing import Any, TypeGuard, cast, override
 
 import psutil
-from PyQt6.QtCore import QEvent, QPoint, QRect, QSize, Qt, QTimer, pyqtSlot
+from PyQt6 import sip
+from PyQt6.QtCore import QEvent, QObject, QPoint, QPropertyAnimation, QRect, QSize, Qt, QTimer, pyqtSlot
 from PyQt6.QtGui import (
     QColor,
     QFontMetrics,
@@ -23,12 +24,17 @@ from PyQt6.QtWidgets import QApplication, QFrame, QGraphicsDropShadowEffect, QLa
 from winrt.windows.data.xml.dom import XmlDocument
 from winrt.windows.ui.notifications import ToastNotification, ToastNotificationManager
 
-from core.utils.win32.blurWindow import Blur
+from core.utils.win32.win32_accent import Blur
+
+
+def is_valid_qobject[T](obj: T | None) -> TypeGuard[T]:
+    """Check if the object is a valid QObject with specific type"""
+    return obj is not None and isinstance(obj, QObject) and not sip.isdeleted(obj)
 
 
 def app_data_path(filename: str = None) -> Path:
     """
-    Get the Yasb local data folder (creating it if it doesn't exist),
+    Get the YASB local data folder (creating it if it doesn't exist),
     or a file path inside it if filename is provided.
     """
     folder = Path(os.environ["LOCALAPPDATA"]) / "YASB"
@@ -176,7 +182,7 @@ def get_app_identifier():
             if Path(scoop_shortcut).exists():
                 return sys.executable
         # Fallback to the default AppUserModelID
-        return "Yasb"
+        return "YASB"
 
 
 class PopupWidget(QWidget):
@@ -218,9 +224,17 @@ class PopupWidget(QWidget):
         self._round_corners = round_corners
         self._round_corners_type = round_corners_type
         self._border_color = border_color
-
+        self._parent = parent
+        # We need bar_id for global_state autohide manager
+        self.bar_id = getattr(self._parent, "bar_id", None)
         # Create the inner frame
         self._popup_content = QFrame(self)
+
+        self._fade_animation = QPropertyAnimation(self, b"windowOpacity")
+        self._fade_animation.setDuration(80)
+        self._fade_animation.finished.connect(self._on_animation_finished)
+
+        self._is_closing = False
 
         QApplication.instance().installEventFilter(self)
 
@@ -281,6 +295,56 @@ class PopupWidget(QWidget):
         separator.setStyleSheet("border:none")
         layout.addWidget(separator)
 
+    def _on_animation_finished(self):
+        """Handle animation completion."""
+        if self._is_closing:
+            try:
+                super().hide()
+                self.deleteLater()
+            except Exception:
+                pass
+
+    def hide_animated(self):
+        """Hide the popup with animation."""
+        if self._is_closing:
+            return
+        try:
+            if self._fade_animation.state() == QPropertyAnimation.State.Running:
+                self._fade_animation.stop()
+        except Exception:
+            pass
+
+        current_opacity = self.windowOpacity()
+        if current_opacity <= 0.0:
+            current_opacity = 1.0
+            self.setWindowOpacity(1.0)
+
+        self._is_closing = True
+
+        self._fade_animation.setStartValue(current_opacity)
+        self._fade_animation.setEndValue(0.0)
+        self._fade_animation.start()
+
+    def hide(self):
+        """Hide the popup immediately without animation."""
+        try:
+            if self._fade_animation.state() == QPropertyAnimation.State.Running:
+                self._fade_animation.stop()
+        except Exception:
+            pass
+
+        self._is_closing = True
+        try:
+            super().hide()
+            self.deleteLater()
+        except Exception:
+            pass
+
+    def closeEvent(self, event):
+        """Override close event to use animation."""
+        event.ignore()  # Ignore the default close behavior
+        self.hide_animated()
+
     def showEvent(self, event):
         if self._blur:
             Blur(
@@ -291,56 +355,71 @@ class PopupWidget(QWidget):
                 RoundCornersType=self._round_corners_type,
                 BorderColor=self._border_color,
             )
-        self.activateWindow()
+
+        # Reset closing state and stop any ongoing fade animation
+        self._is_closing = False
+        try:
+            if self._fade_animation.state() == QPropertyAnimation.State.Running:
+                self._fade_animation.stop()
+        except Exception:
+            pass
+
+        # Set initial opacity and show
+        self.setWindowOpacity(0.0)
+
         super().showEvent(event)
+
+        self.activateWindow()
+        self._fade_animation.setStartValue(0.0)
+        self._fade_animation.setEndValue(1.0)
+        self._fade_animation.start()
 
     def eventFilter(self, obj, event):
         if event.type() == QEvent.Type.MouseButtonPress:
             global_pos = event.globalPosition().toPoint()
 
             # Check if click is inside popup
-            if self.geometry().contains(global_pos):
+            try:
+                popup_global_geom = QRect(self.mapToGlobal(QPoint(0, 0)), self.size())
+            except Exception:
+                popup_global_geom = self.geometry()
+            if popup_global_geom.contains(global_pos):
                 return super().eventFilter(obj, event)
 
-            # Check if click is inside any visible QMenu child
-            for menu in self.findChildren(QMenu):
-                menu_global_geom = menu.geometry().translated(menu.mapToGlobal(QPoint(0, 0)))
-                if menu.isVisible() and menu_global_geom.contains(global_pos):
-                    return super().eventFilter(obj, event)
+            # Check if click is inside any visible QMenu
+            try:
+                for w in QApplication.topLevelWidgets():
+                    if isinstance(w, QMenu) and w.isVisible():
+                        menu_global_geom = QRect(w.mapToGlobal(QPoint(0, 0)), w.size())
+                        if menu_global_geom.contains(global_pos):
+                            return super().eventFilter(obj, event)
+            except Exception:
+                pass
 
             # Otherwise, close all open QMenus first
             for menu in self.findChildren(QMenu):
                 if menu.isVisible():
                     menu.close()
 
-            if not self.geometry().contains(global_pos):
-                self.hide()
-                self.deleteLater()
-                return True
+            self.hide_animated()
+            return True
         return super().eventFilter(obj, event)
 
     def hideEvent(self, event):
-        QApplication.instance().removeEventFilter(self)
+        if self._is_closing:
+            QApplication.instance().removeEventFilter(self)
+
+            try:
+                # Restart autohide timer if applicable
+                from core.global_state import get_autohide_owner_for_widget
+
+                mgr = get_autohide_owner_for_widget(self)._autohide_manager
+                if mgr._hide_timer:
+                    mgr._hide_timer.start(mgr._autohide_delay)
+            except Exception:
+                pass
+
         super().hideEvent(event)
-
-        try:
-            bar_el = self.parent()
-            while bar_el and not hasattr(bar_el, "_autohide_bar"):
-                bar_el = bar_el.parent()
-
-            if bar_el and bar_el._autohide_manager and bar_el._autohide_manager.is_enabled():
-                # Check if parent needs autohide
-                if bar_el._autohide_manager.is_enabled():
-                    # Get current cursor position
-                    from PyQt6.QtGui import QCursor
-
-                    cursor_pos = QCursor.pos()
-                    # If mouse is outside the bar, start the hide timer
-                    if not bar_el.geometry().contains(cursor_pos):
-                        if bar_el._autohide_manager._hide_timer:
-                            bar_el._autohide_manager._hide_timer.start(bar_el._autohide_manager._autohide_delay)
-        except Exception:
-            pass
 
     def resizeEvent(self, event):
         # reset geometry

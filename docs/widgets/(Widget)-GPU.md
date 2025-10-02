@@ -17,18 +17,20 @@ If you see a table with your GPU information, `nvidia-smi` is available. If you 
 |-----------------------|---------|-------------------------------------------------------------------------|-----------------------------------------------------------------------------|
 | `label`               | string  | `"<span>\uf4bc</span> {info[utilization]}%"`                              | The primary label format.                                                   |
 | `label_alt`           | string  | `"<span>\uf4bc</span> {info[temp]}°C | {info[mem_used]} / {info[mem_total]}"`                 | The alternative label format.                                               |
+| `class_name`        | string  | `""`                                                                                  | Additional CSS class name for the widget.                                    |
+| `gpu_index`          | integer | `0`                                                                     | The index of the GPU to monitor (0 for the first GPU, 1 for the second, etc.). |
 | `update_interval`     | integer | `1000`                                                                  | The interval in milliseconds to update the widget.                          |
 | `histogram_icons`     | list    | `["\u2581", "\u2581", "\u2582", "\u2583", "\u2584", "\u2585", "\u2586", "\u2587", "\u2588"]` | Icons representing GPU utilization histograms.                              |
 | `histogram_num_columns` | integer | `10`                                                                    | The number of columns in the histogram.                                     |
 | `callbacks`           | dict    | `{'on_left': 'toggle_label', 'on_middle': 'do_nothing', 'on_right': 'do_nothing'}` | Callback functions for different mouse button actions.                      |
 | `gpu_thresholds`      | dict    | `{'low': 25, 'medium': 50, 'high': 90}`                                 | Thresholds for GPU utilization levels.                                      |
-| `animation`           | dict    | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
-| `container_padding`   | dict    | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}`                        | Explicitly set padding inside widget container.                             |
+| `animation`           | dict    | `{'enabled': true, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
 | `container_shadow`    | dict    | `{"enabled": False, "color": "black", "offset": [1, 1], "radius": 3}`                                                                  | Container shadow options.                                                   |
 | `label_shadow`        | dict    | `{"enabled": False, "color": "black", "offset": [1, 1], "radius": 3}`                                                                  | Label shadow options.                                                       |
-| `progress_bar`        | dict    | `{'enabled': False, 'position': 'left', 'size': 14, 'thickness': 2, 'color': '#57948a', animation: True, 'center_label': ''}` | Progress bar settings.                                                      |
+| `progress_bar`        | dict    | `{'enabled': false, 'position': 'left', 'size': 14, 'thickness': 2, 'color': '#57948a', 'animation': false, 'center_label': ''}` | Progress bar settings.                                                      |
+| `hide_decimal`        | bool    | `false`                                                                 | Whether to hide decimal places in the GPU widget.                          |
 
-> **About `index`:** If you have multiple NVIDIA GPUs, you can set the `index` option to select which GPU to monitor. Create multiple GPU widgets with different `index` values (e.g., 0, 1, 2, ...) to display stats for each card separately.
+> **About `index`:** If you have multiple NVIDIA GPUs, you can set the `gpu_index` option to select which GPU to monitor. Create multiple GPU widgets with different `gpu_index` values (e.g., 0, 1, 2, ...) to display stats for each card separately.
 
 ## Example Configuration
 
@@ -55,20 +57,21 @@ gpu:
       - "\u2588" # 80%+
     histogram_num_columns: 8
     callbacks:
-      on_left: toggle_label
+      on_left: "toggle_label"
 ```
 
 ## Description of Options
 
 - **label**: The format string for the GPU usage label. You can use placeholders like `{info[utilization]}` and `{info[temp]}` to dynamically insert GPU information.
 - **label_alt**: The alternative format string for the GPU usage label. Useful for displaying additional GPU details, such as a histogram.
+- **class_name:** Additional CSS class name for the widget. This allows for custom styling.
 - **update_interval**: The interval in milliseconds at which the widget updates its information. Minimum is 1000 ms (1 second).
 - **gpu_thresholds:** A dictionary specifying the thresholds for GPU utilization levels. The keys are `low`, `medium`, and `high`, and the values are the percentage thresholds.
+- **hide_decimal**: Whether to hide decimal places in the GPU widget.
 - **histogram_icons**: A list of icons representing different levels of GPU utilization in the histogram. 8 or 9 icons are typically used, representing usage from 0% to 80%+.
 - **histogram_num_columns**: The number of columns to display in the GPU utilization histogram.
 - **callbacks**: A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions.
 - **animation:** A dictionary specifying the animation settings for the widget. It contains three keys: `enabled`, `type`, and `duration`. The `type` can be `fadeInOut` and the `duration` is the animation duration in milliseconds.
-- **container_padding**: Explicitly set padding inside widget container. You can set padding for top, left, bottom and right sides of the widget container.
 - **container_shadow:** Container shadow options.
 - **label_shadow:** Label shadow options.
 - **progress_bar**: A dictionary containing settings for the progress bar. It includes:
@@ -89,6 +92,7 @@ gpu:
 - `{info[mem_used]}` - Used GPU memory
 - `{info[mem_free]}` - Free GPU memory
 - `{info[temp]}` - GPU temperature (°C)
+- `{info[fan_speed]}` - GPU fan speed (if available, in percentage)
 - `{info[histograms][utilization]}` - GPU utilization histogram using configured icons
 - `{info[histograms][mem_used]}` - GPU memory usage histogram using configured icons
 
@@ -97,6 +101,7 @@ gpu:
 
 ```css
 .gpu-widget {}
+.gpu-widget.your_class {} /* If you are using class_name option */
 .gpu-widget .widget-container {}
 .gpu-widget .widget-container .label {}
 .gpu-widget .widget-container .label.alt {}

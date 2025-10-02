@@ -5,44 +5,34 @@ For more information about configuration options, please visit the Wiki https://
 :root {
     --mauve: #cba6f7;
     --red: #f38ba8;
-    --yellow: #f9e2af;
-    --blue: #89b4fa;
+    --yellow: #ffd16d;
+    --blue: #448fff;
     --lavender: #b4befe;
-    --text: #cdd6f4;
-    --subtext1: #bac2de;
-    --subtext0: #a6adc8;
-    --overlay2: #9399b2;
-    --overlay1: #7f849c;
-    --overlay0: #6c7086;
-    --surface2: #585b70;
-    --surface1: #45475a;
-    --surface0: #282936;
-    --base: #1e1e2e;
-    --crust: rgba(32, 32, 43, 0.92);
+    --text1: #d4d9eb;
+    --text2: #8f929e;
+    --text3: #9399b2;
+    --text4: #7f849c;
+    --bg-color1: #191919;
+    --bg-color2: #333333;
 }
 * {
     font-size: 12px;
-    color: var(--text);
+    color: var(--text1);
     font-weight: 600;
     font-family: "JetBrainsMono NFP";
-    margin: 0;
-    padding: 0;
 }
 .yasb-bar {
-    padding: 0;
-    margin: 0;
-    background-color: var(--crust);
+    background-color: var(--bg-color1);
     border-radius: 8px;
-    border: 1px solid #313244;
+    border: 1px solid var(--bg-color2);
 }
 /* Global styles for ToolTip */
 .tooltip {
-    background-color: #18191a;
-    border: 1px solid #36383a;
+    background-color: var(--bg-color1);
     border-radius: 4px;
-    color: #a6adc8;
-    padding: 6px 12px;
-    font-size: 13px;
+    color: var(--text1);
+    padding: 5px 10px;
+    font-size: 12px;
     font-family: 'Segoe UI';
     font-weight: 600;
     margin-top: 4px;
@@ -50,12 +40,12 @@ For more information about configuration options, please visit the Wiki https://
 /* Global context menu style */
 .context-menu,
 .context-menu .menu-checkbox {
-    background-color: #202020;
+    background-color: var(--bg-color1);
     border: none;
     padding: 4px 0px;
     font-family: 'Segoe UI';
     font-size: 12px;
-    color: #FFFFFF;
+    color: var(--text1)
 }
 .context-menu::right-arrow {
     width: 8px;
@@ -73,7 +63,7 @@ For more information about configuration options, please visit the Wiki https://
 
 .context-menu::item:selected,
 .context-menu .menu-checkbox:hover {
-    background-color: #3a3a3a;
+    background-color: var(--bg-color2);
     color: #FFFFFF;
 }
 
@@ -92,7 +82,7 @@ For more information about configuration options, please visit the Wiki https://
     padding: 8px 16px;
     font-size: 12px;
     margin: 0;
-    color: #FFFFFF;
+    color: var(--text1);
     font-family: 'Segoe UI'
 }
 .context-menu .submenu::item:disabled {
@@ -100,7 +90,7 @@ For more information about configuration options, please visit the Wiki https://
     padding-left: 16px;
 }
 .context-menu .menu-checkbox .checkbox:unchecked {
-    color: #999
+    color: var(--text2)
 }
 .context-menu .menu-checkbox .checkbox::indicator {
     width: 12px;
@@ -113,7 +103,7 @@ For more information about configuration options, please visit the Wiki https://
     border-radius: 2px;
 }
 .context-menu .menu-checkbox .checkbox::indicator:checked {
-    background: #007acc;
+    background: var(--blue);
     border-radius: 2px;
 }
 .context-menu .menu-checkbox .checkbox:focus {
@@ -131,78 +121,32 @@ For more information about configuration options, please visit the Wiki https://
     padding: 0px 2px;
 }
 .komorebi-active-layout {
-    padding: 0 4px 0 0;
-}
-.komorebi-active-layout .label {
-    font-weight: 600;
-    padding: 2px 0 0 0;
-}
-.apps-widget .widget-container,
-.komorebi-workspaces .widget-container,
-.komorebi-active-layout .widget-container {
-    background-color: var(--surface1);
-    margin: 3px 0 3px 0;
-    border-radius: 12px;
-    border: 1px solid var(--surface0);
-}
-.komorebi-workspaces .widget-container {
-    border-top-left-radius: 6px;
-    border-bottom-left-radius: 6px;
-    margin-left: 4px;
-}
-.komorebi-workspaces {
-    border-top-right-radius: 14px;
-    border-bottom-right-radius: 14px;
-    padding: 0 4px 0 0;
+    padding: 0
 }
 .komorebi-workspaces .offline-status {
-    color: var(--surface2);
+    color: var(--text4);
     font-size: 12px;
     padding: 0 0 0 4px;
     font-weight: 600;
 }
 .komorebi-workspaces .ws-btn {
     border: none;
-    background-color: transparent;
-    margin: 0;
-    font-size: 12px;
-    color: var(--overlay1);
-    height: 28px;
-    width: 18px;
+    background-color: var(--text4);
+    margin: 0 3px;
+    height: 9px;
+    width: 9px;
+    border-radius: 4px;
 }
 .komorebi-workspaces .ws-btn:hover {
-    color: var(--subtext1);
+    color: var(--text2);
 }
 .komorebi-workspaces .ws-btn.populated {
-    color: transparent;
-    width: 10px;
-    height: 10px;
     background-color: var(--lavender);
-    border-radius: 5px;
-    margin: 0 4px;
-    font-size: 1px;
 }
 .komorebi-workspaces .ws-btn.active {
-    color: transparent;
     background-color: var(--blue);
     width: 36px;
-    max-width: 36px;
-    height: 10px;
-    margin: 0 4px;
-    border-radius: 5px;
 }
-.apps-widget {
-    padding: 0 4px 0 2px;
-}
-.apps-widget .label {
-    font-size: 14px;
-    padding: 0 2px;
-    color: var(--subtext0);
-}
-.apps-widget .label:hover {
-    color: var(--text);
-}
-
 .power-menu-widget .label {
     color: #f38ba8;
     font-size: 13px;
@@ -215,34 +159,29 @@ For more information about configuration options, please visit the Wiki https://
     width: 180px;
     height: 230px;
     border-radius: 8px;
-    background-color: var(--crust);
-    color: var(--text);
-    border-left: 4px solid rgba(58, 59, 83, 0);
-    border-right: 4px solid rgba(58, 59, 83, 0);
-    border-top: 4px solid rgba(58, 59, 83, 0);
-    border-bottom: 4px solid rgba(58, 59, 83, 0);
+    background-color: var(--bg-color1);
+    border: 4px solid transparent;
     margin: 0px;
 }
 .power-menu-popup .button.hover {
-    background-color: var(--base);
-    border-left: 4px solid var(--base);
-    border-right: 4px solid var(--base);
-    border-top: 4px solid var(--base);
-    border-bottom: 4px solid var(--base);
+    background-color: var(--bg-color1);
+    border: 4px solid var(--bg-color1);
 }
-
 .power-menu-popup .button .label {
     margin-bottom: 8px;
     font-size: 16px;
     font-weight: 500;
-    color: var(--overlay2)
+    color: var(--text3)
 }
 .power-menu-popup .button .icon {
     font-size: 64px;
     padding-top: 32px;
-    color: var(--surface2)
+    color: var(--text4)
 }
-
+.power-menu-popup .button.hover .label,
+.power-menu-popup .button.hover .icon {
+    color: rgba(255, 255, 255, 0.808)
+}
 .power-menu-popup .button.cancel .icon {
     padding: 0;
     margin: 0;
@@ -255,10 +194,13 @@ For more information about configuration options, please visit the Wiki https://
     height: 32px;
     border-radius: 4px;
 }
+.power-menu-popup .button.cancel.hover .label {
+    color: rgb(255, 255, 255)
+}
 .uptime {
     font-size: 14px;
     margin-bottom: 10px;
-    color: var(--surface2);
+    color: var(--text4);
     font-weight: 600;
 }
 .microphone-widget {
@@ -284,16 +226,53 @@ For more information about configuration options, please visit the Wiki https://
     margin: 0 2px 1px 0;
     color: var(--yellow);
 }
+.weather-card {
+    background-color: var(--bg-color1);
+    border-radius: 8px;
+    min-width: 540px;
+    border: 1px solid var(--bg-color2);
+}
+.weather-card-today .label {
+    font-size: 12px;
+}
+.weather-card-today .label.location {
+    font-size: 24px;
+    font-weight: 700;
+}
+.weather-card-today .label.alert {
+    font-size: 12px;
+    font-weight: 700;
+    background-color: rgba(247, 199, 42, 0.05);
+    border: 1px solid rgba(247, 209, 42, 0.1);
+    color: rgba(196, 181, 162, 0.85);
+    border-radius: 6px;
+    padding: 5px 0;
+}
+.weather-card-day {
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background-color: rgba(17, 17, 27, 0.2);
+}
+.weather-card-day.active {
+    border: 1px solid rgb(61, 61, 80);
+}
+.weather-card-day .label {
+    font-size: 12px;
+}
+.weather-card .hourly-container {
+    background-color: transparent;
+    min-height: 150px;
+    border: none
+}
+.weather-card .hourly-data {
+    background-color: #FAE93F;
+    font-size: 12px;
+    font-weight: bold;
+}
 .media-widget {
     padding: 0;
     margin: 0;
     border-radius: 0;
-}
-.media-widget .label {
-    color: #bac2db;
-    padding: 0px;
-    padding-right: 4px;
-    font-size: 12px;
 }
 .media-widget .btn {
     color: #7a7f8b;
@@ -316,6 +295,111 @@ For more information about configuration options, please visit the Wiki https://
     background-color: rgba(0, 0, 0, 0);
     font-size: 20px;
 }
+.media-menu {
+    min-width: 420px;
+    max-width: 420px;
+    background-color: var(--bg-color1);
+    border-radius: 8px;
+    border: 1px solid var(--bg-color2);
+}
+.media-menu .title,
+.media-menu .artist,
+.media-menu .source {
+    font-size: 14px;
+    font-weight: 600;
+    margin-left: 10px;
+    font-family: 'Segoe UI'
+}
+.media-menu .artist {
+    font-size: 13px;
+    color: #6c7086;
+    margin-top: 0px;
+    margin-bottom: 8px;
+}
+.media-menu .source {
+    font-size: 11px;
+    color: #000;
+    font-weight: normal;
+    border-radius: 3px;
+    background-color: #bac2de;
+    padding: 2px 4px;
+
+}
+.media-menu .source.firefox {
+    background-color: #ff583b;
+    color: #ffffff;
+}
+.media-menu .source.spotify {
+    background-color: #199143;
+    color: #ffffff;
+}
+.media-menu .source.edge {
+    background-color: #0078d4;
+    color: #ffffff;
+}
+.media-menu .source.windows-media {
+    background-color: #0078d4;
+    color: #ffffff;
+}
+
+.media-menu .btn {
+    font-family: "Segoe Fluent Icons";
+    font-size: 14px;
+    font-weight: 400;
+    margin: 10px 2px 0px 2px;
+    min-width: 40px;
+    max-width: 40px;
+    min-height: 40px;
+    max-height: 40px;
+    border-radius: 20px;
+}
+.media-menu .btn.prev {
+    margin-left: 10px;
+}
+.media-menu .btn:hover {
+    color: white;
+    background-color: rgba(255, 255, 255, 0.1);
+}
+.media-menu .btn.play {
+    background-color: rgba(255, 255, 255, 0.1);
+    font-size: 20px
+}
+.media-menu .btn.disabled:hover,
+.media-menu .btn.disabled {
+    color: #4e525c;
+    background-color: rgba(0, 0, 0, 0);
+}
+
+.media-menu .playback-time {
+    font-size: 13px;
+    font-family: 'Segoe UI';
+    color: #7f849c;
+    margin-top: 20px;
+    min-width: 100px;
+}
+.media-menu .progress-slider {
+    height: 10px;
+    margin: 5px 4px;
+    border-radius: 3px;
+}
+.media-menu .progress-slider::groove {
+    background: transparent;
+    height: 2px;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.1);
+
+}
+.media-menu .progress-slider::groove:hover {
+    background: transparent;
+    height: 6px;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.2);
+}
+.media-menu .progress-slider::sub-page {
+    background: white;
+    border-radius: 3px;
+    height: 4px;
+}
 .home-widget {
     padding: 0 4px 0 12px;
 }
@@ -323,17 +407,18 @@ For more information about configuration options, please visit the Wiki https://
     color: var(--lavender);
 }
 .home-widget .icon:hover {
-    color: var(--text);
+    color: var(--text1);
 }
 .home-menu {
-    background-color: var(--crust);
+    background-color: var(--bg-color1);
     border-radius: 8px;
+    border: 1px solid var(--bg-color2);
 }
 .home-menu .menu-item {
     padding: 8px 48px 9px 16px;
     font-size: 12px;
     font-family: 'Segoe UI';
-    color: var(--text);
+    color: var(--text1);
     font-weight: 600;
 }
 .home-menu .menu-item:hover {
@@ -352,4 +437,59 @@ For more information about configuration options, please visit the Wiki https://
 }
 .notification-widget .icon.new-notification {
     color: var(--blue);
+}
+
+.calendar {
+    background-color: var(--bg-color1);
+    border-radius: 8px;
+    border: 1px solid var(--bg-color2);
+}
+.calendar .calendar-table,
+.calendar .calendar-table::item {
+    background-color: rgba(17, 17, 27, 0);
+    color: rgba(162, 177, 196, 0.85);
+    font-family: "Segoe UI";
+    margin: 0;
+    padding: 0;
+    border: none;
+    outline: none;
+}
+.calendar .calendar-table::item:selected {
+    color: #000000;
+    background-color: var(--blue);
+    border-radius: 10px;
+}
+.calendar .day-label {
+    margin-top: 20px;
+}
+.calendar .day-label,
+.calendar .month-label,
+.calendar .date-label,
+.calendar .week-label,
+.calendar .holiday-label {
+    font-family: "Segoe UI";
+    font-size: 16px;
+    color: #fff;
+    font-weight: 700;
+    min-width: 180px;
+    max-width: 180px;
+}
+.calendar .week-label,
+.calendar .holiday-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: rgba(162, 177, 196, 0.85);
+}
+.calendar .holiday-label {
+    color: rgba(162, 177, 196, 0.85);
+    font-weight: 700;
+}
+.calendar .month-label {
+    font-weight: normal;
+}
+.calendar .date-label {
+    font-size: 88px;
+    font-weight: 900;
+    color: rgb(255, 255, 255);
+    margin-top: -20px;
 }

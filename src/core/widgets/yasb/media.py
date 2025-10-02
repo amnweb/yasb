@@ -1,24 +1,37 @@
+import ctypes
 import logging
-from re import DEBUG
 from typing import Any, Optional
 
+import comtypes
 from PIL import Image, ImageChops
 from PIL.ImageDraw import ImageDraw
 from PIL.ImageQt import ImageQt
+from pycaw.pycaw import AudioUtilities
 from PyQt6 import QtCore
 from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtGui import (
-    QPixmap,
-    QWheelEvent,
-)
-from PyQt6.QtWidgets import QGridLayout, QHBoxLayout, QLabel, QSlider, QVBoxLayout, QWidget
+from PyQt6.QtGui import QPixmap, QWheelEvent
+from PyQt6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QLabel, QSizePolicy, QSlider, QVBoxLayout
 from winrt.windows.media.control import GlobalSystemMediaTransportControlsSessionPlaybackInfo
 
 from core.utils.utilities import PopupWidget, ScrollingLabel, add_shadow
 from core.utils.widgets.animation_manager import AnimationManager
+from core.utils.widgets.media.aumid_process import get_process_name_for_aumid
 from core.utils.widgets.media.media import WindowsMedia
+from core.utils.widgets.media.source_apps import (
+    get_source_app_class_name,
+    get_source_app_display_name,
+    get_source_app_mapping,
+)
+from core.utils.win32.app_aumid import (
+    ERROR_INSUFFICIENT_BUFFER,
+    PROCESS_QUERY_LIMITED_INFORMATION,
+    CloseHandle,
+    GetApplicationUserModelId,
+    OpenProcess,
+)
 from core.validation.widgets.yasb.media import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
+from settings import DEBUG
 
 
 class MediaWidget(BaseWidget):
@@ -36,6 +49,7 @@ class MediaWidget(BaseWidget):
         self,
         label: str,
         label_alt: str,
+        class_name: str,
         hide_empty: bool,
         callbacks: dict[str, str],
         max_field_size: dict[str, int],
@@ -57,7 +71,7 @@ class MediaWidget(BaseWidget):
         label_shadow: dict = None,
         container_shadow: dict = None,
     ):
-        super().__init__(class_name="media-widget")
+        super().__init__(class_name=f"media-widget {class_name}")
         self._label_content = label
         self._label_alt_content = label_alt
 
@@ -81,20 +95,18 @@ class MediaWidget(BaseWidget):
         self._container_shadow = container_shadow
         self._scrolling_label = scrolling_label
         # Construct container
-        self._widget_container_layout: QHBoxLayout = QHBoxLayout()
+        self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(
-            self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
-        )
+        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
         # Initialize container
-        self._widget_container: QWidget = QWidget()
+        self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
         add_shadow(self._widget_container, self._container_shadow)
         # Add the container to the main widget layout
         self.widget_layout.addWidget(self._widget_container)
         if self._hide_empty:
-            self._widget_frame.hide()
+            self.hide()
         # Make a grid box to overlay the text and thumbnail
         self.thumbnail_box = QGridLayout()
 
@@ -146,17 +158,47 @@ class MediaWidget(BaseWidget):
         # Get media manager
         self.media = WindowsMedia()
 
+        if self._controls_only:
+            # Initial hide labels and thumbnail
+            self._label.hide()
+            self._label_alt.hide()
+            self._thumbnail_label.hide()
+
         # Set configure signals and register them als callbacks
         self._playback_info_signal.connect(self._on_playback_info_changed)
-        self.media.subscribe(lambda playback_info: self._playback_info_signal.emit(playback_info), "playback_info")
+        self.media.subscribe(
+            lambda playback_info: self._playback_info_signal.emit(playback_info)
+            if hasattr(self, "_playback_info_signal")
+            else None,
+            "playback_info",
+        )
         self._media_info_signal.connect(self._on_media_properties_changed)
-        self.media.subscribe(lambda media_info: self._media_info_signal.emit(media_info), "media_info")
+        self.media.subscribe(
+            lambda media_info: self._media_info_signal.emit(media_info)
+            if hasattr(self, "_media_info_signal")
+            else None,
+            "media_info",
+        )
         self._session_status_signal.connect(self._on_session_status_changed)
-        self.media.subscribe(lambda session_status: self._session_status_signal.emit(session_status), "session_status")
-        # Add after your other signal connections
+        self.media.subscribe(
+            lambda session_status: self._session_status_signal.emit(session_status)
+            if hasattr(self, "_session_status_signal")
+            else None,
+            "session_status",
+        )
         self._timeline_info_signal.connect(self._on_timeline_properties_changed)
-        self.media.subscribe(lambda timeline_info: self._timeline_info_signal.emit(timeline_info), "timeline_info")
-        self.media.subscribe(self._update_interpolated_position, "timeline_interpolated")
+        self.media.subscribe(
+            lambda timeline_info: self._timeline_info_signal.emit(timeline_info)
+            if hasattr(self, "_timeline_info_signal")
+            else None,
+            "timeline_info",
+        )
+        self.media.subscribe(
+            lambda timeline_info: self._update_interpolated_position(timeline_info)
+            if hasattr(self, "_label")
+            else None,
+            "timeline_interpolated",
+        )
 
         self.callback_left = callbacks["on_left"]
         self.callback_right = callbacks["on_right"]
@@ -178,6 +220,10 @@ class MediaWidget(BaseWidget):
         self._last_position = 0
         self._last_update_time = 0
         self._is_playing = False
+        self._app_volume_slider = None
+        self._app_volume_session = None
+        self._app_mute_button = None
+        self._app_is_muted = False
 
     def _toggle_media_menu(self):
         if self._animation["enabled"]:
@@ -245,6 +291,7 @@ class MediaWidget(BaseWidget):
                 self._popup_title_label.setContentsMargins(0, 0, 0, 0)
                 self._popup_title_label.setProperty("class", "title")
                 self._popup_title_label.setWordWrap(True)
+                self._popup_title_label.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
 
                 artist_text = (
                     self._format_max_field_size(media_info["artist"], "popup_artist")
@@ -255,9 +302,9 @@ class MediaWidget(BaseWidget):
                 self._popup_artist_label.setContentsMargins(0, 0, 0, 0)
                 self._popup_artist_label.setProperty("class", "artist")
                 self._popup_artist_label.setWordWrap(True)
-
-                text_layout.addWidget(self._popup_title_label)
-                text_layout.addWidget(self._popup_artist_label)
+                self._popup_artist_label.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
+                text_layout.addWidget(self._popup_title_label, alignment=Qt.AlignmentFlag.AlignTop)
+                text_layout.addWidget(self._popup_artist_label, alignment=Qt.AlignmentFlag.AlignTop)
 
                 # Add control buttons directly below the slider in the text layout
                 control_layout = QHBoxLayout()
@@ -265,12 +312,14 @@ class MediaWidget(BaseWidget):
 
                 # Create clickable buttons using the same method as main widget
                 prev_button = ClickableLabel(self)
+                prev_button.setProperty("class", "btn prev")
                 prev_button.setAlignment(Qt.AlignmentFlag.AlignCenter)
                 prev_button.setText(self._menu_config_icons["prev_track"])
                 prev_button.data = self.media.prev
                 self._popup_prev_label = prev_button
 
                 play_button = ClickableLabel(self)
+                play_button.setProperty("class", "btn play")
                 play_button.setAlignment(Qt.AlignmentFlag.AlignCenter)
                 play_icon = self._menu_config_icons["pause" if self._is_playing else "play"]
                 play_button.setText(play_icon)
@@ -278,6 +327,7 @@ class MediaWidget(BaseWidget):
                 self._popup_play_button = play_button
 
                 next_button = ClickableLabel(self)
+                next_button.setProperty("class", "btn next")
                 next_button.setAlignment(Qt.AlignmentFlag.AlignCenter)
                 next_button.setText(self._menu_config_icons["next_track"])
                 next_button.data = self.media.next
@@ -294,7 +344,7 @@ class MediaWidget(BaseWidget):
                     self._popup_source_label = QLabel(source_name)
                     self._popup_source_label.setContentsMargins(0, 0, 0, 0)
                     self._popup_source_label.setProperty("class", f"source {source_class_name}")
-                    self._popup_source_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
+                    self._popup_source_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
                     control_layout.addWidget(self._popup_source_label, 0, Qt.AlignmentFlag.AlignVCenter)
 
                 # Add control layout to the text layout
@@ -302,6 +352,41 @@ class MediaWidget(BaseWidget):
 
                 # Add the text layout to the top layout
                 content_layout.addLayout(text_layout)
+
+                # Per-app vertical volume slider
+                if self._menu_config["show_volume_slider"]:
+                    try:
+                        self._vol_container = QFrame()
+                        self._vol_container.setProperty("class", "app-volume-container")
+                        vol_layout = QVBoxLayout(self._vol_container)
+                        vol_layout.setContentsMargins(0, 0, 0, 0)
+                        vol_layout.setSpacing(0)
+
+                        self._app_volume_slider = QSlider(Qt.Orientation.Vertical)
+                        self._app_volume_slider.setProperty("class", "volume-slider")
+                        self._app_volume_slider.setMinimum(0)
+                        self._app_volume_slider.setMaximum(100)
+                        self._app_volume_slider.setCursor(Qt.CursorShape.PointingHandCursor)
+                        self._app_volume_slider.valueChanged.connect(self._on_app_volume_slider_changed)
+
+                        vol_layout.addWidget(self._app_volume_slider, 0, Qt.AlignmentFlag.AlignCenter)
+
+                        # Add mute/unmute button below the volume slider
+                        self._app_mute_button = ClickableLabel(self)
+                        self._app_mute_button.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                        self._app_mute_button.setProperty("class", "mute-button")
+                        self._app_mute_button.setCursor(Qt.CursorShape.PointingHandCursor)
+                        self._app_mute_button.data = self._toggle_app_mute
+
+                        vol_layout.addWidget(self._app_mute_button, 0, Qt.AlignmentFlag.AlignCenter)
+                        content_layout.addWidget(self._vol_container, 0, Qt.AlignmentFlag.AlignRight)
+
+                        # Bind slider to the current media app session and set initial value
+                        self._bind_app_volume_session()
+                        self._update_app_volume_slider()
+                        self._update_app_mute_button()
+                    except Exception as e:
+                        logging.error(f"MediaWidget: Error creating app volume slider: {e}")
 
             except Exception as e:
                 logging.error(f"MediaWidget: Error setting thumbnail in menu: {e}")
@@ -316,7 +401,7 @@ class MediaWidget(BaseWidget):
         main_layout.addLayout(content_layout)
 
         # Create horizontal layout for slider and time labels
-        self._time_slider_container = QWidget()
+        self._time_slider_container = QFrame()
         self._time_slider_container.setProperty("class", "media-timeline-container")
         self._time_slider_container.setContentsMargins(0, 0, 0, 0)
 
@@ -396,43 +481,22 @@ class MediaWidget(BaseWidget):
         self._wheel_filter = WheelEventFilter(self)
         self._dialog.installEventFilter(self._wheel_filter)
 
+        if self._menu_config["show_volume_slider"]:
+            self._update_app_volume_slider()
+            self._update_app_mute_button()
+
     def _get_source_app_name(self, media_info):
         """Get formatted source app name from media info or session."""
-        # Define dictionary of known source app IDs and their display names
-        source_list = {
-            "SpotifyAB.SpotifyMusic_zpdnekdrzrea0!Spotify": "Spotify",
-            "Spotify.exe": "Spotify",
-            "308046B0AF4A39CB": "FireFox",
-            "firefox.exe": "FireFox",
-            "F0DC299D809B9700": "Zen",
-            "MSEdge": "Edge",
-            "msedge.exe": "Edge",
-            "Chrome": "Chrome",
-            "chrome.exe": "Chrome",
-            "opera.exe": "Opera",
-            "Brave": "Brave",
-            "Brave.Q2QWMKZ4RMMIMDZ2JQ2NKBXFT4": "Brave",
-            "Microsoft.ZuneMusic_8wekyb3d8bbwe!Microsoft.ZuneMusic": "Media Player",
-            "foobar2000.exe": "Foobar2000",
-            "MusicBee.exe": "MusicBee",
-            "AppleInc.AppleMusicWin_nzyj5cx40ttqa!App": "Apple Music",
-            "com.badmanners.murglar": "Murglar",
-            "com.squirrel.TIDAL.TIDAL": "Tidal",
-            "mpv.exe": "NSMusicS",
-            "com.squirrel.Qobuz.Qobuz": "Qobuz",
-        }
-
         source_name = None
 
         # First try from media_info
         if media_info and "source_app" in media_info and media_info["source_app"]:
             source_app = media_info["source_app"]
-            # Direct lookup in dictionary
-            if source_app in source_list:
-                source_name = source_list[source_app]
-            elif DEBUG:
+            # Direct lookup using the imported function
+            source_name = get_source_app_display_name(source_app)
+            if source_name is None and DEBUG:
                 # Log when app is found but not in our list
-                logging.debug(f"Unknown source app in media_info: '{source_app}' - consider adding to source_list")
+                logging.debug(f"Unknown source app in media_info: '{source_app}' - consider adding to source_apps.py")
 
         # If not found, try to get source name from session
         if source_name is None:
@@ -440,21 +504,20 @@ class MediaWidget(BaseWidget):
                 if hasattr(self.media, "_current_session") and self.media._current_session:
                     source_app = self.media._current_session.source_app_user_model_id
                     if source_app:
-                        # Direct lookup without case conversion
-                        if source_app in source_list:
-                            source_name = source_list[source_app]
-                        elif DEBUG:
+                        # Direct lookup using the imported function
+                        source_name = get_source_app_display_name(source_app)
+                        if source_name is None and DEBUG:
                             # Log when session app is found but not in our list
                             logging.debug(
-                                f"Unknown source app in session: '{source_app}' - consider adding to source_list"
+                                f"Unknown source app in session: '{source_app}' - consider adding to source_apps.py"
                             )
             except Exception as e:
                 if DEBUG:
                     logging.debug(f"Error getting media source: {e}")
 
-        # Return the source name and its lowercase version for CSS (or None, None if not found)
+        # Return the source name and its CSS class name (or None, None if not found)
         if source_name:
-            return source_name, source_name.lower().replace(" ", "-")
+            return source_name, get_source_app_class_name(source_name)
         else:
             return None, None
 
@@ -601,7 +664,7 @@ class MediaWidget(BaseWidget):
 
         if has_session:
             # If media is not None, we show the frame
-            self._widget_frame.show()
+            self.show()
 
             # If we do not only have controls, make sure the label is shown
             if not self._controls_only:
@@ -628,7 +691,7 @@ class MediaWidget(BaseWidget):
 
             # If we want to hide the widget when no music is playing, hide it!
             if self._hide_empty:
-                self._widget_frame.hide()
+                self.hide()
 
     @QtCore.pyqtSlot(GlobalSystemMediaTransportControlsSessionPlaybackInfo)
     def _on_playback_info_changed(self, playback_info: GlobalSystemMediaTransportControlsSessionPlaybackInfo):
@@ -731,6 +794,8 @@ class MediaWidget(BaseWidget):
                         if source_name is not None:
                             self._popup_source_label.setText(source_name)
                             self._popup_source_label.setProperty("class", f"source {source_class_name}")
+                            self._popup_source_label.style().unpolish(self._popup_source_label)
+                            self._popup_source_label.style().polish(self._popup_source_label)
 
                 except Exception as e:
                     logging.error(f"Error updating popup content: {e}")
@@ -923,20 +988,19 @@ class MediaWidget(BaseWidget):
     def _crop_thumbnail(self, thumbnail: Image.Image, active_label_width: int) -> Image.Image:
         """Process an image thumbnail for proper display."""
         # Calculate dimensions while respecting container padding
-        available_width = active_label_width - (self._padding["left"] + self._padding["right"])
-        new_width = available_width
-        if not self._scrolling_label["enabled"]:
-            new_width = available_width + self._thumbnail_padding
+        available_width = active_label_width
 
+        if not self._scrolling_label["enabled"]:
+            available_width = available_width + self._thumbnail_padding
         # Preserve aspect ratio during resize
         aspect_ratio = thumbnail.width / thumbnail.height
-        new_height = int(new_width / aspect_ratio)
+        new_height = int(available_width / aspect_ratio)
 
         # Resize with high-quality resampling
-        thumbnail = thumbnail.resize((new_width, new_height), Image.LANCZOS)
+        thumbnail = thumbnail.resize((available_width, new_height), Image.LANCZOS)
 
         # Crop vertically to fit widget height
-        available_height = self._widget_frame.size().height() - (self._padding["top"] + self._padding["bottom"])
+        available_height = max(1, int(self._widget_container.contentsRect().height()))
         if thumbnail.height > available_height:
             y1 = (thumbnail.height - available_height) // 2
             thumbnail = thumbnail.crop((0, y1, thumbnail.width, y1 + available_height))
@@ -1091,6 +1155,232 @@ class MediaWidget(BaseWidget):
             self._popup_current_time_label.setText(position_str)
             self._popup_total_time_label.setText(duration_str)
 
+    def _get_current_app_identifier(self) -> tuple[Optional[str], Optional[str]]:
+        """Get the AUMID of the current media app."""
+        aumid = None
+
+        # Try to get AUMID from current session
+        try:
+            if hasattr(self.media, "_current_session") and self.media._current_session:
+                aumid = self.media._current_session.source_app_user_model_id
+        except Exception:
+            pass
+
+        # Try to get AUMID from media info
+        try:
+            media_info = getattr(self.media, "_media_info", None)
+            if media_info and media_info.get("source_app"):
+                aumid = media_info.get("source_app") or aumid
+        except Exception:
+            pass
+
+        return aumid
+
+    def _get_process_aumid(self, pid: int) -> Optional[str]:
+        """Get AUMID for a process using GetApplicationUserModelId."""
+        if GetApplicationUserModelId is None:
+            return None
+
+        try:
+            hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, int(pid))
+            if not hProcess:
+                return None
+
+            try:
+                length = ctypes.c_uint32(0)
+                # First call to get buffer size
+                if GetApplicationUserModelId(hProcess, ctypes.byref(length), None) == ERROR_INSUFFICIENT_BUFFER:
+                    buf = ctypes.create_unicode_buffer(length.value)
+                    if GetApplicationUserModelId(hProcess, ctypes.byref(length), buf) == 0:
+                        return buf.value
+            finally:
+                CloseHandle(hProcess)
+        except Exception:
+            pass
+
+        return None
+
+    def _match_session_by_mapping(self, sessions, aumid: str):
+        """Match session using source app mapping."""
+        if not aumid:
+            return None
+
+        mapping = get_source_app_mapping(aumid)
+        if not mapping:
+            return None
+
+        process_name = mapping.get("process")
+        if process_name:
+            for session in sessions:
+                try:
+                    proc = getattr(session, "Process", None)
+                    if proc and proc.name().lower() == process_name.lower():
+                        return session
+                except Exception:
+                    continue
+
+        return None
+
+    def _match_session_by_aumid(self, sessions, aumid: str):
+        """Match session by process AUMID."""
+        target_aumid = aumid.lower()
+        for session in sessions:
+            try:
+                proc = getattr(session, "Process", None)
+                if proc and proc.pid:
+                    process_aumid = self._get_process_aumid(int(proc.pid))
+                    if process_aumid and process_aumid.lower() == target_aumid:
+                        return session
+            except Exception:
+                continue
+        return None
+
+    def _match_session_by_executable(self, sessions, identifier: str):
+        """Match session by executable name."""
+        if not identifier.endswith(".exe"):
+            return None
+
+        exe_name = identifier.lower()
+        for session in sessions:
+            try:
+                proc = getattr(session, "Process", None)
+                if proc and proc.name().lower() == exe_name:
+                    return session
+            except Exception:
+                continue
+        return None
+
+    def _bind_app_volume_session(self):
+        """Locate and bind the audio session corresponding to current media app."""
+        self._app_volume_session = None
+        aumid = self._get_current_app_identifier()
+        identifier = (aumid or "").lower()
+
+        try:
+            comtypes.CoInitialize()
+            sessions = AudioUtilities.GetAllSessions()
+            candidate = None
+            if aumid:
+                candidate = self._match_session_by_mapping(sessions, aumid)
+
+            if not candidate and aumid:
+                candidate = self._match_session_by_aumid(sessions, aumid)
+
+            if not candidate and identifier:
+                candidate = self._match_session_by_executable(sessions, identifier)
+
+            if not candidate and aumid:
+                proc_name = get_process_name_for_aumid(aumid)
+                if proc_name:
+                    candidate = self._match_session_by_executable(sessions, proc_name)
+
+            self._app_volume_session = candidate
+
+        except Exception as e:
+            logging.error(f"MediaWidget: Failed to bind app volume session: {e}")
+            self._app_volume_session = None
+        finally:
+            try:
+                comtypes.CoUninitialize()
+            except Exception:
+                pass
+
+    def _get_volume_interface(self):
+        """Get the SimpleAudioVolume interface for the current session."""
+        if not self._app_volume_session:
+            return None
+        return getattr(self._app_volume_session, "SimpleAudioVolume", None)
+
+    def _update_app_volume_slider(self):
+        """Update slider value from bound app session volume."""
+        if not self._app_volume_slider:
+            return
+
+        volume_interface = self._get_volume_interface()
+        if not volume_interface:
+            self._vol_container.hide()
+            self._app_volume_slider.setEnabled(False)
+            return
+
+        try:
+            raw_level = volume_interface.GetMasterVolume()
+            level = int(round(float(raw_level) * 100))
+
+            self._app_volume_slider.blockSignals(True)
+            self._app_volume_slider.setValue(level)
+            self._app_volume_slider.blockSignals(False)
+            self._app_volume_slider.setEnabled(True)
+
+        except Exception as e:
+            logging.error(f"MediaWidget: Failed to read app volume: {e}")
+            self._app_volume_slider.setEnabled(False)
+
+    def _on_app_volume_slider_changed(self, value: int):
+        """Set app session volume from slider."""
+        volume_interface = self._get_volume_interface()
+        if not volume_interface:
+            return
+
+        try:
+            volume_interface.SetMasterVolume(float(value) / 100.0, None)
+
+            # Unmute if volume is raised above 0
+            if value > 0 and self._app_is_muted:
+                self._app_is_muted = False
+                self._update_app_mute_button()
+
+        except Exception as e:
+            logging.error(f"MediaWidget: Failed to set app volume: {e}")
+
+    def _toggle_app_mute(self):
+        """Toggle mute state for the current app."""
+        volume_interface = self._get_volume_interface()
+        if not volume_interface:
+            return
+
+        try:
+            # Get current mute state (default to False if failed)
+            current_mute = False
+            try:
+                current_mute = bool(volume_interface.GetMute())
+            except Exception:
+                pass
+
+            # Toggle mute state
+            new_mute = not current_mute
+            volume_interface.SetMute(new_mute, None)
+            self._app_is_muted = new_mute
+
+            self._update_app_mute_button()
+
+        except Exception as e:
+            logging.error(f"MediaWidget: Failed to toggle app mute: {e}")
+
+    def _update_app_mute_button(self):
+        """Update the mute button icon based on current mute state."""
+        if not self._app_mute_button:
+            return
+
+        volume_interface = self._get_volume_interface()
+        if not volume_interface:
+            self._app_mute_button.setEnabled(False)
+            return
+
+        try:
+            is_muted = volume_interface.GetMute()
+            self._app_is_muted = is_muted
+
+            icon_key = "unmute" if is_muted else "mute"
+            self._app_mute_button.setText(self._menu_config_icons[icon_key])
+            self._app_mute_button.setProperty("class", f"{icon_key}-button")
+            self._app_mute_button.setEnabled(True)
+            self._app_mute_button.style().unpolish(self._app_mute_button)
+            self._app_mute_button.style().polish(self._app_mute_button)
+
+        except Exception as e:
+            logging.error(f"MediaWidget: Failed to update mute button: {e}")
+            self._app_mute_button.setEnabled(False)
+
 
 class ClickableLabel(QLabel):
     def __init__(self, parent=None):
@@ -1121,6 +1411,15 @@ class WheelEventFilter(QtCore.QObject):
         if event.type() == QtCore.QEvent.Type.Wheel:
             if not self.media_widget._dialog.geometry().contains(event.globalPosition().toPoint()):
                 return False
+
+            if hasattr(self.media_widget, "_app_volume_slider") and self.media_widget._app_volume_slider:
+                slider_global_rect = QtCore.QRect(
+                    self.media_widget._app_volume_slider.mapToGlobal(QtCore.QPoint(0, 0)),
+                    self.media_widget._app_volume_slider.size(),
+                )
+                if slider_global_rect.contains(event.globalPosition().toPoint()):
+                    return False
+
             old_session = getattr(self.media_widget.media, "_current_session", None)
             if event.angleDelta().y() > 0:
                 self.media_widget.media.switch_session(+1)
@@ -1128,7 +1427,7 @@ class WheelEventFilter(QtCore.QObject):
                 self.media_widget.media.switch_session(-1)
             new_session = getattr(self.media_widget.media, "_current_session", None)
             if new_session != old_session:
-                self.media_widget._dialog.close()
+                self.media_widget._dialog.hide()
                 self.media_widget.show_menu()
             return True
         return False

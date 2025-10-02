@@ -3,6 +3,7 @@ from typing import Any
 DEFAULTS: dict[str, Any] = {
     "label": "{title}",
     "label_alt": "{artist} - {title}",
+    "class_name": "",
     "animation": {"enabled": True, "type": "fadeInOut", "duration": 200},
     "icons": {
         "prev_track": "\uf048",
@@ -24,8 +25,16 @@ DEFAULTS: dict[str, Any] = {
         "max_title_size": 150,
         "max_artist_size": 40,
         "show_source": True,
+        "show_volume_slider": False,
     },
-    "media_menu_icons": {"play": "\ue768", "pause": "\ue769", "prev_track": "\ue892", "next_track": "\ue893"},
+    "media_menu_icons": {
+        "play": "\ue768",
+        "pause": "\ue769",
+        "prev_track": "\ue892",
+        "next_track": "\ue893",
+        "mute": "\ue994",
+        "unmute": "\ue74f",
+    },
     "container_padding": {"top": 0, "left": 0, "bottom": 0, "right": 0},
     "scrolling_label": {
         "enabled": False,
@@ -37,12 +46,13 @@ DEFAULTS: dict[str, Any] = {
         "ease_pos": 0.8,
         "ease_min": 0.5,
     },
-    "callbacks": {"on_left": "toggle_label", "on_middle": "do_nothing", "on_right": "do_nothing"},
+    "callbacks": {"on_left": "do_nothing", "on_middle": "do_nothing", "on_right": "do_nothing"},
 }
 
 VALIDATION_SCHEMA = {
     "label": {"type": "string", "default": DEFAULTS["label"]},
     "label_alt": {"type": "string", "default": DEFAULTS["label_alt"]},
+    "class_name": {"type": "string", "required": False, "default": DEFAULTS["class_name"]},
     "hide_empty": {"type": "boolean", "default": False},
     "animation": {
         "type": "dict",
@@ -78,6 +88,7 @@ VALIDATION_SCHEMA = {
             "max_title_size": {"type": "integer", "default": DEFAULTS["media_menu"]["max_title_size"]},
             "max_artist_size": {"type": "integer", "default": DEFAULTS["media_menu"]["max_artist_size"]},
             "show_source": {"type": "boolean", "default": DEFAULTS["media_menu"]["show_source"]},
+            "show_volume_slider": {"type": "boolean", "default": DEFAULTS["media_menu"]["show_volume_slider"]},
         },
         "default": DEFAULTS["media_menu"],
     },
@@ -100,6 +111,14 @@ VALIDATION_SCHEMA = {
             "next_track": {
                 "type": "string",
                 "default": DEFAULTS["media_menu_icons"]["next_track"],
+            },
+            "mute": {
+                "type": "string",
+                "default": DEFAULTS["media_menu_icons"]["mute"],
+            },
+            "unmute": {
+                "type": "string",
+                "default": DEFAULTS["media_menu_icons"]["unmute"],
             },
         },
         "default": DEFAULTS["media_menu_icons"],

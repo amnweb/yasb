@@ -2,7 +2,7 @@ import logging
 import re
 
 from PyQt6.QtCore import pyqtSignal
-from PyQt6.QtWidgets import QHBoxLayout, QLabel, QWidget
+from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel
 
 from core.event_service import EventService
 from core.utils.utilities import add_shadow, build_widget_label, is_windows_10
@@ -27,15 +27,17 @@ class NotificationsWidget(BaseWidget):
         self,
         label: str,
         label_alt: str,
+        class_name: str,
         hide_empty: bool,
         tooltip: bool,
+        icons: dict,
         container_padding: dict,
         animation: dict[str, str],
         callbacks: dict[str, str],
         label_shadow: dict = None,
         container_shadow: dict = None,
     ):
-        super().__init__(class_name="notification-widget")
+        super().__init__(class_name=f"notification-widget {class_name}")
         self._show_alt_label = False
         self._label_content = label
         self._label_alt_content = label_alt
@@ -43,19 +45,20 @@ class NotificationsWidget(BaseWidget):
 
         self._hide_empty = hide_empty
         self._tooltip = tooltip
+        self._icons = icons
         self._padding = container_padding
         self._animation = animation
         self._callbacks = callbacks
         self._label_shadow = label_shadow
         self._container_shadow = container_shadow
 
-        self._widget_container_layout: QHBoxLayout = QHBoxLayout()
+        self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
         self._widget_container_layout.setContentsMargins(
             self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
         )
         # Initialize container
-        self._widget_container: QWidget = QWidget()
+        self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
         add_shadow(self._widget_container, self._container_shadow)
@@ -120,11 +123,17 @@ class NotificationsWidget(BaseWidget):
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
         active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
 
+        if self._notification_count > 0:
+            icon = self._icons["new"]
+        else:
+            icon = self._icons["default"]
+
         label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
         label_parts = [part for part in label_parts if part]
         widget_index = 0
 
-        label_options = [("{count}", self._notification_count)]
+        # Provide replacements for {count} and {icon}
+        label_options = [("{count}", self._notification_count), ("{icon}", icon)]
 
         for part in label_parts:
             part = part.strip()

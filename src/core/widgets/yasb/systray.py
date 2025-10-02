@@ -14,11 +14,11 @@ from PyQt6.QtCore import (
 )
 from PyQt6.QtWidgets import (
     QApplication,
+    QFrame,
     QHBoxLayout,
     QLayout,
     QMenu,
     QPushButton,
-    QWidget,
 )
 
 from core.utils.utilities import add_shadow, app_data_path
@@ -177,7 +177,7 @@ class SystrayWidget(BaseWidget):
             self.container_padding["bottom"],
         )
 
-        self.widget_container = QWidget(self)
+        self.widget_container = QFrame(self)
         self.widget_container.setLayout(self.widget_container_layout)
         self.widget_container.setProperty("class", "widget-container")
 
@@ -235,7 +235,23 @@ class SystrayWidget(BaseWidget):
         if not refresh_action:
             return
         refresh_action.triggered.connect(self.refresh_systray)  # pyright: ignore [reportUnknownMemberType]
-        menu.exec(self.unpinned_vis_btn.mapToGlobal(pos))
+
+        def _on_menu_about_to_hide():
+            from core.global_state import get_autohide_owner_for_widget
+
+            try:
+                mgr = get_autohide_owner_for_widget(self)._autohide_manager
+                if mgr._hide_timer:
+                    mgr._hide_timer.start(mgr._autohide_delay)
+            except Exception:
+                pass
+
+        menu.aboutToHide.connect(_on_menu_about_to_hide)  # type: ignore
+        menu.popup(self.unpinned_vis_btn.mapToGlobal(pos))
+        try:
+            menu.activateWindow()
+        except Exception:
+            pass
 
     def refresh_systray(self):
         """Refresh the icons by sending a message to the tray monitor"""
@@ -398,8 +414,11 @@ class SystrayWidget(BaseWidget):
             "exe_path",
         ]
         for attr in direct_attributes:
+            if attr in ("hWnd", "uID"):
+                continue
             setattr(old_data, attr, getattr(new_data, attr))
-
+        old_data.hWnd = new_data.hWnd or old_data.hWnd
+        old_data.uID = new_data.uID or old_data.uID
         if 0 < new_data.uVersion <= 4:
             old_data.uVersion = new_data.uVersion
 

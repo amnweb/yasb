@@ -76,7 +76,7 @@ class TodoWidget(BaseWidget):
         self._widget_container_layout.setContentsMargins(
             self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
         )
-        self._widget_container = QWidget()
+        self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
         add_shadow(self._widget_container, self._container_shadow)
@@ -163,6 +163,7 @@ class TodoWidget(BaseWidget):
         self._show_menu()
 
     def _show_task_dialog(self, dialog_title, save_button_text, on_save, task=None):
+        self._menu.hide()
         self._selected_category = task.get("category", "default") if task else "default"
         dialog = QDialog(self._menu)
         dialog.setWindowTitle(dialog_title)

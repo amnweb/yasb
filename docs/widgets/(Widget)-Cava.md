@@ -1,9 +1,10 @@
 # Cava Widget Configuration
 
-> NOTE: This widget requires the `cava` version >= 0.10.4 to be installed on your system. You can install it using winget `winget install karlstav.cava` or from the [official repository](https://github.com/karlstav/cava/releases). Cava need to be accessible in the system path. YASB will create temporary configuration files for cava in the `%LOCALAPPDATA%\Yasb` directory.
+> NOTE: This widget requires `cava` version >= 0.10.4 to be installed on your system. You can install it using winget (`winget install karlstav.cava`) or from the [official repository](https://github.com/karlstav/cava/releases). Cava needs to be accessible in the system PATH. YASB will create temporary configuration files for cava in the `%LOCALAPPDATA%\YASB` directory.
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
+| `class_name` | string | "" | Additional CSS class names for the widget container |
 | `bar_height` | integer | 20 | The height of bars in pixels |
 | `min_bar_height` | integer | 0 | The minimum height of bars in pixels |
 | `bars_number` | integer | 10 | The number of bars (0-512). 0 sets it to auto |
@@ -28,7 +29,8 @@
 | `gradient_color_2` | string | "#89b4fa" | Second gradient color in hex format |
 | `gradient_color_3` | string | "#cba6f7" | Third gradient color in hex format |
 | `hide_empty` | boolean | false | Hide widget when no audio is playing (requires `sleep_timer` to be enabled) |
-| `container_padding` | object | {top: 0, left: 0, bottom: 0, right: 0} | Padding of the widget container |
+| `bar_type`         | string  | `bars`  | Type of bar display. Can be 'bars', 'bars_mirrored', 'waves', or 'waves_mirrored'. |
+| `edge_fade` | integer or array | 0 | Apply fade effect to edges in pixels. Can be a single integer (applies to both sides) or an array `[left, right]` for separate control. 0 to disable. **Note:** When both sides have fade, each is capped to half the widget width to prevent overlap. When only one side has fade, it can use the full widget width |
 | `callbacks`         | dict    | `{'on_left': 'do_nothing', 'on_middle': 'do_nothing', 'on_right': 'reload_cava'}` | Callbacks for mouse events on the widget. |
 
 ## Example Configuration
@@ -40,7 +42,6 @@
       bar_height: 12
       min_bar_height: 0
       gradient: 1
-      reverse: 0
       foreground: "#89b4fa"
       gradient_color_1: '#74c7ec'
       gradient_color_2: '#89b4fa'
@@ -48,16 +49,14 @@
       bars_number: 8
       bar_spacing: 2
       bar_width: 4
+      bar_type: "bars"
+      framerate: 60
       hide_empty: true
-      container_padding:
-        top: 0
-        left: 8
-        bottom: 0
-        right: 8
 ```
 
 ## Description of Options
 
+- **class_name**: Additional CSS class names for the widget container. (optional)
 - **bar_height**: The height of bars in pixels.
 - **min_bar_height**: The minimum height of bars in pixels.
 - **bars_number**: The number of bars to display. Can be between 0 and 512. 0 sets it to auto.
@@ -80,10 +79,24 @@
 - **gradient**: Gradient mode, 1 = on, 0 = off.
 - **gradient_color_1**: First gradient color in hex format.
 - **gradient_color_2**: Second gradient color in hex format.
-- **gradient_color_3**: Third gradient color in hex format.
+- **gradient_color_3**: Third gradient color in hex format. (optional)
 - **hide_empty**: Hide widget when no audio is playing (requires `sleep_timer` to be enabled).
-- **container_padding**: Explicitly set padding inside widget container.
+- **bar_type**: Type of bar display. Can be 'bars', 'bars_mirrored', 'waves', or 'waves_mirrored'.
+- **edge_fade**: Apply fade effect to edges. Creates a smooth fade-out effect on the edges of the visualization. Can be configured in two ways:
+  - **Single value** (e.g., `15`): Applies the same fade width to both left and right edges
+  - **Array format** (e.g., `[10, 20]`): Applies different fade widths - first value for left edge, second for right edge
+  - Set to `0` or `[0, 0]` to disable. **Important:** When both sides have fade, each is automatically capped to half the widget width to prevent overlapping. When only one side has fade (e.g., `[180, 0]`), it can use the full widget width.
 - **callbacks**: A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions.
+
+> **Note:** The `waves` and `waves_mirrored` ignore the `bar_spacing` option.
+
+### Allowed Callbacks:
+```
+"reload_cava"
+"do_nothing"
+```
+
+
 
 More information on this option is documented in the [example config file](https://github.com/karlstav/cava/blob/master/example_files/config)
 

@@ -2,8 +2,9 @@
 
 | Option                                | Type      | Default                                                   | Description                                                        |
 | -------------------------             | --------- | ---------                                                 | -------------------------------------                              |
-| `label`                               | string    |                                                           | The main label format for the media widget.                        |
-| `label_alt`                           | string    |                                                           | The alternative label format for the media widget.                 |
+| `label`                               | string    | `"{title}"`                                               | The main label format for the media widget.                        |
+| `label_alt`                           | string    | `"{artist} - {title}"`                                    | The alternative label format for the media widget.                 |
+| `class_name`                          | string  | `""`                                                        | The custom CSS class name for the widget.                          |
 | `label_shadow`                        | boolean   | false                                                     | Whether to show a shadow effect on the label.                      |
 | `max_field_size`                      | dict      |                                                           | Maximum field sizes for labels.                                    |
 | `max_field_size.label`                | integer   | 20                                                        | Maximum size for the main label.                                   |
@@ -24,13 +25,13 @@
 | `icons.next_track`                    | string    | `\uf051`                                                  | Icon for the next track button.                                    |
 | `icons.play`                          | string    | `\uf04b`                                                  | Icon for the play button.                                          |
 | `icons.pause`                         | string    | `\uf04c`                                                  | Icon for the pause button.                                         |
-| `animation`                           | dict      | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}` | Animation settings for the widget.                                 |
-| `container_padding`                   | dict      | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}`          | Explicitly set padding inside widget container.                    |
-| `container_shadow`                    | dict      | `None`                                                    | Container shadow options.                                          |
-| `label_shadow`                        | dict      | `None`                                                    | Label shadow options.                                              |
-| `media_menu`                          | dict      | `None`                                                    | Media menu popup.                                                  |
-| `media_menu_icons`                    | dict      | `None`                                                    | Media menu icons for popup.                                        |
-| `scrolling_label`                     | dict      | `None`                                                    | Widget label scrolling options                                     |
+| `animation`                           | dict      | `{'enabled': true, 'type': 'fadeInOut', 'duration': 200}` | Animation settings for the widget.                                 |
+| `container_shadow`                    | dict      | [See below](#label-and-container-shadow)                  | Container shadow options.                                          |
+| `label_shadow`                        | dict      | [See below](#label-and-container-shadow)                  | Label shadow options.                                              |
+| `media_menu`                          | dict      | [See below](#media-menu-options)                          | Media menu popup.                                                  |
+| `media_menu_icons`                    | dict      | [See below](#media-menu-icons)                            | Media menu icons for popup.                                        |
+| `scrolling_label`                     | dict      | [See below](#scrolling-label)                             | Widget label scrolling options                                     |
+| `callbacks`                           | dict      | [See below](#available-callbacks)                         | Callbacks for mouse events on the widget.                          |
 
 ## Example Configuration
 
@@ -55,16 +56,6 @@ media:
     thumbnail_alpha: 80
     thumbnail_padding: 8
     thumbnail_corner_radius: 16
-    scrolling_label:
-      enabled: false
-      update_interval_ms: 33
-      style: "left"  # can be "left", "right", "bounce", "bounce-ease"
-      separator: " | "
-      label_padding: 1
-      # Easing curve params: https://www.desmos.com/calculator/j7eamemxzi
-      ease_slope: 20
-      ease_pos: 0.8
-      ease_min: 0.5
     icons:
       prev_track: "\ue892"
       next_track: "\ue893"
@@ -81,7 +72,7 @@ media:
       offset_left: 0
       thumbnail_corner_radius: 8
       thumbnail_size: 120
-      max_title_size: 80
+      max_title_size: 60
       max_artist_size: 20
       show_source: true
     media_menu_icons:
@@ -89,11 +80,63 @@ media:
       pause: "\ue769"
       prev_track: "\ue892"
       next_track: "\ue893"
+    scrolling_label:
+      enabled: false
+      update_interval_ms: 33
+      style: "left"  # can be "left", "right", "bounce", "bounce-ease"
+      separator: " | "
+      label_padding: 1
+      # Easing curve params: https://www.desmos.com/calculator/j7eamemxzi
+      ease_slope: 20
+      ease_pos: 0.8
+      ease_min: 0.5
     label_shadow:
       enabled: true
       color: "black"
       radius: 3
       offset: [ 1, 1 ]
+```
+## Media Menu Options
+```yaml
+    media_menu:
+      blur: false                          # Whether to apply a blur effect to the popup background.
+      round_corners: true                  # Whether to round the corners of the popup.
+      round_corners_type: "normal"         # The type of corner rounding. Can be "normal" or "symmetric".
+      border_color: "system"               # The border color of the popup. Can be a HEX, None or "system".
+      alignment: "right"                   # The alignment of the popup relative to the widget. Can be "left", "center", or "right".
+      direction: "down"                    # The direction in which the popup opens. Can be "up" or "down".
+      offset_top: 6                        # The vertical offset of the popup from the widget.
+      offset_left: 0                       # The horizontal offset of the popup from the widget.
+      thumbnail_corner_radius: 8           # The corner radius for the thumbnail in the popup.
+      thumbnail_size: 120                  # The size of the thumbnail in the popup.
+      max_title_size: 60                   # The maximum size for the title in the popup.
+      max_artist_size: 20                  # The maximum size for the artist name in the popup.
+      show_source: true                    # Whether to show the media source (e.g., Spotify, YouTube) in the popup.
+      show_volume_slider: false            # Whether to show the volume slider in the popup. Volume control per application.
+```
+
+## Media Menu Icons
+```yaml
+    media_menu_icons:
+      play: "\ue768"       # Icon for the play button in the popup.
+      pause: "\ue769"      # Icon for the pause button in the popup.
+      prev_track: "\ue892" # Icon for the previous track button in the popup.
+      next_track: "\ue893" # Icon for the next track button in the popup.
+      mute: "\ue994"       # Icon for the mute button in the popup.
+      unmute: "\ue74f"     # Icon for the unmute button in the popup.
+```
+
+## Scrolling Label Options
+```yaml
+    scrolling_label:
+      enabled: false                # Whether to enable the scrolling label.
+      update_interval_ms: 33       # The update interval for the scrolling label in milliseconds.
+      style: "left"                 # The style of the scrolling label. Can be "left", "right", "bounce", or "bounce-ease".
+      separator: " | "              # The separator between repeating text in "left" or "right" scrolling style.
+      label_padding: 1              # The padding around the label in "bounce" and "bounce-ease" style. By default it's one character on each side.
+      ease_slope: 20                # The easing slope for the bounce effect. Easing curve params: https://www.desmos.com/calculator/j7eamemxzi
+      ease_pos: 0.8                 # The easing curve position for the bounce effect.
+      ease_min: 0.5                 # The minimum value for the bounce effect easing curve.
 ```
 
 ## Available Callbacks
@@ -103,12 +146,27 @@ media:
 - `toggle_media_menu`: Toggles the visibility of the media menu popup.
 
 
+## Label and Container Shadow
+```yaml
+    container_shadow:
+      enabled: false          # Whether to enable the container shadow.
+      color: "black"          # The color of the shadow. Can be a HEX value or color name.
+      radius: 3               # The blur radius of the shadow.
+      offset: [1, 1]          # The offset of the shadow in the format [x, y].
+
+    label_shadow:
+      enabled: false          # Whether to enable the label shadow.
+      color: "black"          # The color of the shadow. Can be a HEX value or color name.
+      radius: 3               # The blur radius of the shadow.
+      offset: [1, 1]          # The offset of the shadow in the format [x, y].
+```
+
 ## Description of Options
 - **label:** The format string for the media label. You can use placeholders like `{title}` and `{artist}` to dynamically insert media information.
 - **label_alt:** The alternative format string for the media label. Useful for displaying additional media details.
-- **label_shadow:** Whether to show a shadow effect on the label. This can enhance the visibility of the label against different backgrounds.
+- **class_name:** The CSS class name for the widget. This allows you to apply custom styles to the widget. (optional)
 - **hide_empty:** Whether to hide the widget when there is no media information available.
-- **callbacks:** A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, `on_right`. Available callbacks are `toggle_label`, `do_nothing`, and `toggle_play_pause`.
+- **callbacks:** A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, `on_right`.
 - **max_field_size:** Maximum field sizes for the labels.
   - **label:** Maximum size for the main label. If the label exceeds this size, it will be truncated.
   - **label_alt:** Maximum size for the alternative label. If the label exceeds this size, it will be truncated.
@@ -121,6 +179,45 @@ media:
 - **thumbnail_padding:** The padding around the media thumbnail.
 - **thumbnail_corner_radius:** The corner radius for the media thumbnail. Set to 0 for square corners.
 - **symmetric_corner_radius:** Whether to use symmetric corner radius for the thumbnail. If set to true, the corner radius will be applied equally on all corners.
+- **thumbnail_edge_fade:** Whether to apply an edge fade effect to the thumbnail. This can create a smoother transition between the thumbnail and the background.
+- **icons:** Icons for the media controls.
+  - **prev_track:** Icon for the previous track button.
+  - **next_track:** Icon for the next track button.
+  - **play:** Icon for the play button.
+  - **pause:** Icon for the pause button.
+- **animation:** A dictionary specifying the animation settings for the widget. It contains three keys: `enabled`, `type`, and `duration`. The `type` can be `fadeInOut` and the `duration` is the animation duration in milliseconds.
+- **container_shadow:** Container shadow options.
+  - **enabled:** Whether to enable the container shadow.
+  - **color:** The color of the shadow. Can be a HEX value or color name
+  - **radius:** The blur radius of the shadow.
+  - **offset:** The offset of the shadow in the format [x, y].
+- **label_shadow:** Label shadow options.
+  - **enabled:** Whether to enable the label shadow.
+  - **color:** The color of the shadow. Can be a HEX value or color name
+  - **radius:** The blur radius of the shadow.
+  - **offset:** The offset of the shadow in the format [x, y].
+- **media_menu:** A dictionary specifying the media menu popup options.
+  - **blur:** Whether to apply a blur effect to the popup background.
+  - **round_corners:** Whether to round the corners of the popup.
+  - **round_corners_type:** The type of corner rounding. Can be `normal` or `symmetric`.
+  - **border_color:** The border color of the popup. Can be a HEX value, None, or `system`.
+  - **alignment:** The alignment of the popup relative to the widget. Can be `left`, `center`, or `right`.
+  - **direction:** The direction in which the popup opens. Can be `up` or `down`.
+  - **offset_top:** The vertical offset of the popup from the widget.
+  - **offset_left:** The horizontal offset of the popup from the widget.
+  - **thumbnail_corner_radius:** The corner radius for the thumbnail in the popup.
+  - **thumbnail_size:** The size of the thumbnail in the popup.
+  - **max_title_size:** The maximum size for the title in the popup.
+  - **max_artist_size:** The maximum size for the artist name in the popup.
+  - **show_source:** Whether to show the media source (e.g., Spotify, FireFox) in the popup.
+  - **show_volume_slider:** Whether to show the volume slider in the popup. Volume control per application.
+- **media_menu_icons:** A dictionary specifying the icons for the media menu popup. It contains
+  - **play:** Icon for the play button in the popup.
+  - **pause:** Icon for the pause button in the popup.
+  - **prev_track:** Icon for the previous track button in the popup.
+  - **next_track:** Icon for the next track button in the popup.
+  - **mute:** Icon for the mute button in the popup.
+  - **unmute:** Icon for the unmute button in the popup.
 - **scrolling_label:** A dictionary specifying the scrolling label options for the widget.
   - **enabled:** Whether to enable the scrolling label.
   - **update_interval_ms:** The update interval for the scrolling label in milliseconds. Min 4 max 1000.
@@ -130,15 +227,6 @@ media:
   - **ease_slope:** The easing slope for the bounce effect. Easing curve params: https://www.desmos.com/calculator/j7eamemxzi
   - **ease_pos:** The easing curve position for the bounce effect.
   - **ease_min:** The minimum value for the bounce effect easing curve.
-- **thumbnail_edge_fade:** Whether to apply an edge fade effect to the thumbnail. This can create a smoother transition between the thumbnail and the background.
-- **icons:** Icons for the media controls.
-- **animation:** A dictionary specifying the animation settings for the widget. It contains three keys: `enabled`, `type`, and `duration`. The `type` can be `fadeInOut` and the `duration` is the animation duration in milliseconds.
-- **container_padding**: Explicitly set padding inside widget container. Use this option to set padding inside the widget container. You can set padding for top, left, bottom and right sides of the widget container.
-- **container_shadow:** Container shadow options.
-- **label_shadow:** Label shadow options.
-- **media_menu:** A dictionary specifying the media menu popup options. It contains keys for blur, round corners, border color, alignment, direction, offsets, thumbnail corner radius, thumbnail size, max title size, max artist size, and show source.
-- **media_menu_icons:** Icons for the media menu popup. It contains keys for play, pause, previous track, and next track icons.
-
 
 ## Scrolling Label Notes
 - The scrolling label uses `max_field_size` to limit its size.
@@ -154,6 +242,32 @@ media:
 .media-widget .btn.prev {}
 .media-widget .btn.next {}
 .media-widget .btn.disabled {}
+
+.media-menu {}
+.media-menu .title {}
+.media-menu .artist {}
+.media-menu .source {}
+.media-menu .btn.play {}
+.media-menu .btn.pause {}
+.media-menu .btn.prev {}
+.media-menu .btn.next {}
+.media-menu .btn.disabled {}
+.media-menu .thumbnail {}
+.media-menu .playback-time {}
+.media-menu .progress-slider {}
+.media-menu .progress-slider::groove {}
+.media-menu .progress-slider::sub-page {}
+.media-menu .progress-slider::handle {}
+.media-menu .progress-slider::handle:hover {}
+.media-menu .app-volume-container {}
+
+.media-menu .app-volume-container .volume-slider {}
+.media-menu .app-volume-container .volume-slider::groove {}
+.media-menu .app-volume-container .volume-slider::sub-page {}
+.media-menu .app-volume-container .volume-slider::handle {}
+.media-menu .app-volume-container .volume-slider::handle:hover {}
+.media-menu .app-volume-container .mute-button {}
+
 ```
 
 ## Example Style
@@ -163,17 +277,16 @@ media:
     margin: 0;
 }
 .media-widget .label {
-    color: #bac2db;
-    background-color: rgba(24, 24, 37, 0.7);
+    color: #d2d6e2;
     padding: 0px;
     padding-right: 4px;
     font-size: 12px;
 }
 .media-widget .btn {
-    color: #989caa;
+    color: #9498a8;
     padding: 0 4px;
     margin: 0;
-    font-family: Segoe Fluent Icons;
+    font-family: "Segoe Fluent Icons";
     font-weight: 400;
 }
 .media-widget .btn:hover {
@@ -193,8 +306,8 @@ media:
 ## Example Popup Style
 ```css
 .media-menu {
-    min-width: 420px;
-    max-width: 420px;
+    min-width: 440px;
+    max-width: 440px;
     background-color: rgba(31, 39, 49, 0.5);
 }
 .media-menu .title,
@@ -203,42 +316,101 @@ media:
     font-size: 14px;
     font-weight: 600;
     margin-left: 10px;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-family: 'Segoe UI';
 }
 .media-menu .artist {
     font-size: 13px;
     color: #6c7086;
     margin-top: 0px;
-    margin-bottom: 8px;
 }
 .media-menu .source {
     font-size: 11px;
     color: #000;
-    font-weight: normal;
     border-radius: 3px;
     background-color: #bac2de;
     padding: 2px 4px;
-
+    font-weight: 600;
+    font-family: 'Segoe UI';
+    margin-top: 10px;
 }
 /* The source class name is the same as what you see in the media widget; just replace spaces with dashes and convert it to lowercase. 
 Example: "Windows Media" becomes "windows-media" */
-.media-menu .source.firefox {
-    background-color: #ff583b;
+.media-menu .source.aimp {
+    background-color: #6f42c1;
     color: #ffffff;
 }
-.media-menu .source.spotify {
-    background-color: #199143;
+.media-menu .source.apple-music {
+    background-color: #fa2b56;
+    color: #ffffff;
+}
+.media-menu .source.brave {
+    background-color: #fb542b;
+    color: #ffffff;
+}
+.media-menu .source.chrome {
+    background-color: #4285f4;
     color: #ffffff;
 }
 .media-menu .source.edge {
     background-color: #0078d4;
     color: #ffffff;
 }
-.media-menu .source.windows-media {
+.media-menu .source.firefox {
+    background-color: #ff7139;
+    color: #ffffff;
+}
+.media-menu .source.foobar2000 {
+    background-color: #444444;
+    color: #ffffff;
+}
+.media-menu .source.media-player {
     background-color: #0078d4;
     color: #ffffff;
 }
-
+.media-menu .source.murglar {
+    background-color: #8a8a8a;
+    color: #ffffff;
+}
+.media-menu .source.musicbee {
+    background-color: #ffcc00;
+    color: #000000;
+}
+.media-menu .source.nsmusics {
+    background-color: #e64a19;
+    color: #ffffff;
+}
+.media-menu .source.opera {
+    background-color: #ff1b2d;
+    color: #ffffff;
+}
+.media-menu .source.qobuz {
+    background-color: #003a6f;
+    color: #ffffff;
+}
+.media-menu .source.spotify {
+    background-color: #1db954;
+    color: #ffffff;
+}
+.media-menu .source.tidal {
+    background-color: #000000;
+    color: #ffffff;
+}
+.media-menu .source.winamp {
+    background-color: #f1a11b;
+    color: #000000;
+}
+.media-menu .source.youtube {
+    background-color: #ff0000;
+    color: #ffffff;
+}
+.media-menu .source.youtube-music {
+    background-color: #c51f1f;
+    color: #ffffff;
+}
+.media-menu .source.zen {
+    background-color: #2ecc71;
+    color: #000000;
+}
 .media-menu .btn {
     font-family: "Segoe Fluent Icons";
     font-size: 14px;
@@ -269,7 +441,7 @@ Example: "Windows Media" becomes "windows-media" */
 
 .media-menu .playback-time {
     font-size: 13px;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-family: 'Segoe UI';
     color: #7f849c;
     margin-top: 20px;
     min-width: 100px;
@@ -297,7 +469,46 @@ Example: "Windows Media" becomes "windows-media" */
     border-radius: 3px;
     height: 4px;
 }
+
+.media-menu .app-volume-container {
+    background-color: rgba(255, 255, 255, 0.05); 
+    padding: 8px 6px;
+    border-radius: 16px;
+    margin-left: 10px; 
+}
+.media-menu .app-volume-container .volume-slider::groove {
+    background: rgba(255, 255, 255, 0.1);
+    width: 2px;
+    border-radius: 3px;
+}
+.media-menu .app-volume-container .volume-slider::add-page {
+    background: white;
+    border-radius: 3px;
+}
+.media-menu .app-volume-container .volume-slider::groove:hover {
+    background: rgba(255, 255, 255, 0.1);
+    width:  6px;    
+    border-radius: 3px;
+}
+.media-menu .app-volume-container .volume-slider::sub-page {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+}
+.media-menu .app-volume-container .mute-button,
+.media-menu .app-volume-container .unmute-button {
+    font-size: 16px;
+    color: #ffffff;
+    font-family: "Segoe Fluent Icons";
+    margin-top: 4px; 
+}
+.media-menu .app-volume-container .unmute-button {
+    color: #a0a0a0;
+}
 ```
 
 > [!NOTE] 
 > The style example above uses the Segoe Fluent Icons font for buttons, you can use any other icon font or custom icons as per your design requirements.
+
+
+## Preview of the Widget
+![YASB Media Widget](assets/f1c8a395-6b4e7d21-8a5c-9f3b-4d7e2a9c5f8b.png)

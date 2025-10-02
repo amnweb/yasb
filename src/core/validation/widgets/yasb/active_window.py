@@ -1,6 +1,7 @@
 DEFAULTS = {
     "label": "{win[title]}",
     "label_alt": "[class_name='{win[class_name]}' exe='{win[process][name]}' hwnd={win[hwnd]}]",
+    "class_name": "",
     "label_no_window": None,
     "label_icon": True,
     "label_icon_size": 16,
@@ -17,6 +18,7 @@ DEFAULTS = {
 VALIDATION_SCHEMA = {
     "label": {"type": "string", "default": DEFAULTS["label"]},
     "label_alt": {"type": "string", "default": DEFAULTS["label_alt"]},
+    "class_name": {"type": "string", "required": False, "default": DEFAULTS["class_name"]},
     "label_no_window": {"type": "string", "nullable": True, "required": False, "default": DEFAULTS["label_no_window"]},
     "label_icon": {"type": "boolean", "default": DEFAULTS["label_icon"]},
     "label_icon_size": {"type": "integer", "default": DEFAULTS["label_icon_size"]},

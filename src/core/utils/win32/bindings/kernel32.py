@@ -116,6 +116,10 @@ kernel32.FormatMessageW.argtypes = [
 ]
 kernel32.FormatMessageW.restype = DWORD
 
+# Additional kernel32 APIs
+kernel32.GetCurrentThreadId.argtypes = []
+kernel32.GetCurrentThreadId.restype = DWORD
+
 
 # --- Python-friendly typed wrapper functions ---
 
@@ -248,3 +252,7 @@ def FormatMessage(
         nSize,
         Arguments,
     )
+
+
+def GetCurrentThreadId() -> int:
+    return int(kernel32.GetCurrentThreadId())

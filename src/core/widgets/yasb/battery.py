@@ -5,7 +5,7 @@ from typing import Union
 import humanize
 import psutil
 from PyQt6.QtCore import QTimer
-from PyQt6.QtWidgets import QHBoxLayout, QLabel, QWidget
+from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel
 
 from core.utils.utilities import add_shadow, build_widget_label
 from core.utils.widgets.animation_manager import AnimationManager
@@ -20,6 +20,7 @@ class BatteryWidget(BaseWidget):
         self,
         label: str,
         label_alt: str,
+        class_name: str,
         update_interval: int,
         time_remaining_natural: bool,
         hide_unsupported: bool,
@@ -32,7 +33,7 @@ class BatteryWidget(BaseWidget):
         label_shadow: dict = None,
         container_shadow: dict = None,
     ):
-        super().__init__(update_interval, class_name="battery-widget")
+        super().__init__(update_interval, class_name=f"battery-widget {class_name}")
         self._time_remaining_natural = time_remaining_natural
         self._status_thresholds = status_thresholds
         self._status_icons = status_icons
@@ -52,13 +53,13 @@ class BatteryWidget(BaseWidget):
         self._label_content = label
         self._label_alt_content = label_alt
         # Construct container
-        self._widget_container_layout: QHBoxLayout = QHBoxLayout()
+        self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
         self._widget_container_layout.setContentsMargins(
             self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
         )
         # Initialize container
-        self._widget_container: QWidget = QWidget()
+        self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
         add_shadow(self._widget_container, self._container_shadow)

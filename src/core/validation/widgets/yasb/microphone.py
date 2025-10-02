@@ -1,6 +1,7 @@
 DEFAULTS = {
     "label": "{icon}",
     "label_alt": "{icon} {level}%",
+    "class_name": "",
     "mute_text": "mute",
     "tooltip": True,
     "scroll_step": 2,
@@ -26,6 +27,7 @@ DEFAULTS = {
 VALIDATION_SCHEMA = {
     "label": {"type": "string", "default": DEFAULTS["label"]},
     "label_alt": {"type": "string", "default": DEFAULTS["label_alt"]},
+    "class_name": {"type": "string", "required": False, "default": DEFAULTS["class_name"]},
     "mute_text": {"type": "string", "default": DEFAULTS["mute_text"]},
     "tooltip": {"type": "boolean", "required": False, "default": DEFAULTS["tooltip"]},
     "scroll_step": {

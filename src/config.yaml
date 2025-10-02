@@ -18,14 +18,14 @@ bars:
       center: false
     animation:
       enabled: true
-      duration: 1000
+      duration: 400
     blur_effect:
       enabled: false
       acrylic: false
       dark_mode: false
       round_corners: false
       round_corners_type: "normal"
-      border_color: "System"
+      border_color: "system"
     window_flags:
       always_on_top: false
       windows_app_bar: true
@@ -33,29 +33,25 @@ bars:
       width: "100%"
       height: 32
     padding:
-      top: 6
-      left: 6
+      top: 4
+      left: 4
       bottom: 0
-      right: 6
+      right: 4
     widgets:
-      left: [
-        "home",
-        "komorebi_workspaces",
-        "komorebi_active_layout",
-        "active_window",
-      ]
-      center: [
-        "clock",
-        "apps"
-      ]
-      right: [
-        "media",
-        "weather",
-        "microphone",
-        "volume",
-        "notifications",
-        "power_menu"
-        ]
+      left:
+      - "home"
+      - "komorebi_workspaces"
+      - "komorebi_active_layout"
+      - "active_window"
+      center:
+      - "clock"
+      right:
+      - "media"
+      - "weather"
+      - "microphone"
+      - "volume"
+      - "notifications"
+      - "power_menu"
 widgets:
   home:
     type: "yasb.home.HomeWidget"
@@ -75,14 +71,15 @@ widgets:
       label: "{title}"
       label_alt: "{artist} - {title}"
       max_field_size:
-        label: 24
+        label: 16
         label_alt: 24
       show_thumbnail: true
       controls_only: false
       controls_left: true
+      controls_hide: true
       hide_empty: true
-      thumbnail_alpha: 80
-      thumbnail_padding: 24
+      thumbnail_alpha: 100
+      thumbnail_padding: 16
       thumbnail_corner_radius: 0
       thumbnail_edge_fade: true
       icons:
@@ -90,6 +87,33 @@ widgets:
         next_track: "\udb81\udcad"
         play: "\udb81\udc0a"
         pause: "\udb80\udfe4"
+      media_menu:
+        blur: false
+        round_corners: false
+        alignment: "right"
+        direction: "down"
+        offset_top: 6
+        offset_left: 0
+        thumbnail_corner_radius: 4
+        thumbnail_size: 100
+        max_title_size: 80
+        max_artist_size: 20
+        show_source: true
+      label_shadow:
+        enabled: true
+        color: "#000000"
+        radius: 2
+        offset: [ 1, 1 ]
+      scrolling_label:
+        enabled: true
+        update_interval_ms: 50
+        style: "left"  # can be "left", "right", "bounce", "bounce-ease"
+        separator: " | "
+        label_padding: 1
+      callbacks:
+        on_left: "toggle_media_menu"
+        on_middle: "do_nothing"
+        on_right: "toggle_label"
   active_window:
     type: "yasb.active_window.ActiveWindowWidget"
     options:
@@ -98,7 +122,7 @@ widgets:
       label_no_window: ""
       label_icon: true
       label_icon_size: 14
-      max_length: 56
+      max_length: 30
       max_length_ellipsis: "..."
       monitor_exclusive: true
   clock:
@@ -107,25 +131,26 @@ widgets:
       label: "{%a, %d %b %H:%M}"
       label_alt: "{%A, %d %B %Y %H:%M}"
       timezones: []
+      calendar: 
+        blur: false
+        round_corners: false
+        alignment: "center"
+        direction: "down"
       callbacks:
-        on_left: "toggle_label"
+        on_left: "toggle_calendar"
+        on_right: "toggle_label"
   komorebi_workspaces:
     type: "komorebi.workspaces.WorkspaceWidget"
     options:
       label_offline: "\u23fc Offline"
-      label_workspace_btn: "\udb81\udc3d"
-      label_workspace_active_btn: ""
-      label_workspace_populated_btn: "\udb81\udc3e"
+      label_workspace_btn: "\u000d"
+      label_workspace_active_btn: "\u000d"
+      label_workspace_populated_btn: "\u000d"
       label_default_name: "{index}"
       label_zero_index: false
       hide_empty_workspaces: false
       hide_if_offline: true
       animation: true
-      container_padding:
-        top: 0
-        left: 8
-        bottom: 0
-        right: 8
   komorebi_active_layout:
     type: "komorebi.active_layout.ActiveLayoutWidget"
     options:
@@ -155,11 +180,6 @@ widgets:
         maximized: "MAX"
         floating: "FLOATING"
         paused: "PAUSED"
-      container_padding:
-        top: 0
-        left: 8
-        bottom: 0
-        right: 8
       callbacks:
         on_left: "next_layout"
         on_middle: "toggle_monocle"
@@ -174,7 +194,9 @@ widgets:
       hide_decimal: true
       location: env
       callbacks:
-        on_left: "toggle_label"
+        on_left: "toggle_card"
+        on_middle: "do_nothing"
+        on_right: "toggle_label"
       icons:
         sunnyDay: "\ue30d"
         clearNight: "\ue32b"
@@ -191,6 +213,21 @@ widgets:
         thunderstormDay: "\ue30f"
         thunderstormNight: "\ue338"
         default: "\uebaa"
+      weather_card:
+        blur: false
+        round_corners: false
+        alignment: "right"
+        direction: "down"
+        icon_size: 64
+        show_hourly_forecast: true
+        time_format: "24h"
+        hourly_point_spacing: 76
+        hourly_icon_size: 32
+        icon_smoothing: true
+        temp_line_width: 2
+        current_line_color: "#8EAEE8"
+        current_line_width: 1
+        current_line_style: "dot"
   volume:
     type: "yasb.volume.VolumeWidget"
     options:
@@ -234,19 +271,6 @@ widgets:
         hibernate: ["\uf28e", "Hibernate"]
         sleep: ["\u23fe", "Sleep"]
         cancel: ["", "Cancel"]
-  apps:
-    type: "yasb.applications.ApplicationsWidget"
-    options:
-      container_padding:
-        top: 0
-        left: 8
-        bottom: 0
-        right: 8
-      label: "{data}"
-      app_list:
-        - { icon: "\uf422", launch: "search" }
-        - { icon: "\ueb03", launch: "cmd /c Taskmgr" }
-        - { icon: "\udb80\ude39",launch: "C:\\Program Files\\Mozilla Firefox\\firefox.exe" }
   notifications:
     type: "yasb.notifications.NotificationsWidget"
     options:

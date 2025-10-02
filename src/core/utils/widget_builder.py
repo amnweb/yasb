@@ -61,6 +61,13 @@ class WidgetBuilder(QObject):
                     self._invalid_widget_options[widget_name] = indented_validation_errors
                 else:
                     normalized_options = widget_options_validator.normalized(widget_options)
+                    # If this widget is a Grouper, proactively collect child listeners so BarManager can manage them
+                    try:
+                        if widget_cls.__name__ == "GrouperWidget" and widget_module.__name__.endswith("yasb.grouper"):
+                            child_names = normalized_options.get("widgets", []) or []
+                            self._collect_nested_listeners(child_names)
+                    except Exception:
+                        logging.debug("WidgetBuilder failed to collect nested listeners for Grouper")
                     return widget_cls(**normalized_options)
             except (AttributeError, ValueError, ModuleNotFoundError):
                 logging.exception(f"Failed to import widget with type {widget_config['type']}")
@@ -121,3 +128,25 @@ class WidgetBuilder(QObject):
                 informative_msg="Please click 'Show Details' to find out more.",
                 additional_details=f"The following widget(s) have no widget type defined:\n{widget_names}",
             )
+
+    def _collect_nested_listeners(self, widget_names: list[str]) -> None:
+        """Recursively collect event listeners from nested widgets."""
+        for name in widget_names:
+            try:
+                cfg = self._widget_configurations.get(name)
+                if not cfg or "type" not in cfg:
+                    continue
+                module_str, class_str = cfg["type"].rsplit(".", 1)
+                mod = import_module(f"core.widgets.{module_str}")
+                cls = getattr(mod, class_str)
+                listener = getattr(cls, "event_listener", None)
+                if listener:
+                    self._widget_event_listeners.add(listener)
+                # If nested grouper, recurse into its configured child names
+                if cls.__name__ == "GrouperWidget" and mod.__name__.endswith("yasb.grouper"):
+                    child_opts = cfg.get("options", {})
+                    child_names = child_opts.get("widgets", []) or []
+                    if child_names:
+                        self._collect_nested_listeners(child_names)
+            except Exception:
+                logging.debug(f"WidgetBuilder skipped collecting listener for nested widget '{name}'")

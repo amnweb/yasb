@@ -128,7 +128,7 @@ class KomorebiEventListener(QThread):
         while self._app_running and state is None:
             logging.error(
                 "Failed to retrieve komorebi state before starting event listener: None returned. "
-                "Retrying in 1 second... Is komorebi online and its binaries added to $PATH?"
+                "Retrying in 2 second... Is komorebi online and its binaries added to $PATH?"
             )
             time.sleep(2)
             state = self._komorebic.query_state()

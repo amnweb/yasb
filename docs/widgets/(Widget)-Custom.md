@@ -5,11 +5,11 @@
 | `label`         | string  | `"{data}"`                                | The format string for data |
 | `label_alt`     | string  | `"{data}"`    | Example of label alt. |
 | `label_max_length`          | int     | `None`                                                                     | The maximum length of the label. |
+| `label_placeholder` | string  | `"Loading..."`                                                          | Placeholder text when data is not available. |
 | `class_name`    | string  | `"custom-widget"`                                                      | The CSS class name for the widget. |
-| `exec_options`  | dict    | `{'run_cmd': None, 'run_interval': 120000, 'return_format': 'json', 'hide_empty: False', use_shell: True, encoding: None}` | Execution options for custom widget. |
+| `exec_options`  | dict    | `{'run_cmd': None, 'run_interval': 120000, 'return_format': 'json', 'hide_empty': false, 'use_shell': true, 'encoding': None}` | Execution options for custom widget. |
 | `callbacks`     | dict    | `{'on_left': 'toggle_label', 'on_middle': 'do_nothing', 'on_right': 'do_nothing'}` | Callbacks for mouse events. |
-| `animation`         | dict    | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
-| `container_padding`  | dict | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}`      | Explicitly set padding inside widget container. |
+| `animation`         | dict    | `{'enabled': true, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
 | `container_shadow`   | dict   | `None`                  | Container shadow options.                       |
 | `label_shadow`         | dict   | `None`                  | Label shadow options.                 |
 
@@ -75,12 +75,12 @@ nvidia_temp:
 
 - **label**: The format string.
 - **label_alt**: The alternative format string.
+- **label_placeholder**: Placeholder text when data is not available. Default is `"Loading..."`.
 - **label_max_length**: The maximum length of the label. Minimum value is 1. Default is `None`.
 - **class_name**: The CSS class name for the widget.
 - **exec_options**: A dictionary specifying the execution options. The keys are `run_cmd` command to run, `run_interval` (in milliseconds), `return_format` can be `json` or `string`, `hide_empty` (boolean) hide widget if output is empty, `use_shell` use shell to run command, `encoding` encoding for the command output, can be utf-8, cp1252, etc.
 - **callbacks**: A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions.
 - **animation:** A dictionary specifying the animation settings for the widget. It contains three keys: `enabled`, `type`, and `duration`. The `type` can be `fadeInOut` and the `duration` is the animation duration in milliseconds.
-- **container_padding**: Explicitly set padding inside widget container. Use this option to set padding inside the widget container. You can set padding for top, left, bottom and right sides of the widget container.
 - **container_shadow:** Container shadow options.
 - **label_shadow:** Label shadow options.
 

@@ -4,6 +4,7 @@
 |-------------------------|---------|----------------------------------------------|-----------------------------------------------------------------------------|
 | `label`                 | string  | `{icon}`                                     | The primary label format.                                                   |
 | `label_alt`             | string  | `{percent}%` | Battery percent           | The alternative label format.                                               |
+| `class_name`            | string  | `""`                                         | Additional CSS class name for the widget.                                    |
 | `update_interval`       | integer | `5000`                                       | The interval in milliseconds to update the widget.                          |
 | `time_remaining_natural`| boolean | `False`                                      | Whether to display the remaining time in a natural format.                  |
 | `hide_unsupported`| boolean | `True`                                      | Whether to hide the widget if the current system does not have battery info.                  |
@@ -12,7 +13,6 @@
 | `status_icons`          | dict    | `{icon_charging: '\uf0e7', icon_critical: '\uf244', icon_low: '\uf243', icon_medium: '\uf242', icon_high: '\uf241', icon_full: '\uf240'}` | Icons for different battery statuses.                                       |
 | `callbacks`             | dict    | `{on_left: 'toggle_label', on_middle: 'do_nothing', on_right: 'do_nothing'}` | Callback functions for different mouse button actions.                      |
 | `animation`         | dict    | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
-| `container_padding`  | dict | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}`      | Explicitly set padding inside widget container. |
 | `container_shadow`   | dict   | `None`                  | Container shadow options.                       |
 | `label_shadow`         | dict   | `None`                  | Label shadow options.                 |
 
@@ -42,7 +42,7 @@ battery:
       icon_low: "\uf243"
       icon_medium: "\uf242"
       icon_high: "\uf241"
-      icon_full: "uf240"
+      icon_full: "\uf240"
     label_shadow:
       enabled: true
       color: "black"
@@ -55,6 +55,7 @@ battery:
 
 - **label**: The primary label format for the battery widget. You can use placeholders like `{icon}` to dynamically insert the battery icon.
 - **label_alt**: The alternative label format for the battery widget. Useful for displaying additional battery details such as `{percent}%` and `remaining: {time_remaining}`.
+- **class_name**: Additional CSS class name for the widget. This allows for custom styling.
 - **update_interval**: The interval in milliseconds to update the widget.
 - **time_remaining_natural**: A boolean indicating whether to display the remaining time in a natural format.
 - **hide_unsupported**: A boolean indicating whether to hide the widget if the current system does not have battery information.
@@ -80,13 +81,13 @@ battery:
   - **on_middle**: The name of the callback function for middle mouse button click.
   - **on_right**: The name of the callback function for right mouse button click.
 - **animation**: A dictionary specifying the animation settings for the widget. It contains three keys: `enabled`, `type`, and `duration`. The `type` can be `fadeInOut` and the `duration` is the animation duration in milliseconds.
-- **container_padding**: Explicitly set padding inside widget container. Use this option to set padding inside the widget container. You can set padding for top, left, bottom and right sides of the widget container.
 - **container_shadow**: Container shadow options.
 - **label_shadow**: Label shadow options.
 
 ## Example Style
 ```css
 .battery-widget {}
+.battery-widget.your_class {} /* If you are using class_name option */
 .battery-widget .widget-container {}
 .battery-widget .widget-container .label {}
 .battery-widget .widget-container .label.alt {}

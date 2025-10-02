@@ -4,14 +4,24 @@ import psutil
 from PyQt6 import QtCore, QtGui
 from PyQt6.QtCore import QPropertyAnimation, Qt, pyqtSignal
 from PyQt6.QtGui import QCursor
-from PyQt6.QtWidgets import QApplication, QHBoxLayout, QLabel, QPushButton, QStyle, QStyleOption, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import (
+    QApplication,
+    QFrame,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QStyle,
+    QStyleOption,
+    QVBoxLayout,
+    QWidget,
+)
 
 from core.config import get_stylesheet
 from core.event_service import EventService
 from core.utils.utilities import add_shadow, is_windows_10
 from core.utils.widgets.power_menu.power_commands import PowerOperations
-from core.utils.win32.blurWindow import Blur
 from core.utils.win32.utilities import get_foreground_hwnd, set_foreground_hwnd
+from core.utils.win32.win32_accent import Blur
 from core.validation.widgets.yasb.power_menu import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
 
@@ -146,14 +156,14 @@ class PowerMenuWidget(BaseWidget):
         self._button.setAlignment(Qt.AlignmentFlag.AlignCenter)
         add_shadow(self._button, self._label_shadow)
         # Construct container
-        self._widget_container_layout: QHBoxLayout = QHBoxLayout()
+        self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
         self._widget_container_layout.setContentsMargins(
             self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
         )
         # Initialize container
 
-        self._widget_container: QWidget = QWidget()
+        self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
         add_shadow(self._widget_container, self._container_shadow)

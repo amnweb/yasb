@@ -1,6 +1,6 @@
 import json
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import StrEnum, auto
 from typing import Any, cast
 
@@ -19,12 +19,24 @@ else:
 
 
 @dataclass
+class Window:
+    id: str
+    title: str
+    handle: int
+    class_name: str
+    process_name: str
+    display_state: str
+    is_floating: bool
+
+
+@dataclass
 class Workspace:
     name: str
     display_name: str
     focus: bool = False
     is_displayed: bool = False
     num_windows: int = 0
+    windows: list[Window] = field(default_factory=list)
 
 
 @dataclass
@@ -161,15 +173,11 @@ class GlazewmClient(QObject):
         for mon in data:
             monitor_name: str | None = mon.get("hardwareId")
             handle: int | None = mon.get("handle")
-            if monitor_name is None or handle is None:
-                logger.warning(f"Monitor name or hwnd not found | name: {monitor_name}, handle: {handle}")
-                continue
-            if not monitor_name:
-                monitor_name = f"Unknown ({handle})"
-                logger.warning(f"Monitor name not found. Replacing with {monitor_name}")
             if not handle:
                 logger.warning("Monitor handle not found")
                 continue
+            if not monitor_name:
+                monitor_name = f"Unknown_{handle}"
             workspaces_data = [
                 Workspace(
                     name=child.get("name", ""),
@@ -177,6 +185,7 @@ class GlazewmClient(QObject):
                     is_displayed=child.get("isDisplayed", False),
                     focus=child.get("hasFocus", False),
                     num_windows=len(child.get("children", [])),
+                    windows=self._read_windows(child),
                 )
                 for child in mon.get("children", [])
                 if child.get("type") == "workspace"
@@ -198,3 +207,22 @@ class GlazewmClient(QObject):
             name=data[0].get("name", None),
             display_name=data[0].get("displayName", None),
         )
+
+    def _read_windows(self, parent):
+        windows = []
+        for child in parent.get("children", []):
+            if child.get("type") == "window":
+                windows.append(
+                    Window(
+                        id=child.get("id"),
+                        title=child.get("title"),
+                        handle=child.get("handle"),
+                        class_name=child.get("className"),
+                        process_name=child.get("processName"),
+                        display_state=child.get("displayState"),
+                        is_floating=child.get("state").get("type") == "floating",
+                    )
+                )
+            elif child.get("type") == "split":
+                windows.extend(self._read_windows(child))
+        return windows

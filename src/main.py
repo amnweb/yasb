@@ -3,6 +3,7 @@ import contextlib
 import ctypes
 import logging
 import sys
+import time
 from sys import argv
 
 import qasync
@@ -24,21 +25,65 @@ logging.getLogger("asyncio").setLevel(logging.WARNING)
 
 @contextlib.contextmanager
 def single_instance_lock(name="yasb_reborn"):
+    """Create a Windows mutex to ensure a single instance, with optional restart wait.
+
+    If the process is launched with --restart-wait, the new instance will
+    wait for the previous instance to exit and release the mutex (bounded
+    wait) instead of exiting immediately.
     """
-    Context manager that creates a Windows mutex to ensure a single instance.
-    """
-    mutex = ctypes.windll.kernel32.CreateMutexW(None, False, name)
+    ERROR_ALREADY_EXISTS = 183
+    wait_for_restart = "--restart-wait" in sys.argv
+
+    # CreateMutexW(bInitialOwner=True) to own the mutex while we run
+    mutex = ctypes.windll.kernel32.CreateMutexW(None, True, name)
     if not mutex:
         logging.error("Failed to create mutex.")
         sys.exit(1)
-    if ctypes.windll.kernel32.GetLastError() == 183:  # ERROR_ALREADY_EXISTS
-        ctypes.windll.kernel32.CloseHandle(mutex)
-        logging.error("Another instance of the YASB is already running.")
-        sys.exit(1)
+
+    last_err = ctypes.windll.kernel32.GetLastError()
+    if last_err == ERROR_ALREADY_EXISTS:
+        # Another instance owns or created the mutex. If we're in restart mode, wait for it.
+        if wait_for_restart:
+            logging.info("Waiting for previous YASB instance to exit...")
+            # Release our initial ownership before waiting to avoid interfering
+            ctypes.windll.kernel32.ReleaseMutex(mutex)
+
+            # Loop trying to acquire (CreateMutexW again) until timeout
+            timeout_s = 10
+            start = time.time()
+            acquired = False
+            while time.time() - start < timeout_s:
+                ctypes.windll.kernel32.CloseHandle(mutex)
+                mutex = ctypes.windll.kernel32.CreateMutexW(None, True, name)
+                if not mutex:
+                    logging.error("CreateMutexW failed while waiting")
+                    break
+                if ctypes.windll.kernel32.GetLastError() != ERROR_ALREADY_EXISTS:
+                    acquired = True
+                    break
+                # Still held by previous instance
+                ctypes.windll.kernel32.ReleaseMutex(mutex)
+                ctypes.windll.kernel32.CloseHandle(mutex)
+                time.sleep(0.25)
+
+            if not acquired:
+                logging.error("Timeout waiting for previous instance. Aborting start.")
+                sys.exit(1)
+
+            logging.info("Previous instance exited, continuing startup.")
+        else:
+            ctypes.windll.kernel32.CloseHandle(mutex)
+            logging.error("Another instance of the YASB is already running.")
+            sys.exit(1)
+
     try:
         yield mutex
     finally:
-        ctypes.windll.kernel32.ReleaseMutex(mutex)
+        # Ensure we release and close the mutex on exit
+        try:
+            ctypes.windll.kernel32.ReleaseMutex(mutex)
+        except Exception:
+            pass
         ctypes.windll.kernel32.CloseHandle(mutex)
 
 
@@ -75,8 +120,9 @@ def main():
     app.aboutToQuit.connect(stop_observer)
 
     # Build system tray icon
-    tray_manager = SystemTrayManager(manager)
-    tray_manager.show()
+    if config["show_systray"]:
+        tray_manager = SystemTrayManager(manager)
+        tray_manager.show()
 
     # Initialize auto update service
     if config["update_check"] and getattr(sys, "frozen", False):

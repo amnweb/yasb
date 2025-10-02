@@ -1,4 +1,5 @@
 # We import all the bindings here to make them available in the top-level namespace
+from .dwmapi import *
 from .gdi32 import *
 from .kernel32 import *
 from .powrprof import *

@@ -4,7 +4,7 @@ import subprocess
 import threading
 
 from PyQt6.QtCore import QObject, Qt, pyqtSignal
-from PyQt6.QtWidgets import QHBoxLayout, QLabel, QWidget
+from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel
 
 from core.utils.utilities import add_shadow
 from core.utils.widgets.animation_manager import AnimationManager
@@ -55,6 +55,7 @@ class CustomWidget(BaseWidget):
         self,
         label: str,
         label_alt: str,
+        label_placeholder: str,
         label_max_length: int,
         exec_options: dict,
         callbacks: dict,
@@ -75,18 +76,19 @@ class CustomWidget(BaseWidget):
         self._show_alt_label = False
         self._label_content = label
         self._label_alt_content = label_alt
+        self._label_placeholder = label_placeholder
         self._animation = animation
         self._padding = container_padding
         self._label_shadow = label_shadow
         self._container_shadow = container_shadow
         # Construct container
-        self._widget_container_layout: QHBoxLayout = QHBoxLayout()
+        self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
         self._widget_container_layout.setContentsMargins(
             self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
         )
         # Initialize container
-        self._widget_container: QWidget = QWidget()
+        self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
         add_shadow(self._widget_container, self._container_shadow)
@@ -138,8 +140,8 @@ class CustomWidget(BaseWidget):
                     label.setProperty("class", class_result)
                 else:
                     label = QLabel(part)
-                    label.setProperty("class", "label")
-                    label.setText("Loading...")
+                    label.setProperty("class", "label alt" if is_alt else "label")
+                    label.setText(self._label_placeholder)
                 label.setAlignment(Qt.AlignmentFlag.AlignCenter)
                 self._set_cursor(label)
                 add_shadow(label, self._label_shadow)

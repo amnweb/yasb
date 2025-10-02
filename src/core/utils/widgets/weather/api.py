@@ -1,5 +1,6 @@
 import json
 import logging
+import traceback
 from datetime import datetime
 from random import randint
 from typing import Any
@@ -9,6 +10,14 @@ from PyQt6.QtNetwork import QNetworkAccessManager, QNetworkReply, QNetworkReques
 
 HEADER = (b"User-Agent", b"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:129.0) Gecko/20100101 Firefox/129.0")
 CACHE_CONTROL = (b"Cache-Control", b"no-cache")
+
+
+class BadRequestError(Exception):
+    pass
+
+
+class HostNotFoundError(Exception):
+    pass
 
 
 class WeatherDataFetcher(QObject):
@@ -53,20 +62,30 @@ class WeatherDataFetcher(QObject):
         self._manager.get(request)
 
     def handle_response(self, reply: QNetworkReply):
-        if reply.error() == QNetworkReply.NetworkError.NoError:
-            logging.info(f"Fetching new weather data at {datetime.now()}")
-            try:
-                self.finished.emit(json.loads(reply.readAll().data().decode()))
-            except json.JSONDecodeError as e:
-                logging.error(f"Weather response error. Weather data is not a valid JSON: {e}")
-                self.finished.emit({})
-            except Exception as e:
-                logging.error(f"Weather response error: {e}")
-                self.finished.emit({})
-        else:
-            logging.error(f"Weather response error: {reply.error().name} {reply.error().value}.")
-            self.finished.emit({})
-            reply.deleteLater()
+        try:
+            error = reply.error()
+            status = reply.attribute(QNetworkRequest.Attribute.HttpStatusCodeAttribute)
+            if error == QNetworkReply.NetworkError.NoError:
+                logging.info(f"Fetching new weather data at {datetime.now()}")
+                data = json.loads(reply.readAll().data().decode())
+                self.finished.emit(data)
+                reply.deleteLater()
+                return
+            elif error == QNetworkReply.NetworkError.HostNotFoundError:
+                raise HostNotFoundError("No internet connection or host not found. Unable to fetch weather.")
+            elif status in {400, 401, 403}:
+                data = json.loads(reply.readAll().data().decode())
+                raise BadRequestError(f"Weather response error {status}: {data['error']['message']}")
+            else:
+                raise Exception(f"Weather response error {status}: {error.name} {error.value}.")
+        except json.JSONDecodeError as e:
+            logging.error(f"Weather API invalid JSON response: {e}")
+        except (BadRequestError, HostNotFoundError) as e:
+            logging.error(e)
+        except Exception as e:
+            logging.error(f"{e}\n{traceback.format_exc()}")
+        self.finished.emit({})
+        reply.deleteLater()
 
 
 class IconFetcher(QObject):

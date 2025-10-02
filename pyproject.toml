@@ -13,7 +13,8 @@ license = { file = "LICENSE" }
 readme = "README.md"
 requires-python = "==3.12.*"
 dependencies = [
-    "PyQt6",
+    "PyQt6==6.9.1",
+    "PyQt6-Qt6==6.9.1",
     "PyQt6_sip",
     "cerberus",
     "humanize",
@@ -32,6 +33,7 @@ dependencies = [
     "openai",
     "pyvda",
     "python-dotenv",
+    "winmica",
     "winrt.windows.foundation",
     "winrt.windows.foundation.collections",
     "winrt.windows.data.xml.dom",

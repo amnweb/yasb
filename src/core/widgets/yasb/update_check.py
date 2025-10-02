@@ -6,7 +6,7 @@ import threading
 
 import win32com.client
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
-from PyQt6.QtWidgets import QHBoxLayout, QLabel, QWidget
+from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel
 
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import add_shadow
@@ -341,7 +341,7 @@ class UpdateCheckWidget(BaseWidget):
 
     def _create_dynamically_label(self, windows_label: str, winget_label: str):
         def process_content(label_text, label_type):
-            container = QWidget()
+            container = QFrame()
             container_layout = QHBoxLayout()
             container_layout.setSpacing(0)
             container_layout.setContentsMargins(0, 0, 0, 0)

@@ -24,6 +24,11 @@ CONFIG_SCHEMA = {
         "default": True,
         "required": False,
     },
+    "show_systray": {
+        "type": "boolean",
+        "default": True,
+        "required": False,
+    },
     "komorebi": {
         "type": "dict",
         "schema": {
@@ -44,6 +49,28 @@ CONFIG_SCHEMA = {
             "start_command": "komorebic start --whkd",
             "stop_command": "komorebic stop --whkd",
             "reload_command": "komorebic reload-configuration",
+        },
+    },
+    "glazewm": {
+        "type": "dict",
+        "schema": {
+            "start_command": {
+                "type": "string",
+                "required": False,
+            },
+            "stop_command": {
+                "type": "string",
+                "required": False,
+            },
+            "reload_command": {
+                "type": "string",
+                "required": False,
+            },
+        },
+        "default": {
+            "start_command": "glazewm.exe start",
+            "stop_command": "glazewm.exe command wm-exit",
+            "reload_command": "glazewm.exe command wm-exit && glazewm.exe start",
         },
     },
     "bars": {

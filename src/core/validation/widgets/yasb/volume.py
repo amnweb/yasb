@@ -1,9 +1,11 @@
 DEFAULTS = {
     "label": "{volume[percent]}%",
     "label_alt": "{volume[percent]}%",
+    "class_name": "",
     "mute_text": "mute",
     "tooltip": True,
     "scroll_step": 2,
+    "slider_beep": True,
     "volume_icons": [
         "\ueee8",  # Icon for muted
         "\uf026",  # Icon for 0-10% volume
@@ -30,6 +32,7 @@ DEFAULTS = {
 VALIDATION_SCHEMA = {
     "label": {"type": "string", "default": DEFAULTS["label"]},
     "label_alt": {"type": "string", "default": DEFAULTS["label_alt"]},
+    "class_name": {"type": "string", "required": False, "default": DEFAULTS["class_name"]},
     "mute_text": {"type": "string", "required": False, "default": DEFAULTS["mute_text"]},
     "tooltip": {"type": "boolean", "required": False, "default": DEFAULTS["tooltip"]},
     "scroll_step": {
@@ -39,6 +42,7 @@ VALIDATION_SCHEMA = {
         "min": 1,
         "max": 100,
     },
+    "slider_beep": {"type": "boolean", "required": False, "default": DEFAULTS["slider_beep"]},
     "volume_icons": {
         "type": "list",
         "default": DEFAULTS["volume_icons"],

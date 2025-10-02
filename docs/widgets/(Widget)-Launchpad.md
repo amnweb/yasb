@@ -1,6 +1,6 @@
 # Launchpad Widget
 
-The Launchpad widget provides a customizable application launcher grid, similar to macOS Launchpad. It allows you to quickly launch, add, edit, or remove applications from a visually organized popup. Launchpad supports drag-and-drop functionality, search, and context menus for managing your applications. It's support UWP apps, executables and URLs making it a versatile tool for accessing your favorite programs.
+The Launchpad widget provides a customizable application launcher grid, similar to macOS Launchpad. It allows you to quickly launch, add, edit, or remove applications from a visually organized popup. Launchpad supports drag-and-drop functionality, search, and context menus for managing your applications. It supports UWP apps, executables, and URLs, making it a versatile tool for accessing your favorite programs.
 
 ## Options
 
@@ -9,11 +9,10 @@ The Launchpad widget provides a customizable application launcher grid, similar 
 | `label`               | string   | `'<span>\udb85\udcde</span>'`| The label/icon for the widget on the bar.                                   |
 | `search_placeholder`  | string   | `"Search applications..."`     | Placeholder text for the search field.                                      |
 | `app_icon_size`       | int      | `64`                   | Size of application icons in pixels.                                        |
-| `window`              | dict     | `{fullscreen: False, width: 800, height: 600, overlay_block: true}`                | Popup window size and fullscreen options.                                   |
-| `window_style`        | dict     | `{enable_blur: True, round_corners: True, round_corners_type: "normal", border_color: "system"}`                | Popup window styling (blur, corners, border, etc).                          |
+| `window`              | dict     | `{fullscreen: false, width: 800, height: 600, overlay_block: true}`                | Popup window size and fullscreen options.                                   |
+| `window_style`        | dict     | `{enable_blur: true, round_corners: true, round_corners_type: "normal", border_color: "system"}`                | Popup window styling (blur, corners, border, etc).                          |
 | `window_animation`    | dict     | `{fade_in_duration: 400, fade_out_duration: 400}`                | Animation settings for showing/hiding the popup.                            |
-| `animation`           | dict     | `{enabled: True, type: "fadeInOut", duration: 200}`                | Widget animation settings.                                                  |
-| `container_padding`   | dict     | `{top:0,left:0,bottom:0,right:0}` | Padding inside the widget container.                             |
+| `animation`           | dict     | `{enabled: true, type: "fadeInOut", duration: 200}`                | Widget animation settings.                                                  |
 | `callbacks`           | dict     | `{on_left: "toggle_launchpad", on_right: "do_nothing", on_middle: "do_nothing"}` | Mouse event callbacks.      |
 | `label_shadow`        | dict     | `None`                 | Label shadow options.                                                       |
 | `container_shadow`    | dict     | `None`                 | Container shadow options.                                                   |
@@ -87,7 +86,6 @@ launchpad:
 - **label:** The label/icon for the widget on the bar.
 - **search_placeholder:** Placeholder text for the search field in the popup.
 - **app_icon_size:** Size of application icons in pixels.
-- **container_padding:** Padding inside the widget container (`top`, `left`, `bottom`, `right`).
 - **label_shadow:** Shadow options for the label.
 - **container_shadow:** Shadow options for the widget container.
 - **window:** Popup window size and fullscreen options.

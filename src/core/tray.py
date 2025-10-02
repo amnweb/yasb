@@ -8,23 +8,20 @@ from pathlib import Path
 
 from PyQt6.QtCore import QEvent, QSize, Qt
 from PyQt6.QtGui import QCursor, QIcon
-from PyQt6.QtWidgets import QMenu, QMessageBox, QSystemTrayIcon
+from PyQt6.QtWidgets import QMenu, QSystemTrayIcon
 
 from core.bar_manager import BarManager
 from core.config import get_config
+from core.ui.windows.about import AboutDialog
 from core.utils.controller import exit_application, reload_application
-from core.utils.win32.utilities import disable_autostart, enable_autostart, is_autostart_enabled
+from core.utils.win32.utilities import disable_autostart, enable_autostart, is_autostart_enabled, qmenu_rounded_corners
 from settings import (
     APP_NAME,
-    APP_NAME_FULL,
-    BUILD_VERSION,
     DEFAULT_CONFIG_DIRECTORY,
-    GITHUB_THEME_URL,
     GITHUB_URL,
     SCRIPT_PATH,
 )
 
-OS_STARTUP_FOLDER = os.path.join(os.environ["APPDATA"], r"Microsoft\Windows\Start Menu\Programs\Startup")
 VBS_PATH = os.path.join(SCRIPT_PATH, "yasb.vbs")
 EXE_PATH = os.path.join(SCRIPT_PATH, "yasb.exe")
 THEME_EXE_PATH = os.path.join(SCRIPT_PATH, "yasb_themes.exe")
@@ -40,7 +37,6 @@ class SystemTrayManager(QSystemTrayIcon):
         self._load_favicon()
         self.setToolTip(APP_NAME)
         self._load_config()
-        self._remove_shortcut()
         self.activated.connect(self._on_tray_activated)
 
     def eventFilter(self, obj, event):
@@ -72,6 +68,11 @@ class SystemTrayManager(QSystemTrayIcon):
             self.komorebi_stop = config["komorebi"]["stop_command"]
             self.komorebi_reload = config["komorebi"]["reload_command"]
 
+        if config["glazewm"]:
+            self.glazewm_start = config["glazewm"]["start_command"]
+            self.glazewm_stop = config["glazewm"]["stop_command"]
+            self.glazewm_reload = config["glazewm"]["reload_command"]
+
     def _load_favicon(self):
         # Get the current directory of the script
         self._icon.addFile(os.path.join(SCRIPT_PATH, "assets", "images", "app_icon.png"), QSize(48, 48))
@@ -80,10 +81,10 @@ class SystemTrayManager(QSystemTrayIcon):
     def _load_context_menu(self):
         self.menu = QMenu()
         self.menu.setWindowModality(Qt.WindowModality.WindowModal)
-
+        qmenu_rounded_corners(self.menu)
         style_sheet = """
         QMenu {
-            background-color: #26292b;
+            background-color: #202020;
             color: #ffffff;
             border:1px solid #373b3e;
             padding:5px 0;
@@ -96,15 +97,15 @@ class SystemTrayManager(QSystemTrayIcon):
             border-radius: 4px;
             font-size: 11px;
             font-weight: 600;
-            font-family: 'Segoe UI', sans-serif;
+            font-family: 'Segoe UI';
         }
         QMenu::item:selected {
-            background-color: #373b3e;
+            background-color: #333333;
         }
         QMenu::separator {
             height: 1px;
-            background: #373b3e;
-            margin:5px 0;
+            background: #404040;
+            margin: 4px 8px;
         }
         QMenu::right-arrow {
             width: 8px;
@@ -113,6 +114,21 @@ class SystemTrayManager(QSystemTrayIcon):
         }
         """
         self.menu.setStyleSheet(style_sheet)
+
+        def _on_menu_about_to_hide():
+            # Restart autohide timers for all registered autohide owners.
+            # Use the central global_state registry so we don't need a widget with a bar_id here.
+            from core.global_state import get_all_autohide_owners
+
+            try:
+                for owner in get_all_autohide_owners():
+                    mgr = getattr(owner, "_autohide_manager", None)
+                    if mgr and getattr(mgr, "_hide_timer", None):
+                        mgr._hide_timer.start(getattr(mgr, "_autohide_delay", 400))
+            except Exception:
+                pass
+
+        self.menu.aboutToHide.connect(_on_menu_about_to_hide)
 
         open_config_action = self.menu.addAction("Open Config")
         open_config_action.triggered.connect(self._open_config)
@@ -125,16 +141,45 @@ class SystemTrayManager(QSystemTrayIcon):
         self.reload_action = reload_action
 
         self.menu.addSeparator()
-        if self.is_komorebi_installed():
+        if self.is_wm_installed("komorebi"):
             komorebi_menu = self.menu.addMenu("Komorebi")
             start_komorebi = komorebi_menu.addAction("Start Komorebi")
-            start_komorebi.triggered.connect(self._start_komorebi)
+            start_komorebi.triggered.connect(
+                lambda checked=False, wm="Komorebi", cmd=self.komorebi_start: self._run_wm_command(wm, cmd)
+            )
 
             stop_komorebi = komorebi_menu.addAction("Stop Komorebi")
-            stop_komorebi.triggered.connect(self._stop_komorebi)
+            stop_komorebi.triggered.connect(
+                lambda checked=False, wm="Komorebi", cmd=self.komorebi_stop: self._run_wm_command(wm, cmd)
+            )
 
             reload_komorebi = komorebi_menu.addAction("Reload Komorebi")
-            reload_komorebi.triggered.connect(self._reload_komorebi)
+            reload_komorebi.triggered.connect(
+                lambda checked=False, wm="Komorebi", cmd=self.komorebi_reload: self._run_wm_command(wm, cmd)
+            )
+
+            komorebi_menu.aboutToShow.connect(lambda: qmenu_rounded_corners(komorebi_menu))
+
+            self.menu.addSeparator()
+
+        if self.is_wm_installed("glazewm"):
+            glazewm_menu = self.menu.addMenu("Glazewm")
+            start_glazewm = glazewm_menu.addAction("Start Glazewm")
+            start_glazewm.triggered.connect(
+                lambda checked=False, wm="Glazewm", cmd=self.glazewm_start: self._run_wm_command(wm, cmd)
+            )
+
+            stop_glazewm = glazewm_menu.addAction("Stop Glazewm")
+            stop_glazewm.triggered.connect(
+                lambda checked=False, wm="Glazewm", cmd=self.glazewm_stop: self._run_wm_command(wm, cmd)
+            )
+
+            reload_glazewm = glazewm_menu.addAction("Reload Glazewm")
+            reload_glazewm.triggered.connect(
+                lambda checked=False, wm="Glazewm", cmd=self.glazewm_reload: self._run_wm_command(wm, cmd)
+            )
+
+            glazewm_menu.aboutToShow.connect(lambda: qmenu_rounded_corners(glazewm_menu))
 
             self.menu.addSeparator()
 
@@ -155,27 +200,13 @@ class SystemTrayManager(QSystemTrayIcon):
         exit_action = self.menu.addAction("Exit")
         exit_action.triggered.connect(self._exit_application)
 
-    def is_komorebi_installed(self):
+    def is_wm_installed(self, wm) -> bool:
         try:
-            komorebi_path = shutil.which("komorebi")
-            return komorebi_path is not None
+            wm_path = shutil.which(wm)
+            return wm_path is not None
         except Exception as e:
-            logging.error(f"Error checking komorebi installation: {e}")
+            logging.error(f"Error checking {wm} installation: {e}")
             return False
-
-    def _remove_shortcut(self):
-        # Backward compatibility for old versions, this should be removed in future releases
-        # Check if the shortcut file exists in the startup folder and remove it if it does
-        shortcut_path = os.path.join(OS_STARTUP_FOLDER, SHORTCUT_FILENAME)
-        if os.path.exists(shortcut_path):
-            try:
-                os.remove(shortcut_path)
-            except FileNotFoundError:
-                logging.warning(f"Shortcut file not found: {shortcut_path}")
-            except PermissionError:
-                logging.error(f"Permission denied while trying to remove shortcut: {shortcut_path}")
-            except Exception as e:
-                logging.error(f"An unexpected error occurred while removing shortcut: {e}")
 
     def _enable_startup(self):
         enable_autostart(APP_NAME, AUTOSTART_FILE)
@@ -195,32 +226,20 @@ class SystemTrayManager(QSystemTrayIcon):
         except Exception as e:
             logging.error(f"Failed to open config directory: {e}")
 
-    def _start_komorebi(self):
-        def run_komorebi_start():
+    def _run_wm_command(self, wm, command):
+        def wm_command():
             try:
-                subprocess.run(self.komorebi_start, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True)
+                subprocess.run(
+                    command,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.DEVNULL,
+                    shell=True,
+                    creationflags=subprocess.CREATE_NO_WINDOW,
+                )
             except Exception as e:
-                logging.error(f"Failed to start komorebi: {e}")
+                logging.error(f"Failed to start {wm}: {e}")
 
-        threading.Thread(target=run_komorebi_start).start()
-
-    def _stop_komorebi(self):
-        def run_komorebi_stop():
-            try:
-                subprocess.run(self.komorebi_stop, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True)
-            except Exception as e:
-                logging.error(f"Failed to stop komorebi: {e}")
-
-        threading.Thread(target=run_komorebi_stop).start()
-
-    def _reload_komorebi(self):
-        def run_komorebi_reload():
-            try:
-                subprocess.run(self.komorebi_reload, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True)
-            except Exception as e:
-                logging.error(f"Failed to reload komorebi: {e}")
-
-        threading.Thread(target=run_komorebi_reload).start()
+        threading.Thread(target=wm_command).start()
 
     def _reload_application(self):
         reload_application("Reloading Application from tray...")
@@ -235,23 +254,5 @@ class SystemTrayManager(QSystemTrayIcon):
             logging.error(f"Failed to open browser: {e}")
 
     def _show_about_dialog(self):
-        about_box = QMessageBox()
-        about_box.setWindowTitle("About YASB")
-        icon_path = os.path.join(SCRIPT_PATH, "assets", "images", "app_icon.png")
-        icon = QIcon(icon_path)
-        about_box.setStyleSheet("QLabel#qt_msgboxex_icon_label { margin: 10px 10px 10px 20px; }")
-        about_box.setIconPixmap(icon.pixmap(64, 64))
-        about_box.setWindowIcon(icon)
-        about_text = f"""
-        <div style="font-family:'Segoe UI'">
-        <div style="font-size:24px;font-weight:400;margin-right:60px"><span style="font-weight:bold">YASB</span> Reborn</div>
-        <div style="font-size:13px;font-weight:600;margin-top:8px">{APP_NAME_FULL}</div>
-        <div style="font-size:13px;font-weight:600;">Version: {BUILD_VERSION}</div><br>
-        <div style="margin-top:5px;font-size:13px;font-weight:600;"><a style="text-decoration:none" href="{GITHUB_URL}">YASB on GitHub</a></div>
-        <div style="margin-top:5px;font-size:13px;font-weight:600;"><a style="text-decoration:none" href="{GITHUB_THEME_URL}">YASB Themes</a></div>
-        <div style="margin-top:5px;font-size:13px;font-weight:600;"><a style="text-decoration:none" href="https://discord.gg/qkeunvBFgX">Join Discord</a></div>
-        </div>
-        """
-        about_box.setText(about_text)
-        about_box.setStandardButtons(QMessageBox.StandardButton.Close)
-        about_box.exec()
+        dialog = AboutDialog(self)
+        dialog.exec()

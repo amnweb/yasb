@@ -1,8 +1,11 @@
 import json
 import logging
+import ssl
 import threading
 import time
 import urllib.request
+
+import certifi
 
 from core.utils.utilities import ToastNotifier, app_data_path
 from settings import BUILD_VERSION, SCRIPT_PATH
@@ -32,7 +35,8 @@ class UpdateCheckService:
             return
         try:
             url = "https://api.github.com/repos/amnweb/yasb/releases/latest"
-            with urllib.request.urlopen(url, timeout=10) as response:
+            context = ssl.create_default_context(cafile=certifi.where())
+            with urllib.request.urlopen(url, context=context, timeout=10) as response:
                 data = response.read()
                 release_info = json.loads(data)
                 latest_version = release_info["tag_name"].lstrip("v")

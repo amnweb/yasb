@@ -15,6 +15,7 @@ DEFAULTS = {
     "menu_labels": {
         "shutdown": "Shutdown",
         "restart": "Restart",
+        "hibernate": "Hibernate",
         "logout": "Logout",
         "lock": "Lock",
         "sleep": "Sleep",
@@ -61,6 +62,7 @@ VALIDATION_SCHEMA = {
         "schema": {
             "shutdown": {"type": "string", "default": DEFAULTS["menu_labels"]["shutdown"]},
             "restart": {"type": "string", "default": DEFAULTS["menu_labels"]["restart"]},
+            "hibernate": {"type": "string", "default": DEFAULTS["menu_labels"]["hibernate"]},
             "logout": {"type": "string", "default": DEFAULTS["menu_labels"]["logout"]},
             "lock": {"type": "string", "default": DEFAULTS["menu_labels"]["lock"]},
             "sleep": {"type": "string", "default": DEFAULTS["menu_labels"]["sleep"]},

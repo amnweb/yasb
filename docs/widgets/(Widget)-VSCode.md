@@ -7,9 +7,9 @@
 | `menu_title`         | string  | `<span style='font-weight:bold'>VScode</span> recents` | The title of the menu. |
 | `folder_icon`         | string  | `'\uf114'`                     | The icon for the folders to display in the menu. |
 | `file_icon`         | string  | `'\uf016'`                     | The icon for the files to display in the menu. |
-| `hide_folder_icon` | bool    | `False`                        | Whether to hide the folder icon in the menu. |
-| `hide_file_icon` | bool    | `False`                        | Whether to hide the file icon in the menu. |
-| `truncate_to_root` | bool    | `False`                        | Whether to truncate the path to the projects root directory. |
+| `hide_folder_icon` | bool    | `false`                        | Whether to hide the folder icon in the menu. |
+| `hide_file_icon` | bool    | `false`                        | Whether to hide the file icon in the menu. |
+| `truncate_to_root_dir` | bool    | `false`                        | Whether to truncate the path to the projects root directory. |
 | `max_number_of_folders` | int | `30` | The maximum number of folders to display in the menu. |
 | `max_number_of_files` | int | `30` | The maximum number of files to display in the menu. |
 | `max_field_size` | int | `100` | The maximum number of characters in the title before truncation. |
@@ -17,7 +17,6 @@
 | `modified_date_format` | string | `'Date modified: %Y-%m-%d %H:%M'` | The format for the modified date of the files and folders. |
 | `cli_command` | string | `'code'` | The CLI command to execute when a workspace is clicked, doesn't need to contain folder name. For example, `code`, `windsurf`. |
 | `menu`              | dict    | `{'blur': True, 'round_corners': True, 'round_corners_type': 'normal', 'border_color': 'System', 'alignment': 'right', 'direction': 'down', 'offset_top': 6, 'offset_left': 0}` | Menu settings for the widget. |
-| `container_padding` | dict | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}` | Explicitly set padding inside widget container. |
 | `callbacks` | dict | `{'on_left': 'toggle_menu', 'on_middle': 'do_nothing', 'on_right': 'toggle_label'}` | Callbacks for mouse events on the widget. |
 | `animation` | dict | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}` | Animation settings for the widget. |
 | `container_shadow` | dict   | `None` | Container shadow options. |

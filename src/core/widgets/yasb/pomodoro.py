@@ -4,7 +4,7 @@ import re
 
 from PyQt6.QtCore import QPropertyAnimation, QRectF, Qt, QTimer, pyqtProperty
 from PyQt6.QtGui import QColor, QCursor, QPainter, QPen
-from PyQt6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
 
 from core.utils.utilities import PopupWidget, ToastNotifier, add_shadow, build_progress_widget, build_widget_label
 from core.utils.widgets.animation_manager import AnimationManager
@@ -33,6 +33,7 @@ class PomodoroWidget(BaseWidget):
         self,
         label: str,
         label_alt: str,
+        class_name: str,
         work_duration: int,
         break_duration: int,
         long_break_duration: int,
@@ -52,7 +53,7 @@ class PomodoroWidget(BaseWidget):
         container_shadow: dict = None,
         progress_bar: dict = None,
     ):
-        super().__init__(class_name="pomodoro-widget")
+        super().__init__(class_name=f"pomodoro-widget {class_name}")
 
         self._show_alt_label = False
         self._label_content = label
@@ -92,7 +93,7 @@ class PomodoroWidget(BaseWidget):
         )
 
         # Initialize container
-        self._widget_container = QWidget()
+        self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
         add_shadow(self._widget_container, self._container_shadow)

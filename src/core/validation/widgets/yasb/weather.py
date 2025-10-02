@@ -3,6 +3,7 @@ from typing import Any
 DEFAULTS: dict[str, Any] = {
     "label": "0",
     "label_alt": "0",
+    "class_name": "",
     "update_interval": 3600,
     "hide_decimal": False,
     "location": "",
@@ -56,6 +57,7 @@ DEFAULTS: dict[str, Any] = {
 VALIDATION_SCHEMA: dict[str, Any] = {
     "label": {"type": "string", "default": DEFAULTS["label"]},
     "label_alt": {"type": "string", "default": DEFAULTS["label_alt"]},
+    "class_name": {"type": "string", "required": False, "default": DEFAULTS["class_name"]},
     "update_interval": {"type": "integer", "default": DEFAULTS["update_interval"], "min": 60, "max": 36000000},
     "hide_decimal": {"type": "boolean", "default": DEFAULTS["hide_decimal"]},
     "location": {"type": "string", "default": DEFAULTS["location"]},

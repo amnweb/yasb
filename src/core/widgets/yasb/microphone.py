@@ -15,7 +15,7 @@ from pycaw.pycaw import (
 )
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QWheelEvent
-from PyQt6.QtWidgets import QHBoxLayout, QLabel, QSlider, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QSlider, QVBoxLayout
 
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import PopupWidget, add_shadow, build_progress_widget, build_widget_label
@@ -55,6 +55,7 @@ class MicrophoneWidget(BaseWidget):
         self,
         label: str,
         label_alt: str,
+        class_name: str,
         mute_text: str,
         tooltip: bool,
         scroll_step: int,
@@ -67,7 +68,7 @@ class MicrophoneWidget(BaseWidget):
         container_shadow: dict = None,
         progress_bar: dict = None,
     ):
-        super().__init__(class_name="microphone-widget")
+        super().__init__(class_name=f"microphone-widget {class_name}")
 
         self._initializing = True
         self.audio_endpoint = None
@@ -89,12 +90,12 @@ class MicrophoneWidget(BaseWidget):
         self.progress_widget = None
         self.progress_widget = build_progress_widget(self, self._progress_bar)
 
-        self._widget_container_layout: QHBoxLayout = QHBoxLayout()
+        self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
         self._widget_container_layout.setContentsMargins(
             self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
         )
-        self._widget_container: QWidget = QWidget()
+        self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
         add_shadow(self._widget_container, self._container_shadow)

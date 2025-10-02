@@ -2,6 +2,7 @@ DEFAULTS = {
     "gpu_index": 0,
     "label": "{info[utilization]}%",
     "label_alt": "{info[mem_used]}/{info[mem_total]}",
+    "class_name": "",
     "update_interval": 2000,
     "histogram_icons": ["\u2581", "\u2581", "\u2582", "\u2583", "\u2584", "\u2585", "\u2586", "\u2587", "\u2588"],
     "histogram_num_columns": 10,
@@ -9,6 +10,7 @@ DEFAULTS = {
     "container_padding": {"top": 0, "left": 0, "bottom": 0, "right": 0},
     "callbacks": {"on_left": "toggle_label", "on_middle": "do_nothing", "on_right": "do_nothing"},
     "gpu_thresholds": {"low": 30, "medium": 60, "high": 90},
+    "hide_decimal": False,
 }
 
 VALIDATION_SCHEMA = {
@@ -20,6 +22,7 @@ VALIDATION_SCHEMA = {
     },
     "label": {"type": "string", "default": DEFAULTS["label"]},
     "label_alt": {"type": "string", "default": DEFAULTS["label_alt"]},
+    "class_name": {"type": "string", "required": False, "default": DEFAULTS["class_name"]},
     "update_interval": {"type": "integer", "default": DEFAULTS["update_interval"], "min": 2000, "max": 60000},
     "histogram_icons": {
         "type": "list",
@@ -121,4 +124,5 @@ VALIDATION_SCHEMA = {
         },
         "default": DEFAULTS["gpu_thresholds"],
     },
+    "hide_decimal": {"type": "boolean", "default": DEFAULTS["hide_decimal"]},
 }

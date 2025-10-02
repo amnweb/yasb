@@ -3,7 +3,7 @@ import re
 
 from humanize import naturalsize
 from PyQt6.QtCore import QTimer
-from PyQt6.QtWidgets import QHBoxLayout, QLabel, QWidget
+from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel
 
 from core.utils.utilities import add_shadow, build_progress_widget, build_widget_label
 from core.utils.widgets.animation_manager import AnimationManager
@@ -21,6 +21,7 @@ class MemoryWidget(BaseWidget):
         self,
         label: str,
         label_alt: str,
+        class_name: str,
         update_interval: int,
         histogram_icons: list[str],
         animation: dict[str, str],
@@ -30,8 +31,9 @@ class MemoryWidget(BaseWidget):
         label_shadow: dict = None,
         container_shadow: dict = None,
         progress_bar: dict = None,
+        hide_decimal: bool = False,
     ):
-        super().__init__(class_name="memory-widget")
+        super().__init__(class_name=f"memory-widget {class_name}")
         self._memory_thresholds = memory_thresholds
         self._histogram_icons = histogram_icons
         self._show_alt_label = False
@@ -42,17 +44,18 @@ class MemoryWidget(BaseWidget):
         self._label_shadow = label_shadow
         self._container_shadow = container_shadow
         self._progress_bar = progress_bar
+        self._hide_decimal = hide_decimal
 
         self.progress_widget = None
         self.progress_widget = build_progress_widget(self, self._progress_bar)
         # Construct container
-        self._widget_container_layout: QHBoxLayout = QHBoxLayout()
+        self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
         self._widget_container_layout.setContentsMargins(
             self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
         )
         # Initialize container
-        self._widget_container: QWidget = QWidget()
+        self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
         add_shadow(self._widget_container, self._container_shadow)
@@ -125,16 +128,18 @@ class MemoryWidget(BaseWidget):
         label_parts = [part for part in label_parts if part]
         widget_index = 0
 
+        _round = lambda value: round(value) if self._hide_decimal else value
+        _naturalsize = lambda value: naturalsize(value, True, True, "%.0f" if self._hide_decimal else "%.1f")
         label_options = {
-            "{virtual_mem_free}": naturalsize(virtual_mem.free, True, True),
-            "{virtual_mem_percent}": virtual_mem.percent,
-            "{virtual_mem_total}": naturalsize(virtual_mem.total, True, True),
-            "{virtual_mem_avail}": naturalsize(virtual_mem.available, True, True),
-            "{virtual_mem_used}": naturalsize(virtual_mem.used, True, True),
-            "{virtual_mem_outof}": f"{naturalsize(virtual_mem.used, True, True)} / {naturalsize(virtual_mem.total, True, True)}",
-            "{swap_mem_free}": naturalsize(swap_mem.free, True, True),
-            "{swap_mem_percent}": swap_mem.percent,
-            "{swap_mem_total}": naturalsize(swap_mem.total, True, True),
+            "{virtual_mem_free}": _naturalsize(virtual_mem.free),
+            "{virtual_mem_percent}": _round(virtual_mem.percent),
+            "{virtual_mem_total}": _naturalsize(virtual_mem.total),
+            "{virtual_mem_avail}": _naturalsize(virtual_mem.available),
+            "{virtual_mem_used}": _naturalsize(virtual_mem.used),
+            "{virtual_mem_outof}": f"{_naturalsize(virtual_mem.used)} / {_naturalsize(virtual_mem.total)}",
+            "{swap_mem_free}": _naturalsize(swap_mem.free),
+            "{swap_mem_percent}": _round(swap_mem.percent),
+            "{swap_mem_total}": _naturalsize(swap_mem.total),
             "{histogram}": "".join([self._get_histogram_bar(virtual_mem.percent, 0, 100)]),
         }
 

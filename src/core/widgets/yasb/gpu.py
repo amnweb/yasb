@@ -7,7 +7,7 @@ from subprocess import PIPE, Popen
 
 from humanize import naturalsize
 from PyQt6.QtCore import QTimer
-from PyQt6.QtWidgets import QHBoxLayout, QLabel, QWidget
+from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel
 
 from core.utils.utilities import add_shadow, build_progress_widget, build_widget_label
 from core.utils.widgets.animation_manager import AnimationManager
@@ -28,6 +28,7 @@ class GpuWidget(BaseWidget):
         gpu_index: int,
         label: str,
         label_alt: str,
+        class_name: str,
         histogram_icons: list[str],
         histogram_num_columns: int,
         update_interval: int,
@@ -38,8 +39,9 @@ class GpuWidget(BaseWidget):
         label_shadow: dict = None,
         container_shadow: dict = None,
         progress_bar: dict = None,
+        hide_decimal: bool = False,
     ):
-        super().__init__(class_name="gpu-widget")
+        super().__init__(class_name=f"gpu-widget {class_name}")
         self._gpu_index = gpu_index
         self._histogram_icons = histogram_icons
         self._gpu_util_history = deque([0] * histogram_num_columns, maxlen=histogram_num_columns)
@@ -53,17 +55,18 @@ class GpuWidget(BaseWidget):
         self._container_shadow = container_shadow
         self._gpu_thresholds = gpu_thresholds
         self._progress_bar = progress_bar
+        self._hide_decimal = hide_decimal
 
         self.progress_widget = None
         self.progress_widget = build_progress_widget(self, self._progress_bar)
 
-        self._widget_container_layout: QHBoxLayout = QHBoxLayout()
+        self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
         self._widget_container_layout.setContentsMargins(
             self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
         )
         # Initialize container
-        self._widget_container: QWidget = QWidget()
+        self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
         add_shadow(self._widget_container, self._container_shadow)
@@ -100,6 +103,7 @@ class GpuWidget(BaseWidget):
             mem_used = 0
             mem_free = 0
             temp = 0
+            fan_speed = 0
 
         gpu_data = DummyGpu()
         self._update_label(gpu_data)
@@ -127,7 +131,7 @@ class GpuWidget(BaseWidget):
             gpu = Popen(
                 [
                     nvidia_smi,
-                    "--query-gpu=index,utilization.gpu,memory.total,memory.used,memory.free,temperature.gpu",
+                    "--query-gpu=index,utilization.gpu,memory.total,memory.used,memory.free,temperature.gpu,fan.speed",
                     "--format=csv,noheader,nounits",
                 ],
                 stdout=PIPE,
@@ -153,6 +157,7 @@ class GpuWidget(BaseWidget):
                             mem_used = int(fields[3])
                             mem_free = int(fields[4])
                             temp = int(fields[5])
+                            fan_speed = int(fields[6]) if fields[6].isdigit() else 0
 
                         inst._update_label(GpuData)
                     else:
@@ -169,13 +174,15 @@ class GpuWidget(BaseWidget):
         self._gpu_util_history.append(gpu_data.utilization)
         self._gpu_mem_history.append(gpu_data.mem_used)
 
+        _naturalsize = lambda value: naturalsize(value, True, True, "%.0f" if self._hide_decimal else "%.1f")
         gpu_info = {
             "index": gpu_data.index,
             "utilization": gpu_data.utilization,
-            "mem_total": naturalsize(gpu_data.mem_total * 1024 * 1024, True, True),
-            "mem_used": naturalsize(gpu_data.mem_used * 1024 * 1024, True, True),
-            "mem_free": naturalsize(gpu_data.mem_free * 1024 * 1024, True, True),
+            "mem_total": _naturalsize(gpu_data.mem_total * 1024 * 1024),
+            "mem_used": _naturalsize(gpu_data.mem_used * 1024 * 1024),
+            "mem_free": _naturalsize(gpu_data.mem_free * 1024 * 1024),
             "temp": gpu_data.temp,
+            "fan_speed": gpu_data.fan_speed,
             "histograms": {
                 "utilization": "".join([self._get_histogram_bar(val, 0, 100) for val in self._gpu_util_history]),
                 "mem_used": "".join(

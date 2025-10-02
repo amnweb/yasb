@@ -89,13 +89,13 @@ class ActiveLayoutWidget(BaseWidget):
         add_shadow(self._active_layout_text, self._label_shadow)
         self._animation = animation
         # Construct container
-        self._widget_container_layout: QHBoxLayout = QHBoxLayout()
+        self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
         self._widget_container_layout.setContentsMargins(
             self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
         )
         # Initialize container
-        self._widget_container: QWidget = QWidget()
+        self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
         add_shadow(self._widget_container, self._container_shadow)
@@ -285,6 +285,28 @@ class ActiveLayoutWidget(BaseWidget):
 
         for event_type in active_layout_change_event_watchlist:
             self._event_service.register_event(event_type, self.k_signal_layout_change)
+        try:
+            self.destroyed.connect(self._on_destroyed)  # type: ignore[attr-defined]
+        except Exception:
+            pass
+
+    def _on_destroyed(self, *args):
+        try:
+            self._event_service.unregister_event(KomorebiEvent.KomorebiConnect, self.k_signal_connect)
+            self._event_service.unregister_event(KomorebiEvent.KomorebiDisconnect, self.k_signal_disconnect)
+            self._event_service.unregister_event(KomorebiEvent.KomorebiUpdate, self.k_signal_update)
+            for event_type in [
+                KomorebiEvent.ChangeLayout,
+                KomorebiEvent.FocusWorkspaceNumber,
+                KomorebiEvent.FocusMonitorWorkspaceNumber,
+                KomorebiEvent.TogglePause,
+                KomorebiEvent.ToggleTiling,
+                KomorebiEvent.ToggleMonocle,
+                KomorebiEvent.ToggleMaximize,
+            ]:
+                self._event_service.unregister_event(event_type, self.k_signal_layout_change)
+        except Exception:
+            pass
 
     def _on_komorebi_connect_event(self, state: dict) -> None:
         self._update_active_layout(state, is_connect_event=True)

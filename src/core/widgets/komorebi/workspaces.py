@@ -3,13 +3,14 @@ from contextlib import suppress
 from typing import Dict, List, Literal
 
 from PIL import Image
-from PyQt6.QtCore import Qt, QTimer, pyqtSignal
+from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QCursor, QImage, QMouseEvent, QPixmap
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QWidget
 
 from core.event_enums import KomorebiEvent
 from core.event_service import EventService
 from core.utils.utilities import add_shadow
+from core.utils.widgets.komorebi.animation import KomorebiAnimation
 from core.utils.widgets.komorebi.client import KomorebiClient
 from core.utils.win32.app_icons import get_window_icon
 from core.utils.win32.utilities import get_monitor_hwnd, get_process_info
@@ -64,7 +65,9 @@ class WorkspaceButton(QPushButton):
             button.setProperty("class", new_class)
             button.setStyleSheet("")
 
-    def update_and_redraw(self, status: WorkspaceStatus):
+    def update_and_redraw(self, status: WorkspaceStatus, lock_width: bool = False):
+        # Lock current visual width so style/class changes don't cause a jump
+        prev_width = self.width() if lock_width else None
         self.status = status
         self.setProperty("class", f"ws-btn {status.lower()}")
         if status == WORKSPACE_STATUS_ACTIVE:
@@ -74,46 +77,14 @@ class WorkspaceButton(QPushButton):
         else:
             self.setText(self.default_label)
         self.setStyleSheet("")
+        if lock_width and prev_width is not None:
+            self.setFixedWidth(prev_width)
 
     def activate_workspace(self):
         try:
             self.komorebic.activate_workspace(self.parent_widget._komorebi_screen["index"], self.workspace_index)
-            if self._animation:
-                pass
-                # self.animate_buttons()
         except Exception:
             logging.exception(f"Failed to focus workspace at index {self.workspace_index}")
-
-    def animate_buttons(self, duration=200, step=30):
-        # Store the initial width if not already stored (to enable reverse animations)
-        if not hasattr(self, "_initial_width"):
-            self._initial_width = self.width()
-
-        self._current_width = self.width()
-        target_width = self.sizeHint().width()
-
-        step_duration = int(duration / step)
-        width_increment = (target_width - self._current_width) / step
-        self._current_step = 0
-
-        def update_width():
-            if self._current_step < step:
-                self._current_width += width_increment
-                self.setFixedWidth(int(self._current_width))
-                self._current_step += 1
-            else:
-                # Animation done: stop timer and set to target exactly
-                self._animation_timer.stop()
-                self.setFixedWidth(target_width)
-
-        # Stop any existing timer before starting a new one to prevent conflicts
-        if hasattr(self, "_animation_timer") and self._animation_timer.isActive():
-            self._animation_timer.stop()
-
-        # Parent the timer to the widget to avoid potential memory leaks
-        self._animation_timer = QTimer(self)
-        self._animation_timer.timeout.connect(update_width)
-        self._animation_timer.start(step_duration)
 
 
 class WorkspaceButtonWithIcons(QFrame):
@@ -167,7 +138,8 @@ class WorkspaceButtonWithIcons(QFrame):
             button.setProperty("class", new_class)
             button.setStyleSheet("")
 
-    def update_and_redraw(self, status: WorkspaceStatus):
+    def update_and_redraw(self, status: WorkspaceStatus, lock_width: bool = False):
+        prev_width = self.width() if lock_width else None
         self.status = status
         self.setProperty("class", f"ws-btn {status.lower()}")
         if status == WORKSPACE_STATUS_ACTIVE:
@@ -177,6 +149,8 @@ class WorkspaceButtonWithIcons(QFrame):
         else:
             self.text_label.setText(self.default_label)
         self.setStyleSheet("")
+        if lock_width and prev_width is not None:
+            self.setFixedWidth(prev_width)
 
     def update_icons(self, icons: Dict[int, QPixmap] = None, update_width: bool = True):
         if icons:
@@ -227,7 +201,8 @@ class WorkspaceButtonWithIcons(QFrame):
 
         if curr_icon_count < prev_icon_count and update_width:
             if self.parent_widget._animation and self._animation_initialized:
-                self.animate_buttons()
+                # Delegate width animation to central animator (use defaults)
+                KomorebiAnimation.animate_width(self)
 
     def update_icon_by_hwnd(self, hwnd: int):
         if hwnd in self.icons.keys():
@@ -238,49 +213,8 @@ class WorkspaceButtonWithIcons(QFrame):
     def activate_workspace(self):
         try:
             self.komorebic.activate_workspace(self.parent_widget._komorebi_screen["index"], self.workspace_index)
-            if self._animation:
-                pass
-                # self.animate_buttons()
         except Exception:
             logging.exception(f"Failed to focus workspace at index {self.workspace_index}")
-
-    def animate_buttons(self, duration=200, step=30):
-        # Store the initial width if not already stored (to enable reverse animations)
-        if not hasattr(self, "_initial_width"):
-            self._initial_width = self.width()
-
-        self._current_width = self.width()
-        target_width = self.sizeHint().width()
-        if (
-            not self.parent_widget._workspace_app_icons["enabled_active"]
-            and self.parent_widget._workspace_app_icons["enabled_populated"]
-        ):
-            for icon_label in self.icon_labels:
-                target_width += icon_label.sizeHint().width()
-
-        step_duration = int(duration / step)
-        width_increment = (target_width - self._current_width) / step
-        self._current_step = 0
-
-        def update_width():
-            if self._current_step < step:
-                self._current_width += width_increment
-                self.setFixedWidth(int(self._current_width))
-                self._current_step += 1
-            else:
-                # Animation done: stop timer and set to target exactly
-                self._animation_timer.stop()
-                self.setMinimumWidth(target_width)
-                self.setMaximumWidth(16777215)
-
-        # Stop any existing timer before starting a new one to prevent conflicts
-        if hasattr(self, "_animation_timer") and self._animation_timer.isActive():
-            self._animation_timer.stop()
-
-        # Parent the timer to the widget to avoid potential memory leaks
-        self._animation_timer = QTimer(self)
-        self._animation_timer.timeout.connect(update_width)
-        self._animation_timer.start(step_duration)
 
 
 class WorkspaceWidget(BaseWidget):
@@ -370,13 +304,13 @@ class WorkspaceWidget(BaseWidget):
         add_shadow(self._offline_text, self._label_shadow)
         self._offline_text.setProperty("class", "offline-status")
         # Construct container which holds workspace buttons
-        self._workspace_container_layout: QHBoxLayout = QHBoxLayout()
+        self._workspace_container_layout = QHBoxLayout()
         self._workspace_container_layout.setSpacing(0)
         self._workspace_container_layout.setContentsMargins(
             self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
         )
         self._workspace_container_layout.addWidget(self._offline_text)
-        self._workspace_container: QWidget = QWidget()
+        self._workspace_container = QFrame()
         self._workspace_container.setLayout(self._workspace_container_layout)
         self._workspace_container.setProperty("class", "widget-container")
         add_shadow(self._workspace_container, self._container_shadow)
@@ -401,7 +335,6 @@ class WorkspaceWidget(BaseWidget):
         self._reverse_scroll_direction = reverse_scroll_direction
         self._icon_cache = dict()
         self.dpi = None
-        self._icon_update_retry_count = 0
 
         self._register_signals_and_events()
 
@@ -412,6 +345,18 @@ class WorkspaceWidget(BaseWidget):
         self._event_service.register_event(KomorebiEvent.KomorebiConnect, self.k_signal_connect)
         self._event_service.register_event(KomorebiEvent.KomorebiDisconnect, self.k_signal_disconnect)
         self._event_service.register_event(KomorebiEvent.KomorebiUpdate, self.k_signal_update)
+        try:
+            self.destroyed.connect(self._on_destroyed)  # type: ignore[attr-defined]
+        except Exception:
+            pass
+
+    def _on_destroyed(self, *args):
+        try:
+            self._event_service.unregister_event(KomorebiEvent.KomorebiConnect, self.k_signal_connect)
+            self._event_service.unregister_event(KomorebiEvent.KomorebiDisconnect, self.k_signal_disconnect)
+            self._event_service.unregister_event(KomorebiEvent.KomorebiUpdate, self.k_signal_update)
+        except Exception:
+            pass
 
     def _reset(self):
         self._komorebi_state = None
@@ -587,9 +532,11 @@ class WorkspaceWidget(BaseWidget):
         else:
             workspace_btn.show()
             if workspace_btn.status != workspace_status:
-                workspace_btn.update_and_redraw(workspace_status)
-                if self._animation and workspace_btn._animation_initialized:
-                    workspace_btn.animate_buttons()
+                # First-time setup apply state without animation to avoid initial jump
+                if not workspace_btn._animation_initialized or not self._animation:
+                    workspace_btn.update_and_redraw(workspace_status)
+                else:
+                    KomorebiAnimation.animate_state_transition(workspace_btn, workspace_status)
             workspace_btn.update_visible_buttons()
         self._get_workspace_layer(workspace_index)
         workspace_btn._animation_initialized = True
@@ -723,7 +670,7 @@ class WorkspaceWidget(BaseWidget):
                     return None
 
             self.dpi = self.screen().devicePixelRatio()
-            cache_key = (hwnd, pid, self.dpi)
+            cache_key = (hwnd, self.dpi)
 
             if cache_key in self._icon_cache and not ignore_cache:
                 icon_img = self._icon_cache[cache_key]
@@ -731,7 +678,6 @@ class WorkspaceWidget(BaseWidget):
                 icon_img = get_window_icon(hwnd)
 
             if icon_img:
-                self._icon_update_retry_count = 0
                 icon_img = icon_img.resize(
                     (
                         int(self._workspace_app_icons["size"] * self.dpi),
@@ -743,20 +689,9 @@ class WorkspaceWidget(BaseWidget):
                 qimage = QImage(icon_img.tobytes(), icon_img.width, icon_img.height, QImage.Format.Format_RGBA8888)
                 pixmap = QPixmap.fromImage(qimage)
                 pixmap.setDevicePixelRatio(self.dpi)
-                if process["name"] == "ApplicationFrameHost.exe":
-                    try:
-                        self._workspace_buttons[workspace_index].update_icons(icons={hwnd: pixmap})
-                    except IndexError:
-                        return pixmap
-                else:
-                    return pixmap
-            elif process["name"] == "ApplicationFrameHost.exe":
-                if self._icon_update_retry_count < 10:
-                    self._icon_update_retry_count += 1
-                    QTimer.singleShot(100, lambda: self._get_app_icon(hwnd, workspace_index, ignore_cache))
-                else:
-                    self._icon_update_retry_count = 0
-
+                return pixmap
+            else:
+                return None
         except Exception:
             if DEBUG:
                 logging.exception(f"Failed to get icons for window with HWND {hwnd}")

@@ -1,6 +1,7 @@
 DEFAULTS = {
     "label": "\uf252 {remaining}",
     "label_alt": "{session}/{total_sessions} - {remaining}",
+    "class_name": "",
     "work_duration": 25,
     "break_duration": 5,
     "long_break_duration": 15,
@@ -39,6 +40,7 @@ DEFAULTS = {
 VALIDATION_SCHEMA = {
     "label": {"type": "string", "default": DEFAULTS["label"]},
     "label_alt": {"type": "string", "default": DEFAULTS["label_alt"]},
+    "class_name": {"type": "string", "required": False, "default": DEFAULTS["class_name"]},
     "work_duration": {"type": "integer", "min": 1, "default": DEFAULTS["work_duration"]},
     "break_duration": {"type": "integer", "min": 1, "default": DEFAULTS["break_duration"]},
     "long_break_duration": {"type": "integer", "min": 1, "default": DEFAULTS["long_break_duration"]},

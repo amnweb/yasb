@@ -49,6 +49,9 @@ Valid options are:
 | `watch_config`         | boolean    | `true`        | Reload bar when config is changed. |
 | `debug`      | boolean  | `false`   | Enable debug mode to see more logs |
 | `update_check`      | boolean  | `true`   | Enable automatic update check. This works only if the application is installed. |
+| `show_systray`      | boolean  | `true`   | Show or hide the YASB system tray icon. |
+| `komorebi`      | object  | [See below](#komorebi-settings-for-tray-menu)   | Komorebi configuration for tray menu. |
+| `glazewm`      | object  | [See below](#glazewm-settings-for-tray-menu)   | Glazewm configuration for tray menu. |
 
 
 ## Komorebi settings for tray menu
@@ -57,6 +60,14 @@ Valid options are:
 | `start_command`         | string | `"komorebic start --whkd"` | Start komorebi with --whkd and default config location. |
 | `stop_command`         | string    | `"komorebic stop --whkd"` | Stop komorebi. |
 | `reload_command`      | string  | `"komorebic reload-configuration"` | Reload komorebi configuration.|
+
+
+## Glazewm settings for tray menu
+| Option            | Type    | Default       | Description |
+|-------------------|---------|---------------|-------------|
+| `start_command`         | string | `"glazewm.exe start"` | Start
+| `stop_command`         | string    | `"glazewm.exe command wm-exit"` | Stop glazewm. |
+| `reload_command`      | string  | `"glazewm.exe command wm-exit && glazewm.exe start"` | Reload glazewm configuration.|
 
 
 ## Status Bar Configuration

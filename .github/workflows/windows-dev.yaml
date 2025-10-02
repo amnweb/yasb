@@ -3,30 +3,42 @@ name: Build Dev Release
 on:
   workflow_dispatch:
   pull_request:
-    types: [closed]
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - ready_for_review
     branches:
       - main
       - feature/*
       - dev
 
 permissions:
-  contents: write
+  contents: read
+
+env:
+  PYTHON_VERSION: '3.12'
 
 jobs:
   build:
+    permissions:
+      contents: write
     runs-on: windows-latest
-    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' && github.event.action != 'closed')
     
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
+        ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.ref }}
 
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.12'
+        python-version: ${{ env.PYTHON_VERSION }}
 
     - name: Create virtual environment
       run: |
@@ -41,16 +53,20 @@ jobs:
         echo "BUILD_DATETIME=$currentDateTime" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
         $commitHash = git rev-parse --short HEAD
         echo "COMMIT_HASH=$commitHash" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        # Also expose as step outputs for use in later expression fields
+        echo "BUILD_DATETIME=$currentDateTime" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+        echo "COMMIT_HASH=$commitHash" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
       shell: pwsh
 
-    - name: Update Release Channel for Dev Build
+    - name: Update Release Channel
       run: |
         .\venv\Scripts\Activate
         $settingsPath = "src/settings.py"
         $content = Get-Content $settingsPath -Raw
-        $content = $content -replace 'RELEASE_CHANNEL = "stable"', 'RELEASE_CHANNEL = "dev-${{ env.COMMIT_HASH }}"'
+        $replacement = 'RELEASE_CHANNEL = "dev-' + $env:COMMIT_HASH + '"'
+        $content = $content -replace 'RELEASE_CHANNEL = "stable"', $replacement
         Set-Content -Path $settingsPath -Value $content -NoNewline
-        echo "Updated RELEASE_CHANNEL to dev-${{ env.COMMIT_HASH }}"
+        Write-Host "Updated RELEASE_CHANNEL to dev-$env:COMMIT_HASH"
       shell: pwsh
 
     - name: Activate virtual environment and install dependencies
@@ -61,11 +77,147 @@ jobs:
         pip install --force --no-cache --upgrade cx_Freeze==7.2.10
       shell: pwsh
 
+    - name: Build EXE
+      run: |
+        .\venv\Scripts\Activate
+        cd src
+        python build.py build
+      shell: pwsh
+
+    - name: Upload unsigned EXE artifacts
+      if: github.event_name == 'workflow_dispatch'
+      uses: actions/upload-artifact@v4
+      with:
+        name: unsigned-exes
+        path: |
+          src/dist/yasb.exe
+          src/dist/yasbc.exe
+          src/dist/yasb_themes.exe
+
+    - name: Get unsigned-exes artifact id
+      if: github.event_name == 'workflow_dispatch'
+      id: get_exes_artifact
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ secrets.PAT }}
+        script: |
+          const { owner, repo } = context.repo;
+          const run_id = context.runId;
+          const res = await github.rest.actions.listWorkflowRunArtifacts({ owner, repo, run_id });
+          const artifact = res.data.artifacts.find(a => a.name === 'unsigned-exes');
+          if (!artifact) throw new Error('unsigned-exes artifact not found');
+          return artifact.id;
+
+    - name: Submit EXE signing request
+      if: github.event_name == 'workflow_dispatch'
+      id: sign_exes
+      uses: signpath/github-action-submit-signing-request@v1
+      with:
+        api-token: '${{ secrets.SIGN_TOKEN }}'
+        organization-id: '9efb6764-d1fc-46c5-b050-5ef07bb67a8c'
+        project-slug: 'yasb'
+        signing-policy-slug: '${{ secrets.SIGN_POLICY_SLUG }}'
+        artifact-configuration-slug: 'signing_executable'
+        github-artifact-id: '${{ steps.get_exes_artifact.outputs.result }}'
+        wait-for-completion: 'true'
+        output-artifact-directory: 'src/signed'
+
+    - name: Replace unsigned EXE with signed
+      if: github.event_name == 'workflow_dispatch' && steps.sign_exes.outcome == 'success'
+      run: |
+        .\venv\Scripts\Activate
+        $signedDir = 'src/signed'
+        if (-not (Test-Path $signedDir)) {
+          Write-Host "Signed artifacts directory $signedDir not found. Ensure SignPath places signed files there.";
+          exit 1
+        }
+        # Copy signed EXEs into the distribution folder; fail if none found
+        $signedExes = Get-ChildItem -Path $signedDir -File -Filter '*.exe' -Recurse -ErrorAction SilentlyContinue
+        if ($null -eq $signedExes -or $signedExes.Count -eq 0) {
+          Write-Error "No signed .exe files found in $signedDir after extraction. Failing the job."
+          exit 1
+        }
+        Write-Host "Copying signed EXEs from $signedDir to src/dist"
+        foreach ($f in $signedExes) {
+          Copy-Item -Path $f.FullName -Destination (Join-Path 'src/dist' $f.Name) -Force
+        }
+        # Clean up signed directory after successful copy
+        try {
+          Get-ChildItem -Path $signedDir -Recurse -Force | Remove-Item -Force -Recurse
+          Write-Host "Cleaned up $signedDir"
+        } catch {
+          Write-Warning "Failed to clean up ${signedDir}: $($_.Exception.Message)"
+        }
+      shell: pwsh
+
     - name: Build MSI
       run: |
         .\venv\Scripts\Activate
         cd src
         python build.py bdist_msi
+      shell: pwsh
+
+    - name: Upload unsigned MSI
+      if: github.event_name == 'workflow_dispatch'
+      uses: actions/upload-artifact@v4
+      with:
+        name: unsigned-msi
+        path: src/dist/out/*.msi
+
+    - name: Get unsigned-msi artifact id
+      if: github.event_name == 'workflow_dispatch'
+      id: get_msi_artifact
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ secrets.PAT }}
+        script: |
+          const { owner, repo } = context.repo;
+          const run_id = context.runId;
+          const res = await github.rest.actions.listWorkflowRunArtifacts({ owner, repo, run_id });
+          const artifact = res.data.artifacts.find(a => a.name === 'unsigned-msi');
+          if (!artifact) throw new Error('unsigned-msi artifact not found');
+          return artifact.id;
+
+    - name: Submit MSI signing request
+      if: github.event_name == 'workflow_dispatch'
+      id: sign_msi
+      uses: signpath/github-action-submit-signing-request@v1
+      with:
+        api-token: '${{ secrets.SIGN_TOKEN }}'
+        organization-id: '9efb6764-d1fc-46c5-b050-5ef07bb67a8c'
+        project-slug: 'yasb'
+        signing-policy-slug: '${{ secrets.SIGN_POLICY_SLUG }}'
+        artifact-configuration-slug: 'signing_installer'
+        github-artifact-id: '${{ steps.get_msi_artifact.outputs.result }}'
+        wait-for-completion: 'true'
+        output-artifact-directory: 'src/signed'
+
+    - name: Replace unsigned MSI with signed
+      if: github.event_name == 'workflow_dispatch' && steps.sign_msi.outcome == 'success'
+      run: |
+        .\venv\Scripts\Activate
+        $signedDir = 'src/signed'
+        if (-not (Test-Path $signedDir)) {
+          Write-Host "Signed artifacts directory $signedDir not found. Ensure SignPath places signed files there.";
+          exit 1
+        }
+        # Copy signed MSIs into the output folder; fail if none found
+        $signedMsis = Get-ChildItem -Path $signedDir -File -Filter '*.msi' -Recurse -ErrorAction SilentlyContinue
+        if ($null -eq $signedMsis -or $signedMsis.Count -eq 0) {
+          Write-Error "No signed .msi files found in $signedDir after extraction. Failing the job."
+          exit 1
+        }
+        Write-Host "Copying signed MSIs from $signedDir to src/dist/out"
+        foreach ($f in $signedMsis) {
+          Copy-Item -Path $f.FullName -Destination (Join-Path 'src/dist/out' $f.Name) -Force
+        }
+        # Clean up signed directory after successful copy
+        try {
+          Get-ChildItem -Path $signedDir -Recurse -Force | Remove-Item -Force -Recurse
+          Write-Host "Cleaned up $signedDir"
+        } catch {
+          Write-Warning "Failed to clean up ${signedDir}: $($_.Exception.Message)"
+        }
       shell: pwsh
 
     - name: Rename Artifacts File
@@ -103,10 +255,18 @@ jobs:
     - name: Upload Artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: yasb-dev-${{ env.COMMIT_HASH }}
+        name: yasb-dev-${{ steps.get_info.outputs.COMMIT_HASH }}
         path: |
           src/dist/out/*.msi
         retention-days: 10
+
+    - name: Delete Artifacts
+      if: github.event_name == 'workflow_dispatch'
+      uses: geekyeggo/delete-artifact@v5
+      with:
+        name: |
+          unsigned-*
+          signed-*
 
     - name: Delete existing dev release
       if: github.event_name == 'workflow_dispatch'
@@ -124,7 +284,7 @@ jobs:
       if: github.event_name == 'workflow_dispatch'
       uses: softprops/action-gh-release@v1
       with:
-        name: YASB Pre-release (${{ env.COMMIT_HASH }})
+        name: YASB Pre-release (${{ steps.get_info.outputs.COMMIT_HASH }})
         tag_name: dev
         prerelease: true
         files: |

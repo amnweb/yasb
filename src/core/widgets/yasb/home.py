@@ -3,7 +3,7 @@ import os
 import subprocess
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QHBoxLayout, QLabel, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
 from core.utils.utilities import PopupWidget, add_shadow, build_widget_label
 from core.utils.widgets.animation_manager import AnimationManager
@@ -58,13 +58,13 @@ class HomeWidget(BaseWidget):
         self._label_shadow = label_shadow
         self._container_shadow = container_shadow
         # Construct container
-        self._widget_container_layout: QHBoxLayout = QHBoxLayout()
+        self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
         self._widget_container_layout.setContentsMargins(
             self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
         )
         # Initialize container
-        self._widget_container: QWidget = QWidget()
+        self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
         add_shadow(self._widget_container, self._container_shadow)
@@ -121,6 +121,7 @@ class HomeWidget(BaseWidget):
             self._menu._add_separator(main_layout)
 
         if self._power_menu:
+            self._add_menu_item(main_layout, self._menu_labels["hibernate"], lambda: self.power_operations.hibernate())
             self._add_menu_item(main_layout, self._menu_labels["sleep"], lambda: self.power_operations.sleep())
             self._add_menu_item(main_layout, self._menu_labels["restart"], lambda: self.power_operations.restart())
             self._add_menu_item(main_layout, self._menu_labels["shutdown"], lambda: self.power_operations.shutdown())
@@ -157,8 +158,8 @@ class HomeWidget(BaseWidget):
         # Add click event
         def mouse_press_handler(event):
             if event.button() == Qt.MouseButton.LeftButton:
-                triggered_func()
                 self._menu.hide()
+                triggered_func()
 
         item.mousePressEvent = mouse_press_handler
         layout.addWidget(item)

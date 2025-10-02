@@ -1,14 +1,31 @@
 import logging
 
-from PyQt6.QtCore import Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import QCursor
-from PyQt6.QtWidgets import QFileDialog, QHBoxLayout, QInputDialog, QLabel, QPushButton, QVBoxLayout, QWidget
+from PyQt6.QtCore import (
+    QEasingCurve,
+    QParallelAnimationGroup,
+    QPropertyAnimation,
+    Qt,
+    QTimer,
+    pyqtSignal,
+)
+from PyQt6.QtGui import QAction, QCursor
+from PyQt6.QtWidgets import (
+    QFileDialog,
+    QFrame,
+    QHBoxLayout,
+    QInputDialog,
+    QMenu,
+    QPushButton,
+)
 from pyvda import VirtualDesktop, get_virtual_desktops, set_wallpaper_for_all_desktops
 
 from core.event_service import EventService
-from core.utils.utilities import PopupWidget, add_shadow, is_windows_10
+from core.utils.utilities import add_shadow, is_windows_10
+from core.utils.win32.utilities import qmenu_rounded_corners
 from core.validation.widgets.yasb.windows_desktops import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
+
+logging.getLogger("comtypes").setLevel(logging.INFO)
 
 
 class WorkspaceButton(QPushButton):
@@ -22,9 +39,11 @@ class WorkspaceButton(QPushButton):
         self.setText(self.default_label)
         self.clicked.connect(self.activate_workspace)
         self.parent_widget = parent
-        self.workspace_animation = self.parent_widget._switch_workspace_animation
-        self.animation = self.parent_widget._animation
-        self.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.workspace_animation = getattr(self.parent_widget, "_switch_workspace_animation", False)
+        self.animation = getattr(self.parent_widget, "_animation", False)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._width_animation = None
+        self._initial_width = None
 
     def update_visible_buttons(self):
         visible_buttons = [btn for btn in self.parent_widget._workspace_buttons if btn.isVisible()]
@@ -33,90 +52,116 @@ class WorkspaceButton(QPushButton):
             new_class = " ".join([cls for cls in current_class.split() if not cls.startswith("button-")])
             new_class = f"{new_class} button-{index + 1}"
             button.setProperty("class", new_class)
-            button.setStyleSheet("")
+            button.style().unpolish(button)
+            button.style().polish(button)
         if self.animation:
-            self.animate_buttons()
+            try:
+                parent = self.parent_widget
+                prev_idx = getattr(parent, "_prev_workspace_index", None)
+                curr_idx = getattr(parent, "_curr_workspace_index", None)
+                if self.workspace_index in (prev_idx, curr_idx):
+                    self.animate_buttons()
+            except Exception:
+                self.animate_buttons()
 
     def activate_workspace(self):
         try:
-            # VirtualDesktop(self.workspace_index).go(self.workspace_animation)
             VirtualDesktop(self.workspace_index).go()
             if isinstance(self.parent_widget, WorkspaceWidget):
-                # Emit event to update desktops on all monitors
                 self.parent_widget._event_service.emit_event("virtual_desktop_changed", {"index": self.workspace_index})
         except Exception:
             logging.exception(f"Failed to focus desktop at index {self.workspace_index}")
 
-    def animate_buttons(self, duration=200, step=120):
-        # Store the initial width if not already stored
-        # we need this to animate the width back to the initial width
-        if not hasattr(self, "_initial_width"):
-            self._initial_width = self.width()
+    def animate_buttons(self, duration: int = 120):
+        if not hasattr(self, "_initial_width") or not self._initial_width:
+            self._initial_width = self.sizeHint().width()
 
-        self._current_width = self.width()
         target_width = self.sizeHint().width()
+        current_width = self.width() if self.width() > 0 else self._initial_width
 
-        step_duration = int(duration / step)
-        width_increment = (target_width - self._current_width) / step
+        if self._width_animation is not None:
+            try:
+                self._width_animation.stop()
+            except Exception:
+                pass
 
-        self._current_step = 0
+        anim_min = QPropertyAnimation(self, b"minimumWidth")
+        anim_min.setStartValue(current_width)
+        anim_min.setEndValue(target_width)
+        anim_min.setDuration(duration)
+        anim_min.setEasingCurve(QEasingCurve.Type.Linear)
 
-        def update_width():
-            if self._current_step < step:
-                self._current_width += width_increment
-                self.setFixedWidth(int(self._current_width))
-                self._current_step += 1
-            else:
-                self._animation_timer.stop()
-                self.setFixedWidth(target_width)
+        anim_max = QPropertyAnimation(self, b"maximumWidth")
+        anim_max.setStartValue(current_width)
+        anim_max.setEndValue(target_width)
+        anim_max.setDuration(duration)
+        anim_max.setEasingCurve(QEasingCurve.Type.Linear)
 
-        # Stop any existing timer before starting a new one to prevent conflicts
-        if hasattr(self, "_animation_timer") and self._animation_timer.isActive():
-            self._animation_timer.stop()
+        group = QParallelAnimationGroup()
+        group.addAnimation(anim_min)
+        group.addAnimation(anim_max)
 
-        self._animation_timer = QTimer()
-        self._animation_timer.timeout.connect(update_width)
-        self._animation_timer.start(step_duration)
+        self._width_animation = group
+
+        def on_finished():
+            try:
+                self.setMinimumWidth(target_width)
+                self.setMaximumWidth(16777215)
+            except Exception:
+                pass
+            self._width_animation = None
+
+        group.finished.connect(on_finished)
+        group.start()
 
     def contextMenuEvent(self, event):
-        # Create the popup menu
-        self._popup_menu = PopupWidget(self)
-        self._popup_menu.setProperty("class", "context-menu")
+        menu = QMenu(self)
+        # Assign a class for global styling; apply rounded corners via helper
+        menu.setProperty("class", "context-menu")
+        # Apply Windows rounded corners to the QMenu when it is shown
+        menu.aboutToShow.connect(lambda: qmenu_rounded_corners(menu))
 
-        layout = QVBoxLayout(self._popup_menu)
-        layout.setSpacing(0)
-        layout.setContentsMargins(0, 0, 0, 0)
+        act_rename = QAction("Rename", self)
+        act_rename.triggered.connect(self.rename_desktop)
+        menu.addAction(act_rename)
 
-        def add_menu_item(text, handler):
-            label = QLabel(text, self._popup_menu)
-            label.setProperty("class", "menu-item")
-            label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-            # Mouse press event handler
+        act_delete = QAction("Delete", self)
+        act_delete.triggered.connect(self.delete_desktop)
+        menu.addAction(act_delete)
 
-            def mousePressEvent(event):
-                handler()
-                self._popup_menu.hide()
+        menu.addSeparator()
 
-            label.mousePressEvent = mousePressEvent
-            layout.addWidget(label)
-
-        add_menu_item("Rename", self.rename_desktop)
-        add_menu_item("Delete", self.delete_desktop)
-
-        self._popup_menu._add_separator(layout)
-
-        add_menu_item("Create New Desktop", self.create_new_desktop)
+        act_create = QAction("Create New Desktop", self)
+        act_create.triggered.connect(self.create_new_desktop)
+        menu.addAction(act_create)
 
         if not is_windows_10():
-            # Separator
-            self._popup_menu._add_separator(layout)
+            menu.addSeparator()
+            act_set_wall = QAction("Set Wallpaper On This Desktop", self)
+            act_set_wall.triggered.connect(self.set_wallpaper)
+            menu.addAction(act_set_wall)
 
-            add_menu_item("Set Wallpaper On This Desktop", self.set_wallpaper)
-            add_menu_item("Set Wallpaper On All Desktops", self.set_wallpaper_all)
+            act_set_wall_all = QAction("Set Wallpaper On All Desktops", self)
+            act_set_wall_all.triggered.connect(self.set_wallpaper_all)
+            menu.addAction(act_set_wall_all)
 
-        self._popup_menu.adjustSize()
-        self._popup_menu.move(self.mapToGlobal(event.pos()))
-        self._popup_menu.show()
+        def _on_menu_about_to_hide():
+            from core.global_state import get_autohide_owner_for_widget
+
+            try:
+                mgr = get_autohide_owner_for_widget(self)._autohide_manager
+                if mgr._hide_timer:
+                    mgr._hide_timer.start(mgr._autohide_delay)
+            except Exception:
+                pass
+
+        menu.aboutToHide.connect(_on_menu_about_to_hide)
+
+        menu.popup(self.mapToGlobal(event.pos()))
+        try:
+            menu.activateWindow()
+        except Exception:
+            pass
 
     def set_wallpaper(self):
         image_path, _ = QFileDialog.getOpenFileName(
@@ -144,7 +189,7 @@ class WorkspaceButton(QPushButton):
         dialog.setWindowTitle("Rename This Desktop")
         dialog.setProperty("class", "rename-dialog")
         dialog.setLabelText("Enter name for this desktop")
-        # Set the initial text value to the current desktop name or fallback to its index
+
         current_name = VirtualDesktop(self.workspace_index).name.strip()
         if not current_name:
             current_name = str(self.workspace_index)
@@ -185,6 +230,8 @@ class WorkspaceWidget(BaseWidget):
     d_signal_virtual_desktop_changed = pyqtSignal(dict)
     d_signal_virtual_desktop_update = pyqtSignal(dict, dict)
     validation_schema = VALIDATION_SCHEMA
+    _instances: list["WorkspaceWidget"] = []
+    _shared_timer: QTimer | None = None
 
     def __init__(
         self,
@@ -221,26 +268,63 @@ class WorkspaceWidget(BaseWidget):
         self.mousePressEvent = None
 
         # Construct container which holds workspace buttons
-        self._workspace_container_layout: QHBoxLayout = QHBoxLayout()
+        self._workspace_container_layout = QHBoxLayout()
         self._workspace_container_layout.setSpacing(0)
         self._workspace_container_layout.setContentsMargins(
             self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
         )
-        self._workspace_container: QWidget = QWidget()
+        self._workspace_container = QFrame()
         self._workspace_container.setLayout(self._workspace_container_layout)
         self._workspace_container.setProperty("class", "widget-container")
         add_shadow(self._workspace_container, self._container_shadow)
         self.widget_layout.addWidget(self._workspace_container)
 
-        self.timer_interval = 500  # milliseconds
-        self.callback_timer = "update_desktops"
-        self.register_callback(self.callback_timer, self.on_update_desktops)
-        self.start_timer()
+        self.register_callback("update_desktops", self.on_update_desktops)
+
+        # Register this instance to the class-wide shared timer (one timer per widget class)
+        if self not in WorkspaceWidget._instances:
+            WorkspaceWidget._instances.append(self)
+
+        if WorkspaceWidget._shared_timer is None:
+            WorkspaceWidget._shared_timer = QTimer(self)
+            WorkspaceWidget._shared_timer.setInterval(500)
+            WorkspaceWidget._shared_timer.timeout.connect(WorkspaceWidget._notify_instances)
+            WorkspaceWidget._shared_timer.start()
+
+        try:
+            self.destroyed.connect(
+                lambda _=None: WorkspaceWidget._instances.remove(self) if self in WorkspaceWidget._instances else None
+            )
+        except Exception:
+            pass
+
+        # initial update
+        try:
+            self.on_update_desktops()
+        except Exception:
+            logging.exception("Initial update_desktops failed on register")
 
     def _on_desktop_changed(self, event_data: dict):
-        self._curr_workspace_index = event_data["index"]
-        for button in self._workspace_buttons:
-            self._update_button(button)
+        # Keep track of previous index for animation coordination
+        new_index = event_data["index"]
+        self._prev_workspace_index = self._curr_workspace_index
+        self._curr_workspace_index = new_index
+
+        # Update only affected buttons (previous and current) and animate both simultaneously
+        prev_btn = next((b for b in self._workspace_buttons if b.workspace_index == self._prev_workspace_index), None)
+        curr_btn = next((b for b in self._workspace_buttons if b.workspace_index == self._curr_workspace_index), None)
+
+        # Update labels without scheduling the automatic update/animation, we'll start animations explicitly
+        if prev_btn is not None:
+            self._update_button(prev_btn, schedule_update=False)
+        if curr_btn is not None:
+            self._update_button(curr_btn, schedule_update=False)
+
+        # Start both animations so they run in parallel
+        if prev_btn is not None and getattr(prev_btn, "animation", False):
+            prev_btn.animate_buttons()
+        if curr_btn is not None and getattr(curr_btn, "animation", False):
+            curr_btn.animate_buttons()
 
     def on_update_desktops(self):
         # Emit event to update desktops on all monitors
@@ -255,21 +339,25 @@ class WorkspaceWidget(BaseWidget):
         if (
             self._virtual_desktops != self._virtual_desktops_check
             or self._curr_workspace_index != self._curr_workspace_index_check
+            or update_buttons
         ):
             self._virtual_desktops = self._virtual_desktops_check
             self._curr_workspace_index = self._curr_workspace_index_check
             self._add_or_remove_buttons()
-            self.refresh_workspace_button_labels()
-        if update_buttons:
-            self.refresh_workspace_button_labels()
+            self.refresh_workspace_button_labels(animate=update_buttons)
 
-    def refresh_workspace_button_labels(self):
+    def refresh_workspace_button_labels(self, animate: bool = False):
         for button in self._workspace_buttons:
             ws_label, ws_active_label = self._get_workspace_label(button.workspace_index)
             button.default_label = ws_label
             button.active_label = ws_active_label
             button.workspace_name = VirtualDesktop(button.workspace_index).name
             self._update_button(button)
+            if animate and getattr(button, "animation", False):
+                try:
+                    button.animate_buttons()
+                except Exception:
+                    pass
 
     def _clear_container_layout(self):
         for i in reversed(range(self._workspace_container_layout.count())):
@@ -277,19 +365,27 @@ class WorkspaceWidget(BaseWidget):
             self._workspace_container_layout.removeWidget(old_workspace_widget)
             old_workspace_widget.setParent(None)
 
-    def _update_button(self, workspace_btn: WorkspaceButton) -> None:
+    def _update_button(self, workspace_btn: WorkspaceButton, schedule_update: bool = True) -> None:
+        existing_class = workspace_btn.property("class") or ""
+        tokens = [t for t in str(existing_class).split() if t.startswith("button-")]
+
+        # Determine base classes explicitly so stale tokens are not preserved
         if workspace_btn.workspace_index == self._curr_workspace_index:
-            workspace_btn.setProperty("class", "ws-btn active")
-            workspace_btn.setStyleSheet("")
+            base = "ws-btn active"
             workspace_btn.setText(workspace_btn.active_label)
         else:
-            workspace_btn.setProperty("class", "ws-btn")
-            workspace_btn.setStyleSheet("")
+            base = "ws-btn"
             workspace_btn.setText(workspace_btn.default_label)
-        QTimer.singleShot(0, workspace_btn.update_visible_buttons)
+        if tokens:
+            base = f"{base} {' '.join(tokens)}"
+
+        workspace_btn.setProperty("class", base)
+        workspace_btn.style().unpolish(workspace_btn)
+        workspace_btn.style().polish(workspace_btn)
+        if schedule_update:
+            QTimer.singleShot(0, workspace_btn.update_visible_buttons)
 
     def _add_or_remove_buttons(self) -> None:
-        changes_made = False
         current_indices = set(self._virtual_desktops)
         existing_indices = set(btn.workspace_index for btn in self._workspace_buttons)
         # Handle removals
@@ -298,7 +394,6 @@ class WorkspaceWidget(BaseWidget):
             self._workspace_buttons = [
                 btn for btn in self._workspace_buttons if btn.workspace_index not in indices_to_remove
             ]
-            changes_made = True
 
         # Handle additions
         for desktop_index in current_indices:
@@ -311,17 +406,27 @@ class WorkspaceWidget(BaseWidget):
             else:
                 new_button = self._try_add_workspace_button(desktop_index)
                 self._update_button(new_button)
-                changes_made = True
-        # Rebuild layout only if changes occurred
-        if changes_made:
             self._workspace_buttons.sort(key=lambda btn: btn.workspace_index)
             self._clear_container_layout()
             for workspace_btn in self._workspace_buttons:
                 self._workspace_container_layout.addWidget(workspace_btn)
                 add_shadow(workspace_btn, self._btn_shadow)
+            try:
+                QTimer.singleShot(0, lambda: [btn.update_visible_buttons() for btn in self._workspace_buttons])
+                for btn in self._workspace_buttons:
+                    if getattr(btn, "animation", False):
+                        try:
+                            QTimer.singleShot(0, btn.animate_buttons)
+                        except Exception:
+                            pass
+            except Exception:
+                pass
 
     def _get_workspace_label(self, workspace_index):
-        ws_name = VirtualDesktop(workspace_index).name
+        try:
+            ws_name = VirtualDesktop(workspace_index).name
+        except Exception:
+            ws_name = ""
         if not ws_name or not ws_name.strip():
             ws_name = f"{workspace_index}"
         label = self._label_workspace_btn.format(index=workspace_index, name=ws_name)
@@ -336,3 +441,22 @@ class WorkspaceWidget(BaseWidget):
             self._update_button(workspace_btn)
             self._workspace_buttons.append(workspace_btn)
             return workspace_btn
+
+    @classmethod
+    def _notify_instances(cls):
+        if not cls._instances:
+            return
+        for inst in cls._instances[:]:
+            try:
+                inst.on_update_desktops()
+            except Exception:
+                try:
+                    cls._instances.remove(inst)
+                except Exception:
+                    pass
+        if not cls._instances and cls._shared_timer:
+            try:
+                cls._shared_timer.stop()
+            except Exception:
+                pass
+            cls._shared_timer = None

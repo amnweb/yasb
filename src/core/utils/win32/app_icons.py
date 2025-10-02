@@ -1,54 +1,46 @@
-import ctypes
-import locale
 import logging
-import os
-import re
 import struct
-import xml.etree.ElementTree as ET
 from ctypes import byref, create_string_buffer, sizeof
-from glob import glob
-from pathlib import Path
 
 import win32api
 import win32con
 import win32gui
 import win32ui
-from PIL import Image, ImageFilter
+from PIL import Image
 from win32con import DIB_RGB_COLORS
 
-from core.utils.win32.app_uwp import get_package
+from core.utils.win32.app_aumid import get_aumid_for_window, get_icon_for_aumid
 from core.utils.win32.bindings import DeleteObject, GetDC, GetDIBits, GetIconInfo, GetObject, ReleaseDC
 from core.utils.win32.structs import BITMAP, BITMAPINFO, BITMAPINFOHEADER, ICONINFO
-from settings import DEBUG
 
 pil_logger = logging.getLogger("PIL")
 pil_logger.setLevel(logging.INFO)
 
-TARGETSIZE_REGEX = re.compile(r"targetsize-([0-9]+)")
 
+def get_window_icon(hwnd: int):
+    """Get the icon for a window handle (HWND).
 
-def get_window_icon(hwnd: int, smooth_level: int = 0):
-    """Fetch the icon of the window."""
+    - WM_GETICON: ICON_BIG, ICON_SMALL, ICON_SMALL2
+    - App User Model ID icon (UWP) via AUMID
+    - Class icons: GCLP_HICONSM, GCLP_HICON
+    - OS default application icon (IDI_APPLICATION)
+    """
     try:
-        hicon = win32gui.SendMessage(hwnd, win32con.WM_GETICON, win32con.ICON_BIG, 0)
-        if hicon == 0:
-            # If big icon is not available, try to get the small icon
-            hicon = win32gui.SendMessage(hwnd, win32con.WM_GETICON, win32con.ICON_SMALL, 0)
-        if hicon == 0:
-            # If both small and big icons are not available, get the class icon
-            if hasattr(win32gui, "GetClassLongPtr"):
-                hicon = win32gui.GetClassLongPtr(hwnd, win32con.GCLP_HICON)
-            else:
-                hicon = win32gui.GetClassLong(hwnd, win32con.GCL_HICON)
 
-        if hicon:
+        def _image_from_hicon(hicon: int) -> Image.Image | None:
+            if not hicon:
+                return None
             img = hicon_to_image(hicon)
             if img is not None:
                 return img
 
+            # Fallback draw the icon into a compatible bitmap
             hdc_handle = win32gui.GetDC(0)
             if not hdc_handle:
-                raise Exception("Failed to get DC handle")
+                return None
+            memdc = None
+            hdc = None
+            hbmp = None
             try:
                 hdc = win32ui.CreateDCFromHandle(hdc_handle)
                 hbmp = win32ui.CreateBitmap()
@@ -56,7 +48,6 @@ def get_window_icon(hwnd: int, smooth_level: int = 0):
                 bitmap_size = int(system_icon_size)
                 hbmp.CreateCompatibleBitmap(hdc, bitmap_size, bitmap_size)
                 memdc = hdc.CreateCompatibleDC()
-                # Select the bitmap into the memory device context
                 memdc.SelectObject(hbmp)
                 try:
                     memdc.DrawIcon((0, 0), hicon)
@@ -65,143 +56,107 @@ def get_window_icon(hwnd: int, smooth_level: int = 0):
 
                 bmpinfo = hbmp.GetInfo()
                 bmpstr = hbmp.GetBitmapBits(True)
-
                 raw_data = bytes(bmpstr)
-                img = Image.frombuffer(
-                    "RGBA", (bmpinfo["bmWidth"], bmpinfo["bmHeight"]), raw_data, "raw", "BGRA", 0, 1
+                return Image.frombuffer(
+                    "RGBA",
+                    (bmpinfo["bmWidth"], bmpinfo["bmHeight"]),
+                    raw_data,
+                    "raw",
+                    "BGRA",
+                    0,
+                    1,
                 ).convert("RGBA")
-                # target_size = 48  # target size (48x48) wihout DPI, most of uwps are also 48x48
-                # img = img.resize((target_size, target_size), Image.LANCZOS)
-                if smooth_level == 1:
-                    img = img.filter(ImageFilter.SMOOTH)
-                elif smooth_level == 2:
-                    img = img.filter(ImageFilter.SMOOTH_MORE)
-                return img
             finally:
-                # Cleaning up resources
-                # logging.debug("Cleaning up")
                 try:
-                    win32gui.DestroyIcon(hicon)
-                    # logging.debug("Destroyed hicon")
+                    if memdc is not None:
+                        memdc.DeleteDC()
                 except Exception:
-                    # logging.debug(f"Error destroying hicon: {e}")
                     pass
                 try:
-                    memdc.DeleteDC()
-                    # logging.debug("Deleted memory device context.")
+                    if hdc is not None:
+                        hdc.DeleteDC()
                 except Exception:
-                    # logging.debug(f"Error deleting memory device context: {e}")
                     pass
                 try:
-                    hdc.DeleteDC()
-                    # logging.debug("Deleted device context.")
+                    if hbmp is not None:
+                        win32gui.DeleteObject(hbmp.GetHandle())
                 except Exception:
-                    # logging.debug(f"Error deleting device context: {e}")
-                    pass
-                try:
-                    win32gui.DeleteObject(hbmp.GetHandle())
-                    # logging.debug("Deleted bitmap object.")
-                except Exception:
-                    # logging.debug(f"Error deleting bitmap object: {e}")
                     pass
                 try:
                     win32gui.ReleaseDC(0, hdc_handle)
-                    # logging.debug("Released device context handle.")
                 except Exception:
-                    # logging.debug(f"Error releasing device context handle: {e}")
                     pass
-        else:
-            try:
-                class_name = win32gui.GetClassName(hwnd)
-            except:
-                return None
-            actual_hwnd = 1
 
-            def cb(hwnd, b):
-                nonlocal actual_hwnd
-                try:
-                    class_name = win32gui.GetClassName(hwnd)
-                except:
-                    class_name = ""
-                if "ApplicationFrame" in class_name:
-                    return True
-                actual_hwnd = hwnd
+        def _is_fully_transparent(img: Image.Image) -> bool:
+            try:
+                if img.mode != "RGBA":
+                    img = img.convert("RGBA")
+                alpha = img.getchannel("A")
+                return alpha.getbbox() is None
+            except Exception:
                 return False
 
-            if class_name == "ApplicationFrameWindow":
-                win32gui.EnumChildWindows(hwnd, cb, False)
+        # Ask the window for its icons
+        for which in (win32con.ICON_BIG, win32con.ICON_SMALL, getattr(win32con, "ICON_SMALL2", 2)):
+            try:
+                hicon = win32gui.SendMessage(hwnd, win32con.WM_GETICON, which, 0)
+            except Exception:
+                hicon = 0
+            if hicon:
+                img = _image_from_hicon(hicon)
+                # WM_GETICON returns an icon handle we should destroy
+                try:
+                    win32gui.DestroyIcon(hicon)
+                except Exception:
+                    pass
+                if img is not None and not _is_fully_transparent(img):
+                    return img
+
+        # AppUserModelID icon for UWP apps
+        aumid = get_aumid_for_window(hwnd)
+        if aumid:
+            img = get_icon_for_aumid(aumid)
+            if img is not None:
+                return img
+
+        # Fall back to class icons
+        class_hicon = 0
+        try:
+            if hasattr(win32gui, "GetClassLongPtr"):
+                # Try small icon first, then big
+                class_hicon = win32gui.GetClassLongPtr(hwnd, getattr(win32con, "GCLP_HICONSM", 0)) or 0
+                if not class_hicon:
+                    class_hicon = win32gui.GetClassLongPtr(hwnd, win32con.GCLP_HICON) or 0
             else:
-                actual_hwnd = hwnd
+                class_hicon = win32gui.GetClassLong(hwnd, getattr(win32con, "GCL_HICONSM", -34)) or 0
+                if not class_hicon:
+                    class_hicon = win32gui.GetClassLong(hwnd, win32con.GCL_HICON) or 0
+        except Exception:
+            class_hicon = 0
 
-            package = get_package(actual_hwnd)
-            if package is None:
-                return None
-            if package.package_path is None:
-                return None
-            manifest_path = os.path.join(package.package_path, "AppXManifest.xml")
-            if not os.path.exists(manifest_path):
-                if DEBUG:
-                    logging.error(f"manifest not found {manifest_path}")
-                return None
-            root = ET.parse(manifest_path)
-            velement = root.find(".//VisualElements")
-            if velement is None:
-                velement = root.find(".//{http://schemas.microsoft.com/appx/manifest/uap/windows10}VisualElements")
-            if not velement:
-                return None
-            if "Square44x44Logo" not in velement.attrib:
-                return None
-            package_path = Path(package.package_path)
-            # logopath = Path(package.package_path) / (velement.attrib["Square44x44Logo"])
-            logofile = Path(velement.attrib["Square44x44Logo"])
-            logopattern = str(logofile.parent / "**") + "\\" + str(logofile.stem) + "*" + str(logofile.suffix)
-            logofiles = glob(logopattern, recursive=True, root_dir=package_path)
-            logofiles = [x.lower() for x in logofiles]
-            if len(logofiles) == 0:
-                return None
+        if class_hicon:
+            img = _image_from_hicon(class_hicon)
+            if img is not None:
+                return img
 
-            def filter_logos(logofiles, qualifiers, values):
-                for qualifier in qualifiers:
-                    for value in values:
-                        filtered_files = list(filter(lambda x: (qualifier + "-" + value in x), logofiles))
-                        if len(filtered_files) > 0:
-                            return filtered_files
-                return logofiles
+        # OS default application icon
+        try:
+            size = win32api.GetSystemMetrics(win32con.SM_CXICON)
+            default_hicon = win32gui.LoadImage(
+                0,
+                win32con.IDI_APPLICATION,
+                win32con.IMAGE_ICON,
+                size,
+                size,
+                win32con.LR_SHARED,
+            )
+        except Exception:
+            default_hicon = 0
 
-            langs = []
-            current_lang_code = ctypes.windll.kernel32.GetUserDefaultUILanguage()
-            if current_lang_code in locale.windows_locale:
-                current_lang = locale.windows_locale[current_lang_code].lower().replace("_", "-")
-                current_lang_short = current_lang.split("-", 1)[0]
-                langs += [current_lang, current_lang_short]
-            if "en" not in langs:
-                langs += ["en", "en-us"]
+        if default_hicon:
+            return _image_from_hicon(default_hicon)
 
-            # filter_logos will try to select only the files matching the qualifier values
-            # if nothing matches, the list is unchanged
-            if langs:
-                logofiles = filter_logos(logofiles, ["lang", "language"], langs)
-            logofiles = filter_logos(logofiles, ["contrast"], ["standard"])
-            logofiles = filter_logos(logofiles, ["alternateform", "altform"], ["unplated"])
-            logofiles = filter_logos(logofiles, ["contrast"], ["standard"])
-            logofiles = filter_logos(logofiles, ["scale"], ["100", "150", "200"])
-
-            # find the one closest to 48, but bigger
-            def target_size_sort(s):
-                m = TARGETSIZE_REGEX.search(s)
-                if m:
-                    size = int(m.group(1))
-                    if size < 48:
-                        return 5000 - size
-                    return size - 48
-                return 10000
-
-            logofiles.sort(key=target_size_sort)
-
-            img = Image.open(package_path / logofiles[0])
-            if not img:
-                return None
-            return img
+        return None
     except Exception as e:
         logging.error(f"Error fetching icon: {e}")
         return None

@@ -4,6 +4,7 @@ DEFAULTS: dict[str, Any] = {
     "label": "{wifi_icon}",
     "label_alt": "{wifi_icon} {wifi_name}",
     "update_interval": 1000,
+    "class_name": "",
     "callbacks": {"on_left": "toggle_label", "on_middle": "do_nothing", "on_right": "do_nothing"},
     "wifi_icons": [
         "\udb82\udd2e",  # Icon for 0% strength
@@ -47,6 +48,7 @@ VALIDATION_SCHEMA: dict[str, Any] = {
     "label": {"type": "string", "default": DEFAULTS["label"]},
     "label_alt": {"type": "string", "default": DEFAULTS["label_alt"]},
     "update_interval": {"type": "integer", "default": DEFAULTS["update_interval"], "min": 0, "max": 60000},
+    "class_name": {"type": "string", "required": False, "default": DEFAULTS["class_name"]},
     "wifi_icons": {"type": "list", "default": DEFAULTS["wifi_icons"], "schema": {"type": "string", "required": False}},
     "ethernet_label": {"type": "string", "default": DEFAULTS["ethernet_label"]},
     "ethernet_label_alt": {"type": "string", "default": DEFAULTS["ethernet_label_alt"]},

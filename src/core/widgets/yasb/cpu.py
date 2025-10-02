@@ -3,7 +3,7 @@ import re
 from collections import deque
 
 from PyQt6.QtCore import QTimer
-from PyQt6.QtWidgets import QHBoxLayout, QLabel, QWidget
+from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel
 
 from core.utils.utilities import add_shadow, build_progress_widget, build_widget_label
 from core.utils.widgets.animation_manager import AnimationManager
@@ -22,6 +22,7 @@ class CpuWidget(BaseWidget):
         self,
         label: str,
         label_alt: str,
+        class_name: str,
         histogram_icons: list[str],
         histogram_num_columns: int,
         update_interval: int,
@@ -32,8 +33,9 @@ class CpuWidget(BaseWidget):
         label_shadow: dict = None,
         container_shadow: dict = None,
         progress_bar: dict = None,
+        hide_decimal: bool = False,
     ):
-        super().__init__(class_name="cpu-widget")
+        super().__init__(class_name=f"cpu-widget {class_name}")
         self._histogram_icons = histogram_icons
         self._cpu_freq_history = deque([0] * histogram_num_columns, maxlen=histogram_num_columns)
         self._cpu_perc_history = deque([0] * histogram_num_columns, maxlen=histogram_num_columns)
@@ -46,17 +48,18 @@ class CpuWidget(BaseWidget):
         self._container_shadow = container_shadow
         self._cpu_thresholds = cpu_thresholds
         self._progress_bar = progress_bar
+        self._hide_decimal = hide_decimal
 
         self.progress_widget = None
         self.progress_widget = build_progress_widget(self, self._progress_bar)
 
-        self._widget_container_layout: QHBoxLayout = QHBoxLayout()
+        self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
         self._widget_container_layout.setContentsMargins(
             self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
         )
         # Initialize container
-        self._widget_container: QWidget = QWidget()
+        self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
         add_shadow(self._widget_container, self._container_shadow)
@@ -137,10 +140,11 @@ class CpuWidget(BaseWidget):
         self._cpu_freq_history.append(cpu_freq.current)
         self._cpu_perc_history.append(current_perc)
 
+        _round = lambda value: round(value) if self._hide_decimal else value
         cpu_info = {
             "cores": cpu_cores,
-            "freq": {"min": cpu_freq.min, "max": cpu_freq.max, "current": cpu_freq.current},
-            "percent": {"core": cores_perc, "total": current_perc},
+            "freq": {"min": _round(cpu_freq.min), "max": _round(cpu_freq.max), "current": _round(cpu_freq.current)},
+            "percent": {"core": [_round(core) for core in cores_perc], "total": _round(current_perc)},
             "stats": {
                 "context_switches": cpu_stats.ctx_switches,
                 "interrupts": cpu_stats.interrupts,

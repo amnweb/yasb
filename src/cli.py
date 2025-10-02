@@ -546,8 +546,8 @@ class CLITaskHandler:
         settings.StartWhenAvailable = True
         settings.AllowHardTerminate = True
         settings.ExecutionTimeLimit = "PT0S"
-        settings.Priority = 7
-        settings.MultipleInstances = 0
+        settings.Priority = 4
+        settings.MultipleInstances = 3
         settings.DisallowStartIfOnBatteries = False
         settings.StopIfGoingOnBatteries = False
         settings.Hidden = False

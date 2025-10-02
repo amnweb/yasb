@@ -1,6 +1,6 @@
 import logging
 
-from PyQt6.QtCore import QTimer
+from PyQt6.QtCore import QEasingCurve, QPropertyAnimation
 from PyQt6.QtWidgets import QGraphicsOpacityEffect
 
 
@@ -30,33 +30,28 @@ class AnimationManager:
             animation_method(widget)
 
     def fadeInOut(self, widget):
-        if hasattr(widget, "_opacity_effect") and widget._opacity_effect is not None:
-            widget._opacity_effect.setOpacity(1.0)
-            if hasattr(widget, "_animation_timer") and widget._animation_timer.isActive():
-                widget._animation_timer.stop()
+        effect = QGraphicsOpacityEffect(widget)
+        effect.setEnabled(True)
+        effect.setOpacity(0.5)
+        widget.setGraphicsEffect(effect)
 
-        widget._opacity_effect = QGraphicsOpacityEffect()
-        widget._opacity_effect.setEnabled(True)
-        widget.setGraphicsEffect(widget._opacity_effect)
-        widget._opacity_effect.setOpacity(0.5)
+        anim = QPropertyAnimation(effect, b"opacity", widget)
+        anim.setDuration(self.duration)
+        anim.setStartValue(0.5)
+        anim.setEndValue(1.0)
+        anim.setEasingCurve(QEasingCurve.Type.InOutQuad)
 
-        widget._animation_timer = QTimer()
-        step = 0
-        steps = 20
-        increment = 0.5 / steps
+        def on_finished():
+            try:
+                effect.setEnabled(False)
+            except Exception:
+                pass
+            try:
+                widget.setGraphicsEffect(None)
+            except Exception:
+                pass
 
-        def animate():
-            nonlocal step
-            new_opacity = widget._opacity_effect.opacity() + increment
-            if new_opacity >= 1.0:
-                new_opacity = 1.0
-                widget._opacity_effect.setOpacity(new_opacity)
-                widget._animation_timer.stop()
-                widget._opacity_effect.setEnabled(False)
-                widget._opacity_effect = None
-                return
-            widget._opacity_effect.setOpacity(new_opacity)
-            step += 1
+        anim.finished.connect(on_finished)
 
-        widget._animation_timer.timeout.connect(animate)
-        widget._animation_timer.start(self.duration // steps)
+        widget._yasb_animation = anim
+        anim.start()
