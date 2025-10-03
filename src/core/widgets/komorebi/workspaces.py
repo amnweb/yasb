@@ -241,6 +241,7 @@ class WorkspaceWidget(BaseWidget):
         animation: bool,
         enable_scroll_switching: bool,
         reverse_scroll_direction: bool,
+        scroll_populated_only: bool,
         btn_shadow: dict = None,
         label_shadow: dict = None,
         container_shadow: dict = None,
@@ -333,6 +334,7 @@ class WorkspaceWidget(BaseWidget):
 
         self._enable_scroll_switching = enable_scroll_switching
         self._reverse_scroll_direction = reverse_scroll_direction
+        self._scroll_populated_only = scroll_populated_only
         self._icon_cache = dict()
         self.dpi = None
 
@@ -620,6 +622,10 @@ class WorkspaceWidget(BaseWidget):
         direction = -1 if (delta > 0) != self._reverse_scroll_direction else 1
 
         workspaces = self._komorebic.get_workspaces(self._komorebi_screen)
+
+        if self._scroll_populated_only:
+            workspaces = [ws for ws in workspaces if not self._komorebic.get_num_windows(ws) == 0]
+
         if not workspaces:
             return
 

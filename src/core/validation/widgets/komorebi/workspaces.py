@@ -21,6 +21,7 @@ DEFAULTS = {
     "animation": False,
     "enable_scroll_switching": False,
     "reverse_scroll_direction": False,
+    "scroll_populated_only": False,
     "container_padding": {"top": 0, "left": 0, "bottom": 0, "right": 0},
 }
 
@@ -59,6 +60,7 @@ VALIDATION_SCHEMA = {
     "animation": {"type": "boolean", "default": DEFAULTS["animation"]},
     "enable_scroll_switching": {"type": "boolean", "default": DEFAULTS["enable_scroll_switching"]},
     "reverse_scroll_direction": {"type": "boolean", "default": DEFAULTS["reverse_scroll_direction"]},
+    "scroll_populated_only": {"type": "boolean", "default": DEFAULTS["scroll_populated_only"]},
     "container_padding": {"type": "dict", "default": DEFAULTS["container_padding"], "required": False},
     "btn_shadow": {
         "type": "dict",
