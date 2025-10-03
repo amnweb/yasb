@@ -11,7 +11,7 @@ from PyQt6.QtCore import (
     pyqtProperty,
 )
 from PyQt6.QtGui import QCursor, QGuiApplication
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel
+from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QWidget
 
 from core.config import get_stylesheet
 
@@ -399,7 +399,7 @@ class TooltipEventFilter(QObject):
         return super().eventFilter(obj, event)
 
 
-def set_tooltip(widget, text, delay=400):
+def set_tooltip(widget: QWidget, text: str, delay: int = 400):
     """Set a tooltip to a widget in a declarative way.
 
     Args:
