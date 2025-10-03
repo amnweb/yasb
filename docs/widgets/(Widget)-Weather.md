@@ -11,7 +11,7 @@
 | `show_alerts`   | boolean | `false`                                                                 | Whether to show weather alerts. |
 | `units`         | string  | `'metric'`                                                              | The units for the weather data. Can be `'metric'` or `'imperial'`. |
 | `api_key`       | string  | `'0'`                                                                   | The API key for accessing the weather service. |
-| `icons`         | dict    | `{ 'sunnyDay': '\ue30d', 'clearNight': '\ue32b', 'cloudyDay': '\ue312', 'cloudyNight': '\ue311', 'rainyDay': '\udb81\ude7e', 'rainyNight': '\udb81\ude7e', 'snowyIcyDay': '\udb81\udd98', 'snowyIcyNight': '\udb81\udd98', 'blizzardDay': '\uebaa', 'default': '\uebaa' }` | A dictionary of icons for different weather conditions. |
+| `icons`         | dict    | `{ 'sunnyDay': '\ue30d', 'clearNight': '\ue32b', 'cloudyDay': '\ue312', 'cloudyNight': '\ue311', 'rainyDay': '\udb81\ude7e', 'rainyNight': '\udb81\ude7e', 'snowyDay': '\udb81\udd98', 'snowyNight': '\udb81\udd98', 'blizzardDay': '\uebaa', 'default': '\uebaa' }` | A dictionary of icons for different weather conditions. |
 | `callbacks`     | dict    | `{ 'on_left': 'do_nothing', 'on_middle': 'do_nothing', 'on_right': 'do_nothing' }` | Callbacks for mouse events on the weather widget. |
 | `weather_card`  | dict    | `{ 'blur': True, 'round_corners': True, 'round_corners_type': 'normal', 'border_color': 'System', 'alignment': 'right', 'direction': 'down', 'offset_top': 6, 'offset_left': 0, 'icon_size': 64 }` | Configuration for the weather card popup display. Controls visibility, appearance, and positioning. |
 | `animation`         | dict    | `{'enabled': true, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
@@ -46,8 +46,8 @@ weather:
       cloudyNight: "\ue311"
       rainyDay: "\ue308"
       rainyNight: "\ue333"
-      snowyIcyDay: "\ue30a"
-      snowyIcyNight: "\ue335"
+      snowyDay: "\ue30a"
+      snowyNight: "\ue335"
       blizzardDay: "\udb83\udf36"
       blizzardNight: "\udb83\udf36"
       foggyDay: "\ue303"
@@ -91,7 +91,7 @@ weather:
 - **show_alerts:** Whether to show weather alerts.
 - **tooltip:** Whether to show a tooltip with the min and max temperatures.
 - **units:** The units for the weather data. Can be `'metric'` or `'imperial'`.
-- **icons:** A dictionary of icons for different weather conditions `sunnyDay`, `sunnyNight`, `clearDay`, `clearNight`, `cloudyDay`, `cloudyNight`, `rainyDay`, `rainyNight`, `snowyIcyDay`, `snowyIcyNight`, `blizzard`, `default`.
+- **icons:** A dictionary of icons for different weather conditions `sunnyDay`, `sunnyNight`, `clearDay`, `clearNight`, `cloudyDay`, `cloudyNight`, `rainyDay`, `rainyNight`, `snowyDay`, `snowyNight`, `blizzard`, `default`.
 - **weather_card:** Configuration for the weather card popup display. Controls visibility, appearance, and positioning.
   - **blur:** Enable blur effect for the weather card.
   - **round_corners:** Enable round corners for weather card.
@@ -132,8 +132,8 @@ weather:
 .weather-widget .icon.cloudyNight {}
 .weather-widget .icon.rainyDay {}
 .weather-widget .icon.rainyNight {}
-.weather-widget .icon.snowyIcyDay {}
-.weather-widget .icon.snowyIcyNight {}
+.weather-widget .icon.snowyDay {}
+.weather-widget .icon.snowyNight {}
 .weather-widget .icon.blizzardDay {}
 .weather-widget .icon.blizzardNight {}
 .weather-widget .icon.foggyDay {}
