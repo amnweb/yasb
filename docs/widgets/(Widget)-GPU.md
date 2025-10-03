@@ -27,7 +27,7 @@ If you see a table with your GPU information, `nvidia-smi` is available. If you 
 | `animation`           | dict    | `{'enabled': true, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
 | `container_shadow`    | dict    | `{"enabled": False, "color": "black", "offset": [1, 1], "radius": 3}`                                                                  | Container shadow options.                                                   |
 | `label_shadow`        | dict    | `{"enabled": False, "color": "black", "offset": [1, 1], "radius": 3}`                                                                  | Label shadow options.                                                       |
-| `progress_bar`        | dict    | `{'enabled': false, 'position': 'left', 'size': 14, 'thickness': 2, 'color': '#57948a', 'animation': false}` | Progress bar settings.                                                      |
+| `progress_bar`        | dict    | `{'enabled': false, 'position': 'left', 'size': 14, 'thickness': 2, 'color': '#57948a', 'animation': false, 'center_label': ''}` | Progress bar settings.                                                      |
 | `hide_decimal`        | bool    | `false`                                                                 | Whether to hide decimal places in the GPU widget.                          |
 
 > **About `index`:** If you have multiple NVIDIA GPUs, you can set the `gpu_index` option to select which GPU to monitor. Create multiple GPU widgets with different `gpu_index` values (e.g., 0, 1, 2, ...) to display stats for each card separately.
@@ -82,6 +82,7 @@ gpu:
   - **color**: The color of the progress bar. Color can be single color or gradient.
   - **background_color**: The background color of the progress bar.
   - **animation**: Whether to enable smooth change of the progress bar value.
+  - **center_label**: The label that will be centered inside the progress bar (can be styled using `.progress-circle`)
 
 ## Available Placeholders
 

@@ -175,6 +175,7 @@ class CpuWidget(BaseWidget):
                     self.progress_widget,
                 )
             self.progress_widget.set_value(current_perc)
+            self.progress_widget.set_class(f"status-{self._get_cpu_threshold(current_perc)}")
 
         for part in label_parts:
             part = part.strip()
