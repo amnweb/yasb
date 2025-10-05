@@ -3,11 +3,16 @@ import ctypes.wintypes
 import logging
 import winreg
 from contextlib import suppress
-from ctypes import GetLastError
+from ctypes import GetLastError, byref, c_ulong, create_unicode_buffer
 from functools import lru_cache
 
+import win32api
+import win32gui
+from PyQt6.QtGui import QCursor
+from PyQt6.QtWidgets import QApplication
 from win32api import GetMonitorInfo, MonitorFromWindow
 from win32gui import GetClassName, GetWindowPlacement, GetWindowRect, GetWindowText
+from winrt.windows.management.deployment import PackageManager
 
 from core.utils.utilities import is_windows_10
 from core.utils.win32.bindings import (
@@ -110,6 +115,85 @@ def get_process_info(hwnd: int) -> dict:
         return {"name": None, "pid": pid}
 
 
+def get_app_name_from_pid(pid: int) -> str | None:
+    """Get the actual application name - handles both UWP and Win32 apps properly"""
+    try:
+        h_process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
+        if not h_process:
+            return None
+
+        try:
+            # Method 1: Check if this is a UWP app and get its proper display name
+            length = c_ulong(0)
+            kernel32 = ctypes.windll.kernel32
+            ERROR_INSUFFICIENT_BUFFER = 0x7A
+
+            res = kernel32.GetPackageFullName(h_process, byref(length), None)
+
+            if res == ERROR_INSUFFICIENT_BUFFER and length.value > 0:
+                # This is a UWP app - get its package display name
+                buf = create_unicode_buffer(length.value)
+                res = kernel32.GetPackageFullName(h_process, byref(length), buf)
+
+                if res == 0 and buf.value:
+                    package_full_name = buf.value
+                    CloseHandle(h_process)
+
+                    # Use WinRT API to get the proper localized display name
+                    try:
+                        package_manager = PackageManager()
+
+                        # Find the package by full name
+                        for package in package_manager.find_packages_by_user_security_id(""):
+                            if package.id.full_name == package_full_name:
+                                # Package.display_name automatically resolves ms-resource: strings
+                                display_name = package.display_name
+                                if display_name and display_name.strip():
+                                    return display_name.strip()
+                                break
+                    except Exception as e:
+                        logging.debug(f"Failed to get UWP package display name for {package_full_name}: {e}")
+
+                    # If WinRT fails, we already closed the handle, so return None
+                    return None
+
+            # Method 2: This is a Win32 app - get FileDescription from executable
+            size = c_ulong(1024)
+            buf = create_unicode_buffer(size.value)
+            if QueryFullProcessImageNameW(h_process, 0, buf, byref(size)):
+                exe_path = buf.value
+
+                # Get file description from executable version info
+                try:
+                    # Try to get the FileDescription (this is the friendly app name)
+                    lang, codepage = win32api.GetFileVersionInfo(exe_path, "\\VarFileInfo\\Translation")[0]
+                    string_file_info = f"\\StringFileInfo\\{lang:04X}{codepage:04X}\\"
+
+                    # Try FileDescription first (most user-friendly)
+                    try:
+                        app_name = win32api.GetFileVersionInfo(exe_path, string_file_info + "FileDescription")
+                        if app_name:
+                            return app_name
+                    except:
+                        pass
+
+                    # Fallback to ProductName
+                    try:
+                        app_name = win32api.GetFileVersionInfo(exe_path, string_file_info + "ProductName")
+                        if app_name:
+                            return app_name
+                    except:
+                        pass
+                except Exception as e:
+                    logging.debug(f"Failed to get version info for {exe_path}: {e}")
+        finally:
+            CloseHandle(h_process)
+    except Exception as e:
+        logging.debug(f"Failed to get app name for PID {pid}: {e}")
+
+    return None
+
+
 def get_window_extended_frame_bounds(hwnd: int) -> dict:
     rect = ctypes.wintypes.RECT()
 
@@ -189,10 +273,6 @@ def set_foreground_hwnd(hwnd):
 
 def find_focused_screen(follow_mouse, follow_window, screens=None):
     """Find the screen that should be focused based on mouse position or active window."""
-    import win32api
-    import win32gui
-    from PyQt6.QtGui import QCursor
-    from PyQt6.QtWidgets import QApplication
 
     qt_screens = QApplication.screens()
     primary_screen = QApplication.primaryScreen()
