@@ -18,8 +18,8 @@ DEFAULTS: dict[str, Any] = {
         "cloudyNight": "\ue311",
         "rainyDay": "\udb81\ude7e",
         "rainyNight": "\udb81\ude7e",
-        "snowyIcyDay": "\udb81\udd98",
-        "snowyIcyNight": "\udb81\udd98",
+        "snowyDay": "\udb81\udd98",
+        "snowyNight": "\udb81\udd98",
         "blizzardDay": "\uebaa",
         "blizzardNight": "\uebaa",
         "foggyDay": "\ue303",
@@ -90,13 +90,21 @@ VALIDATION_SCHEMA: dict[str, Any] = {
                 "type": "string",
                 "default": DEFAULTS["icons"]["rainyNight"],
             },
-            "snowyIcyDay": {
+            "snowyDay": {
                 "type": "string",
-                "default": DEFAULTS["icons"]["snowyIcyDay"],
+                "default": DEFAULTS["icons"]["snowyDay"],
             },
-            "snowyIcyNight": {
+            "snowyNight": {
                 "type": "string",
-                "default": DEFAULTS["icons"]["snowyIcyNight"],
+                "default": DEFAULTS["icons"]["snowyNight"],
+            },
+            "snowyIcyDay": {  # deprecated
+                "type": "string",
+                "default": DEFAULTS["icons"]["snowyDay"],
+            },
+            "snowyIcyNight": {  # deprecated
+                "type": "string",
+                "default": DEFAULTS["icons"]["snowyNight"],
             },
             "blizzardDay": {
                 "type": "string",
