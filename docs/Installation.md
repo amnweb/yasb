@@ -10,7 +10,7 @@
 
 ### Winget
 Install YASB using [winget](https://learn.microsoft.com/en-us/windows/package-manager/winget/):
-```
+```powershell
 winget install --id AmN.yasb
 ```
 
@@ -18,15 +18,23 @@ winget install --id AmN.yasb
 
 ### Scoop
 Install YASB using [Scoop](https://scoop.sh/):
-```
+```powershell
 scoop bucket add extras
 scoop install extras/yasb
 ```
 
 ***
 
+### Chocolatey
+Install YASB using [Chocolatey](https://chocolatey.org/):
+```powershell
+choco install yasb
+```
+
+***
+
 ### Using Python
-- Install Python 3.12
+- Install Python >= 3.12
 - Install the application and its dependencies:
   - `pip install .` (for regular installation)
   - `pip install -e .[dev]` (for development installation)
@@ -36,4 +44,13 @@ scoop install extras/yasb
   - run `python src/main.py` in your terminal (or click [yasb.vbs](https://github.com/amnweb/yasb/blob/main/src/yasb.vbs))
 
 
-
+### Build from source
+- Clone the repository: `git clone https://github.com/amnweb/yasb`
+- Navigate to the project directory: `cd yasb`
+- Install the required dependencies: `pip install -e .[dev]`
+- Navigate to the `src` directory: `cd src`
+- Build the installer using following command:
+```powershell
+python build.py build
+python build.py bdist_msi
+```
