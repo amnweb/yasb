@@ -1,16 +1,29 @@
 import logging
 import struct
-from ctypes import byref, create_string_buffer, sizeof
+from ctypes import byref, c_ulong, create_string_buffer, create_unicode_buffer, sizeof
 
 import win32api
 import win32con
 import win32gui
+import win32process
 import win32ui
+from icoextract import IconExtractor
 from PIL import Image
 from win32con import DIB_RGB_COLORS
 
-from core.utils.win32.app_aumid import get_aumid_for_window, get_icon_for_aumid
-from core.utils.win32.bindings import DeleteObject, GetDC, GetDIBits, GetIconInfo, GetObject, ReleaseDC
+from core.utils.win32.app_aumid import GetApplicationUserModelId, get_aumid_for_window, get_icon_for_aumid
+from core.utils.win32.bindings import (
+    CloseHandle,
+    DeleteObject,
+    GetDC,
+    GetDIBits,
+    GetIconInfo,
+    GetObject,
+    OpenProcess,
+    QueryFullProcessImageNameW,
+    ReleaseDC,
+)
+from core.utils.win32.constants import PROCESS_QUERY_LIMITED_INFORMATION
 from core.utils.win32.structs import BITMAP, BITMAPINFO, BITMAPINFOHEADER, ICONINFO
 
 pil_logger = logging.getLogger("PIL")
@@ -160,6 +173,86 @@ def get_window_icon(hwnd: int):
     except Exception as e:
         logging.error(f"Error fetching icon: {e}")
         return None
+
+
+def get_process_icon(pid: int) -> Image.Image | None:
+    """Get icon for a process by PID.
+
+    Tries multiple methods:
+    - AUMID-based extraction for UWP apps
+    - Extract from executable using icoextract
+    - Find window and extract icon from window handle
+
+    Returns PIL Image or None if icon cannot be extracted.
+    """
+    try:
+        # Try AUMID for UWP apps first
+        try:
+            if GetApplicationUserModelId is not None:
+                h_process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
+                if h_process:
+                    try:
+                        length = c_ulong(0)
+                        res = GetApplicationUserModelId(h_process, byref(length), None)
+                        ERROR_INSUFFICIENT_BUFFER = 0x7A
+                        if res == ERROR_INSUFFICIENT_BUFFER and length.value:
+                            buf = create_unicode_buffer(length.value)
+                            res = GetApplicationUserModelId(h_process, byref(length), buf)
+                            if res == 0 and buf.value:
+                                aumid = buf.value
+                                # Got AUMID, extract icon using AUMID method
+                                icon_img = get_icon_for_aumid(aumid)
+                                if icon_img:
+                                    CloseHandle(h_process)
+                                    return icon_img
+                    finally:
+                        CloseHandle(h_process)
+        except Exception as e:
+            logging.debug(f"Failed to get AUMID icon for PID {pid}: {e}")
+
+        # Get executable path and extract icon from it
+        h_process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
+        if h_process:
+            try:
+                size = c_ulong(1024)
+                buf = create_unicode_buffer(size.value)
+                if QueryFullProcessImageNameW(h_process, 0, buf, byref(size)):
+                    exe_path = buf.value
+
+                    # Extract icon from executable using icoextract
+                    try:
+                        extractor = IconExtractor(exe_path)
+                        icon_data = extractor.get_icon()
+                        icon_img = Image.open(icon_data)
+                        return icon_img
+                    except Exception as e:
+                        logging.debug(f"Failed to extract icon from {exe_path}: {e}")
+            finally:
+                CloseHandle(h_process)
+
+        # Try to find window and get icon from it (fallback)
+        def enum_windows_callback(hwnd, results):
+            try:
+                _, window_pid = win32process.GetWindowThreadProcessId(hwnd)
+                if window_pid == pid:
+                    if win32gui.IsWindowVisible(hwnd) and win32gui.GetWindowText(hwnd):
+                        results.append(hwnd)
+            except:
+                pass
+
+        windows = []
+        win32gui.EnumWindows(enum_windows_callback, windows)
+
+        if windows:
+            hwnd = windows[0]
+            icon_img = get_window_icon(hwnd)
+            if icon_img:
+                return icon_img
+
+    except Exception as e:
+        logging.debug(f"Failed to get icon for PID {pid}: {e}")
+
+    return None
 
 
 def hicon_to_image(hicon: int) -> Image.Image | None:
