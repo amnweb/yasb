@@ -19,11 +19,11 @@ power_menu:
   type: "yasb.power_menu.PowerMenuWidget"
   options:
     label: "\uf011"
-    uptime: True
-    blur: False
-    blur_background: True
-    animation_duration: 300 # Milliseconds
-    button_row: 3 # Number of buttons in a row, min 1 max 5
+    uptime: true
+    blur: false
+    blur_background: true
+    animation_duration: 200 # Milliseconds
+    button_row: 5 # Number of buttons in a row, min 1 max 5
     buttons:
       lock: ["\uea75", "Lock"]
       sleep: ["\u23fe","Sleep"]
@@ -33,7 +33,7 @@ power_menu:
       hibernate: ["\uf28e", "Hibernate"]
       cancel: ["\udb81\udf3a", "Cancel"]
     label_shadow:
-      enabled: true
+      enabled: false
       color: "black"
       radius: 3
       offset: [ 1, 1 ]
@@ -50,7 +50,7 @@ power_menu:
 - **container_shadow:** Container shadow options.
 - **label_shadow:** Label shadow options.
 
-## Example Style
+## Available Styles
 ```css
 .uptime {}
 .power-menu-widget .label { /*icon on the bar*/ }
@@ -69,6 +69,65 @@ power_menu:
 .power-menu-popup .button.force_shutdown {}
 .power-menu-popup .button.force_restart {}
 
+```
+## Example Styles
+```css
+.power-menu-widget .label {
+    color: #f38ba8;
+    font-size: 13px;
+}
+.power-menu-popup {
+    background-color: transparent
+}
+.power-menu-popup .button {
+    padding: 0;
+    width: 180px;
+    height: 230px;
+    border-radius: 8px;
+    background-color: #191919;
+    border: 4px solid transparent;
+    margin: 0px;
+}
+.power-menu-popup .button.hover {
+    background-color: #191919;
+    border: 4px solid #191919;
+}
+.power-menu-popup .button .label {
+    margin-bottom: 8px;
+    font-size: 16px;
+    font-weight: 500;
+    color: #9399b2
+}
+.power-menu-popup .button .icon {
+    font-size: 64px;
+    padding-top: 32px;
+    color: #7f849c
+}
+.power-menu-popup .button.hover .label,
+.power-menu-popup .button.hover .icon {
+    color: rgba(255, 255, 255, 0.808)
+}
+.power-menu-popup .button.cancel .icon {
+    padding: 0;
+    margin: 0;
+}
+.power-menu-popup .button.cancel .label {
+    color:  #f38ba8;
+    margin: 0;
+}
+.power-menu-popup .button.cancel {
+    height: 32px;
+    border-radius: 4px;
+}
+.power-menu-popup .button.cancel.hover .label {
+    color: rgb(255, 255, 255)
+}
+.uptime {
+    font-size: 14px;
+    margin-bottom: 10px;
+    color: #7f849c;
+    font-weight: 600;
+}
 ```
 
 > [!NOTE]
