@@ -107,6 +107,14 @@ def _match_aumid_by_regex(source_app_id: str) -> dict:
     if re.match(r"^Chrome\._crx_[A-Za-z0-9_-]+$", source_app_id, re.IGNORECASE):
         return {"name": "Chrome", "process": "chrome.exe"}
 
+    # Match Opera and Opera GX with version numbers
+    # Examples: OperaSoftware.OperaStable.12345, OperaSoftware.OperaGXStable.67890
+    #           OperaSoftware.OperaGXWebBrowser.1759345670
+    if re.match(r"^OperaSoftware\.Opera(?:GX|Stable|WebBrowser)", source_app_id, re.IGNORECASE):
+        if "GX" in source_app_id:
+            return {"name": "Opera GX", "process": "opera.exe"}
+        return {"name": "Opera", "process": "opera.exe"}
+
     return None
 
 
