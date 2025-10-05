@@ -33,6 +33,7 @@ class CustomToolTip(QFrame):
         self._slide_offset = 0
         self._base_pos = None
         self._is_destroyed = False
+        self._position = None  # 'top', 'bottom', or None for auto
 
         # Create label for text content
         self.label = QLabel()
@@ -196,16 +197,30 @@ class CustomToolTip(QFrame):
         # Center horizontally on widget
         x = widget_geometry.center().x() - (self.width() // 2)
 
-        # Position vertically (prefer below, but above if no space)
+        # Position vertically based on preference
         space_below = screen_geometry.bottom() - widget_geometry.bottom()
         space_above = widget_geometry.top() - screen_geometry.top()
 
-        if space_below >= self.height() + 5:
-            y = widget_geometry.bottom() + 5
-        elif space_above >= self.height() + 5:
-            y = widget_geometry.top() - self.height() - 5
+        if self._position == "top":
+            # Force top position if there's space, otherwise fallback to bottom
+            if space_above >= self.height() + 5:
+                y = widget_geometry.top() - self.height() - 5
+            else:
+                y = widget_geometry.bottom() + 5
+        elif self._position == "bottom":
+            # Force bottom position if there's space, otherwise fallback to top
+            if space_below >= self.height() + 5:
+                y = widget_geometry.bottom() + 5
+            else:
+                y = widget_geometry.top() - self.height() - 5
         else:
-            y = widget_geometry.bottom() + 5  # Default to below
+            # Auto: prefer below, but above if no space
+            if space_below >= self.height() + 5:
+                y = widget_geometry.bottom() + 5
+            elif space_above >= self.height() + 5:
+                y = widget_geometry.top() - self.height() - 5
+            else:
+                y = widget_geometry.bottom() + 5  # Default to below
 
         # Clamp to screen bounds
         x = max(screen_geometry.left(), min(x, screen_geometry.right() - self.width()))
@@ -284,12 +299,13 @@ class CustomToolTip(QFrame):
 class TooltipEventFilter(QObject):
     """Event filter that shows/hides a custom tooltip with delay."""
 
-    def __init__(self, widget, tooltip_text, delay: int, parent=None):
+    def __init__(self, widget, tooltip_text, delay: int, position=None, parent=None):
         super().__init__(parent)
         self.widget = widget
         self.tooltip_text = tooltip_text
         self.tooltip = None
         self.hover_delay = delay
+        self.position = position  # 'top', 'bottom', or None for auto
         self.hide_timer = QTimer(self)
         self.hide_timer.setSingleShot(True)
         self.hide_timer.timeout.connect(self._hide_tooltip)
@@ -323,6 +339,7 @@ class TooltipEventFilter(QObject):
     def show_tooltip(self):
         if not self.tooltip:
             self.tooltip = CustomToolTip.get_or_create_tooltip()
+            self.tooltip._position = self.position  # Set position preference
 
         # Update content if tooltip is visible, otherwise show it
         if self.tooltip.isVisible():
@@ -399,21 +416,25 @@ class TooltipEventFilter(QObject):
         return super().eventFilter(obj, event)
 
 
-def set_tooltip(widget, text, delay=400):
+def set_tooltip(widget, text, delay=400, position=None):
     """Set a tooltip to a widget in a declarative way.
 
     Args:
         widget: The widget to attach the tooltip to.
         text: The tooltip text.
         delay: Tooltip delay in ms, tooltip will show after this delay, default is 400ms.
+        position: Optional position preference - 'top' or 'bottom'. If None, auto-positions based on available space.
     """
     if not text:
         return
 
     if hasattr(widget, "_tooltip_filter"):
         widget._tooltip_filter.update_tooltip_text(text)
+        # Update position if provided
+        if position is not None:
+            widget._tooltip_filter.position = position
     else:
-        event_filter = TooltipEventFilter(widget, text, delay, widget)
+        event_filter = TooltipEventFilter(widget, text, delay, position, widget)
         widget.setMouseTracking(True)
         widget.installEventFilter(event_filter)
         widget._tooltip_filter = event_filter
