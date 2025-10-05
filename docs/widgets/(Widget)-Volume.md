@@ -10,7 +10,7 @@
 | `tooltip`  | boolean  | `true`        | Whether to show the tooltip on hover. |
 | `volume_icons` | list  | `['\ueee8', '\uf026', '\uf027', '\uf027', '\uf028']`                    | A list of icons representing different volume levels. The icons are used based on the current volume percentage. |
 | `callbacks`  | dict   | `{'on_left': 'toggle_volume_menu', 'on_middle': 'do_nothing', 'on_right': 'toggle_mute'}`                  | Callbacks for mouse events on the volume widget. |
-| `audio_menu` | dict | `{'blur': True, 'round_corners': True, 'round_corners_type': 'normal', 'border_color': 'System', 'alignment': 'right', 'direction': 'down', 'offset_top': 6, 'offset_left': 0}` | Menu settings for the widget. |
+| `audio_menu` | dict | [See below](#audio-menu-options)  | Menu settings for the widget. |
 | `animation`         | dict    | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
 | `container_shadow`   | dict   | `None`                  | Container shadow options.                       |
 | `label_shadow`         | dict   | `None`                  | Label shadow options.                 |
@@ -47,7 +47,25 @@ volume:
       radius: 3
       offset: [ 1, 1 ]
 ```
-
+## Audio Menu Options
+```yaml
+    audio_menu:
+      blur: true # Enable blur effect for the menu
+      round_corners: true # Enable round corners for the menu (not supported on Windows 10)
+      round_corners_type: "normal" # Set the type of round corners for the menu (normal, small) (not supported on Windows 10)
+      border_color: "system" # Set the border color for the menu, "system", Hex color or None
+      alignment: "right" # Set the alignment of the menu (left, right, center)
+      direction: "down" # Set the direction of the menu (up, down)
+      offset_top: 6 # Set the top offset of the menu
+      offset_left: 0 # Set the left offset of the menu
+      show_apps: true # Whether to show the list of applications with audio sessions
+      show_app_labels: false # Whether to show application labels in the audio menu
+      show_app_icons: true # Whether to show application icons in the audio menu
+      app_icons: # Icons for the toggle button to expand/collapse application volumes and fallback icon
+        toggle_down: "\uf078" # Icon for btn collapsed state
+        toggle_up: "\uf077" # Icon for btn expanded state
+        app_fallback: "\uf025" # Fallback icon for applications without an icon
+```
 ## Description of Options
 
 - **label**: The format string for the volume label. You can use placeholders like `{volume[percent]}` to dynamically insert volume information.
@@ -67,6 +85,13 @@ volume:
   - **direction**: Set the direction of the menu (up, down).
   - **offset_top**: Set the top offset of the menu.
   - **offset_left**: Set the left offset of the menu.
+  - **show_apps**: Whether to show the list of applications with audio sessions.
+  - **show_app_labels**: Whether to show application labels in the audio menu.
+  - **show_app_icons**: Whether to show application icons in the audio menu.
+  - **app_icons**: A dictionary specifying icons for the toggle button to expand/collapse application volumes and a fallback icon for applications without an icon. It contains the following keys:
+    - **toggle_down**: Icon for the button in the collapsed state.
+    - **toggle_up**: Icon for the button in the expanded state.
+    - **app_fallback**: Fallback icon for applications without an icon.
 - **callbacks**: A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions.
 - **animation:** A dictionary specifying the animation settings for the widget. It contains three keys: `enabled`, `type`, and `duration`. The `type` can be `fadeInOut` and the `duration` is the animation duration in milliseconds.
 - **container_shadow:** Container shadow options.
@@ -80,7 +105,7 @@ volume:
   - **background_color**: The background color of the progress bar.
   - **animation**: Whether to enable smooth change of the progress bar value.
 
-## Example Style
+## Available Styles
 ```css
 .volume-widget {}
 .volume-widget.your_class {} /* If you are using class_name option */
@@ -92,19 +117,45 @@ volume:
 .volume-widget .icon.muted {}
 /* Volume progress bar styles if enabled */
 .volume-widget .progress-circle {} 
+/* Audio menu styles */
+.volume-widget .audio-menu {}
+/* System volume */
+.audio-menu .system-volume-container .volume-slider {}
+.audio-menu .system-volume-container .volume-slider::groove {}
+.audio-menu .system-volume-container .volume-slider::handle{}
+/* Device list styles */
+.audio-menu .audio-container .device {}
+.audio-menu .audio-container .device.selected {}
+.audio-menu .audio-container .device:hover {}
+/* Toggle button for application volumes (if is enabled) */
+.audio-menu .toggle-apps {}
+.audio-menu .toggle-apps.expanded {}
+.audio-menu .toggle-apps:hover {}
+/* Container for application volumes (if is enabled) */
+.audio-menu .apps-container {} /* Individual application volume container */
+.audio-menu .apps-container .app-volume {} /* Individual application volume container */
+.audio-menu .apps-container .app-volume:hover {}
+.audio-menu .apps-container .app-volume .app-label {} /* Application label */
+.audio-menu .apps-container .app-volume .app-icon-container .app-icon {} /* Application icon */
+.audio-menu .apps-container .app-volume .app-slider {} /* Application volume slider */  
 ```
 
-## Style for the Audio Menu
+## Example Styles
 ```css
-.volume-slider {
-    border: none;
+.volume-widget .icon {
+	color: #74b0ff;;
+	margin:0 2px 0 0;
 }
-.volume-slider::groove {}
-.volume-slider::handle{} 
 .audio-menu {
     background-color:rgba(17, 17, 27, 0.4); 
+    min-width: 300px;
 }
-.audio-container .device {
+/* System volume */
+.audio-menu .system-volume-container .volume-slider {
+    border: none;
+}
+/* Device list styles */
+.audio-menu .audio-container .device {
     background-color:transparent;
     border: none;
     padding:6px 8px 6px 4px;
@@ -112,11 +163,51 @@ volume:
     font-size: 12px;
     border-radius: 4px;
 }
-.audio-container .device.selected {
+.audio-menu .audio-container .device.selected {
     background-color: rgba(255, 255, 255, 0.085);
+   
 }
-.audio-container .device:hover {
+.audio-menu .audio-container .device:hover {
     background-color: rgba(255, 255, 255, 0.06);
+}
+/* Toggle button for application volumes (if is enabled) */
+.audio-menu .toggle-apps {
+    background-color: transparent;
+    border: none;
+    padding: 0;
+    margin: 0;
+    min-height: 24px;
+    min-width: 24px;
+    border-radius: 4px;
+}
+.audio-menu .toggle-apps.expanded {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+.audio-menu .toggle-apps:hover {
+    background-color: rgba(255, 255, 255, 0.15);
+    
+}
+/* Container for application volumes (if is enabled) */
+.audio-menu .apps-container {
+    padding: 8px;
+    margin-top:20px;
+    border-radius: 8px;
+    background-color:rgba(255, 255, 255, 0.062)
+}
+.audio-menu .apps-container .app-volume .app-icon-container {
+    min-width: 40px;
+    min-height: 40px;
+    max-width: 40px;
+    max-height: 40px;
+    border-radius: 6px;
+    margin-right: 8px;
+}
+.audio-menu .apps-container .app-volume .app-slider {
+    min-height: 40px;
+    max-height: 40px;
+}
+.audio-menu .apps-container .app-volume .app-icon-container:hover {
+    background-color: rgba(255, 255, 255, 0.1);
 }
 ```
 

@@ -23,6 +23,14 @@ DEFAULTS = {
         "distance": 6,  # deprecated
         "offset_top": 6,
         "offset_left": 0,
+        "show_apps": False,
+        "show_app_labels": False,
+        "show_app_icons": True,
+        "app_icons": {
+            "toggle_down": "\uf078",
+            "toggle_up": "\uf077",
+            "app_fallback": "\uf025",
+        },
     },
     "animation": {"enabled": True, "type": "fadeInOut", "duration": 200},
     "container_padding": {"top": 0, "left": 0, "bottom": 0, "right": 0},
@@ -61,6 +69,18 @@ VALIDATION_SCHEMA = {
             "distance": {"type": "integer", "default": DEFAULTS["audio_menu"]["distance"]},
             "offset_top": {"type": "integer", "default": DEFAULTS["audio_menu"]["offset_top"]},
             "offset_left": {"type": "integer", "default": DEFAULTS["audio_menu"]["offset_left"]},
+            "show_apps": {"type": "boolean", "default": DEFAULTS["audio_menu"]["show_apps"]},
+            "show_app_labels": {"type": "boolean", "default": DEFAULTS["audio_menu"]["show_app_labels"]},
+            "show_app_icons": {"type": "boolean", "default": DEFAULTS["audio_menu"]["show_app_icons"]},
+            "app_icons": {
+                "type": "dict",
+                "schema": {
+                    "toggle_down": {"type": "string", "default": DEFAULTS["audio_menu"]["app_icons"]["toggle_down"]},
+                    "toggle_up": {"type": "string", "default": DEFAULTS["audio_menu"]["app_icons"]["toggle_up"]},
+                    "app_fallback": {"type": "string", "default": DEFAULTS["audio_menu"]["app_icons"]["app_fallback"]},
+                },
+                "default": DEFAULTS["audio_menu"]["app_icons"],
+            },
         },
         "default": DEFAULTS["audio_menu"],
     },
