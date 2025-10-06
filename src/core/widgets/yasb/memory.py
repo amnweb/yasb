@@ -150,6 +150,7 @@ class MemoryWidget(BaseWidget):
                     self.progress_widget,
                 )
             self.progress_widget.set_value(virtual_mem.percent)
+            self.progress_widget.set_class(f"status-{self._get_virtual_memory_threshold(virtual_mem.percent)}")
 
         for part in label_parts:
             part = part.strip()
