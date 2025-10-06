@@ -249,6 +249,22 @@ def get_process_icon(pid: int) -> Image.Image | None:
             if icon_img:
                 return icon_img
 
+        # Fallback OS default application icon
+        try:
+            size = win32api.GetSystemMetrics(win32con.SM_CXICON)
+            default_hicon = win32gui.LoadImage(
+                0,
+                win32con.IDI_APPLICATION,
+                win32con.IMAGE_ICON,
+                size,
+                size,
+                win32con.LR_SHARED,
+            )
+            if default_hicon:
+                return hicon_to_image(default_hicon)
+        except Exception as e:
+            logging.debug(f"Failed to get default icon: {e}")
+
     except Exception as e:
         logging.debug(f"Failed to get icon for PID {pid}: {e}")
 
