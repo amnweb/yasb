@@ -61,10 +61,9 @@ volume:
       show_apps: true # Whether to show the list of applications with audio sessions
       show_app_labels: false # Whether to show application labels in the audio menu
       show_app_icons: true # Whether to show application icons in the audio menu
-      app_icons: # Icons for the toggle button to expand/collapse application volumes and fallback icon
+      app_icons: # Icons for the toggle button to expand/collapse application volumes
         toggle_down: "\uf078" # Icon for btn collapsed state
         toggle_up: "\uf077" # Icon for btn expanded state
-        app_fallback: "\uf025" # Fallback icon for applications without an icon
 ```
 ## Description of Options
 
@@ -88,10 +87,9 @@ volume:
   - **show_apps**: Whether to show the list of applications with audio sessions.
   - **show_app_labels**: Whether to show application labels in the audio menu.
   - **show_app_icons**: Whether to show application icons in the audio menu.
-  - **app_icons**: A dictionary specifying icons for the toggle button to expand/collapse application volumes and a fallback icon for applications without an icon. It contains the following keys:
+  - **app_icons**: A dictionary specifying icons for the toggle button to expand/collapse application volumes. It contains the following keys:
     - **toggle_down**: Icon for the button in the collapsed state.
     - **toggle_up**: Icon for the button in the expanded state.
-    - **app_fallback**: Fallback icon for applications without an icon.
 - **callbacks**: A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions.
 - **animation:** A dictionary specifying the animation settings for the widget. It contains three keys: `enabled`, `type`, and `duration`. The `type` can be `fadeInOut` and the `duration` is the animation duration in milliseconds.
 - **container_shadow:** Container shadow options.

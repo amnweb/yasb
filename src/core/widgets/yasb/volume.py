@@ -540,6 +540,8 @@ class VolumeWidget(BaseWidget):
     def _get_active_audio_sessions(self):
         """Get all active audio sessions (applications with audio)"""
         sessions = []
+        seen_sessions = {}  # Track unique sessions by (PID, GroupingParam)
+
         try:
             devices = AudioUtilities.GetSpeakers()
             if not devices:
@@ -550,6 +552,24 @@ class VolumeWidget(BaseWidget):
                 if session.Process and session.Process.name():
                     # Skip blacklisted processes
                     if session.Process.name().lower() in [p.lower() for p in BLACKLISTED_PROCESSES]:
+                        continue
+
+                    try:
+                        pid = session.ProcessId
+
+                        try:
+                            grouping_param = str(session.GroupingParam)
+                        except:
+                            grouping_param = ""
+
+                        session_key = (pid, grouping_param)
+
+                        if session_key in seen_sessions:
+                            continue
+
+                        seen_sessions[session_key] = True
+                    except Exception as e:
+                        logging.debug(f"Failed to process session grouping: {e}")
                         continue
 
                     volume = session._ctl.QueryInterface(ISimpleAudioVolume)
@@ -592,6 +612,8 @@ class VolumeWidget(BaseWidget):
                     )
         except Exception as e:
             logging.error(f"Failed to get audio sessions: {e}")
+
+        sessions.sort(key=lambda s: s["app_name"].lower())
 
         return sessions
 
@@ -784,10 +806,6 @@ class VolumeWidget(BaseWidget):
                     )
                     if app_icon:
                         icon_label.setPixmap(app_icon)
-                    else:
-                        # Fallback to text icon if no image icon found
-                        icon_label.setText(self._audio_menu["app_icons"]["app_fallback"])
-                        icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
                     icon_frame_layout.addWidget(icon_label)
                     slider_layout.addWidget(icon_frame)
