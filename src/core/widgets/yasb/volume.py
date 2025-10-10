@@ -882,9 +882,8 @@ class VolumeWidget(BaseWidget):
     def _update_label(self):
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
         active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
-        label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
-        label_parts = [part for part in label_parts if part]
         widget_index = 0
+
         try:
             self._initialize_volume_interface()
             mute_status = self.volume.GetMute()
@@ -895,8 +894,6 @@ class VolumeWidget(BaseWidget):
         except Exception:
             mute_status, icon_volume, level_volume = None, "", "No Device"
 
-        label_options = {"{icon}": icon_volume, "{level}": level_volume}
-
         if self._progress_bar["enabled"] and self.progress_widget:
             if self._widget_container_layout.indexOf(self.progress_widget) == -1:
                 self._widget_container_layout.insertWidget(
@@ -906,19 +903,19 @@ class VolumeWidget(BaseWidget):
             numeric_value = int(re.search(r"\d+", level_volume).group()) if re.search(r"\d+", level_volume) else 0
             self.progress_widget.set_value(numeric_value)
 
+        active_label_content = active_label_content.format(icon=icon_volume, level=level_volume)
+        label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
+
         for part in label_parts:
             part = part.strip()
             if part:
-                formatted_text = part
-                for option, value in label_options.items():
-                    formatted_text = formatted_text.replace(option, str(value))
                 if "<span" in part and "</span>" in part:
                     if widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
-                        active_widgets[widget_index].setText(formatted_text)
+                        active_widgets[widget_index].setText(part)
                         self._set_muted_class(active_widgets[widget_index], mute_status == 1)
                 else:
                     if widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
-                        active_widgets[widget_index].setText(formatted_text)
+                        active_widgets[widget_index].setText(part)
                         self._set_muted_class(active_widgets[widget_index], mute_status == 1)
                 widget_index += 1
 

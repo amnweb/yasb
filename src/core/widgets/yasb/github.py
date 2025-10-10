@@ -221,8 +221,11 @@ class GithubWidget(BaseWidget):
         notification_count = len([notification for notification in self._github_data if notification["unread"]])
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
         active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
+        active_label_content = active_label_content.format(data=notification_count)
+
         # Split label content and filter out empty parts
-        label_parts = [part.strip() for part in re.split(r"(<span.*?>.*?</span>)", active_label_content) if part]
+        label_parts = re.split(r"(<span.*?>.*?</span>)", active_label_content)
+        label_parts = [part.strip() for part in label_parts if part.strip()]
 
         # Setting the notification dot if enabled and the label exists
         if self._notification_dot["enabled"]:
@@ -253,8 +256,7 @@ class GithubWidget(BaseWidget):
                 current_widget.setProperty("class", " ".join(current_classes))
 
             else:
-                formatted_text = part.format(data=notification_count)
-                current_widget.setText(formatted_text)
+                current_widget.setText(part)
             current_widget.style().unpolish(current_widget)
 
     def mark_as_read(self, notification_id, container_label):

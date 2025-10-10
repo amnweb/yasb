@@ -817,7 +817,7 @@ class MediaWidget(BaseWidget):
                     k: self._format_max_field_size(v, f"field_{k}") if isinstance(v, str) else v
                     for k, v in media_info.items()
                 }
-                format_label_content = active_label_content.format(**formatted_info)
+                format_label_content = active_label_content.format_map(formatted_info)
                 format_label_content = self._format_max_field_size(format_label_content)
             except Exception as e:
                 logging.error(f"MediaWidget: Error formatting label: {e}")
@@ -827,8 +827,8 @@ class MediaWidget(BaseWidget):
                 else:
                     format_label_content = "No media"
         else:
-            format_label_content = active_label_content.format(
-                **{k: self._format_max_field_size(v) if isinstance(v, str) else v for k, v in media_info.items()}
+            format_label_content = active_label_content.format_map(
+                {k: self._format_max_field_size(v) if isinstance(v, str) else v for k, v in media_info.items()}
             )
         # Format the label
         active_label.setText(format_label_content)

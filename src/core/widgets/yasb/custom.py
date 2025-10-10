@@ -165,6 +165,7 @@ class CustomWidget(BaseWidget):
     def _update_label(self):
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
         active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
+        active_label_content = active_label_content.format(data=self._exec_data)
         label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
         widget_index = 0
         try:
@@ -175,7 +176,7 @@ class CustomWidget(BaseWidget):
                         icon = re.sub(r"<span.*?>|</span>", "", part).strip()
                         active_widgets[widget_index].setText(icon)
                     else:
-                        active_widgets[widget_index].setText(self._truncate_label(part.format(data=self._exec_data)))
+                        active_widgets[widget_index].setText(self._truncate_label(part))
                     if self._hide_empty:
                         if self._exec_data:
                             self.setVisible(True)

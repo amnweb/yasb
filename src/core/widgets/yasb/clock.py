@@ -239,34 +239,53 @@ class ClockWidget(BaseWidget):
     def _update_label(self):
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
         active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
-        label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
-        label_parts = [part for part in label_parts if part]
         widget_index = 0
+
         now = datetime.now(pytz.timezone(self._active_tz))
+        icon = ''
+
+        # Finding the datetime format string in the label using keyerror exception.
+        try:
+            active_label_content.format(icon='')
+        except KeyError as ke:
+            # Remove the quotes around the exception message to get the datetime format.
+            datetime_format = str(ke)[1:-1]
+
+            datetime_format_idx = active_label_content.find(datetime_format)
+            closing_braces_idx = active_label_content.find('}', datetime_format_idx + len(datetime_format))
+
+            datetime_format = active_label_content[datetime_format_idx: closing_braces_idx]
+            active_label_content = active_label_content.replace(
+                '{' + datetime_format + '}', now.strftime(datetime_format)
+            )
+
         current_hour = f"{now.hour:02d}"
         hour_changed = self._current_hour != current_hour
         if hour_changed:
             self._current_hour = current_hour
+        icon = self._get_icon_for_hour(now.hour)
+        hour_class = f"clock_{current_hour}"
+
+        active_label_content = active_label_content.format(icon=icon)
+
         if self._locale:
             org_locale_time = locale.getlocale(locale.LC_TIME)
             try:
                 org_locale_ctype = locale.getlocale(locale.LC_CTYPE)
             except locale.Error:
                 pass
+
+        label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
+
         for part in label_parts:
             part = part.strip()
             if part and widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
                 if "<span" in part and "</span>" in part:
                     icon_placeholder = re.sub(r"<span.*?>|</span>", "", part).strip()
-                    if icon_placeholder == "{icon}":
-                        if hour_changed:
-                            icon = self._get_icon_for_hour(now.hour)
-                            active_widgets[widget_index].setText(icon)
-                            hour_class = f"clock_{current_hour}"
-                            active_widgets[widget_index].setProperty("class", f"icon {hour_class}")
-                            self._reload_css(active_widgets[widget_index])
-                    else:
-                        active_widgets[widget_index].setText(icon_placeholder)
+                    active_widgets[widget_index].setProperty("class", f"icon {hour_class}")
+                    if hour_changed:
+                        self._reload_css(active_widgets[widget_index])
+                    active_widgets[widget_index].setText(icon_placeholder)
                 else:
                     try:
                         if self._locale:
@@ -275,14 +294,9 @@ class ClockWidget(BaseWidget):
                                 locale.setlocale(locale.LC_CTYPE, self._locale)
                             except locale.Error:
                                 pass
-                        datetime_format_search = re.search("\\{(.*)}", part)
-                        datetime_format_str = datetime_format_search.group()
-                        datetime_format = datetime_format_search.group(1)
-                        datetime_now = datetime.now(pytz.timezone(self._active_tz))
-                        format_label_content = part.replace(datetime_format_str, datetime_now.strftime(datetime_format))
                     except Exception:
-                        format_label_content = part
-                    active_widgets[widget_index].setText(format_label_content)
+                        pass
+                    active_widgets[widget_index].setText(part)
                     if hour_changed:
                         hour_class = f"clock_{current_hour}"
                         active_widgets[widget_index].setProperty("class", f"label {hour_class}")

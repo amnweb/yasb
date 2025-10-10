@@ -310,8 +310,6 @@ class BluetoothWidget(BaseWidget):
     def _update_label(self, icon, connected_devices=None):
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
         active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
-        label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
-        label_parts = [part for part in label_parts if part]
         widget_index = 0
 
         if connected_devices:
@@ -333,26 +331,25 @@ class BluetoothWidget(BaseWidget):
             device_names = self._label_no_device
             tooltip_text = self._label_no_device
 
-        label_options = {
-            "{icon}": icon,
-            "{device_name}": device_names,
-            "{device_count}": len(connected_devices) if connected_devices else 0,
-        }
+        active_label_content = active_label_content.format(
+            icon=icon,
+            device_name=device_names,
+            device_count=len(connected_devices) if connected_devices else 0,
+        )
+
+        label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
 
         for part in label_parts:
             part = part.strip()
             if part:
-                formatted_text = part
-                for option, value in label_options.items():
-                    formatted_text = formatted_text.replace(option, str(value))
                 if "<span" in part and "</span>" in part:
                     if widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
-                        active_widgets[widget_index].setText(formatted_text)
+                        active_widgets[widget_index].setText(part)
                 else:
-                    if self._max_length and len(formatted_text) > self._max_length:
-                        formatted_text = formatted_text[: self._max_length] + self._max_length_ellipsis
+                    if self._max_length and len(part) > self._max_length:
+                        part = part[: self._max_length] + self._max_length_ellipsis
                     if widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
-                        active_widgets[widget_index].setText(formatted_text)
+                        active_widgets[widget_index].setText(part)
                 widget_index += 1
 
         if self._tooltip:

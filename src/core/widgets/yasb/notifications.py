@@ -128,17 +128,14 @@ class NotificationsWidget(BaseWidget):
         else:
             icon = self._icons["default"]
 
+        active_label_content = active_label_content.format(count=self._notification_count, icon=icon)
         label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
-        label_parts = [part for part in label_parts if part]
         widget_index = 0
 
         # Provide replacements for {count} and {icon}
-        label_options = [("{count}", self._notification_count), ("{icon}", icon)]
 
         for part in label_parts:
             part = part.strip()
-            for option, value in label_options:
-                part = part.replace(option, str(value))
 
             if part and widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
                 if "<span" in part and "</span>" in part:
