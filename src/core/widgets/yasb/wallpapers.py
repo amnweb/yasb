@@ -172,7 +172,6 @@ class WallpapersWidget(BaseWidget):
         active_widgets = self._widgets
         active_label_content = self._label_content
         label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
-        label_parts = [part for part in label_parts if part]
         widget_index = 0
         for part in label_parts:
             part = part.strip()
