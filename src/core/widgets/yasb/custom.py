@@ -178,6 +178,15 @@ class CustomWidget(BaseWidget):
         active_label_content = active_label_content.format(data=self._exec_data)
         label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
         widget_index = 0
+
+        if self._hide_empty:
+            if self._exec_data:
+                self.setVisible(True)
+                # active_widgets[widget_index].show()
+            else:
+                self.setVisible(False)
+                # active_widgets[widget_index].hide()
+
         try:
             for part in label_parts:
                 part = part.strip()
@@ -187,16 +196,16 @@ class CustomWidget(BaseWidget):
                         active_widgets[widget_index].setText(icon)
                     else:
                         active_widgets[widget_index].setText(self._truncate_label(part))
-                    if self._hide_empty:
-                        if self._exec_data:
-                            self.setVisible(True)
-                            # active_widgets[widget_index].show()
-                        else:
-                            self.setVisible(False)
-                            # active_widgets[widget_index].hide()
+
+                    if not active_widgets[widget_index].isVisible():
+                        active_widgets[widget_index].setVisible(True)
                     widget_index += 1
         except Exception:
             active_widgets[widget_index].setText(self._truncate_label(part))
+
+        while widget_index < len(active_widgets):
+            active_widgets[widget_index].setVisible(False)
+            widget_index += 1
 
     def _exec_callback(self):
         if self._exec_cmd:
