@@ -132,7 +132,7 @@ class DiskWidget(BaseWidget):
 
         label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
         disk_threshold_class = self._get_disk_threshold(percent_value)
-    
+
         for part in label_parts:
             part = part.strip()
             if part and widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):

@@ -178,7 +178,7 @@ class BatteryWidget(BaseWidget):
             percent=str(self._battery_state.percent),
             time_remaining=time_remaining,
             is_charging=is_charging_str,
-            icon=charging_icon
+            icon=charging_icon,
         )
         label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
 

@@ -242,21 +242,21 @@ class ClockWidget(BaseWidget):
         widget_index = 0
 
         now = datetime.now(pytz.timezone(self._active_tz))
-        icon = ''
+        icon = ""
 
         # Finding the datetime format string in the label using keyerror exception.
         try:
-            active_label_content.format(icon='')
+            active_label_content.format(icon="")
         except KeyError as ke:
             # Remove the quotes around the exception message to get the datetime format.
             datetime_format = str(ke)[1:-1]
 
             datetime_format_idx = active_label_content.find(datetime_format)
-            closing_braces_idx = active_label_content.find('}', datetime_format_idx + len(datetime_format))
+            closing_braces_idx = active_label_content.find("}", datetime_format_idx + len(datetime_format))
 
-            datetime_format = active_label_content[datetime_format_idx: closing_braces_idx]
+            datetime_format = active_label_content[datetime_format_idx:closing_braces_idx]
             active_label_content = active_label_content.replace(
-                '{' + datetime_format + '}', now.strftime(datetime_format)
+                "{" + datetime_format + "}", now.strftime(datetime_format)
             )
 
         current_hour = f"{now.hour:02d}"
