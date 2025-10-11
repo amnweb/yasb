@@ -241,15 +241,15 @@ class WeatherWidget(BaseWidget):
                 min_temp = self._weather_data["min_temp"]
                 max_temp = self._weather_data["max_temp"]
             else:
-                name = self._weather_data[f"{{day{i}_name}}"]
-                min_temp = self._weather_data[f"{{day{i}_min_temp}}"]
-                max_temp = self._weather_data[f"{{day{i}_max_temp}}"]
+                name = self._weather_data[f"day{i}_name"]
+                min_temp = self._weather_data[f"day{i}_min_temp"]
+                max_temp = self._weather_data[f"day{i}_max_temp"]
             row_day_label = QLabel(f"{name}\nMin: {min_temp}\nMax: {max_temp}", frame_day)
             row_day_label.setProperty("class", "label")
 
             # Create the icon label and pixmap
             row_day_icon_label = QLabel(frame_day)
-            icon_url = self._weather_data[f"{{day{i}_icon}}"]
+            icon_url = self._weather_data[f"day{i}_icon"]
             icon_data_day = self._icon_fetcher.get_icon(icon_url)
             if bool(icon_data_day):
                 self._set_pixmap(row_day_icon_label, icon_data_day)
