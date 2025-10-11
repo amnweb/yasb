@@ -291,7 +291,14 @@ class LibreHardwareMonitorWidget(BaseWidget):
                     active_widgets[widget_index].setText(icon)
                 else:
                     active_widgets[widget_index].setText(part)
+
+                if not active_widgets[widget_index].isVisible():
+                    active_widgets[widget_index].setVisible(True)
+
                 widget_index += 1
+
+        for i in range(widget_index, len(active_widgets)):
+            active_widgets[i].setVisible(False)
 
         # Update popup menu if it's visible
         if self._is_menu_visible():
