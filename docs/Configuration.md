@@ -139,7 +139,7 @@ layouts:
 
 # Multiple Bars Example
 > **Note:**
-> If you want to have different bars on each screen you will need to define on which screen the bar should be displayed, `screens` inside bar config is your monitor name. You can find your monitor name inside device manager or click on YASB tray icon and select Debug > Information to show all available screens.
+> If you want to have different bars on each screen you will need to define on which screen the bar should be displayed, `screens` inside bar config is your monitor name. You can find your monitor names using `yasbc monitor-information` or inside device manager.
 
 ```
 bars:
