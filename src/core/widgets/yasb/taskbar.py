@@ -922,6 +922,10 @@ class TaskbarWidget(BaseWidget):
                             else:
                                 self._widget_container_layout.insertWidget(insert_pos, container)
 
+                            # Show taskbar if it was hidden and hide_empty is enabled
+                            if self._hide_empty and len(self._hwnd_to_widget) > 0:
+                                self._show_taskbar_widget()
+
             elif action == "unpin":
                 # Remove the pinned-only button if it exists (pseudo hwnd < 0)
                 for pseudo_hwnd, widget in list(self._hwnd_to_widget.items()):
@@ -936,6 +940,10 @@ class TaskbarWidget(BaseWidget):
                     if self._pin_manager.running_pinned.get(hwnd) == unique_id:
                         self._pin_manager.running_pinned.pop(hwnd)
                         self._update_pinned_status(hwnd, is_pinned=False)
+
+                # Check if taskbar should be hidden after unpinning
+                if self._hide_empty and len(self._hwnd_to_widget) < 1:
+                    self._hide_taskbar_widget()
 
             elif action == "reorder":
                 # Rebuild the entire layout in the new order
@@ -1213,6 +1221,7 @@ class TaskbarWidget(BaseWidget):
 
         # If pinned app closed, recreate its pinned-only button
         # Only recreate if NO other windows of this app are still running
+        will_recreate_pinned_button = False
         if is_pinned:
             # Check if any other windows of the same app are still running
             other_windows_exist = unique_id in self._pin_manager.running_pinned.values()
@@ -1224,6 +1233,7 @@ class TaskbarWidget(BaseWidget):
                 position = current_position if current_position >= 0 else -1
 
                 if position >= 0:
+                    will_recreate_pinned_button = True
                     delay = ANIMATION_DURATION_MS if self._animation["enabled"] and not immediate else 0
                     QTimer.singleShot(
                         delay,
@@ -1232,7 +1242,8 @@ class TaskbarWidget(BaseWidget):
                         ),
                     )
 
-        if self._hide_empty and len(self._hwnd_to_widget) < 1:
+        # Only hide taskbar if no widgets left AND we're not about to recreate a pinned button
+        if self._hide_empty and len(self._hwnd_to_widget) < 1 and not will_recreate_pinned_button:
             self._hide_taskbar_widget()
 
     def _update_window_ui(self, hwnd, window_data):
@@ -1466,6 +1477,10 @@ class TaskbarWidget(BaseWidget):
                         widget.deleteLater()
                     except Exception:
                         pass
+
+                # Check if taskbar should be hidden after unpinning
+                if self._hide_empty and len(self._hwnd_to_widget) < 1:
+                    self._hide_taskbar_widget()
 
         except Exception as e:
             logging.error(f"Error unpinning pinned-only app: {e}")
