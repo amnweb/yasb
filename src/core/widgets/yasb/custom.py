@@ -24,10 +24,14 @@ class CustomWorker(QObject):
         self.encoding = encoding
         self.return_type = return_type
         self.hide_empty = hide_empty
+        self._is_running = True
+
+    def stop(self):
+        self._is_running = False
 
     def run(self):
         exec_data = None
-        if self.cmd:
+        if self.cmd and self._is_running:
             proc = subprocess.Popen(
                 self.cmd,
                 stdout=subprocess.PIPE,
@@ -44,8 +48,13 @@ class CustomWorker(QObject):
                     exec_data = None
             else:
                 exec_data = output.decode("utf-8").strip()
-        self.data_ready.emit(exec_data)
-        self.finished.emit()
+
+        if self._is_running:
+            try:
+                self.data_ready.emit(exec_data)
+                self.finished.emit()
+            except RuntimeError:
+                pass
 
 
 class CustomWidget(BaseWidget):
@@ -81,6 +90,7 @@ class CustomWidget(BaseWidget):
         self._padding = container_padding
         self._label_shadow = label_shadow
         self._container_shadow = container_shadow
+        self._worker = None  # Keep reference to worker for cleanup
         # Construct container
         self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
@@ -189,12 +199,15 @@ class CustomWidget(BaseWidget):
 
     def _exec_callback(self):
         if self._exec_cmd:
-            worker = CustomWorker(
+            if self._worker:
+                self._worker.stop()
+
+            self._worker = CustomWorker(
                 self._exec_cmd, self._exec_shell, self._exec_encoding, self._exec_return_type, self._hide_empty
             )
-            worker_thread = threading.Thread(target=worker.run)
-            worker.data_ready.connect(self._handle_exec_data)
-            worker.finished.connect(worker.deleteLater)
+            worker_thread = threading.Thread(target=self._worker.run)
+            self._worker.data_ready.connect(self._handle_exec_data)
+            self._worker.finished.connect(self._worker.deleteLater)
             worker_thread.start()
         else:
             self._update_label()
