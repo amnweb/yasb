@@ -4,7 +4,6 @@ import logging
 import winreg
 from contextlib import suppress
 from ctypes import GetLastError, byref, c_ulong, create_unicode_buffer
-from functools import lru_cache
 
 import win32api
 import win32gui
@@ -58,72 +57,67 @@ def get_monitor_info(monitor_hwnd: int) -> dict:
     }
 
 
-@lru_cache(maxsize=4096)
-def _pid_to_name(pid: int) -> str | None:
-    """Return the executable file name for a PID or None on failure."""
-    h_process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
-    if not h_process:
-        return None
-    try:
-        size = ctypes.c_ulong(1024)
-        buf = ctypes.create_unicode_buffer(size.value)
-        if QueryFullProcessImageNameW(h_process, 0, buf, ctypes.byref(size)):
-            val = buf.value
-            i = val.rfind("\\")
-            return val[i + 1 :] if i != -1 else val
-        return None
-    finally:
-        CloseHandle(h_process)
-
-
 def get_process_info(hwnd: int) -> dict:
-    """Get process info { name, pid }.
+    """Get process info { name, pid, path }.
 
     - Returns pid=0 when no valid PID is associated or process is gone.
     - Returns name=None when access is denied or name can't be resolved.
+    - Returns path=None when access is denied or path can't be resolved.
     """
     try:
         pid_c = ctypes.c_ulong(0)
         GetWindowThreadProcessId(hwnd, ctypes.byref(pid_c))
         pid = int(pid_c.value)
     except Exception:
-        return {"name": None, "pid": 0}
+        return {"name": None, "pid": 0, "path": None}
 
     if pid <= 0:
-        return {"name": None, "pid": 0}
+        return {"name": None, "pid": 0, "path": None}
 
-    name = _pid_to_name(pid)
-    if name is not None:
-        return {"name": name, "pid": pid}
-
-    # Disambiguate failure: try opening to check error cause
+    # Try to get the full path first (includes name extraction as bonus)
     h_process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
     if not h_process:
         # Determine why it failed
         err = GetLastError()
         if err in (ERROR_INVALID_PARAMETER, ERROR_INVALID_HANDLE, 0):
             # Process likely no longer exists
-            return {"name": None, "pid": 0}
+            return {"name": None, "pid": 0, "path": None}
         if err == ACCESS_DENIED:
             # Access denied: process exists but protected
-            return {"name": None, "pid": pid}
-        # Unknown: keep pid but no name
-        return {"name": None, "pid": pid}
-    else:
+            return {"name": None, "pid": pid, "path": None}
+        # Unknown: keep pid but no name/path
+        return {"name": None, "pid": pid, "path": None}
+
+    try:
+        # Get full path
+        size = c_ulong(1024)
+        buf = create_unicode_buffer(size.value)
+        path = None
+        if QueryFullProcessImageNameW(h_process, 0, buf, byref(size)):
+            path = buf.value
+
+        # Extract name from path if we got it
+        name = None
+        if path:
+            i = path.rfind("\\")
+            name = path[i + 1 :] if i != -1 else path
+
+        return {"name": name, "pid": pid, "path": path}
+    finally:
         CloseHandle(h_process)
-        # Handle opened but name lookup failed: keep pid without name
-        return {"name": None, "pid": pid}
 
 
 def get_app_name_from_pid(pid: int) -> str | None:
-    """Get the actual application name - handles both UWP and Win32 apps properly"""
+    """
+    Get the actual application name - handles both UWP and Win32 apps properly.
+    """
     try:
         h_process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
         if not h_process:
             return None
 
         try:
-            # Method 1: Check if this is a UWP app and get its proper display name
+            # Check if this is a UWP app and get its proper display name
             length = c_ulong(0)
             kernel32 = ctypes.windll.kernel32
             ERROR_INSUFFICIENT_BUFFER = 0x7A
@@ -139,14 +133,25 @@ def get_app_name_from_pid(pid: int) -> str | None:
                     package_full_name = buf.value
                     CloseHandle(h_process)
 
-                    # Use WinRT API to get the proper localized display name
+                    # Use WinRT API to get the SHORT name
                     try:
                         package_manager = PackageManager()
 
                         # Find the package by full name
                         for package in package_manager.find_packages_by_user_security_id(""):
                             if package.id.full_name == package_full_name:
-                                # Package.display_name automatically resolves ms-resource: strings
+                                # Try to get SHORT name from app list entries first
+                                try:
+                                    app_entries = package.get_app_list_entries()
+                                    if app_entries and len(app_entries) > 0:
+                                        # Use the first app entry's short name
+                                        short_name = app_entries[0].display_info.display_name
+                                        if short_name and short_name.strip():
+                                            return short_name.strip()
+                                except Exception:
+                                    pass
+
+                                # Fallback to package display name
                                 display_name = package.display_name
                                 if display_name and display_name.strip():
                                     return display_name.strip()
@@ -157,31 +162,27 @@ def get_app_name_from_pid(pid: int) -> str | None:
                     # If WinRT fails, we already closed the handle, so return None
                     return None
 
-            # Method 2: This is a Win32 app - get FileDescription from executable
+            # This is a Win32 app - get FileDescription from executable
             size = c_ulong(1024)
             buf = create_unicode_buffer(size.value)
             if QueryFullProcessImageNameW(h_process, 0, buf, byref(size)):
                 exe_path = buf.value
 
-                # Get file description from executable version info
+                # Get ProductName or FileDescription from executable version info
                 try:
-                    # Try to get the FileDescription (this is the friendly app name)
                     lang, codepage = win32api.GetFileVersionInfo(exe_path, "\\VarFileInfo\\Translation")[0]
                     string_file_info = f"\\StringFileInfo\\{lang:04X}{codepage:04X}\\"
 
-                    # Try FileDescription first (most user-friendly)
                     try:
                         app_name = win32api.GetFileVersionInfo(exe_path, string_file_info + "FileDescription")
-                        if app_name:
-                            return app_name
+                        if app_name and app_name.strip():
+                            return app_name.strip()
                     except:
                         pass
-
-                    # Fallback to ProductName
                     try:
                         app_name = win32api.GetFileVersionInfo(exe_path, string_file_info + "ProductName")
-                        if app_name:
-                            return app_name
+                        if app_name and app_name.strip():
+                            return app_name.strip()
                     except:
                         pass
                 except Exception as e:
@@ -190,6 +191,48 @@ def get_app_name_from_pid(pid: int) -> str | None:
             CloseHandle(h_process)
     except Exception as e:
         logging.debug(f"Failed to get app name for PID {pid}: {e}")
+
+    return None
+
+
+def get_app_name_from_aumid(aumid: str) -> str | None:
+    """
+    Get the real app name from AUMID using Windows Package Manager API.
+    Works for any UWP app (Edge PWAs, Microsoft Store apps, etc.).
+    """
+    try:
+        if "!" in aumid:
+            package_family = aumid.split("!")[0]
+        else:
+            package_family = aumid
+
+        package_manager = PackageManager()
+        for package in package_manager.find_packages_by_user_security_id(""):
+            try:
+                family_name = package.id.family_name
+                if family_name and package_family == family_name:
+                    # Try to get the SHORT name from app list entries
+                    try:
+                        app_entries = package.get_app_list_entries()
+                        for app_entry in app_entries:
+                            if app_entry.app_user_model_id == aumid:
+                                short_name = app_entry.display_info.display_name
+                                if short_name and short_name.strip():
+                                    return short_name.strip()
+                    except Exception:
+                        pass
+
+                    # Fallback to package display name if app list entry method fails
+                    display_name = package.display_name
+                    if display_name:
+                        return display_name
+            except Exception:
+                continue
+
+    except ImportError:
+        logging.debug("winrt module not available, cannot resolve UWP app names")
+    except Exception as e:
+        logging.debug(f"Failed to get UWP app name from PackageManager: {e}")
 
     return None
 
@@ -254,7 +297,7 @@ def qmenu_rounded_corners(qwidget):
         qwidget.setStyle(QStyleFactory.create("Fusion"))
         hwnd = int(qwidget.winId())
 
-        Blur(hwnd, Acrylic=False, DarkMode=False, RoundCorners=True, RoundCornersType="normal", BorderColor="system")
+        Blur(hwnd, Acrylic=False, DarkMode=True, RoundCorners=True, RoundCornersType="normal", BorderColor="None")
     except Exception:
         # If anything goes wrong, just skip it.
         pass
