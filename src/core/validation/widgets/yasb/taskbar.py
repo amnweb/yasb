@@ -10,7 +10,7 @@ DEFAULTS = {
     "hide_empty": False,
     "container_padding": {"top": 0, "left": 0, "bottom": 0, "right": 0},
     "preview": {"enabled": False, "width": 240, "delay": 400, "padding": 8, "margin": 8},
-    "callbacks": {"on_left": "toggle_window", "on_middle": "do_nothing", "on_right": "do_nothing"},
+    "callbacks": {"on_left": "toggle_window", "on_middle": "do_nothing", "on_right": "context_menu"},
 }
 
 VALIDATION_SCHEMA = {
