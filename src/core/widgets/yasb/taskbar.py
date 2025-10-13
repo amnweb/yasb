@@ -446,6 +446,7 @@ class TaskbarWidget(BaseWidget):
         self._label_shadow = label_shadow
         self._container_shadow = container_shadow
         self._widget_monitor_handle = None
+        self._context_menu_open = False
 
         self._preview_enabled = preview["enabled"]
         self._preview_width = preview["width"]
@@ -1279,17 +1280,18 @@ class TaskbarWidget(BaseWidget):
 
         try:
             if self._title_label["enabled"] and layout.count() > 1:
-                title_wrapper = layout.itemAt(1).widget()
+                title_wrapper = self._get_title_wrapper(widget)
                 title_label = self._get_title_label(title_wrapper)
                 if title_label:
                     formatted_title = self._format_title(title)
                     if title_label.text() != formatted_title:
                         title_label.setText(formatted_title)
                 if self._title_label["show"] == "focused" and title_wrapper:
-                    desired_visible = self._get_title_visibility(hwnd)
-                    if desired_visible != title_wrapper.isVisible():
-                        self._animate_or_set_title_visible(title_wrapper, desired_visible)
-                        layout.activate()
+                    if not self._context_menu_open:
+                        desired_visible = self._get_title_visibility(hwnd)
+                        if desired_visible != title_wrapper.isVisible():
+                            self._animate_or_set_title_visible(title_wrapper, desired_visible)
+                            layout.activate()
         except Exception:
             pass
 
@@ -1314,6 +1316,26 @@ class TaskbarWidget(BaseWidget):
         # Update the tooltip if enabled
         if self._tooltip and title:
             set_tooltip(widget, title, delay=0)
+
+    def _refresh_title_visibility(self, hwnd: int) -> None:
+        if not (self._title_label.get("enabled") and self._title_label.get("show") == "focused"):
+            return
+        container = self._hwnd_to_widget.get(hwnd)
+        if not container:
+            return
+        title_wrapper = self._get_title_wrapper(container)
+        if not title_wrapper:
+            return
+        desired_visible = self._get_title_visibility(hwnd)
+        if desired_visible == title_wrapper.isVisible():
+            return
+        self._animate_or_set_title_visible(title_wrapper, desired_visible)
+        try:
+            layout = container.layout()
+            if layout:
+                layout.activate()
+        except Exception:
+            pass
 
     def _show_taskbar_widget(self):
         """Show the taskbar widget if hidden."""
@@ -1410,7 +1432,18 @@ class TaskbarWidget(BaseWidget):
 
     def _show_context_menu(self, hwnd: int, pos) -> None:
         """Show context menu for a taskbar button."""
-        show_context_menu(self, hwnd, pos)
+        menu = show_context_menu(self, hwnd, pos)
+        if not menu:
+            self._context_menu_open = False
+            return
+
+        self._context_menu_open = True
+
+        def _handle_hide():
+            self._context_menu_open = False
+            self._refresh_title_visibility(hwnd)
+
+        menu.aboutToHide.connect(_handle_hide)
 
     def _unpin_pinned_only_app(self, unique_id: str, pseudo_hwnd: int) -> None:
         """Unpin an app that's not currently running."""
@@ -1808,6 +1841,19 @@ class TaskbarWidget(BaseWidget):
                         st.polish(w)
         except Exception:
             pass
+
+    def _get_title_wrapper(self, container: QWidget) -> QWidget | None:
+        try:
+            if not container:
+                return None
+            layout = container.layout()
+            if layout and layout.count() > 1:
+                wrapper = layout.itemAt(1).widget()
+                if isinstance(wrapper, QWidget):
+                    return wrapper
+        except Exception:
+            pass
+        return None
 
     def _get_title_label(self, container: QWidget) -> QLabel | None:
         try:

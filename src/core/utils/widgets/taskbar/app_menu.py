@@ -153,7 +153,7 @@ def get_windows_terminal_profiles(identifier: str = None) -> list[tuple[str, str
         return []
 
 
-def show_context_menu(taskbar_widget, hwnd: int, pos) -> None:
+def show_context_menu(taskbar_widget, hwnd: int, pos) -> QMenu | None:
     """
     Show context menu for a taskbar button.
 
@@ -288,8 +288,11 @@ def show_context_menu(taskbar_widget, hwnd: int, pos) -> None:
 
         menu.aboutToHide.connect(restore_cursor)
 
+        return menu
+
     except Exception as e:
         logging.error(f"Error showing context menu: {e}")
+        return None
 
 
 def _add_explorer_menu_items(menu: QMenu, on_launch_callback) -> None:

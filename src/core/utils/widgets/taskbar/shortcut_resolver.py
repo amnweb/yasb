@@ -41,32 +41,38 @@ def normalize_path(path_str: str) -> str:
 
 
 def normalized_targets(exe_path: str | None) -> list[str]:
-    """Produce the path variants that should map to the same target shortcut."""
+    """
+    Produce path variants for versioned apps (Electron, Scoop, etc).
+    """
 
     if not exe_path:
         return []
 
-    targets: list[str] = []
-
-    main_target = normalize_path(exe_path)
-    targets.append(main_target)
-
     try:
         path_obj = Path(exe_path)
         parent = path_obj.parent
-        grandparent = parent.parent if parent else None
+        normalized = normalize_path(exe_path)
 
-        if parent and parent.name.lower().startswith("app-") and grandparent:
-            stable_target = grandparent / path_obj.name
-            targets.append(normalize_path(str(stable_target)))
+        # Electron apps: ...\\app-1.2.3\\app.exe -> ...\\appname\\app.exe
+        if parent.name.lower().startswith("app-"):
+            grandparent = parent.parent
+            stable_path = grandparent / path_obj.name
+            normalized_stable = os.path.normcase(str(stable_path))
+            return [normalized, normalized_stable]
 
-            current_dir = grandparent / "current" / path_obj.name
-            targets.append(normalize_path(str(current_dir)))
+        # Scoop apps: ...\\scoop\\apps\\appname\\1.2.3.4\\app.exe -> ...\\appname\\app.exe
+        grandparent = parent.parent
+        if grandparent and re.match(r"^\d+[\d.]*$", parent.name):
+            path_str_lower = str(path_obj).lower()
+            if "\\scoop\\apps\\" in path_str_lower or "/scoop/apps/" in path_str_lower:
+                stable_path = grandparent / path_obj.name
+                normalized_stable = os.path.normcase(str(stable_path))
+                return [normalized, normalized_stable]
+
+        return [normalized]
+
     except Exception:
-        pass
-
-    seen: set[str] = set()
-    return [t for t in targets if not (t in seen or seen.add(t))]
+        return [normalize_path(exe_path)]
 
 
 def canonical_display_key(name: str | None) -> str | None:
