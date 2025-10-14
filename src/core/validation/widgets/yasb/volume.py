@@ -26,6 +26,7 @@ DEFAULTS = {
         "show_apps": False,
         "show_app_labels": False,
         "show_app_icons": True,
+        "show_apps_expanded": False,
         "app_icons": {"toggle_down": "\uf078", "toggle_up": "\uf077"},
     },
     "animation": {"enabled": True, "type": "fadeInOut", "duration": 200},
@@ -68,6 +69,7 @@ VALIDATION_SCHEMA = {
             "show_apps": {"type": "boolean", "default": DEFAULTS["audio_menu"]["show_apps"]},
             "show_app_labels": {"type": "boolean", "default": DEFAULTS["audio_menu"]["show_app_labels"]},
             "show_app_icons": {"type": "boolean", "default": DEFAULTS["audio_menu"]["show_app_icons"]},
+            "show_apps_expanded": {"type": "boolean", "default": DEFAULTS["audio_menu"]["show_apps_expanded"]},
             "app_icons": {
                 "type": "dict",
                 "schema": {

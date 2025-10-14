@@ -61,6 +61,7 @@ volume:
       show_apps: true # Whether to show the list of applications with audio sessions
       show_app_labels: false # Whether to show application labels in the audio menu
       show_app_icons: true # Whether to show application icons in the audio menu
+      show_apps_expanded: false # Whether application volumes are expanded by default when opening the menu
       app_icons: # Icons for the toggle button to expand/collapse application volumes
         toggle_down: "\uf078" # Icon for btn collapsed state
         toggle_up: "\uf077" # Icon for btn expanded state
@@ -87,6 +88,7 @@ volume:
   - **show_apps**: Whether to show the list of applications with audio sessions.
   - **show_app_labels**: Whether to show application labels in the audio menu.
   - **show_app_icons**: Whether to show application icons in the audio menu.
+  - **show_apps_expanded**: Whether application volumes are expanded by default when opening the menu. When set to `true`, the application volume sliders will be visible immediately when the menu opens. When set to `false` (default), they remain collapsed until the toggle button is clicked.
   - **app_icons**: A dictionary specifying icons for the toggle button to expand/collapse application volumes. It contains the following keys:
     - **toggle_down**: Icon for the button in the collapsed state.
     - **toggle_up**: Icon for the button in the expanded state.
