@@ -868,7 +868,8 @@ class VolumeWidget(BaseWidget):
             offset_top=self._audio_menu["offset_top"],
         )
         self.dialog.show()
-        if self._audio_menu["show_apps_expanded"]:
+        # Automatically expand app volumes if configured
+        if audio_sessions and self._audio_menu["show_apps_expanded"] and self._audio_menu["show_apps"]:
             self._toggle_app_volumes()
 
     def _toggle_label(self):
