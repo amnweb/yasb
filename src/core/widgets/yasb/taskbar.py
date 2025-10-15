@@ -1417,6 +1417,10 @@ class TaskbarWidget(BaseWidget):
             logging.warning("No hwnd found for widget.")
             return
 
+        # Don't close pinned-only buttons (negative hwnd = placeholder for pinned apps not running)
+        if hwnd < 0:
+            return
+
         # Check if the window is valid before attempting to close it
         if win32gui.IsWindow(hwnd):
             close_application(hwnd)
