@@ -32,6 +32,16 @@ class ApplicationWindow:
         self.ignored_processes = set(ignored_processes) if ignored_processes else set()
         self.ignored_titles = set(ignored_titles) if ignored_titles else set()
 
+        try:
+            process_info = get_process_info(hwnd)
+            self.process_name = process_info.get("name")
+            self.process_pid = process_info.get("pid")
+            self.process_path = process_info.get("path")
+        except Exception:
+            self.process_name = None
+            self.process_pid = 0
+            self.process_path = None
+
         # Default ignored processes
         default_ignored_processes = {"SearchHost.exe"}
         self.ignored_processes.update(default_ignored_processes)
@@ -78,7 +88,9 @@ class ApplicationWindow:
             "is_active": self.is_active,
             "is_flashing": self.is_flashing,
             "monitor_handle": monitor_handle,
-            "process_name": self._get_process_name(),
+            "process_name": self.process_name,
+            "process_pid": self.process_pid,
+            "process_path": self.process_path,
         }
 
     def _get_title(self):
@@ -129,9 +141,9 @@ class ApplicationWindow:
                 "ImmersiveLauncher",
             ):
                 # Explorer-only gate: treat these windows as immersive shell (Start/Search, etc.)
-                # only when the owning process is explorer.exe, so they’re excluded from the taskbar
+                # only when the owning process is explorer.exe, so they're excluded from the taskbar
                 # without hiding third-party app windows that reuse similar classes.
-                proc = (self._get_process_name() or "").lower()
+                proc = (self.process_name or "").lower()
                 if "explorer.exe" in proc:
                     return True
             return False
@@ -207,12 +219,9 @@ class ApplicationWindow:
 
             if self.class_name in self.excluded_classes:
                 return False
-            try:
-                proc = self._get_process_name()
-                if proc and proc in self.ignored_processes:
-                    return False
-            except Exception:
-                pass
+
+            if self.process_name and self.process_name in self.ignored_processes:
+                return False
 
             return True
         except Exception:
@@ -238,11 +247,3 @@ class ApplicationWindow:
     def __hash__(self):
         """Hash by hwnd for use in sets/dicts."""
         return hash(self.hwnd)
-
-    def _get_process_name(self):
-        """Return the owning process filename (e.g., 'explorer.exe') or None on failure."""
-        try:
-            info = get_process_info(self.hwnd)
-            return info.get("name")
-        except Exception:
-            return None

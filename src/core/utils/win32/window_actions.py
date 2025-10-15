@@ -135,13 +135,23 @@ def set_foreground(hwnd: int) -> None:
 # --- Close application helper ---
 
 
-def close_application(hwnd: int):
+def close_application(hwnd: int, force: bool = False):
     """
     Close the application associated with the given HWND.
-    Tries multiple safe paths similar to shell/taskbar behavior:
+
+    Args:
+        hwnd: The window handle of the application to close
+        force: If True, forcefully terminates the process (like Task Manager's End Task)
+               If False, tries graceful close methods first
+
+    Graceful close (force=False):
     - SendMessageTimeout(WM_SYSCOMMAND, SC_CLOSE) to the root owner window
     - Fallback to PostMessage(WM_CLOSE)
-    - As a last resort, call EndTask (graceful attempt; not forced kill)
+    - As a last resort, call EndTask (graceful attempt)
+
+    Forced termination (force=True):
+    - Tries EndTask with force flag
+    - Falls back to direct TerminateProcess
     """
     try:
         if not hwnd or hwnd == 0:
@@ -161,39 +171,87 @@ def close_application(hwnd: int):
             root = 0
         target_hwnd = int(root_owner or root or hwnd)
 
-        # First try: SC_CLOSE via SendMessageTimeout to avoid hangs
-        WM_SYSCOMMAND = 0x0112
-        SC_CLOSE = 0xF060
-        SMTO_ABORTIFHUNG = 0x0002
+        if force:
+            # Forced termination path
+            # Get process ID for direct termination
+            try:
+                _, process_id = win32process.GetWindowThreadProcessId(hwnd)
+            except Exception as e:
+                logging.error(f"Failed to get process ID for HWND {hwnd}: {e}")
+                return
 
-        lpdw_result = ctypes.c_ulong()
-        sent = u32.SendMessageTimeoutW(
-            int(target_hwnd),
-            int(WM_SYSCOMMAND),
-            int(SC_CLOSE),
-            0,
-            int(SMTO_ABORTIFHUNG),
-            int(2000),
-            ctypes.byref(lpdw_result),
-        )
+            if not process_id:
+                logging.warning(f"No process ID found for HWND: {hwnd}")
+                return
 
-        if sent:
-            return
+            # Try forced EndTask first (Windows shell approach)
+            try:
+                # BOOL EndTask(HWND hWnd, BOOL fShutDown, BOOL fForce)
+                # fForce=True makes it more aggressive
+                endtask_ok = u32.EndTask(int(target_hwnd), False, True)
+                if endtask_ok:
+                    logging.info(f"Successfully ended task via forced EndTask for HWND: {hwnd}")
+                    return
+            except Exception as et_ex:
+                logging.warning(f"Forced EndTask failed for HWND {target_hwnd}: {et_ex}")
 
-        # Fallback: WM_CLOSE via PostMessage
-        WM_CLOSE = 0x0010
-        posted = u32.PostMessage(int(target_hwnd), int(WM_CLOSE), 0, 0)
-        if posted:
-            return
+            # Fallback: Direct process termination
+            PROCESS_TERMINATE = 0x0001
+            try:
+                # Open process handle with terminate rights
+                process_handle = k32.OpenProcess(PROCESS_TERMINATE, False, process_id)
+                if not process_handle:
+                    logging.error(f"Failed to open process {process_id} for termination")
+                    return
 
-        # Last resort: EndTask (graceful attempt, not forced)
-        # BOOL EndTask(HWND hWnd, BOOL fShutDown, BOOL fForce)
-        try:
-            endtask_ok = u32.EndTask(int(target_hwnd), False, False)
-            if not endtask_ok:
-                logging.warning(f"EndTask failed for HWND: {target_hwnd}")
-        except Exception as et_ex:
-            logging.warning(f"EndTask unavailable/failed for HWND {target_hwnd}: {et_ex}")
+                # Terminate the process with exit code 1
+                terminated = k32.TerminateProcess(process_handle, 1)
+                if terminated:
+                    logging.info(f"Successfully terminated process {process_id} for HWND: {hwnd}")
+                else:
+                    logging.warning(f"TerminateProcess returned False for process {process_id}")
+
+                # Close the process handle
+                k32.CloseHandle(process_handle)
+
+            except Exception as term_ex:
+                logging.error(f"Failed to terminate process {process_id}: {term_ex}")
+
+        else:
+            # Graceful close path
+            # First try: SC_CLOSE via SendMessageTimeout to avoid hangs
+            WM_SYSCOMMAND = 0x0112
+            SC_CLOSE = 0xF060
+            SMTO_ABORTIFHUNG = 0x0002
+
+            lpdw_result = ctypes.c_ulong()
+            sent = u32.SendMessageTimeoutW(
+                int(target_hwnd),
+                int(WM_SYSCOMMAND),
+                int(SC_CLOSE),
+                0,
+                int(SMTO_ABORTIFHUNG),
+                int(2000),
+                ctypes.byref(lpdw_result),
+            )
+
+            if sent:
+                return
+
+            # Fallback: WM_CLOSE via PostMessage
+            WM_CLOSE = 0x0010
+            posted = u32.PostMessage(int(target_hwnd), int(WM_CLOSE), 0, 0)
+            if posted:
+                return
+
+            # Last resort: EndTask (graceful attempt, not forced)
+            # BOOL EndTask(HWND hWnd, BOOL fShutDown, BOOL fForce)
+            try:
+                endtask_ok = u32.EndTask(int(target_hwnd), False, False)
+                if not endtask_ok:
+                    logging.warning(f"EndTask failed for HWND: {target_hwnd}")
+            except Exception as et_ex:
+                logging.warning(f"EndTask unavailable/failed for HWND {target_hwnd}: {et_ex}")
 
     except Exception as e:
         logging.error(f"Failed to close window {hwnd}: {e}")

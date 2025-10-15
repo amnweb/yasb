@@ -69,6 +69,7 @@ build_options = {
         "winrt.windows.media",
         "winrt.windows.media.control",
         "winrt.windows.management.deployment",
+        "winrt.windows.applicationmodel",
         "winrt.windows.networking",
         "winrt.windows.networking.connectivity",
         "winrt.windows.storage",

@@ -11,6 +11,8 @@ from PyQt6.QtWidgets import QApplication, QFrame, QHBoxLayout, QLabel, QSizePoli
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import add_shadow
 from core.utils.widgets.animation_manager import AnimationManager
+from core.utils.widgets.taskbar.app_menu import show_context_menu
+from core.utils.widgets.taskbar.pin_manager import PinManager
 from core.utils.widgets.taskbar.thumbnail import TaskbarThumbnailManager
 from core.utils.win32.app_icons import get_window_icon
 from core.utils.win32.utilities import get_monitor_hwnd, get_monitor_info
@@ -35,11 +37,12 @@ except ImportError:
     logging.error("Failed to connect_taskbar")
 
 
+ANIMATION_DURATION_MS = 200
+
+
 class DraggableAppButton(QFrame):
     """A QFrame subclass that supports left/right reordering within a QHBoxLayout and
     raises its window on external file/text drag hover."""
-
-    HOVER_RAISE_DELAY_MS = 350
 
     def __init__(self, taskbar_widget: "TaskbarWidget", hwnd: int):
         super().__init__()
@@ -308,6 +311,13 @@ class TaskbarDropWidget(QFrame):
         self.dragged_button = None
         self.current_indicator_index = -1
         event.acceptProposedAction()
+
+        # Update pinned order if pinned apps were reordered
+        try:
+            self._owner._update_pinned_order_from_layout()
+        except Exception:
+            pass
+
         self.drag_ended.emit()
 
     def _highlight_hover(self, btn: QFrame):
@@ -436,6 +446,7 @@ class TaskbarWidget(BaseWidget):
         self._label_shadow = label_shadow
         self._container_shadow = container_shadow
         self._widget_monitor_handle = None
+        self._context_menu_open = False
 
         self._preview_enabled = preview["enabled"]
         self._preview_width = preview["width"]
@@ -444,6 +455,7 @@ class TaskbarWidget(BaseWidget):
         self._preview_margin = preview["margin"]
 
         self._tooltip = tooltip if not self._preview_enabled else False
+        self._tooltip_enabled = tooltip  # Store original tooltip setting for pinned apps
 
         self._ignore_apps["classes"] = list(set(self._ignore_apps.get("classes", [])))
         self._ignore_apps["processes"] = list(set(self._ignore_apps.get("processes", [])))
@@ -454,6 +466,10 @@ class TaskbarWidget(BaseWidget):
         self._window_buttons = {}
         self._suspend_updates = False
         self._animating_widgets = {}
+        self._flashing_animation = {}  # Track which hwnds are currently flashing
+
+        # Initialize pin manager for pinned apps functionality
+        self._pin_manager = PinManager()
 
         self._widget_container = TaskbarDropWidget(self)
         self._widget_container.setContentsMargins(
@@ -469,6 +485,8 @@ class TaskbarWidget(BaseWidget):
 
         self.register_callback("toggle_window", self._on_toggle_window)
         self.register_callback("close_app", self._on_close_app)
+        self.register_callback("context_menu", self._on_context_menu)
+
         self.callback_left = callbacks["on_left"]
         self.callback_right = callbacks["on_right"]
         self.callback_middle = callbacks["on_middle"]
@@ -493,6 +511,264 @@ class TaskbarWidget(BaseWidget):
                 self._animation["enabled"],
             )
 
+        # Initialize pinned apps display flag
+        self._pinned_apps_displayed = False
+
+        # Connect to global signal bus for inter-widget communication
+        PinManager.get_signal_bus().pinned_apps_changed.connect(self._on_pinned_apps_changed_signal)
+
+    def _load_pinned_apps(self) -> None:
+        """Load pinned apps from disk using PinManager."""
+        self._pin_manager.load_pinned_apps()
+
+    def _save_pinned_apps(self) -> None:
+        """Save pinned apps to disk using PinManager."""
+        self._pin_manager.save_pinned_apps()
+
+    def _get_app_identifier(self, hwnd: int, window_data: dict) -> tuple[str, dict]:
+        """Get a unique identifier for an app and its metadata. Delegates to PinManager."""
+        return PinManager.get_app_identifier(hwnd, window_data)
+
+    def _pin_app(self, hwnd: int) -> None:
+        """Pin an application to the taskbar (pinned apps are global across all monitors)."""
+        try:
+            # Get app info from ApplicationWindow (includes process_pid and process_path)
+            if not (hasattr(self, "_task_manager") and self._task_manager and hwnd in self._task_manager._windows):
+                logging.warning(f"Cannot pin app: window {hwnd} not found in task manager")
+                return
+
+            app_window = self._task_manager._windows[hwnd]
+            window_data = app_window.as_dict()
+
+            # Get icon for caching
+            icon_img = get_window_icon(hwnd)
+
+            # Pin at the end of existing pinned apps (position = number of pinned apps)
+            # This puts it after all other pinned apps but before unpinned running apps
+            position = len(self._pin_manager.pinned_order)
+            unique_id = self._pin_manager.pin_app(hwnd, window_data, icon_img, position=position)
+
+            if unique_id:
+                self._update_pinned_status(hwnd, is_pinned=True)
+
+                # Move the widget to the correct position (after all pinned apps)
+                widget = self._hwnd_to_widget.get(hwnd)
+                if widget:
+                    # Remove from current position
+                    self._widget_container_layout.removeWidget(widget)
+
+                    # Find the position to insert: after all pinned apps
+                    insert_pos = 0
+                    for i in range(self._widget_container_layout.count()):
+                        w = self._widget_container_layout.itemAt(i).widget()
+                        if not w:
+                            continue
+                        w_hwnd = w.property("hwnd")
+                        # Count all pinned apps (both running and pinned-only)
+                        if w_hwnd and w_hwnd < 0:  # Pinned-only
+                            insert_pos = i + 1
+                        elif w_hwnd and w_hwnd > 0 and w_hwnd in self._pin_manager.running_pinned:  # Running pinned
+                            insert_pos = i + 1
+
+                    # Insert at the calculated position
+                    self._widget_container_layout.insertWidget(insert_pos, widget)
+
+        except Exception as e:
+            logging.error(f"Error pinning app: {e}")
+
+    def _unpin_app(self, hwnd: int) -> None:
+        """Unpin an application from the taskbar."""
+        try:
+            # Get window data if needed (only when hwnd is not in running_pinned cache)
+            window_data = None
+            if hwnd not in self._pin_manager.running_pinned:
+                if hasattr(self, "_task_manager") and self._task_manager and hwnd in self._task_manager._windows:
+                    app_window = self._task_manager._windows[hwnd]
+                    window_data = app_window.as_dict()
+                else:
+                    logging.warning(f"Cannot unpin app: window {hwnd} not found in task manager")
+                    return
+
+            # Unpin using PinManager
+            self._pin_manager.unpin_app(hwnd, window_data)
+            self._update_pinned_status(hwnd, is_pinned=False)
+
+        except Exception as e:
+            logging.error(f"Error unpinning app: {e}")
+
+    def _is_app_pinned(self, hwnd: int) -> bool:
+        """Check if an app is pinned."""
+        return self._pin_manager.is_app_pinned(hwnd)
+
+    def _get_hwnd_position(self, hwnd: int) -> int:
+        """Get the position of a hwnd in the widget layout."""
+        for i in range(self._widget_container_layout.count()):
+            w = self._widget_container_layout.itemAt(i).widget()
+            if w and w.property("hwnd") == hwnd:
+                return i
+        return -1
+
+    def _update_pinned_order_from_layout(self) -> None:
+        """Update the pinned order based on current layout positions after drag-and-drop.
+
+        Since pinned apps are global, all taskbars share the same order.
+        """
+        try:
+            # Collect pinned apps visible in current layout (in their new order)
+            visible_order = []
+            for i in range(self._widget_container_layout.count()):
+                widget = self._widget_container_layout.itemAt(i).widget()
+                if not widget:
+                    continue
+
+                hwnd = widget.property("hwnd")
+                if hwnd and hwnd < 0:  # Pinned-only button
+                    unique_id = widget.property("unique_id")
+                    if unique_id and unique_id in self._pin_manager.pinned_apps:
+                        visible_order.append(unique_id)
+                elif hwnd and hwnd > 0:  # Running app
+                    # Check if it's a running pinned app
+                    unique_id = self._pin_manager.running_pinned.get(hwnd)
+                    if unique_id and unique_id in self._pin_manager.pinned_apps and unique_id not in visible_order:
+                        visible_order.append(unique_id)
+
+            # Build new complete order from visible order
+            # Since pinned apps are now global, we use the visible order directly
+            new_order = visible_order
+
+            # Update pinned order using PinManager
+            self._pin_manager.update_pinned_order(new_order)
+        except Exception as e:
+            logging.error(f"Error updating pinned order from layout: {e}")
+
+    def _update_pinned_status(self, hwnd: int, is_pinned: bool) -> None:
+        """Update the visual state of a pinned/unpinned app."""
+        widget = self._hwnd_to_widget.get(hwnd)
+        if widget:
+            widget.setProperty("pinned", is_pinned)
+            current_class = widget.property("class") or ""
+            if is_pinned and "pinned" not in current_class:
+                widget.setProperty("class", f"{current_class} pinned")
+            elif not is_pinned and "pinned" in current_class:
+                widget.setProperty("class", current_class.replace(" pinned", ""))
+
+            # Repolish to apply style changes
+            if style := widget.style():
+                style.unpolish(widget)
+                style.polish(widget)
+
+    def _display_pinned_apps(self) -> None:
+        """Display all pinned apps on all taskbars (always shows all pinned apps regardless of monitor_exclusive)."""
+        for unique_id in self._pin_manager.pinned_order:
+            if unique_id not in self._pin_manager.pinned_apps:
+                continue
+
+            metadata = self._pin_manager.pinned_apps[unique_id]
+            self._create_pinned_app_button(unique_id, metadata)
+
+    def _create_pinned_app_button(self, unique_id: str, metadata: dict) -> None:
+        """Create a button for a pinned app that's not currently running."""
+        if unique_id in self._pin_manager.running_pinned.values():
+            return  # App is already running
+
+        pseudo_hwnd = -(abs(hash(unique_id)) % 1000000000 + 1000000000)
+        title = metadata.get("title", "App")
+        icon = self._load_cached_icon(unique_id)
+
+        container = self._create_pinned_app_container(title, icon, pseudo_hwnd, unique_id)
+        self._hwnd_to_widget[pseudo_hwnd] = container
+        add_shadow(container, self._label_shadow)
+
+        # Add with animation if enabled
+        if self._animation["enabled"]:
+            container.setFixedWidth(0)
+            self._widget_container_layout.addWidget(container)
+            self._animate_container(
+                container,
+                start_width=0,
+                end_width=container.sizeHint().width(),
+                duration=ANIMATION_DURATION_MS,
+                hwnd=pseudo_hwnd,
+            )
+        else:
+            self._widget_container_layout.addWidget(container)
+
+    def _recreate_pinned_button(self, unique_id: str, metadata: dict, position: int = -1) -> None:
+        """Recreate pinned button when pinned app closes."""
+        if unique_id in self._pin_manager.running_pinned.values():
+            return  # App is still running
+
+        pseudo_hwnd = -(abs(hash(unique_id)) % 1000000000 + 1000000000)
+        title = metadata.get("title", "App")
+        icon = self._load_cached_icon(unique_id)
+
+        container = self._create_pinned_app_container(title, icon, pseudo_hwnd, unique_id)
+        self._hwnd_to_widget[pseudo_hwnd] = container
+        add_shadow(container, self._label_shadow)
+
+        # Add with animation if enabled
+        if self._animation["enabled"]:
+            container.setFixedWidth(0)
+            if 0 <= position <= self._widget_container_layout.count():
+                self._widget_container_layout.insertWidget(position, container)
+            else:
+                self._widget_container_layout.addWidget(container)
+            self._animate_container(
+                container,
+                start_width=0,
+                end_width=container.sizeHint().width(),
+                duration=ANIMATION_DURATION_MS,
+                hwnd=pseudo_hwnd,
+            )
+        else:
+            if 0 <= position <= self._widget_container_layout.count():
+                self._widget_container_layout.insertWidget(position, container)
+            else:
+                self._widget_container_layout.addWidget(container)
+
+    def _create_pinned_app_container(
+        self, title: str, icon: QPixmap | None, pseudo_hwnd: int, unique_id: str
+    ) -> QFrame:
+        """Create a container widget for a pinned app that's not running."""
+        container = DraggableAppButton(self, pseudo_hwnd)
+        container.setProperty("class", "app-container")
+        container.setProperty("hwnd", pseudo_hwnd)
+        container.setProperty("unique_id", unique_id)
+        container.setProperty("pinned", True)
+        container.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+
+        layout = QHBoxLayout(container)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+
+        icon_label = QLabel()
+        icon_label.setProperty("class", "app-icon")
+
+        try:
+            icon_label.setFixedSize(self._label_icon_size, self._label_icon_size)
+        except Exception:
+            pass
+        if icon is not None:
+            icon_label.setPixmap(icon)
+        icon_label.setProperty("hwnd", pseudo_hwnd)
+        layout.addWidget(icon_label)
+
+        # Use original tooltip setting for pinned apps (not affected by preview)
+        if self._tooltip_enabled:
+            set_tooltip(container, title, delay=0)
+
+        return container
+
+    def _load_cached_icon(self, unique_id: str) -> QPixmap | None:
+        """Load a cached icon using PinManager with DPI awareness."""
+        # Get the DPI for this screen
+        dpi = self.screen().devicePixelRatio() if self.screen() else 1.0
+        return self._pin_manager.load_cached_icon(unique_id, self._label_icon_size, dpi)
+
+    def _delete_cached_icon(self, unique_id: str) -> None:
+        """Delete a cached icon using PinManager."""
+        self._pin_manager.delete_cached_icon(unique_id)
+
     def show_preview_for_hwnd(self, hwnd: int, anchor_widget: QWidget) -> None:
         try:
             if self._preview_enabled and getattr(self, "_thumbnail_mgr", None):
@@ -509,6 +785,24 @@ class TaskbarWidget(BaseWidget):
 
     def showEvent(self, event):
         try:
+            super().showEvent(event)
+        except Exception:
+            pass
+
+        # Load and display pinned apps FIRST
+        # This ensures pinned apps appear before running windows are added
+        try:
+            if not getattr(self, "_pinned_apps_displayed", False):
+                # Load pinned apps (global across all monitors)
+                self._load_pinned_apps()
+                self._display_pinned_apps()
+                self._pinned_apps_displayed = True
+        except Exception as e:
+            logging.error(f"Error displaying pinned apps: {e}")
+
+        # Connect to task manager AFTER pinned apps are displayed
+        # This ensures running windows are inserted in the correct position
+        try:
             if connect_taskbar and not getattr(self, "_task_manager_connected", False):
                 try:
                     self._task_manager = connect_taskbar(self)
@@ -517,15 +811,195 @@ class TaskbarWidget(BaseWidget):
                     logging.error(f"Failed to connect taskbar manager from showEvent: {e}")
         except Exception:
             pass
+
         try:
-            super().showEvent(event)
-        except Exception:
-            pass
-        try:
-            if not self._hwnd_to_widget and self._hide_empty:
+            if not self._hwnd_to_widget and not self._pin_manager.pinned_apps and self._hide_empty:
                 QTimer.singleShot(0, self._hide_taskbar_widget)
         except Exception:
             pass
+
+    def _on_pinned_apps_changed_signal(self, action: str, unique_id: str) -> None:
+        """Handle pinned apps changes from other taskbar instances."""
+        try:
+            # Reload the file to get the latest data
+            self._load_pinned_apps()
+
+            if action == "pin":
+                # Display pinned app (pinned apps are global across all monitors)
+                if unique_id in self._pin_manager.pinned_apps:
+                    metadata = self._pin_manager.pinned_apps[unique_id]
+
+                    # Check if we have a running window that matches this unique_id
+                    found_running = False
+                    for hwnd, widget in self._hwnd_to_widget.items():
+                        if hwnd > 0:  # Real window (not pseudo)
+                            # Get unique_id for this window - use full as_dict() to include process_pid and process_path
+                            window_data = {"process_name": "", "title": ""}
+                            if (
+                                hasattr(self, "_task_manager")
+                                and self._task_manager
+                                and hwnd in self._task_manager._windows
+                            ):
+                                app_window = self._task_manager._windows[hwnd]
+                                window_data = app_window.as_dict()
+
+                            window_unique_id, _ = self._get_app_identifier(hwnd, window_data)
+                            if window_unique_id == unique_id:
+                                # This window matches the pinned app
+                                self._pin_manager.running_pinned[hwnd] = unique_id
+                                self._update_pinned_status(hwnd, is_pinned=True)
+                                found_running = True
+
+                                # Move the widget to the correct position (after all pinned apps)
+                                self._widget_container_layout.removeWidget(widget)
+
+                                # Find the position to insert: after all pinned apps
+                                insert_pos = 0
+                                for i in range(self._widget_container_layout.count()):
+                                    w = self._widget_container_layout.itemAt(i).widget()
+                                    if not w:
+                                        continue
+                                    w_hwnd = w.property("hwnd")
+                                    # Count all pinned apps (both running and pinned-only)
+                                    if w_hwnd and w_hwnd < 0:  # Pinned-only
+                                        insert_pos = i + 1
+                                    elif (
+                                        w_hwnd and w_hwnd > 0 and w_hwnd in self._pin_manager.running_pinned
+                                    ):  # Running pinned
+                                        # Don't count the current widget we're moving
+                                        if w_hwnd != hwnd:
+                                            insert_pos = i + 1
+
+                                self._widget_container_layout.insertWidget(insert_pos, widget)
+                                break
+
+                    if not found_running:
+                        # App is not running, create pinned-only button
+                        already_displayed = any(
+                            w.property("unique_id") == unique_id
+                            for w in [
+                                self._widget_container_layout.itemAt(i).widget()
+                                for i in range(self._widget_container_layout.count())
+                            ]
+                            if w
+                        )
+                        if not already_displayed:
+                            # Create the pinned button
+                            pseudo_hwnd = -(abs(hash(unique_id)) % 1000000000 + 1000000000)
+                            title = metadata.get("title", "App")
+                            icon = self._load_cached_icon(unique_id)
+
+                            container = self._create_pinned_app_container(title, icon, pseudo_hwnd, unique_id)
+                            self._hwnd_to_widget[pseudo_hwnd] = container
+                            add_shadow(container, self._label_shadow)
+
+                            # Find the position to insert: after all pinned apps
+                            insert_pos = 0
+                            for i in range(self._widget_container_layout.count()):
+                                w = self._widget_container_layout.itemAt(i).widget()
+                                if not w:
+                                    continue
+                                w_hwnd = w.property("hwnd")
+                                # Count all pinned apps (both running and pinned-only)
+                                if w_hwnd and w_hwnd < 0:  # Pinned-only
+                                    insert_pos = i + 1
+                                elif (
+                                    w_hwnd and w_hwnd > 0 and w_hwnd in self._pin_manager.running_pinned
+                                ):  # Running pinned
+                                    insert_pos = i + 1
+
+                            # Add with animation if enabled
+                            if self._animation["enabled"]:
+                                container.setFixedWidth(0)
+                                self._widget_container_layout.insertWidget(insert_pos, container)
+                                self._animate_container(
+                                    container,
+                                    start_width=0,
+                                    end_width=container.sizeHint().width(),
+                                    duration=ANIMATION_DURATION_MS,
+                                    hwnd=pseudo_hwnd,
+                                )
+                            else:
+                                self._widget_container_layout.insertWidget(insert_pos, container)
+
+                            # Show taskbar if it was hidden and hide_empty is enabled
+                            if self._hide_empty and len(self._hwnd_to_widget) > 0:
+                                self._show_taskbar_widget()
+
+            elif action == "unpin":
+                # Remove the pinned-only button if it exists (pseudo hwnd < 0)
+                for pseudo_hwnd, widget in list(self._hwnd_to_widget.items()):
+                    if pseudo_hwnd < 0 and widget.property("unique_id") == unique_id:
+                        self._hwnd_to_widget.pop(pseudo_hwnd)
+                        self._widget_container_layout.removeWidget(widget)
+                        widget.deleteLater()
+                        break
+
+                # Also update running apps - remove pinned status
+                for hwnd in list(self._pin_manager.running_pinned.keys()):
+                    if self._pin_manager.running_pinned.get(hwnd) == unique_id:
+                        self._pin_manager.running_pinned.pop(hwnd)
+                        self._update_pinned_status(hwnd, is_pinned=False)
+
+                # Check if taskbar should be hidden after unpinning
+                if self._hide_empty and len(self._hwnd_to_widget) < 1:
+                    self._hide_taskbar_widget()
+
+            elif action == "reorder":
+                # Rebuild the entire layout in the new order
+
+                # Collect all current widgets (both pinned and running)
+                current_widgets = {}  # unique_id or hwnd -> widget
+
+                for i in range(self._widget_container_layout.count()):
+                    widget = self._widget_container_layout.itemAt(i).widget()
+                    if not widget:
+                        continue
+
+                    hwnd = widget.property("hwnd")
+                    if hwnd and hwnd < 0:  # Pinned-only button
+                        unique_id = widget.property("unique_id")
+                        if unique_id:
+                            current_widgets[unique_id] = widget
+                    elif hwnd and hwnd > 0:  # Running app
+                        # Check if it's a running pinned app
+                        unique_id = self._pin_manager.running_pinned.get(hwnd)
+                        if unique_id:
+                            current_widgets[unique_id] = widget
+                        else:
+                            # Not pinned, keep at current position for now
+                            pass
+
+                # Remove all widgets from layout (but don't delete them yet)
+                while self._widget_container_layout.count():
+                    item = self._widget_container_layout.takeAt(0)
+                    if item and item.widget():
+                        item.widget().setParent(None)
+
+                # Re-add widgets in the new order from pinned_order (global order for all monitors)
+                for unique_id in self._pin_manager.pinned_order:
+                    if unique_id not in self._pin_manager.pinned_apps:
+                        continue
+
+                    metadata = self._pin_manager.pinned_apps[unique_id]
+
+                    # Check if we already have a widget for this app
+                    if unique_id in current_widgets:
+                        # Re-add existing widget
+                        self._widget_container_layout.addWidget(current_widgets[unique_id])
+                    else:
+                        # Need to create new widget (shouldn't happen often)
+                        self._create_pinned_app_button(unique_id, metadata)
+
+                # Re-add unpinned running apps at the end
+                for hwnd, widget in self._hwnd_to_widget.items():
+                    if hwnd > 0 and hwnd not in self._pin_manager.running_pinned:
+                        # This is a running unpinned app
+                        if widget.parent() is None:  # Not yet added back
+                            self._widget_container_layout.addWidget(widget)
+
+        except Exception as e:
+            logging.error(f"Error handling pinned apps signal: {e}")
 
     def _on_window_added(self, hwnd, window_data):
         """Handle window added signal from task manager"""
@@ -611,97 +1085,166 @@ class TaskbarWidget(BaseWidget):
         if self._suspend_updates:
             return
 
-        # Cancel any existing animation for this hwnd
-        if hwnd in self._animating_widgets:
-            try:
-                old_animation = self._animating_widgets.pop(hwnd)
-                old_animation.stop()
-                old_animation.deleteLater()
-            except Exception:
-                pass
+        # Skip if window is already added (prevents duplicate calls)
+        if hwnd in self._window_buttons:
+            return
 
-        # Drop any old widget for this hwnd to avoid duplicates
-        old = self._hwnd_to_widget.pop(hwnd, None)
-        if old is not None:
-            try:
-                self._widget_container_layout.removeWidget(old)
-                old.deleteLater()
-            except Exception:
-                pass
-        # Reset button state if previously tracked
+        # Check if this is a pinned app
+        unique_id, _ = self._get_app_identifier(hwnd, window_data)
+
+        # Pinned apps are global across all monitors
+        is_pinned = unique_id in self._pin_manager.pinned_apps
+
+        # If pinned app is starting, remove its pinned-only button and track position
+        insert_position = -1
+        if is_pinned:
+            # Try to find and replace an existing pinned-only button
+            found_pinned_button = False
+            for pseudo_hwnd, widget in list(self._hwnd_to_widget.items()):
+                if pseudo_hwnd < 0 and widget.property("unique_id") == unique_id:
+                    insert_position = self._get_hwnd_position(pseudo_hwnd)
+
+                    # Animate removal of pinned-only button if animation is enabled
+                    if self._animation["enabled"]:
+                        # Cancel any existing animation
+                        if pseudo_hwnd in self._animating_widgets:
+                            self._animating_widgets.pop(pseudo_hwnd).stop()
+                        # Animate shrinking
+                        self._animate_container(widget, start_width=widget.width(), end_width=0)
+                    else:
+                        self._widget_container_layout.removeWidget(widget)
+                        widget.deleteLater()
+
+                    del self._hwnd_to_widget[pseudo_hwnd]
+                    found_pinned_button = True
+                    break
+
+            # If no pinned-only button found, app is already running
+            if not found_pinned_button:
+                # Find the position of any existing window of this app and insert after it
+                last_position = -1
+                for existing_hwnd, existing_widget in self._hwnd_to_widget.items():
+                    if self._pin_manager.running_pinned.get(existing_hwnd) == unique_id:
+                        last_position = self._get_hwnd_position(existing_hwnd)
+
+                if last_position >= 0:
+                    # Insert after the last window of this app
+                    insert_position = last_position + 1
+                elif unique_id in self._pin_manager.pinned_order:
+                    # Only use pinned_order position if app is actually pinned on this screen
+                    # (For monitor_exclusive mode, is_pinned was already checked above)
+                    if is_pinned:
+                        desired_position = self._pin_manager.pinned_order.index(unique_id)
+                        # Clamp to valid range - if out of range, add at the end
+                        current_count = self._widget_container_layout.count()
+                        if desired_position <= current_count:
+                            insert_position = desired_position
+                        # else: leave insert_position as -1 to add at the end
+
+            # Only track as running pinned app if it's pinned on this screen
+            self._pin_manager.running_pinned[hwnd] = unique_id
+
+        # Clean up any existing widget/animation for this hwnd
+        if hwnd in self._animating_widgets:
+            self._animating_widgets.pop(hwnd).stop()
+        if hwnd in self._hwnd_to_widget:
+            old = self._hwnd_to_widget.pop(hwnd)
+            self._widget_container_layout.removeWidget(old)
+            old.deleteLater()
         self._window_buttons.pop(hwnd, None)
 
+        # Create the window widget
         title = window_data.get("title", "")
         process = window_data.get("process_name", "")
-        # If process is explorer.exe (e.g. file explorer), we use the title for caching the icon.
         icon = self._get_app_icon(hwnd, title if process == "explorer.exe" else "")
         self._window_buttons[hwnd] = (title, icon, hwnd, process)
 
-        # Create UI container
         container = self._create_app_container(title, icon, hwnd)
         self._hwnd_to_widget[hwnd] = container
         add_shadow(container, self._label_shadow)
 
+        if is_pinned:
+            container.setProperty("pinned", True)
+            container.setProperty("unique_id", unique_id)
+            container.setProperty("class", container.property("class") + " pinned")
+
+        # Insert widget: pinned apps replace their button, unpinned apps go at the end
+        position = insert_position if insert_position >= 0 else self._widget_container_layout.count()
+
         if self._animation["enabled"]:
             container.setFixedWidth(0)
-            self._widget_container_layout.addWidget(container)
-
-            # Create and track the animation for adding
+            self._widget_container_layout.insertWidget(position, container)
             self._animate_container(
                 container,
                 start_width=0,
                 end_width=container.sizeHint().width(),
-                duration=300,
+                duration=ANIMATION_DURATION_MS,
                 hwnd=hwnd,
             )
         else:
-            self._widget_container_layout.addWidget(container)
+            self._widget_container_layout.insertWidget(position, container)
 
-        if self._hide_empty:
-            hwnd_len = len(self._hwnd_to_widget)
-            if hwnd_len > 0:
-                self._show_taskbar_widget()
+        if self._hide_empty and len(self._hwnd_to_widget) > 0:
+            self._show_taskbar_widget()
 
     def _remove_window_ui(self, hwnd, window_data, *, immediate: bool = False):
-        """Remove window UI element. If immediate=True, bypass animations to prevent duplicates across monitors."""
+        """Remove window UI element."""
         if self._suspend_updates:
             return
 
-        # Check if this widget is currently animating in and cancel the animation immediately
+        # Cancel any running animation
         if hwnd in self._animating_widgets:
-            try:
-                animation = self._animating_widgets.pop(hwnd)
-                animation.stop()
-                animation.deleteLater()
-                # For widgets animating in, force immediate removal to prevent sticking
-                immediate = True
-            except Exception:
-                pass
+            self._animating_widgets.pop(hwnd).stop()
+            immediate = True
 
-        # Prefer direct lookup, fallback to scan once
+        # Stop any flashing animation
+        self._stop_flashing_animation(hwnd)
+
+        # Check if this is a pinned app that needs to be replaced with pinned-only button
+        unique_id = self._pin_manager.running_pinned.pop(hwnd, None)
+        is_pinned = unique_id and unique_id in self._pin_manager.pinned_apps
+
+        # Save the current position BEFORE removing the widget
+        # This ensures pinned button goes back to exact same spot
+        current_position = self._get_hwnd_position(hwnd) if is_pinned else -1
+
+        # Remove the widget
         widget = self._hwnd_to_widget.pop(hwnd, None)
-        if widget is None:
-            for i in range(self._widget_container_layout.count()):
-                w = self._widget_container_layout.itemAt(i).widget()
-                if w and w.property("hwnd") == hwnd:
-                    widget = w
-                    break
-        if widget is not None:
+        if widget:
             if self._animation["enabled"] and not immediate:
                 self._animate_container(widget, start_width=widget.width(), end_width=0)
             else:
-                try:
-                    self._widget_container_layout.removeWidget(widget)
-                except Exception:
-                    pass
+                self._widget_container_layout.removeWidget(widget)
                 widget.deleteLater()
-        # Remove from tracking
+
         self._window_buttons.pop(hwnd, None)
 
-        if self._hide_empty:
-            hwnd_len = len(self._hwnd_to_widget)
-            if hwnd_len < 1:
-                self._hide_taskbar_widget()
+        # If pinned app closed, recreate its pinned-only button
+        # Only recreate if NO other windows of this app are still running
+        will_recreate_pinned_button = False
+        if is_pinned:
+            # Check if any other windows of the same app are still running
+            other_windows_exist = unique_id in self._pin_manager.running_pinned.values()
+
+            if not other_windows_exist:
+                # Recreate pinned button (pinned apps are global across all monitors)
+                # Use the position where the window was removed from
+                # This preserves the exact layout position
+                position = current_position if current_position >= 0 else -1
+
+                if position >= 0:
+                    will_recreate_pinned_button = True
+                    delay = ANIMATION_DURATION_MS if self._animation["enabled"] and not immediate else 0
+                    QTimer.singleShot(
+                        delay,
+                        lambda: self._recreate_pinned_button(
+                            unique_id, self._pin_manager.pinned_apps[unique_id], position
+                        ),
+                    )
+
+        # Only hide taskbar if no widgets left AND we're not about to recreate a pinned button
+        if self._hide_empty and len(self._hwnd_to_widget) < 1 and not will_recreate_pinned_button:
+            self._hide_taskbar_widget()
 
     def _update_window_ui(self, hwnd, window_data):
         """Update window UI element (focused on the specific widget, no global sweep)."""
@@ -730,6 +1273,15 @@ class TaskbarWidget(BaseWidget):
         if not layout:
             return
 
+        # Check if window is flashing and start/stop animation accordingly
+        is_flashing = window_data.get("is_flashing", False)
+        if is_flashing and hwnd not in self._flashing_animation:
+            # Start flashing animation
+            self._start_flashing_animation(hwnd)
+        elif not is_flashing and hwnd in self._flashing_animation:
+            # Stop flashing animation if it's no longer flashing
+            self._stop_flashing_animation(hwnd)
+
         try:
             icon_label = layout.itemAt(0).widget()
             if icon_label and icon is not None:
@@ -739,17 +1291,18 @@ class TaskbarWidget(BaseWidget):
 
         try:
             if self._title_label["enabled"] and layout.count() > 1:
-                title_wrapper = layout.itemAt(1).widget()
+                title_wrapper = self._get_title_wrapper(widget)
                 title_label = self._get_title_label(title_wrapper)
                 if title_label:
                     formatted_title = self._format_title(title)
                     if title_label.text() != formatted_title:
                         title_label.setText(formatted_title)
                 if self._title_label["show"] == "focused" and title_wrapper:
-                    desired_visible = self._get_title_visibility(hwnd)
-                    if desired_visible != title_wrapper.isVisible():
-                        self._animate_or_set_title_visible(title_wrapper, desired_visible)
-                        layout.activate()
+                    if not self._context_menu_open:
+                        desired_visible = self._get_title_visibility(hwnd)
+                        if desired_visible != title_wrapper.isVisible():
+                            self._animate_or_set_title_visible(title_wrapper, desired_visible)
+                            layout.activate()
         except Exception:
             pass
 
@@ -774,6 +1327,26 @@ class TaskbarWidget(BaseWidget):
         # Update the tooltip if enabled
         if self._tooltip and title:
             set_tooltip(widget, title, delay=0)
+
+    def _refresh_title_visibility(self, hwnd: int) -> None:
+        if not (self._title_label.get("enabled") and self._title_label.get("show") == "focused"):
+            return
+        container = self._hwnd_to_widget.get(hwnd)
+        if not container:
+            return
+        title_wrapper = self._get_title_wrapper(container)
+        if not title_wrapper:
+            return
+        desired_visible = self._get_title_visibility(hwnd)
+        if desired_visible == title_wrapper.isVisible():
+            return
+        self._animate_or_set_title_visible(title_wrapper, desired_visible)
+        try:
+            layout = container.layout()
+            if layout:
+                layout.activate()
+        except Exception:
+            pass
 
     def _show_taskbar_widget(self):
         """Show the taskbar widget if hidden."""
@@ -854,6 +1427,63 @@ class TaskbarWidget(BaseWidget):
                 self._remove_window_ui(hwnd, {}, immediate=True)
             except Exception:
                 pass
+
+    def _on_context_menu(self) -> None:
+        """Handle context menu callback."""
+        self.hide_preview()
+        widget = QApplication.instance().widgetAt(QCursor.pos())
+        if not widget:
+            return
+
+        hwnd = widget.property("hwnd")
+        if not hwnd:
+            return
+
+        self._show_context_menu(hwnd, QCursor.pos())
+
+    def _show_context_menu(self, hwnd: int, pos) -> None:
+        """Show context menu for a taskbar button."""
+        menu = show_context_menu(self, hwnd, pos)
+        if not menu:
+            self._context_menu_open = False
+            return
+
+        self._context_menu_open = True
+
+        def _handle_hide():
+            self._context_menu_open = False
+            self._refresh_title_visibility(hwnd)
+
+        menu.aboutToHide.connect(_handle_hide)
+
+    def _unpin_pinned_only_app(self, unique_id: str, pseudo_hwnd: int) -> None:
+        """Unpin an app that's not currently running."""
+        try:
+            if unique_id in self._pin_manager.pinned_apps:
+                # Directly remove from pinned apps data structures
+                del self._pin_manager.pinned_apps[unique_id]
+                self._pin_manager.pinned_order.remove(unique_id)
+                self._pin_manager.delete_cached_icon(unique_id)
+                self._pin_manager.save_pinned_apps()
+
+                # Notify other taskbar instances
+                PinManager.get_signal_bus().pinned_apps_changed.emit("unpin", unique_id)
+
+                # Remove the widget from this taskbar
+                widget = self._hwnd_to_widget.pop(pseudo_hwnd, None)
+                if widget:
+                    try:
+                        self._widget_container_layout.removeWidget(widget)
+                        widget.deleteLater()
+                    except Exception:
+                        pass
+
+                # Check if taskbar should be hidden after unpinning
+                if self._hide_empty and len(self._hwnd_to_widget) < 1:
+                    self._hide_taskbar_widget()
+
+        except Exception as e:
+            logging.error(f"Error unpinning pinned-only app: {e}")
 
     def _get_title_visibility(self, hwnd: int) -> bool:
         """Should title be visible when show=="focused"? Normalize to base owner."""
@@ -957,25 +1587,48 @@ class TaskbarWidget(BaseWidget):
 
         return container
 
+    def _start_flashing_animation(self, hwnd: int):
+        """Start flashing animation for a window using AnimationManager."""
+        widget = self._hwnd_to_widget.get(hwnd)
+        if not widget:
+            return
+
+        # Track that this hwnd is flashing
+        self._flashing_animation[hwnd] = True
+        AnimationManager.start_animation(
+            widget, animation_type="blink", animation_duration=800, repeat_interval=2000, timeout=12000
+        )
+
+    def _stop_flashing_animation(self, hwnd: int):
+        """Stop flashing animation for a window."""
+        if hwnd in self._flashing_animation:
+            self._flashing_animation.pop(hwnd)
+            widget = self._hwnd_to_widget.get(hwnd)
+            if widget:
+                AnimationManager.stop_animation(widget)
+
     def _get_container_class(self, hwnd: int) -> str:
         """Get CSS class for the app container based on window active and flashing status."""
+        # Base class - all running apps get 'running' class
+        base_class = "app-container running"
+
         # Check if window is active using task manager data
         if hasattr(self, "_task_manager") and self._task_manager and hwnd in self._task_manager._windows:
             app_window = self._task_manager._windows[hwnd]
 
             # Check for flashing state first (flashing takes priority over active)
             if hasattr(app_window, "is_flashing") and app_window.is_flashing:
-                return "app-container flashing"
+                return f"{base_class} flashing"
 
             # Then check for active state
             if hasattr(app_window, "is_active") and app_window.is_active:
-                return "app-container foreground"
+                return f"{base_class} foreground"
 
         # Fallback to GetForegroundWindow check
         if hwnd == win32gui.GetForegroundWindow():
-            return "app-container foreground"
+            return f"{base_class} foreground"
 
-        return "app-container"
+        return base_class
 
     def _get_app_icon(self, hwnd: int, title: str) -> QPixmap | None:
         """Return a QPixmap for the given window handle, using a DPI-aware cache."""
@@ -1049,7 +1702,25 @@ class TaskbarWidget(BaseWidget):
             self.hide_preview()
 
     def bring_to_foreground(self, hwnd):
-        """Bring the specified window to the foreground, restoring if minimized."""
+        """Bring the specified window to the foreground, restoring if minimized. For pinned apps, launch them."""
+        # Stop flashing animation if this window was flashing
+        if hwnd > 0:  # Only for real windows (not pinned apps)
+            self._stop_flashing_animation(hwnd)
+
+        # Add click animation feedback
+        if self._animation["enabled"] and not self._suspend_updates:
+            widget = self._hwnd_to_widget.get(hwnd)
+            if widget:
+                try:
+                    AnimationManager.animate(widget, "fadeInOut", 200)
+                except Exception:
+                    pass
+
+        # Check if this is a pinned app that's not running (negative hwnd)
+        if hwnd < 0:
+            self._launch_pinned_app(hwnd)
+            return
+
         if not win32gui.IsWindow(hwnd):
             return
         try:
@@ -1095,6 +1766,26 @@ class TaskbarWidget(BaseWidget):
                     if DEBUG:
                         logging.error(f"Failed to show window {hwnd}: {final_e}")
 
+    def _launch_pinned_app(self, unique_id_or_hwnd: int | str, extra_arguments: str = "") -> None:
+        """Launch a pinned application using PinManager with optional extra arguments."""
+        try:
+            # Determine if we received unique_id (str) or pseudo_hwnd (int)
+            if isinstance(unique_id_or_hwnd, str):
+                unique_id = unique_id_or_hwnd
+            else:
+                # It's a pseudo_hwnd, look up the widget
+                widget = self._hwnd_to_widget.get(unique_id_or_hwnd)
+                if not widget:
+                    return
+                unique_id = widget.property("unique_id")
+                if not unique_id:
+                    return
+
+            # Launch using PinManager with optional arguments
+            self._pin_manager.launch_pinned_app(unique_id, extra_arguments=extra_arguments)
+        except Exception as e:
+            logging.error(f"Error launching pinned app: {e}")
+
     def ensure_foreground(self, hwnd):
         """When we use dragging file ensure the window is in foreground."""
         if not win32gui.IsWindow(hwnd):
@@ -1128,21 +1819,25 @@ class TaskbarWidget(BaseWidget):
                     continue
                 hwnd = w.property("hwnd")
 
-                # Base class
-                new_cls = "app-container"
+                # Skip pinned-not-running apps (negative hwnd)
+                if hwnd and hwnd < 0:
+                    continue
+
+                # Base class for running apps
+                new_cls = "app-container running"
 
                 # Preserve flashing if manager reports it
                 try:
                     if hasattr(self, "_task_manager") and self._task_manager and hwnd in self._task_manager._windows:
                         aw = self._task_manager._windows[hwnd]
                         if getattr(aw, "is_flashing", False):
-                            new_cls = "app-container flashing"
+                            new_cls = "app-container running flashing"
                 except Exception:
                     pass
 
                 # Target gets 'foreground' (manager usually clears flashing on activation)
                 if target_hwnd is not None and hwnd == target_hwnd:
-                    new_cls = "app-container foreground"
+                    new_cls = "app-container running foreground"
 
                 if w.property("class") != new_cls:
                     w.setProperty("class", new_cls)
@@ -1161,6 +1856,19 @@ class TaskbarWidget(BaseWidget):
                         st.polish(w)
         except Exception:
             pass
+
+    def _get_title_wrapper(self, container: QWidget) -> QWidget | None:
+        try:
+            if not container:
+                return None
+            layout = container.layout()
+            if layout and layout.count() > 1:
+                wrapper = layout.itemAt(1).widget()
+                if isinstance(wrapper, QWidget):
+                    return wrapper
+        except Exception:
+            pass
+        return None
 
     def _get_title_label(self, container: QWidget) -> QLabel | None:
         try:

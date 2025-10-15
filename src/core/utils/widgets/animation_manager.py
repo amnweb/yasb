@@ -1,15 +1,23 @@
 import logging
 
-from PyQt6.QtCore import QEasingCurve, QPropertyAnimation
+from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, QTimer
 from PyQt6.QtWidgets import QGraphicsOpacityEffect
 
 
 class AnimationManager:
     _instances = {}
-    ALLOWED_ANIMATIONS = ["fadeInOut"]
+    _repeating_animations = {}  # Track widgets with repeating animations
+    ALLOWED_ANIMATIONS = ["fadeInOut", "blink"]
 
     @classmethod
     def animate(cls, widget, animation_type: str, duration: int = 200):
+        """Execute a single animation on a widget.
+
+        Args:
+            widget: The widget to animate
+            animation_type: Type of animation ('fadeInOut', 'flash', etc.)
+            duration: Duration of the animation in milliseconds
+        """
         if animation_type not in cls.ALLOWED_ANIMATIONS:
             logging.error(f"Animation type '{animation_type}' not supported. Allowed types: {cls.ALLOWED_ANIMATIONS}")
             return
@@ -17,6 +25,76 @@ class AnimationManager:
         if key not in cls._instances:
             cls._instances[key] = cls(animation_type, duration)
         cls._instances[key]._animate(widget)
+
+    @classmethod
+    def start_animation(
+        cls,
+        widget,
+        animation_type: str,
+        animation_duration: int = 800,
+        repeat_interval: int = 2000,
+        timeout: int = 5000,
+    ):
+        """Start a repeating animation on a widget.
+
+        Args:
+            widget: The widget to animate
+            animation_type: Type of animation ('blink', 'fadeInOut', etc.)
+            animation_duration: Duration of each animation cycle in ms (default 800ms)
+            repeat_interval: Time between animation cycles in ms (default 2000ms = 2s)
+            timeout: Auto-stop after this many ms (default 5000ms = 5s), 0 = no timeout
+        """
+        if animation_type not in cls.ALLOWED_ANIMATIONS:
+            logging.error(f"Animation type '{animation_type}' not supported. Allowed types: {cls.ALLOWED_ANIMATIONS}")
+            return
+
+        # Stop any existing animation for this widget
+        cls.stop_animation(widget)
+
+        # Create repeating timer for the animation
+        repeat_timer = QTimer()
+        repeat_timer.setInterval(repeat_interval)
+        repeat_timer.timeout.connect(lambda: cls.animate(widget, animation_type, animation_duration))
+        repeat_timer.start()
+
+        # Trigger first animation immediately
+        cls.animate(widget, animation_type, animation_duration)
+
+        # Create timeout timer if specified
+        timeout_timer = None
+        if timeout > 0:
+            timeout_timer = QTimer()
+            timeout_timer.setSingleShot(True)
+            timeout_timer.timeout.connect(lambda: cls.stop_animation(widget))
+            timeout_timer.start(timeout)
+
+        # Store timers
+        cls._repeating_animations[id(widget)] = (repeat_timer, timeout_timer, animation_type)
+
+    @classmethod
+    def stop_animation(cls, widget):
+        """Stop any repeating animation on a widget.
+
+        Args:
+            widget: The widget to stop animating
+        """
+        widget_id = id(widget)
+        if widget_id in cls._repeating_animations:
+            timers = cls._repeating_animations.pop(widget_id)
+            if timers:
+                repeat_timer, timeout_timer, _ = timers
+                if repeat_timer:
+                    repeat_timer.stop()
+                    repeat_timer.deleteLater()
+                if timeout_timer:
+                    timeout_timer.stop()
+                    timeout_timer.deleteLater()
+
+            # Clean up any graphics effect
+            try:
+                widget.setGraphicsEffect(None)
+            except Exception:
+                pass
 
     def __init__(self, animation_type: str, duration: int = 200):
         self.animation_type = animation_type
@@ -32,12 +110,12 @@ class AnimationManager:
     def fadeInOut(self, widget):
         effect = QGraphicsOpacityEffect(widget)
         effect.setEnabled(True)
-        effect.setOpacity(0.5)
+        effect.setOpacity(0.6)
         widget.setGraphicsEffect(effect)
 
         anim = QPropertyAnimation(effect, b"opacity", widget)
         anim.setDuration(self.duration)
-        anim.setStartValue(0.5)
+        anim.setStartValue(0.6)
         anim.setEndValue(1.0)
         anim.setEasingCurve(QEasingCurve.Type.InOutQuad)
 
@@ -53,5 +131,41 @@ class AnimationManager:
 
         anim.finished.connect(on_finished)
 
+        # Keep reference to prevent garbage collection
+        widget._yasb_animation = anim
+        anim.start()
+
+    def blink(self, widget):
+        """Blink animation - dim and brighten like Windows taskbar notification blinking."""
+        effect = QGraphicsOpacityEffect(widget)
+        effect.setEnabled(True)
+        effect.setOpacity(1.0)
+        widget.setGraphicsEffect(effect)
+
+        anim = QPropertyAnimation(effect, b"opacity", widget)
+        anim.setDuration(self.duration)
+        anim.setStartValue(1.0)
+        anim.setEndValue(0.7)
+        anim.setEasingCurve(QEasingCurve.Type.InOutQuad)
+
+        # Reverse the animation to go back to full opacity
+        anim.setDirection(QPropertyAnimation.Direction.Forward)
+
+        def on_finished():
+            try:
+                # Fade back to full opacity
+                if anim.direction() == QPropertyAnimation.Direction.Forward:
+                    anim.setDirection(QPropertyAnimation.Direction.Backward)
+                    anim.start()
+                else:
+                    # Animation complete, clean up
+                    effect.setEnabled(False)
+                    widget.setGraphicsEffect(None)
+            except Exception:
+                pass
+
+        anim.finished.connect(on_finished)
+
+        # Keep reference to prevent garbage collection
         widget._yasb_animation = anim
         anim.start()
