@@ -97,6 +97,16 @@ def add_shadow(el: QWidget, options: dict[str, Any]) -> None:
     el.setGraphicsEffect(shadow_effect)
 
 
+def refresh_widget_style(*widgets: QWidget) -> None:
+    """
+    Refresh widget styles by unpolishing and re-polishing them.
+    """
+    for widget in widgets:
+        if widget is not None:
+            widget.style().unpolish(widget)
+            widget.style().polish(widget)
+
+
 def build_widget_label(self, content: str, content_alt: str = None, content_shadow: dict = None):
     def process_content(content, is_alt=False):
         label_parts = re.split("(<span.*?>.*?</span>)", content)

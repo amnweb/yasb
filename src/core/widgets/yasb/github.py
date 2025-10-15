@@ -14,7 +14,7 @@ from PyQt6.QtGui import QColor, QCursor, QDesktopServices, QPainter, QPaintEvent
 from PyQt6.QtWidgets import QFrame, QGraphicsOpacityEffect, QHBoxLayout, QLabel, QScrollArea, QVBoxLayout, QWidget
 
 from core.utils.tooltip import set_tooltip
-from core.utils.utilities import PopupWidget, add_shadow
+from core.utils.utilities import PopupWidget, add_shadow, refresh_widget_style
 from core.utils.widgets.animation_manager import AnimationManager
 from core.validation.widgets.yasb.github import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
@@ -255,7 +255,7 @@ class GithubWidget(BaseWidget):
             else:
                 formatted_text = part.format(data=notification_count)
                 current_widget.setText(formatted_text)
-            current_widget.style().unpolish(current_widget)
+            refresh_widget_style(current_widget)
 
     def mark_as_read(self, notification_id, container_label):
         for notification in self._github_data:
