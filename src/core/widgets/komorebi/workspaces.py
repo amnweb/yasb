@@ -9,7 +9,7 @@ from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QWidget
 
 from core.event_enums import KomorebiEvent
 from core.event_service import EventService
-from core.utils.utilities import add_shadow
+from core.utils.utilities import add_shadow, refresh_widget_style
 from core.utils.widgets.komorebi.animation import KomorebiAnimation
 from core.utils.widgets.komorebi.client import KomorebiClient
 from core.utils.win32.app_icons import get_window_icon
@@ -63,7 +63,7 @@ class WorkspaceButton(QPushButton):
             new_class = " ".join([cls for cls in current_class.split() if not cls.startswith("button-")])
             new_class = f"{new_class} button-{index + 1}"
             button.setProperty("class", new_class)
-            button.setStyleSheet("")
+            refresh_widget_style(button)
 
     def update_and_redraw(self, status: WorkspaceStatus, lock_width: bool = False):
         # Lock current visual width so style/class changes don't cause a jump
@@ -76,7 +76,7 @@ class WorkspaceButton(QPushButton):
             self.setText(self.populated_label)
         else:
             self.setText(self.default_label)
-        self.setStyleSheet("")
+        refresh_widget_style(self)
         if lock_width and prev_width is not None:
             self.setFixedWidth(prev_width)
 
@@ -136,7 +136,7 @@ class WorkspaceButtonWithIcons(QFrame):
             new_class = " ".join([cls for cls in current_class.split() if not cls.startswith("button-")])
             new_class = f"{new_class} button-{index + 1}"
             button.setProperty("class", new_class)
-            button.setStyleSheet("")
+            refresh_widget_style(button)
 
     def update_and_redraw(self, status: WorkspaceStatus, lock_width: bool = False):
         prev_width = self.width() if lock_width else None
@@ -148,7 +148,7 @@ class WorkspaceButtonWithIcons(QFrame):
             self.text_label.setText(self.populated_label)
         else:
             self.text_label.setText(self.default_label)
-        self.setStyleSheet("")
+        refresh_widget_style(self)
         if lock_width and prev_width is not None:
             self.setFixedWidth(prev_width)
 

@@ -12,7 +12,7 @@ from PyQt6.QtCore import (
 from PyQt6.QtGui import QCursor, QImage, QMouseEvent, QPixmap, QShowEvent, QWheelEvent
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QWidget
 
-from core.utils.utilities import add_shadow
+from core.utils.utilities import add_shadow, refresh_widget_style
 from core.utils.widgets.glazewm.client import GlazewmClient, Monitor, Window
 from core.utils.win32.app_icons import get_window_icon
 from core.utils.win32.utilities import get_monitor_hwnd, get_process_info
@@ -71,7 +71,7 @@ class GlazewmWorkspaceButton(QPushButton):
         self._update_status()
         self._update_label()
         self.setProperty("class", f"ws-btn {self.status.value}")
-        self.setStyleSheet("")
+        refresh_widget_style(self)
 
     @pyqtSlot()
     def _activate_workspace(self):
@@ -166,7 +166,7 @@ class GlazewmWorkspaceButtonWithIcons(QFrame):
         self._update_label()
         self._update_icons()
         self.setProperty("class", f"ws-btn {self.status.value}")
-        self.setStyleSheet("")
+        refresh_widget_style(self)
 
     def _update_label(self):
         replacements = {
