@@ -39,14 +39,15 @@ class BarManager(QObject):
         app.screenAdded.connect(self.on_screens_update)
         app.screenRemoved.connect(self.on_screens_update)
         app.aboutToQuit.connect(self.stop_listener_threads)
+        app.setStyleSheet(self.stylesheet)
 
     @pyqtSlot()
     def on_styles_modified(self):
         stylesheet = get_stylesheet(show_error_dialog=True)
         if stylesheet and (stylesheet != self.stylesheet):
             self.stylesheet = stylesheet
-            for bar in self.bars:
-                bar.setStyleSheet(self.stylesheet)
+            app = QApplication.instance()
+            app.setStyleSheet(self.stylesheet)
 
     @pyqtSlot()
     def on_config_modified(self):
@@ -153,7 +154,6 @@ class BarManager(QObject):
             "bar_id": bar_id,
             "bar_name": name,
             "bar_screen": screen,
-            "stylesheet": self.stylesheet,
             "widgets": bar_widgets,
             "widget_config": bar_config.get("widgets", {}),
             "init": init,

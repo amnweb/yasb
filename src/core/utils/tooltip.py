@@ -1,5 +1,3 @@
-import re
-
 from PyQt6.QtCore import (
     QEasingCurve,
     QEvent,
@@ -13,13 +11,10 @@ from PyQt6.QtCore import (
 from PyQt6.QtGui import QCursor, QGuiApplication
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QWidget
 
-from core.config import get_stylesheet
-
 
 class CustomToolTip(QFrame):
     """Custom tooltip widget with enhanced styling and fade effects."""
 
-    _tooltip_stylesheet = None  # Class-level cache for tooltip CSS
     _active_tooltip = None  # Class-level reference to the currently visible tooltip
     _tooltip_pool = []  # Pool of reusable tooltip instances
     _pool_size_limit = 5  # Maximum number of tooltips to keep in pool
@@ -28,7 +23,7 @@ class CustomToolTip(QFrame):
         super().__init__(parent)
         self.setWindowFlags(Qt.WindowType.ToolTip | Qt.WindowType.FramelessWindowHint)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-        self.setStyleSheet("background: transparent;")
+
         self._opacity = 0.0
         self._slide_offset = 0
         self._base_pos = None
@@ -43,7 +38,6 @@ class CustomToolTip(QFrame):
         self.layout = QHBoxLayout(self)
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.layout.addWidget(self.label)
-        self.apply_stylesheet()
 
         self.fade_in_animation = None
         self.fade_out_animation = None
@@ -131,36 +125,6 @@ class CustomToolTip(QFrame):
             tooltip._is_destroyed = True
             tooltip.cleanup_animations()
             tooltip.deleteLater()
-
-    def apply_stylesheet(self):
-        """Apply the tooltip stylesheet from the cached class-level variable."""
-        if CustomToolTip._tooltip_stylesheet is None:
-            stylesheet = get_stylesheet()
-            extracted = self.extract_class_styles(stylesheet, ["tooltip"])
-            if not extracted.strip():
-                # Default style if class .tooltip is not found in the stylesheet
-                extracted = (
-                    ".tooltip {"
-                    "background-color: #18191a;"
-                    "border: 1px solid #36383a;"
-                    "border-radius: 4px;"
-                    "color: #a6adc8;"
-                    "padding: 6px 12px;"
-                    "font-size: 13px;"
-                    "font-family: 'Segoe UI';"
-                    "font-weight: 600;"
-                    "margin-top: 4px;"
-                    "}"
-                )
-            CustomToolTip._tooltip_stylesheet = extracted
-        self.setStyleSheet(CustomToolTip._tooltip_stylesheet)
-
-    def extract_class_styles(self, stylesheet, classes):
-        pattern = re.compile(
-            r"(\.({})\s*\{{[^}}]*\}})".format("|".join(re.escape(cls) for cls in classes)), re.MULTILINE
-        )
-        matches = pattern.findall(stylesheet)
-        return "\n".join(match[0] for match in matches)
 
     def get_opacity(self):
         return self._opacity
@@ -396,6 +360,8 @@ class TooltipEventFilter(QObject):
             self._mouse_inside = False
 
     def eventFilter(self, obj, event):
+        if event is None or not isinstance(event, QEvent) or not isinstance(obj, QObject):
+            return False
         if obj is self.widget:
             if event.type() == QEvent.Type.Enter:
                 self._mouse_inside = True

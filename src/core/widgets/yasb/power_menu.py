@@ -16,7 +16,6 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from core.config import get_stylesheet
 from core.event_service import EventService
 from core.utils.utilities import add_shadow, is_windows_10
 from core.utils.widgets.power_menu.power_commands import PowerOperations
@@ -24,12 +23,6 @@ from core.utils.win32.utilities import get_foreground_hwnd, set_foreground_hwnd
 from core.utils.win32.win32_accent import Blur
 from core.validation.widgets.yasb.power_menu import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
-
-
-class BaseStyledWidget(QWidget):
-    def apply_stylesheet(self):
-        stylesheet = get_stylesheet()
-        self.setStyleSheet(stylesheet)
 
 
 class ClickableLabel(QLabel):
@@ -67,7 +60,7 @@ class AnimatedWidget(QWidget):
         self.hide()
 
 
-class OverlayWidget(BaseStyledWidget, AnimatedWidget):
+class OverlayWidget(AnimatedWidget):
     def __init__(self, animation_duration, uptime):
         super().__init__(animation_duration)
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.Tool)
@@ -96,7 +89,7 @@ class OverlayWidget(BaseStyledWidget, AnimatedWidget):
         layout.addWidget(self.label_boot)
         self.setLayout(layout)
         # Apply the stylesheet here
-        self.apply_stylesheet()
+
         # Start timer for live updates
         self.timer = QtCore.QTimer(self)
         self.timer.timeout.connect(self.update_uptime_display)
@@ -217,7 +210,7 @@ class PowerMenuWidget(BaseWidget):
             self.main_window.setFocus()
 
 
-class MainWindow(BaseStyledWidget, AnimatedWidget):
+class MainWindow(AnimatedWidget):
     def __init__(self, parent_button, uptime, blur, blur_background, animation_duration, button_row, buttons):
         super(MainWindow, self).__init__(animation_duration)
 
@@ -293,7 +286,7 @@ class MainWindow(BaseStyledWidget, AnimatedWidget):
         main_layout.addLayout(button_layout3)
         main_layout.addLayout(button_layout4)
         self.setLayout(main_layout)
-        self.apply_stylesheet()
+
         self.adjustSize()
         self.center_on_screen()
 

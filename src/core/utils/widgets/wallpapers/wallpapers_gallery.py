@@ -1,5 +1,4 @@
 import os
-import re
 
 from PyQt6.QtCore import (
     QObject,
@@ -28,37 +27,12 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from core.config import get_stylesheet
 from core.event_service import EventService
 from core.utils.utilities import is_windows_10
 from core.utils.win32.win32_accent import Blur
 
 
-class BaseStyledWidget(QWidget):
-    """BaseStyledWidget applies filtered styles to the widget from a given stylesheet."""
-
-    def apply_stylesheet(self):
-        stylesheet = get_stylesheet()
-        classes_to_include = [
-            "wallpapers-gallery-window",
-            "wallpapers-gallery-buttons",
-            "wallpapers-gallery-buttons:hover",
-            "wallpapers-gallery-image",
-            "wallpapers-gallery-image.focused",
-            "wallpapers-gallery-image:hover",
-        ]
-        filtered_stylesheet = self.extract_class_styles(stylesheet, classes_to_include)
-        self.setStyleSheet(filtered_stylesheet)
-
-    def extract_class_styles(self, stylesheet, classes):
-        pattern = re.compile(
-            r"(\.({})\s*\{{[^}}]*\}})".format("|".join(re.escape(cls) for cls in classes)), re.MULTILINE
-        )
-        matches = pattern.findall(stylesheet)
-        return "\n".join(match[0] for match in matches)
-
-
-class HoverLabel(QLabel, BaseStyledWidget):
+class HoverLabel(QLabel):
     """HoverLabel: QLabel with hover, focus, and opacity effects for a wallpapers gallery."""
 
     def __init__(self, parent, *args, **kwargs):
@@ -69,7 +43,7 @@ class HoverLabel(QLabel, BaseStyledWidget):
         self._opacity = 0.0
         self.parent_gallery = parent
         self.setProperty("class", "wallpapers-gallery-image")
-        self.apply_stylesheet()
+
         self.opacity_effect = QGraphicsOpacityEffect(self)
         self.setGraphicsEffect(self.opacity_effect)
         self.opacity_effect.setOpacity(self._opacity)
@@ -192,7 +166,7 @@ class ImageLoader(QRunnable):
         self.signals.loaded.emit(self.image_path, pixmap, self.index)
 
 
-class ImageGallery(QMainWindow, BaseStyledWidget):
+class ImageGallery(QMainWindow):
     """ImageGallery displays a gallery of images with navigation and lazy loading features."""
 
     def __init__(self, image_folder, gallery):
@@ -231,7 +205,6 @@ class ImageGallery(QMainWindow, BaseStyledWidget):
         self.is_loading = False
         self.threadpool = QThreadPool()
         self.threadpool.setMaxThreadCount(self.images_per_page)
-        self.apply_stylesheet()
 
     def initUI(self, parent=None):
         """Initialize the UI components and layout for the wallpapers gallery window."""
@@ -277,7 +250,8 @@ class ImageGallery(QMainWindow, BaseStyledWidget):
 
         # Set up the scroll area
         self.scroll_area = QScrollArea()
-        self.scroll_area.setStyleSheet("background-color:transparent;border:0")
+        self.scroll_area.setObjectName("wallpapers-gallery-scroll")
+        self.scroll_area.setStyleSheet("QScrollArea#wallpapers-gallery-scroll{background-color:transparent;border:0}")
         self.scroll_area.setWidgetResizable(True)
         self.scroll_area.setFixedHeight(self.window_height)
         self.scroll_area.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -287,6 +261,10 @@ class ImageGallery(QMainWindow, BaseStyledWidget):
 
         # Set up the image container
         self.image_container = QWidget()
+        self.image_container.setObjectName("wallpapers-gallery-container")
+        self.image_container.setStyleSheet(
+            "QWidget#wallpapers-gallery-container{background-color:transparent;border:0}"
+        )
         self.scroll_area.setWidget(self.image_container)
         self.image_layout = QHBoxLayout()
         self.image_container.setLayout(self.image_layout)

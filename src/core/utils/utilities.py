@@ -374,6 +374,8 @@ class PopupWidget(QWidget):
         self._fade_animation.start()
 
     def eventFilter(self, obj, event):
+        if event is None or not isinstance(event, QEvent) or not isinstance(obj, QObject):
+            return False
         if event.type() == QEvent.Type.MouseButtonPress:
             global_pos = event.globalPosition().toPoint()
 

@@ -30,7 +30,6 @@ class Bar(QWidget):
         bar_id: str,
         bar_name: str,
         bar_screen: QScreen,
-        stylesheet: str,
         widgets: dict[str, list],
         layouts: dict[str, dict[str, bool | str]],
         widget_config: dict = None,
@@ -78,7 +77,6 @@ class Bar(QWidget):
             self.app_bar_manager = None
 
         self.setWindowTitle(APP_BAR_TITLE)
-        self.setStyleSheet(stylesheet)
         self.setWindowFlag(Qt.WindowType.Tool)
         self.setWindowFlag(Qt.WindowType.FramelessWindowHint)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
