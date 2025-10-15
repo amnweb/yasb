@@ -28,9 +28,6 @@ YASB_WEATHER_LOCATION=your_location_here
 # Some Qt settings
 QT_SCREEN_SCALE_FACTORS="1.25;1"
 QT_SCALE_FACTOR_ROUNDING_POLICY="PassThrough"
-# OpenGL settings, Use "desktop" for hardware acceleration, "software" for software rendering
-QT_OPENGL="desktop" 
-QT_OPENGL="software"
 ```
 
 ## YASB Font Engine
@@ -79,11 +76,14 @@ Valid options are:
 | `alignment`       | object  | [See below](#bar-alignment) | The alignment settings for the status bar. |
 | `blur_effect`     | object  | [See below](#blur-effect-configuration) | The blur effect settings for the status bar. |
 | `window_flags`    | object  | [See below](#window-flags-configuration) | The window flags for the status bar. |
-| `dimensions`      | object  | `{width: "100%", height: 36}` | The dimensions of the status bar. |
+| `dimensions`      | object  | `{width: "100%", height: 36}` | The dimensions of the status bar. Width can be a number (pixels), percentage string (e.g., `"100%"`, `"50%"`), or `"auto"` to resize based on content. When using `"auto"`, the bar will automatically resize as widget content changes, with a maximum width of the available screen width minus padding. |
 | `padding`         | object  | `{top: 4, left: 0, bottom: 4, right: 0}` | The padding for the status bar. |
 | `animation`       | object  | `{enabled: true, duration: 500}` | The animation settings for the status bar. Duration is in milliseconds. Animation is used to show/hide the bar smoothly. |
 | `widgets`         | list  | `left[], center[], right[]` | Active widgets and position. |
 | `layouts`         | object  | [See below](#layouts-configuration) | Configuration for widget layouts in each section (left, center, right). |
+
+> **note:**
+> Setting the width to `"auto"` is not recommended for widgets that constantly update data, such as CPU, memory, clock, etc. This can cause the bar to constantly resize, which may lead to flickering or performance issues.
 
 > **Note:**
 > `screens` can be specified as a list of monitor names. If you want the bar to appear on all screens, use `['*']`. To specify a single screen, use `['DELL P2419H (1)']` or a similar name based on your monitor setup. To show the bar only and always on the primary screen, use `['primary']`.

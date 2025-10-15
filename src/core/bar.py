@@ -61,7 +61,8 @@ class Bar(QWidget):
         self._autohide_bar = self._window_flags["auto_hide"]
         self._widgets = widgets  # Store widgets reference for context menu
         self._widget_config_map = widget_config or {}
-
+        self._is_auto_width = str(dimensions["width"]).lower() == "auto"
+        self._current_auto_width = 0
         self._os_theme_manager = None
         self._fullscreen_manager = None
         self._autohide_manager = None
@@ -202,7 +203,10 @@ class Bar(QWidget):
 
         scale_state = self.screen().devicePixelRatio() > 1.0
 
-        if is_valid_percentage_str(str(self._dimensions["width"])):
+        if str(self._dimensions["width"]).lower() == "auto":
+            bar_width = max(self._bar_frame.sizeHint().width(), 0)
+
+        elif is_valid_percentage_str(str(self._dimensions["width"])):
             percent = percent_to_float(self._dimensions["width"])
             bar_width = int(screen_width * percent)
 
@@ -253,6 +257,9 @@ class Bar(QWidget):
 
         self._bar_frame.setLayout(bar_layout)
 
+        if self._is_auto_width:
+            self._bar_frame.installEventFilter(self)
+
     def show_bar(self):
         self.setWindowOpacity(0.0)
         self.opacity_animation = QPropertyAnimation(self, b"windowOpacity")
@@ -300,6 +307,29 @@ class Bar(QWidget):
             if self._os_theme_manager:
                 self._os_theme_manager.update_theme_class()
         super().changeEvent(event)
+
+    def eventFilter(self, obj, event):
+        if self._is_auto_width and obj == self._bar_frame and event.type() == QEvent.Type.LayoutRequest:
+            requested = max(self._bar_frame.sizeHint().width(), 0)
+            available = self.screen().geometry().width() - self._padding["left"] - self._padding["right"]
+            new_width = min(requested, available)
+            if new_width != self._current_auto_width:
+                self._current_auto_width = new_width
+                bar_height = self.height()
+                self.resize(new_width, bar_height)
+                self._bar_frame.resize(new_width, bar_height)
+
+                screen_geometry = self.screen().geometry()
+                bar_x, bar_y = self.bar_pos(
+                    new_width,
+                    bar_height,
+                    screen_geometry.width(),
+                    screen_geometry.height(),
+                )
+                if self.x() != bar_x or self.y() != bar_y:
+                    self.move(bar_x, bar_y)
+
+        return super().eventFilter(obj, event)
 
     def hide(self):
         if self.isVisible() and self._animation["enabled"]:

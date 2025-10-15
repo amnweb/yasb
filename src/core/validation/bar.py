@@ -93,6 +93,7 @@ BAR_SCHEMA = {
                 "width": {
                     "anyof": [
                         {"type": "string", "minlength": 2, "maxlength": 4, "regex": "\\d+%"},
+                        {"type": "string", "allowed": ["auto"]},
                         {"type": "integer", "min": 0},
                     ],
                     "default": BAR_DEFAULTS["dimensions"]["width"],
