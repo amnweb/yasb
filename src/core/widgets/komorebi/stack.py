@@ -506,14 +506,12 @@ class StackWidget(BaseWidget):
     def _get_window_label(self, window_index):
         window = self._komorebi_windows[window_index]
         w_index = window_index if self._label_zero_index else window_index + 1
-        
+
         # Apply rewrite filter to title and process name
         title = self._rewrite_filter(window["title"])
         process_name = self._rewrite_filter(window["exe"])
-        
-        default_label = self._label_window.format(
-            index=w_index, title=title, process=process_name, hwnd=window["hwnd"]
-        )
+
+        default_label = self._label_window.format(index=w_index, title=title, process=process_name, hwnd=window["hwnd"])
         active_label = self._label_window_active.format(
             index=w_index, title=title, process=process_name, hwnd=window["hwnd"]
         )

@@ -150,7 +150,6 @@ class VSCodeWidget(BaseWidget):
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
         active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
         label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
-        label_parts = [part for part in label_parts if part]
         widget_index = 0
 
         for part in label_parts:
