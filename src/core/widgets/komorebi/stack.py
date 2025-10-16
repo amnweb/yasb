@@ -11,7 +11,7 @@ from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QWidget
 
 from core.event_enums import KomorebiEvent
 from core.event_service import EventService
-from core.utils.utilities import add_shadow
+from core.utils.utilities import add_shadow, refresh_widget_style
 from core.utils.widgets.komorebi.client import KomorebiClient
 from core.utils.win32.app_icons import get_window_icon
 from core.utils.win32.utilities import get_monitor_hwnd
@@ -88,7 +88,7 @@ class WindowButton(QFrame):
             new_class = " ".join([cls for cls in current_class.split() if not cls.startswith("button-")])
             new_class = f"{new_class} button-{index + 1}"
             button.setProperty("class", new_class)
-            button.setStyleSheet("")
+            refresh_widget_style(button)
 
     def update_and_redraw(self, status: WindowStatus):
         self.status = status
@@ -97,7 +97,7 @@ class WindowButton(QFrame):
             self.text_label.setText(self.active_label)
         else:
             self.text_label.setText(self.default_label)
-        self.setStyleSheet("")
+        refresh_widget_style(self)
 
         if self.parent_widget._show_icons == "focused":
             if self.status == WINDOW_STATUS_ACTIVE:
@@ -506,14 +506,12 @@ class StackWidget(BaseWidget):
     def _get_window_label(self, window_index):
         window = self._komorebi_windows[window_index]
         w_index = window_index if self._label_zero_index else window_index + 1
-        
+
         # Apply rewrite filter to title and process name
         title = self._rewrite_filter(window["title"])
         process_name = self._rewrite_filter(window["exe"])
-        
-        default_label = self._label_window.format(
-            index=w_index, title=title, process=process_name, hwnd=window["hwnd"]
-        )
+
+        default_label = self._label_window.format(index=w_index, title=title, process=process_name, hwnd=window["hwnd"])
         active_label = self._label_window_active.format(
             index=w_index, title=title, process=process_name, hwnd=window["hwnd"]
         )

@@ -3,7 +3,7 @@ import re
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel
 
 from core.utils.tooltip import set_tooltip
-from core.utils.utilities import add_shadow, build_widget_label
+from core.utils.utilities import add_shadow, build_widget_label, refresh_widget_style
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.widgets.recycle_bin.recycle_bin_monitor import RecycleBinMonitor
 from core.validation.widgets.yasb.recycle_bin import VALIDATION_SCHEMA
@@ -108,14 +108,14 @@ class RecycleBinWidget(BaseWidget):
                         active_widgets[widget_index].setText(formatted_text)
                         base_class = active_widgets[widget_index].property("class").split()[0]
                         active_widgets[widget_index].setProperty("class", f"{base_class} {class_name}")
-                        active_widgets[widget_index].setStyleSheet("")
+                        refresh_widget_style(active_widgets[widget_index])
                 else:
                     if widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
                         alt_class = "alt" if self._show_alt_label else ""
                         active_widgets[widget_index].setText(formatted_text)
                         base_class = "label"
                         active_widgets[widget_index].setProperty("class", f"{base_class} {alt_class} {class_name}")
-                        active_widgets[widget_index].setStyleSheet("")
+                        refresh_widget_style(active_widgets[widget_index])
                 widget_index += 1
         if self._tooltip:
             set_tooltip(

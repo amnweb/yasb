@@ -141,6 +141,7 @@ class WifiWidget(BaseWidget):
                     label = QLabel(part)
                     label.setProperty("class", "label alt" if is_alt else "label")
                 label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                label.setCursor(Qt.CursorShape.PointingHandCursor)
                 add_shadow(label, self._label_shadow)
                 self._widget_container_layout.addWidget(label)
                 widgets.append(label)

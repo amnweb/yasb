@@ -416,7 +416,7 @@ class TodoWidget(BaseWidget):
         self._menu.show()
 
     def _show_sort_menu(self):
-        menu = QMenu(self._order_btn)
+        menu = QMenu(self._order_btn.window())
         menu.setProperty("class", "context-menu")
         menu.setStyleSheet("""
             QMenu::indicator:checked { background: transparent;color:transparent }
@@ -557,9 +557,12 @@ class TodoWidget(BaseWidget):
 
     def widget_context_menu(self, widget):
         def show_custom_menu(point):
-            menu = widget.createStandardContextMenu()
-            qmenu_rounded_corners(menu)
+            standard_menu = widget.createStandardContextMenu()
+            menu = QMenu(widget.window())
             menu.setProperty("class", "context-menu")
+            menu.addActions(standard_menu.actions())
+            standard_menu.deleteLater()
+            qmenu_rounded_corners(menu)
             for action in menu.actions():
                 action.setIconVisibleInMenu(False)
                 action.setIcon(QIcon())
@@ -867,7 +870,7 @@ class TaskFrame(QFrame):
         if event.mimeData().hasText():
             self._drop_highlight = True
             self.setProperty("class", f"task-item drop-highlight {self._task.get('category', 'default')}")
-            self.setStyleSheet("")
+            refresh_widget_style(self)
             self.update()
             event.acceptProposedAction()
         else:
@@ -876,7 +879,7 @@ class TaskFrame(QFrame):
     def dragLeaveEvent(self, event):
         self._drop_highlight = False
         self.setProperty("class", f"task-item {self._task.get('category', 'default')}")
-        self.setStyleSheet("")
+        refresh_widget_style(self)
         self.update()
 
     def dragMoveEvent(self, event):
@@ -896,7 +899,7 @@ class TaskFrame(QFrame):
     def dropEvent(self, event):
         self._drop_highlight = False
         self.setProperty("class", f"task-item {self._task.get('category', 'default')}")
-        self.setStyleSheet("")
+        refresh_widget_style(self)
         self.update()
         source_id = event.mimeData().text()
         target_id = str(self._task_id)

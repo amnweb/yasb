@@ -9,7 +9,7 @@ from humanize import naturalsize
 from PyQt6.QtCore import QTimer
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel
 
-from core.utils.utilities import add_shadow, build_progress_widget, build_widget_label
+from core.utils.utilities import add_shadow, build_progress_widget, build_widget_label, refresh_widget_style
 from core.utils.widgets.animation_manager import AnimationManager
 from core.validation.widgets.yasb.gpu import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
@@ -219,7 +219,7 @@ class GpuWidget(BaseWidget):
                     active_widgets[widget_index].setProperty(
                         "class", f"{label_class} status-{self._get_gpu_threshold(gpu_data.utilization)}"
                     )
-                    active_widgets[widget_index].setStyleSheet("")
+                    refresh_widget_style(active_widgets[widget_index])
                 widget_index += 1
 
     def _get_gpu_threshold(self, utilization) -> str:

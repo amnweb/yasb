@@ -7,7 +7,7 @@ from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QCursor
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QVBoxLayout
 
-from core.utils.utilities import PopupWidget, add_shadow, build_widget_label
+from core.utils.utilities import PopupWidget, add_shadow, build_widget_label, refresh_widget_style
 from core.utils.win32.bindings import PowerEnumerate, PowerGetActiveScheme, PowerReadFriendlyName, PowerSetActiveScheme
 from core.utils.win32.structs import GUID
 from core.validation.widgets.yasb.power_plan import VALIDATION_SCHEMA
@@ -154,7 +154,7 @@ class PowerPlanWidget(BaseWidget):
                     alt_class = "alt" if self._show_alt_label else ""
                     base_class = "icon" if "<span" in part else f"label {alt_class}"
                     active_widgets[widget_index].setProperty("class", f"{base_class} {self._plan_class_name}")
-                    active_widgets[widget_index].setStyleSheet("")
+                    refresh_widget_style(active_widgets[widget_index])
                 widget_index += 1
 
     def _toggle_label(self):

@@ -7,7 +7,7 @@ import psutil
 from PyQt6.QtCore import QTimer
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel
 
-from core.utils.utilities import add_shadow, build_widget_label
+from core.utils.utilities import add_shadow, build_widget_label, refresh_widget_style
 from core.utils.widgets.animation_manager import AnimationManager
 from core.validation.widgets.yasb.battery import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
@@ -139,7 +139,7 @@ class BatteryWidget(BaseWidget):
             new_classes = f"{current_classes} blink".strip()
 
         label.setProperty("class", new_classes)
-        label.setStyleSheet("")
+        refresh_widget_style(label)
 
     def _update_label(self):
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
@@ -188,7 +188,7 @@ class BatteryWidget(BaseWidget):
                     existing_classes = widget_label.property("class")
                     new_classes = re.sub(r"status-\w+", "", existing_classes).strip()
                     widget_label.setProperty("class", f"{new_classes} status-{threshold}")
-                    widget_label.setStyleSheet("")
+                    refresh_widget_style(widget_label)
 
                     # only blink when plugged AND blink_enabled
                     if self._battery_state.power_plugged and self._icon_charging_blink:
@@ -204,11 +204,11 @@ class BatteryWidget(BaseWidget):
                             new_classes = current_classes.replace("blink", "").strip()
                             new_classes = re.sub(r"\s+", " ", new_classes)
                             widget_label.setProperty("class", new_classes)
-                            widget_label.setStyleSheet("")
+                            refresh_widget_style(widget_label)
                 else:
                     alt_class = "alt" if self._show_alt_label else ""
                     formatted_text = battery_status.format(battery_status)
                     active_widgets[widget_index].setText(formatted_text)
                     active_widgets[widget_index].setProperty("class", f"label {alt_class} status-{threshold}")
-                    active_widgets[widget_index].setStyleSheet("")
+                    refresh_widget_style(active_widgets[widget_index])
                 widget_index += 1

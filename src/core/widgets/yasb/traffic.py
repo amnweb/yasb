@@ -5,7 +5,7 @@ from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
 
 from core.utils.tooltip import set_tooltip
-from core.utils.utilities import PopupWidget, add_shadow, build_widget_label
+from core.utils.utilities import PopupWidget, add_shadow, build_widget_label, refresh_widget_style
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.widgets.traffic.connection_monitor import InternetChecker
 from core.utils.widgets.traffic.traffic_manager import TrafficDataManager
@@ -284,13 +284,14 @@ class TrafficWidget(BaseWidget):
                     if "offline" not in current_class:
                         new_class = f"{current_class} offline".strip()
                         active_widgets[widget_index].setProperty("class", new_class)
+
                 else:
                     # Remove offline class if connected
                     if "offline" in current_class:
                         new_class = current_class.replace("offline", "").strip()
                         new_class = " ".join(new_class.split())
                         active_widgets[widget_index].setProperty("class", new_class)
-                active_widgets[widget_index].setStyleSheet("")
+                refresh_widget_style(active_widgets[widget_index])
 
                 widget_index += 1
 
@@ -318,7 +319,7 @@ class TrafficWidget(BaseWidget):
                 status_text = f"Internet {net_status.capitalize()}"
                 self.menu_labels["internet-info"].setText(status_text)
                 self.menu_labels["internet-info"].setProperty("class", f"internet-info {net_status}")
-                self.menu_labels["internet-info"].setStyleSheet("")
+                refresh_widget_style(self.menu_labels["internet-info"])
             except (RuntimeError, AttributeError):
                 pass
 
