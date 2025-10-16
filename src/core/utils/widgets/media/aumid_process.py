@@ -195,10 +195,3 @@ def _aumid_heuristic_fallback(aumid: str) -> str | None:
             return res
 
     return None
-
-
-# if __name__ == "__main__":
-#     # Usage: aumid_process.py <AUMID>
-#     import sys
-
-#     print(get_process_name_for_aumid(sys.argv[1]))

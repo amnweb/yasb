@@ -86,10 +86,10 @@ class SystemTrayManager(QSystemTrayIcon):
         QMenu {
             background-color: #202020;
             color: #ffffff;
-            border:1px solid #373b3e;
+            border:1px solid #303030;
             padding:5px 0;
             margin:0;
-            border-radius:4px
+            border-radius:8px
         }
         QMenu::item {
             margin:0 4px;

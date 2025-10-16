@@ -6,6 +6,7 @@ from PyQt6.QtCore import QEasingCurve, QPoint, QPropertyAnimation, QRect, Qt
 from PyQt6.QtGui import QFontMetrics, QPixmap, QRegion
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QWidget
 
+from core.utils.utilities import refresh_widget_style
 from core.utils.win32.bindings.dwmapi import (
     DwmQueryThumbnailSourceSize,
     DwmRegisterThumbnail,
@@ -474,8 +475,7 @@ class TaskbarThumbnailManager:
             if is_flashing and hasattr(self._preview_popup, "_content"):
                 try:
                     self._preview_popup._content.setProperty("class", "taskbar-preview flashing")
-                    self._preview_popup._content.style().unpolish(self._preview_popup._content)
-                    self._preview_popup._content.style().polish(self._preview_popup._content)
+                    refresh_widget_style(self._preview_popup._content)
                 except Exception:
                     pass
 

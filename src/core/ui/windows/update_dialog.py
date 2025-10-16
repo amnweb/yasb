@@ -30,7 +30,7 @@ from winmica import BackdropType, EnableMica, is_mica_supported
 
 from core.ui.style import apply_button_style
 from core.utils.controller import exit_application
-from core.utils.utilities import is_process_running, is_valid_qobject
+from core.utils.utilities import is_process_running, is_valid_qobject, refresh_widget_style
 from settings import APP_NAME, SCRIPT_PATH
 
 GITHUB_LATEST_RELEASE_URL = "https://api.github.com/repos/amnweb/yasb/releases/latest"
@@ -487,8 +487,7 @@ class UpdateDialog(QDialog):
     def event(self, event) -> bool:
         if event.type() == QEvent.Type.PaletteChange:
             self._apply_button_styles()
-            self.changelog_view.style().unpolish(self.changelog_view)
-            self.changelog_view.style().polish(self.changelog_view)
+            refresh_widget_style(self.changelog_view)
         return super().event(event)
 
     def present(self) -> None:

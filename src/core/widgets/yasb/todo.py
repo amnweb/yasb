@@ -25,7 +25,7 @@ from PyQt6.QtWidgets import (
 
 from core.config import HOME_CONFIGURATION_DIR
 from core.utils.tooltip import set_tooltip
-from core.utils.utilities import PopupWidget, add_shadow, build_widget_label
+from core.utils.utilities import PopupWidget, add_shadow, build_widget_label, refresh_widget_style
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.win32.utilities import qmenu_rounded_corners
 from core.validation.widgets.yasb.todo import VALIDATION_SCHEMA
@@ -634,8 +634,7 @@ class TodoWidget(BaseWidget):
                 cb.setChecked(True)
                 cb.setEnabled(False)
                 container.setProperty("class", f"task-item completed {task.get('category', 'default')}")
-                container.style().unpolish(container)
-                container.style().polish(container)
+                refresh_widget_style(container)
                 checkbox.setText(self._icons["checked"])
 
                 def do_archive():

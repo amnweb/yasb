@@ -5,7 +5,7 @@ import subprocess
 import threading
 
 import win32com.client
-from PyQt6.QtCore import Qt, QThread, pyqtSignal
+from PyQt6.QtCore import Qt, QThread, QTimer, pyqtSignal
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel
 
 from core.utils.tooltip import set_tooltip
@@ -319,12 +319,33 @@ class UpdateCheckWidget(BaseWidget):
         self._update_manager = UpdateManager()
         self._update_manager.register_subscriber(self)
 
+        self._workers_started = False
+        self._startup_timer = None
+        if self._window_update_enabled or self._winget_update_enabled:
+            self._schedule_worker_start()
+
+        self.update_widget_visibility()
+
+    def _schedule_worker_start(self):
+        if self._workers_started:
+            return
+        self._startup_timer = QTimer(self)
+        self._startup_timer.setSingleShot(True)
+        self._startup_timer.timeout.connect(self._start_workers)
+        self._startup_timer.start(10000)
+
+    def _start_workers(self):
+        if self._workers_started:
+            return
+        self._workers_started = True
+        if self._startup_timer:
+            self._startup_timer.stop()
+            self._startup_timer = None
+
         if self._window_update_enabled:
             self._update_manager.start_worker("windows", self._windows_update_exclude)
         if self._winget_update_enabled:
             self._update_manager.start_worker("winget", self._winget_update_exclude)
-
-        self.update_widget_visibility()
 
     def emit_event(self, event_type, update_info):
         if event_type == "windows_update":

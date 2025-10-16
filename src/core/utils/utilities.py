@@ -97,6 +97,21 @@ def add_shadow(el: QWidget, options: dict[str, Any]) -> None:
     el.setGraphicsEffect(shadow_effect)
 
 
+def refresh_widget_style(*widgets: QWidget) -> None:
+    """Refresh the style of the given widgets."""
+    for widget in widgets:
+        if widget is None or not is_valid_qobject(widget):
+            continue
+        style = widget.style()
+        if not style:
+            continue
+        try:
+            style.unpolish(widget)
+            style.polish(widget)
+        except Exception:
+            pass
+
+
 def build_widget_label(self, content: str, content_alt: str = None, content_shadow: dict = None):
     def process_content(content, is_alt=False):
         label_parts = re.split("(<span.*?>.*?</span>)", content)
@@ -374,6 +389,8 @@ class PopupWidget(QWidget):
         self._fade_animation.start()
 
     def eventFilter(self, obj, event):
+        if not isinstance(obj, QObject):
+            return False
         if event.type() == QEvent.Type.MouseButtonPress:
             global_pos = event.globalPosition().toPoint()
 

@@ -7,6 +7,7 @@ from PyQt6.QtCore import QPoint, QPointF, QSize, Qt, pyqtSignal
 from PyQt6.QtGui import QColor, QImage, QMouseEvent, QPainter, QPainterPath, QPaintEvent, QPen, QPixmap, QWheelEvent
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QScrollArea, QWidget
 
+from core.utils.utilities import refresh_widget_style
 from core.utils.widgets.weather.api import IconFetcher
 
 
@@ -64,9 +65,8 @@ class ClickableWidget(QFrame):
     @override
     def setProperty(self, name: str | None, value: Any) -> bool:
         super().setProperty(name, value)
-        if name == "class" and (s := self.style()):
-            s.unpolish(self)
-            s.polish(self)
+        if name == "class":
+            refresh_widget_style(self)
             self.update()
             return True
         return False

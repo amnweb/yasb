@@ -8,7 +8,7 @@ from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QSizePolicy, QVBoxLayou
 
 from core.event_enums import KomorebiEvent
 from core.event_service import EventService
-from core.utils.utilities import PopupWidget, add_shadow, build_widget_label
+from core.utils.utilities import PopupWidget, add_shadow, build_widget_label, refresh_widget_style
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.widgets.komorebi.client import KomorebiClient
 from core.validation.widgets.komorebi.control import VALIDATION_SCHEMA
@@ -282,8 +282,7 @@ class KomorebiControlWidget(BaseWidget):
 
         # Force style refresh on each button
         for btn in (self.start_btn, self.stop_btn, self.reload_btn):
-            btn.style().unpolish(btn)
-            btn.style().polish(btn)
+            refresh_widget_style(btn)
 
     def _run_komorebi_command(self, command: str):
         """Runs a Komorebi command with locked UI and error handling."""

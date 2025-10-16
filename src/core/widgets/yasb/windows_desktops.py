@@ -20,7 +20,7 @@ from PyQt6.QtWidgets import (
 from pyvda import VirtualDesktop, get_virtual_desktops, set_wallpaper_for_all_desktops
 
 from core.event_service import EventService
-from core.utils.utilities import add_shadow, is_windows_10
+from core.utils.utilities import add_shadow, is_windows_10, refresh_widget_style
 from core.utils.win32.utilities import qmenu_rounded_corners
 from core.validation.widgets.yasb.windows_desktops import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
@@ -52,8 +52,7 @@ class WorkspaceButton(QPushButton):
             new_class = " ".join([cls for cls in current_class.split() if not cls.startswith("button-")])
             new_class = f"{new_class} button-{index + 1}"
             button.setProperty("class", new_class)
-            button.style().unpolish(button)
-            button.style().polish(button)
+            refresh_widget_style(button)
         if self.animation:
             try:
                 parent = self.parent_widget
@@ -380,8 +379,7 @@ class WorkspaceWidget(BaseWidget):
             base = f"{base} {' '.join(tokens)}"
 
         workspace_btn.setProperty("class", base)
-        workspace_btn.style().unpolish(workspace_btn)
-        workspace_btn.style().polish(workspace_btn)
+        refresh_widget_style(workspace_btn)
         if schedule_update:
             QTimer.singleShot(0, workspace_btn.update_visible_buttons)
 

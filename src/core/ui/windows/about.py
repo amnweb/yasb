@@ -20,7 +20,7 @@ from winmica import BackdropType, EnableMica, is_mica_supported
 from core.ui.style import apply_button_style, apply_link_button_style
 from core.ui.windows.update_dialog import ReleaseFetcher, ReleaseInfo, UpdateDialog
 from core.utils.tooltip import set_tooltip
-from core.utils.utilities import get_app_identifier, is_valid_qobject
+from core.utils.utilities import get_app_identifier, is_valid_qobject, refresh_widget_style
 from settings import (
     APP_ID,
     APP_NAME,
@@ -209,8 +209,7 @@ class AboutDialog(QDialog):
         state = self._update_button.property("updateState") or "idle"
         variant = "primary" if state == "available" else "secondary"
         apply_button_style(self._update_button, variant)
-        self._update_button.style().unpolish(self._update_button)
-        self._update_button.style().polish(self._update_button)
+        refresh_widget_style(self._update_button)
 
     def _apply_state(
         self,
@@ -332,8 +331,7 @@ class AboutDialog(QDialog):
         set_tooltip(self._update_button, config["tooltip"], 0, position="top")
 
         apply_button_style(self._update_button, "secondary")
-        self._update_button.style().unpolish(self._update_button)
-        self._update_button.style().polish(self._update_button)
+        refresh_widget_style(self._update_button)
 
     def showEvent(self, event) -> None:
         self._apply_palette()

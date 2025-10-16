@@ -11,11 +11,9 @@ authors = [
 ]
 license = { file = "LICENSE" }
 readme = "README.md"
-requires-python = "==3.12.*"
+requires-python = ">= 3.13"
 dependencies = [
-    "PyQt6==6.9.1",
-    "PyQt6-Qt6==6.9.1",
-    "PyQt6_sip",
+    "pyqt6>=6.9.1",
     "cerberus",
     "humanize",
     "psutil",
@@ -26,7 +24,7 @@ dependencies = [
     "holidays",
     "watchdog",
     "pycaw",
-    "pillow==11.1",
+    "pillow",
     "icoextract",
     "qasync",
     "obs-websocket-py",
@@ -56,7 +54,9 @@ dependencies = [
 dev = [
     "pre-commit",
     "ruff",
-    "cx_Freeze==7.2.10"
+    "cx_freeze",
+    "pyqt6-stubs",
+    "types-pillow",
 ]
 
 [tool.hatch.metadata]

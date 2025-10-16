@@ -21,7 +21,7 @@ from PyQt6.QtWidgets import (
     QPushButton,
 )
 
-from core.utils.utilities import add_shadow, app_data_path
+from core.utils.utilities import add_shadow, app_data_path, refresh_widget_style
 from core.utils.widgets.systray.systray_widget import DropWidget, IconState, IconWidget
 from core.utils.widgets.systray.tasks_service import TasksService
 from core.utils.widgets.systray.tray_monitor import IconData, TrayMonitor
@@ -226,7 +226,7 @@ class SystrayWidget(BaseWidget):
 
     def show_context_menu(self, pos: QPoint):
         """Show the context menu for the unpinned visibility button"""
-        menu = QMenu(self)
+        menu = QMenu(self.window())
         menu.setProperty("class", "context-menu")
         qmenu_rounded_corners(menu)
         menu.setContentsMargins(0, 0, 0, 0)
@@ -268,12 +268,25 @@ class SystrayWidget(BaseWidget):
         app_inst = QApplication.instance()
         if app_inst is not None:
             app_inst.aboutToQuit.connect(self.save_state)  # type: ignore
+            app_inst.aboutToQuit.connect(self._cleanup_threads)  # type: ignore
 
         if systray_thread is not None and not systray_thread.isRunning():
             systray_thread.start()
             systray_thread.started.connect(self.on_thread_started)  # type: ignore
             if tasks_service is not None and tasks_thread is not None:
                 tasks_thread.start()
+
+    @classmethod
+    def _cleanup_threads(cls):
+        """Cleanup destroy Win32 message loop threads before app quit"""
+        try:
+            if cls._systray_instance is not None:
+                cls._systray_instance.destroy()
+
+            if cls._tasks_service_instance is not None:
+                cls._tasks_service_instance.destroy()
+        except Exception as e:
+            logger.debug(f"Error during thread cleanup: {e}")
 
     def set_containers_visibility(self):
         """Update the containers visibility based on the show_unpinned_button setting"""
@@ -451,16 +464,14 @@ class SystrayWidget(BaseWidget):
         """
         is_empty = self.is_layout_empty(self.pinned_layout)
         self.pinned_widget.setVisible(not is_empty or force_show)
-        if force_show and is_empty and (w := self.pinned_widget.style()):
+        if force_show and is_empty:
             logger.debug(f"Is empty: {is_empty}, force show: {force_show}")
             self.pinned_widget.setProperty("forceshow", True)
-            w.unpolish(self.pinned_widget)
-            w.polish(self.pinned_widget)
-        elif self.pinned_widget.property("forceshow") and not is_empty and (w := self.pinned_widget.style()):
+            refresh_widget_style(self.pinned_widget)
+        elif self.pinned_widget.property("forceshow") and not is_empty:
             logger.debug(f"Is empty: {is_empty}, force show: {force_show}")
             self.pinned_widget.setProperty("forceshow", False)
-            w.unpolish(self.pinned_widget)
-            w.polish(self.pinned_widget)
+            refresh_widget_style(self.pinned_widget)
 
     def toggle_unpinned_widget_visibility(self):
         """On button click, toggle the visibility of the unpinned widget."""

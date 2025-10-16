@@ -31,7 +31,7 @@ from PyQt6.QtWidgets import (
 )
 from winrt.windows.devices.wifi import WiFiConnectionStatus
 
-from core.utils.utilities import PopupWidget, is_valid_qobject
+from core.utils.utilities import PopupWidget, is_valid_qobject, refresh_widget_style
 from core.utils.widgets.wifi.wifi_managers import (
     NetworkInfo,
     ScanResultStatus,
@@ -289,8 +289,7 @@ class WifiItem(QFrame):
         # Update the style
         style = self.style()
         if style is not None:
-            style.unpolish(self)
-            style.polish(self)
+            refresh_widget_style(self)
 
     @override
     def mousePressEvent(self, a0: QMouseEvent | None):

@@ -17,7 +17,7 @@ permissions:
   contents: read
 
 env:
-  PYTHON_VERSION: '3.12'
+  PYTHON_VERSION: '3.14'
 
 jobs:
   build:
@@ -74,7 +74,7 @@ jobs:
         .\venv\Scripts\Activate
         python -m pip install --upgrade pip
         pip install --force --no-cache .
-        pip install --force --no-cache --upgrade cx_Freeze==7.2.10
+        pip install --extra-index-url https://test.pypi.org/simple/ cx_Freeze --pre --no-cache
       shell: pwsh
 
     - name: Build EXE

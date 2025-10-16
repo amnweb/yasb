@@ -39,6 +39,7 @@ from win32con import (
 
 import core.utils.widgets.systray.utils as utils
 from core.utils.tooltip import set_tooltip
+from core.utils.utilities import refresh_widget_style
 from core.utils.widgets.systray.tray_monitor import IconData
 from core.utils.widgets.systray.utils import pack_i32
 from core.utils.win32.bindings import (
@@ -413,10 +414,4 @@ class DropWidget(QFrame):
         """
         Refresh styles for the widget and dragged button.
         """
-        if style := self.style():
-            style.unpolish(self)
-            style.polish(self)
-
-        if self.dragged_button and (style := self.dragged_button.style()):
-            style.unpolish(self.dragged_button)
-            style.polish(self.dragged_button)
+        refresh_widget_style(self, self.dragged_button)

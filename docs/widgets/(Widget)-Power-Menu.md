@@ -89,8 +89,8 @@ power_menu:
     margin: 0px;
 }
 .power-menu-popup .button.hover {
-    background-color: #191919;
-    border: 4px solid #191919;
+    background-color: #1d1d1d;
+    border: 4px solid #1d1d1d;
 }
 .power-menu-popup .button .label {
     margin-bottom: 8px;
@@ -110,13 +110,14 @@ power_menu:
 .power-menu-popup .button.cancel .icon {
     padding: 0;
     margin: 0;
+    max-height: 0;
 }
 .power-menu-popup .button.cancel .label {
     color:  #f38ba8;
     margin: 0;
 }
 .power-menu-popup .button.cancel {
-    height: 32px;
+    height: 40px;
     border-radius: 4px;
 }
 .power-menu-popup .button.cancel.hover .label {

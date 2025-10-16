@@ -5,7 +5,7 @@ from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel
 
 from core.event_service import EventService
-from core.utils.utilities import add_shadow, build_widget_label, is_windows_10
+from core.utils.utilities import add_shadow, build_widget_label, is_windows_10, refresh_widget_style
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.win32.system_function import notification_center, quick_settings
 from core.validation.widgets.yasb.notifications import VALIDATION_SCHEMA
@@ -159,5 +159,4 @@ class NotificationsWidget(BaseWidget):
 
                 widget_index += 1
         for widget in active_widgets:
-            widget.style().unpolish(widget)
-            widget.style().polish(widget)
+            refresh_widget_style(widget)

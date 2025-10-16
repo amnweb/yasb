@@ -5,14 +5,14 @@ import traceback
 import urllib.parse
 from datetime import datetime
 from functools import partial
-from typing import Any, cast
+from typing import Any
 
 from PyQt6.QtCore import Qt, QTimer, QUrl, pyqtSlot
 from PyQt6.QtGui import QPixmap
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QStyle, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
 from core.utils.tooltip import set_tooltip
-from core.utils.utilities import PopupWidget, add_shadow
+from core.utils.utilities import PopupWidget, add_shadow, refresh_widget_style
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.widgets.weather.api import IconFetcher, WeatherDataFetcher
 from core.utils.widgets.weather.widgets import (
@@ -358,9 +358,7 @@ class WeatherWidget(BaseWidget):
         self._widgets_alt = process_content(content_alt, is_alt=True)
 
     def _reload_css(self, label: QLabel):
-        style = cast(QStyle, label.style())
-        style.unpolish(label)
-        style.polish(label)
+        refresh_widget_style(label)
         label.update()
 
     @pyqtSlot(bool)
