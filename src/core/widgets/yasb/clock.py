@@ -170,6 +170,7 @@ class ClockWidget(BaseWidget):
         self._container_shadow = container_shadow
         self._icons = icons or {}
         self._current_hour = None
+        self._current_minute = None
         self._country_code = self._calendar["country_code"] or self.get_country_code()
         self._subdivision = self._calendar.get("subdivision")
         # Construct container
@@ -233,6 +234,40 @@ class ClockWidget(BaseWidget):
         refresh_widget_style(label)
         label.update()
 
+    def _set_locale_context(self):
+        """Set the configured locale and return the original locale settings."""
+        if not self._locale:
+            return None, None
+
+        org_locale_time = locale.getlocale(locale.LC_TIME)
+        try:
+            org_locale_ctype = locale.getlocale(locale.LC_CTYPE)
+        except locale.Error:
+            org_locale_ctype = None
+
+        try:
+            locale.setlocale(locale.LC_TIME, self._locale)
+            try:
+                locale.setlocale(locale.LC_CTYPE, self._locale)
+            except locale.Error:
+                pass
+        except locale.Error:
+            pass
+
+        return org_locale_time, org_locale_ctype
+
+    def _restore_locale_context(self, org_locale_time, org_locale_ctype):
+        """Restore the original locale settings."""
+        if org_locale_time is None:
+            return
+
+        locale.setlocale(locale.LC_TIME, org_locale_time)
+        if org_locale_ctype:
+            try:
+                locale.setlocale(locale.LC_CTYPE, org_locale_ctype)
+            except locale.Error:
+                pass
+
     def _update_label(self):
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
         active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
@@ -241,15 +276,16 @@ class ClockWidget(BaseWidget):
         widget_index = 0
         now = datetime.now(pytz.timezone(self._active_tz))
         current_hour = f"{now.hour:02d}"
+        current_minute = f"{now.minute:02d}"
         hour_changed = self._current_hour != current_hour
+        minute_changed = self._current_minute != current_minute
         if hour_changed:
             self._current_hour = current_hour
-        if self._locale:
-            org_locale_time = locale.getlocale(locale.LC_TIME)
-            try:
-                org_locale_ctype = locale.getlocale(locale.LC_CTYPE)
-            except locale.Error:
-                pass
+        if minute_changed:
+            self._current_minute = current_minute
+
+        org_locale_time, org_locale_ctype = self._set_locale_context()
+
         for part in label_parts:
             part = part.strip()
             if part and widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
@@ -266,12 +302,6 @@ class ClockWidget(BaseWidget):
                         active_widgets[widget_index].setText(icon_placeholder)
                 else:
                     try:
-                        if self._locale:
-                            locale.setlocale(locale.LC_TIME, self._locale)
-                            try:
-                                locale.setlocale(locale.LC_CTYPE, self._locale)
-                            except locale.Error:
-                                pass
                         datetime_format_search = re.search("\\{(.*)}", part)
                         datetime_format_str = datetime_format_search.group()
                         datetime_format = datetime_format_search.group(1)
@@ -285,18 +315,34 @@ class ClockWidget(BaseWidget):
                         active_widgets[widget_index].setProperty("class", f"label {hour_class}")
                         self._reload_css(active_widgets[widget_index])
                 widget_index += 1
-        if self._locale:
-            locale.setlocale(locale.LC_TIME, org_locale_time)
-            try:
-                locale.setlocale(locale.LC_CTYPE, org_locale_ctype)
-            except locale.Error:
-                pass
+
+        self._restore_locale_context(org_locale_time, org_locale_ctype)
+        if minute_changed:
+            self._update_tooltip()
+
+    def _update_tooltip(self):
+        """Update tooltip with current date, time, and timezone."""
+        if self._tooltip:
+            now = datetime.now(pytz.timezone(self._active_tz))
+            org_locale_time, org_locale_ctype = self._set_locale_context()
+            date_str = now.strftime("%A, %d %B %Y")
+            day_abbr = now.strftime("%a")
+            time_str = now.strftime("%H:%M")
+            self._restore_locale_context(org_locale_time, org_locale_ctype)
+            local_tz = get_localzone_name()
+            if self._active_tz == local_tz:
+                tz_display = "Local time"
+            else:
+                tz_display = self._active_tz.replace("_", " ")
+            tooltip_text = f"{date_str}\n\n{day_abbr} {time_str} ({tz_display})"
+            set_tooltip(self, tooltip_text)
 
     def _next_timezone(self):
         self._active_tz = next(self._timezones)
-        if self._tooltip:
-            set_tooltip(self, self._active_tz)
+        self._update_tooltip()
         self._update_label()
+        if self._tooltip and hasattr(self, "_tooltip_filter"):
+            self._tooltip_filter.show_tooltip()
 
     def update_month_label(self, year, month):
         qlocale = QLocale(self._locale) if self._locale else QLocale.system()
