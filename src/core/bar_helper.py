@@ -22,6 +22,7 @@ from PyQt6.QtWidgets import (
 )
 
 from core.utils.controller import exit_application, reload_application
+from core.utils.utilities import refresh_widget_style
 from core.utils.win32.bindings import DwmGetWindowAttribute
 from core.utils.win32.constants import DWMWA_CLOAKED, S_OK
 from core.utils.win32.utilities import get_monitor_hwnd, get_window_rect, qmenu_rounded_corners
@@ -437,11 +438,9 @@ class OsThemeManager(QObject):
 
     def _update_styles(self, widget):
         """Update styles for widget and its children by unpolishing and re-polishing"""
-        widget.style().unpolish(widget)
-        widget.style().polish(widget)
+        refresh_widget_style(widget)
         for child in widget.findChildren(QWidget):
-            child.style().unpolish(child)
-            child.style().polish(child)
+            refresh_widget_style(child)
 
 
 class BarContextMenu:

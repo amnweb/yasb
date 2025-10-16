@@ -13,7 +13,7 @@ from PyQt6.QtGui import QPixmap, QWheelEvent
 from PyQt6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QLabel, QSizePolicy, QSlider, QVBoxLayout
 from winrt.windows.media.control import GlobalSystemMediaTransportControlsSessionPlaybackInfo
 
-from core.utils.utilities import PopupWidget, ScrollingLabel, add_shadow
+from core.utils.utilities import PopupWidget, ScrollingLabel, add_shadow, refresh_widget_style
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.widgets.media.aumid_process import get_process_name_for_aumid
 from core.utils.widgets.media.media import WindowsMedia
@@ -543,23 +543,23 @@ class MediaWidget(BaseWidget):
                 self._popup_play_button.setText(play_icon)
                 self._popup_play_button.setProperty("class", f"btn play {'disabled' if not is_play_enabled else ''}")
                 self._popup_play_button.setCursor(
-                    Qt.CursorShape.PointingHandCursor if is_play_enabled else Qt.CursorShape.PointingHandCursor
+                    Qt.CursorShape.PointingHandCursor if is_play_enabled else Qt.CursorShape.ArrowCursor
                 )
-                self._popup_play_button.setStyleSheet("")
+                refresh_widget_style(self._popup_play_button)
 
             if self._popup_prev_label:
                 self._popup_prev_label.setProperty("class", f"btn prev {'disabled' if not is_prev_enabled else ''}")
                 self._popup_prev_label.setCursor(
-                    Qt.CursorShape.PointingHandCursor if is_prev_enabled else Qt.CursorShape.PointingHandCursor
+                    Qt.CursorShape.PointingHandCursor if is_prev_enabled else Qt.CursorShape.ArrowCursor
                 )
-                self._popup_prev_label.setStyleSheet("")
+                refresh_widget_style(self._popup_prev_label)
 
             if self._popup_next_label:
                 self._popup_next_label.setProperty("class", f"btn next {'disabled' if not is_next_enabled else ''}")
                 self._popup_next_label.setCursor(
-                    Qt.CursorShape.PointingHandCursor if is_next_enabled else Qt.CursorShape.PointingHandCursor
+                    Qt.CursorShape.PointingHandCursor if is_next_enabled else Qt.CursorShape.ArrowCursor
                 )
-                self._popup_next_label.setStyleSheet("")
+                refresh_widget_style(self._popup_next_label)
         except Exception as e:
             logging.error(f"MediaWidget: Error initializing popup buttons: {e}")
 
@@ -679,15 +679,15 @@ class MediaWidget(BaseWidget):
                 if self._play_label is not None:
                     self._play_label.setText(self._media_button_icons["play"])
                     self._play_label.setProperty("class", "btn play disabled")
-                    self._play_label.setStyleSheet("")
+                    refresh_widget_style(self._play_label)
 
                 if self._prev_label is not None:
                     self._prev_label.setProperty("class", "btn prev disabled")
-                    self._prev_label.setStyleSheet("")
+                    refresh_widget_style(self._prev_label)
 
                 if self._next_label is not None:
                     self._next_label.setProperty("class", "btn next disabled")
-                    self._next_label.setStyleSheet("")
+                    refresh_widget_style(self._next_label)
 
             # If we want to hide the widget when no music is playing, hide it!
             if self._hide_empty:
@@ -709,22 +709,20 @@ class MediaWidget(BaseWidget):
 
             self._prev_label.setProperty("class", f"btn prev {'disabled' if not is_prev_enabled else ''}")
             self._prev_label.setCursor(
-                Qt.CursorShape.PointingHandCursor if is_prev_enabled else Qt.CursorShape.PointingHandCursor
+                Qt.CursorShape.PointingHandCursor if is_prev_enabled else Qt.CursorShape.ArrowCursor
             )
 
             self._play_label.setProperty("class", f"btn play {'disabled' if not is_play_enabled else ''}")
             self._play_label.setCursor(
-                Qt.CursorShape.PointingHandCursor if is_play_enabled else Qt.CursorShape.PointingHandCursor
+                Qt.CursorShape.PointingHandCursor if is_play_enabled else Qt.CursorShape.ArrowCursor
             )
 
             self._next_label.setProperty("class", f"btn next {'disabled' if not is_next_enabled else ''}")
             self._next_label.setCursor(
-                Qt.CursorShape.PointingHandCursor if is_next_enabled else Qt.CursorShape.PointingHandCursor
+                Qt.CursorShape.PointingHandCursor if is_next_enabled else Qt.CursorShape.ArrowCursor
             )
 
-            self._prev_label.setStyleSheet("")
-            self._play_label.setStyleSheet("")
-            self._next_label.setStyleSheet("")
+            refresh_widget_style(self._prev_label, self._play_label, self._next_label)
 
         # Update popup if it's currently open
         try:
@@ -736,23 +734,23 @@ class MediaWidget(BaseWidget):
                         "class", f"btn play {'disabled' if not is_play_enabled else ''}"
                     )
                     self._popup_play_button.setCursor(
-                        Qt.CursorShape.PointingHandCursor if is_play_enabled else Qt.CursorShape.PointingHandCursor
+                        Qt.CursorShape.PointingHandCursor if is_play_enabled else Qt.CursorShape.ArrowCursor
                     )
-                    self._popup_play_button.setStyleSheet("")
+                    refresh_widget_style(self._popup_play_button)
 
                 if self._popup_prev_label is not None:
                     self._popup_prev_label.setProperty("class", f"btn prev {'disabled' if not is_prev_enabled else ''}")
                     self._popup_prev_label.setCursor(
-                        Qt.CursorShape.PointingHandCursor if is_prev_enabled else Qt.CursorShape.PointingHandCursor
+                        Qt.CursorShape.PointingHandCursor if is_prev_enabled else Qt.CursorShape.ArrowCursor
                     )
-                    self._popup_prev_label.setStyleSheet("")
+                    refresh_widget_style(self._popup_prev_label)
 
                 if self._popup_next_label is not None:
                     self._popup_next_label.setProperty("class", f"btn next {'disabled' if not is_next_enabled else ''}")
                     self._popup_next_label.setCursor(
-                        Qt.CursorShape.PointingHandCursor if is_next_enabled else Qt.CursorShape.PointingHandCursor
+                        Qt.CursorShape.PointingHandCursor if is_next_enabled else Qt.CursorShape.ArrowCursor
                     )
-                    self._popup_next_label.setStyleSheet("")
+                    refresh_widget_style(self._popup_next_label)
         except RuntimeError:
             self._popup_play_button = None
             self._popup_prev_label = None
@@ -794,8 +792,8 @@ class MediaWidget(BaseWidget):
                         if source_name is not None:
                             self._popup_source_label.setText(source_name)
                             self._popup_source_label.setProperty("class", f"source {source_class_name}")
-                            self._popup_source_label.style().unpolish(self._popup_source_label)
-                            self._popup_source_label.style().polish(self._popup_source_label)
+
+                            refresh_widget_style(self._popup_source_label)
 
                 except Exception as e:
                     logging.error(f"Error updating popup content: {e}")
@@ -1374,8 +1372,7 @@ class MediaWidget(BaseWidget):
             self._app_mute_button.setText(self._menu_config_icons[icon_key])
             self._app_mute_button.setProperty("class", f"{icon_key}-button")
             self._app_mute_button.setEnabled(True)
-            self._app_mute_button.style().unpolish(self._app_mute_button)
-            self._app_mute_button.style().polish(self._app_mute_button)
+            refresh_widget_style(self._app_mute_button)
 
         except Exception as e:
             logging.error(f"MediaWidget: Failed to update mute button: {e}")

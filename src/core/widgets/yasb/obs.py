@@ -5,6 +5,7 @@ from PyQt6.QtCore import Q_ARG, QMetaObject, Qt, QThread, QTimer, pyqtSignal
 from PyQt6.QtGui import QCursor
 from PyQt6.QtWidgets import QFrame, QGraphicsOpacityEffect, QHBoxLayout, QLabel
 
+from core.utils.utilities import refresh_widget_style
 from core.validation.widgets.yasb.obs import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
 from settings import DEBUG
@@ -145,8 +146,7 @@ class ObsWidget(BaseWidget):
             self.hide_widget()
             QMetaObject.invokeMethod(self.blink_timer, "stop")
 
-        self.record_button.style().unpolish(self.record_button)
-        self.record_button.style().polish(self.record_button)
+        refresh_widget_style(self.record_button)
         self.record_button.update()
         self.record_button.repaint()
 

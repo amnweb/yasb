@@ -396,6 +396,8 @@ class TooltipEventFilter(QObject):
             self._mouse_inside = False
 
     def eventFilter(self, obj, event):
+        if not isinstance(obj, QObject):
+            return False
         if obj is self.widget:
             if event.type() == QEvent.Type.Enter:
                 self._mouse_inside = True

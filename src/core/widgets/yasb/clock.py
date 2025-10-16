@@ -2,16 +2,15 @@ import locale
 import re
 from datetime import date, datetime
 from itertools import cycle
-from typing import cast
 
 import pytz
 from PyQt6.QtCore import QDate, QLocale, Qt, QTimer
 from PyQt6.QtGui import QColor
-from PyQt6.QtWidgets import QCalendarWidget, QFrame, QHBoxLayout, QLabel, QSizePolicy, QStyle, QTableView, QVBoxLayout
+from PyQt6.QtWidgets import QCalendarWidget, QFrame, QHBoxLayout, QLabel, QSizePolicy, QTableView, QVBoxLayout
 from tzlocal import get_localzone_name
 
 from core.utils.tooltip import set_tooltip
-from core.utils.utilities import PopupWidget, add_shadow, build_widget_label
+from core.utils.utilities import PopupWidget, add_shadow, build_widget_label, refresh_widget_style
 from core.utils.widgets.animation_manager import AnimationManager
 from core.validation.widgets.yasb.clock import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
@@ -231,9 +230,7 @@ class ClockWidget(BaseWidget):
         return icon or ""
 
     def _reload_css(self, label: QLabel):
-        style = cast(QStyle, label.style())
-        style.unpolish(label)
-        style.polish(label)
+        refresh_widget_style(label)
         label.update()
 
     def _update_label(self):

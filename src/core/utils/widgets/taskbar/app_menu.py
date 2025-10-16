@@ -206,7 +206,7 @@ def show_context_menu(taskbar_widget, hwnd: int, pos) -> QMenu | None:
                     }
                 unique_id, _ = PinManager.get_app_identifier(hwnd, window_data, resolve_shortcut=False)
 
-        menu = QMenu(taskbar_widget)
+        menu = QMenu(taskbar_widget.window())
         menu.setProperty("class", "context-menu")
         qmenu_rounded_corners(menu)
 

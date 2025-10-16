@@ -9,7 +9,7 @@ from PyQt6.QtGui import QCursor, QDrag, QImage, QMouseEvent, QPixmap
 from PyQt6.QtWidgets import QApplication, QFrame, QHBoxLayout, QLabel, QSizePolicy, QWidget
 
 from core.utils.tooltip import set_tooltip
-from core.utils.utilities import add_shadow
+from core.utils.utilities import add_shadow, refresh_widget_style
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.widgets.taskbar.app_menu import show_context_menu
 from core.utils.widgets.taskbar.pin_manager import PinManager
@@ -342,6 +342,7 @@ class TaskbarDropWidget(QFrame):
         btn.setStyleSheet(prev)
         btn.setProperty("_prev_inline_style", None)
         btn.update()
+        refresh_widget_style(btn)
         self._hover_highlight_btn = None
 
     def _find_button_at(self, pos):
@@ -402,12 +403,7 @@ class TaskbarDropWidget(QFrame):
         self.current_indicator_index = -1
 
     def refresh_styles(self):
-        if style := self.style():
-            style.unpolish(self)
-            style.polish(self)
-        if self.dragged_button and (style := self.dragged_button.style()):
-            style.unpolish(self.dragged_button)
-            style.polish(self.dragged_button)
+        refresh_widget_style(self, self.dragged_button)
 
 
 class TaskbarWidget(BaseWidget):
@@ -644,18 +640,17 @@ class TaskbarWidget(BaseWidget):
     def _update_pinned_status(self, hwnd: int, is_pinned: bool) -> None:
         """Update the visual state of a pinned/unpinned app."""
         widget = self._hwnd_to_widget.get(hwnd)
-        if widget:
-            widget.setProperty("pinned", is_pinned)
-            current_class = widget.property("class") or ""
-            if is_pinned and "pinned" not in current_class:
-                widget.setProperty("class", f"{current_class} pinned")
-            elif not is_pinned and "pinned" in current_class:
-                widget.setProperty("class", current_class.replace(" pinned", ""))
+        if not widget:
+            return
 
-            # Repolish to apply style changes
-            if style := widget.style():
-                style.unpolish(widget)
-                style.polish(widget)
+        widget.setProperty("pinned", is_pinned)
+        current_class = widget.property("class") or ""
+        if is_pinned and "pinned" not in current_class:
+            widget.setProperty("class", f"{current_class} pinned")
+        elif not is_pinned and "pinned" in current_class:
+            widget.setProperty("class", current_class.replace(" pinned", ""))
+
+        refresh_widget_style(widget)
 
     def _display_pinned_apps(self) -> None:
         """Display all pinned apps on all taskbars (always shows all pinned apps regardless of monitor_exclusive)."""
@@ -1318,9 +1313,7 @@ class TaskbarWidget(BaseWidget):
         # Repolish the widget to apply any style changes
         try:
             widget.setProperty("class", self._get_container_class(hwnd))
-            if style := widget.style():
-                style.unpolish(widget)
-                style.polish(widget)
+            refresh_widget_style(widget)
         except Exception:
             pass
 
@@ -1854,10 +1847,7 @@ class TaskbarWidget(BaseWidget):
                                 if title_wrapper.isVisible() != want_visible:
                                     self._animate_or_set_title_visible(title_wrapper, want_visible)
                                     lay.activate()
-                    st = w.style()
-                    if st:
-                        st.unpolish(w)
-                        st.polish(w)
+                    refresh_widget_style(w)
         except Exception:
             pass
 

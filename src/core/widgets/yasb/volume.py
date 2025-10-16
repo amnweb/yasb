@@ -22,7 +22,13 @@ from PyQt6.QtGui import QImage, QPixmap, QWheelEvent
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QSlider, QVBoxLayout, QWidget
 
 from core.utils.tooltip import CustomToolTip, set_tooltip
-from core.utils.utilities import PopupWidget, add_shadow, build_progress_widget, build_widget_label
+from core.utils.utilities import (
+    PopupWidget,
+    add_shadow,
+    build_progress_widget,
+    build_widget_label,
+    refresh_widget_style,
+)
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.win32.app_icons import get_process_icon
 from core.utils.win32.utilities import get_app_name_from_pid
@@ -414,8 +420,7 @@ class VolumeWidget(BaseWidget):
             if self._tooltip:
                 set_tooltip(self.app_toggle_btn, "Expand application volumes")
 
-        self.app_toggle_btn.style().unpolish(self.app_toggle_btn)
-        self.app_toggle_btn.style().polish(self.app_toggle_btn)
+        refresh_widget_style(self.app_toggle_btn)
 
         # Stop any existing animation
         if (
@@ -624,8 +629,7 @@ class VolumeWidget(BaseWidget):
                 btn.setProperty("class", "device selected")
             else:
                 btn.setProperty("class", "device")
-            btn.style().unpolish(btn)
-            btn.style().polish(btn)
+            refresh_widget_style(btn)
 
     def _set_default_device(self, device_id: str):
         """Set default audio device with error handling and multiple interface attempts"""
@@ -934,8 +938,7 @@ class VolumeWidget(BaseWidget):
         else:
             classes.discard("muted")
         widget.setProperty("class", " ".join(classes))
-        widget.style().unpolish(widget)
-        widget.style().polish(widget)
+        refresh_widget_style(widget)
 
     def _get_volume_icon(self):
         current_mute_status = self.volume.GetMute()

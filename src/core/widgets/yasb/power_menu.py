@@ -18,7 +18,7 @@ from PyQt6.QtWidgets import (
 
 from core.config import get_stylesheet
 from core.event_service import EventService
-from core.utils.utilities import add_shadow, is_windows_10
+from core.utils.utilities import add_shadow, is_windows_10, refresh_widget_style
 from core.utils.widgets.power_menu.power_commands import PowerOperations
 from core.utils.win32.utilities import get_foreground_hwnd, set_foreground_hwnd
 from core.utils.win32.win32_accent import Blur
@@ -30,18 +30,6 @@ class BaseStyledWidget(QWidget):
     def apply_stylesheet(self):
         stylesheet = get_stylesheet()
         self.setStyleSheet(stylesheet)
-
-
-class ClickableLabel(QLabel):
-    clicked = pyqtSignal()
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    def mouseReleaseEvent(self, event):
-        if event.button() == Qt.MouseButton.LeftButton:
-            self.clicked.emit()
-        super().mouseReleaseEvent(event)
 
 
 class AnimatedWidget(QWidget):
@@ -150,7 +138,7 @@ class PowerMenuWidget(BaseWidget):
         self._label_shadow = label_shadow
         self._container_shadow = container_shadow
 
-        self._button = ClickableLabel(label)
+        self._button = QLabel(label)
         self._button.setProperty("class", "label power-button")
         self._button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self._button.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -171,7 +159,11 @@ class PowerMenuWidget(BaseWidget):
         self.widget_layout.addWidget(self._widget_container)
         self._widget_container_layout.addWidget(self._button)
 
-        self._button.clicked.connect(self.show_main_window)
+        self.register_callback("show_main_window", self._show_main_window)
+
+        callbacks = {"on_left": "show_main_window"}
+        self.callback_left = callbacks["on_left"]
+
         self.main_window = None
 
         self._popup_from_cli = False
@@ -188,9 +180,9 @@ class PowerMenuWidget(BaseWidget):
             current_screen_name = current_screen.name() if current_screen else None
             if not screen or (current_screen_name and screen.lower() == current_screen_name.lower()):
                 self._popup_from_cli = True
-                self.show_main_window()
+                self._show_main_window()
 
-    def show_main_window(self):
+    def _show_main_window(self):
         if self.main_window and self.main_window.isVisible():
             self.main_window.fade_out()
             self.main_window.overlay.fade_out()
@@ -257,6 +249,7 @@ class MainWindow(BaseStyledWidget, AnimatedWidget):
 
         for i, (icon, label, action, class_name) in enumerate(self.buttons_info):
             button = QPushButton(self)
+            button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
             button.setProperty("class", f"button {class_name}")
             button_layout = QVBoxLayout(button)
 
@@ -336,18 +329,14 @@ class MainWindow(BaseStyledWidget, AnimatedWidget):
     def eventFilter(self, source, event):
         if event.type() == QtCore.QEvent.Type.Enter and isinstance(source, QPushButton):
             source.setProperty("class", f"button {source.property('class').split()[1]} hover")
-            source.style().unpolish(source)
-            source.style().polish(source)
+            refresh_widget_style(source)
             for child in source.findChildren(QLabel):
-                child.style().unpolish(child)
-                child.style().polish(child)
+                refresh_widget_style(child)
         elif event.type() == QtCore.QEvent.Type.Leave and isinstance(source, QPushButton):
             source.setProperty("class", f"button {source.property('class').split()[1]}")
-            source.style().unpolish(source)
-            source.style().polish(source)
+            refresh_widget_style(source)
             for child in source.findChildren(QLabel):
-                child.style().unpolish(child)
-                child.style().polish(child)
+                refresh_widget_style(child)
         return super(MainWindow, self).eventFilter(source, event)
 
     def keyPressEvent(self, event):
@@ -454,8 +443,7 @@ class MainWindow(BaseStyledWidget, AnimatedWidget):
             # Set class without hover
             clean_class = " ".join(class_parts)
             button.setProperty("class", clean_class)
-            button.style().unpolish(button)
-            button.style().polish(button)
+            refresh_widget_style(button)
 
         # Then apply hover to the selected button
         current_button = self.buttons_list[self.current_focus_index]
@@ -464,8 +452,7 @@ class MainWindow(BaseStyledWidget, AnimatedWidget):
         # Add hover class
         hover_class = f"{current_class} hover"
         current_button.setProperty("class", hover_class)
-        current_button.style().unpolish(current_button)
-        current_button.style().polish(current_button)
+        refresh_widget_style(current_button)
 
         self.setFocus()
 

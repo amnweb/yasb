@@ -1,11 +1,11 @@
 import logging
 import re
-from typing import Any, cast
+from typing import Any
 
 from PyQt6.QtCore import pyqtSlot
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QStyle
+from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel
 
-from core.utils.utilities import add_shadow, build_widget_label
+from core.utils.utilities import add_shadow, build_widget_label, refresh_widget_style
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.widgets.glazewm.client import BindingMode, GlazewmClient
 from core.validation.widgets.glazewm.binding_mode import VALIDATION_SCHEMA
@@ -101,9 +101,7 @@ class GlazewmBindingModeWidget(BaseWidget):
         self._update_label()
 
     def _reload_css(self, label: QLabel):
-        style = cast(QStyle, label.style())
-        style.unpolish(label)
-        style.polish(label)
+        refresh_widget_style(label)
         label.update()
 
     def _update_label(self):

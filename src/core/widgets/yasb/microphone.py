@@ -18,7 +18,13 @@ from PyQt6.QtGui import QWheelEvent
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QSlider, QVBoxLayout
 
 from core.utils.tooltip import set_tooltip
-from core.utils.utilities import PopupWidget, add_shadow, build_progress_widget, build_widget_label
+from core.utils.utilities import (
+    PopupWidget,
+    add_shadow,
+    build_progress_widget,
+    build_widget_label,
+    refresh_widget_style,
+)
 from core.utils.widgets.animation_manager import AnimationManager
 from core.validation.widgets.yasb.microphone import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
@@ -201,8 +207,7 @@ class MicrophoneWidget(BaseWidget):
         else:
             classes.discard("muted")
         widget.setProperty("class", " ".join(classes))
-        widget.style().unpolish(widget)
-        widget.style().polish(widget)
+        refresh_widget_style(widget)
 
     def _get_mic_icon(self):
         if not self.audio_endpoint:

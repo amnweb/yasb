@@ -6,7 +6,14 @@ from PyQt6.QtCore import QPropertyAnimation, QRectF, Qt, QTimer, pyqtProperty
 from PyQt6.QtGui import QColor, QCursor, QPainter, QPen
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
 
-from core.utils.utilities import PopupWidget, ToastNotifier, add_shadow, build_progress_widget, build_widget_label
+from core.utils.utilities import (
+    PopupWidget,
+    ToastNotifier,
+    add_shadow,
+    build_progress_widget,
+    build_widget_label,
+    refresh_widget_style,
+)
 from core.utils.widgets.animation_manager import AnimationManager
 from core.validation.widgets.yasb.pomodoro import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
@@ -267,8 +274,7 @@ class PomodoroWidget(BaseWidget):
                 if hasattr(inst, "_dialog") and inst._dialog is not None and inst._dialog.isVisible():
                     inst._toggle_button.setText("Pause")
                     inst._toggle_button.setProperty("class", "button pause")
-                    inst._toggle_button.style().unpolish(inst._toggle_button)
-                    inst._toggle_button.style().polish(inst._toggle_button)
+                    refresh_widget_style(inst._toggle_button)
         except RuntimeError:
             pass
 
@@ -282,8 +288,7 @@ class PomodoroWidget(BaseWidget):
                 if hasattr(inst, "_dialog") and inst._dialog is not None and inst._dialog.isVisible():
                     inst._toggle_button.setText("Start")
                     inst._toggle_button.setProperty("class", "button start")
-                    inst._toggle_button.style().unpolish(inst._toggle_button)
-                    inst._toggle_button.style().polish(inst._toggle_button)
+                    refresh_widget_style(inst._toggle_button)
                     inst._progress_gauge.setStatusText(f"Paused\n{inst._format_time(inst._remaining_time)}")
         except RuntimeError:
             pass
@@ -307,8 +312,7 @@ class PomodoroWidget(BaseWidget):
 
                     inst._toggle_button.setText("Start")
                     inst._toggle_button.setProperty("class", "button start")
-                    inst._toggle_button.style().unpolish(inst._toggle_button)
-                    inst._toggle_button.style().polish(inst._toggle_button)
+                    refresh_widget_style(inst._toggle_button)
         except RuntimeError:
             pass
 

@@ -30,7 +30,7 @@ from PyQt6.QtWidgets import (
 
 from core.config import get_stylesheet
 from core.event_service import EventService
-from core.utils.utilities import is_windows_10
+from core.utils.utilities import is_windows_10, refresh_widget_style
 from core.utils.win32.win32_accent import Blur
 
 
@@ -394,8 +394,7 @@ class ImageGallery(QMainWindow, BaseStyledWidget):
             else:
                 label.set_focus(False)
                 label.setProperty("class", "wallpapers-gallery-image")
-            label.style().unpolish(label)
-            label.style().polish(label)
+            refresh_widget_style(label)
 
     # Navigation methods
     def load_next_images(self):

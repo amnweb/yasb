@@ -18,7 +18,7 @@ from PyQt6.QtWidgets import (
 )
 
 from core.utils.alert_dialog import raise_info_alert
-from core.utils.utilities import add_shadow, build_widget_label
+from core.utils.utilities import add_shadow, build_widget_label, refresh_widget_style
 from core.utils.widgets.animation_manager import AnimationManager
 from core.validation.widgets.yasb.whkd import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
@@ -204,8 +204,7 @@ class KeybindsDialog(QDialog):
                     btn.setMinimumWidth(28)
                     btn.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
                     buttons_layout.addWidget(btn)
-                    btn.style().unpolish(btn)
-                    btn.style().polish(btn)
+                    refresh_widget_style(btn)
                     return btn
 
                 if " + " in keybind:
@@ -244,8 +243,7 @@ class KeybindsDialog(QDialog):
                 self.row_layout.addWidget(self.command_label)
 
                 self.container_layout.addWidget(self.row)
-                self.row.style().unpolish(self.row)
-                self.row.style().polish(self.row)
+                refresh_widget_style(self.row)
 
     def _friendly_key_text(self, k: str) -> str:
         return self.special_keys.get(k.lower(), k)

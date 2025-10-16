@@ -4,8 +4,10 @@ import traceback
 
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QIcon
-from PyQt6.QtWidgets import QMessageBox, QSizePolicy, QTextEdit
+from PyQt6.QtWidgets import QMessageBox, QPushButton, QSizePolicy, QTextEdit
+from winmica import BackdropType, EnableMica, is_mica_supported
 
+from core.ui.style import apply_button_style
 from settings import SCRIPT_PATH
 
 
@@ -24,10 +26,13 @@ class AlertDialog(QMessageBox):
         super().__init__(parent)
 
         self.setWindowTitle(title)
+        if is_mica_supported():
+            self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+            hwnd = int(self.winId())
+            EnableMica(hwnd, BackdropType.MICA)
+
         self.setTextInteractionFlags(Qt.TextInteractionFlag.LinksAccessibleByMouse)
-        self.setWindowFlags(
-            Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.WindowCloseButtonHint | Qt.WindowType.WindowTitleHint
-        )
+        self.setWindowFlags(Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.WindowCloseButtonHint)
         self.setIcon(icon)
         self.setText(message)
         self.icon_path = os.path.join(SCRIPT_PATH, "assets", "images", "app_icon.png")
@@ -53,8 +58,10 @@ class AlertDialog(QMessageBox):
         self.adjustSize()
 
     def showEvent(self, event):
+        self._style_dialog_buttons()
         text_edit = self.findChild(QTextEdit)
         if text_edit:
+            text_edit.setStyleSheet("background-color: rgba(0,0,0,0.2); border: none;")
             text_edit.setMinimumHeight(60)
             text_edit.setMaximumHeight(150)
             text_edit.setMinimumWidth(420)
@@ -80,6 +87,10 @@ class AlertDialog(QMessageBox):
             text_edit.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
         return result
+
+    def _style_dialog_buttons(self):
+        for button in self.findChildren(QPushButton):
+            apply_button_style(button, "secondary")
 
 
 _persistent_dialogs = []
