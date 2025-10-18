@@ -32,15 +32,11 @@ class ApplicationWindow:
         self.ignored_processes = set(ignored_processes) if ignored_processes else set()
         self.ignored_titles = set(ignored_titles) if ignored_titles else set()
 
-        try:
-            process_info = get_process_info(hwnd)
-            self.process_name = process_info.get("name")
-            self.process_pid = process_info.get("pid")
-            self.process_path = process_info.get("path")
-        except Exception:
-            self.process_name = None
-            self.process_pid = 0
-            self.process_path = None
+        self.process_name = None
+        self.process_pid = 0
+        self.process_path = None
+
+        self._refresh_process_info()
 
         # Default ignored processes
         default_ignored_processes = {"SearchHost.exe"}
@@ -81,6 +77,8 @@ class ApplicationWindow:
         except Exception:
             pass
 
+        self._refresh_process_info()
+
         return {
             "hwnd": self.hwnd,
             "title": self.title,
@@ -92,6 +90,22 @@ class ApplicationWindow:
             "process_pid": self.process_pid,
             "process_path": self.process_path,
         }
+
+    def _refresh_process_info(self) -> None:
+        """Refresh cached process information for this window."""
+        try:
+            process_info = get_process_info(self.hwnd)
+        except Exception:
+            process_info = None
+
+        if process_info:
+            self.process_name = process_info.get("name")
+            self.process_pid = process_info.get("pid") or 0
+            self.process_path = process_info.get("path")
+        else:
+            self.process_name = None
+            self.process_pid = 0
+            self.process_path = None
 
     def _get_title(self):
         try:

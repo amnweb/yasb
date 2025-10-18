@@ -463,6 +463,7 @@ class TaskbarWidget(BaseWidget):
         self._suspend_updates = False
         self._animating_widgets = {}
         self._flashing_animation = {}  # Track which hwnds are currently flashing
+        self._pending_pinned_recreations = set()  # Track pending placeholder recreations
 
         # Initialize pin manager for pinned apps functionality
         self._pin_manager = PinManager()
@@ -688,11 +689,18 @@ class TaskbarWidget(BaseWidget):
         else:
             self._widget_container_layout.addWidget(container)
 
-    def _recreate_pinned_button(self, unique_id: str, metadata: dict, position: int = -1) -> None:
+    def _recreate_pinned_button(self, unique_id: str, position: int = -1) -> None:
         """Recreate pinned button when pinned app closes."""
+        # Remove from pending set since we're executing now
+        self._pending_pinned_recreations.discard(unique_id)
+
         if unique_id in self._pin_manager.running_pinned.values():
             return  # App is still running
 
+        if unique_id not in self._pin_manager.pinned_apps:
+            return  # App is no longer pinned
+
+        metadata = self._pin_manager.pinned_apps[unique_id]
         pseudo_hwnd = -(abs(hash(unique_id)) % 1000000000 + 1000000000)
         title = metadata.get("title", "App")
         icon = self._load_cached_icon(unique_id)
@@ -937,7 +945,7 @@ class TaskbarWidget(BaseWidget):
                         self._update_pinned_status(hwnd, is_pinned=False)
 
                 # Check if taskbar should be hidden after unpinning
-                if self._hide_empty and len(self._hwnd_to_widget) < 1:
+                if self._hide_empty and len(self._hwnd_to_widget) < 1 and not self._pending_pinned_recreations:
                     self._hide_taskbar_widget()
 
             elif action == "reorder":
@@ -1105,7 +1113,9 @@ class TaskbarWidget(BaseWidget):
                         if pseudo_hwnd in self._animating_widgets:
                             self._animating_widgets.pop(pseudo_hwnd).stop()
                         # Animate shrinking
-                        self._animate_container(widget, start_width=widget.width(), end_width=0)
+                        self._animate_container(
+                            widget, start_width=widget.width(), end_width=0, duration=ANIMATION_DURATION_MS
+                        )
                     else:
                         self._widget_container_layout.removeWidget(widget)
                         widget.deleteLater()
@@ -1198,6 +1208,16 @@ class TaskbarWidget(BaseWidget):
         # Check if this is a pinned app that needs to be replaced with pinned-only button
         unique_id = self._pin_manager.running_pinned.pop(hwnd, None)
         is_pinned = unique_id and unique_id in self._pin_manager.pinned_apps
+        print(unique_id)
+        # If process_name is None and it's not a pinned app, just remove immediately
+        # Some apps like Nvidia App send remove events with no process info when they close
+        if window_data and window_data.get("process_name") is None and not is_pinned:
+            widget = self._hwnd_to_widget.pop(hwnd, None)
+            if widget:
+                self._widget_container_layout.removeWidget(widget)
+                widget.deleteLater()
+            self._window_buttons.pop(hwnd, None)
+            return
 
         # Save the current position BEFORE removing the widget
         # This ensures pinned button goes back to exact same spot
@@ -1216,29 +1236,27 @@ class TaskbarWidget(BaseWidget):
 
         # If pinned app closed, recreate its pinned-only button
         # Only recreate if NO other windows of this app are still running
-        will_recreate_pinned_button = False
         if is_pinned:
             # Check if any other windows of the same app are still running
             other_windows_exist = unique_id in self._pin_manager.running_pinned.values()
 
-            if not other_windows_exist:
+            if not other_windows_exist and unique_id not in self._pending_pinned_recreations:
                 # Recreate pinned button (pinned apps are global across all monitors)
                 # Use the position where the window was removed from
                 # This preserves the exact layout position
                 position = current_position if current_position >= 0 else -1
 
                 if position >= 0:
-                    will_recreate_pinned_button = True
+                    # Mark as pending to prevent duplicate scheduling
+                    self._pending_pinned_recreations.add(unique_id)
                     delay = ANIMATION_DURATION_MS if self._animation["enabled"] and not immediate else 0
                     QTimer.singleShot(
                         delay,
-                        lambda: self._recreate_pinned_button(
-                            unique_id, self._pin_manager.pinned_apps[unique_id], position
-                        ),
+                        lambda uid=unique_id, pos=position: self._recreate_pinned_button(uid, pos),
                     )
 
-        # Only hide taskbar if no widgets left AND we're not about to recreate a pinned button
-        if self._hide_empty and len(self._hwnd_to_widget) < 1 and not will_recreate_pinned_button:
+        # Only hide taskbar if no widgets left AND no pending pinned recreations (from any previous events)
+        if self._hide_empty and len(self._hwnd_to_widget) < 1 and not self._pending_pinned_recreations:
             self._hide_taskbar_widget()
 
     def _update_window_ui(self, hwnd, window_data):
@@ -1476,7 +1494,7 @@ class TaskbarWidget(BaseWidget):
                         pass
 
                 # Check if taskbar should be hidden after unpinning
-                if self._hide_empty and len(self._hwnd_to_widget) < 1:
+                if self._hide_empty and len(self._hwnd_to_widget) < 1 and not self._pending_pinned_recreations:
                     self._hide_taskbar_widget()
 
         except Exception as e:
@@ -1899,6 +1917,11 @@ class TaskbarWidget(BaseWidget):
                 container.setParent(None)
                 self._widget_container_layout.removeWidget(container)
                 container.deleteLater()
+
+                # Check if we should hide taskbar after animation completes
+                # Don't hide if there are pending pinned recreations scheduled
+                if self._hide_empty and len(self._hwnd_to_widget) < 1 and not self._pending_pinned_recreations:
+                    self._hide_taskbar_widget()
             else:
                 # Clear width constraint so future content changes (e.g., focused title)
                 try:
