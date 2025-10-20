@@ -85,7 +85,8 @@ media:
       update_interval_ms: 33
       style: "left"  # can be "left", "right", "bounce", "bounce-ease"
       separator: " | "
-      label_padding: 1
+      label_padding: 0
+      always_scroll: false
       # Easing curve params: https://www.desmos.com/calculator/j7eamemxzi
       ease_slope: 20
       ease_pos: 0.8
@@ -224,6 +225,7 @@ media:
   - **style:** The style of the scrolling label. Can be `left`, `right`, `bounce`, or `bounce-ease`.
   - **separator:** The separator between repeating text in `left` or `rignt` scrolling style.
   - **label_padding:** The padding around the label in `bounce` and `bounce-ease` style. By default it's one character on each side.
+  - **always_scroll:** Whether to always scroll the label regardless of the text length in `left` or `right` style.
   - **ease_slope:** The easing slope for the bounce effect. Easing curve params: https://www.desmos.com/calculator/j7eamemxzi
   - **ease_pos:** The easing curve position for the bounce effect.
   - **ease_min:** The minimum value for the bounce effect easing curve.
