@@ -2,8 +2,6 @@ import logging
 
 from PyQt6.QtCore import (
     QEasingCurve,
-    QParallelAnimationGroup,
-    QPropertyAnimation,
     Qt,
     QTimer,
     pyqtSignal,
@@ -21,6 +19,7 @@ from pyvda import VirtualDesktop, get_virtual_desktops, set_wallpaper_for_all_de
 
 from core.event_service import EventService
 from core.utils.utilities import add_shadow, is_windows_10, refresh_widget_style
+from core.utils.widgets.komorebi.animation import KomorebiAnimation
 from core.utils.win32.utilities import qmenu_rounded_corners
 from core.validation.widgets.yasb.windows_desktops import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
@@ -42,11 +41,15 @@ class WorkspaceButton(QPushButton):
         self.workspace_animation = getattr(self.parent_widget, "_switch_workspace_animation", False)
         self.animation = getattr(self.parent_widget, "_animation", False)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._width_animation = None
-        self._initial_width = None
+
+    def update_text(self, text: str):
+        """Update button text and capture width before change for animation"""
+        if self.animation:
+            self._pre_change_width = self.sizeHint().width()
+        self.setText(text)
 
     def update_visible_buttons(self):
-        visible_buttons = [btn for btn in self.parent_widget._workspace_buttons if btn.isVisible()]
+        visible_buttons = self.parent_widget._workspace_buttons
         for index, button in enumerate(visible_buttons):
             current_class = button.property("class")
             new_class = " ".join([cls for cls in current_class.split() if not cls.startswith("button-")])
@@ -72,46 +75,11 @@ class WorkspaceButton(QPushButton):
             logging.exception(f"Failed to focus desktop at index {self.workspace_index}")
 
     def animate_buttons(self, duration: int = 120):
-        if not hasattr(self, "_initial_width") or not self._initial_width:
-            self._initial_width = self.sizeHint().width()
-
-        target_width = self.sizeHint().width()
-        current_width = self.width() if self.width() > 0 else self._initial_width
-
-        if self._width_animation is not None:
-            try:
-                self._width_animation.stop()
-            except Exception:
-                pass
-
-        anim_min = QPropertyAnimation(self, b"minimumWidth")
-        anim_min.setStartValue(current_width)
-        anim_min.setEndValue(target_width)
-        anim_min.setDuration(duration)
-        anim_min.setEasingCurve(QEasingCurve.Type.Linear)
-
-        anim_max = QPropertyAnimation(self, b"maximumWidth")
-        anim_max.setStartValue(current_width)
-        anim_max.setEndValue(target_width)
-        anim_max.setDuration(duration)
-        anim_max.setEasingCurve(QEasingCurve.Type.Linear)
-
-        group = QParallelAnimationGroup()
-        group.addAnimation(anim_min)
-        group.addAnimation(anim_max)
-
-        self._width_animation = group
-
-        def on_finished():
-            try:
-                self.setMinimumWidth(target_width)
-                self.setMaximumWidth(16777215)
-            except Exception:
-                pass
-            self._width_animation = None
-
-        group.finished.connect(on_finished)
-        group.start()
+        # Use the centralized animation from Komorebi
+        start_width = self._pre_change_width
+        KomorebiAnimation.animate_width(
+            self, duration=duration, easing=QEasingCurve.Type.OutCubic, start_width=start_width
+        )
 
     def contextMenuEvent(self, event):
         menu = QMenu(self)
@@ -371,10 +339,10 @@ class WorkspaceWidget(BaseWidget):
         # Determine base classes explicitly so stale tokens are not preserved
         if workspace_btn.workspace_index == self._curr_workspace_index:
             base = "ws-btn active"
-            workspace_btn.setText(workspace_btn.active_label)
+            workspace_btn.update_text(workspace_btn.active_label)
         else:
             base = "ws-btn"
-            workspace_btn.setText(workspace_btn.default_label)
+            workspace_btn.update_text(workspace_btn.default_label)
         if tokens:
             base = f"{base} {' '.join(tokens)}"
 
