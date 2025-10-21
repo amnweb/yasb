@@ -3,6 +3,7 @@ from typing import Any
 DEFAULTS: dict[str, Any] = {
     "label": "{title}",
     "label_alt": "{artist} - {title}",
+    "separator": " - ",
     "class_name": "",
     "animation": {"enabled": True, "type": "fadeInOut", "duration": 200},
     "icons": {
@@ -52,6 +53,7 @@ DEFAULTS: dict[str, Any] = {
 VALIDATION_SCHEMA = {
     "label": {"type": "string", "default": DEFAULTS["label"]},
     "label_alt": {"type": "string", "default": DEFAULTS["label_alt"]},
+    "separator": {"type": "string", "default": DEFAULTS["separator"]},
     "class_name": {"type": "string", "required": False, "default": DEFAULTS["class_name"]},
     "hide_empty": {"type": "boolean", "default": False},
     "animation": {

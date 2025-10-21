@@ -1,6 +1,7 @@
 import ctypes
 import logging
-from typing import Any, Optional
+import uuid
+from typing import Any, Literal, Optional
 
 import comtypes
 from PIL import Image, ImageChops
@@ -33,6 +34,8 @@ from core.validation.widgets.yasb.media import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
 from settings import DEBUG
 
+FieldTypes = Literal["default", "popup_title", "popup_artist"]
+
 
 class MediaWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
@@ -49,6 +52,7 @@ class MediaWidget(BaseWidget):
         self,
         label: str,
         label_alt: str,
+        separator: str,
         class_name: str,
         hide_empty: bool,
         callbacks: dict[str, str],
@@ -74,6 +78,7 @@ class MediaWidget(BaseWidget):
         super().__init__(class_name=f"media-widget {class_name}")
         self._label_content = label
         self._label_alt_content = label_alt
+        self._separator = separator
 
         self._max_field_size = max_field_size
         self._show_thumbnail = show_thumbnail
@@ -762,7 +767,7 @@ class MediaWidget(BaseWidget):
             self._popup_next_label = None
 
     @QtCore.pyqtSlot(object)  # None or dict
-    def _on_media_properties_changed(self, media_info: Optional[dict[str, Any]]):
+    def _on_media_properties_changed(self, media_info: dict[str, Any] | None):
         try:
             if (
                 hasattr(self, "_dialog")
@@ -809,27 +814,39 @@ class MediaWidget(BaseWidget):
         if self._controls_only:
             return
 
-        if self._max_field_size["truncate_whole_label"]:
-            try:
-                formatted_info = {
-                    k: self._format_max_field_size(v, f"field_{k}") if isinstance(v, str) else v
-                    for k, v in media_info.items()
-                }
-                format_label_content = active_label_content.format(**formatted_info)
-                format_label_content = self._format_max_field_size(format_label_content)
-            except Exception as e:
-                logging.error(f"MediaWidget: Error formatting label: {e}")
-                # Try to at least show the title if available
-                if media_info and "title" in media_info and media_info["title"]:
-                    format_label_content = self._format_max_field_size(media_info["title"])
-                else:
-                    format_label_content = "No media"
-        else:
-            format_label_content = active_label_content.format(
-                **{k: self._format_max_field_size(v) if isinstance(v, str) else v for k, v in media_info.items()}
-            )
-        # Format the label
-        active_label.setText(format_label_content)
+        # Process label content
+        try:
+            items = list(media_info.items()) if media_info else []
+            # Use a unique sentinel to safely separate fields during formatting,
+            # then replace with the intended separator.
+            s_sentinel = f"__S_SENTINEL_{uuid.uuid4()}__"
+            formatted_info = {"s": s_sentinel}
+
+            # Format each individual field in the label content
+            for k, v in items:
+                if isinstance(v, str):
+                    formatted_info[k] = self._format_max_field_size(v)
+            formatted_label = active_label_content.format_map(formatted_info)
+
+            # Remove any sentinels from the beginning and end of the label
+            while formatted_label.startswith(s_sentinel):
+                formatted_label = formatted_label.removeprefix(s_sentinel)
+            while formatted_label.endswith(s_sentinel):
+                formatted_label = formatted_label.removesuffix(s_sentinel)
+
+            # Replace the remaining sentinels with the separator
+            formatted_label = formatted_label.replace(s_sentinel, self._separator)
+
+            # Finally, truncate the label if necessary
+            if self._max_field_size.get("truncate_whole_label"):
+                formatted_label = self._format_max_field_size(formatted_label)
+        except Exception as e:
+            logging.error(f"MediaWidget: Error formatting label: {e}")
+            if media_info and media_info.get("title"):
+                formatted_label = self._format_max_field_size(media_info["title"])
+            else:
+                formatted_label = "No media"
+        active_label.setText(formatted_label)
 
         # If we don't want the thumbnail, stop here
         if not self._show_thumbnail:
@@ -1075,7 +1092,7 @@ class MediaWidget(BaseWidget):
         # Use ImageChops.darker instead of multiply to preserve corner transparency
         return ImageChops.darker(alpha_mask, fade_mask)
 
-    def _format_max_field_size(self, text: str, field_type="default"):
+    def _format_max_field_size(self, text: str, field_type: FieldTypes = "default"):
         if field_type == "popup_title":
             max_size = self._menu_config["max_title_size"]
         elif field_type == "popup_artist":
