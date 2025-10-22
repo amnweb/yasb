@@ -1,6 +1,5 @@
 import ctypes
 import logging
-import uuid
 from typing import Any, Literal, Optional
 
 import comtypes
@@ -23,6 +22,7 @@ from core.utils.widgets.media.source_apps import (
     get_source_app_display_name,
     get_source_app_mapping,
 )
+from core.utils.widgets.media.tokenizer import clean_string
 from core.utils.win32.app_aumid import (
     ERROR_INSUFFICIENT_BUFFER,
     PROCESS_QUERY_LIMITED_INFORMATION,
@@ -817,25 +817,16 @@ class MediaWidget(BaseWidget):
         # Process label content
         try:
             items = list(media_info.items()) if media_info else []
-            # Use a unique sentinel to safely separate fields during formatting,
-            # then replace with the intended separator.
-            s_sentinel = f"__S_SENTINEL_{uuid.uuid4()}__"
-            formatted_info = {"s": s_sentinel}
-
-            # Format each individual field in the label content
+            formatted_info: dict[str, str] = {"s": self._separator}
             for k, v in items:
                 if isinstance(v, str):
                     formatted_info[k] = self._format_max_field_size(v)
-            formatted_label = active_label_content.format_map(formatted_info)
 
-            # Remove any sentinels from the beginning and end of the label
-            while formatted_label.startswith(s_sentinel):
-                formatted_label = formatted_label.removeprefix(s_sentinel)
-            while formatted_label.endswith(s_sentinel):
-                formatted_label = formatted_label.removesuffix(s_sentinel)
+            # Clean the label content from any empty placeholders or dangling separators
+            cleaned_content = clean_string(active_label_content, formatted_info)
 
-            # Replace the remaining sentinels with the separator
-            formatted_label = formatted_label.replace(s_sentinel, self._separator)
+            # Replace the remaining placeholders and separators
+            formatted_label = cleaned_content.format_map(formatted_info)
 
             # Finally, truncate the label if necessary
             if self._max_field_size.get("truncate_whole_label"):
