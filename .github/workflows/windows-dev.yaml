@@ -23,7 +23,23 @@ jobs:
   build:
     permissions:
       contents: write
-    runs-on: windows-latest
+    strategy:
+      matrix:
+        include:
+          - arch: x64
+            runner: windows-latest
+            python_arch: x64
+            artifact_suffix: win64
+            unsigned_exe_name: unsigned-exes-win64
+            unsigned_msi_name: unsigned-msi-win64
+          - arch: arm64
+            runner: windows-11-arm
+            python_arch: arm64
+            artifact_suffix: aarch64
+            unsigned_exe_name: unsigned-exes-arm64
+            unsigned_msi_name: unsigned-msi-arm64
+    runs-on: ${{ matrix.runner }}
+    name: Build (${{ matrix.arch }})
     if: |
       github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'pull_request' && github.event.action != 'closed')
@@ -39,6 +55,7 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: ${{ env.PYTHON_VERSION }}
+        architecture: ${{ matrix.python_arch }}
 
     - name: Create virtual environment
       run: |
@@ -88,7 +105,7 @@ jobs:
       if: github.event_name == 'workflow_dispatch'
       uses: actions/upload-artifact@v4
       with:
-        name: unsigned-exes
+        name: ${{ matrix.unsigned_exe_name }}
         path: |
           src/dist/yasb.exe
           src/dist/yasbc.exe
@@ -98,14 +115,17 @@ jobs:
       if: github.event_name == 'workflow_dispatch'
       id: get_exes_artifact
       uses: actions/github-script@v7
+      env:
+        ARTIFACT_NAME: ${{ matrix.unsigned_exe_name }}
       with:
         github-token: ${{ secrets.PAT }}
         script: |
           const { owner, repo } = context.repo;
           const run_id = context.runId;
+          const expectedName = process.env.ARTIFACT_NAME;
           const res = await github.rest.actions.listWorkflowRunArtifacts({ owner, repo, run_id });
-          const artifact = res.data.artifacts.find(a => a.name === 'unsigned-exes');
-          if (!artifact) throw new Error('unsigned-exes artifact not found');
+          const artifact = res.data.artifacts.find(a => a.name === expectedName);
+          if (!artifact) throw new Error(`${expectedName} artifact not found`);
           return artifact.id;
 
     - name: Submit EXE signing request
@@ -161,21 +181,24 @@ jobs:
       if: github.event_name == 'workflow_dispatch'
       uses: actions/upload-artifact@v4
       with:
-        name: unsigned-msi
+        name: ${{ matrix.unsigned_msi_name }}
         path: src/dist/out/*.msi
 
     - name: Get unsigned-msi artifact id
       if: github.event_name == 'workflow_dispatch'
       id: get_msi_artifact
       uses: actions/github-script@v7
+      env:
+        ARTIFACT_NAME: ${{ matrix.unsigned_msi_name }}
       with:
         github-token: ${{ secrets.PAT }}
         script: |
           const { owner, repo } = context.repo;
           const run_id = context.runId;
+          const expectedName = process.env.ARTIFACT_NAME;
           const res = await github.rest.actions.listWorkflowRunArtifacts({ owner, repo, run_id });
-          const artifact = res.data.artifacts.find(a => a.name === 'unsigned-msi');
-          if (!artifact) throw new Error('unsigned-msi artifact not found');
+          const artifact = res.data.artifacts.find(a => a.name === expectedName);
+          if (!artifact) throw new Error(`${expectedName} artifact not found`);
           return artifact.id;
 
     - name: Submit MSI signing request
@@ -221,41 +244,33 @@ jobs:
       shell: pwsh
 
     - name: Rename Artifacts File
+      env:
+        ARTIFACT_SUFFIX: ${{ matrix.artifact_suffix }}
       run: |
-        $sourceMsi = (Get-ChildItem -Path src/dist/out/*.msi).FullName
-        $targetMsi = "src/dist/out/yasb-dev-win64.msi"
+        $msis = Get-ChildItem -Path src/dist/out/*.msi
+        if (-not $msis) {
+          Write-Error "No MSI files found to rename."
+          exit 1
+        }
+        if ($msis.Count -gt 1) {
+          Write-Warning "Multiple MSI files found; using the first entry ${msis[0].FullName}."
+        }
+        $sourceMsi = $msis[0].FullName
+        $targetName = "yasb-dev-$($env:ARTIFACT_SUFFIX).msi"
+        $targetMsi = Join-Path 'src/dist/out' $targetName
         Copy-Item -Path $sourceMsi -Destination $targetMsi -Force
-        Remove-Item -Path $sourceMsi
-        echo "FILENAME=yasb-dev-win64.msi" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-      shell: pwsh
-
-    - name: Generate Changelog
-      id: generate_changelog
-      if: github.event_name == 'workflow_dispatch'
-      run: |
-        # Find the latest version tag
-        $latestVersionTag = $(try { git tag --sort=-version:refname | Where-Object { $_ -match "^v\d+\.\d+\.\d+" } | Select-Object -First 1 } catch { $null })
-
-        if ($latestVersionTag) {
-            $commits = $(git log "$latestVersionTag..HEAD" --pretty=format:"* %s (%h)" --no-merges)
-        } else {
-            $commits = $(git log -n 20 --pretty=format:"* %s (%h)" --no-merges)
+        if ($sourceMsi -ne $targetMsi) {
+          Remove-Item -Path $sourceMsi -Force
         }
-        
-        if ($commits) {
-            $changelog += $commits -join "`n"
-        } else {
-            $changelog += "* No significant changes detected since $latestVersionTag"
+        if ($env:ARTIFACT_SUFFIX -eq 'win64') {
+          echo "FILENAME=$targetName" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
         }
-        
-        # Save changelog to file for the release body
-        $changelog | Out-File -FilePath "CHANGELOG.md" -Encoding utf8
       shell: pwsh
 
     - name: Upload Artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: yasb-dev-${{ steps.get_info.outputs.COMMIT_HASH }}
+        name: yasb-dev-${{ steps.get_info.outputs.COMMIT_HASH }}-${{ matrix.artifact_suffix }}
         path: |
           src/dist/out/*.msi
         retention-days: 10
@@ -268,25 +283,73 @@ jobs:
           unsigned-*
           signed-*
 
-    - name: Delete existing dev release
-      if: github.event_name == 'workflow_dispatch'
+  publish_dev_release:
+    needs: build
+    if: github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        ref: ${{ github.ref }}
+
+    - name: Set release metadata
+      id: release_info
       run: |
-        # Delete existing release if it exists (ignore errors if it doesn't)
+        currentDateTime=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
+        echo "BUILD_DATETIME=$currentDateTime" >> "$GITHUB_ENV"
+        commitHash=$(git rev-parse --short HEAD)
+        echo "COMMIT_HASH=$commitHash" >> "$GITHUB_ENV"
+        echo "COMMIT_HASH=$commitHash" >> "$GITHUB_OUTPUT"
+
+    - name: Generate Changelog
+      run: |
+        latestVersionTag=$(git tag --sort=-version:refname | grep -E "^v[0-9]+\.[0-9]+\.[0-9]+" | head -n 1 || true)
+        if [ -n "$latestVersionTag" ]; then
+          commits=$(git log "$latestVersionTag..HEAD" --pretty=format:"* %s (%h)" --no-merges)
+        else
+          commits=$(git log -n 20 --pretty=format:"* %s (%h)" --no-merges)
+        fi
+        if [ -z "$commits" ]; then
+          if [ -n "$latestVersionTag" ]; then
+            commits="* No significant changes detected since $latestVersionTag"
+          else
+            commits="* No significant changes detected"
+          fi
+        fi
+        printf '%s\n' "$commits" > CHANGELOG.md
+
+    - name: Download MSI artifacts
+      uses: actions/download-artifact@v4
+      with:
+        pattern: yasb-dev-*
+        path: artifacts
+        merge-multiple: true
+
+    - name: Generate Checksums
+      run: |
+        cd artifacts
+        sha256sum *.msi > checksums.txt
+
+    - name: Delete existing dev release
+      run: |
         gh release delete dev --yes || true
-        # Delete the tag locally and remotely
         git tag -d dev || true
         git push origin :refs/tags/dev || true
       env:
         GH_TOKEN: ${{ github.token }}
-      shell: pwsh
 
     - name: Create GitHub Release
-      if: github.event_name == 'workflow_dispatch'
       uses: softprops/action-gh-release@v1
       with:
-        name: YASB Pre-release (${{ steps.get_info.outputs.COMMIT_HASH }})
+        name: YASB Pre-release (${{ steps.release_info.outputs.COMMIT_HASH }})
         tag_name: dev
         prerelease: true
         files: |
-          src/dist/out/*.msi
+          artifacts/*.msi
+          artifacts/checksums.txt
         body_path: CHANGELOG.md
+
