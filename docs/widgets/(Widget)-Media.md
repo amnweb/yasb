@@ -1,37 +1,38 @@
 # Media Widget Options
 
-| Option                                | Type      | Default                                                   | Description                                                        |
-| -------------------------             | --------- | ---------                                                 | -------------------------------------                              |
-| `label`                               | string    | `"{title}"`                                               | The main label format for the media widget.                        |
-| `label_alt`                           | string    | `"{artist} - {title}"`                                    | The alternative label format for the media widget.                 |
-| `class_name`                          | string  | `""`                                                        | The custom CSS class name for the widget.                          |
-| `label_shadow`                        | boolean   | false                                                     | Whether to show a shadow effect on the label.                      |
-| `max_field_size`                      | dict      |                                                           | Maximum field sizes for labels.                                    |
-| `max_field_size.label`                | integer   | 20                                                        | Maximum size for the main label.                                   |
-| `max_field_size.label_alt`            | integer   | 30                                                        | Maximum size for the alternative label.                            |
-| `max_field_size.truncate_whole_label` | boolean   | false                                                     | Whether to truncate the whole label if it exceeds the maximum size.|
-| `show_thumbnail`                      | boolean   | true                                                      | Whether to show the media thumbnail.                               |
-| `controls_only`                       | boolean   | false                                                     | Whether to show only the media controls.                           |
-| `controls_left`                       | boolean   | true                                                      | Whether to position the controls on the left.                      |
-| `controls_hide`                       | boolean   | false                                                     | Whether to hide the media controls buttons                         |
-| `hide_empty`                          | boolean   | true                                                      | Whether to hide the widget when there is no media information.     |
-| `thumbnail_alpha`                     | integer   | 50                                                        | The alpha transparency value for the thumbnail.                    |
-| `thumbnail_padding`                   | integer   | 8                                                         | The padding around the thumbnail.                                  |
-| `thumbnail_corner_radius`             | integer   | 0                                                         | The corner radius for the thumbnail.                               |
-| `symmetric_corner_radius`             | boolean   | false                                                     | Whether to use symmetric corner radius for the thumbnail.          |
-| `thumbnail_edge_fade`                 | boolean   | false                                                     | Whether to apply an edge fade effect to the thumbnail.             |
-| `icons`                               | dict      |                                                           | Icons for media controls.                                          |
-| `icons.prev_track`                    | string    | `\uf048`                                                  | Icon for the previous track button.                                |
-| `icons.next_track`                    | string    | `\uf051`                                                  | Icon for the next track button.                                    |
-| `icons.play`                          | string    | `\uf04b`                                                  | Icon for the play button.                                          |
-| `icons.pause`                         | string    | `\uf04c`                                                  | Icon for the pause button.                                         |
-| `animation`                           | dict      | `{'enabled': true, 'type': 'fadeInOut', 'duration': 200}` | Animation settings for the widget.                                 |
-| `container_shadow`                    | dict      | [See below](#label-and-container-shadow)                  | Container shadow options.                                          |
-| `label_shadow`                        | dict      | [See below](#label-and-container-shadow)                  | Label shadow options.                                              |
-| `media_menu`                          | dict      | [See below](#media-menu-options)                          | Media menu popup.                                                  |
-| `media_menu_icons`                    | dict      | [See below](#media-menu-icons)                            | Media menu icons for popup.                                        |
-| `scrolling_label`                     | dict      | [See below](#scrolling-label)                             | Widget label scrolling options                                     |
-| `callbacks`                           | dict      | [See below](#available-callbacks)                         | Callbacks for mouse events on the widget.                          |
+| Option                                | Type      | Default                                                   | Description                                                         |
+| -------------------------             | --------- | ---------                                                 | -------------------------------------                               |
+| `label`                               | string    | `"{artist}{s}{title}"`                                    | The main label format for the media widget.                         |
+| `label_alt`                           | string    | `"{title}"`                                               | The alternative label format for the media widget.                  |
+| `separator`                           | string    | `" - "`                                                   | The dynamic separator. Automatically stripped. More below.          |
+| `class_name`                          | string    | `""`                                                      | The custom CSS class name for the widget.                           |
+| `label_shadow`                        | boolean   | false                                                     | Whether to show a shadow effect on the label.                       |
+| `max_field_size`                      | dict      |                                                           | Maximum field sizes for labels.                                     |
+| `max_field_size.label`                | integer   | 20                                                        | Maximum size for the main label.                                    |
+| `max_field_size.label_alt`            | integer   | 30                                                        | Maximum size for the alternative label.                             |
+| `max_field_size.truncate_whole_label` | boolean   | false                                                     | Whether to truncate the whole label if it exceeds the maximum size. |
+| `show_thumbnail`                      | boolean   | true                                                      | Whether to show the media thumbnail.                                |
+| `controls_only`                       | boolean   | false                                                     | Whether to show only the media controls.                            |
+| `controls_left`                       | boolean   | true                                                      | Whether to position the controls on the left.                       |
+| `controls_hide`                       | boolean   | false                                                     | Whether to hide the media controls buttons                          |
+| `hide_empty`                          | boolean   | true                                                      | Whether to hide the widget when there is no media information.      |
+| `thumbnail_alpha`                     | integer   | 50                                                        | The alpha transparency value for the thumbnail.                     |
+| `thumbnail_padding`                   | integer   | 8                                                         | The padding around the thumbnail.                                   |
+| `thumbnail_corner_radius`             | integer   | 0                                                         | The corner radius for the thumbnail.                                |
+| `symmetric_corner_radius`             | boolean   | false                                                     | Whether to use symmetric corner radius for the thumbnail.           |
+| `thumbnail_edge_fade`                 | boolean   | false                                                     | Whether to apply an edge fade effect to the thumbnail.              |
+| `icons`                               | dict      |                                                           | Icons for media controls.                                           |
+| `icons.prev_track`                    | string    | `\uf048`                                                  | Icon for the previous track button.                                 |
+| `icons.next_track`                    | string    | `\uf051`                                                  | Icon for the next track button.                                     |
+| `icons.play`                          | string    | `\uf04b`                                                  | Icon for the play button.                                           |
+| `icons.pause`                         | string    | `\uf04c`                                                  | Icon for the pause button.                                          |
+| `animation`                           | dict      | `{'enabled': true, 'type': 'fadeInOut', 'duration': 200}` | Animation settings for the widget.                                  |
+| `container_shadow`                    | dict      | [See below](#label-and-container-shadow)                  | Container shadow options.                                           |
+| `label_shadow`                        | dict      | [See below](#label-and-container-shadow)                  | Label shadow options.                                               |
+| `media_menu`                          | dict      | [See below](#media-menu-options)                          | Media menu popup.                                                   |
+| `media_menu_icons`                    | dict      | [See below](#media-menu-icons)                            | Media menu icons for popup.                                         |
+| `scrolling_label`                     | dict      | [See below](#scrolling-label)                             | Widget label scrolling options                                      |
+| `callbacks`                           | dict      | [See below](#available-callbacks)                         | Callbacks for mouse events on the widget.                           |
 
 ## Example Configuration
 
@@ -39,8 +40,9 @@
 media:
   type: "yasb.media.MediaWidget"
   options:
-    label: "{title} - {artist}"
+    label: "{title}{s}{artist}"
     label_alt: "{title}"
+    separator: " - "
     hide_empty: true
     callbacks:
       on_left: "toggle_label"
@@ -165,6 +167,7 @@ media:
 ## Description of Options
 - **label:** The format string for the media label. You can use placeholders like `{title}` and `{artist}` to dynamically insert media information.
 - **label_alt:** The alternative format string for the media label. Useful for displaying additional media details.
+- **separator:** The dynamic separator `{s}` that will be stripped from the label if it's at the end or start of the label. Useful when parts of the label are not present at the source to avoid having separator at the end/beginning of the label.
 - **class_name:** The CSS class name for the widget. This allows you to apply custom styles to the widget. (optional)
 - **hide_empty:** Whether to hide the widget when there is no media information available.
 - **callbacks:** A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, `on_right`.
