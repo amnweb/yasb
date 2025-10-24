@@ -9,6 +9,8 @@ from typing import Iterable
 
 import win32com.client
 
+from core.utils.win32.aumid import get_aumid_from_shortcut
+
 
 @lru_cache(maxsize=1)
 def get_wscript_shell():
@@ -161,6 +163,39 @@ def find_shortcut_by_name(
                     shortcut_str = str(shortcut_file)
                     shortcut_name_cache[stem] = shortcut_str
                     return shortcut_str, shortcut_file.stem
+        except Exception:
+            continue
+
+    return None
+
+
+def find_shortcut_by_aumid(aumid: str) -> tuple[str, str] | None:
+    """
+    Find a shortcut in Start Menu that has the specified AUMID embedded.
+    This is the same method Windows uses for taskbar pinning.
+
+    Args:
+        aumid: The AppUserModelID to search for
+
+    Returns:
+        Tuple of (shortcut_path, shortcut_name) if found, None otherwise
+    """
+    if not aumid:
+        return None
+
+    for base_path in _start_menu_search_roots():
+        if not base_path.exists():
+            continue
+
+        try:
+            for lnk_file in base_path.rglob("*.lnk"):
+                try:
+                    shortcut_aumid = get_aumid_from_shortcut(str(lnk_file))
+                    if shortcut_aumid == aumid:
+                        return str(lnk_file), lnk_file.stem
+                except Exception:
+                    # Skip shortcuts we can't read
+                    continue
         except Exception:
             continue
 

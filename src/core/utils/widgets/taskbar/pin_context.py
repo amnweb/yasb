@@ -8,13 +8,22 @@ from urllib.parse import unquote
 
 import win32com.client
 
-from core.utils.win32.app_aumid import get_aumid_for_window
+from core.utils.win32.aumid import get_aumid_for_window
 from settings import DEBUG
 
 
 @dataclass
 class WindowContext:
-    """Snapshot of the runtime state for a window we might pin."""
+    """
+    Snapshot of the runtime state for a window we might pin.
+
+    For Explorer windows, explorer_path contains:
+    - File system paths (e.g., 'C:\\Users\\Documents')
+    - Shell: URLs for special folders (e.g., 'shell:RecycleBinFolder')
+    - CLSID paths for special folders (e.g., '::{645FF040-5081-101B-9F08-00AA002F954E}')
+
+    Note: CLSID paths are language-independent and work across all Windows locales.
+    """
 
     hwnd: int
     exe_path: str | None
@@ -53,13 +62,45 @@ def collect_window_context(hwnd: int, window_data: dict[str, Any]) -> WindowCont
                 try:
                     if hasattr(window, "HWND") and window.HWND == hwnd:
                         location = window.LocationURL
-                        if location and location.startswith("file:///"):
-                            explorer_path = unquote(location[8:]).replace("/", "\\")
+                        if location:
+                            if location.startswith("file:///"):
+                                # Regular file system folder
+                                explorer_path = unquote(location[8:]).replace("/", "\\")
+                            else:
+                                # Special shell folder (Recycle Bin, This PC, etc.)
+                                # Use the LocationURL directly as the identifier
+                                explorer_path = location
                             break
-                except Exception:
+                except Exception as exc:
+                    if DEBUG:
+                        logging.debug(f"Error getting LocationURL for explorer window {hwnd}: {exc}")
                     continue
-        except Exception:
+        except Exception as exc:
+            if DEBUG:
+                logging.debug(f"Error accessing Shell.Application for explorer window {hwnd}: {exc}")
             explorer_path = None
+
+        # Fallback: If we couldn't get LocationURL but this is an explorer window,
+        # try to detect special folders using Shell namespace GUIDs (language-independent)
+        if explorer_path is None and hwnd:
+            try:
+                # Try to get the folder CLSID/GUID for special folders via Document interface
+                shell_windows = win32com.client.Dispatch("Shell.Application").Windows()
+                for window in shell_windows:
+                    try:
+                        if window.HWND == hwnd:
+                            # Access the folder path which may contain CLSID for special folders
+                            folder_path = window.Document.Folder.Self.Path
+                            if folder_path and "::{" in folder_path:
+                                # This is a CLSID path (e.g., Recycle Bin), use it directly
+                                explorer_path = folder_path
+                                break
+                    except (AttributeError, Exception):
+                        # Window doesn't have Document/Folder/Self, or COM error - skip it
+                        continue
+            except Exception as exc:
+                if DEBUG:
+                    logging.debug(f"Error detecting special folder for hwnd {hwnd}: {exc}")
 
     return WindowContext(
         hwnd=hwnd,

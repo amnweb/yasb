@@ -32,6 +32,7 @@ from core.utils.widgets.taskbar.shortcut_resolver import (
     extract_appname_from_cmdline,
     extract_title_from_cmdline,
     find_app_shortcut,
+    find_shortcut_by_aumid,
     find_shortcut_by_name,
     get_wscript_shell,
     normalized_targets,
@@ -80,6 +81,8 @@ class PinManager:
             'path:C:\\...\\mmc.exe|eventvwr.msc' -> ('path', 'C:\\...\\mmc.exe', 'eventvwr.msc')
             'aumid:Microsoft.App' -> ('aumid', 'Microsoft.App', '')
             'explorer:C:\\folder' -> ('explorer', 'C:\\folder', '')
+            'explorer:shell:RecycleBinFolder' -> ('explorer', 'shell:RecycleBinFolder', '')
+            'explorer:::{645FF040-...}' -> ('explorer', '::{645FF040-...}', '')
         """
         if ":" in unique_id:
             type_prefix, value_with_args = unique_id.split(":", 1)
@@ -278,16 +281,67 @@ class PinManager:
                                 PinManager._shortcut_cache[key] = shortcut_path
 
         elif aumid and not shortcut_path:
-            ensure_cmdline_hints()
-            candidate_names = [cmdline_title, cmdline_app_name, window_title, process_name]
-            filtered_candidates = [name for name in candidate_names if name]
-            if filtered_candidates:
-                fallback = find_shortcut_by_name(
-                    filtered_candidates,
-                    shortcut_name_cache=PinManager._shortcut_name_cache,
-                )
-                if fallback:
-                    shortcut_path, shortcut_name = fallback
+            # AUMID apps can be either:
+            # 1. UWP/PWA apps - have AUMIDs ending with !App, launch via shell:AppsFolder
+            # 2. Win32 apps with AUMID (like Steam, Electron) - need shortcut to launch properly
+
+            # FIRST: Try to find shortcut by AUMID (most reliable, same as Windows does)
+            aumid_shortcut = find_shortcut_by_aumid(aumid)
+            if aumid_shortcut:
+                shortcut_path, shortcut_name = aumid_shortcut
+                logging.debug(f"Found shortcut by AUMID: {shortcut_path}")
+            else:
+                # If no shortcut found by AUMID, determine if this is Win32 app that needs shortcut
+                # Key insight: All UWP/PWA apps end with !App, Win32 apps with AUMID do NOT
+                # Examples:
+                #   - YouTube PWA: www.youtube.com-54E21B02_pd8mbgmqs65xy!App -> ends with !App
+                #   - TikTok Store PWA: BytedancePte.Ltd.TikTok_6yccndn6064se!App -> ends with !App
+                #   - Calculator UWP: Microsoft.WindowsCalculator_8wekyb3d8bbwe!App -> ends with !App
+                #   - Steam Win32: Valve.Steam.Client → does NOT end with !App
+                #   - Discord Electron: com.squirrel.Discord.Discord → does NOT end with !App
+
+                is_uwp_or_pwa = aumid and aumid.endswith("!App")
+
+                # Only search for shortcuts if this is a Win32 app (no !App suffix)
+                if not is_uwp_or_pwa and exe_path:
+                    # This is a Win32 app with AUMID - search for shortcut by exe path
+                    # First check cache
+                    for key in normalized_targets(exe_path):
+                        cached_shortcut = PinManager._shortcut_cache.get(key)
+                        if cached_shortcut and isinstance(cached_shortcut, str):
+                            if os.path.exists(cached_shortcut):
+                                shortcut_path = cached_shortcut
+                                shortcut_name = Path(cached_shortcut).stem
+                                break
+                            PinManager._shortcut_cache.pop(key, None)
+
+                    # If not in cache, search by name
+                    if not shortcut_path:
+                        ensure_cmdline_hints()
+                        candidate_names = [cmdline_title, cmdline_app_name, window_title, process_name]
+                        try:
+                            candidate_names.append(Path(exe_path).stem if exe_path else None)
+                        except Exception:
+                            pass
+
+                        filtered_candidates = [name for name in candidate_names if name]
+                        if filtered_candidates:
+                            app_shortcut = find_app_shortcut(
+                                exe_path,
+                                candidate_names=filtered_candidates,
+                                shortcut_cache=PinManager._shortcut_cache,
+                            )
+                            if app_shortcut:
+                                shortcut_path, shortcut_name = app_shortcut
+                            else:
+                                fallback = find_shortcut_by_name(
+                                    filtered_candidates,
+                                    shortcut_name_cache=PinManager._shortcut_name_cache,
+                                )
+                                if fallback:
+                                    shortcut_path, shortcut_name = fallback
+                                    for key in normalized_targets(exe_path):
+                                        PinManager._shortcut_cache[key] = shortcut_path
 
         best_title = base_title or ""
 
@@ -296,20 +350,40 @@ class PinManager:
             if not shortcut_name:
                 shortcut_name = Path(shortcut_path).stem
 
+        # Title priority depends on whether we found a shortcut:
+        # - With shortcut: shortcut_name > window_title > base_title (shortcut name is most reliable)
+        # - Without shortcut (UWP apps): base_title > window_title (window_title can be tab/document name)
+        # - Fallback: cmdline hints > process_name
         if shortcut_name:
             best_title = shortcut_name
-        else:
-            ensure_cmdline_hints()
-            if cmdline_title:
-                best_title = cmdline_title
-            elif cmdline_app_name:
-                best_title = cmdline_app_name
+        elif not aumid or not base_title:
+            # For non-AUMID apps or if base_title is empty, prefer window_title
+            if window_title:
+                best_title = window_title
             elif base_title:
+                best_title = base_title
+            else:
+                ensure_cmdline_hints()
+                if cmdline_title:
+                    best_title = cmdline_title
+                elif cmdline_app_name:
+                    best_title = cmdline_app_name
+                elif process_name:
+                    best_title = process_name
+        else:
+            # For AUMID apps without shortcut (UWP), prefer base_title over window_title
+            if base_title:
                 best_title = base_title
             elif window_title:
                 best_title = window_title
-            elif process_name:
-                best_title = process_name
+            else:
+                ensure_cmdline_hints()
+                if cmdline_title:
+                    best_title = cmdline_title
+                elif cmdline_app_name:
+                    best_title = cmdline_app_name
+                elif process_name:
+                    best_title = process_name
 
         if best_title:
             metadata["title"] = best_title
@@ -319,7 +393,8 @@ class PinManager:
     def get_app_identifier(hwnd: int, window_data: dict, *, resolve_shortcut: bool = False) -> tuple[str | None, dict]:
         """
         Get a unique identifier for an app and its metadata.
-        For File Explorer, includes the folder path in the unique_id to allow multiple pinned folders.
+        For File Explorer, includes the folder path or shell location in the unique_id to allow
+        multiple pinned folders and special folders (e.g., Recycle Bin, This PC).
         Returns (unique_id, metadata_dict) or (None, {}) if unable to identify the app.
         """
         from core.utils.win32.utilities import get_app_name_from_pid
@@ -576,8 +651,13 @@ class PinManager:
             cmd = [exe_path]
             if arguments:
                 try:
-                    cmd.extend(shlex.split(arguments, posix=False))
+                    # Use shlex to split arguments, then strip quotes from each arg
+                    parsed_args = shlex.split(arguments, posix=False)
+                    # Remove surrounding quotes if shlex preserved them
+                    cleaned_args = [arg.strip('"') for arg in parsed_args]
+                    cmd.extend(cleaned_args)
                 except ValueError:
+                    # Fallback to simple split if shlex fails
                     cmd.extend(arguments.split())
 
             subprocess.Popen(
@@ -608,13 +688,10 @@ class PinManager:
         """
         try:
             id_type, value, cmdline_args = PinManager._parse_unique_id(unique_id)
-            # Normalize lookup key so semicolon-suffixed AUMIDs reuse base metadata
-            lookup_id = unique_id
-            if id_type == "aumid" and ";" in value:
-                base_value = value.split(";", 1)[0]
-                lookup_id = f"aumid:{base_value}"
 
-            metadata = self.pinned_apps.get(lookup_id, {})
+            # Use the unique_id as-is to look up metadata
+            # Each pinned entry (including AUMID variants like Firefox Private) has its own metadata
+            metadata = self.pinned_apps.get(unique_id, {})
             shortcut_path = metadata.get("shortcut_path")
 
             # Launch AUMID apps (UWP) unless a shortcut override exists
@@ -642,25 +719,26 @@ class PinManager:
                 os.startfile(shortcut_path)
                 return
 
-            # Launch File Explorer folders
+            # Launch File Explorer folders and special shell locations
+            # This handles both regular file paths (C:\folder) and shell: URLs (shell:RecycleBinFolder)
             if id_type == "explorer":
                 os.startfile(value)
                 return
 
-            # Determine target exe and arguments
+            # Determine target exe and arguments from shortcut or direct path
             target = None
             arguments = ""
             working_dir = None
 
             if shortcut_path and os.path.exists(shortcut_path):
-                # Read shortcut properties
+                # Read shortcut properties to get target and args
                 wsh = get_wscript_shell()
                 shortcut = wsh.CreateShortcut(shortcut_path)
                 target = shortcut.Targetpath or ""
                 arguments = shortcut.Arguments or ""
                 working_dir = shortcut.WorkingDirectory or ""
 
-            # Fallback to direct exe path
+            # Fallback to direct exe path if shortcut didn't provide target
             if not target and id_type == "path" and os.path.exists(value):
                 target = value
 
@@ -678,7 +756,7 @@ class PinManager:
                 all_args = f"{arguments} {extra_arguments}".strip()
                 PinManager._launch_exe(target, all_args, working_dir)
             else:
-                logging.warning(f"Cannot launch app {lookup_id} - no valid target")
+                logging.warning(f"Cannot launch app {unique_id} - no valid target")
 
         except Exception as e:
             logging.error(f"Error launching pinned app: {e}")

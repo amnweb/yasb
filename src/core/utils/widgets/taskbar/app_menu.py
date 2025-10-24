@@ -2,7 +2,7 @@
 Context menu utilities for taskbar widget.
 
 This module provides context menu functionality for taskbar buttons,
-including app-specific menu items for File Explorer, Edge, Firefox, VS Code, and Windows Terminal.
+including app-specific menu items for File Explorer, Recycle Bin, Edge, Firefox, VS Code, and Windows Terminal.
 """
 
 import json
@@ -12,13 +12,42 @@ from pathlib import Path
 
 import pythoncom
 import win32gui
-from PyQt6.QtCore import Qt
+from humanize import naturalsize
+from PyQt6.QtCore import QPoint, Qt
 from PyQt6.QtGui import QCursor
 from PyQt6.QtWidgets import QMenu
 from win32comext.shell import shell, shellcon
 
+from core.utils.win32.constants import KnownCLSID
 from core.utils.win32.utilities import qmenu_rounded_corners
 from core.utils.win32.window_actions import close_application
+
+# Global reference to keep thread alive
+_empty_bin_thread_ref = None
+
+
+def _empty_recycle_bin() -> None:
+    """Empty the Windows Recycle Bin using RecycleBinMonitor async method."""
+    global _empty_bin_thread_ref
+
+    try:
+        from core.utils.widgets.recycle_bin.recycle_bin_monitor import RecycleBinMonitor
+
+        monitor = RecycleBinMonitor.get_instance()
+        # Use async version with confirmation, keep global reference to prevent garbage collection
+        signal, thread = monitor.empty_recycle_bin_async(show_confirmation=True, show_progress=True)
+        _empty_bin_thread_ref = thread  # Keep thread alive
+
+        # Clear reference when done
+        signal.connect(lambda: _clear_thread_ref())
+    except Exception as e:
+        logging.error(f"Failed to empty Recycle Bin: {e}")
+
+
+def _clear_thread_ref():
+    """Clear the global thread reference."""
+    global _empty_bin_thread_ref
+    _empty_bin_thread_ref = None
 
 
 def get_explorer_pinned_folders() -> list[tuple[str, str]]:
@@ -36,8 +65,7 @@ def get_explorer_pinned_folders() -> list[tuple[str, str]]:
             desktop = shell.SHGetDesktopFolder()
 
             # Parse Quick Access using its GUID
-            # FOLDERID_QuickAccess = {679f85cb-0220-4080-b29b-5540cc05aab6}
-            quick_access_path = "shell:::{679f85cb-0220-4080-b29b-5540cc05aab6}"
+            quick_access_path = f"shell:::{{{KnownCLSID.QUICK_ACCESS}}}"
             pidl = shell.SHParseDisplayName(quick_access_path, 0)
 
             # Bind to Quick Access folder
@@ -62,8 +90,13 @@ def get_explorer_pinned_folders() -> list[tuple[str, str]]:
                     is_folder = bool(attrs & shellcon.SFGAO_FOLDER)
                     is_filesystem = bool(attrs & shellcon.SFGAO_FILESYSTEM)
 
-                    # Only include filesystem folders (skip virtual folders like Recycle Bin)
-                    if is_folder and is_filesystem and fs_path and os.path.isdir(fs_path):
+                    # Only include filesystem folders (skip virtual folders except Recycle Bin)
+                    if not fs_path:
+                        continue
+
+                    is_recycle_bin = KnownCLSID.RECYCLE_BIN in fs_path.upper()
+
+                    if is_folder and ((is_filesystem and os.path.isdir(fs_path)) or is_recycle_bin):
                         folder_name = display_name or os.path.basename(fs_path) or fs_path
                         pinned_folders.append((folder_name, fs_path))
 
@@ -212,6 +245,7 @@ def show_context_menu(taskbar_widget, hwnd: int, pos) -> QMenu | None:
 
         # Determine app type from unique_id
         is_explorer = False
+        is_recycle_bin = False
         is_chromium_browser = False  # Edge, Chrome
         is_firefox_browser = False  # Firefox, Zen
         is_vscode = False  # VSCode or VSCode Insiders
@@ -221,6 +255,8 @@ def show_context_menu(taskbar_widget, hwnd: int, pos) -> QMenu | None:
             check_str = unique_id.lower()
 
             is_explorer = "explorer.exe" in check_str or check_str.startswith("explorer:")
+            # Check if this is specifically the Recycle Bin
+            is_recycle_bin = KnownCLSID.RECYCLE_BIN in check_str.upper()
             is_chromium_browser = (
                 "msedge.exe" in check_str or "msedge" in check_str or "chrome.exe" in check_str or "chrome" in check_str
             )
@@ -234,7 +270,9 @@ def show_context_menu(taskbar_widget, hwnd: int, pos) -> QMenu | None:
             is_terminal = "windowsterminal.exe" in check_str or "windowsterminal" in check_str
 
         # Add app-specific menu items
-        if is_explorer:
+        if is_recycle_bin and is_pinned:
+            _add_recycle_bin_menu_items(menu, taskbar_widget._launch_pinned_app)
+        elif is_explorer:
             _add_explorer_menu_items(menu, taskbar_widget._launch_pinned_app)
         elif is_chromium_browser and unique_id:
             _add_chromium_browser_menu_items(menu, unique_id, taskbar_widget._launch_pinned_app)
@@ -247,12 +285,12 @@ def show_context_menu(taskbar_widget, hwnd: int, pos) -> QMenu | None:
 
         menu.addSeparator()
 
-        # 1. Open App (only show for pinned apps, not for running non-pinned apps)
+        # Open App (only show for pinned apps, not for running non-pinned apps)
         if is_pinned and not is_explorer:
             open_action = menu.addAction("Open app")
             open_action.triggered.connect(lambda: taskbar_widget._launch_pinned_app(hwnd))
 
-        # 2. Pin/Unpin
+        # Pin/Unpin
         if is_pinned:
             menu.addSeparator()
             pin_action = menu.addAction("Unpin from taskbar")
@@ -265,12 +303,31 @@ def show_context_menu(taskbar_widget, hwnd: int, pos) -> QMenu | None:
             pin_action.triggered.connect(lambda: taskbar_widget._pin_app(hwnd))
             menu.addSeparator()
 
-        # 3. End task and Close window (only for running apps)
+        # End task and Close window (only for running apps)
         if not is_pinned_only and win32gui.IsWindow(hwnd):
             end_task_action = menu.addAction("End task")
             end_task_action.triggered.connect(lambda: close_application(hwnd, force=True))
             close_action = menu.addAction("Close window")
             close_action.triggered.connect(lambda: close_application(hwnd))
+
+        # Adjust menu position so it appears just outside the bar
+        margin = 6
+        menu_size = menu.sizeHint()
+
+        bar_widget = taskbar_widget.window()
+        bar_top_left = bar_widget.mapToGlobal(bar_widget.rect().topLeft())
+        bar_height = bar_widget.height()
+
+        button_center = widget.mapToGlobal(widget.rect().center()) if widget else pos
+        new_x = button_center.x() - menu_size.width() / 2
+
+        bar_alignment = getattr(bar_widget, "_alignment", {}) if bar_widget else {}
+        bar_position = bar_alignment.get("position") if isinstance(bar_alignment, dict) else None
+        if bar_position == "top":
+            new_y = bar_top_left.y() + bar_height + margin
+        else:
+            new_y = bar_top_left.y() - menu_size.height() - margin
+        pos = QPoint(int(new_x), int(new_y))
 
         # Use popup instead of exec to allow proper focus handling
         menu.popup(pos)
@@ -293,6 +350,49 @@ def show_context_menu(taskbar_widget, hwnd: int, pos) -> QMenu | None:
     except Exception as e:
         logging.error(f"Error showing context menu: {e}")
         return None
+
+
+def _add_recycle_bin_menu_items(menu: QMenu, on_launch_callback) -> None:
+    """Add Recycle Bin specific menu items."""
+    # Get recycle bin info from singleton monitor
+    try:
+        from core.utils.widgets.recycle_bin.recycle_bin_monitor import RecycleBinMonitor
+
+        monitor = RecycleBinMonitor.get_instance()
+        # Use cached info (fast, non-blocking)
+        info = monitor._last_info
+        num_items = int(info.get("num_items", 0))
+        size_bytes = int(info.get("size_bytes", 0))
+    except Exception:
+        num_items = 0
+        size_bytes = 0
+
+    # Add info item only if there are items in the recycle bin
+    if num_items > 0:
+        info_text = (
+            f"{num_items} item{'s' if num_items != 1 else ''} ({naturalsize(size_bytes, binary=True, format='%.2f')})"
+        )
+        info_action = menu.addAction(info_text)
+        info_action.setEnabled(False)
+        menu.addSeparator()
+
+    # Add "Open" option to open Recycle Bin
+    open_action = menu.addAction("Open")
+    open_action.triggered.connect(lambda: on_launch_callback(f"explorer:::{{{KnownCLSID.RECYCLE_BIN}}}"))
+
+    menu.addSeparator()
+
+    # Add "Empty Recycle Bin" option
+    empty_action = menu.addAction("Empty Recycle Bin")
+
+    # Check if Recycle Bin is empty and disable the option if it is
+    is_empty = num_items == 0 and size_bytes == 0
+    empty_action.setEnabled(not is_empty)
+    if is_empty:
+        empty_action.setToolTip("Recycle Bin is already empty")
+
+    empty_action.triggered.connect(_empty_recycle_bin)
+    menu.addSeparator()
 
 
 def _add_explorer_menu_items(menu: QMenu, on_launch_callback) -> None:

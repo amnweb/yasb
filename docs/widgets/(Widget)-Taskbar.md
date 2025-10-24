@@ -102,6 +102,12 @@ taskbar:
 .taskbar-widget .app-container.flashing {
     background-color: rgba(255, 106, 106, 0.63);
 }
+.taskbar-widget .app-container.running {
+    background-color: rgba(255, 255, 255, 0.25);
+}
+.taskbar-widget .app-container:hover {
+    background-color: rgba(255, 255, 255, 0.15);
+}
 .taskbar-widget .app-container .app-title {
     padding-left: 4px;
 }

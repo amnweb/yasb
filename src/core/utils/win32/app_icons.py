@@ -1,3 +1,4 @@
+import ctypes
 import logging
 import struct
 from ctypes import byref, c_ulong, create_string_buffer, create_unicode_buffer, sizeof
@@ -11,7 +12,8 @@ from icoextract import IconExtractor
 from PIL import Image
 from win32con import DIB_RGB_COLORS
 
-from core.utils.win32.app_aumid import GetApplicationUserModelId, get_aumid_for_window, get_icon_for_aumid
+from core.utils.win32.aumid import GetApplicationUserModelId, get_aumid_for_window
+from core.utils.win32.aumid_icons import get_icon_for_aumid
 from core.utils.win32.bindings import (
     CloseHandle,
     DeleteObject,
@@ -22,9 +24,10 @@ from core.utils.win32.bindings import (
     OpenProcess,
     QueryFullProcessImageNameW,
     ReleaseDC,
+    shell32,
 )
-from core.utils.win32.constants import PROCESS_QUERY_LIMITED_INFORMATION
-from core.utils.win32.structs import BITMAP, BITMAPINFO, BITMAPINFOHEADER, ICONINFO
+from core.utils.win32.constants import PROCESS_QUERY_LIMITED_INFORMATION, SHGSI_ICON, SHGSI_LARGEICON
+from core.utils.win32.structs import BITMAP, BITMAPINFO, BITMAPINFOHEADER, ICONINFO, SHSTOCKICONINFO
 
 pil_logger = logging.getLogger("PIL")
 pil_logger.setLevel(logging.INFO)
@@ -291,7 +294,6 @@ def hicon_to_image(hicon: int) -> Image.Image | None:
 
     width, height = bitmap.bmWidth, bitmap.bmHeight
     buffer_size = width * height * 4
-
     # Create buffers for the bitmap data
     color_buffer = create_string_buffer(buffer_size)
     mask_buffer = create_string_buffer(buffer_size)
@@ -371,3 +373,42 @@ def hicon_to_image(hicon: int) -> Image.Image | None:
 
     # Create PIL Image
     return Image.frombuffer("RGBA", (width, height), bytes(img_data), "raw", "RGBA", 0, 1)
+
+
+def get_stock_icon(icon_id: int) -> Image.Image | None:
+    """Get a Windows stock icon by its SHSTOCKICONID value.
+
+    Args:
+        icon_id: Stock icon ID from SHSTOCKICONID enum
+                 Example values:
+                 - 31 (SIID_RECYCLER): Empty recycle bin
+                 - 32 (SIID_RECYCLERFULL): Full recycle bin
+                 See: https://learn.microsoft.com/en-us/windows/win32/api/shellapi/ne-shellapi-shstockiconid
+
+    Returns:
+        PIL Image of the stock icon, or None if retrieval fails
+    """
+    try:
+        # SHGSI flags - must include SHGSI_ICON to request icon handle
+        flags = SHGSI_ICON | SHGSI_LARGEICON
+
+        sii = SHSTOCKICONINFO()
+        sii.cbSize = ctypes.sizeof(sii)
+
+        # Get the stock icon
+        result = shell32.SHGetStockIconInfo(icon_id, flags, ctypes.byref(sii))
+        if result != 0 or not sii.hIcon:
+            return None
+
+        try:
+            icon_img = hicon_to_image(sii.hIcon)
+            return icon_img
+        finally:
+            try:
+                win32gui.DestroyIcon(sii.hIcon)
+            except Exception:
+                pass
+
+    except Exception as e:
+        logging.error(f"Error getting stock icon {icon_id}: {e}")
+        return None

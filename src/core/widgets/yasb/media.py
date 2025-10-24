@@ -23,7 +23,7 @@ from core.utils.widgets.media.source_apps import (
     get_source_app_mapping,
 )
 from core.utils.widgets.media.tokenizer import clean_string
-from core.utils.win32.app_aumid import (
+from core.utils.win32.aumid import (
     ERROR_INSUFFICIENT_BUFFER,
     PROCESS_QUERY_LIMITED_INFORMATION,
     CloseHandle,
