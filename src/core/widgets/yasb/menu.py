@@ -21,7 +21,7 @@ class MenuWidget(BaseWidget):
         self,
         label: str,
         class_name: str,
-        menu_items: list[dict[str]],
+        menu_items: list[dict[str, str]],
         icon: str,
         image_icon_size: int,
         popup_image_icon_size: int,
@@ -33,8 +33,8 @@ class MenuWidget(BaseWidget):
         popup_offset: dict[str, int],
         alignment: str,
         direction: str,
-        label_shadow: dict = None,
-        container_shadow: dict = None,
+        label_shadow: dict | None = None,
+        container_shadow: dict | None = None,
     ):
         super().__init__(class_name=f"menu-widget {class_name}")
         self._label = label
@@ -65,7 +65,8 @@ class MenuWidget(BaseWidget):
         self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
-        add_shadow(self._widget_container, self._container_shadow)
+        if self._container_shadow is not None:
+            add_shadow(self._widget_container, self._container_shadow)
 
         # Create the menu button container
         self._button_container = QWidget()
@@ -91,7 +92,8 @@ class MenuWidget(BaseWidget):
             else:
                 self._icon_label.setText(self._icon)
 
-            add_shadow(self._icon_label, self._label_shadow)
+            if self._label_shadow is not None:
+                add_shadow(self._icon_label, self._label_shadow)
             self._button_layout.addWidget(self._icon_label)
 
         # Create text label if label is provided
@@ -102,7 +104,8 @@ class MenuWidget(BaseWidget):
             self._text_label.setText(self._label)
             self._text_label.clicked.connect(self._toggle_popup)
 
-            add_shadow(self._text_label, self._label_shadow)
+            if self._label_shadow is not None:
+                add_shadow(self._text_label, self._label_shadow)
             self._button_layout.addWidget(self._text_label)
 
         # Set tooltip
@@ -177,11 +180,18 @@ class MenuWidget(BaseWidget):
         # Adjust popup size to content
         self._popup.adjustSize()
 
-        # Force Qt to apply the stylesheet to the popup and its children
-        self._popup.style().unpolish(self._popup)
-        self._popup.style().polish(self._popup)
-        self._popup._popup_content.style().unpolish(self._popup._popup_content)
-        self._popup._popup_content.style().polish(self._popup._popup_content)
+        # Force Qt to apply the stylesheet to the popup and its children (guard against None)
+        popup_style = self._popup.style()
+        if popup_style is not None:
+            popup_style.unpolish(self._popup)
+            popup_style.polish(self._popup)
+
+        popup_content = getattr(self._popup, "_popup_content", None)
+        if popup_content is not None:
+            content_style = popup_content.style()
+            if content_style is not None:
+                content_style.unpolish(popup_content)
+                content_style.polish(popup_content)
 
         # Position and show popup
         self._popup.setPosition(
