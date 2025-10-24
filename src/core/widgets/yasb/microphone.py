@@ -2,16 +2,13 @@ import logging
 import re
 
 from comtypes import (
-    CLSCTX_ALL,
     CoInitialize,
-    COMObject,
     CoUninitialize,
 )
+from pycaw.callbacks import AudioEndpointVolumeCallback as PycawAudioEndpointVolumeCallback
 from pycaw.callbacks import MMNotificationClient
 from pycaw.pycaw import (
     AudioUtilities,
-    IAudioEndpointVolume,
-    IAudioEndpointVolumeCallback,  # import the public enumerator
 )
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QWheelEvent
@@ -42,14 +39,13 @@ class AudioEndpointChangeCallback(MMNotificationClient):
         self.parent.update_label_signal.emit()
 
 
-class AudioEndpointVolumeCallback(COMObject):
-    _com_interfaces_ = [IAudioEndpointVolumeCallback]
-
+class AudioEndpointVolumeCallback(PycawAudioEndpointVolumeCallback):
     def __init__(self, parent):
         super().__init__()
         self.parent = parent
 
-    def OnNotify(self, pNotify):
+    def on_notify(self, new_volume, new_mute, event_context, channels, channel_volumes):
+        """Called when audio endpoint volume or mute state changes"""
         self.parent.update_label_signal.emit()
 
 
@@ -148,14 +144,20 @@ class MicrophoneWidget(BaseWidget):
         label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
         label_parts = [part for part in label_parts if part]
         widget_index = 0
-        try:
-            self._initialize_microphone_interface()
-            mute_status = self.audio_endpoint.GetMute() if self.audio_endpoint else None
-            mic_level = round(self.audio_endpoint.GetMasterVolumeLevelScalar() * 100) if self.audio_endpoint else None
-            min_icon = self._get_mic_icon()
-            min_level = self._mute_text if mute_status == 1 else f"{mic_level}%" if self.audio_endpoint else "N/A"
-        except Exception:
-            min_icon, min_level = "N/A", "N/A"
+
+        if self.audio_endpoint is None:
+            logging.warning("No microphone interface available")
+            min_icon, min_level, mute_status = "N/A", "N/A", None
+        else:
+            try:
+                mute_status = self.audio_endpoint.GetMute()
+                mic_level = round(self.audio_endpoint.GetMasterVolumeLevelScalar() * 100)
+                min_icon = self._get_mic_icon()
+                min_level = self._mute_text if mute_status == 1 else f"{mic_level}%"
+            except Exception as e:
+                logging.error(f"Failed to get microphone info: {e}")
+                min_icon, min_level, mute_status = "N/A", "N/A", None
+
         label_options = {"{icon}": min_icon, "{level}": min_level}
 
         if self._progress_bar["enabled"] and self.progress_widget:
@@ -189,11 +191,15 @@ class MicrophoneWidget(BaseWidget):
             devices = AudioUtilities.GetMicrophone()
             if not devices:
                 logging.error("Microphone not found")
-            interface = devices.Activate(IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
-            self.audio_endpoint = interface.QueryInterface(IAudioEndpointVolume)
+                self.audio_endpoint = None
+                return
+            # Wrap the device and use the EndpointVolume property (new pycaw API)
+            device = AudioUtilities.CreateDevice(devices)
+            self.audio_endpoint = device.EndpointVolume
             self.callback = AudioEndpointVolumeCallback(self)
             self.audio_endpoint.RegisterControlChangeNotify(self.callback)
-        except Exception:
+        except Exception as e:
+            logging.error(f"Failed to initialize microphone interface: {e}")
             self.audio_endpoint = None
         finally:
             CoUninitialize()
@@ -230,7 +236,6 @@ class MicrophoneWidget(BaseWidget):
         if self.audio_endpoint:
             current_mute_status = self.audio_endpoint.GetMute()
             self.audio_endpoint.SetMute(not current_mute_status, None)
-            self._update_label()
 
     def _increase_volume(self):
         if self.audio_endpoint:
@@ -239,7 +244,6 @@ class MicrophoneWidget(BaseWidget):
             self.audio_endpoint.SetMasterVolumeLevelScalar(new_volume, None)
             if self.audio_endpoint.GetMute() and new_volume > 0.0:
                 self.audio_endpoint.SetMute(False, None)
-            self._update_label()
 
     def _decrease_volume(self):
         if self.audio_endpoint:
@@ -248,7 +252,6 @@ class MicrophoneWidget(BaseWidget):
             self.audio_endpoint.SetMasterVolumeLevelScalar(new_volume, None)
             if new_volume == 0.0:
                 self.audio_endpoint.SetMute(True, None)
-            self._update_label()
 
     def wheelEvent(self, event: QWheelEvent):
         if event.angleDelta().y() > 0:

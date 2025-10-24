@@ -6,14 +6,13 @@ from ctypes import c_int as enum
 from ctypes.wintypes import BOOL, INT, LPCWSTR, WORD
 
 import comtypes
-from comtypes import CLSCTX_ALL, COMMETHOD, GUID, CoInitialize, COMObject, CoUninitialize
+from comtypes import CLSCTX_ALL, COMMETHOD, GUID, CoInitialize, CoUninitialize
 from PIL import Image
+from pycaw.callbacks import AudioEndpointVolumeCallback as PycawAudioEndpointVolumeCallback
 from pycaw.callbacks import MMNotificationClient
 from pycaw.pycaw import (
     AudioUtilities,
     EDataFlow,
-    IAudioEndpointVolume,
-    IAudioEndpointVolumeCallback,
     IMMDeviceEnumerator,
     ISimpleAudioVolume,
 )
@@ -45,6 +44,7 @@ BLACKLISTED_PROCESSES = [
     "taskhostw.exe",
     "audiodg.exe",
     "svchost.exe",
+    "shellhost.exe",
 ]
 
 IID_IPolicyConfig = GUID("{f8679f50-850a-41cf-9c72-430f290290c8}")
@@ -192,14 +192,13 @@ class AudioEndpointChangeCallback(MMNotificationClient):
         self.parent.update_label_signal.emit()
 
 
-class AudioEndpointVolumeCallback(COMObject):
-    _com_interfaces_ = [IAudioEndpointVolumeCallback]
-
+class AudioEndpointVolumeCallback(PycawAudioEndpointVolumeCallback):
     def __init__(self, parent):
         super().__init__()
         self.parent = parent
 
-    def OnNotify(self, pNotify):
+    def on_notify(self, new_volume, new_mute, event_context, channels, channel_volumes):
+        """Called when audio endpoint volume or mute state changes"""
         self.parent.update_label_signal.emit()
 
 
@@ -353,7 +352,7 @@ class VolumeWidget(BaseWidget):
         if self.volume is not None:
             try:
                 self.volume.SetMasterVolumeLevelScalar(value / 100, None)
-                self._update_label()
+                # self._update_label()
                 # Show tooltip while actively dragging
                 if hasattr(self, "volume_slider"):
                     self._show_slider_tooltip(self.volume_slider, value)
@@ -688,7 +687,8 @@ class VolumeWidget(BaseWidget):
         self.devices = self._list_audio_devices()
         if len(self.devices) > 1:
             current_device = AudioUtilities.GetSpeakers()
-            current_device_id = current_device.GetId()
+            # Use .id property instead of .GetId() method (new pycaw API)
+            current_device_id = current_device.id
             self.device_buttons = {}
             for device_id, device_name in self.devices:
                 btn = QPushButton(device_name)
@@ -892,15 +892,20 @@ class VolumeWidget(BaseWidget):
         label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
         label_parts = [part for part in label_parts if part]
         widget_index = 0
-        try:
-            self._initialize_volume_interface()
-            mute_status = self.volume.GetMute()
-            icon_volume = self._get_volume_icon()
-            level_volume = (
-                self._mute_text if mute_status == 1 else f"{round(self.volume.GetMasterVolumeLevelScalar() * 100)}%"
-            )
-        except Exception:
+
+        if self.volume is None:
+            logging.error("No volume interface available")
             mute_status, icon_volume, level_volume = None, "", "No Device"
+        else:
+            try:
+                mute_status = self.volume.GetMute()
+                icon_volume = self._get_volume_icon()
+                level_volume = (
+                    self._mute_text if mute_status == 1 else f"{round(self.volume.GetMasterVolumeLevelScalar() * 100)}%"
+                )
+            except Exception as e:
+                logging.error(f"Failed to get volume info: {e}")
+                mute_status, icon_volume, level_volume = None, "", "No Device"
 
         label_options = {"{icon}": icon_volume, "{level}": level_volume}
 
@@ -1013,8 +1018,7 @@ class VolumeWidget(BaseWidget):
             if not devices:
                 self.volume = None
                 return
-            interface = devices.Activate(IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
-            self.volume = interface.QueryInterface(IAudioEndpointVolume)
+            self.volume = devices.EndpointVolume
             self.callback = AudioEndpointVolumeCallback(self)
             self.volume.RegisterControlChangeNotify(self.callback)
         except Exception as e:
