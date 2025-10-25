@@ -410,7 +410,7 @@ class WifiList(QScrollArea):
             item.update_state(item is selected)
 
 
-class WifiMenu(QWidget):
+class WifiMenu(QObject):
     """Container for the wifi menu"""
 
     _networks_cache: dict[str, NetworkInfo] = {}
