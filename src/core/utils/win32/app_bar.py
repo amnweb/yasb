@@ -76,14 +76,20 @@ class Win32AppBar:
         self.app_bar_data = None
 
     def create_appbar(
-        self, hwnd: int, edge: AppBarEdge, app_bar_height: int, screen: QScreen, scale_screen: bool = False
+        self,
+        hwnd: int,
+        edge: AppBarEdge,
+        app_bar_height: int,
+        screen: QScreen,
+        scale_screen: bool = False,
+        bar_name: str = None,
     ):
         self.app_bar_data = AppBarData()
         self.app_bar_data.cbSize = wintypes.DWORD(sizeof(self.app_bar_data))
         self.app_bar_data.uEdge = edge
         self.app_bar_data.hWnd = hwnd
         self.register_new()
-        self.position_bar(app_bar_height, screen, scale_screen)
+        self.position_bar(app_bar_height, screen, scale_screen, bar_name)
         self.set_position()
 
         exStyle = windll.user32.GetWindowLongPtrW(hwnd, win32con.GWL_EXSTYLE)
@@ -91,7 +97,9 @@ class Win32AppBar:
             hwnd, win32con.GWL_EXSTYLE, exStyle | win32con.WS_EX_NOACTIVATE | win32con.WS_EX_TOPMOST
         )
 
-    def position_bar(self, app_bar_height: int, screen: QScreen, scale_screen: bool = False) -> None:
+    def position_bar(
+        self, app_bar_height: int, screen: QScreen, scale_screen: bool = False, bar_name: str = None
+    ) -> None:
         geometry = screen.geometry()
         bar_height = int(app_bar_height * screen.devicePixelRatio())
         screen_height = int(geometry.height() * screen.devicePixelRatio() if scale_screen else geometry.height())
@@ -106,8 +114,9 @@ class Win32AppBar:
             self.app_bar_data.rc.top = screen.geometry().y() + screen_height - bar_height
             self.app_bar_data.rc.bottom = screen.geometry().y() + screen_height
         if settings.DEBUG:
+            bar_info = f"Bar {bar_name}" if bar_name else "Bar"
             logging.info(
-                f"Bar Created on Screen: {screen.name()} [Bar Height: {app_bar_height}px, DPI Scale: {screen.devicePixelRatio()}, Scale Screen: {scale_screen}, Screen Geometry: X: {screen.geometry().x()}, Y: {screen.geometry().y()}, Screen Width: {screen.geometry().width()}, Screen Height: {screen.geometry().height()}]"
+                f"{bar_info} Created on Screen: {screen.name()} [Bar Height: {app_bar_height}px, DPI Scale: {screen.devicePixelRatio()}]"
             )
 
     def register_new(self):

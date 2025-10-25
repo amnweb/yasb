@@ -71,7 +71,7 @@ Valid options are:
 | Option            | Type    | Default       | Description |
 |-------------------|---------|---------------|-------------|
 | `enabled`         | boolean | `true`        | Whether the status bar is enabled. |
-| `screens`         | list    | `['*']`       | The screens on which the status bar should be displayed. |
+| `screens`         | list    | `['*']`       | The screens on which the status bar should be displayed. Use `['*']` for all unassigned screens, `['**']` for all screens (including assigned), or specify screen names like `['DELL P2419H (1)']`. |
 | `class_name`      | string  | `"yasb-bar"`  | The CSS class name for the status bar. |
 | `alignment`       | object  | [See below](#bar-alignment) | The alignment settings for the status bar. |
 | `blur_effect`     | object  | [See below](#blur-effect-configuration) | The blur effect settings for the status bar. |
@@ -141,21 +141,36 @@ layouts:
 > **Note:**
 > If you want to have different bars on each screen you will need to define on which screen the bar should be displayed, `screens` inside bar config is your monitor name. You can find your monitor names using `yasbc monitor-information` or inside device manager.
 
+## Screen Assignment Options:
+- `screens: ['*']` - Show on all **unassigned** screens (screens not explicitly assigned to other bars)
+- `screens: ['**']` - Show on **all screens** (including screens assigned to other bars)
+- `screens: ['SCREEN_NAME']` - Show on specific screen(s)
+
 ```
 bars:
   status-bar:
-    screens: ['DELL P2419H (1)'] 
+    screens: ['DELL P2419H (1)']  # Show only on monitor 1
     widgets:
       left: ["clock"]
       center: ["cpu"]
       right: ["memory"]
 
   status-bar-2:
-    screens: ['DELL P2419H (2)'] 
+    screens: ['DELL P2419H (2)']  # Show only on monitor 2
     widgets:
       left: ["active_window"]
       center: ["media"]
       right: ["volume","power_menu"]
+
+  status-bar-3:
+    screens: ['*']  # Show on all unassigned screens
+    widgets:
+      center: ["weather"]
+
+  global-taskbar:
+    screens: ['**']  # Show on ALL screens (including monitors 1 and 2)
+    widgets:
+      left: ["taskbar"]
 
 widgets:
     ...

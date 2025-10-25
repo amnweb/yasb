@@ -151,7 +151,9 @@ class Bar(QWidget):
         return self._bar_id
 
     def on_geometry_changed(self, geo: QRect) -> None:
-        logging.info(f"Screen geometry changed. Updating position for bar ({self.bar_id})")
+        logging.info(
+            f"Screen geometry changed. Updating position for bar {self._bar_name} on screen {self._target_screen.name()}"
+        )
         self.position_bar()
 
         if self._autohide_manager and self._autohide_manager.is_enabled():
@@ -168,6 +170,7 @@ class Bar(QWidget):
                 self._dimensions["height"] + self._padding["top"] + self._padding["bottom"],
                 self._target_screen,
                 scale_screen_height,
+                self._bar_name,
             )
 
     def try_remove_app_bar(self) -> None:
