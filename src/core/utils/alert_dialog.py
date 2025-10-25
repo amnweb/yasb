@@ -5,7 +5,6 @@ import traceback
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QMessageBox, QPushButton, QSizePolicy, QTextEdit
-from winmica import BackdropType, EnableMica, is_mica_supported
 
 from core.ui.style import apply_button_style
 from settings import SCRIPT_PATH
@@ -26,11 +25,6 @@ class AlertDialog(QMessageBox):
         super().__init__(parent)
 
         self.setWindowTitle(title)
-        if is_mica_supported():
-            self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
-            hwnd = int(self.winId())
-            EnableMica(hwnd, BackdropType.MICA)
-
         self.setTextInteractionFlags(Qt.TextInteractionFlag.LinksAccessibleByMouse)
         self.setWindowFlags(Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.WindowCloseButtonHint)
         self.setIcon(icon)
