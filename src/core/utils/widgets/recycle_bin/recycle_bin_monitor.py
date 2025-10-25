@@ -8,16 +8,94 @@ from ctypes import wintypes
 
 from PyQt6.QtCore import QObject, QThread, pyqtSignal
 
+from core.utils.win32.bindings import kernel32, shell32
+from core.utils.win32.constants import (
+    FILE_FLAG_BACKUP_SEMANTICS,
+    FILE_LIST_DIRECTORY,
+    FILE_NOTIFY_CHANGE_DIR_NAME,
+    FILE_NOTIFY_CHANGE_FILE_NAME,
+    FILE_SHARE_DELETE,
+    FILE_SHARE_READ,
+    FILE_SHARE_WRITE,
+    INFINITE,
+    INVALID_HANDLE_VALUE,
+    OPEN_EXISTING,
+    S_OK,
+    SHERB_NOCONFIRMATION,
+    SHERB_NOPROGRESSUI,
+    SHERB_NOSOUND,
+    WAIT_FAILED,
+    WAIT_OBJECT_0,
+    KnownCLSID,
+)
+from core.utils.win32.structs import SHQUERYRBINFO
 from settings import DEBUG
 
-# Windows API constants
-FILE_NOTIFY_CHANGE_FILE_NAME = 0x00000001
-FILE_NOTIFY_CHANGE_DIR_NAME = 0x00000002
-FILE_NOTIFY_CHANGE_ATTRIBUTES = 0x00000004
-FILE_NOTIFY_CHANGE_SIZE = 0x00000008
-FILE_NOTIFY_CHANGE_LAST_WRITE = 0x00000010
-WAIT_OBJECT_0 = 0
-INFINITE = 0xFFFFFFFF
+
+class BinInfoWorker(QThread):
+    """Reusable worker thread to query recycle bin info on demand"""
+
+    info_ready = pyqtSignal(dict)
+
+    def __init__(self):
+        super().__init__()
+        self._request_event = threading.Event()
+        self._stop_event = threading.Event()
+
+    def run(self):
+        """Wait for requests and query bin info"""
+        while True:
+            self._request_event.wait()
+            self._request_event.clear()
+
+            if self._stop_event.is_set():
+                break
+
+            info = self._get_recycle_bin_info()
+            self.info_ready.emit(info)
+
+    def request_query(self):
+        """Request a bin info query"""
+        self._request_event.set()
+
+    def stop(self):
+        """Stop the worker thread"""
+        self._stop_event.set()
+        self._request_event.set()
+        self.wait(1000)
+
+    def _get_recycle_bin_info(self):
+        """Get information about the Recycle Bin using SHQueryRecycleBinW"""
+        info = SHQUERYRBINFO()
+        info.cbSize = ctypes.sizeof(info)
+
+        # Query all Recycle Bins (pszRootPath = None)
+        result = shell32.SHQueryRecycleBinW(None, ctypes.byref(info))
+
+        if result == S_OK:
+            return {"size_bytes": info.i64Size, "num_items": info.i64NumItems}
+
+        if DEBUG:
+            error_code = result & 0xFFFF  # Equivalent to HRESULT_CODE macro
+            try:
+                error_message = str(ctypes.WinError(error_code))
+            except Exception:
+                error_message = f"HRESULT 0x{result & 0xFFFFFFFF:08X}"
+            logging.error("SHQueryRecycleBinW failed: %s", error_message)
+
+        return {"size_bytes": 0, "num_items": 0}
+
+
+class EmptyBinThread(QThread):
+    def __init__(self, monitor, show_confirmation=False, show_progress=False, play_sound=False):
+        super().__init__()
+        self.monitor = monitor
+        self.show_confirmation = show_confirmation
+        self.show_progress = show_progress
+        self.play_sound = play_sound
+
+    def run(self):
+        self.monitor.empty_recycle_bin(self.show_confirmation, self.show_progress, self.play_sound)
 
 
 class RecycleBinMonitor(QObject):
@@ -35,287 +113,402 @@ class RecycleBinMonitor(QObject):
         """Singleton pattern to ensure only one monitor is running"""
         if cls._instance is None:
             cls._instance = RecycleBinMonitor()
-
-        # Auto-start monitoring when instance is requested
-        if not cls._instance._is_monitoring:
-            cls._instance.start_monitoring()
-
         return cls._instance
 
     def __init__(self):
         super().__init__()
         self._active = False
         self._monitoring_thread = None
+        self._watchers = []  # Win32DirectoryWatcher instances
         self._last_info = {"size_bytes": 0, "num_items": 0}
-        self._last_emit_time = 0  # Track the last time we emitted a signal
-        self._throttle_interval = 0.2  # 100ms in seconds
-        self._pending_update = None  # Store pending update
-        self._lock = threading.Lock()  # Lock for thread safety
+        self._lock = threading.Lock()
+        self._query_worker = None  # Reusable worker thread for async queries
+        self._query_pending = False  # Flag to prevent multiple simultaneous queries
+        self._poll_timer = None  # Timer for periodic polling during bursts
+        self._poll_interval = 1  # Poll interval in seconds during bursts
+        self._last_change_time = time.monotonic()  # Timestamp of last detected change
+        self._last_poll_time = 0.0  # Timestamp of last direct poll trigger
+        self._subscribers = set()  # Track subscribers (widget instances)
+
+    def subscribe(self, subscriber_id):
+        """Subscribe to recycle bin updates. Starts monitoring if this is the first subscriber.
+
+        Args:
+            subscriber_id: Unique identifier for the subscriber (e.g., id(widget_instance))
+
+        Returns:
+            bool: True if subscription successful
+        """
+        with self._lock:
+            self._subscribers.add(subscriber_id)
+            subscriber_count = len(self._subscribers)
+
+        # Start monitoring if this is the first subscriber
+        if subscriber_count == 1 and not self._is_monitoring:
+            if DEBUG:
+                logging.debug(f"RecycleBinMonitor first subscriber {subscriber_id}, starting monitoring")
+            self.start_monitoring()
+        else:
+            if DEBUG:
+                logging.debug(f"RecycleBinMonitor subscriber {subscriber_id} added (total: {subscriber_count})")
+
+        return True
+
+    def unsubscribe(self, subscriber_id):
+        """Unsubscribe from recycle bin updates. Stops monitoring if this is the last subscriber.
+
+        Args:
+            subscriber_id: Unique identifier for the subscriber
+        """
+        with self._lock:
+            self._subscribers.discard(subscriber_id)
+            subscriber_count = len(self._subscribers)
+
+        # Stop monitoring if no more subscribers
+        if subscriber_count == 0 and self._is_monitoring:
+            if DEBUG:
+                logging.debug(f"RecycleBinMonitor last subscriber {subscriber_id} removed (stopping monitoring)")
+            self.stop_monitoring()
+        else:
+            if DEBUG:
+                logging.debug(f"RecycleBinMonitor subscriber {subscriber_id} removed (remaining: {subscriber_count})")
 
     def start_monitoring(self):
         """Start monitoring the recycle bin for changes"""
         if self._is_monitoring:
-            return  # Prevent multiple starts
+            return
 
         self._active = True
+        self._last_poll_time = time.monotonic() - self._poll_interval
+
+        # Start the reusable worker thread
+        self._query_worker = BinInfoWorker()
+        self._query_worker.info_ready.connect(self._on_bin_info_ready)
+        self._query_worker.start()
+
         self._monitoring_thread = threading.Thread(target=self._monitor_recycle_bin, daemon=True)
         self._monitoring_thread.start()
 
         # Get initial info
-        info = self.get_recycle_bin_info()
-        if info:
-            self._last_info = info
-            self.bin_updated.emit(info)
+        self._query_bin_info_async(mark_poll_time=False)
 
         self._is_monitoring = True
 
     def stop_monitoring(self):
         """Stop monitoring the recycle bin"""
         self._active = False
-        if hasattr(self, "_stop_event"):
-            kernel32 = ctypes.windll.kernel32
-            kernel32.SetEvent(self._stop_event)  # Signal the stop event
+        self._is_monitoring = False
 
+        # Stop polling timer
+        self._stop_poll_timer()
+
+        # Stop any active watchers
+        for watcher in getattr(self, "_watchers", []):
+            try:
+                watcher.stop(timeout=1.0)
+            except Exception:
+                logging.exception("Error stopping watcher")
+        self._watchers = []
+
+        # If there was a legacy monitoring thread, join it
         if self._monitoring_thread and self._monitoring_thread.is_alive():
-            self._monitoring_thread.join(timeout=1.0)  # Wait up to 1 second
+            self._monitoring_thread.join(timeout=1.0)
 
-        # Clean up stop event handle
-        if hasattr(self, "_stop_event"):
-            kernel32 = ctypes.windll.kernel32
-            kernel32.CloseHandle(self._stop_event)
-            del self._stop_event
+        # Stop the worker thread
+        if self._query_worker:
+            self._query_worker.stop()
+            self._query_worker.deleteLater()
+            self._query_worker = None
 
-    def get_recycle_bin_info(self):
-        """Get information about the Recycle Bin using SHQueryRecycleBinW"""
+    def empty_recycle_bin(self, show_confirmation=False, show_progress=False, play_sound=False):
+        """Empty the recycle bin with configurable UI options
 
-        class SHQUERYRBINFO(ctypes.Structure):
-            _fields_ = [("cbSize", wintypes.DWORD), ("i64Size", ctypes.c_longlong), ("i64NumItems", ctypes.c_longlong)]
+        Args:
+            show_confirmation: If True, show confirmation dialog before emptying
+            show_progress: If True, show progress dialog while emptying
+            play_sound: If True, play sound when operation completes
+        """
 
-        shell32 = ctypes.windll.shell32
-
-        info = SHQUERYRBINFO()
-        info.cbSize = ctypes.sizeof(info)
-
-        # Query all Recycle Bins (pszRootPath = None)
-        result = shell32.SHQueryRecycleBinW(None, ctypes.byref(info))
-
-        if result == 0:  # S_OK
-            return {"size_bytes": info.i64Size, "num_items": info.i64NumItems}
-        else:
-            return {"size_bytes": 0, "num_items": 0}
-
-    def empty_recycle_bin(self):
-        """Empty the recycle bin with no confirmation, progress UI, or sound"""
-        SHERB_NOCONFIRMATION = 0x00000001
-        SHERB_NOPROGRESSUI = 0x00000002
-        SHERB_NOSOUND = 0x00000004
-
-        # Get current bin info to check if it's already empty
-        current_info = self.get_recycle_bin_info()
-        if current_info["num_items"] == 0:
-            if DEBUG:
-                logging.info("Recycle bin is already empty")
+        # Check if already empty using cached info (fast, no blocking)
+        if self._last_info["num_items"] == 0:
             return True
 
         try:
-            shell32 = ctypes.windll.shell32
-            flags = SHERB_NOCONFIRMATION | SHERB_NOPROGRESSUI | SHERB_NOSOUND
-            result = shell32.SHEmptyRecycleBinW(None, None, flags)
+            # Build flags based on parameters
+            flags = 0
+            if not show_confirmation:
+                flags |= SHERB_NOCONFIRMATION
+            if not show_progress:
+                flags |= SHERB_NOPROGRESSUI
+            if not play_sound:
+                flags |= SHERB_NOSOUND
 
-            if result == 0:  # S_OK
-                if DEBUG:
-                    logging.info("Recycle bin emptied successfully")
-                # Force an update
-                info = self.get_recycle_bin_info()
-                if info:
-                    self._last_info = info
-                    self.bin_updated.emit(info)
+            result = shell32.SHEmptyRecycleBinW(None, None, flags)
+            # We can't reliably detect cancellation, so we just check for success/error
+            if result == S_OK:
                 return True
-            else:
-                error = ctypes.WinError(result)
-                logging.error(f"Failed to empty recycle bin: {error}")
-                return False
+
+            error_code = result & 0xFFFF
+            try:
+                error_message = str(ctypes.WinError(error_code))
+            except Exception:
+                error_message = f"HRESULT 0x{result & 0xFFFFFFFF:08X}"
+            logging.error("Failed to empty recycle bin: %s", error_message)
+            return False
         except Exception as e:
             logging.error(f"Error emptying recycle bin: {e}")
             return False
 
-    def empty_recycle_bin_async(self):
-        """Empty the recycle bin asynchronously
+    def empty_recycle_bin_async(self, show_confirmation=False, show_progress=False, play_sound=False):
+        """Empty the recycle bin asynchronously with configurable UI options
+
+        Args:
+            show_confirmation: If True, show confirmation dialog before emptying
+            show_progress: If True, show progress dialog while emptying
+            play_sound: If True, play sound when operation completes
 
         Returns:
             tuple: (signal, thread) - The finished signal and the thread object
         """
-        thread = EmptyBinThread(self)
+        thread = EmptyBinThread(self, show_confirmation, show_progress, play_sound)
         thread.finished.connect(thread.deleteLater)  # Auto-cleanup thread when done
         thread.start()
         # Return both the signal and the thread so the caller can keep a reference
         return thread.finished, thread
 
-    def _cleanup_empty_thread(self):
-        """Clean up the empty thread resources"""
-        if hasattr(self, "_empty_thread") and self._empty_thread:
-            self._empty_thread.deleteLater()
-            self._empty_thread = None
-
     def open_recycle_bin(self):
         """Open the recycle bin in Explorer"""
         try:
-            shell32 = ctypes.windll.shell32
-            result = shell32.ShellExecuteW(None, "open", "shell:RecycleBinFolder", None, None, 1)
-
-            if result <= 32:  # Error codes are <= 32
-                logging.error(f"Failed to open recycle bin: {result}")
-                return False
-            return True
+            os.startfile(f"shell:::{{{KnownCLSID.RECYCLE_BIN}}}")
         except Exception as e:
             logging.error(f"Error opening recycle bin: {e}")
             return False
 
-    def _emit_update(self, bin_info):
-        """
-        Emit an update with throttling because the Recycle Bin can change rapidly with multiple files being added or removed.
-        This method ensures that we only emit updates at a specified interval to avoid flooding the signal.
+    def _query_bin_info_async(self, mark_poll_time=True):
+        """Request bin info query from the worker thread
+
+        Args:
+            mark_poll_time: When True, record the trigger time to throttle bursts.
         """
         with self._lock:
-            current_time = time.time()
-            time_since_last = current_time - self._last_emit_time
+            if self._query_pending or not self._query_worker:
+                return
+            self._query_pending = True
+            if mark_poll_time:
+                self._last_poll_time = time.monotonic()
 
-            # Always store the latest info
-            self._pending_update = bin_info
+        self._query_worker.request_query()
 
-            # If it's been long enough since our last emit, send immediately
-            if time_since_last >= self._throttle_interval:
+    def _on_bin_info_ready(self, bin_info):
+        """Handle bin info result from async query and emit if changed"""
+        if not bin_info:
+            with self._lock:
+                self._query_pending = False
+            return
+
+        with self._lock:
+            self._query_pending = False
+
+            # Only emit signal if the info has changed
+            if (
+                bin_info["size_bytes"] != self._last_info["size_bytes"]
+                or bin_info["num_items"] != self._last_info["num_items"]
+            ):
                 self._last_info = bin_info
-                self._last_emit_time = current_time
-                self.bin_updated.emit(bin_info)
-                self._pending_update = None
+                should_emit = True
             else:
-                # Otherwise schedule a delayed emission if not already scheduled
-                if not hasattr(self, "_timer_active") or not self._timer_active:
-                    self._timer_active = True
-                    delay = self._throttle_interval - time_since_last
-                    threading.Timer(delay, self._emit_pending_update).start()
+                # Update last_info even if unchanged (for initial load)
+                if self._last_info["size_bytes"] == 0 and self._last_info["num_items"] == 0:
+                    self._last_info = bin_info
+                    should_emit = True
+                else:
+                    should_emit = False
 
-    def _emit_pending_update(self):
-        """Emit the pending update after the throttle interval"""
+        if should_emit:
+            self.bin_updated.emit(bin_info)
+
+    def _start_poll_timer(self):
+        """Start polling timer for burst handling"""
         with self._lock:
-            if self._pending_update:
-                self._last_info = self._pending_update
-                self._last_emit_time = time.time()
-                self.bin_updated.emit(self._pending_update)
-                self._pending_update = None
-            self._timer_active = False
+            if self._poll_timer or not self._active:
+                return
+
+            timer = threading.Timer(self._poll_interval, self._poll_tick)
+            timer.daemon = True
+            self._poll_timer = timer
+            timer.start()
+
+    def _stop_poll_timer(self):
+        """Stop the polling timer"""
+        with self._lock:
+            if self._poll_timer:
+                self._poll_timer.cancel()
+                self._poll_timer = None
+
+    def _poll_tick(self):
+        """Periodic polling callback during bursts"""
+        with self._lock:
+            self._poll_timer = None
+
+            if not self._active:
+                return
+
+            # Check if we should continue polling
+            time_since_change = time.monotonic() - self._last_change_time
+            should_continue = time_since_change < self._poll_interval
+
+        # Query current state
+        self._query_bin_info_async()
+
+        # Reschedule if activity is ongoing
+        if should_continue:
+            self._start_poll_timer()
+
+    def _handle_change_notification(self):
+        """Handle filesystem change notification"""
+        with self._lock:
+            now = time.monotonic()
+            self._last_change_time = now
+            has_timer = self._poll_timer is not None
+            query_pending = self._query_pending
+            should_query_now = not query_pending and (now - self._last_poll_time) >= self._poll_interval
+
+        # Start polling if not already running
+        if should_query_now:
+            self._query_bin_info_async()
+
+        if not has_timer:
+            self._start_poll_timer()
+
+    def get_all_drives(self):
+        drive_bitmask = kernel32.GetLogicalDrives()
+        drives = []
+        for i in range(26):
+            if drive_bitmask & (1 << i):
+                drives.append(string.ascii_uppercase[i] + ":\\")
+        return drives
 
     def _monitor_recycle_bin(self):
         """Monitor the Recycle Bin status using Windows change notifications"""
-        kernel32 = ctypes.windll.kernel32
 
-        # Create an event handle that will be used to signal thread termination
-        self._stop_event = kernel32.CreateEventW(None, True, False, None)
-
-        def get_all_drives():
-            drive_bitmask = kernel32.GetLogicalDrives()
-            drives = []
-            for i in range(26):
-                if drive_bitmask & (1 << i):
-                    drives.append(string.ascii_uppercase[i] + ":\\")
-            return drives
-
-        def monitor_drive_recycle_bin(drive_path):
-            recycle_bin_path = os.path.join(drive_path, "$Recycle.Bin")
+        # Create watchers for each drive's Recycle Bin folder
+        for drive in self.get_all_drives():
+            recycle_bin_path = os.path.join(drive, "$Recycle.Bin")
             if not os.path.exists(recycle_bin_path):
-                return
+                continue
 
-            # Create a directory handle
-            dir_handle = kernel32.CreateFileW(
-                recycle_bin_path,
-                0x0001,  # FILE_LIST_DIRECTORY
-                0x0007,  # FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE
-                None,
-                0x0003,  # OPEN_EXISTING
-                0x02000000,  # FILE_FLAG_BACKUP_SEMANTICS (required for directories)
-                None,
-            )
+            watcher = Win32DirectoryWatcher(recycle_bin_path, callback=self._handle_change_notification)
+            if watcher.start():
+                self._watchers.append(watcher)
 
-            if dir_handle == -1:
-                logging.error(f"Failed to open directory handle for {recycle_bin_path}: {ctypes.WinError()}")
-                return
 
-            try:
-                # Create a notification event
-                change_handle = kernel32.FindFirstChangeNotificationW(
-                    recycle_bin_path,
-                    True,  # Watch subdirectories
-                    FILE_NOTIFY_CHANGE_FILE_NAME | FILE_NOTIFY_CHANGE_DIR_NAME | FILE_NOTIFY_CHANGE_SIZE,
-                )
+class Win32DirectoryWatcher:
+    """Small helper that watches a directory for changes using Win32 APIs"""
 
-                if change_handle == -1:
-                    logging.error(f"Failed to set up change notification for {recycle_bin_path}: {ctypes.WinError()}")
-                    return
+    def __init__(self, path, callback):
+        self.path = path
+        self.callback = callback
+        self.watch_subtree = True
+        self.flag = FILE_NOTIFY_CHANGE_FILE_NAME | FILE_NOTIFY_CHANGE_DIR_NAME
 
+        self._change_handle = INVALID_HANDLE_VALUE
+        self._dir_handle = INVALID_HANDLE_VALUE
+        self._stop_event = None
+        self._thread = None
+        self._running = False
+
+    def start(self):
+        if self._running:
+            return True
+
+        # Create stop event
+        self._stop_event = kernel32.CreateEventW(None, True, False, None)
+        if not self._stop_event:
+            logging.error(f"Watcher: failed to create stop event for {self.path}: {ctypes.WinError()}")
+            self._stop_event = None
+            return False
+
+        # Open directory handle (required on some Windows versions)
+        self._dir_handle = kernel32.CreateFileW(
+            self.path,
+            FILE_LIST_DIRECTORY,
+            FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+            None,
+            OPEN_EXISTING,
+            FILE_FLAG_BACKUP_SEMANTICS,
+            None,
+        )
+
+        if self._dir_handle == INVALID_HANDLE_VALUE:
+            logging.error(f"Watcher: failed to open dir handle for {self.path}: {ctypes.WinError()}")
+            if self._stop_event is not None:
+                kernel32.CloseHandle(self._stop_event)
+                self._stop_event = None
+            return False
+
+        # Register change notification
+        self._change_handle = kernel32.FindFirstChangeNotificationW(self.path, self.watch_subtree, self.flag)
+        if self._change_handle == INVALID_HANDLE_VALUE:
+            logging.error(f"Watcher: failed to register change notification for {self.path}: {ctypes.WinError()}")
+            if self._dir_handle != INVALID_HANDLE_VALUE:
+                kernel32.CloseHandle(self._dir_handle)
+                self._dir_handle = INVALID_HANDLE_VALUE
+            if self._stop_event is not None:
+                kernel32.CloseHandle(self._stop_event)
+                self._stop_event = None
+            return False
+
+        # Start thread
+        self._running = True
+        self._thread = threading.Thread(target=self._run, daemon=True)
+        self._thread.start()
+        return True
+
+    def _run(self):
+        wait_handles = (wintypes.HANDLE * 2)(self._change_handle, self._stop_event)
+        while self._running:
+            result = kernel32.WaitForMultipleObjects(2, wait_handles, False, INFINITE)
+            if not self._running:
+                break
+
+            if result == WAIT_FAILED:
+                logging.error(f"Watcher: wait failed for {self.path}: {ctypes.WinError()}")
+                break
+
+            if result == WAIT_OBJECT_0:
                 try:
-                    wait_handles = (wintypes.HANDLE * 2)(change_handle, self._stop_event)
-                    if DEBUG:
-                        logging.debug(f"Monitoring {recycle_bin_path} for changes...")
-                    while self._active:
-                        # Wait for either a change notification or the stop event
-                        # Using INFINITE for true event-based notification with no timer
-                        result = kernel32.WaitForMultipleObjects(
-                            2,  # Number of handles
-                            wait_handles,  # Array of handles
-                            False,  # WaitAll=False, so return when any handle is signaled
-                            INFINITE,  # Wait indefinitely, no timeout
-                        )
+                    self.callback()
+                except Exception:
+                    logging.exception("Watcher callback raised")
 
-                        if not self._active or result == WAIT_OBJECT_0 + 1:  # Stop event was signaled
-                            break
+                # Reset change notification
+                if not kernel32.FindNextChangeNotification(self._change_handle):
+                    logging.error(f"Watcher: failed to reset notification for {self.path}: {ctypes.WinError()}")
+                    break
+            elif result == WAIT_OBJECT_0 + 1:
+                # Stop event signaled
+                break
+            else:
+                logging.error(f"Watcher: unexpected wait result: {result}")
+                break
 
-                        if result == WAIT_OBJECT_0:  # Change notification was signaled
-                            # Change detected, get updated info
-                            bin_info = self.get_recycle_bin_info()
-                            if bin_info:
-                                # Only emit signal if the info has changed
-                                if (
-                                    bin_info["size_bytes"] != self._last_info["size_bytes"]
-                                    or bin_info["num_items"] != self._last_info["num_items"]
-                                ):
-                                    # Use the throttled emission instead of direct emit
-                                    self._emit_update(bin_info)
+        # Cleanup
+        if self._change_handle != INVALID_HANDLE_VALUE:
+            kernel32.FindCloseChangeNotification(self._change_handle)
+            self._change_handle = INVALID_HANDLE_VALUE
+        if self._dir_handle != INVALID_HANDLE_VALUE:
+            kernel32.CloseHandle(self._dir_handle)
+            self._dir_handle = INVALID_HANDLE_VALUE
+        if self._stop_event is not None:
+            kernel32.CloseHandle(self._stop_event)
+            self._stop_event = None
 
-                            # Reset the notification for the next change
-                            if not kernel32.FindNextChangeNotification(change_handle):
-                                logging.error(
-                                    f"Failed to reset change notification for {recycle_bin_path}: {ctypes.WinError()}"
-                                )
-                                break
-                        else:
-                            # Error occurred
-                            logging.error(f"Error waiting for change notification: {ctypes.WinError()}")
-                            break
-                finally:
-                    # Clean up notification handle
-                    if change_handle != -1:
-                        kernel32.FindCloseChangeNotification(change_handle)
-            finally:
-                # Clean up directory handle
-                if dir_handle != -1:
-                    kernel32.CloseHandle(dir_handle)
-
-        # Monitor all drive recycle bins in parallel
-        monitor_threads = []
-        for drive in get_all_drives():
-            thread = threading.Thread(target=monitor_drive_recycle_bin, args=(drive,), daemon=True)
-            thread.start()
-            monitor_threads.append(thread)
-
-
-class EmptyBinThread(QThread):
-    finished = pyqtSignal()
-
-    def __init__(self, monitor):
-        super().__init__()
-        self.monitor = monitor
-
-    def run(self):
-        self.monitor.empty_recycle_bin()
-        self.finished.emit()
+    def stop(self, timeout=None):
+        if not self._running:
+            return
+        self._running = False
+        if self._stop_event is not None:
+            kernel32.SetEvent(self._stop_event)
+        if self._thread is not None:
+            self._thread.join(timeout=timeout)
+            self._thread = None

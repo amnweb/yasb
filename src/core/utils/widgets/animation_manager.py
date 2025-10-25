@@ -7,7 +7,7 @@ from PyQt6.QtWidgets import QGraphicsOpacityEffect
 class AnimationManager:
     _instances = {}
     _repeating_animations = {}  # Track widgets with repeating animations
-    ALLOWED_ANIMATIONS = ["fadeInOut", "blink"]
+    ALLOWED_ANIMATIONS = ["fadeInOut"]
 
     @classmethod
     def animate(cls, widget, animation_type: str, duration: int = 200):
@@ -15,7 +15,7 @@ class AnimationManager:
 
         Args:
             widget: The widget to animate
-            animation_type: Type of animation ('fadeInOut', 'flash', etc.)
+            animation_type: Type of animation ('fadeInOut',  etc.)
             duration: Duration of the animation in milliseconds
         """
         if animation_type not in cls.ALLOWED_ANIMATIONS:
@@ -39,7 +39,7 @@ class AnimationManager:
 
         Args:
             widget: The widget to animate
-            animation_type: Type of animation ('blink', 'fadeInOut', etc.)
+            animation_type: Type of animation ('fadeInOut', etc.)
             animation_duration: Duration of each animation cycle in ms (default 800ms)
             repeat_interval: Time between animation cycles in ms (default 2000ms = 2s)
             timeout: Auto-stop after this many ms (default 5000ms = 5s), 0 = no timeout
@@ -128,44 +128,13 @@ class AnimationManager:
                 widget.setGraphicsEffect(None)
             except Exception:
                 pass
-
-        anim.finished.connect(on_finished)
-
-        # Keep reference to prevent garbage collection
-        widget._yasb_animation = anim
-        anim.start()
-
-    def blink(self, widget):
-        """Blink animation - dim and brighten like Windows taskbar notification blinking."""
-        effect = QGraphicsOpacityEffect(widget)
-        effect.setEnabled(True)
-        effect.setOpacity(1.0)
-        widget.setGraphicsEffect(effect)
-
-        anim = QPropertyAnimation(effect, b"opacity", widget)
-        anim.setDuration(self.duration)
-        anim.setStartValue(1.0)
-        anim.setEndValue(0.7)
-        anim.setEasingCurve(QEasingCurve.Type.InOutQuad)
-
-        # Reverse the animation to go back to full opacity
-        anim.setDirection(QPropertyAnimation.Direction.Forward)
-
-        def on_finished():
             try:
-                # Fade back to full opacity
-                if anim.direction() == QPropertyAnimation.Direction.Forward:
-                    anim.setDirection(QPropertyAnimation.Direction.Backward)
-                    anim.start()
-                else:
-                    # Animation complete, clean up
-                    effect.setEnabled(False)
-                    widget.setGraphicsEffect(None)
+                widget._yasb_animation = None
             except Exception:
                 pass
 
         anim.finished.connect(on_finished)
 
-        # Keep reference to prevent garbage collection
+        # Keep reference to prevent garbage collection if not cleared
         widget._yasb_animation = anim
         anim.start()

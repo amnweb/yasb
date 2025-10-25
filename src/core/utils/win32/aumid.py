@@ -1,17 +1,12 @@
 """
 This module provides utilities for working with App User Model IDs (AUMIDs).
-It includes functions to retrieve the AUMID for a given window handle and to extract icons for UWP apps based on their AUMID.
-It uses the Windows Shell API to access properties of application windows and extract icons.
+It includes functions to retrieve the AUMID for a given window handle or shortcut file.
+It uses the Windows Shell API to access properties of application windows.
 """
 
 import ctypes
 import ctypes.wintypes as wt
 from ctypes import POINTER, WINFUNCTYPE, byref, c_void_p
-
-from PIL import Image
-
-from core.utils.win32.bindings import DeleteObject, GetDC, GetDIBits, GetObject, ReleaseDC
-from core.utils.win32.structs import BITMAP, BITMAPINFO, BITMAPINFOHEADER
 
 
 class GUID(ctypes.Structure):
@@ -93,6 +88,11 @@ SHGetPropertyStoreForWindow = shell32.SHGetPropertyStoreForWindow
 SHGetPropertyStoreForWindow.argtypes = [wt.HWND, POINTER(GUID), POINTER(c_void_p)]
 SHGetPropertyStoreForWindow.restype = ctypes.c_long
 
+# SHGetPropertyStoreFromParsingName - to read properties from files (shortcuts)
+SHGetPropertyStoreFromParsingName = shell32.SHGetPropertyStoreFromParsingName
+SHGetPropertyStoreFromParsingName.argtypes = [wt.LPCWSTR, c_void_p, ctypes.c_uint32, POINTER(GUID), POINTER(c_void_p)]
+SHGetPropertyStoreFromParsingName.restype = ctypes.c_long
+
 # PropVariantClear is exported by Ole32.dll
 PropVariantClear = ole32.PropVariantClear
 PropVariantClear.argtypes = [POINTER(PROPVARIANT)]
@@ -133,6 +133,7 @@ for dll in (kernel32, shell32):
 # Constants
 PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
 ERROR_INSUFFICIENT_BUFFER = 0x7A
+GPS_DEFAULT = 0  # Default flags for SHGetPropertyStoreFromParsingName
 
 
 def _ensure_com_initialized():
@@ -193,107 +194,44 @@ def get_aumid_for_window(hwnd: int) -> str | None:
     return None
 
 
-# IShellItemImageFactory based icon extraction from AppsFolder\\<AUMID>
-IID_IShellItemImageFactory = GUID("BCC18B79-BA16-442F-80C4-8A59C30C463B")
+def get_aumid_from_shortcut(shortcut_path: str) -> str | None:
+    """
+    Read AUMID from a .lnk file using IPropertyStore.
 
+    Args:
+        shortcut_path: Full path to a .lnk file
 
-class SIZE(ctypes.Structure):
-    _fields_ = [("cx", ctypes.c_long), ("cy", ctypes.c_long)]
-
-
-class IShellItemImageFactoryVtbl(ctypes.Structure):
-    _fields_ = [
-        ("QueryInterface", WINFUNCTYPE(ctypes.c_long, c_void_p, POINTER(GUID), POINTER(c_void_p))),
-        ("AddRef", WINFUNCTYPE(ctypes.c_ulong, c_void_p)),
-        ("Release", WINFUNCTYPE(ctypes.c_ulong, c_void_p)),
-        ("GetImage", WINFUNCTYPE(ctypes.c_long, c_void_p, SIZE, ctypes.c_int, POINTER(wt.HBITMAP))),
-    ]
-
-
-class IShellItemImageFactory(ctypes.Structure):
-    _fields_ = [("lpVtbl", POINTER(IShellItemImageFactoryVtbl))]
-
-
-SHCreateItemFromParsingName = shell32.SHCreateItemFromParsingName
-SHCreateItemFromParsingName.argtypes = [wt.LPCWSTR, c_void_p, POINTER(GUID), POINTER(c_void_p)]
-SHCreateItemFromParsingName.restype = ctypes.c_long
-
-
-# SIIGBF flags
-# https://learn.microsoft.com/en-us/windows/win32/api/shobjidl_core/nf-shobjidl_core-ishellitemimagefactory-getimage
-SIIGBF_RESIZETOFIT = 0x00
-SIIGBF_BIGGERSIZEOK = 0x01
-SIIGBF_MEMORYONLY = 0x02
-SIIGBF_ICONONLY = 0x04
-SIIGBF_THUMBNAILONLY = 0x08
-SIIGBF_INCACHEONLY = 0x10
-
-
-def _hbitmap_to_image(hbitmap: int) -> Image.Image | None:
-    # Get bitmap info
-    bmp = BITMAP()
-    res = GetObject(wt.HBITMAP(hbitmap), ctypes.sizeof(BITMAP), ctypes.byref(bmp))
-    if res == 0:
-        return None
-
-    width, height = bmp.bmWidth, bmp.bmHeight
-    # Prepare BITMAPINFO
-    bi = BITMAPINFO()
-    bi.bmiHeader.biSize = ctypes.sizeof(BITMAPINFOHEADER)
-    bi.bmiHeader.biWidth = width
-    bi.bmiHeader.biHeight = -abs(height)
-    bi.bmiHeader.biPlanes = 1
-    bi.bmiHeader.biBitCount = 32
-
-    buf_size = width * height * 4
-    pixel_buffer = (ctypes.c_byte * buf_size)()
-
-    hdc = GetDC(None)
-    try:
-        n = GetDIBits(
-            hdc,
-            wt.HBITMAP(hbitmap),
-            0,
-            height,
-            ctypes.byref(pixel_buffer),
-            ctypes.byref(bi),
-            0,
-        )
-        if n == 0:
-            return None
-        # Convert buffer to bytes and interpret as BGRA
-        raw_bytes = ctypes.string_at(ctypes.addressof(pixel_buffer), buf_size)
-        return Image.frombuffer("RGBA", (width, height), raw_bytes, "raw", "BGRA", 0, 1)
-    finally:
-        ReleaseDC(None, hdc)
-        try:
-            DeleteObject(wt.HBITMAP(hbitmap))
-        except Exception:
-            pass
-
-
-def get_icon_for_aumid(aumid: str, size: int = 48) -> Image.Image | None:
-    if not aumid:
-        return None
+    Returns:
+        AUMID string if the shortcut has one embedded, None otherwise
+    """
+    import os
 
     _ensure_com_initialized()
-    path = f"shell:AppsFolder\\{aumid}"
-    ppv = c_void_p()
-    hr = SHCreateItemFromParsingName(path, None, byref(IID_IShellItemImageFactory), byref(ppv))
-    if hr != 0 or not ppv.value:
+
+    if not os.path.exists(shortcut_path):
         return None
 
-    factory = ctypes.cast(ppv, POINTER(IShellItemImageFactory))
-    hbmp = wt.HBITMAP()
+    store_ptr = c_void_p()
+    hr = SHGetPropertyStoreFromParsingName(
+        shortcut_path, None, GPS_DEFAULT, byref(IID_IPropertyStore), byref(store_ptr)
+    )
+
+    if hr != 0 or not store_ptr.value:
+        return None
+
+    store = ctypes.cast(store_ptr, POINTER(IPropertyStore))
+    pv = PROPVARIANT()
+    aumid = None
+
     try:
-        sz = SIZE(size, size)
-        flags = SIIGBF_ICONONLY | SIIGBF_BIGGERSIZEOK
-        hr = factory.contents.lpVtbl.contents.GetImage(factory, sz, flags, byref(hbmp))
-        if hr != 0 or not hbmp.value:
-            return None
-        return _hbitmap_to_image(hbmp.value)
+        hr = store.contents.lpVtbl.contents.GetValue(store, byref(PKEY_AppUserModel_ID), byref(pv))
+        if hr == 0 and pv.vt == VT_LPWSTR and pv.pwszVal:
+            aumid = ctypes.wstring_at(pv.pwszVal)
     finally:
+        PropVariantClear(byref(pv))
         try:
-            factory.contents.lpVtbl.contents.Release(factory)
+            store.contents.lpVtbl.contents.Release(store)
         except Exception:
             pass
+
+    return aumid

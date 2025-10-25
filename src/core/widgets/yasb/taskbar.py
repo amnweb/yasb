@@ -11,10 +11,12 @@ from PyQt6.QtWidgets import QApplication, QFrame, QHBoxLayout, QLabel, QSizePoli
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import add_shadow, refresh_widget_style
 from core.utils.widgets.animation_manager import AnimationManager
+from core.utils.widgets.recycle_bin.recycle_bin_monitor import RecycleBinMonitor
 from core.utils.widgets.taskbar.app_menu import show_context_menu
 from core.utils.widgets.taskbar.pin_manager import PinManager
 from core.utils.widgets.taskbar.thumbnail import TaskbarThumbnailManager
-from core.utils.win32.app_icons import get_window_icon
+from core.utils.win32.app_icons import get_stock_icon, get_window_icon
+from core.utils.win32.constants import KnownCLSID
 from core.utils.win32.utilities import get_monitor_hwnd, get_monitor_info
 from core.utils.win32.window_actions import (
     can_minimize,
@@ -205,6 +207,9 @@ class TaskbarDropWidget(QFrame):
     def dragEnterEvent(self, event):
         source = event.source()
         if isinstance(source, DraggableAppButton):
+            if source.parent() is not self:
+                event.ignore()
+                return
             self.dragged_button = source
             self.dragged_button.setProperty("dragging", True)
             self.refresh_styles()
@@ -223,6 +228,9 @@ class TaskbarDropWidget(QFrame):
     def dragMoveEvent(self, event):
         source = event.source()
         if isinstance(source, DraggableAppButton):
+            if source.parent() is not self:
+                event.ignore()
+                return
             pos = event.position().toPoint()
             hovered = self._find_button_at(pos)
             if isinstance(hovered, DraggableAppButton) and hovered is not self.dragged_button:
@@ -267,6 +275,12 @@ class TaskbarDropWidget(QFrame):
             event.ignore()
             return
 
+        # Ignore drops from other taskbar instances to avoid duplicate handling
+        if source.parent() is not self:
+            event.ignore()
+            self.drag_ended.emit()
+            return
+
         # Finalize reorder
         self._clear_hover_highlight()
         source.setProperty("dragging", False)
@@ -282,28 +296,27 @@ class TaskbarDropWidget(QFrame):
                 insert_index = self.get_insert_index(pos)
 
         current_index = -1
-        for i in range(self.main_layout.count()):
+        count = self.main_layout.count()
+        for i in range(count):
             item = self.main_layout.itemAt(i)
             if item and item.widget() is source:
                 current_index = i
                 break
 
-        if source.parent() == self:
-            # Adjust index after removal if moving forward in the list
-            adjusted_index = insert_index
-            if current_index != -1 and adjusted_index > current_index:
-                adjusted_index -= 1
-            # If after adjustment it's the same slot, treat as no-op
-            if adjusted_index == current_index:
-                self.hide_drop_indicator()
-                event.acceptProposedAction()
-                self.drag_ended.emit()
-                return
-            self.main_layout.removeWidget(source)
-        else:
-            source.setParent(self)
+        # Adjust index after removal if moving forward in the list
+        adjusted_index = insert_index
+        if current_index != -1 and adjusted_index > current_index:
+            adjusted_index -= 1
+        # If after adjustment it's the same slot, treat as no-op
+        if adjusted_index == current_index:
+            self.hide_drop_indicator()
+            event.acceptProposedAction()
+            self.drag_ended.emit()
+            return
 
-        target_index = adjusted_index if source.parent() == self else insert_index
+        self.main_layout.removeWidget(source)
+
+        target_index = adjusted_index
         self.main_layout.insertWidget(target_index, source)
         source.show()
         self.refresh_styles()
@@ -366,9 +379,10 @@ class TaskbarDropWidget(QFrame):
         self._hover_timer.start(200)
 
     def get_insert_index(self, drop_position):
-        if self.main_layout.count() == 0:
+        count = self.main_layout.count()
+        if count == 0:
             return 0
-        for i in range(self.main_layout.count()):
+        for i in range(count):
             item = self.main_layout.itemAt(i)
             if not item or not item.widget():
                 continue
@@ -376,7 +390,7 @@ class TaskbarDropWidget(QFrame):
             mid_x = w.geometry().center().x()
             if drop_position.x() < mid_x:
                 return i
-        return self.main_layout.count()
+        return count
 
     def _get_index_from_hover(self, hovered_btn: QFrame, source_btn: QFrame) -> int:
         """Return insertion index based on relative positions:
@@ -385,7 +399,8 @@ class TaskbarDropWidget(QFrame):
         This makes dropping anywhere on a hovered button perform a move."""
         hovered_idx = -1
         source_idx = -1
-        for i in range(self.main_layout.count()):
+        count = self.main_layout.count()
+        for i in range(count):
             w = self.main_layout.itemAt(i).widget()
             if w is hovered_btn:
                 hovered_idx = i
@@ -438,7 +453,6 @@ class TaskbarWidget(BaseWidget):
         self._show_only_visible = show_only_visible
         self._ignore_apps = ignore_apps
         self._hide_empty = hide_empty
-        self._padding = container_padding
         self._label_shadow = label_shadow
         self._container_shadow = container_shadow
         self._widget_monitor_handle = None
@@ -463,15 +477,14 @@ class TaskbarWidget(BaseWidget):
         self._suspend_updates = False
         self._animating_widgets = {}
         self._flashing_animation = {}  # Track which hwnds are currently flashing
+        self._recycle_bin_state = {"is_empty": True}
         self._pending_pinned_recreations = set()  # Track pending placeholder recreations
 
         # Initialize pin manager for pinned apps functionality
         self._pin_manager = PinManager()
 
         self._widget_container = TaskbarDropWidget(self)
-        self._widget_container.setContentsMargins(
-            self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
-        )
+        self._widget_container.setContentsMargins(0, 0, 0, 0)
         self._widget_container_layout = self._widget_container.main_layout
         self._widget_container.setProperty("class", "widget-container")
         add_shadow(self._widget_container, self._container_shadow)
@@ -518,10 +531,6 @@ class TaskbarWidget(BaseWidget):
         """Load pinned apps from disk using PinManager."""
         self._pin_manager.load_pinned_apps()
 
-    def _save_pinned_apps(self) -> None:
-        """Save pinned apps to disk using PinManager."""
-        self._pin_manager.save_pinned_apps()
-
     def _get_app_identifier(self, hwnd: int, window_data: dict) -> tuple[str, dict]:
         """Get a unique identifier for an app and its metadata. Delegates to PinManager."""
         return PinManager.get_app_identifier(hwnd, window_data)
@@ -555,17 +564,7 @@ class TaskbarWidget(BaseWidget):
                     self._widget_container_layout.removeWidget(widget)
 
                     # Find the position to insert: after all pinned apps
-                    insert_pos = 0
-                    for i in range(self._widget_container_layout.count()):
-                        w = self._widget_container_layout.itemAt(i).widget()
-                        if not w:
-                            continue
-                        w_hwnd = w.property("hwnd")
-                        # Count all pinned apps (both running and pinned-only)
-                        if w_hwnd and w_hwnd < 0:  # Pinned-only
-                            insert_pos = i + 1
-                        elif w_hwnd and w_hwnd > 0 and w_hwnd in self._pin_manager.running_pinned:  # Running pinned
-                            insert_pos = i + 1
+                    insert_pos = self._find_insert_position_after_pinned()
 
                     # Insert at the calculated position
                     self._widget_container_layout.insertWidget(insert_pos, widget)
@@ -599,11 +598,28 @@ class TaskbarWidget(BaseWidget):
 
     def _get_hwnd_position(self, hwnd: int) -> int:
         """Get the position of a hwnd in the widget layout."""
-        for i in range(self._widget_container_layout.count()):
+        count = self._widget_container_layout.count()
+        for i in range(count):
             w = self._widget_container_layout.itemAt(i).widget()
             if w and w.property("hwnd") == hwnd:
                 return i
         return -1
+
+    def _find_insert_position_after_pinned(self) -> int:
+        """Find the position to insert after all pinned apps."""
+        insert_pos = 0
+        count = self._widget_container_layout.count()
+        for i in range(count):
+            w = self._widget_container_layout.itemAt(i).widget()
+            if not w:
+                continue
+            w_hwnd = w.property("hwnd")
+            # Count all pinned apps (both running and pinned-only)
+            if w_hwnd and w_hwnd < 0:  # Pinned-only
+                insert_pos = i + 1
+            elif w_hwnd and w_hwnd > 0 and w_hwnd in self._pin_manager.running_pinned:  # Running pinned
+                insert_pos = i + 1
+        return insert_pos
 
     def _update_pinned_order_from_layout(self) -> None:
         """Update the pinned order based on current layout positions after drag-and-drop.
@@ -613,7 +629,8 @@ class TaskbarWidget(BaseWidget):
         try:
             # Collect pinned apps visible in current layout (in their new order)
             visible_order = []
-            for i in range(self._widget_container_layout.count()):
+            count = self._widget_container_layout.count()
+            for i in range(count):
                 widget = self._widget_container_layout.itemAt(i).widget()
                 if not widget:
                     continue
@@ -662,6 +679,10 @@ class TaskbarWidget(BaseWidget):
             metadata = self._pin_manager.pinned_apps[unique_id]
             self._create_pinned_app_button(unique_id, metadata)
 
+            # Start monitoring if Recycle Bin is pinned
+            if KnownCLSID.RECYCLE_BIN in unique_id.upper():
+                self._rbin_monitor_start()
+
     def _create_pinned_app_button(self, unique_id: str, metadata: dict) -> None:
         """Create a button for a pinned app that's not currently running."""
         if unique_id in self._pin_manager.running_pinned.values():
@@ -669,11 +690,12 @@ class TaskbarWidget(BaseWidget):
 
         pseudo_hwnd = -(abs(hash(unique_id)) % 1000000000 + 1000000000)
         title = metadata.get("title", "App")
+
+        # Always use _load_cached_icon - it handles Recycle Bin caching internally
         icon = self._load_cached_icon(unique_id)
 
         container = self._create_pinned_app_container(title, icon, pseudo_hwnd, unique_id)
         self._hwnd_to_widget[pseudo_hwnd] = container
-        add_shadow(container, self._label_shadow)
 
         # Add with animation if enabled
         if self._animation["enabled"]:
@@ -707,7 +729,6 @@ class TaskbarWidget(BaseWidget):
 
         container = self._create_pinned_app_container(title, icon, pseudo_hwnd, unique_id)
         self._hwnd_to_widget[pseudo_hwnd] = container
-        add_shadow(container, self._label_shadow)
 
         # Add with animation if enabled
         if self._animation["enabled"]:
@@ -740,13 +761,24 @@ class TaskbarWidget(BaseWidget):
         container.setProperty("pinned", True)
         container.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
 
-        layout = QHBoxLayout(container)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
+        # Create outer layout with no margins
+        outer_layout = QHBoxLayout(container)
+        outer_layout.setContentsMargins(0, 0, 0, 0)
+        outer_layout.setSpacing(0)
+
+        # Create inner content wrapper - this holds the actual content (icon + title)
+        # and has shadow effects applied, while the outer container handles animations
+        content_wrapper = QFrame()
+
+        # Apply shadow effect to content wrapper
+        add_shadow(content_wrapper, self._label_shadow)
+
+        content_layout = QHBoxLayout(content_wrapper)
+        content_layout.setContentsMargins(0, 0, 0, 0)
+        content_layout.setSpacing(0)
 
         icon_label = QLabel()
         icon_label.setProperty("class", "app-icon")
-
         try:
             icon_label.setFixedSize(self._label_icon_size, self._label_icon_size)
         except Exception:
@@ -754,7 +786,10 @@ class TaskbarWidget(BaseWidget):
         if icon is not None:
             icon_label.setPixmap(icon)
         icon_label.setProperty("hwnd", pseudo_hwnd)
-        layout.addWidget(icon_label)
+        content_layout.addWidget(icon_label)
+
+        # Add content wrapper to outer container
+        outer_layout.addWidget(content_wrapper)
 
         # Use original tooltip setting for pinned apps (not affected by preview)
         if self._tooltip_enabled:
@@ -764,13 +799,91 @@ class TaskbarWidget(BaseWidget):
 
     def _load_cached_icon(self, unique_id: str) -> QPixmap | None:
         """Load a cached icon using PinManager with DPI awareness."""
-        # Get the DPI for this screen
+        # Special handling for Recycle Bin, always generate fresh based on current state
+        if KnownCLSID.RECYCLE_BIN in unique_id.upper():
+            is_empty = self._recycle_bin_state.get("is_empty", True)
+            return self._get_recycle_bin_icon(is_empty)
+
+        # Normal apps use PinManager cache
         dpi = self.screen().devicePixelRatio() if self.screen() else 1.0
         return self._pin_manager.load_cached_icon(unique_id, self._label_icon_size, dpi)
 
-    def _delete_cached_icon(self, unique_id: str) -> None:
-        """Delete a cached icon using PinManager."""
-        self._pin_manager.delete_cached_icon(unique_id)
+    def _on_recycle_bin_update(self, info: dict) -> None:
+        """Update pinned Recycle Bin icons when bin state changes."""
+        try:
+            is_empty = info.get("num_items", 0) == 0
+            self._recycle_bin_state["is_empty"] = is_empty
+
+            # Generate fresh icon for current state
+            icon = self._get_recycle_bin_icon(is_empty)
+            if not icon:
+                return
+
+            # Find and update all Recycle Bin widgets
+            recycle_bin_guid = KnownCLSID.RECYCLE_BIN
+            for widget in self._hwnd_to_widget.values():
+                uid = widget.property("unique_id")
+                if uid and recycle_bin_guid in uid.upper():
+                    icon_label = self._get_icon_label(widget)
+                    if icon_label:
+                        icon_label.setPixmap(icon)
+
+        except Exception as e:
+            logging.error(f"Error in _on_recycle_bin_update: {e}")
+
+    def _get_recycle_bin_icon(self, is_empty: bool) -> QPixmap | None:
+        """Get Recycle Bin icon from Windows stock icons with caching."""
+        try:
+            # Use a special cache key for Recycle Bin: ("RECYCLE_BIN", is_empty, dpi)
+            cache_key = ("RECYCLE_BIN", is_empty, self._dpi)
+
+            # Check if icon is already cached
+            if cache_key in self._icon_cache:
+                return self._icon_cache[cache_key]
+
+            # Get stock icon (31 = empty, 32 = full)
+            icon_img = get_stock_icon(31 if is_empty else 32)
+            if not icon_img:
+                return None
+
+            dpi = self._dpi
+            target_size = int(self._label_icon_size * dpi)
+            icon_img = icon_img.resize((target_size, target_size), Image.LANCZOS).convert("RGBA")
+
+            # Convert to QPixmap
+            qimage = QImage(icon_img.tobytes(), icon_img.width, icon_img.height, QImage.Format.Format_RGBA8888)
+            pixmap = QPixmap.fromImage(qimage)
+            pixmap.setDevicePixelRatio(dpi)
+
+            # Cache the pixmap for future use
+            self._icon_cache[cache_key] = pixmap
+
+            return pixmap
+
+        except Exception as e:
+            logging.error(f"Error getting recycle bin icon: {e}")
+            return None
+
+    def _rbin_monitor_start(self):
+        """Start monitoring recycle bin changes."""
+        try:
+            # Only subscribe if not already subscribed
+            if not hasattr(self, "rbin_monitor") or self.rbin_monitor is None:
+                self.rbin_monitor = RecycleBinMonitor.get_instance()
+                self.rbin_monitor.subscribe(id(self))  # Register this widget as a subscriber
+                self.rbin_monitor.bin_updated.connect(self._on_recycle_bin_update, Qt.ConnectionType.UniqueConnection)
+        except Exception as e:
+            logging.error(f"Error subscribing to recycle bin: {e}")
+
+    def _rbin_monitor_stop(self):
+        """Stop monitoring recycle bin changes."""
+        try:
+            if hasattr(self, "rbin_monitor") and self.rbin_monitor:
+                self.rbin_monitor.bin_updated.disconnect(self._on_recycle_bin_update)
+                self.rbin_monitor.unsubscribe(id(self))  # Unregister this widget
+                self.rbin_monitor = None
+        except Exception as e:
+            logging.error(f"Error unsubscribing from recycle bin monitor: {e}")
 
     def show_preview_for_hwnd(self, hwnd: int, anchor_widget: QWidget) -> None:
         try:
@@ -791,6 +904,13 @@ class TaskbarWidget(BaseWidget):
             super().showEvent(event)
         except Exception:
             pass
+
+        # Cache the DPI when widget is first shown and properly connected to screen
+        if self._dpi is None:
+            try:
+                self._dpi = self.screen().devicePixelRatio() if self.screen() else 1.0
+            except Exception:
+                self._dpi = 1.0
 
         # Load and display pinned apps FIRST
         # This ensures pinned apps appear before running windows are added
@@ -828,6 +948,10 @@ class TaskbarWidget(BaseWidget):
             self._load_pinned_apps()
 
             if action == "pin":
+                # Start monitoring if Recycle Bin is being pinned
+                if KnownCLSID.RECYCLE_BIN in unique_id.upper():
+                    self._rbin_monitor_start()
+
                 # Display pinned app (pinned apps are global across all monitors)
                 if unique_id in self._pin_manager.pinned_apps:
                     metadata = self._pin_manager.pinned_apps[unique_id]
@@ -858,7 +982,8 @@ class TaskbarWidget(BaseWidget):
 
                                 # Find the position to insert: after all pinned apps
                                 insert_pos = 0
-                                for i in range(self._widget_container_layout.count()):
+                                count = self._widget_container_layout.count()
+                                for i in range(count):
                                     w = self._widget_container_layout.itemAt(i).widget()
                                     if not w:
                                         continue
@@ -878,14 +1003,15 @@ class TaskbarWidget(BaseWidget):
 
                     if not found_running:
                         # App is not running, create pinned-only button
-                        already_displayed = any(
-                            w.property("unique_id") == unique_id
-                            for w in [
-                                self._widget_container_layout.itemAt(i).widget()
-                                for i in range(self._widget_container_layout.count())
-                            ]
-                            if w
-                        )
+                        # Check if already displayed using direct lookup
+                        already_displayed = False
+                        count = self._widget_container_layout.count()
+                        for i in range(count):
+                            w = self._widget_container_layout.itemAt(i).widget()
+                            if w and w.property("unique_id") == unique_id:
+                                already_displayed = True
+                                break
+
                         if not already_displayed:
                             # Create the pinned button
                             pseudo_hwnd = -(abs(hash(unique_id)) % 1000000000 + 1000000000)
@@ -894,22 +1020,9 @@ class TaskbarWidget(BaseWidget):
 
                             container = self._create_pinned_app_container(title, icon, pseudo_hwnd, unique_id)
                             self._hwnd_to_widget[pseudo_hwnd] = container
-                            add_shadow(container, self._label_shadow)
 
                             # Find the position to insert: after all pinned apps
-                            insert_pos = 0
-                            for i in range(self._widget_container_layout.count()):
-                                w = self._widget_container_layout.itemAt(i).widget()
-                                if not w:
-                                    continue
-                                w_hwnd = w.property("hwnd")
-                                # Count all pinned apps (both running and pinned-only)
-                                if w_hwnd and w_hwnd < 0:  # Pinned-only
-                                    insert_pos = i + 1
-                                elif (
-                                    w_hwnd and w_hwnd > 0 and w_hwnd in self._pin_manager.running_pinned
-                                ):  # Running pinned
-                                    insert_pos = i + 1
+                            insert_pos = self._find_insert_position_after_pinned()
 
                             # Add with animation if enabled
                             if self._animation["enabled"]:
@@ -930,6 +1043,10 @@ class TaskbarWidget(BaseWidget):
                                 self._show_taskbar_widget()
 
             elif action == "unpin":
+                # Stop monitoring if Recycle Bin is being unpinned
+                if KnownCLSID.RECYCLE_BIN in unique_id.upper():
+                    self._rbin_monitor_stop()
+
                 # Remove the pinned-only button if it exists (pseudo hwnd < 0)
                 for pseudo_hwnd, widget in list(self._hwnd_to_widget.items()):
                     if pseudo_hwnd < 0 and widget.property("unique_id") == unique_id:
@@ -954,7 +1071,8 @@ class TaskbarWidget(BaseWidget):
                 # Collect all current widgets (both pinned and running)
                 current_widgets = {}  # unique_id or hwnd -> widget
 
-                for i in range(self._widget_container_layout.count()):
+                count = self._widget_container_layout.count()
+                for i in range(count):
                     widget = self._widget_container_layout.itemAt(i).widget()
                     if not widget:
                         continue
@@ -1166,7 +1284,6 @@ class TaskbarWidget(BaseWidget):
 
         container = self._create_app_container(title, icon, hwnd)
         self._hwnd_to_widget[hwnd] = container
-        add_shadow(container, self._label_shadow)
 
         if is_pinned:
             container.setProperty("pinned", True)
@@ -1208,7 +1325,6 @@ class TaskbarWidget(BaseWidget):
         # Check if this is a pinned app that needs to be replaced with pinned-only button
         unique_id = self._pin_manager.running_pinned.pop(hwnd, None)
         is_pinned = unique_id and unique_id in self._pin_manager.pinned_apps
-        print(unique_id)
         # If process_name is None and it's not a pinned app, just remove immediately
         # Some apps like Nvidia App send remove events with no process info when they close
         if window_data and window_data.get("process_name") is None and not is_pinned:
@@ -1263,6 +1379,12 @@ class TaskbarWidget(BaseWidget):
         """Update window UI element (focused on the specific widget, no global sweep)."""
         if self._suspend_updates:
             return
+
+        # Skip updates for Recycle Bin to prevent identity loss during navigation
+        # unique_id = self._pin_manager.running_pinned.get(hwnd)
+        # if unique_id and KnownCLSID.RECYCLE_BIN in unique_id.upper():
+        #     return
+
         title = window_data.get("title", "")
         process = window_data.get("process_name", "")
         # If process is explorer.exe (e.g. file explorer), we use the title for caching the icon.
@@ -1273,7 +1395,8 @@ class TaskbarWidget(BaseWidget):
         widget = self._hwnd_to_widget.get(hwnd)
         if widget is None:
             # Fallback scan once and store mapping
-            for i in range(self._widget_container_layout.count()):
+            count = self._widget_container_layout.count()
+            for i in range(count):
                 w = self._widget_container_layout.itemAt(i).widget()
                 if w and w.property("hwnd") == hwnd:
                     widget = w
@@ -1295,15 +1418,14 @@ class TaskbarWidget(BaseWidget):
             # Stop flashing animation if it's no longer flashing
             self._stop_flashing_animation(hwnd)
 
-        try:
-            icon_label = layout.itemAt(0).widget()
-            if icon_label and icon is not None:
+        # Update icon using helper method
+        if icon:
+            icon_label = self._get_icon_label(widget)
+            if icon_label:
                 icon_label.setPixmap(icon)
-        except Exception:
-            pass
 
         try:
-            if self._title_label["enabled"] and layout.count() > 1:
+            if self._title_label["enabled"]:
                 title_wrapper = self._get_title_wrapper(widget)
                 title_label = self._get_title_label(title_wrapper)
                 if title_label:
@@ -1454,6 +1576,12 @@ class TaskbarWidget(BaseWidget):
         if not hwnd:
             return
 
+        # Remove hover state from the button
+        container = self._hwnd_to_widget.get(hwnd)
+        if container:
+            container.setAttribute(Qt.WidgetAttribute.WA_UnderMouse, False)
+            container.update()
+
         self._show_context_menu(hwnd, QCursor.pos())
 
     def _show_context_menu(self, hwnd: int, pos) -> None:
@@ -1467,7 +1595,12 @@ class TaskbarWidget(BaseWidget):
 
         def _handle_hide():
             self._context_menu_open = False
-            self._refresh_title_visibility(hwnd)
+            if self._title_label.get("enabled") and self._title_label.get("show") == "focused":
+                for taskbar_hwnd in list(self._hwnd_to_widget.keys()):
+                    if taskbar_hwnd > 0:
+                        self._refresh_title_visibility(taskbar_hwnd)
+            else:
+                self._refresh_title_visibility(hwnd)
 
         menu.aboutToHide.connect(_handle_hide)
 
@@ -1550,13 +1683,24 @@ class TaskbarWidget(BaseWidget):
         container.setProperty("hwnd", hwnd)
         container.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
 
-        layout = QHBoxLayout(container)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
+        # Create outer layout with no margins
+        outer_layout = QHBoxLayout(container)
+        outer_layout.setContentsMargins(0, 0, 0, 0)
+        outer_layout.setSpacing(0)
+
+        # Create inner content wrapper - this holds the actual content (icon + title)
+        # and has shadow effects applied, while the outer container handles animations
+        content_wrapper = QFrame()
+
+        # Apply shadow effect to content wrapper
+        add_shadow(content_wrapper, self._label_shadow)
+
+        content_layout = QHBoxLayout(content_wrapper)
+        content_layout.setContentsMargins(0, 0, 0, 0)
+        content_layout.setSpacing(0)
 
         icon_label = QLabel()
         icon_label.setProperty("class", "app-icon")
-
         try:
             icon_label.setFixedSize(self._label_icon_size, self._label_icon_size)
         except Exception:
@@ -1564,7 +1708,7 @@ class TaskbarWidget(BaseWidget):
         if icon is not None:
             icon_label.setPixmap(icon)
         icon_label.setProperty("hwnd", hwnd)
-        layout.addWidget(icon_label)
+        content_layout.addWidget(icon_label)
 
         if self._title_label["enabled"]:
             # Wrap the label to animate only wrapper width and reduce reflow
@@ -1587,7 +1731,7 @@ class TaskbarWidget(BaseWidget):
                 pass
 
             tw_layout.addWidget(title_label)
-            layout.addWidget(title_wrapper)
+            content_layout.addWidget(title_wrapper)
 
             if self._title_label["show"] == "focused":
                 initial_visible = self._get_title_visibility(hwnd)
@@ -1597,6 +1741,10 @@ class TaskbarWidget(BaseWidget):
                         title_wrapper.setMaximumWidth(0)
                     except Exception:
                         pass
+
+        # Add content wrapper to outer container
+        outer_layout.addWidget(content_wrapper)
+
         if self._tooltip:
             set_tooltip(container, title, delay=0)
 
@@ -1611,7 +1759,7 @@ class TaskbarWidget(BaseWidget):
         # Track that this hwnd is flashing
         self._flashing_animation[hwnd] = True
         AnimationManager.start_animation(
-            widget, animation_type="blink", animation_duration=800, repeat_interval=2000, timeout=12000
+            widget, animation_type="fadeInOut", animation_duration=800, repeat_interval=2000, timeout=14000
         )
 
     def _stop_flashing_animation(self, hwnd: int):
@@ -1624,8 +1772,7 @@ class TaskbarWidget(BaseWidget):
 
     def _get_container_class(self, hwnd: int) -> str:
         """Get CSS class for the app container based on window active and flashing status."""
-        # Base class - all running apps get 'running' class
-        base_class = "app-container running"
+        base_class = "app-container"
 
         # Check if window is active using task manager data
         if hasattr(self, "_task_manager") and self._task_manager and hwnd in self._task_manager._windows:
@@ -1643,18 +1790,25 @@ class TaskbarWidget(BaseWidget):
         if hwnd == win32gui.GetForegroundWindow():
             return f"{base_class} foreground"
 
-        return base_class
+        # Not active, not flashing - just running
+        return f"{base_class} running"
 
     def _get_app_icon(self, hwnd: int, title: str) -> QPixmap | None:
         """Return a QPixmap for the given window handle, using a DPI-aware cache."""
         try:
+            # Check if this is a Recycle Bin window - use monitored state instead of window icon
+            unique_id = self._pin_manager.running_pinned.get(hwnd)
+            if unique_id and KnownCLSID.RECYCLE_BIN in unique_id.upper():
+                # Use the cached icon based on Recycle Bin monitor's state
+                is_empty = self._recycle_bin_state.get("is_empty", True)
+                return self._get_recycle_bin_icon(is_empty)
+
             cache_key = (hwnd, title, self._dpi)
             if cache_key in self._icon_cache:
                 icon_img = self._icon_cache[cache_key]
             else:
                 icon_img = get_window_icon(hwnd)
                 if icon_img:
-                    self._dpi = self.screen().devicePixelRatio()
                     icon_img = icon_img.resize(
                         (int(self._label_icon_size * self._dpi), int(self._label_icon_size * self._dpi)), Image.LANCZOS
                     ).convert("RGBA")
@@ -1672,24 +1826,6 @@ class TaskbarWidget(BaseWidget):
             if DEBUG:
                 logging.exception(f"Failed to get icons for window with HWND {hwnd} ")
             return None
-
-    def _retry_get_and_set_icon(self, hwnd: int, title: str) -> None:
-        """Retry fetch and, if ready, set the pixmap on the window's icon label."""
-        try:
-            pix = self._get_app_icon(hwnd, title)
-            if not pix:
-                return
-            widget = self._hwnd_to_widget.get(hwnd)
-            if not widget:
-                return
-            layout = widget.layout()
-            if not layout:
-                return
-            lbl = layout.itemAt(0).widget()
-            if isinstance(lbl, QLabel):
-                lbl.setPixmap(pix)
-        except Exception:
-            pass
 
     def _perform_action(self, action: str) -> None:
         widget = QApplication.instance().widgetAt(QCursor.pos())
@@ -1828,7 +1964,8 @@ class TaskbarWidget(BaseWidget):
     def _clear_others_set_foreground(self, target_hwnd: int | None) -> None:
         """Set a single 'foreground' entry; preserve flashing from manager; toggle focused-only titles."""
         try:
-            for i in range(self._widget_container_layout.count()):
+            count = self._widget_container_layout.count()
+            for i in range(count):
                 w = self._widget_container_layout.itemAt(i).widget()
                 if not w:
                     continue
@@ -1846,38 +1983,68 @@ class TaskbarWidget(BaseWidget):
                     if hasattr(self, "_task_manager") and self._task_manager and hwnd in self._task_manager._windows:
                         aw = self._task_manager._windows[hwnd]
                         if getattr(aw, "is_flashing", False):
-                            new_cls = "app-container running flashing"
+                            new_cls = "app-container flashing"
                 except Exception:
                     pass
 
                 # Target gets 'foreground' (manager usually clears flashing on activation)
                 if target_hwnd is not None and hwnd == target_hwnd:
-                    new_cls = "app-container running foreground"
+                    new_cls = "app-container foreground"
 
                 if w.property("class") != new_cls:
                     w.setProperty("class", new_cls)
                     if self._title_label.get("enabled") and self._title_label.get("show") == "focused":
-                        lay = w.layout()
-                        if lay and lay.count() > 1:
-                            title_wrapper = lay.itemAt(1).widget()
-                            if title_wrapper:
-                                want_visible = target_hwnd is not None and hwnd == target_hwnd
-                                if title_wrapper.isVisible() != want_visible:
-                                    self._animate_or_set_title_visible(title_wrapper, want_visible)
-                                    lay.activate()
+                        title_wrapper = self._get_title_wrapper(w)
+                        if title_wrapper:
+                            want_visible = target_hwnd is not None and hwnd == target_hwnd
+                            if title_wrapper.isVisible() != want_visible:
+                                self._animate_or_set_title_visible(title_wrapper, want_visible)
+                                try:
+                                    w.layout().activate()
+                                except Exception:
+                                    pass
                     refresh_widget_style(w)
         except Exception:
             pass
 
-    def _get_title_wrapper(self, container: QWidget) -> QWidget | None:
+    def _get_icon_label(self, container: QWidget) -> QLabel | None:
+        """Get the icon label widget from a container, navigating through the content_wrapper structure."""
         try:
             if not container:
                 return None
-            layout = container.layout()
-            if layout and layout.count() > 1:
-                wrapper = layout.itemAt(1).widget()
-                if isinstance(wrapper, QWidget):
-                    return wrapper
+            outer_layout = container.layout()
+            if not outer_layout or outer_layout.count() < 1:
+                return None
+            # Get content_wrapper (first child of outer_layout)
+            content_wrapper = outer_layout.itemAt(0).widget()
+            if not content_wrapper:
+                return None
+            content_layout = content_wrapper.layout()
+            if content_layout and content_layout.count() > 0:
+                icon_label = content_layout.itemAt(0).widget()
+                if isinstance(icon_label, QLabel):
+                    return icon_label
+        except Exception:
+            pass
+        return None
+
+    def _get_title_wrapper(self, container: QWidget) -> QWidget | None:
+        """Get the title wrapper widget from a container, navigating through the content_wrapper structure."""
+        try:
+            if not container:
+                return None
+            outer_layout = container.layout()
+            if not outer_layout or outer_layout.count() < 1:
+                return None
+            # Get content_wrapper (first child of outer_layout)
+            content_wrapper = outer_layout.itemAt(0).widget()
+            if not content_wrapper:
+                return None
+            content_layout = content_wrapper.layout()
+            if content_layout and content_layout.count() > 1:
+                title_wrapper = content_layout.itemAt(1).widget()
+                if isinstance(title_wrapper, QWidget):
+                    return title_wrapper
         except Exception:
             pass
         return None
@@ -1901,9 +2068,6 @@ class TaskbarWidget(BaseWidget):
         animation.setDuration(duration)
 
         animation.setEasingCurve(QEasingCurve.Type.InOutQuad)
-        if end_width > start_width and not container.graphicsEffect():
-            add_shadow(container, self._label_shadow)
-
         # Track animation for add operations
         if hwnd is not None and end_width > start_width:
             self._animating_widgets[hwnd] = animation

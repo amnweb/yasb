@@ -10,6 +10,7 @@ from ctypes import (
     c_ulonglong,
     c_void_p,
     c_wchar_p,
+    wintypes,
 )
 from ctypes.wintypes import (
     BOOL,
@@ -27,6 +28,7 @@ from ctypes.wintypes import (
     LPARAM,
     LPCWSTR,
     LPVOID,
+    MAX_PATH,
     UINT,
     ULONG,
     USHORT,
@@ -394,4 +396,19 @@ class MSG(ct.Structure):
         ("time", DWORD),
         ("pt_x", LONG),
         ("pt_y", LONG),
+    ]
+
+
+# Define SHQUERYRBINFO struct for Recycle Bin info
+class SHQUERYRBINFO(ct.Structure):
+    _fields_ = [("cbSize", wintypes.DWORD), ("i64Size", ct.c_longlong), ("i64NumItems", ct.c_longlong)]
+
+
+class SHSTOCKICONINFO(ct.Structure):
+    _fields_ = [
+        ("cbSize", wintypes.DWORD),
+        ("hIcon", wintypes.HICON),
+        ("iSysImageIndex", ct.c_int),
+        ("iIcon", ct.c_int),
+        ("szPath", wintypes.WCHAR * MAX_PATH),
     ]
