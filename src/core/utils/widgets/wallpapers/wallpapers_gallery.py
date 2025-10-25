@@ -2,6 +2,7 @@ import os
 import re
 
 from PyQt6.QtCore import (
+    QEvent,
     QObject,
     QPropertyAnimation,
     QRect,
@@ -14,7 +15,7 @@ from PyQt6.QtCore import (
     pyqtProperty,
     pyqtSignal,
 )
-from PyQt6.QtGui import QImageReader, QKeySequence, QPainter, QPainterPath, QPixmap, QShortcut
+from PyQt6.QtGui import QCursor, QImageReader, QKeySequence, QPainter, QPainterPath, QPixmap, QShortcut
 from PyQt6.QtWidgets import (
     QApplication,
     QGraphicsOpacityEffect,
@@ -48,6 +49,22 @@ class BaseStyledWidget(QWidget):
             "wallpapers-gallery-image:hover",
         ]
         filtered_stylesheet = self.extract_class_styles(stylesheet, classes_to_include)
+
+        # Add default background if .wallpapers-gallery-window doesn't have one
+        if ".wallpapers-gallery-window" in filtered_stylesheet:
+            # Check if background property exists in the wallpapers-gallery-window class
+            # We need to check that to prevent clicking issues on transparent areas where click goes through
+            window_style_match = re.search(r"\.wallpapers-gallery-window\s*\{([^}]*)\}", filtered_stylesheet, re.DOTALL)
+            if window_style_match:
+                style_content = window_style_match.group(1)
+                if not re.search(r"background(-color)?\s*:", style_content, re.IGNORECASE):
+                    filtered_stylesheet = re.sub(
+                        r"(\.wallpapers-gallery-window\s*\{)", r"\1 background: rgba(0,0,0,0.01);", filtered_stylesheet
+                    )
+        else:
+            # Class doesn't exist, add it with default background
+            filtered_stylesheet += "\n.wallpapers-gallery-window { background: rgba(0,0,0,0.01); }"
+
         self.setStyleSheet(filtered_stylesheet)
 
     def extract_class_styles(self, stylesheet, classes):
@@ -232,6 +249,7 @@ class ImageGallery(QMainWindow, BaseStyledWidget):
         self.threadpool = QThreadPool()
         self.threadpool.setMaxThreadCount(self.images_per_page)
         self.apply_stylesheet()
+        self.is_closing = False
 
     def initUI(self, parent=None):
         """Initialize the UI components and layout for the wallpapers gallery window."""
@@ -523,6 +541,10 @@ class ImageGallery(QMainWindow, BaseStyledWidget):
 
     def fade_out_and_close_gallery(self):
         """Close the gallery with a fade-out animation."""
+        if self.is_closing:
+            return
+        self.is_closing = True
+
         self.fade_out_animation = QPropertyAnimation(self, b"windowOpacity")
         self.fade_out_animation.setDuration(200)
         self.fade_out_animation.setStartValue(1)
@@ -539,3 +561,17 @@ class ImageGallery(QMainWindow, BaseStyledWidget):
         import gc
 
         gc.collect()
+
+    def mousePressEvent(self, event):
+        """Handle mouse press events on the window itself."""
+        super().mousePressEvent(event)
+        event.accept()
+
+    def changeEvent(self, event):
+        """Handle window state changes - close when window becomes inactive."""
+        if event.type() == QEvent.Type.ActivationChange:
+            if not self.isActiveWindow() and not self.is_closing:
+                cursor_pos = QCursor.pos()
+                if not self.geometry().contains(cursor_pos):
+                    self.fade_out_and_close_gallery()
+        super().changeEvent(event)
