@@ -84,6 +84,8 @@ class KomorebiClient:
         if isinstance(workspace["monocle_container"], dict):
             return True
 
+        if isinstance(workspace["maximized_window"], dict):
+            return True
         return False
 
     def get_workspace_by_window_hwnd(self, workspaces: list[Optional[dict]], window_hwnd: int) -> Optional[dict]:
