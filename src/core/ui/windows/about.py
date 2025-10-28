@@ -113,7 +113,7 @@ class AboutDialog(QDialog):
 
         update_service = get_update_service()
         arch_display = update_service.architecture_display
-        version_label = QLabel(f"Version {BUILD_VERSION} {arch_display} ({RELEASE_CHANNEL}")
+        version_label = QLabel(f"Version {BUILD_VERSION} {arch_display} ({RELEASE_CHANNEL})")
         version_label.setContentsMargins(0, 4, 0, 0)
         version_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         version_font = version_label.font()

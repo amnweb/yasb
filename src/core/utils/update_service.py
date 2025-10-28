@@ -82,7 +82,6 @@ class UpdateService:
         self._initialized = True
         self._current_version = BUILD_VERSION
         self._architecture = self._detect_architecture()
-        logging.info(f"UpdateService initialized: version={self._current_version}, arch={self._architecture.value}")
 
     @staticmethod
     def _detect_architecture() -> Architecture:
@@ -188,13 +187,6 @@ class UpdateService:
                 logging.info(f"Found architecture-specific asset: {asset.get('name')}")
                 return asset
 
-        # Fallback: try generic MSI (backwards compatibility)
-        for asset in assets:
-            name = asset.get("name", "").lower()
-            if name.endswith(".msi") and "aarch64" not in name and "arm64" not in name and "x64" not in name:
-                logging.warning(f"Using generic MSI asset: {asset.get('name')}")
-                return asset
-
         logging.error(f"No suitable MSI asset found for architecture: {self._architecture.value}")
         return None
 
@@ -244,7 +236,6 @@ class UpdateService:
                 architecture=self._architecture,
             )
 
-            logging.info(f"Update available: {latest_version} ({self._architecture.value})")
             return release_info
 
         except urllib.error.HTTPError as e:
@@ -340,7 +331,6 @@ def start_update_checker() -> None:
     global _update_checker_started
 
     if _update_checker_started:
-        logging.debug("Update checker already started")
         return
 
     _update_checker_started = True
