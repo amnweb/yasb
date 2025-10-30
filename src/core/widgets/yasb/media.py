@@ -729,6 +729,12 @@ class MediaWidget(BaseWidget):
 
             refresh_widget_style(self._prev_label, self._play_label, self._next_label)
 
+            # Clear any inline styles
+            # Related to https://github.com/amnweb/yasb/issues/481
+            self._prev_label.setStyleSheet("")
+            self._play_label.setStyleSheet("")
+            self._next_label.setStyleSheet("")
+
         # Update popup if it's currently open
         try:
             if hasattr(self, "_dialog") and self._dialog is not None and self._dialog.isVisible():
