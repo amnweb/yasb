@@ -99,6 +99,7 @@ https://github.com/user-attachments/assets/aab8d8e8-248f-46a1-919c-9b0601236ac1
 - **[GlazeWM Binding Mode](https://github.com/amnweb/yasb/wiki/(Widget)-GlazeWM-Binding-Mode)**: GlazeWM binding mode widget.
 - **[GlazeWM Tiling Direction](https://github.com/amnweb/yasb/wiki/(Widget)-GlazeWM-Tiling-Direction)**: GlazeWM tiling direction widget.
 - **[GlazeWM Workspaces](https://github.com/amnweb/yasb/wiki/(Widget)-GlazeWM-Workspaces)**: GlazeWM workspaces widget.
+- **[Glucose Monitor](https://github.com/amnweb/yasb/wiki/(Widget)-Glucose-Monitor)**: Nightscout CGM Widget.
 - **[Grouper](https://github.com/amnweb/yasb/wiki/(Widget)-Grouper)**: Groups multiple widgets together in a container.
 - **[GPU](https://github.com/amnweb/yasb/wiki/(Widget)-GPU)**: Displays GPU utilization, temperature, and memory usage.
 - **[Home](https://github.com/amnweb/yasb/wiki/(Widget)-Home)**: A customizable home widget menu.
