@@ -11,16 +11,6 @@ on:
         options:
           - stable
           - dev
-  pull_request:
-    types:
-      - opened
-      - reopened
-      - synchronize
-      - ready_for_review
-    branches:
-      - main
-      - feature/*
-      - dev
 
 permissions:
   contents: read
@@ -49,16 +39,12 @@ jobs:
             unsigned_msi_name: unsigned-msi-arm64
     runs-on: ${{ matrix.runner }}
     name: Build (${{ matrix.arch }})
-    if: |
-      github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'pull_request' && github.event.action != 'closed')
     
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
-        ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.ref }}
 
     - name: Set up Python
       uses: actions/setup-python@v5
@@ -95,16 +81,12 @@ jobs:
         Write-Host "Updated RELEASE_CHANNEL to dev-$env:COMMIT_HASH"
       shell: pwsh
 
-    - name: Activate virtual environment and install dependencies
+    - name: Install dependencies
       run: |
         .\venv\Scripts\Activate
         python -m pip install --upgrade pip
         pip install --force --no-cache .
-        # For workflow_dispatch, use the selected version; for PR, default to dev
         $cxFreezeVersion = "${{ github.event.inputs.cx_freeze_version }}"
-        if ([string]::IsNullOrEmpty($cxFreezeVersion)) {
-          $cxFreezeVersion = "dev"
-        }
         if ($cxFreezeVersion -eq "dev") {
           Write-Host "Installing cx_Freeze dev version from test.pypi.org"
           pip install --extra-index-url https://test.pypi.org/simple/ cx_Freeze --pre --no-cache
@@ -122,7 +104,6 @@ jobs:
       shell: pwsh
 
     - name: Upload unsigned EXE artifacts
-      if: github.event_name == 'workflow_dispatch'
       uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.unsigned_exe_name }}
@@ -132,7 +113,6 @@ jobs:
           src/dist/yasb_themes.exe
 
     - name: Get unsigned-exes artifact id
-      if: github.event_name == 'workflow_dispatch'
       id: get_exes_artifact
       uses: actions/github-script@v7
       env:
@@ -149,7 +129,6 @@ jobs:
           return artifact.id;
 
     - name: Submit EXE signing request
-      if: github.event_name == 'workflow_dispatch'
       id: sign_exes
       uses: signpath/github-action-submit-signing-request@v1
       with:
@@ -163,7 +142,7 @@ jobs:
         output-artifact-directory: 'src/signed'
 
     - name: Replace unsigned EXE with signed
-      if: github.event_name == 'workflow_dispatch' && steps.sign_exes.outcome == 'success'
+      if: steps.sign_exes.outcome == 'success'
       run: |
         .\venv\Scripts\Activate
         $signedDir = 'src/signed'
@@ -198,14 +177,12 @@ jobs:
       shell: pwsh
 
     - name: Upload unsigned MSI
-      if: github.event_name == 'workflow_dispatch'
       uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.unsigned_msi_name }}
         path: src/dist/out/*.msi
 
     - name: Get unsigned-msi artifact id
-      if: github.event_name == 'workflow_dispatch'
       id: get_msi_artifact
       uses: actions/github-script@v7
       env:
@@ -222,7 +199,6 @@ jobs:
           return artifact.id;
 
     - name: Submit MSI signing request
-      if: github.event_name == 'workflow_dispatch'
       id: sign_msi
       uses: signpath/github-action-submit-signing-request@v1
       with:
@@ -236,7 +212,7 @@ jobs:
         output-artifact-directory: 'src/signed'
 
     - name: Replace unsigned MSI with signed
-      if: github.event_name == 'workflow_dispatch' && steps.sign_msi.outcome == 'success'
+      if: steps.sign_msi.outcome == 'success'
       run: |
         .\venv\Scripts\Activate
         $signedDir = 'src/signed'
@@ -296,7 +272,6 @@ jobs:
         retention-days: 10
 
     - name: Delete Artifacts
-      if: github.event_name == 'workflow_dispatch'
       uses: geekyeggo/delete-artifact@v5
       with:
         name: |
@@ -305,7 +280,6 @@ jobs:
 
   publish_dev_release:
     needs: build
-    if: github.event_name == 'workflow_dispatch'
     permissions:
       contents: write
     runs-on: ubuntu-latest
