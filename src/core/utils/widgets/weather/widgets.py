@@ -81,7 +81,9 @@ class HourlyTemperatureScrollArea(QScrollArea):
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setWidgetResizable(True)
         self.setCursor(Qt.CursorShape.OpenHandCursor)
+        self.setAutoFillBackground(False)
         self.setContentsMargins(0, 0, 0, 0)
+        self.setStyleSheet("QScrollArea{background: transparent;border: none;}")
         self._drag_active = False
         self._drag_start_pos = QPoint()
         self._scroll_start_pos = QPoint()
