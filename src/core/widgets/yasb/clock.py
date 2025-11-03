@@ -184,7 +184,7 @@ class ClockWidgetSharedState:
         try:
             json_str = json.dumps(self._alarms, indent=2, ensure_ascii=False)
             json_str = re.sub(
-                r"\[\s*((?:\d+\s*,?\s*)*\d*)\s*\]",
+                r"\[\s*(\d+(?:\s*,\s*\d+)*)\s*\]",
                 lambda m: "[" + m.group(1).replace("\n", "").replace(" ", "") + "]",
                 json_str,
             )
