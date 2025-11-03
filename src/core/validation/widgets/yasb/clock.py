@@ -7,6 +7,11 @@ DEFAULTS = {
     "tooltip": True,
     "timezones": [],
     "icons": {},
+    "alarm_icons": {
+        "enabled": "\uf0f3",
+        "disabled": "\uf0a2",
+        "snooze": "\uf1f6",
+    },
     "calendar": {
         "blur": True,
         "round_corners": True,
@@ -22,6 +27,7 @@ DEFAULTS = {
         "show_holidays": False,
         "holiday_color": "#FF6464",
         "show_week_numbers": False,
+        "extended": False,
     },
     "animation": {"enabled": True, "type": "fadeInOut", "duration": 200},
     "container_padding": {"top": 0, "left": 0, "bottom": 0, "right": 0},
@@ -42,6 +48,16 @@ VALIDATION_SCHEMA = {
         "default": {},
         "keysrules": {"type": "string", "regex": "^clock_\\d{2}$"},
         "valuesrules": {"type": "string"},
+    },
+    "alarm_icons": {
+        "type": "dict",
+        "required": False,
+        "schema": {
+            "enabled": {"type": "string", "default": DEFAULTS["alarm_icons"]["enabled"]},
+            "disabled": {"type": "string", "default": DEFAULTS["alarm_icons"]["disabled"]},
+            "snooze": {"type": "string", "default": DEFAULTS["alarm_icons"]["snooze"]},
+        },
+        "default": DEFAULTS["alarm_icons"],
     },
     "calendar": {
         "type": "dict",
@@ -80,6 +96,10 @@ VALIDATION_SCHEMA = {
             "show_week_numbers": {
                 "type": "boolean",
                 "default": DEFAULTS["calendar"]["show_week_numbers"],
+            },
+            "extended": {
+                "type": "boolean",
+                "default": DEFAULTS["calendar"]["extended"],
             },
         },
         "default": DEFAULTS["calendar"],
