@@ -1,11 +1,5 @@
-import json
-import logging
 import os
 import re
-import threading
-import urllib.error
-import urllib.request
-from datetime import datetime
 from enum import StrEnum
 from typing import Any
 
@@ -16,9 +10,9 @@ from PyQt6.QtWidgets import QFrame, QGraphicsOpacityEffect, QHBoxLayout, QLabel,
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import PopupWidget, add_shadow, refresh_widget_style
 from core.utils.widgets.animation_manager import AnimationManager
+from core.utils.widgets.github.api import GitHubDataManager
 from core.validation.widgets.yasb.github import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
-from settings import DEBUG
 
 
 class Corner(StrEnum):
@@ -112,18 +106,18 @@ class GithubWidget(BaseWidget):
         label_shadow: dict = None,
         container_shadow: dict = None,
     ):
-        super().__init__((update_interval * 1000), class_name="github-widget")
-
+        super().__init__(timer_interval=None, class_name="github-widget")
         self._show_alt_label = False
         self._label_content = label
         self._label_alt_content = label_alt
-        self._token = token if token != "env" else os.getenv("YASB_GITHUB_TOKEN")
+        self._github_token = token if token != "env" else os.getenv("YASB_GITHUB_TOKEN")
         self._tooltip = tooltip
         self._menu_popup = menu
         self._icons = icons
         self._max_notification = max_notification
         self._only_unread = only_unread
         self._max_field_size = max_field_size
+        self._update_interval = update_interval
         self._animation = animation
         self._padding = container_padding
         self._label_shadow = label_shadow
@@ -132,8 +126,6 @@ class GithubWidget(BaseWidget):
         self._notification_label: NotificationLabel | None = None
         self._notification_label_alt: NotificationLabel | None = None
         self._notification_dot: dict[str, Any] = notification_dot
-
-        self._github_data = []
 
         self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
@@ -151,14 +143,19 @@ class GithubWidget(BaseWidget):
 
         self.register_callback("toggle_label", self._toggle_label)
         self.register_callback("toggle_menu", self._toggle_menu)
-        self.register_callback("get_github_data", self.get_github_data)
 
         callbacks = {"on_left": "toggle_menu", "on_right": "toggle_label"}
         self.callback_left = callbacks["on_left"]
         self.callback_right = callbacks["on_right"]
 
-        self.callback_timer = "get_github_data"
-        self.start_timer()
+        GitHubDataManager.register_callback(self._on_data_update)
+
+        GitHubDataManager.initialize(
+            token=self._github_token,
+            only_unread=self._only_unread,
+            max_notification=self._max_notification,
+            update_interval=self._update_interval,
+        )
 
     def _toggle_menu(self):
         if self._animation["enabled"]:
@@ -217,8 +214,12 @@ class GithubWidget(BaseWidget):
         self._widgets = process_content(content)
         self._widgets_alt = process_content(content_alt, is_alt=True)
 
+    def _on_data_update(self, _notifications: list):
+        QTimer.singleShot(0, self._update_label)
+
     def _update_label(self):
-        notification_count = len([notification for notification in self._github_data if notification["unread"]])
+        github_data = GitHubDataManager.get_data()
+        notification_count = len([notification for notification in github_data if notification["unread"]])
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
         active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
         # Split label content and filter out empty parts
@@ -258,11 +259,8 @@ class GithubWidget(BaseWidget):
             refresh_widget_style(current_widget)
 
     def mark_as_read(self, notification_id, container_label):
-        for notification in self._github_data:
-            if notification["id"] == notification_id:
-                notification["unread"] = False
-                break
-        self._update_label()
+        # Update in GitHubDataManager and sync with GitHub API
+        GitHubDataManager.mark_as_read(notification_id, sync_to_github=True, token=self._github_token)
         current_classes = container_label.property("class").split()
         if "new" in current_classes:
             current_classes.remove("new")
@@ -270,27 +268,15 @@ class GithubWidget(BaseWidget):
         container_label.setStyleSheet(container_label.styleSheet())
         container_label.repaint()
 
-    def mark_as_read_notification_on_github(self, notification_id):
-        headers = {"Authorization": f"token {self._token}", "Accept": "application/vnd.github.v3+json"}
-        url = f"https://api.github.com/notifications/threads/{notification_id}"
-        req = urllib.request.Request(url, headers=headers, method="PATCH")
-        try:
-            with urllib.request.urlopen(req):
-                QTimer.singleShot(0, self._update_label)
-                if DEBUG:
-                    logging.info(f"Notification {notification_id} marked as read on GitHub.")
-        except urllib.error.HTTPError as e:
-            logging.error(f"HTTP Error occurred: {e.code} - {e.reason}")
-        except Exception as e:
-            logging.error(
-                f"An unexpected error occurred: {str(e)}, in most cases this error when there is no internet connection."
-            )
+    def _mark_all_as_read(self):
+        """Mark all notifications as read."""
+        GitHubDataManager.mark_all_as_read(self._github_token)
+        self._menu.hide()
 
     def _handle_mouse_press_event(self, event, notification_id, url, container_label):
         self.mark_as_read(notification_id, container_label)
         self._menu.hide()
         QDesktopServices.openUrl(QUrl(url))
-        self.mark_as_read_notification_on_github(notification_id)
 
     def _create_container_mouse_press_event(self, notification_id, url, container_label):
         def mouse_press_event(event):
@@ -299,8 +285,9 @@ class GithubWidget(BaseWidget):
         return mouse_press_event
 
     def show_menu(self):
-        notifications_count = len(self._github_data)
-        notifications_unread_count = len([notification for notification in self._github_data if notification["unread"]])
+        github_data = GitHubDataManager.get_data()
+        notifications_count = len(github_data)
+        notifications_unread_count = len([notification for notification in github_data if notification["unread"]])
 
         self._menu = PopupWidget(
             self,
@@ -344,7 +331,7 @@ class GithubWidget(BaseWidget):
         scroll_area.setWidget(scroll_widget)
 
         if notifications_count > 0:
-            for notification in self._github_data:
+            for notification in github_data:
                 repo_title = notification["title"]
                 repo_description = f"{notification['type']}: {notification['repository']}"
                 repo_title = (
@@ -425,9 +412,28 @@ class GithubWidget(BaseWidget):
             # Add the center layout to the scroll layout
             scroll_layout.addLayout(center_layout)
         if notifications_count > 0:
+            # Create footer container
+            footer_container = QFrame()
+            footer_container.setProperty("class", "footer")
+            footer_layout = QHBoxLayout(footer_container)
+            footer_layout.setContentsMargins(0, 0, 0, 0)
+            footer_layout.setSpacing(0)
+
+            # Left side - unread count
             footer_label = QLabel(f"Unread notifications ({notifications_unread_count})")
-            footer_label.setProperty("class", "footer")
-            main_layout.addWidget(footer_label)
+            footer_label.setProperty("class", "label")
+            footer_layout.addWidget(footer_label)
+
+            footer_layout.addStretch()
+
+            # Right side - mark all as read button
+            mark_all_label = QLabel("Mark all as read")
+            mark_all_label.setProperty("class", "label")
+            mark_all_label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+            mark_all_label.mousePressEvent = lambda event: self._mark_all_as_read()
+            footer_layout.addWidget(mark_all_label)
+
+            main_layout.addWidget(footer_container)
 
         self._menu.adjustSize()
         self._menu.setPosition(
@@ -438,73 +444,3 @@ class GithubWidget(BaseWidget):
         )
 
         self._menu.show()
-
-    def get_github_data(self):
-        threading.Thread(target=self._get_github_data).start()
-
-    def _get_github_data(self):
-        self._github_data = self._get_github_notifications(self._token)
-        QTimer.singleShot(0, self._update_label)
-
-    def _get_github_notifications(self, token):
-        if DEBUG:
-            logging.info(f"Check for GitHub notifications at {datetime.now()}")
-        headers = {"Authorization": f"token {token}", "Accept": "application/vnd.github.v3+json"}
-        params = {
-            "all": "false" if self._only_unread else "true",
-            "participating": "false",
-            "per_page": self._max_notification,
-        }
-
-        url = "https://api.github.com/notifications"
-        query_string = "&".join(f"{k}={v}" for k, v in params.items())
-        full_url = f"{url}?{query_string}"
-
-        req = urllib.request.Request(full_url, headers=headers)
-        try:
-            with urllib.request.urlopen(req) as response:
-                notifications = json.loads(response.read().decode())
-            result = []
-            if notifications:
-                for notification in notifications:
-                    repo_full_name = notification["repository"]["full_name"]
-                    subject_type = notification["subject"]["type"]
-                    subject_url = notification["subject"]["url"]
-                    unread = notification["unread"]
-
-                    if subject_type == "Issue":
-                        github_url = subject_url.replace("api.github.com/repos", "github.com")
-                    elif subject_type == "PullRequest":
-                        github_url = subject_url.replace("api.github.com/repos", "github.com").replace(
-                            "/pulls/", "/pull/"
-                        )
-                    elif subject_type == "Release":
-                        github_url = f"https://github.com/{repo_full_name}/releases"
-                    elif subject_type == "Discussion":
-                        github_url = subject_url.replace("api.github.com/repos", "github.com")
-                    else:
-                        github_url = notification["repository"]["html_url"]
-
-                    result.append(
-                        {
-                            "id": notification["id"],
-                            "repository": repo_full_name,
-                            "title": notification["subject"]["title"],
-                            "type": subject_type,
-                            "url": github_url,
-                            "unread": unread,
-                        }
-                    )
-                return result
-            else:
-                return []
-
-        except urllib.error.URLError:
-            logging.error("No internet connection. Unable to fetch notifications.")
-            return []
-        except urllib.error.HTTPError as e:
-            logging.error(f"HTTP Error occurred: {e.code} - {e.reason}")
-            return []
-        except Exception as e:
-            logging.error(f"An unexpected error occurred: {str(e)}")
-            return []

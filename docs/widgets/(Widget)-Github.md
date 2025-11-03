@@ -91,6 +91,7 @@ github:
 .github-menu {}
 .github-menu .header {}
 .github-menu .footer {}
+.github-menu .footer .label {}
 .github-menu .contents {}
 .github-menu .contents .item {}
 .github-menu .contents .item.new {} /* New notification */
@@ -123,11 +124,13 @@ github:
 }
 .github-menu .footer {
     border-top: 1px solid rgba(255, 255, 255, 0.1);
-    font-size: 12px;
     padding: 4px 8px 6px 8px;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    color: #9399b2;
     background-color: rgba(17, 17, 27, 0.75);
+}
+.github-menu .footer .label{
+    font-size: 12px;
+    font-family: 'Segoe UI';
+    color: #9399b2;
 }
 .github-menu .contents {
     background-color:  rgba(17, 17, 27, 0.2);
