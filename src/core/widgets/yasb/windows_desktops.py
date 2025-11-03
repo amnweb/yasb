@@ -20,7 +20,7 @@ from pyvda import VirtualDesktop, get_virtual_desktops, set_wallpaper_for_all_de
 from core.event_service import EventService
 from core.utils.utilities import add_shadow, is_windows_10, refresh_widget_style
 from core.utils.widgets.komorebi.animation import KomorebiAnimation
-from core.utils.win32.utilities import qmenu_rounded_corners
+from core.utils.win32.utilities import apply_qmenu_style
 from core.validation.widgets.yasb.windows_desktops import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
 
@@ -86,7 +86,7 @@ class WorkspaceButton(QPushButton):
         # Assign a class for global styling; apply rounded corners via helper
         menu.setProperty("class", "context-menu")
         # Apply Windows rounded corners to the QMenu when it is shown
-        menu.aboutToShow.connect(lambda: qmenu_rounded_corners(menu))
+        apply_qmenu_style(menu)
 
         act_rename = QAction("Rename", self)
         act_rename.triggered.connect(self.rename_desktop)

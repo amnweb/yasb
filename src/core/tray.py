@@ -14,7 +14,7 @@ from core.bar_manager import BarManager
 from core.config import get_config
 from core.ui.windows.about import AboutDialog
 from core.utils.controller import exit_application, reload_application
-from core.utils.win32.utilities import disable_autostart, enable_autostart, is_autostart_enabled, qmenu_rounded_corners
+from core.utils.win32.utilities import apply_qmenu_style, disable_autostart, enable_autostart, is_autostart_enabled
 from settings import (
     APP_NAME,
     DEFAULT_CONFIG_DIRECTORY,
@@ -81,7 +81,7 @@ class SystemTrayManager(QSystemTrayIcon):
     def _load_context_menu(self):
         self.menu = QMenu()
         self.menu.setWindowModality(Qt.WindowModality.WindowModal)
-        qmenu_rounded_corners(self.menu)
+        apply_qmenu_style(self.menu)
         style_sheet = """
         QMenu {
             background-color: #202020;
@@ -158,7 +158,7 @@ class SystemTrayManager(QSystemTrayIcon):
                 lambda checked=False, wm="Komorebi", cmd=self.komorebi_reload: self._run_wm_command(wm, cmd)
             )
 
-            komorebi_menu.aboutToShow.connect(lambda: qmenu_rounded_corners(komorebi_menu))
+            apply_qmenu_style(komorebi_menu)
 
             self.menu.addSeparator()
 
@@ -179,7 +179,7 @@ class SystemTrayManager(QSystemTrayIcon):
                 lambda checked=False, wm="Glazewm", cmd=self.glazewm_reload: self._run_wm_command(wm, cmd)
             )
 
-            glazewm_menu.aboutToShow.connect(lambda: qmenu_rounded_corners(glazewm_menu))
+            apply_qmenu_style(glazewm_menu)
 
             self.menu.addSeparator()
 

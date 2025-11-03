@@ -26,7 +26,7 @@ from core.utils.utilities import PopupWidget, add_shadow
 from core.utils.widgets.ai_chat.client import AiChatClient
 from core.utils.widgets.ai_chat.client_helper import format_chat_text
 from core.utils.widgets.animation_manager import AnimationManager
-from core.utils.win32.utilities import qmenu_rounded_corners
+from core.utils.win32.utilities import apply_qmenu_style
 from core.validation.widgets.yasb.ai_chat import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
 
@@ -494,7 +494,7 @@ class AiChatWidget(BaseWidget):
         self.provider_menu = QMenu(self.provider_btn)
         self.provider_menu.setProperty("class", "context-menu")
         self.provider_menu.setStyleSheet("QMenu::indicator { width: 0px; height: 0px; }")
-        self.provider_menu.aboutToShow.connect(lambda: qmenu_rounded_corners(self.provider_menu))
+        apply_qmenu_style(self.provider_menu)
         self.provider_btn.clicked.connect(
             lambda: self.provider_menu.exec(self.provider_btn.mapToGlobal(self.provider_btn.rect().bottomLeft()))
         )
@@ -516,7 +516,7 @@ class AiChatWidget(BaseWidget):
         self.model_menu.setStyleSheet("QMenu::indicator { width: 0px; height: 0px; }")
         self.model_menu.aboutToShow.connect(
             lambda: (
-                qmenu_rounded_corners(self.model_menu),
+                apply_qmenu_style(self.model_menu),
                 [
                     action.setChecked(
                         any(
@@ -1239,7 +1239,7 @@ class AiChatWidget(BaseWidget):
                     pass
 
             select_all_action.triggered.connect(select_all)
-        context_menu.aboutToShow.connect(lambda: qmenu_rounded_corners(context_menu))
+        apply_qmenu_style(context_menu)
 
         global_pos = widget.mapToGlobal(pos)
         # For input field, show menu above the input to prevent closing the popup
