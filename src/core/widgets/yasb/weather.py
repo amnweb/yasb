@@ -189,7 +189,15 @@ class WeatherWidget(BaseWidget):
         hourly_temperature_widget.setProperty("class", "hourly-data")
         hourly_temperature_scroll_area = HourlyTemperatureScrollArea()
         hourly_temperature_scroll_area.setWidget(hourly_temperature_widget)
-        hourly_temperature_scroll_area.setProperty("class", "hourly-container")
+
+        # NOTE: # This is needed for Qt >=6.10.0 because QScrollArea
+        # refuses to play nicely with background color and border styles
+        hourly_container_wrapper = QFrame()
+        hourly_container_wrapper_layout = QHBoxLayout()
+        hourly_container_wrapper.setLayout(hourly_container_wrapper_layout)
+        hourly_container_wrapper_layout.addWidget(hourly_temperature_scroll_area)
+        hourly_container_wrapper_layout.setContentsMargins(0, 0, 0, 0)
+        hourly_container_wrapper.setProperty("class", "hourly-container")
 
         @pyqtSlot(int)
         def switch_hourly_data(day_idx: int):
@@ -275,7 +283,7 @@ class WeatherWidget(BaseWidget):
 
         # If we have no data just don't add the widget at all
         if self._hourly_data_today and self._weather_card["show_hourly_forecast"]:
-            main_layout.addWidget(hourly_temperature_scroll_area)
+            main_layout.addWidget(hourly_container_wrapper)
 
         self.dialog.setLayout(main_layout)
 
