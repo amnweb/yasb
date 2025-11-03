@@ -1017,7 +1017,8 @@ class LaunchpadWidget(BaseWidget):
         """)
 
         grid_container = QFrame()
-        grid_container.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+        grid_container.setObjectName("grid-container")
+        grid_container.setStyleSheet("#grid-container { background: transparent; }")
         grid_container.setContentsMargins(0, 0, 0, 0)
 
         grid_layout = QGridLayout(grid_container)
