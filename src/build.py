@@ -85,6 +85,7 @@ build_options = {
         ("assets/images/app_icon.png", "assets/images/app_icon.png"),
         ("assets/images/app_transparent.png", "assets/images/app_transparent.png"),
         ("assets/sound/notification01.wav", "assets/sound/notification01.wav"),
+        ("assets/sound/notification02.wav", "assets/sound/notification02.wav"),
         ("config.yaml", "config.yaml"),
         ("styles.css", "styles.css"),
     ],

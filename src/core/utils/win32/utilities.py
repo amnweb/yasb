@@ -281,11 +281,10 @@ def get_hwnd_info(hwnd: int) -> dict:
         }
 
 
-def qmenu_rounded_corners(qwidget):
+def apply_qmenu_style(qwidget):
     """
     Set blur and rounded corners for a QMenu on Windows 11.
     Fusion style is required for correct rendering and removing qmenu shadow.
-    If is Windows 10, we will skip this as it is not supported.
     """
     if is_windows_10():
         return
@@ -294,10 +293,21 @@ def qmenu_rounded_corners(qwidget):
 
         from core.utils.win32.win32_accent import Blur
 
+        # First we need to set Fusion style to remove shadow artifacts
         qwidget.setStyle(QStyleFactory.create("Fusion"))
-        hwnd = int(qwidget.winId())
 
-        Blur(hwnd, Acrylic=False, DarkMode=True, RoundCorners=True, RoundCornersType="normal", BorderColor="None")
+        def apply_blur():
+            try:
+                hwnd = int(qwidget.winId())
+                Blur(
+                    hwnd, Acrylic=False, DarkMode=True, RoundCorners=True, RoundCornersType="normal", BorderColor="None"
+                )
+            except Exception:
+                pass
+
+        # When the menu is shown, apply blur and rounded corners
+        qwidget.aboutToShow.connect(apply_blur)
+
     except Exception:
         # If anything goes wrong, just skip it.
         pass

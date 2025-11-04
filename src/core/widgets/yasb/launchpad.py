@@ -47,7 +47,7 @@ from core.utils.utilities import add_shadow, build_widget_label, refresh_widget_
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.widgets.launchpad.app_loader import AppListLoader, ShortcutResolver
 from core.utils.widgets.launchpad.icon_extractor import IconExtractorUtil, UrlExtractorUtil
-from core.utils.win32.utilities import get_foreground_hwnd, qmenu_rounded_corners, set_foreground_hwnd
+from core.utils.win32.utilities import apply_qmenu_style, get_foreground_hwnd, set_foreground_hwnd
 from core.utils.win32.win32_accent import Blur
 from core.validation.widgets.yasb.launchpad import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
@@ -361,7 +361,7 @@ class AppDialog(QDialog):
     def lineedit_context_menu(self, lineedit: QLineEdit):
         def show_custom_menu(point):
             menu = lineedit.createStandardContextMenu()
-            qmenu_rounded_corners(menu)
+            apply_qmenu_style(menu)
             menu.setProperty("class", "context-menu")
             for action in menu.actions():
                 action.setIconVisibleInMenu(False)
@@ -854,7 +854,7 @@ class LaunchpadWidget(BaseWidget):
         menu_parent = parent_widget if parent_widget else self._launchpad_popup
         menu = QMenu(menu_parent.window())
         menu.setProperty("class", "context-menu")
-        qmenu_rounded_corners(menu)
+        apply_qmenu_style(menu)
 
         if app_data:
             edit_action = QAction("Edit", menu_parent)

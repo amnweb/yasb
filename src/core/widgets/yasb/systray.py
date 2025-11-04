@@ -34,7 +34,7 @@ from core.utils.win32.constants import (
     NIF_STATE,
     NIF_TIP,
 )
-from core.utils.win32.utilities import qmenu_rounded_corners
+from core.utils.win32.utilities import apply_qmenu_style
 from core.validation.widgets.yasb.systray import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
 
@@ -228,7 +228,7 @@ class SystrayWidget(BaseWidget):
         """Show the context menu for the unpinned visibility button"""
         menu = QMenu(self.window())
         menu.setProperty("class", "context-menu")
-        qmenu_rounded_corners(menu)
+        apply_qmenu_style(menu)
         menu.setContentsMargins(0, 0, 0, 0)
         menu.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
         refresh_action = menu.addAction("Refresh Systray")  # pyright: ignore [reportUnknownMemberType]

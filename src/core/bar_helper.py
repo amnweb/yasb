@@ -25,7 +25,7 @@ from core.utils.controller import exit_application, reload_application
 from core.utils.utilities import refresh_widget_style
 from core.utils.win32.bindings import DwmGetWindowAttribute
 from core.utils.win32.constants import DWMWA_CLOAKED, S_OK
-from core.utils.win32.utilities import get_monitor_hwnd, get_window_rect, qmenu_rounded_corners
+from core.utils.win32.utilities import apply_qmenu_style, get_monitor_hwnd, get_window_rect
 
 
 class AutoHideZone(QFrame):
@@ -457,7 +457,7 @@ class BarContextMenu:
         self._menu = QMenu(self.parent)
         self._menu.setProperty("class", "context-menu")
         self._menu.aboutToHide.connect(self._on_menu_about_to_hide)
-        qmenu_rounded_corners(self._menu)
+        apply_qmenu_style(self._menu)
 
         # Bar info
         bar_info = self._menu.addAction(f"Bar: {self._bar_name}")
@@ -466,7 +466,7 @@ class BarContextMenu:
         # Widgets menu
         widgets_menu = self._menu.addMenu("Active Widgets")
         widgets_menu.setProperty("class", "context-menu submenu")
-        widgets_menu.aboutToShow.connect(lambda: qmenu_rounded_corners(widgets_menu))
+        apply_qmenu_style(widgets_menu)
         self._populate_widgets_menu(widgets_menu)
 
         self._menu.addSeparator()

@@ -19,7 +19,7 @@ from PyQt6.QtWidgets import QMenu
 from win32comext.shell import shell, shellcon
 
 from core.utils.win32.constants import KnownCLSID
-from core.utils.win32.utilities import qmenu_rounded_corners
+from core.utils.win32.utilities import apply_qmenu_style
 from core.utils.win32.window_actions import close_application
 
 # Global reference to keep thread alive
@@ -241,7 +241,7 @@ def show_context_menu(taskbar_widget, hwnd: int, pos) -> QMenu | None:
 
         menu = QMenu(taskbar_widget.window())
         menu.setProperty("class", "context-menu")
-        qmenu_rounded_corners(menu)
+        apply_qmenu_style(menu)
 
         # Determine app type from unique_id
         is_explorer = False

@@ -40,7 +40,7 @@ from core.utils.widgets.wifi.wifi_managers import (
     WiFiManager,
     WifiState,
 )
-from core.utils.win32.utilities import qmenu_rounded_corners  # type: ignore
+from core.utils.win32.utilities import apply_qmenu_style  # type: ignore
 
 logger = logging.getLogger("wifi_widget")
 
@@ -174,7 +174,7 @@ class WifiItem(QFrame):
     def show_context_menu(self, pos: QPoint):
         menu = QMenu(self)
         menu.setProperty("class", "context-menu")
-        menu.aboutToShow.connect(lambda: qmenu_rounded_corners(menu))  # pyright: ignore[reportUnknownMemberType]
+        apply_qmenu_style(menu)  # pyright: ignore[reportUnknownMemberType]
 
         # Auto-connect checkbox
         self.auto_connect_checkbox = QCheckBox("Auto-connect")

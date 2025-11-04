@@ -27,7 +27,7 @@ from core.config import HOME_CONFIGURATION_DIR
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import PopupWidget, add_shadow, build_widget_label, refresh_widget_style
 from core.utils.widgets.animation_manager import AnimationManager
-from core.utils.win32.utilities import qmenu_rounded_corners
+from core.utils.win32.utilities import apply_qmenu_style
 from core.validation.widgets.yasb.todo import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
 
@@ -421,7 +421,7 @@ class TodoWidget(BaseWidget):
         menu.setStyleSheet("""
             QMenu::indicator:checked { background: transparent;color:transparent }
         """)
-        qmenu_rounded_corners(menu)
+        apply_qmenu_style(menu)
         sort_by_date = QAction("Sort by date (Newest)", self)
         sort_by_date_old = QAction("Sort by date (Oldest)", self)
         sort_reset = QAction("Reset sorting", self)
@@ -562,7 +562,7 @@ class TodoWidget(BaseWidget):
             menu.setProperty("class", "context-menu")
             menu.addActions(standard_menu.actions())
             standard_menu.deleteLater()
-            qmenu_rounded_corners(menu)
+            apply_qmenu_style(menu)
             for action in menu.actions():
                 action.setIconVisibleInMenu(False)
                 action.setIcon(QIcon())
