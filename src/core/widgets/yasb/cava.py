@@ -359,6 +359,7 @@ class CavaBar(QFrame):
 class CavaWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
     samplesUpdated = pyqtSignal(list)
+    _instance_counter = 0  # Class variable to track instances
 
     def __init__(
         self,
@@ -394,6 +395,10 @@ class CavaWidget(BaseWidget):
         callbacks: dict[str, str],
     ):
         super().__init__(class_name=f"cava-widget {class_name}")
+        # Assign unique instance ID
+        CavaWidget._instance_counter += 1
+        self._instance_id = CavaWidget._instance_counter
+
         # Widget configuration
         self._height = bar_height
         self._min_height = min_bar_height
@@ -599,7 +604,7 @@ class CavaWidget(BaseWidget):
         def process_audio():
             cava_config_path = None
             try:
-                cava_config_path = app_data_path("yasb_cava_config")
+                cava_config_path = app_data_path(f"yasb_cava_config_{self._instance_id}")
                 with open(cava_config_path, "w") as config_file:
                     config_file.write(config_template)
                     config_file.flush()
