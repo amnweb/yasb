@@ -97,6 +97,8 @@ class GithubWidget(BaseWidget):
         max_notification: int,
         notification_dot: dict[str, Any],
         only_unread: bool,
+        reason_filters: list[str] | None,
+        show_comment_count: bool,
         max_field_size: int,
         menu: dict[str, str],
         icons: dict[str, str],
@@ -116,22 +118,30 @@ class GithubWidget(BaseWidget):
         self._icons = icons
         self._max_notification = max_notification
         self._only_unread = only_unread
+        self._reason_filters = [str(reason) for reason in (reason_filters or []) if str(reason).strip()]
+        self._show_comment_count = show_comment_count
         self._max_field_size = max_field_size
         self._update_interval = update_interval
         self._animation = animation
         self._padding = container_padding
         self._label_shadow = label_shadow
         self._container_shadow = container_shadow
+        self._show_categories = self._menu_popup.get("show_categories", True)
+        categories_order = self._menu_popup.get("categories_order", [])
+        if isinstance(categories_order, list):
+            self._categories_order = [str(category) for category in categories_order]
+        else:
+            self._categories_order = []
 
         self._notification_label: NotificationLabel | None = None
         self._notification_label_alt: NotificationLabel | None = None
         self._notification_dot: dict[str, Any] = notification_dot
 
+        self._shared_cursor = QCursor(Qt.CursorShape.PointingHandCursor)
+
         self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(
-            self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
-        )
+        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
 
         self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
@@ -155,6 +165,8 @@ class GithubWidget(BaseWidget):
             only_unread=self._only_unread,
             max_notification=self._max_notification,
             update_interval=self._update_interval,
+            reason_filters=self._reason_filters,
+            show_comment_count=self._show_comment_count,
         )
 
     def _toggle_menu(self):
@@ -284,6 +296,153 @@ class GithubWidget(BaseWidget):
 
         return mouse_press_event
 
+    def _format_category_title(self, category_type: str) -> str:
+        """Return a human-friendly label for a GitHub notification type."""
+        custom_titles = {
+            "Issue": "Issues",
+            "PullRequest": "Pull Requests",
+            "Release": "Releases",
+            "Discussion": "Discussions",
+            "CheckSuite": "Check Suites",
+        }
+        if category_type in custom_titles:
+            return custom_titles[category_type]
+        spaced = re.sub(r"(?<!^)(?=[A-Z])", " ", category_type)
+        return spaced.strip() or category_type
+
+    def _resolve_icon_and_states(self, notification: dict[str, Any]) -> tuple[str, list[str]]:
+        """Return icon and state class list for a notification."""
+        notification_type = notification.get("type", "")
+        state_classes: list[str] = []
+
+        if notification_type == "Issue":
+            issue_state = (notification.get("issue_state") or "").lower()
+            if issue_state == "closed":
+                icon_type = self._icons["issue_closed"]
+            else:
+                icon_type = self._icons["issue"]
+            if issue_state:
+                state_classes.append(issue_state)
+        elif notification_type == "PullRequest":
+            pr_state = (notification.get("pull_request_state") or "").lower()
+            pr_is_merged = bool(notification.get("pull_request_is_merged"))
+            pr_is_draft = bool(notification.get("pull_request_is_draft"))
+
+            if pr_is_merged:
+                icon_type = self._icons["pull_request_merged"]
+                state_classes.append("merged")
+            elif pr_state == "closed":
+                icon_type = self._icons["pull_request_closed"]
+            elif pr_is_draft:
+                icon_type = self._icons["pull_request_draft"]
+                state_classes.append("draft")
+            else:
+                icon_type = self._icons["pull_request"]
+
+            if pr_state:
+                state_classes.append(pr_state)
+        elif notification_type == "Discussion":
+            discussion_answered = bool(notification.get("discussion_is_answered"))
+            if discussion_answered:
+                icon_type = self._icons["discussion_answered"]
+                state_classes.append("answered")
+            else:
+                icon_type = self._icons["discussion"]
+        elif notification_type == "Release":
+            icon_type = self._icons["release"]
+        elif notification_type == "CheckSuite":
+            icon_type = self._icons["checksuite"]
+        else:
+            icon_type = self._icons["default"]
+
+        return icon_type, state_classes
+
+    def _create_notification_item(
+        self,
+        notification: dict[str, Any],
+        extra_classes: list[str] | None = None,
+        parent: QWidget | None = None,
+    ) -> QFrame:
+        title = notification["title"]
+        if len(title) > self._max_field_size:
+            title = title[: self._max_field_size - 3] + "..."
+
+        repo_description = f"{notification['type']}: {notification['repository']}"
+        if len(repo_description) > self._max_field_size:
+            repo_description = repo_description[: self._max_field_size - 3] + "..."
+
+        notification_type = notification.get("type", "")
+        icon_type, state_classes = self._resolve_icon_and_states(notification)
+        base_class = notification_type.lower() if notification_type else ""
+
+        classes = ["item"]
+        if notification.get("unread"):
+            classes.append("new")
+
+        if base_class:
+            classes.append(base_class)
+        if extra_classes:
+            classes.extend(extra_classes)
+
+        comment_count_value = notification.get("comment_count")
+
+        container = QFrame(parent)
+        container.setProperty("class", " ".join(dict.fromkeys(classes)))
+        container.setContentsMargins(0, 0, 0, 0)
+        container.setCursor(self._shared_cursor)
+
+        icon_label = QLabel(icon_type)
+        icon_classes = ["icon", base_class] if base_class else ["icon"]
+        icon_classes.extend(state_classes)
+        icon_label.setProperty("class", " ".join(dict.fromkeys(icon_classes)))
+
+        title_label = QLabel(title)
+        title_label.setProperty("class", "title")
+
+        description_label = QLabel(repo_description)
+        description_label.setProperty("class", "description")
+
+        text_content = QWidget()
+        text_content_layout = QVBoxLayout(text_content)
+        text_content_layout.addWidget(title_label)
+        text_content_layout.addWidget(description_label)
+        text_content_layout.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        text_content_layout.setContentsMargins(0, 0, 0, 0)
+        text_content_layout.setSpacing(0)
+
+        container_layout = QHBoxLayout(container)
+        container_layout.addWidget(icon_label)
+        container_layout.addWidget(text_content, 1)
+
+        if self._show_comment_count and isinstance(comment_count_value, int):
+            comment_wrapper = QWidget()
+            comment_wrapper_layout = QHBoxLayout(comment_wrapper)
+            comment_wrapper_layout.setContentsMargins(8, 0, 0, 0)
+            comment_wrapper_layout.setSpacing(0)
+
+            comment_icon_text = (self._icons.get("comment", "") or "").strip()
+            if comment_icon_text:
+                comment_icon_label = QLabel(comment_icon_text)
+                comment_icon_label.setProperty("class", "comment-icon")
+                comment_icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                comment_wrapper_layout.addWidget(comment_icon_label)
+
+            comment_value_label = QLabel(str(comment_count_value))
+            comment_value_label.setProperty("class", "comment-count")
+            comment_value_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            comment_wrapper_layout.addWidget(comment_value_label)
+
+            container_layout.addWidget(comment_wrapper)
+        container_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        container_layout.setContentsMargins(0, 0, 0, 0)
+        container_layout.setSpacing(0)
+
+        container.mousePressEvent = self._create_container_mouse_press_event(
+            notification["id"], notification["url"], container
+        )
+
+        return container
+
     def show_menu(self):
         github_data = GitHubDataManager.get_data()
         notifications_count = len(github_data)
@@ -328,67 +487,80 @@ class GithubWidget(BaseWidget):
         scroll_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         scroll_layout.setContentsMargins(0, 0, 0, 0)
         scroll_layout.setSpacing(0)
-        scroll_area.setWidget(scroll_widget)
 
+        # Build the content first before attaching to scroll area
         if notifications_count > 0:
-            for notification in github_data:
-                repo_title = notification["title"]
-                repo_description = f"{notification['type']}: {notification['repository']}"
-                repo_title = (
-                    (notification["title"][: self._max_field_size - 3] + "...")
-                    if len(notification["title"]) > self._max_field_size
-                    else notification["title"]
-                )
-                repo_description = (
-                    (repo_description[: self._max_field_size - 3] + "...")
-                    if len(repo_description) > self._max_field_size
-                    else repo_description
-                )
+            if self._show_categories:
+                grouped_notifications: dict[str, list[dict[str, Any]]] = {}
+                for notification in github_data:
+                    grouped_notifications.setdefault(notification["type"], []).append(notification)
 
-                icon_type = {
-                    "Issue": self._icons["issue"],
-                    "PullRequest": self._icons["pull_request"],
-                    "Release": self._icons["release"],
-                    "Discussion": self._icons["discussion"],
-                    "CheckSuite": self._icons["checksuite"],
-                }.get(notification["type"], self._icons["default"])
+                category_lookup = {key.lower(): key for key in grouped_notifications}
 
-                new_item_class = "new" if notification["unread"] else ""
+                ordered_categories: list[str] = []
+                for configured_category in self._categories_order:
+                    actual_key = category_lookup.get(configured_category.lower())
+                    if actual_key and actual_key not in ordered_categories:
+                        ordered_categories.append(actual_key)
 
-                container = QWidget()
-                container.setProperty("class", f"item {new_item_class}")
-                container.setContentsMargins(0, 0, 8, 0)
-                container.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+                # Add remaining categories not in configured order
+                for category in grouped_notifications:
+                    if category not in ordered_categories:
+                        ordered_categories.append(category)
 
-                icon_label = QLabel(f"{icon_type}")
-                type_class = notification["type"] if "type" in notification else ""
-                icon_label.setProperty("class", f"icon {type_class.lower()}")
-                title_label = QLabel(repo_title)
-                title_label.setProperty("class", "title")
+                for category_type in ordered_categories:
+                    items = grouped_notifications[category_type]
 
-                description_label = QLabel(repo_description)
-                description_label.setProperty("class", "description")
+                    section_header = QLabel(self._format_category_title(category_type))
+                    section_header.setProperty("class", "section-header")
+                    section_header.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+                    scroll_layout.addWidget(section_header)
 
-                text_content = QWidget()
-                text_content_layout = QVBoxLayout(text_content)
-                text_content_layout.addWidget(title_label)
-                text_content_layout.addWidget(description_label)
-                text_content_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
-                text_content_layout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
-                text_content_layout.setContentsMargins(0, 0, 0, 0)
-                text_content_layout.setSpacing(0)
+                    section_widget = QFrame()
+                    section_widget.setProperty("class", "section")
 
-                container_layout = QHBoxLayout(container)
-                container_layout.addWidget(icon_label)
-                container_layout.addWidget(text_content, 1)
-                container_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
-                container_layout.setContentsMargins(0, 0, 0, 0)
-                container_layout.setSpacing(0)
-                scroll_layout.addWidget(container)
+                    section_layout = QVBoxLayout(section_widget)
+                    section_layout.setContentsMargins(0, 0, 0, 0)
+                    section_layout.setSpacing(0)
 
-                container.mousePressEvent = self._create_container_mouse_press_event(
-                    notification["id"], notification["url"], container
-                )
+                    items_count = len(items)
+                    for index, notification in enumerate(items):
+                        position_classes: list[str] = []
+                        if index == 0:
+                            position_classes.append("first")
+                        if index == items_count - 1:
+                            position_classes.append("last")
+                        container = self._create_notification_item(
+                            notification,
+                            position_classes,
+                            parent=section_widget,
+                        )
+                        section_layout.addWidget(container)
+
+                    scroll_layout.addWidget(section_widget)
+            else:
+                section_widget = QFrame()
+                section_widget.setProperty("class", "section")
+
+                section_layout = QVBoxLayout(section_widget)
+                section_layout.setContentsMargins(0, 0, 0, 0)
+                section_layout.setSpacing(0)
+
+                notifications_count_total = len(github_data)
+                for index, notification in enumerate(github_data):
+                    position_classes: list[str] = []
+                    if index == 0:
+                        position_classes.append("first")
+                    if index == notifications_count_total - 1:
+                        position_classes.append("last")
+                    container = self._create_notification_item(
+                        notification,
+                        position_classes,
+                        parent=section_widget,
+                    )
+                    section_layout.addWidget(container)
+
+                scroll_layout.addWidget(section_widget)
         else:
             large_label = QLabel(self._icons["github_logo"])
             large_label.setStyleSheet("font-size:88px;font-weight:400")
@@ -411,6 +583,10 @@ class GithubWidget(BaseWidget):
 
             # Add the center layout to the scroll layout
             scroll_layout.addLayout(center_layout)
+
+        # Attach the fully-built widget to scroll area
+        scroll_area.setWidget(scroll_widget)
+
         if notifications_count > 0:
             # Create footer container
             footer_container = QFrame()
