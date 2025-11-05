@@ -4,6 +4,8 @@ DEFAULTS = {
     "empty_label": None,
     "active_populated_label": None,
     "active_empty_label": None,
+    "focused_populated_label": None,
+    "focused_empty_label": None,
     "hide_empty_workspaces": True,
     "hide_if_offline": False,
     "glazewm_server_uri": "ws://localhost:6123",
@@ -19,6 +21,7 @@ DEFAULTS = {
     "app_icons": {
         "enabled_populated": False,
         "enabled_active": False,
+        "enabled_focused": None,
         "size": 16,
         "max_icons": 0,
         "hide_label": False,
@@ -51,6 +54,16 @@ VALIDATION_SCHEMA = {
     "active_empty_label": {
         "type": "string",
         "default": DEFAULTS["active_empty_label"],
+        "nullable": True,
+    },
+    "focused_populated_label": {
+        "type": "string",
+        "default": DEFAULTS["focused_populated_label"],
+        "nullable": True,
+    },
+    "focused_empty_label": {
+        "type": "string",
+        "default": DEFAULTS["focused_empty_label"],
         "nullable": True,
     },
     "hide_empty_workspaces": {
@@ -102,6 +115,11 @@ VALIDATION_SCHEMA = {
         "schema": {
             "enabled_populated": {"type": "boolean", "default": DEFAULTS["app_icons"]["enabled_populated"]},
             "enabled_active": {"type": "boolean", "default": DEFAULTS["app_icons"]["enabled_active"]},
+            "enabled_focused": {
+                "type": "boolean",
+                "default": DEFAULTS["app_icons"]["enabled_focused"],
+                "nullable": True,
+            },
             "size": {"type": "integer", "default": DEFAULTS["app_icons"]["size"]},
             "max_icons": {"type": "integer", "default": DEFAULTS["app_icons"]["max_icons"]},
             "hide_label": {"type": "boolean", "default": DEFAULTS["app_icons"]["hide_label"]},

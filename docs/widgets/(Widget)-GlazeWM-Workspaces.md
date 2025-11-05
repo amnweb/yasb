@@ -4,8 +4,10 @@
 | `offline_label`          | string  | `'GlazeWM Offline'`                              | The label to display when GlazeWM is offline.                               |
 | `populated_label`        | string  | `'{name}'`                                       | Optional label for populated workspaces.                                    |
 | `empty_label`            | string  | `'{name}'`                                       | Optional label for empty workspaces.                                        |
-| `active_populated_label` | string  | `'{name}'`                                       | Optional label for the currently focused workspace (has opened windows).    |
-| `active_empty_label`     | string  | `'{name}'`                                       | Optional label for the currently focused workspace (has no windows opened). |
+| `active_populated_label` | string  | `'{name}'`                                       | Optional label for the currently active workspace (has opened windows).    |
+| `active_empty_label`     | string  | `'{name}'`                                       | Optional label for the currently active workspace (has no windows opened). |
+| `focused_populated_label`| string  | `'{name}'`                                       | Optional label for the currently focused workspace (has opened windows). Falls back to `active_populated_label` if not set.  |
+| `focused_empty_label`    | string  | `'{name}'`                                       | Optional label for the currently focused workspace (has no windows opened). Falls back to `active_empty_label` if not set. |
 | `hide_empty_workspaces`  | boolean | `true`                                           | Whether to hide empty workspaces.                                           |
 | `hide_if_offline`        | boolean | `false`                                          | Whether to hide workspaces widget if GlazeWM is offline.                    |
 | `glazewm_server_uri`     | string  | `'ws://localhost:6123'`                          | Optional GlazeWM server uri.                                                |
@@ -13,7 +15,7 @@
 | `reverse_scroll_direction` | boolean | `false`      | Reverse scroll direction.                                                  |
 | `container_shadow`       | dict    | `None`                                           | Container shadow options.                                                   |
 | `btn_shadow`             | dict    | `None`                                           | Workspace button shadow options.                                            |
-| `app_icons`    | dict    | `{'enabled_populated': False, 'enabled_active': False, 'size': 16, 'max_icons': 0, 'hide_label': False, 'hide_duplicates': False, 'hide_floating': False}` | Controls the display of opened app icons per workspace. |
+| `app_icons`    | dict    | `{'enabled_populated': False, 'enabled_active': False, 'enabled_focused': None, 'size': 16, 'max_icons': 0, 'hide_label': False, 'hide_duplicates': False, 'hide_floating': False}` | Controls the display of opened app icons per workspace. `enabled_focused` falls back to `enabled_active` if not explicitly set to a non-None bool value.  |
 | `animation`  | boolean | `false`      | Buttons animation.    
 
 ## Example Configuration
@@ -54,8 +56,10 @@ glazewm_workspaces:
 - **offline_label:** The label to display when GlazeWM is offline.
 - **populated_label:** Optional label for populated workspaces. If not set, name or display_name from GlazeWM will be used.
 - **empty_label:** Optional label for empty workspaces. If not set, name or display_name from GlazeWM will be used.
-- **active_populated_label:** Optional label for the currently focused workspace (has windows opened). If not set, name or display_name from GlazeWM will be used.
-- **active_empty_label:** Optional label for the currently focused workspace (has no windows opened). If not set, name or display_name from GlazeWM will be used.
+- **active_populated_label:** Optional label for the currently active workspace (has windows opened). If not set, name or display_name from GlazeWM will be used.
+- **active_empty_label:** Optional label for the currently active workspace (has no windows opened). If not set, name or display_name from GlazeWM will be used.
+- **focused_populated_label:** Optional label for the currently focused workspace (has windows opened). If not set, **active_populated_label** will be used, falling back to name or display_name from GlazeWM.
+- **focused_empty_label:** Optional label for the currently focused workspace (has no windows opened). If not set, **active_empty_label** will be used, falling back to name or display_name from GlazeWM.
 - **hide_empty_workspaces:** Whether to hide empty workspaces.
 - **hide_if_offline:** Whether to hide workspaces widget if GlazeWM is offline.
 - **glazewm_server_uri:** Optional GlazeWM server uri if it ever changes on GlazeWM side.
@@ -66,6 +70,7 @@ glazewm_workspaces:
 - **app_icons:** Controls the display of opened app icons per workspace.
   - **enabled_populated:** Whether to show app icons in populated workspaces.
   - **enabled_active:** Whether to show app icons in the active workspace.
+  - **enabled_focused:** Whether to show app icons in the focused workspace. If not set, **enabled_active** will be used.
   - **size:** The size of the app icons.
   - **max_icons:** The maximum number of app icons to display (0 for no limit).
   - **hide_label:** Whether to hide the label of the workspace buttons that app icons are displayed.
@@ -104,12 +109,15 @@ workspaces:
 .glazewm-workspaces .ws-btn {} /*Style for workspace buttons.*/
 .glazewm-workspaces .ws-btn.active_populated {} /*Style for active populated workspace button.*/
 .glazewm-workspaces .ws-btn.active_empty {} /*Style for active empty workspace button.*/
+.glazewm-workspaces .ws-btn.focused_populated {} /*Style for focused populated workspace button.*/
+.glazewm-workspaces .ws-btn.focused_empty {} /*Style for focused empty workspace button.*/
 .glazewm-workspaces .ws-btn.populated {} /*Style for populated workspace button.*/
 .glazewm-workspaces .ws-btn.empty {} /*Style for empty workspace button.*/
 .glazewm-workspaces .offline-status {} /*Style for offline status label.*/
 ```
+Note: `focused_populated` and `focused_empty` MUST COME AFTER `active_populated` and `active_empty`, respectively, otherwise the `active_*` classes will override any CSS conflicting properties set by their `focused_*` counterparts. Any property that you do not want the `focused_*` classes to inherit from their `active_*` counterparts will need to be set to an explicit value or **unset** if you both do not want to inherit a specific property and you do not want to set it to something.
 
-If `app_icons` is enabled is enabled (either `enabled_populated` or `enabled_active`), the following styles are available:
+If `app_icons` is enabled (either `enabled_populated`, `enabled_active`, or `enabled_focused`), the following styles are available:
 ```css
 .glazewm-workspaces .ws-btn .label {} /*Style for workspace label in buttons.*/
 .glazewm-workspaces .ws-btn .icon {} /*Style for icon in buttons.*/
