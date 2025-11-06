@@ -26,7 +26,7 @@ github:
     label: "<span>\ueba1</span>"
     label_alt: "Notifications {data}" # {data} return number of unread notification
     token: ghp_xxxxxxxxxxx # GitHub Personal access tokens (classic) https://github.com/settings/tokens
-  max_notification: 30 # Max number of notification displaying in menu max: 50
+    max_notification: 30 # Max number of notification displaying in menu max: 50
     notification_dot:
       enabled: True
       corner: "bottom_left" # Can be "top_left", "top_right", "bottom_left", "bottom_right"
