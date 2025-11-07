@@ -1,15 +1,13 @@
 import os
-import re
 import shutil
 import ssl
 import subprocess
 import sys
 import urllib.request
-from typing import Dict
 
 import certifi
 from PyQt6.QtCore import QPropertyAnimation, Qt, QThread, QTimer, QUrl, pyqtSignal
-from PyQt6.QtGui import QDesktopServices, QFont, QFontDatabase, QIcon, QPixmap
+from PyQt6.QtGui import QDesktopServices, QFont, QIcon, QPixmap
 from PyQt6.QtWidgets import (
     QApplication,
     QDialog,
@@ -227,14 +225,15 @@ class ThemeCard(QFrame):
         layout = QVBoxLayout(self.dialog)
 
         confirmation_message = QLabel(
-            f"Are you sure you want to install the theme <b>{self.theme_data['name']}</b>?<br>This will overwrite your current config and styles files."
+            f"Are you sure you want to install the theme <b>{self.theme_data['name']}</b>?<br>"
+            f"This will overwrite your current config and styles files."
         )
         confirmation_message.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         layout.addWidget(confirmation_message)
 
         self.compat_label = QLabel("Checking compatibility...")
         layout.addWidget(self.compat_label)
-        QTimer.singleShot(1000, lambda: self._check_font_families(self.theme_data["id"]))
+        QTimer.singleShot(0, self._show_font_guidance)
         # Add Yes and No buttons
         button_layout = QHBoxLayout()
         self.yes_button = QPushButton("Install")
@@ -300,82 +299,37 @@ class ThemeCard(QFrame):
             except Exception as e:
                 QMessageBox.critical(self, "Error", f"Failed to install theme: {str(e)}")
 
-    def _check_font_families(self, theme_id):
-        try:
-            styles_url = f"https://raw.githubusercontent.com/amnweb/yasb-themes/main/themes/{theme_id}/styles.css"
-            context = ssl.create_default_context(cafile=certifi.where())
-            with urllib.request.urlopen(styles_url, context=context, timeout=5) as resp:
-                css = resp.read().decode("utf-8")
-            css = self._extract_and_replace_variables(css)
-            available_fonts = set(QFontDatabase.families())
-            font_families = set()
-            missing_fonts = set()
-            matches = re.findall(r"font-family\s*:\s*([^;}\n]+)\s*[;}]+", css, flags=re.IGNORECASE)
-            for match in matches:
-                fonts = [f.strip(" '\"\t\r\n") for f in match.split(",")]
-                for font in fonts:
-                    if font:
-                        font_families.add(font)
-                        if font not in available_fonts:
-                            missing_fonts.add(font)
+    def _show_font_guidance(self):
+        theme_id = self.theme_data.get("id", "")
+        repo_url = (
+            f"https://github.com/amnweb/yasb-themes/tree/main/themes/{theme_id}"
+            if theme_id
+            else "https://github.com/amnweb/yasb-themes"
+        )
 
-            if missing_fonts:
-                missing_fonts_label = "Some theme fonts are missing from your system"
-                self.compat_label.setStyleSheet("""
-                    QLabel {
-                        font-size: 12px;
-                        padding: 10px;
-                        margin: 0px 10px 10px 10px;
-                        font-family: 'Segoe UI';
-                        color: #f1e1c9;
-                        background-color:#34291c;
-                        border: 1px solid #955816;
-                        border-radius: 4px
-                    }
-                """)
-                self.compat_label.setText(f"{missing_fonts_label}<br><b>{'<br>'.join(sorted(missing_fonts))}</b>")
-                self.yes_button.setText("Install anyway")
-            else:
-                self.compat_label.hide()
-        except Exception as e:
-            self.compat_label.setStyleSheet("""
-                QLabel {
-                    font-size: 12px;
-                    padding: 10px;
-                    font-family: 'Segoe UI';
-                    color: #fff;
-                    background-color: #a00;
-                    border: 1px solid #c33;
-                    border-radius: 4px
-                }
-            """)
-            self.compat_label.setText(f"Error checking fonts: {str(e)}")
-            self.compat_label.setWordWrap(True)
-            self.yes_button.setText("Install anyway")
-        finally:
-            self.dialog.adjustSize()
-
-    def _extract_and_replace_variables(self, css: str) -> str:
-        # Extract variables from :root
-        root_vars: Dict[str, str] = {}
-
-        def root_replacer(match):
-            content = match.group(1)
-            for var_match in re.finditer(r"--([\w-]+)\s*:\s*([^;]+);", content):
-                var_name = f"--{var_match.group(1).strip()}"
-                var_value = var_match.group(2).strip()
-                root_vars[var_name] = var_value
-            return ""  # Remove :root block
-
-        css = re.sub(r":root\s*{([^}]*)}", root_replacer, css, flags=re.DOTALL)
-
-        # Replace var(--name) with value
-        def var_replacer(match):
-            var_name = match.group(1).strip()
-            return root_vars.get(var_name, match.group(0))
-
-        css = re.sub(r"var\((--[\w-]+)\)", var_replacer, css)
-        return css
+        self.compat_label.setStyleSheet("""
+            QLabel {
+                font-size: 12px;
+                padding: 10px;
+                margin: 0px 10px 10px 10px;
+                font-family: 'Segoe UI';
+                color: #f1e1c9;
+                background-color:#34291c;
+                border: 1px solid #955816;
+                border-radius: 4px
+            }
+            QLabel a {
+                text-decoration: none;
+            }
+        """)
+        self.compat_label.setWordWrap(True)
+        self.compat_label.setOpenExternalLinks(True)
+        self.compat_label.setText(
+            "Note: Some themes require additional fonts.<br>Review the "
+            f"<a href='{repo_url}'>theme</a> or <a href='{repo_url}/styles.css'>styles.css</a> "
+            f"to confirm font requirements before installing."
+        )
+        self.dialog.adjustSize()
 
 
 class ThemeViewer(QMainWindow):
