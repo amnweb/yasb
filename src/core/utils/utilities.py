@@ -2,6 +2,7 @@ import math
 import os
 import platform
 import re
+from datetime import datetime, timezone
 from enum import StrEnum
 from functools import lru_cache
 from pathlib import Path
@@ -47,6 +48,64 @@ def app_data_path(filename: str = None) -> Path:
 def is_windows_10() -> bool:
     version = platform.version()
     return bool(re.match(r"^10\.0\.1\d{4}$", version))
+
+
+def get_relative_time(iso_timestamp: str) -> str:
+    """
+    Convert an ISO 8601 timestamp to a human-readable relative time string.
+
+    Args:
+        iso_timestamp: ISO 8601 formatted timestamp (e.g., "2024-11-01T12:00:00Z")
+
+    Returns:
+        A relative time string (e.g., "3 days ago", "2 weeks ago", "just now")
+        Returns empty string if timestamp is invalid or empty.
+
+    Examples:
+        >>> get_relative_time("2024-11-07T12:00:00Z")
+        "just now"
+        >>> get_relative_time("2024-11-04T12:00:00Z")
+        "3 days ago"
+    """
+    if not iso_timestamp:
+        return ""
+
+    try:
+        # Parse ISO 8601 timestamp
+        updated = datetime.fromisoformat(iso_timestamp.replace("Z", "+00:00"))
+        now = datetime.now(timezone.utc)
+        diff = now - updated
+
+        seconds = diff.total_seconds()
+        minutes = seconds / 60
+        hours = minutes / 60
+        days = hours / 24
+        weeks = days / 7
+        months = days / 30
+        years = days / 365
+
+        if seconds < 60:
+            return "just now"
+        elif minutes < 60:
+            m = int(minutes)
+            return f"{m} minute{'s' if m != 1 else ''} ago"
+        elif hours < 24:
+            h = int(hours)
+            return f"{h} hour{'s' if h != 1 else ''} ago"
+        elif days < 7:
+            d = int(days)
+            return f"{d} day{'s' if d != 1 else ''} ago"
+        elif weeks < 4:
+            w = int(weeks)
+            return f"{w} week{'s' if w != 1 else ''} ago"
+        elif months < 12:
+            mo = int(months)
+            return f"{mo} month{'s' if mo != 1 else ''} ago"
+        else:
+            y = int(years)
+            return f"{y} year{'s' if y != 1 else ''} ago"
+    except Exception:
+        return ""
 
 
 def is_process_running(process_name: str) -> bool:
