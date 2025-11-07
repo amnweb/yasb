@@ -20,9 +20,9 @@ from winmica import BackdropType, EnableMica, is_mica_supported
 from core.ui.style import apply_button_style, apply_link_button_style
 from core.ui.windows.update_dialog import ReleaseFetcher, ReleaseInfo, UpdateDialog
 from core.utils.tooltip import set_tooltip
-from core.utils.utilities import get_app_identifier, is_valid_qobject, refresh_widget_style
+from core.utils.update_service import get_update_service
+from core.utils.utilities import get_architecture, is_valid_qobject, refresh_widget_style
 from settings import (
-    APP_ID,
     APP_NAME,
     BUILD_VERSION,
     GITHUB_THEME_URL,
@@ -30,6 +30,8 @@ from settings import (
     RELEASE_CHANNEL,
     SCRIPT_PATH,
 )
+
+ARCHITECTURE = get_architecture()
 
 if TYPE_CHECKING:
     from core.tray import SystemTrayManager
@@ -57,7 +59,10 @@ class AboutDialog(QDialog):
 
         self._release_fetcher: Optional[ReleaseFetcher] = None
         self._update_dialog: Optional[UpdateDialog] = None
-        self._updates_supported = get_app_identifier() == APP_ID
+
+        # Check if updates are supported (installed app + supported architecture)
+        update_service = get_update_service()
+        self._updates_supported = update_service.is_update_supported()
 
         self._link_buttons: list[QPushButton] = []
         self._secondary_buttons: list[QPushButton] = []
@@ -72,6 +77,7 @@ class AboutDialog(QDialog):
     def _build_window(self) -> None:
         self.setWindowTitle(f"About {APP_NAME}")
         self.setWindowFlag(Qt.WindowType.WindowContextHelpButtonHint, False)
+        self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, True)
         self.setWindowFlag(Qt.WindowType.Window, True)
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         self.setMinimumSize(360, 480)
@@ -107,7 +113,8 @@ class AboutDialog(QDialog):
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(title_label)
 
-        version_label = QLabel(f"Version {BUILD_VERSION} ({RELEASE_CHANNEL})")
+        arch_suffix = f" {ARCHITECTURE}" if ARCHITECTURE else ""
+        version_label = QLabel(f"Version {BUILD_VERSION}{arch_suffix} ({RELEASE_CHANNEL})")
         version_label.setContentsMargins(0, 4, 0, 0)
         version_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         version_font = version_label.font()

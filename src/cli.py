@@ -23,14 +23,14 @@ import time
 import winreg
 from ctypes import GetLastError
 
-from packaging.version import Version
 from win32con import (
     GENERIC_READ,
     GENERIC_WRITE,
     OPEN_EXISTING,
 )
 
-from core.utils.utilities import app_data_path
+from core.utils.update_service import get_update_service
+from core.utils.utilities import app_data_path, get_architecture
 from core.utils.win32.bindings import (
     CloseHandle,
     CreateFile,
@@ -44,6 +44,7 @@ BUFSIZE = 65536
 YASB_VERSION = BUILD_VERSION
 YASB_CLI_VERSION = CLI_VERSION
 YASB_RELEASE_CHANNEL = RELEASE_CHANNEL
+ARCHITECTURE = get_architecture()
 
 INSTALLATION_PATH = os.path.abspath(os.path.join(__file__, "../../.."))
 EXE_PATH = os.path.join(INSTALLATION_PATH, "yasb.exe")
@@ -500,7 +501,10 @@ class CLIHandler:
             sys.exit(0)
 
         elif args.version:
-            version_message = f"YASB Reborn v{YASB_VERSION} ({YASB_RELEASE_CHANNEL})\nYASB-CLI v{YASB_CLI_VERSION}"
+            arch_suffix = f" {ARCHITECTURE}" if ARCHITECTURE else ""
+            version_message = (
+                f"YASB Reborn v{YASB_VERSION}{arch_suffix} ({YASB_RELEASE_CHANNEL})\nYASB-CLI v{YASB_CLI_VERSION}"
+            )
             print(version_message)
         else:
             print("Unknown command. Use --help for available options.")
@@ -599,49 +603,67 @@ class CLIUpdateHandler:
         return None
 
     def update_yasb(self, yasb_version: str):
-        from urllib.request import urlopen
+        """Check for updates and install if available using centralized update service."""
+        # Get update service
+        update_service = get_update_service()
 
-        # Fetch the latest tag from the GitHub API
-        api_url = "https://api.github.com/repos/amnweb/yasb/releases/latest"
-        with urlopen(api_url) as response:
-            data = response.read().decode("utf-8")  # Read and decode bytes
-            latest_release = json.loads(data)  # Parse JSON manually
-        tag: str = latest_release["tag_name"].lstrip("v")
-        changelog = "https://github.com/amnweb/yasb/releases/latest"
-        # Step 2: Generate the download link based on the latest tag
-        msi_url = f"https://github.com/amnweb/yasb/releases/download/v{tag}/yasb-{tag}-win64.msi"
-        temp_dir = tempfile.gettempdir()
-        msi_path = os.path.join(temp_dir, f"yasb-{tag}-win64.msi")
-        if Version(tag) <= Version(yasb_version):
-            print("\nYASB Reborn is already up to date.\n")
-            sys.exit(0)
-        print(f"\nYASB Reborn version {Format.underline}{tag}{Format.reset} is available.")
-        print(f"\nChangelog {changelog}")
-        # Ask the user if they want to continue with the update
+        # Check if updates are supported
+        if not update_service.is_update_supported():
+            print("\nUpdates are not supported on this system.")
+            if not ARCHITECTURE:
+                print("Reason: Unsupported architecture")
+            sys.exit(1)
+
+        print("\nChecking for updates...")
+        arch_suffix = f" ({ARCHITECTURE})" if ARCHITECTURE else ""
+        print(f"Current version: {yasb_version}{arch_suffix}")
+
         try:
-            user_input = input("\nDo you want to continue with the update? (Y/n): ").strip().lower()
-            if user_input not in ["y", "yes", ""]:
-                print("\nUpdate canceled.")
+            release_info = update_service.check_for_updates(timeout=15)
+
+            if release_info is None:
+                print(f"\nYASB Reborn is already up to date (v{yasb_version}).\n")
                 sys.exit(0)
-        except KeyboardInterrupt:
-            print("\nUpdate canceled.")
+
+            # Update available
+            print(f"\nYASB Reborn version {Format.underline}{release_info.version}{Format.reset} is available.")
+            print(f"Download: {release_info.asset_name}")
+            if release_info.asset_size:
+                print(f"Size: {release_info.asset_size / 1024 / 1024:.1f} MB")
+            print("Changelog: https://github.com/amnweb/yasb/releases/latest")
+
+            # Ask the user if they want to continue with the update
+            try:
+                user_input = input("\nDo you want to continue with the update? (Y/n): ").strip().lower()
+                if user_input not in ["y", "yes", ""]:
+                    print("\nUpdate canceled.")
+                    sys.exit(0)
+            except KeyboardInterrupt:
+                print("\n\nUpdate canceled.")
+                sys.exit(0)
+
+            # Download the MSI
+            temp_dir = tempfile.gettempdir()
+            msi_path = os.path.join(temp_dir, release_info.asset_name)
+            self.download_yasb(release_info.download_url, msi_path)
+
+            # Kill running processes
+            for proc in ["yasb.exe", "yasb_themes.exe"]:
+                if is_process_running(proc):
+                    subprocess.run(["taskkill", "/f", "/im", proc], creationflags=subprocess.CREATE_NO_WINDOW)
+
+            # Install and restart
+            install_command = f'msiexec /i "{os.path.abspath(msi_path)}" /passive /norestart'
+            run_after_command = f'"{EXE_PATH}"'
+            combined_command = f"{install_command} && {run_after_command}"
+
+            print("\nStarting installer...")
+            subprocess.Popen(combined_command, shell=True)
             sys.exit(0)
-        # Step 3: Download the latest MSI file
-        self.download_yasb(msi_url, msi_path)
 
-        # Step 4: Run the MSI installer in silent mode and restart the application
-        for proc in ["yasb.exe", "yasb_themes.exe"]:
-            if is_process_running(proc):
-                subprocess.run(["taskkill", "/f", "/im", proc], creationflags=subprocess.CREATE_NO_WINDOW)
-
-        # Construct the install command as a string
-        install_command = f'msiexec /i "{os.path.abspath(msi_path)}" /passive /norestart'
-        run_after_command = f'"{EXE_PATH}"'
-        # combined_command = f'{uninstall_command} && {install_command} && {run_after_command}'
-        combined_command = f"{install_command} && {run_after_command}"
-        # Finally run update and restart the application
-        subprocess.Popen(combined_command, shell=True)
-        sys.exit(0)
+        except Exception as e:
+            print(f"\nFailed to check for updates: {e}")
+            sys.exit(1)
 
     def download_yasb(self, msi_url: str, msi_path: str) -> None:
         import urllib.error
