@@ -4,7 +4,7 @@ permissions:
   contents: read
 
 on:
-  workflow_dispatch: # Manually run the action
+  workflow_dispatch: 
 
 jobs:
   winget:
@@ -21,47 +21,20 @@ jobs:
           # Fetching latest release from GitHub
           $github = Invoke-RestMethod -uri "https://api.github.com/repos/amnweb/yasb/releases"
           $targetRelease = $github | Where-Object -Property name -match 'v'| Select-Object -First 1
-          $installerUrl = $targetRelease | Select-Object -ExpandProperty assets -First 1 | Where-Object -Property name -match '\.msi$' | Select-Object -ExpandProperty browser_download_url
           $packageVersion = $targetRelease.tag_name.Trim("v")
+
+          # Get both x64 and aarch64 MSI URLs
+          $assets = $targetRelease | Select-Object -ExpandProperty assets
+          $x64Url = $assets | Where-Object -Property name -match 'x64\.msi$' | Select-Object -ExpandProperty browser_download_url
+          # Temporarily disabled ARM64
+          # $aarch64Url = $assets | Where-Object -Property name -match 'aarch64\.msi$' | Select-Object -ExpandProperty browser_download_url
 
           $relaseTitle = "New version: AmN.yasb version $packageVersion"
           $relaseUrl = $targetRelease.html_url
           $relaseDate = [datetime]::Parse($targetRelease.published_at).ToString("yyyy-MM-dd")
 
-          # Update package using wingetcreate
+          # Update package using wingetcreate with both architectures
           Invoke-WebRequest https://aka.ms/wingetcreate/latest -OutFile wingetcreate.exe
-          .\wingetcreate.exe update $packageId --version $packageVersion --urls "$installerUrl" --prtitle "$relaseTitle" --release-notes-url "$relaseUrl" --release-date "$relaseDate" --submit --token $gitToken
-
-# name: Publish to WinGet
-
-# permissions:
-#   contents: read
-
-# on:
-#   workflow_dispatch: # Manually run the action
-
-# jobs:
-#   msix-to-winget:
-#     name: Publish to WinGet
-#     runs-on: windows-latest
-#     steps:
-#       - name: Get Latest Release
-#         id: get-version
-#         uses: actions/github-script@v7
-#         with:
-#           script: |-
-#             const { owner, repo } = context.repo;
-#             const latestRelease = await github.rest.repos.getLatestRelease({ owner, repo });
-#             const tag = latestRelease.data.tag_name;
-#             const version = tag.replace("v", "");
-#             core.setOutput('version', version);
-#             core.setOutput('release-tag', tag);
-#             console.log("Release tag: ", tag, " Version: ", version);
-
-#       - uses: vedantmgoyal9/winget-releaser@main
-#         with:
-#           identifier: AmN.yasb
-#           version: ${{ steps.get-version.outputs.version }}
-#           release-tag: ${{ steps.get-version.outputs.release-tag }}
-#           installers-regex: '\.msi$'
-#           token: ${{ secrets.WINGET_TOKEN }}
+          # Temporarily submitting only x64
+          .\wingetcreate.exe update $packageId --version $packageVersion --urls "$x64Url|x64" --prtitle "$relaseTitle" --release-notes-url "$relaseUrl" --release-date "$relaseDate" --submit --token $gitToken
+          # .\wingetcreate.exe update $packageId --version $packageVersion --urls "$x64Url|x64" "$aarch64Url|arm64" --prtitle "$relaseTitle" --release-notes-url "$relaseUrl" --release-date "$relaseDate" --submit --token $gitToken

@@ -2,59 +2,22 @@ import datetime
 
 from cx_Freeze import Executable, setup
 
+from core.utils.utilities import detect_architecture
 from settings import APP_ID, BUILD_VERSION
+
+arch_info = detect_architecture()
+if not arch_info:
+    raise RuntimeError("Unsupported or undetected architecture. Cannot build MSI package.")
+
+display_arch, msi_arch_suffix = arch_info
 
 build_options = {
     "packages": [
-        "core.widgets.yasb.power_menu",
-        "core.widgets.yasb.volume",
-        "core.widgets.yasb.weather",
-        "core.widgets.yasb.memory",
-        "core.widgets.yasb.cpu",
-        "core.widgets.yasb.libre_monitor",
-        "core.widgets.yasb.active_window",
-        "core.widgets.yasb.applications",
-        "core.widgets.yasb.battery",
-        "core.widgets.yasb.clock",
-        "core.widgets.yasb.custom",
-        "core.widgets.yasb.github",
-        "core.widgets.yasb.media",
-        "core.widgets.yasb.microphone",
-        "core.widgets.yasb.bluetooth",
-        "core.widgets.yasb.wallpapers",
-        "core.widgets.yasb.traffic",
-        "core.widgets.yasb.wifi",
-        "core.widgets.yasb.language",
-        "core.widgets.yasb.launchpad",
-        "core.widgets.yasb.disk",
-        "core.widgets.yasb.obs",
-        "core.widgets.yasb.whkd",
-        "core.widgets.yasb.taskbar",
-        "core.widgets.yasb.brightness",
-        "core.widgets.yasb.update_check",
-        "core.widgets.yasb.windows_desktops",
-        "core.widgets.yasb.server_monitor",
-        "core.widgets.yasb.notifications",
-        "core.widgets.yasb.home",
-        "core.widgets.yasb.cava",
-        "core.widgets.yasb.systray",
-        "core.widgets.yasb.pomodoro",
-        "core.widgets.yasb.notes",
-        "core.widgets.yasb.recycle_bin",
-        "core.widgets.yasb.vscode",
-        "core.widgets.yasb.power_plan",
-        "core.widgets.yasb.grouper",
-        "core.widgets.yasb.todo",
-        "core.widgets.yasb.ai_chat",
-        "core.widgets.yasb.gpu",
-        "core.widgets.komorebi.control",
-        "core.widgets.komorebi.active_layout",
-        "core.widgets.komorebi.stack",
-        "core.widgets.komorebi.workspaces",
-        "core.widgets.glazewm.binding_mode",
-        "core.widgets.glazewm.tiling_direction",
-        "core.widgets.glazewm.workspaces",
+        "core.widgets.yasb",
+        "core.widgets.komorebi",
+        "core.widgets.glazewm",
     ],
+    "constants": [f"ARCHITECTURE='{display_arch}'"],
     "silent_level": 1,
     "silent": True,
     "excludes": ["PySide6", "pydoc_data", "email", "tkinter", "PyQt5", "PySide2", "unittest"],
@@ -126,6 +89,7 @@ bdist_msi_options = {
     "initial_target_dir": r"[ProgramFiles64Folder]\YASB",
     "all_users": True,
     "skip_build": True,
+    "target_name": f"yasb-{BUILD_VERSION}-{msi_arch_suffix}.msi",
     "summary_data": {
         "author": "AmN",
         "comments": "A highly configurable Windows status bar",

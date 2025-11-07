@@ -50,6 +50,46 @@ def is_windows_10() -> bool:
     return bool(re.match(r"^10\.0\.1\d{4}$", version))
 
 
+def detect_architecture() -> tuple[str, str] | None:
+    """Detect the system architecture for build purposes.
+
+    Returns:
+        Tuple of (display_name, msi_suffix): ("ARM64", "aarch64") or ("x64", "x64"), or None if unknown
+    """
+    try:
+        machine = platform.machine().lower()
+
+        # Check for ARM64
+        if machine in ["arm64", "aarch64"]:
+            return ("ARM64", "aarch64")
+
+        # Check for x64
+        if machine in ["amd64", "x86_64", "x64"]:
+            return ("x64", "x64")
+
+        # Fallback: check if running on 64-bit Windows
+        if platform.architecture()[0] == "64bit":
+            return ("x64", "x64")
+
+        return None
+    except Exception:
+        return None
+
+
+def get_architecture() -> str | None:
+    """Get the build architecture from BUILD_CONSTANTS.
+
+    Returns:
+        Architecture string from frozen build, or None if not frozen/built
+    """
+    try:
+        from BUILD_CONSTANTS import ARCHITECTURE  # type: ignore[import-not-found]
+
+        return ARCHITECTURE
+    except ImportError:
+        return None
+
+
 def get_relative_time(iso_timestamp: str) -> str:
     """
     Convert an ISO 8601 timestamp to a human-readable relative time string.

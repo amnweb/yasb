@@ -2,16 +2,15 @@ name: Build Dev Release
 
 on:
   workflow_dispatch:
-  pull_request:
-    types:
-      - opened
-      - reopened
-      - synchronize
-      - ready_for_review
-    branches:
-      - main
-      - feature/*
-      - dev
+    inputs:
+      cx_freeze_version:
+        description: 'cx_Freeze version to use'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - stable
+          - dev
 
 permissions:
   contents: read
@@ -29,27 +28,23 @@ jobs:
           - arch: x64
             runner: windows-latest
             python_arch: x64
-            artifact_suffix: win64
-            unsigned_exe_name: unsigned-exes-win64
-            unsigned_msi_name: unsigned-msi-win64
-          - arch: arm64
-            runner: windows-11-arm
-            python_arch: arm64
-            artifact_suffix: aarch64
-            unsigned_exe_name: unsigned-exes-arm64
-            unsigned_msi_name: unsigned-msi-arm64
+            artifact_suffix: x64
+            unsigned_exe_name: unsigned-exes-x64
+            unsigned_msi_name: unsigned-msi-x64
+          # - arch: arm64  # Temporarily skipped due to build issues
+          #   runner: windows-11-arm
+          #   python_arch: arm64
+          #   artifact_suffix: aarch64
+          #   unsigned_exe_name: unsigned-exes-arm64
+          #   unsigned_msi_name: unsigned-msi-arm64
     runs-on: ${{ matrix.runner }}
     name: Build (${{ matrix.arch }})
-    if: |
-      github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'pull_request' && github.event.action != 'closed')
     
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
-        ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.ref }}
 
     - name: Set up Python
       uses: actions/setup-python@v5
@@ -86,12 +81,19 @@ jobs:
         Write-Host "Updated RELEASE_CHANNEL to dev-$env:COMMIT_HASH"
       shell: pwsh
 
-    - name: Activate virtual environment and install dependencies
+    - name: Install dependencies
       run: |
         .\venv\Scripts\Activate
         python -m pip install --upgrade pip
         pip install --force --no-cache .
-        pip install --extra-index-url https://test.pypi.org/simple/ cx_Freeze --pre --no-cache
+        $cxFreezeVersion = "${{ github.event.inputs.cx_freeze_version }}"
+        if ($cxFreezeVersion -eq "dev") {
+          Write-Host "Installing cx_Freeze dev version from test.pypi.org"
+          pip install --extra-index-url https://test.pypi.org/simple/ cx_Freeze --pre --no-cache
+        } else {
+          Write-Host "Installing cx_Freeze stable version"
+          pip install --force --no-cache --upgrade cx_Freeze
+        }
       shell: pwsh
 
     - name: Build EXE
@@ -102,7 +104,6 @@ jobs:
       shell: pwsh
 
     - name: Upload unsigned EXE artifacts
-      if: github.event_name == 'workflow_dispatch'
       uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.unsigned_exe_name }}
@@ -112,7 +113,6 @@ jobs:
           src/dist/yasb_themes.exe
 
     - name: Get unsigned-exes artifact id
-      if: github.event_name == 'workflow_dispatch'
       id: get_exes_artifact
       uses: actions/github-script@v7
       env:
@@ -129,7 +129,6 @@ jobs:
           return artifact.id;
 
     - name: Submit EXE signing request
-      if: github.event_name == 'workflow_dispatch'
       id: sign_exes
       uses: signpath/github-action-submit-signing-request@v1
       with:
@@ -143,7 +142,7 @@ jobs:
         output-artifact-directory: 'src/signed'
 
     - name: Replace unsigned EXE with signed
-      if: github.event_name == 'workflow_dispatch' && steps.sign_exes.outcome == 'success'
+      if: steps.sign_exes.outcome == 'success'
       run: |
         .\venv\Scripts\Activate
         $signedDir = 'src/signed'
@@ -178,14 +177,12 @@ jobs:
       shell: pwsh
 
     - name: Upload unsigned MSI
-      if: github.event_name == 'workflow_dispatch'
       uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.unsigned_msi_name }}
         path: src/dist/out/*.msi
 
     - name: Get unsigned-msi artifact id
-      if: github.event_name == 'workflow_dispatch'
       id: get_msi_artifact
       uses: actions/github-script@v7
       env:
@@ -202,7 +199,6 @@ jobs:
           return artifact.id;
 
     - name: Submit MSI signing request
-      if: github.event_name == 'workflow_dispatch'
       id: sign_msi
       uses: signpath/github-action-submit-signing-request@v1
       with:
@@ -216,7 +212,7 @@ jobs:
         output-artifact-directory: 'src/signed'
 
     - name: Replace unsigned MSI with signed
-      if: github.event_name == 'workflow_dispatch' && steps.sign_msi.outcome == 'success'
+      if: steps.sign_msi.outcome == 'success'
       run: |
         .\venv\Scripts\Activate
         $signedDir = 'src/signed'
@@ -243,30 +239,6 @@ jobs:
         }
       shell: pwsh
 
-    - name: Rename Artifacts File
-      env:
-        ARTIFACT_SUFFIX: ${{ matrix.artifact_suffix }}
-      run: |
-        $msis = Get-ChildItem -Path src/dist/out/*.msi
-        if (-not $msis) {
-          Write-Error "No MSI files found to rename."
-          exit 1
-        }
-        if ($msis.Count -gt 1) {
-          Write-Warning "Multiple MSI files found; using the first entry ${msis[0].FullName}."
-        }
-        $sourceMsi = $msis[0].FullName
-        $targetName = "yasb-dev-$($env:ARTIFACT_SUFFIX).msi"
-        $targetMsi = Join-Path 'src/dist/out' $targetName
-        Copy-Item -Path $sourceMsi -Destination $targetMsi -Force
-        if ($sourceMsi -ne $targetMsi) {
-          Remove-Item -Path $sourceMsi -Force
-        }
-        if ($env:ARTIFACT_SUFFIX -eq 'win64') {
-          echo "FILENAME=$targetName" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-        }
-      shell: pwsh
-
     - name: Upload Artifacts
       uses: actions/upload-artifact@v4
       with:
@@ -276,7 +248,6 @@ jobs:
         retention-days: 10
 
     - name: Delete Artifacts
-      if: github.event_name == 'workflow_dispatch'
       uses: geekyeggo/delete-artifact@v5
       with:
         name: |
@@ -285,7 +256,6 @@ jobs:
 
   publish_dev_release:
     needs: build
-    if: github.event_name == 'workflow_dispatch'
     permissions:
       contents: write
     runs-on: ubuntu-latest

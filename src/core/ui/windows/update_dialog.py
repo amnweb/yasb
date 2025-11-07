@@ -1,6 +1,5 @@
 """Update dialog for checking, downloading, and installing application updates."""
 
-import json
 import logging
 import os
 import re
@@ -9,7 +8,6 @@ import subprocess
 import tempfile
 import urllib.error
 import urllib.request
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Optional
 
@@ -30,11 +28,12 @@ from winmica import BackdropType, EnableMica, is_mica_supported
 
 from core.ui.style import apply_button_style
 from core.utils.controller import exit_application
-from core.utils.utilities import is_process_running, is_valid_qobject, refresh_widget_style
+from core.utils.update_service import ReleaseInfo, get_update_service
+from core.utils.utilities import get_architecture, is_process_running, is_valid_qobject, refresh_widget_style
 from settings import APP_NAME, SCRIPT_PATH
 
-GITHUB_LATEST_RELEASE_URL = "https://api.github.com/repos/amnweb/yasb/releases/latest"
 USER_AGENT_HEADER = {"User-Agent": f"{APP_NAME} Updater"}
+ARCHITECTURE = get_architecture()
 
 _COMMIT_URL_PATTERN = re.compile(r"https://github\.com/[^/\s]+/[^/\s]+/commit/([0-9a-fA-F]{7,40})(?=[^0-9a-fA-F]|$)")
 _COMPARE_URL_PATTERN = re.compile(r"(?<![<\[(])(https://github\.com/[^/\s]+/[^/\s]+/compare/[^\s<>()]+)")
@@ -48,6 +47,7 @@ _CANCEL_BUTTON_TEXT = "Cancel"
 
 
 def _strip_commit_links(changelog: str) -> str:
+    """Strip commit links from changelog markdown."""
     if not changelog:
         return changelog
     transformed = _COMMIT_URL_PATTERN.sub(lambda match: f"[[link]]({match.group(0)})", changelog)
@@ -58,33 +58,13 @@ def _strip_commit_links(changelog: str) -> str:
     return _COMPARE_URL_PATTERN.sub(lambda match: f"<{match.group(1)}>", transformed)
 
 
-@dataclass(slots=True)
-class ReleaseInfo:
-    version: str
-    changelog: str
-    download_url: str
-    asset_name: str
-    asset_size: Optional[int]
-
-
-def _normalize_version_segments(version: str) -> list[int]:
-    """Return a list of numeric segments found within the version string."""
-    segments = [int(part) for part in re.findall(r"\d+", version)]
-    if not segments:
-        return [0]
-    return segments
-
-
-def is_newer_version(latest: str, current: str) -> bool:
-    latest_segments = _normalize_version_segments(latest)
-    current_segments = _normalize_version_segments(current)
-    max_length = max(len(latest_segments), len(current_segments))
-    latest_segments.extend([0] * (max_length - len(latest_segments)))
-    current_segments.extend([0] * (max_length - len(current_segments)))
-    return latest_segments > current_segments
-
-
 class ReleaseFetcher(QThread):
+    """Thread for fetching release information from GitHub.
+
+    Uses the centralized UpdateService for consistent version checking
+    and architecture-specific asset selection.
+    """
+
     update_available = pyqtSignal(object)
     up_to_date = pyqtSignal(str)
     error = pyqtSignal(str)
@@ -92,35 +72,20 @@ class ReleaseFetcher(QThread):
     def __init__(self, current_version: str, parent=None):
         super().__init__(parent)
         self._current_version = current_version
+        self._update_service = get_update_service()
 
     def run(self):
+        """Check for updates using the centralized UpdateService."""
         try:
-            request = urllib.request.Request(GITHUB_LATEST_RELEASE_URL, headers=USER_AGENT_HEADER)
-            context = ssl.create_default_context(cafile=certifi.where())
-            with urllib.request.urlopen(request, context=context, timeout=15) as response:
-                data = response.read()
-            release_info = json.loads(data)
-            latest_version = release_info.get("tag_name", "").lstrip("vV")
-            if not latest_version:
-                raise ValueError("Latest release tag is missing.")
+            release_info = self._update_service.check_for_updates(timeout=15)
 
-            if not is_newer_version(latest_version, self._current_version):
-                self.up_to_date.emit(f"You already have the latest version ({self._current_version}).")
+            if release_info is None:
+                self.up_to_date.emit(f"You already have the latest version ({self._current_version})")
                 return
 
-            assets = release_info.get("assets", [])
-            msi_asset = next((asset for asset in assets if asset.get("name", "").lower().endswith(".msi")), None)
-            if not msi_asset:
-                raise ValueError("Latest release does not include a Windows installer (MSI).")
+            # Update available
+            self.update_available.emit(release_info)
 
-            info = ReleaseInfo(
-                version=latest_version,
-                changelog=release_info.get("body", ""),
-                download_url=msi_asset.get("browser_download_url"),
-                asset_name=msi_asset.get("name", f"yasb-{latest_version}.msi"),
-                asset_size=msi_asset.get("size"),
-            )
-            self.update_available.emit(info)
         except urllib.error.HTTPError as http_error:
             logging.error("GitHub responded with HTTP error during update check: %s", http_error)
             self.error.emit("GitHub returned an error while checking for updates.")
@@ -128,7 +93,7 @@ class ReleaseFetcher(QThread):
             logging.warning("Network error during update check: %s", url_error)
             self.error.emit("Couldn't reach GitHub. Check your internet connection and try again.")
         except Exception as exc:
-            logging.error("Unexpected error while checking for updates")
+            logging.error("Unexpected error while checking for updates: %s", exc)
             self.error.emit(str(exc))
 
 
@@ -214,6 +179,7 @@ class UpdateDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle("Check for Updates")
         self.setModal(True)
+        self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, True)
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         self.setMinimumSize(800, 600)
         if is_mica_supported():
@@ -333,13 +299,24 @@ class UpdateDialog(QDialog):
         self._cancel_requested = False
 
     def set_release_info(self, release_info: ReleaseInfo) -> None:
+        """Set release information and update the dialog UI.
+
+        Args:
+            release_info: Release information including version and architecture
+        """
         self._available_release = release_info
-        self.setWindowTitle(f"Update Available - {release_info.version}")
-        # self.changelog_label.setText(f"Latest changes - {release_info.version}")
+
+        # Update window title with version and architecture
+        arch_suffix = f" ({ARCHITECTURE})" if ARCHITECTURE else ""
+        self.setWindowTitle(f"Update Available - v{release_info.version}{arch_suffix}")
+
+        # Display changelog
         changelog = release_info.changelog.strip() or "_No changelog provided._"
         self.changelog_view.setMarkdown(_strip_commit_links(changelog))
         self._apply_heading_spacing()
+
         self._set_idle_state(enabled=True)
+
         if self.isVisible():
             self.raise_()
             self.activateWindow()

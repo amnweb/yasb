@@ -1,0 +1,346 @@
+name: PR Check
+
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - ready_for_review
+
+permissions:
+  contents: read
+  pull-requests: write
+
+env:
+  PYTHON_VERSION: '3.14'
+
+jobs:
+  ruff-lint:
+    runs-on: windows-latest
+    name: Ruff Format & Lint Check
+    
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        ref: ${{ github.event.pull_request.head.sha }}
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Install Ruff
+      run: |
+        python -m pip install --upgrade pip
+        pip install ruff
+      shell: pwsh
+
+    - name: Run Ruff Format Check
+      id: ruff_format
+      continue-on-error: true
+      run: |
+        Write-Host "Running Ruff format check..."
+        ruff format --check --diff . 2>&1 | Tee-Object -FilePath "format_output.txt"
+        $formatExitCode = $LASTEXITCODE
+        
+        if ($formatExitCode -ne 0) {
+          Write-Host "::error::Ruff format check failed"
+          exit 1
+        } else {
+          Write-Host "Ruff format check passed"
+          "" | Out-File -FilePath "format_output.txt" -Encoding utf8
+        }
+      shell: pwsh
+
+    - name: Run Ruff Lint Check
+      id: ruff_lint
+      continue-on-error: true
+      run: |
+        Write-Host "Running Ruff lint check..."
+        ruff check --output-format=full . 2>&1 | Tee-Object -FilePath "lint_output.txt"
+        $lintExitCode = $LASTEXITCODE
+        
+        if ($lintExitCode -ne 0) {
+          Write-Host "::error::Ruff lint check failed"
+          exit 1
+        } else {
+          Write-Host "Ruff lint check passed"
+          "" | Out-File -FilePath "lint_output.txt" -Encoding utf8
+        }
+      shell: pwsh
+
+    - name: Prepare Failure Comment
+      if: always() && (steps.ruff_format.outcome == 'failure' || steps.ruff_lint.outcome == 'failure')
+      id: prepare_comment
+      run: |
+        $comment = "## ❌ Ruff Lint Check Failed`n`n"
+        $comment += "The code quality checks did not pass. Please review and fix the issues below:`n`n"
+        
+        $hasIssues = $false
+        
+        if ((Test-Path "format_output.txt") -and ((Get-Item "format_output.txt").Length -gt 0)) {
+          $formatOutput = Get-Content "format_output.txt" -Raw
+          if ($formatOutput -and $formatOutput.Trim() -ne "") {
+            $hasIssues = $true
+            $comment += "### 📝 Format Issues`n`n"
+            $comment += "The following code needs formatting. Here are the differences:`n`n"
+            $comment += "``````diff`n"
+            $comment += $formatOutput.TrimEnd()
+            $comment += "`n``````"
+            $comment += "`n`n**To fix:** Run ``ruff format .`` in your local repository.`n`n"
+          }
+        }
+        
+        if ((Test-Path "lint_output.txt") -and ((Get-Item "lint_output.txt").Length -gt 0)) {
+          $lintOutput = Get-Content "lint_output.txt" -Raw
+          if ($lintOutput -and $lintOutput.Trim() -ne "" -and $lintOutput -notmatch "All checks passed") {
+            $hasIssues = $true
+            $comment += "### 🔍 Lint Issues`n`n"
+            $comment += "The following issues were found:`n`n"
+            $comment += "``````text`n"
+            $comment += $lintOutput.TrimEnd()
+            $comment += "`n``````"
+            $comment += "`n`n**To fix:** Run ``ruff check --fix .`` to automatically fix some issues, or fix them manually.`n`n"
+          }
+        }
+        
+        if ($hasIssues) {
+          $comment += "---`n"
+          $comment += "**Note:** The build checks will be skipped until these issues are resolved.`n"
+          $comment += "Please commit the fixes and push to this PR branch."
+          
+          $comment | Out-File -FilePath "comment.txt" -Encoding utf8
+        } else {
+          Write-Host "No issues found to report"
+        }
+      shell: pwsh
+
+    - name: Comment on PR (Only on Failure)
+      if: always() && steps.prepare_comment.outcome == 'success'
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const fs = require('fs');
+          
+          if (!fs.existsSync('comment.txt')) {
+            console.log('No comment file found, skipping comment');
+            return;
+          }
+          
+          const comment = fs.readFileSync('comment.txt', 'utf8');
+          
+          const { data: comments } = await github.rest.issues.listComments({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
+          });
+          
+          const botComment = comments.find(comment => 
+            comment.user.type === 'Bot' && 
+            comment.body.includes('Ruff Lint Check Failed')
+          );
+          
+          if (botComment) {
+            console.log('Updating existing comment');
+            await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: botComment.id,
+              body: comment
+            });
+          } else {
+            console.log('Creating new comment');
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: comment
+            });
+          }
+
+    - name: Delete Success Comments
+      if: always() && steps.ruff_format.outcome == 'success' && steps.ruff_lint.outcome == 'success'
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const { data: comments } = await github.rest.issues.listComments({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
+          });
+          
+          const botComments = comments.filter(comment => 
+            comment.user.type === 'Bot' && 
+            (comment.body.includes('Ruff Lint Check Failed') || comment.body.includes('Ruff Lint Check Passed'))
+          );
+          
+          for (const comment of botComments) {
+            console.log('Deleting old lint comment');
+            await github.rest.issues.deleteComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: comment.id,
+            });
+          }
+
+    - name: Fail job if checks failed
+      if: steps.ruff_format.outcome == 'failure' || steps.ruff_lint.outcome == 'failure'
+      run: |
+        Write-Host "Ruff checks failed. Failing the job."
+        exit 1
+      shell: pwsh
+
+  build-x64:
+    needs: ruff-lint
+    if: needs.ruff-lint.result == 'success'
+    runs-on: windows-latest
+    name: Build (x64)
+    
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        ref: ${{ github.event.pull_request.head.sha }}
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        architecture: x64
+
+    - name: Create virtual environment
+      run: |
+        python -m venv venv
+      shell: pwsh
+
+    - name: Get App Info
+      id: get_info
+      run: |
+        .\venv\Scripts\Activate
+        $currentDateTime = Get-Date -Format "yyyy-MM-dd HH:mm:ss UTC"
+        echo "BUILD_DATETIME=$currentDateTime" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        $commitHash = git rev-parse --short HEAD
+        echo "COMMIT_HASH=$commitHash" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        echo "BUILD_DATETIME=$currentDateTime" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+        echo "COMMIT_HASH=$commitHash" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+      shell: pwsh
+
+    - name: Update Release Channel
+      run: |
+        .\venv\Scripts\Activate
+        $settingsPath = "src/settings.py"
+        $content = Get-Content $settingsPath -Raw
+        $replacement = 'RELEASE_CHANNEL = "pr-' + $env:COMMIT_HASH + '"'
+        $content = $content -replace 'RELEASE_CHANNEL = "stable"', $replacement
+        Set-Content -Path $settingsPath -Value $content -NoNewline
+        Write-Host "Updated RELEASE_CHANNEL to pr-$env:COMMIT_HASH"
+      shell: pwsh
+
+    - name: Install dependencies
+      run: |
+        .\venv\Scripts\Activate
+        python -m pip install --upgrade pip
+        pip install --force --no-cache .
+        Write-Host "Installing cx_Freeze dev version from test.pypi.org"
+        pip install --extra-index-url https://test.pypi.org/simple/ cx_Freeze --pre --no-cache
+      shell: pwsh
+
+    - name: Build Installer
+      run: |
+        .\venv\Scripts\Activate
+        cd src
+        python build.py build
+        python build.py bdist_msi
+      shell: pwsh
+
+    - name: Upload Build Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: yasb-dev-${{ steps.get_info.outputs.COMMIT_HASH }}-x64
+        path: |
+          src/dist/out/*.msi
+        retention-days: 7
+
+  build-arm64:
+    needs: ruff-lint
+    if: needs.ruff-lint.result == 'success'
+    runs-on: windows-11-arm
+    name: Build (arm64)
+    
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        ref: ${{ github.event.pull_request.head.sha }}
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        architecture: arm64
+
+    - name: Create virtual environment
+      run: |
+        python -m venv venv
+      shell: pwsh
+
+    - name: Get App Info
+      id: get_info
+      run: |
+        .\venv\Scripts\Activate
+        $currentDateTime = Get-Date -Format "yyyy-MM-dd HH:mm:ss UTC"
+        echo "BUILD_DATETIME=$currentDateTime" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        $commitHash = git rev-parse --short HEAD
+        echo "COMMIT_HASH=$commitHash" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        echo "BUILD_DATETIME=$currentDateTime" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+        echo "COMMIT_HASH=$commitHash" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+      shell: pwsh
+
+    - name: Update Release Channel
+      run: |
+        .\venv\Scripts\Activate
+        $settingsPath = "src/settings.py"
+        $content = Get-Content $settingsPath -Raw
+        $replacement = 'RELEASE_CHANNEL = "pr-' + $env:COMMIT_HASH + '"'
+        $content = $content -replace 'RELEASE_CHANNEL = "stable"', $replacement
+        Set-Content -Path $settingsPath -Value $content -NoNewline
+        Write-Host "Updated RELEASE_CHANNEL to pr-$env:COMMIT_HASH"
+      shell: pwsh
+
+    - name: Install dependencies
+      run: |
+        .\venv\Scripts\Activate
+        python -m pip install --upgrade pip
+        pip install --force --no-cache .
+        Write-Host "Installing cx_Freeze dev version from test.pypi.org"
+        pip install --extra-index-url https://test.pypi.org/simple/ cx_Freeze --pre --no-cache
+      shell: pwsh
+
+    - name: Build EXE
+      run: |
+        .\venv\Scripts\Activate
+        cd src
+        python build.py build
+      shell: pwsh
+
+    - name: Build MSI
+      run: |
+        .\venv\Scripts\Activate
+        cd src
+        python build.py bdist_msi
+      shell: pwsh
+
+    - name: Upload Build Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: yasb-dev-${{ steps.get_info.outputs.COMMIT_HASH }}-aarch64
+        path: |
+          src/dist/out/*.msi
+        retention-days: 7
