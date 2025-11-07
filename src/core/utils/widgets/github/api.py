@@ -288,6 +288,7 @@ class GitHubDataManager:
                             "unread": notification["unread"],
                             "reason": notification.get("reason", ""),
                             "comment_count": None,
+                            "updated_at": notification.get("updated_at", ""),
                             "__subject_api_url": subject_url,
                         }
                     )

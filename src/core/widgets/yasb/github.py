@@ -8,7 +8,7 @@ from PyQt6.QtGui import QColor, QCursor, QDesktopServices, QPainter, QPaintEvent
 from PyQt6.QtWidgets import QFrame, QGraphicsOpacityEffect, QHBoxLayout, QLabel, QScrollArea, QVBoxLayout, QWidget
 
 from core.utils.tooltip import set_tooltip
-from core.utils.utilities import PopupWidget, add_shadow, refresh_widget_style
+from core.utils.utilities import PopupWidget, add_shadow, get_relative_time, refresh_widget_style
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.widgets.github.api import GitHubDataManager
 from core.validation.widgets.yasb.github import VALIDATION_SCHEMA
@@ -367,7 +367,16 @@ class GithubWidget(BaseWidget):
         if len(title) > self._max_field_size:
             title = title[: self._max_field_size - 3] + "..."
 
-        repo_description = f"{notification['type']}: {notification['repository']}"
+        if self._show_categories:
+            repo_description = notification["repository"]
+        else:
+            repo_description = f"{notification['type']} • {notification['repository']}"
+
+        updated_at = notification.get("updated_at", "")
+        relative_time = get_relative_time(updated_at)
+        if relative_time:
+            repo_description = f"{repo_description} • Updated {relative_time}"
+
         if len(repo_description) > self._max_field_size:
             repo_description = repo_description[: self._max_field_size - 3] + "..."
 
@@ -398,9 +407,11 @@ class GithubWidget(BaseWidget):
 
         title_label = QLabel(title)
         title_label.setProperty("class", "title")
+        title_label.setContentsMargins(0, 0, 0, 0)
 
         description_label = QLabel(repo_description)
         description_label.setProperty("class", "description")
+        description_label.setContentsMargins(0, 0, 0, 0)
 
         text_content = QWidget()
         text_content_layout = QVBoxLayout(text_content)
