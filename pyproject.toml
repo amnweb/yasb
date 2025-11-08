@@ -11,9 +11,9 @@ authors = [
 ]
 license = "MIT"
 readme = "README.md"
-requires-python = ">= 3.13"
+requires-python = ">= 3.14"
 dependencies = [
-    "pyqt6>=6.10.0",
+    "pyqt6==6.10.0",
     "cerberus",
     "humanize",
     "psutil",
@@ -23,8 +23,8 @@ dependencies = [
     "tzlocal",
     "holidays",
     "watchdog",
-    "pycaw",
-    "pillow",
+    "pycaw==20251023",
+    "pillow==12.0.0",
     "icoextract",
     "qasync",
     "obs-websocket-py",
@@ -78,7 +78,7 @@ packages = ["src/core"]
 
 [tool.ruff]
 line-length = 120
-target-version = "py313"
+target-version = "py314"
 extend-exclude = [
     "__pycache__",
     ".github",
