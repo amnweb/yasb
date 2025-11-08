@@ -9,11 +9,11 @@ description = "Yet Another Status Bar - A highly configurable Windows status bar
 authors = [
     { name = "AmN" },
 ]
-license = { file = "LICENSE" }
+license = "MIT"
 readme = "README.md"
 requires-python = ">= 3.13"
 dependencies = [
-    "pyqt6>=6.9.1",
+    "pyqt6>=6.10.0",
     "cerberus",
     "humanize",
     "psutil",
@@ -50,6 +50,13 @@ dependencies = [
     "screen_brightness_control @ git+https://github.com/amnweb/screen_brightness_control.git",
 ]
 
+[project.urls]
+Homepage = "https://github.com/amnweb/yasb"
+Documentation = "https://github.com/amnweb/yasb/wiki"
+Repository = "https://github.com/amnweb/yasb"
+Issues = "https://github.com/amnweb/yasb/issues"
+Changelog = "https://github.com/amnweb/yasb/releases/latest"
+
 [project.optional-dependencies]
 dev = [
     "pre-commit",
@@ -71,14 +78,14 @@ packages = ["src/core"]
 
 [tool.ruff]
 line-length = 120
-target-version = "py312"
+target-version = "py313"
 extend-exclude = [
     "__pycache__",
     ".github",
     ".vscode",
     "build",
     "docs",
-    "demo"   
+    "demo"
 ]
 
 [tool.ruff.lint]
