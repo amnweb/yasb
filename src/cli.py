@@ -17,7 +17,6 @@ import json
 import os
 import subprocess
 import sys
-import tempfile
 import textwrap
 import time
 import winreg
@@ -29,8 +28,6 @@ from win32con import (
     OPEN_EXISTING,
 )
 
-from core.utils.update_service import get_update_service
-from core.utils.utilities import app_data_path, get_architecture
 from core.utils.win32.bindings import (
     CloseHandle,
     CreateFile,
@@ -44,7 +41,6 @@ BUFSIZE = 65536
 YASB_VERSION = BUILD_VERSION
 YASB_CLI_VERSION = CLI_VERSION
 YASB_RELEASE_CHANNEL = RELEASE_CHANNEL
-ARCHITECTURE = get_architecture()
 
 INSTALLATION_PATH = os.path.abspath(os.path.join(__file__, "../../.."))
 EXE_PATH = os.path.join(INSTALLATION_PATH, "yasb.exe")
@@ -109,6 +105,10 @@ class Format:
 
 
 class CustomArgumentParser(argparse.ArgumentParser):
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault("suggest_on_error", True)
+        super().__init__(*args, **kwargs)
+
     def error(self, message: str):
         print(f"\n{Format.red}Error:{Format.reset} {message}\n")
         sys.exit(2)
@@ -454,6 +454,8 @@ class CLIHandler:
                         print(f"Failed to delete {fpath}: {e}")
 
             # Clear all files in app_data_folder if it exists
+            from core.utils.utilities import app_data_path
+
             app_data_folder = app_data_path()
             if app_data_folder.exists() and app_data_folder.is_dir():
                 for child in app_data_folder.iterdir():
@@ -501,7 +503,10 @@ class CLIHandler:
             sys.exit(0)
 
         elif args.version:
-            arch_suffix = f" {ARCHITECTURE}" if ARCHITECTURE else ""
+            from core.utils.utilities import get_architecture
+
+            architecture = get_architecture()
+            arch_suffix = f" {architecture}" if architecture else ""
             version_message = (
                 f"YASB Reborn v{YASB_VERSION}{arch_suffix} ({YASB_RELEASE_CHANNEL})\nYASB-CLI v{YASB_CLI_VERSION}"
             )
@@ -604,18 +609,23 @@ class CLIUpdateHandler:
 
     def update_yasb(self, yasb_version: str):
         """Check for updates and install if available using centralized update service."""
-        # Get update service
+        import tempfile
+
+        from core.utils.update_service import get_update_service
+        from core.utils.utilities import get_architecture
+
+        architecture = get_architecture()
         update_service = get_update_service()
 
         # Check if updates are supported
         if not update_service.is_update_supported():
             print("\nUpdates are not supported on this system.")
-            if not ARCHITECTURE:
+            if not architecture:
                 print("Reason: Unsupported architecture")
             sys.exit(1)
 
         print("\nChecking for updates...")
-        arch_suffix = f" ({ARCHITECTURE})" if ARCHITECTURE else ""
+        arch_suffix = f" ({architecture})" if architecture else ""
         print(f"Current version: {yasb_version}{arch_suffix}")
 
         try:
