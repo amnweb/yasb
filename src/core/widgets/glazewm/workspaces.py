@@ -216,6 +216,8 @@ class GlazewmWorkspaceButtonWithIcons(QFrame):
             button_class += self.status.value
         self.setProperty("class", button_class)
         refresh_widget_style(self)
+        # Even though the label class name, we still need to run this on the label to catch any different stylings we want to do when the status changes
+        refresh_widget_style(self.text_label)
 
     def _update_label(self):
         replacements = {
