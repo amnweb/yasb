@@ -52,6 +52,7 @@ from core.utils.win32.bindings import (
     SetTimer,
     SetWindowPos,
 )
+from core.utils.win32.bindings.user32 import SetProp
 from core.utils.win32.constants import (
     NIF_GUID,
     NIF_ICON,
@@ -76,6 +77,8 @@ logger = logging.getLogger("systray_widget")
 # Load necessary Windows functions
 user32 = windll.user32
 kernel32 = windll.kernel32
+
+WM_TASKBARCREATED = RegisterWindowMessage("TaskbarCreated")
 
 
 @dataclass
@@ -102,7 +105,7 @@ class IconData:
     exe_path: str = ""
 
 
-class TrayMonitor(QObject):
+class SystrayMonitor(QObject):
     """Main class to handle systray message interception and forwarding"""
 
     icon_modified = pyqtSignal(IconData)
@@ -115,7 +118,7 @@ class TrayMonitor(QObject):
         self._is_destroyed: bool = False
 
         try:
-            self.destroyed.connect(lambda: setattr(self, "_is_destroyed", True))  # type: ignore
+            self.destroyed.connect(lambda: setattr(self, "_is_destroyed", True))
         except Exception:
             pass
         atexit.register(self.destroy)
@@ -153,6 +156,14 @@ class TrayMonitor(QObject):
         SendNotifyMessage(HWND_BROADCAST, taskbar_created_msg, 0, 0)
         logger.debug(f"Sending TaskbarCreated message: {taskbar_created_msg}")
 
+    def set_taskbar_list_hwnd(self):
+        """Set the TaskbandHWND prop to the Yasb systray window on TaskbarCreated message"""
+        if self.hwnd == 0:
+            logger.error("YASB systray hwnd is invalid")
+            return
+        logger.debug(f"Adding TaskbandHWND prop to hwnd {self.hwnd}")
+        SetProp(self.hwnd, "TaskbandHWND", self.hwnd)
+
     def _window_proc(self, hwnd: int, uMsg: int, wParam: int, lParam: int) -> int:
         """Main window procedure for handling window messages"""
         if self._is_destroyed:
@@ -160,6 +171,9 @@ class TrayMonitor(QObject):
         if uMsg == WM_CLOSE:
             logger.debug(f"WM_CLOSE received, destroying window {hwnd}")
             DestroyWindow(hwnd)
+            return 0
+        elif uMsg == WM_TASKBARCREATED:
+            self.set_taskbar_list_hwnd()
             return 0
         elif uMsg == WM_DESTROY:
             logger.debug(f"WM_DESTROY received for window {hwnd}")

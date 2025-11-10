@@ -40,7 +40,7 @@ from win32con import (
 import core.utils.widgets.systray.utils as utils
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import refresh_widget_style
-from core.utils.widgets.systray.tray_monitor import IconData
+from core.utils.widgets.systray.systray_monitor import IconData
 from core.utils.widgets.systray.utils import pack_i32
 from core.utils.win32.bindings import (
     AllowSetForegroundWindow,
@@ -414,4 +414,5 @@ class DropWidget(QFrame):
         """
         Refresh styles for the widget and dragged button.
         """
-        refresh_widget_style(self, self.dragged_button)
+        if self.dragged_button is not None:
+            refresh_widget_style(self, self.dragged_button)

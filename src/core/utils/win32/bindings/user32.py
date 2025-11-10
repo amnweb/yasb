@@ -246,7 +246,7 @@ def DeregisterShellHookWindow(hwnd: int) -> bool:
     return user32.DeregisterShellHookWindow(hwnd)
 
 
-def SetProp(hwnd: int, lpString: str, hData: int) -> bool:
+def SetProp(hwnd: int, lpString: str, hData: int | None = None) -> bool:
     return user32.SetPropW(hwnd, lpString, hData)
 
 
