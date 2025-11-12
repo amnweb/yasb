@@ -63,7 +63,7 @@ class WorkspaceButton(QPushButton):
             new_class = " ".join([cls for cls in current_class.split() if not cls.startswith("button-")])
             new_class = f"{new_class} button-{index + 1}"
             button.setProperty("class", new_class)
-            refresh_widget_style(button)
+            button.setStyleSheet("")
 
     def update_and_redraw(self, status: WorkspaceStatus, lock_width: bool = False):
         # Lock current visual width so style/class changes don't cause a jump
@@ -136,7 +136,7 @@ class WorkspaceButtonWithIcons(QFrame):
             new_class = " ".join([cls for cls in current_class.split() if not cls.startswith("button-")])
             new_class = f"{new_class} button-{index + 1}"
             button.setProperty("class", new_class)
-            refresh_widget_style(button)
+            button.setStyleSheet("")
 
     def update_and_redraw(self, status: WorkspaceStatus, lock_width: bool = False):
         prev_width = self.width() if lock_width else None
