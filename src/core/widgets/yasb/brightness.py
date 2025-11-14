@@ -185,6 +185,7 @@ class BrightnessWidget(BaseWidget):
                     self.progress_widget,
                 )
             self.progress_widget.set_value(percent)
+            self.progress_widget.set_icon(icon)
 
         for part in label_parts:
             part = part.strip()
