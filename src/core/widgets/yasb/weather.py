@@ -162,7 +162,7 @@ class WeatherWidget(BaseWidget):
         today_label0.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         today_label1 = QLabel(
-            f"Feels like {self._weather_data['{feelslike}']} - {self._weather_data['{condition_text}']} - Humidity {self._weather_data['{humidity}']}\nPressure {self._weather_data['{pressure}']} - Visibility {self._weather_data['{vis}']} - Cloud {self._weather_data['{cloud}']}%"
+            f"Feels like {self._weather_data['{feelslike}']} - {self._weather_data['{condition_text}']} - Humidity {self._weather_data['{humidity}']}\nPressure {self._weather_data['{pressure}']} - Visibility {self._weather_data['{vis}']} - Cloud {self._weather_data['{cloud}']}%\nRain chance {self._weather_data['{daily_chance_of_rain}']} - Snow chance {self._weather_data['{daily_chance_of_snow}']}"
         )
         today_label1.setProperty("class", "label")
         today_label1.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -381,10 +381,26 @@ class WeatherWidget(BaseWidget):
         label_parts = [part for part in label_parts if part]
 
         if self._tooltip:
-            set_tooltip(
-                self,
-                f"{self._weather_data['{location}']}\nMin {self._weather_data['{min_temp}']}\nMax {self._weather_data['{max_temp}']}",
-            )
+            tooltip_parts = [
+                f"<strong>{self._weather_data['{location}']}</strong><br><br>",
+                "Temperature<br>",
+                f"Min {self._weather_data['{min_temp}']} / Max {self._weather_data['{max_temp}']}",
+            ]
+
+            # Add precipitation info only if there's any chance of rain or snow
+            rain_value = int(self._weather_data["{hourly_chance_of_rain}"].rstrip("%"))
+            snow_value = int(self._weather_data["{hourly_chance_of_snow}"].rstrip("%"))
+
+            if rain_value > 0 or snow_value > 0:
+                tooltip_parts.append("<br><br>Precipitation<br>")
+                precip_parts = []
+                if rain_value > 0:
+                    precip_parts.append(f"Rain {self._weather_data['{hourly_chance_of_rain}']}")
+                if snow_value > 0:
+                    precip_parts.append(f"Snow {self._weather_data['{hourly_chance_of_snow}']}")
+                tooltip_parts.append(" / ".join(precip_parts))
+
+            set_tooltip(self, "".join(tooltip_parts))
 
         widget_index = 0
 
@@ -476,6 +492,12 @@ class WeatherWidget(BaseWidget):
                 # Forecast today
                 "{min_temp}": self._format_temp(forecast["mintemp_f"], forecast["mintemp_c"]),
                 "{max_temp}": self._format_temp(forecast["maxtemp_f"], forecast["maxtemp_c"]),
+                # Rain/Snow chances (daily)
+                "{daily_chance_of_rain}": f"{forecast.get('daily_chance_of_rain', 0)}%",
+                "{daily_chance_of_snow}": f"{forecast.get('daily_chance_of_snow', 0)}%",
+                # Rain/Snow chances (hourly)
+                "{hourly_chance_of_rain}": f"{self._hourly_data_today[self._current_time.hour].get('chance_of_rain', 0) if self._hourly_data_today and self._current_time else 0}%",
+                "{hourly_chance_of_snow}": f"{self._hourly_data_today[self._current_time.hour].get('chance_of_snow', 0) if self._hourly_data_today and self._current_time else 0}%",
                 # Location and conditions
                 "{location}": weather_data["location"]["name"],
                 "{location_region}": weather_data["location"]["region"],
