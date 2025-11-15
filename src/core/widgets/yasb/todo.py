@@ -40,6 +40,7 @@ class TodoWidget(BaseWidget):
         self,
         label: str,
         label_alt: str,
+        data_path: str,
         container_padding: dict,
         animation: dict,
         menu: dict,
@@ -55,6 +56,7 @@ class TodoWidget(BaseWidget):
         self._show_alt_label = False
         self._label_content = label
         self._label_alt_content = label_alt
+        self._data_path = data_path
         self._animation = animation
         self._padding = container_padding
         self._menu_config = menu
@@ -100,6 +102,8 @@ class TodoWidget(BaseWidget):
             instance._update_label()
 
     def _get_tasks_file_path(self):
+        if self._data_path and self._data_path.strip():
+            return os.path.expanduser(self._data_path)
         return os.path.join(HOME_CONFIGURATION_DIR, "todo.json")
 
     def _load_tasks(self):
