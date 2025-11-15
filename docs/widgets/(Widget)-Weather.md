@@ -81,7 +81,7 @@ weather:
 
 ## Description of Options
 
-- **label:** The format string for the weather label. You can use placeholders like `{temp}`, `{min_temp}`, `{max_temp}`, `{feelslike}`, `{location}`, `{humidity}`, `{icon}`, `{conditions}`, `{wind}`, `{wind_dir}`, `{wind_degree}`, `{pressure}`, `{precip}`, `{uv}`, `{vis}`, `{cloud}`.
+- **label:** The format string for the weather label. You can use placeholders like `{temp}`, `{min_temp}`, `{max_temp}`, `{feelslike}`, `{location}`, `{humidity}`, `{icon}`, `{conditions}`, `{wind}`, `{wind_dir}`, `{wind_degree}`, `{pressure}`, `{precip}`, `{uv}`, `{vis}`, `{cloud}`, `{hourly_chance_of_rain}`, `{hourly_chance_of_snow}`, `{daily_chance_of_rain}`, `{daily_chance_of_snow}`.
 - **label_alt:** The alternative format string for the weather label. Useful for displaying additional weather details.
 - **class_name:** Additional CSS class name for the widget. This allows for custom styling.
 - **update_interval:** The interval in seconds to update the weather data. Must be between 60 and 36000000.
@@ -89,7 +89,7 @@ weather:
 - **location:** The location for which to fetch the weather data. You can use example "USA Los Angeles 90006" {COUNTRY CITY ZIP_CODE}, or just city. Location can be set to `env`, this means you have to set `YASB_WEATHER_LOCATION` in environment variable or you can set it directly in the configuration file.
 - **api_key:** The API key for accessing the weather service. You can get free API key `weatherapi.com`. API key can be set to `env`, this means you have to set `YASB_WEATHER_API_KEY` in environment variable or you can set it directly in the configuration file.
 - **show_alerts:** Whether to show weather alerts.
-- **tooltip:** Whether to show a tooltip with the min and max temperatures.
+- **tooltip:** Whether to show a tooltip with the min and max temperatures, and precipitation chances (rain/snow are only shown when above 0%).
 - **units:** The units for the weather data. Can be `'metric'` or `'imperial'`.
 - **icons:** A dictionary of icons for different weather conditions `sunnyDay`, `sunnyNight`, `clearDay`, `clearNight`, `cloudyDay`, `cloudyNight`, `rainyDay`, `rainyNight`, `snowyDay`, `snowyNight`, `blizzard`, `default`.
 - **weather_card:** Configuration for the weather card popup display. Controls visibility, appearance, and positioning.
