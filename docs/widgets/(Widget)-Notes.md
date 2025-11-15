@@ -5,6 +5,7 @@
 | `label`           | String | `<span>\udb82\udd0c</span> {count}`      | Primary label template, supports the `{count}` placeholder which is replaced with the number of notes.                  |
 | `label_alt`       | String | `{count} notes`                         | Alternative label format used when switching widget modes.                                                             |
 | `class_name`      | String | `""`                                    | Additional CSS class name for the widget.                                    |
+| `data_path`       | String | `""`                                    | Custom path to JSON file for storing notes. Leave empty to use default location (`~/.config/yasb/notes.json`). Supports `~` for home directory. |
 | `animation`       | Dict   | `{ enabled: true, type: "fadeInOut", duration: 200 }` | Controls animation settings; `enabled` turns animations on/off, `type` defines style, and `duration` is in ms. |
 | `menu`            | Dict   | See below                               | Popup menu settings. See details below.                                                                                |
 | `icons`           | Dict   | `{ note: "\udb82\udd0c", delete: "\ueab8", copy: "\uebcc" }` | Icons for note, delete action and copy text                                                                  |
@@ -38,6 +39,7 @@ notes:
   options:
     label: "<span>\udb82\udd0c</span> {count}"
     label_alt: "{count} notes"
+    # data_path: "~/Documents/my-notes.json"  # Optional: custom JSON file path
     menu:
       blur: true
       round_corners: true
@@ -68,6 +70,7 @@ notes:
 - **label** Primary label template. It can include the `{count}` placeholder, which is dynamically replaced with the number of notes.
 - **label_alt** Alternative label format used when switching modes.
 - **class_name** Additional CSS class name for the widget. This allows for custom styling.
+- **data_path** Optional custom path to the JSON file where notes are stored. If empty or not specified, uses the default location (`~/.config/yasb/notes.json`). Supports `~` for home directory expansion (e.g., `~/Documents/my-notes.json` or `C:/Users/YourName/my-notes.json`).
 - **animation** A dictionary to control widget animation:
   - **enabled**: Boolean flag to turn animations on or off.
   - **type**: The animation style (e.g., "fadeInOut").

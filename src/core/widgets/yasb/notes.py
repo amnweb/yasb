@@ -37,6 +37,7 @@ class NotesWidget(BaseWidget):
         label: str,
         label_alt: str,
         class_name: str,
+        data_path: str,
         container_padding: dict,
         animation: dict,
         menu: dict,
@@ -58,7 +59,11 @@ class NotesWidget(BaseWidget):
         self._label_shadow = label_shadow
         self._container_shadow = container_shadow
 
-        self._notes_file = os.path.join(HOME_CONFIGURATION_DIR, "notes.json")
+        # Use custom data path if provided, otherwise use default
+        if data_path and data_path.strip():
+            self._notes_file = os.path.expanduser(data_path)
+        else:
+            self._notes_file = os.path.join(HOME_CONFIGURATION_DIR, "notes.json")
         self._notes = self._load_notes()
 
         # Initialize container layout

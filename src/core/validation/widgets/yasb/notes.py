@@ -2,6 +2,7 @@ DEFAULTS = {
     "label": "<span>\udb82\udd0c</span> {count}",
     "label_alt": "{count} notes",
     "class_name": "",
+    "data_path": "",
     "container_padding": {"top": 0, "left": 0, "bottom": 0, "right": 0},
     "animation": {"enabled": True, "type": "fadeInOut", "duration": 200},
     "menu": {
@@ -28,6 +29,7 @@ VALIDATION_SCHEMA = {
     "label": {"type": "string", "default": DEFAULTS["label"]},
     "label_alt": {"type": "string", "default": DEFAULTS["label_alt"]},
     "class_name": {"type": "string", "required": False, "default": DEFAULTS["class_name"]},
+    "data_path": {"type": "string", "required": False, "default": DEFAULTS["data_path"]},
     "container_padding": {
         "type": "dict",
         "required": False,
