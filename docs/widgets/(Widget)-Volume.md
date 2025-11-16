@@ -113,8 +113,10 @@ volume:
 .volume-widget .label {}
 .volume-widget .label.alt {}
 .volume-widget .icon {}
-.volume-widget .label.muted {}
-.volume-widget .icon.muted {}
+.volume-widget .label.muted {} /* Applied when audio is muted */
+.volume-widget .icon.muted {} /* Applied when audio is muted */
+.volume-widget .label.no-device {} /* Applied when no audio device is connected */
+.volume-widget .icon.no-device {} /* Applied when no audio device is connected */
 /* Volume progress bar styles if enabled */
 .volume-widget .progress-circle {} 
 /* Audio menu styles */
