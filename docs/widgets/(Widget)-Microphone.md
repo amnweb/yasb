@@ -77,7 +77,7 @@ microphone:
   - **background_color**: The background color of the progress bar.
   - **animation**: Whether to enable smooth change of the progress bar value.
 
-## Example Style
+## Available Styles
 ```css
 .microphone-widget {}
 .microphone-widget.your_class {} /* If you are using class_name option */
@@ -85,17 +85,51 @@ microphone:
 .microphone-widget .label {}
 .microphone-widget .label.alt {}
 .microphone-widget .icon {}
-.microphone-widget .label.muted {}
-.microphone-widget .icon.muted {}
-.microphone-slider {
-    border: none;
-}
-.microphone-slider::groove {}
-.microphone-slider::handle{} 
-.microphone-menu {
-    background-color:rgba(17, 17, 27, 0.4); 
-}
-
+.microphone-widget .label.muted {} /* Applied when microphone is muted */
+.microphone-widget .icon.muted {} /* Applied when microphone is muted */
+.microphone-widget .label.no-device {} /* Applied when no microphone device is connected */
+.microphone-widget .icon.no-device {} /* Applied when no microphone device is connected */
 /* Microphone progress bar styles if enabled */
 .microphone-widget .progress-circle {} 
+/* Microphone menu styles */
+.microphone-widget .microphone-menu {}
+/* System microphone volume */
+.microphone-menu .system-volume-container .volume-slider {}
+.microphone-menu .system-volume-container .volume-slider::groove {}
+.microphone-menu .system-volume-container .volume-slider::handle{}
+/* Device list styles (if multiple microphones) */
+.microphone-menu .microphone-container .device {}
+.microphone-menu .microphone-container .device.selected {}
+.microphone-menu .microphone-container .device:hover {}
+```
+
+## Example Styles
+```css
+.microphone-widget .icon {
+    color: #ff6b6b;
+    margin: 0 2px 0 0;
+}
+.microphone-menu {
+    background-color: rgba(17, 17, 27, 0.4); 
+    min-width: 300px;
+}
+/* System microphone volume */
+.microphone-menu .system-volume-container .volume-slider {
+    border: none;
+}
+/* Device list styles */
+.microphone-menu .microphone-container .device {
+    background-color: transparent;
+    border: none;
+    padding: 6px 8px 6px 4px;
+    margin: 2px 0;
+    font-size: 12px;
+    border-radius: 4px;
+}
+.microphone-menu .microphone-container .device.selected {
+    background-color: rgba(255, 255, 255, 0.085);
+}
+.microphone-menu .microphone-container .device:hover {
+    background-color: rgba(255, 255, 255, 0.06);
+}
 ```

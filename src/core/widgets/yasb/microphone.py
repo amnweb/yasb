@@ -1,57 +1,27 @@
 import logging
 import re
 
-from comtypes import (
-    CoInitialize,
-    CoUninitialize,
-)
-from pycaw.callbacks import AudioEndpointVolumeCallback as PycawAudioEndpointVolumeCallback
-from pycaw.callbacks import MMNotificationClient
-from pycaw.pycaw import (
-    AudioUtilities,
-)
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import QRect, Qt
 from PyQt6.QtGui import QWheelEvent
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QSlider, QVBoxLayout
+from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QSlider, QVBoxLayout, QWidget
 
-from core.utils.tooltip import set_tooltip
+from core.utils.tooltip import CustomToolTip, set_tooltip
 from core.utils.utilities import (
     PopupWidget,
     add_shadow,
     build_progress_widget,
     build_widget_label,
+    is_valid_qobject,
     refresh_widget_style,
 )
 from core.utils.widgets.animation_manager import AnimationManager
+from core.utils.widgets.microphone.service import AudioInputService
 from core.validation.widgets.yasb.microphone import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
-
-# Disable comtypes logging
-logging.getLogger("comtypes").setLevel(logging.CRITICAL)
-
-
-class AudioEndpointChangeCallback(MMNotificationClient):
-    def __init__(self, parent):
-        super().__init__()
-        self.parent = parent
-
-    def on_property_value_changed(self, device_id, property_struct, fmtid, pid):
-        self.parent.update_label_signal.emit()
-
-
-class AudioEndpointVolumeCallback(PycawAudioEndpointVolumeCallback):
-    def __init__(self, parent):
-        super().__init__()
-        self.parent = parent
-
-    def on_notify(self, new_volume, new_mute, event_context, channels, channel_volumes):
-        """Called when audio endpoint volume or mute state changes"""
-        self.parent.update_label_signal.emit()
 
 
 class MicrophoneWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
-    update_label_signal = pyqtSignal()
 
     def __init__(
         self,
@@ -71,10 +41,7 @@ class MicrophoneWidget(BaseWidget):
         progress_bar: dict = None,
     ):
         super().__init__(class_name=f"microphone-widget {class_name}")
-
-        self._initializing = True
         self.audio_endpoint = None
-
         self._show_alt_label = False
         self._label_content = label
         self._label_alt_content = label_alt
@@ -89,7 +56,6 @@ class MicrophoneWidget(BaseWidget):
         self._container_shadow = container_shadow
         self._progress_bar = progress_bar
 
-        self.progress_widget = None
         self.progress_widget = build_progress_widget(self, self._progress_bar)
 
         self._widget_container_layout = QHBoxLayout()
@@ -113,15 +79,30 @@ class MicrophoneWidget(BaseWidget):
         self.callback_right = callbacks["on_right"]
         self.callback_middle = callbacks["on_middle"]
 
-        self.cb = AudioEndpointChangeCallback(self)
-        self.enumerator = AudioUtilities.GetDeviceEnumerator()
-        self.enumerator.RegisterEndpointNotificationCallback(self.cb)
+        self._service = AudioInputService()
+        self._service.register_widget(self)
 
-        self._initialize_microphone_interface()
-        self.update_label_signal.connect(self._update_label)
+        self.audio_endpoint = self._service.get_microphone_interface()
+        self._update_label()
+
+    def _reinitialize_microphone(self):
+        """Update microphone interface reference after device change."""
+        # Service already reinitialized, just update our reference
+        self.audio_endpoint = self._service.get_microphone_interface()
+
+        # Close dialog if open (device change means menu data is stale)
+        if hasattr(self, "dialog") and is_valid_qobject(self.dialog):
+            self.dialog.hide()
+            # Only reopen menu if we still have a valid device
+            if self.audio_endpoint is not None:
+                try:
+                    microphone = self._service.get_microphone()
+                    if microphone:
+                        self.show_menu()
+                except Exception as e:
+                    logging.debug(f"Cannot show microphone menu after device change: {e}")
 
         self._update_label()
-        self._initializing = False
 
     def _toggle_label(self):
         if self._animation["enabled"]:
@@ -134,20 +115,17 @@ class MicrophoneWidget(BaseWidget):
         self._update_label()
 
     def _update_label(self):
-        if self.audio_endpoint:
-            if self.isHidden() and not self._initializing:
-                self.show()
-        else:
-            self.hide()
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
         active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
         label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
         label_parts = [part for part in label_parts if part]
         widget_index = 0
 
+        # Handle no device case
         if self.audio_endpoint is None:
-            logging.warning("No microphone interface available")
-            min_icon, min_level, mute_status = "N/A", "N/A", None
+            min_icon = self._get_mic_icon()
+            min_level = "No Device"
+            mute_status = None
         else:
             try:
                 mute_status = self.audio_endpoint.GetMute()
@@ -156,7 +134,7 @@ class MicrophoneWidget(BaseWidget):
                 min_level = self._mute_text if mute_status == 1 else f"{mic_level}%"
             except Exception as e:
                 logging.error(f"Failed to get microphone info: {e}")
-                min_icon, min_level, mute_status = "N/A", "N/A", None
+                return
 
         label_options = {"{icon}": min_icon, "{level}": min_level}
 
@@ -178,54 +156,118 @@ class MicrophoneWidget(BaseWidget):
                 if "<span" in part and "</span>" in part:
                     if widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
                         active_widgets[widget_index].setText(formatted_text)
-                        self._set_muted_class(active_widgets[widget_index], mute_status == 1)
+                        self._set_muted_class(
+                            active_widgets[widget_index], mute_status == 1 if mute_status is not None else False
+                        )
                 else:
                     if widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
                         active_widgets[widget_index].setText(formatted_text)
-                        self._set_muted_class(active_widgets[widget_index], mute_status == 1)
+                        self._set_muted_class(
+                            active_widgets[widget_index], mute_status == 1 if mute_status is not None else False
+                        )
                 widget_index += 1
 
-    def _initialize_microphone_interface(self):
-        CoInitialize()
-        try:
-            devices = AudioUtilities.GetMicrophone()
-            if not devices:
-                logging.error("Microphone not found")
-                self.audio_endpoint = None
-                return
-            # Wrap the device and use the EndpointVolume property (new pycaw API)
-            device = AudioUtilities.CreateDevice(devices)
-            self.audio_endpoint = device.EndpointVolume
-            self.callback = AudioEndpointVolumeCallback(self)
-            self.audio_endpoint.RegisterControlChangeNotify(self.callback)
-        except Exception as e:
-            logging.error(f"Failed to initialize microphone interface: {e}")
-            self.audio_endpoint = None
-        finally:
-            CoUninitialize()
+    def _update_slider_value(self):
+        """Helper method to update slider value based on current microphone level"""
+        if hasattr(self, "volume_slider") and self.audio_endpoint is not None:
+            try:
+                current_volume = round(self.audio_endpoint.GetMasterVolumeLevelScalar() * 100)
+                self.volume_slider.setValue(current_volume)
+            except:
+                pass
 
     def _set_muted_class(self, widget, muted: bool):
-        """Set or remove the 'muted' class on the widget."""
+        """Set or remove the 'muted' and 'no-device' classes on the widget."""
         current_class = widget.property("class") or ""
         classes = set(current_class.split())
+
+        # Handle no-device class
+        if self.audio_endpoint is None:
+            classes.add("no-device")
+        else:
+            classes.discard("no-device")
+
+        # Handle muted class
         if muted:
             classes.add("muted")
         else:
             classes.discard("muted")
+
         widget.setProperty("class", " ".join(classes))
         refresh_widget_style(widget)
 
+    def _on_slider_released(self):
+        """Hide tooltip when slider is released"""
+        if hasattr(self, "_slider_tooltip") and self._slider_tooltip:
+            self._slider_tooltip.hide()
+            self._slider_tooltip = None
+
+    def _get_slider_handle_geometry(self, slider):
+        """Calculate the geometry for the slider handle position"""
+        value = slider.value()
+        slider_range = slider.maximum() - slider.minimum()
+        if slider_range > 0:
+            handle_pos = (value - slider.minimum()) / slider_range
+            x_offset = int(slider.width() * handle_pos)
+
+            # Get slider position in global coordinates
+            widget_rect = slider.rect()
+            widget_global_pos = slider.mapToGlobal(widget_rect.topLeft())
+            widget_global_pos.setX(widget_global_pos.x() + x_offset)
+
+            # Create geometry at handle position (thin vertical rect)
+            handle_geometry = QRect(widget_global_pos.x(), widget_global_pos.y(), 1, slider.height())
+            return handle_geometry
+        return None
+
+    def _setup_slider_tooltip(self, slider):
+        """Setup tooltip for slider (only show during drag)"""
+        # Remove the tooltip filter to disable hover tooltips
+        if hasattr(slider, "_tooltip_filter"):
+            slider.removeEventFilter(slider._tooltip_filter)
+            delattr(slider, "_tooltip_filter")
+
+    def _show_slider_tooltip(self, slider, value):
+        """Helper method to show/update tooltip for slider during drag"""
+        if not self._tooltip or not slider.isSliderDown():
+            return
+
+        if not hasattr(self, "_slider_tooltip") or not self._slider_tooltip:
+            # Create new tooltip
+            self._slider_tooltip = CustomToolTip()
+            self._slider_tooltip._position = "top"
+            handle_geometry = self._get_slider_handle_geometry(slider)
+            if handle_geometry:
+                self._slider_tooltip.label.setText(f"{value}%")
+                self._slider_tooltip.adjustSize()
+                self._slider_tooltip._base_pos = self._slider_tooltip._calculate_position(handle_geometry)
+                self._slider_tooltip.move(self._slider_tooltip._base_pos.x(), self._slider_tooltip._base_pos.y())
+                self._slider_tooltip.setWindowOpacity(1.0)
+                self._slider_tooltip.show()
+        else:
+            # Update existing tooltip
+            handle_geometry = self._get_slider_handle_geometry(slider)
+            if handle_geometry:
+                self._slider_tooltip.label.setText(f"{value}%")
+                self._slider_tooltip.adjustSize()
+                base_pos = self._slider_tooltip._calculate_position(handle_geometry)
+                self._slider_tooltip.move(base_pos.x(), base_pos.y())
+
     def _get_mic_icon(self):
-        if not self.audio_endpoint:
-            return self._icons["normal"]
+        """Get appropriate microphone icon based on mute status."""
+        if self.audio_endpoint is None:
+            if self._tooltip:
+                set_tooltip(self, "No microphone device connected")
+            return self._icons["muted"]
+
         current_mute_status = self.audio_endpoint.GetMute()
         current_level = round(self.audio_endpoint.GetMasterVolumeLevelScalar() * 100)
         if current_mute_status == 1:
             mic_icon = self._icons["muted"]
-            tooltip = f"Muted: Volume {current_level}"
+            tooltip = f"Muted: Volume {current_level}%"
         else:
             mic_icon = self._icons["normal"]
-            tooltip = f"Volume {current_level}"
+            tooltip = f"Volume {current_level}%"
         if self._tooltip:
             set_tooltip(self, tooltip)
         return mic_icon
@@ -233,33 +275,54 @@ class MicrophoneWidget(BaseWidget):
     def toggle_mute(self):
         if self._animation["enabled"]:
             AnimationManager.animate(self, self._animation["type"], self._animation["duration"])
-        if self.audio_endpoint:
+        if self.audio_endpoint is None:
+            return
+        try:
             current_mute_status = self.audio_endpoint.GetMute()
             self.audio_endpoint.SetMute(not current_mute_status, None)
+        except Exception as e:
+            logging.error(f"Failed to toggle microphone mute: {e}")
 
     def _increase_volume(self):
-        if self.audio_endpoint:
+        if self.audio_endpoint is None:
+            return
+        try:
             current_volume = self.audio_endpoint.GetMasterVolumeLevelScalar()
             new_volume = min(current_volume + self._scroll_step, 1.0)
             self.audio_endpoint.SetMasterVolumeLevelScalar(new_volume, None)
             if self.audio_endpoint.GetMute() and new_volume > 0.0:
                 self.audio_endpoint.SetMute(False, None)
+            self._update_label()
+            self._update_slider_value()
+        except Exception as e:
+            logging.error(f"Failed to increase microphone volume: {e}")
 
     def _decrease_volume(self):
-        if self.audio_endpoint:
+        if self.audio_endpoint is None:
+            return
+        try:
             current_volume = self.audio_endpoint.GetMasterVolumeLevelScalar()
             new_volume = max(current_volume - self._scroll_step, 0.0)
             self.audio_endpoint.SetMasterVolumeLevelScalar(new_volume, None)
             if new_volume == 0.0:
                 self.audio_endpoint.SetMute(True, None)
+            self._update_label()
+            self._update_slider_value()
+        except Exception as e:
+            logging.error(f"Failed to decrease microphone volume: {e}")
 
     def wheelEvent(self, event: QWheelEvent):
+        if self.audio_endpoint is None:
+            return
         if event.angleDelta().y() > 0:
             self._increase_volume()
         elif event.angleDelta().y() < 0:
             self._decrease_volume()
 
     def show_menu(self):
+        if self.audio_endpoint is None:
+            return
+
         self.dialog = PopupWidget(
             self,
             self._mic_menu["blur"],
@@ -269,22 +332,70 @@ class MicrophoneWidget(BaseWidget):
         )
         self.dialog.setProperty("class", "microphone-menu")
 
+        # Create vertical layout for the dialog
         layout = QVBoxLayout()
         layout.setSpacing(0)
         layout.setContentsMargins(10, 10, 10, 10)
 
+        # Create a container widget for device buttons
+        self.container = QWidget()
+        self.container.setProperty("class", "microphone-container")
+        self.container_layout = QVBoxLayout()
+        self.container_layout.setSpacing(0)
+        self.container_layout.setContentsMargins(0, 0, 0, 0)
+
+        # Get all microphone devices and create buttons if more than one
+        self.devices = self._service.get_all_devices()
+        if len(self.devices) > 1:
+            current_device = self._service.get_microphone()
+            current_device_id = current_device.id if current_device else None
+            self.device_buttons = {}
+            for device_id, device_name in self.devices:
+                btn = QPushButton(device_name)
+                if device_id == current_device_id:
+                    btn.setProperty("class", "device selected")
+                else:
+                    btn.setProperty("class", "device")
+                btn.setProperty("device_id", device_id)
+                btn.clicked.connect(self._set_default_device)
+                self.container_layout.addWidget(btn)
+                self.device_buttons[device_id] = btn
+
+            self.container.setLayout(self.container_layout)
+
+        layout.addWidget(self.container)
+
+        # Create global microphone volume section
+        global_container = QFrame()
+        global_container.setProperty("class", "system-volume-container")
+        global_layout = QVBoxLayout()
+        global_layout.setSpacing(0)
+        global_layout.setContentsMargins(0, 0, 0, 0)
+
+        # Slider row with toggle button
+        slider_row = QHBoxLayout()
+        slider_row.setSpacing(0)
+        slider_row.setContentsMargins(0, 0, 0, 0)
+
+        # System microphone slider
         self.volume_slider = QSlider(Qt.Orientation.Horizontal)
-        self.volume_slider.setProperty("class", "microphone-slider")
+        self.volume_slider.setProperty("class", "volume-slider")
         self.volume_slider.setMinimum(0)
         self.volume_slider.setMaximum(100)
         try:
-            if self.audio_endpoint:
-                current_volume = round(self.audio_endpoint.GetMasterVolumeLevelScalar() * 100)
-                self.volume_slider.setValue(current_volume)
+            current_volume = round(self.audio_endpoint.GetMasterVolumeLevelScalar() * 100)
+            self.volume_slider.setValue(current_volume)
         except Exception:
             self.volume_slider.setValue(0)
         self.volume_slider.valueChanged.connect(self._on_slider_value_changed)
-        layout.addWidget(self.volume_slider)
+        self.volume_slider.sliderReleased.connect(self._on_slider_released)
+        slider_row.addWidget(self.volume_slider)
+
+        self._setup_slider_tooltip(self.volume_slider)
+
+        global_layout.addLayout(slider_row)
+        global_container.setLayout(global_layout)
+        layout.addWidget(global_container)
 
         self.dialog.setLayout(layout)
         self.dialog.adjustSize()
@@ -296,10 +407,29 @@ class MicrophoneWidget(BaseWidget):
         )
         self.dialog.show()
 
+    def _set_default_device(self):
+        """Handle device button click to set new default microphone."""
+        sender_btn = self.sender()
+        device_id = sender_btn.property("device_id")
+
+        # Unselect all buttons first
+        for btn in self.device_buttons.values():
+            btn.setProperty("class", "device")
+            refresh_widget_style(btn)
+
+        # Select clicked button
+        sender_btn.setProperty("class", "device selected")
+        refresh_widget_style(sender_btn)
+
+        # Set the default device (this will trigger device change callback)
+        self._service.set_default_device(device_id)
+
     def _on_slider_value_changed(self, value):
-        if self.audio_endpoint:
+        if self.audio_endpoint is not None:
             try:
                 self.audio_endpoint.SetMasterVolumeLevelScalar(value / 100, None)
-                self._update_label()
+                # Show tooltip while actively dragging
+                if hasattr(self, "volume_slider"):
+                    self._show_slider_tooltip(self.volume_slider, value)
             except Exception as e:
                 logging.error(f"Failed to set microphone volume: {e}")
