@@ -1,4 +1,5 @@
 import logging
+import warnings
 from dataclasses import dataclass
 from logging.handlers import RotatingFileHandler
 from os.path import join
@@ -46,7 +47,16 @@ class ColoredFormatter(logging.Formatter):
         return super().format(record)
 
 
+def _suppress_third_party_warnings():
+    """Suppress noisy warnings and logs from third-party libraries."""
+    logging.getLogger("asyncio").setLevel(logging.WARNING)
+    logging.getLogger("comtypes").setLevel(logging.ERROR)
+    logging.getLogger("icoextract").setLevel(logging.ERROR)
+    warnings.filterwarnings("ignore", category=UserWarning, module="pycaw")
+
+
 def init_logger():
+    _suppress_third_party_warnings()
     # File handler should be without colors
     file_handler = RotatingFileHandler(
         join(get_config_dir(), DEFAULT_LOG_FILENAME), maxBytes=1024 * 1024, backupCount=5, encoding="utf-8"

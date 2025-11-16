@@ -20,8 +20,6 @@ from core.utils.update_service import get_update_service, start_update_checker
 from core.watcher import create_observer
 from env_loader import load_env, set_font_engine
 
-logging.getLogger("asyncio").setLevel(logging.WARNING)
-
 
 @contextlib.contextmanager
 def single_instance_lock(name="yasb_reborn"):
