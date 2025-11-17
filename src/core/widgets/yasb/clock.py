@@ -6,8 +6,8 @@ import re
 import winsound
 from datetime import date, datetime, timedelta
 from itertools import cycle
+from zoneinfo import ZoneInfo, available_timezones
 
-import pytz
 from PyQt6.QtCore import QDate, QEasingCurve, QLocale, QPoint, QPropertyAnimation, Qt, QTimer
 from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import (
@@ -27,7 +27,6 @@ from PyQt6.QtWidgets import (
     QTableView,
     QVBoxLayout,
 )
-from tzlocal import get_localzone_name
 
 from core.config import HOME_CONFIGURATION_DIR
 from core.utils.tooltip import set_tooltip
@@ -326,8 +325,10 @@ class CustomCalendar(QCalendarWidget):
     def update_calendar_display(self):
         """Set the calendar selected date according to the configured timezone."""
         if self.timezone:
-            datetime_now = datetime.now(pytz.timezone(self.timezone))
-            self.setSelectedDate(QDate(datetime_now.year, datetime_now.month, datetime_now.day))
+            datetime_now = datetime.now(ZoneInfo(self.timezone))
+        else:
+            datetime_now = datetime.now().astimezone()
+        self.setSelectedDate(QDate(datetime_now.year, datetime_now.month, datetime_now.day))
 
 
 class ClockWidget(BaseWidget):
@@ -355,7 +356,7 @@ class ClockWidget(BaseWidget):
         self._locale = locale
         self._tooltip = tooltip
         self._active_tz = None
-        self._timezones_list = self._validate_timezones(timezones if timezones else [get_localzone_name()])
+        self._timezones_list = self._validate_timezones(timezones if timezones else [None])
         self._timezones = cycle(self._timezones_list)
         self._active_datetime_format_str = ""
         self._active_datetime_format = None
@@ -425,18 +426,21 @@ class ClockWidget(BaseWidget):
     def _validate_timezones(self, timezones):
         """Validate provided timezone strings and return the valid ones."""
         valid_timezones = []
+        available = available_timezones()
         for tz in timezones:
-            try:
-                pytz.timezone(tz)
+            if tz is None:
+                # None means use system local timezone
+                valid_timezones.append(None)
+            elif tz in available:
                 valid_timezones.append(tz)
-            except pytz.exceptions.UnknownTimeZoneError:
+            else:
                 logging.warning(
                     f"Invalid timezone '{tz}' ignored. Use format like 'America/New_York' or 'Europe/London'"
                 )
 
         if not valid_timezones:
-            logging.warning("No valid timezones found, using local timezone")
-            valid_timezones = [get_localzone_name()]
+            logging.warning("No valid timezones found, using system local timezone")
+            valid_timezones = [None]
 
         return valid_timezones
 
@@ -510,7 +514,7 @@ class ClockWidget(BaseWidget):
         label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
         label_parts = [part for part in label_parts if part]
         widget_index = 0
-        now = datetime.now(pytz.timezone(self._active_tz))
+        now = datetime.now(ZoneInfo(self._active_tz)) if self._active_tz else datetime.now().astimezone()
         current_hour = f"{now.hour:02d}"
         current_minute = f"{now.minute:02d}"
         hour_changed = self._current_hour != current_hour
@@ -582,8 +586,7 @@ class ClockWidget(BaseWidget):
                         datetime_format_search = re.search(r"\{(.*)}", part)
                         datetime_format_str = datetime_format_search.group()
                         datetime_format = datetime_format_search.group(1)
-                        datetime_now = datetime.now(pytz.timezone(self._active_tz))
-                        format_label_content = part.replace(datetime_format_str, datetime_now.strftime(datetime_format))
+                        format_label_content = part.replace(datetime_format_str, now.strftime(datetime_format))
                     except Exception:
                         format_label_content = part
 
@@ -610,17 +613,13 @@ class ClockWidget(BaseWidget):
     def _update_tooltip(self):
         if self._tooltip:
             try:
-                now = datetime.now(pytz.timezone(self._active_tz))
+                now = datetime.now(ZoneInfo(self._active_tz)) if self._active_tz else datetime.now().astimezone()
                 org_locale_time, org_locale_ctype = self._set_locale_context()
                 date_str = now.strftime("%A, %d %B %Y")
                 day_abbr = now.strftime("%a")
                 time_str = now.strftime("%H:%M")
                 self._restore_locale_context(org_locale_time, org_locale_ctype)
-                local_tz = get_localzone_name()
-                if self._active_tz == local_tz:
-                    tz_display = "Local time"
-                else:
-                    tz_display = self._active_tz.replace("_", " ")
+                tz_display = self._active_tz.replace("_", " ") if self._active_tz else "Local time"
                 tooltip_text = f"{date_str}\n\n{day_abbr} {time_str} ({tz_display})"
 
                 if self._has_enabled_alarms():
@@ -635,14 +634,15 @@ class ClockWidget(BaseWidget):
         """Rotate to the next timezone in the configured list."""
         try:
             self._active_tz = next(self._timezones)
-            pytz.timezone(self._active_tz)
+            if self._active_tz:
+                ZoneInfo(self._active_tz)  # Validate timezone
             self._update_tooltip()
             self._update_label()
             if self._tooltip and hasattr(self, "_tooltip_filter"):
                 self._tooltip_filter.show_tooltip()
         except Exception as e:
             logging.error(f"Error switching to timezone '{self._active_tz}': {e}")
-            self._active_tz = get_localzone_name()
+            self._active_tz = None
             self._update_tooltip()
             self._update_label()
 
@@ -742,7 +742,7 @@ class ClockWidget(BaseWidget):
         date_layout.setSpacing(0)
         date_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        datetime_now = datetime.now(pytz.timezone(self._active_tz))
+        datetime_now = datetime.now(ZoneInfo(self._active_tz)) if self._active_tz else datetime.now().astimezone()
         qlocale = QLocale(self._locale) if self._locale else QLocale.system()
 
         self.day_label = QLabel(
@@ -863,7 +863,9 @@ class ClockWidget(BaseWidget):
                         country = self._country_code.upper()
 
                     if country:
-                        today_dt = datetime.now(pytz.timezone(self._active_tz)).date()
+                        today_dt = (
+                            datetime.now(ZoneInfo(self._active_tz)) if self._active_tz else datetime.now().astimezone()
+                        ).date()
                         holidays = {}
                         for y in (today_dt.year, today_dt.year + 1):
                             holidays.update(_get_cached_country_holidays(country, y, self._subdivision))
@@ -905,7 +907,8 @@ class ClockWidget(BaseWidget):
             apply_qmenu_style(tz_menu)
 
             for tz in self._timezones_list:
-                tz_action = tz_menu.addAction(tz.replace("_", " "))
+                tz_display = tz.replace("_", " ")
+                tz_action = tz_menu.addAction(tz_display)
                 tz_action.triggered.connect(lambda checked=False, timezone=tz: self._set_timezone(timezone))
 
             menu.addMenu(tz_menu)
@@ -1403,8 +1406,7 @@ class ClockWidget(BaseWidget):
         win._icon_animation = create_shake_animation()
 
         try:
-            tz = self._active_tz or get_localzone_name()
-            now = datetime.now(pytz.timezone(tz))
+            now = datetime.now(ZoneInfo(self._active_tz)) if self._active_tz else datetime.now().astimezone()
             display_time = now.strftime("%H:%M")
         except Exception:
             display_time = datetime.now().strftime("%H:%M")

@@ -17,7 +17,6 @@ dependencies = [
     "cerberus",
     "humanize",
     "psutil",
-    "pytz",
     "pywin32",
     "PyYAML",
     "tzlocal",
