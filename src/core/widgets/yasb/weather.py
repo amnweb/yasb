@@ -157,7 +157,9 @@ class WeatherWidget(BaseWidget):
         # Create graph buttons container
         buttons_container = QFrame(self.dialog)
         buttons_container.setProperty("class", "hourly-data-buttons")
+        buttons_container.setContentsMargins(0, 0, 0, 0)
         buttons_layout = QVBoxLayout()
+        buttons_layout.setContentsMargins(0, 0, 0, 0)
         buttons_container.setLayout(buttons_layout)
 
         hourly_data_widget = HourlyDataLineWidget(units=self._units, config=self._weather_card, data_type="temperature")
