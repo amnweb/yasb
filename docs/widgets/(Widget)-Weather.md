@@ -72,6 +72,11 @@ weather:
       current_line_color: "#8EAEE8"
       current_line_width: 1 # can be 0 to hide the current hour line
       current_line_style: "dot"
+      hourly_forecast_buttons:
+        enabled: true # Set to false to hide the buttons
+        temperature_icon: "\udb81\udd99"
+        rain_icon: "\udb81\udd96"
+        snow_icon: "\udb81\udd98"
     label_shadow:
       enabled: true
       color: "black"
@@ -111,6 +116,11 @@ weather:
   - **current_line_color:** Color of the current hour line.
   - **current_line_width:** Width of the current hour line. Setting this to `0` will hide the current hour line.
   - **current_line_style:** Style of the current hour line. Possible values are `solid`, `dash`, `dot`, `dashDot`, `dashDotDot`.
+  - **hourly_forecast_buttons:** Configuration for the data type toggle buttons in the hourly forecast view.
+    - **enabled:** Whether to show the toggle buttons. Set to `false` to hide them.
+    - **temperature_icon:** Icon for the temperature button (default: `"\udb81\udd99"`).
+    - **rain_icon:** Icon for the rain chance button (default: `"\udb81\udd96"`).
+    - **snow_icon:** Icon for the snow chance button (default: `"\udb81\udd98"`).
 - **callbacks:** A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions.
 - **animation:** A dictionary specifying the animation settings for the widget. It contains three keys: `enabled`, `type`, and `duration`. The `type` can be `fadeInOut` and the `duration` is the animation duration in milliseconds.
 - **container_shadow:** Container shadow options.
@@ -199,6 +209,26 @@ weather:
     background-color: #FAE93F; /* <- Curve color */
     font-size: 12px;
     font-weight: bold;
+}
+
+/* Hourly forecast toggle buttons */
+.weather-card .hourly-data-buttons {
+    margin: 0px;
+}
+.weather-card .hourly-data-button {
+    border-radius: 4px;
+    min-height: 24px;
+    min-width: 24px;
+    max-width: 24px;
+    max-height: 24px;
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.3);
+    border: 1px solid transparent;
+}
+.weather-card .hourly-data-button.active {
+    color: #fff;
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 ```
 

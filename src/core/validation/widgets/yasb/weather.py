@@ -48,6 +48,12 @@ DEFAULTS: dict[str, Any] = {
         "current_line_color": "#8EAEE8",
         "current_line_width": 1,
         "current_line_style": "dot",
+        "hourly_forecast_buttons": {
+            "enabled": False,
+            "snow_icon": "\udb81\udd98",
+            "rain_icon": "\udb81\udd96",
+            "temperature_icon": "\udb81\udd99",
+        },
     },
     "animation": {"enabled": True, "type": "fadeInOut", "duration": 200},
     "container_padding": {"top": 0, "left": 0, "bottom": 0, "right": 0},
@@ -192,6 +198,28 @@ VALIDATION_SCHEMA: dict[str, Any] = {
                 "type": "string",
                 "allowed": ["solid", "dash", "dot", "dashDot", "dashDotDot"],
                 "default": DEFAULTS["weather_card"]["current_line_style"],
+            },
+            "hourly_forecast_buttons": {
+                "type": "dict",
+                "schema": {
+                    "enabled": {
+                        "type": "boolean",
+                        "default": DEFAULTS["weather_card"]["hourly_forecast_buttons"]["enabled"],
+                    },
+                    "snow_icon": {
+                        "type": "string",
+                        "default": DEFAULTS["weather_card"]["hourly_forecast_buttons"]["snow_icon"],
+                    },
+                    "rain_icon": {
+                        "type": "string",
+                        "default": DEFAULTS["weather_card"]["hourly_forecast_buttons"]["rain_icon"],
+                    },
+                    "temperature_icon": {
+                        "type": "string",
+                        "default": DEFAULTS["weather_card"]["hourly_forecast_buttons"]["temperature_icon"],
+                    },
+                },
+                "default": DEFAULTS["weather_card"]["hourly_forecast_buttons"],
             },
         },
         "default": DEFAULTS["weather_card"],
