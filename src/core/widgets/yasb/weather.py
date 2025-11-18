@@ -162,8 +162,12 @@ class WeatherWidget(BaseWidget):
         buttons_layout.setContentsMargins(0, 0, 0, 0)
         buttons_container.setLayout(buttons_layout)
 
-        hourly_data_widget = HourlyDataLineWidget(units=self._units, config=self._weather_card, data_type="temperature")
-        hourly_data_widget.setProperty("class", "hourly-data")
+        # Get default data type from config
+        default_data_type = self._weather_card["hourly_forecast_buttons"]["default_view"]
+        hourly_data_widget = HourlyDataLineWidget(
+            units=self._units, config=self._weather_card, data_type=default_data_type
+        )
+        # Note: CSS class is set automatically in HourlyDataLineWidget.__init__ based on data_type
         hourly_scroll_area = HourlyTemperatureScrollArea()
         hourly_scroll_area.setWidget(hourly_data_widget)
 
@@ -178,18 +182,18 @@ class WeatherWidget(BaseWidget):
         buttons_config = self._weather_card["hourly_forecast_buttons"]
         if buttons_config["enabled"] and self._weather_card["show_hourly_forecast"]:
             button_configs = [
-                (buttons_config["temperature_icon"], "temperature", True),
-                (buttons_config["rain_icon"], "rain", False),
-                (buttons_config["snow_icon"], "snow", False),
+                ("temperature", buttons_config["temperature_icon"]),
+                ("rain", buttons_config["rain_icon"]),
+                ("snow", buttons_config["snow_icon"]),
             ]
             buttons = []
 
-            for text, data_type, is_active in button_configs:
-                btn = QLabel(text)
-                btn.setProperty("class", f"hourly-data-button{' active' if is_active else ''}")
+            for data_type, icon in button_configs:
+                btn = QLabel(icon)
+                btn.setProperty("class", f"hourly-data-button{' active' if data_type == default_data_type else ''}")
                 btn.setAlignment(Qt.AlignmentFlag.AlignCenter)
                 btn.setCursor(Qt.CursorShape.PointingHandCursor)
-                set_tooltip(btn, data_type.capitalize(), delay=100, position="top")
+                set_tooltip(btn, data_type.capitalize(), delay=400, position="top")
                 buttons_layout.addWidget(btn)
                 buttons.append(btn)
 
@@ -426,26 +430,23 @@ class WeatherWidget(BaseWidget):
         label_parts = [part for part in label_parts if part]
 
         if self._tooltip:
-            tooltip_parts = [
-                f"<strong>{self._weather_data['{location}']}</strong><br><br>",
-                "Temperature<br>",
-                f"Min {self._weather_data['{min_temp}']} / Max {self._weather_data['{max_temp}']}",
-            ]
+            tooltip = (
+                f"<strong>{self._weather_data['{location}']}</strong><br><br>Temperature<br>"
+                f"Min {self._weather_data['{min_temp}']} / Max {self._weather_data['{max_temp}']}"
+            )
 
-            # Add precipitation info only if there's any chance of rain or snow
-            rain_value = int(self._weather_data["{hourly_chance_of_rain}"].rstrip("%"))
-            snow_value = int(self._weather_data["{hourly_chance_of_snow}"].rstrip("%"))
+            rain = self._weather_data["{hourly_chance_of_rain}"]
+            snow = self._weather_data["{hourly_chance_of_snow}"]
 
-            if rain_value > 0 or snow_value > 0:
-                tooltip_parts.append("<br><br>Precipitation<br>")
-                precip_parts = []
-                if rain_value > 0:
-                    precip_parts.append(f"Rain {self._weather_data['{hourly_chance_of_rain}']}")
-                if snow_value > 0:
-                    precip_parts.append(f"Snow {self._weather_data['{hourly_chance_of_snow}']}")
-                tooltip_parts.append(" / ".join(precip_parts))
+            if rain != "N/A" and snow != "N/A" and (int(rain.rstrip("%")) > 0 or int(snow.rstrip("%")) > 0):
+                precip = []
+                if int(rain.rstrip("%")) > 0:
+                    precip.append(f"Rain {rain}")
+                if int(snow.rstrip("%")) > 0:
+                    precip.append(f"Snow {snow}")
+                tooltip += f"<br><br>Precipitation<br>{' / '.join(precip)}"
 
-            set_tooltip(self, "".join(tooltip_parts))
+            set_tooltip(self, tooltip)
 
         widget_index = 0
 
@@ -595,6 +596,10 @@ class WeatherWidget(BaseWidget):
                     "{temp}": "N/A",
                     "{min_temp}": "N/A",
                     "{max_temp}": "N/A",
+                    "{daily_chance_of_rain}": "N/A",
+                    "{daily_chance_of_snow}": "N/A",
+                    "{hourly_chance_of_rain}": "N/A",
+                    "{hourly_chance_of_snow}": "N/A",
                     "{location}": "N/A",
                     "{location_region}": "N/A",
                     "{location_country}": "N/A",

@@ -173,9 +173,20 @@ class HourlyDataLineWidget(QFrame):
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setAutoFillBackground(False)
 
+        # Set initial CSS class
+        self.set_data_type(data_type)
+
     def set_data_type(self, data_type: str):
         """Change the data type being displayed."""
         self.data_type = data_type
+        # Update CSS class based on data type
+        if data_type == "rain":
+            self.setProperty("class", "hourly-data rain")
+        elif data_type == "snow":
+            self.setProperty("class", "hourly-data snow")
+        else:
+            self.setProperty("class", "hourly-data temperature")
+        refresh_widget_style(self)
         self.update()
 
     def update_weather(

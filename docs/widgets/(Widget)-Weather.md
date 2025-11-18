@@ -13,7 +13,7 @@
 | `api_key`       | string  | `'0'`                                                                   | The API key for accessing the weather service. |
 | `icons`         | dict    | `{ 'sunnyDay': '\ue30d', 'clearNight': '\ue32b', 'cloudyDay': '\ue312', 'cloudyNight': '\ue311', 'rainyDay': '\udb81\ude7e', 'rainyNight': '\udb81\ude7e', 'snowyDay': '\udb81\udd98', 'snowyNight': '\udb81\udd98', 'blizzardDay': '\uebaa', 'default': '\uebaa' }` | A dictionary of icons for different weather conditions. |
 | `callbacks`     | dict    | `{ 'on_left': 'do_nothing', 'on_middle': 'do_nothing', 'on_right': 'do_nothing' }` | Callbacks for mouse events on the weather widget. |
-| `weather_card`  | dict    | `{ 'blur': True, 'round_corners': True, 'round_corners_type': 'normal', 'border_color': 'System', 'alignment': 'right', 'direction': 'down', 'offset_top': 6, 'offset_left': 0, 'icon_size': 64 }` | Configuration for the weather card popup display. Controls visibility, appearance, and positioning. |
+| `weather_card`  | dict    | [See below](#example-configuration) | Configuration for the weather card popup display. |
 | `animation`         | dict    | `{'enabled': true, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
 | `container_shadow`   | dict   | `None`                  | Container shadow options.                       |
 | `label_shadow`         | dict   | `None`                  | Label shadow options.                 |
@@ -72,8 +72,9 @@ weather:
       current_line_color: "#8EAEE8"
       current_line_width: 1 # can be 0 to hide the current hour line
       current_line_style: "dot"
-      hourly_forecast_buttons:
+      hourly_forecast_buttons: # Optional hourly forecast data type toggle buttons, default disabled
         enabled: true # Set to false to hide the buttons
+        default_view: "temperature" # Default view when opening the weather card. Options: "temperature", "rain", "snow"
         temperature_icon: "\udb81\udd99"
         rain_icon: "\udb81\udd96"
         snow_icon: "\udb81\udd98"
@@ -118,10 +119,11 @@ weather:
   - **current_line_style:** Style of the current hour line. Possible values are `solid`, `dash`, `dot`, `dashDot`, `dashDotDot`.
   - **hourly_forecast_buttons:** Configuration for the data type toggle buttons in the hourly forecast view.
     - **enabled:** Whether to show the toggle buttons. Set to `false` to hide them.
+    - **default_view:** Which data type to show by default when opening the weather card. Options: `"temperature"` (default), `"rain"`, or `"snow"`.
     - **temperature_icon:** Icon for the temperature button (default: `"\udb81\udd99"`).
     - **rain_icon:** Icon for the rain chance button (default: `"\udb81\udd96"`).
     - **snow_icon:** Icon for the snow chance button (default: `"\udb81\udd98"`).
-- **callbacks:** A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions.
+- **callbacks:** A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions. Available callback functions are `toggle_card`, `toggle_label`, `do_nothing`.
 - **animation:** A dictionary specifying the animation settings for the widget. It contains three keys: `enabled`, `type`, and `duration`. The `type` can be `fadeInOut` and the `duration` is the animation duration in milliseconds.
 - **container_shadow:** Container shadow options.
 - **label_shadow:** Label shadow options.
@@ -206,9 +208,20 @@ weather:
 .weather-card .hourly-data {
     /* font-family: 'Segoe UI';*/
     /* color: cyan;*/ /* <- Font color */
-    background-color: #FAE93F; /* <- Curve color */
     font-size: 12px;
     font-weight: bold;
+}
+
+.weather-card .hourly-data.temperature {
+    background-color: #FAE93F; /* Temperature curve & line color */
+}
+
+.weather-card .hourly-data.rain {
+    background-color: #4A90E2; /* Rain curve & line color */
+}
+
+.weather-card .hourly-data.snow {
+    background-color: #A0C4FF; /* Snow curve & line color */
 }
 
 /* Hourly forecast toggle buttons */

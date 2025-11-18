@@ -50,6 +50,7 @@ DEFAULTS: dict[str, Any] = {
         "current_line_style": "dot",
         "hourly_forecast_buttons": {
             "enabled": False,
+            "default_view": "temperature",
             "snow_icon": "\udb81\udd98",
             "rain_icon": "\udb81\udd96",
             "temperature_icon": "\udb81\udd99",
@@ -205,6 +206,11 @@ VALIDATION_SCHEMA: dict[str, Any] = {
                     "enabled": {
                         "type": "boolean",
                         "default": DEFAULTS["weather_card"]["hourly_forecast_buttons"]["enabled"],
+                    },
+                    "default_view": {
+                        "type": "string",
+                        "allowed": ["temperature", "rain", "snow"],
+                        "default": DEFAULTS["weather_card"]["hourly_forecast_buttons"]["default_view"],
                     },
                     "snow_icon": {
                         "type": "string",
