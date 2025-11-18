@@ -39,6 +39,9 @@ class HourlyData:
     wind: float
     icon_url: str
     time: datetime
+    chance_of_rain: int
+    chance_of_snow: int
+    humidity: int
 
 
 def quadratic_bezier_point(p0: QPointF, p1: QPointF, p2: QPointF, t: float) -> QPointF:
@@ -138,14 +141,21 @@ class HourlyTemperatureScrollArea(QScrollArea):
             super().wheelEvent(a0)
 
 
-class HourlyTemperatureLineWidget(QFrame):
-    """Widget for drawing the temperature line and current hour indicator."""
+class HourlyDataLineWidget(QFrame):
+    """Unified widget for drawing temperature, rain, or snow data lines."""
 
-    def __init__(self, parent: QWidget | None = None, units: str = "metric", config: dict[str, Any] | None = None):
+    def __init__(
+        self,
+        parent: QWidget | None = None,
+        units: str = "metric",
+        config: dict[str, Any] | None = None,
+        data_type: str = "temperature",
+    ):
         super().__init__(parent)
         self.hourly_data: list[HourlyData] = []
         self.current_time: datetime | None = None
         self.current_idx: int | None = None
+        self.data_type = data_type  # "temperature", "rain", or "snow"
 
         self.config = config or {}
         self.units = units
@@ -162,6 +172,11 @@ class HourlyTemperatureLineWidget(QFrame):
         # Background color will be used as curve color in the paintEvent
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setAutoFillBackground(False)
+
+    def set_data_type(self, data_type: str):
+        """Change the data type being displayed."""
+        self.data_type = data_type
+        self.update()
 
     def update_weather(
         self,
@@ -186,9 +201,16 @@ class HourlyTemperatureLineWidget(QFrame):
         self.setMinimumWidth(abs(min_width))
         self.update()
 
-    def _get_temp_range(self) -> tuple[float, float]:
-        temps = [h.temp for h in self.hourly_data]
-        return (min(temps), max(temps)) if temps else (0.0, 1.0)
+    def _get_data_range(self) -> tuple[float, float]:
+        """Get the range of data based on current data_type."""
+        if self.data_type == "temperature":
+            values = [h.temp for h in self.hourly_data]
+            return (min(values), max(values)) if values else (0.0, 1.0)
+        elif self.data_type == "rain":
+            return (0.0, 100.0)
+        elif self.data_type == "snow":
+            return (0.0, 100.0)
+        return (0.0, 1.0)
 
     def _get_points(
         self,
@@ -209,13 +231,21 @@ class HourlyTemperatureLineWidget(QFrame):
         graph_bottom = height - bottom_content_height
         graph_height = graph_bottom - graph_top
 
-        temp_min, temp_max = self._get_temp_range()
-        temp_range = temp_max - temp_min or 1
+        data_min, data_max = self._get_data_range()
+        data_range = data_max - data_min or 1
         x_step = self.hour_point_spacing if len(self.hourly_data) > 1 else width
 
         points: list[QPointF] = []
         for i, h in enumerate(self.hourly_data):
-            norm = (h.temp - temp_min) / temp_range
+            if self.data_type == "temperature":
+                value = h.temp
+            elif self.data_type == "rain":
+                value = h.chance_of_rain
+            elif self.data_type == "snow":
+                value = h.chance_of_snow
+            else:
+                value = 0
+            norm = (value - data_min) / data_range
             y = graph_bottom - norm * graph_height
             x = i * x_step
             points.append(QPointF(x, y))
@@ -262,17 +292,24 @@ class HourlyTemperatureLineWidget(QFrame):
             time_x = x_offset - time_rect.width() / 2
             time_y = height - time_rect.height() / 2
             painter.drawText(QPointF(time_x, time_y), time_text)
-            # Wind text
-            wind_text = f"{self.hourly_data[i].wind} {'km/h' if self.units == 'metric' else 'mph'}"
-            wind_rect = painter.fontMetrics().boundingRect(wind_text)
-            wind_x = x_offset - wind_rect.width() / 2
-            wind_y = time_y - wind_rect.height()
-            painter.drawText(QPointF(wind_x, wind_y), wind_text)
+            # Data text (wind for temperature, humidity for rain/snow)
+            if self.data_type == "temperature":
+                data_text = f"{self.hourly_data[i].wind} {'km/h' if self.units == 'metric' else 'mph'}"
+            elif self.data_type == "rain":
+                data_text = f"{self.hourly_data[i].humidity}%"
+            elif self.data_type == "snow":
+                data_text = f"{self.hourly_data[i].humidity}%"
+            else:
+                data_text = ""
+            data_rect = painter.fontMetrics().boundingRect(data_text)
+            data_x = x_offset - data_rect.width() / 2
+            data_y = time_y - data_rect.height()
+            painter.drawText(QPointF(data_x, data_y), data_text)
             # Draw icon
             icon = self.icon_fetcher.get_icon(self.hourly_data[i].icon_url)
             pixmap = QPixmap.fromImage(QImage.fromData(icon))
             icon_x = x_offset - icon_size.width() / 2
-            icon_y = wind_y - wind_rect.height() - icon_size.height()
+            icon_y = data_y - data_rect.height() - icon_size.height()
             painter.drawPixmap(
                 int(icon_x),
                 int(icon_y),
@@ -280,8 +317,8 @@ class HourlyTemperatureLineWidget(QFrame):
                 icon_size.height(),
                 pixmap,
             )
-            # Set temp, wind and icon combined height
-            text_wind_icon_height = time_rect.height() + wind_rect.height() + icon_size.height()
+            # Set combined height
+            text_wind_icon_height = time_rect.height() + data_rect.height() + icon_size.height()
 
         # Draw temperature curve
         temp_line_width = self.config.get("temp_line_width", 2)
@@ -299,28 +336,35 @@ class HourlyTemperatureLineWidget(QFrame):
                     path.lineTo(points[i])
             painter.drawPath(path)
 
-        # Draw temperature text
+        # Draw value text above curve
         painter.setPen(default_pen)
         for i in range(1, len(self.hourly_data) - 1):
             x_offset = i * self.hour_point_spacing
-            temp_text = f"{self.hourly_data[i].temp}{'°C' if self.units == 'metric' else '°F'}"
-            temp_rect = painter.fontMetrics().boundingRect(temp_text)
-            temp_x = x_offset - temp_rect.width() / 2
+            if self.data_type == "temperature":
+                value_text = f"{self.hourly_data[i].temp}{'°C' if self.units == 'metric' else '°F'}"
+            elif self.data_type == "rain":
+                value_text = f"{self.hourly_data[i].chance_of_rain}%"
+            elif self.data_type == "snow":
+                value_text = f"{self.hourly_data[i].chance_of_snow}%"
+            else:
+                value_text = ""
+            value_rect = painter.fontMetrics().boundingRect(value_text)
+            value_x = x_offset - value_rect.width() / 2
             # Text will be drawn above the curve
             if temp_line_width > 0:
                 p0 = points[i - 1]
                 p1 = points[i]
                 p2 = points[i + 1]
                 t = 0.5
-                # NOTE: We calculate this point to average it with the actual temp point
-                # because otherwise the temperature text will clip with the curve on some values
+                # NOTE: We calculate this point to average it with the actual point
+                # because otherwise the text will clip with the curve on some values
                 custom_point = quadratic_bezier_point(p0, p1, p2, t)
                 average_point = (custom_point + points[i]) / 2
-                temp_y = average_point.y() - 15
+                value_y = average_point.y() - 15
             # Text will have an offset from top of the widget if no curve is drawn
             else:
-                temp_y = temp_rect.height()
-            painter.drawText(QPointF(temp_x, temp_y), temp_text)
+                value_y = value_rect.height()
+            painter.drawText(QPointF(value_x, value_y), value_text)
 
         # Draw vertical line for current hour
         current_line_width = self.config.get("current_line_width", 1)
@@ -338,8 +382,8 @@ class HourlyTemperatureLineWidget(QFrame):
                     average_point = (custom_point + points[1]) / 2
                     line_from = average_point.y() + 10
                 else:
-                    temp_rect = painter.fontMetrics().boundingRect("20°C")
-                    line_from = temp_rect.height() + 10
+                    sample_rect = painter.fontMetrics().boundingRect("100%")
+                    line_from = sample_rect.height() + 10
                 line_to = height - text_wind_icon_height - 10
 
                 painter.drawLine(

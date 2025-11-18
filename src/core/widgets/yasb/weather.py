@@ -18,7 +18,7 @@ from core.utils.widgets.weather.api import IconFetcher, WeatherDataFetcher
 from core.utils.widgets.weather.widgets import (
     ClickableWidget,
     HourlyData,
-    HourlyTemperatureLineWidget,
+    HourlyDataLineWidget,
     HourlyTemperatureScrollArea,
 )
 from core.validation.widgets.yasb.weather import VALIDATION_SCHEMA
@@ -153,6 +153,59 @@ class WeatherWidget(BaseWidget):
         self.dialog.setProperty("class", "weather-card")
 
         main_layout = QVBoxLayout()
+
+        # Create graph buttons container
+        buttons_container = QFrame(self.dialog)
+        buttons_container.setProperty("class", "hourly-data-buttons")
+        buttons_container.setContentsMargins(0, 0, 0, 0)
+        buttons_layout = QVBoxLayout()
+        buttons_layout.setContentsMargins(0, 0, 0, 0)
+        buttons_container.setLayout(buttons_layout)
+
+        hourly_data_widget = HourlyDataLineWidget(units=self._units, config=self._weather_card, data_type="temperature")
+        hourly_data_widget.setProperty("class", "hourly-data")
+        hourly_scroll_area = HourlyTemperatureScrollArea()
+        hourly_scroll_area.setWidget(hourly_data_widget)
+
+        hourly_container_wrapper = QFrame()
+        hourly_container_wrapper_layout = QHBoxLayout()
+        hourly_container_wrapper.setLayout(hourly_container_wrapper_layout)
+        hourly_container_wrapper_layout.addWidget(hourly_scroll_area)
+        hourly_container_wrapper_layout.setContentsMargins(0, 0, 0, 0)
+        hourly_container_wrapper.setProperty("class", "hourly-container")
+
+        # Create buttons and handlers if enabled
+        buttons_config = self._weather_card["hourly_forecast_buttons"]
+        if buttons_config["enabled"] and self._weather_card["show_hourly_forecast"]:
+            button_configs = [
+                (buttons_config["temperature_icon"], "temperature", True),
+                (buttons_config["rain_icon"], "rain", False),
+                (buttons_config["snow_icon"], "snow", False),
+            ]
+            buttons = []
+
+            for text, data_type, is_active in button_configs:
+                btn = QLabel(text)
+                btn.setProperty("class", f"hourly-data-button{' active' if is_active else ''}")
+                btn.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                btn.setCursor(Qt.CursorShape.PointingHandCursor)
+                set_tooltip(btn, data_type.capitalize(), delay=100, position="top")
+                buttons_layout.addWidget(btn)
+                buttons.append(btn)
+
+                def make_handler(dt, active_btn):
+                    def handler(event):
+                        hourly_data_widget.set_data_type(dt)
+                        for b in buttons:
+                            b.setProperty("class", f"hourly-data-button{' active' if b == active_btn else ''}")
+                            refresh_widget_style(b)
+
+                    return handler
+
+                btn.mousePressEvent = make_handler(data_type, btn)
+
+            buttons_layout.addStretch()
+
         frame_today = QWidget()
         frame_today.setProperty("class", "weather-card-today")
         layout_today = QVBoxLayout(frame_today)
@@ -162,7 +215,7 @@ class WeatherWidget(BaseWidget):
         today_label0.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         today_label1 = QLabel(
-            f"Feels like {self._weather_data['{feelslike}']} - {self._weather_data['{condition_text}']} - Humidity {self._weather_data['{humidity}']}\nPressure {self._weather_data['{pressure}']} - Visibility {self._weather_data['{vis}']} - Cloud {self._weather_data['{cloud}']}%"
+            f"Feels like {self._weather_data['{feelslike}']} - {self._weather_data['{condition_text}']} - Humidity {self._weather_data['{humidity}']}\nPressure {self._weather_data['{pressure}']} - Visibility {self._weather_data['{vis}']} - Cloud {self._weather_data['{cloud}']}%\nRain chance {self._weather_data['{daily_chance_of_rain}']} - Snow chance {self._weather_data['{daily_chance_of_snow}']}"
         )
         today_label1.setProperty("class", "label")
         today_label1.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -180,24 +233,6 @@ class WeatherWidget(BaseWidget):
         layout_today.addWidget(today_label1)
         if self._show_alerts and self._weather_data["{alert_title}"] and self._weather_data["{alert_desc}"]:
             layout_today.addWidget(today_label2)
-
-        # Create hourly layout and add frames (before the daily widget to pass it to press event)
-        hourly_temperature_widget = HourlyTemperatureLineWidget(
-            units=self._units,
-            config=self._weather_card,
-        )
-        hourly_temperature_widget.setProperty("class", "hourly-data")
-        hourly_temperature_scroll_area = HourlyTemperatureScrollArea()
-        hourly_temperature_scroll_area.setWidget(hourly_temperature_widget)
-
-        # NOTE: # This is needed for Qt >=6.10.0 because QScrollArea
-        # refuses to play nicely with background color and border styles
-        hourly_container_wrapper = QFrame()
-        hourly_container_wrapper_layout = QHBoxLayout()
-        hourly_container_wrapper.setLayout(hourly_container_wrapper_layout)
-        hourly_container_wrapper_layout.addWidget(hourly_temperature_scroll_area)
-        hourly_container_wrapper_layout.setContentsMargins(0, 0, 0, 0)
-        hourly_container_wrapper.setProperty("class", "hourly-container")
 
         @pyqtSlot(int)
         def switch_hourly_data(day_idx: int):
@@ -225,9 +260,12 @@ class WeatherWidget(BaseWidget):
                         wind=h["wind_kph"] if self._units == "metric" else h["wind_mph"],
                         icon_url=f"http:{h['condition']['icon']}",
                         time=datetime.strptime(h["time"], "%Y-%m-%d %H:%M"),
+                        chance_of_rain=h.get("chance_of_rain", 0),
+                        chance_of_snow=h.get("chance_of_snow", 0),
+                        humidity=h.get("humidity", 0),
                     )
                 )
-            hourly_temperature_widget.update_weather(parsed_data, current_time)
+            hourly_data_widget.update_weather(parsed_data, current_time)
             for i, w in enumerate(self._weather_card_daily_widgets):
                 if i == day_idx:
                     w.setProperty("class", "weather-card-day active")
@@ -277,7 +315,7 @@ class WeatherWidget(BaseWidget):
 
         switch_hourly_data(0)
 
-        # Add the "Current" label on top, days on bottom
+        # Add content to main layout (no buttons here - they're absolutely positioned)
         main_layout.addWidget(frame_today)
         main_layout.addLayout(days_layout)
 
@@ -296,8 +334,15 @@ class WeatherWidget(BaseWidget):
         )
         self.dialog.show()
 
+        # Position buttons absolutely in top-left corner after dialog is shown
+        buttons_config = self._weather_card["hourly_forecast_buttons"]
+        if buttons_config["enabled"] and self._weather_card["show_hourly_forecast"]:
+            buttons_container.adjustSize()
+            buttons_container.move(0, 0)
+            buttons_container.raise_()
+
         # Scroll to the current hour. Must be done after the window is shown.
-        if hsb := hourly_temperature_scroll_area.horizontalScrollBar():
+        if hsb := hourly_scroll_area.horizontalScrollBar():
             hsb.setValue(self._weather_card["hourly_point_spacing"] // 2 - 5)
 
         # If any icons failed to load, try to fetch them again once
@@ -381,10 +426,26 @@ class WeatherWidget(BaseWidget):
         label_parts = [part for part in label_parts if part]
 
         if self._tooltip:
-            set_tooltip(
-                self,
-                f"{self._weather_data['{location}']}\nMin {self._weather_data['{min_temp}']}\nMax {self._weather_data['{max_temp}']}",
-            )
+            tooltip_parts = [
+                f"<strong>{self._weather_data['{location}']}</strong><br><br>",
+                "Temperature<br>",
+                f"Min {self._weather_data['{min_temp}']} / Max {self._weather_data['{max_temp}']}",
+            ]
+
+            # Add precipitation info only if there's any chance of rain or snow
+            rain_value = int(self._weather_data["{hourly_chance_of_rain}"].rstrip("%"))
+            snow_value = int(self._weather_data["{hourly_chance_of_snow}"].rstrip("%"))
+
+            if rain_value > 0 or snow_value > 0:
+                tooltip_parts.append("<br><br>Precipitation<br>")
+                precip_parts = []
+                if rain_value > 0:
+                    precip_parts.append(f"Rain {self._weather_data['{hourly_chance_of_rain}']}")
+                if snow_value > 0:
+                    precip_parts.append(f"Snow {self._weather_data['{hourly_chance_of_snow}']}")
+                tooltip_parts.append(" / ".join(precip_parts))
+
+            set_tooltip(self, "".join(tooltip_parts))
 
         widget_index = 0
 
@@ -476,6 +537,12 @@ class WeatherWidget(BaseWidget):
                 # Forecast today
                 "{min_temp}": self._format_temp(forecast["mintemp_f"], forecast["mintemp_c"]),
                 "{max_temp}": self._format_temp(forecast["maxtemp_f"], forecast["maxtemp_c"]),
+                # Rain/Snow chances (daily)
+                "{daily_chance_of_rain}": f"{forecast.get('daily_chance_of_rain', 0)}%",
+                "{daily_chance_of_snow}": f"{forecast.get('daily_chance_of_snow', 0)}%",
+                # Rain/Snow chances (hourly)
+                "{hourly_chance_of_rain}": f"{self._hourly_data_today[self._current_time.hour].get('chance_of_rain', 0) if self._hourly_data_today and self._current_time else 0}%",
+                "{hourly_chance_of_snow}": f"{self._hourly_data_today[self._current_time.hour].get('chance_of_snow', 0) if self._hourly_data_today and self._current_time else 0}%",
                 # Location and conditions
                 "{location}": weather_data["location"]["name"],
                 "{location_region}": weather_data["location"]["region"],
