@@ -1,7 +1,7 @@
 <p align="center"><img src="https://raw.githubusercontent.com/amnweb/yasb/main/src/assets/images/app_icon.png" width="180"></p>
 <h1 align="center">YASB Reborn</h1>
 <p align="center">
-  A highly configurable Windows status bar written in Python.
+  YASB (Yet Another Status Bar) is a highly configurable Windows status bar written in Python.
   <br><br>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg"></a>
   <a href="https://github.com/amnweb/yasb"><img src="https://img.shields.io/github/languages/top/amnweb/yasb"></a>
@@ -57,7 +57,7 @@ choco install yasb
 ***
 
 ### Using Python
-- Install Python 3.12
+- Install Python 3.14
 - Install the application and its dependencies:
   - `pip install .` (for regular installation)
   - `pip install -e .[dev]` (for development installation)
@@ -80,7 +80,7 @@ https://github.com/user-attachments/assets/aab8d8e8-248f-46a1-919c-9b0601236ac1
 
 
 > [!NOTE]  
-> This repository is updated on a regular basis; when you update files, always check [styles.css](src/styles.css) and [config.yaml](src/config.yaml) for new features and changes; otherwise, your config can be broken.
+> This repository is updated on a regular basis, when you update files, always check [styles.css](src/styles.css) and [config.yaml](src/config.yaml) for new features and changes; otherwise, your config can be broken.
 
 
 ## List of currently available widgets in YASB.

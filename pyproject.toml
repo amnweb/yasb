@@ -19,7 +19,6 @@ dependencies = [
     "psutil",
     "pywin32",
     "PyYAML",
-    "tzlocal",
     "holidays",
     "watchdog",
     "pycaw==20251023",
@@ -60,7 +59,6 @@ Changelog = "https://github.com/amnweb/yasb/releases/latest"
 dev = [
     "pre-commit",
     "ruff",
-    "cx_freeze",
     "pyqt6-stubs",
     "types-pillow",
 ]
