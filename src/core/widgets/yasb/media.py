@@ -2,7 +2,6 @@ import ctypes
 import logging
 from typing import Any, Literal, Optional
 
-import comtypes
 from PIL import Image, ImageChops
 from PIL.ImageDraw import ImageDraw
 from PIL.ImageQt import ImageQt
@@ -1269,7 +1268,7 @@ class MediaWidget(BaseWidget):
         identifier = (aumid or "").lower()
 
         try:
-            comtypes.CoInitialize()
+            # pycaw handles COM initialization internally
             sessions = AudioUtilities.GetAllSessions()
             candidate = None
             if aumid:
@@ -1291,11 +1290,6 @@ class MediaWidget(BaseWidget):
         except Exception as e:
             logging.error(f"MediaWidget: Failed to bind app volume session: {e}")
             self._app_volume_session = None
-        finally:
-            try:
-                comtypes.CoUninitialize()
-            except Exception:
-                pass
 
     def _get_volume_interface(self):
         """Get the SimpleAudioVolume interface for the current session."""

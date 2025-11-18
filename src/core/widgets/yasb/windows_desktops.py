@@ -24,8 +24,6 @@ from core.utils.win32.utilities import apply_qmenu_style
 from core.validation.widgets.yasb.windows_desktops import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
 
-logging.getLogger("comtypes").setLevel(logging.INFO)
-
 
 class WorkspaceButton(QPushButton):
     def __init__(self, workspace_index: int, label: str = None, active_label: str = None, parent=None):
