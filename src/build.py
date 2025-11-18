@@ -22,26 +22,15 @@ build_options = {
     "silent": True,
     "excludes": ["PySide6", "pydoc_data", "email", "tkinter", "PyQt5", "PySide2", "unittest"],
     "bin_excludes": ["Qt6Pdf.dll", "_avif.cp314-win_amd64.pyd"],
-    "zip_exclude_packages": ["*"],
+    "zip_exclude_packages": [],
+    "zip_include_packages": ["*"],
+    "no_compress": True,
+    "zip_filename": "library.zip",
     "build_exe": "dist",
     "include_msvcr": True,
     "includes": [
         "holidays.countries",
-        "winrt.windows.ui.notifications",
-        "winrt.windows.ui.notifications.management",
-        "winrt.windows.data.xml.dom",
-        "winrt.windows.media",
-        "winrt.windows.media.control",
-        "winrt.windows.management.deployment",
         "winrt.windows.applicationmodel",
-        "winrt.windows.networking",
-        "winrt.windows.networking.connectivity",
-        "winrt.windows.storage",
-        "winrt.windows.storage.streams",
-        "winrt.windows.foundation",
-        "winrt.windows.foundation.collections",
-        "winrt.windows.devices.wifi",
-        "winrt.windows.security.credentials",
     ],
     "optimize": 1,
     "include_files": [
@@ -123,10 +112,10 @@ executables = [
 ]
 
 setup(
-    name="yasb",
+    name="YASB",
     version=BUILD_VERSION,
     author="AmN",
-    description="Yasb Status Bar",
+    description="YASB",
     executables=executables,
     options={
         "build_exe": build_options,
