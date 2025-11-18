@@ -115,7 +115,7 @@ setup(
     name="YASB",
     version=BUILD_VERSION,
     author="AmN",
-    description="Yasb Status Bar",
+    description="YASB",
     executables=executables,
     options={
         "build_exe": build_options,

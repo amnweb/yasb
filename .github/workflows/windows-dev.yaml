@@ -31,12 +31,12 @@ jobs:
             artifact_suffix: x64
             unsigned_exe_name: unsigned-exes-x64
             unsigned_msi_name: unsigned-msi-x64
-          # - arch: arm64  # Temporarily skipped due to build issues
-          #   runner: windows-11-arm
-          #   python_arch: arm64
-          #   artifact_suffix: aarch64
-          #   unsigned_exe_name: unsigned-exes-arm64
-          #   unsigned_msi_name: unsigned-msi-arm64
+          - arch: arm64  # Temporarily skipped due to build issues
+            runner: windows-11-arm
+            python_arch: arm64
+            artifact_suffix: aarch64
+            unsigned_exe_name: unsigned-exes-arm64
+            unsigned_msi_name: unsigned-msi-arm64
     runs-on: ${{ matrix.runner }}
     name: Build (${{ matrix.arch }})
     
