@@ -21,7 +21,7 @@ from typing import Optional
 import certifi
 
 from core.utils.utilities import ToastNotifier, app_data_path, get_app_identifier, get_architecture
-from settings import APP_ID, BUILD_VERSION, SCRIPT_PATH
+from settings import APP_ID, BUILD_VERSION, RELEASE_CHANNEL, SCRIPT_PATH
 
 # GitHub API configuration
 GITHUB_API_URL = "https://api.github.com/repos/amnweb/yasb/releases/latest"
@@ -252,6 +252,7 @@ class UpdateService:
         1. App is frozen (running as bundled executable)
         2. YASB is installed (not running from source)
         3. Architecture is known (x64 or ARM64)
+        4. Running a stable release (not dev/pr build)
 
         Returns:
             True if updates are supported, False otherwise
@@ -260,8 +261,9 @@ class UpdateService:
         is_forzen = getattr(sys, "frozen", False)
         is_installed = get_app_identifier() == APP_ID
         is_arch_supported = ARCHITECTURE is not None
+        is_stable = RELEASE_CHANNEL == "stable"
 
-        return is_installed and is_arch_supported and is_forzen
+        return is_installed and is_arch_supported and is_forzen and is_stable
 
 
 def get_update_service() -> UpdateService:

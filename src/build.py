@@ -3,7 +3,7 @@ import datetime
 from cx_Freeze import Executable, setup
 
 from core.utils.utilities import detect_architecture
-from settings import APP_ID, BUILD_VERSION
+from settings import APP_ID, BUILD_VERSION, RELEASE_CHANNEL
 
 arch_info = detect_architecture()
 if not arch_info:
@@ -78,7 +78,7 @@ bdist_msi_options = {
     "initial_target_dir": r"[ProgramFiles64Folder]\YASB",
     "all_users": True,
     "skip_build": True,
-    "target_name": f"yasb-{BUILD_VERSION}-{msi_arch_suffix}.msi",
+    "target_name": f"yasb-{BUILD_VERSION if RELEASE_CHANNEL == 'stable' else 'dev'}-{msi_arch_suffix}.msi",
     "summary_data": {
         "author": "AmN",
         "comments": "A highly configurable Windows status bar",
