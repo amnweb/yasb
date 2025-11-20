@@ -50,12 +50,23 @@ def _strip_commit_links(changelog: str) -> str:
     """Strip commit links from changelog markdown."""
     if not changelog:
         return changelog
+    # Convert full commit URLs to [[link]]
     transformed = _COMMIT_URL_PATTERN.sub(lambda match: f"[[link]]({match.group(0)})", changelog)
+    # Convert PR URLs to [#123]
     transformed = _PULL_URL_PATTERN.sub(
         lambda match: f"[#{match.group(1)}]({match.group(0)})",
         transformed,
     )
-    return _COMPARE_URL_PATTERN.sub(lambda match: f"<{match.group(1)}>", transformed)
+    # Convert compare URLs
+    transformed = _COMPARE_URL_PATTERN.sub(lambda match: f"<{match.group(1)}>", transformed)
+    # Convert plain commit hashes (7+ hex chars at end of line or before whitespace) to links
+    transformed = re.sub(
+        r"\b([0-9a-fA-F]{7,40})(?=\s*$)",
+        lambda m: f"[[link]](https://github.com/amnweb/yasb/commit/{m.group(1)})",
+        transformed,
+        flags=re.MULTILINE,
+    )
+    return transformed
 
 
 class ReleaseFetcher(QThread):
@@ -213,6 +224,7 @@ class UpdateDialog(QDialog):
 
         self.changelog_view = QTextBrowser(self)
         self.changelog_view.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
+        self.changelog_view.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         changelog_font = self.changelog_view.font()
         changelog_font.setPointSize(max(changelog_font.pointSize(), 10))
         self.changelog_view.setFont(changelog_font)
