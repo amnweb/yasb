@@ -1,0 +1,123 @@
+name: PR Comment
+
+on:
+  workflow_run:
+    workflows: ["PR Check"]
+    types:
+      - completed
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+  actions: write
+
+jobs:
+  manage-comments:
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'success' || github.event.workflow_run.conclusion == 'failure'
+    steps:
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: pr-metadata
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
+        continue-on-error: true
+
+      - name: Manage PR Comments
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            
+            // 1. Check for PR Number
+            if (!fs.existsSync('pr_number.txt')) {
+              console.log('No PR number artifact found. Skipping.');
+              return;
+            }
+            const issueNumber = parseInt(fs.readFileSync('pr_number.txt', 'utf8').trim());
+            console.log('Found PR Number:', issueNumber);
+
+            // 2. Get existing bot comments
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+            });
+            
+            const botComments = comments.filter(comment => 
+              comment.user.type === 'Bot' && 
+              comment.body.includes('Ruff Lint Check Failed')
+            );
+
+            const conclusion = context.payload.workflow_run.conclusion;
+            console.log('Workflow conclusion:', conclusion);
+
+            // 3. Handle Success (Delete comments)
+            if (conclusion === 'success') {
+               if (botComments.length > 0) {
+                 console.log('Check passed. Deleting old failure comments.');
+                 for (const comment of botComments) {
+                   await github.rest.issues.deleteComment({
+                     owner: context.repo.owner,
+                     repo: context.repo.repo,
+                     comment_id: comment.id,
+                   });
+                 }
+               } else {
+                 console.log('Check passed and no comments to delete.');
+               }
+            } 
+            // 4. Handle Failure (Post/Update comment)
+            else if (conclusion === 'failure') {
+               if (!fs.existsSync('comment.txt')) {
+                  console.log('No comment.txt found. Skipping comment (likely not a lint failure).');
+                  return;
+               }
+               const commentBody = fs.readFileSync('comment.txt', 'utf8');
+               
+               // We only want one comment. Update if exists, create if not.
+               const existingComment = botComments[0];
+
+               if (existingComment) {
+                 console.log('Updating existing comment');
+                 await github.rest.issues.updateComment({
+                   owner: context.repo.owner,
+                   repo: context.repo.repo,
+                   comment_id: existingComment.id,
+                   body: commentBody
+                 });
+               } else {
+                 console.log('Creating new comment');
+                 await github.rest.issues.createComment({
+                   owner: context.repo.owner,
+                   repo: context.repo.repo,
+                   issue_number: issueNumber,
+                   body: commentBody
+                 });
+               }
+            }
+
+      - name: Delete Artifact
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const artifacts = await github.rest.actions.listWorkflowRunArtifacts({
+               owner: context.repo.owner,
+               repo: context.repo.repo,
+               run_id: context.payload.workflow_run.id,
+            });
+            const matchArtifact = artifacts.data.artifacts.find((artifact) => {
+               return artifact.name == "pr-metadata"
+            });
+            if (matchArtifact) {
+               console.log("Deleting artifact " + matchArtifact.id);
+               await github.rest.actions.deleteArtifact({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  artifact_id: matchArtifact.id,
+               });
+            }
