@@ -138,7 +138,7 @@ class DownloadWorker(QThread):
             if bytes_read == 0:
                 raise IOError("No data received from server.")
             if total_size and bytes_read < total_size:
-                raise IOError("Download incomplete; connection lost.")
+                raise IOError("Download incomplete, connection lost.")
             self.progress.emit(100)
             self.finished.emit(self._output_path)
         except InterruptedError:
@@ -205,6 +205,11 @@ class UpdateDialog(QDialog):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(18, 18, 18, 18)
         layout.setSpacing(12)
+
+        self.title_label = QLabel("", self)
+        self.title_label.setStyleSheet("font-size: 14pt; font-weight: bold;")
+        self.title_label.setVisible(False)
+        layout.addWidget(self.title_label)
 
         self.changelog_view = QTextBrowser(self)
         self.changelog_view.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
@@ -305,10 +310,17 @@ class UpdateDialog(QDialog):
             release_info: Release information including version and architecture
         """
         self._available_release = release_info
+        self.setWindowTitle("Update Available")
 
-        # Update window title with version and architecture
-        arch_suffix = f" ({ARCHITECTURE})" if ARCHITECTURE else ""
-        self.setWindowTitle(f"Update Available - v{release_info.version}{arch_suffix}")
+        # Display title with version and architecture
+        update_service = get_update_service()
+        if update_service._current_channel == "dev":
+            version_display = f"New Dev Build ({release_info.version.replace('dev-', '')})"
+        else:
+            version_display = f"Version {release_info.version}"
+
+        self.title_label.setText(f"{version_display} - {release_info.architecture}")
+        self.title_label.setVisible(True)
 
         # Display changelog
         changelog = release_info.changelog.strip() or "_No changelog provided._"

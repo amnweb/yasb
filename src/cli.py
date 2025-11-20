@@ -99,9 +99,11 @@ class Format:
     yellow = "\033[93m"
     red = "\033[91m"
     red_bg = "\033[41m"
-    underline = "\033[4m"
     gray = "\033[90m"
     blue = "\033[94m"
+    cyan = "\033[96m"
+    magenta = "\033[95m"
+    underline = "\033[4m"
 
 
 class CustomArgumentParser(argparse.ArgumentParser):
@@ -120,6 +122,7 @@ class CLIHandler:
     def __init__(self):
         self.task_handler = CLITaskHandler()
         self.update_handler = CLIUpdateHandler()
+        self.channel_handler = CLIChannelHandler()
 
     def send_command_to_application(self, command: str):
         """
@@ -210,54 +213,196 @@ class CLIHandler:
             print(f"Failed to remove {APP_NAME} from startup: {e}")
 
     def parse_arguments(self):
-        parser = CustomArgumentParser(description="The command-line interface for YASB Reborn.", add_help=False)
-        subparsers = parser.add_subparsers(dest="command", help="Commands")
+        parser = CustomArgumentParser(
+            description="The command-line interface for YASB Reborn.",
+            add_help=False,
+            prog="yasbc",
+        )
+        subparsers = parser.add_subparsers(
+            dest="command",
+            help="Commands",
+        )
 
-        start_parser = subparsers.add_parser("start", help="Start the application")
-        start_parser.add_argument("-s", "--silent", action="store_true", help="Silence print messages")
+        start_parser = subparsers.add_parser(
+            "start",
+            help="Start the application",
+            prog="yasbc start",
+        )
+        start_parser.add_argument(
+            "-s",
+            "--silent",
+            action="store_true",
+            help="Silence print messages",
+        )
 
-        stop_parser = subparsers.add_parser("stop", help="Stop the application")
-        stop_parser.add_argument("-s", "--silent", action="store_true", help="Silence print messages")
-        stop_parser.add_argument("-f", "--force", action="store_true", help="Force stop the application")
+        stop_parser = subparsers.add_parser(
+            "stop",
+            help="Stop the application",
+            prog="yasbc stop",
+        )
+        stop_parser.add_argument(
+            "-s",
+            "--silent",
+            action="store_true",
+            help="Silence print messages",
+        )
+        stop_parser.add_argument(
+            "-f",
+            "--force",
+            action="store_true",
+            help="Force stop the application",
+        )
 
-        reload_parser = subparsers.add_parser("reload", help="Reload the application")
-        reload_parser.add_argument("-s", "--silent", action="store_true", help="Silence print messages")
+        reload_parser = subparsers.add_parser(
+            "reload",
+            help="Reload the application",
+            prog="yasbc reload",
+        )
+        reload_parser.add_argument(
+            "-s",
+            "--silent",
+            action="store_true",
+            help="Silence print messages",
+        )
 
-        subparsers.add_parser("update", help="Update the application")
+        subparsers.add_parser(
+            "update",
+            help="Update the application",
+            add_help=False,
+        )
 
-        enable_autostart_parser = subparsers.add_parser("enable-autostart", help="Enable autostart on system boot")
-        enable_autostart_parser.add_argument("--task", action="store_true", help="Enable autostart as a scheduled task")
+        enable_autostart_parser = subparsers.add_parser(
+            "enable-autostart",
+            help="Enable autostart on system boot",
+            prog="yasbc enable-autostart",
+        )
+        enable_autostart_parser.add_argument(
+            "--task",
+            action="store_true",
+            help="Enable autostart as a scheduled task",
+        )
 
-        disable_autostart_parser = subparsers.add_parser("disable-autostart", help="Disable autostart on system boot")
+        disable_autostart_parser = subparsers.add_parser(
+            "disable-autostart",
+            help="Disable autostart on system boot",
+            prog="yasbc disable-autostart",
+        )
         disable_autostart_parser.add_argument(
-            "--task", action="store_true", help="Disable autostart as a scheduled task"
+            "--task",
+            action="store_true",
+            help="Disable autostart as a scheduled task",
         )
 
-        subparsers.add_parser("monitor-information", help="Show information about connected monitors")
+        subparsers.add_parser(
+            "monitor-information",
+            help="Show information about connected monitors",
+            add_help=False,
+        )
 
-        show_bar_parser = subparsers.add_parser("show-bar", help="Show the bar on a specific screen")
-        show_bar_parser.add_argument("-s", "--screen", type=str, help="Screen name (optional)")
+        show_bar_parser = subparsers.add_parser(
+            "show-bar",
+            help="Show the bar on a specific screen",
+            prog="yasbc show-bar",
+        )
+        show_bar_parser.add_argument(
+            "-s",
+            "--screen",
+            type=str,
+            help="Screen name (optional)",
+        )
 
-        hide_bar_parser = subparsers.add_parser("hide-bar", help="Hide the bar on a specific screen")
-        hide_bar_parser.add_argument("-s", "--screen", type=str, help="Screen name (optional)")
+        hide_bar_parser = subparsers.add_parser(
+            "hide-bar",
+            help="Hide the bar on a specific screen",
+            prog="yasbc hide-bar",
+        )
+        hide_bar_parser.add_argument(
+            "-s",
+            "--screen",
+            type=str,
+            help="Screen name (optional)",
+        )
 
-        toggle_bar_parser = subparsers.add_parser("toggle-bar", help="Toggle the bar on a specific screen")
-        toggle_bar_parser.add_argument("-s", "--screen", type=str, help="Screen name (optional)")
+        toggle_bar_parser = subparsers.add_parser(
+            "toggle-bar",
+            help="Toggle the bar on a specific screen",
+            prog="yasbc toggle-bar",
+        )
+        toggle_bar_parser.add_argument(
+            "-s",
+            "--screen",
+            type=str,
+            help="Screen name (optional)",
+        )
 
-        widget_toggle_parser = subparsers.add_parser("toggle-widget", help="Toggle a widget show/hide")
-        widget_toggle_parser.add_argument("widget_name", type=str, help="Name of the widget to toggle")
-        widget_toggle_parser.add_argument("-s", "--screen", type=str, help="Screen name (optional)")
-        widget_toggle_parser.add_argument("--follow-mouse", action="store_true", help="Follow mouse cursor (optional)")
+        widget_toggle_parser = subparsers.add_parser(
+            "toggle-widget",
+            help="Toggle a widget show/hide",
+            prog="yasbc toggle-widget",
+        )
         widget_toggle_parser.add_argument(
-            "--follow-focus", action="store_true", help="Follow focused window (optional)"
+            "widget_name",
+            type=str,
+            help="Name of the widget to toggle",
+        )
+        widget_toggle_parser.add_argument(
+            "-s",
+            "--screen",
+            type=str,
+            help="Screen name (optional)",
+        )
+        widget_toggle_parser.add_argument(
+            "--follow-mouse",
+            action="store_true",
+            help="Follow mouse cursor (optional)",
+        )
+        widget_toggle_parser.add_argument(
+            "--follow-focus",
+            action="store_true",
+            help="Follow focused window (optional)",
         )
 
-        subparsers.add_parser("reset", help="Restore default config files and clear cache")
+        # Channel management
+        set_channel_parser = subparsers.add_parser(
+            "set-channel",
+            help="Switch release channels",
+            prog="yasbc set-channel",
+        )
+        set_channel_parser.add_argument(
+            "target_channel",
+            type=str,
+            choices=["stable", "dev"],
+            help="Channel to switch to 'stable' for tested releases or 'dev' for latest updates",
+        )
 
-        subparsers.add_parser("help", help="Show help message")
-        subparsers.add_parser("log", help="Tail yasb process logs (cancel with Ctrl-C)")
-        parser.add_argument("-v", "--version", action="store_true", help="Show program's version number and exit.")
-        parser.add_argument("-h", "--help", action="store_true", help="Show help message")
+        subparsers.add_parser(
+            "reset",
+            help="Restore default config files and clear cache",
+            add_help=False,
+        )
+
+        subparsers.add_parser(
+            "help",
+            help="Show help message",
+            add_help=False,
+        )
+        subparsers.add_parser(
+            "log",
+            help="Tail yasb process logs (cancel with Ctrl-C)",
+            add_help=False,
+        )
+        parser.add_argument(
+            "-v",
+            "--version",
+            action="store_true",
+            help="Show program's version number and exit.",
+        )
+        parser.add_argument(
+            "-h",
+            "--help",
+            action="store_true",
+            help="Show help message",
+        )
         args = parser.parse_args()
 
         if args.command == "start":
@@ -273,6 +418,10 @@ class CLIHandler:
                     # Documentation
                     * Read the docs https://github.com/amnweb/yasb/wiki - how to configure and use YASB
                     * Read the FAQ https://github.com/amnweb/yasb/wiki/FAQ
+                    
+                    # Support the project
+                    * Consider sponsoring the project on GitHub Sponsors or Buy Me a Coffee
+                    * Thank you for using YASB!
                 """)
                 )
             subprocess.Popen(["yasb.exe"])
@@ -325,6 +474,10 @@ class CLIHandler:
             else:
                 arg = ""
             self.send_command_to_application(f"toggle-widget {args.widget_name}{arg}")
+            sys.exit(0)
+
+        elif args.command == "set-channel":
+            self.channel_handler.switch_channel(args.target_channel)
             sys.exit(0)
 
         elif args.command == "update":
@@ -490,6 +643,7 @@ class CLIHandler:
                   hide-bar                  Hide the bar on all or a specific screen
                   toggle-bar                Toggle the bar on all or a specific screen
                   toggle-widget             Toggle a widget show/hide
+                  set-channel               Switch release channels (stable, dev)
                   update                    Update the application
                   log                       Tail yasb process logs (cancel with Ctrl-C)
                   reset                     Restore default config files and clear cache
@@ -589,6 +743,101 @@ class CLITaskHandler:
             print("Failed to delete task YASB or task does not exist.")
 
 
+class CLIChannelHandler:
+    """Handles channel management operations."""
+
+    def switch_channel(self, target_channel: str):
+        """Switch to a different release channel.
+
+        Args:
+            target_channel: Target channel ('stable' or 'dev')
+        """
+        import tempfile
+
+        from core.utils.update_service import get_update_service
+        from core.utils.utilities import get_architecture
+
+        update_service = get_update_service()
+        current_channel = update_service._current_channel
+        architecture = get_architecture()
+
+        # Check if already on target channel
+        if current_channel == target_channel:
+            print(f"\nYou are already on the {target_channel} channel.")
+            sys.exit(0)
+
+        # Check if updates are supported
+        if not architecture:
+            print("\nError: Cannot switch channels - unsupported architecture.")
+            sys.exit(1)
+
+        # Show warning message
+        print(f"\n{Format.yellow}WARNING: Switching release channels{Format.reset}\n")
+        print(
+            f"You are about to switch from {Format.yellow}{current_channel}{Format.reset} to {Format.yellow}{target_channel}{Format.reset} channel.\n"
+        )
+        print("Things to consider:")
+        print("  * Configuration files may be incompatible between versions")
+        print("  * You may need to reconfigure some settings after switching")
+        print("  * Switching channels will download and install a new version of YASB")
+
+        if target_channel == "dev":
+            print("  * Bugs and instability may be present in dev channel")
+            print("  * Read the changelog: https://github.com/amnweb/yasb/releases/tag/dev")
+        else:
+            print("  * Read the changelog: https://github.com/amnweb/yasb/releases")
+
+        print()
+
+        # Ask for confirmation
+        try:
+            user_input = input("Do you want to continue? [y/N]: ").strip().lower()
+            if user_input not in ["y", "yes"]:
+                print("\nChannel switch canceled.")
+                sys.exit(0)
+        except KeyboardInterrupt:
+            print("\n\nChannel switch canceled.")
+            sys.exit(0)
+
+        print(f"\nFetching {Format.magenta}{target_channel}{Format.reset} channel release...")
+
+        try:
+            release_info = update_service.check_for_updates(channel=target_channel, skip_version_check=True, timeout=15)
+            if target_channel == "dev":
+                version_display = f"build {release_info.version.replace('dev-', '')}"
+            else:
+                version_display = f"version {release_info.version}"
+            print(f"Found {Format.magenta}{target_channel}{Format.reset} {version_display}")
+            print(f"Installer {release_info.asset_name}")
+            if release_info.asset_size:
+                print(f"Size {release_info.asset_size / 1024 / 1024:.1f} MB")
+            # Download the MSI
+            temp_dir = tempfile.gettempdir()
+            msi_path = os.path.join(temp_dir, release_info.asset_name)
+
+            # Use CLIUpdateHandler's download method
+            update_handler = CLIUpdateHandler()
+            update_handler.download_yasb(release_info.download_url, msi_path)
+
+            # Kill running processes
+            for proc in ["yasb.exe", "yasb_themes.exe"]:
+                if is_process_running(proc):
+                    subprocess.run(["taskkill", "/f", "/im", proc], creationflags=subprocess.CREATE_NO_WINDOW)
+
+            # Install and restart
+            install_command = f'msiexec /i "{os.path.abspath(msi_path)}" /passive /norestart'
+            run_after_command = f'"{EXE_PATH}"'
+            combined_command = f"{install_command} && {run_after_command}"
+
+            print("Starting installer...")
+            subprocess.Popen(combined_command, shell=True)
+            sys.exit(0)
+
+        except Exception as e:
+            print(f"\nError switching channels: {e}")
+            sys.exit(1)
+
+
 class CLIUpdateHandler:
     """Handles the update functionality for the command-line interface."""
 
@@ -624,24 +873,20 @@ class CLIUpdateHandler:
                 print("Reason: Unsupported architecture")
             sys.exit(1)
 
-        print("\nChecking for updates...")
+        print("Checking for updates...")
         arch_suffix = f" ({architecture})" if architecture else ""
-        print(f"Current version: {yasb_version}{arch_suffix}")
+        print(f"Current version {yasb_version}{arch_suffix} ({YASB_RELEASE_CHANNEL})")
 
         try:
             release_info = update_service.check_for_updates(timeout=15)
 
             if release_info is None:
-                print(f"\nYASB Reborn is already up to date (v{yasb_version}).\n")
+                print(f"YASB Reborn is already up to date (v{yasb_version}).\n")
                 sys.exit(0)
 
             # Update available
-            print(f"\nYASB Reborn version {Format.underline}{release_info.version}{Format.reset} is available.")
-            print(f"Download: {release_info.asset_name}")
-            if release_info.asset_size:
-                print(f"Size: {release_info.asset_size / 1024 / 1024:.1f} MB")
-            print("Changelog: https://github.com/amnweb/yasb/releases/latest")
-
+            print(f"Found {Format.cyan}YASB Reborn{Format.reset} Version {release_info.version}")
+            print("Changelog https://github.com/amnweb/yasb/releases/latest")
             # Ask the user if they want to continue with the update
             try:
                 user_input = input("\nDo you want to continue with the update? (Y/n): ").strip().lower()
@@ -667,7 +912,7 @@ class CLIUpdateHandler:
             run_after_command = f'"{EXE_PATH}"'
             combined_command = f"{install_command} && {run_after_command}"
 
-            print("\nStarting installer...")
+            print("Starting installer...")
             subprocess.Popen(combined_command, shell=True)
             sys.exit(0)
 
@@ -676,6 +921,12 @@ class CLIUpdateHandler:
             sys.exit(1)
 
     def download_yasb(self, msi_url: str, msi_path: str) -> None:
+        """Download a file with progress bar.
+
+        Args:
+            msi_url: Download URL
+            msi_path: Local file path
+        """
         import urllib.error
         from urllib.request import urlopen
 
@@ -694,7 +945,7 @@ class CLIUpdateHandler:
 
                 downloaded = 0
                 chunk_size = 4096
-
+                print(f"Downloading {Format.magenta}{msi_url}{Format.reset}")
                 with open(msi_path, "wb") as file:
                     while True:
                         chunk = response.read(chunk_size)
@@ -703,9 +954,12 @@ class CLIUpdateHandler:
                         file.write(chunk)
                         downloaded += len(chunk)
                         percent = downloaded / total_length * 100
-                        print(f"\rDownloading {percent:.1f}%", end="")
+                        bar_length = 30
+                        filled = int(bar_length * downloaded / total_length)
+                        bar = "\u2588" * filled + "\u2591" * (bar_length - filled)
+                        print(f"\r{bar} {percent:.1f}%", end="", flush=True)
 
-                print("\rDownload completed.          ")
+                print("\r" + " " * (bar_length + 10) + "\rDownload completed.")
 
         except KeyboardInterrupt:
             print("\nDownload interrupted by user.")

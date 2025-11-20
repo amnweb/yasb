@@ -25,6 +25,7 @@ from settings import APP_ID, BUILD_VERSION, RELEASE_CHANNEL, SCRIPT_PATH
 
 # GitHub API configuration
 GITHUB_API_URL = "https://api.github.com/repos/amnweb/yasb/releases/latest"
+GITHUB_API_DEV_URL = "https://api.github.com/repos/amnweb/yasb/releases/tags/dev"
 USER_AGENT_HEADER = {"User-Agent": "YASB Updater"}
 CHECK_INTERVAL = 60 * 60  # 60 minutes
 LAST_CHECK_FILE = app_data_path("last_update_check")
@@ -79,11 +80,43 @@ class UpdateService:
             return
         self._initialized = True
         self._current_version = BUILD_VERSION
+        self._current_channel = self._get_current_channel()
 
     @property
     def current_version(self) -> str:
         """Get the current application version."""
         return self._current_version
+
+    def _get_current_channel(self) -> str:
+        """Detect the current release channel from RELEASE_CHANNEL.
+
+        Returns:
+            'dev' if running dev build, 'stable' otherwise
+        """
+        return "dev" if RELEASE_CHANNEL.startswith("dev-") else "stable"
+
+    def _get_current_commit_hash(self) -> str:
+        """Extract commit hash from dev RELEASE_CHANNEL.
+
+        Returns:
+            Commit hash if dev channel, empty string otherwise
+        """
+        if self._current_channel == "dev" and "-" in RELEASE_CHANNEL:
+            return RELEASE_CHANNEL.split("-", 1)[1]
+        return ""
+
+    @staticmethod
+    def _extract_commit_from_release_name(release_name: str) -> str:
+        """Extract commit hash from dev release name.
+
+        Args:
+            release_name: Release name like "YASB Pre-release (abc1234)"
+
+        Returns:
+            Commit hash from parentheses, or empty string if not found
+        """
+        match = re.search(r"\(([a-f0-9]+)\)", release_name)
+        return match.group(1) if match else ""
 
     @staticmethod
     def _normalize_version_segments(version: str) -> list[int]:
@@ -121,11 +154,12 @@ class UpdateService:
 
         return latest_segments > current_segments
 
-    def _select_asset_for_architecture(self, assets: list[dict]) -> Optional[dict]:
+    def _select_asset_for_architecture(self, assets: list[dict], channel: str = "stable") -> Optional[dict]:
         """Select the appropriate MSI asset for the current architecture.
 
         Args:
             assets: List of release assets from GitHub API
+            channel: Release channel ('stable' or 'dev')
 
         Returns:
             The matching asset dict, or None if not found
@@ -134,60 +168,99 @@ class UpdateService:
             logging.warning("Cannot select asset: architecture not detected")
             return None
 
-        # Look for architecture-specific MSI (ARM64 uses "aarch64" in filenames)
-        arch_suffix = f"-{_get_msi_arch_suffix()}.msi"
+        arch_suffix = _get_msi_arch_suffix()
+
+        # Asset naming patterns:
+        # Stable: yasb-{version}-{arch}.msi (e.g., yasb-1.8.4-x64.msi)
+        # Dev: yasb-dev-{arch}.msi (e.g., yasb-dev-x64.msi)
+        if channel == "dev":
+            pattern = f"yasb-dev-{arch_suffix}.msi"
+        else:
+            # Match any stable version pattern with architecture
+            pattern = f"-{arch_suffix}.msi"
 
         for asset in assets:
             name = asset.get("name", "").lower()
-            if name.endswith(arch_suffix):
-                logging.info(f"Found architecture-specific asset: {asset.get('name')}")
-                return asset
+            if channel == "dev":
+                if name == pattern:
+                    return asset
+            else:
+                if name.endswith(pattern) and not name.startswith("yasb-dev-"):
+                    return asset
 
-        logging.error(f"No suitable MSI asset found for architecture: {ARCHITECTURE}")
+        logging.error(f"No suitable MSI asset found for {channel} channel, architecture: {ARCHITECTURE}")
         return None
 
-    def check_for_updates(self, timeout: int = 15) -> Optional[ReleaseInfo]:
+    def check_for_updates(
+        self,
+        timeout: int = 15,
+        channel: Optional[str] = None,
+        skip_version_check: bool = False,
+    ) -> Optional[ReleaseInfo]:
         """Check GitHub for available updates.
+
+        Supports both stable and dev channels:
+        - Stable: Compares semantic versions
+        - Dev: Compares commit hashes
 
         Args:
             timeout: Request timeout in seconds
+            channel: Release channel to check ('stable' or 'dev'). If None, uses current channel
+            skip_version_check: If True, returns release info without checking if it's newer
 
         Returns:
-            ReleaseInfo if update is available, None otherwise
+            ReleaseInfo if update is available (or skip_version_check=True), None otherwise
 
         Raises:
             urllib.error.URLError: Network errors
             ValueError: Invalid release data
         """
+        check_channel = channel or self._current_channel
+
         try:
-            request = urllib.request.Request(GITHUB_API_URL, headers=USER_AGENT_HEADER)
+            # Determine API URL based on channel
+            api_url = GITHUB_API_DEV_URL if check_channel == "dev" else GITHUB_API_URL
+            request = urllib.request.Request(api_url, headers=USER_AGENT_HEADER)
             context = ssl.create_default_context(cafile=certifi.where())
 
             with urllib.request.urlopen(request, context=context, timeout=timeout) as response:
                 data = response.read()
 
             release_data = json.loads(data)
-            latest_version = release_data.get("tag_name", "").lstrip("vV")
-
-            if not latest_version:
-                raise ValueError("Latest release tag is missing")
-
-            # Check if update is available
-            if not self.is_newer_version(latest_version):
-                return None
 
             # Select appropriate asset for architecture
             assets = release_data.get("assets", [])
-            msi_asset = self._select_asset_for_architecture(assets)
+            msi_asset = self._select_asset_for_architecture(assets, channel=check_channel)
 
             if not msi_asset:
                 raise ValueError(f"No MSI installer found for {ARCHITECTURE} architecture")
 
+            # Get version display based on channel
+            if check_channel == "dev":
+                release_name = release_data.get("name", "")
+                commit_hash = self._extract_commit_from_release_name(release_name)
+                version = f"dev-{commit_hash}"
+
+                # Check if it's actually an update for dev channel
+                if not skip_version_check:
+                    current_commit = self._get_current_commit_hash()
+                    if commit_hash and commit_hash == current_commit:
+                        logging.debug(f"Already on latest dev build: {current_commit}")
+                        return None
+            else:
+                version = release_data.get("tag_name", "").lstrip("vV")
+                if not version:
+                    raise ValueError("Release tag is missing")
+
+                # Check if it's actually an update for stable channel
+                if not skip_version_check and not self.is_newer_version(version):
+                    return None
+
             release_info = ReleaseInfo(
-                version=latest_version,
+                version=version,
                 changelog=release_data.get("body", ""),
                 download_url=msi_asset.get("browser_download_url"),
-                asset_name=msi_asset.get("name", f"yasb-{latest_version}-{_get_msi_arch_suffix()}.msi"),
+                asset_name=msi_asset.get("name", ""),
                 asset_size=msi_asset.get("size"),
                 architecture=ARCHITECTURE,
             )
@@ -248,11 +321,10 @@ class UpdateService:
     def is_update_supported(self) -> bool:
         """Check if updates are supported on this system.
 
-        Updates are supported only when:
+        Updates are supported when:
         1. App is frozen (running as bundled executable)
         2. YASB is installed (not running from source)
         3. Architecture is known (x64 or ARM64)
-        4. Running a stable release (not dev/pr build)
 
         Returns:
             True if updates are supported, False otherwise
@@ -261,9 +333,8 @@ class UpdateService:
         is_forzen = getattr(sys, "frozen", False)
         is_installed = get_app_identifier() == APP_ID
         is_arch_supported = ARCHITECTURE is not None
-        is_stable = RELEASE_CHANNEL == "stable"
 
-        return is_installed and is_arch_supported and is_forzen and is_stable
+        return is_installed and is_arch_supported and is_forzen
 
 
 def get_update_service() -> UpdateService:
@@ -305,11 +376,21 @@ def start_update_checker() -> None:
             if release_info:
                 icon_path = f"{SCRIPT_PATH}/assets/images/app_transparent.png"
                 toaster = ToastNotifier()
+
+                # Determine launch URL and message based on channel
+                update_service = get_update_service()
+                if update_service._current_channel == "dev":
+                    launch_url = "https://github.com/amnweb/yasb/releases/tag/dev"
+                    message = "New dev build is available!"
+                else:
+                    launch_url = "https://github.com/amnweb/yasb/releases/latest"
+                    message = f"New version {release_info.version} is available!"
+
                 toaster.show(
                     icon_path=icon_path,
                     title="Update Available",
-                    message=f"New version {release_info.version} is available!",
-                    launch_url="https://github.com/amnweb/yasb/releases/latest",
+                    message=message,
+                    launch_url=launch_url,
                     scenario="reminder",
                 )
             # Update last check time

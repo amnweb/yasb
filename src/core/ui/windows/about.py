@@ -148,7 +148,7 @@ class AboutDialog(QDialog):
         layout.addWidget(links_container)
 
         button_layout = QVBoxLayout()
-        button_layout.setContentsMargins(0, 24, 0, 0)
+        button_layout.setContentsMargins(0, 12, 0, 0)
         button_layout.setSpacing(12)
         button_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
