@@ -21,7 +21,6 @@ from core.utils.tooltip import set_tooltip
 from core.utils.utilities import add_shadow
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.widgets.wallpapers.wallpapers_gallery import ImageGallery
-from core.utils.win32.utilities import get_foreground_hwnd, set_foreground_hwnd
 from core.validation.widgets.yasb.wallpapers import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
 from settings import DEBUG
@@ -68,7 +67,6 @@ class WallpapersWidget(BaseWidget):
 
         self._last_image = None
         self._is_running = False
-        self._popup_from_cli = False
 
         # Construct container
         self._widget_container_layout = QHBoxLayout()
@@ -96,7 +94,6 @@ class WallpapersWidget(BaseWidget):
         if self._change_automatically:
             self.start_timer()
 
-        self._previous_hwnd = None
         self.handle_widget_cli.connect(self._handle_widget_cli)
         self._event_service.register_event("handle_widget_cli", self.handle_widget_cli)
 
@@ -106,20 +103,13 @@ class WallpapersWidget(BaseWidget):
             current_screen = self.window().screen() if self.window() else None
             current_screen_name = current_screen.name() if current_screen else None
             if not screen or (current_screen_name and screen.lower() == current_screen_name.lower()):
-                self._popup_from_cli = True
                 self._toggle_widget()
 
     def _toggle_widget(self):
         """Toggle the visibility of the widget."""
         if self._image_gallery is not None and self._image_gallery.isVisible():
             self._image_gallery.fade_out_and_close_gallery()
-            if self._previous_hwnd:
-                set_foreground_hwnd(self._previous_hwnd)
-                self._previous_hwnd = None
         else:
-            if getattr(self, "_popup_from_cli", False):
-                self._previous_hwnd = get_foreground_hwnd()
-                self._popup_from_cli = False
             self._image_gallery = ImageGallery(self._image_path, self._gallery)
             self._image_gallery.fade_in_gallery(parent=self)
 
