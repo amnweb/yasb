@@ -20,8 +20,8 @@ from core.config import get_stylesheet
 from core.event_service import EventService
 from core.utils.utilities import add_shadow, is_windows_10, refresh_widget_style
 from core.utils.widgets.power_menu.power_commands import PowerOperations
-from core.utils.win32.utilities import get_foreground_hwnd, set_foreground_hwnd
 from core.utils.win32.win32_accent import Blur
+from core.utils.win32.window_actions import force_foreground_focus
 from core.validation.widgets.yasb.power_menu import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
 
@@ -166,9 +166,6 @@ class PowerMenuWidget(BaseWidget):
 
         self.main_window = None
 
-        self._popup_from_cli = False
-        self._previous_hwnd = None
-
         self._event_service = EventService()
         self.handle_widget_cli.connect(self._handle_widget_cli)
         self._event_service.register_event("handle_widget_cli", self.handle_widget_cli)
@@ -179,20 +176,13 @@ class PowerMenuWidget(BaseWidget):
             current_screen = self.window().screen() if self.window() else None
             current_screen_name = current_screen.name() if current_screen else None
             if not screen or (current_screen_name and screen.lower() == current_screen_name.lower()):
-                self._popup_from_cli = True
                 self._show_main_window()
 
     def _show_main_window(self):
         if self.main_window and self.main_window.isVisible():
             self.main_window.fade_out()
             self.main_window.overlay.fade_out()
-            if self._previous_hwnd:
-                set_foreground_hwnd(self._previous_hwnd)
-                self._previous_hwnd = None
         else:
-            if getattr(self, "_popup_from_cli", False):
-                self._previous_hwnd = get_foreground_hwnd()
-                self._popup_from_cli = False
             self.main_window = MainWindow(
                 self._button,
                 self.uptime,
@@ -205,8 +195,7 @@ class PowerMenuWidget(BaseWidget):
             self.main_window.overlay.fade_in()
             self.main_window.overlay.show()
             self.main_window.show()
-            self.main_window.activateWindow()
-            self.main_window.setFocus()
+            force_foreground_focus(int(self.main_window.winId()))
 
 
 class MainWindow(BaseStyledWidget, AnimatedWidget):

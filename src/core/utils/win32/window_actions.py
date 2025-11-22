@@ -132,6 +132,38 @@ def set_foreground(hwnd: int) -> None:
                 pass
 
 
+def force_foreground_focus(hwnd: int) -> None:
+    """
+    Force a window to foreground with focus.
+
+    Args:
+        hwnd: Window handle to set as foreground
+    """
+    if not hwnd:
+        return
+
+    try:
+        # Get the current foreground window
+        fg_hwnd = u32.GetForegroundWindow()
+
+        if fg_hwnd:
+            fg_tid, _ = win32process.GetWindowThreadProcessId(fg_hwnd)
+            my_tid = k32.GetCurrentThreadId()
+            if fg_tid and my_tid and fg_tid != my_tid:
+                u32.AttachThreadInput(my_tid, fg_tid, True)
+                u32.SetForegroundWindow(hwnd)
+                u32.SetFocus(hwnd)
+                u32.AttachThreadInput(my_tid, fg_tid, False)
+            else:
+                u32.SetForegroundWindow(hwnd)
+                u32.SetFocus(hwnd)
+        else:
+            u32.SetForegroundWindow(hwnd)
+            u32.SetFocus(hwnd)
+    except Exception as e:
+        logging.debug(f"Failed to force foreground focus: {e}")
+
+
 # --- Close application helper ---
 
 

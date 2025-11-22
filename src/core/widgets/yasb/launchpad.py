@@ -49,6 +49,7 @@ from core.utils.widgets.launchpad.app_loader import AppListLoader, ShortcutResol
 from core.utils.widgets.launchpad.icon_extractor import IconExtractorUtil, UrlExtractorUtil
 from core.utils.win32.utilities import apply_qmenu_style, get_foreground_hwnd, set_foreground_hwnd
 from core.utils.win32.win32_accent import Blur
+from core.utils.win32.window_actions import force_foreground_focus
 from core.validation.widgets.yasb.launchpad import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
 
@@ -574,12 +575,12 @@ class LaunchpadWidget(BaseWidget):
         self._overlay = None
         self._drop_overlay = None
         self._is_closing = False
-        self._popup_from_cli = False
         self._app_icons = []
         self._all_apps = []
         self._icon_worker = None
         self._grid_columns = 0
         self._num_drag_items = 0
+        self._previous_hwnd = 0
 
         # Create a container widget for layout
         self._widget_container_layout = QHBoxLayout()
@@ -600,8 +601,6 @@ class LaunchpadWidget(BaseWidget):
         self.callback_right = callbacks["on_right"]
         self.callback_middle = callbacks["on_middle"]
 
-        self._previous_hwnd = None
-
         self._event_service = EventService()
         self.handle_widget_cli.connect(self._handle_widget_cli)
         self._event_service.register_event("handle_widget_cli", self.handle_widget_cli)
@@ -612,7 +611,6 @@ class LaunchpadWidget(BaseWidget):
             current_screen = self.window().screen() if self.window() else None
             current_screen_name = current_screen.name() if current_screen else None
             if not screen or (current_screen_name and screen.lower() == current_screen_name.lower()):
-                self._popup_from_cli = True
                 self._toggle_launchpad()
 
     def _toggle_launchpad(self):
@@ -625,23 +623,23 @@ class LaunchpadWidget(BaseWidget):
 
     def _show_launchpad(self):
         self._dpr = self.screen().devicePixelRatio()
+
+        # Save current foreground window before showing popup
+        self._previous_hwnd = get_foreground_hwnd()
+
         if not self._launchpad_popup:
             self._launchpad_popup = self._create_launchpad_popup()
         if not self._overlay and not self._window["fullscreen"] and self._window["overlay_block"]:
             self._overlay = self._create_overlay()
-
-        if getattr(self, "_popup_from_cli", False):
-            self._previous_hwnd = get_foreground_hwnd()
-            self._popup_from_cli = False
 
         self._center_popup_on_screen()
         if self._overlay:
             self._overlay.show()
         self._launchpad_popup.show()
         self._populate_grid()
-        self._launchpad_popup.raise_()
-        self._launchpad_popup.activateWindow()
-        self._launchpad_popup.setFocus()
+
+        # Force focus using Win32 API
+        force_foreground_focus(int(self._launchpad_popup.winId()))
 
     def _hide_launchpad(self):
         if self._launchpad_popup and not self._is_closing:
@@ -1383,9 +1381,10 @@ class LaunchpadWidget(BaseWidget):
             self._is_closing = False
             AppListLoader.clear_cache()
 
-        if self._previous_hwnd:
-            set_foreground_hwnd(self._previous_hwnd)
-            self._previous_hwnd = None
+            # Restore focus to previous window
+            if self._previous_hwnd:
+                set_foreground_hwnd(self._previous_hwnd)
+                self._previous_hwnd = 0
 
     def _cleanup_overlay(self):
         if self._overlay:

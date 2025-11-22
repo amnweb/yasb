@@ -33,6 +33,7 @@ from core.config import get_stylesheet
 from core.event_service import EventService
 from core.utils.utilities import is_windows_10, refresh_widget_style
 from core.utils.win32.win32_accent import Blur
+from core.utils.win32.window_actions import force_foreground_focus
 
 
 class BaseStyledWidget(QWidget):
@@ -514,11 +515,10 @@ class ImageGallery(QMainWindow, BaseStyledWidget):
     def showEvent(self, event):
         """Handle show event."""
         super().showEvent(event)
-        self.activateWindow()
-        self.raise_()
-        self.setFocus()
+
+        force_foreground_focus(int(self.winId()))
         if self.lazy_load:
-            QTimer.singleShot(400, self.load_images)
+            QTimer.singleShot(200, self.load_images)
         else:
             self.load_images()
 
