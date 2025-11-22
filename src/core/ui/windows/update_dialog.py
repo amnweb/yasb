@@ -50,12 +50,23 @@ def _strip_commit_links(changelog: str) -> str:
     """Strip commit links from changelog markdown."""
     if not changelog:
         return changelog
+    # Convert full commit URLs to [[link]]
     transformed = _COMMIT_URL_PATTERN.sub(lambda match: f"[[link]]({match.group(0)})", changelog)
+    # Convert PR URLs to [#123]
     transformed = _PULL_URL_PATTERN.sub(
         lambda match: f"[#{match.group(1)}]({match.group(0)})",
         transformed,
     )
-    return _COMPARE_URL_PATTERN.sub(lambda match: f"<{match.group(1)}>", transformed)
+    # Convert compare URLs
+    transformed = _COMPARE_URL_PATTERN.sub(lambda match: f"<{match.group(1)}>", transformed)
+    # Convert plain commit hashes (7+ hex chars at end of line or before whitespace) to links
+    transformed = re.sub(
+        r"\b([0-9a-fA-F]{7,40})(?=\s*$)",
+        lambda m: f"[[link]](https://github.com/amnweb/yasb/commit/{m.group(1)})",
+        transformed,
+        flags=re.MULTILINE,
+    )
+    return transformed
 
 
 class ReleaseFetcher(QThread):
@@ -138,7 +149,7 @@ class DownloadWorker(QThread):
             if bytes_read == 0:
                 raise IOError("No data received from server.")
             if total_size and bytes_read < total_size:
-                raise IOError("Download incomplete; connection lost.")
+                raise IOError("Download incomplete, connection lost.")
             self.progress.emit(100)
             self.finished.emit(self._output_path)
         except InterruptedError:
@@ -206,8 +217,14 @@ class UpdateDialog(QDialog):
         layout.setContentsMargins(18, 18, 18, 18)
         layout.setSpacing(12)
 
+        self.title_label = QLabel("", self)
+        self.title_label.setStyleSheet("font-size: 14pt; font-weight: bold;")
+        self.title_label.setVisible(False)
+        layout.addWidget(self.title_label)
+
         self.changelog_view = QTextBrowser(self)
         self.changelog_view.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
+        self.changelog_view.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         changelog_font = self.changelog_view.font()
         changelog_font.setPointSize(max(changelog_font.pointSize(), 10))
         self.changelog_view.setFont(changelog_font)
@@ -305,10 +322,17 @@ class UpdateDialog(QDialog):
             release_info: Release information including version and architecture
         """
         self._available_release = release_info
+        self.setWindowTitle("Update Available")
 
-        # Update window title with version and architecture
-        arch_suffix = f" ({ARCHITECTURE})" if ARCHITECTURE else ""
-        self.setWindowTitle(f"Update Available - v{release_info.version}{arch_suffix}")
+        # Display title with version and architecture
+        update_service = get_update_service()
+        if update_service._current_channel == "dev":
+            version_display = f"New Dev Build ({release_info.version.replace('dev-', '')})"
+        else:
+            version_display = f"Version {release_info.version}"
+
+        self.title_label.setText(f"{version_display} - {release_info.architecture}")
+        self.title_label.setVisible(True)
 
         # Display changelog
         changelog = release_info.changelog.strip() or "_No changelog provided._"

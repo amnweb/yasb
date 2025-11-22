@@ -280,9 +280,9 @@ jobs:
       run: |
         latestVersionTag=$(git tag --sort=-version:refname | grep -E "^v[0-9]+\.[0-9]+\.[0-9]+" | head -n 1 || true)
         if [ -n "$latestVersionTag" ]; then
-          commits=$(git log "$latestVersionTag..HEAD" --pretty=format:"* %s (%h)" --no-merges)
+          commits=$(git log "$latestVersionTag..HEAD" --pretty=format:"* %s %h" --no-merges)
         else
-          commits=$(git log -n 20 --pretty=format:"* %s (%h)" --no-merges)
+          commits=$(git log -n 20 --pretty=format:"* %s %h" --no-merges)
         fi
         if [ -z "$commits" ]; then
           if [ -n "$latestVersionTag" ]; then

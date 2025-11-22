@@ -17,6 +17,7 @@ The YASB CLI is a command line interface that allows you to interact with the YA
 - `toggle-bar` - Toggle the visibility of the status bar.
 - `toggle-widget` - Toggle the visibility of specific widget.
 - `update` - Update aplicattion to the latest version.
+- `set-channel` - Set the update channel (stable, dev).
 - `log` - Show the status bar logs in the terminal.
 - `reset` - Restore default config files and clear cache
 - `help` - Show the help message.
@@ -90,5 +91,12 @@ To toggle the visibility of a specific widget on screens where is focused window
 ```bash
 yasbc toggle-widget launchpad --follow-focused
 ```
+
+## Switch Update Channel
+To switch the update channel to dev, use the following command:
+```bash
+yasbc set-channel dev
+```
+
 > [!NOTE]
 > The `toggle-widget` command is not available for all widgets, it is only available for widgets that support toggling visibility. On each widget page, you can find information about the widget and whether it supports toggling visibility.
