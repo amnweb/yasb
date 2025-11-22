@@ -6,6 +6,7 @@ import threading
 from PyQt6.QtCore import QObject, Qt, pyqtSignal
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel
 
+from core.utils.tooltip import set_tooltip
 from core.utils.utilities import add_shadow
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.win32.system_function import function_map
@@ -71,8 +72,10 @@ class CustomWidget(BaseWidget):
         animation: dict[str, str],
         container_padding: dict[str, int],
         class_name: str,
-        label_shadow: dict = None,
-        container_shadow: dict = None,
+        tooltip: bool = False,
+        tooltip_label: str | None = None,
+        label_shadow: dict | None = None,
+        container_shadow: dict | None = None,
     ):
         super().__init__(exec_options["run_interval"], class_name=f"custom-widget {class_name}")
         self._label_max_length = label_max_length
@@ -90,6 +93,8 @@ class CustomWidget(BaseWidget):
         self._padding = container_padding
         self._label_shadow = label_shadow
         self._container_shadow = container_shadow
+        self._tooltip = tooltip
+        self._tooltip_label = tooltip_label
         self._worker = None  # Keep reference to worker for cleanup
         # Construct container
         self._widget_container_layout = QHBoxLayout()
@@ -196,6 +201,31 @@ class CustomWidget(BaseWidget):
                     widget_index += 1
         except Exception:
             active_widgets[widget_index].setText(self._truncate_label(part))
+
+        # Update tooltip if enabled
+        self._update_tooltip()
+
+    def _update_tooltip(self):
+        """Update the tooltip text based on configuration and data."""
+        if not self._tooltip or not self._exec_data:
+            return
+
+        tooltip_text = None
+
+        # If custom tooltip_label provided, use it with formatting
+        if self._tooltip_label:
+            try:
+                tooltip_text = self._tooltip_label.format(data=self._exec_data)
+            except (KeyError, AttributeError, TypeError, IndexError):
+                # If formatting fails, fall back to showing raw data
+                tooltip_text = str(self._exec_data)
+        else:
+            tooltip_text = (
+                json.dumps(self._exec_data, indent=2) if isinstance(self._exec_data, dict) else str(self._exec_data)
+            )
+
+        if tooltip_text:
+            set_tooltip(self._widget_container, tooltip_text, delay=400)
 
     def _exec_callback(self):
         if self._exec_cmd:
