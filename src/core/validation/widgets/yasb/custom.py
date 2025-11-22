@@ -1,6 +1,8 @@
 DEFAULTS = {
     "label_placeholder": "Loading...",
     "label_max_length": None,
+    "tooltip": False,
+    "tooltip_label": None,
     "exec_options": {
         "run_cmd": None,
         "run_once": False,
@@ -29,6 +31,8 @@ VALIDATION_SCHEMA = {
     "label_alt": {"type": "string", "default": True},
     "label_placeholder": {"type": "string", "required": False, "default": DEFAULTS["label_placeholder"]},
     "label_max_length": {"type": "integer", "nullable": True, "default": DEFAULTS["label_max_length"], "min": 1},
+    "tooltip": {"type": "boolean", "required": False, "default": DEFAULTS["tooltip"]},
+    "tooltip_label": {"type": "string", "nullable": True, "required": False, "default": DEFAULTS["tooltip_label"]},
     "exec_options": {
         "type": "dict",
         "schema": {

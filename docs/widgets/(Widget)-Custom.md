@@ -6,6 +6,8 @@
 | `label_alt`     | string  | `"{data}"`    | Example of label alt. |
 | `label_max_length`          | int     | `None`                                                                     | The maximum length of the label. |
 | `label_placeholder` | string  | `"Loading..."`                                                          | Placeholder text when data is not available. |
+| `tooltip`       | boolean | `false`                                                                | Whether to show the tooltip on hover. |
+| `tooltip_label` | string  | `None`                                                                 | Custom format string for the tooltip. If not specified, shows raw data. |
 | `class_name`    | string  | `"custom-widget"`                                                      | The CSS class name for the widget. |
 | `exec_options`  | dict    | `{'run_cmd': None, 'run_interval': 120000, 'return_format': 'json', 'hide_empty': false, 'use_shell': true, 'encoding': None}` | Execution options for custom widget. |
 | `callbacks`     | dict    | `{'on_left': 'toggle_label', 'on_middle': 'do_nothing', 'on_right': 'do_nothing'}` | Callbacks for mouse events. |
@@ -22,6 +24,8 @@ ip_info:
     label: "<span>\udb81\udd9f</span> {data[ip]}"
     label_alt: "<span>\uf450</span> {data[city]} {data[region]}, {data[country]}"
     class_name: "ip-info-widget"
+    tooltip: true
+    tooltip_label: "IP: {data[ip]}\nCity: {data[city]}\nRegion: {data[region]}\nCountry: {data[country]}"
     exec_options:
       run_cmd: "curl.exe https://ipinfo.io"
       run_interval: 120000  # every 5 minutes
@@ -61,7 +65,6 @@ nvidia_temp:
   type: "yasb.custom.CustomWidget"
   options:
     label: "London {data[current][temperature_2m]}{data[current_units][temperature_2m]}"
-    label: "London {data[current][temperature_2m]}{data[current_units][temperature_2m]}"
     class_name: "custom-widget"
     exec_options:
       run_cmd: "curl.exe http://api.open-meteo.com/v1/forecast?latitude=51.5074&longitude=-0.1278&current=temperature_2m&timezone=auto"
@@ -77,6 +80,8 @@ nvidia_temp:
 - **label_alt**: The alternative format string.
 - **label_placeholder**: Placeholder text when data is not available. Default is `"Loading..."`.
 - **label_max_length**: The maximum length of the label. Minimum value is 1. Default is `None`.
+- **tooltip**: Whether to show the tooltip on hover. Default is `false`.
+- **tooltip_label**: Custom format string for the tooltip. Use `{data}` to reference the command output data. If not specified, shows the raw data representation (JSON for dict, string for other types).
 - **class_name**: The CSS class name for the widget.
 - **exec_options**: A dictionary specifying the execution options. The keys are `run_cmd` command to run, `run_interval` (in milliseconds), `return_format` can be `json` or `string`, `hide_empty` (boolean) hide widget if output is empty, `use_shell` use shell to run command, `encoding` encoding for the command output, can be utf-8, cp1252, etc.
 - **callbacks**: A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions.
