@@ -160,7 +160,7 @@ jobs:
           .\venv\Scripts\Activate
           $settingsPath = 'src/settings.py'
           $content = Get-Content $settingsPath -Raw
-          $replacement = 'RELEASE_CHANNEL = dev-' + $env:COMMIT_HASH + '"'
+          $replacement = 'RELEASE_CHANNEL = "dev-' + $env:COMMIT_HASH + '"'
           $content = $content -replace 'RELEASE_CHANNEL = "stable"', $replacement
           Set-Content -Path $settingsPath -Value $content -NoNewline
           Write-Host "Updated RELEASE_CHANNEL to dev-$env:COMMIT_HASH"
