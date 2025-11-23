@@ -29,6 +29,7 @@ If you see a table with your GPU information, `nvidia-smi` is available. If you 
 | `label_shadow`        | dict    | `{"enabled": False, "color": "black", "offset": [1, 1], "radius": 3}`                                                                  | Label shadow options.                                                       |
 | `progress_bar`        | dict    | `{'enabled': false, 'position': 'left', 'size': 14, 'thickness': 2, 'color': '#57948a', 'animation': false}` | Progress bar settings.                                                      |
 | `hide_decimal`        | bool    | `false`                                                                 | Whether to hide decimal places in the GPU widget.                          |
+| `units`               | string  | `"metric"`                                                              | Whether the temperature is converted to Fahrenheit (if set to `"imperial"`) or Celsius (if not set or explicitly set to `"metric"`) |
 
 > **About `index`:** If you have multiple NVIDIA GPUs, you can set the `gpu_index` option to select which GPU to monitor. Create multiple GPU widgets with different `gpu_index` values (e.g., 0, 1, 2, ...) to display stats for each card separately.
 

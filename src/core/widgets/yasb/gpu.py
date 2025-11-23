@@ -36,6 +36,7 @@ class GpuWidget(BaseWidget):
         container_padding: dict[str, int],
         callbacks: dict[str, str],
         gpu_thresholds: dict[str, int],
+        units: str,
         label_shadow: dict = None,
         container_shadow: dict = None,
         progress_bar: dict = None,
@@ -54,6 +55,7 @@ class GpuWidget(BaseWidget):
         self._label_shadow = label_shadow
         self._container_shadow = container_shadow
         self._gpu_thresholds = gpu_thresholds
+        self._units = units
         self._progress_bar = progress_bar
         self._hide_decimal = hide_decimal
 
@@ -173,7 +175,8 @@ class GpuWidget(BaseWidget):
         """Update the label with GPU data."""
         self._gpu_util_history.append(gpu_data.utilization)
         self._gpu_mem_history.append(gpu_data.mem_used)
-
+        _temp = gpu_data.temp if self._units == "metric" else (gpu_data.temp * (9 / 5) + 32)
+        _temp = round(_temp) if self._hide_decimal else _temp
         _naturalsize = lambda value: naturalsize(value, True, True, "%.0f" if self._hide_decimal else "%.1f")
         gpu_info = {
             "index": gpu_data.index,
@@ -181,7 +184,7 @@ class GpuWidget(BaseWidget):
             "mem_total": _naturalsize(gpu_data.mem_total * 1024 * 1024),
             "mem_used": _naturalsize(gpu_data.mem_used * 1024 * 1024),
             "mem_free": _naturalsize(gpu_data.mem_free * 1024 * 1024),
-            "temp": gpu_data.temp,
+            "temp": _temp,
             "fan_speed": gpu_data.fan_speed,
             "histograms": {
                 "utilization": "".join([self._get_histogram_bar(val, 0, 100) for val in self._gpu_util_history]),
