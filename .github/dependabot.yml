@@ -13,6 +13,7 @@ updates:
       - dependency-name: "pyqt6"
       - dependency-name: "pillow"
       - dependency-name: "pycaw"
+      - dependency-name: "cx-Freeze"
     commit-message:
       prefix: "chore"
       include: "scope"
