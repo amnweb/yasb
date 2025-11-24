@@ -26,8 +26,7 @@ jobs:
           # Get both x64 and aarch64 MSI URLs
           $assets = $targetRelease | Select-Object -ExpandProperty assets
           $x64Url = $assets | Where-Object -Property name -match 'x64\.msi$' | Select-Object -ExpandProperty browser_download_url
-          # Temporarily disabled ARM64
-          # $aarch64Url = $assets | Where-Object -Property name -match 'aarch64\.msi$' | Select-Object -ExpandProperty browser_download_url
+          $aarch64Url = $assets | Where-Object -Property name -match 'aarch64\.msi$' | Select-Object -ExpandProperty browser_download_url
 
           $relaseTitle = "New version: AmN.yasb version $packageVersion"
           $relaseUrl = $targetRelease.html_url
@@ -35,6 +34,5 @@ jobs:
 
           # Update package using wingetcreate with both architectures
           Invoke-WebRequest https://aka.ms/wingetcreate/latest -OutFile wingetcreate.exe
-          # Temporarily submitting only x64
           .\wingetcreate.exe update $packageId --version $packageVersion --urls "$x64Url|x64" --prtitle "$relaseTitle" --release-notes-url "$relaseUrl" --release-date "$relaseDate" --submit --token $gitToken
-          # .\wingetcreate.exe update $packageId --version $packageVersion --urls "$x64Url|x64" "$aarch64Url|arm64" --prtitle "$relaseTitle" --release-notes-url "$relaseUrl" --release-date "$relaseDate" --submit --token $gitToken
+          .\wingetcreate.exe update $packageId --version $packageVersion --urls "$x64Url|x64" "$aarch64Url|arm64" --prtitle "$relaseTitle" --release-notes-url "$relaseUrl" --release-date "$relaseDate" --submit --token $gitToken

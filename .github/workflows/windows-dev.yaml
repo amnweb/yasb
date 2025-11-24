@@ -85,15 +85,12 @@ jobs:
       run: |
         .\venv\Scripts\Activate
         python -m pip install --upgrade pip
-        pip install --force --no-cache .
+        pip install --force --no-cache .[packaging]
         $cxFreezeVersion = "${{ github.event.inputs.cx_freeze_version }}"
         if ($cxFreezeVersion -eq "dev") {
           Write-Host "Installing cx_Freeze dev version from GitHub"
           pip install git+https://github.com/amnweb/cx_Freeze.git@fix/msi-product-name
           pip install git+https://github.com/amnweb/python-msilib --force --no-cache
-        } else {
-          Write-Host "Installing cx_Freeze stable version"
-          pip install --force --no-cache --upgrade cx_Freeze
         }
       shell: pwsh
 

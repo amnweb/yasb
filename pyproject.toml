@@ -62,7 +62,10 @@ dev = [
     "pyqt6-stubs",
     "types-pillow",
 ]
-
+packaging = [
+    "cx-Freeze==8.5.0",
+    "python-msilib @ git+https://github.com/amnweb/python-msilib.git"
+]
 [tool.hatch.metadata]
 allow-direct-references = true
 

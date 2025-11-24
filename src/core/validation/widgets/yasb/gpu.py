@@ -11,6 +11,7 @@ DEFAULTS = {
     "callbacks": {"on_left": "toggle_label", "on_middle": "do_nothing", "on_right": "do_nothing"},
     "gpu_thresholds": {"low": 30, "medium": 60, "high": 90},
     "hide_decimal": False,
+    "units": "metric",
 }
 
 VALIDATION_SCHEMA = {
@@ -124,4 +125,5 @@ VALIDATION_SCHEMA = {
         "default": DEFAULTS["gpu_thresholds"],
     },
     "hide_decimal": {"type": "boolean", "default": DEFAULTS["hide_decimal"]},
+    "units": {"type": "string", "default": DEFAULTS["units"], "allowed": ["metric", "imperial"]},
 }

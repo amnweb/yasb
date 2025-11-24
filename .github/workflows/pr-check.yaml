@@ -170,9 +170,7 @@ jobs:
         run: |
           .\venv\Scripts\Activate
           python -m pip install --upgrade pip
-          pip install --force --no-cache .
-          pip install git+https://github.com/amnweb/cx_Freeze.git@fix/msi-product-name
-          pip install git+https://github.com/amnweb/python-msilib --force --no-cache
+          pip install --force --no-cache .[packaging]
         shell: pwsh
 
       - name: Build Installer
@@ -241,9 +239,7 @@ jobs:
         run: |
           .\venv\Scripts\Activate
           python -m pip install --upgrade pip
-          pip install --force --no-cache .
-          pip install git+https://github.com/amnweb/cx_Freeze.git@fix/msi-product-name
-          pip install git+https://github.com/amnweb/python-msilib --force --no-cache
+          pip install --force --no-cache .[packaging]
         shell: pwsh
 
       - name: Build EXE
