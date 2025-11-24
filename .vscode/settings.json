@@ -15,6 +15,7 @@
 		"src/dist": true
 	},
 	"[python]": {
+        "editor.formatOnSave": true,
 		"editor.codeActionsOnSave": {
 			"source.fixAll": "explicit",
 			"source.organizeImports": "explicit"
