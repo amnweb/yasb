@@ -1,3 +1,4 @@
+import json
 import os
 import shutil
 import ssl
@@ -52,16 +53,24 @@ class ThemeLoader(QThread):
     error = pyqtSignal(str)
 
     def run(self):
-        try:
-            url = "https://raw.githubusercontent.com/amnweb/yasb-themes/refs/heads/main/themes.json"
-            context = ssl.create_default_context(cafile=certifi.where())
-            with urllib.request.urlopen(url, context=context, timeout=15) as response:
-                import json
+        urls = [
+            "https://raw.githubusercontent.com/amnweb/yasb-themes/refs/heads/main/themes.json",
+            "https://api.yasb.dev/yasb-themes/themes.json",
+        ]
+        context = ssl.create_default_context(cafile=certifi.where())
+        last_error = None
 
-                themes = json.loads(response.read().decode("utf-8"))
-            self.finished.emit(themes)
-        except Exception as e:
-            self.error.emit(str(e))
+        for url in urls:
+            try:
+                with urllib.request.urlopen(url, context=context, timeout=15) as response:
+                    themes = json.loads(response.read().decode("utf-8"))
+                self.finished.emit(themes)
+                return
+            except Exception as e:
+                last_error = e
+
+        if last_error is not None:
+            self.error.emit(str(last_error))
 
 
 class ThemeCard(QFrame):
@@ -202,10 +211,6 @@ class ThemeCard(QFrame):
     def install_theme(self):
         # Create a custom styled dialog for the confirmation
         self.dialog = QDialog(self)
-        if is_mica_supported():
-            self.dialog.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
-            hwnd = int(self.dialog.winId())
-            EnableMica(hwnd, BackdropType.MICA)
         self.dialog.setFixedWidth(420)
         self.dialog.setWindowTitle("Install Theme")
         self.dialog.setModal(True)
@@ -226,14 +231,11 @@ class ThemeCard(QFrame):
 
         confirmation_message = QLabel(
             f"Are you sure you want to install the theme <b>{self.theme_data['name']}</b>?<br>"
-            f"This will overwrite your current config and styles files."
+            f"This will overwrite your current config and styles files.<br>"
+            f"Note: Some themes require additional fonts.<br>"
         )
         confirmation_message.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         layout.addWidget(confirmation_message)
-
-        self.compat_label = QLabel("Checking compatibility...")
-        layout.addWidget(self.compat_label)
-        QTimer.singleShot(0, self._show_font_guidance)
         # Add Yes and No buttons
         button_layout = QHBoxLayout()
         self.yes_button = QPushButton("Install")
@@ -263,10 +265,10 @@ class ThemeCard(QFrame):
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
                 )
-                # Define the URLs for the files
-                base_url = f"https://raw.githubusercontent.com/amnweb/yasb-themes/main/themes/{self.theme_data['id']}"
-                config_url = f"{base_url}/config.yaml"
-                styles_url = f"{base_url}/styles.css"
+                base_urls = [
+                    f"https://raw.githubusercontent.com/amnweb/yasb-themes/main/themes/{self.theme_data['id']}",
+                    f"https://api.yasb.dev/yasb-themes/themes/{self.theme_data['id']}",
+                ]
 
                 config_home = (
                     os.getenv("YASB_CONFIG_HOME")
@@ -279,17 +281,32 @@ class ThemeCard(QFrame):
                 os.makedirs(os.path.dirname(config_path), exist_ok=True)
 
                 context = ssl.create_default_context(cafile=certifi.where())
-                # Download and save the styles.css file
-                with urllib.request.urlopen(styles_url, context=context) as styles_response:
-                    styles_data = styles_response.read()
-                with open(styles_path, "wb") as styles_file:
-                    styles_file.write(styles_data)
+                last_error = None
+                downloaded = False
 
-                # Download and save the config.yaml file
-                with urllib.request.urlopen(config_url, context=context) as config_response:
-                    config_data = config_response.read()
-                with open(config_path, "wb") as config_file:
-                    config_file.write(config_data)
+                for base_url in base_urls:
+                    config_url = f"{base_url}/config.yaml"
+                    styles_url = f"{base_url}/styles.css"
+
+                    try:
+                        with urllib.request.urlopen(styles_url, context=context) as styles_response:
+                            styles_data = styles_response.read()
+                        with open(styles_path, "wb") as styles_file:
+                            styles_file.write(styles_data)
+
+                        with urllib.request.urlopen(config_url, context=context) as config_response:
+                            config_data = config_response.read()
+                        with open(config_path, "wb") as config_file:
+                            config_file.write(config_data)
+
+                        downloaded = True
+                        break
+                    except Exception as download_error:
+                        last_error = download_error
+
+                if not downloaded:
+                    raise last_error if last_error else RuntimeError("Failed to download theme files")
+
                 subprocess.run(
                     ["yasbc", "start"],
                     creationflags=subprocess.CREATE_NO_WINDOW,
@@ -298,38 +315,6 @@ class ThemeCard(QFrame):
                 )
             except Exception as e:
                 QMessageBox.critical(self, "Error", f"Failed to install theme: {str(e)}")
-
-    def _show_font_guidance(self):
-        theme_id = self.theme_data.get("id", "")
-        repo_url = (
-            f"https://github.com/amnweb/yasb-themes/tree/main/themes/{theme_id}"
-            if theme_id
-            else "https://github.com/amnweb/yasb-themes"
-        )
-
-        self.compat_label.setStyleSheet("""
-            QLabel {
-                font-size: 12px;
-                padding: 10px;
-                margin: 0px 10px 10px 10px;
-                font-family: 'Segoe UI';
-                color: #f1e1c9;
-                background-color:#34291c;
-                border: 1px solid #955816;
-                border-radius: 4px
-            }
-            QLabel a {
-                text-decoration: none;
-            }
-        """)
-        self.compat_label.setWordWrap(True)
-        self.compat_label.setOpenExternalLinks(True)
-        self.compat_label.setText(
-            "Note: Some themes require additional fonts.<br>Review the "
-            f"<a href='{repo_url}'>theme</a> or <a href='{repo_url}/styles.css'>styles.css</a> "
-            f"to confirm font requirements before installing."
-        )
-        self.dialog.adjustSize()
 
 
 class ThemeViewer(QMainWindow):
@@ -441,8 +426,9 @@ class ThemeViewer(QMainWindow):
         self.scroll.hide()
 
         container = QWidget()
+        container.setObjectName("containerWidget")
         if is_mica_supported():
-            container.setStyleSheet("background-color: transparent;")
+            container.setStyleSheet("QWidget#containerWidget { background-color: transparent; }")
         self.container_layout = QVBoxLayout(container)
         self.container_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.scroll.setWidget(container)
