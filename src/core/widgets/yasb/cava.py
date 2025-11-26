@@ -566,7 +566,6 @@ class CavaWidget(BaseWidget):
         lines.append(f"lower_cutoff_freq = {self._lower_cutoff_freq}")
         lines.append(f"higher_cutoff_freq = {self._higher_cutoff_freq}")
         lines.append(f"framerate = {self._framerate}")
-        lines.append(f"noise_reduction = {self._noise_reduction}")
         lines.append("")
         lines.append("[output]")
         lines.append("method = raw")
@@ -590,6 +589,7 @@ class CavaWidget(BaseWidget):
         lines.append("[smoothing]")
         lines.append(f"monstercat = {self._monstercat}")
         lines.append(f"waves = {self._waves}")
+        lines.append(f"noise_reduction = {self._noise_reduction}")
 
         config_template = "\n".join(lines) + "\n"
 
