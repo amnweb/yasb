@@ -16,14 +16,14 @@ dependencies = [
     "pyqt6==6.10.0",
     "cerberus",
     "humanize",
-    "psutil",
+    "psutil==7.1.3",
     "pywin32",
-    "PyYAML",
-    "holidays",
+    "pyyaml",
+    "holidays==0.85",
     "watchdog",
     "pycaw==20251023",
     "pillow==12.0.0",
-    "icoextract",
+    "icoextract==0.2.0",
     "qasync",
     "obs-websocket-py",
     "openai",
@@ -45,7 +45,7 @@ dependencies = [
     "winrt.windows.ui.notifications.management",
     "winrt.windows.devices.wifi",
     "winrt.windows.security.credentials",
-    "screen_brightness_control @ git+https://github.com/amnweb/screen_brightness_control.git",
+    "screen-brightness-control==0.24.3",
 ]
 
 [project.urls]
@@ -63,7 +63,7 @@ dev = [
     "types-pillow",
 ]
 packaging = [
-    "cx-Freeze==8.5.0",
+    "cx-freeze==8.5.0",
     "python-msilib @ git+https://github.com/amnweb/python-msilib.git"
 ]
 [tool.hatch.metadata]
