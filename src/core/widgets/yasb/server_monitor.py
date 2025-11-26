@@ -113,7 +113,7 @@ class ServerCheckWorker(QThread):
             if http_status is not None:
                 response_time = int((datetime.now() - start_time).total_seconds() * 1000)
 
-        except (urllib.error.URLError, socket.timeout, ssl.SSLError, ConnectionError):
+        except (urllib.error.URLError, socket.timeout, ssl.SSLError, ConnectionError, PermissionError, OSError):
             pass
 
         # Check SSL if needed and determine status
@@ -139,6 +139,8 @@ class ServerCheckWorker(QThread):
             ConnectionRefusedError,
             ConnectionAbortedError,
             ConnectionError,
+            PermissionError,
+            OSError,
         ):
             return
 
