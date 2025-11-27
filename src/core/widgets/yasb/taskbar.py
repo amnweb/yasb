@@ -1387,6 +1387,8 @@ class TaskbarWidget(BaseWidget):
 
         title = window_data.get("title", "")
         process = window_data.get("process_name", "")
+        title_wrapper = None
+        title_label = None
         # If process is explorer.exe (e.g. file explorer), we use the title for caching the icon.
         icon = self._get_app_icon(hwnd, title if process == "explorer.exe" else "")
         self._window_buttons[hwnd] = (title, icon, hwnd, process)
@@ -1453,7 +1455,7 @@ class TaskbarWidget(BaseWidget):
         # Repolish the widget to apply any style changes
         try:
             widget.setProperty("class", self._get_container_class(hwnd))
-            refresh_widget_style(widget)
+            refresh_widget_style(widget, title_wrapper, title_label)
         except Exception:
             pass
 
