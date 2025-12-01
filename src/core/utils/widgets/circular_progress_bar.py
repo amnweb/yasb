@@ -14,9 +14,11 @@ class CircularProgressBar(QFrame):
         value: float = 0.0,
         color="#00C800",
         background_color: str = "#3C3C3C",
+        center_label: str = "",
         animation: bool = True,
     ):
         super().__init__(parent)
+        self.setProperty("class", "progress-circle")
 
         self._size = size
         self._thickness = thickness
@@ -24,6 +26,8 @@ class CircularProgressBar(QFrame):
         self._color_config = color
         self.setContentsMargins(0, 0, 0, 0)
         self._background_color = QColor(background_color)
+        self._center_label_template = center_label
+        self._center_label = center_label
         self._animation_enabled = animation
         self._animation = QPropertyAnimation(self, b"animatedValue")
         self._animation.setDuration(400)
@@ -74,6 +78,12 @@ class CircularProgressBar(QFrame):
         if rect.width() <= 0 or rect.height() <= 0:
             return
 
+        # Draw the text in the center
+        painter.setPen(self.palette().color(self.foregroundRole()))
+        painter.setFont(self.font())
+        painter.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, self._center_label)
+
+        # Draw the circular bar
         painter.setPen(QPen(self._background_color, self._thickness, Qt.PenStyle.SolidLine, Qt.PenCapStyle.FlatCap))
         painter.setBrush(Qt.BrushStyle.NoBrush)
         painter.drawArc(rect, 0, 360 * 16)
@@ -100,7 +110,13 @@ class CircularProgressBar(QFrame):
             self._value = new_value
             self._update_angles()
             self.update()
-
+            
+    def set_icon(self, icon: str):
+        """Set the center label text (icon)."""
+        if self._center_label == icon:
+            return
+        self._center_label = self._center_label_template.replace("{icon}", icon)
+        self.update()
 
 class CircularProgressWidget(QFrame):
     """A widget that contains a CircularProgressBar and exposes its API."""
@@ -117,3 +133,11 @@ class CircularProgressWidget(QFrame):
 
     def set_value(self, value: float):
         self._progress_bar.set_value(value)
+
+    def set_icon(self, icon: str):
+        self._progress_bar.set_icon(icon)
+
+    def set_class(self, class_name: str):
+        self._progress_bar.setProperty("class", f"progress-circle {class_name}")
+        self._progress_bar.style().unpolish(self._progress_bar)
+        self._progress_bar.style().polish(self._progress_bar)
