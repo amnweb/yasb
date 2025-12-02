@@ -5,36 +5,64 @@
 | `tooltip`  | boolean  | `true`        | Whether to show the tooltip on hover. |
 | `update_interval`  | integer  | 60        | The interval in seconds to update the wallpaper. Must be between 60 and 86400. |
 | `change_automatically` | boolean | `false`       | Whether to automatically change the wallpaper. |
-| `image_path`      | string   | `""`        | The path to the folder containing images for the wallpaper. This field is required. |
+| `image_path`      | string/list   | `""`        | The path(s) to the folder(s) containing images for the wallpaper. Can be a single string or a list of strings. This field is required. |
 | `gallery`         | object   | `{}`        | The gallery options for the wallpaper widget. |
 | `run_after`       | list     | `[]`        | A list of functions to run after the wallpaper is updated. |
 | `animation`         | dict    | `{'enabled': true, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
 | `container_shadow`   | dict   | `None`                  | Container shadow options.                       |
 | `label_shadow`         | dict   | `None`                  | Label shadow options.                 |
+| `callbacks`         | dict   | `{'on_left': 'toggle_gallery', 'on_middle': 'do_nothing', 'on_right': 'change_wallpaper'}`                  | Dictionary of callbacks to run when the widget is clicked.                 |
 
-## Example Configuration
-
+## Minimal Configuration
 ```yaml
 wallpapers:
   type: "yasb.wallpapers.WallpapersWidget"
   options:
     label: "<span>\udb83\ude09</span>"
-    image_path: "C:\\Users\\{Username}\\Images" # Example path to folder with images
+    # Example path to folder with images. Can be a single string or a list of strings.
+    image_path: "C:\\Users\\{Username}\\Images" 
+    gallery:
+        enabled: true
+        blur: true
+        image_width: 220
+        image_per_page: 6
+        orientation: "portrait"
+        show_buttons: false
+        image_spacing: 8
+        lazy_load: true
+        lazy_load_fadein: 400
+        image_corner_radius: 12
+```
+
+## Advanced Configuration
+```yaml
+wallpapers:
+  type: "yasb.wallpapers.WallpapersWidget"
+  options:
+    label: "<span>\udb83\ude09</span>"
+    # Example path to folder with images. Can be a single string or a list of strings.
+    # image_path: "C:\\Users\\{Username}\\Images" 
+    image_path: 
+      - "C:\\Users\\{Username}\\Images"
+      - "D:\\Wallpapers\\Nature"
     change_automatically: false # Automatically change wallpaper
     update_interval: 60 # If change_automatically is true, update interval in seconds
     gallery:
         enabled: true
         blur: true
         image_width: 220
-        image_per_page: 8
+        image_per_page: 6
+        gallery_columns: 0 # 0 = auto, matches image_per_page for a single row
+        horizontal_position: "center" # left/center/right placement on screen
+        vertical_position: "center" # top/center/bottom placement
+        position_offset: 0 # minimum gap (px) from screen edges - see below for advanced options
+        respect_work_area: true # clamp to OS work area (avoids Windows taskbar)
         show_buttons: false
         orientation: "portrait"
         image_spacing: 8
         lazy_load: true
-        lazy_load_delay: 80
         lazy_load_fadein: 400
-        image_corner_radius: 20
-        enable_cache: true
+        image_corner_radius: 12
     run_after: # List of functions to run after wallpaper is updated
       - "wal -s -t -e -q -n -i {image}" # Example command to run after wallpaper is updated
       - "cmd.exe /c start /min pwsh ./yasb.ps1" # Example command to run after wallpaper is updated
@@ -43,6 +71,10 @@ wallpapers:
       color: "black"
       radius: 3
       offset: [ 1, 1 ]
+    callbacks:
+      on_left: "toggle_gallery"
+      on_middle: "do_nothing"
+      on_right: "change_wallpaper"
 ```
 
 ## Description of Options
@@ -50,24 +82,32 @@ wallpapers:
 - **update_interval:** The interval in seconds to update the wallpaper. Must be between 60 and 86400.
 - **tooltip:** Whether to show the tooltip on hover.
 - **change_automatically:** Whether to automatically change the wallpaper.
-- **image_path:** The path to the folder containing images for the wallpaper. This field is required.
+- **image_path:** The path(s) to the folder(s) containing images for the wallpaper. Can be a single string or a list of strings. This field is required.
 - **gallery:** The gallery options for the wallpaper widget.
   - **enabled:** Whether to enable the gallery.
   - **blur:** Whether to blur the background when the gallery is open.
   - **image_width:** The width of the images in the gallery.
   - **image_per_page:** The number of images per page in the gallery.
+    - **gallery_columns:** How many columns (images per row) the gallery grid uses. Set to `0` (the default) to auto-match `image_per_page` for a single row, or supply a value between 1 and 64 to lock the number of columns (the value is capped at `image_per_page`).
+    - **horizontal_position:** Horizontal placement of the gallery window. `center` (default) keeps the existing behavior, `left` anchors the gallery to the active screen's left edge, and `right` aligns it to the right edge.
+    - **vertical_position:** Vertical anchor for the gallery (`top`, `center`, or `bottom`).
+    - **position_offset:** Controls margins from screen edges. Supports three formats:
+      - **Single integer:** `position_offset: 20` - applies 20px margin to all edges (top, right, bottom, left)
+      - **Two values:** `position_offset: [10, 20]` - applies 10px to top/bottom, 20px to left/right
+      - **Four values:** `position_offset: [10, 20, 30, 40]` - applies margins in CSS order (top, right, bottom, left)
+      - **Negative values:** Supported for extending beyond work area boundaries (e.g., `position_offset: [-10, 20]`)
+    - **respect_work_area:** When `true`, the gallery respects Windows taskbars and other reserved OS areas (uses the screen's available/work area). If the gallery is too large to fit, it will be clipped without scrollbars. Set to `false` to allow the gallery to span the entire monitor.
   - **show_buttons:** Whether to show the navigation buttons in the gallery.
   - **orientation:** The orientation of the images in the gallery. Can be "portrait" or "landscape".
   - **image_spacing:** The spacing between images in the gallery.
   - **lazy_load:** Whether to lazy load images in the gallery.
-  - **lazy_load_delay:** The delay in milliseconds between loading images in the gallery.
   - **lazy_load_fadein:** The fade-in duration in milliseconds for lazy loaded images.
   - **image_corner_radius:** The corner radius of the images in the gallery. (Note: This is not same as the css border-radius property.)
-  - **enable_cache:** Whether to enable caching of images in the gallery. (Note: Images are cached in memory and not saved to disk.)
 - **run_after:** A list of functions to run after the wallpaper is updated.
 - **animation:** A dictionary specifying the animation settings for the widget. It contains three keys: `enabled`, `type`, and `duration`. The `type` can be `fadeInOut` and the `duration` is the animation duration in milliseconds.
 - **container_shadow:** Container shadow options.
 - **label_shadow:** Label shadow options.
+- **callbacks:** A dictionary of callbacks to run when the widget is clicked. The keys are `on_left`, `on_middle`, and `on_right`. The values are the names of the callbacks to run. Default callbacks are `toggle_gallery`, `do_nothing`, and `change_wallpaper`.
 
 > If gallery is enabled left mouse click on the widget will open the gallery and right mouse click will change the wallpaper and get random one. 
 
@@ -85,7 +125,7 @@ wallpapers:
 .wallpapers-gallery-window {
     background-color: rgba(85, 42, 240, 0.01);
     border: 0;
-    margin: 0;
+    margin: 16px
 }
 .wallpapers-gallery-buttons {
     background-color:rgba(255, 255, 255, 0);
@@ -95,14 +135,14 @@ wallpapers:
     padding: 8px 0;
     border-radius: 8px;
     margin:0 8px 8px 8px;
-    width: 600px;
+    width: 200px;
 }
 .wallpapers-gallery-buttons:hover {
     background-color:rgba(255, 255, 255, 0.1)
 }
 .wallpapers-gallery-image {
     border: 4px solid transparent;
-    border-radius: 10px;
+    border-radius: 16px;
 }
 .wallpapers-gallery-image:hover {
     border: 4px solid rgb(66, 68, 83);
