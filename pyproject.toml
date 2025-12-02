@@ -29,6 +29,7 @@ dependencies = [
     "openai",
     "pyvda",
     "python-dotenv",
+    "tzdata; sys_platform == 'win32'",
     "winmica",
     "winrt.windows.foundation",
     "winrt.windows.foundation.collections",
