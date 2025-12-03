@@ -19,7 +19,7 @@ dependencies = [
     "psutil==7.1.3",
     "pywin32",
     "pyyaml",
-    "holidays==0.85",
+    "holidays==0.86",
     "watchdog",
     "pycaw==20251023",
     "pillow==12.0.0",
