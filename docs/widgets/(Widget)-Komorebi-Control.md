@@ -7,6 +7,7 @@
 | `icons`           | dict  | `{'start': "\uead3", 'stop': "\uead7", 'reload': "\uead2"}`        | Button icons. |
 | `run_ahk`         | boolean | `false`                                                                  | Whether to run AutoHotKey.                                          |
 | `run_whkd`        | boolean | `false`                                                                  | Whether to run WHKD.                                                |
+| `run_masir`       | boolean | `false`                                                                  | Whether to run Masir.                                                |
 | `config_path`     | string  | `None`                                                                   | Path to the Komorebi configuration file. If not set, uses default location. |
 | `show_version`    | boolean | `false`                                                                  | Whether to show the komorebi version.                                          |
 | `komorebi_menu`   | dict | `{'blur': true, 'round_corners': true, 'round_corners_type': 'normal','border_color': 'System', 'alignment': 'right', 'direction': 'down', 'offset_top': 6, 'offset_left': 0}` | Settings for the Komorebi menu. |
@@ -27,7 +28,8 @@
           stop: "\uead7"
           reload: "\uead2"
         run_ahk: false
-        run_whkd: true
+        run_whkd: false
+        run_masir: false
         show_version: true
         komorebi_menu:
           blur: true
@@ -54,6 +56,7 @@
   - **reload:** Icon for the reload button.
 - **run_ahk:** Whether to run AutoHotKey.
 - **run_whkd:** Whether to run WHKD.
+- **run_masir:** Whether to run Masir.
 - **config_path:** Path to the Komorebi configuration file. If not set, uses the default location. (e.g., `C:/Users/username/.config/komorebi.json`).
 - **show_version:** Whether to show the komorebi version.
 - **komorebi_menu:** Settings for the Komorebi menu.

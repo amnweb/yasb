@@ -44,6 +44,7 @@ class KomorebiControlWidget(BaseWidget):
         icons: dict[str, str],
         run_ahk: bool,
         run_whkd: bool,
+        run_masir: bool,
         config_path: Optional[str],
         show_version: bool,
         komorebi_menu: dict[str, str],
@@ -59,6 +60,7 @@ class KomorebiControlWidget(BaseWidget):
         self._icons = icons
         self._run_ahk = run_ahk
         self._run_whkd = run_whkd
+        self._run_masir = run_masir
         self._config_path = config_path
         self._show_version = show_version
         self._komorebi_menu = komorebi_menu
@@ -307,6 +309,8 @@ class KomorebiControlWidget(BaseWidget):
             flags.append("--whkd")
         if self._run_ahk:
             flags.append("--ahk")
+        if self._run_masir:
+            flags.append("--masir")
         if include_config and self._config_path:
             flags.append(f"--config={self._config_path}")
         return " ".join(flags)

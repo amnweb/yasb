@@ -7,6 +7,7 @@ DEFAULTS = {
     },
     "run_ahk": False,
     "run_whkd": False,
+    "run_masir": False,
     "config_path": None,
     "show_version": True,
     "komorebi_menu": {
@@ -38,6 +39,7 @@ VALIDATION_SCHEMA = {
     },
     "run_ahk": {"type": "boolean", "default": DEFAULTS["run_ahk"]},
     "run_whkd": {"type": "boolean", "default": DEFAULTS["run_whkd"]},
+    "run_masir": {"type": "boolean", "default": DEFAULTS["run_masir"]},
     "config_path": {
         "type": "string",
         "required": False,
