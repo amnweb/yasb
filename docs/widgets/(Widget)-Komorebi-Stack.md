@@ -1,5 +1,6 @@
 # Komorebi Stack Widget
-This widget displays information about each window in the currently active Komorebi stack.
+*This widget displays information about each window in the currently active Komorebi stack.*
+
 | Option                     | Type    | Default                  | Description                                                                 |
 |----------------------------|---------|--------------------------|-----------------------------------------------------------------------------|
 | `label_offline`          | string  | `'Komorebi Offline'`     | The label to display when Komorebi is offline.                              |
