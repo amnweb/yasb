@@ -48,12 +48,26 @@ DEFAULTS: dict[str, Any] = {
         "current_line_color": "#8EAEE8",
         "current_line_width": 1,
         "current_line_style": "dot",
+        "hourly_gradient": {
+            "enabled": False,
+            "top_color": "#8EAEE8",
+            "bottom_color": "#2A3E68",
+        },
         "hourly_forecast_buttons": {
             "enabled": False,
             "default_view": "temperature",
             "snow_icon": "\udb81\udd98",
             "rain_icon": "\udb81\udd96",
             "temperature_icon": "\udb81\udd99",
+        },
+        "weather_animation": {
+            "enabled": False,
+            "snow_overrides_rain": True,
+            "temp_line_animation_style": "both",
+            "rain_effect_intensity": 1.0,
+            "snow_effect_intensity": 1.0,
+            "scale_with_chance": True,
+            "enable_debug": False,
         },
     },
     "animation": {"enabled": True, "type": "fadeInOut", "duration": 200},
@@ -200,6 +214,24 @@ VALIDATION_SCHEMA: dict[str, Any] = {
                 "allowed": ["solid", "dash", "dot", "dashDot", "dashDotDot"],
                 "default": DEFAULTS["weather_card"]["current_line_style"],
             },
+            "hourly_gradient": {
+                "type": "dict",
+                "schema": {
+                    "enabled": {
+                        "type": "boolean",
+                        "default": DEFAULTS["weather_card"]["hourly_gradient"]["enabled"],
+                    },
+                    "top_color": {
+                        "type": "string",
+                        "default": DEFAULTS["weather_card"]["hourly_gradient"]["top_color"],
+                    },
+                    "bottom_color": {
+                        "type": "string",
+                        "default": DEFAULTS["weather_card"]["hourly_gradient"]["bottom_color"],
+                    },
+                },
+                "default": DEFAULTS["weather_card"]["hourly_gradient"],
+            },
             "hourly_forecast_buttons": {
                 "type": "dict",
                 "schema": {
@@ -226,6 +258,42 @@ VALIDATION_SCHEMA: dict[str, Any] = {
                     },
                 },
                 "default": DEFAULTS["weather_card"]["hourly_forecast_buttons"],
+            },
+            "weather_animation": {
+                "type": "dict",
+                "schema": {
+                    "enabled": {"type": "boolean", "default": DEFAULTS["weather_card"]["weather_animation"]["enabled"]},
+                    "snow_overrides_rain": {
+                        "type": "boolean",
+                        "default": DEFAULTS["weather_card"]["weather_animation"]["snow_overrides_rain"],
+                    },
+                    "temp_line_animation_style": {
+                        "type": "string",
+                        "allowed": ["rain", "snow", "both", "none"],
+                        "default": DEFAULTS["weather_card"]["weather_animation"]["temp_line_animation_style"],
+                    },
+                    "rain_effect_intensity": {
+                        "type": "float",
+                        "min": 0.01,
+                        "max": 10.0,
+                        "default": DEFAULTS["weather_card"]["weather_animation"]["rain_effect_intensity"],
+                    },
+                    "snow_effect_intensity": {
+                        "type": "float",
+                        "min": 0.01,
+                        "max": 10.0,
+                        "default": DEFAULTS["weather_card"]["weather_animation"]["snow_effect_intensity"],
+                    },
+                    "scale_with_chance": {
+                        "type": "boolean",
+                        "default": DEFAULTS["weather_card"]["weather_animation"]["scale_with_chance"],
+                    },
+                    "enable_debug": {
+                        "type": "boolean",
+                        "default": DEFAULTS["weather_card"]["weather_animation"]["enable_debug"],
+                    },
+                },
+                "default": DEFAULTS["weather_card"]["weather_animation"],
             },
         },
         "default": DEFAULTS["weather_card"],
