@@ -20,7 +20,28 @@
 
 > **note**: To use the weather widget, you need to obtain a free API key from [weatherapi.com](https://www.weatherapi.com/) and set it in the `api_key` option.
 
-## Example Configuration
+## Minimal Configuration
+
+```yaml
+weather:
+  type: "yasb.weather.WeatherWidget"
+  options:
+    label: "<span>{icon}</span> {temp}"
+    label_alt: "{location}: Min {min_temp}, Max {max_temp}, Humidity {humidity}"
+    api_key: "3bf4cf9a7c3f40d6b31174128242807" # Get your free API key from https://www.weatherapi.com/
+    show_alerts: true
+    tooltip: true
+    update_interval: 600 # Update interval in seconds, Min 600 seconds
+    hide_decimal: true
+    units: "metric" # Can be 'metric' or 'imperial'
+    location: "Los Angeles, CA, USA" # You can use "USA Los Angeles 90006" {COUNTRY CITY ZIP_CODE}, or just city.
+    callbacks:
+      on_left: "toggle_card"
+      on_middle: "do_nothing"
+      on_right: "toggle_label"
+```
+
+## Advanced Configuration
 
 ```yaml
 weather:
@@ -72,12 +93,24 @@ weather:
       current_line_color: "#8EAEE8"
       current_line_width: 1 # can be 0 to hide the current hour line
       current_line_style: "dot"
+      hourly_gradient:
+        enabled: false
+        top_color: "#8EAEE8"
+        bottom_color: "#2A3E68"
       hourly_forecast_buttons: # Optional hourly forecast data type toggle buttons, default disabled
         enabled: true # Set to false to hide the buttons
         default_view: "temperature" # Default view when opening the weather card. Options: "temperature", "rain", "snow"
         temperature_icon: "\udb81\udd99"
         rain_icon: "\udb81\udd96"
         snow_icon: "\udb81\udd98"
+      weather_animation:
+        enabled: false
+        snow_overrides_rain: true
+        temp_line_animation_style: both # can be "rain", "snow", "both", or "none"
+        rain_effect_intensity: 1.0 # 0.01 - 10.0
+        snow_effect_intensity: 1.0 # 0.01 - 10.0
+        scale_with_chance: true
+        enable_debug: false
     label_shadow:
       enabled: true
       color: "black"
@@ -117,12 +150,24 @@ weather:
   - **current_line_color:** Color of the current hour line.
   - **current_line_width:** Width of the current hour line. Setting this to `0` will hide the current hour line.
   - **current_line_style:** Style of the current hour line. Possible values are `solid`, `dash`, `dot`, `dashDot`, `dashDotDot`.
+  - **hourly_gradient:** Configuration for the gradient effect under the hourly line.
+    - **enabled:** Whether to enable the gradient effect under the hourly line.
+    - **top_color:** Top color of the gradient.
+    - **bottom_color:** Bottom color of the gradient.
   - **hourly_forecast_buttons:** Configuration for the data type toggle buttons in the hourly forecast view.
     - **enabled:** Whether to show the toggle buttons. Set to `false` to hide them.
     - **default_view:** Which data type to show by default when opening the weather card. Options: `"temperature"` (default), `"rain"`, or `"snow"`.
     - **temperature_icon:** Icon for the temperature button (default: `"\udb81\udd99"`).
     - **rain_icon:** Icon for the rain chance button (default: `"\udb81\udd96"`).
     - **snow_icon:** Icon for the snow chance button (default: `"\udb81\udd98"`).
+  - **weather_animation:** Configuration for the weather animation effects.
+    - **enabled:** Whether to enable the weather animation effects. Make sure to add css styles for the animations.
+    - **snow_overrides_rain:** Whether to override the rain animation with the snow animation (if overlapping).
+    - **temp_line_animation_style:** Which animation style to use for the temperature line. Options: `rain`, `snow`, `both`, or `none`.
+    - **rain_effect_intensity:** Intensity of the rain animation. (0.01 - 10.0, Default: 1.0)
+    - **snow_effect_intensity:** Intensity of the snow animation. (0.01 - 10.0, Default: 1.0)
+    - **scale_with_chance:** Whether to scale the animation intensity with the chance of rain/snow.
+    - **enable_debug:** Generate dummy hourly weather data for testing and styling.
 - **callbacks:** A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions. Available callback functions are `toggle_card`, `toggle_label`, `do_nothing`.
 - **animation:** A dictionary specifying the animation settings for the widget. It contains three keys: `enabled`, `type`, and `duration`. The `type` can be `fadeInOut` and the `duration` is the animation duration in milliseconds.
 - **container_shadow:** Container shadow options.
@@ -222,6 +267,16 @@ weather:
 
 .weather-card .hourly-data.snow {
     background-color: #A0C4FF; /* Snow curve & line color */
+}
+
+.weather-card .hourly-data .hourly-rain-animation {
+    color: rgba(150, 200, 255, 40); /* Rain color */
+    background-color: rgba(0, 0, 0, 0.1); /* Rain background color */
+}
+
+.weather-card .hourly-data .hourly-snow-animation {
+    color: rgba(255, 255, 255, 150); /* Snow color */
+    background-color: rgba(0, 0, 0, 0.1); /* Snow background color */
 }
 
 /* Hourly forecast toggle buttons */

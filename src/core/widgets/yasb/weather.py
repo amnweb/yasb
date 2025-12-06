@@ -8,7 +8,7 @@ from functools import partial
 from typing import Any
 
 from PyQt6.QtCore import Qt, QTimer, QUrl, pyqtSlot
-from PyQt6.QtGui import QPixmap
+from PyQt6.QtGui import QMouseEvent, QPixmap
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
 from core.utils.tooltip import set_tooltip
@@ -165,7 +165,9 @@ class WeatherWidget(BaseWidget):
         # Get default data type from config
         default_data_type = self._weather_card["hourly_forecast_buttons"]["default_view"]
         hourly_data_widget = HourlyDataLineWidget(
-            units=self._units, config=self._weather_card, data_type=default_data_type
+            units=self._units,
+            config=self._weather_card,
+            data_type=default_data_type,
         )
         # Note: CSS class is set automatically in HourlyDataLineWidget.__init__ based on data_type
         hourly_scroll_area = HourlyTemperatureScrollArea()
@@ -186,7 +188,7 @@ class WeatherWidget(BaseWidget):
                 ("rain", buttons_config["rain_icon"]),
                 ("snow", buttons_config["snow_icon"]),
             ]
-            buttons = []
+            buttons: list[QLabel] = []
 
             for data_type, icon in button_configs:
                 btn = QLabel(icon)
@@ -197,8 +199,8 @@ class WeatherWidget(BaseWidget):
                 buttons_layout.addWidget(btn)
                 buttons.append(btn)
 
-                def make_handler(dt, active_btn):
-                    def handler(event):
+                def make_handler(dt: str, active_btn: QLabel):
+                    def handler(ev: QMouseEvent | None):
                         hourly_data_widget.set_data_type(dt)
                         for b in buttons:
                             b.setProperty("class", f"hourly-data-button{' active' if b == active_btn else ''}")
@@ -439,7 +441,7 @@ class WeatherWidget(BaseWidget):
             snow = self._weather_data["{hourly_chance_of_snow}"]
 
             if rain != "N/A" and snow != "N/A" and (int(rain.rstrip("%")) > 0 or int(snow.rstrip("%")) > 0):
-                precip = []
+                precip: list[str] = []
                 if int(rain.rstrip("%")) > 0:
                     precip.append(f"Rain {rain}")
                 if int(snow.rstrip("%")) > 0:
