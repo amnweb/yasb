@@ -283,8 +283,6 @@ class ServerMonitor(BaseWidget):
     def _update_label(self):
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
         active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
-        label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
-        label_parts = [part for part in label_parts if part]
         widget_index = 0
 
         try:
@@ -307,6 +305,11 @@ class ServerMonitor(BaseWidget):
         # Force style update
         self._widget_container.setStyleSheet(self._widget_container.styleSheet())
 
+        active_label_content = active_label_content.format(
+            online=online_count, offline=offline_count, total=total_count
+        )
+        label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
+
         for part in label_parts:
             part = part.strip()
             if part and widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
@@ -315,8 +318,7 @@ class ServerMonitor(BaseWidget):
                     icon = re.sub(r"<span.*?>|</span>", "", part).strip()
                     active_widgets[widget_index].setText(icon)
                 else:
-                    formatted_text = part.format(online=online_count, offline=offline_count, total=total_count)
-                    active_widgets[widget_index].setText(formatted_text)
+                    active_widgets[widget_index].setText(part)
                 widget_index += 1
         if self._tooltip:
             set_tooltip(

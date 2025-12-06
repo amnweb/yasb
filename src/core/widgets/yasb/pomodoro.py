@@ -197,21 +197,11 @@ class PomodoroWidget(BaseWidget):
     def _update_label(self):
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
         active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
-        label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
-        label_parts = [part for part in label_parts if part]
         widget_index = 0
 
         remaining_str = self._format_time(self._remaining_time)
         status = "Paused" if self._is_paused else "Break" if self._is_break else "Work"
         class_name = "paused" if self._is_paused else "break" if self._is_break else "work"
-
-        label_options = {
-            "{remaining}": remaining_str,
-            "{status}": status,
-            "{session}": str(self._session_count + 1),
-            "{total_sessions}": str(self._session_target) if self._session_target > 0 else "∞",
-            "{icon}": self._get_current_icon(),
-        }
 
         if self._progress_bar["enabled"] and self.progress_widget:
             if self._widget_container_layout.indexOf(self.progress_widget) == -1:
@@ -229,22 +219,29 @@ class PomodoroWidget(BaseWidget):
             percent = (elapsed / max_value) * 100 if max_value > 0 else 0
             self.progress_widget.set_value(percent)
 
+        active_label_content = active_label_content.format(
+            remaining=remaining_str,
+            status=status,
+            session=str(self._session_count + 1),
+            total_sessions=str(self._session_target) if self._session_target > 0 else "∞",
+            icon=self._get_current_icon(),
+        )
+
+        label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
+
         for part in label_parts:
             part = part.strip()
             if part:
-                formatted_text = part
-                for option, value in label_options.items():
-                    formatted_text = formatted_text.replace(option, str(value))
                 if "<span" in part and "</span>" in part:
                     if widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
-                        active_widgets[widget_index].setText(formatted_text)
+                        active_widgets[widget_index].setText(part)
                         base_class = active_widgets[widget_index].property("class").split()[0]
                         active_widgets[widget_index].setProperty("class", f"{base_class} {class_name}")
                         refresh_widget_style(active_widgets[widget_index])
                 else:
                     if widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
                         alt_class = "alt" if self._show_alt_label else ""
-                        active_widgets[widget_index].setText(formatted_text)
+                        active_widgets[widget_index].setText(part)
                         base_class = "label"
                         active_widgets[widget_index].setProperty("class", f"{base_class} {alt_class} {class_name}")
                         refresh_widget_style(active_widgets[widget_index])
