@@ -46,7 +46,9 @@ class AboutDialog(QDialog):
             "text": "Updates disabled",
             "enabled": False,
             "attr": "unsupported",
-            "tooltip": "Install YASB to enable automatic updates.",
+            "tooltip": "Automatic updates are disabled for PR build."
+            if RELEASE_CHANNEL.startswith("pr-")
+            else "Install YASB to enable automatic updates.",
         },
     }
 
@@ -60,7 +62,6 @@ class AboutDialog(QDialog):
         self._release_fetcher: Optional[ReleaseFetcher] = None
         self._update_dialog: Optional[UpdateDialog] = None
 
-        # Check if updates are supported (installed app + supported architecture)
         update_service = get_update_service()
         self._updates_supported = update_service.is_update_supported()
 
@@ -125,9 +126,9 @@ class AboutDialog(QDialog):
         version_label.setGraphicsEffect(version_effect)
         layout.addWidget(version_label)
 
-        release_note_btn = self._create_link_button(
-            "View Release Notes", lambda: self._tray._open_in_browser(f"{GITHUB_URL}/releases/tag/v{BUILD_VERSION}")
-        )
+        release_url = self._get_release_notes_url()
+        release_label = "View PR Details" if RELEASE_CHANNEL.startswith("pr-") else "View Release Notes"
+        release_note_btn = self._create_link_button(release_label, lambda: self._tray._open_in_browser(release_url))
         layout.addWidget(release_note_btn, alignment=Qt.AlignmentFlag.AlignHCenter)
 
         links_container = QWidget()
@@ -176,6 +177,19 @@ class AboutDialog(QDialog):
             button_layout.addWidget(button, alignment=Qt.AlignmentFlag.AlignHCenter)
 
         layout.addLayout(button_layout)
+
+    def _get_release_notes_url(self) -> str:
+        if RELEASE_CHANNEL.startswith("pr-"):
+            pr_part = RELEASE_CHANNEL.split("-", 1)[1] if "-" in RELEASE_CHANNEL else ""
+            pr_number = pr_part.split("-", 1)[0]
+            if pr_number.isdigit():
+                return f"{GITHUB_URL}/pull/{pr_number}"
+            return GITHUB_URL
+
+        if RELEASE_CHANNEL.startswith("dev-"):
+            return f"{GITHUB_URL}/releases/tag/dev"
+
+        return f"{GITHUB_URL}/releases/tag/v{BUILD_VERSION}"
 
     def _create_link_button(self, text: str, callback) -> QPushButton:
         button = QPushButton(text)

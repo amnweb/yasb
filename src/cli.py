@@ -868,7 +868,10 @@ class CLIUpdateHandler:
 
         # Check if updates are supported
         if not update_service.is_update_supported():
-            print("\nUpdates are not supported on this system.")
+            if YASB_RELEASE_CHANNEL.startswith("pr-"):
+                print("\nAutomatic updates are disabled for PR build.")
+            else:
+                print("\nUpdates are not supported on this system.")
             if not architecture:
                 print("Reason: Unsupported architecture")
             sys.exit(1)

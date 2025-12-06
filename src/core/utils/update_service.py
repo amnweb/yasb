@@ -1,4 +1,5 @@
-"""Centralized update service for checking, downloading, and managing YASB updates.
+"""
+Centralized update service for checking, downloading, and managing YASB updates.
 
 This module provides a unified interface for handling application updates across
 both the automatic background update checker and the GUI update dialog. It supports
@@ -325,6 +326,9 @@ class UpdateService:
         1. App is frozen (running as bundled executable)
         2. YASB is installed (not running from source)
         3. Architecture is known (x64 or ARM64)
+        4. Updates are disabled for PR build channels.
+
+        Updates are disabled for PR build channels.
 
         Returns:
             True if updates are supported, False otherwise
@@ -333,8 +337,9 @@ class UpdateService:
         is_forzen = getattr(sys, "frozen", False)
         is_installed = get_app_identifier() == APP_ID
         is_arch_supported = ARCHITECTURE is not None
+        is_pr_build = RELEASE_CHANNEL.startswith("pr-")
 
-        return is_installed and is_arch_supported and is_forzen
+        return is_installed and is_arch_supported and is_forzen and (not is_pr_build)
 
 
 def get_update_service() -> UpdateService:

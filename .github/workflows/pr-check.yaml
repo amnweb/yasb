@@ -149,10 +149,10 @@ jobs:
           .\venv\Scripts\Activate
           $currentDateTime = Get-Date -Format 'yyyy-MM-dd HH:mm:ss UTC'
           echo "BUILD_DATETIME=$currentDateTime" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          $commitHash = git rev-parse --short HEAD
-          echo "COMMIT_HASH=$commitHash" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          $prNumber = "${{ github.event.pull_request.number }}"
+          echo "PR_NUMBER=$prNumber" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           echo "BUILD_DATETIME=$currentDateTime" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
-          echo "COMMIT_HASH=$commitHash" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          echo "PR_NUMBER=$prNumber" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
         shell: pwsh
 
       - name: Update Release Channel
@@ -160,10 +160,10 @@ jobs:
           .\venv\Scripts\Activate
           $settingsPath = 'src/settings.py'
           $content = Get-Content $settingsPath -Raw
-          $replacement = 'RELEASE_CHANNEL = "dev-' + $env:COMMIT_HASH + '"'
-          $content = $content -replace 'RELEASE_CHANNEL = "stable"', $replacement
+          $replacement = 'RELEASE_CHANNEL = "pr-' + $env:PR_NUMBER + '"'
+          $content = $content -replace 'RELEASE_CHANNEL = "[^"]*"', $replacement
           Set-Content -Path $settingsPath -Value $content -NoNewline
-          Write-Host "Updated RELEASE_CHANNEL to dev-$env:COMMIT_HASH"
+          Write-Host "Updated RELEASE_CHANNEL to pr-$env:PR_NUMBER"
         shell: pwsh
 
       - name: Install dependencies
@@ -184,7 +184,7 @@ jobs:
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: yasb-dev-${{ steps.get_info.outputs.COMMIT_HASH }}-x64
+          name: yasb-dev-pr-${{ steps.get_info.outputs.PR_NUMBER }}-x64
           path: |
             src/dist/out/*.msi
           retention-days: 7
@@ -218,10 +218,10 @@ jobs:
           .\venv\Scripts\Activate
           $currentDateTime = Get-Date -Format 'yyyy-MM-dd HH:mm:ss UTC'
           echo "BUILD_DATETIME=$currentDateTime" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          $commitHash = git rev-parse --short HEAD
-          echo "COMMIT_HASH=$commitHash" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          $prNumber = "${{ github.event.pull_request.number }}"
+          echo "PR_NUMBER=$prNumber" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           echo "BUILD_DATETIME=$currentDateTime" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
-          echo "COMMIT_HASH=$commitHash" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          echo "PR_NUMBER=$prNumber" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
         shell: pwsh
 
       - name: Update Release Channel
@@ -229,10 +229,10 @@ jobs:
           .\venv\Scripts\Activate
           $settingsPath = 'src/settings.py'
           $content = Get-Content $settingsPath -Raw
-          $replacement = 'RELEASE_CHANNEL = "dev-' + $env:COMMIT_HASH + '"'
-          $content = $content -replace 'RELEASE_CHANNEL = "stable"', $replacement
+          $replacement = 'RELEASE_CHANNEL = "pr-' + $env:PR_NUMBER + '"'
+          $content = $content -replace 'RELEASE_CHANNEL = "[^"]*"', $replacement
           Set-Content -Path $settingsPath -Value $content -NoNewline
-          Write-Host "Updated RELEASE_CHANNEL to dev-$env:COMMIT_HASH"
+          Write-Host "Updated RELEASE_CHANNEL to pr-$env:PR_NUMBER"
         shell: pwsh
 
       - name: Install dependencies
@@ -259,7 +259,7 @@ jobs:
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: yasb-dev-${{ steps.get_info.outputs.COMMIT_HASH }}-aarch64
+          name: yasb-dev-pr-${{ steps.get_info.outputs.PR_NUMBER }}-aarch64
           path: |
             src/dist/out/*.msi
           retention-days: 7
