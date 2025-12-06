@@ -75,13 +75,15 @@ def process_cli_command(command: str):
         from core.global_state import get_bar_screens
 
         available_screens = get_bar_screens()
-        if "--follow-mouse" in command:
-            screen_name = find_focused_screen(follow_mouse=True, follow_window=False, screens=available_screens)
-        elif "--follow-focus" in command:
-            screen_name = find_focused_screen(follow_mouse=False, follow_window=True, screens=available_screens)
-        else:
-            # If no argument provided, use primary screen
-            screen_name = find_focused_screen(follow_mouse=False, follow_window=False, screens=available_screens)
+
+        if not screen_name:
+            if "--follow-mouse" in command:
+                screen_name = find_focused_screen(follow_mouse=True, follow_window=False, screens=available_screens)
+            elif "--follow-focus" in command:
+                screen_name = find_focused_screen(follow_mouse=False, follow_window=True, screens=available_screens)
+            else:
+                # If no argument provided, use primary screen
+                screen_name = find_focused_screen(follow_mouse=False, follow_window=False, screens=available_screens)
 
         widget_name = parts[1] if len(parts) > 1 else None
         if screen_name is not None:

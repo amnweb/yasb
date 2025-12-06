@@ -9,6 +9,11 @@ DEFAULTS = {
         "blur": True,
         "image_width": 100,
         "image_per_page": 5,
+        "gallery_columns": 0,
+        "horizontal_position": "center",
+        "vertical_position": "center",
+        "position_offset": 0,
+        "respect_work_area": True,
         "image_corner_radius": 0,
         "show_buttons": True,
         "orientation": "landscape",
@@ -21,13 +26,18 @@ DEFAULTS = {
     "run_after": [],
     "animation": {"enabled": True, "type": "fadeInOut", "duration": 200},
     "container_padding": {"top": 0, "left": 0, "bottom": 0, "right": 0},
+    "callbacks": {"on_left": "toggle_gallery", "on_middle": "do_nothing", "on_right": "change_wallpaper"},
 }
 
 VALIDATION_SCHEMA = {
     "label": {"type": "string", "default": DEFAULTS["label"]},
     "update_interval": {"type": "integer", "default": DEFAULTS["update_interval"], "min": 60, "max": 86400},
     "change_automatically": {"type": "boolean", "default": DEFAULTS["change_automatically"]},
-    "image_path": {"required": True, "type": "string", "default": DEFAULTS["image_path"]},
+    "image_path": {
+        "required": True,
+        "anyof": [{"type": "string"}, {"type": "list", "schema": {"type": "string"}}],
+        "default": DEFAULTS["image_path"],
+    },
     "tooltip": {"required": False, "type": "boolean", "default": DEFAULTS["tooltip"]},
     "gallery": {
         "type": "dict",
@@ -40,7 +50,34 @@ VALIDATION_SCHEMA = {
                 "type": "integer",
                 "default": DEFAULTS["gallery"]["image_per_page"],
                 "min": 1,
-                "max": 24,
+                "max": 64,
+            },
+            "gallery_columns": {
+                "type": "integer",
+                "default": DEFAULTS["gallery"]["gallery_columns"],
+                "min": 0,
+                "max": 64,
+            },
+            "horizontal_position": {
+                "type": "string",
+                "default": DEFAULTS["gallery"]["horizontal_position"],
+                "allowed": ["left", "center", "right"],
+            },
+            "vertical_position": {
+                "type": "string",
+                "default": DEFAULTS["gallery"]["vertical_position"],
+                "allowed": ["top", "center", "bottom"],
+            },
+            "position_offset": {
+                "type": ["integer", "list"],
+                "default": DEFAULTS["gallery"]["position_offset"],
+                "min": -2000,
+                "max": 2000,
+                "schema": {"type": "integer", "min": -2000, "max": 2000},
+            },
+            "respect_work_area": {
+                "type": "boolean",
+                "default": DEFAULTS["gallery"]["respect_work_area"],
             },
             "image_corner_radius": {
                 "type": "integer",
@@ -114,5 +151,23 @@ VALIDATION_SCHEMA = {
             "right": {"type": "integer", "default": DEFAULTS["container_padding"]["right"]},
         },
         "default": DEFAULTS["container_padding"],
+    },
+    "callbacks": {
+        "type": "dict",
+        "schema": {
+            "on_left": {
+                "type": "string",
+                "default": DEFAULTS["callbacks"]["on_left"],
+            },
+            "on_middle": {
+                "type": "string",
+                "default": DEFAULTS["callbacks"]["on_middle"],
+            },
+            "on_right": {
+                "type": "string",
+                "default": DEFAULTS["callbacks"]["on_right"],
+            },
+        },
+        "default": DEFAULTS["callbacks"],
     },
 }
