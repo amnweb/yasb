@@ -196,8 +196,8 @@ class GpuWidget(BaseWidget):
 
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
         active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
+        active_label_content = active_label_content.format(info=gpu_info)
         label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
-        label_parts = [part for part in label_parts if part]
         widget_index = 0
 
         if self._progress_bar["enabled"] and self.progress_widget:
@@ -216,8 +216,7 @@ class GpuWidget(BaseWidget):
                     active_widgets[widget_index].setText(icon)
                 else:
                     label_class = "label alt" if self._show_alt_label else "label"
-                    formatted_text = part.format(info=gpu_info)
-                    active_widgets[widget_index].setText(formatted_text)
+                    active_widgets[widget_index].setText(part)
                     active_widgets[widget_index].setProperty("class", label_class)
                     active_widgets[widget_index].setProperty(
                         "class", f"{label_class} status-{self._get_gpu_threshold(gpu_data.utilization)}"

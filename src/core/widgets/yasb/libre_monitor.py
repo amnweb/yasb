@@ -280,8 +280,8 @@ class LibreHardwareMonitorWidget(BaseWidget):
 
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
         active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
+        active_label_content = active_label_content.format(info=info)
         label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
-        label_parts = [part for part in label_parts if part]
         widget_index = 0
         for part in label_parts:
             part = part.strip()
@@ -290,9 +290,15 @@ class LibreHardwareMonitorWidget(BaseWidget):
                     icon = re.sub(r"<span.*?>|</span>", "", part).strip()
                     active_widgets[widget_index].setText(icon)
                 else:
-                    formatted_text = part.format(info=info) if info else part
-                    active_widgets[widget_index].setText(formatted_text)
+                    active_widgets[widget_index].setText(part)
+
+                if not active_widgets[widget_index].isVisible():
+                    active_widgets[widget_index].setVisible(True)
+
                 widget_index += 1
+
+        for i in range(widget_index, len(active_widgets)):
+            active_widgets[i].setVisible(False)
 
         # Update popup menu if it's visible
         if self._is_menu_visible():

@@ -204,23 +204,17 @@ class WifiWidget(BaseWidget):
             active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
             active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
 
+        active_label_content = active_label_content.format(
+            wifi_icon=wifi_icon, wifi_name=wifi_name, wifi_strength=wifi_strength, ip_addr=ip_addr
+        )
         label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
-        label_parts = [part for part in label_parts if part]
         widget_index = 0
-        label_options = {
-            "{wifi_icon}": wifi_icon,
-            "{wifi_name}": wifi_name,
-            "{wifi_strength}": wifi_strength,
-            "{ip_addr}": ip_addr,
-        }
+
         for part in label_parts:
             part = part.strip()
             if part:
-                formatted_text = part
-                for option, value in label_options.items():
-                    formatted_text = formatted_text.replace(option, str(value))
                 if widget_index < len(active_widgets):
-                    active_widgets[widget_index].setText(formatted_text)
+                    active_widgets[widget_index].setText(part)
                 widget_index += 1
 
     def _get_wifi_strength_safe(self) -> int:
