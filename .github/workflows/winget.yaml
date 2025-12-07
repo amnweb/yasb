@@ -20,7 +20,7 @@ jobs:
 
           # Fetching latest release from GitHub
           $github = Invoke-RestMethod -uri "https://api.github.com/repos/amnweb/yasb/releases"
-          $targetRelease = $github | Where-Object -Property name -match 'v'| Select-Object -First 1
+          $targetRelease = $github | Where-Object -Property name -match '^v'| Select-Object -First 1
           $packageVersion = $targetRelease.tag_name.Trim("v")
 
           # Get both x64 and aarch64 MSI URLs
