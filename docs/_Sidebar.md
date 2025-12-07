@@ -21,6 +21,7 @@
     - [GlazeWM Binding Mode](./(Widget)-GlazeWM-Binding-Mode)
     - [GlazeWM Tiling Direction](./(Widget)-GlazeWM-Tiling-Direction)
     - [GlazeWM Workspaces](./(Widget)-GlazeWM-Workspaces)
+    - [Glucose Monitor](./(Widget)-Glucose-Monitor)
     - [Grouper](./(Widget)-Grouper)
     - [GPU](./(Widget)-GPU)
     - [Home](./(Widget)-Home)
