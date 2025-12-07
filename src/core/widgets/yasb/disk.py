@@ -110,8 +110,6 @@ class DiskWidget(BaseWidget):
     def _update_label(self):
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
         active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
-        label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
-        label_parts = [part for part in label_parts if part]
         widget_index = 0
 
         try:
@@ -127,6 +125,8 @@ class DiskWidget(BaseWidget):
             else:
                 percent_value = float(percent_str)
 
+            active_label_content = active_label_content.format(space=disk_space, volume_label=self._volume_label)
+
         if self._progress_bar["enabled"] and self.progress_widget:
             if self._widget_container_layout.indexOf(self.progress_widget) == -1:
                 self._widget_container_layout.insertWidget(
@@ -135,6 +135,9 @@ class DiskWidget(BaseWidget):
                 )
 
             self.progress_widget.set_value(percent_value)
+
+        label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
+        disk_threshold_class = self._get_disk_threshold(percent_value)
 
         for part in label_parts:
             part = part.strip()
@@ -146,13 +149,8 @@ class DiskWidget(BaseWidget):
                 else:
                     # Update label with formatted content
                     label_class = "label alt" if self._show_alt_label else "label"
-                    formatted_text = (
-                        part.format(space=disk_space, volume_label=self._volume_label) if disk_space else part
-                    )
-                    active_widgets[widget_index].setProperty(
-                        "class", f"{label_class} status-{self._get_disk_threshold(percent_value)}"
-                    )
-                    active_widgets[widget_index].setText(formatted_text)
+                    active_widgets[widget_index].setProperty("class", f"{label_class} status-{disk_threshold_class}")
+                    active_widgets[widget_index].setText(part)
                     refresh_widget_style(active_widgets[widget_index])
                 widget_index += 1
 

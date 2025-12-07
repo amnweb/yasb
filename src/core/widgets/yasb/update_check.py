@@ -372,8 +372,8 @@ class UpdateCheckWidget(BaseWidget):
             add_shadow(container, self._container_shadow)
             self.widget_layout.addWidget(container)
             container.hide()
+
             label_parts = re.split(r"(<span.*?>.*?</span>)", label_text)
-            label_parts = [part for part in label_parts if part]
             widgets = []
 
             for part in label_parts:
@@ -413,13 +413,16 @@ class UpdateCheckWidget(BaseWidget):
         else:
             return
 
-        label_parts = re.split(r"(<span.*?>.*?</span>)", active_label_content)
-        label_parts = [part for part in label_parts if part]
-        widget_index = 0
         if data == 0:
             container.hide()
             return
+
         container.show()
+
+        active_label_content = active_label_content.format(count=data)
+        label_parts = re.split(r"(<span.*?>.*?</span>)", active_label_content)
+        widget_index = 0
+
         for part in label_parts:
             part = part.strip()
             if part and widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
@@ -427,8 +430,7 @@ class UpdateCheckWidget(BaseWidget):
                     icon = re.sub(r"<span.*?>|</span>", "", part).strip()
                     active_widgets[widget_index].setText(icon)
                 else:
-                    formatted_text = part.format(count=data)
-                    active_widgets[widget_index].setText(formatted_text)
+                    active_widgets[widget_index].setText(part)
                 active_widgets[widget_index].setCursor(Qt.CursorShape.PointingHandCursor)
                 widget_index += 1
         if widget_type == "windows" and self._windows_update_tooltip:
