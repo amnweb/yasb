@@ -11,7 +11,7 @@ SCRIPT_PATH = (
 )
 GITHUB_URL = "https://github.com/amnweb/yasb"
 GITHUB_THEME_URL = "https://github.com/amnweb/yasb-themes"
-BUILD_VERSION = "1.8.5"
+BUILD_VERSION = "1.8.6"
 CLI_VERSION = "1.1.4"
 RELEASE_CHANNEL = "stable"
 # Development Settings
