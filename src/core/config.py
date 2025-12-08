@@ -18,6 +18,8 @@ from core.utils.alert_dialog import raise_info_alert
 from core.utils.css_processor import CSSProcessor
 from core.validation.config import CONFIG_SCHEMA
 
+import pretty_log as _log
+
 SRC_CONFIGURATION_DIR = os.path.dirname(sys.executable) if getattr(sys, "frozen", False) else os.path.dirname(argv[0])
 HOME_CONFIGURATION_DIR = path.join(Path.home(), settings.DEFAULT_CONFIG_DIRECTORY)
 HOME_STYLES_PATH = path.normpath(path.join(HOME_CONFIGURATION_DIR, settings.DEFAULT_STYLES_FILENAME))
@@ -121,7 +123,7 @@ def get_config(show_error_dialog=False) -> Union[dict, None]:
                     additional_details=pretty_errors,
                 )
     except ParserError as e:
-        logging.error(f"The file '{config_path}' contains Parser Error(s). Please fix:\n{str(e)}")
+        _log.log_error(f"The file '{config_path}' contains Parser Error(s). Please fix", e)
     except FileNotFoundError:
         logging.error(f"The file '{config_path}' could not be found. Does it exist?")
     except OSError:
@@ -136,7 +138,7 @@ def get_stylesheet(show_error_dialog=False) -> Union[str, None]:
         return css_content
 
     except SyntaxErr as e:
-        logging.error(f"The file '{styles_path}' contains Syntax Error(s). Please fix:\n{str(e)}")
+        _log.log_error(f"The file '{styles_path}' contains Syntax Error(s). Please fix:", e)
         if show_error_dialog:
             raise_info_alert(
                 title="Failed to load recently updated stylesheet file.",

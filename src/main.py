@@ -7,6 +7,7 @@ import time
 from sys import argv
 import win32api
 import winreg
+import subprocess
 
 def get_windows_version():
     # Read core OS information from the registry
@@ -43,7 +44,7 @@ from core.utils.update_service import get_update_service, start_update_checker
 from core.watcher import create_observer
 from env_loader import load_env, set_font_engine
 
-import log as _log
+import pretty_log as _log
 
 
 @contextlib.contextmanager
@@ -125,8 +126,13 @@ def main():
             simple_windows_version = lambda: f"Windows {platform.release()}, Build {platform.version()}"
             logging.info("Retrieved minimal OS information (may be innacurate).")
             logging.info(f" |  {simple_windows_version}")
-        except BaseException as e:
+        except BaseException as e2:
             logging.warning("Failed to retrieve OS information.")
+
+    logging.info("YASB info:")
+    version = subprocess.check_output(['yasbc', '--version']).decode().split("\n")
+    logging.info(" |  version (Main): %r", version[0].replace('\r', ''))
+    logging.info(" |  version (CLI):  %r", version[1].replace('\r', ''))
 
     # Application instance should be created first
     app = QApplication(argv)

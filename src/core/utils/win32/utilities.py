@@ -32,6 +32,8 @@ from core.utils.win32.constants import (
     SW_MAXIMIZE,
 )
 
+import pretty_log as _log
+
 
 def get_monitor_hwnd(window_hwnd: int) -> int:
     return int(MonitorFromWindow(window_hwnd))
@@ -349,7 +351,7 @@ def find_focused_screen(follow_mouse, follow_window, screens=None):
                 if screen.geometry().contains(pos) and is_valid(screen.name()):
                     return screen.name()
         except Exception as e:
-            logging.error(f"Exception in follow_mouse: {e}")
+            _log.log_error("Exception in follow_mouse", e)
 
     if follow_window:
         hwnd = win32gui.GetForegroundWindow()
@@ -384,7 +386,7 @@ def enable_autostart(app_name: str, executable_path: str) -> bool:
         logging.info(f"{app_name} added to startup")
         return True
     except Exception as e:
-        logging.error(f"Failed to add {app_name} to startup: {e}")
+        _log.log_error(f"Failed to add {app_name} to startup", e)
         return False
 
 
@@ -400,7 +402,7 @@ def disable_autostart(app_name: str) -> bool:
             logging.info(f"Startup entry for {app_name} not found")
         return True
     except Exception as e:
-        logging.error(f"Failed to remove {app_name} from startup: {e}")
+        _log.log_error(f"Failed to remove {app_name} from startup", e)
         return False
 
 
@@ -413,5 +415,5 @@ def is_autostart_enabled(app_name: str) -> bool:
     except WindowsError:
         return False
     except Exception as e:
-        logging.error(f"Failed to check startup status for {app_name}: {e}")
+        _log.log_error(f"Failed to check startup status for {app_name}", e)
         return False

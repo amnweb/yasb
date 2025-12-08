@@ -7,6 +7,8 @@ import win32process
 from core.utils.win32.bindings import kernel32 as k32
 from core.utils.win32.bindings import user32 as u32
 
+import pretty_log as _log
+
 # --- Resolution helpers ---
 
 
@@ -209,7 +211,7 @@ def close_application(hwnd: int, force: bool = False):
             try:
                 _, process_id = win32process.GetWindowThreadProcessId(hwnd)
             except Exception as e:
-                logging.error(f"Failed to get process ID for HWND {hwnd}: {e}")
+                _log.log_error(f"Failed to get process ID for HWND {hwnd}", e)
                 return
 
             if not process_id:
@@ -247,7 +249,7 @@ def close_application(hwnd: int, force: bool = False):
                 k32.CloseHandle(process_handle)
 
             except Exception as term_ex:
-                logging.error(f"Failed to terminate process {process_id}: {term_ex}")
+                _log.log_error(f"Failed to terminate process {process_id}", term_ex)
 
         else:
             # Graceful close path
@@ -286,4 +288,4 @@ def close_application(hwnd: int, force: bool = False):
                 logging.warning(f"EndTask unavailable/failed for HWND {target_hwnd}: {et_ex}")
 
     except Exception as e:
-        logging.error(f"Failed to close window {hwnd}: {e}")
+        _log.log_error(f"Failed to close window {hwnd}", e)

@@ -9,6 +9,7 @@ from core.event_service import EventService
 from core.utils.cli_server import CliPipeHandler
 from core.utils.win32.utilities import find_focused_screen
 
+import pretty_log as _log
 
 def reload_application(msg="Reloading Application..."):
     try:
@@ -27,7 +28,7 @@ def reload_application(msg="Reloading Application..."):
         if app is not None:
             QMetaObject.invokeMethod(app, "quit", Qt.ConnectionType.QueuedConnection)
     except Exception as e:
-        logging.error(f"Error during reload: {e}")
+        _log.log_error("Error during reload", e)
         os._exit(0)
 
 

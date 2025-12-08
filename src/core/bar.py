@@ -14,6 +14,8 @@ from core.utils.win32.win32_accent import Blur
 from core.validation.bar import BAR_DEFAULTS
 from settings import APP_BAR_TITLE
 
+import pretty_log as _log
+
 try:
     from core.utils.win32 import app_bar
 
@@ -96,7 +98,7 @@ class Bar(QWidget):
             self._os_theme_manager = OsThemeManager(self._bar_frame, self)
             self._os_theme_manager.update_theme_class()
         except Exception as e:
-            logging.error(f"Failed to initialize theme manager: {e}")
+            _log.log_error("Failed to initialize theme manager", e)
             self._os_theme_manager = None
 
         # Initialize fullscreen manager
@@ -104,7 +106,7 @@ class Bar(QWidget):
             try:
                 self._fullscreen_manager = FullscreenManager(self, self)
             except Exception as e:
-                logging.error(f"Failed to initialize fullscreen manager: {e}")
+                _log.log_error("Failed to initialize fullscreen manager", e)
                 self._fullscreen_manager = None
 
         self.position_bar(init)

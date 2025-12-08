@@ -10,6 +10,8 @@ from PyQt6.QtWidgets import QWidget
 from core.utils.alert_dialog import raise_info_alert
 from settings import DEFAULT_CONFIG_FILENAME
 
+import pretty_log as _log
+
 
 class WidgetBuilder(QObject):
     def __init__(self, widget_configs: dict):

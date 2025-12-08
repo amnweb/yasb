@@ -3,6 +3,7 @@ import os
 import re
 from typing import Dict, Set
 
+import pretty_log as _log
 
 class CSSProcessor:
     """
@@ -38,7 +39,7 @@ class CSSProcessor:
             with open(file_path, "r", encoding="utf-8") as file:
                 return file.read()
         except (FileNotFoundError, OSError) as e:
-            logging.error(f"CSSProcessor Error '{file_path}': {e}")
+            _log.log_error(f"CSSProcessor Error '{file_path}'", e)
         return ""
 
     def _remove_comments(self, css: str) -> str:

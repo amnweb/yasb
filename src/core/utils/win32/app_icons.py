@@ -29,6 +29,8 @@ from core.utils.win32.bindings import (
 from core.utils.win32.constants import PROCESS_QUERY_LIMITED_INFORMATION, SHGSI_ICON, SHGSI_LARGEICON
 from core.utils.win32.structs import BITMAP, BITMAPINFO, BITMAPINFOHEADER, ICONINFO, SHSTOCKICONINFO
 
+import pretty_log as _log
+
 pil_logger = logging.getLogger("PIL")
 pil_logger.setLevel(logging.INFO)
 
@@ -174,7 +176,7 @@ def get_window_icon(hwnd: int):
 
         return None
     except Exception as e:
-        logging.error(f"Error fetching icon: {e}")
+        _log.log_error("Error fetching icon", e)
         return None
 
 
@@ -410,5 +412,5 @@ def get_stock_icon(icon_id: int) -> Image.Image | None:
                 pass
 
     except Exception as e:
-        logging.error(f"Error getting stock icon {icon_id}: {e}")
+        _log.log_error(f"Error getting stock icon {icon_id}", e)
         return None

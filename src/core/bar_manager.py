@@ -15,6 +15,7 @@ from core.utils.controller import reload_application
 from core.utils.utilities import get_screen_by_name
 from core.utils.widget_builder import WidgetBuilder
 
+import pretty_log as _log
 
 class BarManager(QObject):
     styles_modified = pyqtSignal()
@@ -53,7 +54,7 @@ class BarManager(QObject):
         try:
             config = get_config(show_error_dialog=True)
         except Exception as e:
-            logging.error(f"Error loading config: {e}")
+            _log.log_error(f"Error loading config", e)
             return
         if config and (config != self.config):
             if any(

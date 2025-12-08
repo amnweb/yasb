@@ -24,6 +24,8 @@ import certifi
 from core.utils.utilities import ToastNotifier, app_data_path, get_app_identifier, get_architecture
 from settings import APP_ID, BUILD_VERSION, RELEASE_CHANNEL, SCRIPT_PATH
 
+import pretty_log as _log
+
 # GitHub API configuration
 GITHUB_API_URL = "https://api.github.com/repos/amnweb/yasb/releases/latest"
 GITHUB_API_DEV_URL = "https://api.github.com/repos/amnweb/yasb/releases/tags/dev"
@@ -275,10 +277,10 @@ class UpdateService:
             logging.warning(f"Network error checking for updates: {e.reason}")
             raise
         except json.JSONDecodeError as e:
-            logging.error(f"Failed to parse GitHub API response: {e}")
+            _log.log_error("Failed to parse GitHub API response", e)
             raise ValueError("Invalid JSON response from GitHub API")
         except Exception as e:
-            logging.error(f"Unexpected error checking for updates: {e}")
+            _log.log_error("Unexpected error checking for updates", e)
             raise
 
     def should_check_for_updates(self) -> bool:
