@@ -21,13 +21,12 @@ from PyQt6.QtWidgets import (
     QWidgetAction,
 )
 
+import pretty_log as _log
 from core.utils.controller import exit_application, reload_application
 from core.utils.utilities import refresh_widget_style
 from core.utils.win32.bindings import DwmGetWindowAttribute
 from core.utils.win32.constants import DWMWA_CLOAKED, S_OK
 from core.utils.win32.utilities import apply_qmenu_style, get_monitor_hwnd, get_window_rect
-
-import pretty_log as _log
 
 
 class AutoHideZone(QFrame):
@@ -419,7 +418,7 @@ class OsThemeManager(QObject):
                     value, _ = winreg.QueryValueEx(key, "AppsUseLightTheme")
                     return value == 0
         except Exception as e:
-            _log.log_error(f"Failed to determine Windows theme", e)
+            _log.log_error("Failed to determine Windows theme", e)
             return False
 
     def update_theme_class(self):

@@ -5,6 +5,7 @@ from typing import Dict, Set
 
 import pretty_log as _log
 
+
 class CSSProcessor:
     """
     Processes CSS files: handles @import, CSS variables, and removes comments.

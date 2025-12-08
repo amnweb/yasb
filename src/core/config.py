@@ -13,12 +13,11 @@ from cerberus import Validator, schema
 from yaml import dump, safe_load
 from yaml.parser import ParserError
 
+import pretty_log as _log
 import settings
 from core.utils.alert_dialog import raise_info_alert
 from core.utils.css_processor import CSSProcessor
 from core.validation.config import CONFIG_SCHEMA
-
-import pretty_log as _log
 
 SRC_CONFIGURATION_DIR = os.path.dirname(sys.executable) if getattr(sys, "frozen", False) else os.path.dirname(argv[0])
 HOME_CONFIGURATION_DIR = path.join(Path.home(), settings.DEFAULT_CONFIG_DIRECTORY)

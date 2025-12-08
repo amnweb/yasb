@@ -5,11 +5,11 @@ import sys
 from PyQt6.QtCore import QMetaObject, QProcess, Qt
 from PyQt6.QtWidgets import QApplication
 
+import pretty_log as _log
 from core.event_service import EventService
 from core.utils.cli_server import CliPipeHandler
 from core.utils.win32.utilities import find_focused_screen
 
-import pretty_log as _log
 
 def reload_application(msg="Reloading Application..."):
     try:

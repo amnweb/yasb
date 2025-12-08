@@ -21,10 +21,9 @@ from typing import Optional
 
 import certifi
 
+import pretty_log as _log
 from core.utils.utilities import ToastNotifier, app_data_path, get_app_identifier, get_architecture
 from settings import APP_ID, BUILD_VERSION, RELEASE_CHANNEL, SCRIPT_PATH
-
-import pretty_log as _log
 
 # GitHub API configuration
 GITHUB_API_URL = "https://api.github.com/repos/amnweb/yasb/releases/latest"

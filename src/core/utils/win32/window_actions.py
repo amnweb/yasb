@@ -4,10 +4,9 @@ import logging
 import win32con
 import win32process
 
+import pretty_log as _log
 from core.utils.win32.bindings import kernel32 as k32
 from core.utils.win32.bindings import user32 as u32
-
-import pretty_log as _log
 
 # --- Resolution helpers ---
 

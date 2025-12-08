@@ -13,6 +13,7 @@ from win32api import GetMonitorInfo, MonitorFromWindow
 from win32gui import GetClassName, GetWindowPlacement, GetWindowRect, GetWindowText
 from winrt.windows.management.deployment import PackageManager
 
+import pretty_log as _log
 from core.utils.utilities import is_windows_10
 from core.utils.win32.bindings import (
     CloseHandle,
@@ -31,8 +32,6 @@ from core.utils.win32.constants import (
     PROCESS_QUERY_LIMITED_INFORMATION,
     SW_MAXIMIZE,
 )
-
-import pretty_log as _log
 
 
 def get_monitor_hwnd(window_hwnd: int) -> int:

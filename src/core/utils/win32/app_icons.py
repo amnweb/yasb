@@ -12,6 +12,7 @@ from icoextract import IconExtractor
 from PIL import Image
 from win32con import DIB_RGB_COLORS
 
+import pretty_log as _log
 from core.utils.win32.aumid import GetApplicationUserModelId, get_aumid_for_window
 from core.utils.win32.aumid_icons import get_icon_for_aumid
 from core.utils.win32.bindings import (
@@ -28,8 +29,6 @@ from core.utils.win32.bindings import (
 )
 from core.utils.win32.constants import PROCESS_QUERY_LIMITED_INFORMATION, SHGSI_ICON, SHGSI_LARGEICON
 from core.utils.win32.structs import BITMAP, BITMAPINFO, BITMAPINFOHEADER, ICONINFO, SHSTOCKICONINFO
-
-import pretty_log as _log
 
 pil_logger = logging.getLogger("PIL")
 pil_logger.setLevel(logging.INFO)
