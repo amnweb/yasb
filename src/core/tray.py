@@ -1,4 +1,3 @@
-import logging
 import os
 import shutil
 import subprocess
@@ -10,6 +9,7 @@ from PyQt6.QtCore import QEvent, QSize, Qt
 from PyQt6.QtGui import QCursor, QIcon
 from PyQt6.QtWidgets import QMenu, QSystemTrayIcon
 
+import pretty_log as _log
 from core.bar_manager import BarManager
 from core.config import get_config
 from core.ui.windows.about import AboutDialog
@@ -61,7 +61,7 @@ class SystemTrayManager(QSystemTrayIcon):
         try:
             config = get_config(show_error_dialog=True)
         except Exception as e:
-            logging.error(f"Error loading config: {e}")
+            _log.log_error("Error loading config", e)
             return
         if config["komorebi"]:
             self.komorebi_start = config["komorebi"]["start_command"]
@@ -205,7 +205,7 @@ class SystemTrayManager(QSystemTrayIcon):
             wm_path = shutil.which(wm)
             return wm_path is not None
         except Exception as e:
-            logging.error(f"Error checking {wm} installation: {e}")
+            _log.log_error(f"Error checking {wm} installation", e)
             return False
 
     def _enable_startup(self):
@@ -224,7 +224,7 @@ class SystemTrayManager(QSystemTrayIcon):
         try:
             subprocess.run(["explorer", str(os.path.join(Path.home(), DEFAULT_CONFIG_DIRECTORY))])
         except Exception as e:
-            logging.error(f"Failed to open config directory: {e}")
+            _log.log_error("Failed to open config directory", e)
 
     def _run_wm_command(self, wm, command):
         def wm_command():
@@ -237,7 +237,7 @@ class SystemTrayManager(QSystemTrayIcon):
                     creationflags=subprocess.CREATE_NO_WINDOW,
                 )
             except Exception as e:
-                logging.error(f"Failed to start {wm}: {e}")
+                _log.log_error(f"Failed to start {wm}", e)
 
         threading.Thread(target=wm_command).start()
 
@@ -251,7 +251,7 @@ class SystemTrayManager(QSystemTrayIcon):
         try:
             webbrowser.open(url)
         except Exception as e:
-            logging.error(f"Failed to open browser: {e}")
+            _log.log_error("Failed to open browser", e)
 
     def _show_about_dialog(self):
         dialog = AboutDialog(self)
