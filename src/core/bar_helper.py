@@ -27,6 +27,8 @@ from core.utils.win32.bindings import DwmGetWindowAttribute
 from core.utils.win32.constants import DWMWA_CLOAKED, S_OK
 from core.utils.win32.utilities import apply_qmenu_style, get_monitor_hwnd, get_window_rect
 
+import log as _log
+
 
 class AutoHideZone(QFrame):
     """A transparent zone at the edge of the screen to detect when to show the bar"""
@@ -220,14 +222,14 @@ class FullscreenManager(QObject):
         try:
             self._timer.start()
         except Exception as e:
-            logging.error(f"Failed to start fullscreen polling: {e}")
+            _log.log_error("Failed to start fullscreen polling", e)
 
     def stop_monitoring(self):
         """Stop monitoring for fullscreen applications"""
         try:
             self._timer.stop()
         except Exception as e:
-            logging.error(f"Failed to stop fullscreen polling: {e}")
+            _log.log_error("Failed to stop fullscreen polling", e)
 
     def is_window_cloaked(self, hwnd):
         """Check if a window is cloaked (hidden by DWM)"""
@@ -518,7 +520,7 @@ class BarContextMenu:
                     self.parent._autohide_manager._hide_timer.start(self.parent._autohide_manager._autohide_delay)
 
         except Exception as e:
-            logging.error(f"Failed to restart autohide timer: {e}")
+            _log.log_error("Failed to restart autohide timer", e)
 
     def _populate_widgets_menu(self, widgets_menu):
         if not any(self._widgets.get(layout) for layout in ["left", "center", "right"]):
@@ -593,7 +595,7 @@ class BarContextMenu:
             widget.hide = controlled_hide
 
         except Exception as e:
-            logging.error(f"Failed to toggle widget {self._get_widget_display_name(widget)}: {e}")
+            _log.log_error(f"Failed to toggle widget {self._get_widget_display_name(widget)}", e)
 
     def _get_widget_display_name(self, widget):
         for layout_type, widget_list in self._widgets.items():
@@ -613,7 +615,7 @@ class BarContextMenu:
         try:
             subprocess.Popen("taskmgr", shell=True, creationflags=subprocess.CREATE_NO_WINDOW)
         except Exception as e:
-            logging.error(f"Failed to open Task Manager: {e}")
+            _log.log_error("Failed to open Task Manager", e)
 
     def _take_screenshot(self):
         """Take a screenshot of the bar with proper padding"""
@@ -669,7 +671,7 @@ class BarContextMenu:
             self._screenshot_flash()
 
         except Exception as e:
-            logging.error(f"Failed to take screenshot: {e}")
+            _log.log_error("Failed to take screenshot", e)
 
     def _screenshot_flash(self):
         """Create a flashing effect on the bar when taking screenshot"""
@@ -688,7 +690,7 @@ class BarContextMenu:
             self.flash_animation.start()
 
         except Exception as e:
-            logging.error(f"Failed to create flash effect: {e}")
+            _log.log_error("Failed to create flash effect", e)
 
     def _enable_autohide(self):
         """Enable autohide functionality for the bar"""
@@ -702,7 +704,7 @@ class BarContextMenu:
                 self.parent._autohide_manager.setup_autohide()
 
         except Exception as e:
-            logging.error(f"Failed to enable autohide: {e}")
+            _log.log_error("Failed to enable autohide", e)
 
     def _disable_autohide(self):
         """Disable autohide functionality"""
@@ -716,4 +718,4 @@ class BarContextMenu:
                 self.parent.show()
 
         except Exception as e:
-            logging.error(f"Failed to disable autohide: {e}")
+            _log.log_error("Failed to disable autohide", e)
