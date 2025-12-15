@@ -504,11 +504,13 @@ class AiChatWidget(BaseWidget):
 
     def _handle_widget_cli(self, widget: str, screen: str):
         """Handle widget CLI commands"""
-        if widget == "ai_chat":
-            current_screen = self.window().screen() if self.window() else None
-            current_screen_name = current_screen.name() if current_screen else None
-            if not screen or (current_screen_name and screen.lower() == current_screen_name.lower()):
-                self._toggle_chat()
+        # Match if widget is "ai_chat" (backward compatibility) or matches widget_config_name
+        if widget != "ai_chat" and widget != self.widget_config_name:
+            return
+        current_screen = self.window().screen() if self.window() else None
+        current_screen_name = current_screen.name() if current_screen else None
+        if not screen or (current_screen_name and screen.lower() == current_screen_name.lower()):
+            self._toggle_chat()
 
     def _show_chat(self):
         """Show the AI chat popup with all components initialized."""
