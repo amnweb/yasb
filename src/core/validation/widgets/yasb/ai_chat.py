@@ -164,6 +164,7 @@ VALIDATION_SCHEMA = {
                         "schema": {
                             "name": {"type": "string", "required": True},
                             "label": {"type": "string", "required": True},
+                            "default": {"type": "boolean", "required": False, "default": False},
                             "max_tokens": {"type": "integer", "required": False, "default": 0},
                             "temperature": {"type": "number", "required": False, "default": 0.7},
                             "top_p": {"type": "number", "required": False, "default": 0.95},
