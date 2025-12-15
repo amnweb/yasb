@@ -368,6 +368,9 @@ If you want to use different styles for the context menu, you can target the `.a
 
 > [!NOTE]
 > AI Chat widget supports toggle visibility using the `toggle-widget ai_chat` command in the CLI. More information about the CLI commands can be found in the [CLI documentation](https://github.com/amnweb/yasb/wiki/CLI#toggle-widget-visibility).
+> Additionally, you can toggle visibility of specific widget instances by their configuration name — e.g. `toggle-widget ai_chat1` or `toggle-widget <widget-name>`.
+
+
 
 ## Preview of the Widget
 ![AI Chat YASB Widget](assets/ec1b9764-1a027260-3e58-1f50-e78022a4eede.png)
