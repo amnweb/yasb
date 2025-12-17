@@ -1,5 +1,6 @@
 DEFAULTS = {
     "label": "AI Chat",
+    "auto_focus_input": False,
     "chat": {
         "blur": True,
         "round_corners": True,
@@ -29,6 +30,7 @@ DEFAULTS = {
 
 VALIDATION_SCHEMA = {
     "label": {"type": "string", "default": DEFAULTS["label"]},
+    "auto_focus_input": {"type": "boolean", "default": DEFAULTS["auto_focus_input"]},
     "container_padding": {
         "type": "dict",
         "required": False,
@@ -164,6 +166,7 @@ VALIDATION_SCHEMA = {
                         "schema": {
                             "name": {"type": "string", "required": True},
                             "label": {"type": "string", "required": True},
+                            "default": {"type": "boolean", "required": False, "default": False},
                             "max_tokens": {"type": "integer", "required": False, "default": 0},
                             "temperature": {"type": "number", "required": False, "default": 0.7},
                             "top_p": {"type": "number", "required": False, "default": 0.95},

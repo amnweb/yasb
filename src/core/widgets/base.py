@@ -23,6 +23,7 @@ class BaseWidget(QWidget):
         self.bar = None
         self.bar_id = None
         self.monitor_hwnd = None
+        self.widget_config_name = None
 
         if class_name:
             self._widget_frame.setProperty("class", f"widget {class_name}")

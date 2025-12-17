@@ -22,11 +22,13 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from core.event_service import EventService
 from core.utils.utilities import PopupWidget, add_shadow
 from core.utils.widgets.ai_chat.client import AiChatClient
 from core.utils.widgets.ai_chat.client_helper import format_chat_text
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.win32.utilities import apply_qmenu_style
+from core.utils.win32.window_actions import force_foreground_focus
 from core.validation.widgets.yasb.ai_chat import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
 
@@ -226,10 +228,12 @@ class NotificationLabel(QLabel):
 class AiChatWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
     _persistent_chat_history = {}
+    handle_widget_cli = pyqtSignal(str, str)
 
     def __init__(
         self,
         label: str,
+        auto_focus_input: bool,
         chat: dict,
         icons: dict,
         notification_dot: dict[str, Any],
@@ -242,12 +246,14 @@ class AiChatWidget(BaseWidget):
     ):
         super().__init__(class_name="ai-chat-widget")
         self._label_content = label
+        self._auto_focus_input = auto_focus_input
         self._icons = icons
         self._notification_dot: dict[str, Any] = notification_dot
         self._providers = providers or []
         self._provider = None
         self._provider_config = None
         self._model = None
+        self._initialize_provider_and_model()
         self._popup_chat = None
         self._animation = animation
         self._padding = container_padding
@@ -277,6 +283,38 @@ class AiChatWidget(BaseWidget):
         self._thinking_step = 0
         self._thinking_label = None
         self._new_notification = False
+
+        self._event_service = EventService()
+        self.handle_widget_cli.connect(self._handle_widget_cli)
+        self._event_service.register_event("handle_widget_cli", self.handle_widget_cli)
+
+    def _initialize_provider_and_model(self):
+        """Initialize provider and model by finding the model with default: true flag.
+
+        Validates that only one model has the default flag set.
+        """
+        default_models = []
+
+        # Find all models with default flag set to true
+        for provider_cfg in self._providers:
+            for model_cfg in provider_cfg.get("models", []):
+                if model_cfg.get("default", False):
+                    default_models.append((provider_cfg["provider"], model_cfg["name"]))
+
+        # Logs warning if more than one model has default flag set
+        if len(default_models) > 1:
+            logging.warning(
+                f"Multiple models have default flag set: {default_models}. Using first model: {default_models[0]}"
+            )
+
+        # Set the default provider and model if found
+        if default_models:
+            self._provider = default_models[0][0]
+            self._model = default_models[0][1]
+
+        # Set provider config
+        if self._provider:
+            self._provider_config = next((p for p in self._providers if p["provider"] == self._provider), None)
 
     def _create_dynamically_label(self, content: str):
         label_parts = re.split("(<span.*?>.*?</span>)", content)
@@ -440,6 +478,19 @@ class AiChatWidget(BaseWidget):
             if not self._streaming_state.get("partial_text", ""):
                 self._start_thinking_animation(msg_label)
 
+    def _focus_input(self):
+        """Activate the popup window and set focus to input field"""
+        if not self._is_popup_valid():
+            return
+        try:
+            # Use Win32 API to force the popup window to foreground
+            hwnd = int(self._popup_chat.winId())
+            force_foreground_focus(hwnd)
+            # Then set focus to the input field
+            self.input_edit.setFocus()
+        except RuntimeError as e:
+            logging.error(f"Error bringing ai_chat window to foreground: {e}")
+
     def _toggle_chat(self):
         # If popup is not visible or doesn't exist, open it
         if self._popup_chat is None or not (self._popup_chat and self._popup_chat.isVisible()):
@@ -450,6 +501,16 @@ class AiChatWidget(BaseWidget):
             self._popup_chat.hide()
             self._popup_chat.deleteLater()
             self._popup_chat = None
+
+    def _handle_widget_cli(self, widget: str, screen: str):
+        """Handle widget CLI commands"""
+        # Match if widget is "ai_chat" (backward compatibility) or matches widget_config_name
+        if widget != "ai_chat" and widget != self.widget_config_name:
+            return
+        current_screen = self.window().screen() if self.window() else None
+        current_screen_name = current_screen.name() if current_screen else None
+        if not screen or (current_screen_name and screen.lower() == current_screen_name.lower()):
+            self._toggle_chat()
 
     def _show_chat(self):
         """Show the AI chat popup with all components initialized."""
@@ -610,6 +671,8 @@ class AiChatWidget(BaseWidget):
         self._popup_chat.show()
         self._reconnect_streaming_if_needed()
         self._update_send_button_state()
+        if self._auto_focus_input:
+            self._focus_input()
 
     def _populate_provider_menu(self):
         self.provider_menu.clear()

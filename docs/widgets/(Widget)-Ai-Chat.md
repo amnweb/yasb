@@ -6,6 +6,7 @@ The AI Chat widget provides a flexible, interactive chat interface that works wi
 | Option              | Type    | Default         | Description |
 |---------------------|---------|-----------------|-------------|
 | `label`             | string  | `"AI Chat"`    | The label displayed for the widget. |
+| `auto_focus_input`  | boolean | `false`         | Automatically focus the input field when the chat window is opened. |
 | `chat`              | dict    | See example     | Popup menu configuration (blur, corners, etc). |
 | `icons`             | dict    | See example     | Icons for send, stop, clear, assistant. |
 | `notification_dot`  | dict    | `{'enabled': false, 'corner': 'bottom_left', 'color': 'red', 'margin': [1, 1]}` | A dictionary specifying the notification dot settings for the widget. |
@@ -22,6 +23,7 @@ ai_chat:
   type: "yasb.ai_chat.AiChatWidget"
   options:
     label: "<span>\uf086</span>"
+    auto_focus_input: true
     chat:
       blur: true
       round_corners: true
@@ -58,6 +60,7 @@ ai_chat:
           label: "GPT3.5 Turbo"
         - name: "gpt-4"
           label: "GPT4"
+          default: true
           temperature: 0.3
           top_p: 0.95
           max_tokens: 4096
@@ -91,6 +94,7 @@ This widget is ideal for integrating any LLM service that follows the OpenAI API
 ## Description of Options
 
 - **label:** The label displayed for the widget.
+- **auto_focus_input:** Automatically focus the input field when the chat window is opened.
 - **chat:** Dictionary for popup menu appearance.
   - **blur**: Enable blur effect
   - **round_corners**: Enable system rounded corners
@@ -125,6 +129,7 @@ This widget is ideal for integrating any LLM service that follows the OpenAI API
   - **models**: List of models, each with:
     - **name**: Model name
     - **label**: Display label
+    - **default**: Optionally mark this provider+model as the default selection (only one model per widget should have this set to `true`)
     - **max_tokens**: Max tokens per response
     - **temperature**: Sampling temperature
     - **top_p**: Nucleus sampling
@@ -360,6 +365,12 @@ If you want to use different styles for the context menu, you can target the `.a
 - Endpoints must be return valid responses with openai-compatible formats.
 - If instructions are a file path, it must end with `_chatmode.md` and be accessible.
 - If streaming fails, check network/API credentials and error messages.
+
+> [!NOTE]
+> AI Chat widget supports toggle visibility using the `toggle-widget ai_chat` command in the CLI. More information about the CLI commands can be found in the [CLI documentation](https://github.com/amnweb/yasb/wiki/CLI#toggle-widget-visibility).
+> Additionally, you can toggle visibility of specific widget instances by their configuration name — e.g. `toggle-widget ai_chat1` or `toggle-widget <widget-name>`.
+
+
 
 ## Preview of the Widget
 ![AI Chat YASB Widget](assets/ec1b9764-1a027260-3e58-1f50-e78022a4eede.png)
