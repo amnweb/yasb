@@ -64,7 +64,7 @@ dev = [
     "types-pillow",
 ]
 packaging = [
-    "cx-freeze==8.5.0",
+    "cx-freeze==8.5.1",
     "python-msilib @ git+https://github.com/amnweb/python-msilib.git"
 ]
 [tool.hatch.metadata]
