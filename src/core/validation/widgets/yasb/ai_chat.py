@@ -15,6 +15,7 @@ DEFAULTS = {
         "stop": "\uf04d",
         "clear": "\uf1f8",
         "assistant": "\udb81\ude74",
+        "attach": "\uf0c6",
     },
     "notification_dot": {
         "enabled": True,
@@ -71,6 +72,7 @@ VALIDATION_SCHEMA = {
             "stop": {"type": "string"},
             "clear": {"type": "string"},
             "assistant": {"type": "string"},
+            "attach": {"type": "string"},
         },
     },
     "notification_dot": {
@@ -167,6 +169,8 @@ VALIDATION_SCHEMA = {
                             "max_tokens": {"type": "integer", "required": False, "default": 0},
                             "temperature": {"type": "number", "required": False, "default": 0.7},
                             "top_p": {"type": "number", "required": False, "default": 0.95},
+                            "max_image_size": {"type": "integer", "required": False, "default": 0, "min": 0},
+                            "max_attachment_size": {"type": "integer", "required": False, "default": 256, "min": 0},
                             "instructions": {
                                 "type": "string",
                                 "required": False,

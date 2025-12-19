@@ -1,18 +1,34 @@
+import base64
 import functools
 import logging
 import os
 import re
+from datetime import datetime
 from enum import StrEnum
+from pathlib import Path
 from typing import Any
 
-from PyQt6.QtCore import QEvent, QObject, QPoint, QPropertyAnimation, Qt, QThread, QTimer, pyqtSignal
-from PyQt6.QtGui import QColor, QContextMenuEvent, QKeyEvent, QMouseEvent, QPainter, QPaintEvent
+from PyQt6.QtCore import (
+    QBuffer,
+    QEvent,
+    QIODevice,
+    QObject,
+    QPoint,
+    QPropertyAnimation,
+    Qt,
+    QThread,
+    QTimer,
+    pyqtSignal,
+)
+from PyQt6.QtGui import QColor, QContextMenuEvent, QImage, QKeyEvent, QMouseEvent, QPainter, QPaintEvent
 from PyQt6.QtWidgets import (
     QApplication,
+    QFileDialog,
     QFrame,
     QHBoxLayout,
     QLabel,
     QMenu,
+    QMessageBox,
     QPushButton,
     QScrollArea,
     QSizePolicy,
@@ -96,6 +112,14 @@ class ChatInputEdit(ContextMenuMixin, QTextEdit):
             super().keyPressEvent(event)
 
     def insertFromMimeData(self, source):
+        # Let parent handle attachments/images pasted from clipboard; fallback to text paste
+        parent = getattr(self, "_parent_widget", None)
+        if parent and hasattr(parent, "_handle_paste_mime"):
+            try:
+                if parent._handle_paste_mime(source):
+                    return
+            except Exception:
+                pass
         self.insertPlainText(source.text())
 
 
@@ -256,6 +280,7 @@ class AiChatWidget(BaseWidget):
         self._container_shadow = container_shadow
         self._notification_label: NotificationLabel | None = None
         self._input_draft = ""
+        self._attachments: list[dict[str, Any]] = []
         self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
         self._widget_container_layout.setContentsMargins(
@@ -321,16 +346,21 @@ class AiChatWidget(BaseWidget):
             self._notification_label.show_dot(self._new_notification)
 
     def _update_send_button_state(self):
-        """Update send button state based on provider and model selection and input text"""
+        """Update send button state based on provider/model selection and pending input"""
         if not self._is_popup_valid():
             return
 
         try:
-            # Enable send button only if provider, model are selected and input has text
+            # Enable send button only if provider, model are selected and there is text or attachments
             has_provider_and_model = bool(self._provider and self._model and not self._model.startswith("No models"))
             has_input_text = bool(self.input_edit.toPlainText().strip())
-            is_enabled = has_provider_and_model and has_input_text
+            has_attachments = bool(getattr(self, "_attachments", []))
+            is_enabled = has_provider_and_model and (has_input_text or has_attachments)
             self.send_btn.setEnabled(is_enabled)
+
+            # Enable attachment button only when a provider/model is selected and attachments are supported
+            if hasattr(self, "attach_btn"):
+                self.attach_btn.setEnabled(has_provider_and_model and self._attachments_supported())
         except RuntimeError:
             pass
 
@@ -359,6 +389,86 @@ class AiChatWidget(BaseWidget):
         if not (self._provider_config and self._provider_config.get("models")):
             return None
         return next((m for m in self._provider_config["models"] if m["name"] == self._model), None)
+
+    def _get_max_image_bytes(self) -> int:
+        """Get max image size in bytes from current model config."""
+        model_config = self._get_model_config()
+        if model_config:
+            return model_config.get("max_image_size", 0) * 1024
+        return 0  # Default disabled
+
+    def _get_max_attachment_bytes(self) -> int:
+        """Get max text attachment size in bytes from current model config."""
+        model_config = self._get_model_config()
+        if model_config:
+            return model_config.get("max_attachment_size", 0) * 1024
+        return 0  # Default disabled
+
+    def _attachments_supported(self) -> bool:
+        """Check if current model supports any type of attachments."""
+        return self._get_max_image_bytes() > 0 or self._get_max_attachment_bytes() > 0
+
+    def _prune_attachments_for_model(self) -> bool:
+        """Remove attachments that are not supported by the current model.
+
+        Returns True if any attachments were removed.
+        """
+        if not hasattr(self, "_attachments"):
+            return False
+
+        max_image_bytes = self._get_max_image_bytes()
+        max_attachment_bytes = self._get_max_attachment_bytes()
+
+        pruned: list[dict[str, Any]] = []
+        for att in getattr(self, "_attachments", []):
+            if att.get("is_image"):
+                if max_image_bytes > 0:
+                    pruned.append(att)
+            else:
+                if max_attachment_bytes > 0:
+                    pruned.append(att)
+
+        changed = len(pruned) != len(getattr(self, "_attachments", []))
+        self._attachments = pruned
+        return changed
+
+    def _compress_image_if_needed(self, image_bytes: bytes, max_bytes: int) -> tuple[bytes, bool]:
+        """Compress image bytes to fit within max_bytes using iterative quality reduction.
+
+        Returns:
+            tuple[bytes, bool]: (compressed_bytes, was_compressed)
+        """
+        if len(image_bytes) <= max_bytes:
+            return image_bytes, False
+
+        try:
+            # Load image from bytes
+            img = QImage()
+            img.loadFromData(image_bytes)
+            if img.isNull():
+                return image_bytes, False
+
+            # Start with quality 85 and reduce until we're under max_bytes
+            quality = 85
+            best_bytes = image_bytes
+            while quality >= 5:
+                qbuffer = QBuffer()
+                qbuffer.open(QIODevice.OpenModeFlag.WriteOnly)
+                img.save(qbuffer, "JPEG", quality)
+                compressed_bytes = qbuffer.data().data()
+                qbuffer.close()
+
+                if len(compressed_bytes) <= max_bytes:
+                    # This quality works, save it
+                    best_bytes = compressed_bytes
+                    return best_bytes, True
+                quality -= 5
+
+            # Even at quality 5, still too large - return best attempt
+            return best_bytes, True
+        except Exception as e:
+            logging.exception(f"Failed to compress image: {e}")
+            return image_bytes, False
 
     def _reconnect_streaming_if_needed(self):
         """Reconnect streaming state when popup is reopened"""
@@ -572,8 +682,26 @@ class AiChatWidget(BaseWidget):
 
         footer = QFrame()
         footer.setProperty("class", "chat-footer")
-        footer_layout = QHBoxLayout(footer)
+        footer_layout = QVBoxLayout(footer)
         footer_layout.setContentsMargins(0, 0, 0, 0)
+        footer_layout.setSpacing(6)
+
+        attachments_row = QHBoxLayout()
+        attachments_row.setContentsMargins(4, 0, 0, 0)
+        attachments_row.setSpacing(6)
+        self.attachments_layout = attachments_row
+        footer_layout.addLayout(attachments_row)
+
+        input_row = QHBoxLayout()
+        input_row.setContentsMargins(0, 0, 0, 0)
+        input_row.setSpacing(4)
+
+        self.attach_btn = QPushButton(self._icons["attach"])
+        self.attach_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.attach_btn.setProperty("class", "attach-button")
+        self.attach_btn.clicked.connect(self._on_add_attachment)
+        input_row.addWidget(self.attach_btn)
+
         self.input_edit = ChatInputEdit()
         self.input_edit.setProperty("class", "chat-input")
         self.input_edit.setPlaceholderText("Type your message...")
@@ -583,24 +711,31 @@ class AiChatWidget(BaseWidget):
         self.input_edit.set_parent_widget(self)
         if hasattr(self, "_input_draft") and self._input_draft:
             self.input_edit.setPlainText(self._input_draft)
+        input_row.addWidget(self.input_edit, stretch=1)
+
         self.send_btn = QPushButton(self._icons["send"])
         self.send_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.send_btn.setProperty("class", "send-button")
         self.send_btn.clicked.connect(self._on_send_clicked)
+        input_row.addWidget(self.send_btn)
+
         self.stop_btn = QPushButton(self._icons["stop"])
         self.stop_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.stop_btn.setProperty("class", "stop-button")
         self.stop_btn.clicked.connect(self._on_stop_clicked)
         self.stop_btn.setVisible(False)
+        input_row.addWidget(self.stop_btn)
+
         self.clear_btn = QPushButton(self._icons["clear"])
         self.clear_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.clear_btn.setProperty("class", "clear-button")
         self.clear_btn.clicked.connect(self._on_clear_chat)
-        footer_layout.addWidget(self.input_edit, stretch=1)
-        footer_layout.addWidget(self.send_btn)
-        footer_layout.addWidget(self.stop_btn)
-        footer_layout.addWidget(self.clear_btn)
+        input_row.addWidget(self.clear_btn)
+
+        footer_layout.addLayout(input_row)
         layout.addWidget(footer)
+        # Refresh attachments UI to show any existing attachments
+        self._refresh_attachments_ui()
         self._popup_chat.setPosition(
             alignment=self._chat["alignment"],
             direction=self._chat["direction"],
@@ -687,8 +822,6 @@ class AiChatWidget(BaseWidget):
     def _show_empty_chat_placeholder(self):
         """Show the empty chat placeholder with greeting."""
         self._remove_placeholder()  # Ensure only one placeholder exists
-        from datetime import datetime
-
         hour = datetime.now().hour
         greeting = "Good morning" if 5 <= hour < 12 else "Good afternoon" if 12 <= hour < 18 else "Good evening"
         placeholder = QWidget()
@@ -741,7 +874,9 @@ class AiChatWidget(BaseWidget):
 
         for idx in range(start_idx, end_idx):
             msg = self._history_to_load[idx]
-            self._append_message(msg["role"], msg["content"])
+            # Compute display text lazily from history entry
+            display_text = self._compute_display_for_history_entry(msg)
+            self._append_message(msg["role"], display_text)
 
         self._message_batch_index = end_idx
 
@@ -788,12 +923,16 @@ class AiChatWidget(BaseWidget):
         if key in AiChatWidget._persistent_chat_history:
             del AiChatWidget._persistent_chat_history[key]
         self._render_chat_history()
+        self._attachments = []
+        self._refresh_attachments_ui()
+        self._update_send_button_state()
 
     def _on_popup_destroyed(self, *args):
         if hasattr(self, "input_edit"):
             self._input_draft = self.input_edit.toPlainText()
         else:
             self._input_draft = ""
+        # Keep attachments in memory across popup close/reopen
         if hasattr(self, "_loading_label"):
             del self._loading_label
         self._popup_chat = None
@@ -812,6 +951,9 @@ class AiChatWidget(BaseWidget):
             self._provider_config = next((p for p in self._providers if p["provider"] == provider_name), None)
             self._populate_model_menu()
             self._render_chat_history()
+            # Remove any attachments that are not supported by the new model
+            self._prune_attachments_for_model()
+            self._refresh_attachments_ui()
             self._update_send_button_state()
 
         for action in self.provider_menu.actions():
@@ -856,6 +998,9 @@ class AiChatWidget(BaseWidget):
                 self._model = model_cfg["name"]
                 self.model_btn.setText(model_label)
                 self._render_chat_history()
+                # Remove any attachments that are not supported by the new model
+                self._prune_attachments_for_model()
+                self._refresh_attachments_ui()
                 # Update send button state after model change
                 self._update_send_button_state()
                 break
@@ -865,17 +1010,381 @@ class AiChatWidget(BaseWidget):
 
     def _on_send_clicked(self):
         user_text = self.input_edit.toPlainText().strip()
-        if not user_text or not self._provider or not self._model or self._model.startswith("No models"):
+        has_attachments = bool(self._attachments)
+        if (
+            (not user_text and not has_attachments)
+            or not self._provider
+            or not self._model
+            or self._model.startswith("No models")
+        ):
             return
+
+        payload_text, ui_text, images, attachment_texts = self._compose_user_message(user_text)
+
+        # Preserve attachments for history entry before clearing UI state
+        attachments_copy = [dict(att) for att in self._attachments]
+
         self.input_edit.clear()
-        self._append_message("user", user_text)
-        self._add_to_history("user", user_text)
+        self._attachments = []
+        self._refresh_attachments_ui()
+        self._append_message("user", ui_text)
+        # Store structured entry: keep payload (content), original user_text and attachments
+        self._add_to_history(
+            "user",
+            payload_text,
+            user_text=user_text,
+            attachments=attachments_copy,
+        )
         self._set_ui_state(streaming=True)
         self.stop_btn.setEnabled(False)
         self._stop_event = False
         self._send_to_api()
         self.chat_widget.layout().activate()
         QTimer.singleShot(0, self._scroll_to_bottom)
+
+    def _on_add_attachment(self):
+        """Open a file picker and stage selected files for the next message."""
+        if not self._is_popup_valid():
+            return
+        files: list[str] = []
+        popup = self._popup_chat
+        # Store original flags and switch to Tool window to prevent auto-close on focus loss
+        original_flags = popup.windowFlags()
+        try:
+            popup.set_auto_close_enabled(False)
+            popup.setWindowFlags(
+                Qt.WindowType.Tool
+                | Qt.WindowType.FramelessWindowHint
+                | Qt.WindowType.WindowStaysOnTopHint
+                | Qt.WindowType.NoDropShadowWindowHint
+            )
+            popup.show()  # Required after changing window flags
+
+            files, _ = QFileDialog.getOpenFileNames(
+                None,
+                "Select files",
+                "",
+                "All Files (*)",
+            )
+        finally:
+            if popup and self._is_popup_valid():
+                popup.setWindowFlags(original_flags)
+                popup.show()  # Required after changing window flags
+                popup.set_auto_close_enabled(True)
+
+        if not files:
+            return
+
+        added_any = False
+        for file_path in files:
+            if self._add_attachment(file_path):
+                added_any = True
+
+        if added_any:
+            self._refresh_attachments_ui()
+            self._update_send_button_state()
+
+    def _handle_paste_mime(self, mime) -> bool:
+        """Handle pasted files/images from the clipboard. Returns True if handled."""
+        if not self._is_popup_valid():
+            return False
+
+        added_any = False
+
+        # Handle file paths from clipboard (e.g., copied files from Explorer)
+        if mime.hasUrls():
+            for url in mime.urls():
+                if url.isLocalFile():
+                    if self._add_attachment(url.toLocalFile()):
+                        added_any = True
+            if added_any:
+                self._refresh_attachments_ui()
+                self._update_send_button_state()
+            # Return True even if files were rejected to prevent default paste behavior (such as pasting file-urls to the input field)
+            return True
+
+        # Handle image data from clipboard
+        if mime.hasImage():
+            image_data = mime.imageData()
+            if isinstance(image_data, QImage):
+                try:
+                    # Convert QImage directly to base64 without using temp files
+                    buffer = QBuffer()
+                    buffer.open(QIODevice.OpenModeFlag.WriteOnly)
+                    image_data.save(buffer, "PNG")
+                    img_bytes = buffer.data().data()
+                    buffer.close()
+
+                    # Compress if needed to fit within max_image_bytes
+                    max_image_bytes = self._get_max_image_bytes()
+                    compressed = False
+                    if max_image_bytes > 0 and len(img_bytes) > max_image_bytes:
+                        img_bytes, compressed = self._compress_image_if_needed(img_bytes, max_image_bytes)
+
+                    # Create attachment dict directly from memory
+                    b64_data = base64.b64encode(img_bytes).decode("ascii")
+                    image_url = f"data:image/png;base64,{b64_data}"
+
+                    # Generate a unique identifier for this clipboard image
+                    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+                    clipboard_name = f"clipboard_image_{timestamp}.png"
+
+                    attachment = {
+                        "path": clipboard_name,  # Virtual path identifier
+                        "name": clipboard_name,
+                        "size": len(img_bytes),
+                        "is_image": True,
+                        "image_url": image_url,
+                        "prompt": f"[Image: {clipboard_name}{' (compressed)' if compressed else ''}]",
+                        "is_clipboard": True,  # Mark as clipboard to avoid file operations
+                        "compressed": compressed,
+                    }
+
+                    self._attachments.append(attachment)
+                    added_any = True
+                except Exception as e:
+                    logging.exception(f"Failed to process clipboard image: {e}")
+            # Return True even if image was rejected to prevent default paste behavior
+            if added_any:
+                self._refresh_attachments_ui()
+                self._update_send_button_state()
+            return True
+
+        return False
+
+    def _add_attachment(self, file_path: str) -> bool:
+        """Read file metadata and safe preview content for prompt inclusion."""
+        try:
+            path = Path(file_path)
+        except TypeError:
+            return False
+
+        if not path.exists() or not path.is_file():
+            return False
+
+        if any(att.get("path") == str(path) for att in self._attachments):
+            return False
+
+        attachment = self._read_attachment(path)
+        if not attachment:
+            return False
+
+        self._attachments.append(attachment)
+        return True
+
+    def _read_attachment(self, path: Path) -> dict[str, Any] | None:
+        """Return attachment payload with size-safe content for prompting."""
+        try:
+            raw = path.read_bytes()
+        except Exception as e:
+            logging.error(f"Failed to read attachment {path}: {e}")
+            return None
+
+        size = len(raw)
+        suffix = path.suffix.lower()
+
+        # Check if this is an image file
+        image_extensions = {".png", ".jpg", ".jpeg", ".gif", ".webp"}
+        mime_types = {
+            ".png": "image/png",
+            ".jpg": "image/jpeg",
+            ".jpeg": "image/jpeg",
+            ".gif": "image/gif",
+            ".webp": "image/webp",
+        }
+
+        if suffix in image_extensions:
+            # Check if images are supported
+            max_image_bytes = self._get_max_image_bytes()
+            if max_image_bytes == 0:
+                # Reject images if not supported by this model
+                QTimer.singleShot(
+                    0,
+                    lambda: QMessageBox.warning(
+                        self,
+                        "Images Not Supported",
+                        f"{path.name} cannot be attached.\n\nThis model does not support image attachments.",
+                    ),
+                )
+                return None
+
+            # For images, compress if needed to get as close as possible to max_image_bytes
+            if max_image_bytes > 0 and size > max_image_bytes:
+                raw, compressed = self._compress_image_if_needed(raw, max_image_bytes)
+                size = len(raw)
+            else:
+                compressed = False
+
+            mime_type = mime_types.get(suffix, "image/png")
+            b64_data = base64.b64encode(raw).decode("ascii")
+            image_url = f"data:{mime_type};base64,{b64_data}"
+
+            return {
+                "path": str(path),
+                "name": path.name,
+                "size": size,
+                "is_image": True,
+                "image_url": image_url,
+                "prompt": f"[Image: {path.name}{' (compressed)' if compressed else ''}]",
+                "compressed": compressed,
+            }
+
+        # For non-image files, only allow plain text (UTF-8 decodable)
+        # Binary files are not supported as the API only accepts text and image_url types
+        max_attachment_bytes = self._get_max_attachment_bytes()
+        truncated = False
+
+        # Try to decode as UTF-8 text - if it fails, treat as binary
+        try:
+            content_str = raw.decode("utf-8")
+        except UnicodeDecodeError:
+            # Reject binary files that can't be decoded as UTF-8
+            QTimer.singleShot(
+                0,
+                lambda: QMessageBox.warning(
+                    self,
+                    "Unsupported File Type",
+                    f"{path.name} cannot be attached.\n\n"
+                    f"Only text files and images are supported.\n"
+                    f"This file appears to be binary and cannot be sent.",
+                ),
+            )
+            return None
+
+        # Truncate if needed (after successful decode)
+        if max_attachment_bytes > 0 and size > max_attachment_bytes:
+            content_str = content_str[:max_attachment_bytes]
+            truncated = True
+
+        header = (
+            f"[Attachment: {path.name} | size={self._human_readable_size(size)}"
+            + (" | truncated" if truncated else "")
+            + "]"
+        )
+
+        prompt_block = f"{header}\n{content_str}"
+
+        return {
+            "path": str(path),
+            "name": path.name,
+            "size": size,
+            "truncated": truncated,
+            "is_image": False,
+            "prompt": prompt_block,
+        }
+
+    def _remove_attachment(self, path: str):
+        self._attachments = [att for att in self._attachments if att.get("path") != path]
+        self._refresh_attachments_ui()
+        self._update_send_button_state()
+
+    def _refresh_attachments_ui(self):
+        """Render small chips for staged attachments."""
+        if not hasattr(self, "attachments_layout"):
+            return
+
+        layout = self.attachments_layout
+        while layout.count():
+            item = layout.takeAt(0)
+            widget = item.widget()
+            if widget:
+                widget.setParent(None)
+                widget.deleteLater()
+
+        if not self._attachments:
+            return
+
+        for attachment in self._attachments:
+            chip = QFrame()
+            chip.setProperty("class", "attachment-chip")
+            chip_layout = QHBoxLayout(chip)
+            chip_layout.setContentsMargins(6, 2, 6, 2)
+            chip_layout.setSpacing(4)
+
+            name_label = QLabel(attachment["name"])
+            name_label.setProperty("class", "attachment-label")
+            remove_btn = QPushButton("x")
+            remove_btn.setProperty("class", "attachment-remove-button")
+            remove_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            remove_btn.setFixedWidth(20)
+            remove_btn.setFixedHeight(20)
+            remove_btn.clicked.connect(lambda _=False, p=attachment["path"]: self._remove_attachment(p))
+
+            chip_layout.addWidget(name_label)
+            chip_layout.addWidget(remove_btn)
+            chip_layout.addStretch(1)
+            layout.addWidget(chip)
+
+    def _compose_user_message(self, user_text: str) -> tuple[str, str, list, list[str]]:
+        """Return (payload_text, display_text, images, attachment_texts) including any attachments."""
+        text_attachments = [att for att in self._attachments if not att.get("is_image")]
+        image_attachments = [att for att in self._attachments if att.get("is_image")]
+
+        # Build text payload for non-image attachments (for display/history)
+        payload_text = user_text
+        if text_attachments:
+            lines = ["Attachments:"]
+            for idx, att in enumerate(text_attachments, 1):
+                lines.append(f"{idx}) {att['prompt']}")
+            attachments_text = "\n".join(lines)
+            payload_text = f"{user_text}\n\n{attachments_text}" if user_text else attachments_text
+
+        # Build display text with size info
+        display_text = user_text
+        if self._attachments:
+            lines = ["Attachments (sent to AI):"]
+            for idx, att in enumerate(self._attachments, 1):
+                info = f"{idx}) {att['name']} ({self._human_readable_size(att.get('size', 0))})"
+                if att.get("truncated"):
+                    info += " [truncated]"
+                if att.get("compressed"):
+                    info += " [compressed]"
+                lines.append(info)
+            display_summary = "\n".join(lines)
+            display_text = f"{user_text}\n\n{display_summary}" if user_text else display_summary
+
+        # Collect image URLs for multimodal API
+        images = [att["image_url"] for att in image_attachments]
+
+        # Return individual attachment texts for separate API text blocks
+        attachment_texts = [att["prompt"] for att in text_attachments]
+
+        return payload_text, display_text, images, attachment_texts
+
+    def _prepare_attachments_for_display(self, attachments: list[dict] | None = None) -> str:
+        """Prepare a short attachments summary string from staged or provided attachments."""
+        attachments = self._attachments if attachments is None else attachments
+        if not attachments:
+            return ""
+
+        lines = ["Attachments (sent to AI):"]
+        for idx, attachment in enumerate(attachments, 1):
+            info = f"{idx}) {attachment.get('name')} ({self._human_readable_size(attachment.get('size', 0))})"
+            if attachment.get("truncated"):
+                info += " [truncated]"
+            if attachment.get("compressed"):
+                info += " [compressed]"
+            lines.append(info)
+        return "\n".join(lines)
+
+    def _compute_display_for_history_entry(self, entry: dict) -> str:
+        """Compute a UI-friendly display string for a history entry.
+
+        Backwards compatible: uses stored user_text + attachments summary, or falls back to content.
+        """
+        if not entry:
+            return ""
+        if entry.get("display"):
+            return entry["display"]
+
+        user_text = entry.get("user_text")
+        attachments = entry.get("attachments") or []
+
+        if user_text:
+            attachments_display = self._prepare_attachments_for_display(attachments)
+            return f"{user_text}\n\n{attachments_display}" if attachments_display else user_text
+
+        return entry.get("content", "")
 
     def _on_stop_clicked(self):
         self._stop_event = True
@@ -1037,6 +1546,35 @@ class AiChatWidget(BaseWidget):
             if not (chat_history and chat_history[0]["role"] == "system"):
                 chat_history = [{"role": "system", "content": instructions}] + chat_history
 
+        # Convert history to API format, handling multimodal messages with images
+        api_messages = []
+        for msg in chat_history:
+            role = msg["role"]
+            content = msg["content"]
+            attachments = msg.get("attachments", [])
+
+            if attachments and role == "user":
+                # Build multimodal parts from attachments
+                content_parts = []
+
+                # Add user's main text first (if any)
+                user_text = msg.get("user_text", "")
+                if user_text:
+                    content_parts.append({"type": "text", "text": user_text})
+
+                # Add attachments (text files and images)
+                for att in attachments:
+                    if att.get("is_image"):
+                        # Add image
+                        content_parts.append({"type": "image_url", "image_url": {"url": att["image_url"]}})
+                    else:
+                        # Add text attachment as separate text block
+                        content_parts.append({"type": "text", "text": att["prompt"]})
+
+                api_messages.append({"role": role, "content": content_parts})
+            else:
+                api_messages.append({"role": role, "content": content})
+
         # Setup streaming state for reconnection
         self._streaming_state = {
             "in_progress": True,
@@ -1049,7 +1587,7 @@ class AiChatWidget(BaseWidget):
         self._worker = self._StreamWorker(
             self._provider_config,
             self._model,
-            chat_history,
+            api_messages,
             lambda: getattr(self, "_stop_event", False),
             max_tokens,
             temperature,
@@ -1300,14 +1838,40 @@ class AiChatWidget(BaseWidget):
         history = AiChatWidget._persistent_chat_history.get(key, [])
         return history
 
-    def _add_to_history(self, role: str, content: str):
-        """Add a message to chat history"""
+    def _add_to_history(
+        self,
+        role: str,
+        content: str,
+        user_text: str = None,
+        attachments: list[dict] | None = None,
+    ):
+        """Add a message to chat history.
+
+        We store `content` (what is sent to the API), optional `user_text` (original
+        text typed by the user) and `attachments` (list of attachment metadata including
+        image_url and prompt fields). UI display is computed lazily from these fields.
+        """
         key = self._get_history_key()
         if key not in AiChatWidget._persistent_chat_history:
             AiChatWidget._persistent_chat_history[key] = []
 
         history = AiChatWidget._persistent_chat_history[key]
-        history.append({"role": role, "content": content})
+        entry: dict = {"role": role, "content": content}
+        if user_text is not None:
+            entry["user_text"] = user_text
+        if attachments:
+            entry["attachments"] = attachments
+        history.append(entry)
+
+    def _human_readable_size(self, size_bytes: int) -> str:
+        """Convert byte counts to small human-readable strings."""
+        if size_bytes < 1024:
+            return f"{size_bytes} B"
+        for unit in ("KB", "MB", "GB"):
+            size_bytes /= 1024.0
+            if size_bytes < 1024:
+                return f"{size_bytes:.1f} {unit}"
+        return f"{size_bytes:.1f} TB"
 
     def _scroll_to_bottom(self):
         """Smoothly scroll chat area to bottom"""

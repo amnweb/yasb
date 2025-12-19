@@ -21,7 +21,7 @@ from PyQt6.QtGui import (
     QStaticText,
     QTransform,
 )
-from PyQt6.QtWidgets import QApplication, QFrame, QGraphicsDropShadowEffect, QLabel, QMenu, QWidget
+from PyQt6.QtWidgets import QApplication, QDialog, QFrame, QGraphicsDropShadowEffect, QLabel, QMenu, QWidget
 from winrt.windows.data.xml.dom import XmlDocument
 from winrt.windows.ui.notifications import ToastNotification, ToastNotificationManager
 
@@ -338,6 +338,7 @@ class PopupWidget(QWidget):
         self._round_corners_type = round_corners_type
         self._border_color = border_color
         self._parent = parent
+        self._suspend_close = False
         # We need bar_id for global_state autohide manager
         self.bar_id = getattr(self._parent, "bar_id", None)
         # Create the inner frame
@@ -490,6 +491,8 @@ class PopupWidget(QWidget):
     def eventFilter(self, obj, event):
         if not isinstance(obj, QObject):
             return False
+        if self._suspend_close:
+            return super().eventFilter(obj, event)
         if event.type() == QEvent.Type.MouseButtonPress:
             global_pos = event.globalPosition().toPoint()
 
@@ -501,13 +504,16 @@ class PopupWidget(QWidget):
             if popup_global_geom.contains(global_pos):
                 return super().eventFilter(obj, event)
 
-            # Check if click is inside any visible QMenu
+            # Check if click is inside any visible QMenu or QDialog (file dialogs, etc.)
             try:
                 for w in QApplication.topLevelWidgets():
-                    if isinstance(w, QMenu) and w.isVisible():
-                        menu_global_geom = QRect(w.mapToGlobal(QPoint(0, 0)), w.size())
-                        if menu_global_geom.contains(global_pos):
-                            return super().eventFilter(obj, event)
+                    if isinstance(w, (QMenu, QDialog)) and w.isVisible() and w is not self:
+                        try:
+                            w_global_geom = QRect(w.mapToGlobal(QPoint(0, 0)), w.size())
+                            if w_global_geom.contains(global_pos):
+                                return super().eventFilter(obj, event)
+                        except Exception:
+                            continue
             except Exception:
                 pass
 
@@ -519,6 +525,10 @@ class PopupWidget(QWidget):
             self.hide_animated()
             return True
         return super().eventFilter(obj, event)
+
+    def set_auto_close_enabled(self, enabled: bool):
+        """Enable/disable auto-close behavior when clicking outside."""
+        self._suspend_close = not enabled
 
     def hideEvent(self, event):
         if self._is_closing:
