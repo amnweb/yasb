@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from enum import StrEnum
 from functools import lru_cache
 from pathlib import Path
+from threading import Lock
 from typing import Any, TypeGuard, cast, override
 
 import psutil
@@ -839,9 +840,26 @@ class ScrollingLabel(QLabel):
 
 
 class Singleton(type):
-    _instances = {}
+    """Singleton metaclass for generic python classes"""
 
-    def __call__(cls, *args, **kwargs):
-        if cls not in cls._instances:
-            cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
-        return cls._instances[cls]
+    _instances: dict[Any, Any] = {}
+    _lock = Lock()
+
+    def __call__(cls, *args: Any, **kwargs: Any):
+        with cls._lock:
+            if cls not in cls._instances:
+                cls._instances[cls] = super().__call__(*args, **kwargs)
+            return cls._instances[cls]
+
+
+class QSingleton(type(QObject)):
+    """Singleton metaclass for Qt classes"""
+
+    _instances: dict[Any, Any] = {}
+    _lock = Lock()
+
+    def __call__(cls, *args: Any, **kwargs: Any):
+        with cls._lock:
+            if cls not in cls._instances or sip.isdeleted(cls._instances[cls]):
+                cls._instances[cls] = super().__call__(*args, **kwargs)
+            return cls._instances[cls]

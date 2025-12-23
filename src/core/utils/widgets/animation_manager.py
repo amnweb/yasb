@@ -1,7 +1,7 @@
 import logging
 
 from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, QTimer
-from PyQt6.QtWidgets import QGraphicsOpacityEffect
+from PyQt6.QtWidgets import QGraphicsOpacityEffect, QWidget
 
 
 class AnimationManager:
@@ -10,7 +10,7 @@ class AnimationManager:
     ALLOWED_ANIMATIONS = ["fadeInOut"]
 
     @classmethod
-    def animate(cls, widget, animation_type: str, duration: int = 200):
+    def animate(cls, widget: QWidget, animation_type: str, duration: int = 200):
         """Execute a single animation on a widget.
 
         Args:

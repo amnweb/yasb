@@ -6,6 +6,7 @@ from ctypes import GetLastError
 from typing import Callable
 
 from win32con import (
+    FILE_FLAG_OVERLAPPED,
     PIPE_ACCESS_DUPLEX,
     PIPE_READMODE_MESSAGE,
     PIPE_TYPE_MESSAGE,
@@ -27,6 +28,7 @@ from settings import CLI_VERSION
 CLI_SERVER_PIPE_NAME = r"\\.\pipe\yasb_pipe_cli"
 LOG_SERVER_PIPE_NAME = r"\\.\pipe\yasb_pipe_log"
 BUFSIZE = 65536
+GENERIC_READ = 0x80000000
 
 logger = logging.getLogger("cli_server")
 
@@ -100,6 +102,7 @@ class LogPipeServer:
         """Start the logging pipe server"""
         self.stop_event.clear()
         self.server_thread = threading.Thread(target=self._run_server, daemon=True)
+        self.server_thread.name = "LogPipeServer"
         self.server_thread.start()
         logger.info("Log pipe server started")
 
@@ -117,7 +120,7 @@ class LogPipeServer:
             # Create a new pipe
             handle = CreateNamedPipe(
                 LOG_SERVER_PIPE_NAME,
-                PIPE_ACCESS_DUPLEX,
+                PIPE_ACCESS_DUPLEX | FILE_FLAG_OVERLAPPED,
                 PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT,
                 10,
                 BUFSIZE,
@@ -151,7 +154,7 @@ class LogPipeServer:
             while True:
                 msg = read_message(handle)
                 if msg is None:
-                    logger.error(f"Client disconnected or read error. Err: {GetLastError()}")
+                    logger.info(f"Client disconnected or read error. Err: {GetLastError()}")
                     time.sleep(0.1)
                     break
 
@@ -192,6 +195,7 @@ class CliPipeHandler:
         """
         self.stop_event.clear()
         self.server_thread = threading.Thread(target=self._run_server, daemon=True)
+        self.server_thread.name = "CLIPipeServer"
         self.server_thread.start()
         self.log_server.start()
 
@@ -214,7 +218,7 @@ class CliPipeHandler:
         while not self.stop_event.is_set():
             handle = CreateNamedPipe(
                 CLI_SERVER_PIPE_NAME,
-                PIPE_ACCESS_DUPLEX,
+                PIPE_ACCESS_DUPLEX | FILE_FLAG_OVERLAPPED,
                 PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT,
                 10,
                 BUFSIZE,
@@ -243,7 +247,7 @@ class CliPipeHandler:
         """Handle a client connection and process commands"""
         success, data = ReadFile(pipe, 64 * 1024)
         if not success or len(data) == 0:
-            logger.error(f"CLI client disconnected or read error. Err: {GetLastError()}")
+            logger.info(f"CLI client disconnected or read error. Err: {GetLastError()}")
             return None
 
         full_command = data.decode("utf-8").strip()
