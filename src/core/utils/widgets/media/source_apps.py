@@ -12,6 +12,8 @@ For simple applications where AUMID matching is sufficient, use string format:
     "aumid": "Display Name"
 """
 
+from typing import Any
+
 MEDIA_SOURCE_APPS = {
     # Audio Players
     "AIMP.exe": "AIMP",
@@ -83,7 +85,7 @@ MEDIA_SOURCE_APPS = {
 }
 
 
-def _match_aumid_by_regex(source_app_id: str) -> dict:
+def _match_aumid_by_regex(source_app_id: str) -> dict[str, str | None] | None:
     """
     Attempt to match common AUMID patterns using regex when an exact
     dictionary lookup fails.
@@ -140,7 +142,7 @@ def get_source_app_display_name(source_app_id: str) -> str:
     return None
 
 
-def get_source_app_mapping(source_app_id: str) -> dict:
+def get_source_app_mapping(source_app_id: str) -> dict[str, Any] | None:
     """
     Get the complete mapping information for a source application ID.
 

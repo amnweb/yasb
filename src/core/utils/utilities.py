@@ -840,7 +840,7 @@ class ScrollingLabel(QLabel):
 
 
 class Singleton(type):
-    """Singleton metaclass for generic python classes"""
+    """Singleton metaclass for regular python classes"""
 
     _instances: dict[Any, Any] = {}
     _lock = Lock()

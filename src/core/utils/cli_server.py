@@ -28,7 +28,6 @@ from settings import CLI_VERSION
 CLI_SERVER_PIPE_NAME = r"\\.\pipe\yasb_pipe_cli"
 LOG_SERVER_PIPE_NAME = r"\\.\pipe\yasb_pipe_log"
 BUFSIZE = 65536
-GENERIC_READ = 0x80000000
 
 logger = logging.getLogger("cli_server")
 

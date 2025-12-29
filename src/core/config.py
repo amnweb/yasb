@@ -6,7 +6,7 @@ import sys
 from os import makedirs, path
 from pathlib import Path
 from sys import argv
-from typing import Any, Union
+from typing import Any
 from xml.dom import SyntaxErr
 
 from cerberus import Validator, schema
