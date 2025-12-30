@@ -144,9 +144,8 @@ class BatteryWidget(BaseWidget):
     def _update_label(self):
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
         active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
-        label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
-        label_parts = [part for part in label_parts if part]
         widget_index = 0
+
         self._battery_state = psutil.sensors_battery()
 
         if self._battery_state is None:
@@ -155,8 +154,13 @@ class BatteryWidget(BaseWidget):
                 self.timer.stop()
                 return
 
+            label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
+
             for part in label_parts:
                 part = part.strip()
+                if not part:
+                    continue
+
                 if widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
                     if "<span" in part and "</span>" in part:
                         active_widgets[widget_index].hide()
@@ -170,19 +174,21 @@ class BatteryWidget(BaseWidget):
         is_charging_str = "yes" if self._battery_state.power_plugged else "no"
         charging_icon = self._get_charging_icon(original_threshold)
 
+        active_label_content = active_label_content.format(
+            percent=str(self._battery_state.percent),
+            time_remaining=time_remaining,
+            is_charging=is_charging_str,
+            icon=charging_icon,
+        )
+        label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
+
         for part in label_parts:
             part = part.strip()
             if part and widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
-                battery_status = (
-                    part.replace("{percent}", str(self._battery_state.percent))
-                    .replace("{time_remaining}", time_remaining)
-                    .replace("{is_charging}", is_charging_str)
-                    .replace("{icon}", charging_icon)
-                )
-                if "<span" in battery_status and "</span>" in battery_status:
+                if "<span" in part and "</span>" in part:
                     # icon-only QLabel
                     widget_label = active_widgets[widget_index]
-                    icon = re.sub(r"<span.*?>|</span>", "", battery_status).strip()
+                    icon = re.sub(r"<span.*?>|</span>", "", part).strip()
                     widget_label.setText(icon)
                     # apply status‐class
                     existing_classes = widget_label.property("class")
@@ -207,8 +213,7 @@ class BatteryWidget(BaseWidget):
                             refresh_widget_style(widget_label)
                 else:
                     alt_class = "alt" if self._show_alt_label else ""
-                    formatted_text = battery_status.format(battery_status)
-                    active_widgets[widget_index].setText(formatted_text)
+                    active_widgets[widget_index].setText(part)
                     active_widgets[widget_index].setProperty("class", f"label {alt_class} status-{threshold}")
                     refresh_widget_style(active_widgets[widget_index])
                 widget_index += 1

@@ -117,8 +117,6 @@ class MicrophoneWidget(BaseWidget):
     def _update_label(self):
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
         active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
-        label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
-        label_parts = [part for part in label_parts if part]
         widget_index = 0
 
         # Handle no device case
@@ -129,14 +127,12 @@ class MicrophoneWidget(BaseWidget):
         else:
             try:
                 mute_status = self.audio_endpoint.GetMute()
-                mic_level = round(self.audio_endpoint.GetMasterVolumeLevelScalar() * 100)
+                mic_level = self.audio_endpoint.GetMasterVolumeLevelScalar()
                 min_icon = self._get_mic_icon()
-                min_level = self._mute_text if mute_status == 1 else f"{mic_level}%"
+                min_level = self._mute_text if mute_status == 1 else f"{mic_level:.0%}%"
             except Exception as e:
                 logging.error(f"Failed to get microphone info: {e}")
                 return
-
-        label_options = {"{icon}": min_icon, "{level}": min_level}
 
         if self._progress_bar["enabled"] and self.progress_widget:
             if self._widget_container_layout.indexOf(self.progress_widget) == -1:
@@ -147,24 +143,20 @@ class MicrophoneWidget(BaseWidget):
             numeric_value = int(re.search(r"\d+", min_level).group()) if re.search(r"\d+", min_level) else 0
             self.progress_widget.set_value(numeric_value)
 
+        active_label_content = active_label_content.format(icon=min_icon, level=min_level)
+        label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
+
         for part in label_parts:
             part = part.strip()
             if part:
-                formatted_text = part
-                for option, value in label_options.items():
-                    formatted_text = formatted_text.replace(option, str(value))
                 if "<span" in part and "</span>" in part:
                     if widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
-                        active_widgets[widget_index].setText(formatted_text)
-                        self._set_muted_class(
-                            active_widgets[widget_index], mute_status == 1 if mute_status is not None else False
-                        )
+                        active_widgets[widget_index].setText(part)
+                        self._set_muted_class(active_widgets[widget_index], mute_status == 1)
                 else:
                     if widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
-                        active_widgets[widget_index].setText(formatted_text)
-                        self._set_muted_class(
-                            active_widgets[widget_index], mute_status == 1 if mute_status is not None else False
-                        )
+                        active_widgets[widget_index].setText(part)
+                        self._set_muted_class(active_widgets[widget_index], mute_status == 1)
                 widget_index += 1
 
     def _update_slider_value(self):

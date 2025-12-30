@@ -158,9 +158,7 @@ class BrightnessWidget(BaseWidget):
     def _update_label(self):
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
         active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
-        label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
-        label_parts = [part for part in label_parts if part]
-        widget_index = 0
+
         try:
             percent = self.get_brightness()
             if percent is None:
@@ -176,7 +174,9 @@ class BrightnessWidget(BaseWidget):
         except Exception:
             percent, icon = 0, "not supported"
 
-        label_options = {"{icon}": icon, "{percent}": percent}
+        active_label_content = active_label_content.format(icon=icon, percent=percent)
+        label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
+        widget_index = 0
 
         if self._progress_bar["enabled"] and self.progress_widget:
             if self._widget_container_layout.indexOf(self.progress_widget) == -1:
@@ -189,15 +189,12 @@ class BrightnessWidget(BaseWidget):
         for part in label_parts:
             part = part.strip()
             if part:
-                formatted_text = part
-                for option, value in label_options.items():
-                    formatted_text = formatted_text.replace(option, str(value))
                 if "<span" in part and "</span>" in part:
                     if widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
-                        active_widgets[widget_index].setText(formatted_text)
+                        active_widgets[widget_index].setText(part)
                 else:
                     if widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
-                        active_widgets[widget_index].setText(formatted_text)
+                        active_widgets[widget_index].setText(part)
                 widget_index += 1
 
     def show_brightness_menu(self):
