@@ -8,7 +8,7 @@ from PIL.ImageQt import ImageQt
 from pycaw.pycaw import AudioUtilities
 from PyQt6 import QtCore
 from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtGui import QPixmap, QWheelEvent
+from PyQt6.QtGui import QPixmap, QWheelEvent, QIcon
 from PyQt6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QLabel, QSizePolicy, QSlider, QVBoxLayout
 from winrt.windows.media.control import GlobalSystemMediaTransportControlsSessionPlaybackInfo
 
@@ -158,6 +158,17 @@ class MediaWidget(BaseWidget):
         self.thumbnail_box.addWidget(self._thumbnail_label, 0, 0)
         self.thumbnail_box.addWidget(self._label, 0, 0)
         self.thumbnail_box.addWidget(self._label_alt, 0, 0)
+
+        # App icon label (aligned to the right)
+        self._app_icon_label = QLabel(self)
+        self._app_icon_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        self._app_icon_label.setProperty("class", "app-icon")
+        self._app_icon_label.setFixedSize(20, 20)  # Icon size
+        self._app_icon_label.setScaledContents(True)
+        self._app_icon_label.hide()  # Initially hidden
+
+        # Add app icon to the right of the container
+        self._widget_container_layout.addWidget(self._app_icon_label)
 
         # Get media manager
         self.media = WindowsMedia()
@@ -595,7 +606,28 @@ class MediaWidget(BaseWidget):
     def _toggle_play_pause(self):
         if self._animation["enabled"]:
             AnimationManager.animate(self, self._animation["type"], self._animation["duration"])
+
+        # Call the media control
         WindowsMedia().play_pause()
+
+        # In fallback mode, manually toggle the play/pause icon
+        logging.info(
+            f"Toggle play/pause - fallback_mode: {getattr(self, '_fallback_mode', None)}, play_label: {self._play_label is not None}"
+        )
+        if hasattr(self, "_fallback_mode") and self._fallback_mode and self._play_label is not None:
+            current_text = self._play_label.text()
+            logging.info(
+                f"Current icon: {current_text}, play icon: {self._media_button_icons['play']}, pause icon: {self._media_button_icons['pause']}"
+            )
+            # Toggle between play and pause icons
+            if current_text == self._media_button_icons["play"]:
+                self._play_label.setText(self._media_button_icons["pause"])
+                self._is_playing = True
+                logging.info("Changed to PAUSE icon")
+            else:
+                self._play_label.setText(self._media_button_icons["play"])
+                self._is_playing = False
+                logging.info("Changed to PLAY icon")
 
     def _on_timeline_properties_changed(self, timeline_props):
         """Handle timeline property updates."""
@@ -773,6 +805,95 @@ class MediaWidget(BaseWidget):
 
     @QtCore.pyqtSlot(object)  # None or dict
     def _on_media_properties_changed(self, media_info: dict[str, Any] | None):
+        # Check if we're in fallback mode and enable controls
+        if media_info and media_info.get("_fallback_mode"):
+            # Store fallback mode flag
+            self._fallback_mode = True
+
+            # Check if a media app is detected
+            has_media_app = media_info.get("_has_media_app", False)
+            self._has_media_app = has_media_app  # Store for later use in execute_code
+            initial_playing = media_info.get("_initial_playing", False)
+            logging.info(f"Fallback mode: has_media_app={has_media_app}, playing={initial_playing}")
+
+            if not self._controls_hide:
+                if has_media_app:
+                    # Enable all controls when media app is detected
+                    if self._play_label is not None:
+                        # Set correct icon: pause icon if playing, play icon if paused
+                        initial_icon = self._media_button_icons["pause"] if initial_playing else self._media_button_icons["play"]
+                        current_icon = self._play_label.text()
+
+                        # Only update if icon changed to avoid unnecessary updates
+                        if current_icon != initial_icon:
+                            self._play_label.setText(initial_icon)
+                            logging.info(f"Icon updated: {current_icon} -> {initial_icon} (playing={initial_playing})")
+
+                        self._play_label.setProperty("class", "btn play")
+                        self._play_label.setCursor(Qt.CursorShape.PointingHandCursor)
+                        refresh_widget_style(self._play_label)
+                        self._play_label.update()  # Force visual update
+
+                    if self._prev_label is not None:
+                        self._prev_label.setProperty("class", "btn prev")
+                        self._prev_label.setCursor(Qt.CursorShape.PointingHandCursor)
+                        refresh_widget_style(self._prev_label)
+
+                    if self._next_label is not None:
+                        self._next_label.setProperty("class", "btn next")
+                        self._next_label.setCursor(Qt.CursorShape.PointingHandCursor)
+                        refresh_widget_style(self._next_label)
+
+                    # Update app icon
+                    if media_info and "artist" in media_info and media_info["artist"] != "Unknown Artist":
+                        # Try to detect which app is playing
+                        process_name = None
+                        if hasattr(self.media, "_is_process_running"):
+                            # Check common media players
+                            for app in ["spotify.exe", "vlc.exe", "wmplayer.exe", "foobar2000.exe", "aimp.exe"]:
+                                if self.media._is_process_running(app):
+                                    process_name = app
+                                    break
+
+                        if process_name:
+                            pixmap = self._extract_app_icon(process_name)
+                            if pixmap:
+                                self._app_icon_label.setPixmap(pixmap)
+                                self._app_icon_label.show()
+                            else:
+                                self._app_icon_label.hide()
+                        else:
+                            self._app_icon_label.hide()
+                    else:
+                        self._app_icon_label.hide()
+                else:
+                    # Disable all controls when no media app is detected
+                    self._app_icon_label.hide()
+                    if self._play_label is not None:
+                        # Always show play icon when disabled (no media = not playing)
+                        current_icon = self._play_label.text()
+                        play_icon = self._media_button_icons["play"]
+                        if current_icon != play_icon:
+                            self._play_label.setText(play_icon)
+                            logging.info(f"Controls disabled - icon set to play: {current_icon} -> {play_icon}")
+
+                        self._play_label.setProperty("class", "btn play disabled")
+                        self._play_label.setCursor(Qt.CursorShape.ArrowCursor)
+                        refresh_widget_style(self._play_label)
+                        self._play_label.update()
+
+                    if self._prev_label is not None:
+                        self._prev_label.setProperty("class", "btn prev disabled")
+                        self._prev_label.setCursor(Qt.CursorShape.ArrowCursor)
+                        refresh_widget_style(self._prev_label)
+
+                    if self._next_label is not None:
+                        self._next_label.setProperty("class", "btn next disabled")
+                        self._next_label.setCursor(Qt.CursorShape.ArrowCursor)
+                        refresh_widget_style(self._next_label)
+        else:
+            self._fallback_mode = False
+
         try:
             if (
                 hasattr(self, "_dialog")
@@ -843,6 +964,11 @@ class MediaWidget(BaseWidget):
             else:
                 formatted_label = "No media"
         active_label.setText(formatted_label)
+
+        # Force update for scrolling labels to ensure animation starts
+        if isinstance(active_label, ScrollingLabel):
+            active_label.update()
+            logging.debug(f"ScrollingLabel updated with text: {formatted_label[:50]}...")
 
         # If we don't want the thumbnail, stop here
         if not self._show_thumbnail:
@@ -1104,6 +1230,41 @@ class MediaWidget(BaseWidget):
         else:
             return text
 
+    def _extract_app_icon(self, process_name: str) -> Optional[QPixmap]:
+        """Extract the icon from a process executable using Qt's file icon provider."""
+        try:
+            from PyQt6.QtWidgets import QFileIconProvider
+            from PyQt6.QtCore import QFileInfo
+            import psutil
+
+            # Find the process and get its exe path
+            for proc in psutil.process_iter(['name', 'exe']):
+                try:
+                    if proc.info['name'] and proc.info['name'].lower() == process_name.lower():
+                        exe_path = proc.info['exe']
+                        if exe_path:
+                            # Use Qt's file icon provider to get the icon
+                            provider = QFileIconProvider()
+                            file_info = QFileInfo(exe_path)
+                            icon = provider.icon(file_info)
+
+                            if not icon.isNull():
+                                # Get pixmap from icon (20x20 to match label size)
+                                pixmap = icon.pixmap(20, 20)
+                                return pixmap
+                            break
+                except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                    continue
+
+            return None
+
+        except ImportError:
+            logging.debug("psutil not available, cannot extract app icon")
+            return None
+        except Exception as e:
+            logging.debug(f"Error extracting app icon: {e}")
+            return None
+
     def _create_media_button(self, icon, action):
         if not self._controls_hide:
             label = ClickableLabel(self)
@@ -1123,7 +1284,16 @@ class MediaWidget(BaseWidget):
 
     def execute_code(self, func):
         try:
+            # In fallback mode without media app, don't execute
+            if hasattr(self, "_fallback_mode") and self._fallback_mode:
+                if not getattr(self, "_has_media_app", False):
+                    logging.info("Controls disabled - no media app detected")
+                    return
+
+            # Execute the function
+            # Icon updates happen automatically via peak detection timer
             func()
+
         except Exception as e:
             logging.error(f"Error executing code: {e}")
 
