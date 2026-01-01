@@ -83,6 +83,7 @@ class WeatherWidget(BaseWidget):
 
         # Store weather data
         self._weather_data: dict[str, Any] | None = None
+        self._has_valid_weather_data = False
         self._hourly_data_today: list[dict[str, Any]] = []
         self._hourly_data_2: list[dict[str, Any]] = []
         self._hourly_data_3: list[dict[str, Any]] = []
@@ -139,10 +140,6 @@ class WeatherWidget(BaseWidget):
         self._popup_card()
 
     def _popup_card(self):
-        if self._weather_data is None:
-            logging.warning("Weather data is not yet available.")
-            return
-
         self.dialog = PopupWidget(
             self,
             self._weather_card["blur"],
@@ -151,6 +148,31 @@ class WeatherWidget(BaseWidget):
             self._weather_card["border_color"],
         )
         self.dialog.setProperty("class", "weather-card")
+
+        if self._weather_data is None or not self._has_valid_weather_data:
+            logging.warning("Weather data is not yet available.")
+            layout = QVBoxLayout()
+            layout.setContentsMargins(24, 24, 24, 24)
+            layout.setSpacing(12)
+            icon_label = QLabel(self._icons.get("default", ""))
+            icon_label.setStyleSheet("font-size: 72px;")
+            icon_label.setProperty("class", "placeholder-icon")
+            icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            info_label = QLabel("Weather data not available")
+            info_label.setProperty("class", "label")
+            info_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            layout.addWidget(icon_label)
+            layout.addWidget(info_label)
+            self.dialog.setLayout(layout)
+            self.dialog.adjustSize()
+            self.dialog.setPosition(
+                alignment=self._weather_card["alignment"],
+                direction=self._weather_card["direction"],
+                offset_left=self._weather_card["offset_left"],
+                offset_top=self._weather_card["offset_top"],
+            )
+            self.dialog.show()
+            return
 
         main_layout = QVBoxLayout()
 
@@ -586,6 +608,7 @@ class WeatherWidget(BaseWidget):
                 if alerts["alert"] and alerts["alert"][0]["expires"]
                 else None,
             }
+            self._has_valid_weather_data = True
         except Exception as e:
             if not self._retry_timer.isActive():
                 err = f"Error processing weather data: {e}. Retrying fetch in 10 seconds."
@@ -593,6 +616,7 @@ class WeatherWidget(BaseWidget):
                     err += f"\n{traceback.format_exc()}"
                 logging.warning(err)
                 self._retry_timer.start(10000)
+            self._has_valid_weather_data = False
             if self._weather_data is None:
                 self._weather_data = {
                     "{temp}": "N/A",
