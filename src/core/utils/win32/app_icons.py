@@ -12,6 +12,7 @@ from icoextract import IconExtractor
 from PIL import Image
 from win32con import DIB_RGB_COLORS
 
+import pretty_log as _log
 from core.utils.win32.aumid import GetApplicationUserModelId, get_aumid_for_window
 from core.utils.win32.aumid_icons import get_icon_for_aumid
 from core.utils.win32.bindings import (
@@ -174,7 +175,7 @@ def get_window_icon(hwnd: int):
 
         return None
     except Exception as e:
-        logging.error(f"Error fetching icon: {e}")
+        _log.log_error("Error fetching icon", e)
         return None
 
 
@@ -410,5 +411,5 @@ def get_stock_icon(icon_id: int) -> Image.Image | None:
                 pass
 
     except Exception as e:
-        logging.error(f"Error getting stock icon {icon_id}: {e}")
+        _log.log_error(f"Error getting stock icon {icon_id}", e)
         return None

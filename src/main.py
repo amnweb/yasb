@@ -2,13 +2,36 @@ import asyncio
 import contextlib
 import ctypes
 import logging
+import subprocess
 import sys
 import time
+import winreg
 from sys import argv
+
+
+def get_windows_version():
+    # Read core OS information from the registry
+    key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows NT\CurrentVersion")
+
+    product_name = winreg.QueryValueEx(key, "ProductName")[0]
+    current_build = winreg.QueryValueEx(key, "CurrentBuild")[0]
+    ubr = winreg.QueryValueEx(key, "UBR")[0]
+
+    # Construct full build string
+    full_build = f"{current_build}.{ubr}"
+
+    # Correct Windows version label if necessary
+    major_build = int(current_build)
+    if major_build >= 22000 and not product_name.startswith("Windows 11"):
+        product_name = product_name.replace("Windows 10", "Windows 11")
+
+    return f"{product_name}, Build {full_build}"
+
 
 import qasync
 from PyQt6.QtWidgets import QApplication
 
+import pretty_log as _log
 import settings
 from core.bar_manager import BarManager
 from core.config import get_config_and_stylesheet
@@ -86,6 +109,28 @@ def single_instance_lock(name="yasb_reborn"):
 
 
 def main():
+    logging.debug("main() entrypoint reached.")
+
+    try:
+        data = get_windows_version()
+        logging.info("Retrieved OS information.")
+        logging.info(f" |  {data}")
+    except BaseException as e:
+        logging.info("Failed to retrieve OS information.")
+        logging.info(f" |  {e}")
+        try:
+            platform = __import__("platform")
+            simple_windows_version = lambda: f"Windows {platform.release()}, Build {platform.version()}"
+            logging.info("Retrieved minimal OS information (may be innacurate).")
+            logging.info(f" |  {simple_windows_version}")
+        except BaseException:
+            logging.warning("Failed to retrieve OS information.")
+
+    logging.info("YASB info:")
+    version = subprocess.check_output(["yasbc", "--version"]).decode().split("\n")
+    logging.info(" |  version (Main): %r", version[0].replace("\r", ""))
+    logging.info(" |  version (CLI):  %r", version[1].replace("\r", ""))
+
     # Application instance should be created first
     app = QApplication(argv)
     app.setQuitOnLastWindowClosed(False)
@@ -129,7 +174,7 @@ def main():
             if update_service.is_update_supported():
                 start_update_checker()
         except Exception as e:
-            logging.error(f"Failed to start auto update service: {e}")
+            _log.log_error("Failed to start auto update service", e)
 
     with loop:
         loop.run_forever()

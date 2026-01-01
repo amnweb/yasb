@@ -5,6 +5,7 @@ import sys
 from PyQt6.QtCore import QMetaObject, QProcess, Qt
 from PyQt6.QtWidgets import QApplication
 
+import pretty_log as _log
 from core.event_service import EventService
 from core.utils.cli_server import CliPipeHandler
 from core.utils.win32.utilities import find_focused_screen
@@ -27,7 +28,7 @@ def reload_application(msg="Reloading Application..."):
         if app is not None:
             QMetaObject.invokeMethod(app, "quit", Qt.ConnectionType.QueuedConnection)
     except Exception as e:
-        logging.error(f"Error during reload: {e}")
+        _log.log_error("Error during reload", e)
         os._exit(0)
 
 
