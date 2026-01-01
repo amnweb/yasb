@@ -92,11 +92,19 @@ class UpdateWorker(QThread):
                         "available": "Disponibile",
                         "source": "Origine",
                     },
+                    "br": {
+                        "name": "Nome",
+                        "id": "Id",
+                        "version": "Versão",
+                        "available": "Disponível",
+                        "source": "Origem",
+                    },
                 }
                 WINGET_SECTION_HEADERS = {
                     "en": "The following packages have an upgrade available",
                     "de": "Für die folgenden Pakete ist ein Upgrade verfügbar",
                     "it": "Per i pacchetti seguenti è disponibile un aggiornamento",
+                    "br": "Os pacotes a seguir têm uma atualização disponível",
                 }
 
                 result = subprocess.run(
