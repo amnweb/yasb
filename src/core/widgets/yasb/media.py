@@ -1,21 +1,31 @@
 import ctypes
 import logging
-from typing import Any, Literal, Optional
+from enum import StrEnum
+from typing import Any, Callable, Literal, cast
 
 from PIL import Image, ImageChops
 from PIL.ImageDraw import ImageDraw
 from PIL.ImageQt import ImageQt
 from pycaw.pycaw import AudioUtilities
 from PyQt6 import QtCore
-from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtGui import QPixmap, QWheelEvent
-from PyQt6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QLabel, QSizePolicy, QSlider, QVBoxLayout
-from winrt.windows.media.control import GlobalSystemMediaTransportControlsSessionPlaybackInfo
+from PyQt6.QtCore import QEvent, QObject, Qt, QTimer, pyqtSlot
+from PyQt6.QtGui import QMouseEvent, QPixmap, QWheelEvent
+from PyQt6.QtWidgets import (
+    QFrame,
+    QGridLayout,
+    QHBoxLayout,
+    QLabel,
+    QProgressBar,
+    QSizePolicy,
+    QSlider,
+    QVBoxLayout,
+)
+from qasync import asyncSlot  # type: ignore
 
 from core.utils.utilities import PopupWidget, ScrollingLabel, add_shadow, refresh_widget_style
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.widgets.media.aumid_process import get_process_name_for_aumid
-from core.utils.widgets.media.media import WindowsMedia
+from core.utils.widgets.media.media import MediaSession, SessionState, WindowsMedia
 from core.utils.widgets.media.source_apps import (
     get_source_app_class_name,
     get_source_app_display_name,
@@ -31,21 +41,34 @@ from core.utils.win32.aumid import (
 )
 from core.validation.widgets.yasb.media import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
-from settings import DEBUG
 
-FieldTypes = Literal["default", "popup_title", "popup_artist"]
+logger = logging.getLogger("MediaWidget")
+
+MAX_TIMLINE_DURATION = 604800  # 7 days
+
+type FieldTypes = Literal["default", "popup_title", "popup_artist"]
+
+
+class ProgressBarAlignment(StrEnum):
+    TOP = "top"
+    BOTTOM = "bottom"
+    CENTER = "center"
+
+    def to_qt(self) -> Qt.AlignmentFlag:
+        mapping = {
+            ProgressBarAlignment.TOP: Qt.AlignmentFlag.AlignTop,
+            ProgressBarAlignment.BOTTOM: Qt.AlignmentFlag.AlignBottom,
+            ProgressBarAlignment.CENTER: Qt.AlignmentFlag.AlignVCenter,
+        }
+        return mapping.get(self, Qt.AlignmentFlag.AlignBottom)
 
 
 class MediaWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
 
-    _playback_info_signal = QtCore.pyqtSignal(GlobalSystemMediaTransportControlsSessionPlaybackInfo)
-    _media_info_signal = QtCore.pyqtSignal(object)
-    _session_status_signal = QtCore.pyqtSignal(bool)
     _popup_play_button = None
     _popup_next_label = None
     _popup_prev_label = None
-    _timeline_info_signal = QtCore.pyqtSignal(object)
 
     def __init__(
         self,
@@ -66,13 +89,14 @@ class MediaWidget(BaseWidget):
         thumbnail_edge_fade: bool,
         symmetric_corner_radius: bool,
         icons: dict[str, str],
-        animation: dict[str, str],
+        animation: dict[str, Any],
         container_padding: dict[str, int],
         media_menu: dict[str, Any],
         media_menu_icons: dict[str, str],
         scrolling_label: dict[str, Any],
-        label_shadow: dict = None,
-        container_shadow: dict = None,
+        progress_bar: dict[str, Any],
+        label_shadow: dict[str, Any],
+        container_shadow: dict[str, Any],
     ):
         super().__init__(class_name=f"media-widget {class_name}")
         self._label_content = label
@@ -91,13 +115,15 @@ class MediaWidget(BaseWidget):
         self._thumbnail_edge_fade = thumbnail_edge_fade
         self._symmetric_corner_radius = symmetric_corner_radius
         self._hide_empty = hide_empty
-        self._animation = animation
         self._padding = container_padding
         self._menu_config = media_menu
         self._menu_config_icons = media_menu_icons
         self._label_shadow = label_shadow
         self._container_shadow = container_shadow
         self._scrolling_label = scrolling_label
+        self._progress_bar_config = progress_bar
+        self.animation = animation
+
         # Construct container
         self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
@@ -111,16 +137,22 @@ class MediaWidget(BaseWidget):
         self.widget_layout.addWidget(self._widget_container)
         if self._hide_empty:
             self.hide()
+
+        # Get media manager
+        self.media = WindowsMedia()
+
         # Make a grid box to overlay the text and thumbnail
-        self.thumbnail_box = QGridLayout()
+        self.thumbnail_stack = QGridLayout()
+        self.thumbnail_stack.setContentsMargins(0, 0, 0, 0)
+        self.thumbnail_stack.setSpacing(0)
 
         if self._controls_left:
             self._prev_label, self._play_label, self._next_label = self._create_media_buttons()
             if not controls_only:
-                self._widget_container_layout.addLayout(self.thumbnail_box)
+                self._widget_container_layout.addLayout(self.thumbnail_stack)
         else:
             if not controls_only:
-                self._widget_container_layout.addLayout(self.thumbnail_box)
+                self._widget_container_layout.addLayout(self.thumbnail_stack)
             self._prev_label, self._play_label, self._next_label = self._create_media_buttons()
 
         # Label
@@ -155,54 +187,46 @@ class MediaWidget(BaseWidget):
         self._label.setProperty("class", "label")
         self._label_alt.setProperty("class", "label alt")
 
-        self.thumbnail_box.addWidget(self._thumbnail_label, 0, 0)
-        self.thumbnail_box.addWidget(self._label, 0, 0)
-        self.thumbnail_box.addWidget(self._label_alt, 0, 0)
+        progress_bar_container = QFrame()
+        progress_bar_container.setContentsMargins(0, 0, 0, 0)
+        progress_bar_container.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
+        progress_bar_container.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
 
-        # Get media manager
-        self.media = WindowsMedia()
+        progress_bar_layout = QHBoxLayout(progress_bar_container)
+        progress_bar_layout.setAlignment(ProgressBarAlignment(self._progress_bar_config["alignment"]).to_qt())
+        progress_bar_layout.setContentsMargins(0, 0, 0, 0)
+        progress_bar_layout.setSpacing(0)
+
+        self._progress_bar = QProgressBar()
+        self._progress_bar.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
+        self._progress_bar.setProperty("class", "progress-bar")
+        self._progress_bar.setRange(0, 1000)
+        self._progress_bar.setTextVisible(False)
+        self._progress_bar.setValue(500)
+
+        progress_bar_layout.addWidget(self._progress_bar)
+
+        self.thumbnail_stack.addWidget(self._thumbnail_label, 0, 0)
+        self.thumbnail_stack.addWidget(progress_bar_container, 0, 0)
+        self.thumbnail_stack.addWidget(self._label_alt, 0, 0)
+        self.thumbnail_stack.addWidget(self._label, 0, 0)
 
         if self._controls_only:
             # Initial hide labels and thumbnail
             self._label.hide()
             self._label_alt.hide()
             self._thumbnail_label.hide()
+            progress_bar_container.hide()
 
-        # Set configure signals and register them als callbacks
-        self._playback_info_signal.connect(self._on_playback_info_changed)
-        self.media.subscribe(
-            lambda playback_info: self._playback_info_signal.emit(playback_info)
-            if hasattr(self, "_playback_info_signal")
-            else None,
-            "playback_info",
-        )
-        self._media_info_signal.connect(self._on_media_properties_changed)
-        self.media.subscribe(
-            lambda media_info: self._media_info_signal.emit(media_info)
-            if hasattr(self, "_media_info_signal")
-            else None,
-            "media_info",
-        )
-        self._session_status_signal.connect(self._on_session_status_changed)
-        self.media.subscribe(
-            lambda session_status: self._session_status_signal.emit(session_status)
-            if hasattr(self, "_session_status_signal")
-            else None,
-            "session_status",
-        )
-        self._timeline_info_signal.connect(self._on_timeline_properties_changed)
-        self.media.subscribe(
-            lambda timeline_info: self._timeline_info_signal.emit(timeline_info)
-            if hasattr(self, "_timeline_info_signal")
-            else None,
-            "timeline_info",
-        )
-        self.media.subscribe(
-            lambda timeline_info: self._update_interpolated_position(timeline_info)
-            if hasattr(self, "_label")
-            else None,
-            "timeline_interpolated",
-        )
+        if not self._progress_bar_config["enabled"]:
+            progress_bar_container.hide()
+
+        # Set configure signals and register them as callbacks
+        self.media.media_data_changed.connect(self._on_media_data_changed)
+        self.media.current_session_changed.connect(self._on_session_status_changed)
+        self.media.media_properties_changed.connect(self._on_media_properties_changed)
+        self.media.timeline_info_changed.connect(self._on_timeline_properties_changed)
+        self.media.playback_info_changed.connect(self._on_playback_info_changed)
 
         self.callback_left = callbacks["on_left"]
         self.callback_right = callbacks["on_right"]
@@ -217,25 +241,36 @@ class MediaWidget(BaseWidget):
         self._label_alt.hide()
         self._show_alt_label = False
 
-        # Force media update to detect running session
-        self.timer.singleShot(0, self.media.force_update)
-
+        # Currently active session
+        self.all_sessions: dict[str, SessionState] = {}
+        self.current_session: SessionState | None = None
         # Initialize tracking variables
-        self._last_position = 0
-        self._last_update_time = 0
-        self._is_playing = False
-        self._app_volume_slider = None
-        self._app_volume_session = None
+        self.app_volume_slider = None
         self._app_mute_button = None
+        self._app_volume_session = None
+        self._is_playing = False
         self._app_is_muted = False
 
+    @pyqtSlot(dict)
+    def _on_media_data_changed(self, data: dict[str, SessionState]):
+        self.all_sessions = data
+        old_session = self.current_session
+        self.current_session = next((s for s in data.values() if s.is_current), None)
+
+        self._update_interpolated_position()
+
+        # If the session has changed, trigger property/playback updates to sync UI
+        if self.current_session and (old_session is None or self.current_session.app_id != old_session.app_id):
+            self._on_media_properties_changed()
+            self._on_playback_info_changed()
+
     def _toggle_media_menu(self):
-        if self._animation["enabled"]:
-            AnimationManager.animate(self, self._animation["type"], self._animation["duration"])
+        if self.animation["enabled"]:
+            AnimationManager.animate(self, self.animation["type"], self.animation["duration"])
         self.show_menu()
 
     def show_menu(self):
-        self._dialog = PopupWidget(
+        self.dialog = PopupWidget(
             self,
             self._menu_config["blur"],
             self._menu_config["round_corners"],
@@ -243,23 +278,17 @@ class MediaWidget(BaseWidget):
             self._menu_config["border_color"],
         )
 
-        self._dialog.setProperty("class", "media-menu")
+        self.dialog.setProperty("class", "media-menu")
 
         # Create main layout for the popup dialog
-        main_layout = QVBoxLayout(self._dialog)
+        main_layout = QVBoxLayout(self.dialog)
         main_layout.setContentsMargins(12, 12, 12, 12)
         main_layout.setSpacing(0)
 
         content_layout = QHBoxLayout()
         content_layout.setSpacing(0)
 
-        # Try to get current media info and thumbnail
-        media_info = self.media._media_info
-
-        if media_info is not None and (
-            ("title" in media_info and media_info["title"] is not None)
-            or ("artist" in media_info and media_info["artist"] is not None)
-        ):
+        if self.current_session is not None:
             # Create thumbnail label
             self._popup_thumbnail_label = QLabel()
             self._popup_thumbnail_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -270,8 +299,8 @@ class MediaWidget(BaseWidget):
             )
             try:
                 # Use thumbnail if available, otherwise create a default one
-                if media_info["thumbnail"] is not None:
-                    popup_pixmap = self._create_thumbnail_for_popup(media_info["thumbnail"])
+                if self.current_session.thumbnail is not None:
+                    popup_pixmap = self._create_thumbnail_for_popup(self.current_session.thumbnail)
                 else:
                     # Create default thumbnail
                     popup_pixmap = self._create_empty_thumbnail()
@@ -287,8 +316,8 @@ class MediaWidget(BaseWidget):
                 text_layout.setProperty("class", "text-layout")
 
                 title_text = (
-                    self._format_max_field_size(media_info["title"], "popup_title")
-                    if media_info["title"] is not None
+                    self._format_max_field_size(self.current_session.title, "popup_title")
+                    if self.current_session.title
                     else "Unknown Title"
                 )
                 self._popup_title_label = QLabel(title_text)
@@ -298,9 +327,9 @@ class MediaWidget(BaseWidget):
                 self._popup_title_label.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
 
                 artist_text = (
-                    self._format_max_field_size(media_info["artist"], "popup_artist")
-                    if media_info["artist"] is not None
-                    else "Unknown Artist"
+                    self._format_max_field_size(self.current_session.artist, "popup_artist")
+                    if self.current_session.artist
+                    else ""
                 )
                 self._popup_artist_label = QLabel(artist_text)
                 self._popup_artist_label.setContentsMargins(0, 0, 0, 0)
@@ -343,7 +372,7 @@ class MediaWidget(BaseWidget):
 
                 control_layout.addStretch(1)
 
-                source_name, source_class_name = self._get_source_app_name(media_info)
+                source_name, source_class_name = self._get_source_app_name()
                 if source_name is not None and self._menu_config["show_source"]:
                     self._popup_source_label = QLabel(source_name)
                     self._popup_source_label.setContentsMargins(0, 0, 0, 0)
@@ -366,14 +395,14 @@ class MediaWidget(BaseWidget):
                         vol_layout.setContentsMargins(0, 0, 0, 0)
                         vol_layout.setSpacing(0)
 
-                        self._app_volume_slider = QSlider(Qt.Orientation.Vertical)
-                        self._app_volume_slider.setProperty("class", "volume-slider")
-                        self._app_volume_slider.setMinimum(0)
-                        self._app_volume_slider.setMaximum(100)
-                        self._app_volume_slider.setCursor(Qt.CursorShape.PointingHandCursor)
-                        self._app_volume_slider.valueChanged.connect(self._on_app_volume_slider_changed)
+                        self.app_volume_slider = QSlider(Qt.Orientation.Vertical)
+                        self.app_volume_slider.setProperty("class", "volume-slider")
+                        self.app_volume_slider.setMinimum(0)
+                        self.app_volume_slider.setMaximum(100)
+                        self.app_volume_slider.setCursor(Qt.CursorShape.PointingHandCursor)
+                        self.app_volume_slider.valueChanged.connect(self._on_app_volume_slider_changed)
 
-                        vol_layout.addWidget(self._app_volume_slider, 0, Qt.AlignmentFlag.AlignCenter)
+                        vol_layout.addWidget(self.app_volume_slider, 0, Qt.AlignmentFlag.AlignCenter)
 
                         # Add mute/unmute button below the volume slider
                         self._app_mute_button = ClickableLabel(self)
@@ -387,13 +416,13 @@ class MediaWidget(BaseWidget):
 
                         # Bind slider to the current media app session and set initial value
                         self._bind_app_volume_session()
-                        self._update_app_volume_slider()
+                        self._updateapp_volume_slider()
                         self._update_app_mute_button()
                     except Exception as e:
-                        logging.error(f"MediaWidget: Error creating app volume slider: {e}")
+                        logger.error(f"Error creating app volume slider: {e}")
 
             except Exception as e:
-                logging.error(f"MediaWidget: Error setting thumbnail in menu: {e}")
+                logger.error(f"Error setting thumbnail in menu: {e}")
         else:
             # No media playing message
             no_media_label = QLabel("No media playing")
@@ -436,9 +465,9 @@ class MediaWidget(BaseWidget):
         self._popup_total_time_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
 
         # Initialize with current times if available
-        if hasattr(self, "_last_position") and hasattr(self, "_duration"):
-            self._popup_current_time_label.setText(self._format_time(self._last_position))
-            self._popup_total_time_label.setText(self._format_time(self._duration))
+        if self.current_session is not None:
+            self._popup_current_time_label.setText(self._format_time(self.current_session.current_pos))
+            self._popup_total_time_label.setText(self._format_time(self.current_session.duration))
 
         # Add time labels to the horizontal layout with stretch to push them apart
         time_labels_layout.addWidget(self._popup_current_time_label)
@@ -453,8 +482,8 @@ class MediaWidget(BaseWidget):
         main_layout.addWidget(self._time_slider_container)
 
         # Initialize slider position
-        if hasattr(self, "_last_position") and hasattr(self, "_duration") and self._duration > 0:
-            percent = min(1000, int((self._last_position / self._duration) * 1000))
+        if self.current_session is not None and self.current_session.duration > 0:
+            percent = min(1000, int((self.current_session.current_pos / self.current_session.duration) * 1000))
             self._progress_slider.setValue(percent)
         else:
             self._progress_slider.setValue(0)
@@ -467,63 +496,45 @@ class MediaWidget(BaseWidget):
         # Initialize seeking flag
         self._seeking = False
 
-        if not self.media.is_seek_supported():
+        if not (
+            self.current_session
+            and self.current_session.timeline_enabled
+            and (0 < self.current_session.duration < MAX_TIMLINE_DURATION)  # hide timeline if duration is too long
+        ):
             self._time_slider_container.setVisible(False)
-            QTimer.singleShot(0, lambda: self._dialog.adjustSize())
+            QTimer.singleShot(0, self.dialog.adjustSize)
 
-        self._dialog.adjustSize()
-        self._dialog.setPosition(
+        self.dialog.adjustSize()
+        self.dialog.setPosition(
             alignment=self._menu_config["alignment"],
             direction=self._menu_config["direction"],
             offset_left=self._menu_config["offset_left"],
             offset_top=self._menu_config["offset_top"],
         )
         self._update_popup_menu_buttons()
-        self._dialog.show()
+        self.dialog.show()
 
         # Create and install the filter
         self._wheel_filter = WheelEventFilter(self)
-        self._dialog.installEventFilter(self._wheel_filter)
+        self.dialog.installEventFilter(self._wheel_filter)
 
         if self._menu_config["show_volume_slider"]:
-            self._update_app_volume_slider()
+            self._updateapp_volume_slider()
             self._update_app_mute_button()
 
-    def _get_source_app_name(self, media_info):
+    def _get_source_app_name(self):
         """Get formatted source app name from media info or session."""
-        source_name = None
-
-        # First try from media_info
-        if media_info and "source_app" in media_info and media_info["source_app"]:
-            source_app = media_info["source_app"]
-            # Direct lookup using the imported function
-            source_name = get_source_app_display_name(source_app)
-            if source_name is None and DEBUG:
-                # Log when app is found but not in our list
-                logging.debug(f"Unknown source app in media_info: '{source_app}' - consider adding to source_apps.py")
-
-        # If not found, try to get source name from session
-        if source_name is None:
-            try:
-                if hasattr(self.media, "_current_session") and self.media._current_session:
-                    source_app = self.media._current_session.source_app_user_model_id
-                    if source_app:
-                        # Direct lookup using the imported function
-                        source_name = get_source_app_display_name(source_app)
-                        if source_name is None and DEBUG:
-                            # Log when session app is found but not in our list
-                            logging.debug(
-                                f"Unknown source app in session: '{source_app}' - consider adding to source_apps.py"
-                            )
-            except Exception as e:
-                if DEBUG:
-                    logging.debug(f"Error getting media source: {e}")
-
-        # Return the source name and its CSS class name (or None, None if not found)
-        if source_name:
-            return source_name, get_source_app_class_name(source_name)
-        else:
+        if not self.current_session or not (source_app := self.current_session.app_id):
             return None, None
+        try:
+            # Direct lookup
+            source_name = get_source_app_display_name(source_app)
+            if source_name:
+                return source_name, get_source_app_class_name(source_name)
+            logger.debug(f"Unknown source app in session: '{source_app}' - consider adding to source_apps.py")
+        except Exception:
+            logger.exception("Error getting media source")
+        return None, None
 
     def _update_popup_menu_buttons(self):
         try:
@@ -531,13 +542,11 @@ class MediaWidget(BaseWidget):
             play_icon = self._menu_config_icons["pause" if is_playing else "play"]
 
             # Get control states directly from playback info, not from main UI buttons
-            try:
-                playback_info = self.media._playback_info
-                is_prev_enabled = playback_info.controls.is_previous_enabled
-                is_next_enabled = playback_info.controls.is_next_enabled
-                is_play_enabled = playback_info.controls.is_play_pause_toggle_enabled
-            except (AttributeError, Exception):
-                # Default to enabled if there's an error getting control states
+            if self.current_session is not None and (pb_info := self.current_session.playback_info) is not None:
+                is_prev_enabled = pb_info.controls.is_previous_enabled
+                is_next_enabled = pb_info.controls.is_next_enabled
+                is_play_enabled = pb_info.controls.is_play_pause_toggle_enabled
+            else:
                 is_prev_enabled = True
                 is_next_enabled = True
                 is_play_enabled = True
@@ -565,9 +574,9 @@ class MediaWidget(BaseWidget):
                 )
                 refresh_widget_style(self._popup_next_label)
         except Exception as e:
-            logging.error(f"MediaWidget: Error initializing popup buttons: {e}")
+            logger.error(f"Error initializing popup buttons: {e}")
 
-    def _format_time(self, seconds):
+    def _format_time(self, seconds: float) -> str:
         """Format seconds as HH:MM:SS or MM:SS depending on duration."""
         # Extract hours, minutes, and seconds
         minutes, seconds = divmod(int(seconds), 60)
@@ -579,8 +588,8 @@ class MediaWidget(BaseWidget):
             return f"{minutes:01d}:{seconds:02d}"
 
     def _toggle_label(self):
-        if self._animation["enabled"]:
-            AnimationManager.animate(self, self._animation["type"], self._animation["duration"])
+        if self.animation["enabled"]:
+            AnimationManager.animate(self, self.animation["type"], self.animation["duration"])
         self._show_alt_label = not self._show_alt_label
 
         if self._show_alt_label:
@@ -593,24 +602,23 @@ class MediaWidget(BaseWidget):
         self.media.force_update()
 
     def _toggle_play_pause(self):
-        if self._animation["enabled"]:
-            AnimationManager.animate(self, self._animation["type"], self._animation["duration"])
-        WindowsMedia().play_pause()
+        if self.animation["enabled"]:
+            AnimationManager.animate(self, self.animation["type"], self.animation["duration"])
+        _ = self.media.play_pause()
 
-    def _on_timeline_properties_changed(self, timeline_props):
+    def _on_timeline_properties_changed(self):
         """Handle timeline property updates."""
-        if not timeline_props:
+        if not self.current_session:
             return
 
         try:
             # Get position and duration in seconds
-            position_sec = timeline_props.position.total_seconds()
-            duration_sec = timeline_props.end_time.total_seconds()
+            position_sec = self.current_session.current_pos
+            duration_sec = self.current_session.duration
             # Update individual time labels if they exist
             try:
                 if hasattr(self, "_popup_current_time_label") and self._popup_current_time_label:
                     self._popup_current_time_label.setText(self._format_time(position_sec))
-
                 if hasattr(self, "_popup_total_time_label") and self._popup_total_time_label:
                     self._popup_total_time_label.setText(self._format_time(duration_sec))
             except RuntimeError:
@@ -618,23 +626,28 @@ class MediaWidget(BaseWidget):
                 self._popup_current_time_label = None
                 self._popup_total_time_label = None
 
-            # Store the official position and current time for interpolation
-            self._last_position = timeline_props.position.total_seconds()
-            self._last_update_time = QtCore.QDateTime.currentMSecsSinceEpoch()
-            self._duration = timeline_props.end_time.total_seconds()
-
         except Exception as e:
-            logging.error(f"Error updating timeline: {e}")
+            logger.error(f"Error updating timeline: {e}")
 
-    def _update_interpolated_position(self, timeline_data):
+    def _update_interpolated_position(self):
+        if self.current_session is None:
+            return
         try:
+            # Update widget progress bar first (hide progress bar if duration is too long)
+            if self.current_session.timeline_enabled and (0 < self.current_session.duration < MAX_TIMLINE_DURATION):
+                self._progress_bar.setHidden(False)
+                new_pos = min(1000, int((self.current_session.current_pos / self.current_session.duration) * 1000))
+                self._progress_bar.setValue(new_pos)
+            else:
+                self._progress_bar.setHidden(True)
+
             # Skip updates if user is currently seeking or dialog isn't visible
-            if not (hasattr(self, "_dialog") and self._dialog is not None and self._dialog.isVisible()):
+            if not (hasattr(self, "dialog") and self.dialog.isVisible()):
                 return
             if self._seeking:
                 return
-            position = timeline_data["position"]
-            duration = timeline_data["duration"]
+            position = self.current_session.current_pos
+            duration = self.current_session.duration
 
             # Update UI with estimated position
             if hasattr(self, "_popup_current_time_label") and self._popup_current_time_label:
@@ -660,13 +673,13 @@ class MediaWidget(BaseWidget):
             if hasattr(self, "_progress_slider"):
                 self._progress_slider = None
         except Exception as e:
-            logging.error(f"Error updating interpolated position: {e}")
+            logger.error(f"Error updating interpolated position: {e}")
 
-    @QtCore.pyqtSlot(bool)
-    def _on_session_status_changed(self, has_session: bool):
+    @QtCore.pyqtSlot()
+    def _on_session_status_changed(self):
         active_label = self._label_alt if self._show_alt_label else self._label
 
-        if has_session:
+        if self.current_session is not None:
             # If media is not None, we show the frame
             self.show()
 
@@ -697,9 +710,11 @@ class MediaWidget(BaseWidget):
             if self._hide_empty:
                 self.hide()
 
-    @QtCore.pyqtSlot(GlobalSystemMediaTransportControlsSessionPlaybackInfo)
-    def _on_playback_info_changed(self, playback_info: GlobalSystemMediaTransportControlsSessionPlaybackInfo):
+    def _on_playback_info_changed(self):
+        if self.current_session is None or self.current_session.playback_info is None:
+            return
         # Set play-pause state icon
+        playback_info = self.current_session.playback_info
         is_playing = playback_info.playback_status == 4
         is_prev_enabled = playback_info.controls.is_previous_enabled
         is_play_enabled = playback_info.controls.is_play_pause_toggle_enabled
@@ -708,35 +723,36 @@ class MediaWidget(BaseWidget):
 
         if not self._controls_hide:
             play_icon = self._media_button_icons["pause" if is_playing else "play"]
-            # Update main widget button
-            self._play_label.setText(play_icon)
-
-            self._prev_label.setProperty("class", f"btn prev {'disabled' if not is_prev_enabled else ''}")
-            self._prev_label.setCursor(
-                Qt.CursorShape.PointingHandCursor if is_prev_enabled else Qt.CursorShape.ArrowCursor
-            )
-
-            self._play_label.setProperty("class", f"btn play {'disabled' if not is_play_enabled else ''}")
-            self._play_label.setCursor(
-                Qt.CursorShape.PointingHandCursor if is_play_enabled else Qt.CursorShape.ArrowCursor
-            )
-
-            self._next_label.setProperty("class", f"btn next {'disabled' if not is_next_enabled else ''}")
-            self._next_label.setCursor(
-                Qt.CursorShape.PointingHandCursor if is_next_enabled else Qt.CursorShape.ArrowCursor
-            )
-
-            refresh_widget_style(self._prev_label, self._play_label, self._next_label)
-
-            # Clear any inline styles
+            # We need to clear any inline styles: setStyleSheet("")
             # Related to https://github.com/amnweb/yasb/issues/481
-            self._prev_label.setStyleSheet("")
-            self._play_label.setStyleSheet("")
-            self._next_label.setStyleSheet("")
+            if self._play_label is not None:
+                self._play_label.setText(play_icon)
+                self._play_label.setProperty("class", f"btn play {'disabled' if not is_play_enabled else ''}")
+                self._play_label.setCursor(
+                    Qt.CursorShape.PointingHandCursor if is_play_enabled else Qt.CursorShape.ArrowCursor
+                )
+                refresh_widget_style(self._play_label)
+                self._play_label.setStyleSheet("")
+
+            if self._prev_label is not None:
+                self._prev_label.setProperty("class", f"btn prev {'disabled' if not is_prev_enabled else ''}")
+                self._prev_label.setCursor(
+                    Qt.CursorShape.PointingHandCursor if is_prev_enabled else Qt.CursorShape.ArrowCursor
+                )
+                refresh_widget_style(self._prev_label)
+                self._prev_label.setStyleSheet("")
+
+            if self._next_label is not None:
+                self._next_label.setProperty("class", f"btn next {'disabled' if not is_next_enabled else ''}")
+                self._next_label.setCursor(
+                    Qt.CursorShape.PointingHandCursor if is_next_enabled else Qt.CursorShape.ArrowCursor
+                )
+                refresh_widget_style(self._next_label)
+                self._next_label.setStyleSheet("")
 
         # Update popup if it's currently open
         try:
-            if hasattr(self, "_dialog") and self._dialog is not None and self._dialog.isVisible():
+            if hasattr(self, "dialog") and self.dialog.isVisible():
                 play_icon_popup = self._menu_config_icons["pause" if is_playing else "play"]
                 if self._popup_play_button is not None:
                     self._popup_play_button.setText(play_icon_popup)
@@ -766,39 +782,36 @@ class MediaWidget(BaseWidget):
             self._popup_prev_label = None
             self._popup_next_label = None
         except Exception as e:
-            logging.error(f"MediaWidget: Error updating popup button: {e}")
+            logger.error(f"Error updating popup button: {e}")
             self._popup_play_button = None
             self._popup_prev_label = None
             self._popup_next_label = None
 
-    @QtCore.pyqtSlot(object)  # None or dict
-    def _on_media_properties_changed(self, media_info: dict[str, Any] | None):
+    @pyqtSlot()
+    def _on_media_properties_changed(self):
         try:
-            if (
-                hasattr(self, "_dialog")
-                and self._dialog is not None
-                and self._dialog.isVisible()
-                and media_info is not None
-            ):
+            if self.current_session is not None and hasattr(self, "dialog") and self.dialog.isVisible():
                 try:
                     if (
                         hasattr(self, "_popup_title_label")
                         and hasattr(self, "_popup_artist_label")
                         and hasattr(self, "_popup_thumbnail_label")
                     ):
-                        self._popup_title_label.setText(self._format_max_field_size(media_info["title"], "popup_title"))
+                        self._popup_title_label.setText(
+                            self._format_max_field_size(self.current_session.title, "popup_title")
+                        )
                         self._popup_artist_label.setText(
-                            self._format_max_field_size(media_info["artist"], "popup_artist")
+                            self._format_max_field_size(self.current_session.artist, "popup_artist")
                         )
 
-                        if media_info["thumbnail"] is not None:
-                            popup_pixmap = self._create_thumbnail_for_popup(media_info["thumbnail"])
+                        if self.current_session.thumbnail is not None:
+                            popup_pixmap = self._create_thumbnail_for_popup(self.current_session.thumbnail)
                         else:
                             popup_pixmap = self._create_empty_thumbnail()
-                        self._popup_thumbnail_label.setPixmap(popup_pixmap)
+                        self._popup_thumbnail_label.setPixmap(popup_pixmap or QPixmap())
 
                     if hasattr(self, "_popup_source_label"):
-                        source_name, source_class_name = self._get_source_app_name(media_info)
+                        source_name, source_class_name = self._get_source_app_name()
                         if source_name is not None:
                             self._popup_source_label.setText(source_name)
                             self._popup_source_label.setProperty("class", f"source {source_class_name}")
@@ -806,11 +819,11 @@ class MediaWidget(BaseWidget):
                             refresh_widget_style(self._popup_source_label)
 
                 except Exception as e:
-                    logging.error(f"Error updating popup content: {e}")
+                    logger.error(f"Error updating popup content: {e}")
         except RuntimeError:
             pass
         except Exception as e:
-            logging.error(f"MediaWidget: Error updating popup content: {e}")
+            logger.error(f"Error updating popup content: {e}")
 
         active_label = self._label_alt if self._show_alt_label else self._label
         active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
@@ -820,47 +833,50 @@ class MediaWidget(BaseWidget):
             return
 
         # Process label content
-        try:
-            items = list(media_info.items()) if media_info else []
-            formatted_info: dict[str, str] = {"s": self._separator}
-            for k, v in items:
-                if isinstance(v, str):
+        if self.current_session is not None:
+            try:
+                items = (
+                    ("title", self.current_session.title),
+                    ("artist", self.current_session.artist),
+                )
+                formatted_info: dict[str, str] = {"s": self._separator}
+                for k, v in items:
                     formatted_info[k] = self._format_max_field_size(v)
 
-            # Clean the label content from any empty placeholders or dangling separators
-            cleaned_content = clean_string(active_label_content, formatted_info)
+                # Clean the label content from any empty placeholders or dangling separators
+                cleaned_content = clean_string(active_label_content, formatted_info)
 
-            # Replace the remaining placeholders and separators
-            formatted_label = cleaned_content.format_map(formatted_info)
+                # Replace the remaining placeholders and separators
+                formatted_label = cleaned_content.format_map(formatted_info)
 
-            # Finally, truncate the label if necessary
-            if self._max_field_size.get("truncate_whole_label"):
-                formatted_label = self._format_max_field_size(formatted_label)
-        except Exception as e:
-            logging.error(f"MediaWidget: Error formatting label: {e}")
-            if media_info and media_info.get("title"):
-                formatted_label = self._format_max_field_size(media_info["title"])
-            else:
-                formatted_label = "No media"
-        active_label.setText(formatted_label)
+                # Finally, truncate the label if necessary
+                if self._max_field_size.get("truncate_whole_label"):
+                    formatted_label = self._format_max_field_size(formatted_label)
+            except Exception as e:
+                logger.error(f"Error formatting label: {e}", exc_info=True)
+                if self.current_session and self.current_session.title:
+                    formatted_label = self._format_max_field_size(self.current_session.title)
+                else:
+                    formatted_label = "No media"
+            active_label.setText(formatted_label)
 
         # If we don't want the thumbnail, stop here
         if not self._show_thumbnail:
             return
 
         # If no media in session, hide thumbnail and stop here
-        if media_info["thumbnail"] is None:
+        if self.current_session and self.current_session.thumbnail is None:
             self._thumbnail_label.hide()
             return
         # Only update the thumbnail if the title/artist changes or if we did a toggle (resize)
         try:
-            if media_info["thumbnail"] is not None and media_info["title"]:
-                thumbnail = self._crop_thumbnail(media_info["thumbnail"], active_label.sizeHint().width())
+            if self.current_session and self.current_session.title and self.current_session.thumbnail:
+                thumbnail = self._crop_thumbnail(self.current_session.thumbnail, active_label.sizeHint().width())
                 pixmap = QPixmap.fromImage(ImageQt(thumbnail))
                 self._thumbnail_label.setPixmap(pixmap)
 
         except Exception as e:
-            logging.error(f"MediaWidget: Error setting thumbnail: {e}")
+            logger.error(f"Error setting thumbnail: {e}")
             self._thumbnail_label.hide()
         else:
             self._thumbnail_label.show()
@@ -901,10 +917,10 @@ class MediaWidget(BaseWidget):
             stem_x = head_x + head_radius - stem_width  # Stem attaches to right side of note head
             stem_top_y = head_y - stem_height
             draw.rectangle(
-                [
+                (
                     (stem_x, stem_top_y),  # Top-left
                     (stem_x + stem_width, head_y),  # Bottom-right
-                ],
+                ),
                 fill=note_color,
             )
 
@@ -915,10 +931,10 @@ class MediaWidget(BaseWidget):
             )
 
             draw.rectangle(
-                [
+                (
                     (stem_x + stem_width - 1, stem_top_y),
                     (stem_x + stem_width + flag_width, stem_top_y + flag_height // 3),
-                ],
+                ),
                 fill=note_color,
             )
 
@@ -928,7 +944,7 @@ class MediaWidget(BaseWidget):
             # Add rounded corners
             mask = Image.new("L", (size, size), 0)
             mask_draw = ImageDraw(mask)
-            mask_draw.rounded_rectangle([(0, 0), (size, size)], corner_radius, fill=150)
+            mask_draw.rounded_rectangle(((0, 0), (size, size)), corner_radius, fill=150)
 
             # Apply mask for rounded corners
             img.putalpha(mask)
@@ -936,10 +952,10 @@ class MediaWidget(BaseWidget):
             return QPixmap.fromImage(ImageQt(img))
 
         except Exception as e:
-            logging.error(f"Error creating default thumbnail: {e}")
+            logger.error(f"Error creating default thumbnail: {e}")
             return None
 
-    def _create_thumbnail_for_popup(self, img):
+    def _create_thumbnail_for_popup(self, img: Image.Image):
         """Process image thumbnail into a square with rounded corners for popup display."""
         try:
             square_size = self._menu_config["thumbnail_size"]
@@ -982,7 +998,7 @@ class MediaWidget(BaseWidget):
             draw = ImageDraw(mask)
 
             # Draw rounded rectangle with smoother corners
-            draw.rounded_rectangle([(0, 0), (hr_size, hr_size)], radius=hr_radius, fill=255)
+            draw.rounded_rectangle(((0, 0), (hr_size, hr_size)), radius=hr_radius, fill=255)
 
             # Resize mask back down with high-quality anti-aliasing
             mask = mask.resize((square_size, square_size), Image.LANCZOS)
@@ -993,7 +1009,7 @@ class MediaWidget(BaseWidget):
             # Convert to QPixmap
             return QPixmap.fromImage(ImageQt(square_img))
         except Exception as e:
-            logging.error(f"Error creating square thumbnail: {e}")
+            logger.error(f"Error creating square thumbnail: {e}")
             return None
 
     def _crop_thumbnail(self, thumbnail: Image.Image, active_label_width: int) -> Image.Image:
@@ -1035,7 +1051,7 @@ class MediaWidget(BaseWidget):
         thumbnail.putalpha(base_alpha)
         return thumbnail
 
-    def _create_corner_mask(self, image_size: tuple, base_mask: Image) -> Image:
+    def _create_corner_mask(self, image_size: tuple[int, int], base_mask: Image.Image) -> Image.Image:
         """Create a rounded corner mask compatible with the base alpha mask."""
         # Determine which corners to round
         corners = (False, True, True, False) if self._controls_left else (True, False, False, True)
@@ -1054,10 +1070,15 @@ class MediaWidget(BaseWidget):
         try:
             # Draw rounded rectangle
             painter.rounded_rectangle(
-                [0, 0, hr_size[0] - 1, hr_size[1] - 1], hr_radius, self._thumbnail_alpha, None, 0, corners=corners
+                (0, 0, hr_size[0] - 1, hr_size[1] - 1),
+                hr_radius,
+                self._thumbnail_alpha,
+                None,
+                0,
+                corners=corners,
             )
         except Exception as e:
-            logging.error(f"Error creating corner mask, return default thumb: {e}")
+            logger.error(f"Error creating corner mask, return default thumb: {e}")
             return base_mask
 
         # Scale back down with antialiasing
@@ -1065,7 +1086,7 @@ class MediaWidget(BaseWidget):
 
         return corner_mask
 
-    def _apply_edge_fade(self, alpha_mask: Image) -> Image:
+    def _apply_edge_fade(self, alpha_mask: Image.Image) -> Image.Image:
         """Apply edge fade effect to an alpha mask."""
 
         width, height = alpha_mask.size
@@ -1104,7 +1125,7 @@ class MediaWidget(BaseWidget):
         else:
             return text
 
-    def _create_media_button(self, icon, action):
+    def _create_media_button(self, icon: str, action: Callable[..., Any]):
         if not self._controls_hide:
             label = ClickableLabel(self)
             label.setProperty("class", "btn disabled")
@@ -1116,78 +1137,69 @@ class MediaWidget(BaseWidget):
 
     def _create_media_buttons(self):
         return (
-            self._create_media_button(self._media_button_icons["prev_track"], WindowsMedia().prev),
-            self._create_media_button(self._media_button_icons["play"], WindowsMedia().play_pause),
-            self._create_media_button(self._media_button_icons["next_track"], WindowsMedia().next),
+            self._create_media_button(self._media_button_icons["prev_track"], self.media.prev),
+            self._create_media_button(self._media_button_icons["play"], self.media.play_pause),
+            self._create_media_button(self._media_button_icons["next_track"], self.media.next),
         )
 
-    def execute_code(self, func):
+    def execute_code(self, func: Callable[..., Any]):
         try:
             func()
         except Exception as e:
-            logging.error(f"Error executing code: {e}")
+            logger.error(f"Error executing code: {e}")
 
-    def wheelEvent(self, event: QWheelEvent):
-        if event.angleDelta().y() > 0:
-            self.media.switch_session(+1)  # Next
-        elif event.angleDelta().y() < 0:
-            self.media.switch_session(-1)  # Prev
+    def wheelEvent(self, a0: QWheelEvent | None):
+        if a0 is None:
+            return
+        if a0.angleDelta().y() > 0:
+            self.media.switch_current_session(+1)  # Next
+        elif a0.angleDelta().y() < 0:
+            self.media.switch_current_session(-1)  # Prev
 
     def _on_slider_pressed(self):
         # User started dragging, stop automatic updates
         self._seeking = True
 
-    def _on_slider_released(self):
+    @asyncSlot()
+    async def _on_slider_released(self):
         # User finished dragging, perform seek operation
+        if self._progress_slider is None:
+            return
         value = self._progress_slider.value()
-        if hasattr(self, "_duration") and self._duration > 0:
+        if self.current_session and self.current_session.duration > 0:
             # Convert percentage to seconds
-            position = (value / 1000.0) * self._duration
+            position = (value / 1000.0) * self.current_session.duration
             try:
                 # Seek to the position
-                self.media.seek_to_position(position)
+                await self.media.seek_to_position(position)
             except Exception as e:
-                logging.error(f"Error seeking to position: {e}")
+                logger.error(f"Error seeking to position: {e}")
         # Resume automatic updates
         self._seeking = False
 
-    def _on_slider_value_changed(self, value):
+    def _on_slider_value_changed(self, value: int):
         # Only process value changes from user interaction
         if not self._seeking:
             return
 
         # Update time labels to reflect potential new position
-        if hasattr(self, "_duration") and self._duration > 0:
-            position = (value / 1000.0) * self._duration
+        if self.current_session and self.current_session.duration > 0:
+            position = (value / 1000.0) * self.current_session.duration
             position_str = self._format_time(position)
-            duration_str = self._format_time(self._duration)
+            duration_str = self._format_time(self.current_session.duration)
 
             # Update both time labels
-            self._popup_current_time_label.setText(position_str)
-            self._popup_total_time_label.setText(duration_str)
+            if self._popup_current_time_label is not None:
+                self._popup_current_time_label.setText(position_str)
+            if self._popup_total_time_label is not None:
+                self._popup_total_time_label.setText(duration_str)
 
-    def _get_current_app_identifier(self) -> tuple[Optional[str], Optional[str]]:
+    def _get_current_app_identifier(self) -> str | None:
         """Get the AUMID of the current media app."""
-        aumid = None
+        if self.current_session:
+            return self.current_session.app_id
 
-        # Try to get AUMID from current session
-        try:
-            if hasattr(self.media, "_current_session") and self.media._current_session:
-                aumid = self.media._current_session.source_app_user_model_id
-        except Exception:
-            pass
-
-        # Try to get AUMID from media info
-        try:
-            media_info = getattr(self.media, "_media_info", None)
-            if media_info and media_info.get("source_app"):
-                aumid = media_info.get("source_app") or aumid
-        except Exception:
-            pass
-
-        return aumid
-
-    def _get_process_aumid(self, pid: int) -> Optional[str]:
+    def _get_process_aumid(self, pid: int) -> str | None:
         """Get AUMID for a process using GetApplicationUserModelId."""
         if GetApplicationUserModelId is None:
             return None
@@ -1211,7 +1223,7 @@ class MediaWidget(BaseWidget):
 
         return None
 
-    def _match_session_by_mapping(self, sessions, aumid: str):
+    def _match_session_by_mapping(self, sessions: list[MediaSession], aumid: str) -> MediaSession | None:
         """Match session using source app mapping."""
         if not aumid:
             return None
@@ -1232,7 +1244,7 @@ class MediaWidget(BaseWidget):
 
         return None
 
-    def _match_session_by_aumid(self, sessions, aumid: str):
+    def _match_session_by_aumid(self, sessions: list[MediaSession], aumid: str):
         """Match session by process AUMID."""
         target_aumid = aumid.lower()
         for session in sessions:
@@ -1246,7 +1258,7 @@ class MediaWidget(BaseWidget):
                 continue
         return None
 
-    def _match_session_by_executable(self, sessions, identifier: str):
+    def _match_session_by_executable(self, sessions: list[MediaSession], identifier: str):
         """Match session by executable name."""
         if not identifier.endswith(".exe"):
             return None
@@ -1269,7 +1281,7 @@ class MediaWidget(BaseWidget):
 
         try:
             # pycaw handles COM initialization internally
-            sessions = AudioUtilities.GetAllSessions()
+            sessions = cast(list[MediaSession], AudioUtilities.GetAllSessions())
             candidate = None
             if aumid:
                 candidate = self._match_session_by_mapping(sessions, aumid)
@@ -1288,7 +1300,7 @@ class MediaWidget(BaseWidget):
             self._app_volume_session = candidate
 
         except Exception as e:
-            logging.error(f"MediaWidget: Failed to bind app volume session: {e}")
+            logger.error(f"Failed to bind app volume session: {e}")
             self._app_volume_session = None
 
     def _get_volume_interface(self):
@@ -1297,29 +1309,29 @@ class MediaWidget(BaseWidget):
             return None
         return getattr(self._app_volume_session, "SimpleAudioVolume", None)
 
-    def _update_app_volume_slider(self):
+    def _updateapp_volume_slider(self):
         """Update slider value from bound app session volume."""
-        if not self._app_volume_slider:
+        if not self.app_volume_slider:
             return
 
         volume_interface = self._get_volume_interface()
         if not volume_interface:
             self._vol_container.hide()
-            self._app_volume_slider.setEnabled(False)
+            self.app_volume_slider.setEnabled(False)
             return
 
         try:
             raw_level = volume_interface.GetMasterVolume()
             level = int(round(float(raw_level) * 100))
 
-            self._app_volume_slider.blockSignals(True)
-            self._app_volume_slider.setValue(level)
-            self._app_volume_slider.blockSignals(False)
-            self._app_volume_slider.setEnabled(True)
+            self.app_volume_slider.blockSignals(True)
+            self.app_volume_slider.setValue(level)
+            self.app_volume_slider.blockSignals(False)
+            self.app_volume_slider.setEnabled(True)
 
         except Exception as e:
-            logging.error(f"MediaWidget: Failed to read app volume: {e}")
-            self._app_volume_slider.setEnabled(False)
+            logger.error(f"Failed to read app volume: {e}")
+            self.app_volume_slider.setEnabled(False)
 
     def _on_app_volume_slider_changed(self, value: int):
         """Set app session volume from slider."""
@@ -1336,7 +1348,7 @@ class MediaWidget(BaseWidget):
                 self._update_app_mute_button()
 
         except Exception as e:
-            logging.error(f"MediaWidget: Failed to set app volume: {e}")
+            logger.error(f"Failed to set app volume: {e}")
 
     def _toggle_app_mute(self):
         """Toggle mute state for the current app."""
@@ -1360,7 +1372,7 @@ class MediaWidget(BaseWidget):
             self._update_app_mute_button()
 
         except Exception as e:
-            logging.error(f"MediaWidget: Failed to toggle app mute: {e}")
+            logger.error(f"Failed to toggle app mute: {e}")
 
     def _update_app_mute_button(self):
         """Update the mute button icon based on current mute state."""
@@ -1383,56 +1395,62 @@ class MediaWidget(BaseWidget):
             refresh_widget_style(self._app_mute_button)
 
         except Exception as e:
-            logging.error(f"MediaWidget: Failed to update mute button: {e}")
+            logger.error(f"Failed to update mute button: {e}")
             self._app_mute_button.setEnabled(False)
 
 
 class ClickableLabel(QLabel):
-    def __init__(self, parent=None):
+    def __init__(self, parent: MediaWidget | None = None):
         super().__init__(parent)
-        self.parent_widget = parent
-        self.data = None
+        self.parent_widget: MediaWidget | None = parent
+        self.data: Callable[..., Any] | None = None
 
-    def mousePressEvent(self, event):
-        if event.button() == Qt.MouseButton.LeftButton and self.data:
-            if self.parent_widget._animation["enabled"]:
+    def mousePressEvent(self, ev: QMouseEvent | None):
+        if ev is None:
+            return
+        if ev.button() == Qt.MouseButton.LeftButton and self.data:
+            if self.parent_widget is None:
+                return
+            if self.parent_widget.animation["enabled"]:
                 AnimationManager.animate(
-                    self, self.parent_widget._animation["type"], self.parent_widget._animation["duration"]
+                    self, self.parent_widget.animation["type"], self.parent_widget.animation["duration"]
                 )
             self.parent_widget.execute_code(self.data)
 
 
-class WheelEventFilter(QtCore.QObject):
+class WheelEventFilter(QObject):
     """
     Install event filter to capture wheel events in the popup to handle wheel events for media session switching.
     This class is used to capture wheel events and switch media sessions accordingly.
     """
 
-    def __init__(self, parent=None):
+    def __init__(self, parent: MediaWidget):
         super().__init__(parent)
         self.media_widget = parent
 
-    def eventFilter(self, obj, event):
-        if event.type() == QtCore.QEvent.Type.Wheel:
-            if not self.media_widget._dialog.geometry().contains(event.globalPosition().toPoint()):
+    def eventFilter(self, obj: QObject, event: QEvent):  # pyright: ignore[reportIncompatibleMethodOverride]
+        if event.type() == QEvent.Type.Wheel:
+            event = cast(QWheelEvent, event)
+            dialog = self.media_widget.dialog
+            if not dialog.geometry().contains(event.globalPosition().toPoint()):
                 return False
 
-            if hasattr(self.media_widget, "_app_volume_slider") and self.media_widget._app_volume_slider:
+            if self.media_widget.app_volume_slider is not None:
                 slider_global_rect = QtCore.QRect(
-                    self.media_widget._app_volume_slider.mapToGlobal(QtCore.QPoint(0, 0)),
-                    self.media_widget._app_volume_slider.size(),
+                    self.media_widget.app_volume_slider.mapToGlobal(QtCore.QPoint(0, 0)),
+                    self.media_widget.app_volume_slider.size(),
                 )
                 if slider_global_rect.contains(event.globalPosition().toPoint()):
                     return False
 
-            old_session = getattr(self.media_widget.media, "_current_session", None)
+            old_session = self.media_widget.current_session
             if event.angleDelta().y() > 0:
-                self.media_widget.media.switch_session(+1)
+                self.media_widget.media.switch_current_session(+1)
             elif event.angleDelta().y() < 0:
-                self.media_widget.media.switch_session(-1)
-            new_session = getattr(self.media_widget.media, "_current_session", None)
+                self.media_widget.media.switch_current_session(-1)
+            new_session = self.media_widget.current_session
             if new_session != old_session:
-                self.media_widget._dialog.hide()
+                self.media_widget.dialog.hide()
                 self.media_widget.show_menu()
             return True
         return False

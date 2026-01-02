@@ -5,8 +5,8 @@ import shutil
 import sys
 from os import makedirs, path
 from pathlib import Path
-from sys import argv, exit
-from typing import Union
+from sys import argv
+from typing import Any
 from xml.dom import SyntaxErr
 
 from cerberus import Validator, schema
@@ -101,7 +101,7 @@ def parse_env(obj):
     return obj
 
 
-def get_config(show_error_dialog=False) -> Union[dict, None]:
+def get_config(show_error_dialog: bool = False) -> dict[str, Any] | None:
     config_path = get_config_path()
 
     try:
@@ -128,7 +128,7 @@ def get_config(show_error_dialog=False) -> Union[dict, None]:
         logging.error(f"The file '{config_path}' could not be read. Do you have read/write permissions?")
 
 
-def get_stylesheet(show_error_dialog=False) -> Union[str, None]:
+def get_stylesheet(show_error_dialog: bool = False) -> str | None:
     styles_path = get_stylesheet_path()
     try:
         css_processor = CSSProcessor(styles_path)
@@ -151,9 +151,10 @@ def get_stylesheet(show_error_dialog=False) -> Union[str, None]:
     return None
 
 
-def get_config_and_stylesheet() -> tuple[dict, str]:
+def get_config_and_stylesheet() -> tuple[dict[str, Any], str]:
     config = get_config()
     stylesheet = get_stylesheet()
+    error_msg: str | None = None
 
     if not config:
         error_msg = "User config file could not be loaded. Exiting Application."
@@ -166,4 +167,4 @@ def get_config_and_stylesheet() -> tuple[dict, str]:
 
     if error_msg:
         logging.error(error_msg)
-        exit(1)
+        sys.exit(1)

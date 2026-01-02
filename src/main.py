@@ -5,11 +5,12 @@ import logging
 import sys
 import time
 from sys import argv
+from types import TracebackType
 
 import qasync
-from PyQt6.QtWidgets import QApplication
 
 import settings
+from core.application import YASBApplication
 from core.bar_manager import BarManager
 from core.config import get_config_and_stylesheet
 from core.event_service import EventService
@@ -22,7 +23,7 @@ from env_loader import load_env, set_font_engine
 
 
 @contextlib.contextmanager
-def single_instance_lock(name="yasb_reborn"):
+def single_instance_lock(name: str = "yasb_reborn"):
     """Create a Windows mutex to ensure a single instance, with optional restart wait.
 
     If the process is launched with --restart-wait, the new instance will
@@ -86,9 +87,26 @@ def single_instance_lock(name="yasb_reborn"):
 
 
 def main():
-    # Application instance should be created first
-    app = QApplication(argv)
-    app.setQuitOnLastWindowClosed(False)
+    """Main entry point"""
+    app = YASBApplication(argv)
+    asyncio.run(main_async(app), loop_factory=qasync.QEventLoop)
+
+
+async def main_async(app: YASBApplication):
+    """
+    Async entry point
+    Required for qasync to work properly
+    """
+    # Event to signal application shutdown
+    app_close_event = asyncio.Event()
+
+    # Assign the loop and close event to the app instance
+    # This allows the controller to close the app gracefully from another thread
+    app.loop = asyncio.get_running_loop()
+    app.close_event = app_close_event
+
+    # Connect the app's aboutToQuit signal to the close event
+    app.aboutToQuit.connect(app_close_event.set)
 
     # Initialize configuration early after the single instance check
     config, stylesheet = get_config_and_stylesheet()
@@ -96,10 +114,6 @@ def main():
     if config["debug"]:
         settings.DEBUG = True
         logging.info("Debug mode enabled.")
-
-    # Need qasync event loop to work with PyQt6
-    loop = qasync.QEventLoop(app)
-    asyncio.set_event_loop(loop)
 
     # Initialise bars and background event listeners
     manager = BarManager(config, stylesheet)
@@ -131,8 +145,16 @@ def main():
         except Exception as e:
             logging.error(f"Failed to start auto update service: {e}")
 
-    with loop:
-        loop.run_forever()
+    # Wait for application shutdown
+    try:
+        await app_close_event.wait()
+    except asyncio.CancelledError:
+        logging.info("Application closes...")
+    except Exception as e:
+        logging.error(f"Error during application shutdown: {e}")
+    finally:
+        app.quit()
+        sys.exit()
 
 
 if __name__ == "__main__":
@@ -141,7 +163,7 @@ if __name__ == "__main__":
     load_env()
     set_font_engine()
 
-    def exception_hook(exctype, value, traceback):
+    def exception_hook(_exctype: type, value: BaseException, _traceback: TracebackType | None):
         EventService().clear()
         logging.error("Unhandled exception", exc_info=value)
         sys.exit(1)

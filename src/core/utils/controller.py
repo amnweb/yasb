@@ -5,40 +5,47 @@ import sys
 from PyQt6.QtCore import QMetaObject, QProcess, Qt
 from PyQt6.QtWidgets import QApplication
 
+from core.application import YASBApplication
 from core.event_service import EventService
 from core.utils.cli_server import CliPipeHandler
 from core.utils.win32.utilities import find_focused_screen
 
 
-def reload_application(msg="Reloading Application..."):
+def reload_application(msg: str = "Reloading Application..."):
     try:
         logging.info(msg)
         if hasattr(sys, "_cli_pipe_handler") and sys._cli_pipe_handler is not None:
             sys._cli_pipe_handler.stop_cli_pipe_server()
+
         app = QApplication.instance()
-        if app is not None:
-            app.processEvents()
+        if isinstance(app, YASBApplication):
+            if app.loop and app.close_event:
+                app.loop.call_soon_threadsafe(app.close_event.set)
+            else:  # Should never happen while we use qasync
+                QMetaObject.invokeMethod(app, "quit", Qt.ConnectionType.QueuedConnection)
 
         args = list(sys.argv)
         if "--restart-wait" not in args:
             args.append("--restart-wait")
 
         QProcess.startDetached(sys.executable, args)
-        if app is not None:
-            QMetaObject.invokeMethod(app, "quit", Qt.ConnectionType.QueuedConnection)
     except Exception as e:
         logging.error(f"Error during reload: {e}")
         os._exit(0)
 
 
-def exit_application(msg="Exiting Application..."):
+def exit_application(msg: str = "Exiting Application..."):
     logging.info(msg)
     try:
         if hasattr(sys, "_cli_pipe_handler") and sys._cli_pipe_handler is not None:
             sys._cli_pipe_handler.stop_cli_pipe_server()
+
         app = QApplication.instance()
-        if app is not None:
-            QMetaObject.invokeMethod(app, "quit", Qt.ConnectionType.QueuedConnection)
+        if isinstance(app, YASBApplication):
+            if app.loop and app.close_event:
+                app.loop.call_soon_threadsafe(app.close_event.set)
+            else:  # Should never happen while we use qasync
+                QMetaObject.invokeMethod(app, "quit", Qt.ConnectionType.QueuedConnection)
     except:
         os._exit(0)
 
