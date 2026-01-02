@@ -22,7 +22,7 @@ dependencies = [
     "holidays==0.87",
     "watchdog",
     "pycaw==20251023",
-    "pillow==12.0.0",
+    "pillow==12.1.0",
     "icoextract==0.2.0",
     "qasync",
     "obs-websocket-py",
