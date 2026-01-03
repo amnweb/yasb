@@ -32,6 +32,7 @@ ai_chat:
       offset_left: 0
       offset_top: 6
     icons:
+      attach: "\uf0c6"
       send: "\uf1d8"
       stop: "\uf04d"
       clear: "\uf1f8"
@@ -61,6 +62,8 @@ ai_chat:
           temperature: 0.3
           top_p: 0.95
           max_tokens: 4096
+          max_image_size: 1024
+          max_attachment_size: 256
           instructions: "C:/Users/amnweb/Desktop/custom_gpt_chatmode.md"
 
 ```
@@ -76,10 +79,17 @@ ai_chat:
 - Robust error handling and reconnection for streaming
 - Supports system prompts/instructions as strings or external markdown files
 - Notification dot for new messages when the chat is closed
+- File attachments (images and text files) with automatic compression/truncation based on model limits
 
 **Usage:**
 - Click the widget to open the chat popup
 - Select your provider and model from the dropdown menus
+- Attach files with the attach button (images and text files supported)
+  - Images are automatically compressed if they exceed the model's `max_image_size` limit
+  - Text files are automatically truncated if they exceed the model's `max_attachment_size` limit
+  - Binary files (PDFs, executables, etc.) are rejected as unsupported
+  - Set `max_image_size: 0` to disable image attachments for a model
+  - Set `max_attachment_size: 0` to disable text file attachments for a model
 - Enter your message and send; responses stream in real time
 - Switch providers/models at any time—your chat history is preserved
 - API credentials can be set as environment variables (recommended for security) or in the config file
@@ -102,6 +112,7 @@ This widget is ideal for integrating any LLM service that follows the OpenAI API
   - **offset_top**: Vertical offset from the widget
 - **icons:** Dictionary of icons for send, stop, clear, and assistant. Can be icon fonts or simple text.
   - **send** Icon for sending messages
+  - **attach** Icon for the attachment button
   - **stop**: Icon for stopping streaming
   - **clear**: Icon for clearing chat history
   - **assistant**: Icon for the assistant avatar
@@ -129,6 +140,8 @@ This widget is ideal for integrating any LLM service that follows the OpenAI API
     - **temperature**: Sampling temperature
     - **top_p**: Nucleus sampling
     - **instructions**: System prompt or path to instructions file
+    - **max_image_size**: Maximum image attachment size in KB (default: 0, disabled). Images larger than this will be compressed automatically
+    - **max_attachment_size**: Maximum text file attachment size in KB (default: 256). Text files larger than this will be truncated
 
 
 
@@ -168,10 +181,16 @@ If you want to use different styles for the context menu, you can target the `.a
 .ai-chat-popup .chat-content .assistant-icon {} /* Icon for assistant messages */
 
 /* Input area */
+.ai-chat-popup .chat-footer .attach-button {} /* Attachment button */
 .ai-chat-popup .chat-footer .chat-input {} /* Input area for chat messages */
 .ai-chat-popup .chat-footer .send-button {} /* Send button in input area */
 .ai-chat-popup .chat-footer .stop-button {} /* Stop button in input area */
 .ai-chat-popup .chat-footer .clear-button {} /* Clear button in input area */
+
+/* Attachments row */
+.ai-chat-popup .attachment-chip {} /* Attachment chip container */
+.ai-chat-popup .attachment-label {} /* Attachment filename text */
+.ai-chat-popup .attachment-remove-button {} /* Remove (x) button on chip */
 ```
 
 
@@ -325,7 +344,8 @@ If you want to use different styles for the context menu, you can target the `.a
 }
 .ai-chat-popup .chat-footer .clear-button,
 .ai-chat-popup .chat-footer .send-button,
-.ai-chat-popup .chat-footer .stop-button {
+.ai-chat-popup .chat-footer .stop-button,
+.ai-chat-popup .chat-footer .attach-button {
     background-color: #2d2d2d;
     color: #ffffff;
     font-size: 12px;
@@ -343,12 +363,14 @@ If you want to use different styles for the context menu, you can target the `.a
 }
 .ai-chat-popup .chat-footer .clear-button:hover,
 .ai-chat-popup .chat-footer .send-button:hover,
-.ai-chat-popup .chat-footer .stop-button:hover {
+.ai-chat-popup .chat-footer .stop-button:hover,
+.ai-chat-popup .chat-footer .attach-button:hover {
     background-color: #464646;
 }
 .ai-chat-popup .chat-footer .clear-button:disabled,
 .ai-chat-popup .chat-footer .send-button:disabled,
-.ai-chat-popup .chat-footer .stop-button:disabled {
+.ai-chat-popup .chat-footer .stop-button:disabled,
+.ai-chat-popup .chat-footer .attach-button:disabled {
     background-color: #2d2d2d;
     color: #818181;
 }

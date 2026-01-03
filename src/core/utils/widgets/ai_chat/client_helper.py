@@ -32,7 +32,19 @@ def maybe_answer_yasb_question(messages):
     """
     if not messages or not isinstance(messages[-1], dict):
         return None
-    user_text = messages[-1].get("content", "").lower().strip()
+    content = messages[-1].get("content", "")
+    # Handle multimodal content (list of parts) - get first text block (user's text, not attachments)
+    if isinstance(content, list):
+        for part in content:
+            if isinstance(part, dict) and part.get("type") == "text":
+                if "[Attachment: " not in part.get("text", ""):
+                    content = part.get("text", "")
+                    break
+        else:
+            content = ""
+    if not isinstance(content, str):
+        return None
+    user_text = content.lower().strip()
     # Only answer if the question is about YASB
     if (
         ("yasb" in user_text)
