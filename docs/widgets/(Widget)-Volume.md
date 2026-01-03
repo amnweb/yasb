@@ -214,4 +214,4 @@ volume:
 ```
 
 ## Preview of the Widget
-![Volume Widget](assets/119849t2-ty6f89d1-as5e-9982-t6d7ddbdda70.png)
+![Volume Widget](../assets/119849t2-ty6f89d1-as5e-9982-t6d7ddbdda70.png)

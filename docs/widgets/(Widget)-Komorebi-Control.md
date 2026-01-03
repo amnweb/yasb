@@ -128,4 +128,4 @@
 ```
 
 ## Preview
-![Komorebi Control Widget](assets/768254j6-dx9t65f3-gm2v-3045-u5l8eabcfd19.png)
+![Komorebi Control Widget](../assets/768254j6-dx9t65f3-gm2v-3045-u5l8eabcfd19.png)

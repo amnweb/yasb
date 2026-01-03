@@ -206,4 +206,4 @@ github:
 ```
 
 ## Preview of the Widget
-![GitHub YASB Widget](assets/576054922-dc651bd1-dedc-5786-c62a7ebdca70.png)
+![GitHub YASB Widget](../assets/576054922-dc651bd1-dedc-5786-c62a7ebdca70.png)

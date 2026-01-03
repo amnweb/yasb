@@ -185,4 +185,4 @@
 ```
 
 ## Preview of the Widget
-![Server Monitor YASB Widget](assets/985054922-dcf91bd1-xert-3056-t62a7ebdca33.png)
+![Server Monitor YASB Widget](../assets/985054922-dcf91bd1-xert-3056-t62a7ebdca33.png)

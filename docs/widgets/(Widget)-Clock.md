@@ -442,4 +442,4 @@ Clock format https://docs.python.org/3/library/time.html#time.strftime
 ```
 
 ## Preview of the Widget
-![GitHub YASB Widget](assets/792254956-fr651bd1-gtdc-8966-e89a5edca704.png)
+![GitHub YASB Widget](../assets/792254956-fr651bd1-gtdc-8966-e89a5edca704.png)

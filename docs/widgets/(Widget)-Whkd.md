@@ -148,4 +148,4 @@ Whkd is a simple hotkey daemon for Windows that reacts to input events by execut
 }
 ```
 ## Preview of the WHKD card
-![YASB WHKD Widget](assets/765432109-1a2b3c4d-5e6f-78ab-9012-3456789abcd.png)
+![YASB WHKD Widget](../assets/765432109-1a2b3c4d-5e6f-78ab-9012-3456789abcd.png)

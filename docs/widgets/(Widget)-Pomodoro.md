@@ -222,4 +222,4 @@ pomodoro:
 ```
 
 ## Preview of the Widget
-![Pomodoro Timer YASB Widget](assets/864209753-d1e2f3a4-b5c6-7890-1234-5678defabc90.png)
+![Pomodoro Timer YASB Widget](../assets/864209753-d1e2f3a4-b5c6-7890-1234-5678defabc90.png)

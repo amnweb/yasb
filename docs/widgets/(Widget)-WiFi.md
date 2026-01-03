@@ -279,4 +279,4 @@ wifi:
 ```
 
 ## Preview of the Popup Menu
-![Popup Menu Demo](assets/457922931-4ba996e6-0ee6-4f68-9528-2a2f14002104.gif)
+![Popup Menu Demo](../assets/457922931-4ba996e6-0ee6-4f68-9528-2a2f14002104.gif)

@@ -167,4 +167,4 @@ language:
 ```
 
 ## Preview of the Widget
-![Language YASB Widget](assets/6b646834-fc98abfe-b297-ce61-4bce3683223c.png)
+![Language YASB Widget](../assets/6b646834-fc98abfe-b297-ce61-4bce3683223c.png)
