@@ -64,7 +64,7 @@ dev = [
     "types-pillow",
 ]
 packaging = [
-    "cx-freeze==8.5.2"
+    "cx-freeze==8.5.3"
 ]
 [tool.hatch.metadata]
 allow-direct-references = true
