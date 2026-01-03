@@ -1,4 +1,5 @@
 import logging
+from collections import defaultdict
 from contextlib import suppress
 from typing import Dict, List, Literal
 
@@ -558,22 +559,22 @@ class WorkspaceWidget(BaseWidget):
                 add_shadow(workspace_btn, self._btn_shadow)
 
     def _get_workspace_label(self, workspace_index):
-        workspace = self._komorebic.get_workspace_by_index(self._komorebi_screen, workspace_index)
+        workspace = self._komorebic.get_workspace_by_index(self._komorebi_screen, workspace_index) or {}
         monitor_index = self._komorebi_screen["index"]
         ws_index = workspace_index if self._label_zero_index else workspace_index + 1
         ws_monitor_index = monitor_index if self._label_zero_index else monitor_index + 1
-        ws_name = (
-            workspace["name"]
-            if workspace["name"]
-            else self._label_default_name.format(index=ws_index, monitor_index=ws_monitor_index)
+
+        base_params = defaultdict(
+            str,
+            {"name": workspace.get("name") or "", "index": ws_index, "monitor_index": ws_monitor_index},
         )
-        default_label = self._label_workspace_btn.format(name=ws_name, index=ws_index, monitor_index=ws_monitor_index)
-        active_label = self._label_workspace_active_btn.format(
-            name=ws_name, index=ws_index, monitor_index=ws_monitor_index
-        )
-        populated_label = self._label_workspace_populated_btn.format(
-            name=ws_name, index=ws_index, monitor_index=ws_monitor_index
-        )
+
+        ws_name = base_params["name"] or self._label_default_name.format_map(base_params) or str(ws_index)
+        params = defaultdict(str, {**base_params, "name": ws_name})
+
+        default_label = self._label_workspace_btn.format_map(params)
+        active_label = self._label_workspace_active_btn.format_map(params)
+        populated_label = self._label_workspace_populated_btn.format_map(params)
         return default_label, active_label, populated_label
 
     def _try_add_workspace_button(self, workspace_index: int) -> WorkspaceButton:
