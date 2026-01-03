@@ -311,7 +311,8 @@ class MediaWidget(BaseWidget):
 
                 # Create layout for text information (title, artist, slider, controls)
                 text_layout = QVBoxLayout()
-                text_layout.setContentsMargins(0, 0, 0, 0)
+                # Add left padding to separate text from thumbnail
+                text_layout.setContentsMargins(12, 0, 0, 0)
                 text_layout.setSpacing(0)
                 text_layout.setProperty("class", "text-layout")
 
@@ -604,7 +605,28 @@ class MediaWidget(BaseWidget):
     def _toggle_play_pause(self):
         if self.animation["enabled"]:
             AnimationManager.animate(self, self.animation["type"], self.animation["duration"])
-        _ = self.media.play_pause()
+
+        # Call the media control
+        WindowsMedia().play_pause()
+
+        # In fallback mode, manually toggle the play/pause icon
+        logger.info(
+            f"Toggle play/pause - fallback_mode: {getattr(self, '_fallback_mode', None)}, play_label: {self._play_label is not None}"
+        )
+        if hasattr(self, "_fallback_mode") and self._fallback_mode and self._play_label is not None:
+            current_text = self._play_label.text()
+            logger.info(
+                f"Current icon: {current_text}, play icon: {self._media_button_icons['play']}, pause icon: {self._media_button_icons['pause']}"
+            )
+            # Toggle between play and pause icons
+            if current_text == self._media_button_icons["play"]:
+                self._play_label.setText(self._media_button_icons["pause"])
+                self._is_playing = True
+                logger.info("Changed to PAUSE icon")
+            else:
+                self._play_label.setText(self._media_button_icons["play"])
+                self._is_playing = False
+                logger.info("Changed to PLAY icon")
 
     def _on_timeline_properties_changed(self):
         """Handle timeline property updates."""
@@ -688,10 +710,11 @@ class MediaWidget(BaseWidget):
                 active_label.show()
 
         else:
-            # Hide thumbnail and label fields
+            # Hide thumbnail and show "No media playing" message
             self._thumbnail_label.hide()
-            active_label.hide()
-            active_label.setText("")
+            if not self._controls_only:
+                active_label.show()
+                active_label.setText("No media playing")
             if not self._controls_hide:
                 if self._play_label is not None:
                     self._play_label.setText(self._media_button_icons["play"])
@@ -713,6 +736,11 @@ class MediaWidget(BaseWidget):
     def _on_playback_info_changed(self):
         if self.current_session is None or self.current_session.playback_info is None:
             return
+
+        # In fallback mode, button states are managed by _on_media_properties_changed
+        if hasattr(self.media, '_fallback_mode') and self.media._fallback_mode:
+            return
+
         # Set play-pause state icon
         playback_info = self.current_session.playback_info
         is_playing = playback_info.playback_status == 4
@@ -723,16 +751,16 @@ class MediaWidget(BaseWidget):
 
         if not self._controls_hide:
             play_icon = self._media_button_icons["pause" if is_playing else "play"]
-            # We need to clear any inline styles: setStyleSheet("")
+            # Update main widget button
+            self._play_label.setText(play_icon)
+            self._play_label.setProperty("class", f"btn play {'disabled' if not is_play_enabled else ''}")
+            self._play_label.setCursor(
+                Qt.CursorShape.PointingHandCursor if is_play_enabled else Qt.CursorShape.ArrowCursor
+            )
+            refresh_widget_style(self._play_label)
+            # Clear any inline styles
             # Related to https://github.com/amnweb/yasb/issues/481
-            if self._play_label is not None:
-                self._play_label.setText(play_icon)
-                self._play_label.setProperty("class", f"btn play {'disabled' if not is_play_enabled else ''}")
-                self._play_label.setCursor(
-                    Qt.CursorShape.PointingHandCursor if is_play_enabled else Qt.CursorShape.ArrowCursor
-                )
-                refresh_widget_style(self._play_label)
-                self._play_label.setStyleSheet("")
+            self._play_label.setStyleSheet("")
 
             if self._prev_label is not None:
                 self._prev_label.setProperty("class", f"btn prev {'disabled' if not is_prev_enabled else ''}")
@@ -825,6 +853,72 @@ class MediaWidget(BaseWidget):
         except Exception as e:
             logger.error(f"Error updating popup content: {e}")
 
+        # Update button states in fallback mode
+        if hasattr(self.media, '_fallback_mode') and self.media._fallback_mode and not self._controls_hide:
+            if self.current_session is not None:
+                has_media_app = bool(self.current_session.title or self.current_session.artist)
+                initial_playing = getattr(self.media, '_fallback_is_playing', False)
+
+                if has_media_app:
+                    # Enable controls when media app is active
+                    if self._play_label is not None:
+                        # Set correct icon: pause icon if playing, play icon if paused
+                        initial_icon = self._media_button_icons["pause"] if initial_playing else self._media_button_icons["play"]
+                        current_icon = self._play_label.text()
+
+                        # Only update if icon changed to avoid unnecessary updates
+                        if current_icon != initial_icon:
+                            self._play_label.setText(initial_icon)
+
+                        self._play_label.setProperty("class", "btn play")
+                        self._play_label.setCursor(Qt.CursorShape.PointingHandCursor)
+                        refresh_widget_style(self._play_label)
+                        self._play_label.update()  # Force visual update
+
+                    if self._prev_label is not None:
+                        self._prev_label.setProperty("class", "btn prev")
+                        self._prev_label.setCursor(Qt.CursorShape.PointingHandCursor)
+                        refresh_widget_style(self._prev_label)
+
+                    if self._next_label is not None:
+                        self._next_label.setProperty("class", "btn next")
+                        self._next_label.setCursor(Qt.CursorShape.PointingHandCursor)
+                        refresh_widget_style(self._next_label)
+                else:
+                    # Disable controls when no media app is active
+                    if self._play_label is not None:
+                        self._play_label.setText(self._media_button_icons["play"])
+                        self._play_label.setProperty("class", "btn play disabled")
+                        self._play_label.setCursor(Qt.CursorShape.ArrowCursor)
+                        refresh_widget_style(self._play_label)
+
+                    if self._prev_label is not None:
+                        self._prev_label.setProperty("class", "btn prev disabled")
+                        self._prev_label.setCursor(Qt.CursorShape.ArrowCursor)
+                        refresh_widget_style(self._prev_label)
+
+                    if self._next_label is not None:
+                        self._next_label.setProperty("class", "btn next disabled")
+                        self._next_label.setCursor(Qt.CursorShape.ArrowCursor)
+                        refresh_widget_style(self._next_label)
+            else:
+                # Disable controls when no session is active
+                if self._play_label is not None:
+                    self._play_label.setText(self._media_button_icons["play"])
+                    self._play_label.setProperty("class", "btn play disabled")
+                    self._play_label.setCursor(Qt.CursorShape.ArrowCursor)
+                    refresh_widget_style(self._play_label)
+
+                if self._prev_label is not None:
+                    self._prev_label.setProperty("class", "btn prev disabled")
+                    self._prev_label.setCursor(Qt.CursorShape.ArrowCursor)
+                    refresh_widget_style(self._prev_label)
+
+                if self._next_label is not None:
+                    self._next_label.setProperty("class", "btn next disabled")
+                    self._next_label.setCursor(Qt.CursorShape.ArrowCursor)
+                    refresh_widget_style(self._next_label)
+
         active_label = self._label_alt if self._show_alt_label else self._label
         active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
 
@@ -834,31 +928,50 @@ class MediaWidget(BaseWidget):
 
         # Process label content
         if self.current_session is not None:
-            try:
-                items = (
-                    ("title", self.current_session.title),
-                    ("artist", self.current_session.artist),
-                )
-                formatted_info: dict[str, str] = {"s": self._separator}
-                for k, v in items:
-                    formatted_info[k] = self._format_max_field_size(v)
+            # Check if we have actual media info (title or artist not empty)
+            has_media_info = bool(self.current_session.title or self.current_session.artist)
 
-                # Clean the label content from any empty placeholders or dangling separators
-                cleaned_content = clean_string(active_label_content, formatted_info)
+            if has_media_info:
+                try:
+                    items = (
+                        ("title", self.current_session.title),
+                        ("artist", self.current_session.artist),
+                    )
+                    formatted_info: dict[str, str] = {"s": self._separator}
+                    for k, v in items:
+                        formatted_info[k] = self._format_max_field_size(v)
 
-                # Replace the remaining placeholders and separators
-                formatted_label = cleaned_content.format_map(formatted_info)
+                    # Clean the label content from any empty placeholders or dangling separators
+                    cleaned_content = clean_string(active_label_content, formatted_info)
 
-                # Finally, truncate the label if necessary
-                if self._max_field_size.get("truncate_whole_label"):
-                    formatted_label = self._format_max_field_size(formatted_label)
-            except Exception as e:
-                logger.error(f"Error formatting label: {e}", exc_info=True)
-                if self.current_session and self.current_session.title:
-                    formatted_label = self._format_max_field_size(self.current_session.title)
+                    # Replace the remaining placeholders and separators
+                    formatted_label = cleaned_content.format_map(formatted_info)
+
+                    # Finally, truncate the label if necessary
+                    if self._max_field_size.get("truncate_whole_label"):
+                        formatted_label = self._format_max_field_size(formatted_label)
+                except Exception as e:
+                    logger.error(f"Error formatting label: {e}", exc_info=True)
+                    if self.current_session and self.current_session.title:
+                        formatted_label = self._format_max_field_size(self.current_session.title)
+                    else:
+                        formatted_label = "No media"
+
+                # Only update text if it has changed to avoid resetting scroll position
+                current_text = active_label.text()
+                if current_text != formatted_label:
+                    active_label.setText(formatted_label)
+                    # Force update for scrolling labels to ensure animation starts
+                    if isinstance(active_label, ScrollingLabel):
+                        active_label.update()
                 else:
-                    formatted_label = "No media"
-            active_label.setText(formatted_label)
+                    logger.debug(f"Text unchanged, skipping setText to preserve scroll position")
+            else:
+                # Session exists but no media info (player closed)
+                active_label.setText("No media playing")
+        else:
+            # No session - show a message
+            active_label.setText("No media playing")
 
         # If we don't want the thumbnail, stop here
         if not self._show_thumbnail:
@@ -1128,9 +1241,11 @@ class MediaWidget(BaseWidget):
     def _create_media_button(self, icon: str, action: Callable[..., Any]):
         if not self._controls_hide:
             label = ClickableLabel(self)
+            # Start disabled by default - will be enabled when media is detected
             label.setProperty("class", "btn disabled")
             label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             label.setText(icon)
+            label.setCursor(Qt.CursorShape.ArrowCursor)
             label.data = action
             self._widget_container_layout.addWidget(label)
             return label
@@ -1144,9 +1259,25 @@ class MediaWidget(BaseWidget):
 
     def execute_code(self, func: Callable[..., Any]):
         try:
-            func()
+            # In fallback mode without media app, don't execute - controls are disabled
+            if hasattr(self.media, '_fallback_mode') and self.media._fallback_mode:
+                if self.current_session is None or not bool(self.current_session.title or self.current_session.artist):
+                    logger.info("Controls disabled - no media app detected")
+                    return
+
+            import asyncio
+            import inspect
+
+            # Check if the function is a coroutine (async)
+            if inspect.iscoroutinefunction(func):
+                # Get the current event loop and schedule the coroutine
+                loop = asyncio.get_event_loop()
+                loop.create_task(func())
+            else:
+                # Regular synchronous function
+                func()
         except Exception as e:
-            logger.error(f"Error executing code: {e}")
+            logger.error(f"Error executing code: {e}", exc_info=True)
 
     def wheelEvent(self, a0: QWheelEvent | None):
         if a0 is None:
@@ -1406,16 +1537,20 @@ class ClickableLabel(QLabel):
         self.data: Callable[..., Any] | None = None
 
     def mousePressEvent(self, ev: QMouseEvent | None):
-        if ev is None:
-            return
-        if ev.button() == Qt.MouseButton.LeftButton and self.data:
-            if self.parent_widget is None:
+        try:
+            if not ev:
                 return
-            if self.parent_widget.animation["enabled"]:
-                AnimationManager.animate(
-                    self, self.parent_widget.animation["type"], self.parent_widget.animation["duration"]
-                )
-            self.parent_widget.execute_code(self.data)
+
+            if ev.button() == Qt.MouseButton.LeftButton and self.data:
+                if self.parent_widget is None:
+                    return
+                if self.parent_widget.animation["enabled"]:
+                    AnimationManager.animate(
+                        self, self.parent_widget.animation["type"], self.parent_widget.animation["duration"]
+                    )
+                self.parent_widget.execute_code(self.data)
+        except Exception as e:
+            logger.error(f"Exception in mousePressEvent: {e}", exc_info=True)
 
 
 class WheelEventFilter(QObject):
