@@ -91,4 +91,4 @@ through [Nightscout CGM remote monitor](https://github.com/nightscout/cgm-remote
 
 ## Preview of the Widget
 
-![Glucose Monitor YASB Widget](assets/glucose_monitor_01.png)
+![Glucose Monitor YASB Widget](../assets/glucose_monitor_01.png)

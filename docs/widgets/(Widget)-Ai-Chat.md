@@ -362,4 +362,4 @@ If you want to use different styles for the context menu, you can target the `.a
 - If streaming fails, check network/API credentials and error messages.
 
 ## Preview of the Widget
-![AI Chat YASB Widget](assets/ec1b9764-1a027260-3e58-1f50-e78022a4eede.png)
+![AI Chat YASB Widget](../assets/ec1b9764-1a027260-3e58-1f50-e78022a4eede.png)

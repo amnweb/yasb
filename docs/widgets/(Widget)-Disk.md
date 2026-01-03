@@ -201,4 +201,4 @@ disk:
 ```
 
 ## Preview of example above
-![GitHub YASB Widget](assets/758425162-b61ef748-4280-0884-dc5f59c2ba8d.png)
+![GitHub YASB Widget](../assets/758425162-b61ef748-4280-0884-dc5f59c2ba8d.png)

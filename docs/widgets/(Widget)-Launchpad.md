@@ -385,4 +385,4 @@ If you want to use different styles for the context menu, you can target the `.l
 
 ## Preview
 
-![Launchpad Widget Preview](assets/cf6e095b-804e2221-a7a8-a36b-44bde9433392.png)
+![Launchpad Widget Preview](../assets/cf6e095b-804e2221-a7a8-a36b-44bde9433392.png)

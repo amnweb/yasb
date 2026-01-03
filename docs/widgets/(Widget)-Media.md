@@ -539,4 +539,4 @@ Example: "Windows Media" becomes "windows-media" */
 
 
 ## Preview of the Widget
-![YASB Media Widget](assets/f1c8a395-6b4e7d21-8a5c-9f3b-4d7e2a9c5f8b.png)
+![YASB Media Widget](../assets/f1c8a395-6b4e7d21-8a5c-9f3b-4d7e2a9c5f8b.png)

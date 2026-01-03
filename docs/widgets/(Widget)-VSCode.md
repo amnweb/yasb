@@ -149,4 +149,4 @@ vscode:
 ```
 
 ## Preview of the Widget
-![VSCode YASB Widget](assets/ee9942e2-56694a11-2a9c-0b46-0b1f1f5401b0.png)
+![VSCode YASB Widget](../assets/ee9942e2-56694a11-2a9c-0b46-0b1f1f5401b0.png)

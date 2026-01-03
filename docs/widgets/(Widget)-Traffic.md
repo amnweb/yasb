@@ -297,4 +297,4 @@ traffic:
 ```
 
 ## Preview of the Widget
-![Power Plan Widget](assets/d937ad0d-94feed9b-557f-b331-10e7a654c7d0.png)
+![Power Plan Widget](../assets/d937ad0d-94feed9b-557f-b331-10e7a654c7d0.png)

@@ -153,4 +153,4 @@ power_plan:
 ```
 
 ## Preview of the Widget
-![Power Plan Widget](assets/da938a64-cbbb7f87-81d0-5e53-942dcd03cd53.png)
+![Power Plan Widget](../assets/da938a64-cbbb7f87-81d0-5e53-942dcd03cd53.png)
