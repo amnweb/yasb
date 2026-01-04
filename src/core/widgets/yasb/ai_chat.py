@@ -43,7 +43,8 @@ from core.utils.utilities import PopupWidget, add_shadow
 from core.utils.widgets.ai_chat.client import AiChatClient
 from core.utils.widgets.ai_chat.client_helper import format_chat_text
 from core.utils.widgets.animation_manager import AnimationManager
-from core.utils.win32.utilities import apply_qmenu_style
+from core.utils.win32.utilities import apply_qmenu_style, get_foreground_hwnd, set_foreground_hwnd
+from core.utils.win32.window_actions import force_foreground_focus
 from core.validation.widgets.yasb.ai_chat import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
 
@@ -284,6 +285,7 @@ class AiChatWidget(BaseWidget):
         self._notification_label: NotificationLabel | None = None
         self._input_draft = ""
         self._attachments: list[dict[str, Any]] = []
+        self._previous_hwnd = 0
         self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
         self._widget_container_layout.setContentsMargins(
@@ -615,6 +617,9 @@ class AiChatWidget(BaseWidget):
         self._new_notification = False
         self._update_label()
 
+        # Remember the current foreground window so we can restore focus when closing
+        self._previous_hwnd = get_foreground_hwnd()
+
         self._popup_chat = PopupWidget(
             self,
             self._chat["blur"],
@@ -792,6 +797,7 @@ class AiChatWidget(BaseWidget):
             offset_top=self._chat["offset_top"],
         )
         self._popup_chat.show()
+        force_foreground_focus(int(self._popup_chat.winId()))
         self._reconnect_streaming_if_needed()
         self._update_send_button_state()
 
@@ -986,6 +992,7 @@ class AiChatWidget(BaseWidget):
             del self._loading_label
         self._popup_chat = None
         self._stop_thinking_animation()
+        self._restore_previous_focus()
         for attr in ("_history_to_load", "_streaming_partial_to_load", "_message_batch_index"):
             if hasattr(self, attr):
                 delattr(self, attr)
@@ -1326,6 +1333,14 @@ class AiChatWidget(BaseWidget):
         self._attachments = [att for att in self._attachments if att.get("path") != path]
         self._refresh_attachments_ui()
         self._update_send_button_state()
+
+    def _restore_previous_focus(self):
+        """Return focus to the window that was active before opening the chat popup."""
+        if getattr(self, "_previous_hwnd", 0):
+            try:
+                set_foreground_hwnd(self._previous_hwnd)
+            finally:
+                self._previous_hwnd = 0
 
     def _refresh_attachments_ui(self):
         """Render small chips for staged attachments."""
