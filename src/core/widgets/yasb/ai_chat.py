@@ -9,9 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from PyQt6.QtCore import (
-    QBuffer,
     QEvent,
-    QIODevice,
     QObject,
     QPoint,
     QPropertyAnimation,
@@ -20,7 +18,15 @@ from PyQt6.QtCore import (
     QTimer,
     pyqtSignal,
 )
-from PyQt6.QtGui import QColor, QContextMenuEvent, QImage, QKeyEvent, QMouseEvent, QPainter, QPaintEvent
+from PyQt6.QtGui import (
+    QColor,
+    QContextMenuEvent,
+    QImage,
+    QKeyEvent,
+    QMouseEvent,
+    QPainter,
+    QPaintEvent,
+)
 from PyQt6.QtWidgets import (
     QApplication,
     QFileDialog,
@@ -42,6 +48,7 @@ from core.event_service import EventService
 from core.utils.utilities import PopupWidget, add_shadow
 from core.utils.widgets.ai_chat.client import AiChatClient
 from core.utils.widgets.ai_chat.client_helper import format_chat_text
+from core.utils.widgets.ai_chat.image_helper import is_image_extension, process_image, qimage_to_bytes
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.win32.utilities import apply_qmenu_style, get_foreground_hwnd, set_foreground_hwnd
 from core.utils.win32.window_actions import force_foreground_focus
@@ -467,43 +474,72 @@ class AiChatWidget(BaseWidget):
         self._attachments = pruned
         return changed
 
-    def _compress_image_if_needed(self, image_bytes: bytes, max_bytes: int) -> tuple[bytes, bool]:
-        """Compress image bytes to fit within max_bytes using iterative quality reduction.
+    def _create_image_attachment(
+        self,
+        image_bytes: bytes,
+        name: str | None = None,
+        path: str | None = None,
+    ) -> dict[str, Any] | None:
+        """Create an image attachment from raw bytes.
+
+        Args:
+            image_bytes: Raw image bytes.
+            name: Display name for the attachment.
+            path: File path or virtual path identifier.
 
         Returns:
-            tuple[bytes, bool]: (compressed_bytes, was_compressed)
+            Attachment dict or None if processing fails.
         """
-        if len(image_bytes) <= max_bytes:
-            return image_bytes, False
+        max_bytes = self._get_max_image_bytes()
 
-        try:
-            # Load image from bytes
-            img = QImage()
-            img.loadFromData(image_bytes)
-            if img.isNull():
-                return image_bytes, False
+        if max_bytes == 0:
+            QTimer.singleShot(
+                0,
+                lambda: QMessageBox.warning(
+                    self,
+                    "Images Not Supported",
+                    "This model does not support image attachments.",
+                ),
+            )
+            return None
 
-            # Start with quality 85 and reduce until we're under max_bytes
-            quality = 85
-            best_bytes = image_bytes
-            while quality >= 5:
-                qbuffer = QBuffer()
-                qbuffer.open(QIODevice.OpenModeFlag.WriteOnly)
-                img.save(qbuffer, "JPEG", quality)
-                compressed_bytes = qbuffer.data().data()
-                qbuffer.close()
+        result = process_image(image_bytes, max_bytes)
+        if result is None:
+            display_name = name or "Image"
+            QTimer.singleShot(
+                0,
+                lambda: QMessageBox.warning(
+                    self,
+                    "Image Too Large",
+                    f"{display_name} could not be compressed enough to fit the size limit.",
+                ),
+            )
+            return None
 
-                if len(compressed_bytes) <= max_bytes:
-                    # This quality works, save it
-                    best_bytes = compressed_bytes
-                    return best_bytes, True
-                quality -= 5
+        if name is None:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+            name = f"clipboard_image_{timestamp}.{result['ext']}"
+        else:
+            # Update extension if format changed during processing
+            name_path = Path(name)
+            name = f"{name_path.stem}.{result['ext']}"
 
-            # Even at quality 5, still too large - return best attempt
-            return best_bytes, True
-        except Exception as e:
-            logging.exception(f"Failed to compress image: {e}")
-            return image_bytes, False
+        if path is None:
+            path = name
+
+        b64_data = base64.b64encode(result["bytes"]).decode("ascii")
+        image_url = f"data:{result['mime_type']};base64,{b64_data}"
+        compressed = result["compressed"] or result["scaled"]
+
+        return {
+            "path": path,
+            "name": name,
+            "size": len(result["bytes"]),
+            "is_image": True,
+            "image_url": image_url,
+            "prompt": f"[Image: {name}{' (compressed)' if compressed else ''}]",
+            "compressed": compressed,
+        }
 
     def _reconnect_streaming_if_needed(self):
         """Reconnect streaming state when popup is reopened"""
@@ -1161,43 +1197,10 @@ class AiChatWidget(BaseWidget):
         if mime.hasImage():
             image_data = mime.imageData()
             if isinstance(image_data, QImage):
-                try:
-                    # Convert QImage directly to base64 without using temp files
-                    buffer = QBuffer()
-                    buffer.open(QIODevice.OpenModeFlag.WriteOnly)
-                    image_data.save(buffer, "PNG")
-                    img_bytes = buffer.data().data()
-                    buffer.close()
-
-                    # Compress if needed to fit within max_image_bytes
-                    max_image_bytes = self._get_max_image_bytes()
-                    compressed = False
-                    if max_image_bytes > 0 and len(img_bytes) > max_image_bytes:
-                        img_bytes, compressed = self._compress_image_if_needed(img_bytes, max_image_bytes)
-
-                    # Create attachment dict directly from memory
-                    b64_data = base64.b64encode(img_bytes).decode("ascii")
-                    image_url = f"data:image/png;base64,{b64_data}"
-
-                    # Generate a unique identifier for this clipboard image
-                    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-                    clipboard_name = f"clipboard_image_{timestamp}.png"
-
-                    attachment = {
-                        "path": clipboard_name,  # Virtual path identifier
-                        "name": clipboard_name,
-                        "size": len(img_bytes),
-                        "is_image": True,
-                        "image_url": image_url,
-                        "prompt": f"[Image: {clipboard_name}{' (compressed)' if compressed else ''}]",
-                        "is_clipboard": True,  # Mark as clipboard to avoid file operations
-                        "compressed": compressed,
-                    }
-
+                attachment = self._process_paste_mime_image(image_data)
+                if attachment:
                     self._attachments.append(attachment)
                     added_any = True
-                except Exception as e:
-                    logging.exception(f"Failed to process clipboard image: {e}")
             # Return True even if image was rejected to prevent default paste behavior
             if added_any:
                 self._refresh_attachments_ui()
@@ -1205,6 +1208,16 @@ class AiChatWidget(BaseWidget):
             return True
 
         return False
+
+    def _process_paste_mime_image(
+        self,
+        qimage: QImage,
+    ) -> dict[str, Any] | None:
+        """Process a QImage into an attachment dict."""
+        img_bytes = qimage_to_bytes(qimage, "PNG")
+        if img_bytes is None:
+            return None
+        return self._create_image_attachment(img_bytes)
 
     def _add_attachment(self, file_path: str) -> bool:
         """Read file metadata and safe preview content for prompt inclusion."""
@@ -1237,51 +1250,8 @@ class AiChatWidget(BaseWidget):
         size = len(raw)
         suffix = path.suffix.lower()
 
-        # Check if this is an image file
-        image_extensions = {".png", ".jpg", ".jpeg", ".gif", ".webp"}
-        mime_types = {
-            ".png": "image/png",
-            ".jpg": "image/jpeg",
-            ".jpeg": "image/jpeg",
-            ".gif": "image/gif",
-            ".webp": "image/webp",
-        }
-
-        if suffix in image_extensions:
-            # Check if images are supported
-            max_image_bytes = self._get_max_image_bytes()
-            if max_image_bytes == 0:
-                # Reject images if not supported by this model
-                QTimer.singleShot(
-                    0,
-                    lambda: QMessageBox.warning(
-                        self,
-                        "Images Not Supported",
-                        f"{path.name} cannot be attached.\n\nThis model does not support image attachments.",
-                    ),
-                )
-                return None
-
-            # For images, compress if needed to get as close as possible to max_image_bytes
-            if max_image_bytes > 0 and size > max_image_bytes:
-                raw, compressed = self._compress_image_if_needed(raw, max_image_bytes)
-                size = len(raw)
-            else:
-                compressed = False
-
-            mime_type = mime_types.get(suffix, "image/png")
-            b64_data = base64.b64encode(raw).decode("ascii")
-            image_url = f"data:{mime_type};base64,{b64_data}"
-
-            return {
-                "path": str(path),
-                "name": path.name,
-                "size": size,
-                "is_image": True,
-                "image_url": image_url,
-                "prompt": f"[Image: {path.name}{' (compressed)' if compressed else ''}]",
-                "compressed": compressed,
-            }
+        if is_image_extension(suffix):
+            return self._create_image_attachment(raw, name=path.name, path=str(path))
 
         # For non-image files, only allow plain text (UTF-8 decodable)
         # Binary files are not supported as the API only accepts text and image_url types
