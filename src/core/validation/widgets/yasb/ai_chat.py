@@ -66,14 +66,15 @@ VALIDATION_SCHEMA = {
     },
     "icons": {
         "type": "dict",
-        "required": True,
+        "required": False,
         "schema": {
-            "send": {"type": "string"},
-            "stop": {"type": "string"},
-            "clear": {"type": "string"},
-            "assistant": {"type": "string"},
-            "attach": {"type": "string"},
+            "send": {"type": "string", "default": DEFAULTS["icons"]["send"]},
+            "stop": {"type": "string", "default": DEFAULTS["icons"]["stop"]},
+            "clear": {"type": "string", "default": DEFAULTS["icons"]["clear"]},
+            "assistant": {"type": "string", "default": DEFAULTS["icons"]["assistant"]},
+            "attach": {"type": "string", "default": DEFAULTS["icons"]["attach"]},
         },
+        "default": DEFAULTS["icons"],
     },
     "notification_dot": {
         "type": "dict",

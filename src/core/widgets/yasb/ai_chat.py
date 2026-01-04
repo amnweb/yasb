@@ -288,9 +288,7 @@ class AiChatWidget(BaseWidget):
         self._previous_hwnd = 0
         self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(
-            self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
-        )
+        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
         self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
