@@ -105,6 +105,9 @@ async def main_async(app: YASBApplication):
     app.loop = asyncio.get_running_loop()
     app.close_event = app_close_event
 
+    # Prevent the app from exiting when closing the dialogs
+    app.setQuitOnLastWindowClosed(False)
+
     # Connect the app's aboutToQuit signal to the close event
     app.aboutToQuit.connect(app_close_event.set)
 
