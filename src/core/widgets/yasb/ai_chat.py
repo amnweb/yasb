@@ -38,6 +38,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from core.event_service import EventService
 from core.utils.utilities import PopupWidget, add_shadow
 from core.utils.widgets.ai_chat.client import AiChatClient
 from core.utils.widgets.ai_chat.client_helper import format_chat_text
@@ -250,6 +251,7 @@ class NotificationLabel(QLabel):
 class AiChatWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
     _persistent_chat_history = {}
+    handle_widget_cli = pyqtSignal(str, str)
 
     def __init__(
         self,
@@ -272,6 +274,7 @@ class AiChatWidget(BaseWidget):
         self._provider = None
         self._provider_config = None
         self._model = None
+        self._initialize_provider_and_model()
         self._popup_chat = None
         self._animation = animation
         self._padding = container_padding
@@ -302,6 +305,38 @@ class AiChatWidget(BaseWidget):
         self._thinking_step = 0
         self._thinking_label = None
         self._new_notification = False
+
+        self._event_service = EventService()
+        self.handle_widget_cli.connect(self._handle_widget_cli)
+        self._event_service.register_event("handle_widget_cli", self.handle_widget_cli)
+
+    def _initialize_provider_and_model(self):
+        """Initialize provider and model by finding the model with default: true flag.
+
+        Validates that only one model has the default flag set.
+        """
+        default_models = []
+
+        # Find all models with default flag set to true
+        for provider_cfg in self._providers:
+            for model_cfg in provider_cfg.get("models", []):
+                if model_cfg.get("default", False):
+                    default_models.append((provider_cfg["provider"], model_cfg["name"]))
+
+        # Logs warning if more than one model has default flag set
+        if len(default_models) > 1:
+            logging.warning(
+                f"Multiple models have default flag set: {default_models}. Using first model: {default_models[0]}"
+            )
+
+        # Set the default provider and model if found
+        if default_models:
+            self._provider = default_models[0][0]
+            self._model = default_models[0][1]
+
+        # Set provider config
+        if self._provider:
+            self._provider_config = next((p for p in self._providers if p["provider"] == self._provider), None)
 
     def _create_dynamically_label(self, content: str):
         label_parts = re.split("(<span.*?>.*?</span>)", content)
@@ -556,10 +591,24 @@ class AiChatWidget(BaseWidget):
             if self._animation["enabled"]:
                 AnimationManager.animate(self, self._animation["type"], self._animation["duration"])
             self._show_chat()
+
+            # Focus and move cursor to end of text
+            self.input_edit.setFocus()
+            cursor = self.input_edit.textCursor()
+            cursor.movePosition(cursor.MoveOperation.End)
+            self.input_edit.setTextCursor(cursor)
         else:
             self._popup_chat.hide()
             self._popup_chat.deleteLater()
             self._popup_chat = None
+
+    def _handle_widget_cli(self, widget: str, screen: str):
+        """Handle widget CLI commands"""
+        if widget == "ai_chat":
+            current_screen = self.window().screen() if self.window() else None
+            current_screen_name = current_screen.name() if current_screen else None
+            if not screen or (current_screen_name and screen.lower() == current_screen_name.lower()):
+                self._toggle_chat()
 
     def _show_chat(self):
         """Show the AI chat popup with all components initialized."""
