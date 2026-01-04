@@ -651,6 +651,8 @@ class ClockWidget(BaseWidget):
         qlocale = QLocale(self._locale) if self._locale else QLocale.system()
         new_month = qlocale.monthName(month)
         self.month_label.setText(new_month)
+        if self.year_label:
+            self.year_label.setText(str(year))
 
         selected_day = self.calendar.selectedDate().day()
         days_in_month = QDate(year, month, 1).daysInMonth()
@@ -666,6 +668,8 @@ class ClockWidget(BaseWidget):
         qlocale = QLocale(self._locale) if self._locale else QLocale.system()
         self.day_label.setText(qlocale.dayName(date.dayOfWeek()))
         self.month_label.setText(qlocale.monthName(date.month()))
+        if self.year_label:
+            self.year_label.setText(str(date.year()))
         self.date_label.setText(date.toString("d"))
         if self._calendar["show_week_numbers"]:
             self.update_week_label(date)
@@ -757,6 +761,13 @@ class ClockWidget(BaseWidget):
         self.month_label.setProperty("class", "month-label")
         date_layout.addWidget(self.month_label)
 
+        self.year_label = None
+        if self._calendar.get("show_years", True):
+            self.year_label = QLabel(str(datetime_now.year))
+            self.year_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.year_label.setProperty("class", "year-label")
+            date_layout.addWidget(self.year_label)
+
         self.date_label = QLabel(str(datetime_now.day))
         self.date_label.setProperty("class", "date-label")
         self.date_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -788,13 +799,6 @@ class ClockWidget(BaseWidget):
             holiday_color=self._calendar["holiday_color"],
         )
         self.calendar.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
-
-        current_year = QDate.currentDate().year()
-        min_date = QDate(current_year, 1, 1)
-        max_date = QDate(current_year, 12, 31)
-
-        self.calendar.setMinimumDate(min_date)
-        self.calendar.setMaximumDate(max_date)
         self.calendar.currentPageChanged.connect(self.update_month_label)
         self.calendar.clicked.connect(self.update_selected_date)
 
