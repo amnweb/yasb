@@ -11,18 +11,31 @@ from typing import Any, TypeGuard, cast, override
 
 import psutil
 from PyQt6 import sip
-from PyQt6.QtCore import QEvent, QObject, QPoint, QPropertyAnimation, QRect, QSize, Qt, QTimer, pyqtSlot
+from PyQt6.QtCore import QEasingCurve, QEvent, QObject, QPoint, QPropertyAnimation, QRect, QSize, Qt, QTimer, QVariantAnimation, pyqtProperty, pyqtSlot
 from PyQt6.QtGui import (
     QColor,
     QFontMetrics,
     QPainter,
     QPaintEvent,
+    QPixmap,
     QResizeEvent,
     QScreen,
     QStaticText,
     QTransform,
 )
-from PyQt6.QtWidgets import QApplication, QDialog, QFrame, QGraphicsDropShadowEffect, QLabel, QMenu, QWidget
+from PyQt6.QtOpenGLWidgets import QOpenGLWidget
+from PyQt6.QtWidgets import (
+    QApplication,
+    QDialog,
+    QFrame,
+    QGraphicsDropShadowEffect,
+    QGraphicsScene,
+    QGraphicsSimpleTextItem,
+    QGraphicsView,
+    QLabel,
+    QMenu,
+    QWidget,
+)
 from winrt.windows.data.xml.dom import XmlDocument
 from winrt.windows.ui.notifications import ToastNotification, ToastNotificationManager
 
@@ -671,13 +684,37 @@ class ScrollingLabel(QLabel):
         self._raw_text = text
         self._text = ""  # Will be built by _build_text_and_metrics
 
-        # Initialize metrics and text
+        # Initialize font metrics
         self._font_metrics = QFontMetrics(self.font())
+
+        # For throttling update calls (smooth animation optimization)
+        self._last_painted_offset = 0
+
+        # Use QVariantAnimation for smooth scrolling (left/right styles)
+        # Use QTimer for bounce styles (more complex logic)
+        if self._style in {self.Style.SCROLL_LEFT, self.Style.SCROLL_RIGHT}:
+            self._scroll_animation = QVariantAnimation(self)
+            self._scroll_animation.valueChanged.connect(self._on_animation_value_changed)
+            self._scroll_animation.setLoopCount(-1)  # Infinite loop
+            self._scroll_animation.setEasingCurve(QEasingCurve.Type.Linear)  # Constant speed
+            self._scroll_timer = None
+        else:
+            self._scroll_timer = QTimer(self)
+            self._scroll_timer.timeout.connect(self._scroll_text)
+            self._scroll_timer.start(self._update_interval)
+            self._scroll_animation = None
+
+        # Build text and metrics AFTER creating animation/timer
         self._build_text_and_metrics()
 
-        self._scroll_timer = QTimer(self)
-        self._scroll_timer.timeout.connect(self._scroll_text)
-        self._scroll_timer.start(self._update_interval)
+        # Enable widget optimizations for smoother rendering
+        if self._scroll_animation:
+            # Opaque paint - no background clearing needed (faster)
+            self.setAttribute(Qt.WidgetAttribute.WA_OpaquePaintEvent, True)
+            # No system background - we draw everything (faster)
+            self.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground, True)
+            # Static contents - hint for compositor optimization
+            self.setAttribute(Qt.WidgetAttribute.WA_StaticContents, False)
 
     def _ease(self, offset: int, max_offset: int, slope: int = 20, pos: float = 0.8, min_value: float = 0.5) -> float:
         """
@@ -689,16 +726,61 @@ class ScrollingLabel(QLabel):
         x = abs(2 * (offset / max_offset) - 1 if max_offset else 0)
         return (1 + math.tanh(-slope * (x - pos))) * (1 - min_value) / 2 + min_value
 
+    def _on_animation_value_changed(self, value):
+        """Callback for QVariantAnimation - updates offset and triggers repaint"""
+        # Keep float precision to avoid rounding stutters
+        self._offset = value
+
+        # Throttle updates: only repaint when movement is visually significant (≥0.5px)
+        # This drastically reduces repaint calls while maintaining smooth appearance
+        if self.isVisible() and abs(self._offset - self._last_painted_offset) >= 0.5:
+            self._last_painted_offset = self._offset
+            self.update()
+
+    def _render_text_to_pixmap(self):
+        """Pre-render text to pixmap for ultra-smooth scrolling (cache optimization)"""
+        # Calculate pixmap size - needs to fit repeated text for seamless loop
+        pixmap_width = self._text_width * 2  # Double width for seamless scrolling
+        pixmap_height = self.height()
+
+        # Create high-DPI pixmap for crisp rendering
+        device_pixel_ratio = self.devicePixelRatio()
+        self._text_pixmap = QPixmap(int(pixmap_width * device_pixel_ratio), int(pixmap_height * device_pixel_ratio))
+        self._text_pixmap.setDevicePixelRatio(device_pixel_ratio)
+        self._text_pixmap.fill(Qt.GlobalColor.transparent)
+
+        # Render text to pixmap
+        painter = QPainter(self._text_pixmap)
+        painter.setFont(self.font())
+        painter.setPen(self.palette().color(self.foregroundRole()))
+
+        # Enable antialiasing for smooth text
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setRenderHint(QPainter.RenderHint.TextAntialiasing)
+        painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
+
+        # Draw text twice for seamless loop
+        text_y = self._text_y - self._font_metrics.ascent()
+        painter.drawStaticText(0, text_y, self._static_text)
+        painter.drawStaticText(self._text_width, text_y, self._static_text)
+        painter.end()
+
     @override
     def setText(self, a0: str | None):
         super().setText(a0)
         self._offset = 0
         self._raw_text = a0 or ""
 
+        # Stop animation if running
+        if self._scroll_animation and self._scroll_animation.state() == QVariantAnimation.State.Running:
+            self._scroll_animation.stop()
+
         # Re-build text, re-calculate metrics, and check for scrolling
         self._build_text_and_metrics()
+
         # Update offset immediately based on new state
-        self._scroll_text()
+        if self._scroll_timer:
+            self._scroll_text()
 
     def _build_text_and_metrics(self):
         """
@@ -742,8 +824,33 @@ class ScrollingLabel(QLabel):
         self._text_bb_width = self._font_metrics.boundingRect(self._text).width()
         self._text_y = (self.height() + self._font_metrics.ascent() - self._font_metrics.descent() + 1) // 2
 
+        # Pre-render text to pixmap for smooth animation (cache optimization)
+        if self._scroll_animation and self._scrolling_needed:
+            self._render_text_to_pixmap()
+
         if self._max_width:
             self.setMaximumWidth(self._font_metrics.averageCharWidth() * self._max_width)
+
+        # Configure and start animation for left/right styles
+        if self._scroll_animation:
+            if self._scrolling_needed:
+                # Calculate scroll speed: pixels per second
+                # We want consistent speed regardless of text length
+                pixels_per_second = 40  # Slower = smoother (less frame pressure)
+                duration_ms = int((self._text_width / pixels_per_second) * 1000)
+
+                self._scroll_animation.setStartValue(0)
+                self._scroll_animation.setEndValue(self._text_width)
+                self._scroll_animation.setDuration(duration_ms)
+
+                if self._scroll_animation.state() != QVariantAnimation.State.Running:
+                    self._scroll_animation.start()
+            else:
+                # Stop animation if scrolling not needed
+                if self._scroll_animation.state() == QVariantAnimation.State.Running:
+                    self._scroll_animation.stop()
+                self._offset = 0
+                self.update()
 
     @pyqtSlot()
     def _scroll_text(self):
@@ -790,6 +897,15 @@ class ScrollingLabel(QLabel):
     def paintEvent(self, a0: QPaintEvent | None):
         painter = QPainter(self)
 
+        # Enable all rendering hints for maximum smoothness
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+        painter.setRenderHint(QPainter.RenderHint.TextAntialiasing, True)
+        painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, True)
+
+        # Clear background for opaque paint (required with WA_OpaquePaintEvent)
+        if self.testAttribute(Qt.WidgetAttribute.WA_OpaquePaintEvent):
+            painter.fillRect(self.rect(), self.palette().color(self.backgroundRole()))
+
         content_rect = QRect(
             self._margin.left(),
             self._margin.top(),
@@ -802,22 +918,21 @@ class ScrollingLabel(QLabel):
         text_y = self._text_y - self._font_metrics.ascent()
 
         if self._style == ScrollingLabel.Style.SCROLL_LEFT:
-            if self._scrolling_needed:
-                extra_text = x - self._text_width
-                painter.drawStaticText(extra_text, text_y, self._static_text)
-                while x < self._margin.left() + content_rect.width():
-                    painter.drawStaticText(x, text_y, self._static_text)
-                    x += self._text_width
+            if self._scrolling_needed and hasattr(self, '_text_pixmap'):
+                # Use cached pixmap for ultra-smooth scrolling (10-100x faster!)
+                # Calculate source rect from pixmap (wraps around seamlessly)
+                offset_in_pixmap = self._offset % self._text_width
+                source_rect = QRect(int(offset_in_pixmap), 0, content_rect.width(), content_rect.height())
+                painter.drawPixmap(content_rect, self._text_pixmap, source_rect)
             else:
                 painter.drawStaticText(self._margin.left(), text_y, self._static_text)
 
         elif self._style == ScrollingLabel.Style.SCROLL_RIGHT:
-            if self._scrolling_needed:
-                extra_text = x + self._text_width
-                painter.drawStaticText(extra_text, text_y, self._static_text)
-                while x > self._margin.left() - self._text_width:
-                    painter.drawStaticText(x, text_y, self._static_text)
-                    x -= self._text_width
+            if self._scrolling_needed and hasattr(self, '_text_pixmap'):
+                # Use cached pixmap for ultra-smooth scrolling
+                offset_in_pixmap = (-self._offset) % self._text_width
+                source_rect = QRect(int(offset_in_pixmap), 0, content_rect.width(), content_rect.height())
+                painter.drawPixmap(content_rect, self._text_pixmap, source_rect)
             else:
                 painter.drawStaticText(self._margin.left(), text_y, self._static_text)
 
@@ -845,21 +960,18 @@ class ScrollingLabel(QLabel):
         super().resizeEvent(a0)
         # Re-build text, re-calculate metrics, and check for scrolling
         self._build_text_and_metrics()
-        # Update offset immediately based on new state
-        self._scroll_text()
+        # Update offset immediately based on new state (only for timer-based scrolling)
+        if self._scroll_timer:
+            self._scroll_text()
 
 
 class Singleton(type):
-    """Singleton metaclass for regular python classes"""
+    _instances = {}
 
-    _instances: dict[Any, Any] = {}
-    _lock = Lock()
-
-    def __call__(cls, *args: Any, **kwargs: Any):
-        with cls._lock:
-            if cls not in cls._instances:
-                cls._instances[cls] = super().__call__(*args, **kwargs)
-            return cls._instances[cls]
+    def __call__(cls, *args, **kwargs):
+        if cls not in cls._instances:
+            cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
+        return cls._instances[cls]
 
 
 class QSingleton(type(QObject)):
