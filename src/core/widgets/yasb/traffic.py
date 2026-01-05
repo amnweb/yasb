@@ -250,26 +250,12 @@ class TrafficWidget(BaseWidget):
         """Update label with provided data"""
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets  # type: ignore
         active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
-
+        active_label_content = active_label_content.format_map(shared_data)
         label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
-        label_parts = [part for part in label_parts if part]
         widget_index = 0
-
-        label_options = [
-            ("{upload_speed}", shared_data["upload_speed"]),
-            ("{download_speed}", shared_data["download_speed"]),
-            ("{today_uploaded}", shared_data["today_uploaded"]),
-            ("{today_downloaded}", shared_data["today_downloaded"]),
-            ("{session_uploaded}", shared_data["session_uploaded"]),
-            ("{session_downloaded}", shared_data["session_downloaded"]),
-            ("{alltime_uploaded}", shared_data["alltime_uploaded"]),
-            ("{alltime_downloaded}", shared_data["alltime_downloaded"]),
-        ]
 
         for part in label_parts:
             part = part.strip()
-            for option, value in label_options:
-                part = part.replace(option, str(value))
 
             if part and widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
                 if "<span" in part and "</span>" in part:

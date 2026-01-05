@@ -180,8 +180,18 @@ class CustomWidget(BaseWidget):
     def _update_label(self):
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
         active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
+        active_label_content = active_label_content.format(data=self._exec_data)
         label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
         widget_index = 0
+
+        if self._hide_empty:
+            if self._exec_data:
+                self.setVisible(True)
+                # active_widgets[widget_index].show()
+            else:
+                self.setVisible(False)
+                # active_widgets[widget_index].hide()
+
         try:
             for part in label_parts:
                 part = part.strip()
@@ -190,17 +200,17 @@ class CustomWidget(BaseWidget):
                         icon = re.sub(r"<span.*?>|</span>", "", part).strip()
                         active_widgets[widget_index].setText(icon)
                     else:
-                        active_widgets[widget_index].setText(self._truncate_label(part.format(data=self._exec_data)))
-                    if self._hide_empty:
-                        if self._exec_data:
-                            self.setVisible(True)
-                            # active_widgets[widget_index].show()
-                        else:
-                            self.setVisible(False)
-                            # active_widgets[widget_index].hide()
+                        active_widgets[widget_index].setText(self._truncate_label(part))
+
+                    if not active_widgets[widget_index].isVisible():
+                        active_widgets[widget_index].setVisible(True)
                     widget_index += 1
         except Exception:
             active_widgets[widget_index].setText(self._truncate_label(part))
+
+        while widget_index < len(active_widgets):
+            active_widgets[widget_index].setVisible(False)
+            widget_index += 1
 
         # Update tooltip if enabled
         self._update_tooltip()

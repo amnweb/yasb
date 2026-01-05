@@ -278,14 +278,18 @@ class TodoWidget(BaseWidget):
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
         active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
 
-        label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
-        label_parts = [part for part in label_parts if part]
-
         active_tasks = self._get_filtered_tasks(completed=False)
         completed_tasks = self._get_filtered_tasks(completed=True)
         total_tasks = len(self._tasks)
         active_count = len(active_tasks)
         completed_count = len(completed_tasks)
+
+        active_label_content = active_label_content.format(
+            count=active_count, total=total_tasks, completed=completed_count
+        )
+
+        label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
+        label_parts = [part for part in label_parts if part]
 
         for widget_index, part in enumerate(label_parts):
             if widget_index >= len(active_widgets) or not isinstance(active_widgets[widget_index], QLabel):
@@ -297,12 +301,7 @@ class TodoWidget(BaseWidget):
                 icon = re.sub(r"<span.*?>|</span>", "", part).strip()
                 current_widget.setText(icon)
             else:
-                formatted_text = (
-                    part.replace("{count}", str(active_count))
-                    .replace("{total}", str(total_tasks))
-                    .replace("{completed}", str(completed_count))
-                )
-                current_widget.setText(formatted_text)
+                current_widget.setText(part)
             widget_index += 1
 
         # Tooltip: show number of tasks per category, skip 0s
