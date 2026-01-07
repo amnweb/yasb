@@ -83,7 +83,7 @@ vscode:
 .vscode-menu .contents {}
 .vscode-menu .contents .item {}
 .vscode-menu .contents .item .title {}
-.vscode-menu .contents .item .date-modified {}
+.vscode-menu .contents .item .modified-date {}
 .vscode-menu .contents .item .folder-icon {}
 .vscode-menu .contents .item .file-icon {}
 .vscode-menu .no-recent {}
