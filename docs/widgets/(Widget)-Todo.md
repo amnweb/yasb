@@ -148,6 +148,7 @@ todo:
 .todo-menu .task-info-row .category-icon.soon {}
 .todo-menu .task-info-row .category-text.today {}
 .todo-menu .task-info-row .category-icon.today {}
+.todo-menu .task-info-row .edit-task-button {}
 .todo-menu .task-info-row .delete-task-button {}
 /* todo-menu dialog styles */
 .todo-menu .app-dialog {}
