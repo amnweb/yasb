@@ -27,6 +27,7 @@ from settings import APP_ID, BUILD_VERSION, RELEASE_CHANNEL, SCRIPT_PATH
 # GitHub API configuration
 GITHUB_API_URL = "https://api.github.com/repos/amnweb/yasb/releases/latest"
 GITHUB_API_DEV_URL = "https://api.github.com/repos/amnweb/yasb/releases/tags/dev"
+GITHUB_FALLBACK_URL = "https://api.yasb.dev/github-meta.json"
 USER_AGENT_HEADER = {"User-Agent": "YASB Updater"}
 CHECK_INTERVAL = 60 * 60  # 60 minutes
 LAST_CHECK_FILE = app_data_path("last_update_check")
@@ -192,6 +193,30 @@ class UpdateService:
         logging.error(f"No suitable MSI asset found for {channel} channel, architecture: {ARCHITECTURE}")
         return None
 
+    def _fetch_release_data(self, check_channel: str, timeout: int) -> dict:
+        """Fetch release data from GitHub API with fallback to metadata endpoint."""
+        context = ssl.create_default_context(cafile=certifi.where())
+        api_url = GITHUB_API_DEV_URL if check_channel == "dev" else GITHUB_API_URL
+
+        try:
+            request = urllib.request.Request(api_url, headers=USER_AGENT_HEADER)
+            with urllib.request.urlopen(request, context=context, timeout=timeout) as response:
+                return json.loads(response.read())
+        except urllib.error.HTTPError as e:
+            if e.code not in (403, 429) and e.headers.get("X-RateLimit-Remaining") != "0":
+                raise
+        except urllib.error.URLError:
+            pass
+
+        # Fallback to metadata endpoint
+        request = urllib.request.Request(GITHUB_FALLBACK_URL, headers=USER_AGENT_HEADER)
+        with urllib.request.urlopen(request, context=context, timeout=timeout) as response:
+            meta = json.loads(response.read())
+        key = "nightly_release" if check_channel == "dev" else "stable_release"
+        if key not in meta:
+            raise ValueError(f"Fallback metadata missing {key}")
+        return meta[key]
+
     def check_for_updates(
         self,
         timeout: int = 15,
@@ -219,15 +244,7 @@ class UpdateService:
         check_channel = channel or self._current_channel
 
         try:
-            # Determine API URL based on channel
-            api_url = GITHUB_API_DEV_URL if check_channel == "dev" else GITHUB_API_URL
-            request = urllib.request.Request(api_url, headers=USER_AGENT_HEADER)
-            context = ssl.create_default_context(cafile=certifi.where())
-
-            with urllib.request.urlopen(request, context=context, timeout=timeout) as response:
-                data = response.read()
-
-            release_data = json.loads(data)
+            release_data = self._fetch_release_data(check_channel, timeout)
 
             # Select appropriate asset for architecture
             assets = release_data.get("assets", [])
