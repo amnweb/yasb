@@ -225,18 +225,18 @@ class UsageChartWidget(QFrame):
         self._tooltip.label.setText(f"{formatted}\n{item.get('requests', 0)} requests")
         self._tooltip.adjustSize()
         pos = self.mapToGlobal(self._points[idx].toPoint())
-        
+
         # Calculate tooltip position centered above the point
         tooltip_x = pos.x() - self._tooltip.width() // 2
         tooltip_y = pos.y() - self._tooltip.height() - 10
-        
+
         # Clamp to screen bounds
         screen = QGuiApplication.screenAt(pos)
         if screen:
             screen_geo = screen.geometry()
             tooltip_x = max(screen_geo.left(), min(tooltip_x, screen_geo.right() - self._tooltip.width()))
             tooltip_y = max(screen_geo.top(), min(tooltip_y, screen_geo.bottom() - self._tooltip.height()))
-        
+
         self._tooltip.move(tooltip_x, tooltip_y)
         self._tooltip.show()
 
