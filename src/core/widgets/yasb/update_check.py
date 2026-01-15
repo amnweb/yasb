@@ -94,7 +94,7 @@ class UpdateWorker(QThread):
                     },
                     "br": {
                         "name": "Nome",
-                        "id": "Id",
+                        "id": "ID",
                         "version": "Versão",
                         "available": "Disponível",
                         "source": "Origem",
