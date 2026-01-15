@@ -84,7 +84,7 @@ copilot:
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `label` | string | `"{icon}"` | Label format for the bar. Supports `{icon}`, `{used}`, `{allowance}`, `{percentage}` |
+| `label` | string | `"{icon}"` | Label format for the bar. Supports `{icon}`, `{used}`, `{allowance}`, `{percentage}`, `{total_cost}` |
 | `label_alt` | string | `"{used}/{allowance}"` | Alternative label (toggle with right-click) |
 | `token` | string | `""` | GitHub fine-grained PAT (or `"env"` to use `YASB_COPILOT_TOKEN` env var) |
 | `plan` | string | `"pro"` | Your Copilot plan: `"pro"` (300 requests) or `"pro_plus"` (1500 requests) |
@@ -137,6 +137,7 @@ The following placeholders can be used in `label` and `label_alt`:
 | `{used}` | Number of premium requests used this month |
 | `{allowance}` | Your monthly allowance based on plan |
 | `{percentage}` | Usage percentage |
+| `{total_cost}` | Total cost this month |
 
 ## Styling
 

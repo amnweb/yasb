@@ -385,6 +385,7 @@ class CopilotWidget(BaseWidget):
             "{used}": str(used),
             "{allowance}": str(allowance),
             "{percentage}": str(pct),
+            "{total_cost}": f"{data.total_cost:.2f}",
         }
 
         for i, part in enumerate(label_parts):
