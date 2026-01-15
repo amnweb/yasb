@@ -8,7 +8,7 @@ import re
 from datetime import datetime, timezone
 
 from PyQt6.QtCore import QPointF, Qt, QTimer
-from PyQt6.QtGui import QBrush, QColor, QLinearGradient, QPainter, QPainterPath, QPen
+from PyQt6.QtGui import QBrush, QColor, QGuiApplication, QLinearGradient, QPainter, QPainterPath, QPen
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
 from core.utils.tooltip import CustomToolTip, set_tooltip
@@ -225,7 +225,19 @@ class UsageChartWidget(QFrame):
         self._tooltip.label.setText(f"{formatted}\n{item.get('requests', 0)} requests")
         self._tooltip.adjustSize()
         pos = self.mapToGlobal(self._points[idx].toPoint())
-        self._tooltip.move(pos.x() - self._tooltip.width() // 2, pos.y() - self._tooltip.height() - 10)
+
+        # Calculate tooltip position centered above the point
+        tooltip_x = pos.x() - self._tooltip.width() // 2
+        tooltip_y = pos.y() - self._tooltip.height() - 10
+
+        # Clamp to screen bounds
+        screen = QGuiApplication.screenAt(pos)
+        if screen:
+            screen_geo = screen.geometry()
+            tooltip_x = max(screen_geo.left(), min(tooltip_x, screen_geo.right() - self._tooltip.width()))
+            tooltip_y = max(screen_geo.top(), min(tooltip_y, screen_geo.bottom() - self._tooltip.height()))
+
+        self._tooltip.move(tooltip_x, tooltip_y)
         self._tooltip.show()
 
     def _hide_tooltip(self) -> None:
