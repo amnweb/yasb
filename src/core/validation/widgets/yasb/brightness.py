@@ -21,7 +21,7 @@ DEFAULTS = {
         "offset_top": 6,
         "offset_left": 0,
     },
-    "hide_unsupported": True,
+    "hide_unsupported": True,  # deprecated
     "auto_light": False,
     "auto_light_icon": "\udb80\udce1",
     "auto_light_night_level": 50,
@@ -70,6 +70,7 @@ VALIDATION_SCHEMA = {
         },
         "default": DEFAULTS["brightness_menu"],
     },
+    # deprecated: widget now always hides when unsupported
     "hide_unsupported": {"type": "boolean", "required": False, "default": DEFAULTS["hide_unsupported"]},
     "auto_light": {"type": "boolean", "required": False, "default": DEFAULTS["auto_light"]},
     "auto_light_icon": {"type": "string", "required": False, "default": DEFAULTS["auto_light_icon"]},

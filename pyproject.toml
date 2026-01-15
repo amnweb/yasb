@@ -45,8 +45,7 @@ dependencies = [
     "winrt.windows.ui.notifications",
     "winrt.windows.ui.notifications.management",
     "winrt.windows.devices.wifi",
-    "winrt.windows.security.credentials",
-    "screen-brightness-control==0.25.0",
+    "winrt.windows.security.credentials"
 ]
 
 [project.urls]
