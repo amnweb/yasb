@@ -99,6 +99,18 @@ kernel32.CreateFileW.argtypes = [
 ]
 kernel32.CreateFileW.restype = HANDLE
 
+kernel32.DeviceIoControl.argtypes = [
+    HANDLE,
+    DWORD,
+    LPVOID,
+    DWORD,
+    LPVOID,
+    DWORD,
+    LPDWORD,
+    LPVOID,
+]
+kernel32.DeviceIoControl.restype = BOOL
+
 kernel32.CloseHandle.argtypes = [
     HANDLE,
 ]

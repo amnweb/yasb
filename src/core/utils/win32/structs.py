@@ -412,3 +412,9 @@ class SHSTOCKICONINFO(ct.Structure):
         ("iIcon", ct.c_int),
         ("szPath", wintypes.WCHAR * MAX_PATH),
     ]
+
+
+class DISPLAY_BRIGHTNESS(ct.Structure):
+    """LCD brightness structure for DeviceIoControl."""
+
+    _fields_ = [("ucDisplayPolicy", BYTE), ("ucACBrightness", BYTE), ("ucDCBrightness", BYTE)]
