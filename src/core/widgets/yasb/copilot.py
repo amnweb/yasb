@@ -102,6 +102,7 @@ class UsageChartWidget(QFrame):
         self._tooltip: CustomToolTip | None = None
         self._hovered_index = -1
         self._pad_top = 10  # Top padding for chart to avoid clipping peaks
+        self._pad_bottom = 4  # Bottom padding so 0-value points are visible
         self.setMinimumHeight(80)
         self.setProperty("class", "usage-chart")
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
@@ -119,7 +120,8 @@ class UsageChartWidget(QFrame):
 
         w, h = self.width(), self.height()
         pad_top = self._pad_top
-        chart_h = h - pad_top  # Only top padding, bottom goes to edge
+        pad_bottom = self._pad_bottom
+        chart_h = h - pad_top - pad_bottom
         max_val = max((d.get("requests", 0) for d in self._data), default=1) or 1
         n = len(self._data)
         x_step = w / (n - 1) if n > 1 else w
