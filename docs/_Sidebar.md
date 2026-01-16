@@ -14,6 +14,7 @@
     - [Bluetooth](./(Widget)-Bluetooth)
     - [Brightness](./(Widget)-Brightness)
     - [Cava](./(Widget)-Cava)
+    - [Copilot](./(Widget)-Copilot)
     - [CPU](./(Widget)-CPU)
     - [Clock](./(Widget)-Clock)
     - [Custom](./(Widget)-Custom)
