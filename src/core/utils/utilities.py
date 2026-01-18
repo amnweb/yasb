@@ -546,7 +546,13 @@ class PopupWidget(QWidget):
 
     def hideEvent(self, event):
         if self._is_closing:
-            QApplication.instance().removeEventFilter(self)
+            try:
+                app = QApplication.instance()
+                if app is not None:
+                    app.removeEventFilter(self)
+            except (RuntimeError, AttributeError):
+                # Application already destroyed or filter already removed
+                pass
 
             try:
                 # Restart autohide timer if applicable
