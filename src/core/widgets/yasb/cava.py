@@ -15,6 +15,103 @@ from core.validation.widgets.yasb.cava import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
 
 
+# Global registry to track all active cava processes
+_active_cava_processes = []
+_cava_process_lock = threading.Lock()
+_cleanup_lock = threading.Lock()
+
+
+def kill_all_cava_processes_sync():
+    """
+    Kill ALL cava.exe processes unconditionally.
+    Uses filesystem-based sentinel to ensure execution only once per YASB instance.
+    Cleans up stale sentinel files from dead YASB processes.
+    """
+    import time
+    import tempfile
+    import psutil
+    
+    temp_dir = tempfile.gettempdir()
+    current_pid = os.getpid()
+    sentinel_file = os.path.join(temp_dir, f"yasb_cava_cleanup_{current_pid}.lock")
+    
+    with _cleanup_lock:
+        # CRITICAL: Clean up stale sentinel files from dead YASB processes
+        try:
+            for filename in os.listdir(temp_dir):
+                if filename.startswith("yasb_cava_cleanup_") and filename.endswith(".lock"):
+                    # Extract PID from filename
+                    try:
+                        pid_str = filename.replace("yasb_cava_cleanup_", "").replace(".lock", "")
+                        old_pid = int(pid_str)
+                        
+                        # Check if process is still alive
+                        if old_pid != current_pid and not psutil.pid_exists(old_pid):
+                            # Process is dead, remove stale sentinel
+                            stale_file = os.path.join(temp_dir, filename)
+                            os.remove(stale_file)
+                            logging.debug(f"Removed stale sentinel file for dead PID {old_pid}")
+                    except (ValueError, OSError):
+                        pass
+        except Exception as e:
+            logging.debug(f"Error cleaning stale sentinel files: {e}")
+        
+        # Check if cleanup already done for this YASB process
+        if os.path.exists(sentinel_file):
+            return
+        
+        try:
+            # Kill ALL cava.exe processes unconditionally
+            result = subprocess.run(
+                ["taskkill", "/F", "/IM", "cava.exe"],
+                capture_output=True,
+                text=True,
+                creationflags=subprocess.CREATE_NO_WINDOW,
+                timeout=5
+            )
+            
+            # Check if any processes were killed
+            if result.returncode == 0:
+                logging.info("Killed all existing cava.exe processes on startup")
+                # Wait for processes to fully terminate
+                time.sleep(0.5)
+            elif "not found" in result.stderr.lower() or "no tasks" in result.stderr.lower():
+                logging.debug("No existing cava.exe processes found on startup")
+            else:
+                logging.debug(f"taskkill result: {result.stderr}")
+        except subprocess.TimeoutExpired:
+            logging.warning("Timeout while trying to kill cava processes")
+        except Exception as e:
+            logging.debug(f"Error killing cava processes: {e}")
+        finally:
+            # Create sentinel file to mark cleanup as done for this YASB instance
+            try:
+                with open(sentinel_file, 'w') as f:
+                    f.write(str(time.time()))
+            except Exception:
+                pass
+
+
+def cleanup_all_cava_processes():
+    """Clean up all tracked cava processes - called on module unload."""
+    with _cava_process_lock:
+        for proc in _active_cava_processes[:]:
+            try:
+                if proc.poll() is None:
+                    proc.terminate()
+                    try:
+                        proc.wait(timeout=1)
+                    except subprocess.TimeoutExpired:
+                        proc.kill()
+            except Exception:
+                pass
+        _active_cava_processes.clear()
+
+
+# Register cleanup on exit
+atexit.register(cleanup_all_cava_processes)
+
+
 class CavaBar(QFrame):
     def __init__(self, cava_widget):
         super().__init__()
@@ -460,6 +557,11 @@ class CavaWidget(BaseWidget):
             self._widget_container_layout.addWidget(error_label)
             return
 
+        # CRITICAL: Kill ALL cava.exe processes ONCE before ANY widget starts
+        # Thread-safe with lock to ensure only first widget executes this
+        # Includes 500ms delay to ensure processes fully terminate
+        kill_all_cava_processes_sync()
+
         # Add the custom bar frame
         self._bar_frame = CavaBar(self)
         self._widget_container_layout.addWidget(self._bar_frame)
@@ -504,17 +606,38 @@ class CavaWidget(BaseWidget):
             logging.error(f"Error reloading cava: {e}")
 
     def stop_cava(self) -> None:
+        """Stop cava process and thread with robust cleanup."""
         self._stop_cava = True
         self.colors.clear()
-        if hasattr(self, "_cava_process") and self._cava_process.poll() is None:
+        
+        # Stop and cleanup cava process
+        if hasattr(self, "_cava_process"):
             try:
-                self._cava_process.terminate()
-                self._cava_process.wait(timeout=2)
-            except subprocess.TimeoutExpired:
-                self._cava_process.kill()
+                # Remove from global registry
+                with _cava_process_lock:
+                    if self._cava_process in _active_cava_processes:
+                        _active_cava_processes.remove(self._cava_process)
+                
+                # Terminate process if still running
+                if self._cava_process.poll() is None:
+                    try:
+                        self._cava_process.terminate()
+                        self._cava_process.wait(timeout=2)
+                        logging.debug(f"Terminated cava process (instance {self._instance_id})")
+                    except subprocess.TimeoutExpired:
+                        self._cava_process.kill()
+                        self._cava_process.wait(timeout=1)
+                        logging.warning(f"Killed cava process (instance {self._instance_id})")
+            except Exception as e:
+                logging.debug(f"Error stopping cava process: {e}")
+        
+        # Wait for thread to finish
         if hasattr(self, "thread_cava") and self.thread_cava.is_alive():
             if threading.current_thread() != self.thread_cava:
-                self.thread_cava.join(timeout=2)
+                try:
+                    self.thread_cava.join(timeout=2)
+                except Exception as e:
+                    logging.debug(f"Error joining cava thread: {e}")
 
     def initialize_colors(self) -> None:
         self.foreground_color = QColor(self._foreground)
@@ -615,6 +738,11 @@ class CavaWidget(BaseWidget):
                     stderr=subprocess.DEVNULL,
                     creationflags=subprocess.CREATE_NO_WINDOW,
                 )
+                
+                # Register process in global registry for cleanup
+                with _cava_process_lock:
+                    _active_cava_processes.append(self._cava_process)
+                logging.debug(f"Started cava process (instance {self._instance_id}, PID {self._cava_process.pid})")
 
                 chunk = bytesize * self._bars_number
                 fmt = bytetype * self._bars_number

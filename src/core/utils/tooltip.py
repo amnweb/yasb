@@ -320,16 +320,38 @@ class TooltipEventFilter(QObject):
 
     def cleanup(self):
         """Clean up resources when the event filter is no longer needed."""
-        self.hide_timer.stop()
-        self.poll_timer.stop()
-        self.hover_timer.stop()
+        try:
+            self.hide_timer.stop()
+        except (RuntimeError, AttributeError):
+            pass
+            
+        try:
+            self.poll_timer.stop()
+        except (RuntimeError, AttributeError):
+            pass
+            
+        try:
+            self.hover_timer.stop()
+        except (RuntimeError, AttributeError):
+            pass
 
         if self._app_event_filter_installed:
-            QGuiApplication.instance().removeEventFilter(self)
-            self._app_event_filter_installed = False
+            try:
+                app = QGuiApplication.instance()
+                if app is not None:
+                    app.removeEventFilter(self)
+            except (RuntimeError, AttributeError):
+                # Application already destroyed or filter already removed
+                pass
+            finally:
+                self._app_event_filter_installed = False
 
-        if self.tooltip and self.tooltip.isVisible():
-            self.tooltip.start_fade_out()
+        if self.tooltip:
+            try:
+                if self.tooltip.isVisible():
+                    self.tooltip.start_fade_out()
+            except (RuntimeError, AttributeError):
+                pass
         self.tooltip = None
 
     def _on_hover_timer(self):
@@ -374,10 +396,20 @@ class TooltipEventFilter(QObject):
         if self.tooltip and self.tooltip.isVisible():
             self.tooltip.start_fade_out()
         if self._app_event_filter_installed:
-            QGuiApplication.instance().removeEventFilter(self)
-            self._app_event_filter_installed = False
+            try:
+                app = QGuiApplication.instance()
+                if app is not None:
+                    app.removeEventFilter(self)
+            except (RuntimeError, AttributeError):
+                # Application already destroyed or filter already removed
+                pass
+            finally:
+                self._app_event_filter_installed = False
         self._mouse_inside = False
-        self.poll_timer.stop()
+        try:
+            self.poll_timer.stop()
+        except (RuntimeError, AttributeError):
+            pass
         # Clear reference to tooltip so it can be returned to pool
         self.tooltip = None
 
