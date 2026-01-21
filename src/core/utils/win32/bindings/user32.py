@@ -176,6 +176,9 @@ user32.GetLastActivePopup.restype = HWND
 user32.IsWindowVisible.argtypes = [HWND]
 user32.IsWindowVisible.restype = BOOL
 
+user32.GetKeyState.argtypes = [INT]
+user32.GetKeyState.restype = INT
+
 user32.GetWindowLongW.argtypes = [HWND, INT]
 user32.GetWindowLongW.restype = c_long
 

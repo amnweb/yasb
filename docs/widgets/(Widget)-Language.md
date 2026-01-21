@@ -83,9 +83,13 @@ language:
 .language-widget {}
 .language-widget.your_class {} /* If you are using class_name option */
 .language-widget .widget-container {}
+.language-widget .widget-container.caps-lock-on {} /* If Caps Lock is on */
 .language-widget .label {}
 .language-widget .label.alt {}
 .language-widget .icon {}
+.language-widget .widget-container.caps-lock-on .label {} /* If Caps Lock is on */
+.language-widget .widget-container.caps-lock-on .icon {} /* If Caps Lock is on */
+
 /* Language Menu */
 .language-menu {}
 .language-menu .header {}
