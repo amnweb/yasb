@@ -45,7 +45,7 @@ taskbar:
 
 ## Description of Options
 
-- **icon_size:** The size of icons which will show in the widget.
+- **icon_size:** The size of icons which will show in the widget. Set to `0` to disable icons completely and show only title labels.
 - **show_only_visible:** If set to `True`, the taskbar will only show applications that are currently visible on the screen.
 - **strict_filtering:** If set to `True`, the taskbar will enforce strict filtering of applications based on their properties, such as whether they can be minimized or are tool windows, splash screens, etc. This is useful for ensuring that only valid applications are displayed in the taskbar.
 - **tooltip:** Whether to show the tooltip on hover.
