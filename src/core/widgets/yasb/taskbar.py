@@ -9,7 +9,7 @@ from PyQt6.QtGui import QCursor, QDrag, QImage, QMouseEvent, QPixmap
 from PyQt6.QtWidgets import QApplication, QFrame, QHBoxLayout, QLabel, QSizePolicy, QWidget
 
 from core.utils.tooltip import set_tooltip
-from core.utils.utilities import add_shadow, refresh_widget_style
+from core.utils.utilities import add_shadow, is_valid_qobject, refresh_widget_style
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.widgets.recycle_bin.recycle_bin_monitor import RecycleBinMonitor
 from core.utils.widgets.taskbar.app_menu import show_context_menu
@@ -777,16 +777,18 @@ class TaskbarWidget(BaseWidget):
         content_layout.setContentsMargins(0, 0, 0, 0)
         content_layout.setSpacing(0)
 
-        icon_label = QLabel()
-        icon_label.setProperty("class", "app-icon")
-        try:
-            icon_label.setFixedSize(self._label_icon_size, self._label_icon_size)
-        except Exception:
-            pass
-        if icon is not None:
-            icon_label.setPixmap(icon)
-        icon_label.setProperty("hwnd", pseudo_hwnd)
-        content_layout.addWidget(icon_label)
+        # Only create icon label if icon_size > 0
+        if self._label_icon_size > 0:
+            icon_label = QLabel()
+            icon_label.setProperty("class", "app-icon")
+            try:
+                icon_label.setFixedSize(self._label_icon_size, self._label_icon_size)
+            except Exception:
+                pass
+            if icon is not None:
+                icon_label.setPixmap(icon)
+            icon_label.setProperty("hwnd", pseudo_hwnd)
+            content_layout.addWidget(icon_label)
 
         # Add content wrapper to outer container
         outer_layout.addWidget(content_wrapper)
@@ -821,7 +823,9 @@ class TaskbarWidget(BaseWidget):
 
             # Find and update all Recycle Bin widgets
             recycle_bin_guid = KnownCLSID.RECYCLE_BIN
-            for widget in self._hwnd_to_widget.values():
+            for hwnd, widget in list(self._hwnd_to_widget.items()):
+                if not is_valid_qobject(widget):
+                    continue
                 uid = widget.property("unique_id")
                 if uid and recycle_bin_guid in uid.upper():
                     icon_label = self._get_icon_label(widget)
@@ -833,6 +837,8 @@ class TaskbarWidget(BaseWidget):
 
     def _get_recycle_bin_icon(self, is_empty: bool) -> QPixmap | None:
         """Get Recycle Bin icon from Windows stock icons with caching."""
+        if self._label_icon_size <= 0:
+            return None
         try:
             # Use a special cache key for Recycle Bin: ("RECYCLE_BIN", is_empty, dpi)
             cache_key = ("RECYCLE_BIN", is_empty, self._dpi)
@@ -958,7 +964,9 @@ class TaskbarWidget(BaseWidget):
 
                     # Check if we have a running window that matches this unique_id
                     found_running = False
-                    for hwnd, widget in self._hwnd_to_widget.items():
+                    for hwnd, widget in list(self._hwnd_to_widget.items()):
+                        if not is_valid_qobject(widget):
+                            continue
                         if hwnd > 0:  # Real window (not pseudo)
                             # Get unique_id for this window - use full as_dict() to include process_pid and process_path
                             window_data = {"process_name": "", "title": ""}
@@ -1049,6 +1057,8 @@ class TaskbarWidget(BaseWidget):
 
                 # Remove the pinned-only button if it exists (pseudo hwnd < 0)
                 for pseudo_hwnd, widget in list(self._hwnd_to_widget.items()):
+                    if not is_valid_qobject(widget):
+                        continue
                     if pseudo_hwnd < 0 and widget.property("unique_id") == unique_id:
                         self._hwnd_to_widget.pop(pseudo_hwnd)
                         self._widget_container_layout.removeWidget(widget)
@@ -1113,7 +1123,9 @@ class TaskbarWidget(BaseWidget):
                         self._create_pinned_app_button(unique_id, metadata)
 
                 # Re-add unpinned running apps at the end
-                for hwnd, widget in self._hwnd_to_widget.items():
+                for hwnd, widget in list(self._hwnd_to_widget.items()):
+                    if not is_valid_qobject(widget):
+                        continue
                     if hwnd > 0 and hwnd not in self._pin_manager.running_pinned:
                         # This is a running unpinned app
                         if widget.parent() is None:  # Not yet added back
@@ -1222,6 +1234,8 @@ class TaskbarWidget(BaseWidget):
             # Try to find and replace an existing pinned-only button
             found_pinned_button = False
             for pseudo_hwnd, widget in list(self._hwnd_to_widget.items()):
+                if not is_valid_qobject(widget):
+                    continue
                 if pseudo_hwnd < 0 and widget.property("unique_id") == unique_id:
                     insert_position = self._get_hwnd_position(pseudo_hwnd)
 
@@ -1246,7 +1260,9 @@ class TaskbarWidget(BaseWidget):
             if not found_pinned_button:
                 # Find the position of any existing window of this app and insert after it
                 last_position = -1
-                for existing_hwnd, existing_widget in self._hwnd_to_widget.items():
+                for existing_hwnd, existing_widget in list(self._hwnd_to_widget.items()):
+                    if not is_valid_qobject(existing_widget):
+                        continue
                     if self._pin_manager.running_pinned.get(existing_hwnd) == unique_id:
                         last_position = self._get_hwnd_position(existing_hwnd)
 
@@ -1701,16 +1717,18 @@ class TaskbarWidget(BaseWidget):
         content_layout.setContentsMargins(0, 0, 0, 0)
         content_layout.setSpacing(0)
 
-        icon_label = QLabel()
-        icon_label.setProperty("class", "app-icon")
-        try:
-            icon_label.setFixedSize(self._label_icon_size, self._label_icon_size)
-        except Exception:
-            pass
-        if icon is not None:
-            icon_label.setPixmap(icon)
-        icon_label.setProperty("hwnd", hwnd)
-        content_layout.addWidget(icon_label)
+        # Only create icon label if icon_size > 0
+        if self._label_icon_size > 0:
+            icon_label = QLabel()
+            icon_label.setProperty("class", "app-icon")
+            try:
+                icon_label.setFixedSize(self._label_icon_size, self._label_icon_size)
+            except Exception:
+                pass
+            if icon is not None:
+                icon_label.setPixmap(icon)
+            icon_label.setProperty("hwnd", hwnd)
+            content_layout.addWidget(icon_label)
 
         if self._title_label["enabled"]:
             # Wrap the label to animate only wrapper width and reduce reflow
@@ -1797,6 +1815,8 @@ class TaskbarWidget(BaseWidget):
 
     def _get_app_icon(self, hwnd: int, title: str) -> QPixmap | None:
         """Return a QPixmap for the given window handle, using a DPI-aware cache."""
+        if self._label_icon_size <= 0:
+            return None
         try:
             # Check if this is a Recycle Bin window - use monitored state instead of window icon
             unique_id = self._pin_manager.running_pinned.get(hwnd)
@@ -2043,10 +2063,15 @@ class TaskbarWidget(BaseWidget):
             if not content_wrapper:
                 return None
             content_layout = content_wrapper.layout()
-            if content_layout and content_layout.count() > 1:
-                title_wrapper = content_layout.itemAt(1).widget()
-                if isinstance(title_wrapper, QWidget):
-                    return title_wrapper
+            if content_layout and content_layout.count() > 0:
+                # Title wrapper index depends on whether icon exists
+                # If icon_size > 0: icon at index 0, title_wrapper at index 1
+                # If icon_size <= 0: title_wrapper at index 0
+                title_idx = 1 if self._label_icon_size > 0 else 0
+                if content_layout.count() > title_idx:
+                    title_wrapper = content_layout.itemAt(title_idx).widget()
+                    if isinstance(title_wrapper, QWidget):
+                        return title_wrapper
         except Exception:
             pass
         return None
