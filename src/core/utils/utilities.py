@@ -1,3 +1,5 @@
+import ctypes
+import ctypes.wintypes as wintypes
 import math
 import os
 import platform
@@ -9,7 +11,6 @@ from pathlib import Path
 from threading import Lock
 from typing import Any, TypeGuard, cast, override
 
-import psutil
 from PyQt6 import sip
 from PyQt6.QtCore import QEvent, QObject, QPoint, QPropertyAnimation, QRect, QSize, Qt, QTimer, pyqtSlot
 from PyQt6.QtGui import (
@@ -26,6 +27,9 @@ from PyQt6.QtWidgets import QApplication, QDialog, QFrame, QGraphicsDropShadowEf
 from winrt.windows.data.xml.dom import XmlDocument
 from winrt.windows.ui.notifications import ToastNotification, ToastNotificationManager
 
+from core.utils.win32.bindings.kernel32 import kernel32
+from core.utils.win32.constants import TH32CS_SNAPPROCESS
+from core.utils.win32.structs import PROCESSENTRY32
 from core.utils.win32.win32_accent import Blur
 
 
@@ -150,10 +154,26 @@ def get_relative_time(iso_timestamp: str) -> str:
 
 
 def is_process_running(process_name: str) -> bool:
-    for proc in psutil.process_iter(["name"]):
-        if proc.info["name"] == process_name:
-            return True
-    return False
+    snapshot = kernel32.CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0)
+    if snapshot == wintypes.HANDLE(-1).value:
+        return False
+
+    try:
+        entry = PROCESSENTRY32()
+        entry.dwSize = ctypes.sizeof(PROCESSENTRY32)
+
+        if not kernel32.Process32FirstW(snapshot, ctypes.byref(entry)):
+            return False
+
+        target = process_name.lower()
+        while True:
+            if entry.szExeFile.lower() == target:
+                return True
+            if not kernel32.Process32NextW(snapshot, ctypes.byref(entry)):
+                break
+        return False
+    finally:
+        kernel32.CloseHandle(snapshot)
 
 
 def percent_to_float(percent: str) -> float:

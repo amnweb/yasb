@@ -1,6 +1,9 @@
 """Window context helpers for the taskbar pin manager."""
 
+import ctypes
 import logging
+from ctypes import POINTER, byref, create_string_buffer
+from ctypes.wintypes import ULONG
 from dataclasses import dataclass
 from functools import lru_cache
 from typing import Any
@@ -9,6 +12,10 @@ from urllib.parse import unquote
 import win32com.client
 
 from core.utils.win32.aumid import get_aumid_for_window
+from core.utils.win32.bindings.kernel32 import kernel32
+from core.utils.win32.bindings.ntdll import ProcessCommandLineInformation, ntdll
+from core.utils.win32.constants import PROCESS_QUERY_LIMITED_INFORMATION
+from core.utils.win32.structs import UNICODE_STRING
 from settings import DEBUG
 
 
@@ -130,15 +137,38 @@ def ensure_command_line(context: WindowContext) -> str | None:
 
 def _get_process_command_line(pid: int) -> str | None:
     """Return the command line for a process, if available."""
-
     try:
-        import psutil
+        hProcess = kernel32.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
+        if hProcess:
+            try:
+                bufLen = ULONG(0)
+                ntdll.NtQueryInformationProcess(hProcess, ProcessCommandLineInformation, None, 0, byref(bufLen))
 
-        proc = psutil.Process(pid)
-        cmdline = proc.cmdline()
-        if cmdline:
-            return " ".join(cmdline)
+                if bufLen.value > 0:
+                    buffer = create_string_buffer(bufLen.value)
+                    status = ntdll.NtQueryInformationProcess(
+                        hProcess, ProcessCommandLineInformation, buffer, bufLen.value, byref(bufLen)
+                    )
+
+                    if status >= 0:
+                        unicode_str = ctypes.cast(buffer, POINTER(UNICODE_STRING)).contents
+                        if unicode_str.Buffer:
+                            return unicode_str.Buffer
+            finally:
+                kernel32.CloseHandle(hProcess)
     except Exception as exc:
         if DEBUG:
-            logging.debug("Could not get command line for PID %s: %s", pid, exc)
+            logging.debug("NtQueryInformationProcess failed for PID %s: %s", pid, exc)
+
+    # Fallback to WMI if NtQueryInformationProcess fails
+    try:
+        wmi = win32com.client.GetObject("winmgmts:")
+        processes = wmi.ExecQuery(f"SELECT CommandLine FROM Win32_Process WHERE ProcessId = {pid}")
+        for process in processes:
+            if process.CommandLine:
+                return process.CommandLine
+    except Exception as exc:
+        if DEBUG:
+            logging.debug("WMI fallback failed for PID %s: %s", pid, exc)
+
     return None

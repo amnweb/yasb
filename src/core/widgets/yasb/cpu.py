@@ -7,6 +7,7 @@ from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel
 
 from core.utils.utilities import add_shadow, build_progress_widget, build_widget_label, refresh_widget_style
 from core.utils.widgets.animation_manager import AnimationManager
+from core.utils.widgets.cpu.cpu_api import CpuAPI
 from core.validation.widgets.yasb.cpu import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
 
@@ -87,27 +88,15 @@ class CpuWidget(BaseWidget):
         self._show_placeholder()
 
     def _show_placeholder(self):
-        """Display placeholder (zero/default) CPU data without any psutil calls."""
-
-        class DummyFreq:
-            min = 0
-            max = 0
-            current = 0
-
-        class DummyStats:
-            ctx_switches = 0
-            interrupts = 0
-            soft_interrupts = 0
-            syscalls = 0
-
-        cpu_freq = DummyFreq()
-        cpu_stats = DummyStats()
-        current_perc = 0
-        logical = 1  # Assume at least 1 core for placeholder
-        cores_perc = [0] * logical
-        cpu_cores = {"physical": 1, "total": 1}
-
-        self._update_label(cpu_freq, cpu_stats, current_perc, cores_perc, cpu_cores)
+        """Display placeholder (zero/default) CPU data."""
+        data = CpuAPI.CpuData(
+            freq=CpuAPI.CpuFreq(current=0, min=0, max=0),
+            percent=0,
+            percent_per_core=[0],
+            cores_physical=1,
+            cores_logical=1,
+        )
+        self._update_label(data)
 
     @classmethod
     def _notify_instances(cls):
@@ -116,49 +105,36 @@ class CpuWidget(BaseWidget):
             return
 
         try:
-            import psutil
-
-            cpu_freq = psutil.cpu_freq()
-            cpu_stats = psutil.cpu_stats()
-            current_perc = psutil.cpu_percent()
-            cores_perc = psutil.cpu_percent(percpu=True)
-            cpu_cores = {"physical": psutil.cpu_count(logical=False), "total": psutil.cpu_count(logical=True)}
+            data = CpuAPI.get_data()
 
             # Update each instance using the shared data
             for inst in cls._instances[:]:
                 try:
-                    inst._update_label(cpu_freq, cpu_stats, current_perc, cores_perc, cpu_cores)
+                    inst._update_label(data)
                 except RuntimeError:
                     cls._instances.remove(inst)
 
         except Exception as e:
             logging.error(f"Error updating shared CPU data: {e}")
 
-    def _update_label(self, cpu_freq, cpu_stats, current_perc, cores_perc, cpu_cores):
+    def _update_label(self, data: CpuAPI.CpuData):
         """Update the label with CPU data."""
-
-        self._cpu_freq_history.append(cpu_freq.current)
-        self._cpu_perc_history.append(current_perc)
+        self._cpu_freq_history.append(data.freq.current)
+        self._cpu_perc_history.append(data.percent)
 
         _round = lambda value: round(value) if self._hide_decimal else value
         cpu_info = {
-            "cores": cpu_cores,
-            "freq": {"min": _round(cpu_freq.min), "max": _round(cpu_freq.max), "current": _round(cpu_freq.current)},
-            "percent": {"core": [_round(core) for core in cores_perc], "total": _round(current_perc)},
-            "stats": {
-                "context_switches": cpu_stats.ctx_switches,
-                "interrupts": cpu_stats.interrupts,
-                "soft_interrupts": cpu_stats.soft_interrupts,
-                "sys_calls": cpu_stats.syscalls,
-            },
+            "cores": {"physical": data.cores_physical, "total": data.cores_logical},
+            "freq": {"min": _round(data.freq.min), "max": _round(data.freq.max), "current": _round(data.freq.current)},
+            "percent": {"core": [_round(core) for core in data.percent_per_core], "total": _round(data.percent)},
+            # stats removed - zeroed values for backward compatibility
+            "stats": {"context_switches": 0, "interrupts": 0, "soft_interrupts": 0, "sys_calls": 0},
             "histograms": {
                 "cpu_freq": "".join(
-                    [self._get_histogram_bar(freq, cpu_freq.min, cpu_freq.max) for freq in self._cpu_freq_history]
+                    [self._get_histogram_bar(f, data.freq.min, data.freq.max) for f in self._cpu_freq_history]
                 ),
-                "cpu_percent": "".join(
-                    [self._get_histogram_bar(percent, 0, 100) for percent in self._cpu_perc_history]
-                ),
-                "cores": "".join([self._get_histogram_bar(percent, 0, 100) for percent in cores_perc]),
+                "cpu_percent": "".join([self._get_histogram_bar(p, 0, 100) for p in self._cpu_perc_history]),
+                "cores": "".join([self._get_histogram_bar(p, 0, 100) for p in data.percent_per_core]),
             },
         }
 
@@ -174,7 +150,7 @@ class CpuWidget(BaseWidget):
                     0 if self._progress_bar["position"] == "left" else self._widget_container_layout.count(),
                     self.progress_widget,
                 )
-            self.progress_widget.set_value(current_perc)
+            self.progress_widget.set_value(data.percent)
 
         for part in label_parts:
             part = part.strip()
@@ -188,7 +164,7 @@ class CpuWidget(BaseWidget):
                     active_widgets[widget_index].setText(formatted_text)
                     active_widgets[widget_index].setProperty("class", label_class)
                     active_widgets[widget_index].setProperty(
-                        "class", f"{label_class} status-{self._get_cpu_threshold(current_perc)}"
+                        "class", f"{label_class} status-{self._get_cpu_threshold(data.percent)}"
                     )
                     refresh_widget_style(active_widgets[widget_index])
                 widget_index += 1
@@ -210,12 +186,12 @@ class CpuWidget(BaseWidget):
         bar_index = min(max(bar_index, 0), len(self._histogram_icons) - 1)
         return self._histogram_icons[bar_index]
 
-    def _get_cpu_threshold(self, cpu_percent) -> str:
-        if cpu_percent <= self._cpu_thresholds["low"]:
+    def _get_cpu_threshold(self, percent: float) -> str:
+        if percent <= self._cpu_thresholds["low"]:
             return "low"
-        elif self._cpu_thresholds["low"] < cpu_percent <= self._cpu_thresholds["medium"]:
+        elif self._cpu_thresholds["low"] < percent <= self._cpu_thresholds["medium"]:
             return "medium"
-        elif self._cpu_thresholds["medium"] < cpu_percent <= self._cpu_thresholds["high"]:
+        elif self._cpu_thresholds["medium"] < percent <= self._cpu_thresholds["high"]:
             return "high"
-        elif self._cpu_thresholds["high"] < cpu_percent:
+        elif self._cpu_thresholds["high"] < percent:
             return "critical"

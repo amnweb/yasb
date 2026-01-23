@@ -14,7 +14,6 @@ updates:
       - dependency-name: "pillow"
       - dependency-name: "pycaw"
       - dependency-name: "cx-freeze"
-      - dependency-name: "psutil"
       - dependency-name: "holidays"
       - dependency-name: "icoextract"
     commit-message:

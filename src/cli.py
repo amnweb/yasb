@@ -28,6 +28,7 @@ from win32con import (
     OPEN_EXISTING,
 )
 
+from core.utils.utilities import is_process_running
 from core.utils.win32.bindings import (
     CloseHandle,
     CreateFile,
@@ -48,15 +49,6 @@ AUTOSTART_FILE = EXE_PATH if os.path.exists(EXE_PATH) else None
 
 CLI_SERVER_PIPE_NAME = r"\\.\pipe\yasb_pipe_cli"
 LOG_SERVER_PIPE_NAME = r"\\.\pipe\yasb_pipe_log"
-
-
-def is_process_running(process_name: str) -> bool:
-    import psutil
-
-    for proc in psutil.process_iter(["name"]):
-        if proc.info["name"] == process_name:
-            return True
-    return False
 
 
 def write_message(handle: int, msg_dict: dict[str, str]):

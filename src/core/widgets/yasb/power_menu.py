@@ -1,6 +1,6 @@
+import ctypes
 import datetime
 
-import psutil
 from PyQt6 import QtCore, QtGui
 from PyQt6.QtCore import QPropertyAnimation, Qt, pyqtSignal
 from PyQt6.QtGui import QCursor
@@ -91,8 +91,8 @@ class OverlayWidget(BaseStyledWidget, AnimatedWidget):
         self.timer.start(500)
 
     def update_uptime_display(self):
-        boot_time = datetime.datetime.fromtimestamp(psutil.boot_time())
-        uptime = datetime.datetime.now() - boot_time
+        uptime_seconds = int(ctypes.windll.kernel32.GetTickCount64() / 1000)
+        uptime = datetime.timedelta(seconds=uptime_seconds)
         days = uptime.days
         hours, remainder = divmod(uptime.seconds, 3600)
         minutes, seconds = divmod(remainder, 60)

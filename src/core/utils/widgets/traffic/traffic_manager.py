@@ -4,10 +4,10 @@ import re
 import time
 from datetime import datetime
 
-import psutil
 from PyQt6.QtWidgets import QApplication
 
 from core.utils.utilities import app_data_path
+from core.utils.widgets.traffic.network_api import NetworkAPI
 
 
 class TrafficDataManager:
@@ -356,13 +356,16 @@ class TrafficDataManager:
         """Get IO counters for a specific interface"""
         try:
             if interface.lower() == "auto":
-                return psutil.net_io_counters()
+                return NetworkAPI.net_io_counters()
             else:
-                io_counters = psutil.net_io_counters(pernic=True)
+                io_counters = NetworkAPI.net_io_counters(pernic=True)
                 if interface in io_counters:
                     return io_counters[interface]
                 else:
-                    return psutil.net_io_counters()
+                    logging.warning(
+                        f"Interface '{interface}' not found. Available interfaces: {list(io_counters.keys())}"
+                    )
+                    return None
         except Exception as e:
             logging.error(f"Error getting IO counters for {interface}: {e}")
             return None

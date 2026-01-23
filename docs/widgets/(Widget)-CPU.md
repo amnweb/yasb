@@ -9,7 +9,7 @@
 | `histogram_icons`     | list    | `["\u2581", "\u2581", "\u2582", "\u2583", "\u2584", "\u2585", "\u2586", "\u2587", "\u2588"]` | Icons representing CPU usage histograms.                                    |
 | `histogram_num_columns` | integer | `10`                                                                    | The number of columns in the histogram.                                     |
 | `callbacks`           | dict    | `{'on_left': 'toggle_label', 'on_middle': 'do_nothing', 'on_right': 'do_nothing'}` | Callback functions for different mouse button actions.                      |
-| `cpu_thresholds` | dict  | `{'low': 25, 'medium': 50, 'high': 90}`                                 | Thresholds for Cpu usage levels. |
+| `cpu_thresholds` | dict  | `{'low': 25, 'medium': 50, 'high': 90}`                                 | Thresholds for CPU usage levels. |
 | `animation`         | dict    | `{'enabled': true, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
 | `container_shadow`   | dict   | `None`                  | Container shadow options.                       |
 | `label_shadow`         | dict   | `None`                  | Label shadow options.                 |
@@ -23,7 +23,7 @@ cpu:
   type: "yasb.cpu.CpuWidget"
   options:
     label: "<span>\uf4bc</span> {info[percent][total]}%"
-    label_alt: "<span>\uf437</span> {info[histograms][cpu_percent]}"
+    label_alt: "<span>\uf437</span> {info[freq][current]} MHz"
     update_interval: 2000
     cpu_thresholds:
       low: 25
@@ -55,7 +55,7 @@ cpu:
 - **label_alt**: The alternative format string for the CPU usage label. Useful for displaying additional CPU details.
 - **class_name:** Additional CSS class name for the widget. This allows for custom styling.
 - **update_interval**: The interval in milliseconds at which the widget updates its information. Minimum is 1000 ms (1 second).
-- **cpu_thresholds:** A dictionary specifying the thresholds for cpu usage levels. The keys are `low`, `medium`, and `high`, and the values are the percentage thresholds.
+- **cpu_thresholds:** A dictionary specifying the thresholds for CPU usage levels. The keys are `low`, `medium`, and `high`, and the values are the percentage thresholds.
 - **hide_decimal**: Whether to hide decimal places in the CPU widget.
 - **histogram_icons**: A list of icons representing different levels of CPU usage in the histogram. 8 icons are typically used, representing usage from 0% to 80%+.
 - **histogram_num_columns**: The number of columns to display in the CPU usage histogram.
@@ -79,37 +79,83 @@ cpu:
 - `{info[cores][total]}` - Total number of CPU cores (including logical/hyperthreaded cores)
 
 #### Frequency Information
-- `{info[freq][min]}` - Minimum CPU frequency in MHz
-- `{info[freq][max]}` - Maximum CPU frequency in MHz  
-- `{info[freq][current]}` - Current CPU frequency in MHz
+- `{info[freq][current]}` - Current CPU frequency in MHz (includes turbo boost, matches Windows Task Manager)
+- `{info[freq][max]}` - Base/nominal CPU frequency in MHz  
+- `{info[freq][min]}` - Always 0 (not available on Windows)
 
 #### Usage Percentages
-- `{info[percent][total]}` - Total CPU usage percentage
+- `{info[percent][total]}` - Total CPU usage percentage (0-100)
 - `{info[percent][core]}` - List of per-core CPU usage percentages
-
-#### CPU Statistics
-- `{info[stats][context_switches]}` - Number of context switches
-- `{info[stats][interrupts]}` - Number of interrupts
-- `{info[stats][soft_interrupts]}` - Number of soft interrupts
-- `{info[stats][sys_calls]}` - Number of system calls
 
 #### Histograms
 - `{info[histograms][cpu_freq]}` - CPU frequency histogram using configured icons
 - `{info[histograms][cpu_percent]}` - CPU percentage histogram using configured icons
 - `{info[histograms][cores]}` - Per-core usage histogram using configured icons
 
+> **Note**: The CPU widget uses Windows Performance Data Helper (PDH) API for accurate real-time metrics. If PDH counters are corrupted, the widget will display default values. To repair broken PDH counters, run `lodctr /r` as Administrator.
+
 ## Example Style
 ```css
 .cpu-widget {}
-.cpu-widget.your_class {} /* If you are using class_name option */
 .cpu-widget .widget-container {}
 .cpu-widget .widget-container .label {}
 .cpu-widget .widget-container .label.alt {}
 .cpu-widget .widget-container .icon {}
-.cpu-widget .label.status-low {}
-.cpu-widget .label.status-medium {}
-.cpu-widget .label.status-high {}
-.cpu-widget .label.status-critical {}
-/* CPU progress bar styles if enabled */
-.cpu-widget .progress-circle {} 
+
+/* Status classes based on cpu_thresholds */
+.cpu-widget .widget-container .label.status-low {}
+.cpu-widget .widget-container .label.status-medium {}
+.cpu-widget .widget-container .label.status-high {}
+.cpu-widget .widget-container .label.status-critical {}
+
+/* Icon status classes */
+.cpu-widget .widget-container .icon.status-low {}
+.cpu-widget .widget-container .icon.status-medium {}
+.cpu-widget .widget-container .icon.status-high {}
+.cpu-widget .widget-container .icon.status-critical {}
+
+/* Progress bar styles (if enabled) */
+.cpu-widget .progress-circle {}
+
+/* Custom class styling */
+.cpu-widget.your-class-name {}
+.cpu-widget.your-class-name .label {}
+```
+
+## Full CSS Example
+```css
+.cpu-widget {
+    padding: 0 8px;
+}
+
+.cpu-widget .widget-container .label {
+    font-size: 13px;
+    color: #cdd6f4;
+}
+
+.cpu-widget .widget-container .icon {
+    font-size: 14px;
+    color: #89b4fa;
+}
+
+.cpu-widget .widget-container .label.status-low {
+    color: #a6e3a1; /* Green */
+}
+
+.cpu-widget .widget-container .label.status-medium {
+    color: #f9e2af; /* Yellow */
+}
+
+.cpu-widget .widget-container .label.status-high {
+    color: #fab387; /* Orange */
+}
+
+.cpu-widget .widget-container .label.status-critical {
+    color: #f38ba8; /* Red */
+}
+
+/* Progress bar customization */
+.cpu-widget .progress-circle {
+    margin-right: 6px;
+}
 ```
