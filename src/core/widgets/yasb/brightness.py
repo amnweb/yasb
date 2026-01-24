@@ -216,6 +216,7 @@ class BrightnessWidget(BaseWidget):
                 pos = 0 if self._progress_bar["position"] == "left" else self._widget_container_layout.count()
                 self._widget_container_layout.insertWidget(pos, self.progress_widget)
             self.progress_widget.set_value(percent)
+            self.progress_widget.set_icon(icon)
 
         # Update label widgets
         for part in label_parts:

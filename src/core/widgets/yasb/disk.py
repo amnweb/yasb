@@ -124,6 +124,7 @@ class DiskWidget(BaseWidget):
                 )
 
             self.progress_widget.set_value(percent_value)
+            self.progress_widget.set_class(f"status-{self._get_disk_threshold(percent_value)}")
 
         for part in label_parts:
             part = part.strip()

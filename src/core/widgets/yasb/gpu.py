@@ -211,6 +211,7 @@ class GpuWidget(BaseWidget):
                     self.progress_widget,
                 )
             self.progress_widget.set_value(gpu_data.utilization)
+            self.progress_widget.set_class(f"status-{self._get_gpu_threshold(gpu_data.utilization)}")
 
         for part in label_parts:
             part = part.strip()
