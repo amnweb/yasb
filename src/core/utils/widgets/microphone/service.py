@@ -1,4 +1,5 @@
 import logging
+import threading
 
 from pycaw.callbacks import AudioEndpointVolumeCallback, MMNotificationClient
 from pycaw.constants import DEVICE_STATE
@@ -25,72 +26,98 @@ class AudioInputService(QObject):
 
         self._initialized = True
         super().__init__()
-        self._widgets = []  # List of registered widgets
+
+        self._widgets = []
         self._microphone_interface = None
         self._enumerator = None
         self._device_callback = None
         self._volume_callback = None
 
-        # Initialize audio on first instance
-        self._initialize_microphone()
+        self._cached_microphone = None
+        self._cached_devices = None
+        self._cache_lock = threading.Lock()
+        self._microphone_checked = False
 
-    def _initialize_microphone(self):
-        """Initialize the shared pycaw microphone interface."""
         logging.info("AudioInputService starting...")
         try:
             self._enumerator = AudioUtilities.GetDeviceEnumerator()
         except Exception as e:
-            logging.error(f"AudioInputService failed to initialize enumerator: {e}")
-            self._microphone_interface = None
-            return
+            logging.error(f"AudioInputService failed to initialize: {e}")
 
+    def _initialize_audio(self):
+        """Fetch microphone and devices in background thread."""
+
+        def fetch():
+            try:
+                with self._cache_lock:
+                    if self._cached_microphone is None:
+                        mic = self._get_microphone_device()
+                        if mic:
+                            self._cached_microphone = mic
+                            if self._microphone_interface is None:
+                                self._microphone_interface = mic.EndpointVolume
+
+                    if self._cached_devices is None:
+                        devices = AudioUtilities.GetAllDevices(
+                            data_flow=EDataFlow.eCapture.value, device_state=DEVICE_STATE.ACTIVE.value
+                        )
+                        self._cached_devices = [(d.id, d.FriendlyName) for d in devices]
+            except Exception:
+                pass
+
+        threading.Thread(target=fetch, daemon=True).start()
+
+    def _get_microphone_device(self):
+        """Get default microphone as AudioDevice. Returns None if no mic available."""
         try:
-            devices = AudioUtilities.GetMicrophone()
-            if devices:
-                device = AudioUtilities.CreateDevice(devices)
-                self._microphone_interface = device.EndpointVolume
-            else:
-                self._microphone_interface = None
+            mic_pointer = AudioUtilities.GetMicrophone()
+            if mic_pointer:
+                return AudioUtilities.CreateDevice(mic_pointer)
         except Exception:
-            self._microphone_interface = None
+            pass
+        return None
+
+    def _invalidate_cache(self):
+        """Clear cached data when devices change."""
+        with self._cache_lock:
+            self._cached_microphone = None
+            self._cached_devices = None
+            self._microphone_checked = False
 
     def register_widget(self, widget):
-        """Register a widget to use the shared service."""
+        """Add widget to the service."""
         if widget not in self._widgets:
             self._widgets.append(widget)
 
-        # Register callbacks on first widget
         if len(self._widgets) == 1:
-            # Connect signals to slots for thread-safe callbacks
+            self._initialize_audio()
             self.device_change_requested.connect(self._on_device_change)
             self.volume_change_requested.connect(self._on_volume_change)
             self._register_callbacks()
 
     def unregister_widget(self, widget):
-        """Unregister a widget from the shared service."""
+        """Remove widget from service."""
         if widget in self._widgets:
             self._widgets.remove(widget)
-            # Unregister callbacks when no widgets remain
             if not self._widgets:
                 self._unregister_callbacks()
 
     def _register_callbacks(self):
-        """Register shared pycaw callbacks."""
+        """Hook up device and volume change notifications."""
         try:
-            # Device change callback
             if self._enumerator and not self._device_callback:
                 self._device_callback = _SharedDeviceCallback(self)
                 self._enumerator.RegisterEndpointNotificationCallback(self._device_callback)
 
-            # Volume change callback
-            if self._microphone_interface and not self._volume_callback:
+            volume = self.get_microphone_interface()
+            if volume and not self._volume_callback:
                 self._volume_callback = _SharedVolumeCallback(self)
-                self._microphone_interface.RegisterControlChangeNotify(self._volume_callback)
-        except Exception as e:
-            logging.error(f"Failed to register shared callbacks: {e}")
+                volume.RegisterControlChangeNotify(self._volume_callback)
+        except Exception:
+            pass
 
     def _unregister_callbacks(self):
-        """Unregister shared pycaw callbacks."""
+        """Unhook device and volume notifications."""
         try:
             if self._device_callback and self._enumerator:
                 self._enumerator.UnregisterEndpointNotificationCallback(self._device_callback)
@@ -99,23 +126,22 @@ class AudioInputService(QObject):
             if self._volume_callback and self._microphone_interface:
                 self._microphone_interface.UnregisterControlChangeNotify(self._volume_callback)
                 self._volume_callback = None
-        except Exception as e:
-            logging.error(f"Failed to unregister shared callbacks: {e}")
+        except Exception:
+            pass
 
     def _on_volume_change(self):
-        """Notify all registered widgets of volume change."""
+        """Push volume updates to all widgets."""
         for widget in self._widgets[:]:
             try:
                 widget._update_label()
-                # Update slider only if menu is open
                 if hasattr(widget, "dialog") and widget.dialog and widget.dialog.isVisible():
                     widget._update_slider_value()
             except:
                 pass
 
     def _on_device_change(self):
-        """Notify all registered widgets of device change and reinitialize."""
-        # Unregister old volume callback (device callback stays registered)
+        """Handle audio device add/remove/change."""
+        # Unregister old volume callback
         if self._volume_callback and self._microphone_interface:
             try:
                 self._microphone_interface.UnregisterControlChangeNotify(self._volume_callback)
@@ -123,24 +149,27 @@ class AudioInputService(QObject):
                 pass
             self._volume_callback = None
 
-        # Get new default device
-        try:
-            devices = AudioUtilities.GetMicrophone()
-            if devices:
-                device = AudioUtilities.CreateDevice(devices)
-                self._microphone_interface = device.EndpointVolume
-            else:
-                self._microphone_interface = None
-        except Exception:
-            self._microphone_interface = None
+        # Clear cached data and interface
+        self._invalidate_cache()
+        self._microphone_interface = None
 
-        # Re-register volume callback if we have widgets and a device
+        # Get new microphone (may be None if no mic connected)
+        mic = self._get_microphone_device()
+        if mic:
+            try:
+                self._microphone_interface = mic.EndpointVolume
+                with self._cache_lock:
+                    self._cached_microphone = mic
+            except:
+                pass
+
+        # Re-register volume callback if we have a mic
         if self._widgets and self._microphone_interface:
             try:
                 self._volume_callback = _SharedVolumeCallback(self)
                 self._microphone_interface.RegisterControlChangeNotify(self._volume_callback)
-            except Exception as e:
-                logging.error(f"Failed to register volume callback: {e}")
+            except Exception:
+                pass
 
         # Notify all widgets
         for widget in self._widgets[:]:
@@ -150,43 +179,60 @@ class AudioInputService(QObject):
                 pass
 
     def get_microphone_interface(self):
-        """Get the shared microphone interface."""
+        """Get volume control interface for microphone."""
+        if self._microphone_interface is None:
+            mic = self.get_microphone()
+            if mic:
+                try:
+                    self._microphone_interface = mic.EndpointVolume
+                except:
+                    pass
         return self._microphone_interface
 
     def get_microphone(self):
-        """Get the current default microphone device."""
-        try:
-            mic_pointer = AudioUtilities.GetMicrophone()
-            if mic_pointer:
-                return AudioUtilities.CreateDevice(mic_pointer)
-            return None
-        except Exception as e:
-            logging.debug(f"No microphone available: {e}")
-            return None
+        """Get default microphone device. Returns None if no mic available."""
+        with self._cache_lock:
+            if self._cached_microphone is not None:
+                return self._cached_microphone
+            if self._microphone_checked:
+                return None
+
+        self._microphone_checked = True
+        mic = self._get_microphone_device()
+        if mic:
+            with self._cache_lock:
+                self._cached_microphone = mic
+        return mic
 
     def get_all_devices(self):
-        """Get all active microphone/input devices as list of (device_id, device_name) tuples."""
+        """List all active microphone devices."""
+        with self._cache_lock:
+            if self._cached_devices is not None:
+                return self._cached_devices
+
         try:
-            devices_list = AudioUtilities.GetAllDevices(
+            devices = AudioUtilities.GetAllDevices(
                 data_flow=EDataFlow.eCapture.value, device_state=DEVICE_STATE.ACTIVE.value
             )
-            return [(device.id, device.FriendlyName) for device in devices_list]
-        except Exception as e:
-            logging.error(f"Failed to list microphone devices: {e}")
+            result = [(d.id, d.FriendlyName) for d in devices]
+            with self._cache_lock:
+                self._cached_devices = result
+            return result
+        except Exception:
             return []
 
-    def set_default_device(self, device_id: str):
-        """Set the default microphone device."""
+    def set_default_device(self, device_id):
+        """Switch default microphone."""
         try:
             AudioUtilities.SetDefaultDevice(device_id, roles=[ERole.eConsole])
             return True
         except Exception as e:
-            logging.error(f"Failed to set default microphone device: {e}")
+            logging.error(f"Failed to set default microphone: {e}")
             return False
 
 
 class _SharedVolumeCallback(AudioEndpointVolumeCallback):
-    """Shared callback for volume changes."""
+    """Forwards volume changes to the service."""
 
     def __init__(self, service):
         super().__init__()
@@ -197,33 +243,27 @@ class _SharedVolumeCallback(AudioEndpointVolumeCallback):
 
 
 class _SharedDeviceCallback(MMNotificationClient):
-    """Shared callback for device changes."""
+    """Forwards device changes to the service."""
 
     def __init__(self, service):
         super().__init__()
         self.service = service
         self._last_device_id = None
-        self._last_state_changes = {}  # Track (device_id, state) to deduplicate
 
     def on_default_device_changed(self, flow, flow_id, role, role_id, default_device_id):
         """Handle default microphone device changes."""
         # Only care about capture (input) devices with console role
         if flow_id != EDataFlow.eCapture.value or role_id != ERole.eConsole.value:
             return
-
-        # Only process if device actually changed (prevents spam during transitions)
+        # Deduplicate rapid events
         if default_device_id == self._last_device_id:
             return
-
         self._last_device_id = default_device_id
         self.service.device_change_requested.emit()
 
     def on_device_state_changed(self, device_id, new_state, new_state_id):
-        # Only care about specific state changes
-        if new_state_id in (DEVICE_STATE.DISABLED.value, DEVICE_STATE.ACTIVE.value, DEVICE_STATE.UNPLUGGED.value):
-            # Deduplicate: only emit once per device+state combination
-            if self._last_state_changes.get(device_id) == new_state_id:
-                return
-
-            self._last_state_changes[device_id] = new_state_id
-            self.service.device_change_requested.emit()
+        """Handle device state changes (connected/disconnected)."""
+        # React to Active, Disabled, and Unplugged states
+        if new_state_id not in (DEVICE_STATE.ACTIVE.value, DEVICE_STATE.DISABLED.value, DEVICE_STATE.UNPLUGGED.value):
+            return
+        self.service.device_change_requested.emit()
