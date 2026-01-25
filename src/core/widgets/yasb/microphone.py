@@ -176,6 +176,12 @@ class MicrophoneWidget(BaseWidget):
             except:
                 pass
 
+    def _apply_slider_scroll_step(self, slider: QSlider):
+        """Apply scroll_step to slider wheel/keyboard increments."""
+        step = max(1, int(round(self._scroll_step * 100)))
+        slider.setSingleStep(step)
+        slider.setPageStep(step)
+
     def _set_muted_class(self, widget, muted: bool):
         """Set or remove the 'muted' and 'no-device' classes on the widget."""
         current_class = widget.property("class") or ""
@@ -266,8 +272,8 @@ class MicrophoneWidget(BaseWidget):
             self.audio_endpoint.SetMasterVolumeLevelScalar(new_volume, None)
             if self.audio_endpoint.GetMute() and new_volume > 0.0:
                 self.audio_endpoint.SetMute(False, None)
-            self._update_label()
             self._update_slider_value()
+            self._update_label()
         except Exception as e:
             logging.error(f"Failed to increase microphone volume: {e}")
 
@@ -280,8 +286,8 @@ class MicrophoneWidget(BaseWidget):
             self.audio_endpoint.SetMasterVolumeLevelScalar(new_volume, None)
             if new_volume == 0.0:
                 self.audio_endpoint.SetMute(True, None)
-            self._update_label()
             self._update_slider_value()
+            self._update_label()
         except Exception as e:
             logging.error(f"Failed to decrease microphone volume: {e}")
 
@@ -356,6 +362,7 @@ class MicrophoneWidget(BaseWidget):
         self.volume_slider.setProperty("class", "volume-slider")
         self.volume_slider.setMinimum(0)
         self.volume_slider.setMaximum(100)
+        self._apply_slider_scroll_step(self.volume_slider)
         try:
             current_volume = round(self.audio_endpoint.GetMasterVolumeLevelScalar() * 100)
             self.volume_slider.setValue(current_volume)

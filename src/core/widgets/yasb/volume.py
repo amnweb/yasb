@@ -267,6 +267,12 @@ class VolumeWidget(BaseWidget):
             except:
                 pass
 
+    def _apply_slider_scroll_step(self, slider: QSlider):
+        """Apply scroll_step to slider wheel/keyboard increments."""
+        step = max(1, int(round(self._scroll_step * 100)))
+        slider.setSingleStep(step)
+        slider.setPageStep(step)
+
     def _format_session_label(self, name: str) -> str:
         """Format session label by removing file extensions and truncating if necessary"""
         name = name.removesuffix(".exe").replace(".", " ").title()
@@ -394,6 +400,7 @@ class VolumeWidget(BaseWidget):
         self.volume_slider.setProperty("class", "volume-slider")
         self.volume_slider.setMinimum(0)
         self.volume_slider.setMaximum(100)
+        self._apply_slider_scroll_step(self.volume_slider)
 
         # Set current volume
         try:
@@ -492,6 +499,7 @@ class VolumeWidget(BaseWidget):
                 app_slider.setProperty("class", "app-slider")
                 app_slider.setMinimum(0)
                 app_slider.setMaximum(100)
+                self._apply_slider_scroll_step(app_slider)
 
                 try:
                     app_volume = int(session_info["volume_interface"].GetMasterVolume() * 100)
@@ -574,6 +582,7 @@ class VolumeWidget(BaseWidget):
                 level_volume = (
                     self._mute_text if mute_status == 1 else f"{round(self.volume.GetMasterVolumeLevelScalar() * 100)}%"
                 )
+
             except Exception as e:
                 logging.error(f"Failed to get volume info: {e}")
                 mute_status, icon_volume, level_volume = None, "", "No Device"
@@ -651,8 +660,8 @@ class VolumeWidget(BaseWidget):
             self.volume.SetMasterVolumeLevelScalar(new_volume, None)
             if self.volume.GetMute() and new_volume > 0.0:
                 self.volume.SetMute(False, None)
-            self._update_label()
             self._update_slider_value()
+            self._update_label()
         except Exception as e:
             logging.error(f"Failed to increase volume: {e}")
 
@@ -665,8 +674,8 @@ class VolumeWidget(BaseWidget):
             self.volume.SetMasterVolumeLevelScalar(new_volume, None)
             if new_volume == 0.0:
                 self.volume.SetMute(True, None)
-            self._update_label()
             self._update_slider_value()
+            self._update_label()
         except Exception as e:
             logging.error(f"Failed to decrease volume: {e}")
 
