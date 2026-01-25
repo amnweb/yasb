@@ -164,22 +164,6 @@ jobs:
                 body: message
               });
 
-              if (issue.state === 'open') {
-                await github.rest.issues.update({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  issue_number: issue.number,
-                  state: 'closed'
-                });
-
-                await github.rest.issues.lock({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  issue_number: issue.number,
-                  lock_reason: 'resolved'
-                });
-              }
-
               return;
             }
 
