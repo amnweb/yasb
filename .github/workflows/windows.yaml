@@ -217,6 +217,7 @@ jobs:
     runs-on: windows-latest
     permissions:
       contents: write
+      models: read
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4
@@ -291,6 +292,104 @@ jobs:
         token: ${{ secrets.PAT }}
         config_file: .github/changelog/changelog.js
 
+    - name: Compute Commit Range
+      id: commit_range
+      shell: pwsh
+      run: |
+        $currentTag = "v${{ steps.get_version.outputs.VERSION }}"
+        $prevTag = (git tag --sort=-version:refname | Where-Object { $_ -ne $currentTag } | Select-Object -First 1)
+        if ([string]::IsNullOrWhiteSpace($prevTag)) {
+          $prevTag = (git describe --tags --abbrev=0 2>$null)
+        }
+        if ([string]::IsNullOrWhiteSpace($prevTag)) {
+          $range = "HEAD"
+          $commits = git log -n 100 --pretty=format:"- %s (%h)%n%b%n----"
+        } else {
+          $range = "$prevTag..$currentTag"
+          $commits = git log $range -n 100 --pretty=format:"- %s (%h)%n%b%n----"
+        }
+        "range=$range" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+        "commits<<EOF" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+        $commits | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+        "EOF" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
+    - name: Summarize Changelog
+      id: ai_summary
+      uses: actions/github-script@v8
+      env:
+        AI_SYSTEM_PROMPT: ${{ secrets.AI_SYSTEM_PROMPT }}
+        AI_USER_PROMPT_TEMPLATE: ${{ secrets.AI_USER_PROMPT }}
+        AI_MODEL: ${{ secrets.AI_MODEL }}
+        AI_MAX_TOKENS: ${{ secrets.AI_MAX_TOKENS }}
+      with:
+        github-token: ${{ secrets.AI_TOKEN }}
+        script: |
+          const systemPrompt = process.env.AI_SYSTEM_PROMPT;
+          const promptTemplate = process.env.AI_USER_PROMPT_TEMPLATE;
+          const model = process.env.AI_MODEL;
+          const maxTokens = parseInt(process.env.AI_MAX_TOKENS);
+
+          if (!systemPrompt || !promptTemplate) {
+            console.log('Prompts not configured. Skipping summary.');
+            core.setOutput('summary', '');
+            return;
+          }
+          
+          const userPrompt = promptTemplate
+            .replace('{commit_range}', `${{ steps.commit_range.outputs.range }}`)
+            .replace('{commits}', `${{ steps.commit_range.outputs.commits }}`)
+            .replace('{changelog}', `${{ steps.changelog.outputs.changes }}`);
+          
+          try {
+            const response = await fetch('https://models.github.ai/inference/chat/completions', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${{ secrets.AI_TOKEN }}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                model: model,
+                messages: [
+                  { role: 'system', content: systemPrompt },
+                  { role: 'user', content: userPrompt }
+                ],
+                max_tokens: maxTokens
+              })
+            });
+            
+            if (!response.ok) {
+              console.log(`Request failed: ${response.status}`);
+              core.setOutput('summary', '');
+              return;
+            }
+            
+            const data = await response.json();
+            const summary = data.choices?.[0]?.message?.content?.trim() || '';
+            core.setOutput('summary', summary);
+          } catch (error) {
+            console.log(`Error: ${error.message}`);
+            core.setOutput('summary', '');
+          }
+
+    - name: Build Release Body
+      id: release_body
+      uses: actions/github-script@v8
+      env:
+        AI_SUMMARY: ${{ steps.ai_summary.outputs.summary }}
+        CHANGELOG: ${{ steps.changelog.outputs.changes }}
+      with:
+        github-token: ${{ secrets.PAT }}
+        script: |
+          const summary = (process.env.AI_SUMMARY || '').trim();
+          const changelog = (process.env.CHANGELOG || '').trim();
+          let body = '';
+          if (summary && summary.length > 50) {
+            body = `${summary}\n\n<br>\n\n${changelog}`;
+          } else {
+            body = changelog;
+          }
+          core.setOutput('body', body);
+
     - name: Generate Checksum
       run: |
         .\venv\Scripts\Activate
@@ -310,7 +409,7 @@ jobs:
         tag_name: v${{ steps.get_version.outputs.VERSION }}
         name: v${{ steps.get_version.outputs.VERSION }}
         body: | 
-              ${{ steps.changelog.outputs.changes }}
+              ${{ steps.release_body.outputs.body }}
         append_body: true
         files: |
           dist-msis/*.msi
