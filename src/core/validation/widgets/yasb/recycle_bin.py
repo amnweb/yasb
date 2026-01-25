@@ -4,6 +4,7 @@ DEFAULTS = {
     "class_name": "",
     "icons": {"bin_empty": "\udb82\ude7a", "bin_filled": "\udb82\ude79"},
     "tooltip": True,
+    "show_confirmation": False,
     "animation": {"enabled": True, "type": "fadeInOut", "duration": 200},
     "container_padding": {"top": 0, "left": 0, "bottom": 0, "right": 0},
     "callbacks": {
@@ -26,6 +27,7 @@ VALIDATION_SCHEMA = {
         "default": DEFAULTS["icons"],
     },
     "tooltip": {"type": "boolean", "required": False, "default": DEFAULTS["tooltip"]},
+    "show_confirmation": {"type": "boolean", "required": False, "default": DEFAULTS["show_confirmation"]},
     "animation": {
         "type": "dict",
         "required": False,
