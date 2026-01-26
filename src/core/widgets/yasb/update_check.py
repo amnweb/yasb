@@ -9,7 +9,7 @@ from PyQt6.QtCore import Qt, QThread, QTimer, pyqtSignal
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel
 
 from core.utils.tooltip import set_tooltip
-from core.utils.utilities import add_shadow
+from core.utils.utilities import add_shadow, refresh_widget_style
 from core.validation.widgets.yasb.update_check import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
 from settings import DEBUG
@@ -463,7 +463,26 @@ class UpdateCheckWidget(BaseWidget):
         self.update_widget_visibility()
 
     def update_widget_visibility(self):
+        windows_visible = self._window_update_enabled and self.windows_update_data > 0
+        winget_visible = self._winget_update_enabled and self.winget_update_data > 0
+
+        if windows_visible and winget_visible:
+            self._set_container_class(self._windows_container, "windows", paired=True)
+            self._set_container_class(self._winget_container, "winget", paired=True)
+        else:
+            self._set_container_class(self._windows_container, "windows", paired=False)
+            self._set_container_class(self._winget_container, "winget", paired=False)
+
         if self.windows_update_data == 0 and self.winget_update_data == 0:
             self.hide()
         else:
             self.show()
+
+    def _set_container_class(self, container, base_class: str, paired: bool):
+        if not container:
+            return
+        class_name = f"widget-container {base_class}"
+        if paired:
+            class_name += " paired"
+        container.setProperty("class", class_name)
+        refresh_widget_style(container)
