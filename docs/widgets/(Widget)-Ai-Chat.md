@@ -7,8 +7,9 @@ The AI Chat widget provides a flexible, interactive chat interface that works wi
 |---------------------|---------|-----------------|-------------|
 | `label`             | string  | `"AI Chat"`    | The label displayed for the widget. |
 | `chat`              | dict    | See example     | Popup menu configuration (blur, corners, etc). |
-| `icons`             | dict    | See example     | Icons for send, stop, clear, assistant. |
+| `icons`             | dict    | See example     | Icons for send, stop, clear, assistant, and floating toggle. |
 | `notification_dot`  | dict    | `{'enabled': false, 'corner': 'bottom_left', 'color': 'red', 'margin': [1, 1]}` | A dictionary specifying the notification dot settings for the widget. |
+| `start_floating`    | bool    | `true`          | Open the chat popup in floating mode by default. |
 | `animation`    | dict    | `{enabled: true, type: "fadeInOut", duration: 200}` | Animation settings for the widget.                                          |
 | `callbacks`    | dict    | `{on_left: "toggle_chat", on_middle: "do_nothing", on_right: "do_nothing"}` | Mouse event callbacks.                  |
 | `label_shadow` | dict    | `{enabled: False, color: "black", offset: [1,1], radius: 3}` | Shadow for the label.                   |
@@ -37,6 +38,9 @@ ai_chat:
       stop: "\uf04d"
       clear: "\uf1f8"
       assistant: "\udb81\ude74"
+      float_on: "\udb84\udcac"
+      float_off: "\udb84\udca9"
+    start_floating: false
     notification_dot:
       enabled: false
       corner: "top_right"
@@ -85,6 +89,7 @@ ai_chat:
 **Usage:**
 - Click the widget to open the chat popup
 - Select your provider and model from the dropdown menus
+- Use the float button to toggle floating mode (or set `start_floating: true`)
 - Attach files with the attach button (images and text files supported)
   - Images are automatically compressed if they exceed the model's `max_image_size` limit
   - Text files are automatically truncated if they exceed the model's `max_attachment_size` limit
@@ -112,12 +117,14 @@ This widget is ideal for integrating any LLM service that follows the OpenAI API
   - **direction**: Popup direction ("up", "down")
   - **offset_left**: Horizontal offset from the widget
   - **offset_top**: Vertical offset from the widget
-- **icons:** Dictionary of icons for send, stop, clear, and assistant. Can be icon fonts or simple text.
+- **icons:** Dictionary of icons for send, stop, clear, assistant, and floating toggle. Can be icon fonts or simple text.
   - **send** Icon for sending messages
   - **attach** Icon for the attachment button
   - **stop**: Icon for stopping streaming
   - **clear**: Icon for clearing chat history
   - **assistant**: Icon for the assistant avatar
+  - **float_on**: Icon shown when floating can be enabled
+  - **float_off**: Icon shown when floating can be disabled
 - **notification_dot:** Dictionary for notification dot settings. This allows you to show a small dot indicating new messages when the chat is closed.
   - **enabled:** Enable notification dot.
   - **corner:** Set the corner where the dot should appear.
@@ -133,6 +140,7 @@ This widget is ideal for integrating any LLM service that follows the OpenAI API
   - **on_right**: Right click action
 - **label_shadow:** Shadow options for the label.
 - **container_shadow:** Shadow options for the container.
+- **start_floating:** Open the chat popup in floating mode by default.
 - **providers:** List of provider configs. Each provider has:
   - **provider**: Name (e.g., "OpenAI")
   - **models**: List of models, each with:
@@ -161,7 +169,10 @@ If you want to use different styles for the context menu, you can target the `.a
 
 /* Chat popup */
 .ai-chat-popup {} /* Chat popup container */
+.ai-chat-popup.floating {} /* Floating popup container */
 .ai-chat-popup .chat-header {} /* Header of the chat popup */
+.ai-chat-popup .chat-header .float-button {} /* Floating toggle button */
+.ai-chat-popup.floating .chat-header .float-button {} /* Floating toggle button when floating */
 .ai-chat-popup .chat-content {} /* Content of the chat popup */
 .ai-chat-popup .chat-footer {} /* Footer of the chat popup */
 
@@ -199,7 +210,6 @@ If you want to use different styles for the context menu, you can target the `.a
 
 ## Example CSS
 ```css
-
 .ai-chat-widget {
     padding: 0 6px 0 6px;
 }
@@ -214,9 +224,30 @@ If you want to use different styles for the context menu, you can target the `.a
     min-height: 600px;
     max-height: 600px;
 }
+.ai-chat-popup.floating {
+  background-color: rgba(24, 25, 27, 0.4);
+  min-width: 900px;
+  max-width: 900px;
+  min-height: 700px;
+  max-height: 700px;
+}
 .ai-chat-popup .chat-header {
     background-color: rgba(24, 25, 27, 0.4);
     padding: 16px;
+}
+.ai-chat-popup .chat-header .float-button {
+  background-color: transparent;
+  border: none;
+  color: #cfcfcf;
+  font-size: 16px;
+  padding: 3px 6px;
+  border-radius: 4px;
+}
+.ai-chat-popup .chat-header .float-button:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+.ai-chat-popup.floating .chat-header .float-button {
+  color: #ffffff;
 }
 .ai-chat-popup .chat-footer {
     background-color: rgba(24, 25, 27, 0);
@@ -332,13 +363,12 @@ If you want to use different styles for the context menu, you can target the `.a
 
 .ai-chat-popup .chat-footer .chat-input {
     background-color: rgba(24, 25, 27, 0.6);
-    border: 2px solid  #2d2d2d;
+    border: 2px solid  #646464;
     border-radius: 4px;
     padding: 0 8px;
     font-family: 'Segoe UI';
     font-size: 14px;
     color: #ffffff;
-    margin-top: 8px;
     max-height: 28px;
     min-height: 28px;
 }
@@ -357,7 +387,6 @@ If you want to use different styles for the context menu, you can target the `.a
     max-height: 30px;
     min-height: 30px;
     border-radius: 4px;
-    margin-top: 8px;
     border: none;
     font-family: "JetBrainsMono NFP";
 }
@@ -376,6 +405,23 @@ If you want to use different styles for the context menu, you can target the `.a
 .ai-chat-popup .chat-footer .attach-button:disabled {
     background-color: #2d2d2d;
     color: #818181;
+}
+.ai-chat-popup .attachment-chip {
+    background-color: #0066ff18;
+    border: 1px solid #0066ff54;
+    border-radius: 6px;
+    min-height: 28px;
+} 
+.ai-chat-popup .attachment-chip .attachment-label {
+    font-family: "Segoe UI";
+    font-size: 12px;
+    font-weight: 600;
+    padding: 0 4px;
+}
+.ai-chat-popup .attachment-chip .attachment-remove-button {
+    font-size: 12px;
+    background-color: transparent;
+    border: none;
 }
 ```
 ## Troubleshooting & Best Practices
