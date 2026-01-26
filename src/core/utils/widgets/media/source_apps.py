@@ -51,6 +51,10 @@ MEDIA_SOURCE_APPS = {
         "name": "FireFox",
         "process": "firefox.exe",
     },
+    "CA9422711AE1A81C": {
+        "name": "FireFox",  # Firefox Developer Edition
+        "process": "firefox.exe",
+    },
     "firefox.exe": "FireFox",
     "F0DC299D809B9700": {
         "name": "Zen",
@@ -82,6 +86,11 @@ MEDIA_SOURCE_APPS = {
     },
     # System Media Players
     "Microsoft.ZuneMusic_8wekyb3d8bbwe!Microsoft.ZuneMusic": "Media Player",
+    # Message Apps
+    "Telegram.TelegramDesktop.7e5c2711fcd4e083548c717cc0ca86f4": {
+        "name": "Telegram",  # materialgram
+        "process": "materialgram.exe",
+    },
 }
 
 
