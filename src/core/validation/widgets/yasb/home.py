@@ -32,7 +32,19 @@ VALIDATION_SCHEMA = {
     "menu_list": {
         "required": False,
         "type": "list",
-        "schema": {"type": "dict", "schema": {"title": {"type": "string"}, "path": {"type": "string"}}},
+        "schema": {
+            "type": "dict",
+            "schema": {
+                "title": {"type": "string"},
+                "path": {"type": "string", "required": False},
+                "uri": {"type": "string", "required": False},
+                "command": {"type": "string", "required": False},
+                "separator": {"type": "boolean", "required": False},
+                "args": {"type": "list", "required": False, "schema": {"type": "string"}},
+                "shell": {"type": "boolean", "required": False},
+                "show_window": {"type": "boolean", "required": False},
+            },
+        },
     },
     "container_padding": {
         "type": "dict",
