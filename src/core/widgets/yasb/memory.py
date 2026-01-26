@@ -7,6 +7,7 @@ from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel
 
 from core.utils.utilities import add_shadow, build_progress_widget, build_widget_label, refresh_widget_style
 from core.utils.widgets.animation_manager import AnimationManager
+from core.utils.widgets.memory.memory_api import MemoryAPI
 from core.validation.widgets.yasb.memory import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
 
@@ -83,7 +84,7 @@ class MemoryWidget(BaseWidget):
         self._show_placeholder()
 
     def _show_placeholder(self):
-        """Display placeholder (zero/default) memory data without any psutil calls."""
+        """Display placeholder (zero/default) memory data."""
 
         class DummyMem:
             free = 0
@@ -104,10 +105,8 @@ class MemoryWidget(BaseWidget):
             return
 
         try:
-            import psutil
-
-            virtual_mem = psutil.virtual_memory()
-            swap_mem = psutil.swap_memory()
+            virtual_mem = MemoryAPI.virtual_memory()
+            swap_mem = MemoryAPI.swap_memory()
 
             # Update each instance using the shared data
             for inst in cls._instances[:]:

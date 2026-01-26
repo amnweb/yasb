@@ -8,6 +8,8 @@ import ctypes
 import ctypes.wintypes as wt
 from ctypes import POINTER, WINFUNCTYPE, byref, c_void_p
 
+from core.utils.win32.constants import PROCESS_QUERY_LIMITED_INFORMATION
+
 
 class GUID(ctypes.Structure):
     _fields_ = [
@@ -131,7 +133,6 @@ for dll in (kernel32, shell32):
         continue
 
 # Constants
-PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
 ERROR_INSUFFICIENT_BUFFER = 0x7A
 GPS_DEFAULT = 0  # Default flags for SHGetPropertyStoreFromParsingName
 

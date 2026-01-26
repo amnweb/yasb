@@ -16,7 +16,6 @@ dependencies = [
     "pyqt6==6.10.2",
     "cerberus",
     "humanize",
-    "psutil==7.1.3",
     "pywin32",
     "pyyaml",
     "holidays==0.88",
