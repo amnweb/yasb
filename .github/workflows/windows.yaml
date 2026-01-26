@@ -321,13 +321,16 @@ jobs:
         AI_USER_PROMPT_TEMPLATE: ${{ secrets.AI_USER_PROMPT }}
         AI_MODEL: ${{ secrets.AI_MODEL }}
         AI_MAX_TOKENS: ${{ secrets.AI_MAX_TOKENS }}
+        COMMIT_RANGE: ${{ steps.commit_range.outputs.range }}
+        COMMITS: ${{ steps.commit_range.outputs.commits }}
+        CHANGELOG: ${{ steps.changelog.outputs.changes }}
       with:
         github-token: ${{ secrets.AI_TOKEN }}
         script: |
           const systemPrompt = process.env.AI_SYSTEM_PROMPT;
           const promptTemplate = process.env.AI_USER_PROMPT_TEMPLATE;
           const model = process.env.AI_MODEL;
-          const maxTokens = parseInt(process.env.AI_MAX_TOKENS);
+          const maxTokens = parseInt(process.env.AI_MAX_TOKENS, 300);
 
           if (!systemPrompt || !promptTemplate) {
             console.log('Prompts not configured. Skipping summary.');
@@ -336,9 +339,9 @@ jobs:
           }
           
           const userPrompt = promptTemplate
-            .replace('{commit_range}', `${{ steps.commit_range.outputs.range }}`)
-            .replace('{commits}', `${{ steps.commit_range.outputs.commits }}`)
-            .replace('{changelog}', `${{ steps.changelog.outputs.changes }}`);
+            .replace('{commit_range}', process.env.COMMIT_RANGE || '')
+            .replace('{commits}', process.env.COMMITS || '')
+            .replace('{changelog}', process.env.CHANGELOG || '');
           
           try {
             const response = await fetch('https://models.github.ai/inference/chat/completions', {
