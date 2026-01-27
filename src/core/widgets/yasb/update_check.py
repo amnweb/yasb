@@ -405,13 +405,13 @@ class UpdateCheckWidget(BaseWidget):
             return container, widgets
 
         if self._winget_update_enabled:
-            self._winget_container, self._widget_widget = process_content(self._winget_update_label, "winget")
+            self._winget_container, self._widget_winget = process_content(self._winget_update_label, "winget")
         if self._window_update_enabled:
             self._windows_container, self._widget_windows = process_content(self._windows_update_label, "windows")
 
     def _update_label(self, widget_type, data, names):
         if widget_type == "winget":
-            active_widgets = self._widget_widget
+            active_widgets = self._widget_winget
             active_label_content = self._winget_update_label
             container = self._winget_container
         elif widget_type == "windows":
@@ -478,11 +478,17 @@ class UpdateCheckWidget(BaseWidget):
         else:
             self.show()
 
+        refresh_widget_style(self)
+
     def _set_container_class(self, container, base_class: str, paired: bool):
         if not container:
             return
         class_name = f"widget-container {base_class}"
         if paired:
             class_name += " paired"
+
+        container.setStyleSheet("")
         container.setProperty("class", class_name)
+
+        container.setStyleSheet(container.styleSheet())
         refresh_widget_style(container)
