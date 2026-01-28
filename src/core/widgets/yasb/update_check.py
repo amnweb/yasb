@@ -322,6 +322,11 @@ class UpdateCheckWidget(BaseWidget):
         self.windows_update_data = 0
         self.winget_update_data = 0
 
+        self._winget_container = None
+        self._windows_container = None
+        self._widget_winget = []
+        self._widget_windows = []
+
         self._create_dynamically_label(self._winget_update_label, self._windows_update_label)
 
         self._update_manager = UpdateManager()
@@ -467,11 +472,15 @@ class UpdateCheckWidget(BaseWidget):
         winget_visible = self._winget_update_enabled and self.winget_update_data > 0
 
         if windows_visible and winget_visible:
-            self._set_container_class(self._windows_container, "windows", paired=True)
-            self._set_container_class(self._winget_container, "winget", paired=True)
+            if self._windows_container:
+                self._set_container_class(self._windows_container, "windows", paired=True)
+            if self._winget_container:
+                self._set_container_class(self._winget_container, "winget", paired=True)
         else:
-            self._set_container_class(self._windows_container, "windows", paired=False)
-            self._set_container_class(self._winget_container, "winget", paired=False)
+            if self._windows_container and self._window_update_enabled:
+                self._set_container_class(self._windows_container, "windows", paired=False)
+            if self._winget_container and self._winget_update_enabled:
+                self._set_container_class(self._winget_container, "winget", paired=False)
 
         if self.windows_update_data == 0 and self.winget_update_data == 0:
             self.hide()
