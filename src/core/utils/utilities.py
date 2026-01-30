@@ -1,3 +1,5 @@
+import ctypes
+import ctypes.wintypes as wintypes
 import math
 import os
 import platform
@@ -6,9 +8,9 @@ from datetime import datetime, timezone
 from enum import StrEnum
 from functools import lru_cache
 from pathlib import Path
+from threading import Lock
 from typing import Any, TypeGuard, cast, override
 
-import psutil
 from PyQt6 import sip
 from PyQt6.QtCore import QEvent, QObject, QPoint, QPropertyAnimation, QRect, QSize, Qt, QTimer, pyqtSlot
 from PyQt6.QtGui import (
@@ -21,10 +23,13 @@ from PyQt6.QtGui import (
     QStaticText,
     QTransform,
 )
-from PyQt6.QtWidgets import QApplication, QFrame, QGraphicsDropShadowEffect, QLabel, QMenu, QWidget
+from PyQt6.QtWidgets import QApplication, QDialog, QFrame, QGraphicsDropShadowEffect, QLabel, QMenu, QWidget
 from winrt.windows.data.xml.dom import XmlDocument
 from winrt.windows.ui.notifications import ToastNotification, ToastNotificationManager
 
+from core.utils.win32.bindings.kernel32 import kernel32
+from core.utils.win32.constants import TH32CS_SNAPPROCESS
+from core.utils.win32.structs import PROCESSENTRY32
 from core.utils.win32.win32_accent import Blur
 
 
@@ -149,10 +154,26 @@ def get_relative_time(iso_timestamp: str) -> str:
 
 
 def is_process_running(process_name: str) -> bool:
-    for proc in psutil.process_iter(["name"]):
-        if proc.info["name"] == process_name:
-            return True
-    return False
+    snapshot = kernel32.CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0)
+    if snapshot == wintypes.HANDLE(-1).value:
+        return False
+
+    try:
+        entry = PROCESSENTRY32()
+        entry.dwSize = ctypes.sizeof(PROCESSENTRY32)
+
+        if not kernel32.Process32FirstW(snapshot, ctypes.byref(entry)):
+            return False
+
+        target = process_name.lower()
+        while True:
+            if entry.szExeFile.lower() == target:
+                return True
+            if not kernel32.Process32NextW(snapshot, ctypes.byref(entry)):
+                break
+        return False
+    finally:
+        kernel32.CloseHandle(snapshot)
 
 
 def percent_to_float(percent: str) -> float:
@@ -338,6 +359,7 @@ class PopupWidget(QWidget):
         self._round_corners_type = round_corners_type
         self._border_color = border_color
         self._parent = parent
+        self._suspend_close = False
         # We need bar_id for global_state autohide manager
         self.bar_id = getattr(self._parent, "bar_id", None)
         # Create the inner frame
@@ -490,6 +512,8 @@ class PopupWidget(QWidget):
     def eventFilter(self, obj, event):
         if not isinstance(obj, QObject):
             return False
+        if self._suspend_close:
+            return super().eventFilter(obj, event)
         if event.type() == QEvent.Type.MouseButtonPress:
             global_pos = event.globalPosition().toPoint()
 
@@ -501,13 +525,16 @@ class PopupWidget(QWidget):
             if popup_global_geom.contains(global_pos):
                 return super().eventFilter(obj, event)
 
-            # Check if click is inside any visible QMenu
+            # Check if click is inside any visible QMenu or QDialog (file dialogs, etc.)
             try:
                 for w in QApplication.topLevelWidgets():
-                    if isinstance(w, QMenu) and w.isVisible():
-                        menu_global_geom = QRect(w.mapToGlobal(QPoint(0, 0)), w.size())
-                        if menu_global_geom.contains(global_pos):
-                            return super().eventFilter(obj, event)
+                    if isinstance(w, (QMenu, QDialog)) and w.isVisible() and w is not self:
+                        try:
+                            w_global_geom = QRect(w.mapToGlobal(QPoint(0, 0)), w.size())
+                            if w_global_geom.contains(global_pos):
+                                return super().eventFilter(obj, event)
+                        except Exception:
+                            continue
             except Exception:
                 pass
 
@@ -519,6 +546,10 @@ class PopupWidget(QWidget):
             self.hide_animated()
             return True
         return super().eventFilter(obj, event)
+
+    def set_auto_close_enabled(self, enabled: bool):
+        """Enable/disable auto-close behavior when clicking outside."""
+        self._suspend_close = not enabled
 
     def hideEvent(self, event):
         if self._is_closing:
@@ -839,9 +870,26 @@ class ScrollingLabel(QLabel):
 
 
 class Singleton(type):
-    _instances = {}
+    """Singleton metaclass for regular python classes"""
 
-    def __call__(cls, *args, **kwargs):
-        if cls not in cls._instances:
-            cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
-        return cls._instances[cls]
+    _instances: dict[Any, Any] = {}
+    _lock = Lock()
+
+    def __call__(cls, *args: Any, **kwargs: Any):
+        with cls._lock:
+            if cls not in cls._instances:
+                cls._instances[cls] = super().__call__(*args, **kwargs)
+            return cls._instances[cls]
+
+
+class QSingleton(type(QObject)):
+    """Singleton metaclass for Qt classes"""
+
+    _instances: dict[Any, Any] = {}
+    _lock = Lock()
+
+    def __call__(cls, *args: Any, **kwargs: Any):
+        with cls._lock:
+            if cls not in cls._instances or sip.isdeleted(cls._instances[cls]):
+                cls._instances[cls] = super().__call__(*args, **kwargs)
+            return cls._instances[cls]

@@ -2,6 +2,7 @@
 
 from ctypes import (
     POINTER,
+    WINFUNCTYPE,
     c_int,
     c_long,
     c_ulong,
@@ -15,12 +16,14 @@ from ctypes.wintypes import (
     HICON,
     HINSTANCE,
     HMENU,
+    HMONITOR,
     HWND,
     INT,
     LPARAM,
     LPCWSTR,
     LPDWORD,
     LPVOID,
+    RECT,
     UINT,
     WPARAM,
 )
@@ -33,6 +36,20 @@ from core.utils.win32.typecheck import CArgObject
 user32 = windll.user32
 user32.GetForegroundWindow.argtypes = []
 user32.GetForegroundWindow.restype = HWND
+
+# Monitor functions
+MONITORENUMPROC = WINFUNCTYPE(BOOL, HMONITOR, HDC, POINTER(RECT), LPARAM)
+
+user32.EnumDisplayMonitors.argtypes = [HDC, POINTER(RECT), MONITORENUMPROC, LPARAM]
+user32.EnumDisplayMonitors.restype = BOOL
+
+user32.MonitorFromWindow.argtypes = [HWND, DWORD]
+user32.MonitorFromWindow.restype = HMONITOR
+
+# Monitor flags
+MONITOR_DEFAULTTONULL = 0
+MONITOR_DEFAULTTOPRIMARY = 1
+MONITOR_DEFAULTTONEAREST = 2
 
 user32.SetWinEventHook.argtypes = [
     DWORD,  # eventMin
@@ -158,6 +175,9 @@ user32.GetLastActivePopup.restype = HWND
 
 user32.IsWindowVisible.argtypes = [HWND]
 user32.IsWindowVisible.restype = BOOL
+
+user32.GetKeyState.argtypes = [INT]
+user32.GetKeyState.restype = INT
 
 user32.GetWindowLongW.argtypes = [HWND, INT]
 user32.GetWindowLongW.restype = c_long

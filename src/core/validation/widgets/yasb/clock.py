@@ -27,6 +27,7 @@ DEFAULTS = {
         "show_holidays": False,
         "holiday_color": "#FF6464",
         "show_week_numbers": False,
+        "show_years": False,
         "extended": False,
     },
     "animation": {"enabled": True, "type": "fadeInOut", "duration": 200},
@@ -96,6 +97,10 @@ VALIDATION_SCHEMA = {
             "show_week_numbers": {
                 "type": "boolean",
                 "default": DEFAULTS["calendar"]["show_week_numbers"],
+            },
+            "show_years": {
+                "type": "boolean",
+                "default": DEFAULTS["calendar"]["show_years"],
             },
             "extended": {
                 "type": "boolean",

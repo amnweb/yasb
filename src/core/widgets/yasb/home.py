@@ -60,9 +60,7 @@ class HomeWidget(BaseWidget):
         # Construct container
         self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(
-            self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
-        )
+        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
         # Initialize container
         self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
@@ -75,13 +73,49 @@ class HomeWidget(BaseWidget):
         self.register_callback("toggle_menu", self._toggle_menu)
         self.callback_left = callbacks["on_left"]
 
-    def create_menu_action(self, path):
-        path = os.path.expanduser(path)
-        return (
-            lambda: os.startfile(path)
-            if os.path.exists(path)
-            else logging.error(f"The system cannot find the file specified: '{path}'")
-        )
+    def create_menu_action(self, menu_item: dict):
+        action_keys = [key for key in ("command", "uri", "path") if menu_item.get(key)]
+        if len(action_keys) > 1:
+            return lambda: logging.error("Home menu item must define only one of: 'path', 'uri', or 'command'.")
+        if len(action_keys) == 0:
+            return lambda: logging.error("Home menu item missing 'path', 'uri', or 'command'.")
+
+        if "command" in menu_item:
+            command = menu_item.get("command")
+            if not command:
+                return lambda: logging.error("Home menu item missing 'command'.")
+
+            args = menu_item.get("args")
+            shell = menu_item.get("shell")
+            show_window = menu_item.get("show_window", False)
+            if args is not None:
+                cmd = [command, *args]
+                if shell is None:
+                    shell = False
+            else:
+                cmd = command
+                if shell is None:
+                    shell = True
+
+            creation_flags = subprocess.CREATE_NEW_CONSOLE if show_window else subprocess.CREATE_NO_WINDOW
+            return lambda: subprocess.Popen(cmd, shell=shell, creationflags=creation_flags)
+
+        if "uri" in menu_item:
+            uri = menu_item.get("uri")
+            if not uri:
+                return lambda: logging.error("Home menu item missing 'uri'.")
+            return lambda: os.startfile(uri)
+
+        if "path" in menu_item:
+            path = menu_item.get("path")
+            if not path:
+                return lambda: logging.error("Home menu item missing 'path'.")
+            path = os.path.expanduser(path)
+            return (
+                lambda: os.startfile(path)
+                if os.path.exists(path)
+                else logging.error(f"The system cannot find the file specified: '{path}'")
+            )
 
     def _create_menu(self):
         self._menu = PopupWidget(self, self._blur, self._round_corners, self._round_corners_type, self._border_color)
@@ -115,8 +149,11 @@ class HomeWidget(BaseWidget):
         # Custom menu items
         if isinstance(self._menu_list, list):
             for menu_item in self._menu_list:
-                if "title" in menu_item and "path" in menu_item:
-                    self._add_menu_item(main_layout, menu_item["title"], self.create_menu_action(menu_item["path"]))
+                if menu_item.get("separator"):
+                    self._menu._add_separator(main_layout)
+                    continue
+                if "title" in menu_item:
+                    self._add_menu_item(main_layout, menu_item["title"], self.create_menu_action(menu_item))
         if self._menu_list is not None and len(self._menu_list) > 0 and self._power_menu:
             self._menu._add_separator(main_layout)
 

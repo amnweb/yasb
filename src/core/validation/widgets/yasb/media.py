@@ -48,6 +48,10 @@ DEFAULTS: dict[str, Any] = {
         "ease_pos": 0.8,
         "ease_min": 0.5,
     },
+    "progress_bar": {
+        "enabled": False,
+        "alignment": "bottom",
+    },
     "callbacks": {"on_left": "do_nothing", "on_middle": "do_nothing", "on_right": "do_nothing"},
 }
 
@@ -178,6 +182,22 @@ VALIDATION_SCHEMA = {
             "ease_min": {"type": "float", "default": DEFAULTS["scrolling_label"]["ease_min"]},
         },
         "default": DEFAULTS["scrolling_label"],
+    },
+    "progress_bar": {
+        "type": "dict",
+        "required": False,
+        "schema": {
+            "enabled": {
+                "type": "boolean",
+                "default": DEFAULTS["progress_bar"]["enabled"],
+            },
+            "alignment": {
+                "type": "string",
+                "default": DEFAULTS["progress_bar"]["alignment"],
+                "allowed": ["top", "bottom", "center"],
+            },
+        },
+        "default": DEFAULTS["progress_bar"],
     },
     "callbacks": {
         "type": "dict",

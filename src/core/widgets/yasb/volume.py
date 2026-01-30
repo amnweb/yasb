@@ -121,8 +121,7 @@ class VolumeWidget(BaseWidget):
     def _on_slider_released(self):
         # Hide tooltip when slider is released
         if hasattr(self, "_slider_tooltip") and self._slider_tooltip:
-            self._slider_tooltip.hide()  # Hide instantly without animation
-            # Reset tooltip for next use
+            self._slider_tooltip.hide()
             self._slider_tooltip = None
         if self._slider_beep:
             # Play a beep sound when slider is released
@@ -131,57 +130,30 @@ class VolumeWidget(BaseWidget):
             except Exception as e:
                 logging.debug(f"Failed to play volume sound: {e}")
 
-    def _get_slider_handle_geometry(self, slider):
-        """Calculate the geometry for the slider handle position"""
-
-        value = slider.value()
-        slider_range = slider.maximum() - slider.minimum()
-        if slider_range > 0:
-            handle_pos = (value - slider.minimum()) / slider_range
-            x_offset = int(slider.width() * handle_pos)
-
-            # Get slider position in global coordinates
-            widget_rect = slider.rect()
-            widget_global_pos = slider.mapToGlobal(widget_rect.topLeft())
-            widget_global_pos.setX(widget_global_pos.x() + x_offset)
-
-            # Create geometry at handle position (thin vertical rect)
-            handle_geometry = QRect(widget_global_pos.x(), widget_global_pos.y(), 1, slider.height())
-            return handle_geometry
-        return None
-
-    def _setup_slider_tooltip(self, slider):
-        """Setup tooltip for slider (only show during drag)"""
-        # Remove the tooltip filter to disable hover tooltips
-        if hasattr(slider, "_tooltip_filter"):
-            slider.removeEventFilter(slider._tooltip_filter)
-            delattr(slider, "_tooltip_filter")
-
     def _show_slider_tooltip(self, slider, value):
-        """Helper method to show/update tooltip for slider during drag"""
+        """Show tooltip above slider handle during drag."""
         if not self._tooltip or not slider.isSliderDown():
             return
 
+        # Calculate handle position
+        slider_range = slider.maximum() - slider.minimum()
+        if slider_range <= 0:
+            return
+        ratio = (value - slider.minimum()) / slider_range
+        x_offset = int(slider.width() * ratio)
+        global_pos = slider.mapToGlobal(slider.rect().topLeft())
+        handle_rect = QRect(global_pos.x() + x_offset, global_pos.y(), 1, slider.height())
+
         if not hasattr(self, "_slider_tooltip") or not self._slider_tooltip:
-            # Create new tooltip
             self._slider_tooltip = CustomToolTip()
             self._slider_tooltip._position = "top"
-            handle_geometry = self._get_slider_handle_geometry(slider)
-            if handle_geometry:
-                self._slider_tooltip.label.setText(f"{value}%")
-                self._slider_tooltip.adjustSize()
-                self._slider_tooltip._base_pos = self._slider_tooltip._calculate_position(handle_geometry)
-                self._slider_tooltip.move(self._slider_tooltip._base_pos.x(), self._slider_tooltip._base_pos.y())
-                self._slider_tooltip.setWindowOpacity(1.0)
-                self._slider_tooltip.show()
-        else:
-            # Update existing tooltip
-            handle_geometry = self._get_slider_handle_geometry(slider)
-            if handle_geometry:
-                self._slider_tooltip.label.setText(f"{value}%")
-                self._slider_tooltip.adjustSize()
-                base_pos = self._slider_tooltip._calculate_position(handle_geometry)
-                self._slider_tooltip.move(base_pos.x(), base_pos.y())
+
+        self._slider_tooltip.label.setText(f"{value}%")
+        self._slider_tooltip.adjustSize()
+        pos = self._slider_tooltip._calculate_position(handle_rect)
+        self._slider_tooltip.move(pos.x(), pos.y())
+        self._slider_tooltip.setWindowOpacity(1.0)
+        self._slider_tooltip.show()
 
     def _on_slider_value_changed(self, value):
         if self.volume is not None:
@@ -294,6 +266,12 @@ class VolumeWidget(BaseWidget):
                 self.volume_slider.setValue(current_volume)
             except:
                 pass
+
+    def _apply_slider_scroll_step(self, slider: QSlider):
+        """Apply scroll_step to slider wheel/keyboard increments."""
+        step = max(1, int(round(self._scroll_step * 100)))
+        slider.setSingleStep(step)
+        slider.setPageStep(step)
 
     def _format_session_label(self, name: str) -> str:
         """Format session label by removing file extensions and truncating if necessary"""
@@ -422,6 +400,7 @@ class VolumeWidget(BaseWidget):
         self.volume_slider.setProperty("class", "volume-slider")
         self.volume_slider.setMinimum(0)
         self.volume_slider.setMaximum(100)
+        self._apply_slider_scroll_step(self.volume_slider)
 
         # Set current volume
         try:
@@ -436,8 +415,6 @@ class VolumeWidget(BaseWidget):
         self.volume_slider.sliderReleased.connect(self._on_slider_released)
 
         slider_row.addWidget(self.volume_slider)
-
-        self._setup_slider_tooltip(self.volume_slider)
 
         audio_sessions = []
         if self._audio_menu["show_apps"]:
@@ -522,6 +499,7 @@ class VolumeWidget(BaseWidget):
                 app_slider.setProperty("class", "app-slider")
                 app_slider.setMinimum(0)
                 app_slider.setMaximum(100)
+                self._apply_slider_scroll_step(app_slider)
 
                 try:
                     app_volume = int(session_info["volume_interface"].GetMasterVolume() * 100)
@@ -540,8 +518,6 @@ class VolumeWidget(BaseWidget):
                 # Connect slider release to hide tooltip
                 app_slider.sliderReleased.connect(self._on_slider_released)
 
-                # Disable hover tooltips (we only show during drag)
-                self._setup_slider_tooltip(app_slider)
                 if self._audio_menu["show_app_icons"]:
                     # Make icon frame clickable to toggle mute
                     icon_frame.mousePressEvent = lambda event, vol_interface=session_info[
@@ -606,6 +582,7 @@ class VolumeWidget(BaseWidget):
                 level_volume = (
                     self._mute_text if mute_status == 1 else f"{round(self.volume.GetMasterVolumeLevelScalar() * 100)}%"
                 )
+
             except Exception as e:
                 logging.error(f"Failed to get volume info: {e}")
                 mute_status, icon_volume, level_volume = None, "", "No Device"
@@ -683,8 +660,8 @@ class VolumeWidget(BaseWidget):
             self.volume.SetMasterVolumeLevelScalar(new_volume, None)
             if self.volume.GetMute() and new_volume > 0.0:
                 self.volume.SetMute(False, None)
-            self._update_label()
             self._update_slider_value()
+            self._update_label()
         except Exception as e:
             logging.error(f"Failed to increase volume: {e}")
 
@@ -697,8 +674,8 @@ class VolumeWidget(BaseWidget):
             self.volume.SetMasterVolumeLevelScalar(new_volume, None)
             if new_volume == 0.0:
                 self.volume.SetMute(True, None)
-            self._update_label()
             self._update_slider_value()
+            self._update_label()
         except Exception as e:
             logging.error(f"Failed to decrease volume: {e}")
 

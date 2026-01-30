@@ -3,12 +3,13 @@ from datetime import timedelta
 from typing import Union
 
 import humanize
-import psutil
 from PyQt6.QtCore import QTimer
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel
 
 from core.utils.utilities import add_shadow, build_widget_label, refresh_widget_style
 from core.utils.widgets.animation_manager import AnimationManager
+from core.utils.widgets.battery.battery_api import BatteryAPI
+from core.utils.win32.constants import POWER_TIME_UNKNOWN, POWER_TIME_UNLIMITED
 from core.validation.widgets.yasb.battery import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
 
@@ -37,6 +38,7 @@ class BatteryWidget(BaseWidget):
         self._time_remaining_natural = time_remaining_natural
         self._status_thresholds = status_thresholds
         self._status_icons = status_icons
+        self._battery_api = BatteryAPI.instance()
         self._battery_state = None
         self._show_alt = False
         self._last_threshold = None
@@ -94,15 +96,21 @@ class BatteryWidget(BaseWidget):
         self._update_label()
 
     def _get_time_remaining(self) -> str:
-        secs_left = self._battery_state.secsleft
-        if secs_left == psutil.POWER_TIME_UNLIMITED:
+        secs_left = self._battery_state.time_remaining
+        if secs_left == POWER_TIME_UNLIMITED:
             time_left = "unlimited"
-        elif type(secs_left) == int:
+        elif secs_left == POWER_TIME_UNKNOWN:
+            time_left = "unknown"
+        elif isinstance(secs_left, int) and secs_left >= 0:
             time_left = timedelta(seconds=secs_left)
             time_left = humanize.naturaldelta(time_left) if self._time_remaining_natural else str(time_left)
         else:
             time_left = "unknown"
         return time_left
+
+    def _get_battery_state(self):
+        """Get battery state from the shared BatteryAPI instance."""
+        return self._battery_api.get_status()
 
     def _get_battery_threshold(self):
         percent = self._battery_state.percent
@@ -147,7 +155,7 @@ class BatteryWidget(BaseWidget):
         label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
         label_parts = [part for part in label_parts if part]
         widget_index = 0
-        self._battery_state = psutil.sensors_battery()
+        self._battery_state = self._get_battery_state()
 
         if self._battery_state is None:
             if self._hide_unsupported:
@@ -170,6 +178,18 @@ class BatteryWidget(BaseWidget):
         is_charging_str = "yes" if self._battery_state.power_plugged else "no"
         charging_icon = self._get_charging_icon(original_threshold)
 
+        # Extended battery info formatting
+        state = self._battery_state
+        rate_str = f"{abs(state.rate):.1f}" if state.rate is not None else "N/A"
+        voltage_str = f"{state.voltage:.2f}" if state.voltage is not None else "N/A"
+        capacity_str = str(state.capacity) if state.capacity is not None else "N/A"
+        full_capacity_str = str(state.full_capacity) if state.full_capacity is not None else "N/A"
+        designed_capacity_str = str(state.designed_capacity) if state.designed_capacity is not None else "N/A"
+        temperature_str = f"{state.temperature:.1f}" if state.temperature is not None else "N/A"
+        cycle_count_str = str(state.cycle_count) if state.cycle_count is not None else "N/A"
+        health_str = f"{state.health_percent:.1f}" if state.health_percent is not None else "N/A"
+        chemistry_str = state.chemistry if state.chemistry else "N/A"
+
         for part in label_parts:
             part = part.strip()
             if part and widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
@@ -178,6 +198,15 @@ class BatteryWidget(BaseWidget):
                     .replace("{time_remaining}", time_remaining)
                     .replace("{is_charging}", is_charging_str)
                     .replace("{icon}", charging_icon)
+                    .replace("{power}", rate_str)
+                    .replace("{voltage}", voltage_str)
+                    .replace("{capacity}", capacity_str)
+                    .replace("{full_capacity}", full_capacity_str)
+                    .replace("{designed_capacity}", designed_capacity_str)
+                    .replace("{temperature}", temperature_str)
+                    .replace("{cycle_count}", cycle_count_str)
+                    .replace("{health}", health_str)
+                    .replace("{chemistry}", chemistry_str)
                 )
                 if "<span" in battery_status and "</span>" in battery_status:
                     # icon-only QLabel

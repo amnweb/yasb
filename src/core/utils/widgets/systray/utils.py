@@ -26,6 +26,7 @@ from core.utils.win32.bindings import (
     PostMessage,
     QueryFullProcessImageNameW,
 )
+from core.utils.win32.constants import PROCESS_QUERY_LIMITED_INFORMATION
 from core.utils.win32.structs import WNDCLASS, WNDPROC
 
 logger = logging.getLogger("systray_widget")
@@ -118,7 +119,6 @@ def get_exe_path_from_hwnd(hwnd: int) -> str | None:
         return None
 
     # Open process to get module handle
-    PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
     h_process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, process_id.value)
     if not h_process:
         logger.debug(f"Could not open process ID {process_id.value}. Err: {GetLastError()}")

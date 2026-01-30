@@ -59,7 +59,6 @@ class AiChatClient:
                 model=self.model,
                 messages=messages,
                 stream=True,
-                logprobs=False,
                 temperature=temperature,
                 top_p=top_p,
                 max_tokens=self.max_tokens,

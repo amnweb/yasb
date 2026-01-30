@@ -1,0 +1,264 @@
+name: Issue Triage Bot
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  issues: write
+
+jobs:
+  auto-reply:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Start GitHub App
+        id: app-token
+        uses: actions/create-github-app-token@v2.2.1
+        with:
+          app-id: ${{ secrets.YASB_APP_ID }}
+          private-key: ${{ secrets.YASB_APP_PRIVATE_KEY }}
+
+      - uses: actions/github-script@v8
+        with:
+          github-token: ${{ steps.app-token.outputs.token }}
+          script: |
+            if (context.payload.action !== 'opened') {
+              return;
+            }
+
+            const issue = context.payload.issue;
+            const labels = (issue.labels || []).map(l => (typeof l === 'string' ? l : l.name));
+            const isFeatureRequest = labels.includes('feature-request');
+            const body = context.payload.issue.body || '';
+
+            const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const getSectionValue = (heading) => {
+              const pattern = new RegExp(`###\\s*${escapeRegex(heading)}\\s*\\n([\\s\\S]*?)(?:\\n###\\s|$)`, 'i');
+              const match = body.match(pattern);
+              return match ? match[1].trim() : null;
+            };
+            const isEmptyResponse = (value) => !value || value === '_No response_';
+
+            const isBugReport = /###\s*Windows version/i.test(body) && /###\s*Describe the bug/i.test(body);
+            if (isBugReport) {
+              const requiredFields = [
+                'Windows version',
+                'Windows OS build',
+                'Describe the bug',
+                'Relevant log output'
+              ];
+
+              const missingFields = requiredFields.filter((field) => isEmptyResponse(getSectionValue(field)));
+
+              if (missingFields.length > 0) {
+                const message = [
+                  "Thanks for the report! To help us reproduce the issue, please fill in the required fields:",
+                  "",
+                  ...missingFields.map((field) => `- ${field}`),
+                  "",
+                  "Once you update the issue, we’ll take another look.",
+                  "",
+                  "_YASB Support Bot_"
+                ].join('\n');
+
+                await github.rest.issues.createComment({
+                  issue_number: context.issue.number,
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  body: message
+                });
+
+                if (!labels.includes('info-needed')) {
+                  await github.rest.issues.addLabels({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issue.number,
+                    labels: ['info-needed']
+                  });
+                }
+
+                return;
+              }
+            }
+
+            const title = context.payload.issue.title || '';
+            const stopwords = new Set([
+              'a','an','the','and','or','but','if','then','else','when','what','why','how','to','for','from','in','on','of','with','without','is','are','was','were','be','been','being','this','that','these','those','it','its','as','at','by','into','over','under','after','before','not','no','yes','can','cannot','could','should','would','will','won\'t','does','did','do','done','about'
+            ]);
+
+            const keywords = title
+              .toLowerCase()
+              .split(/[^a-z0-9]+/)
+              .filter((word) => word && word.length > 3 && !stopwords.has(word))
+              .slice(0, 6);
+
+            if (keywords.length >= 2) {
+              const query = `repo:${context.repo.owner}/${context.repo.repo} is:issue ${keywords.join(' ')} in:title`;
+
+              try {
+                const { data: searchResults } = await github.rest.search.issuesAndPullRequests({
+                  q: query,
+                  per_page: 5
+                });
+
+                const matches = (searchResults.items || []).filter((item) => item.number !== issue.number);
+
+                if (matches.length > 0) {
+                  const links = matches
+                    .slice(0, 3)
+                    .map((item) => `- #${item.number} ${item.title} (${item.html_url})`)
+                    .join('\n');
+
+                  const duplicateMessage = [
+                    "Thanks for opening this issue! These existing issues might be related:",
+                    "",
+                    links,
+                    "",
+                    "If one of these matches your case, please add your details there and we can continue in a single thread.",
+                    "",
+                    "_YASB Support Bot_"
+                  ].join('\n');
+
+                  await github.rest.issues.createComment({
+                    issue_number: context.issue.number,
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    body: duplicateMessage
+                  });
+
+                  if (!labels.includes('possible-duplicate')) {
+                    await github.rest.issues.addLabels({
+                      owner: context.repo.owner,
+                      repo: context.repo.repo,
+                      issue_number: issue.number,
+                      labels: ['possible-duplicate']
+                    });
+                  }
+                }
+              } catch (e) {
+                core.info(`Duplicate search failed: ${e}`);
+              }
+            }
+
+            if (isFeatureRequest) {
+              const message = [
+                "Thanks for the feature request and for using YASB!",
+                "",
+                "YASB is a free, community-driven project and we spend a lot of time building and maintaining it.",
+                "Our development focus is primarily guided by supporters (GitHub Sponsors/Ko-fi) and by requests that show clear community interest.",
+                "",
+                "To keep feature work sustainable, feature requests should receive upvotes from other users before we take them on.",
+                "If your request is a clear quality improvement that can help many users, we may still consider it even without high upvotes.",
+                "",
+                "If you’d like to help prioritize this request, please consider supporting the project and encourage others to upvote it.",
+                "",
+                "Thanks for understanding and for helping YASB grow!",
+                "",
+                "_YASB Support Bot_"
+              ].join('\n');
+
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: message
+              });
+
+              return;
+            }
+
+            const rules = [
+              {
+                regex: /parser.*error/i,
+                reply: [
+                  "It looks like your config contains a syntax error.",
+                  "",
+                  "Please double-check your YAML formatting using a linter or validator. A missing comma, incorrect indentation, or brace is often the culprit.",
+                  "",
+                  "You can find more information on how to configure YASB properly here:",
+                  "👉 [YASB Wiki - Configuration](https://github.com/amnweb/yasb/wiki/Configuration)",
+                  "",
+                  "_YASB Support Bot_"
+                ].join('\n')
+              },
+              {
+                regex: /(?:won'?t|will not) start|\bcrash/i,
+                reply: [
+                  "If YASB won't start or crashes on launch, try the following:",
+                  "",
+                  "1. Make sure your configuration file is valid YAML.",
+                  "2. Try deleting the config folder located at:",
+                  "   - Windows: C:\\Users\\{USERNAME}\\.config\\yasb",
+                  "3. Reinstall or update YASB if the problem persists.",
+                  "",
+                  "For help configuring your setup correctly:",
+                  "👉 [YASB Wiki - Configuration](https://github.com/amnweb/yasb/wiki/Configuration)",
+                  "",
+                  "_YASB Support Bot_"
+                ].join('\n')
+              }
+            ];
+
+            let replied = false;
+
+            // Check for keywords first
+            for (const rule of rules) {
+              if (rule.regex.test(body)) {
+                await github.rest.issues.createComment({
+                  issue_number: context.issue.number,
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  body: rule.reply
+                });
+                replied = true;
+                break;
+              }
+            }
+
+            // If no keyword matched, check for version
+            if (!replied) {
+              function isOlderVersion(user, latest) {
+                const u = user.split('.').map(Number);
+                const l = latest.split('.').map(Number);
+                for (let i = 0; i < Math.max(u.length, l.length); i++) {
+                  if ((u[i] || 0) < (l[i] || 0)) return true;
+                  if ((u[i] || 0) > (l[i] || 0)) return false;
+                }
+                return false;
+              }
+
+              // Fetch latest release tag
+              let latestVersion = null;
+              try {
+                const { data: latestRelease } = await github.rest.repos.getLatestRelease({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo
+                });
+                latestVersion = latestRelease.tag_name.replace(/^v/, '');
+                core.info(`Latest version from repo: ${latestVersion}`);
+              } catch (e) {
+                core.info(`Error fetching latest release: ${e}`);
+              }
+
+              // Extract version from "YASB version installed" section
+              let userVersion = null;
+              const versionSection = body.match(/YASB version installed\s*\n([^\n]+)/i);
+              if (versionSection && versionSection[1]) {
+                const versionMatch = versionSection[1].match(/\b\d+\.\d+\.\d+\b/);
+                if (versionMatch) {
+                  userVersion = versionMatch[0];
+                }
+              }
+              core.info(`Extracted user version: ${userVersion}`);
+
+              if (latestVersion && userVersion) {
+                if (isOlderVersion(userVersion, latestVersion)) {
+                  await github.rest.issues.createComment({
+                    issue_number: context.issue.number,
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    body: `Thanks for creating this issue! It looks like you may be using an old version of YASB (\`${userVersion}\`). The latest stable release is \`${latestVersion}\`. Please try upgrading to the latest version and checking whether this issue remains.\n\n_YASB Support Bot_`
+                  });
+                }
+              }
+            }

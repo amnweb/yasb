@@ -8,6 +8,9 @@ import os
 import re
 from ctypes import POINTER, byref, c_void_p
 
+from core.utils.win32.constants import PROCESS_QUERY_LIMITED_INFORMATION, TH32CS_SNAPPROCESS
+from core.utils.win32.structs import PROCESSENTRY32
+
 # Constants and API bindings
 kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
 
@@ -33,25 +36,7 @@ OpenProcess.argtypes = [wt.DWORD, wt.BOOL, wt.DWORD]
 OpenProcess.restype = wt.HANDLE
 
 # Constants
-TH32CS_SNAPPROCESS = 0x00000002
-PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
 ERROR_INSUFFICIENT_BUFFER = 0x7A
-
-
-# PROCESSENTRY32 structure
-class PROCESSENTRY32(ctypes.Structure):
-    _fields_ = [
-        ("dwSize", wt.DWORD),
-        ("cntUsage", wt.DWORD),
-        ("th32ProcessID", wt.DWORD),
-        ("th32DefaultHeapID", ctypes.POINTER(wt.ULONG)),
-        ("th32ModuleID", wt.DWORD),
-        ("cntThreads", wt.DWORD),
-        ("th32ParentProcessID", wt.DWORD),
-        ("pcPriClassBase", ctypes.c_long),
-        ("dwFlags", wt.DWORD),
-        ("szExeFile", wt.WCHAR * 260),
-    ]
 
 
 # GetApplicationUserModelId may be in kernel32 or shell32

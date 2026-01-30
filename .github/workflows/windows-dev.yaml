@@ -2,15 +2,6 @@ name: Build Dev Release
 
 on:
   workflow_dispatch:
-    inputs:
-      cx_freeze_version:
-        description: 'cx_Freeze version to use'
-        required: true
-        default: 'dev'
-        type: choice
-        options:
-          - stable
-          - dev
 
 permissions:
   contents: read
@@ -31,7 +22,7 @@ jobs:
             artifact_suffix: x64
             unsigned_exe_name: unsigned-exes-x64
             unsigned_msi_name: unsigned-msi-x64
-          - arch: arm64  # Temporarily skipped due to build issues
+          - arch: arm64
             runner: windows-11-arm
             python_arch: arm64
             artifact_suffix: aarch64
@@ -86,12 +77,6 @@ jobs:
         .\venv\Scripts\Activate
         python -m pip install --upgrade pip
         pip install --force --no-cache .[packaging]
-        $cxFreezeVersion = "${{ github.event.inputs.cx_freeze_version }}"
-        if ($cxFreezeVersion -eq "dev") {
-          Write-Host "Installing cx_Freeze dev version from GitHub"
-          pip install git+https://github.com/amnweb/cx_Freeze.git@fix/msi-product-name
-          pip install git+https://github.com/amnweb/python-msilib --force --no-cache
-        }
       shell: pwsh
 
     - name: Build EXE
@@ -320,4 +305,3 @@ jobs:
           artifacts/*.msi
           artifacts/checksums.txt
         body_path: CHANGELOG.md
-

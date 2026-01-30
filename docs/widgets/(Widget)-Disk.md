@@ -57,7 +57,7 @@ disk:
 - **volume_label:** Partition/volume which you want to show in the bar.
 - **decimal_display:** The number of decimal places to show, default 1 (min 0 max 3).
 - **update_interval:** The interval in seconds to update the disk widget. Must be between 0 and 3600.
-- **disk_thresholds:** A dictionary specifying the thresholds for disk usage levels. The keys are `low`, `medium`, and `high`, and the values are the percentage thresholds.
+- **disk_thresholds:** A dictionary specifying the thresholds for disk usage levels. The keys are `low`, `medium`, and `high`, and the values are the percentage thresholds. Based on the current disk usage, a CSS class is applied to the label: `status-low`, `status-medium`, `status-high`, or `status-critical`.
 - **group_label:** Group labels for multiple disks. This will show the labels of multiple disks in a popup window.
   - **volume_labels:** List of volume labels to show in the group label.
   - **show_label_name:** Show the label name in the group label.
@@ -70,6 +70,7 @@ disk:
   - **offset_top:** Offset from the top of the screen.
   - **offset_left:** Offset from the left of the screen.
 - **callbacks:** A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions.
+  - **Available callbacks:** `toggle_label`, `toggle_group`, `do_nothing`, or `exec <command>`.
 - **animation:** A dictionary specifying the animation settings for the widget. It contains three keys: `enabled`, `type`, and `duration`. The `type` can be `fadeInOut` and the `duration` is the animation duration in milliseconds.
 - **container_shadow:** Container shadow options.
 - **label_shadow:** Label shadow options.
@@ -82,6 +83,34 @@ disk:
   - **background_color**: The background color of the progress bar.
   - **animation**: Whether to enable smooth change of the progress bar value.
 
+## Label Format Variables
+The following variables can be used in `label` and `label_alt`:
+
+| Variable | Description | Example Output |
+|----------|-------------|----------------|
+| `{volume_label}` | The drive letter | `C` |
+| `{space[total][mb]}` | Total space in MB | `953674.32MB` |
+| `{space[total][gb]}` | Total space in GB | `931.51GB` |
+| `{space[total][tb]}` | Total space in TB | `0.91TB` |
+| `{space[free][mb]}` | Free space in MB | `476837.16MB` |
+| `{space[free][gb]}` | Free space in GB | `465.66GB` |
+| `{space[free][tb]}` | Free space in TB | `0.45TB` |
+| `{space[free][percent]}` | Free space percentage | `50.0%` |
+| `{space[used][mb]}` | Used space in MB | `476837.16MB` |
+| `{space[used][gb]}` | Used space in GB | `465.85GB` |
+| `{space[used][tb]}` | Used space in TB | `0.45TB` |
+| `{space[used][percent]}` | Used space percentage | `50.0%` |
+
+## Disk Threshold Classes
+Based on `disk_thresholds` configuration, the widget applies CSS classes to style the label based on disk usage:
+
+| Disk Usage | CSS Class Applied |
+|------------|-------------------|
+| 0% - `low` | `status-low` |
+| `low` - `medium` | `status-medium` |
+| `medium` - `high` | `status-high` |
+| Above `high` | `status-critical` |
+
 ## Widget Style
 ```css
 .disk-widget {}
@@ -90,6 +119,11 @@ disk:
 .disk-widget .widget-container .label {}
 .disk-widget .widget-container .label.alt {}
 .disk-widget .widget-container .icon {}
+/* Threshold status classes */
+.disk-widget .widget-container .label.status-low {}
+.disk-widget .widget-container .label.status-medium {}
+.disk-widget .widget-container .label.status-high {}
+.disk-widget .widget-container .label.status-critical {}
 /* Group label style */
 .disk-group {}
 .disk-group-row {}
@@ -100,6 +134,22 @@ disk:
 
 /* Disk progress bar styles if enabled */
 .disk-widget .progress-circle {} 
+```
+
+## Example Style for Threshold Classes
+```css
+.disk-widget .widget-container .label.status-low {
+    color: #a6e3a1; /* Green */
+}
+.disk-widget .widget-container .label.status-medium {
+    color: #f9e2af; /* Yellow */
+}
+.disk-widget .widget-container .label.status-high {
+    color: #fab387; /* Orange */
+}
+.disk-widget .widget-container .label.status-critical {
+    color: #f38ba8; /* Red */
+}
 ```
 
 ## Example Style for Group Label

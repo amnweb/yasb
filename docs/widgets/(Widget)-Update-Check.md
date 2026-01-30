@@ -70,8 +70,25 @@ update_check:
 .update-check-widget .widget-container {}
 .update-check-widget .widget-container.winget {}
 .update-check-widget .widget-container.windows {}
+.update-check-widget .widget-container.paired {}
 .update-check-widget .label {}
 .update-check-widget .icon {}
+```
+
+### State Classes
+
+When both Windows Update and Winget containers are visible, each container gets the `paired` class. This is intended for styling the inner gap between the two buttons without affecting the outer margins.
+
+Example to keep 4px outer margin and 4px inner gap:
+
+```css
+.update-check-widget .widget-container.winget,
+.update-check-widget .widget-container.windows {
+  margin: 4px;
+}
+
+.update-check-widget .widget-container.winget.paired { margin-right: 2px; }
+.update-check-widget .widget-container.windows.paired { margin-left: 2px; }
 ```
 
 ## Example
@@ -86,9 +103,15 @@ update_check:
 .update-check-widget .widget-container.winget,
 .update-check-widget .widget-container.windows {
     background: #eba0ac;
-    margin: 6px 2px 6px 2px;
+    margin: 6px 2px;
     border-radius: 8px;
     border: 2px solid #f38ba8;
+}
+.update-check-widget .widget-container.winget.paired {
+    margin-right: 1px;
+}
+.update-check-widget .widget-container.windows.paired {
+    margin-left: 1px;
 }
 .update-check-widget .widget-container.windows {
     background: #b4befe;

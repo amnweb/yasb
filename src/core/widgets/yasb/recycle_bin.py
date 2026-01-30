@@ -21,6 +21,7 @@ class RecycleBinWidget(BaseWidget):
         class_name: str,
         icons: dict[str, str],
         tooltip: bool,
+        show_confirmation: bool,
         animation: dict[str, str],
         callbacks: dict[str, str],
         container_padding: dict[str, int],
@@ -32,6 +33,7 @@ class RecycleBinWidget(BaseWidget):
         self._label_alt_content = label_alt
         self._icons = icons
         self._tooltip = tooltip
+        self._show_confirmation = show_confirmation
         self._animation = animation
         self._padding = container_padding
         self._show_alt_label = False
@@ -146,12 +148,14 @@ class RecycleBinWidget(BaseWidget):
             if "label" in widget.property("class"):
                 widget.setText("Emptying...")
         # Get the thread and signal from monitor, and store the thread reference
-        signal, self._empty_thread = self.monitor.empty_recycle_bin_async()
+        signal, self._empty_thread = self.monitor.empty_recycle_bin_async(show_confirmation=self._show_confirmation)
         signal.connect(self._on_empty_finished)
 
     def _on_empty_finished(self):
         # Reset emptying flag - bin_updated signal will handle the label update
         self._is_emptying = False
+        # In case the operation was canceled (no bin_updated emitted), refresh label
+        self._update_label()
 
     def _open_bin(self):
         """Open the recycle bin"""

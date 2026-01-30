@@ -9,7 +9,7 @@ from PyQt6.QtGui import QCursor
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout
 from win32con import WM_INPUTLANGCHANGEREQUEST
 
-from core.utils.utilities import PopupWidget, add_shadow, build_widget_label
+from core.utils.utilities import PopupWidget, add_shadow, build_widget_label, refresh_widget_style
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.win32.bindings import (
     kernel32,
@@ -88,6 +88,9 @@ class LanguageWidget(BaseWidget):
         # Focused window info for activating the layout from the menu
         self._focused_window_hwnd: int | None = None
 
+        # Caps Lock state
+        self._caps_lock_active = False
+
         self.start_timer()
 
     def _toggle_label(self):
@@ -111,10 +114,18 @@ class LanguageWidget(BaseWidget):
         label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
         label_parts = [part for part in label_parts if part]
         widget_index = 0
+        prev_caps_lock = self._caps_lock_active
         try:
             lang = self._get_current_keyboard_language()
         except:
             lang = None
+
+        if self._caps_lock_active != prev_caps_lock:
+            if self._caps_lock_active:
+                self._widget_container.setProperty("class", "widget-container caps-lock-on")
+            else:
+                self._widget_container.setProperty("class", "widget-container")
+            refresh_widget_style(self._widget_container, *self._widgets, *self._widgets_alt)
 
         for part in label_parts:
             part = part.strip()
@@ -353,15 +364,21 @@ class LanguageWidget(BaseWidget):
 
     def _activate_layout(self, focus_window: int | None, target_layout: int):
         """Activate the specified keyboard layout returning focus to the specified window"""
-        if focus_window:
-            user32.SetFocus(focus_window)
-            user32.SetActiveWindow(focus_window)
+        result = 0
+
+        # Check if the focus window is a valid application window
+        is_valid_window = False
+        if focus_window and focus_window != 0:
+            class_name = ctypes.create_unicode_buffer(256)
+            user32.GetClassNameW(focus_window, class_name, 256)
+            shell_classes = ("Progman", "WorkerW", "Shell_TrayWnd", "Shell_SecondaryTrayWnd")
+            is_valid_window = class_name.value not in shell_classes
+
+        if is_valid_window:
             user32.SetForegroundWindow(focus_window)
-            result = user32.ActivateKeyboardLayout(ctypes.c_void_p(target_layout), 0)
-            # Post the message to the focus window to activate the layout
-            user32.PostMessageW(focus_window, WM_INPUTLANGCHANGEREQUEST, 0, target_layout)
+            user32.SendMessageW(focus_window, WM_INPUTLANGCHANGEREQUEST, 0, target_layout)
+            result = target_layout
         else:
-            # No focus window, just activate the layout
             result = user32.ActivateKeyboardLayout(ctypes.c_void_p(target_layout), 0)
         return result
 
@@ -453,6 +470,10 @@ class LanguageWidget(BaseWidget):
         iso_language_code = ico_code_name.value if ico_code_name.value else language_code
         country_code = country_name.value
         full_name = f"{full_lang_name.value}"
+
+        # Caps Lock state
+        self._caps_lock_active = bool(user32.GetKeyState(0x14) & 0x0001)
+
         return {
             "language_code": language_code,
             "iso_language_code": iso_language_code,

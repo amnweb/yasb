@@ -32,6 +32,7 @@
 | `media_menu`                          | dict      | [See below](#media-menu-options)                          | Media menu popup.                                                   |
 | `media_menu_icons`                    | dict      | [See below](#media-menu-icons)                            | Media menu icons for popup.                                         |
 | `scrolling_label`                     | dict      | [See below](#scrolling-label)                             | Widget label scrolling options                                      |
+| `progress_bar`                        | dict      | [See below](#progress-bar)                                | On widget progress bar options.                                     |
 | `callbacks`                           | dict      | [See below](#available-callbacks)                         | Callbacks for mouse events on the widget.                           |
 
 ## Example Configuration
@@ -102,67 +103,73 @@ media:
 ## Media Menu Options
 ```yaml
     media_menu:
-      blur: false                          # Whether to apply a blur effect to the popup background.
-      round_corners: true                  # Whether to round the corners of the popup.
-      round_corners_type: "normal"         # The type of corner rounding. Can be "normal" or "symmetric".
-      border_color: "system"               # The border color of the popup. Can be a HEX, None or "system".
-      alignment: "right"                   # The alignment of the popup relative to the widget. Can be "left", "center", or "right".
-      direction: "down"                    # The direction in which the popup opens. Can be "up" or "down".
-      offset_top: 6                        # The vertical offset of the popup from the widget.
-      offset_left: 0                       # The horizontal offset of the popup from the widget.
-      thumbnail_corner_radius: 8           # The corner radius for the thumbnail in the popup.
-      thumbnail_size: 120                  # The size of the thumbnail in the popup.
-      max_title_size: 60                   # The maximum size for the title in the popup.
-      max_artist_size: 20                  # The maximum size for the artist name in the popup.
-      show_source: true                    # Whether to show the media source (e.g., Spotify, YouTube) in the popup.
-      show_volume_slider: false            # Whether to show the volume slider in the popup. Volume control per application.
+      blur: false                  # Whether to apply a blur effect to the popup background.
+      round_corners: true          # Whether to round the corners of the popup.
+      round_corners_type: "normal" # The type of corner rounding. Can be "normal" or "symmetric".
+      border_color: "system"       # The border color of the popup. Can be a HEX, None or "system".
+      alignment: "right"           # The alignment of the popup relative to the widget. Can be "left", "center", or "right".
+      direction: "down"            # The direction in which the popup opens. Can be "up" or "down".
+      offset_top: 6                # The vertical offset of the popup from the widget.
+      offset_left: 0               # The horizontal offset of the popup from the widget.
+      thumbnail_corner_radius: 8   # The corner radius for the thumbnail in the popup.
+      thumbnail_size: 120          # The size of the thumbnail in the popup.
+      max_title_size: 60           # The maximum size for the title in the popup.
+      max_artist_size: 20          # The maximum size for the artist name in the popup.
+      show_source: true            # Whether to show the media source (e.g., Spotify, YouTube) in the popup.
+      show_volume_slider: false    # Whether to show the volume slider in the popup. Volume control per application.
 ```
 
 ## Media Menu Icons
 ```yaml
     media_menu_icons:
-      play: "\ue768"       # Icon for the play button in the popup.
-      pause: "\ue769"      # Icon for the pause button in the popup.
-      prev_track: "\ue892" # Icon for the previous track button in the popup.
-      next_track: "\ue893" # Icon for the next track button in the popup.
-      mute: "\ue994"       # Icon for the mute button in the popup.
-      unmute: "\ue74f"     # Icon for the unmute button in the popup.
+      play: "\ue768"        # Icon for the play button in the popup.
+      pause: "\ue769"       # Icon for the pause button in the popup.
+      prev_track: "\ue892"  # Icon for the previous track button in the popup.
+      next_track: "\ue893"  # Icon for the next track button in the popup.
+      mute: "\ue994"        # Icon for the mute button in the popup.
+      unmute: "\ue74f"      # Icon for the unmute button in the popup.
 ```
 
 ## Scrolling Label Options
 ```yaml
     scrolling_label:
-      enabled: false                # Whether to enable the scrolling label.
-      update_interval_ms: 33       # The update interval for the scrolling label in milliseconds.
-      style: "left"                 # The style of the scrolling label. Can be "left", "right", "bounce", or "bounce-ease".
-      separator: " | "              # The separator between repeating text in "left" or "right" scrolling style.
-      label_padding: 1              # The padding around the label in "bounce" and "bounce-ease" style. By default it's one character on each side.
-      ease_slope: 20                # The easing slope for the bounce effect. Easing curve params: https://www.desmos.com/calculator/j7eamemxzi
-      ease_pos: 0.8                 # The easing curve position for the bounce effect.
-      ease_min: 0.5                 # The minimum value for the bounce effect easing curve.
+      enabled: false          # Whether to enable the scrolling label.
+      update_interval_ms: 33  # The update interval for the scrolling label in milliseconds.
+      style: "left"           # The style of the scrolling label. Can be "left", "right", "bounce", or "bounce-ease".
+      separator: " | "        # The separator between repeating text in "left" or "right" scrolling style.
+      label_padding: 1        # The padding around the label in "bounce" and "bounce-ease" style. By default it's one character on each side.
+      ease_slope: 20          # The easing slope for the bounce effect. Easing curve params: https://www.desmos.com/calculator/j7eamemxzi
+      ease_pos: 0.8           # The easing curve position for the bounce effect.
+      ease_min: 0.5           # The minimum value for the bounce effect easing curve.
 ```
 
-## Available Callbacks
-- `toggle_label`: Toggles the visibility of the label.
-- `do_nothing`: A placeholder callback that does nothing when triggered.
-- `toggle_play_pause`: Toggles between play and pause states.
-- `toggle_media_menu`: Toggles the visibility of the media menu popup.
-
+## Widget Progress Bar
+```yaml
+    progress_bar:
+      enabled: false       # Whether to enable the progress bar on the widget.
+      alignment: "bottom"  # The alignment of the progress bar inside the widget container. Can be "top", "bottom", or "center".
+```
 
 ## Label and Container Shadow
 ```yaml
     container_shadow:
-      enabled: false          # Whether to enable the container shadow.
-      color: "black"          # The color of the shadow. Can be a HEX value or color name.
-      radius: 3               # The blur radius of the shadow.
-      offset: [1, 1]          # The offset of the shadow in the format [x, y].
+      enabled: false  # Whether to enable the container shadow.
+      color: "black"  # The color of the shadow. Can be a HEX value or color name.
+      radius: 3       # The blur radius of the shadow.
+      offset: [1, 1]  # The offset of the shadow in the format [x, y].
 
     label_shadow:
-      enabled: false          # Whether to enable the label shadow.
-      color: "black"          # The color of the shadow. Can be a HEX value or color name.
-      radius: 3               # The blur radius of the shadow.
-      offset: [1, 1]          # The offset of the shadow in the format [x, y].
+      enabled: false  # Whether to enable the label shadow.
+      color: "black"  # The color of the shadow. Can be a HEX value or color name.
+      radius: 3       # The blur radius of the shadow.
+      offset: [1, 1]  # The offset of the shadow in the format [x, y].
 ```
+
+## Available Callbacks
+- `toggle_label`: Toggles the visibility of the label.
+- `toggle_play_pause`: Toggles between play and pause states.
+- `toggle_media_menu`: Toggles the visibility of the media menu popup.
+- `do_nothing`: A placeholder callback that does nothing when triggered.
 
 ## Description of Options
 - **label:** The format string for the media label. You can use placeholders like `{title}` and `{artist}` to dynamically insert media information.
@@ -232,6 +239,9 @@ media:
   - **ease_slope:** The easing slope for the bounce effect. Easing curve params: https://www.desmos.com/calculator/j7eamemxzi
   - **ease_pos:** The easing curve position for the bounce effect.
   - **ease_min:** The minimum value for the bounce effect easing curve.
+- **progress_bar:** A dictionary specifying the progress bar options for the widget.
+  - **enabled:** Whether to enable the progress bar on the widget.
+  - **alignment:** The alignment of the progress bar inside the widget container.
 
 ## Scrolling Label Notes
 - The scrolling label uses `max_field_size` to limit its size.
@@ -247,6 +257,8 @@ media:
 .media-widget .btn.prev {}
 .media-widget .btn.next {}
 .media-widget .btn.disabled {}
+.media-widget .progress-bar { }
+.media-widget .progress-bar::chunk {}
 
 .media-menu {}
 .media-menu .title {}
@@ -305,6 +317,17 @@ media:
     color: #4e525c;
     font-size: 12px;
     background-color: rgba(0, 0, 0, 0);
+}
+.media-widget .progress-bar {
+    max-height: 2px;
+    background-color: transparent;
+    margin-left: 5px;
+    border: none;
+}
+
+.media-widget .progress-bar::chunk {
+    background-color: #0078D4ee;
+    border-radius: 2px;
 }
 ```
 

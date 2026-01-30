@@ -3,7 +3,7 @@
 | Option          | Type    | Default                                                                 | Description                                                                 |
 |-----------------|---------|-------------------------------------------------------------------------|-----------------------------------------------------------------------------|
 | `label`         | string  | `"\udb81\udf17"`                                | Icon or text for button. |
-| `menu_list`     | list    | `[]` | List of menu items. title and path |
+| `menu_list`     | list    | `[]` | List of menu items. Supports `path`, `uri`, or `command`. |
 | `system_menu`   | boolean | `true`                                                                 | Show system menu. |
 | `power_menu`    | boolean | `true`                                                                 | Show power menu. |
 | `blur`          | boolean | `true`                                                                 | Blur background. |
@@ -31,6 +31,11 @@ home:
     - { title: "Download", path: "D:\\Downloads" }
     - { title: "Documents", path: "C:\\Users\\amn\\Documents" }
     - { title: "Pictures", path: "C:\\Users\\amn\\Pictures" }
+    - { title: "Sound Settings", command: "cmd.exe /c start ms-settings:sound" }
+    - { title: "Windows Settings", uri: "ms-settings:" }
+    - { separator: true }
+    - { title: "PowerShell", command: "powershell.exe", show_window: true }
+    - { title: "Winget Update", command: "powershell.exe", args: ["-NoProfile", "-NoExit", "-Command", "winget upgrade"], show_window: true }
     system_menu: true
     power_menu: true
     blur: true
@@ -62,7 +67,11 @@ home:
 ## Description of Options
 
 - **label**: Icon or text for button.
-- **menu_list**: List of menu items (title and path). Use this list only for directories; do not use it for applications or files.
+- **menu_list**: List of menu items. Each item needs a `title` and one of:
+        - `path`: Open a file or folder.
+        - `uri`: Open a URI like `ms-settings:sound` or `https://www.example.com`.
+    - `command`: Run a command. Optional `args` (list of strings), `shell` (boolean), and `show_window` (boolean).
+    You can also add a separator with `{ separator: true }`.
 - **system_menu**: Show system menu. Enabling this option will show system menu items like settings, task manager and About this PC.
 - **power_menu**: Show power menu. Enabling this option will show power menu items like shutdown, restart, sleep, lock and sign out.
 - **blur**: Blur background. Enabling this option will blur the background and add default OS radius and border to the widget.

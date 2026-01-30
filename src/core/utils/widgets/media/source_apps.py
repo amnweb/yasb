@@ -12,6 +12,8 @@ For simple applications where AUMID matching is sufficient, use string format:
     "aumid": "Display Name"
 """
 
+from typing import Any
+
 MEDIA_SOURCE_APPS = {
     # Audio Players
     "AIMP.exe": "AIMP",
@@ -49,6 +51,10 @@ MEDIA_SOURCE_APPS = {
         "name": "FireFox",
         "process": "firefox.exe",
     },
+    "CA9422711AE1A81C": {
+        "name": "FireFox",  # Firefox Developer Edition
+        "process": "firefox.exe",
+    },
     "firefox.exe": "FireFox",
     "F0DC299D809B9700": {
         "name": "Zen",
@@ -80,10 +86,15 @@ MEDIA_SOURCE_APPS = {
     },
     # System Media Players
     "Microsoft.ZuneMusic_8wekyb3d8bbwe!Microsoft.ZuneMusic": "Media Player",
+    # Message Apps
+    "Telegram.TelegramDesktop.7e5c2711fcd4e083548c717cc0ca86f4": {
+        "name": "Telegram",  # materialgram
+        "process": "materialgram.exe",
+    },
 }
 
 
-def _match_aumid_by_regex(source_app_id: str) -> dict:
+def _match_aumid_by_regex(source_app_id: str) -> dict[str, str | None] | None:
     """
     Attempt to match common AUMID patterns using regex when an exact
     dictionary lookup fails.
@@ -140,7 +151,7 @@ def get_source_app_display_name(source_app_id: str) -> str:
     return None
 
 
-def get_source_app_mapping(source_app_id: str) -> dict:
+def get_source_app_mapping(source_app_id: str) -> dict[str, Any] | None:
     """
     Get the complete mapping information for a source application ID.
 

@@ -176,6 +176,12 @@ class MicrophoneWidget(BaseWidget):
             except:
                 pass
 
+    def _apply_slider_scroll_step(self, slider: QSlider):
+        """Apply scroll_step to slider wheel/keyboard increments."""
+        step = max(1, int(round(self._scroll_step * 100)))
+        slider.setSingleStep(step)
+        slider.setPageStep(step)
+
     def _set_muted_class(self, widget, muted: bool):
         """Set or remove the 'muted' and 'no-device' classes on the widget."""
         current_class = widget.property("class") or ""
@@ -202,56 +208,30 @@ class MicrophoneWidget(BaseWidget):
             self._slider_tooltip.hide()
             self._slider_tooltip = None
 
-    def _get_slider_handle_geometry(self, slider):
-        """Calculate the geometry for the slider handle position"""
-        value = slider.value()
-        slider_range = slider.maximum() - slider.minimum()
-        if slider_range > 0:
-            handle_pos = (value - slider.minimum()) / slider_range
-            x_offset = int(slider.width() * handle_pos)
-
-            # Get slider position in global coordinates
-            widget_rect = slider.rect()
-            widget_global_pos = slider.mapToGlobal(widget_rect.topLeft())
-            widget_global_pos.setX(widget_global_pos.x() + x_offset)
-
-            # Create geometry at handle position (thin vertical rect)
-            handle_geometry = QRect(widget_global_pos.x(), widget_global_pos.y(), 1, slider.height())
-            return handle_geometry
-        return None
-
-    def _setup_slider_tooltip(self, slider):
-        """Setup tooltip for slider (only show during drag)"""
-        # Remove the tooltip filter to disable hover tooltips
-        if hasattr(slider, "_tooltip_filter"):
-            slider.removeEventFilter(slider._tooltip_filter)
-            delattr(slider, "_tooltip_filter")
-
     def _show_slider_tooltip(self, slider, value):
-        """Helper method to show/update tooltip for slider during drag"""
+        """Show tooltip above slider handle during drag."""
         if not self._tooltip or not slider.isSliderDown():
             return
 
+        # Calculate handle position
+        slider_range = slider.maximum() - slider.minimum()
+        if slider_range <= 0:
+            return
+        ratio = (value - slider.minimum()) / slider_range
+        x_offset = int(slider.width() * ratio)
+        global_pos = slider.mapToGlobal(slider.rect().topLeft())
+        handle_rect = QRect(global_pos.x() + x_offset, global_pos.y(), 1, slider.height())
+
         if not hasattr(self, "_slider_tooltip") or not self._slider_tooltip:
-            # Create new tooltip
             self._slider_tooltip = CustomToolTip()
             self._slider_tooltip._position = "top"
-            handle_geometry = self._get_slider_handle_geometry(slider)
-            if handle_geometry:
-                self._slider_tooltip.label.setText(f"{value}%")
-                self._slider_tooltip.adjustSize()
-                self._slider_tooltip._base_pos = self._slider_tooltip._calculate_position(handle_geometry)
-                self._slider_tooltip.move(self._slider_tooltip._base_pos.x(), self._slider_tooltip._base_pos.y())
-                self._slider_tooltip.setWindowOpacity(1.0)
-                self._slider_tooltip.show()
-        else:
-            # Update existing tooltip
-            handle_geometry = self._get_slider_handle_geometry(slider)
-            if handle_geometry:
-                self._slider_tooltip.label.setText(f"{value}%")
-                self._slider_tooltip.adjustSize()
-                base_pos = self._slider_tooltip._calculate_position(handle_geometry)
-                self._slider_tooltip.move(base_pos.x(), base_pos.y())
+
+        self._slider_tooltip.label.setText(f"{value}%")
+        self._slider_tooltip.adjustSize()
+        pos = self._slider_tooltip._calculate_position(handle_rect)
+        self._slider_tooltip.move(pos.x(), pos.y())
+        self._slider_tooltip.setWindowOpacity(1.0)
+        self._slider_tooltip.show()
 
     def _get_mic_icon(self):
         """Get appropriate microphone icon based on mute status."""
@@ -292,8 +272,8 @@ class MicrophoneWidget(BaseWidget):
             self.audio_endpoint.SetMasterVolumeLevelScalar(new_volume, None)
             if self.audio_endpoint.GetMute() and new_volume > 0.0:
                 self.audio_endpoint.SetMute(False, None)
-            self._update_label()
             self._update_slider_value()
+            self._update_label()
         except Exception as e:
             logging.error(f"Failed to increase microphone volume: {e}")
 
@@ -306,8 +286,8 @@ class MicrophoneWidget(BaseWidget):
             self.audio_endpoint.SetMasterVolumeLevelScalar(new_volume, None)
             if new_volume == 0.0:
                 self.audio_endpoint.SetMute(True, None)
-            self._update_label()
             self._update_slider_value()
+            self._update_label()
         except Exception as e:
             logging.error(f"Failed to decrease microphone volume: {e}")
 
@@ -382,6 +362,7 @@ class MicrophoneWidget(BaseWidget):
         self.volume_slider.setProperty("class", "volume-slider")
         self.volume_slider.setMinimum(0)
         self.volume_slider.setMaximum(100)
+        self._apply_slider_scroll_step(self.volume_slider)
         try:
             current_volume = round(self.audio_endpoint.GetMasterVolumeLevelScalar() * 100)
             self.volume_slider.setValue(current_volume)
@@ -390,8 +371,6 @@ class MicrophoneWidget(BaseWidget):
         self.volume_slider.valueChanged.connect(self._on_slider_value_changed)
         self.volume_slider.sliderReleased.connect(self._on_slider_released)
         slider_row.addWidget(self.volume_slider)
-
-        self._setup_slider_tooltip(self.volume_slider)
 
         global_layout.addLayout(slider_row)
         global_container.setLayout(global_layout)

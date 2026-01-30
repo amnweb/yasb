@@ -522,6 +522,7 @@ class WorkspaceWidget(BaseWidget):
                 refresh_widget_style(self.workspace_layer_label)
 
     def _update_button(self, workspace_btn: WorkspaceButton) -> None:
+        self._refresh_button_labels(workspace_btn)
         workspace_index = workspace_btn.workspace_index
         workspace = self._komorebic.get_workspace_by_index(self._komorebi_screen, workspace_index)
         workspace_status = self._get_workspace_new_status(workspace)
@@ -538,6 +539,27 @@ class WorkspaceWidget(BaseWidget):
             workspace_btn.update_visible_buttons()
         self._get_workspace_layer(workspace_index)
         workspace_btn._animation_initialized = True
+
+    def _refresh_button_labels(self, workspace_btn: WorkspaceButton) -> None:
+        # Workspace names can change dynamically (e.g. via `komorebic workspace-name`).
+        # Refresh cached button labels so the UI reflects the latest state.
+        try:
+            default_label, active_label, populated_label = self._get_workspace_label(workspace_btn.workspace_index)
+        except Exception:
+            return
+
+        if (
+            getattr(workspace_btn, "default_label", None) == default_label
+            and getattr(workspace_btn, "active_label", None) == active_label
+            and getattr(workspace_btn, "populated_label", None) == populated_label
+        ):
+            return
+
+        workspace_btn.default_label = default_label
+        workspace_btn.active_label = active_label
+        workspace_btn.populated_label = populated_label
+        # Keep current status, only update displayed text.
+        workspace_btn.update_and_redraw(workspace_btn.status)
 
     def _add_or_update_buttons(self) -> None:
         buttons_added = False
@@ -562,11 +584,13 @@ class WorkspaceWidget(BaseWidget):
         monitor_index = self._komorebi_screen["index"]
         ws_index = workspace_index if self._label_zero_index else workspace_index + 1
         ws_monitor_index = monitor_index if self._label_zero_index else monitor_index + 1
-        ws_name = (
-            workspace["name"]
-            if workspace["name"]
-            else self._label_default_name.format(index=ws_index, monitor_index=ws_monitor_index)
-        )
+        ws_raw_name = None
+        try:
+            ws_raw_name = workspace.get("name") if isinstance(workspace, dict) else None
+        except Exception:
+            ws_raw_name = None
+
+        ws_name = ws_raw_name or self._label_default_name.format(index=ws_index, monitor_index=ws_monitor_index)
         default_label = self._label_workspace_btn.format(name=ws_name, index=ws_index, monitor_index=ws_monitor_index)
         active_label = self._label_workspace_active_btn.format(
             name=ws_name, index=ws_index, monitor_index=ws_monitor_index

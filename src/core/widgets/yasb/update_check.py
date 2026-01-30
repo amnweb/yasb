@@ -9,7 +9,7 @@ from PyQt6.QtCore import Qt, QThread, QTimer, pyqtSignal
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel
 
 from core.utils.tooltip import set_tooltip
-from core.utils.utilities import add_shadow
+from core.utils.utilities import add_shadow, refresh_widget_style
 from core.validation.widgets.yasb.update_check import VALIDATION_SCHEMA
 from core.widgets.base import BaseWidget
 from settings import DEBUG
@@ -92,11 +92,19 @@ class UpdateWorker(QThread):
                         "available": "Disponibile",
                         "source": "Origine",
                     },
+                    "br": {
+                        "name": "Nome",
+                        "id": "ID",
+                        "version": "Versão",
+                        "available": "Disponível",
+                        "source": "Origem",
+                    },
                 }
                 WINGET_SECTION_HEADERS = {
                     "en": "The following packages have an upgrade available",
                     "de": "Für die folgenden Pakete ist ein Upgrade verfügbar",
                     "it": "Per i pacchetti seguenti è disponibile un aggiornamento",
+                    "br": "Os pacotes a seguir têm uma atualização disponível",
                 }
 
                 result = subprocess.run(
@@ -314,6 +322,11 @@ class UpdateCheckWidget(BaseWidget):
         self.windows_update_data = 0
         self.winget_update_data = 0
 
+        self._winget_container = None
+        self._windows_container = None
+        self._widget_winget = []
+        self._widget_windows = []
+
         self._create_dynamically_label(self._winget_update_label, self._windows_update_label)
 
         self._update_manager = UpdateManager()
@@ -397,13 +410,13 @@ class UpdateCheckWidget(BaseWidget):
             return container, widgets
 
         if self._winget_update_enabled:
-            self._winget_container, self._widget_widget = process_content(self._winget_update_label, "winget")
+            self._winget_container, self._widget_winget = process_content(self._winget_update_label, "winget")
         if self._window_update_enabled:
             self._windows_container, self._widget_windows = process_content(self._windows_update_label, "windows")
 
     def _update_label(self, widget_type, data, names):
         if widget_type == "winget":
-            active_widgets = self._widget_widget
+            active_widgets = self._widget_winget
             active_label_content = self._winget_update_label
             container = self._winget_container
         elif widget_type == "windows":
@@ -455,7 +468,36 @@ class UpdateCheckWidget(BaseWidget):
         self.update_widget_visibility()
 
     def update_widget_visibility(self):
+        windows_visible = self._window_update_enabled and self.windows_update_data > 0
+        winget_visible = self._winget_update_enabled and self.winget_update_data > 0
+
+        if windows_visible and winget_visible:
+            if self._windows_container:
+                self._set_container_class(self._windows_container, "windows", paired=True)
+            if self._winget_container:
+                self._set_container_class(self._winget_container, "winget", paired=True)
+        else:
+            if self._windows_container and self._window_update_enabled:
+                self._set_container_class(self._windows_container, "windows", paired=False)
+            if self._winget_container and self._winget_update_enabled:
+                self._set_container_class(self._winget_container, "winget", paired=False)
+
         if self.windows_update_data == 0 and self.winget_update_data == 0:
             self.hide()
         else:
             self.show()
+
+        refresh_widget_style(self)
+
+    def _set_container_class(self, container, base_class: str, paired: bool):
+        if not container:
+            return
+        class_name = f"widget-container {base_class}"
+        if paired:
+            class_name += " paired"
+
+        container.setStyleSheet("")
+        container.setProperty("class", class_name)
+
+        container.setStyleSheet(container.styleSheet())
+        refresh_widget_style(container)

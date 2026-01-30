@@ -1,8 +1,9 @@
 import logging
 import socket
 
-import psutil
 from PyQt6.QtCore import QObject, QThread, QTimer, pyqtSignal
+
+from core.utils.widgets.traffic.network_api import NetworkAPI
 
 
 class ConnectionTestWorker(QThread):
@@ -64,13 +65,7 @@ class ConnectionTestWorker(QThread):
     def _get_interface_ip(self):
         """Get the IP address of the specified network interface"""
         try:
-            net_if_addrs = psutil.net_if_addrs()
-            if self.interface in net_if_addrs:
-                for addr in net_if_addrs[self.interface]:
-                    if addr.family == socket.AF_INET:
-                        return addr.address
-            return None
-
+            return NetworkAPI.get_interface_ip(self.interface)
         except Exception as e:
             logging.debug(f"Error getting interface IP: {e}")
             return None
@@ -141,22 +136,3 @@ class InternetChecker(QObject):
         if self.worker:
             self.worker.deleteLater()
             self.worker = None
-
-
-class NetworkUtils:
-    """Utility class for network operations"""
-
-    @staticmethod
-    def get_available_interfaces():
-        try:
-            return list(psutil.net_if_addrs().keys())
-        except:
-            return []
-
-    @staticmethod
-    def is_interface_active(interface_name):
-        try:
-            stats = psutil.net_if_stats()
-            return interface_name in stats and stats[interface_name].isup
-        except:
-            return False

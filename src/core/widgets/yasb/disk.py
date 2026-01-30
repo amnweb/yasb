@@ -1,7 +1,6 @@
 import os
 import re
 
-import psutil
 import win32api
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QProgressBar, QVBoxLayout, QWidget
@@ -110,22 +109,12 @@ class DiskWidget(BaseWidget):
     def _update_label(self):
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
         active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
-        label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
+        label_parts = re.split(r"(<span.*?>.*?</span>)", active_label_content)
         label_parts = [part for part in label_parts if part]
         widget_index = 0
 
-        try:
-            disk_space = self._get_space()
-        except Exception:
-            disk_space = None
-
-        percent_value = 0
-        if disk_space:
-            percent_str = disk_space["used"]["percent"]
-            if isinstance(percent_str, str) and percent_str.endswith("%"):
-                percent_value = float(percent_str.strip("%"))
-            else:
-                percent_value = float(percent_str)
+        disk_space = self._get_space()
+        percent_value = float(disk_space["used"]["percent"].rstrip("%")) if disk_space else 0
 
         if self._progress_bar["enabled"] and self.progress_widget:
             if self._widget_container_layout.indexOf(self.progress_widget) == -1:
@@ -251,35 +240,38 @@ class DiskWidget(BaseWidget):
         if volume_label is None:
             volume_label = self._volume_label
 
-        partitions = psutil.disk_partitions()
-        specific_partitions = [partition for partition in partitions if partition.device in (f"{volume_label}:\\")]
-        if not specific_partitions:
-            return
+        try:
+            free_bytes, total_bytes, _ = win32api.GetDiskFreeSpaceEx(f"{volume_label}:\\")
+        except Exception:
+            return None
 
-        for partition in specific_partitions:
-            usage = psutil.disk_usage(partition.mountpoint)
-            percent_used = usage.percent
-            percent_free = 100 - percent_used
-            return {
-                "total": {
-                    "mb": f"{usage.total / (1024**2):.{self._decimal_display}f}MB",
-                    "gb": f"{usage.total / (1024**3):.{self._decimal_display}f}GB",
-                    "tb": f"{usage.total / (1024**4):.{self._decimal_display}f}TB",
-                },
-                "free": {
-                    "mb": f"{usage.free / (1024**2):.{self._decimal_display}f}MB",
-                    "gb": f"{usage.free / (1024**3):.{self._decimal_display}f}GB",
-                    "tb": f"{usage.free / (1024**4):.{self._decimal_display}f}TB",
-                    "percent": f"{percent_free:.{self._decimal_display}f}%",
-                },
-                "used": {
-                    "mb": f"{usage.used / (1024**2):.{self._decimal_display}f}MB",
-                    "gb": f"{usage.used / (1024**3):.{self._decimal_display}f}GB",
-                    "tb": f"{usage.used / (1024**4):.{self._decimal_display}f}TB",
-                    "percent": f"{percent_used:.{self._decimal_display}f}%",
-                },
-            }
-        return None
+        if total_bytes == 0:
+            return None
+
+        used_bytes = total_bytes - free_bytes
+        percent_used = (used_bytes / total_bytes) * 100
+        percent_free = 100 - percent_used
+        d = self._decimal_display
+
+        return {
+            "total": {
+                "mb": f"{total_bytes / 1048576:.{d}f}MB",
+                "gb": f"{total_bytes / 1073741824:.{d}f}GB",
+                "tb": f"{total_bytes / 1099511627776:.{d}f}TB",
+            },
+            "free": {
+                "mb": f"{free_bytes / 1048576:.{d}f}MB",
+                "gb": f"{free_bytes / 1073741824:.{d}f}GB",
+                "tb": f"{free_bytes / 1099511627776:.{d}f}TB",
+                "percent": f"{percent_free:.{d}f}%",
+            },
+            "used": {
+                "mb": f"{used_bytes / 1048576:.{d}f}MB",
+                "gb": f"{used_bytes / 1073741824:.{d}f}GB",
+                "tb": f"{used_bytes / 1099511627776:.{d}f}TB",
+                "percent": f"{percent_used:.{d}f}%",
+            },
+        }
 
     def _get_disk_threshold(self, disk_percent) -> str:
         if disk_percent <= self._disk_thresholds["low"]:

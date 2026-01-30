@@ -15,6 +15,9 @@ DEFAULTS = {
         "stop": "\uf04d",
         "clear": "\uf1f8",
         "assistant": "\udb81\ude74",
+        "attach": "\uf0c6",
+        "float_on": "\udb84\udcac",
+        "float_off": "\udb84\udca9",
     },
     "notification_dot": {
         "enabled": True,
@@ -22,6 +25,7 @@ DEFAULTS = {
         "color": "red",
         "margin": [1, 1],
     },
+    "start_floating": True,
     "animation": {"enabled": True, "type": "fadeInOut", "duration": 200},
     "container_padding": {"top": 0, "left": 0, "bottom": 0, "right": 0},
     "callbacks": {"on_left": "toggle_chat", "on_middle": "do_nothing", "on_right": "do_nothing"},
@@ -65,13 +69,17 @@ VALIDATION_SCHEMA = {
     },
     "icons": {
         "type": "dict",
-        "required": True,
+        "required": False,
         "schema": {
-            "send": {"type": "string"},
-            "stop": {"type": "string"},
-            "clear": {"type": "string"},
-            "assistant": {"type": "string"},
+            "send": {"type": "string", "default": DEFAULTS["icons"]["send"]},
+            "stop": {"type": "string", "default": DEFAULTS["icons"]["stop"]},
+            "clear": {"type": "string", "default": DEFAULTS["icons"]["clear"]},
+            "assistant": {"type": "string", "default": DEFAULTS["icons"]["assistant"]},
+            "attach": {"type": "string", "default": DEFAULTS["icons"]["attach"]},
+            "float_on": {"type": "string", "default": DEFAULTS["icons"]["float_on"]},
+            "float_off": {"type": "string", "default": DEFAULTS["icons"]["float_off"]},
         },
+        "default": DEFAULTS["icons"],
     },
     "notification_dot": {
         "type": "dict",
@@ -94,6 +102,7 @@ VALIDATION_SCHEMA = {
         },
         "default": DEFAULTS["notification_dot"],
     },
+    "start_floating": {"type": "boolean", "default": DEFAULTS["start_floating"]},
     "animation": {
         "type": "dict",
         "required": False,
@@ -164,9 +173,12 @@ VALIDATION_SCHEMA = {
                         "schema": {
                             "name": {"type": "string", "required": True},
                             "label": {"type": "string", "required": True},
+                            "default": {"type": "boolean", "required": False, "default": False},
                             "max_tokens": {"type": "integer", "required": False, "default": 0},
                             "temperature": {"type": "number", "required": False, "default": 0.7},
                             "top_p": {"type": "number", "required": False, "default": 0.95},
+                            "max_image_size": {"type": "integer", "required": False, "default": 0, "min": 0},
+                            "max_attachment_size": {"type": "integer", "required": False, "default": 256, "min": 0},
                             "instructions": {
                                 "type": "string",
                                 "required": False,

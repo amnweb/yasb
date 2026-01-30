@@ -93,6 +93,7 @@ gpu:
 - `{info[mem_free]}` - Free GPU memory
 - `{info[temp]}` - GPU temperature (°C)
 - `{info[fan_speed]}` - GPU fan speed (if available, in percentage)
+- `{info[power_draw]}` - GPU power draw exactly in watts if available.
 - `{info[histograms][utilization]}` - GPU utilization histogram using configured icons
 - `{info[histograms][mem_used]}` - GPU memory usage histogram using configured icons
 

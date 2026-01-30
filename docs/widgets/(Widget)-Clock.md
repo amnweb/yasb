@@ -11,7 +11,7 @@
 | `timezones`         | list    | `[]`                                                                                  | A list of timezones to cycle through. Each timezone should be a valid timezone string.                              |
 | `icons`         | dict    | `{}`                                                                                      | A dictionary of icons for the different times of day. Keys should be in format `clock_HH` where HH is 00-23. |
 | `alarm_icons`       | dict    | `{'enabled': '\uf0f3', 'disabled': '\uf0a2', 'snooze': '\uf1f6'}`                      | Icons for alarm states (enabled, disabled, snooze).                                                                  |
-| `calendar` | dict | `{'blur': True, 'round_corners': True, 'round_corners_type': 'normal', 'border_color': 'System', 'alignment': 'right', 'direction': 'down', 'offset_top': 6, 'offset_left': 0, 'country_code': None, 'subdivision': None, 'show_holidays': False, 'holiday_color': "#FF6464", 'show_week_numbers': False, 'extended': False}` | Calendar settings for the widget. |
+| `calendar` | dict | `{'blur': True, 'round_corners': True, 'round_corners_type': 'normal', 'border_color': 'System', 'alignment': 'right', 'direction': 'down', 'offset_top': 6, 'offset_left': 0, 'country_code': None, 'subdivision': None, 'show_holidays': False, 'holiday_color': "#FF6464", 'show_week_numbers': False, 'show_years': True, 'extended': False}` | Calendar settings for the widget. |
 | `callbacks`         | dict    | `{'on_left': 'toggle_calendar', 'on_middle': 'next_timezone', 'on_right': 'toggle_label'}` | Callbacks for mouse events on the clock widget.                                                                     |
 | `animation`         | dict    | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}`                             | Animation settings for the widget.                                                                                  |
 | `container_padding` | dict    | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}`                                      | Padding for the widget container.                                                                                    |
@@ -61,6 +61,7 @@ clock:
       offset_left: 0
       show_holidays: false
       show_week_numbers: true
+      show_years: true
       country_code: "AR"
       holiday_color: "#FF6464"
       extended: false
@@ -108,6 +109,7 @@ clock:
   - **show_holidays:** Whether to show holidays in the calendar.
   - **holiday_color:** The color used to highlight holidays in the calendar (hex format, e.g., "#00A300").
   - **show_week_numbers:** Whether to show week numbers in the calendar.
+  - **show_years:** Whether to show the year label in the calendar popup.
   - **extended:** Show extended calendar with alarm/timer controls and upcoming holidays.
 - **callbacks:** A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions. Available callbacks: `toggle_calendar`, `next_timezone`, `toggle_label`, `context_menu`.
 - **animation:** A dictionary specifying the animation settings for the widget. It contains three keys: `enabled`, `type`, and `duration`. The `type` can be `fadeInOut` and the `duration` is the animation duration in milliseconds.
@@ -147,6 +149,7 @@ Clock format https://docs.python.org/3/library/time.html#time.strftime
 .clock-popup.calendar .calendar-table::item {}
 .clock-popup.calendar .calendar-table::item:selected {}
 .clock-popup.calendar .day-label {}
+.clock-popup.calendar .year-label {}
 .clock-popup.calendar .month-label {}
 .clock-popup.calendar .date-label {}
 .clock-popup.calendar .week-label {}
@@ -240,6 +243,7 @@ Clock format https://docs.python.org/3/library/time.html#time.strftime
 }
 .clock-popup.calendar .day-label,
 .clock-popup.calendar .month-label,
+.clock-popup.calendar .year-label,
 .clock-popup.calendar .date-label {
     font-family: 'Segoe UI';
     font-size: 16px;
@@ -249,6 +253,9 @@ Clock format https://docs.python.org/3/library/time.html#time.strftime
     max-width: 180px;
 }
 .clock-popup.calendar .month-label {
+    font-weight: normal;
+}
+.clock-popup.calendar .year-label {
     font-weight: normal;
 }
 .clock-popup.calendar .date-label {

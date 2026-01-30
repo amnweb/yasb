@@ -76,15 +76,65 @@ The `label` and `label_alt` options use format strings that can include placehol
 ## Example Style
 ```css
 .memory-widget {}
-.memory-widget.your_class {} /* If you are using class_name option */
 .memory-widget .widget-container {}
-.memory-widget .label {}
-.memory-widget .label.alt {}
-.memory-widget .icon {}
-.memory-widget .label.status-low {}
-.memory-widget .label.status-medium {}
-.memory-widget .label.status-high {}
-.memory-widget .label.status-critical {}
-/* Memory progress bar styles if enabled */
-.memory-widget .progress-circle {} 
+.memory-widget .widget-container .label {}
+.memory-widget .widget-container .label.alt {}
+.memory-widget .widget-container .icon {}
+
+/* Status classes based on memory_thresholds */
+.memory-widget .widget-container .label.status-low {}
+.memory-widget .widget-container .label.status-medium {}
+.memory-widget .widget-container .label.status-high {}
+.memory-widget .widget-container .label.status-critical {}
+
+/* Icon status classes */
+.memory-widget .widget-container .icon.status-low {}
+.memory-widget .widget-container .icon.status-medium {}
+.memory-widget .widget-container .icon.status-high {}
+.memory-widget .widget-container .icon.status-critical {}
+
+/* Progress bar styles (if enabled) */
+.memory-widget .progress-circle {}
+
+/* Custom class styling */
+.memory-widget.your-class-name {}
+.memory-widget.your-class-name .label {}
+```
+
+## Full CSS Example
+```css
+.memory-widget {
+    padding: 0 8px;
+}
+
+.memory-widget .widget-container .label {
+    font-size: 13px;
+    color: #cdd6f4;
+}
+
+.memory-widget .widget-container .icon {
+    font-size: 14px;
+    color: #89b4fa;
+}
+
+.memory-widget .widget-container .label.status-low {
+    color: #a6e3a1; /* Green */
+}
+
+.memory-widget .widget-container .label.status-medium {
+    color: #f9e2af; /* Yellow */
+}
+
+.memory-widget .widget-container .label.status-high {
+    color: #fab387; /* Orange */
+}
+
+.memory-widget .widget-container .label.status-critical {
+    color: #f38ba8; /* Red */
+}
+
+/* Progress bar customization */
+.memory-widget .progress-circle {
+    margin-right: 6px;
+}
 ```
