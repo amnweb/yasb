@@ -183,10 +183,10 @@ class TrafficDataManager:
         previous_recv: int,
         session_sent: int,
         session_recv: int,
-        interval_seconds: int,
+        interval_seconds: float,
         speed_unit: str,
         hide_decimal: bool,
-        speed_threshold: dict,
+        speed_threshold: dict[str, int],
         max_label_length: int = 0,
         max_label_length_align: str = "left",
     ):

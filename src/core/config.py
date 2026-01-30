@@ -6,17 +6,18 @@ import sys
 from os import makedirs, path
 from pathlib import Path
 from sys import argv
-from typing import Any
+from typing import Any, cast
 from xml.dom import SyntaxErr
 
-from cerberus import Validator, schema
-from yaml import dump, safe_load
+from pydantic import ValidationError
+from yaml import safe_load
 from yaml.parser import ParserError
 
 import settings
 from core.utils.alert_dialog import raise_info_alert
 from core.utils.css_processor import CSSProcessor
-from core.validation.config import CONFIG_SCHEMA
+from core.utils.utilities import format_pydantic_errors_to_yaml
+from core.validation.config import YasbConfig
 
 SRC_CONFIGURATION_DIR = os.path.dirname(sys.executable) if getattr(sys, "frozen", False) else os.path.dirname(argv[0])
 HOME_CONFIGURATION_DIR = path.join(Path.home(), settings.DEFAULT_CONFIG_DIRECTORY)
@@ -33,12 +34,6 @@ class ConfigValidationError(TypeError):
         self.errors = errors
         self.filetype = filetype
         self.filepath = filepath
-
-
-try:
-    yaml_validator = Validator(CONFIG_SCHEMA)
-except schema.SchemaError:
-    logging.exception("Failed to load configuration schema for yaml validator.")
 
 
 def get_config_dir() -> str:
@@ -101,25 +96,39 @@ def parse_env(obj):
     return obj
 
 
-def get_config(show_error_dialog: bool = False) -> dict[str, Any] | None:
+def get_config(show_error_dialog: bool = False) -> YasbConfig | None:
     config_path = get_config_path()
 
     try:
         with open(config_path, encoding="utf-8") as yaml_stream:
             config = safe_load(yaml_stream)
 
-        if yaml_validator.validate(config, CONFIG_SCHEMA):
-            return parse_env(yaml_validator.normalized(config))
-        else:
-            pretty_errors = dump(yaml_validator.errors)
-            logging.error(f"The config file '{config_path}' contains validation errors. Please fix:\n{pretty_errors}")
+        if config is None:
+            config = {}
+
+        try:
+            # Parse environment variables in raw config
+            config = parse_env(config)
+
+            # Validate and normalize with Pydantic
+            validated_config = YasbConfig(**cast(dict[str, Any], config if isinstance(config, dict) else {}))
+
+            # Return as dict for compatibility with the rest of the app
+            return validated_config
+
+        except ValidationError as e:
+            validation_errors = format_pydantic_errors_to_yaml(e)
+            logging.error(
+                f"The config file '{config_path}' contains validation errors. Please fix:\n{validation_errors}"
+            )
             if show_error_dialog:
                 raise_info_alert(
                     title="Failed to load recently updated config file.",
                     msg=f"The file '{config_path}' contains validation error(s) and has not been loaded.",
                     informative_msg="For more information, click 'Show Details'.",
-                    additional_details=pretty_errors,
+                    additional_details=validation_errors,
                 )
+            return None
     except ParserError as e:
         logging.error(f"The file '{config_path}' contains Parser Error(s). Please fix:\n{str(e)}")
     except FileNotFoundError:
@@ -151,7 +160,7 @@ def get_stylesheet(show_error_dialog: bool = False) -> str | None:
     return None
 
 
-def get_config_and_stylesheet() -> tuple[dict[str, Any], str]:
+def get_config_and_stylesheet() -> tuple[YasbConfig, str]:
     config = get_config()
     stylesheet = get_stylesheet()
     error_msg: str | None = None
@@ -160,7 +169,7 @@ def get_config_and_stylesheet() -> tuple[dict[str, Any], str]:
         error_msg = "User config file could not be loaded. Exiting Application."
     elif not stylesheet:
         error_msg = "User stylesheet could not be loaded. Exiting Application."
-    elif not config["bars"]:
+    elif not config.bars:
         error_msg = "No bars have been configured. Please edit the config to add a status bar."
     else:
         return config, stylesheet

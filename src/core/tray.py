@@ -63,15 +63,15 @@ class SystemTrayManager(QSystemTrayIcon):
         except Exception as e:
             logging.error(f"Error loading config: {e}")
             return
-        if config["komorebi"]:
-            self.komorebi_start = config["komorebi"]["start_command"]
-            self.komorebi_stop = config["komorebi"]["stop_command"]
-            self.komorebi_reload = config["komorebi"]["reload_command"]
+        if config and config.komorebi:
+            self.komorebi_start = config.komorebi.start_command
+            self.komorebi_stop = config.komorebi.stop_command
+            self.komorebi_reload = config.komorebi.reload_command
 
-        if config["glazewm"]:
-            self.glazewm_start = config["glazewm"]["start_command"]
-            self.glazewm_stop = config["glazewm"]["stop_command"]
-            self.glazewm_reload = config["glazewm"]["reload_command"]
+        if config and config.glazewm:
+            self.glazewm_start = config.glazewm.start_command
+            self.glazewm_stop = config.glazewm.stop_command
+            self.glazewm_reload = config.glazewm.reload_command
 
     def _load_favicon(self):
         # Get the current directory of the script

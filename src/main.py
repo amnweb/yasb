@@ -114,7 +114,7 @@ async def main_async(app: YASBApplication):
     # Initialize configuration early after the single instance check
     config, stylesheet = get_config_and_stylesheet()
 
-    if config["debug"]:
+    if config.debug:
         settings.DEBUG = True
         logging.info("Debug mode enabled.")
 
@@ -123,7 +123,7 @@ async def main_async(app: YASBApplication):
     manager.initialize_bars(init=True)
 
     # Initialise file watcher if needed
-    observer = create_observer(manager) if config["watch_config"] or config["watch_stylesheet"] else None
+    observer = create_observer(manager) if config.watch_config or config.watch_stylesheet else None
     if observer:
         observer.start()
 
@@ -135,12 +135,12 @@ async def main_async(app: YASBApplication):
     app.aboutToQuit.connect(stop_observer)
 
     # Build system tray icon
-    if config["show_systray"]:
+    if config.show_systray:
         tray_manager = SystemTrayManager(manager)
         tray_manager.show()
 
     # Initialize auto update service
-    if config["update_check"]:
+    if config.update_check:
         try:
             update_service = get_update_service()
             if update_service.is_update_supported():
