@@ -9,13 +9,10 @@ updates:
       timezone: "Etc/UTC"
     assignees:
       - "amnweb"
-    allow:
-      - dependency-name: "pyqt6"
-      - dependency-name: "pillow"
-      - dependency-name: "pycaw"
-      - dependency-name: "cx-freeze"
-      - dependency-name: "holidays"
-      - dependency-name: "icoextract"
+    groups:
+      winrt:
+        patterns:
+          - "winrt*"
     commit-message:
       prefix: "chore"
       include: "scope"
