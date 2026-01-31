@@ -23,6 +23,7 @@ class CSSProcessor:
         """
         if not self.css_content:
             return ""
+        self.imported_files = set()
         # Remove comments from the CSS content
         css = self._remove_comments(self.css_content)
         # Process @import statements and CSS variables
