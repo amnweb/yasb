@@ -126,13 +126,6 @@ class InputController:
         self._owner._stream_ui.set_ui_state(streaming=False)
         self._owner._chat_session.stream.in_progress = False
 
-    def handle_widget_cli(self, widget: str, screen: str):
-        if widget == "ai_chat":
-            current_screen = self._owner.window().screen() if self._owner.window() else None
-            current_screen_name = current_screen.name() if current_screen else None
-            if not screen or (current_screen_name and screen.lower() == current_screen_name.lower()):
-                self._owner._toggle_chat()
-
     def on_popup_destroyed(self, *args):
         if hasattr(self._owner, "input_edit"):
             self._owner._input_draft = self._owner.input_edit.toPlainText()
