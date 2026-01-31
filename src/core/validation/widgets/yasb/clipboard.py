@@ -4,7 +4,6 @@ DEFAULTS = {
     "class_name": "",
     "max_length": 30,
     "max_history": 50,
-    "data_path": "",
     "container_padding": {"top": 0, "left": 0, "bottom": 0, "right": 0},
     "animation": {"enabled": True, "type": "fadeInOut", "duration": 200},
     "menu": {
@@ -20,11 +19,7 @@ DEFAULTS = {
     },
     "icons": {
         "clipboard": "\udb80\udd4d",
-        "pin": "\udb81\udc03",
-        "unpin": "\udb82\udd31",
         "clear": "\uf1f8",
-        "persistent": "\udb80\udd93",
-        "temporary": "\udb85\ude43",
         "search_clear": "\uf00d",
     },
     "callbacks": {"on_left": "toggle_menu", "on_middle": "do_nothing", "on_right": "toggle_label"},
@@ -36,7 +31,6 @@ VALIDATION_SCHEMA = {
     "class_name": {"type": "string", "required": False, "default": DEFAULTS["class_name"]},
     "max_length": {"type": "integer", "required": False, "default": DEFAULTS["max_length"], "min": 5, "max": 100},
     "max_history": {"type": "integer", "required": False, "default": DEFAULTS["max_history"], "min": 10, "max": 500},
-    "data_path": {"type": "string", "required": False, "default": DEFAULTS["data_path"]},
     "container_padding": {
         "type": "dict",
         "required": False,
@@ -83,36 +77,10 @@ VALIDATION_SCHEMA = {
         "required": False,
         "schema": {
             "clipboard": {"type": "string", "default": DEFAULTS["icons"]["clipboard"]},
-            "pin": {"type": "string", "default": DEFAULTS["icons"]["pin"]},
-            "unpin": {"type": "string", "default": DEFAULTS["icons"]["unpin"]},
             "clear": {"type": "string", "default": DEFAULTS["icons"]["clear"]},
-            "persistent": {"type": "string", "default": DEFAULTS["icons"]["persistent"]},
-            "temporary": {"type": "string", "default": DEFAULTS["icons"]["temporary"]},
             "search_clear": {"type": "string", "default": DEFAULTS["icons"]["search_clear"]},
         },
         "default": DEFAULTS["icons"],
-    },
-    "label_shadow": {
-        "type": "dict",
-        "required": False,
-        "schema": {
-            "enabled": {"type": "boolean", "default": False},
-            "color": {"type": "string", "default": "black"},
-            "offset": {"type": "list", "default": [1, 1]},
-            "radius": {"type": "integer", "default": 3},
-        },
-        "default": {"enabled": False, "color": "black", "offset": [1, 1], "radius": 3},
-    },
-    "container_shadow": {
-        "type": "dict",
-        "required": False,
-        "schema": {
-            "enabled": {"type": "boolean", "default": False},
-            "color": {"type": "string", "default": "black"},
-            "offset": {"type": "list", "default": [1, 1]},
-            "radius": {"type": "integer", "default": 3},
-        },
-        "default": {"enabled": False, "color": "black", "offset": [1, 1], "radius": 3},
     },
     "callbacks": {
         "type": "dict",
