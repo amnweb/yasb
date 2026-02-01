@@ -452,7 +452,7 @@ class CopilotWidget(BaseWidget):
 
         if data.error:
             layout.addWidget(self._create_error_section(data.error))
-        elif data.total_requests or data.requests_by_model:
+        elif data.total_requests or data.requests_by_model or data.daily_usage:
             layout.addWidget(self._create_progress_section(data))
             layout.addWidget(self._create_spending_section(data))
             if data.requests_by_model:
