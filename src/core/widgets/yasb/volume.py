@@ -41,6 +41,7 @@ class VolumeWidget(BaseWidget):
         animation: dict[str, str],
         container_padding: dict[str, int],
         callbacks: dict[str, str],
+        keybindings: list = None,
         label_shadow: dict = None,
         container_shadow: dict = None,
         progress_bar: dict = None,

@@ -2,7 +2,7 @@ import ctypes
 import datetime
 
 from PyQt6 import QtCore, QtGui
-from PyQt6.QtCore import QPropertyAnimation, Qt, pyqtSignal
+from PyQt6.QtCore import QPropertyAnimation, Qt
 from PyQt6.QtGui import QCursor
 from PyQt6.QtWidgets import (
     QApplication,
@@ -17,7 +17,6 @@ from PyQt6.QtWidgets import (
 )
 
 from core.config import get_stylesheet
-from core.event_service import EventService
 from core.utils.utilities import add_shadow, is_windows_10, refresh_widget_style
 from core.utils.widgets.power_menu.power_commands import PowerOperations
 from core.utils.win32.win32_accent import Blur
@@ -111,7 +110,6 @@ class OverlayWidget(BaseStyledWidget, AnimatedWidget):
 
 class PowerMenuWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
-    handle_widget_cli = pyqtSignal(str, str)
 
     def __init__(
         self,
@@ -125,6 +123,7 @@ class PowerMenuWidget(BaseWidget):
         buttons: dict[str, list[str]],
         label_shadow: dict = None,
         container_shadow: dict = None,
+        keybindings: list = None,
     ):
         super().__init__(0, class_name="power-menu-widget")
 
@@ -165,18 +164,6 @@ class PowerMenuWidget(BaseWidget):
         self.callback_left = callbacks["on_left"]
 
         self.main_window = None
-
-        self._event_service = EventService()
-        self.handle_widget_cli.connect(self._handle_widget_cli)
-        self._event_service.register_event("handle_widget_cli", self.handle_widget_cli)
-
-    def _handle_widget_cli(self, widget: str, screen: str):
-        """Handle widget CLI commands"""
-        if widget == "powermenu":
-            current_screen = self.window().screen() if self.window() else None
-            current_screen_name = current_screen.name() if current_screen else None
-            if not screen or (current_screen_name and screen.lower() == current_screen_name.lower()):
-                self._show_main_window()
 
     def _show_main_window(self):
         if self.main_window and self.main_window.isVisible():

@@ -39,6 +39,7 @@ class MicrophoneWidget(BaseWidget):
         label_shadow: dict = None,
         container_shadow: dict = None,
         progress_bar: dict = None,
+        keybindings: list = None,
     ):
         super().__init__(class_name=f"microphone-widget {class_name}")
         self.audio_endpoint = None

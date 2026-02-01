@@ -1,6 +1,7 @@
 - [Home](./Home)
 - [Installation](./Installation)
 - [Configuration](./Configuration)
+- [Keybindings](./Keybindings)
 - [Styling](./Styling)
 - [YASB CLI](./CLI)
 - [FAQ](./FAQ)

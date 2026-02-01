@@ -12,6 +12,7 @@ DEFAULTS = {
     "gpu_thresholds": {"low": 30, "medium": 60, "high": 90},
     "hide_decimal": False,
     "units": "metric",
+    "keybindings": [],
 }
 
 VALIDATION_SCHEMA = {
@@ -126,4 +127,16 @@ VALIDATION_SCHEMA = {
     },
     "hide_decimal": {"type": "boolean", "default": DEFAULTS["hide_decimal"]},
     "units": {"type": "string", "default": DEFAULTS["units"], "allowed": ["metric", "imperial"]},
+    "keybindings": {
+        "type": "list",
+        "required": False,
+        "default": DEFAULTS["keybindings"],
+        "schema": {
+            "type": "dict",
+            "schema": {
+                "keys": {"type": "string", "required": True},
+                "action": {"type": "string", "required": True},
+            },
+        },
+    },
 }

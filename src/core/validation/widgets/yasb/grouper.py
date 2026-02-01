@@ -10,6 +10,7 @@ DEFAULTS = {
         "collapsed_label": "\uf053",
         "label_position": "right",
     },
+    "keybindings": [],
 }
 
 VALIDATION_SCHEMA = {
@@ -62,5 +63,17 @@ VALIDATION_SCHEMA = {
             "label_position": {"type": "string", "required": False},
         },
         "default": DEFAULTS["collapse_options"],
+    },
+    "keybindings": {
+        "type": "list",
+        "required": False,
+        "default": DEFAULTS["keybindings"],
+        "schema": {
+            "type": "dict",
+            "schema": {
+                "keys": {"type": "string", "required": True},
+                "action": {"type": "string", "required": True},
+            },
+        },
     },
 }

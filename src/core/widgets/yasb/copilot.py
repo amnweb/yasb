@@ -298,6 +298,7 @@ class CopilotWidget(BaseWidget):
         callbacks: dict[str, str],
         label_shadow: dict = None,
         container_shadow: dict = None,
+        keybindings: list = None,
     ):
         super().__init__(timer_interval=None, class_name="copilot-widget")
 

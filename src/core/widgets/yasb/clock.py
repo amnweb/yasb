@@ -351,6 +351,7 @@ class ClockWidget(BaseWidget):
         alarm_icons: dict[str, str] = None,
         label_shadow: dict = None,
         container_shadow: dict = None,
+        keybindings: list = None,
     ):
         super().__init__(update_interval, class_name=f"clock-widget {class_name}")
         self._locale = locale

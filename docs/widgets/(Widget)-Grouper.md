@@ -7,6 +7,7 @@
 | `container_shadow`  | dict    | `None`                                                    | Container shadow options.                                             |
 | `hide_empty`        | boolean | `False`                                                   | If true, the grouper widget will be hidden if all its child widgets are hidden. |
 | `collapse_options`  | dict    | See below                                                 | Options for collapsible grouper functionality.                        |
+| `keybindings`       | list    | `[]`                                                      | List of keybindings for widget actions.                               |
 
 ### Collapse Options
 
@@ -17,6 +18,11 @@
 | `expanded_label`    | string  | `"\uf054"`| Icon/label shown when grouper is expande. |
 | `collapsed_label`   | string  | `"\uf053"`| Icon/label shown when grouper is collapsed. |
 | `label_position`    | string  | `"right"` | Position of collapse button: `"left"` or `"right"`.                   |
+
+### Keybindings
+| Action            | Description                                      |
+|-------------------|--------------------------------------------------|
+| `toggle_collapse` | Toggle the collapsed/expanded state of the grouper. |
 
 ## Example Configuration
 
@@ -58,6 +64,25 @@ glazewm-grouper:
     ]
     collapse_options:
       enabled: false  # Disable collapse functionality
+
+systeminfo-grouper-with-keybindings:
+  type: "yasb.grouper.GrouperWidget"
+  options:
+    class_name: "systeminfo-grouper"
+    widgets: [
+      "memory",
+      "disk",
+      "battery"
+    ]
+    collapse_options:
+      enabled: true
+      exclude_widgets: ["battery"]
+      expanded_label: "\uf054"
+      collapsed_label: "\uf053"
+      label_position: "right"
+    keybindings:
+      - keys: "ctrl+g"
+        action: "toggle_collapse"
 ```
 
 ## Note on usage
@@ -92,6 +117,7 @@ widgets:
   - **expanded_label:** Icon or text displayed on the collapse button when the grouper is expanded.
   - **collapsed_label:** Icon or text displayed on the collapse button when the grouper is collapsed.
   - **label_position:** Where to place the collapse button relative to the grouped widgets (`"left"` or `"right"`).
+- **keybindings:** List of keybindings to trigger widget actions (e.g., `toggle_collapse`).
 
 ## Style
 

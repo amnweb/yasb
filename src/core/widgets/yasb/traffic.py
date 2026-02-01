@@ -40,6 +40,7 @@ class TrafficWidget(BaseWidget):
         menu: dict,
         label_shadow: dict,
         container_shadow: dict,
+        keybindings: list = None,
     ):
         super().__init__(class_name=f"traffic-widget {class_name}")
 

@@ -21,6 +21,7 @@ DEFAULTS = {
         "min": 4,
         "max": 9,
     },
+    "keybindings": [],
 }
 
 VALIDATION_SCHEMA = {
@@ -147,6 +148,18 @@ VALIDATION_SCHEMA = {
         "default": {
             "min": DEFAULTS["sgv_range"]["min"],
             "max": DEFAULTS["sgv_range"]["max"],
+        },
+    },
+    "keybindings": {
+        "type": "list",
+        "required": False,
+        "default": DEFAULTS["keybindings"],
+        "schema": {
+            "type": "dict",
+            "schema": {
+                "keys": {"type": "string", "required": True},
+                "action": {"type": "string", "required": True},
+            },
         },
     },
 }

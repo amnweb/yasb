@@ -97,6 +97,7 @@ class MediaWidget(BaseWidget):
         progress_bar: dict[str, Any],
         label_shadow: dict[str, Any],
         container_shadow: dict[str, Any],
+        keybindings: list = None,
     ):
         super().__init__(class_name=f"media-widget {class_name}")
         self._label_content = label

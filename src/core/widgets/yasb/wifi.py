@@ -43,6 +43,7 @@ class WifiWidget(BaseWidget):
         menu_config: dict[str, Any],
         label_shadow: dict[str, str],
         container_shadow: dict[str, str],
+        keybindings: list = None,
     ):
         super().__init__(update_interval, class_name=f"wifi-widget {class_name}")
         self._wifi_menu = WifiMenu(self, menu_config)

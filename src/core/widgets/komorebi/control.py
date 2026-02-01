@@ -53,6 +53,7 @@ class KomorebiControlWidget(BaseWidget):
         callbacks: dict[str, str],
         label_shadow: dict = None,
         container_shadow: dict = None,
+        keybindings: list = None,
     ):
         super().__init__(class_name="komorebi-control-widget")
 

@@ -41,6 +41,7 @@ class VSCodeWidget(BaseWidget):
         container_padding: dict[str, int],
         animation: dict[str, str],
         callbacks: dict[str, str],
+        keybindings: list = None,
         label_shadow: dict = None,
         container_shadow: dict = None,
     ):

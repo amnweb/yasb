@@ -35,6 +35,7 @@ class CpuWidget(BaseWidget):
         container_shadow: dict = None,
         progress_bar: dict = None,
         hide_decimal: bool = False,
+        keybindings: list = None,
     ):
         super().__init__(class_name=f"cpu-widget {class_name}")
         self._histogram_icons = histogram_icons

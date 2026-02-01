@@ -45,6 +45,7 @@ class NotesWidget(BaseWidget):
         callbacks: dict,
         label_shadow: dict = None,
         container_shadow: dict = None,
+        keybindings: list = None,
     ):
         super().__init__(class_name=f"notes-widget {class_name}")
         NotesWidget._instances.append(self)

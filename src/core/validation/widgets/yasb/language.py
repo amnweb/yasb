@@ -18,6 +18,7 @@ DEFAULTS = {
         "show_layout_icon": True,
     },
     "callbacks": {"on_left": "toggle_label", "on_middle": "do_nothing", "on_right": "do_nothing"},
+    "keybindings": [],
 }
 
 VALIDATION_SCHEMA = {
@@ -102,5 +103,17 @@ VALIDATION_SCHEMA = {
             },
         },
         "default": DEFAULTS["callbacks"],
+    },
+    "keybindings": {
+        "type": "list",
+        "required": False,
+        "default": DEFAULTS["keybindings"],
+        "schema": {
+            "type": "dict",
+            "schema": {
+                "keys": {"type": "string", "required": True},
+                "action": {"type": "string", "required": True},
+            },
+        },
     },
 }

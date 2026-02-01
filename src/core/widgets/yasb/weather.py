@@ -47,6 +47,7 @@ class WeatherWidget(BaseWidget):
         animation: dict[str, str],
         label_shadow: dict[str, Any],
         container_shadow: dict[str, Any],
+        keybindings: list = None,
     ):
         super().__init__(class_name=f"weather-widget {class_name}")
         self._label_content = label

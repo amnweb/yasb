@@ -36,6 +36,7 @@ class HomeWidget(BaseWidget):
         menu_list: list[str, dict[str]] = None,
         label_shadow: dict = None,
         container_shadow: dict = None,
+        keybindings: list = None,
     ):
         super().__init__(class_name="home-widget")
         self.power_operations = PowerOperations()

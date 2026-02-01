@@ -440,6 +440,7 @@ class TaskbarWidget(BaseWidget):
         label_shadow: dict = None,
         container_shadow: dict = None,
         preview: dict | None = None,
+        keybindings: list = None,
     ):
         super().__init__(class_name="taskbar-widget")
         self._dpi = None

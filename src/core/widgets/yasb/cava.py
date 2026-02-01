@@ -393,6 +393,7 @@ class CavaWidget(BaseWidget):
         edge_fade: int | list[int],
         container_padding: dict[str, int],
         callbacks: dict[str, str],
+        keybindings: list = None,
     ):
         super().__init__(class_name=f"cava-widget {class_name}")
         # Assign unique instance ID

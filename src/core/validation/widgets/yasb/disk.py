@@ -26,6 +26,7 @@ DEFAULTS = {
         "medium": 50,
         "high": 90,
     },
+    "keybindings": [],
 }
 
 VALIDATION_SCHEMA = {
@@ -147,5 +148,17 @@ VALIDATION_SCHEMA = {
             "high": {"type": "integer", "default": DEFAULTS["disk_thresholds"]["high"], "min": 0, "max": 100},
         },
         "default": DEFAULTS["disk_thresholds"],
+    },
+    "keybindings": {
+        "type": "list",
+        "required": False,
+        "default": DEFAULTS["keybindings"],
+        "schema": {
+            "type": "dict",
+            "schema": {
+                "keys": {"type": "string", "required": True},
+                "action": {"type": "string", "required": True},
+            },
+        },
     },
 }

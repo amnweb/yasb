@@ -42,7 +42,6 @@ from PyQt6.QtWidgets import (
 )
 
 from core.config import HOME_CONFIGURATION_DIR
-from core.event_service import EventService
 from core.utils.utilities import add_shadow, build_widget_label, refresh_widget_style
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.widgets.launchpad.app_loader import AppListLoader, ShortcutResolver
@@ -605,7 +604,6 @@ class TransparentOverlay(QWidget):
 
 class LaunchpadWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
-    handle_widget_cli = pyqtSignal(str, str)
 
     def __init__(
         self,
@@ -624,6 +622,7 @@ class LaunchpadWidget(BaseWidget):
         container_shadow: Dict = None,
         app_title_shadow: Dict = None,
         app_icon_shadow: Dict = None,
+        keybindings: list = None,
     ):
         super().__init__(class_name="launchpad-widget")
 
@@ -680,18 +679,6 @@ class LaunchpadWidget(BaseWidget):
         self.callback_left = callbacks["on_left"]
         self.callback_right = callbacks["on_right"]
         self.callback_middle = callbacks["on_middle"]
-
-        self._event_service = EventService()
-        self.handle_widget_cli.connect(self._handle_widget_cli)
-        self._event_service.register_event("handle_widget_cli", self.handle_widget_cli)
-
-    def _handle_widget_cli(self, widget: str, screen: str):
-        """Handle widget CLI commands"""
-        if widget == "launchpad":
-            current_screen = self.window().screen() if self.window() else None
-            current_screen_name = current_screen.name() if current_screen else None
-            if not screen or (current_screen_name and screen.lower() == current_screen_name.lower()):
-                self._toggle_launchpad()
 
     def _toggle_launchpad(self):
         if self._animation["enabled"]:

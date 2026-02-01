@@ -65,6 +65,7 @@ class ActiveLayoutWidget(BaseWidget):
         callbacks: dict[str, str],
         label_shadow: dict = None,
         container_shadow: dict = None,
+        keybindings: list = None,
     ):
         super().__init__(class_name="komorebi-active-layout")
         self._label = label

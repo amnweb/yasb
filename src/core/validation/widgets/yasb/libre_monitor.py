@@ -44,6 +44,7 @@ DEFAULTS = {
     },
     "container_padding": {"top": 0, "left": 0, "bottom": 0, "right": 0},
     "animation": {"enabled": True, "type": "fadeInOut", "duration": 200},
+    "keybindings": [],
 }
 
 VALIDATION_SCHEMA = {
@@ -151,6 +152,18 @@ VALIDATION_SCHEMA = {
             },
         },
         "default": DEFAULTS["callbacks"],
+    },
+    "keybindings": {
+        "type": "list",
+        "required": False,
+        "default": DEFAULTS["keybindings"],
+        "schema": {
+            "type": "dict",
+            "schema": {
+                "keys": {"type": "string", "required": True},
+                "action": {"type": "string", "required": True},
+            },
+        },
     },
     "libre_menu": {
         "type": "dict",

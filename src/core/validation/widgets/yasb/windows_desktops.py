@@ -4,6 +4,7 @@ DEFAULTS = {
     "switch_workspace_animation": True,
     "animation": False,
     "container_padding": {"top": 0, "left": 0, "bottom": 0, "right": 0},
+    "keybindings": [],
 }
 VALIDATION_SCHEMA = {
     "label_workspace_btn": {"type": "string", "default": DEFAULTS["label_workspace_btn"]},
@@ -46,5 +47,17 @@ VALIDATION_SCHEMA = {
             "right": {"type": "integer", "default": DEFAULTS["container_padding"]["right"]},
         },
         "default": DEFAULTS["container_padding"],
+    },
+    "keybindings": {
+        "type": "list",
+        "required": False,
+        "default": DEFAULTS["keybindings"],
+        "schema": {
+            "type": "dict",
+            "schema": {
+                "keys": {"type": "string", "required": True},
+                "action": {"type": "string", "required": True},
+            },
+        },
     },
 }

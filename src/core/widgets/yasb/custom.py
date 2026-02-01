@@ -76,6 +76,7 @@ class CustomWidget(BaseWidget):
         tooltip_label: str | None = None,
         label_shadow: dict | None = None,
         container_shadow: dict | None = None,
+        keybindings: list = None,
     ):
         super().__init__(exec_options["run_interval"], class_name=f"custom-widget {class_name}")
         self._label_max_length = label_max_length

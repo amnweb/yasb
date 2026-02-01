@@ -107,6 +107,7 @@ class GithubWidget(BaseWidget):
         container_padding: dict[str, int],
         label_shadow: dict = None,
         container_shadow: dict = None,
+        keybindings: list = None,
     ):
         super().__init__(timer_interval=None, class_name="github-widget")
         self._show_alt_label = False

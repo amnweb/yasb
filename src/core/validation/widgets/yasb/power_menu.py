@@ -6,6 +6,7 @@ DEFAULTS = {
     "animation_duration": 200,
     "button_row": 3,
     "container_padding": {"top": 0, "left": 0, "bottom": 0, "right": 0},
+    "keybindings": [],
 }
 
 VALIDATION_SCHEMA = {
@@ -60,6 +61,18 @@ VALIDATION_SCHEMA = {
             "hibernate": {"type": "list", "required": False},
             "force_shutdown": {"type": "list", "required": False},
             "force_restart": {"type": "list", "required": False},
+        },
+    },
+    "keybindings": {
+        "type": "list",
+        "required": False,
+        "default": DEFAULTS["keybindings"],
+        "schema": {
+            "type": "dict",
+            "schema": {
+                "keys": {"type": "string", "required": True},
+                "action": {"type": "string", "required": True},
+            },
         },
     },
 }

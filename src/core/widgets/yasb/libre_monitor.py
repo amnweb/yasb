@@ -42,6 +42,7 @@ class LibreHardwareMonitorWidget(BaseWidget):
         libre_menu: dict,
         label_shadow: dict = None,
         container_shadow: dict = None,
+        keybindings: list = None,
     ):
         super().__init__(update_interval, class_name=class_name)
         self._show_alt_label = False
