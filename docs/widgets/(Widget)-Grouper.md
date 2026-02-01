@@ -7,7 +7,6 @@
 | `container_shadow`  | dict    | `None`                                                    | Container shadow options.                                             |
 | `hide_empty`        | boolean | `False`                                                   | If true, the grouper widget will be hidden if all its child widgets are hidden. |
 | `collapse_options`  | dict    | See below                                                 | Options for collapsible grouper functionality.                        |
-| `keybindings`       | list    | `[]`                                                      | List of keybindings for widget actions.                               |
 
 ### Collapse Options
 
@@ -117,7 +116,6 @@ widgets:
   - **expanded_label:** Icon or text displayed on the collapse button when the grouper is expanded.
   - **collapsed_label:** Icon or text displayed on the collapse button when the grouper is collapsed.
   - **label_position:** Where to place the collapse button relative to the grouped widgets (`"left"` or `"right"`).
-- **keybindings:** List of keybindings to trigger widget actions (e.g., `toggle_collapse`).
 
 ## Style
 
