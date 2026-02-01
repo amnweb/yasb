@@ -93,9 +93,13 @@ class UpdateService:
         """Detect the current release channel from RELEASE_CHANNEL.
 
         Returns:
-            'dev' if running dev build, 'stable' otherwise
+            'dev' if running dev build, 'pr' if running PR build, 'stable' otherwise
         """
-        return "dev" if RELEASE_CHANNEL.startswith("dev-") else "stable"
+        if RELEASE_CHANNEL.startswith("dev-"):
+            return "dev"
+        if RELEASE_CHANNEL.startswith("pr-"):
+            return "pr"
+        return "stable"
 
     def _get_current_commit_hash(self) -> str:
         """Extract commit hash from dev RELEASE_CHANNEL.
@@ -400,7 +404,6 @@ def start_update_checker() -> None:
                 toaster = ToastNotifier()
 
                 # Determine launch URL and message based on channel
-                update_service = get_update_service()
                 if update_service._current_channel == "dev":
                     launch_url = "https://github.com/amnweb/yasb/releases/tag/dev"
                     message = "New dev build is available!"
