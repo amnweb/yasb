@@ -14,6 +14,7 @@ DEFAULTS = {
     "shortcuts": {"add_app": "Ctrl+N", "edit_app": "F2", "show_context_menu": "Shift+F10", "delete_app": "Delete"},
     "container_padding": {"top": 0, "left": 0, "bottom": 0, "right": 0},
     "callbacks": {"on_left": "toggle_launchpad", "on_right": "do_nothing", "on_middle": "do_nothing"},
+    "group_apps": False,
 }
 
 VALIDATION_SCHEMA = {
@@ -135,4 +136,5 @@ VALIDATION_SCHEMA = {
         },
         "default": {"enabled": False, "color": "black", "offset": [1, 1], "radius": 3},
     },
+    "group_apps": {"type": "boolean", "default": DEFAULTS["group_apps"]},
 }
