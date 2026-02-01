@@ -1,6 +1,6 @@
 # Clipboard Widget for YASB
 
-A lightweight, modern clipboard manager for YASB that integrates directly with the native Windows Clipboard History (Win + V). This widget provides real-time access to your system's clip buffer without the need for heavy local storage or complex background monitoring.
+A lightweight clipboard manager for YASB that integrates directly with the native Windows Clipboard History (Win + V). This widget provides real-time access to your system's clip buffer without the need for heavy local storage or complex background monitoring.
 
 **Note for Users:** This widget requires the following Python packages to interact with Windows APIs:
 `pip install winrt-Windows.ApplicationModel.DataTransfer winrt-Windows.Foundation`
@@ -8,9 +8,9 @@ A lightweight, modern clipboard manager for YASB that integrates directly with t
 ## Features
 - **Native Windows Sync**: Syncs in real-time with your official Windows Clipboard History.
 - **Search**: Built-in real-time search bar to filter through your text-based history.
+- **History**: View your Clipboard history and delete a single history item or your entire history.
 - **Image Support**: Full support for previewing and re-copying images directly from the history list.
 - **Long text preview**: Hover over a copied long piece of text to display complete text preview.
-- **Zero-SDK Footprint**: Uses modular WinRT bindings to keep the installation under 10MB.
 
 ## Options
 

@@ -3,7 +3,7 @@ import logging
 
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QIcon, QPixmap
-from PyQt6.QtWidgets import QLabel, QLineEdit, QPushButton, QScrollArea, QSizePolicy, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QPushButton, QScrollArea, QSizePolicy, QVBoxLayout, QWidget
 from winrt.windows.applicationmodel.datatransfer import Clipboard, DataPackage, StandardDataFormats
 
 from core.utils.utilities import PopupWidget, build_widget_label
@@ -165,12 +165,30 @@ class ClipboardPopup(PopupWidget):
         self._render_items(self._all_items)
 
     def _render_items(self, items):
+        # 1. Properly clear EVERYTHING (widgets and layouts)
         while self.container_layout.count():
-            child = self.container_layout.takeAt(0)
-            if child.widget():
-                child.widget().deleteLater()
+            item = self.container_layout.takeAt(0)
+            widget = item.widget()
+            if widget:
+                widget.deleteLater()
+            else:
+                # If it's a layout (the row), we need to clear its contents too
+                sub_layout = item.layout()
+                if sub_layout:
+                    while sub_layout.count():
+                        sub_item = sub_layout.takeAt(0)
+                        if sub_item.widget():
+                            sub_item.widget().deleteLater()
+                    sub_layout.deleteLater()
+
+        # 2. Re-render the items
+        if not items:
+            self.container_layout.addWidget(QLabel("No items match your search."))
+            return
 
         for item in items:
+            row = QHBoxLayout()
+
             btn = QPushButton()
             btn.setProperty("class", "clipboard-item")
             btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
@@ -186,7 +204,29 @@ class ClipboardPopup(PopupWidget):
                 btn.setText(" [Image]")
 
             btn.clicked.connect(lambda _, i=item: self._parent_widget.set_system_clipboard(i))
-            self.container_layout.addWidget(btn)
+
+            del_btn = QPushButton(self._icons["search_clear"])
+            del_btn.setFixedWidth(35)
+            del_btn.setStyleSheet("color: #e74c3c; font-weight: bold;")
+            del_btn.clicked.connect(lambda _, i=item: self._delete_item(i))
+
+            row.addWidget(btn)
+            row.addWidget(del_btn)
+            self.container_layout.addLayout(row)
+
+    def _delete_item(self, item_data):
+        """Removes a single item from Windows History"""
+        try:
+            # We pass the 'raw_item' stored during _fetch_and_show
+            success = Clipboard.delete_item_from_history(item_data["raw_item"])
+            if not success:
+                logging.warning("Windows refused to delete the item.")
+        except AttributeError:
+            logging.error("Single item deletion is not supported by this WinRT package.")
+
+        # Refresh the UI
+        self.close()
+        asyncio.create_task(self._parent_widget._fetch_and_show())
 
     def _filter_items(self, query):
         filtered = []
