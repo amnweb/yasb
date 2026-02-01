@@ -1,6 +1,6 @@
 # AI Chat Widget
 
-The AI Chat widget provides a flexible, interactive chat interface that works with any provider offering an OpenAI-compatible API (such as OpenAI, Ollama, LocalAI, and others). You can define multiple providers and models in your configuration, and switch between them at runtime—chat history is saved per provider/model combination.
+The AI Chat widget provides a flexible, interactive chat interface that works with any provider offering an OpenAI-compatible API (such as OpenAI, Ollama, LocalAI, and others) or GitHub Copilot via the Copilot CLI. You can define multiple providers and models in your configuration, and switch between them at runtime—chat history is saved per provider/model combination.
 
 
 | Option              | Type    | Default         | Description |
@@ -22,7 +22,7 @@ The AI Chat widget provides a flexible, interactive chat interface that works wi
 ai_chat:
   type: "yasb.ai_chat.AiChatWidget"
   options:
-    label: "<span>\uf086</span>"
+    label: "<span>\uDB81\uDE74</span>"
     chat:
       blur: true
       round_corners: true
@@ -33,13 +33,16 @@ ai_chat:
       offset_left: 0
       offset_top: 6
     icons:
-      attach: "\uf0c6"
+      attach: "\uf067"
       send: "\uf1d8"
       stop: "\uf04d"
       clear: "\uf1f8"
       assistant: "\udb81\ude74"
       float_on: "\udb84\udcac"
       float_off: "\udb84\udca9"
+      close: "\uf00d"
+      copy: "\uebcc"
+      copy_check: "\uf00c"
     start_floating: false
     notification_dot:
       enabled: false
@@ -55,6 +58,22 @@ ai_chat:
         models: 
         - name: "gemma3:1b"
           label: "Gemma3"
+      - provider: "GitHub Copilot"
+        provider_type: "copilot"
+        copilot_cli_url: "http://localhost:4321"
+      - provider: "Copilot"
+        provider_type: "copilot"
+        copilot_cli_url: "http://localhost:4321"
+        models:
+          - name: "gpt-4.1"
+            label: "Copilot GPT‑4.1"
+            default: true
+            max_image_size: 1024
+            max_attachment_size: 256
+            instructions: "C:/Users/amnweb/Desktop/copilot_chatmode.md"
+          - name: "gpt-4.1-mini"
+            label: "GPT‑4.1 Mini"
+            instructions: "You are a concise assistant."
       - provider: "OpenAI"
         api_endpoint: "https://api.openai.com/v1"
         credential: "dsfsfsfs65sd6f56sd5f6"
@@ -72,9 +91,27 @@ ai_chat:
           instructions: "C:/Users/amnweb/Desktop/custom_gpt_chatmode.md"
 
 ```
+> [!IMPORTANT]  
+> If you are using the installed version of YASB, make sure the Copilot CLI is installed and accessible in your system PATH.
+> And always use `copilot_cli_url` to connect to the Copilot CLI server, in that case, YASB can manage the CLI process properly.
+
+Copilot uses the Copilot CLI for auth, `api_endpoint/credential` are not used.  
+Copilot SDK does not document temperature, top_p, or max_tokens, so they are omitted.
+
+**Copilot CLI URL**
+Set `copilot_cli_url` to connect to a specific Copilot CLI server, e.g. `localhost:4321` or `192.167.123.22:5500`.
+
+- If `copilot_cli_url` is provided and points to localhost, YASB will start the CLI server in the background and connect to it.
+- If `copilot_cli_url` is provided and points to a remote host, YASB will only connect (no server start).
+- If `copilot_cli_url` is omitted or empty, YASB lets the SDK manage the CLI process by itself.
+
+**Copilot Models**
+If you don’t have defined models, YASB will fetch all available models from the Copilot API.
+To get list of available Copilot models enable debug in YASB config, start copilot to fetch models, and check the logs, it will list all available models.
 
 **Key features:**
 - Works with any API that returns OpenAI-compatible responses (chat/completions format)
+- GitHub Copilot support via Copilot CLI.
 - Supports multiple providers and models, selectable in the popup menu
 - API keys or credentials can be stored securely in environment variables or directly in the config file
 - Streaming responses with real-time updates
@@ -125,6 +162,9 @@ This widget is ideal for integrating any LLM service that follows the OpenAI API
   - **assistant**: Icon for the assistant avatar
   - **float_on**: Icon shown when floating can be enabled
   - **float_off**: Icon shown when floating can be disabled
+  - **close**: Icon for the close button in the header
+  - **copy**: Icon for the copy button on assistant messages
+  - **copy_check**: Icon shown after copying (feedback icon)
 - **notification_dot:** Dictionary for notification dot settings. This allows you to show a small dot indicating new messages when the chat is closed.
   - **enabled:** Enable notification dot.
   - **corner:** Set the corner where the dot should appear.
@@ -143,6 +183,7 @@ This widget is ideal for integrating any LLM service that follows the OpenAI API
 - **start_floating:** Open the chat popup in floating mode by default.
 - **providers:** List of provider configs. Each provider has:
   - **provider**: Name (e.g., "OpenAI")
+  - **provider_type**: Provider type (`"openai"` default, or `"copilot"`). Use `"copilot"` to enable GitHub Copilot auth (no `api_endpoint`/`credential` required).
   - **models**: List of models, each with:
     - **name**: Model name
     - **label**: Display label
@@ -172,14 +213,14 @@ If you want to use different styles for the context menu, you can target the `.a
 .ai-chat-popup.floating {} /* Floating popup container */
 .ai-chat-popup .chat-header {} /* Header of the chat popup */
 .ai-chat-popup .chat-header .float-button {} /* Floating toggle button */
+.ai-chat-popup .chat-header .close-button {} /* Close button */
+.ai-chat-popup .chat-header .loader-line {} /* Header loader line */
 .ai-chat-popup.floating .chat-header .float-button {} /* Floating toggle button when floating */
 .ai-chat-popup .chat-content {} /* Content of the chat popup */
 .ai-chat-popup .chat-footer {} /* Footer of the chat popup */
 
-.ai-chat-popup .chat-header .provider-label {} /* Provider label in header */
-.ai-chat-popup .chat-header .model-label {} /* Model label in header */
-.ai-chat-popup .chat-header .provider-button {} /* Provider selection button */
-.ai-chat-popup .chat-header .model-button {} /* Model selection button */
+.ai-chat-popup .chat-header .provider-button {} /* Provider selection dropdown */
+.ai-chat-popup .chat-header .model-button {} /* Model selection dropdown */
 
 /* Context menu */
 .ai-chat-popup .chat-header .context-menu {} /* Context menu for chat header */
@@ -193,10 +234,13 @@ If you want to use different styles for the context menu, you can target the `.a
 .ai-chat-popup .chat-content .user-message {} /* User message style */
 .ai-chat-popup .chat-content .assistant-message {} /* Assistant message style */
 .ai-chat-popup .chat-content .assistant-icon {} /* Icon for assistant messages */
+.ai-chat-popup .chat-content .copy-button {} /* Copy button for assistant messages */
 
 /* Input area */
 .ai-chat-popup .chat-footer .attach-button {} /* Attachment button */
-.ai-chat-popup .chat-footer .chat-input {} /* Input area for chat messages */
+.ai-chat-popup .chat-footer .chat-input-wrapper {} /* Wrapper for input (use for border, border-radius, background) */
+.ai-chat-popup .chat-footer .chat-input-wrapper.focused {} /* Wrapper when input is focused */
+.ai-chat-popup .chat-footer .chat-input {} /* Input text field (use for font styling) */
 .ai-chat-popup .chat-footer .send-button {} /* Send button in input area */
 .ai-chat-popup .chat-footer .stop-button {} /* Stop button in input area */
 .ai-chat-popup .chat-footer .clear-button {} /* Clear button in input area */
@@ -207,6 +251,12 @@ If you want to use different styles for the context menu, you can target the `.a
 .ai-chat-popup .attachment-remove-button {} /* Remove (x) button on chip */
 ```
 
+> [!NOTE]
+> The chat input uses a two-element structure for proper CSS `border-radius` support:
+> - `.chat-input-wrapper` — The outer wrapper (QFrame). Use this for `border`, `border-radius`, and `background-color`.
+> - `.chat-input` — The inner text field (QTextEdit). Use this for `font-family`, `font-size`, and `color`.
+> - `.chat-input-wrapper.focused` — Applied when the input has focus (use instead of `:focus` pseudo-class).
+
 
 ## Example CSS
 ```css
@@ -214,7 +264,7 @@ If you want to use different styles for the context menu, you can target the `.a
     padding: 0 6px 0 6px;
 }
 .ai-chat-widget .icon {
-    color: #89b4fa;
+    color: white;
     font-size: 16px;
 }
 .ai-chat-popup {
@@ -225,55 +275,64 @@ If you want to use different styles for the context menu, you can target the `.a
     max-height: 600px;
 }
 .ai-chat-popup.floating {
-  background-color: rgba(24, 25, 27, 0.4);
-  min-width: 900px;
-  max-width: 900px;
-  min-height: 700px;
-  max-height: 700px;
+    background-color: rgba(24, 25, 27, 0.9);
+    min-width: 1000px;
+    max-width: 1000px;
+    min-height: 800px;
+    max-height: 800px;
 }
 .ai-chat-popup .chat-header {
-    background-color: rgba(24, 25, 27, 0.4);
-    padding: 16px;
+    background-color: rgba(0, 0, 0, 0);
+    padding: 8px 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
-.ai-chat-popup .chat-header .float-button {
-  background-color: transparent;
-  border: none;
-  color: #cfcfcf;
-  font-size: 16px;
-  padding: 3px 6px;
-  border-radius: 4px;
+.ai-chat-popup .chat-header .loader-line {
+    color: #2d8fff;
+ }
+.ai-chat-popup .chat-header .float-button,
+.ai-chat-popup .chat-header .close-button {
+    background-color: transparent;
+    font-family: "JetBrainsMono NFP";
+    border: none;
+    color: #cfcfcf;
+    font-weight: 400;
+    font-size: 16px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    margin-left: 4px;
 }
-.ai-chat-popup .chat-header .float-button:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-}
-.ai-chat-popup.floating .chat-header .float-button {
-  color: #ffffff;
-}
+.ai-chat-popup.floating .chat-header .float-button:hover,
+.ai-chat-popup.floating .chat-header .close-button:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+} 
 .ai-chat-popup .chat-footer {
-    background-color: rgba(24, 25, 27, 0);
+    background-color: rgba(24, 60, 134, 0);
     padding: 16px;
- 
-}
-.ai-chat-popup .chat-header .provider-label,
-.ai-chat-popup .chat-header .model-label {
-    font-family: 'Segoe UI';
-    font-size: 14px;
-    color: #ffffff;
-    margin-right: 8px;
-    font-weight: 600;
 }
 .ai-chat-popup .chat-header .provider-button,
 .ai-chat-popup .chat-header .model-button {
-    font-family: 'Segoe UI';
-    background-color: #202020;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    font-size: 13px;
+    font-family: "Segoe UI Variable","Segoe UI";
+    background-color: #252525;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    font-size: 12px;
     color: #ffffff;
     margin-right: 8px;
     min-width: 130px;
-    max-width: 130px;
-    border-radius: 6px;
+    max-width: 230px;
+    border-radius: 4px;
     padding: 4px 10px;
+    margin-bottom: 8px;
+    margin-top: 8px;
+}
+.ai-chat-popup .chat-header .provider-button:hover,
+.ai-chat-popup .chat-header .model-button:hover {
+    background-color: #2c2c2c;
+    border-color: #3a3a3a;
+}
+.ai-chat-popup .chat-header .provider-button:pressed,
+.ai-chat-popup .chat-header .model-button:pressed {
+    background-color: #3a3a3a;
+    border-color: #4a4a4a;
 }
 .ai-chat-popup .chat-header .provider-button:disabled,
 .ai-chat-popup .chat-header .model-button:disabled {
@@ -282,31 +341,31 @@ If you want to use different styles for the context menu, you can target the `.a
 
 /* Context menu styles for header and chat content */
 .ai-chat-popup .context-menu {
-    background-color: #202020;
+    background-color: #2c2c2c;
     border: none;
-    padding: 4px 0px;
-    font-family: 'Segoe UI';
+    padding: 6px 0px;
+    font-family: "Segoe UI Variable","Segoe UI";
     font-size: 12px;
     color: #FFFFFF;
+     
 }
 .ai-chat-popup .context-menu::separator {
     height: 1px;
     background-color: #404040;
     margin: 4px 8px;
 }
- 
+
 .ai-chat-popup .context-menu::item {
     background-color: transparent;
-    padding: 6px 12px;
-    margin: 2px 6px;
+    margin: 2px 8px;
     border-radius: 4px;
     min-width: 100px;
+ 
 }
 /* Context menu item styles for header dropdown */
 .ai-chat-popup .chat-header .context-menu::item {
     min-width: 130px;
-    max-width: 130px;
-    padding: 4px;
+    padding: 8px 12px
 }
 .ai-chat-popup .context-menu::item:disabled {
     color: #666666;
@@ -316,11 +375,12 @@ If you want to use different styles for the context menu, you can target the `.a
     color: #FFFFFF;
 }
 .ai-chat-popup .context-menu::item:checked {
-    background-color: #0078d7;
+    background-color: #2074d4;
     color: #FFFFFF;
 }
- 
-
+.ai-chat-popup .context-menu::item:pressed {
+    background-color: #3A3A3A;
+}
 .ai-chat-popup .chat-content {
     background-color: rgba(206, 10, 10, 0);
     border: none;
@@ -328,7 +388,7 @@ If you want to use different styles for the context menu, you can target the `.a
 .ai-chat-popup .chat-content .empty-chat .greeting,
 .ai-chat-popup .chat-content .empty-chat .message {
     color: rgba(255, 255, 255, 0.8);
-    font-family: 'Segoe UI';
+    font-family: "Segoe UI Variable","Segoe UI";
     font-size: 48px;
     font-weight: 600;
 }
@@ -340,20 +400,26 @@ If you want to use different styles for the context menu, you can target the `.a
 }
 .ai-chat-popup .chat-content .user-message,
 .ai-chat-popup .chat-content .assistant-message {
-    color: #ffffff;
-    padding: 8px;
-    border-radius: 4px;
-    margin: 4px 0;
-    font-family: 'Segoe UI';
+    padding: 12px;
+    border-radius: 8px;
+    margin: 4px 0
+}
+
+.ai-chat-popup .chat-content .user-message .text,
+.ai-chat-popup .chat-content .assistant-message .text {
+    font-family: "Segoe UI Variable","Segoe UI";
     font-size: 14px;
+    color: #e4ebee;
 }
 .ai-chat-popup .chat-content .user-message {
     margin-left: 26px;
+ 
 }
 .ai-chat-popup .chat-content .assistant-message {
-    background-color: rgba(162, 168, 187, 0.1);
+    background-color: #222222;
     border: 1px solid rgba(255, 255, 255, 0.1);
 }
+ 
 .ai-chat-popup .chat-content .assistant-icon {
     font-size: 24px;
     color: #8c8d92;
@@ -361,27 +427,31 @@ If you want to use different styles for the context menu, you can target the `.a
     font-family: "JetBrainsMono NFP";
 }
 
+ .ai-chat-popup .chat-footer .chat-input-wrapper {
+    background-color: rgba(37, 37, 37, 0.4);
+    border: 1px solid #3f3f3f;
+    border-radius: 8px;
+    max-height: 32px;
+    min-height: 32px;
+    padding: 5px 8px 3px 8px;
+}
+ 
 .ai-chat-popup .chat-footer .chat-input {
-    background-color: rgba(24, 25, 27, 0.6);
-    border: 2px solid  #646464;
-    border-radius: 4px;
-    padding: 0 8px;
-    font-family: 'Segoe UI';
+    font-family: "Segoe UI Variable","Segoe UI";
     font-size: 14px;
     color: #ffffff;
-    max-height: 28px;
-    min-height: 28px;
+
 }
-.ai-chat-popup .chat-footer .chat-input:focus {
+.ai-chat-popup .chat-footer .chat-input-wrapper.focused {
     border-color: #0078d7;
 }
+ 
 .ai-chat-popup .chat-footer .clear-button,
 .ai-chat-popup .chat-footer .send-button,
 .ai-chat-popup .chat-footer .stop-button,
 .ai-chat-popup .chat-footer .attach-button {
-    background-color: #2d2d2d;
     color: #ffffff;
-    font-size: 12px;
+    font-size: 16px;
     max-width: 30px;
     min-width: 30px;
     max-height: 30px;
@@ -397,29 +467,30 @@ If you want to use different styles for the context menu, you can target the `.a
 .ai-chat-popup .chat-footer .send-button:hover,
 .ai-chat-popup .chat-footer .stop-button:hover,
 .ai-chat-popup .chat-footer .attach-button:hover {
-    background-color: #464646;
+    background-color: #333333;
 }
 .ai-chat-popup .chat-footer .clear-button:disabled,
 .ai-chat-popup .chat-footer .send-button:disabled,
 .ai-chat-popup .chat-footer .stop-button:disabled,
 .ai-chat-popup .chat-footer .attach-button:disabled {
-    background-color: #2d2d2d;
     color: #818181;
 }
 .ai-chat-popup .attachment-chip {
-    background-color: #0066ff18;
-    border: 1px solid #0066ff54;
+    background-color: #10233f;
+    border: 1px solid #1c3253;
     border-radius: 6px;
     min-height: 28px;
+ 
 } 
 .ai-chat-popup .attachment-chip .attachment-label {
-    font-family: "Segoe UI";
+    font-family: "Segoe UI Variable","Segoe UI";
+    color: #95a4b9;
     font-size: 12px;
-    font-weight: 600;
     padding: 0 4px;
 }
 .ai-chat-popup .attachment-chip .attachment-remove-button {
     font-size: 12px;
+    font-family: "Segoe UI Variable","Segoe UI";
     background-color: transparent;
     border: none;
 }

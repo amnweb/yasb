@@ -12,12 +12,25 @@ from threading import Lock
 from typing import Any, TypeGuard, cast, override
 
 from PyQt6 import sip
-from PyQt6.QtCore import QEvent, QObject, QPoint, QPropertyAnimation, QRect, QSize, Qt, QTimer, pyqtSlot
+from PyQt6.QtCore import (
+    QEasingCurve,
+    QEvent,
+    QObject,
+    QPoint,
+    QPropertyAnimation,
+    QRect,
+    QSize,
+    Qt,
+    QTimer,
+    pyqtProperty,
+    pyqtSlot,
+)
 from PyQt6.QtGui import (
     QColor,
     QFontMetrics,
     QPainter,
     QPaintEvent,
+    QPalette,
     QResizeEvent,
     QScreen,
     QStaticText,
@@ -230,6 +243,168 @@ def refresh_widget_style(*widgets: QWidget) -> None:
             style.polish(widget)
         except Exception:
             pass
+
+
+class LoaderLine(QWidget):
+    """An animated horizontal loading indicator that displays a sliding segment.
+
+    The loader can be attached to any widget and will automatically position
+    itself at the bottom edge, resizing when the parent widget changes size.
+
+    Example:
+        loader = LoaderLine(parent)
+        loader.configure(
+            class_name="my-loader",
+            height=2,
+            duration_ms=1800,
+            segment_ratio=0.25,
+            easing=QEasingCurve.Type.Linear
+        )
+        loader.attach_to_widget(target_widget)
+        loader.start()
+
+    Attributes:
+        offset (pyqtProperty[float]): Animation progress from 0.0 to 1.0.
+
+    """
+
+    def __init__(self, parent: QWidget | None = None):
+        """Initialize the loader line widget.
+
+        Args:
+            parent: Optional parent widget.
+        """
+        super().__init__(parent)
+        self._offset = 0.0
+        self._segment_ratio = 0.18
+        self._animation = QPropertyAnimation(self, b"offset", self)
+        self._animation.setDuration(2400)
+        self._animation.setStartValue(0.0)
+        self._animation.setEndValue(1.0)
+        self._animation.setLoopCount(-1)
+        self._animation.setEasingCurve(QEasingCurve.Type.InOutSine)
+        self.setFixedHeight(1)
+        self.setVisible(False)
+        self._target_widget: QWidget | None = None
+        self._auto_position_enabled = False
+        self.setProperty("class", "loader-line")
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+        self.raise_()
+
+    def configure(
+        self,
+        class_name: str | None = None,
+        duration_ms: int | None = None,
+        easing: QEasingCurve.Type | None = None,
+        segment_ratio: float | None = None,
+        height: int | None = None,
+    ) -> None:
+        """Configure style and animation settings.
+
+        All parameters are optional. When omitted, current defaults remain unchanged.
+
+        Args:
+            class_name: CSS class name for styling (default: "loader-line").
+            duration_ms: Animation cycle duration in milliseconds (default: 2400).
+            easing: Animation easing curve type (default: QEasingCurve.Type.InOutSine).
+            segment_ratio: Width of the sliding segment as a ratio of total width (default: 0.18).
+            height: Fixed height of the loader in pixels (default: 1).
+        """
+        if class_name:
+            self.setProperty("class", class_name)
+        if duration_ms is not None:
+            self._animation.setDuration(duration_ms)
+        if easing is not None:
+            self._animation.setEasingCurve(easing)
+        if segment_ratio is not None:
+            self._segment_ratio = segment_ratio
+        if height is not None:
+            self.setFixedHeight(height)
+            self._position_in_widget()
+
+    def attach_to_widget(self, target_widget: QWidget) -> None:
+        """Attach to a widget and auto-position at the bottom edge.
+
+        Args:
+            target_widget: The widget to attach to. The loader will be reparented
+                to this widget and positioned at its bottom edge.
+        """
+        if not target_widget:
+            return
+        self._target_widget = target_widget
+        if self.parent() is not target_widget:
+            self.setParent(target_widget)
+        self._auto_position_enabled = True
+        target_widget.installEventFilter(self)
+        target_widget.destroyed.connect(lambda: self.detach_from_widget())
+        QTimer.singleShot(0, self._position_in_widget)
+
+    def detach_from_widget(self) -> None:
+        """Detach from the current target widget and stop auto-positioning."""
+        if self._target_widget and is_valid_qobject(self._target_widget):
+            try:
+                self._target_widget.removeEventFilter(self)
+            except Exception:
+                pass
+        self._target_widget = None
+        self._auto_position_enabled = False
+
+    def _position_in_widget(self) -> None:
+        target_widget = self._target_widget
+        if not target_widget or not is_valid_qobject(target_widget):
+            return
+        try:
+            h = self.maximumHeight()
+            if h <= 0 or h >= 10000:
+                h = self.height() or self.sizeHint().height() or 2
+            self.setGeometry(0, target_widget.height() - h, target_widget.width(), h)
+        except RuntimeError:
+            pass
+
+    def eventFilter(self, obj: QObject, event: QEvent):
+        if self._auto_position_enabled and obj is self._target_widget and event.type() == QEvent.Type.Resize:
+            self._position_in_widget()
+        return super().eventFilter(obj, event)
+
+    def start(self) -> None:
+        """Start the loading animation and make the widget visible."""
+        if self._animation.state() == QPropertyAnimation.State.Running:
+            return
+        self._offset = 0.0
+        self.setVisible(True)
+        self._animation.start()
+
+    def stop(self) -> None:
+        """Stop the loading animation and hide the widget."""
+        if self._animation.state() == QPropertyAnimation.State.Running:
+            self._animation.stop()
+        self.setVisible(False)
+        self.update()
+
+    def getOffset(self) -> float:
+        return self._offset
+
+    def setOffset(self, value: float) -> None:
+        self._offset = value
+        self.update()
+
+    offset = pyqtProperty(float, fget=getOffset, fset=setOffset)
+
+    def paintEvent(self, event: QPaintEvent):
+        if not self.isVisible():
+            return
+        w = self.width()
+        h = self.height()
+        if w <= 0 or h <= 0:
+            return
+        phase = min(max(self._offset, 0.0), 1.0)
+        size_scale = 0.2 + 1.2 * (1 - (2 * phase - 1) ** 2)
+        segment_w = max(6, int(w * self._segment_ratio * size_scale))
+        x = int((w + segment_w) * self._offset) - segment_w
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        line_color = self.palette().color(QPalette.ColorRole.WindowText)
+        painter.fillRect(x, 0, segment_w, h, QColor(line_color))
 
 
 def build_widget_label(self, content: str, content_alt: str = None, content_shadow: dict = None):

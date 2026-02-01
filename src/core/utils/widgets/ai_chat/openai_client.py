@@ -4,7 +4,7 @@ Ai Chat API client for config-driven providers (using OpenAI client only)
 
 import logging
 
-from core.utils.widgets.ai_chat.client_helper import maybe_answer_yasb_question
+from core.utils.widgets.ai_chat.constants import DEFAULT_TIMEOUT_SECONDS, OPENAI_CHUNK_BATCH
 
 logging.getLogger("openai").setLevel(logging.WARNING)
 logging.getLogger("httpx").setLevel(logging.WARNING)
@@ -48,11 +48,6 @@ class AiChatClient:
 
     def chat(self, messages: list, temperature: float, top_p: float):
         self._cancelled = False
-        # Check if the last message is a YASB-specific question
-        answer = maybe_answer_yasb_question(messages)
-        if answer is not None:
-            yield answer
-            return
 
         try:
             self._response = self.client.chat.completions.create(
@@ -62,7 +57,7 @@ class AiChatClient:
                 temperature=temperature,
                 top_p=top_p,
                 max_tokens=self.max_tokens,
-                timeout=20,
+                timeout=DEFAULT_TIMEOUT_SECONDS,
             )
             response = self._response
             chunk_buffer = ""
@@ -78,8 +73,8 @@ class AiChatClient:
                 if content:
                     chunk_buffer += content
                     chunk_count += 1
-                    # Send buffered content every 50 chunks
-                    if chunk_count >= 50:
+                    # Send buffered content every N chunks
+                    if chunk_count >= OPENAI_CHUNK_BATCH:
                         yield chunk_buffer
                         chunk_buffer = ""
                         chunk_count = 0
@@ -103,5 +98,5 @@ class AiChatClient:
                 friendly = "Request timed out: Please try again."
             else:
                 friendly = None
-            msg = f"[Error: {friendly}]" if friendly else f"[Error: {err_str}]"
-            yield msg
+            logging.error(friendly if friendly else err_str)
+            raise Exception(friendly if friendly else err_str)

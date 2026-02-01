@@ -18,6 +18,9 @@ DEFAULTS = {
         "attach": "\uf0c6",
         "float_on": "\udb84\udcac",
         "float_off": "\udb84\udca9",
+        "close": "\uf00d",
+        "copy": "\uebcc",
+        "copy_check": "\uf00c",
     },
     "notification_dot": {
         "enabled": True,
@@ -78,6 +81,9 @@ VALIDATION_SCHEMA = {
             "attach": {"type": "string", "default": DEFAULTS["icons"]["attach"]},
             "float_on": {"type": "string", "default": DEFAULTS["icons"]["float_on"]},
             "float_off": {"type": "string", "default": DEFAULTS["icons"]["float_off"]},
+            "close": {"type": "string", "default": DEFAULTS["icons"]["close"]},
+            "copy": {"type": "string", "default": DEFAULTS["icons"]["copy"]},
+            "copy_check": {"type": "string", "default": DEFAULTS["icons"]["copy_check"]},
         },
         "default": DEFAULTS["icons"],
     },
@@ -161,33 +167,90 @@ VALIDATION_SCHEMA = {
         "required": True,
         "schema": {
             "type": "dict",
-            "schema": {
-                "provider": {"type": "string", "required": True},
-                "api_endpoint": {"type": "string", "required": True},
-                "credential": {"type": "string", "required": True},
-                "models": {
-                    "type": "list",
-                    "required": True,
+            "anyof": [
+                {
                     "schema": {
-                        "type": "dict",
-                        "schema": {
-                            "name": {"type": "string", "required": True},
-                            "label": {"type": "string", "required": True},
-                            "default": {"type": "boolean", "required": False, "default": False},
-                            "max_tokens": {"type": "integer", "required": False, "default": 0},
-                            "temperature": {"type": "number", "required": False, "default": 0.7},
-                            "top_p": {"type": "number", "required": False, "default": 0.95},
-                            "max_image_size": {"type": "integer", "required": False, "default": 0, "min": 0},
-                            "max_attachment_size": {"type": "integer", "required": False, "default": 256, "min": 0},
-                            "instructions": {
-                                "type": "string",
-                                "required": False,
-                                "regex": ".*_chatmode\\.md$",
+                        "provider": {"type": "string", "required": True},
+                        "provider_type": {
+                            "type": "string",
+                            "required": False,
+                            "default": "openai",
+                            "allowed": ["openai"],
+                        },
+                        "api_endpoint": {"type": "string", "required": True},
+                        "credential": {"type": "string", "required": True},
+                        "models": {
+                            "type": "list",
+                            "required": True,
+                            "schema": {
+                                "type": "dict",
+                                "schema": {
+                                    "name": {"type": "string", "required": True},
+                                    "label": {"type": "string", "required": True},
+                                    "default": {"type": "boolean", "required": False, "default": False},
+                                    "max_tokens": {"type": "integer", "required": False, "default": 0},
+                                    "temperature": {"type": "number", "required": False, "default": 0.7},
+                                    "top_p": {"type": "number", "required": False, "default": 0.95},
+                                    "max_image_size": {
+                                        "type": "integer",
+                                        "required": False,
+                                        "default": 0,
+                                        "min": 0,
+                                    },
+                                    "max_attachment_size": {
+                                        "type": "integer",
+                                        "required": False,
+                                        "default": 256,
+                                        "min": 0,
+                                    },
+                                    "instructions": {"type": "string", "required": False},
+                                },
                             },
                         },
                     },
                 },
-            },
+                {
+                    "schema": {
+                        "provider": {"type": "string", "required": True},
+                        "provider_type": {
+                            "type": "string",
+                            "required": True,
+                            "allowed": ["copilot"],
+                        },
+                        "copilot_cli_url": {"type": "string", "required": False},
+                        "api_endpoint": {"type": "string", "required": False},
+                        "credential": {"type": "string", "required": False},
+                        "models": {
+                            "type": "list",
+                            "required": False,
+                            "schema": {
+                                "type": "dict",
+                                "schema": {
+                                    "name": {"type": "string", "required": True},
+                                    "label": {"type": "string", "required": True},
+                                    "default": {"type": "boolean", "required": False, "default": False},
+                                    "max_tokens": {"type": "integer", "required": False, "default": 0},
+                                    "temperature": {"type": "number", "required": False, "default": 0.7},
+                                    "top_p": {"type": "number", "required": False, "default": 0.95},
+                                    "max_image_size": {
+                                        "type": "integer",
+                                        "required": False,
+                                        "default": 0,
+                                        "min": 0,
+                                    },
+                                    "max_attachment_size": {
+                                        "type": "integer",
+                                        "required": False,
+                                        "default": 256,
+                                        "min": 0,
+                                    },
+                                    "instructions": {"type": "string", "required": False},
+                                },
+                            },
+                        },
+                    },
+                },
+            ],
         },
     },
 }
