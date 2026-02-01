@@ -260,10 +260,17 @@ class UsageChartWidget(QFrame):
         tension = 0.3
         for i in range(len(pts) - 1):
             p0, p1, p2, p3 = pts[max(0, i - 1)], pts[i], pts[i + 1], pts[min(len(pts) - 1, i + 2)]
+
             cp1_x = p1.x() + (p2.x() - p0.x()) * tension
             cp1_y = p1.y() + (p2.y() - p0.y()) * tension
             cp2_x = p2.x() - (p3.x() - p1.x()) * tension
             cp2_y = p2.y() - (p3.y() - p1.y()) * tension
+
+            min_y = min(p1.y(), p2.y())
+            max_y = max(p1.y(), p2.y())
+            cp1_y = max(min_y, min(cp1_y, max_y))
+            cp2_y = max(min_y, min(cp2_y, max_y))
+
             path.cubicTo(cp1_x, cp1_y, cp2_x, cp2_y, p2.x(), p2.y())
         return path
 

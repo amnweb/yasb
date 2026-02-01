@@ -2,6 +2,7 @@
 GitHub Copilot API client for fetching premium request usage data.
 """
 
+import calendar
 import json
 import logging
 import os
@@ -152,7 +153,7 @@ class CopilotDataManager:
 
                 # Fetch daily data in parallel (only if chart enabled)
                 if cls._chart_enabled:
-                    usage_data.daily_usage = self._fetch_daily_data_parallel(now)
+                    usage_data.daily_usage = self._fetch_daily_data_parallel(now, data)
                 usage_data.last_updated = now
                 cls._data = usage_data
             elif status_code == 403:
@@ -222,17 +223,28 @@ class CopilotDataManager:
 
         return usage_data
 
-    def _fetch_daily_data_parallel(self, now: datetime) -> list[dict[str, Any]]:
-        """Fetch daily usage data, using cache for past days."""
+    def _fetch_daily_data_parallel(self, now: datetime, monthly_data: dict[str, Any]) -> list[dict[str, Any]]:
+        """Fetch daily usage data for the full month."""
         cls = CopilotDataManager
-        year, month, current_day = now.year, now.month, now.day
+
+        # Get the actual month from API response's timePeriod
+        time_period = monthly_data.get("timePeriod", {})
+        year = time_period.get("year", now.year)
+        month = time_period.get("month", now.month)
+        current_day = now.day
+
+        # If API returned a different month than requested, use the full month
+        if (year, month) != (now.year, now.month):
+            current_day = calendar.monthrange(year, month)[1]
+
+        days_in_month = calendar.monthrange(year, month)[1]
 
         # Clear cache if month changed
         cache_month_key = f"{year}-{month:02d}"
         if cls._daily_cache and not any(k.startswith(cache_month_key) for k in cls._daily_cache):
             cls._daily_cache.clear()
 
-        # Determine which days need fetching (today always, past days only if not cached)
+        # Determine which days need fetching
         days_to_fetch = []
         for day in range(1, current_day + 1):
             date_str = f"{year}-{month:02d}-{day:02d}"
@@ -260,14 +272,16 @@ class CopilotDataManager:
                     date_str, requests = future.result()
                     cls._daily_cache[date_str] = requests
 
-        # Build result from cache
-        return [
+        # Build result for ALL days in the detected month
+        result = [
             {
                 "date": f"{year}-{month:02d}-{day:02d}",
-                "requests": cls._daily_cache.get(f"{year}-{month:02d}-{day:02d}", 0),
+                "requests": cls._daily_cache.get(f"{year}-{month:02d}-{day:02d}", 0) if day <= current_day else 0,
             }
-            for day in range(1, current_day + 1)
+            for day in range(1, days_in_month + 1)
         ]
+
+        return result
 
     def _notify_callbacks(self) -> None:
         """Notify all registered callbacks."""
