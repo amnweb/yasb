@@ -45,6 +45,7 @@ class LanguageWidget(BaseWidget):
         language_menu: dict[str, str] = None,
         label_shadow: dict = None,
         container_shadow: dict = None,
+        keybindings: list = None,
     ):
         super().__init__(int(update_interval * 1000), class_name=f"language-widget {class_name}")
 

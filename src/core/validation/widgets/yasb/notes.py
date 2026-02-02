@@ -23,6 +23,7 @@ DEFAULTS = {
         "copy": "\uebcc",
     },
     "callbacks": {"on_left": "toggle_menu", "on_middle": "do_nothing", "on_right": "toggle_label"},
+    "keybindings": [],
 }
 
 VALIDATION_SCHEMA = {
@@ -113,5 +114,17 @@ VALIDATION_SCHEMA = {
             "on_right": {"type": "string", "default": DEFAULTS["callbacks"]["on_right"]},
         },
         "default": DEFAULTS["callbacks"],
+    },
+    "keybindings": {
+        "type": "list",
+        "required": False,
+        "default": DEFAULTS["keybindings"],
+        "schema": {
+            "type": "dict",
+            "schema": {
+                "keys": {"type": "string", "required": True},
+                "action": {"type": "string", "required": True},
+            },
+        },
     },
 }

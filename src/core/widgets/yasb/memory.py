@@ -33,6 +33,7 @@ class MemoryWidget(BaseWidget):
         container_shadow: dict = None,
         progress_bar: dict = None,
         hide_decimal: bool = False,
+        keybindings: list = None,
     ):
         super().__init__(class_name=f"memory-widget {class_name}")
         self._memory_thresholds = memory_thresholds

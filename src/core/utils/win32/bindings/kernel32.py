@@ -134,6 +134,12 @@ kernel32.FormatMessageW.restype = DWORD
 kernel32.GetCurrentThreadId.argtypes = []
 kernel32.GetCurrentThreadId.restype = DWORD
 
+kernel32.GetModuleHandleW.argtypes = [LPCWSTR]
+kernel32.GetModuleHandleW.restype = HANDLE
+
+kernel32.GetLastError.argtypes = []
+kernel32.GetLastError.restype = DWORD
+
 # GetSystemPowerStatus - Battery/power status
 kernel32.GetSystemPowerStatus.argtypes = [POINTER(SYSTEM_POWER_STATUS)]
 kernel32.GetSystemPowerStatus.restype = BOOL
@@ -282,3 +288,11 @@ def FormatMessage(
 
 def GetCurrentThreadId() -> int:
     return int(kernel32.GetCurrentThreadId())
+
+
+def GetModuleHandle(lpModuleName: str | None) -> int:
+    return kernel32.GetModuleHandleW(lpModuleName)
+
+
+def GetLastError() -> int:
+    return int(kernel32.GetLastError())

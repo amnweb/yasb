@@ -447,8 +447,6 @@ If you want to use different styles for the context menu, you can target the `.l
     color: #ffffff;
 }
 ```
-> [!NOTE]
-> Launchpad widget supports toggle visibility using the `toggle-widget launchpad` command in the CLI. More information about the CLI commands can be found in the [CLI documentation](https://github.com/amnweb/yasb/wiki/CLI#toggle-widget-visibility).
 
 ## Preview
 

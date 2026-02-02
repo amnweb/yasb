@@ -11,6 +11,7 @@ DEFAULTS = {
     "container_padding": {"top": 0, "left": 0, "bottom": 0, "right": 0},
     "preview": {"enabled": False, "width": 240, "delay": 400, "padding": 8, "margin": 8},
     "callbacks": {"on_left": "toggle_window", "on_middle": "do_nothing", "on_right": "context_menu"},
+    "keybindings": [],
 }
 
 VALIDATION_SCHEMA = {
@@ -100,5 +101,17 @@ VALIDATION_SCHEMA = {
             "on_right": {"type": "string", "default": DEFAULTS["callbacks"]["on_right"]},
         },
         "default": DEFAULTS["callbacks"],
+    },
+    "keybindings": {
+        "type": "list",
+        "required": False,
+        "default": DEFAULTS["keybindings"],
+        "schema": {
+            "type": "dict",
+            "schema": {
+                "keys": {"type": "string", "required": True},
+                "action": {"type": "string", "required": True},
+            },
+        },
     },
 }

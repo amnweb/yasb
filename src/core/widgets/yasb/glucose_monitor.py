@@ -93,6 +93,7 @@ class GlucoseMonitor(BaseWidget):
         notify_on_error: bool,
         label_shadow: dict | None = None,
         container_shadow: dict | None = None,
+        keybindings: list = None,
     ) -> None:
         super().__init__(timer_interval=self.update_interval_in_milliseconds, class_name="cgm-widget")
 

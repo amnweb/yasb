@@ -25,6 +25,7 @@ DEFAULTS = {
     },
     "animation": {"enabled": True, "type": "fadeInOut", "duration": 200},
     "callbacks": {"on_left": "toggle_menu"},
+    "keybindings": [],
 }
 
 VALIDATION_SCHEMA = {
@@ -121,5 +122,17 @@ VALIDATION_SCHEMA = {
         "type": "dict",
         "schema": {"on_left": {"type": "string", "default": DEFAULTS["callbacks"]["on_left"]}},
         "default": DEFAULTS["callbacks"],
+    },
+    "keybindings": {
+        "type": "list",
+        "required": False,
+        "default": DEFAULTS["keybindings"],
+        "schema": {
+            "type": "dict",
+            "schema": {
+                "keys": {"type": "string", "required": True},
+                "action": {"type": "string", "required": True},
+            },
+        },
     },
 }

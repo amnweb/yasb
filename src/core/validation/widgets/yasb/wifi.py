@@ -20,6 +20,7 @@ DEFAULTS: dict[str, Any] = {
     "hide_if_ethernet": False,
     "container_padding": {"top": 0, "left": 0, "bottom": 0, "right": 0},
     "animation": {"enabled": True, "type": "fadeInOut", "duration": 200},
+    "keybindings": [],
     "menu_config": {
         "blur": True,
         "round_corners": True,
@@ -136,5 +137,17 @@ VALIDATION_SCHEMA: dict[str, Any] = {
             "wifi_icons_unsecured": {"type": "list", "default": DEFAULTS["menu_config"]["wifi_icons_unsecured"]},
         },
         "default": DEFAULTS["menu_config"],
+    },
+    "keybindings": {
+        "type": "list",
+        "required": False,
+        "default": DEFAULTS["keybindings"],
+        "schema": {
+            "type": "dict",
+            "schema": {
+                "keys": {"type": "string", "required": True},
+                "action": {"type": "string", "required": True},
+            },
+        },
     },
 }

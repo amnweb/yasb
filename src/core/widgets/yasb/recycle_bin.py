@@ -27,6 +27,7 @@ class RecycleBinWidget(BaseWidget):
         container_padding: dict[str, int],
         label_shadow: dict = None,
         container_shadow: dict = None,
+        keybindings: list = None,
     ):
         super().__init__(class_name=f"recycle-bin-widget {class_name}")
         self._label_content = label

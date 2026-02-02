@@ -66,6 +66,7 @@ class ActiveWindowWidget(BaseWidget):
         label_shadow: dict = None,
         container_shadow: dict = None,
         rewrite: list[dict] = None,
+        keybindings: list = None,
     ):
         super().__init__(class_name=f"active-window-widget {class_name}")
         self.dpi = None

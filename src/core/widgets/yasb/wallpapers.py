@@ -23,6 +23,7 @@ class WallpapersWidget(BaseWidget):
         run_after: list[str],
         container_padding: dict[str, int],
         gallery: dict = None,
+        keybindings: list = None,
         label_shadow: dict = None,
         container_shadow: dict = None,
         callbacks: dict = None,

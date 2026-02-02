@@ -26,6 +26,7 @@ class GrouperWidget(BaseWidget):
         container_shadow: dict = None,
         hide_empty: bool = False,
         collapse_options: dict = None,
+        keybindings: list = None,
     ):
         super().__init__(class_name=class_name)
         self._padding = container_padding
@@ -64,6 +65,9 @@ class GrouperWidget(BaseWidget):
             self._collapse_button.clicked.connect(self._toggle_collapsed)
 
         self.widget_layout.addWidget(self._widget_container)
+
+        # Register keybinding callback
+        self.register_callback("toggle_collapse", self._toggle_collapsed)
 
         self._create_child_widgets()
 

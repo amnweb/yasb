@@ -38,6 +38,7 @@ class GlazewmBindingModeWidget(BaseWidget):
         callbacks: dict[str, str],
         label_shadow: dict = None,
         container_shadow: dict = None,
+        keybindings: list = None,
     ):
         super().__init__(class_name="glazewm-binding-mode")
         self._label_content = label

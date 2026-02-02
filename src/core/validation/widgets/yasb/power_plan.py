@@ -15,6 +15,7 @@ DEFAULTS = {
     },
     "container_padding": {"top": 0, "left": 0, "bottom": 0, "right": 0},
     "callbacks": {"on_left": "toggle_menu", "on_right": "do_nothing", "on_middle": "toggle_label"},
+    "keybindings": [],
 }
 
 VALIDATION_SCHEMA = {
@@ -61,6 +62,18 @@ VALIDATION_SCHEMA = {
             "on_right": {"type": "string", "default": DEFAULTS["callbacks"]["on_right"]},
         },
         "default": DEFAULTS["callbacks"],
+    },
+    "keybindings": {
+        "type": "list",
+        "required": False,
+        "default": DEFAULTS["keybindings"],
+        "schema": {
+            "type": "dict",
+            "schema": {
+                "keys": {"type": "string", "required": True},
+                "action": {"type": "string", "required": True},
+            },
+        },
     },
     "label_shadow": {
         "type": "dict",

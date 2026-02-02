@@ -39,6 +39,7 @@ class BrightnessWidget(BaseWidget):
         label_shadow: dict = None,
         container_shadow: dict = None,
         progress_bar: dict = None,
+        keybindings: list = None,
     ):
         super().__init__(class_name="brightness-widget")
         self._show_alt_label = False

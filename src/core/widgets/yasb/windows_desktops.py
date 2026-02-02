@@ -207,6 +207,7 @@ class WorkspaceWidget(BaseWidget):
         container_padding: dict,
         btn_shadow: dict = None,
         container_shadow: dict = None,
+        keybindings: list = None,
     ):
         super().__init__(class_name="windows-desktops")
         self._event_service = EventService()

@@ -14,6 +14,7 @@ DEFAULTS = {
         "high": 90,
     },
     "hide_decimal": False,
+    "keybindings": [],
 }
 
 VALIDATION_SCHEMA = {
@@ -121,4 +122,16 @@ VALIDATION_SCHEMA = {
         "default": DEFAULTS["cpu_thresholds"],
     },
     "hide_decimal": {"type": "boolean", "default": DEFAULTS["hide_decimal"]},
+    "keybindings": {
+        "type": "list",
+        "required": False,
+        "default": DEFAULTS["keybindings"],
+        "schema": {
+            "type": "dict",
+            "schema": {
+                "keys": {"type": "string", "required": True},
+                "action": {"type": "string", "required": True},
+            },
+        },
+    },
 }

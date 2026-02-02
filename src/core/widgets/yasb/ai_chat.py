@@ -1,7 +1,7 @@
 from typing import Any
 
 from humanize import naturalsize
-from PyQt6.QtCore import Qt, QTimer, pyqtSignal
+from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtWidgets import (
     QApplication,
     QFrame,
@@ -16,7 +16,6 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from core.event_service import EventService
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import LoaderLine, add_shadow
 from core.utils.widgets.ai_chat.attachment_manager import AttachmentManager
@@ -40,7 +39,6 @@ from core.widgets.base import BaseWidget
 class AiChatWidget(BaseWidget):
     validation_schema = VALIDATION_SCHEMA
     _persistent_chat_history = {}
-    handle_widget_cli = pyqtSignal(str, str)
 
     def __init__(
         self,
@@ -55,6 +53,7 @@ class AiChatWidget(BaseWidget):
         label_shadow: dict = None,
         container_shadow: dict = None,
         providers: list = None,
+        keybindings: list = None,
     ):
         super().__init__(class_name="ai-chat-widget")
         self._label_content = label
@@ -109,10 +108,6 @@ class AiChatWidget(BaseWidget):
         self.callback_right = callbacks["on_right"]
         self.callback_middle = callbacks["on_middle"]
         self._new_notification = False
-
-        self._event_service = EventService()
-        self.handle_widget_cli.connect(self._input_controller.handle_widget_cli)
-        self._event_service.register_event("handle_widget_cli", self.handle_widget_cli)
 
     def _update_label(self):
         """Update the label content and notification dot state."""

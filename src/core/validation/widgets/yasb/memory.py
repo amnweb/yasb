@@ -13,6 +13,7 @@ DEFAULTS = {
         "high": 90,
     },
     "hide_decimal": False,
+    "keybindings": [],
 }
 
 VALIDATION_SCHEMA = {
@@ -118,5 +119,17 @@ VALIDATION_SCHEMA = {
             "on_right": {"type": "string", "nullable": True, "default": DEFAULTS["callbacks"]["on_right"]},
         },
         "default": DEFAULTS["callbacks"],
+    },
+    "keybindings": {
+        "type": "list",
+        "required": False,
+        "default": DEFAULTS["keybindings"],
+        "schema": {
+            "type": "dict",
+            "schema": {
+                "keys": {"type": "string", "required": True},
+                "action": {"type": "string", "required": True},
+            },
+        },
     },
 }

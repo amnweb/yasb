@@ -53,6 +53,7 @@ DEFAULTS: dict[str, Any] = {
         "alignment": "bottom",
     },
     "callbacks": {"on_left": "do_nothing", "on_middle": "do_nothing", "on_right": "do_nothing"},
+    "keybindings": [],
 }
 
 VALIDATION_SCHEMA = {
@@ -216,6 +217,18 @@ VALIDATION_SCHEMA = {
             },
         },
         "default": DEFAULTS["callbacks"],
+    },
+    "keybindings": {
+        "type": "list",
+        "required": False,
+        "default": DEFAULTS["keybindings"],
+        "schema": {
+            "type": "dict",
+            "schema": {
+                "keys": {"type": "string", "required": True},
+                "action": {"type": "string", "required": True},
+            },
+        },
     },
     "max_field_size": {
         "type": "dict",

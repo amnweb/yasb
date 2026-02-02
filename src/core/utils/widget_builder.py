@@ -68,7 +68,10 @@ class WidgetBuilder(QObject):
                             self._collect_nested_listeners(child_names)
                     except Exception:
                         logging.debug("WidgetBuilder failed to collect nested listeners for Grouper")
-                    return widget_cls(**normalized_options)
+                    widget = widget_cls(**normalized_options)
+                    # Set widget_name for keybinding identification
+                    widget.widget_name = widget_name
+                    return widget
             except (AttributeError, ValueError, ModuleNotFoundError):
                 logging.exception(f"Failed to import widget with type {widget_config['type']}")
                 self._invalid_widget_types[widget_name] = widget_config["type"]

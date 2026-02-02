@@ -2,6 +2,7 @@ DEFAULTS = {
     "label": "\uf11c",
     "animation": {"enabled": True, "type": "fadeInOut", "duration": 200},
     "container_padding": {"top": 0, "left": 0, "bottom": 0, "right": 0},
+    "keybindings": [],
 }
 VALIDATION_SCHEMA = {
     "label": {"type": "string", "default": DEFAULTS["label"]},
@@ -51,5 +52,17 @@ VALIDATION_SCHEMA = {
             "right": {"type": "integer", "default": DEFAULTS["container_padding"]["right"]},
         },
         "default": DEFAULTS["container_padding"],
+    },
+    "keybindings": {
+        "type": "list",
+        "required": False,
+        "default": DEFAULTS["keybindings"],
+        "schema": {
+            "type": "dict",
+            "schema": {
+                "keys": {"type": "string", "required": True},
+                "action": {"type": "string", "required": True},
+            },
+        },
     },
 }

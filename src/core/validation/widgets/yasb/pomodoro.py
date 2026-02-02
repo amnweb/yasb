@@ -35,6 +35,7 @@ DEFAULTS = {
         "circle_thickness": 8,
         "circle_size": 160,
     },
+    "keybindings": [],
 }
 
 VALIDATION_SCHEMA = {
@@ -138,6 +139,18 @@ VALIDATION_SCHEMA = {
             "on_right": {"type": "string", "default": DEFAULTS["callbacks"]["on_right"]},
         },
         "default": DEFAULTS["callbacks"],
+    },
+    "keybindings": {
+        "type": "list",
+        "required": False,
+        "default": DEFAULTS["keybindings"],
+        "schema": {
+            "type": "dict",
+            "schema": {
+                "keys": {"type": "string", "required": True},
+                "action": {"type": "string", "required": True},
+            },
+        },
     },
     "menu": {
         "type": "dict",

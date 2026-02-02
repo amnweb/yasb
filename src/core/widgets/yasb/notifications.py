@@ -36,6 +36,7 @@ class NotificationsWidget(BaseWidget):
         callbacks: dict[str, str],
         label_shadow: dict = None,
         container_shadow: dict = None,
+        keybindings: list = None,
     ):
         super().__init__(class_name=f"notification-widget {class_name}")
         self._show_alt_label = False

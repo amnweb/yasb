@@ -259,6 +259,7 @@ class WhkdWidget(BaseWidget):
         special_keys: list = None,
         container_padding: dict = None,
         callbacks: dict = None,
+        keybindings: list = None,
         label_shadow: dict = None,
         container_shadow: dict = None,
     ):

@@ -49,6 +49,7 @@ class DiskWidget(BaseWidget):
         label_shadow: dict = None,
         container_shadow: dict = None,
         progress_bar: dict = None,
+        keybindings: list = None,
     ):
         super().__init__(int(update_interval * 1000), class_name=f"disk-widget {class_name}")
         self._decimal_display = decimal_display

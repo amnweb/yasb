@@ -49,6 +49,7 @@ class TodoWidget(BaseWidget):
         categories: dict,
         label_shadow: dict = None,
         container_shadow: dict = None,
+        keybindings: list = None,
     ):
         super().__init__(class_name="todo-widget")
         TodoWidget._instances.append(self)

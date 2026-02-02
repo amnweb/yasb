@@ -503,8 +503,6 @@ If you want to use different styles for the context menu, you can target the `.a
 - If instructions are a file path, it must end with `_chatmode.md` and be accessible.
 - If streaming fails, check network/API credentials and error messages.
 
-> [!NOTE]
-> AI Chat widget supports toggle visibility using the `toggle-widget ai_chat` command in the CLI. More information about the CLI commands can be found in the [CLI documentation](https://github.com/amnweb/yasb/wiki/CLI#toggle-widget-visibility).
 
 ## Preview of the Widget
 ![AI Chat YASB Widget](assets/ec1b9764-1a027260-3e58-1f50-e78022a4eede.png)

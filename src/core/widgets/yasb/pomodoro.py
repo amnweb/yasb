@@ -59,6 +59,7 @@ class PomodoroWidget(BaseWidget):
         label_shadow: dict = None,
         container_shadow: dict = None,
         progress_bar: dict = None,
+        keybindings: list = None,
     ):
         super().__init__(class_name=f"pomodoro-widget {class_name}")
 

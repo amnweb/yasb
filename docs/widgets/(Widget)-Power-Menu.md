@@ -130,6 +130,3 @@ power_menu:
     font-weight: 600;
 }
 ```
-
-> [!NOTE]
-> Power Menu widget supports toggle visibility using the `toggle-widget powermenu` command in the CLI. More information about the CLI commands can be found in the [CLI documentation](https://github.com/amnweb/yasb/wiki/CLI#toggle-widget-visibility).
