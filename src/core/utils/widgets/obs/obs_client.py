@@ -20,10 +20,10 @@ class ObsWebSocketClient:
     EVENT_OUTPUTS = 1 << 6
     EVENT_UI = 1 << 10
 
-    def __init__(self, host: str = "localhost", port: int = 4455, password: str = "", event_subscriptions: int = 0):
+    def __init__(self, host: str = "localhost", port: int = 4455, auth_key: str = "", event_subscriptions: int = 0):
         self.host = host
         self.port = port
-        self.password = password
+        self.auth_key = auth_key
         self.event_subscriptions = event_subscriptions or self.EVENT_OUTPUTS
 
         self._socket: socket.socket | None = None
@@ -315,14 +315,21 @@ class ObsWebSocketClient:
         except Exception:
             pass
 
+    def _obs_ws_auth(self, secret_key: str, salt: str, challenge: str) -> str:
+        """
+        Generate OBS WebSocket authentication string per protocol specification.
+        """
+        secret = base64.b64encode(hashlib.sha256((secret_key + salt).encode()).digest()).decode()
+        return base64.b64encode(hashlib.sha256((secret + challenge).encode()).digest()).decode()
+
     def _handle_hello(self, payload: dict):
         auth = payload.get("authentication")
         msg = {"op": 1, "d": {"rpcVersion": 1, "eventSubscriptions": self.event_subscriptions}}
 
-        if auth and self.password:
-            secret = base64.b64encode(hashlib.sha256((self.password + auth.get("salt", "")).encode()).digest()).decode()
-            auth_str = base64.b64encode(hashlib.sha256((secret + auth.get("challenge", "")).encode()).digest()).decode()
-            msg["d"]["authentication"] = auth_str
+        if auth and self.auth_key:
+            msg["d"]["authentication"] = self._obs_ws_auth(
+                self.auth_key, auth.get("salt", ""), auth.get("challenge", "")
+            )
 
         try:
             self._ws_send(json.dumps(msg))
@@ -372,7 +379,7 @@ class ObsWorker(QThread):
                     self.client = ObsWebSocketClient(
                         host=self._connection.get("host", "localhost"),
                         port=self._connection.get("port", 4455),
-                        password=self._connection.get("password", ""),
+                        auth_key=self._connection.get("password", ""),
                         event_subscriptions=ObsWebSocketClient.EVENT_OUTPUTS | ObsWebSocketClient.EVENT_UI,
                     )
                     self.client.register_event_callback(self._on_event)
