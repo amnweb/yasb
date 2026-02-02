@@ -7,6 +7,7 @@ from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot
 from PyQt6.QtGui import QScreen
 from PyQt6.QtWidgets import QApplication
 
+import pretty_log as _log
 from core.bar import Bar
 from core.config import get_config, get_stylesheet
 from core.event_service import EventService
@@ -63,7 +64,7 @@ class BarManager(QObject):
         try:
             config = get_config(show_error_dialog=True)
         except Exception as e:
-            logging.error(f"Error loading config: {e}")
+            _log.log_error("Error loading config", e)
             return
         if config and (config != self.config):
             if any(

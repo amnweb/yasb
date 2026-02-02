@@ -5,6 +5,7 @@ from PyQt6.QtCore import QEasingCurve, QEvent, QPropertyAnimation, QRect, Qt, QT
 from PyQt6.QtGui import QScreen
 from PyQt6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QWidget
 
+import pretty_log as _log
 from core.bar_helper import AutoHideManager, BarContextMenu, FullscreenManager, OsThemeManager
 from core.event_service import EventService
 from core.utils.utilities import is_valid_percentage_str, percent_to_float
@@ -96,7 +97,7 @@ class Bar(QWidget):
             self._os_theme_manager = OsThemeManager(self._bar_frame, self)
             self._os_theme_manager.update_theme_class()
         except Exception as e:
-            logging.error(f"Failed to initialize theme manager: {e}")
+            _log.log_error("Failed to initialize theme manager", e)
             self._os_theme_manager = None
 
         # Initialize fullscreen manager
@@ -104,7 +105,7 @@ class Bar(QWidget):
             try:
                 self._fullscreen_manager = FullscreenManager(self, self)
             except Exception as e:
-                logging.error(f"Failed to initialize fullscreen manager: {e}")
+                _log.log_error("Failed to initialize fullscreen manager", e)
                 self._fullscreen_manager = None
 
         self.position_bar(init)
