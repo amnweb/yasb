@@ -200,6 +200,9 @@ user32.IsWindowVisible.restype = BOOL
 user32.GetKeyState.argtypes = [INT]
 user32.GetKeyState.restype = INT
 
+user32.GetAsyncKeyState.argtypes = [INT]
+user32.GetAsyncKeyState.restype = INT
+
 user32.GetWindowLongW.argtypes = [HWND, INT]
 user32.GetWindowLongW.restype = c_long
 

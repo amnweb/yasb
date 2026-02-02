@@ -56,8 +56,12 @@ volume:
 | `win`, `windows`, `super`, `meta` | Either Windows key (left or right) |
 | `lwin`, `leftwin`, `left_win` | Left Windows key only |
 | `rwin`, `rightwin`, `right_win` | Right Windows key only |
-| `alt` | Alt key |
-| `ctrl`, `control` | Control key |
+| `alt` | Either Alt key (left or right) |
+| `lalt`, `leftalt`, `left_alt` | Left Alt key only |
+| `ralt`, `rightalt`, `right_alt` | Right Alt key only |
+| `ctrl`, `control` | Either Control key (left or right) |
+| `lctrl`, `leftctrl`, `left_ctrl` | Left Control key only |
+| `rctrl`, `rightctrl`, `right_ctrl` | Right Control key only |
 | `shift` | Shift key |
 
 ### Function Keys
@@ -152,6 +156,77 @@ clock:
       - keys: "rwin+c"
         action: "toggle_label"
 ```
+
+## Alt/Ctrl Key Specificity
+
+Similarly, you can distinguish between left and right Alt or Ctrl keys:
+
+| Configuration | Behavior |
+|--------------|----------|
+| `"alt+x"` | Triggered by **either** left or right Alt key + X |
+| `"lalt+x"` | Triggered **only** by left Alt key + X |
+| `"ralt+x"` | Triggered **only** by right Alt key + X |
+| `"ctrl+x"` | Triggered by **either** left or right Ctrl key + X |
+| `"lctrl+x"` | Triggered **only** by left Ctrl key + X |
+| `"rctrl+x"` | Triggered **only** by right Ctrl key + X |
+
+### Example: Left Alt vs Right Alt
+
+```yaml
+volume:
+  type: "yasb.volume.VolumeWidget"
+  options:
+    keybindings:
+      - keys: "lalt+v"
+        action: "toggle_menu"
+      - keys: "ralt+v"
+        action: "toggle_mute"
+```
+
+## Extra Modifier Rejection
+
+YASB uses **exact modifier matching**. If you register `alt+x`, pressing `ctrl+alt+x` will **not** trigger it because Ctrl is an extra modifier that wasn't specified.
+
+| Registered | User Presses | Result |
+|------------|--------------|--------|
+| `alt+x` | Alt + X | Triggers |
+| `alt+x` | Ctrl + Alt + X | Blocked (extra Ctrl) |
+| `ctrl+alt+x` | Ctrl + Alt + X | Triggers |
+| `ctrl+alt+x` | Ctrl + Alt + Shift + X | Blocked (extra Shift) |
+
+This prevents accidental triggers when using similar hotkeys in other applications.
+
+## Limitations
+
+### No Multi-Key Combos
+
+YASB only supports **modifier + single key** combinations. You cannot bind multiple non-modifier keys together:
+
+| Configuration | Valid |
+|--------------|-------|
+| `"alt+a"` | Yes |
+| `"ctrl+shift+f1"` | Yes |
+| `"a+b"` | No - two non-modifier keys |
+| `"ctrl+a+b"` | No - two non-modifier keys |
+
+### Modifier-Only Hotkeys Not Supported
+
+You cannot use a modifier key alone as a hotkey:
+
+| Configuration | Valid |
+|--------------|-------|
+| `"ctrl"` | No - no main key |
+| `"alt+shift"` | No - no main key |
+| `"win+a"` | Yes |
+
+### Press Order Matters
+
+Hotkeys are triggered when the **main key** is pressed while modifiers are held. This means:
+
+- Hold Alt, then press X → Triggers `alt+x`
+- Hold X, then press Alt → Does NOT trigger `alt+x`
+
+This is standard behavior for all hotkey systems (Windows `RegisterHotKey`, AutoHotkey, etc.).
 
 ## Available Actions
 
