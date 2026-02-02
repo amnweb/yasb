@@ -98,7 +98,7 @@ class BatteryWidget(BaseWidget):
     def _get_time_remaining(self) -> str:
         secs_left = self._battery_state.time_remaining
         if secs_left == POWER_TIME_UNLIMITED:
-            time_left = "unlimited"
+            time_left = self._status_icons["icon_unlimited"]
         elif secs_left == POWER_TIME_UNKNOWN:
             time_left = "unknown"
         elif isinstance(secs_left, int) and secs_left >= 0:
