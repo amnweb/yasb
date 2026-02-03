@@ -48,7 +48,7 @@ class BatteryWidget(BaseWidget):
         self._icon_charging_blink = charging_options["blink_charging_icon"]
         self._icon_charging_blink_interval = charging_options["blink_interval"]
         self._hide_unsupported = hide_unsupported
-        self._padding = container_padding
+
         self._label_shadow = label_shadow
         self._container_shadow = container_shadow
 
@@ -58,9 +58,7 @@ class BatteryWidget(BaseWidget):
         # Construct container
         self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(
-            self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
-        )
+        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
         # Initialize container
         self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)

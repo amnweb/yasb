@@ -182,7 +182,7 @@ class ServerMonitor(BaseWidget):
         self._desktop_notifications = desktop_notifications
         self._timeout = timeout
         self._label_alt_content = label_alt
-        self._padding = container_padding
+
         self._menu = menu
         self._animation = animation
         self._label_shadow = label_shadow
@@ -197,9 +197,7 @@ class ServerMonitor(BaseWidget):
         # Construct container
         self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(
-            self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
-        )
+        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
         # Initialize container
         self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)

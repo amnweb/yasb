@@ -37,7 +37,7 @@ class WallpapersWidget(BaseWidget):
         self._tooltip = tooltip
         self._gallery = gallery
         self._animation = animation
-        self._padding = container_padding
+
         self._label_shadow = label_shadow
         self._container_shadow = container_shadow
 

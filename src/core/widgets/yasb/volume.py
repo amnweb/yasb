@@ -56,7 +56,7 @@ class VolumeWidget(BaseWidget):
         self._slider_beep = slider_beep
         self._audio_menu = audio_menu
         self._animation = animation
-        self._padding = container_padding
+
         self._label_shadow = label_shadow
         self._container_shadow = container_shadow
         self.volume = None
@@ -69,9 +69,7 @@ class VolumeWidget(BaseWidget):
 
         self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(
-            self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
-        )
+        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
         self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")

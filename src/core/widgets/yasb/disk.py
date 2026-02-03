@@ -57,7 +57,7 @@ class DiskWidget(BaseWidget):
         self._label_content = label
         self._label_alt_content = label_alt
         self._volume_label = volume_label.upper()
-        self._padding = container_padding
+
         self._group_label = group_label
         self._animation = animation
         self._label_shadow = label_shadow
@@ -70,9 +70,7 @@ class DiskWidget(BaseWidget):
 
         self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(
-            self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
-        )
+        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
         # Initialize container
         self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)

@@ -116,7 +116,7 @@ class MediaWidget(BaseWidget):
         self._thumbnail_edge_fade = thumbnail_edge_fade
         self._symmetric_corner_radius = symmetric_corner_radius
         self._hide_empty = hide_empty
-        self._padding = container_padding
+
         self._menu_config = media_menu
         self._menu_config_icons = media_menu_icons
         self._label_shadow = label_shadow

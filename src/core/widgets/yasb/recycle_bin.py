@@ -36,7 +36,7 @@ class RecycleBinWidget(BaseWidget):
         self._tooltip = tooltip
         self._show_confirmation = show_confirmation
         self._animation = animation
-        self._padding = container_padding
+
         self._show_alt_label = False
         self._bin_info = {"num_items": 0, "size_bytes": 0}
         self._is_emptying = False
@@ -51,9 +51,7 @@ class RecycleBinWidget(BaseWidget):
         # Construct container
         self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(
-            self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
-        )
+        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
         self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")

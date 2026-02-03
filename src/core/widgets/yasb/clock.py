@@ -364,7 +364,7 @@ class ClockWidget(BaseWidget):
         self._animation = animation
         self._label_content = label
         self._calendar = calendar
-        self._padding = container_padding
+
         self._label_alt_content = label_alt
         self._label_shadow = label_shadow
         self._container_shadow = container_shadow
@@ -378,9 +378,7 @@ class ClockWidget(BaseWidget):
         self._subdivision = self._calendar.get("subdivision")
         self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(
-            self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
-        )
+        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
         self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")

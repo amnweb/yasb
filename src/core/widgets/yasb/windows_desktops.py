@@ -220,7 +220,7 @@ class WorkspaceWidget(BaseWidget):
 
         self._label_workspace_btn = label_workspace_btn
         self._label_workspace_active_btn = label_workspace_active_btn
-        self._padding = container_padding
+
         self._switch_workspace_animation = switch_workspace_animation
         self._animation = animation
         self._btn_shadow = btn_shadow
@@ -236,9 +236,7 @@ class WorkspaceWidget(BaseWidget):
         # Construct container which holds workspace buttons
         self._workspace_container_layout = QHBoxLayout()
         self._workspace_container_layout.setSpacing(0)
-        self._workspace_container_layout.setContentsMargins(
-            self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
-        )
+        self._workspace_container_layout.setContentsMargins(0, 0, 0, 0)
         self._workspace_container = QFrame()
         self._workspace_container.setLayout(self._workspace_container_layout)
         self._workspace_container.setProperty("class", "widget-container")

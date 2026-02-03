@@ -42,7 +42,7 @@ class HomeWidget(BaseWidget):
         self.power_operations = PowerOperations()
         self._label = label
         self._menu_list = menu_list
-        self._padding = container_padding
+
         self._power_menu = power_menu
         self._system_menu = system_menu
         self._blur = blur

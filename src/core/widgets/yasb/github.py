@@ -124,7 +124,7 @@ class GithubWidget(BaseWidget):
         self._max_field_size = max_field_size
         self._update_interval = update_interval
         self._animation = animation
-        self._padding = container_padding
+
         self._label_shadow = label_shadow
         self._container_shadow = container_shadow
         self._show_categories = self._menu_popup.get("show_categories", True)

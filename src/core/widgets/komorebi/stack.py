@@ -201,7 +201,7 @@ class StackWidget(BaseWidget):
         self._max_length_ellipsis = max_length_ellipsis
         self._hide_if_offline = hide_if_offline
         self._show_only_stack = show_only_stack
-        self._padding = container_padding
+
         self._animation = animation
         self._rewrite_rules = rewrite
         self._btn_shadow = btn_shadow
@@ -248,9 +248,7 @@ class StackWidget(BaseWidget):
         # Construct container which holds windows buttons
         self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(
-            self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
-        )
+        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
         self._widget_container_layout.addWidget(self._offline_text)
         self._widget_container_layout.addWidget(self._no_window_text)
         self._widget_container = QFrame()

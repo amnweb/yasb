@@ -29,7 +29,7 @@ class GrouperWidget(BaseWidget):
         keybindings: list = None,
     ):
         super().__init__(class_name=class_name)
-        self._padding = container_padding
+
         self._container_shadow = container_shadow
         self._hide_empty = hide_empty
         # Use collapse_options structure

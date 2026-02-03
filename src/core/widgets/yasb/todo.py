@@ -59,7 +59,7 @@ class TodoWidget(BaseWidget):
         self._label_alt_content = label_alt
         self._data_path = data_path
         self._animation = animation
-        self._padding = container_padding
+
         self._menu_config = menu
         self._icons = icons
         self._categories = categories
@@ -76,9 +76,7 @@ class TodoWidget(BaseWidget):
 
         self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(
-            self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
-        )
+        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
         self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")

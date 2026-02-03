@@ -33,7 +33,7 @@ class ApplicationsWidget(BaseWidget):
         self._label = label
 
         self._apps = app_list
-        self._padding = container_padding
+
         self._image_icon_size = image_icon_size
         self._animation = animation
         self._tooltip = tooltip
@@ -42,9 +42,7 @@ class ApplicationsWidget(BaseWidget):
         # Construct container
         self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(
-            self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
-        )
+        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
         # Initialize container
         self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)

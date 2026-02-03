@@ -78,7 +78,7 @@ class WeatherWidget(BaseWidget):
         # Set weather data formatting
         self._units = units
         self._show_alerts = show_alerts
-        self._padding = container_padding
+
         self._label_shadow = label_shadow
         self._container_shadow = container_shadow
 
@@ -97,12 +97,7 @@ class WeatherWidget(BaseWidget):
         # Construct container
         self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(
-            self._padding["left"],
-            self._padding["top"],
-            self._padding["right"],
-            self._padding["bottom"],
-        )
+        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
 
         # Initialize container
         self._widget_container = QFrame()

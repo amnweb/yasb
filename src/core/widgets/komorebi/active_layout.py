@@ -72,7 +72,7 @@ class ActiveLayoutWidget(BaseWidget):
         self._layout_icons = layout_icons
         self._layout_menu = layout_menu
         self._layouts_config = layouts
-        self._padding = container_padding
+
         self._label_shadow = label_shadow
         self._container_shadow = container_shadow
         self._reset_layouts()
@@ -92,9 +92,7 @@ class ActiveLayoutWidget(BaseWidget):
         # Construct container
         self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(
-            self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
-        )
+        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
         # Initialize container
         self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)

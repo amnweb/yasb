@@ -54,7 +54,7 @@ class NotesWidget(BaseWidget):
         self._label_content = label
         self._label_alt_content = label_alt
         self._animation = animation
-        self._padding = container_padding
+
         self._menu_config = menu
         self._icons = icons
         self._label_shadow = label_shadow
@@ -70,9 +70,7 @@ class NotesWidget(BaseWidget):
         # Initialize container layout
         self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(
-            self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
-        )
+        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
 
         # Initialize container widget
         self._widget_container = QFrame()

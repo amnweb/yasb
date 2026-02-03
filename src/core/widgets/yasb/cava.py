@@ -426,7 +426,7 @@ class CavaWidget(BaseWidget):
         self._monstercat = monstercat
         self._waves = waves
         self._hide_empty = hide_empty
-        self._padding = container_padding
+
         self._hide_cava_widget = True
         self._stop_cava = False
         self._bar_type = bar_type
@@ -447,9 +447,7 @@ class CavaWidget(BaseWidget):
         # Construct container layout
         self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(
-            self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
-        )
+        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
         self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")

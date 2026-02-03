@@ -260,7 +260,7 @@ class WorkspaceWidget(BaseWidget):
             self._workspace_app_icons["enabled_populated"] or self._workspace_app_icons["enabled_active"]
         )
         self._hide_if_offline = hide_if_offline
-        self._padding = container_padding
+
         self._animation = animation
         self._btn_shadow = btn_shadow
         self._label_shadow = label_shadow
@@ -306,9 +306,7 @@ class WorkspaceWidget(BaseWidget):
         # Construct container which holds workspace buttons
         self._workspace_container_layout = QHBoxLayout()
         self._workspace_container_layout.setSpacing(0)
-        self._workspace_container_layout.setContentsMargins(
-            self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
-        )
+        self._workspace_container_layout.setContentsMargins(0, 0, 0, 0)
         self._workspace_container_layout.addWidget(self._offline_text)
         self._workspace_container = QFrame()
         self._workspace_container.setLayout(self._workspace_container_layout)

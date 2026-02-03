@@ -41,7 +41,7 @@ class PowerPlanWidget(BaseWidget):
         self._label_alt_content = label_alt
         self._update_interval = update_interval
         self._menu = menu
-        self._padding = container_padding
+
         self._callbacks = callbacks
         self._label_shadow = label_shadow
         self._container_shadow = container_shadow
@@ -53,9 +53,7 @@ class PowerPlanWidget(BaseWidget):
 
         self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(
-            self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
-        )
+        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
 
         self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)

@@ -49,7 +49,7 @@ class TrafficWidget(BaseWidget):
         self._label_content = label
         self._label_alt_content = label_alt
         self._animation = animation
-        self._padding = container_padding
+
         self._interface = interface
         self._hide_if_offline = hide_if_offline
         self._max_label_length = max_label_length
@@ -68,9 +68,7 @@ class TrafficWidget(BaseWidget):
 
         self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(
-            self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
-        )
+        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
 
         self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
