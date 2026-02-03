@@ -14,6 +14,7 @@
 | `hide_empty_workspaces`  | boolean | `false`      | Whether to hide empty workspaces.                                           |
 | `enable_scroll_switching` | boolean | `false`      | Enable scroll switching between workspaces.                                 |
 | `reverse_scroll_direction` | boolean | `false`      | Reverse scroll direction.                                                  |
+| `scroll_populated_only` | boolean | `false`      | Scroll through populated workspaces only.                                 |
 | `animation`  | boolean | `false`      | Button animation.                                           |
 | `container_shadow`      | dict    | `None`                  | Container shadow options.                                |
 | `btn_shadow`            | dict    | `None`                  | Workspace button shadow options.                         |

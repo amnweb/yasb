@@ -241,6 +241,7 @@ class WorkspaceWidget(BaseWidget):
         animation: bool,
         enable_scroll_switching: bool,
         reverse_scroll_direction: bool,
+        scroll_populated_only: bool,
         btn_shadow: dict = None,
         label_shadow: dict = None,
         container_shadow: dict = None,
@@ -331,6 +332,7 @@ class WorkspaceWidget(BaseWidget):
 
         self._enable_scroll_switching = enable_scroll_switching
         self._reverse_scroll_direction = reverse_scroll_direction
+        self._scroll_populated_only = scroll_populated_only
         self._icon_cache = dict()
         self.dpi = None
 
@@ -644,8 +646,36 @@ class WorkspaceWidget(BaseWidget):
             return
 
         current_idx = self._curr_workspace_index
-        num_workspaces = len(workspaces)
-        next_idx = (current_idx + direction) % num_workspaces
+
+        if self._scroll_populated_only:
+            populated = [ws["index"] for ws in workspaces if not self._komorebic.get_num_windows(ws) == 0]
+            if not populated:
+                return
+
+            next_idx = None
+
+            if direction > 0:
+                for ws_idx in populated:
+                    if ws_idx > current_idx:
+                        next_idx = ws_idx
+                        break
+
+                # if no next index found, wrap to first populated workspace
+                if next_idx is None:
+                    next_idx = populated[0]
+            else:
+                for ws_idx in reversed(populated):
+                    if ws_idx < current_idx:
+                        next_idx = ws_idx
+                        break
+
+                # if no previous index found, wrap to last populated workspace
+                if next_idx is None:
+                    next_idx = populated[-1]
+        else:
+            num_workspaces = len(workspaces)
+            next_idx = (current_idx + direction) % num_workspaces
+
         try:
             self._komorebic.activate_workspace(self._komorebi_screen["index"], next_idx)
         except Exception:
