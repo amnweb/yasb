@@ -100,6 +100,7 @@ class Win32AppBar:
         scale_screen: bool = False,
         bar_name: str = None,
         reserve_space: bool = True,
+        always_on_top: bool = False,
     ):
         self.app_bar_data = AppBarData()
         self.app_bar_data.cbSize = wintypes.DWORD(sizeof(self.app_bar_data))
@@ -107,10 +108,11 @@ class Win32AppBar:
         self.app_bar_data.hWnd = hwnd
         self.register_new()
 
-        exStyle = windll.user32.GetWindowLongPtrW(hwnd, win32con.GWL_EXSTYLE)
-        windll.user32.SetWindowLongPtrW(
-            hwnd, win32con.GWL_EXSTYLE, exStyle | win32con.WS_EX_NOACTIVATE | win32con.WS_EX_TOPMOST
-        )
+        current_ex_style = windll.user32.GetWindowLongPtrW(hwnd, win32con.GWL_EXSTYLE)
+        updated_ex_style = current_ex_style | win32con.WS_EX_NOACTIVATE
+        if always_on_top:
+            updated_ex_style |= win32con.WS_EX_TOPMOST
+        windll.user32.SetWindowLongPtrW(hwnd, win32con.GWL_EXSTYLE, updated_ex_style)
 
         self.position_bar(app_bar_height, screen, scale_screen, bar_name)
         # Only reserve screen space if requested windows_app_bar: true

@@ -28,12 +28,11 @@ from PyQt6.QtWidgets import (
     QWidget,
     QWidgetAction,
 )
-from win32con import HWND_BOTTOM, HWND_TOPMOST, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE
+from win32con import SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE
 
 from core.utils.controller import exit_application, reload_application
 from core.utils.utilities import refresh_widget_style
 from core.utils.win32.app_bar import APPBAR_CALLBACK_MESSAGE, AppBarNotify
-from core.utils.win32.bindings import user32
 from core.utils.win32.structs import MSG
 from core.utils.win32.utilities import apply_qmenu_style
 
@@ -365,7 +364,7 @@ class AppBarManager(QAbstractNativeEventFilter):
     def register_bar(self, hwnd: int, bar_widget):
         """Register a bar to receive fullscreen notifications"""
         self._ensure_installed()
-        self._bars[hwnd] = (bar_widget, False)
+        self._bars[hwnd] = bar_widget
 
     def unregister_bar(self, hwnd: int):
         """Unregister a bar from receiving fullscreen notifications"""
@@ -390,21 +389,34 @@ class AppBarManager(QAbstractNativeEventFilter):
         return False, 0
 
     def _handle_fullscreen(self, hwnd: int, is_fullscreen_opening: bool):
-        """
-        Handle ABN_FULLSCREENAPP notification, we adjust Z-order.
-        """
-        bar_widget, is_hidden = self._bars.get(hwnd, (None, False))
+        """Handle fullscreen notification for a bar"""
+        bar_widget = self._bars.get(hwnd)
         if not bar_widget:
             return
 
-        if is_fullscreen_opening and not is_hidden:
-            # Fullscreen app opening - move bar to bottom of Z-order
-            self._bars[hwnd] = (bar_widget, True)
-            user32.SetWindowPos(hwnd, HWND_BOTTOM, 0, 0, 0, 0, self._swp_flags)
-        elif not is_fullscreen_opening and is_hidden:
-            # Fullscreen app closing - restore bar to topmost
-            self._bars[hwnd] = (bar_widget, False)
-            user32.SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, self._swp_flags)
+        should_hide_bar = getattr(bar_widget, "_hide_on_fullscreen", False)
+        has_autohide = (
+            bar_widget._autohide_manager and bar_widget._autohide_manager.is_enabled()
+            if hasattr(bar_widget, "_autohide_manager")
+            else False
+        )
+
+        # Only process if hide_on_fullscreen is enabled
+        if not should_hide_bar:
+            return
+
+        if is_fullscreen_opening:
+            bar_widget.hide()
+            # Also hide detection zone if autohide is active
+            if has_autohide and bar_widget._autohide_manager._detection_zone:
+                bar_widget._autohide_manager._detection_zone.hide()
+        else:
+            # Show bar if autohide is not active
+            if not has_autohide:
+                bar_widget.show()
+            # Re-show detection zone if autohide is active
+            if has_autohide and bar_widget._autohide_manager._detection_zone:
+                bar_widget._autohide_manager._detection_zone.show()
 
 
 class OsThemeManager(QObject):

@@ -1,6 +1,5 @@
 import logging
 
-import win32con
 from PyQt6.QtCore import QEvent, QRect, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QScreen
 from PyQt6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QWidget
@@ -8,7 +7,6 @@ from PyQt6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QWidget
 from core.bar_helper import AppBarManager, AutoHideManager, BarAnimationManager, BarContextMenu, OsThemeManager
 from core.event_service import EventService
 from core.utils.utilities import is_valid_percentage_str, percent_to_float
-from core.utils.win32.bindings import user32
 from core.utils.win32.utilities import get_monitor_hwnd
 from core.utils.win32.win32_accent import Blur
 from core.validation.bar import BAR_DEFAULTS
@@ -73,17 +71,6 @@ class Bar(QWidget):
             app_bar.AppBarEdge.Top if self._alignment["position"] == "top" else app_bar.AppBarEdge.Bottom
         )
 
-        # Create AppBar manager when:
-        # - windows_app_bar is true (to reserve screen space), OR
-        # - hide_on_fullscreen is true (to receive ABN_FULLSCREENAPP notifications)
-        register_app_bar = self._window_flags["windows_app_bar"] or (
-            self._window_flags["hide_on_fullscreen"] and self._window_flags["always_on_top"]
-        )
-        if register_app_bar and IMPORT_APP_BAR_MANAGER_SUCCESSFUL:
-            self.app_bar_manager = app_bar.Win32AppBar()
-        else:
-            self.app_bar_manager = None
-
         self.setWindowTitle(APP_BAR_TITLE)
         self.setStyleSheet(stylesheet)
         self.setWindowFlag(Qt.WindowType.Tool)
@@ -91,13 +78,17 @@ class Bar(QWidget):
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
 
-        if self._window_flags["always_on_top"] or self._window_flags["auto_hide"]:
-            self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint)
-
         self._bar_frame = QFrame(self)
         self._bar_frame.setProperty("class", f"bar {class_name}")
 
-        # Initialize the OS theme manager
+        if IMPORT_APP_BAR_MANAGER_SUCCESSFUL:
+            self.app_bar_manager = app_bar.Win32AppBar()
+        else:
+            self.app_bar_manager = None
+
+        if self._window_flags["always_on_top"]:
+            self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint)
+
         try:
             self._os_theme_manager = OsThemeManager(self._bar_frame, self)
             self._os_theme_manager.update_theme_class()
@@ -105,7 +96,6 @@ class Bar(QWidget):
             logging.error(f"Failed to initialize theme manager: {e}")
             self._os_theme_manager = None
 
-        # Store hide_on_fullscreen flag
         self._hide_on_fullscreen = self._window_flags["hide_on_fullscreen"] and self._window_flags["always_on_top"]
 
         self.position_bar(init)
@@ -116,14 +106,6 @@ class Bar(QWidget):
         if self._is_auto_width:
             self._bar_frame.installEventFilter(self)
             QTimer.singleShot(0, self._sync_auto_width)
-
-        if not self._window_flags["windows_app_bar"]:
-            try:
-                hwnd = int(self.winId())
-                exStyle = user32.GetWindowLongPtrW(hwnd, win32con.GWL_EXSTYLE)
-                user32.SetWindowLongPtrW(hwnd, win32con.GWL_EXSTYLE, exStyle | win32con.WS_EX_NOACTIVATE)
-            except Exception:
-                pass
 
         if blur_effect["enabled"]:
             Blur(
@@ -150,7 +132,7 @@ class Bar(QWidget):
         # If animation is enabled, initial show uses fade effect because of DWM issues
         self._initial_show = True
 
-        # Register with fullscreen manager for ABN_FULLSCREENAPP notifications
+        # Register with AppBarManager for fullscreen notifications only if hide_on_fullscreen is enabled
         if self._hide_on_fullscreen and self.app_bar_manager:
             AppBarManager().register_bar(int(self.winId()), self)
 
@@ -189,6 +171,7 @@ class Bar(QWidget):
                 scale_screen_height,
                 self._bar_name,
                 reserve_space,
+                self._window_flags["always_on_top"],
             )
 
     def try_remove_app_bar(self) -> None:
