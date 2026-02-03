@@ -12,7 +12,7 @@ BAR_DEFAULTS = {
         "round_corners_type": "normal",
         "border_color": "System",
     },
-    "animation": {"enabled": True, "duration": 500},
+    "animation": {"enabled": True, "duration": 500, "type": "slide"},
     "window_flags": {"always_on_top": False, "windows_app_bar": False, "hide_on_fullscreen": False, "auto_hide": False},
     "dimensions": {"width": "100%", "height": 30},
     "padding": {"top": 0, "left": 0, "bottom": 0, "right": 0},
@@ -71,6 +71,11 @@ BAR_SCHEMA = {
             "schema": {
                 "enabled": {"type": "boolean", "default": BAR_DEFAULTS["animation"]["enabled"]},
                 "duration": {"type": "integer", "min": 0, "default": BAR_DEFAULTS["animation"]["duration"]},
+                "type": {
+                    "type": "string",
+                    "allowed": ["slide", "fade"],
+                    "default": BAR_DEFAULTS["animation"]["type"],
+                },
             },
             "default": BAR_DEFAULTS["animation"],
         },

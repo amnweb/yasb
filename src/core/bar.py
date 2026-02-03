@@ -1,11 +1,11 @@
 import logging
 
 import win32con
-from PyQt6.QtCore import QEasingCurve, QEvent, QPropertyAnimation, QRect, Qt, QTimer, pyqtSignal
+from PyQt6.QtCore import QEvent, QRect, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QScreen
 from PyQt6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QWidget
 
-from core.bar_helper import AutoHideManager, BarContextMenu, FullscreenManager, OsThemeManager
+from core.bar_helper import AppBarManager, AutoHideManager, BarAnimationManager, BarContextMenu, OsThemeManager
 from core.event_service import EventService
 from core.utils.utilities import is_valid_percentage_str, percent_to_float
 from core.utils.win32.bindings import user32
@@ -64,8 +64,8 @@ class Bar(QWidget):
         self._is_auto_width = str(dimensions["width"]).lower() == "auto"
         self._current_auto_width = 0
         self._os_theme_manager = None
-        self._fullscreen_manager = None
         self._autohide_manager = None
+        self._animation_manager = None
         self._target_screen = bar_screen
 
         self.screen_name = self._target_screen.name()
@@ -73,7 +73,13 @@ class Bar(QWidget):
             app_bar.AppBarEdge.Top if self._alignment["position"] == "top" else app_bar.AppBarEdge.Bottom
         )
 
-        if self._window_flags["windows_app_bar"] and IMPORT_APP_BAR_MANAGER_SUCCESSFUL:
+        # Create AppBar manager when:
+        # - windows_app_bar is true (to reserve screen space), OR
+        # - hide_on_fullscreen is true (to receive ABN_FULLSCREENAPP notifications)
+        register_app_bar = self._window_flags["windows_app_bar"] or (
+            self._window_flags["hide_on_fullscreen"] and self._window_flags["always_on_top"]
+        )
+        if register_app_bar and IMPORT_APP_BAR_MANAGER_SUCCESSFUL:
             self.app_bar_manager = app_bar.Win32AppBar()
         else:
             self.app_bar_manager = None
@@ -85,7 +91,7 @@ class Bar(QWidget):
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
 
-        if self._window_flags["always_on_top"]:
+        if self._window_flags["always_on_top"] or self._window_flags["auto_hide"]:
             self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint)
 
         self._bar_frame = QFrame(self)
@@ -99,13 +105,8 @@ class Bar(QWidget):
             logging.error(f"Failed to initialize theme manager: {e}")
             self._os_theme_manager = None
 
-        # Initialize fullscreen manager
-        if self._window_flags["hide_on_fullscreen"] and self._window_flags["always_on_top"]:
-            try:
-                self._fullscreen_manager = FullscreenManager(self, self)
-            except Exception as e:
-                logging.error(f"Failed to initialize fullscreen manager: {e}")
-                self._fullscreen_manager = None
+        # Store hide_on_fullscreen flag
+        self._hide_on_fullscreen = self._window_flags["hide_on_fullscreen"] and self._window_flags["always_on_top"]
 
         self.position_bar(init)
         self.monitor_hwnd = get_monitor_hwnd(int(self.winId()))
@@ -144,6 +145,18 @@ class Bar(QWidget):
             self._autohide_manager = AutoHideManager(self, self)
             self._autohide_manager.setup_autohide()
 
+        # Initialize animation manager
+        self._animation_manager = BarAnimationManager(self, self)
+        # If animation is enabled, initial show uses fade effect because of DWM issues
+        self._initial_show = True
+
+        # Register with fullscreen manager for ABN_FULLSCREENAPP notifications
+        if self._hide_on_fullscreen and self.app_bar_manager:
+            AppBarManager().register_bar(int(self.winId()), self)
+
+        # Register AppBar once at initialization
+        self.update_app_bar()
+
         self.show()
 
     @property
@@ -155,6 +168,8 @@ class Bar(QWidget):
             f"Screen geometry changed. Updating position for bar {self._bar_name} on screen {self._target_screen.name()}"
         )
         self.position_bar()
+        # Re-register AppBar when screen config changes (resolution/monitor added/removed)
+        self.update_app_bar()
 
         if self._autohide_manager and self._autohide_manager.is_enabled():
             self._autohide_manager.setup_detection_zone()
@@ -162,8 +177,10 @@ class Bar(QWidget):
         if self._is_auto_width:
             QTimer.singleShot(0, self._sync_auto_width)
 
-    def try_add_app_bar(self, scale_screen_height=False) -> None:
+    def update_app_bar(self, scale_screen_height=False) -> None:
         if self.app_bar_manager:
+            # Always register AppBar for notifications, but only reserve space when windows_app_bar is true
+            reserve_space = self._window_flags["windows_app_bar"]
             self.app_bar_manager.create_appbar(
                 self.winId().__int__(),
                 self.app_bar_edge,
@@ -171,6 +188,7 @@ class Bar(QWidget):
                 self._target_screen,
                 scale_screen_height,
                 self._bar_name,
+                reserve_space,
             )
 
     def try_remove_app_bar(self) -> None:
@@ -213,8 +231,6 @@ class Bar(QWidget):
         screen_width = self._target_screen.geometry().width()
         screen_height = self._target_screen.geometry().height()
 
-        scale_state = self._target_screen.devicePixelRatio() > 1.0
-
         if self._is_auto_width:
             if self._bar_frame.layout() is not None:
                 bar_width = self._update_auto_width()
@@ -234,7 +250,6 @@ class Bar(QWidget):
 
         self.setGeometry(bar_x, bar_y, bar_width, bar_height)
         self._bar_frame.setGeometry(0, 0, bar_width, bar_height)
-        self.try_add_app_bar(scale_screen_height=scale_state)
 
     def _update_auto_width(self) -> int:
         """Calculate the current auto width based on the layout's size hint."""
@@ -310,45 +325,31 @@ class Bar(QWidget):
         self._bar_frame.setLayout(bar_layout)
 
     def show_bar(self):
-        self.setWindowOpacity(0.0)
-        self.opacity_animation = QPropertyAnimation(self, b"windowOpacity")
-        self.opacity_animation.setDuration(self._animation["duration"])
-        self.opacity_animation.setStartValue(0.0)
-        self.opacity_animation.setEndValue(1.0)
-        self.opacity_animation.setEasingCurve(QEasingCurve.Type.OutCubic)
-        self.opacity_animation.start()
+        if self._animation_manager:
+            self._animation_manager.show_bar()
 
     def hide_bar(self):
-        self.opacity_animation = QPropertyAnimation(self, b"windowOpacity")
-        self.opacity_animation.setDuration(self._animation["duration"])
-        self.opacity_animation.setStartValue(1.0)
-        self.opacity_animation.setEndValue(0.0)
-        self.opacity_animation.setEasingCurve(QEasingCurve.Type.InCubic)
-        self.opacity_animation.finished.connect(self._on_hide_bar_finished)
-        self.opacity_animation.start()
-
-    def _on_hide_bar_finished(self):
-        super().hide()
-        self.setWindowOpacity(1.0)
+        if self._animation_manager:
+            self._animation_manager.hide_bar()
 
     def showEvent(self, event):
         super().showEvent(event)
-        if self._animation["enabled"]:
-            try:
+        if self._animation.get("enabled", False) and self._animation_manager:
+            # Use fade on initial show to avoid DWM blur/shadow flash with slide
+            if getattr(self, "_initial_show", False):
+                self._initial_show = False
+                self._animation_manager._start_fade(True)
+            else:
                 self.show_bar()
-            except AttributeError:
-                logging.error("Animation not initialized.")
-
-        # Start fullscreen monitoring when bar is shown
-        if self._fullscreen_manager and not hasattr(self, "_fullscreen_monitoring_started"):
-            self._fullscreen_manager.start_monitoring()
-            self._fullscreen_monitoring_started = True
 
     def closeEvent(self, event):
-        if self._fullscreen_manager:
-            self._fullscreen_manager.stop_monitoring()
+        if self._hide_on_fullscreen and self.app_bar_manager:
+            AppBarManager().unregister_bar(int(self.winId()))
+
         if self._autohide_manager:
             self._autohide_manager.cleanup()
+        if self._animation_manager:
+            self._animation_manager.cleanup()
         self.try_remove_app_bar()
 
     def changeEvent(self, event: QEvent) -> None:
@@ -367,8 +368,10 @@ class Bar(QWidget):
         return super().eventFilter(obj, event)
 
     def hide(self):
-        if self.isVisible() and self._animation["enabled"]:
-            self.hide_bar()
+        if getattr(self, "_skip_animation", False):
+            super().hide()
+        elif self.isVisible() and self._animation.get("enabled") and self._animation_manager:
+            self._animation_manager.hide_bar()
         else:
             super().hide()
 
