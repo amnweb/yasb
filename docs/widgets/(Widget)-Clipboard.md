@@ -18,7 +18,7 @@ A lightweight clipboard manager for YASB that integrates directly with the nativ
 | :--- | :--- | :--- | :--- |
 | `type` | `string` | `yasb.clipboard.ClipboardWidget` | The widget class identifier. |
 | `label` | `string` | `<span>\udb80\udd4d</span> {clipboard}` | Primary label format. Supports `{clipboard}` token. |
-| `label_alt` | `string` | `{clipboard}` | Alternative label format (swapped on right-click). |
+| `label_alt` | `string` | `CLIPBOARD` | Alternative label format (swapped on right-click). |
 | `max_length` | `integer` | `30` | Max characters to display in the bar before truncation. |
 | `max_history` | `integer` | `50` | Maximum number of history items to fetch from Windows. |
 | `class_name` | `string` | `""` | Additional CSS class for the widget container. |
@@ -39,7 +39,6 @@ A lightweight clipboard manager for YASB that integrates directly with the nativ
 | :--- | :--- |
 | `toggle_menu` | Opens/closes the clipboard history popup (Scheduled asynchronously). |
 | `toggle_label` | Switches display between `label` and `label_alt` on the bar. |
-| `do_nothing` | No action. |
 
 ---
 
@@ -50,8 +49,8 @@ A lightweight clipboard manager for YASB that integrates directly with the nativ
   clipboard:
     type: "yasb.clipboard.ClipboardWidget"
     options:
-      label: "<span>\udb80\udd4d</span> {clipboard}"
-      label_alt: "<span>CLIPBOARD:</span> {clipboard}"
+      label: "<span>\udb80\udd4d</span>"
+      label_alt: "<span>CLIPBOARD</span>"
       max_length: 25
       menu:
         blur: false
@@ -60,7 +59,6 @@ A lightweight clipboard manager for YASB that integrates directly with the nativ
         direction: "down"
       callbacks:
         on_left: "toggle_menu"
-        on_middle: "do_nothing"
         on_right: "toggle_label"
 ```
 

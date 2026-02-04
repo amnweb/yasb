@@ -1,95 +1,59 @@
-DEFAULTS = {
-    "label": "<span>\udb80\udd4d</span> {clipboard}",
-    "label_alt": "{clipboard}",
-    "class_name": "",
-    "max_length": 30,
-    "max_history": 50,
-    "container_padding": {"top": 0, "left": 0, "bottom": 0, "right": 0},
-    "animation": {"enabled": True, "type": "fadeInOut", "duration": 200},
-    "menu": {
-        "blur": True,
-        "round_corners": True,
-        "round_corners_type": "normal",
-        "border_color": "System",
-        "alignment": "right",
-        "direction": "down",
-        "offset_top": 6,
-        "offset_left": 0,
-        "max_item_length": 50,
-    },
-    "icons": {
-        "clipboard": "\udb80\udd4d",
-        "clear": "\uf1f8",
-        "search_clear": "\uf00d",
-    },
-    "callbacks": {"on_left": "toggle_menu", "on_middle": "do_nothing", "on_right": "toggle_label"},
-}
+from typing import Literal
 
-VALIDATION_SCHEMA = {
-    "label": {"type": "string", "default": DEFAULTS["label"]},
-    "label_alt": {"type": "string", "default": DEFAULTS["label_alt"]},
-    "class_name": {"type": "string", "required": False, "default": DEFAULTS["class_name"]},
-    "max_length": {"type": "integer", "required": False, "default": DEFAULTS["max_length"], "min": 5, "max": 100},
-    "max_history": {"type": "integer", "required": False, "default": DEFAULTS["max_history"], "min": 10, "max": 500},
-    "container_padding": {
-        "type": "dict",
-        "required": False,
-        "schema": {
-            "top": {"type": "integer", "default": DEFAULTS["container_padding"]["top"]},
-            "left": {"type": "integer", "default": DEFAULTS["container_padding"]["left"]},
-            "bottom": {"type": "integer", "default": DEFAULTS["container_padding"]["bottom"]},
-            "right": {"type": "integer", "default": DEFAULTS["container_padding"]["right"]},
-        },
-        "default": DEFAULTS["container_padding"],
-    },
-    "animation": {
-        "type": "dict",
-        "required": False,
-        "schema": {
-            "enabled": {"type": "boolean", "default": DEFAULTS["animation"]["enabled"]},
-            "type": {"type": "string", "default": DEFAULTS["animation"]["type"]},
-            "duration": {"type": "integer", "default": DEFAULTS["animation"]["duration"]},
-        },
-        "default": DEFAULTS["animation"],
-    },
-    "menu": {
-        "type": "dict",
-        "required": False,
-        "schema": {
-            "blur": {"type": "boolean", "default": DEFAULTS["menu"]["blur"]},
-            "round_corners": {"type": "boolean", "default": DEFAULTS["menu"]["round_corners"]},
-            "round_corners_type": {
-                "type": "string",
-                "default": DEFAULTS["menu"]["round_corners_type"],
-                "allowed": ["normal", "small"],
-            },
-            "border_color": {"type": "string", "default": DEFAULTS["menu"]["border_color"]},
-            "alignment": {"type": "string", "default": DEFAULTS["menu"]["alignment"]},
-            "direction": {"type": "string", "default": DEFAULTS["menu"]["direction"]},
-            "offset_top": {"type": "integer", "default": DEFAULTS["menu"]["offset_top"]},
-            "offset_left": {"type": "integer", "default": DEFAULTS["menu"]["offset_left"]},
-            "max_item_length": {"type": "integer", "default": DEFAULTS["menu"]["max_item_length"]},
-        },
-        "default": DEFAULTS["menu"],
-    },
-    "icons": {
-        "type": "dict",
-        "required": False,
-        "schema": {
-            "clipboard": {"type": "string", "default": DEFAULTS["icons"]["clipboard"]},
-            "clear": {"type": "string", "default": DEFAULTS["icons"]["clear"]},
-            "search_clear": {"type": "string", "default": DEFAULTS["icons"]["search_clear"]},
-        },
-        "default": DEFAULTS["icons"],
-    },
-    "callbacks": {
-        "type": "dict",
-        "required": False,
-        "schema": {
-            "on_left": {"type": "string", "default": DEFAULTS["callbacks"]["on_left"]},
-            "on_middle": {"type": "string", "default": DEFAULTS["callbacks"]["on_middle"]},
-            "on_right": {"type": "string", "default": DEFAULTS["callbacks"]["on_right"]},
-        },
-        "default": DEFAULTS["callbacks"],
-    },
-}
+from pydantic import Field
+
+from core.validation.widgets.base_model import (
+    AnimationConfig,
+    CallbacksConfig,
+    CustomBaseModel,
+    KeybindingConfig,
+    PaddingConfig,
+    ShadowConfig,
+)
+
+
+class ClipboardMenuConfig(CustomBaseModel):
+    """Configuration for the clipboard popup menu."""
+
+    blur: bool = True
+    round_corners: bool = True
+    round_corners_type: Literal["normal", "small"] = "normal"
+    border_color: str = "System"
+    alignment: Literal["left", "right", "center"] = "right"
+    direction: Literal["up", "down"] = "down"
+    offset_top: int = 6
+    offset_left: int = 0
+    max_item_length: int = Field(default=50, ge=10, le=200)
+
+
+class ClipboardIconsConfig(CustomBaseModel):
+    """Configuration for clipboard widget icons."""
+
+    clipboard: str = "\udb80\udd4d"
+    clear: str = "\uf1f8"
+    search_clear: str = "\uf00d"
+
+
+class ClipboardCallbacksConfig(CallbacksConfig):
+    """Callbacks configuration with clipboard-specific defaults."""
+
+    on_left: str = "toggle_menu"
+    on_right: str = "toggle_label"
+
+
+class ClipboardConfig(CustomBaseModel):
+    """Main configuration model for the Clipboard widget."""
+
+    label: str = "<span>\udb80\udd4d</span> {clipboard}"
+    label_alt: str = "{clipboard}"
+    class_name: str = ""
+    max_length: int = Field(default=30, ge=5, le=100)
+    max_history: int = Field(default=50, ge=10, le=500)
+    menu: ClipboardMenuConfig = ClipboardMenuConfig()
+    icons: ClipboardIconsConfig = ClipboardIconsConfig()
+    animation: AnimationConfig = AnimationConfig()
+    container_padding: PaddingConfig = PaddingConfig()
+    label_shadow: ShadowConfig = ShadowConfig()
+    container_shadow: ShadowConfig = ShadowConfig()
+    keybindings: list[KeybindingConfig] = []
+    callbacks: ClipboardCallbacksConfig = ClipboardCallbacksConfig()
