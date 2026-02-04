@@ -17,7 +17,6 @@ from settings import DEBUG
 class WallpaperManager(QObject):
     _instance = None
     toggle_gallery_signal = pyqtSignal(str)
-    _handle_widget_cli = pyqtSignal(str, str)
     _set_wallpaper_signal = pyqtSignal(str)
 
     def __new__(cls):
@@ -41,10 +40,6 @@ class WallpaperManager(QObject):
         self._timer_running = False
 
         self._event_service = EventService()
-
-        # Register CLI handler
-        self._handle_widget_cli.connect(self._on_handle_widget_cli)
-        self._event_service.register_event("handle_widget_cli", self._handle_widget_cli)
 
         # Register Set Wallpaper handler
         self._set_wallpaper_signal.connect(self.change_background)
@@ -73,10 +68,6 @@ class WallpaperManager(QObject):
 
     def _timer_callback(self):
         self.change_background()
-
-    def _on_handle_widget_cli(self, widget: str, screen: str):
-        if widget == "wallpapers":
-            self.toggle_gallery_signal.emit(screen)
 
     def set_wallpaper(self, image_path: str):
         """

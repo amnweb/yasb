@@ -75,14 +75,14 @@ class FileModifiedEventHandler(PatternMatchingEventHandler):
         modified_file = basename(event.src_path)
         normalized_path = self._normalize_path(event.src_path)
 
-        if modified_file == self.styles_file and self.bar_manager.config["watch_stylesheet"]:
+        if modified_file == self.styles_file and self.bar_manager.config.watch_stylesheet:
             new_hash = self._file_hash(event.src_path)
             if new_hash and new_hash != self._last_styles_hash:
                 self._last_styles_hash = new_hash
                 self._refresh_imported_stylesheets()
                 self.bar_manager.styles_modified.emit()
                 logging.debug(f"Stylesheet modified: {event.src_path}")
-        elif modified_file == self.config_file and self.bar_manager.config["watch_config"]:
+        elif modified_file == self.config_file and self.bar_manager.config.watch_config:
             new_hash = self._file_hash(event.src_path)
             if new_hash and new_hash != self._last_config_hash:
                 self._last_config_hash = new_hash

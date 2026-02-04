@@ -11,44 +11,51 @@ from PyQt6.QtGui import QColor, QLinearGradient, QPainter, QPainterPath
 from PyQt6.QtWidgets import QApplication, QFrame, QHBoxLayout, QLabel
 
 from core.utils.utilities import app_data_path
-from core.validation.widgets.yasb.cava import VALIDATION_SCHEMA
+from core.validation.widgets.yasb.cava import CavaConfig
 from core.widgets.base import BaseWidget
 
 
 class CavaBar(QFrame):
-    def __init__(self, cava_widget):
+    _dpr: float | None
+    _cava_widget: "CavaWidget"
+
+    def __init__(self, cava_widget: "CavaWidget") -> None:
         super().__init__()
         self._dpr = None
         self._cava_widget = cava_widget
-        self.setFixedHeight(self._cava_widget._height)
+        self.setFixedHeight(self._cava_widget.config.bar_height)
         self.setFixedWidth(
-            self._cava_widget._bars_number
+            self._cava_widget.config.bars_number
             * (
-                self._cava_widget._bar_width
+                self._cava_widget.config.bar_width
                 + (
-                    self._cava_widget._bar_spacing
-                    if self._cava_widget._bar_type == "bars_mirrored" or self._cava_widget._bar_type == "bars"
+                    self._cava_widget.config.bar_spacing
+                    if self._cava_widget.config.bar_type == "bars_mirrored"
+                    or self._cava_widget.config.bar_type == "bars"
                     else 0
                 )
             )
         )
         self.setContentsMargins(0, 0, 0, 0)
 
-    def _device_pixel_ratio(self, painter) -> float:
+    def _device_pixel_ratio(self, painter: QPainter) -> float:
         """Return device pixel ratio for the painter's device."""
         if self._dpr is not None:
             return self._dpr
 
         try:
             dev = painter.device()
-            dpr = float(dev.devicePixelRatioF())
+            if dev:
+                dpr = float(dev.devicePixelRatioF())
+            else:
+                dpr = 1.0
         except Exception:
             dpr = 1.0
 
         self._dpr = dpr if dpr > 0 else 1.0
         return self._dpr
 
-    def _get_fade_opacity(self, x_position):
+    def _get_fade_opacity(self, x_position: float) -> float:
         """Calculate opacity based on position for edge fade effect."""
         fade_left = self._cava_widget._edge_fade_left
         fade_right = self._cava_widget._edge_fade_right
@@ -79,7 +86,7 @@ class CavaBar(QFrame):
         # Middle area - full opacity
         return 1.0
 
-    def paintEvent(self, event):
+    def paintEvent(self, event) -> None:
         """Draw the cava bars according to the selected style."""
         painter = QPainter(self)
 
@@ -88,30 +95,30 @@ class CavaBar(QFrame):
         except Exception:
             pass
 
-        if self._cava_widget._bar_type == "bars_mirrored":
+        if self._cava_widget.config.bar_type == "bars_mirrored":
             self.draw_bars_mirrored(painter)
-        elif self._cava_widget._bar_type == "waves":
+        elif self._cava_widget.config.bar_type == "waves":
             self.draw_waves(painter)
-        elif self._cava_widget._bar_type == "waves_mirrored":
+        elif self._cava_widget.config.bar_type == "waves_mirrored":
             self.draw_waves_mirrored(painter)
         else:
             self.draw_bars(painter)
 
-    def draw_bars(self, painter):
+    def draw_bars(self, painter: QPainter) -> None:
         """Draw traditional bar visualization"""
         dpr = self._device_pixel_ratio(painter)
 
-        bar_w_px = max(1, round(self._cava_widget._bar_width * dpr))
-        bar_s_px = max(0, round(self._cava_widget._bar_spacing * dpr))
-        left_margin_px = round((self._cava_widget._bar_spacing / 2.0) * dpr)
+        bar_w_px = max(1, round(self._cava_widget.config.bar_width * dpr))
+        bar_s_px = max(0, round(self._cava_widget.config.bar_spacing * dpr))
+        left_margin_px = round((self._cava_widget.config.bar_spacing / 2.0) * dpr)
 
         for i, sample in enumerate(self._cava_widget.samples):
-            min_height_logical = float(self._cava_widget._min_height) / dpr
-            computed_height = sample * float(self._cava_widget._height)
+            min_height_logical = float(self._cava_widget.config.min_bar_height) / dpr
+            computed_height = sample * float(self._cava_widget.config.bar_height)
             height = max(min_height_logical, computed_height)
             if height > 0.0:
                 x_px = left_margin_px + i * (bar_w_px + bar_s_px)
-                y_px = max(0, round((float(self._cava_widget._height) - height) * dpr))
+                y_px = max(0, round((float(self._cava_widget.config.bar_height) - height) * dpr))
                 h_px = max(1, round(height * dpr))
 
                 rx = x_px / dpr
@@ -119,7 +126,7 @@ class CavaBar(QFrame):
                 rw = bar_w_px / dpr
                 rh = h_px / dpr
 
-                if self._cava_widget._gradient == 1 and self._cava_widget.colors:
+                if self._cava_widget.config.gradient == 1 and self._cava_widget.colors:
                     gradient = QLinearGradient(0, 1, 0, 0)
                     gradient.setCoordinateMode(QLinearGradient.CoordinateMode.ObjectBoundingMode)
                     stop_step = 1.0 / (len(self._cava_widget.colors) - 1)
@@ -138,18 +145,18 @@ class CavaBar(QFrame):
 
                     painter.fillRect(QRectF(rx, ry, rw, rh), self._cava_widget.foreground_color)
 
-    def draw_bars_mirrored(self, painter):
+    def draw_bars_mirrored(self, painter: QPainter) -> None:
         """Draw mirrored bar visualization"""
         if not self._cava_widget.samples:
             return
         dpr = self._device_pixel_ratio(painter)
         width = self.width()
-        height = float(self._cava_widget._height)
+        height = float(self._cava_widget.config.bar_height)
         samples = self._cava_widget.samples
         center_y = height / 2.0
 
-        band_w_px = max(1, round(self._cava_widget._bar_width * dpr))
-        band_s_px = max(0, round(self._cava_widget._bar_spacing * dpr))
+        band_w_px = max(1, round(self._cava_widget.config.bar_width * dpr))
+        band_s_px = max(0, round(self._cava_widget.config.bar_spacing * dpr))
 
         total_w_px = max(1, round(float(width) * dpr))
         bars_count = len(samples)
@@ -157,7 +164,7 @@ class CavaBar(QFrame):
         left_margin_px = max(0, (total_w_px - total_bars_width_px) // 2)
 
         # Precompute brushes (single gradient instance reused)
-        if self._cava_widget._gradient == 1 and self._cava_widget.colors:
+        if self._cava_widget.config.gradient == 1 and self._cava_widget.colors:
             stop_step = 1.0 / (len(self._cava_widget.colors) - 1)
             gradient_upper = QLinearGradient(0, 1, 0, 0)
             gradient_upper.setCoordinateMode(QLinearGradient.CoordinateMode.ObjectBoundingMode)
@@ -174,8 +181,8 @@ class CavaBar(QFrame):
         for i, sample in enumerate(samples):
             ux_px = left_margin_px + i * (band_w_px + band_s_px)
 
-            min_height_logical = float(self._cava_widget._min_height) / dpr
-            full_height_logical = max(min_height_logical, sample * float(self._cava_widget._height))
+            min_height_logical = float(self._cava_widget.config.min_bar_height) / dpr
+            full_height_logical = max(min_height_logical, sample * float(self._cava_widget.config.bar_height))
 
             full_h_px = round(full_height_logical * dpr)
             if full_h_px <= 0:
@@ -204,7 +211,7 @@ class CavaBar(QFrame):
 
                     painter.fillRect(QRectF(ux_px / dpr, ly_px / dpr, band_w_px / dpr, down_px / dpr), brush_lower)
 
-    def draw_waves(self, painter, radius=1):
+    def draw_waves(self, painter: QPainter, radius: int = 1) -> None:
         """Draw wave visualization."""
         if not self._cava_widget.samples:
             return
@@ -212,10 +219,10 @@ class CavaBar(QFrame):
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
         dpr = self._device_pixel_ratio(painter)
 
-        height = float(self._cava_widget._height)
+        height = float(self._cava_widget.config.bar_height)
         samples = self._cava_widget.samples
 
-        if self._cava_widget._gradient == 1 and self._cava_widget.colors:
+        if self._cava_widget.config.gradient == 1 and self._cava_widget.colors:
             stop_step = 1.0 / (len(self._cava_widget.colors) - 1)
             gradient = QLinearGradient(0, 1, 0, 0)
             gradient.setCoordinateMode(QLinearGradient.CoordinateMode.ObjectBoundingMode)
@@ -238,7 +245,7 @@ class CavaBar(QFrame):
         widget_w = float(self.width())
         step = widget_w / max(1, n)
         points = []
-        min_h_logical = float(self._cava_widget._min_height) / dpr
+        min_h_logical = float(self._cava_widget.config.min_bar_height) / dpr
         for i in range(n):
             cx = i * step + step / 2.0
             val = max(min_h_logical, smooth(i) * height)
@@ -275,18 +282,18 @@ class CavaBar(QFrame):
             # No fade effect - use simple fillPath for efficiency
             painter.fillPath(path, brush)
 
-    def draw_waves_mirrored(self, painter, radius=1):
+    def draw_waves_mirrored(self, painter: QPainter, radius: int = 1) -> None:
         """Draw a mirrored wave visualization."""
         if not self._cava_widget.samples:
             return
 
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
         dpr = self._device_pixel_ratio(painter)
-        height = float(self._cava_widget._height)
+        height = float(self._cava_widget.config.bar_height)
         samples = self._cava_widget.samples
         center_y = height / 2.0
 
-        if self._cava_widget._gradient == 1 and self._cava_widget.colors:
+        if self._cava_widget.config.gradient == 1 and self._cava_widget.colors:
             colors_len = len(self._cava_widget.colors)
             stop_step = 1.0 / (colors_len - 1) if colors_len > 1 else 1.0
             gradient = QLinearGradient(0, 0, 0, 1)
@@ -316,7 +323,7 @@ class CavaBar(QFrame):
 
         top_points = []
         bottom_points = []
-        min_h_logical = float(self._cava_widget._min_height) / dpr
+        min_h_logical = float(self._cava_widget.config.min_bar_height) / dpr
         for i in range(n):
             cx = i * step + step / 2.0
             val = max(min_h_logical, smooth(i) * height / 2.0)
@@ -357,98 +364,53 @@ class CavaBar(QFrame):
 
 
 class CavaWidget(BaseWidget):
-    validation_schema = VALIDATION_SCHEMA
+    validation_schema = CavaConfig
     samplesUpdated = pyqtSignal(list)
     _instance_counter = 0  # Class variable to track instances
 
-    def __init__(
-        self,
-        class_name: str,
-        bar_height: int,
-        min_bar_height: int,
-        bars_number: int,
-        output_bit_format: str,
-        orientation: str,
-        bar_spacing: int,
-        bar_width: int,
-        sleep_timer: int,
-        sensitivity: int,
-        lower_cutoff_freq: int,
-        higher_cutoff_freq: int,
-        framerate: int,
-        noise_reduction: float,
-        mono_option: str,
-        reverse: int,
-        waveform: int,
-        channels: str,
-        foreground: str,
-        gradient: bool,
-        gradient_color_1: str,
-        gradient_color_2: str,
-        gradient_color_3: str,
-        monstercat: int,
-        waves: int,
-        hide_empty: bool,
-        bar_type: str,
-        edge_fade: int | list[int],
-        container_padding: dict[str, int],
-        callbacks: dict[str, str],
-    ):
-        super().__init__(class_name=f"cava-widget {class_name}")
+    _edge_fade_left: int
+    _edge_fade_right: int
+    _cava_process: subprocess.Popen[bytes] | None
+    thread_cava: threading.Thread | None
+    foreground_color: QColor
+    colors: list[QColor]
+    samples: list[float]
+    _instance_id: int
+    _hide_cava_widget: bool
+    _stop_cava: bool
+    _hide_timer: QTimer | None
+    _bar_frame: CavaBar
+
+    def __init__(self, config: CavaConfig):
+        super().__init__(class_name=f"cava-widget {config.class_name}")
+        self.config = config
         # Assign unique instance ID
         CavaWidget._instance_counter += 1
         self._instance_id = CavaWidget._instance_counter
 
-        # Widget configuration
-        self._height = bar_height
-        self._min_height = min_bar_height
-        self._bars_number = bars_number
-        self._output_bit_format = output_bit_format
-        self._orientation = orientation
-        self._bar_spacing = bar_spacing
-        self._bar_width = bar_width
-        self._sleep_timer = sleep_timer
-        self._sensitivity = sensitivity
-        self._lower_cutoff_freq = lower_cutoff_freq
-        self._higher_cutoff_freq = higher_cutoff_freq
-        self._framerate = framerate
-        self._noise_reduction = noise_reduction
-        self._mono_option = mono_option
-        self._reverse = reverse
-        self._waveform = waveform
-        self._channels = channels
-        self._foreground = foreground
-        self._gradient = gradient
-        self._gradient_color_1 = gradient_color_1
-        self._gradient_color_2 = gradient_color_2
-        self._gradient_color_3 = gradient_color_3
-        self._monstercat = monstercat
-        self._waves = waves
-        self._hide_empty = hide_empty
-        self._padding = container_padding
+        self._cava_process = None
+        self.thread_cava = None
+        self._hide_timer = None
         self._hide_cava_widget = True
         self._stop_cava = False
-        self._bar_type = bar_type
 
         # Parse edge_fade parameter - support both integer and [left, right] formats
-        if isinstance(edge_fade, list) and len(edge_fade) == 2:
-            self._edge_fade_left = edge_fade[0]
-            self._edge_fade_right = edge_fade[1]
+        if isinstance(self.config.edge_fade, list) and len(self.config.edge_fade) == 2:
+            self._edge_fade_left = self.config.edge_fade[0]
+            self._edge_fade_right = self.config.edge_fade[1]
         else:
             # Single value applies to both sides
-            self._edge_fade_left = edge_fade
-            self._edge_fade_right = edge_fade
+            self._edge_fade_left = self.config.edge_fade
+            self._edge_fade_right = self.config.edge_fade
 
         # Set up samples and colors
-        self.samples = [0] * self._bars_number
+        self.samples = [0] * self.config.bars_number
         self.colors = []
 
         # Construct container layout
         self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(
-            self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
-        )
+        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
         self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
@@ -466,9 +428,9 @@ class CavaWidget(BaseWidget):
 
         self.register_callback("reload_cava", self._reload_cava)
 
-        self.callback_left = callbacks["on_left"]
-        self.callback_right = callbacks["on_right"]
-        self.callback_middle = callbacks["on_middle"]
+        self.callback_left = self.config.callbacks.on_left
+        self.callback_right = self.config.callbacks.on_right
+        self.callback_middle = self.config.callbacks.on_middle
 
         # Connect signal and start audio processing
         self.samplesUpdated.connect(self.on_samples_updated)
@@ -476,11 +438,13 @@ class CavaWidget(BaseWidget):
         self.start_cava()
 
         # Set up auto-hide timer for silence
-        if self._hide_empty and self._sleep_timer > 0:
+        if self.config.hide_empty and self.config.sleep_timer > 0:
             self.hide()
             self._hide_timer = QTimer(self)
-            self._hide_timer.setInterval(self._sleep_timer * 1000)
+            self._hide_timer.setInterval(self.config.sleep_timer * 1000)
             self._hide_timer.timeout.connect(self.hide_bar_frame)
+        else:
+            self._hide_timer = None
 
         if QApplication.instance():
             QApplication.instance().aboutToQuit.connect(self.stop_cava)
@@ -491,12 +455,12 @@ class CavaWidget(BaseWidget):
         try:
             self.stop_cava()
 
-            self.samples = [0] * self._bars_number
+            self.samples = [0] * self.config.bars_number
 
             QTimer.singleShot(500, self.start_cava)
 
-            if self._hide_empty and self._sleep_timer > 0:
-                if hasattr(self, "_hide_timer"):
+            if self.config.hide_empty and self.config.sleep_timer > 0:
+                if self._hide_timer:
                     self._hide_timer.stop()
                 self._hide_cava_widget = True
                 self.show()
@@ -506,20 +470,20 @@ class CavaWidget(BaseWidget):
     def stop_cava(self) -> None:
         self._stop_cava = True
         self.colors.clear()
-        if hasattr(self, "_cava_process") and self._cava_process.poll() is None:
+        if self._cava_process and self._cava_process.poll() is None:
             try:
                 self._cava_process.terminate()
                 self._cava_process.wait(timeout=2)
             except subprocess.TimeoutExpired:
                 self._cava_process.kill()
-        if hasattr(self, "thread_cava") and self.thread_cava.is_alive():
+        if self.thread_cava and self.thread_cava.is_alive():
             if threading.current_thread() != self.thread_cava:
                 self.thread_cava.join(timeout=2)
 
     def initialize_colors(self) -> None:
-        self.foreground_color = QColor(self._foreground)
-        if self._gradient == 1:
-            for color_str in [self._gradient_color_1, self._gradient_color_2, self._gradient_color_3]:
+        self.foreground_color = QColor(self.config.foreground)
+        if self.config.gradient == 1:
+            for color_str in [self.config.gradient_color_1, self.config.gradient_color_2, self.config.gradient_color_3]:
                 if not color_str:
                     continue
                 try:
@@ -537,11 +501,12 @@ class CavaWidget(BaseWidget):
             return
         if any(val != 0 for val in new_samples):
             try:
-                if self._hide_empty and self._sleep_timer > 0:
+                if self.config.hide_empty and self.config.sleep_timer > 0:
                     if self._hide_cava_widget:
                         self.show()
                         self._hide_cava_widget = False
-                    self._hide_timer.start()
+                    if self._hide_timer:
+                        self._hide_timer.start()
                 self._bar_frame.update()
             except Exception as e:
                 logging.error(f"Error updating cava widget: {e}")
@@ -555,48 +520,48 @@ class CavaWidget(BaseWidget):
         self._stop_cava = False
 
         # Build configuration file, temp config file will be created in YASB TEMP directory
-        lines = []
+        lines: list[str] = []
         lines.append("# Cava config auto-generated by YASB")
         lines.append("[general]")
-        lines.append(f"bars = {self._bars_number}")
-        lines.append(f"bar_spacing = {self._bar_spacing}")
-        lines.append(f"bar_width = {self._bar_width}")
-        lines.append(f"sleep_timer = {self._sleep_timer}")
-        lines.append(f"sensitivity = {self._sensitivity}")
-        lines.append(f"lower_cutoff_freq = {self._lower_cutoff_freq}")
-        lines.append(f"higher_cutoff_freq = {self._higher_cutoff_freq}")
-        lines.append(f"framerate = {self._framerate}")
+        lines.append(f"bars = {self.config.bars_number}")
+        lines.append(f"bar_spacing = {self.config.bar_spacing}")
+        lines.append(f"bar_width = {self.config.bar_width}")
+        lines.append(f"sleep_timer = {self.config.sleep_timer}")
+        lines.append(f"sensitivity = {self.config.sensitivity}")
+        lines.append(f"lower_cutoff_freq = {self.config.lower_cutoff_freq}")
+        lines.append(f"higher_cutoff_freq = {self.config.higher_cutoff_freq}")
+        lines.append(f"framerate = {self.config.framerate}")
         lines.append("")
         lines.append("[output]")
         lines.append("method = raw")
-        lines.append(f"bit_format = {self._output_bit_format}")
-        lines.append(f"orientation = {self._orientation}")
-        lines.append(f"channels = {self._channels}")
-        lines.append(f"mono_option = {self._mono_option}")
-        lines.append(f"reverse = {self._reverse}")
-        lines.append(f"waveform = {self._waveform}")
+        lines.append(f"bit_format = {self.config.output_bit_format}")
+        lines.append(f"orientation = {self.config.orientation}")
+        lines.append(f"channels = {self.config.channels}")
+        lines.append(f"mono_option = {self.config.mono_option}")
+        lines.append(f"reverse = {self.config.reverse}")
+        lines.append(f"waveform = {self.config.waveform}")
         lines.append("")
         lines.append("[color]")
-        lines.append(f"foreground = '{self._foreground}'")
-        lines.append(f"gradient = {self._gradient}")
-        if getattr(self, "_gradient_color_1", None):
-            lines.append(f"gradient_color_1 = '{self._gradient_color_1}'")
-        if getattr(self, "_gradient_color_2", None):
-            lines.append(f"gradient_color_2 = '{self._gradient_color_2}'")
-        if getattr(self, "_gradient_color_3", None):
-            lines.append(f"gradient_color_3 = '{self._gradient_color_3}'")
+        lines.append(f"foreground = '{self.config.foreground}'")
+        lines.append(f"gradient = {self.config.gradient}")
+        if self.config.gradient_color_1:
+            lines.append(f"gradient_color_1 = '{self.config.gradient_color_1}'")
+        if self.config.gradient_color_2:
+            lines.append(f"gradient_color_2 = '{self.config.gradient_color_2}'")
+        if self.config.gradient_color_3:
+            lines.append(f"gradient_color_3 = '{self.config.gradient_color_3}'")
         lines.append("")
         lines.append("[smoothing]")
-        lines.append(f"monstercat = {self._monstercat}")
-        lines.append(f"waves = {self._waves}")
-        lines.append(f"noise_reduction = {self._noise_reduction}")
+        lines.append(f"monstercat = {self.config.monstercat}")
+        lines.append(f"waves = {self.config.waves}")
+        lines.append(f"noise_reduction = {self.config.noise_reduction}")
 
         config_template = "\n".join(lines) + "\n"
 
         self.initialize_colors()
 
         # Determine byte type settings for reading audio data
-        if self._output_bit_format == "16bit":
+        if self.config.output_bit_format == "16bit":
             bytetype, bytesize, bytenorm = ("H", 2, 65535)
         else:
             bytetype, bytesize, bytenorm = ("B", 1, 255)
@@ -616,8 +581,8 @@ class CavaWidget(BaseWidget):
                     creationflags=subprocess.CREATE_NO_WINDOW,
                 )
 
-                chunk = bytesize * self._bars_number
-                fmt = bytetype * self._bars_number
+                chunk = bytesize * self.config.bars_number
+                fmt = bytetype * self.config.bars_number
 
                 while not self._stop_cava:
                     try:
@@ -641,7 +606,7 @@ class CavaWidget(BaseWidget):
                         pass
 
         # Wait for previous thread to finish if it exists
-        if hasattr(self, "thread_cava") and self.thread_cava.is_alive():
+        if self.thread_cava and self.thread_cava.is_alive():
             self.thread_cava.join(timeout=1)
 
         self.thread_cava = threading.Thread(target=process_audio, daemon=True)

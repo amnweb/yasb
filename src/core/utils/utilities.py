@@ -11,6 +11,8 @@ from pathlib import Path
 from threading import Lock
 from typing import Any, TypeGuard, cast, override
 
+import yaml
+from pydantic import ValidationError
 from PyQt6 import sip
 from PyQt6.QtCore import (
     QEasingCurve,
@@ -407,6 +409,30 @@ class LoaderLine(QWidget):
         painter.fillRect(x, 0, segment_w, h, QColor(line_color))
 
 
+def format_pydantic_errors_to_yaml(exc: ValidationError) -> str:
+    """Format a Pydantic ValidationError to a YAML string."""
+    tree = {}
+    for error in exc.errors():
+        current = tree
+        loc = error["loc"]
+
+        # Walk through the path (e.g., ('nested', 0, 'field'))
+        for i, part in enumerate(loc):
+            # If we are at the last part, it's the actual error location
+            if i == len(loc) - 1:
+                if part not in current:
+                    current[part] = []
+                # Handle cases where Pydantic returns multiple errors for one field
+                current[part].append(error["msg"])
+            else:
+                # If the path doesn't exist, create a dict for the next level
+                if part not in current or not isinstance(current[part], dict):
+                    current[part] = {}
+                current = current[part]
+
+    return yaml.dump(tree, default_flow_style=False, sort_keys=False)
+
+
 def build_widget_label(self, content: str, content_alt: str = None, content_shadow: dict = None):
     def process_content(content, is_alt=False):
         label_parts = re.split("(<span.*?>.*?</span>)", content)
@@ -512,6 +538,11 @@ class PopupWidget(QWidget):
         resizeEvent(event): Handle the resize event for the popup.
     """
 
+    # Class-level registry to track open popups per parent widget
+    # This will help to manage toggle behavior when we use keybindings to open/close popups
+    # But this should be revisited maybe is there a better way to manage this
+    _open_popups: dict[int, "PopupWidget"] = {}
+
     def __init__(
         self,
         parent: QWidget,
@@ -545,8 +576,6 @@ class PopupWidget(QWidget):
         self._fade_animation.finished.connect(self._on_animation_finished)
 
         self._is_closing = False
-
-        QApplication.instance().installEventFilter(self)
 
     def setProperty(self, name, value):
         super().setProperty(name, value)
@@ -608,9 +637,18 @@ class PopupWidget(QWidget):
     def _on_animation_finished(self):
         """Handle animation completion."""
         if self._is_closing:
+            # Remove from registry
+            try:
+                parent_id = id(self._parent)
+                if parent_id in PopupWidget._open_popups and PopupWidget._open_popups[parent_id] is self:
+                    PopupWidget._open_popups.pop(parent_id, None)
+            except Exception:
+                pass
+
             try:
                 super().hide()
                 self.deleteLater()
+
             except Exception:
                 pass
 
@@ -644,6 +682,15 @@ class PopupWidget(QWidget):
             pass
 
         self._is_closing = True
+
+        # Remove from registry
+        try:
+            parent_id = id(self._parent)
+            if parent_id in PopupWidget._open_popups and PopupWidget._open_popups[parent_id] is self:
+                PopupWidget._open_popups.pop(parent_id, None)
+        except Exception:
+            pass
+
         try:
             super().hide()
             self.deleteLater()
@@ -655,7 +702,33 @@ class PopupWidget(QWidget):
         event.ignore()  # Ignore the default close behavior
         self.hide_animated()
 
+    def show(self):
+        """Show the popup with toggle support."""
+        parent_id = id(self._parent)
+
+        if parent_id in PopupWidget._open_popups:
+            existing_popup = PopupWidget._open_popups[parent_id]
+            if existing_popup is not self:
+                try:
+                    # Only toggle-close if popup is visible and NOT already closing
+                    # (if _is_closing is True, it means eventFilter already handled it)
+                    if existing_popup.isVisible() and not existing_popup._is_closing:
+                        existing_popup.hide_animated()
+                        return
+                except RuntimeError:
+                    pass
+                PopupWidget._open_popups.pop(parent_id, None)
+
+        super().show()
+
     def showEvent(self, event):
+        # Install event filter only when popup is actually shown
+        QApplication.instance().installEventFilter(self)
+
+        # Register this popup in the class-level registry for toggle support
+        parent_id = id(self._parent)
+        PopupWidget._open_popups[parent_id] = self
+
         if self._blur:
             Blur(
                 self.winId(),

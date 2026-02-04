@@ -204,10 +204,6 @@ volume:
     border-radius: 6px;
     margin-right: 8px;
 }
-.audio-menu .apps-container .app-volume .app-slider {
-    min-height: 40px;
-    max-height: 40px;
-}
 .audio-menu .apps-container .app-volume .app-icon-container:hover {
     background-color: rgba(255, 255, 255, 0.1);
 }

@@ -327,33 +327,6 @@ class CLIHandler:
             help="Screen name (optional)",
         )
 
-        widget_toggle_parser = subparsers.add_parser(
-            "toggle-widget",
-            help="Toggle a widget show/hide",
-            prog="yasbc toggle-widget",
-        )
-        widget_toggle_parser.add_argument(
-            "widget_name",
-            type=str,
-            help="Name of the widget to toggle",
-        )
-        widget_toggle_parser.add_argument(
-            "-s",
-            "--screen",
-            type=str,
-            help="Screen name (optional)",
-        )
-        widget_toggle_parser.add_argument(
-            "--follow-mouse",
-            action="store_true",
-            help="Follow mouse cursor (optional)",
-        )
-        widget_toggle_parser.add_argument(
-            "--follow-focus",
-            action="store_true",
-            help="Follow focused window (optional)",
-        )
-
         # Channel management
         set_channel_parser = subparsers.add_parser(
             "set-channel",
@@ -452,20 +425,6 @@ class CLIHandler:
         elif args.command == "toggle-bar":
             screen_arg = f" --screen {args.screen}" if args.screen else ""
             self.send_command_to_application(f"toggle-bar{screen_arg}")
-            sys.exit(0)
-
-        elif args.command == "toggle-widget":
-            if not args.widget_name:
-                sys.exit(1)
-            if args.screen:
-                arg = f" --screen {args.screen}" if args.screen else ""
-            elif args.follow_mouse:
-                arg = " --follow-mouse"
-            elif args.follow_focus:
-                arg = " --follow-focus"
-            else:
-                arg = ""
-            self.send_command_to_application(f"toggle-widget {args.widget_name}{arg}")
             sys.exit(0)
 
         elif args.command == "set-channel":
@@ -634,7 +593,6 @@ class CLIHandler:
                   show-bar                  Show the bar on all or a specific screen
                   hide-bar                  Hide the bar on all or a specific screen
                   toggle-bar                Toggle the bar on all or a specific screen
-                  toggle-widget             Toggle a widget show/hide
                   set-channel               Switch release channels (stable, dev)
                   update                    Update the application
                   log                       Tail yasb process logs (cancel with Ctrl-C)

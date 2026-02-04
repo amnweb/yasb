@@ -10,40 +10,19 @@ from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QVBoxLayou
 from core.utils.utilities import PopupWidget, add_shadow, build_widget_label, refresh_widget_style
 from core.utils.win32.bindings import PowerEnumerate, PowerGetActiveScheme, PowerReadFriendlyName, PowerSetActiveScheme
 from core.utils.win32.structs import GUID
-from core.validation.widgets.yasb.power_plan import VALIDATION_SCHEMA
+from core.validation.widgets.yasb.power_plan import PowerPlanConfig
 from core.widgets.base import BaseWidget
 
 
 class PowerPlanWidget(BaseWidget):
-    validation_schema = VALIDATION_SCHEMA
+    validation_schema = PowerPlanConfig
 
-    _instances: list["PowerPlanWidget"] = []
+    _instances: list[PowerPlanWidget] = []
     _shared_timer: QTimer | None = None
 
-    def __init__(
-        self,
-        label: str,
-        label_alt: str,
-        class_name: str,
-        update_interval: int,
-        menu: dict,
-        container_padding: dict[str, int],
-        callbacks: dict[str, str],
-        label_shadow: dict = None,
-        container_shadow: dict = None,
-    ):
-        super().__init__(class_name=f"power-plan-widget {class_name}")
-
-        self._label = label
-        self._label_alt = label_alt
-        self._label_content = label
-        self._label_alt_content = label_alt
-        self._update_interval = update_interval
-        self._menu = menu
-        self._padding = container_padding
-        self._callbacks = callbacks
-        self._label_shadow = label_shadow
-        self._container_shadow = container_shadow
+    def __init__(self, config: PowerPlanConfig):
+        super().__init__(class_name=f"power-plan-widget {config.class_name}")
+        self.config = config
         self._show_alt_label = False
 
         # Initialize power plans
@@ -52,31 +31,29 @@ class PowerPlanWidget(BaseWidget):
 
         self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(
-            self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
-        )
+        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
 
         self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
-        add_shadow(self._widget_container, self._container_shadow)
+        add_shadow(self._widget_container, self.config.container_shadow.model_dump())
 
         self.widget_layout.addWidget(self._widget_container)
 
-        build_widget_label(self, self._label_content, self._label_alt_content, self._label_shadow)
+        build_widget_label(self, self.config.label, self.config.label_alt, self.config.label_shadow.model_dump())
 
         self.register_callback("toggle_menu", self._show_menu)
         self.register_callback("toggle_label", self._toggle_label)
-        self.callback_left = callbacks["on_left"]
-        self.callback_right = callbacks["on_right"]
-        self.callback_middle = callbacks["on_middle"]
+        self.callback_left = self.config.callbacks.on_left
+        self.callback_right = self.config.callbacks.on_right
+        self.callback_middle = self.config.callbacks.on_middle
 
         if self not in PowerPlanWidget._instances:
             PowerPlanWidget._instances.append(self)
 
-        if update_interval > 0 and PowerPlanWidget._shared_timer is None:
+        if self.config.update_interval > 0 and PowerPlanWidget._shared_timer is None:
             PowerPlanWidget._shared_timer = QTimer(self)
-            PowerPlanWidget._shared_timer.setInterval(update_interval)
+            PowerPlanWidget._shared_timer.setInterval(self.config.update_interval)
             PowerPlanWidget._shared_timer.timeout.connect(PowerPlanWidget._notify_instances)
             PowerPlanWidget._shared_timer.start()
         PowerPlanWidget._notify_instances()
@@ -96,9 +73,6 @@ class PowerPlanWidget(BaseWidget):
         # update each widget using the shared data
         for inst in cls._instances[:]:
             try:
-                inst._plans = plans
-                inst._active_guid = active_guid
-
                 inst._plans = plans
                 inst._active_guid = active_guid
                 inst._active_plan_name = "Unknown"
@@ -135,7 +109,7 @@ class PowerPlanWidget(BaseWidget):
     def _update_label(self):
         """Update the label with the current power plan name."""
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
-        active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
+        active_label_content = self.config.label_alt if self._show_alt_label else self.config.label
         label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
         label_parts = [part for part in label_parts if part]
         widget_index = 0
@@ -172,10 +146,10 @@ class PowerPlanWidget(BaseWidget):
         self._load_power_plans()
         self._popup_menu = PopupWidget(
             self,
-            self._menu["blur"],
-            self._menu["round_corners"],
-            self._menu["round_corners_type"],
-            self._menu["border_color"],
+            self.config.menu.blur,
+            self.config.menu.round_corners,
+            self.config.menu.round_corners_type,
+            self.config.menu.border_color,
         )
         self._popup_menu.setProperty("class", "power-plan-menu")
 
@@ -214,12 +188,15 @@ class PowerPlanWidget(BaseWidget):
         self._popup_menu.adjustSize()
 
         self._popup_menu.setPosition(
-            self._menu["alignment"], self._menu["direction"], self._menu["offset_left"], self._menu["offset_top"]
+            self.config.menu.alignment,
+            self.config.menu.direction,
+            self.config.menu.offset_left,
+            self.config.menu.offset_top,
         )
 
         self._popup_menu.show()
 
-    def _change_plan(self, guid, name):
+    def _change_plan(self, guid: GUID, name: str):
         """Change the active power plan."""
         self._popup_menu.hide()
         try:
@@ -236,16 +213,16 @@ class PowerPlanWidget(BaseWidget):
         except Exception as e:
             logging.error(f"Error changing power plan: {e}")
 
-    def _guids_equal(self, guid1, guid2):
+    def _guids_equal(self, guid1: GUID, guid2: GUID):
         """Compare two GUIDs for equality."""
         try:
             return ctypes.string_at(ctypes.byref(guid1), ctypes.sizeof(GUID)) == ctypes.string_at(
                 ctypes.byref(guid2), ctypes.sizeof(GUID)
             )
-        except:
+        except Exception:
             return False
 
-    def get_power_plans(self):
+    def get_power_plans(self) -> tuple[list[dict], GUID | None]:
         """Get all available power plans and the currently active one."""
         index = 0
         plans = []
@@ -273,6 +250,6 @@ class PowerPlanWidget(BaseWidget):
 
         return plans, active_guid
 
-    def set_power_plan(self, guid):
+    def set_power_plan(self, guid: GUID):
         """Set the active power plan."""
         return PowerSetActiveScheme(None, ctypes.byref(guid))

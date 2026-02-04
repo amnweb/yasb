@@ -1,177 +1,83 @@
-DEFAULTS = {
-    "label": "{icon}",
-    "label_alt": "{data} Notifications",
-    "update_interval": 600,
-    "token": "",
-    "tooltip": True,
-    "max_notification": 30,
-    "only_unread": False,
-    "show_comment_count": False,
-    "max_field_size": 100,
-    "reason_filters": [],
-    "notification_dot": {
-        "enabled": True,
-        "corner": "bottom_left",
-        "color": "red",
-        "margin": [1, 1],
-    },
-    "menu": {
-        "blur": True,
-        "round_corners": True,
-        "round_corners_type": "normal",
-        "border_color": "System",
-        "alignment": "right",
-        "direction": "down",
-        "distance": 6,  # deprecated
-        "offset_top": 6,
-        "offset_left": 0,
-        "show_categories": False,
-        "categories_order": [
-            "PullRequest",
-            "Issue",
-            "CheckSuite",
-            "Release",
-            "Discussion",
-        ],
-    },
-    "icons": {
-        "issue": "\uf41b",
-        "issue_closed": "\uf41d",
-        "pull_request": "\uea64",
-        "pull_request_closed": "\uebda",
-        "pull_request_merged": "\uf17f",
-        "pull_request_draft": "\uebdb",
-        "release": "\uea84",
-        "discussion": "\uf442",
-        "discussion_answered": "\uf4c0",
-        "checksuite": "\uf418",
-        "default": "\uea84",
-        "github_logo": "\uea84",
-        "comment": "\uf41f",
-    },
-    "animation": {"enabled": True, "type": "fadeInOut", "duration": 200},
-    "container_padding": {"top": 0, "left": 0, "bottom": 0, "right": 0},
-}
+from enum import StrEnum
 
-VALIDATION_SCHEMA = {
-    "label": {"type": "string", "default": DEFAULTS["label"]},
-    "label_alt": {"type": "string", "default": DEFAULTS["label_alt"]},
-    "update_interval": {"type": "integer", "default": DEFAULTS["update_interval"], "min": 60, "max": 3600},
-    "token": {"type": "string", "default": DEFAULTS["token"]},
-    "tooltip": {"type": "boolean", "required": False, "default": DEFAULTS["tooltip"]},
-    "max_notification": {"type": "integer", "default": DEFAULTS["max_notification"]},
-    "notification_dot": {
-        "type": "dict",
-        "required": False,
-        "schema": {
-            "enabled": {
-                "type": "boolean",
-                "default": DEFAULTS["notification_dot"]["enabled"],
-            },
-            "corner": {
-                "type": "string",
-                "default": DEFAULTS["notification_dot"]["corner"],
-                "allowed": ["top_left", "top_right", "bottom_left", "bottom_right"],
-            },
-            "color": {
-                "type": "string",
-                "default": DEFAULTS["notification_dot"]["color"],
-            },
-            "margin": {"type": "list", "default": [1, 1]},
-        },
-        "default": DEFAULTS["notification_dot"],
-    },
-    "only_unread": {"type": "boolean", "default": DEFAULTS["only_unread"]},
-    "show_comment_count": {"type": "boolean", "default": DEFAULTS["show_comment_count"]},
-    "max_field_size": {"type": "integer", "default": DEFAULTS["max_field_size"]},
-    "reason_filters": {
-        "type": "list",
-        "schema": {"type": "string"},
-        "default": DEFAULTS["reason_filters"],
-    },
-    "menu": {
-        "type": "dict",
-        "required": False,
-        "schema": {
-            "blur": {"type": "boolean", "default": DEFAULTS["menu"]["blur"]},
-            "round_corners": {"type": "boolean", "default": DEFAULTS["menu"]["round_corners"]},
-            "round_corners_type": {"type": "string", "default": DEFAULTS["menu"]["round_corners_type"]},
-            "border_color": {"type": "string", "default": DEFAULTS["menu"]["border_color"]},
-            "alignment": {"type": "string", "default": DEFAULTS["menu"]["alignment"]},
-            "direction": {"type": "string", "default": DEFAULTS["menu"]["direction"]},
-            "distance": {"type": "integer", "default": DEFAULTS["menu"]["distance"]},
-            "offset_top": {"type": "integer", "default": DEFAULTS["menu"]["offset_top"]},
-            "offset_left": {"type": "integer", "default": DEFAULTS["menu"]["offset_left"]},
-            "show_categories": {"type": "boolean", "default": DEFAULTS["menu"]["show_categories"]},
-            "categories_order": {
-                "type": "list",
-                "schema": {"type": "string"},
-                "default": DEFAULTS["menu"]["categories_order"],
-            },
-        },
-        "default": DEFAULTS["menu"],
-    },
-    "icons": {
-        "type": "dict",
-        "required": False,
-        "schema": {
-            "issue": {"type": "string", "default": DEFAULTS["icons"]["issue"]},
-            "issue_closed": {"type": "string", "default": DEFAULTS["icons"]["issue_closed"]},
-            "pull_request": {"type": "string", "default": DEFAULTS["icons"]["pull_request"]},
-            "pull_request_closed": {"type": "string", "default": DEFAULTS["icons"]["pull_request_closed"]},
-            "pull_request_merged": {"type": "string", "default": DEFAULTS["icons"]["pull_request_merged"]},
-            "pull_request_draft": {"type": "string", "default": DEFAULTS["icons"]["pull_request_draft"]},
-            "release": {"type": "string", "default": DEFAULTS["icons"]["release"]},
-            "discussion": {"type": "string", "default": DEFAULTS["icons"]["discussion"]},
-            "discussion_answered": {"type": "string", "default": DEFAULTS["icons"]["discussion_answered"]},
-            "checksuite": {"type": "string", "default": DEFAULTS["icons"]["checksuite"]},
-            "default": {"type": "string", "default": DEFAULTS["icons"]["default"]},
-            "github_logo": {"type": "string", "default": DEFAULTS["icons"]["github_logo"]},
-            "comment": {"type": "string", "default": DEFAULTS["icons"]["comment"]},
-        },
-        "default": DEFAULTS["icons"],
-    },
-    "animation": {
-        "type": "dict",
-        "required": False,
-        "schema": {
-            "enabled": {"type": "boolean", "default": DEFAULTS["animation"]["enabled"]},
-            "type": {"type": "string", "default": DEFAULTS["animation"]["type"]},
-            "duration": {"type": "integer", "default": DEFAULTS["animation"]["duration"]},
-        },
-        "default": DEFAULTS["animation"],
-    },
-    "label_shadow": {
-        "type": "dict",
-        "required": False,
-        "schema": {
-            "enabled": {"type": "boolean", "default": False},
-            "color": {"type": "string", "default": "black"},
-            "offset": {"type": "list", "default": [1, 1]},
-            "radius": {"type": "integer", "default": 3},
-        },
-        "default": {"enabled": False, "color": "black", "offset": [1, 1], "radius": 3},
-    },
-    "container_shadow": {
-        "type": "dict",
-        "required": False,
-        "schema": {
-            "enabled": {"type": "boolean", "default": False},
-            "color": {"type": "string", "default": "black"},
-            "offset": {"type": "list", "default": [1, 1]},
-            "radius": {"type": "integer", "default": 3},
-        },
-        "default": {"enabled": False, "color": "black", "offset": [1, 1], "radius": 3},
-    },
-    "container_padding": {
-        "type": "dict",
-        "required": False,
-        "schema": {
-            "top": {"type": "integer", "default": DEFAULTS["container_padding"]["top"]},
-            "left": {"type": "integer", "default": DEFAULTS["container_padding"]["left"]},
-            "bottom": {"type": "integer", "default": DEFAULTS["container_padding"]["bottom"]},
-            "right": {"type": "integer", "default": DEFAULTS["container_padding"]["right"]},
-        },
-        "default": DEFAULTS["container_padding"],
-    },
-}
+from pydantic import Field
+
+from core.validation.widgets.base_model import (
+    AnimationConfig,
+    CustomBaseModel,
+    KeybindingConfig,
+    PaddingConfig,
+    ShadowConfig,
+)
+
+
+class Corner(StrEnum):
+    """Enum for notification dot position corners."""
+
+    TOP_LEFT = "top_left"
+    TOP_RIGHT = "top_right"
+    BOTTOM_LEFT = "bottom_left"
+    BOTTOM_RIGHT = "bottom_right"
+
+
+class NotificationDotConfig(CustomBaseModel):
+    enabled: bool = True
+    corner: Corner = Corner.BOTTOM_LEFT
+    color: str = "red"
+    margin: list[int] = [1, 1]
+
+
+class GithubMenuConfig(CustomBaseModel):
+    blur: bool = True
+    round_corners: bool = True
+    round_corners_type: str = "normal"
+    border_color: str = "System"
+    alignment: str = "right"
+    direction: str = "down"
+    offset_top: int = 6
+    offset_left: int = 0
+    show_categories: bool = False
+    categories_order: list[str] = [
+        "PullRequest",
+        "Issue",
+        "CheckSuite",
+        "Release",
+        "Discussion",
+    ]
+
+
+class GithubIconsConfig(CustomBaseModel):
+    issue: str = "\uf41b"
+    issue_closed: str = "\uf41d"
+    pull_request: str = "\uea64"
+    pull_request_closed: str = "\uebda"
+    pull_request_merged: str = "\uf17f"
+    pull_request_draft: str = "\uebdb"
+    release: str = "\uea84"
+    discussion: str = "\uf442"
+    discussion_answered: str = "\uf4c0"
+    checksuite: str = "\uf418"
+    default: str = "\uea84"
+    github_logo: str = "\uea84"
+    comment: str = "\uf41f"
+
+
+class GithubConfig(CustomBaseModel):
+    label: str = "{icon}"
+    label_alt: str = "{data} Notifications"
+    update_interval: int = Field(default=600, ge=60, le=3600)
+    token: str = ""
+    tooltip: bool = True
+    max_notification: int = 30
+    only_unread: bool = False
+    show_comment_count: bool = False
+    max_field_size: int = 100
+    reason_filters: list[str] = []
+    notification_dot: NotificationDotConfig = NotificationDotConfig()
+    menu: GithubMenuConfig = GithubMenuConfig()
+    icons: GithubIconsConfig = GithubIconsConfig()
+    animation: AnimationConfig = AnimationConfig()
+    label_shadow: ShadowConfig = ShadowConfig()
+    container_shadow: ShadowConfig = ShadowConfig()
+    container_padding: PaddingConfig = PaddingConfig()
+    keybindings: list[KeybindingConfig] = []

@@ -250,7 +250,7 @@ class StreamWorkerManager:
                     self._owner._thread = None
                 else:
                     QTimer.singleShot(SCROLL_DELAY_MS, self.clear_thread_reference)
-            except (RuntimeError, AttributeError):
+            except RuntimeError, AttributeError:
                 self._owner._thread = None
 
     def reset_copilot_session(self, provider: str | None, model: str | None):

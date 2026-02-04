@@ -3,14 +3,22 @@ import logging
 import os
 import subprocess
 import winreg
-from ctypes import wintypes
 from datetime import datetime
 from functools import partial
 
-import win32gui
-from PyQt6.QtCore import QEvent, QObject, QPropertyAnimation, Qt, QTimer
+from PyQt6.QtCore import (
+    QAbstractNativeEventFilter,
+    QEasingCurve,
+    QEvent,
+    QObject,
+    QPropertyAnimation,
+    Qt,
+    QTimer,
+    QVariantAnimation,
+)
 from PyQt6.QtGui import QCursor
 from PyQt6.QtWidgets import (
+    QApplication,
     QCheckBox,
     QFrame,
     QGraphicsOpacityEffect,
@@ -20,12 +28,154 @@ from PyQt6.QtWidgets import (
     QWidget,
     QWidgetAction,
 )
+from win32con import SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE
 
 from core.utils.controller import exit_application, reload_application
 from core.utils.utilities import refresh_widget_style
-from core.utils.win32.bindings import DwmGetWindowAttribute
-from core.utils.win32.constants import DWMWA_CLOAKED, S_OK
-from core.utils.win32.utilities import apply_qmenu_style, get_monitor_hwnd, get_window_rect
+from core.utils.win32.app_bar import APPBAR_CALLBACK_MESSAGE, AppBarNotify
+from core.utils.win32.structs import MSG
+from core.utils.win32.utilities import apply_qmenu_style
+
+
+class BarAnimationManager(QObject):
+    """Handles bar show/hide animations."""
+
+    def __init__(self, bar_widget: QWidget, parent=None):
+        super().__init__(parent)
+        self.bar_widget = bar_widget
+        self._animation = None
+        self._target_geo = None
+        self._full_height = None
+        self._pending_action = None  # 'show' or 'hide' queued while animating
+
+    def show_bar(self):
+        if not self.bar_widget._animation.get("enabled"):
+            self.bar_widget._skip_animation = True
+            self.bar_widget.show()
+            self.bar_widget._skip_animation = False
+            return
+
+        # If animation running, queue this action
+        if self._animation and self._animation.state() == QVariantAnimation.State.Running:
+            self._pending_action = "show"
+            return
+
+        self._pending_action = None
+        if self.bar_widget._animation.get("type") == "fade":
+            self._start_fade(True)
+        else:
+            self._start_slide(True)
+
+    def hide_bar(self):
+        if not self.bar_widget._animation.get("enabled"):
+            self.bar_widget._skip_animation = True
+            self.bar_widget.hide()
+            self.bar_widget._skip_animation = False
+            return
+
+        # If animation running, queue this action
+        if self._animation and self._animation.state() == QVariantAnimation.State.Running:
+            self._pending_action = "hide"
+            return
+
+        self._pending_action = None
+        if self.bar_widget._animation.get("type") == "fade":
+            self._start_fade(False)
+        else:
+            self._start_slide(False)
+
+    def _stop_animation(self):
+        if self._animation and self._animation.state() == QVariantAnimation.State.Running:
+            self._animation.stop()
+        self._animation = None
+
+    def _start_fade(self, show: bool):
+        self._stop_animation()
+        duration = self.bar_widget._animation.get("duration", 300)
+        self._animation = QPropertyAnimation(self.bar_widget, b"windowOpacity")
+        self._animation.setDuration(duration)
+        self._animation.setStartValue(0.0 if show else 1.0)
+        self._animation.setEndValue(1.0 if show else 0.0)
+        self._animation.setEasingCurve(QEasingCurve.Type.OutQuad if show else QEasingCurve.Type.InQuad)
+        self._animation.finished.connect(self._on_show_finished if show else self._on_fade_hide_finished)
+
+        if show:
+            self.bar_widget.setWindowOpacity(0.0)
+            self.bar_widget.show()
+        self._animation.start()
+
+    def _start_slide(self, show: bool):
+        self._stop_animation()
+        bar = self.bar_widget
+
+        # Recalculate position using bar's existing method
+        bar.position_bar()
+        geo = bar.geometry()
+        self._target_geo = (geo.x(), geo.y(), geo.width(), geo.height())
+        self._full_height = geo.height()
+
+        if show:
+            bar._bar_frame.resize(geo.width(), geo.height())
+            self._update_slide(0.0)
+            bar.show()
+
+        self._animation = QVariantAnimation(bar)
+        self._animation.setDuration(bar._animation.get("duration", 300))
+        self._animation.setStartValue(0.0 if show else 1.0)
+        self._animation.setEndValue(1.0 if show else 0.0)
+        self._animation.setEasingCurve(QEasingCurve.Type.OutQuad if show else QEasingCurve.Type.InQuad)
+        self._animation.valueChanged.connect(self._update_slide)
+        self._animation.finished.connect(self._on_show_finished if show else self._on_slide_hide_finished)
+        self._animation.start()
+
+    def _update_slide(self, value: float):
+        h = int(self._full_height * value)
+        x, y, w, full_h = self._target_geo
+        if self.bar_widget._alignment["position"] == "top":
+            new_geo = (x, y, w, max(1, h))
+            frame_y = h - full_h
+            self.bar_widget.setGeometry(*new_geo)
+            self.bar_widget._bar_frame.move(0, frame_y)
+        else:
+            win_y = y + full_h - h
+            new_geo = (x, win_y, w, max(1, h))
+            self.bar_widget.setGeometry(*new_geo)
+            self.bar_widget._bar_frame.move(0, 0)
+
+    def _on_show_finished(self):
+        if self._target_geo:
+            x, y, w, h = self._target_geo
+            self.bar_widget.setGeometry(x, y, w, h)
+        self.bar_widget._bar_frame.move(0, 0)
+        self._animation = None
+        self._process_pending()
+
+    def _on_fade_hide_finished(self):
+        self.bar_widget._skip_animation = True
+        self.bar_widget.hide()
+        self.bar_widget._skip_animation = False
+        self.bar_widget.setWindowOpacity(1.0)
+        self._animation = None
+        self._process_pending()
+
+    def _on_slide_hide_finished(self):
+        self.bar_widget._skip_animation = True
+        self.bar_widget.hide()
+        self.bar_widget._skip_animation = False
+        self._animation = None
+        self._process_pending()
+
+    def _process_pending(self):
+        if self._pending_action == "show":
+            self._pending_action = None
+            self.show_bar()
+        elif self._pending_action == "hide":
+            self._pending_action = None
+            self.hide_bar()
+
+    def cleanup(self):
+        self._pending_action = None
+        self._stop_animation()
 
 
 class AutoHideZone(QFrame):
@@ -53,7 +203,7 @@ class AutoHideManager(QObject):
     def __init__(self, bar_widget, parent=None):
         super().__init__(parent)
         self.bar_widget = bar_widget
-        self._autohide_delay = 400
+        self._autohide_delay = 600
         self._detection_zone_height = None
         self._detection_zone = None
         self._hide_timer = None
@@ -86,7 +236,7 @@ class AutoHideManager(QObject):
             pass
 
         # Set up detection zone after a short delay
-        QTimer.singleShot(1000, self.setup_detection_zone)
+        QTimer.singleShot(self._autohide_delay, self.setup_detection_zone)
 
     def setup_detection_zone(self):
         """Position and configure the autohide detection zone"""
@@ -185,220 +335,88 @@ class AutoHideManager(QObject):
             pass
 
 
-class FullscreenManager(QObject):
-    """Manages fullscreen detection and bar visibility"""
+class AppBarManager(QAbstractNativeEventFilter):
+    """Central handler for AppBar-related native Windows messages."""
 
-    # System window classes that should not hide the bar and should be ignored
-    # CEF-OSC-WIDGET is added to handle NVIDIA Overlay
-    WINDOW_CLASSES = frozenset(
-        [
-            "Progman",
-            "WorkerW",
-            "XamlWindow",
-            "Shell_TrayWnd",
-            "XamlExplorerHostIslandWindow",
-            "CEF-OSC-WIDGET",
-        ]
-    )
+    _instance = None
+    _installed = False
 
-    def __init__(self, bar_widget: QWidget, parent=None):
-        super().__init__(parent)
-        self.bar_widget = bar_widget
-        self._prev_fullscreen_state = None
-        self._cached_screen_data = {}
-        self._timer = QTimer(self)
-        self._timer.setInterval(400)
-        self._timer.timeout.connect(self._check_fullscreen_for_window)
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+            cls._instance._bars = {}
+            cls._instance._swp_flags = SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE
+        return cls._instance
 
+    def __init__(self):
+        if not hasattr(self, "_initialized"):
+            super().__init__()
+            self._initialized = True
+
+    def _ensure_installed(self):
+        """Install the native event filter on first use"""
+        if not AppBarManager._installed:
+            app = QApplication.instance()
+            if app:
+                app.installNativeEventFilter(self)
+                AppBarManager._installed = True
+
+    def register_bar(self, hwnd: int, bar_widget):
+        """Register a bar to receive fullscreen notifications"""
+        self._ensure_installed()
+        self._bars[hwnd] = bar_widget
+
+    def unregister_bar(self, hwnd: int):
+        """Unregister a bar from receiving fullscreen notifications"""
+        self._bars.pop(hwnd, None)
+
+    def nativeEventFilter(self, eventType, message):
+        """Filter native Windows messages for AppBar fullscreen notifications"""
         try:
-            DwmGetWindowAttribute  # presence check
-            self._dwm_available = True
-        except (AttributeError, OSError):
-            self._dwm_available = False
+            if eventType == b"windows_generic_MSG":
+                msg = ctypes.cast(int(message), ctypes.POINTER(MSG)).contents
 
-    def start_monitoring(self):
-        try:
-            self._timer.start()
-        except Exception as e:
-            logging.error(f"Failed to start fullscreen polling: {e}")
+                if msg.message == APPBAR_CALLBACK_MESSAGE:
+                    hwnd = msg.hwnd
+                    notification_code = msg.wParam
 
-    def stop_monitoring(self):
-        """Stop monitoring for fullscreen applications"""
-        try:
-            self._timer.stop()
-        except Exception as e:
-            logging.error(f"Failed to stop fullscreen polling: {e}")
-
-    def is_window_cloaked(self, hwnd):
-        """Check if a window is cloaked (hidden by DWM)"""
-        if not self._dwm_available:
-            return False
-
-        try:
-            is_cloaked = wintypes.DWORD(0)
-            result = DwmGetWindowAttribute(
-                wintypes.HWND(hwnd),
-                wintypes.DWORD(DWMWA_CLOAKED),
-                ctypes.byref(is_cloaked),
-                ctypes.sizeof(is_cloaked),
-            )
-
-            if result != S_OK:
-                return False
-
-            return is_cloaked.value != 0
-        except (OSError, AttributeError):
-            return False
-
-    def _check_fullscreen_for_window(self):
-        """Check if the focused window is fullscreen on the bar's screen"""
-        if not self.bar_widget:
-            return
-
-        # Get the currently focused window first
-        focused_hwnd = win32gui.GetForegroundWindow()
-        if not focused_hwnd:
-            # No focused window, show bar if hidden
-            self._prev_fullscreen_state = False
-            if not self.bar_widget.isVisible():
-                self.bar_widget.show()
-            return
-
-        # Early exit if focused window is invisible/minimized
-        if not win32gui.IsWindowVisible(focused_hwnd) or win32gui.IsIconic(focused_hwnd):
-            self._prev_fullscreen_state = False
-            if not self.bar_widget.isVisible():
-                self.bar_widget.show()
-            return
-
-        # Check monitor early to avoid unnecessary calculations
-        try:
-            focused_window_monitor = get_monitor_hwnd(focused_hwnd)
-            bar_monitor = get_monitor_hwnd(int(self.bar_widget.winId()))
-
-            # If focused window is on different monitor, check if there's a fullscreen window on this monitor
-            if focused_window_monitor != bar_monitor:
-                # Check if there's any fullscreen window on the bar's monitor
-                found_fullscreen = self._check_fullscreen_on_bar_monitor(bar_monitor)
-
-                # Only update visibility if state changed
-                if self._prev_fullscreen_state != found_fullscreen:
-                    self._prev_fullscreen_state = found_fullscreen
-                    if found_fullscreen and self.bar_widget.isVisible():
-                        self.bar_widget.hide()
-                    elif not found_fullscreen and not self.bar_widget.isVisible():
-                        self.bar_widget.show()
-                return
-
-            # Use monitor handle as cache key
-            cache_key = bar_monitor
+                    if hwnd in self._bars and notification_code == AppBarNotify.FullScreenApp:
+                        is_fullscreen_opening = bool(msg.lParam)
+                        self._handle_fullscreen(hwnd, is_fullscreen_opening)
         except Exception:
-            # If monitor check fails, use screen name as fallback cache key
-            cache_key = self.bar_widget.screen().name()
-
-        # Check window class early to filter out system windows
-        try:
-            class_name = win32gui.GetClassName(focused_hwnd)
-            if class_name in self.WINDOW_CLASSES:
-                self._prev_fullscreen_state = False
-                if not self.bar_widget.isVisible():
-                    self.bar_widget.show()
-                return
-        except Exception:
-            # If class name check fails, continue
             pass
 
-        # Check if window is cloaked
-        if self.is_window_cloaked(focused_hwnd):
-            self._prev_fullscreen_state = False
-            if not self.bar_widget.isVisible():
-                self.bar_widget.show()
+        return False, 0
+
+    def _handle_fullscreen(self, hwnd: int, is_fullscreen_opening: bool):
+        """Handle fullscreen notification for a bar"""
+        bar_widget = self._bars.get(hwnd)
+        if not bar_widget:
             return
 
-        # Get or calculate cached screen rect for this specific screen
-        screen = self.bar_widget.screen()
-        screen_geometry = screen.geometry()
-        dpi = screen.devicePixelRatio()
-        # Check if we have cached data for this screen
-        if cache_key not in self._cached_screen_data or self._cached_screen_data[cache_key]["dpi"] != dpi:
-            # Calculate and cache screen rect for this screen
-            screen_rect = (screen_geometry.x(), screen_geometry.y(), screen_geometry.width(), screen_geometry.height())
-            scaled_screen_rect = screen_rect[:2] + tuple(round(dim * dpi) for dim in screen_rect[2:])
+        should_hide_bar = getattr(bar_widget, "_hide_on_fullscreen", False)
+        has_autohide = (
+            bar_widget._autohide_manager and bar_widget._autohide_manager.is_enabled()
+            if hasattr(bar_widget, "_autohide_manager")
+            else False
+        )
 
-            self._cached_screen_data[cache_key] = {"scaled_rect": scaled_screen_rect, "dpi": dpi}
+        # Only process if hide_on_fullscreen is enabled
+        if not should_hide_bar:
+            return
 
-        # Use cached screen rect
-        scaled_screen_rect = self._cached_screen_data[cache_key]["scaled_rect"]
-
-        # Get window rect and check if fullscreen
-        try:
-            rect = get_window_rect(focused_hwnd)
-            window_rect = (rect["x"], rect["y"], rect["width"], rect["height"])
-            found_fullscreen = window_rect == scaled_screen_rect
-        except Exception:
-            found_fullscreen = False
-
-        # Only update visibility if state changed
-        if self._prev_fullscreen_state != found_fullscreen:
-            self._prev_fullscreen_state = found_fullscreen
-            if found_fullscreen and self.bar_widget.isVisible():
-                self.bar_widget.hide()
-            elif not found_fullscreen and not self.bar_widget.isVisible():
-                self.bar_widget.show()
-
-    def _check_fullscreen_on_bar_monitor(self, bar_monitor):
-        """
-        Check if there's any fullscreen window on the bar's monitor (regardless of focus)
-        This is used when the focused window is on a different monitor.
-        It enumerates all windows and checks if any are fullscreen on the bar's monitor.
-        """
-        screen = self.bar_widget.screen()
-        screen_geometry = screen.geometry()
-        dpi = screen.devicePixelRatio()
-
-        # Calculate screen rect for comparison
-        screen_rect = (screen_geometry.x(), screen_geometry.y(), screen_geometry.width(), screen_geometry.height())
-        scaled_screen_rect = screen_rect[:2] + tuple(round(dim * dpi) for dim in screen_rect[2:])
-
-        def enum_windows_proc(hwnd, lparam):
-            try:
-                # Skip invisible/minimized windows
-                if not win32gui.IsWindowVisible(hwnd) or win32gui.IsIconic(hwnd):
-                    return True
-
-                # Check if window is on THIS bar's monitor
-                window_monitor = get_monitor_hwnd(hwnd)
-                if window_monitor != bar_monitor:
-                    return True
-
-                # Skip system windows
-                class_name = win32gui.GetClassName(hwnd)
-                if class_name in self.WINDOW_CLASSES:
-                    return True
-
-                # Skip cloaked windows
-                if self.is_window_cloaked(hwnd):
-                    return True
-
-                # Check if window is fullscreen
-                rect = get_window_rect(hwnd)
-                window_rect = (rect["x"], rect["y"], rect["width"], rect["height"])
-
-                if window_rect == scaled_screen_rect:
-                    # Found a fullscreen window on this bar's monitor and stopping enumeration
-                    return False
-
-            except Exception:
-                pass
-
-            return True
-
-        try:
-            # Enumerate all windows to find fullscreen ones on this bar's monitor
-            win32gui.EnumWindows(enum_windows_proc, None)
-            return False
-        except Exception:
-            return True
+        if is_fullscreen_opening:
+            bar_widget.hide()
+            # Also hide detection zone if autohide is active
+            if has_autohide and bar_widget._autohide_manager._detection_zone:
+                bar_widget._autohide_manager._detection_zone.hide()
+        else:
+            # Show bar if autohide is not active
+            if not has_autohide:
+                bar_widget.show()
+            # Re-show detection zone if autohide is active
+            if has_autohide and bar_widget._autohide_manager._detection_zone:
+                bar_widget._autohide_manager._detection_zone.show()
 
 
 class OsThemeManager(QObject):

@@ -14,7 +14,7 @@ from PyQt6.QtWidgets import QFrame, QGraphicsOpacityEffect, QHBoxLayout, QLabel,
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import PopupWidget, ToastNotifier, add_shadow, build_widget_label
 from core.utils.widgets.animation_manager import AnimationManager
-from core.validation.widgets.yasb.server_monitor import VALIDATION_SCHEMA
+from core.validation.widgets.yasb.server_monitor import ServerMonitorConfig
 from core.widgets.base import BaseWidget
 from settings import DEBUG, SCRIPT_PATH
 
@@ -113,7 +113,7 @@ class ServerCheckWorker(QThread):
             if http_status is not None:
                 response_time = int((datetime.now() - start_time).total_seconds() * 1000)
 
-        except (urllib.error.URLError, socket.timeout, ssl.SSLError, ConnectionError, PermissionError, OSError):
+        except urllib.error.URLError, socket.timeout, ssl.SSLError, ConnectionError, PermissionError, OSError:
             pass
 
         # Check SSL if needed and determine status
@@ -146,47 +146,12 @@ class ServerCheckWorker(QThread):
 
 
 class ServerMonitor(BaseWidget):
-    validation_schema = VALIDATION_SCHEMA
+    validation_schema = ServerMonitorConfig
 
-    def __init__(
-        self,
-        label: str,
-        label_alt: str,
-        servers: list[str],
-        tooltip: bool,
-        update_interval: int,
-        ssl_check: bool,
-        ssl_verify: bool,
-        ssl_warning: int,
-        desktop_notifications: dict[str, bool],
-        timeout: int,
-        menu: dict[str, str],
-        icons: dict[str, int],
-        animation: dict[str, str],
-        container_padding: dict[str, int],
-        callbacks: dict[str, str],
-        label_shadow: dict = None,
-        container_shadow: dict = None,
-    ):
+    def __init__(self, config: ServerMonitorConfig):
         super().__init__(class_name="server-widget")
+        self.config = config
         self._show_alt_label = False
-        self._label_content = label
-        self._servers = servers
-        self._update_interval = update_interval * 1000
-        self._icons = icons
-        self._tooltip = tooltip
-        self._ssl_check = ssl_check
-        self._ssl_verify = ssl_verify
-        self._ssl_warning = ssl_warning
-        self._desktop_notifications = desktop_notifications
-        self._timeout = timeout
-        self._label_alt_content = label_alt
-        self._padding = container_padding
-        self._menu = menu
-        self._animation = animation
-        self._label_shadow = label_shadow
-        self._container_shadow = container_shadow
-
         self._last_refresh_time = None
         self._server_status_data = None
         self._first_run = True
@@ -196,37 +161,37 @@ class ServerMonitor(BaseWidget):
         # Construct container
         self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(
-            self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
-        )
+        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
         # Initialize container
         self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
-        add_shadow(self._widget_container, self._container_shadow)
+        add_shadow(self._widget_container, self.config.container_shadow.model_dump())
         # Add the container to the main widget layout
         self.widget_layout.addWidget(self._widget_container)
 
-        build_widget_label(self, self._label_content, self._label_alt_content, self._label_shadow)
+        build_widget_label(self, self.config.label, self.config.label_alt, self.config.label_shadow.model_dump())
 
         self.register_callback("toggle_label", self._toggle_label)
         self.register_callback("toggle_menu", self._toggle_menu)
 
-        self.callback_left = callbacks["on_left"]
-        self.callback_right = callbacks["on_right"]
-        self.callback_middle = callbacks["on_middle"]
+        self.callback_left = self.config.callbacks.on_left
+        self.callback_right = self.config.callbacks.on_right
+        self.callback_middle = self.config.callbacks.on_middle
 
         self._update_label()
 
         # Setup worker thread
         self._worker = ServerCheckWorker.get_instance()
-        self._worker.set_servers(self._servers, self._ssl_verify, self._ssl_check, self._timeout)
+        self._worker.set_servers(
+            self.config.servers, self.config.ssl_verify, self.config.ssl_check, self.config.timeout
+        )
         self._worker.status_updated.connect(self._handle_status_update)
 
         # Create and start update timer
         self._update_timer = QTimer()
         self._update_timer.timeout.connect(self._worker.start)
-        self._update_timer.start(self._update_interval)
+        self._update_timer.start(self.config.update_interval * 1000)
         # Initial update
         self._worker.start()
 
@@ -238,7 +203,7 @@ class ServerMonitor(BaseWidget):
             {
                 "online_count": online_count,
                 "offline_count": offline_count,
-                "ssl_warning": True if min_ssl < self._ssl_warning else False,
+                "ssl_warning": True if min_ssl < self.config.ssl_warning else False,
             }
         )
         self._server_status_data = status_data
@@ -276,13 +241,13 @@ class ServerMonitor(BaseWidget):
         self._update_label()
 
     def _toggle_menu(self):
-        if self._animation["enabled"]:
-            AnimationManager.animate(self, self._animation["type"], self._animation["duration"])
+        if self.config.animation.enabled:
+            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
         self.show_menu()
 
     def _update_label(self):
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
-        active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
+        active_label_content = self.config.label_alt if self._show_alt_label else self.config.label
         label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
         label_parts = [part for part in label_parts if part]
         widget_index = 0
@@ -291,12 +256,12 @@ class ServerMonitor(BaseWidget):
             online_count = self._server_status_data[-1]["online_count"]
             offline_count = self._server_status_data[-1]["offline_count"]
             ssl_warning = self._server_status_data[-1]["ssl_warning"]
-            total_count = len(self._servers)
+            total_count = len(self.config.servers)
         except Exception:
             online_count = 0
             offline_count = 0
             ssl_warning = False
-            total_count = len(self._servers)
+            total_count = len(self.config.servers)
 
         if offline_count > 0:
             self._widget_container.setProperty("class", "widget-container error")
@@ -318,7 +283,7 @@ class ServerMonitor(BaseWidget):
                     formatted_text = part.format(online=online_count, offline=offline_count, total=total_count)
                     active_widgets[widget_index].setText(formatted_text)
                 widget_index += 1
-        if self._tooltip:
+        if self.config.tooltip:
             set_tooltip(
                 self._widget_container, f"{online_count} online, {offline_count} offline of {total_count} servers"
             )
@@ -331,18 +296,18 @@ class ServerMonitor(BaseWidget):
             offline_count = 0
             ssl_warning = False
         toaster = ToastNotifier()
-        if offline_count > 0 and self._desktop_notifications["offline"]:
+        if offline_count > 0 and self.config.desktop_notifications.offline:
             toaster.show(self._icon_path, "Server Monitor", f"{offline_count} server(s) are offline")
-        if ssl_warning and self._desktop_notifications["ssl"]:
+        if ssl_warning and self.config.desktop_notifications.ssl:
             toaster.show(self._icon_path, "Server Monitor", "Some servers have SSL certificate expiring soon")
 
     def show_menu(self):
         self.dialog = PopupWidget(
             self,
-            self._menu["blur"],
-            self._menu["round_corners"],
-            self._menu["round_corners_type"],
-            self._menu["border_color"],
+            self.config.menu.blur,
+            self.config.menu.round_corners,
+            self.config.menu.round_corners_type,
+            self.config.menu.border_color,
         )
         self.dialog.setProperty("class", "server-menu")
 
@@ -369,7 +334,7 @@ class ServerMonitor(BaseWidget):
         header_layout.addStretch()
 
         # Add reload button
-        reload_button = QLabel(self._icons["reload"])
+        reload_button = QLabel(self.config.icons.reload)
         reload_button.setProperty("class", "reload-button")
         reload_button.setCursor(Qt.CursorShape.PointingHandCursor)
         reload_button.mousePressEvent = lambda _: self._trigger_reload()
@@ -383,10 +348,10 @@ class ServerMonitor(BaseWidget):
 
         self.dialog.adjustSize()
         self.dialog.setPosition(
-            alignment=self._menu["alignment"],
-            direction=self._menu["direction"],
-            offset_left=self._menu["offset_left"],
-            offset_top=self._menu["offset_top"],
+            alignment=self.config.menu.alignment,
+            direction=self.config.menu.direction,
+            offset_left=self.config.menu.offset_left,
+            offset_top=self.config.menu.offset_top,
         )
         self.dialog.show()
 
@@ -423,7 +388,7 @@ class ServerMonitor(BaseWidget):
                 return
             try:
                 self._loading_label.setText(f"<br>Checking {updated}/{total} servers<br><b>{server}</b><br>")
-            except RuntimeError:
+            except RuntimeError, AttributeError:
                 self._worker.progress_updated.disconnect(update_progress)
 
         self._worker.progress_updated.connect(update_progress)
@@ -469,7 +434,7 @@ class ServerMonitor(BaseWidget):
                 {
                     "online_count": online_count,
                     "offline_count": offline_count,
-                    "ssl_warning": True if min_ssl < self._ssl_warning else False,
+                    "ssl_warning": True if min_ssl < self.config.ssl_warning else False,
                 }
             )
             self._server_status_data = status_data
@@ -527,7 +492,7 @@ class ServerMonitor(BaseWidget):
             loading_layout.setContentsMargins(0, 0, 0, 0)
 
             # Create a label to show real-time progress
-            self._loading_label_menu = QLabel(f"Checking 0/{len(self._servers)} servers<br><b>please wait...</b>")
+            self._loading_label_menu = QLabel(f"Checking 0/{len(self.config.servers)} servers<br><b>please wait...</b>")
             self._loading_label_menu.setAlignment(Qt.AlignmentFlag.AlignCenter)
             self._loading_label_menu.setProperty("class", "placeholder")
 
@@ -559,19 +524,19 @@ class ServerMonitor(BaseWidget):
                 row_widget = QWidget()
                 server_status = QLabel()
                 if server_data["status"] == "Online":
-                    server_data_status = self._icons["online"]
+                    server_data_status = self.config.icons.online
                     server_data_response_time = server_data["response_time"]
                     class_name = "online"
                 else:
-                    server_data_status = self._icons["offline"]
+                    server_data_status = self.config.icons.offline
                     server_data_response_time = ""
                     class_name = "offline"
 
-                if server_data["ssl"] is not None and server_data["ssl"] < self._ssl_warning:
-                    server_data_status = self._icons["warning"]
+                if server_data["ssl"] is not None and server_data["ssl"] < self.config.ssl_warning:
+                    server_data_status = self.config.icons.warning
                     class_name += " warning"
 
-                if (server_data["ssl"] is not None and server_data["ssl"] < self._ssl_warning) or server_data[
+                if (server_data["ssl"] is not None and server_data["ssl"] < self.config.ssl_warning) or server_data[
                     "status"
                 ] == "Offline":
                     # Add opacity effect for animation
@@ -604,7 +569,7 @@ class ServerMonitor(BaseWidget):
                 server_status.setProperty("class", "status")
                 h_layout.addWidget(server_status)
 
-                if self._ssl_check:
+                if self.config.ssl_check:
                     ssl_status = f", SSL certificate expires in {server_data['ssl']} days"
                 else:
                     ssl_status = ""

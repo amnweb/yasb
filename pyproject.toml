@@ -14,7 +14,7 @@ readme = "README.md"
 requires-python = ">= 3.14"
 dependencies = [
     "pyqt6==6.10.2",
-    "cerberus==1.3.8",
+    "pydantic==2.12.5",
     "humanize==4.15.0",
     "pywin32==311",
     "pyyaml==6.0.3",
@@ -24,7 +24,6 @@ dependencies = [
     "pillow==12.1.0",
     "icoextract==0.2.0",
     "qasync==0.28.0",
-    "obs-websocket-py==1.0",
     "github-copilot-sdk==0.1.20",
     "openai==2.16.0",
     "pyvda==0.5.0",
@@ -45,7 +44,7 @@ dependencies = [
     "winrt.windows.ui.notifications==3.2.1",
     "winrt.windows.ui.notifications.management==3.2.1",
     "winrt.windows.devices.wifi==3.2.1",
-    "winrt.windows.security.credentials==3.2.1"
+    "winrt.windows.security.credentials==3.2.1",
 ]
 
 [project.urls]
@@ -58,7 +57,7 @@ Changelog = "https://github.com/amnweb/yasb/releases/latest"
 [project.optional-dependencies]
 dev = [
     "pre-commit",
-    "ruff",
+    "ruff>=0.15.0",
     "pyqt6-stubs",
     "types-pillow",
 ]

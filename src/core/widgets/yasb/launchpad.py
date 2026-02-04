@@ -42,7 +42,6 @@ from PyQt6.QtWidgets import (
 )
 
 from core.config import HOME_CONFIGURATION_DIR
-from core.event_service import EventService
 from core.utils.utilities import add_shadow, build_widget_label, refresh_widget_style
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.widgets.launchpad.app_loader import AppListLoader, ShortcutResolver
@@ -50,7 +49,7 @@ from core.utils.widgets.launchpad.icon_extractor import IconExtractorUtil, UrlEx
 from core.utils.win32.utilities import apply_qmenu_style, get_foreground_hwnd, set_foreground_hwnd
 from core.utils.win32.win32_accent import Blur
 from core.utils.win32.window_actions import force_foreground_focus
-from core.validation.widgets.yasb.launchpad import VALIDATION_SCHEMA
+from core.validation.widgets.yasb.launchpad import LaunchpadConfig
 from core.widgets.base import BaseWidget
 
 _ICON_CACHE = {}
@@ -604,43 +603,25 @@ class TransparentOverlay(QWidget):
 
 
 class LaunchpadWidget(BaseWidget):
-    validation_schema = VALIDATION_SCHEMA
-    handle_widget_cli = pyqtSignal(str, str)
+    validation_schema = LaunchpadConfig
 
-    def __init__(
-        self,
-        label: str,
-        search_placeholder: str,
-        app_icon_size: int,
-        window: Dict[str, Any],
-        window_style: Dict[str, Any],
-        window_animation: Dict[str, int],
-        animation: Dict[str, Any],
-        shortcuts: Dict[str, str],
-        container_padding: Dict[str, int],
-        callbacks: Dict[str, str],
-        group_apps: bool = False,
-        label_shadow: Dict = None,
-        container_shadow: Dict = None,
-        app_title_shadow: Dict = None,
-        app_icon_shadow: Dict = None,
-    ):
+    def __init__(self, config: LaunchpadConfig):
         super().__init__(class_name="launchpad-widget")
-
-        self._label = label
-        self._search_placeholder = search_placeholder
-        self._app_icon_size = app_icon_size
-        self._window = window
-        self._window_style = window_style
-        self._window_animation = window_animation
-        self._animation = animation
-        self._shortcuts = shortcuts
-        self._padding = container_padding
-        self._group_apps = group_apps
-        self._label_shadow = label_shadow
-        self._container_shadow = container_shadow
-        self._app_title_shadow = app_title_shadow
-        self._app_icon_shadow = app_icon_shadow
+        self.config = config
+        self._label = config.label
+        self._search_placeholder = config.search_placeholder
+        self._app_icon_size = config.app_icon_size
+        self._window = config.window.model_dump()
+        self._window_style = config.window_style.model_dump()
+        self._window_animation = config.window_animation.model_dump()
+        self._animation = config.animation.model_dump()
+        self._shortcuts = config.shortcuts.model_dump()
+        self._padding = config.container_padding.model_dump()
+        self._group_apps = config.group_apps
+        self._label_shadow = config.label_shadow.model_dump()
+        self._container_shadow = config.container_shadow.model_dump()
+        self._app_title_shadow = config.app_title_shadow.model_dump()
+        self._app_icon_shadow = config.app_icon_shadow.model_dump()
         self._dpr = 1.0
         # Setup directories and files
         self._launchpad_dir = os.path.join(HOME_CONFIGURATION_DIR, "launchpad")
@@ -665,9 +646,7 @@ class LaunchpadWidget(BaseWidget):
         # Create a container widget for layout
         self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(
-            self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
-        )
+        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
         self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
@@ -677,21 +656,9 @@ class LaunchpadWidget(BaseWidget):
 
         # Register callbacks
         self.register_callback("toggle_launchpad", self._toggle_launchpad)
-        self.callback_left = callbacks["on_left"]
-        self.callback_right = callbacks["on_right"]
-        self.callback_middle = callbacks["on_middle"]
-
-        self._event_service = EventService()
-        self.handle_widget_cli.connect(self._handle_widget_cli)
-        self._event_service.register_event("handle_widget_cli", self.handle_widget_cli)
-
-    def _handle_widget_cli(self, widget: str, screen: str):
-        """Handle widget CLI commands"""
-        if widget == "launchpad":
-            current_screen = self.window().screen() if self.window() else None
-            current_screen_name = current_screen.name() if current_screen else None
-            if not screen or (current_screen_name and screen.lower() == current_screen_name.lower()):
-                self._toggle_launchpad()
+        self.callback_left = self.config.callbacks.on_left
+        self.callback_right = self.config.callbacks.on_right
+        self.callback_middle = self.config.callbacks.on_middle
 
     def _toggle_launchpad(self):
         if self._animation["enabled"]:

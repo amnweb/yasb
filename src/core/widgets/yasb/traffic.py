@@ -9,97 +9,72 @@ from core.utils.utilities import PopupWidget, add_shadow, build_widget_label, re
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.widgets.traffic.connection_monitor import InternetChecker
 from core.utils.widgets.traffic.traffic_manager import TrafficDataManager
-from core.validation.widgets.yasb.traffic import VALIDATION_SCHEMA
+from core.validation.widgets.yasb.traffic import TrafficWidgetConfig
 from core.widgets.base import BaseWidget
 from settings import DEBUG
 
 
 class TrafficWidget(BaseWidget):
-    validation_schema = VALIDATION_SCHEMA
+    validation_schema = TrafficWidgetConfig
 
     _instances_by_interface: dict[str, list["TrafficWidget"]] = {}
     _shared_timers: dict[str, QTimer] = {}
     _shared_data: dict[str, dict] = {}
 
-    def __init__(
-        self,
-        label: str,
-        label_alt: str,
-        class_name: str,
-        interface: str,
-        update_interval: int,
-        hide_if_offline: bool,
-        max_label_length: int,
-        max_label_length_align: str,
-        hide_decimal: bool,
-        speed_threshold: dict,
-        speed_unit: str,
-        animation: dict[str, str],
-        container_padding: dict[str, int],
-        callbacks: dict[str, str],
-        menu: dict,
-        label_shadow: dict,
-        container_shadow: dict,
-    ):
-        super().__init__(class_name=f"traffic-widget {class_name}")
+    def __init__(self, config: TrafficWidgetConfig):
+        super().__init__(class_name=f"traffic-widget {config.class_name}")
 
-        self.interval = update_interval / 1000
+        self.config = config
+        self.interval = self.config.update_interval / 1000
         self._show_alt_label = False
-        self._label_content = label
-        self._label_alt_content = label_alt
-        self._animation = animation
-        self._padding = container_padding
-        self._interface = interface
-        self._hide_if_offline = hide_if_offline
-        self._max_label_length = max_label_length
-        self._max_label_length_align = max_label_length_align.lower()
-        self._hide_decimal = hide_decimal
-        self._speed_threshold = speed_threshold
-        self._speed_unit = speed_unit.lower()
-        self._label_shadow = label_shadow
-        self._container_shadow = container_shadow
-        self._menu = menu
 
         TrafficDataManager.setup_global_data_storage()
 
         # Initialize session bytes sent and received
-        self.session_bytes_sent, self.session_bytes_recv = TrafficDataManager.initialize_interface(self._interface)
+        self.session_bytes_sent: int | None = None
+        self.session_bytes_recv: int | None = None
+        self.session_bytes_sent, self.session_bytes_recv = TrafficDataManager.initialize_interface(
+            self.config.interface
+        )
 
         self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(
-            self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
-        )
+        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
 
         self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
 
-        add_shadow(self._widget_container, self._container_shadow)
+        add_shadow(self._widget_container, self.config.container_shadow.model_dump())
 
         self.widget_layout.addWidget(self._widget_container)
-        build_widget_label(self, self._label_content, self._label_alt_content, self._label_shadow)
+        build_widget_label(
+            self,
+            self.config.label,
+            self.config.label_alt,
+            self.config.label_shadow.model_dump(),
+        )
 
         self._initialize_instance_counters()
-        self._setup_callbacks_and_timers(update_interval, callbacks)
+        self._setup_callbacks_and_timers(self.config.update_interval, self.config.callbacks)
 
         # Initial data update
-        QTimer.singleShot(200, lambda: TrafficWidget._update_interface_data(self._interface))
+        QTimer.singleShot(200, lambda: TrafficWidget._update_interface_data(self.config.interface))
 
     def _setup_callbacks_and_timers(self, update_interval, callbacks):
         """Setup callbacks, timers, and internet checker"""
 
         # Create interface-specific internet checker
         try:
-            self.internet_checker = InternetChecker(parent=self, interface=self._interface)
+            self.internet_checker = InternetChecker(parent=self, interface=self.config.interface)
             self.internet_checker.connection_changed.connect(self._on_connection_changed)
 
             self._is_internet_connected = True
             if DEBUG:
-                logging.info(f"Internet checker initialized for interface {self._interface}")
+                logging.info(f"Internet checker initialized for interface {self.config.interface}")
 
         except Exception as e:
-            logging.error(f"Failed to initialize InternetChecker for interface {self._interface}: {e}")
+            logging.error(f"Failed to initialize InternetChecker for interface {self.config.interface}: {e}")
             self._is_internet_connected = False  # Default to disconnected if checker fails
 
         self.register_callback("toggle_label", self._toggle_label)
@@ -107,36 +82,36 @@ class TrafficWidget(BaseWidget):
         self.register_callback("toggle_menu", self._toggle_menu)
         self.register_callback("reset_data", self._reset_traffic_data)
 
-        self.callback_left = callbacks["on_left"]
-        self.callback_right = callbacks["on_right"]
-        self.callback_middle = callbacks["on_middle"]
+        self.callback_left = self.config.callbacks.on_left
+        self.callback_right = self.config.callbacks.on_right
+        self.callback_middle = self.config.callbacks.on_middle
 
-        if self._interface not in TrafficWidget._instances_by_interface:
-            TrafficWidget._instances_by_interface[self._interface] = []
-        TrafficWidget._instances_by_interface[self._interface].append(self)
+        if self.config.interface not in TrafficWidget._instances_by_interface:
+            TrafficWidget._instances_by_interface[self.config.interface] = []
+        TrafficWidget._instances_by_interface[self.config.interface].append(self)
 
-        if update_interval > 0 and self._interface not in TrafficWidget._shared_timers:
-            TrafficWidget._shared_timers[self._interface] = QTimer(self)
-            TrafficWidget._shared_timers[self._interface].setInterval(update_interval)
-            TrafficWidget._shared_timers[self._interface].timeout.connect(
-                lambda: TrafficWidget._update_interface_data(self._interface)
+        if update_interval > 0 and self.config.interface not in TrafficWidget._shared_timers:
+            TrafficWidget._shared_timers[self.config.interface] = QTimer(self)
+            TrafficWidget._shared_timers[self.config.interface].setInterval(update_interval)
+            TrafficWidget._shared_timers[self.config.interface].timeout.connect(
+                lambda: TrafficWidget._update_interface_data(self.config.interface)
             )
-            TrafficWidget._shared_timers[self._interface].start()
+            TrafficWidget._shared_timers[self.config.interface].start()
 
     def _initialize_instance_counters(self):
         """Initialize instance-specific counters"""
 
-        self.bytes_sent = 0
-        self.bytes_recv = 0
+        self.bytes_sent: int = 0
+        self.bytes_recv: int = 0
 
         def get_initial_counters():
             try:
-                initial_io = TrafficDataManager.get_interface_io_counters(self._interface)
+                initial_io = TrafficDataManager.get_interface_io_counters(self.config.interface)
                 if initial_io:
                     self.bytes_sent = initial_io.bytes_sent
                     self.bytes_recv = initial_io.bytes_recv
                 else:
-                    logging.warning(f"Could not get initial IO counters for interface {self._interface}")
+                    logging.warning(f"Could not get initial IO counters for interface {self.config.interface}")
             except Exception as e:
                 logging.error(f"Error initializing instance counters: {e}")
 
@@ -171,7 +146,7 @@ class TrafficWidget(BaseWidget):
             logging.error(f"Error updating interface data for {interface}: {e}")
 
     @classmethod
-    def _get_shared_net_data(cls, interface: str, reference_instance):
+    def _get_shared_net_data(cls, interface: str, reference_instance: "TrafficWidget"):
         """Get network data for a specific interface using a reference instance"""
         try:
             # Use the data manager to calculate everything
@@ -179,14 +154,14 @@ class TrafficWidget(BaseWidget):
                 interface=interface,
                 previous_sent=reference_instance.bytes_sent,
                 previous_recv=reference_instance.bytes_recv,
-                session_sent=reference_instance.session_bytes_sent,
-                session_recv=reference_instance.session_bytes_recv,
+                session_sent=reference_instance.session_bytes_sent or 0,
+                session_recv=reference_instance.session_bytes_recv or 0,
                 interval_seconds=reference_instance.interval,
-                speed_unit=reference_instance._speed_unit,
-                hide_decimal=reference_instance._hide_decimal,
-                speed_threshold=reference_instance._speed_threshold,
-                max_label_length=reference_instance._max_label_length,
-                max_label_length_align=reference_instance._max_label_length_align,
+                speed_unit=reference_instance.config.speed_unit.lower(),
+                hide_decimal=reference_instance.config.hide_decimal,
+                speed_threshold=reference_instance.config.speed_threshold.model_dump(),
+                max_label_length=reference_instance.config.max_label_length,
+                max_label_length_align=reference_instance.config.max_label_length_align.lower(),
             )
 
             if net_data and net_data.get("reset_occurred"):
@@ -249,7 +224,7 @@ class TrafficWidget(BaseWidget):
     def _update_label_with_data(self, shared_data):
         """Update label with provided data"""
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets  # type: ignore
-        active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
+        active_label_content = self.config.label_alt if self._show_alt_label else self.config.label
 
         label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
         label_parts = [part for part in label_parts if part]
@@ -300,7 +275,7 @@ class TrafficWidget(BaseWidget):
 
         self._is_internet_connected = is_connected
 
-        if self._hide_if_offline:
+        if self.config.hide_if_offline:
             current_visibility = self.isVisible()
             if current_visibility == is_connected:
                 return
@@ -320,33 +295,33 @@ class TrafficWidget(BaseWidget):
                 self.menu_labels["internet-info"].setText(status_text)
                 self.menu_labels["internet-info"].setProperty("class", f"internet-info {net_status}")
                 refresh_widget_style(self.menu_labels["internet-info"])
-            except (RuntimeError, AttributeError):
+            except RuntimeError, AttributeError:
                 pass
 
     def _toggle_label(self):
-        if self._animation["enabled"]:
-            AnimationManager.animate(self, self._animation["type"], self._animation["duration"])  # type: ignore
+        if self.config.animation.enabled:
+            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)  # type: ignore
         self._show_alt_label = not self._show_alt_label
         for widget in self._widgets:  # type: ignore
             widget.setVisible(not self._show_alt_label)
         for widget in self._widgets_alt:  # type: ignore
             widget.setVisible(self._show_alt_label)
         # Force update with current shared data
-        if self._interface in TrafficWidget._shared_data:
-            self._update_from_shared_data(TrafficWidget._shared_data[self._interface])
+        if self.config.interface in TrafficWidget._shared_data:
+            self._update_from_shared_data(TrafficWidget._shared_data[self.config.interface])
 
     def _update_label(self):
         """Update label - now just triggers shared data update"""
-        TrafficWidget._update_interface_data(self._interface)
+        TrafficWidget._update_interface_data(self.config.interface)
 
     def _toggle_menu(self):
         """Show traffic statistics popup menu"""
         self._menu_widget = PopupWidget(
             self,
-            self._menu["blur"],
-            self._menu["round_corners"],
-            self._menu["round_corners_type"],
-            self._menu["border_color"],
+            self.config.menu.blur,
+            self.config.menu.round_corners,
+            self.config.menu.round_corners_type,
+            self.config.menu.border_color,
         )
         self._menu_widget.setProperty("class", "traffic-menu")
 
@@ -493,14 +468,14 @@ class TrafficWidget(BaseWidget):
 
             layout.addWidget(container)
 
-        if self._menu["show_interface_name"]:
-            interface_label = QLabel(f"Network Interface: {self._interface.capitalize()}")
+        if self.config.menu.show_interface_name:
+            interface_label = QLabel(f"Network Interface: {self.config.interface.capitalize()}")
             interface_label.setProperty("class", "interface-info")
             interface_label.setWordWrap(True)
             interface_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             layout.addWidget(interface_label)
 
-        if self._menu["show_internet_info"]:
+        if self.config.menu.show_internet_info:
             status_text = "Internet Connected" if self._is_internet_connected else "Internet Disconnected"
             internet_info = QLabel(status_text)
             internet_info.setProperty("class", "internet-info")
@@ -512,7 +487,10 @@ class TrafficWidget(BaseWidget):
         self._menu_widget.setLayout(layout)
         self._menu_widget.adjustSize()
         self._menu_widget.setPosition(
-            self._menu["alignment"], self._menu["direction"], self._menu["offset_left"], self._menu["offset_top"]
+            self.config.menu.alignment,
+            self.config.menu.direction,
+            self.config.menu.offset_left,
+            self.config.menu.offset_top,
         )
         self._menu_widget.show()
         self._update_menu_content()
@@ -523,10 +501,10 @@ class TrafficWidget(BaseWidget):
             try:
                 if data is None:
                     if (
-                        self._interface in TrafficWidget._shared_data
-                        and TrafficWidget._shared_data[self._interface] is not None
+                        self.config.interface in TrafficWidget._shared_data
+                        and TrafficWidget._shared_data[self.config.interface] is not None
                     ):
-                        shared_data = TrafficWidget._shared_data[self._interface]
+                        shared_data = TrafficWidget._shared_data[self.config.interface]
                         data = (
                             shared_data["raw_upload_speed"],
                             shared_data["raw_download_speed"],
@@ -598,17 +576,17 @@ class TrafficWidget(BaseWidget):
         """Reset all traffic data to zero"""
         try:
             # Reset data in TrafficDataManager
-            TrafficDataManager.reset_interface_data(self._interface)
+            TrafficDataManager.reset_interface_data(self.config.interface)
 
             # Reset instance counters
-            current_io = TrafficDataManager.get_interface_io_counters(self._interface)
+            current_io = TrafficDataManager.get_interface_io_counters(self.config.interface)
             if current_io:
                 self.bytes_sent = current_io.bytes_sent
                 self.bytes_recv = current_io.bytes_recv
                 self.session_bytes_sent = current_io.bytes_sent
                 self.session_bytes_recv = current_io.bytes_recv
 
-            TrafficWidget._update_interface_data(self._interface)
+            TrafficWidget._update_interface_data(self.config.interface)
 
             if self._is_menu_visible():
                 self._update_menu_content()
@@ -625,6 +603,6 @@ class TrafficWidget(BaseWidget):
                 and self._menu_widget.isVisible()
             ):
                 return True
-        except (RuntimeError, AttributeError):
+        except RuntimeError, AttributeError:
             return False
         return False

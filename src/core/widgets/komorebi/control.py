@@ -11,7 +11,7 @@ from core.event_service import EventService
 from core.utils.utilities import PopupWidget, add_shadow, build_widget_label, refresh_widget_style
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.widgets.komorebi.client import KomorebiClient
-from core.validation.widgets.komorebi.control import VALIDATION_SCHEMA
+from core.validation.widgets.komorebi.control import KomorebiControlWidgetConfig
 from core.widgets.base import BaseWidget
 
 try:
@@ -32,42 +32,16 @@ class ExtPopupWidget(PopupWidget):
 
 
 class KomorebiControlWidget(BaseWidget):
-    validation_schema = VALIDATION_SCHEMA
+    validation_schema = KomorebiControlWidgetConfig
 
     k_signal_connect = pyqtSignal(dict)
     k_signal_disconnect = pyqtSignal()
     event_listener = KomorebiEventListener
 
-    def __init__(
-        self,
-        label: str,
-        icons: dict[str, str],
-        run_ahk: bool,
-        run_whkd: bool,
-        run_masir: bool,
-        config_path: Optional[str],
-        show_version: bool,
-        komorebi_menu: dict[str, str],
-        container_padding: dict[str, int],
-        animation: dict[str, str],
-        callbacks: dict[str, str],
-        label_shadow: dict = None,
-        container_shadow: dict = None,
-    ):
+    def __init__(self, config: KomorebiControlWidgetConfig):
         super().__init__(class_name="komorebi-control-widget")
+        self.config = config
 
-        self._label_content = label
-        self._icons = icons
-        self._run_ahk = run_ahk
-        self._run_whkd = run_whkd
-        self._run_masir = run_masir
-        self._config_path = config_path
-        self._show_version = show_version
-        self._komorebi_menu = komorebi_menu
-        self._animation = animation
-        self._padding = container_padding
-        self._label_shadow = label_shadow
-        self._container_shadow = container_shadow
         self._is_komorebi_connected = False
         self._locked_ui = False
         self._lock_menu = False
@@ -80,24 +54,22 @@ class KomorebiControlWidget(BaseWidget):
         # Construct container
         self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(
-            self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
-        )
+        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
         # Initialize container
         self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
-        add_shadow(self._widget_container, self._container_shadow)
+        add_shadow(self._widget_container, self.config.container_shadow.model_dump())
         # Add the container to the main widget layout
         self.widget_layout.addWidget(self._widget_container)
 
-        build_widget_label(self, self._label_content, None, self._label_shadow)
+        build_widget_label(self, self.config.label, None, self.config.label_shadow.model_dump())
 
         self.register_callback("toggle_menu", self._toggle_menu)
 
-        self.callback_left = callbacks["on_left"]
-        self.callback_right = callbacks["on_right"]
-        self.callback_middle = callbacks["on_middle"]
+        self.callback_left = self.config.callbacks.on_left
+        self.callback_right = self.config.callbacks.on_right
+        self.callback_middle = self.config.callbacks.on_middle
 
         # Register events
         self._register_signals_and_events()
@@ -139,12 +111,12 @@ class KomorebiControlWidget(BaseWidget):
                     child.setText(self._version_text)
                     break
         # Also update stored label if we created it on the dialog
-        if hasattr(self, "_version_label") and self._show_version:
+        if hasattr(self, "_version_label") and self.config.show_version:
             self._version_label.setText(self._version_text if self._version_text else "")
 
     def _toggle_menu(self):
-        if self._animation["enabled"]:
-            AnimationManager.animate(self, self._animation["type"], self._animation["duration"])
+        if self.config.animation.enabled:
+            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
         self.show_menu()
 
     def show_menu(self):
@@ -155,10 +127,10 @@ class KomorebiControlWidget(BaseWidget):
         # Build the popup dialog
         self.dialog = ExtPopupWidget(
             self,
-            self._komorebi_menu["blur"],
-            self._komorebi_menu["round_corners"],
-            self._komorebi_menu["round_corners_type"],
-            self._komorebi_menu["border_color"],
+            self.config.komorebi_menu.blur,
+            self.config.komorebi_menu.round_corners,
+            self.config.komorebi_menu.round_corners_type,
+            self.config.komorebi_menu.border_color,
         )
         self.dialog.setProperty("class", "komorebi-control-menu")
 
@@ -172,13 +144,13 @@ class KomorebiControlWidget(BaseWidget):
         buttons_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         # Store buttons as class attributes so we can update them
-        self.start_btn = QLabel(self._icons["start"])
+        self.start_btn = QLabel(self.config.icons.start)
         self.start_btn.setCursor(Qt.CursorShape.PointingHandCursor)
 
-        self.stop_btn = QLabel(self._icons["stop"])
+        self.stop_btn = QLabel(self.config.icons.stop)
         self.stop_btn.setCursor(Qt.CursorShape.PointingHandCursor)
 
-        self.reload_btn = QLabel(self._icons["reload"])
+        self.reload_btn = QLabel(self.config.icons.reload)
         self.reload_btn.setCursor(Qt.CursorShape.PointingHandCursor)
 
         # Connect button click events
@@ -210,17 +182,17 @@ class KomorebiControlWidget(BaseWidget):
 
         # Add widgets to main layout vertically
         layout.addWidget(buttons_row)
-        if self._show_version:
+        if self.config.show_version:
             layout.addWidget(version_row)
 
         self.dialog.setLayout(layout)
 
         self.dialog.adjustSize()
         self.dialog.setPosition(
-            alignment=self._komorebi_menu["alignment"],
-            direction=self._komorebi_menu["direction"],
-            offset_left=self._komorebi_menu["offset_left"],
-            offset_top=self._komorebi_menu["offset_top"],
+            alignment=self.config.komorebi_menu.alignment,
+            direction=self.config.komorebi_menu.direction,
+            offset_left=self.config.komorebi_menu.offset_left,
+            offset_top=self.config.komorebi_menu.offset_top,
         )
 
         self.dialog.show()
@@ -305,14 +277,14 @@ class KomorebiControlWidget(BaseWidget):
     def _build_komorebi_flags(self, include_config: bool = True) -> str:
         """Build command line flags based on configuration."""
         flags = []
-        if self._run_whkd:
+        if self.config.run_whkd:
             flags.append("--whkd")
-        if self._run_ahk:
+        if self.config.run_ahk:
             flags.append("--ahk")
-        if self._run_masir:
+        if self.config.run_masir:
             flags.append("--masir")
-        if include_config and self._config_path:
-            flags.append(f"--config={self._config_path}")
+        if include_config and self.config.config_path:
+            flags.append(f"--config={self.config.config_path}")
         return " ".join(flags)
 
     def _start_komorebi(self):

@@ -7,35 +7,27 @@ from PyQt6.QtWidgets import QFrame, QHBoxLayout, QPushButton
 from core.config import get_config
 from core.utils.utilities import add_shadow
 from core.utils.widget_builder import WidgetBuilder
-from core.validation.widgets.yasb.grouper import VALIDATION_SCHEMA
+from core.validation.widgets.yasb.grouper import GrouperWidgetConfig
 from core.widgets.base import BaseWidget
 
 
 class GrouperWidget(BaseWidget):
-    validation_schema: dict[str, Any] = VALIDATION_SCHEMA
+    validation_schema = GrouperWidgetConfig
     # Track and prevent duplicate listener threads across multiple Grouper instances
     _started_listener_classes: set[type] = set()
     _listener_threads: dict[type, Any] = {}
     _listener_refcounts: dict[type, int] = {}
 
-    def __init__(
-        self,
-        class_name: str,
-        container_padding: dict[str, int],
-        widgets: list[str] = [],
-        container_shadow: dict = None,
-        hide_empty: bool = False,
-        collapse_options: dict = None,
-    ):
-        super().__init__(class_name=class_name)
-        self._padding = container_padding
-        self._container_shadow = container_shadow
-        self._hide_empty = hide_empty
+    def __init__(self, config: GrouperWidgetConfig):
+        super().__init__(class_name=config.class_name)
+        self.config = config
+        self._container_shadow = self.config.container_shadow
+        self._hide_empty = self.config.hide_empty
         # Use collapse_options structure
-        self._collapse_options = collapse_options
-        self._collapsed = self._collapse_options["enabled"]
-        self._exclude_widgets = self._collapse_options["exclude_widgets"]
-        self._widgets_list = widgets
+        self._collapse_options = self.config.collapse_options
+        self._collapsed = self._collapse_options.enabled
+        self._exclude_widgets = self._collapse_options.exclude_widgets
+        self._widgets_list = self.config.widgets
         self._child_widgets = []
         self._child_widget_names = {}
         self._local_listeners = set()
@@ -47,33 +39,36 @@ class GrouperWidget(BaseWidget):
         self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "container")
-        add_shadow(self._widget_container, self._container_shadow)
+        add_shadow(self._widget_container, self._container_shadow.model_dump())
 
         self._collapse_button = None
         if self._collapsed:
             self._collapse_button = QPushButton()
             self._collapse_button.setProperty("class", "grouper-button")
-            self._expanded_icon = self._collapse_options["expanded_label"]
-            self._collapsed_icon = self._collapse_options["collapsed_label"]
+            self._expanded_icon = self._collapse_options.expanded_label
+            self._collapsed_icon = self._collapse_options.collapsed_label
             self._collapse_button.setText(self._collapsed_icon)
             self._collapse_button.setFlat(True)
             self._collapse_button.setCursor(Qt.CursorShape.PointingHandCursor)
 
-            if self._collapse_options["label_position"].lower() == "left":
+            if self._collapse_options.label_position.lower() == "left":
                 self._widget_container_layout.addWidget(self._collapse_button)
             self._collapse_button.clicked.connect(self._toggle_collapsed)
 
         self.widget_layout.addWidget(self._widget_container)
 
+        # Register keybinding callback
+        self.register_callback("toggle_collapse", self._toggle_collapsed)
+
         self._create_child_widgets()
 
-        if self._collapsed and self._collapse_options["label_position"].lower() == "right":
+        if self._collapsed and self._collapse_options.label_position.lower() == "right":
             self._widget_container_layout.addWidget(self._collapse_button)
 
     def _create_child_widgets(self):
         try:
             config = get_config()
-            widets_config = config.get("widgets", {})
+            widets_config = config.widgets if config else {}
 
             widget_builder = WidgetBuilder(widets_config)
 

@@ -2,12 +2,12 @@ import logging
 from importlib import import_module
 from typing import Optional
 
-import yaml
-from cerberus import Validator
+from pydantic import BaseModel, ValidationError
 from PyQt6.QtCore import QObject
 from PyQt6.QtWidgets import QWidget
 
 from core.utils.alert_dialog import raise_info_alert
+from core.utils.utilities import format_pydantic_errors_to_yaml
 from settings import DEFAULT_CONFIG_FILENAME
 
 
@@ -46,30 +46,41 @@ class WidgetBuilder(QObject):
                 widget_schema = getattr(widget_cls, "validation_schema")
                 widget_event_listener = getattr(widget_cls, "event_listener")
 
-                if type(widget_schema) != dict and not widget_schema:
+                if not widget_schema:
                     raise Exception(f"The widget {widget_cls.__name__} has no validation_schema")
 
                 if widget_event_listener:
                     self._widget_event_listeners.add(widget_event_listener)
 
-                widget_options_validator = Validator(widget_schema)
                 widget_options = widget_config.get("options", {})
 
-                if not widget_options_validator.validate(widget_options, widget_schema):
-                    validation_errors = yaml.dump(widget_options_validator.errors)
+                if not (isinstance(widget_schema, type) and issubclass(widget_schema, BaseModel)):
+                    raise Exception(
+                        f"The widget {widget_cls.__name__} has an invalid validation_schema (must be a Pydantic V2 model)"
+                    )
+
+                try:
+                    normalized_instance = widget_schema.model_validate(widget_options)
+                    normalized_options = normalized_instance.model_dump()
+                    pydantic_config = normalized_instance
+                except ValidationError as e:
+                    validation_errors = format_pydantic_errors_to_yaml(e)
                     indented_validation_errors = f"\n{validation_errors}".replace("\n", "\n      ")
                     self._invalid_widget_options[widget_name] = indented_validation_errors
-                else:
-                    normalized_options = widget_options_validator.normalized(widget_options)
-                    # If this widget is a Grouper, proactively collect child listeners so BarManager can manage them
-                    try:
-                        if widget_cls.__name__ == "GrouperWidget" and widget_module.__name__.endswith("yasb.grouper"):
-                            child_names = normalized_options.get("widgets", []) or []
-                            self._collect_nested_listeners(child_names)
-                    except Exception:
-                        logging.debug("WidgetBuilder failed to collect nested listeners for Grouper")
-                    return widget_cls(**normalized_options)
-            except (AttributeError, ValueError, ModuleNotFoundError):
+                    return None
+
+                # If this widget is a Grouper, proactively collect child listeners so BarManager can manage them
+                try:
+                    if widget_cls.__name__ == "GrouperWidget" and widget_module.__name__.endswith("yasb.grouper"):
+                        child_names = normalized_options.get("widgets", []) or []
+                        self._collect_nested_listeners(child_names)
+                except Exception:
+                    logging.debug("WidgetBuilder failed to collect nested listeners for Grouper")
+
+                widget = widget_cls(config=pydantic_config)
+                widget.widget_name = widget_name
+                return widget
+            except AttributeError, ValueError, ModuleNotFoundError:
                 logging.exception(f"Failed to import widget with type {widget_config['type']}")
                 self._invalid_widget_types[widget_name] = widget_config["type"]
             except KeyError:

@@ -11,85 +11,54 @@ from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel
 
 from core.utils.utilities import add_shadow, build_progress_widget, build_widget_label, refresh_widget_style
 from core.utils.widgets.animation_manager import AnimationManager
-from core.validation.widgets.yasb.gpu import VALIDATION_SCHEMA
+from core.validation.widgets.yasb.gpu import GpuConfig
 from core.widgets.base import BaseWidget
 
 
 class GpuWidget(BaseWidget):
-    validation_schema = VALIDATION_SCHEMA
+    validation_schema = GpuConfig
 
     # Class-level shared data and timer
     _instances: list["GpuWidget"] = []
     _shared_timer: QTimer | None = None
     _nvidia_smi_path: str | None = None  # Cache for resolved nvidia-smi path
 
-    def __init__(
-        self,
-        gpu_index: int,
-        label: str,
-        label_alt: str,
-        class_name: str,
-        histogram_icons: list[str],
-        histogram_num_columns: int,
-        update_interval: int,
-        animation: dict[str, str],
-        container_padding: dict[str, int],
-        callbacks: dict[str, str],
-        gpu_thresholds: dict[str, int],
-        units: str,
-        label_shadow: dict = None,
-        container_shadow: dict = None,
-        progress_bar: dict = None,
-        hide_decimal: bool = False,
-    ):
-        super().__init__(class_name=f"gpu-widget {class_name}")
-        self._gpu_index = gpu_index
-        self._histogram_icons = histogram_icons
-        self._gpu_util_history = deque([0] * histogram_num_columns, maxlen=histogram_num_columns)
-        self._gpu_mem_history = deque([0] * histogram_num_columns, maxlen=histogram_num_columns)
+    def __init__(self, config: GpuConfig):
+        super().__init__(class_name=f"gpu-widget {config.class_name}")
+        self.config = config
+        self._gpu_util_history = deque([0] * config.histogram_num_columns, maxlen=config.histogram_num_columns)
+        self._gpu_mem_history = deque([0] * config.histogram_num_columns, maxlen=config.histogram_num_columns)
         self._show_alt_label = False
-        self._label_content = label
-        self._label_alt_content = label_alt
-        self._animation = animation
-        self._padding = container_padding
-        self._label_shadow = label_shadow
-        self._container_shadow = container_shadow
-        self._gpu_thresholds = gpu_thresholds
-        self._units = units
-        self._progress_bar = progress_bar
-        self._hide_decimal = hide_decimal
 
         self.progress_widget = None
-        self.progress_widget = build_progress_widget(self, self._progress_bar)
+        self.progress_widget = build_progress_widget(self, self.config.progress_bar.model_dump())
 
         self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(
-            self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
-        )
+        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
         # Initialize container
         self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
-        add_shadow(self._widget_container, self._container_shadow)
+        add_shadow(self._widget_container, self.config.container_shadow.model_dump())
         # Add the container to the main widget layout
         self.widget_layout.addWidget(self._widget_container)
 
-        build_widget_label(self, self._label_content, self._label_alt_content, self._label_shadow)
+        build_widget_label(self, self.config.label, self.config.label_alt, self.config.label_shadow.model_dump())
 
         self.register_callback("toggle_label", self._toggle_label)
 
-        self.callback_left = callbacks["on_left"]
-        self.callback_right = callbacks["on_right"]
-        self.callback_middle = callbacks["on_middle"]
+        self.callback_left = self.config.callbacks.on_left
+        self.callback_right = self.config.callbacks.on_right
+        self.callback_middle = self.config.callbacks.on_middle
 
         # Add this instance to the shared instances list
         if self not in GpuWidget._instances:
             GpuWidget._instances.append(self)
 
-        if update_interval > 0 and GpuWidget._shared_timer is None:
+        if self.config.update_interval > 0 and GpuWidget._shared_timer is None:
             GpuWidget._shared_timer = QTimer(self)
-            GpuWidget._shared_timer.setInterval(update_interval)
+            GpuWidget._shared_timer.setInterval(self.config.update_interval)
             GpuWidget._shared_timer.timeout.connect(GpuWidget._notify_instances)
             GpuWidget._shared_timer.start()
 
@@ -149,7 +118,7 @@ class GpuWidget(BaseWidget):
             for inst in cls._instances[:]:
                 try:
                     # Find the line for the correct GPU index
-                    gpu_line = next((l for l in lines if l.startswith(str(inst._gpu_index) + ",")), None)
+                    gpu_line = next((l for l in lines if l.startswith(str(inst.config.gpu_index) + ",")), None)
                     if gpu_line:
                         fields = [f.strip() for f in gpu_line.split(",")]
 
@@ -177,10 +146,10 @@ class GpuWidget(BaseWidget):
         """Update the label with GPU data."""
         self._gpu_util_history.append(gpu_data.utilization)
         self._gpu_mem_history.append(gpu_data.mem_used)
-        _temp = gpu_data.temp if self._units == "metric" else (gpu_data.temp * (9 / 5) + 32)
-        _temp = round(_temp) if self._hide_decimal else _temp
+        _temp = gpu_data.temp if self.config.units == "metric" else (gpu_data.temp * (9 / 5) + 32)
+        _temp = round(_temp) if self.config.hide_decimal else _temp
         _power_draw = str(gpu_data.power_draw).strip() or 0
-        _naturalsize = lambda value: naturalsize(value, True, True, "%.0f" if self._hide_decimal else "%.1f")
+        _naturalsize = lambda value: naturalsize(value, True, True, "%.0f" if self.config.hide_decimal else "%.1f")
         gpu_info = {
             "index": gpu_data.index,
             "utilization": gpu_data.utilization,
@@ -199,15 +168,15 @@ class GpuWidget(BaseWidget):
         }
 
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
-        active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
+        active_label_content = self.config.label_alt if self._show_alt_label else self.config.label
         label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
         label_parts = [part for part in label_parts if part]
         widget_index = 0
 
-        if self._progress_bar["enabled"] and self.progress_widget:
+        if self.config.progress_bar.enabled and self.progress_widget:
             if self._widget_container_layout.indexOf(self.progress_widget) == -1:
                 self._widget_container_layout.insertWidget(
-                    0 if self._progress_bar["position"] == "left" else self._widget_container_layout.count(),
+                    0 if self.config.progress_bar.position == "left" else self._widget_container_layout.count(),
                     self.progress_widget,
                 )
             self.progress_widget.set_value(gpu_data.utilization)
@@ -229,26 +198,26 @@ class GpuWidget(BaseWidget):
                     refresh_widget_style(active_widgets[widget_index])
                 widget_index += 1
 
-    def _get_gpu_threshold(self, utilization) -> str:
-        if utilization <= self._gpu_thresholds["low"]:
+    def _get_gpu_threshold(self, utilization: float) -> str:
+        if utilization <= self.config.gpu_thresholds.low:
             return "low"
-        elif self._gpu_thresholds["low"] < utilization <= self._gpu_thresholds["medium"]:
+        elif self.config.gpu_thresholds.low < utilization <= self.config.gpu_thresholds.medium:
             return "medium"
-        elif self._gpu_thresholds["medium"] < utilization <= self._gpu_thresholds["high"]:
+        elif self.config.gpu_thresholds.medium < utilization <= self.config.gpu_thresholds.high:
             return "high"
-        elif self._gpu_thresholds["high"] < utilization:
+        elif self.config.gpu_thresholds.high < utilization:
             return "critical"
 
-    def _get_histogram_bar(self, num, num_min, num_max):
+    def _get_histogram_bar(self, num: float, num_min: float, num_max: float) -> str:
         if num_max == num_min:
-            return self._histogram_icons[0]
-        bar_index = int((num - num_min) / (num_max - num_min) * (len(self._histogram_icons) - 1))
-        bar_index = min(max(bar_index, 0), len(self._histogram_icons) - 1)
-        return self._histogram_icons[bar_index]
+            return self.config.histogram_icons[0]
+        bar_index = int((num - num_min) / (num_max - num_min) * (len(self.config.histogram_icons) - 1))
+        bar_index = min(max(bar_index, 0), len(self.config.histogram_icons) - 1)
+        return self.config.histogram_icons[bar_index]
 
     def _toggle_label(self):
-        if self._animation["enabled"]:
-            AnimationManager.animate(self, self._animation["type"], self._animation["duration"])
+        if self.config.animation.enabled:
+            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
         self._show_alt_label = not self._show_alt_label
         for widget in self._widgets:
             widget.setVisible(not self._show_alt_label)

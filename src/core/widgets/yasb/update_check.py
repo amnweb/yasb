@@ -10,7 +10,7 @@ from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel
 
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import add_shadow, refresh_widget_style
-from core.validation.widgets.yasb.update_check import VALIDATION_SCHEMA
+from core.validation.widgets.yasb.update_check import UpdateCheckWidgetConfig
 from core.widgets.base import BaseWidget
 from settings import DEBUG
 
@@ -27,7 +27,10 @@ class UpdateWorker(QThread):
 
     def filter_updates(self, updates, names, update_type):
         if not updates:
-            return 0, [], [] if type == "winget" else 0, []
+            if update_type == "winget":
+                return 0, [], []
+            else:
+                return 0, []
 
         if not self.exclude_list:
             if update_type == "winget":
@@ -279,10 +282,12 @@ class UpdateManager:
         # Get correct exclude list based on type
         exclude_list = []
         for subscriber in self._subscribers:
-            if label_type == "windows" and hasattr(subscriber, "_windows_update_exclude"):
-                exclude_list.extend(subscriber._windows_update_exclude)
-            elif label_type == "winget" and hasattr(subscriber, "_winget_update_exclude"):
-                exclude_list.extend(subscriber._winget_update_exclude)
+            if label_type == "windows":
+                if hasattr(subscriber, "config"):
+                    exclude_list.extend(subscriber.config.windows_update.exclude)
+            elif label_type == "winget":
+                if hasattr(subscriber, "config"):
+                    exclude_list.extend(subscriber.config.winget_update.exclude)
 
         # Hide the container first
         self.notify_subscribers(f"{label_type}_hide", {})
@@ -291,33 +296,14 @@ class UpdateManager:
 
 
 class UpdateCheckWidget(BaseWidget):
-    validation_schema = VALIDATION_SCHEMA
+    validation_schema = UpdateCheckWidgetConfig
 
     def __init__(
         self,
-        windows_update: dict[str, str],
-        winget_update: dict[str, str],
-        label_shadow: dict = None,
-        container_shadow: dict = None,
+        config: UpdateCheckWidgetConfig,
     ):
         super().__init__(class_name="update-check-widget")
-
-        self._windows_update = windows_update
-        self._winget_update = winget_update
-
-        self._windows_update_tooltip = self._windows_update["tooltip"]
-        self._winget_update_tooltip = self._winget_update["tooltip"]
-
-        self._window_update_enabled = self._windows_update.get("enabled", False)
-        self._windows_update_label = self._windows_update.get("label", "")
-        self._windows_update_exclude = self._windows_update.get("exclude", [])
-
-        self._winget_update_enabled = self._winget_update.get("enabled", False)
-        self._winget_update_label = self._winget_update.get("label", "")
-        self._winget_update_exclude = self._winget_update.get("exclude", [])
-
-        self._label_shadow = label_shadow
-        self._container_shadow = container_shadow
+        self.config = config
 
         self.windows_update_data = 0
         self.winget_update_data = 0
@@ -327,14 +313,13 @@ class UpdateCheckWidget(BaseWidget):
         self._widget_winget = []
         self._widget_windows = []
 
-        self._create_dynamically_label(self._winget_update_label, self._windows_update_label)
-
+        self._create_dynamically_label(self.config.winget_update.label, self.config.windows_update.label)
         self._update_manager = UpdateManager()
         self._update_manager.register_subscriber(self)
 
         self._workers_started = False
         self._startup_timer = None
-        if self._window_update_enabled or self._winget_update_enabled:
+        if self.config.windows_update.enabled or self.config.winget_update.enabled:
             self._schedule_worker_start()
 
         self.update_widget_visibility()
@@ -355,10 +340,10 @@ class UpdateCheckWidget(BaseWidget):
             self._startup_timer.stop()
             self._startup_timer = None
 
-        if self._window_update_enabled:
-            self._update_manager.start_worker("windows", self._windows_update_exclude)
-        if self._winget_update_enabled:
-            self._update_manager.start_worker("winget", self._winget_update_exclude)
+        if self.config.windows_update.enabled:
+            self._update_manager.start_worker("windows", self.config.windows_update.exclude)
+        if self.config.winget_update.enabled:
+            self._update_manager.start_worker("winget", self.config.winget_update.exclude)
 
     def emit_event(self, event_type, update_info):
         if event_type == "windows_update":
@@ -382,7 +367,7 @@ class UpdateCheckWidget(BaseWidget):
             container.setLayout(container_layout)
             class_name = "windows" if label_type == "windows" else "winget"
             container.setProperty("class", f"widget-container {class_name}")
-            add_shadow(container, self._container_shadow)
+            add_shadow(container, self.config.container_shadow.model_dump())
             self.widget_layout.addWidget(container)
             container.hide()
             label_parts = re.split(r"(<span.*?>.*?</span>)", label_text)
@@ -402,26 +387,26 @@ class UpdateCheckWidget(BaseWidget):
                 else:
                     label = QLabel(part)
                     label.setProperty("class", "label")
-                add_shadow(label, self._label_shadow)
+                add_shadow(label, self.config.label_shadow.model_dump())
                 label.setAlignment(Qt.AlignmentFlag.AlignCenter)
                 container_layout.addWidget(label)
                 widgets.append(label)
                 label.mousePressEvent = self.handle_mouse_events(label_type)
             return container, widgets
 
-        if self._winget_update_enabled:
-            self._winget_container, self._widget_winget = process_content(self._winget_update_label, "winget")
-        if self._window_update_enabled:
-            self._windows_container, self._widget_windows = process_content(self._windows_update_label, "windows")
+        if self.config.winget_update.enabled:
+            self._winget_container, self._widget_winget = process_content(self.config.winget_update.label, "winget")
+        if self.config.windows_update.enabled:
+            self._windows_container, self._widget_windows = process_content(self.config.windows_update.label, "windows")
 
     def _update_label(self, widget_type, data, names):
         if widget_type == "winget":
             active_widgets = self._widget_winget
-            active_label_content = self._winget_update_label
+            active_label_content = self.config.winget_update.label
             container = self._winget_container
         elif widget_type == "windows":
             active_widgets = self._widget_windows
-            active_label_content = self._windows_update_label
+            active_label_content = self.config.windows_update.label
             container = self._windows_container
         else:
             return
@@ -444,9 +429,9 @@ class UpdateCheckWidget(BaseWidget):
                     active_widgets[widget_index].setText(formatted_text)
                 active_widgets[widget_index].setCursor(Qt.CursorShape.PointingHandCursor)
                 widget_index += 1
-        if widget_type == "windows" and self._windows_update_tooltip:
+        if widget_type == "windows" and self.config.windows_update.tooltip:
             set_tooltip(container, "\n".join(names))
-        elif widget_type == "winget" and self._winget_update_tooltip:
+        elif widget_type == "winget" and self.config.winget_update.tooltip:
             set_tooltip(container, "\n".join(names))
 
     def handle_mouse_events(self, label_type):
@@ -468,8 +453,8 @@ class UpdateCheckWidget(BaseWidget):
         self.update_widget_visibility()
 
     def update_widget_visibility(self):
-        windows_visible = self._window_update_enabled and self.windows_update_data > 0
-        winget_visible = self._winget_update_enabled and self.winget_update_data > 0
+        windows_visible = self.config.windows_update.enabled and self.windows_update_data > 0
+        winget_visible = self.config.winget_update.enabled and self.winget_update_data > 0
 
         if windows_visible and winget_visible:
             if self._windows_container:
@@ -477,9 +462,9 @@ class UpdateCheckWidget(BaseWidget):
             if self._winget_container:
                 self._set_container_class(self._winget_container, "winget", paired=True)
         else:
-            if self._windows_container and self._window_update_enabled:
+            if self._windows_container and self.config.windows_update.enabled:
                 self._set_container_class(self._windows_container, "windows", paired=False)
-            if self._winget_container and self._winget_update_enabled:
+            if self._winget_container and self.config.winget_update.enabled:
                 self._set_container_class(self._winget_container, "winget", paired=False)
 
         if self.windows_update_data == 0 and self.winget_update_data == 0:

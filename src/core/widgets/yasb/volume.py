@@ -20,73 +20,42 @@ from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.widgets.volume.service import AudioOutputService
 from core.utils.win32.app_icons import get_process_icon
 from core.utils.win32.utilities import get_app_name_from_pid
-from core.validation.widgets.yasb.volume import VALIDATION_SCHEMA
+from core.validation.widgets.yasb.volume import VolumeConfig
 from core.widgets.base import BaseWidget
 
 
 class VolumeWidget(BaseWidget):
-    validation_schema = VALIDATION_SCHEMA
+    validation_schema = VolumeConfig
 
-    def __init__(
-        self,
-        label: str,
-        label_alt: str,
-        class_name: str,
-        mute_text: str,
-        tooltip: bool,
-        scroll_step: int,
-        slider_beep: bool,
-        volume_icons: list[str],
-        audio_menu: dict[str, str],
-        animation: dict[str, str],
-        container_padding: dict[str, int],
-        callbacks: dict[str, str],
-        label_shadow: dict = None,
-        container_shadow: dict = None,
-        progress_bar: dict = None,
-    ):
-        super().__init__(class_name=f"volume-widget {class_name}")
+    def __init__(self, config: VolumeConfig):
+        super().__init__(class_name=f"volume-widget {config.class_name}")
+        self.config = config
         self._show_alt_label = False
-        self._label_content = label
-        self._label_alt_content = label_alt
-        self._mute_text = mute_text
-        self._tooltip = tooltip
-        self._scroll_step = int(scroll_step) / 100
-        self._slider_beep = slider_beep
-        self._audio_menu = audio_menu
-        self._animation = animation
-        self._padding = container_padding
-        self._label_shadow = label_shadow
-        self._container_shadow = container_shadow
         self.volume = None
-        self._volume_icons = volume_icons
-        self._progress_bar = progress_bar
         self._icon_cache = {}
         self._dpi = 1.0
 
-        self.progress_widget = build_progress_widget(self, self._progress_bar)
+        self.progress_widget = build_progress_widget(self, self.config.progress_bar.model_dump())
 
         self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(
-            self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
-        )
+        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
         self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
-        add_shadow(self._widget_container, self._container_shadow)
+        add_shadow(self._widget_container, self.config.container_shadow.model_dump())
         self.widget_layout.addWidget(self._widget_container)
 
-        build_widget_label(self, self._label_content, self._label_alt_content, self._label_shadow)
+        build_widget_label(self, self.config.label, self.config.label_alt, self.config.label_shadow.model_dump())
 
         self.register_callback("toggle_label", self._toggle_label)
         self.register_callback("update_label", self._update_label)
         self.register_callback("toggle_mute", self.toggle_mute)
         self.register_callback("toggle_volume_menu", self._toggle_volume_menu)
 
-        self.callback_left = callbacks["on_left"]
-        self.callback_right = callbacks["on_right"]
-        self.callback_middle = callbacks["on_middle"]
+        self.callback_left = self.config.callbacks.on_left
+        self.callback_right = self.config.callbacks.on_right
+        self.callback_middle = self.config.callbacks.on_middle
 
         self._service = AudioOutputService()
         self._service.register_widget(self)
@@ -114,8 +83,8 @@ class VolumeWidget(BaseWidget):
         self._update_label()
 
     def _toggle_volume_menu(self):
-        if self._animation["enabled"]:
-            AnimationManager.animate(self, self._animation["type"], self._animation["duration"])
+        if self.config.animation.enabled:
+            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
         self.show_volume_menu()
 
     def _on_slider_released(self):
@@ -123,7 +92,7 @@ class VolumeWidget(BaseWidget):
         if hasattr(self, "_slider_tooltip") and self._slider_tooltip:
             self._slider_tooltip.hide()
             self._slider_tooltip = None
-        if self._slider_beep:
+        if self.config.slider_beep:
             # Play a beep sound when slider is released
             try:
                 ctypes.windll.user32.MessageBeep(0)
@@ -132,7 +101,7 @@ class VolumeWidget(BaseWidget):
 
     def _show_slider_tooltip(self, slider, value):
         """Show tooltip above slider handle during drag."""
-        if not self._tooltip or not slider.isSliderDown():
+        if not self.config.tooltip or not slider.isSliderDown():
             return
 
         # Calculate handle position
@@ -213,16 +182,16 @@ class VolumeWidget(BaseWidget):
             content_height = self.app_volumes_container.sizeHint().height()
             target_height = content_height
             current_height = 0
-            self.app_toggle_btn.setText(self._audio_menu["app_icons"]["toggle_up"])
+            self.app_toggle_btn.setText(self.config.audio_menu.app_icons.toggle_up)
             self.app_toggle_btn.setProperty("class", "toggle-apps expanded")
-            if self._tooltip:
+            if self.config.tooltip:
                 set_tooltip(self.app_toggle_btn, "Collapse application volumes")
         else:
             target_height = 0
             current_height = self.app_volumes_container.height()
-            self.app_toggle_btn.setText(self._audio_menu["app_icons"]["toggle_down"])
+            self.app_toggle_btn.setText(self.config.audio_menu.app_icons.toggle_down)
             self.app_toggle_btn.setProperty("class", "toggle-apps")
-            if self._tooltip:
+            if self.config.tooltip:
                 set_tooltip(self.app_toggle_btn, "Expand application volumes")
 
         refresh_widget_style(self.app_toggle_btn)
@@ -269,7 +238,7 @@ class VolumeWidget(BaseWidget):
 
     def _apply_slider_scroll_step(self, slider: QSlider):
         """Apply scroll_step to slider wheel/keyboard increments."""
-        step = max(1, int(round(self._scroll_step * 100)))
+        step = max(1, self.config.scroll_step)
         slider.setSingleStep(step)
         slider.setPageStep(step)
 
@@ -344,10 +313,10 @@ class VolumeWidget(BaseWidget):
 
         self.dialog = PopupWidget(
             self,
-            self._audio_menu["blur"],
-            self._audio_menu["round_corners"],
-            self._audio_menu["round_corners_type"],
-            self._audio_menu["border_color"],
+            self.config.audio_menu.blur,
+            self.config.audio_menu.round_corners,
+            self.config.audio_menu.round_corners_type,
+            self.config.audio_menu.border_color,
         )
         self.dialog.setProperty("class", "audio-menu")
 
@@ -417,7 +386,7 @@ class VolumeWidget(BaseWidget):
         slider_row.addWidget(self.volume_slider)
 
         audio_sessions = []
-        if self._audio_menu["show_apps"]:
+        if self.config.audio_menu.show_apps:
             # Get active audio sessions directly from service
             audio_sessions = self._service.get_active_audio_sessions(
                 get_app_name_callback=get_app_name_from_pid,
@@ -425,11 +394,11 @@ class VolumeWidget(BaseWidget):
             )
             # Add app toggle button on the right (only if there are audio sessions)
             if audio_sessions:
-                self.app_toggle_btn = QPushButton(self._audio_menu["app_icons"]["toggle_down"])
+                self.app_toggle_btn = QPushButton(self.config.audio_menu.app_icons.toggle_down)
                 self.app_toggle_btn.setProperty("class", "toggle-apps")
                 self.app_toggle_btn.setCursor(Qt.CursorShape.PointingHandCursor)
                 self.app_toggle_btn.clicked.connect(lambda: self._toggle_app_volumes())
-                if self._tooltip:
+                if self.config.tooltip:
                     set_tooltip(self.app_toggle_btn, "Expand application volumes")
                 slider_row.addWidget(self.app_toggle_btn)
 
@@ -438,7 +407,7 @@ class VolumeWidget(BaseWidget):
         layout.addWidget(global_container)
 
         # Create per-application volume sliders section
-        if audio_sessions and self._audio_menu["show_apps"]:
+        if audio_sessions and self.config.audio_menu.show_apps:
             self.app_volumes_container = QFrame()
             self.app_volumes_container.setProperty("class", "apps-container")
             app_volumes_layout = QVBoxLayout()
@@ -453,7 +422,7 @@ class VolumeWidget(BaseWidget):
                 app_layout.setContentsMargins(0, 0, 0, 0)
 
                 display_name = session_info.get("app_name", self._format_session_label(session_info["name"]))
-                if self._audio_menu["show_app_labels"]:
+                if self.config.audio_menu.show_app_labels:
                     app_label = QLabel(display_name)
                     app_label.setProperty("class", "app-label")
                     app_layout.addWidget(app_label)
@@ -467,12 +436,15 @@ class VolumeWidget(BaseWidget):
                 except:
                     is_muted = False
 
-                if self._audio_menu["show_app_icons"]:
+                icon_label = None
+                icon_frame = None
+
+                if self.config.audio_menu.show_app_icons:
                     icon_frame = QFrame()
                     icon_frame.setContentsMargins(0, 0, 0, 0)
                     icon_frame.setProperty("class", "app-icon-container")
                     icon_frame.setCursor(Qt.CursorShape.PointingHandCursor)
-                    if self._tooltip:
+                    if self.config.tooltip:
                         set_tooltip(icon_frame, display_name, delay=800, position="top")
 
                     icon_frame_layout = QHBoxLayout()
@@ -511,19 +483,19 @@ class VolumeWidget(BaseWidget):
 
                 # Connect to change app volume
                 app_slider.valueChanged.connect(
-                    lambda value,
-                    vol_interface=session_info["volume_interface"],
-                    slider=app_slider: self._set_app_volume(vol_interface, value, slider)
+                    lambda value, vol_interface=session_info["volume_interface"], slider=app_slider: (
+                        self._set_app_volume(vol_interface, value, slider)
+                    )
                 )
                 # Connect slider release to hide tooltip
                 app_slider.sliderReleased.connect(self._on_slider_released)
 
-                if self._audio_menu["show_app_icons"]:
+                if self.config.audio_menu.show_app_icons and icon_frame and icon_label:
                     # Make icon frame clickable to toggle mute
-                    icon_frame.mousePressEvent = lambda event, vol_interface=session_info[
-                        "volume_interface"
-                    ], icon=icon_label, slider=app_slider, pid=session_info["pid"]: self._toggle_app_mute(
-                        vol_interface, icon, slider, pid
+                    icon_frame.mousePressEvent = (
+                        lambda event, vol_interface=session_info["volume_interface"], icon=icon_label, slider=app_slider, pid=session_info["pid"]: (
+                            self._toggle_app_mute(vol_interface, icon, slider, pid)
+                        )
                     )
 
                 slider_layout.addWidget(app_slider)
@@ -545,19 +517,19 @@ class VolumeWidget(BaseWidget):
         # Position the dialog
         self.dialog.adjustSize()
         self.dialog.setPosition(
-            alignment=self._audio_menu["alignment"],
-            direction=self._audio_menu["direction"],
-            offset_left=self._audio_menu["offset_left"],
-            offset_top=self._audio_menu["offset_top"],
+            alignment=self.config.audio_menu.alignment,
+            direction=self.config.audio_menu.direction,
+            offset_left=self.config.audio_menu.offset_left,
+            offset_top=self.config.audio_menu.offset_top,
         )
         self.dialog.show()
         # Automatically expand app volumes if configured
-        if audio_sessions and self._audio_menu["show_apps_expanded"] and self._audio_menu["show_apps"]:
+        if audio_sessions and self.config.audio_menu.show_apps_expanded and self.config.audio_menu.show_apps:
             self._toggle_app_volumes()
 
     def _toggle_label(self):
-        if self._animation["enabled"]:
-            AnimationManager.animate(self, self._animation["type"], self._animation["duration"])
+        if self.config.animation.enabled:
+            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
         self._show_alt_label = not self._show_alt_label
         for widget in self._widgets:
             widget.setVisible(not self._show_alt_label)
@@ -567,20 +539,22 @@ class VolumeWidget(BaseWidget):
 
     def _update_label(self):
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
-        active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
+        active_label_content = self.config.label_alt if self._show_alt_label else self.config.label
         label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
         label_parts = [part for part in label_parts if part]
         widget_index = 0
 
         if self.volume is None:
-            mute_status, icon_volume, level_volume = None, self._volume_icons[0], "No Device"
+            mute_status, icon_volume, level_volume = None, self.config.volume_icons[0], "No Device"
             set_tooltip(self, "No audio device connected.")
         else:
             try:
                 mute_status = self.volume.GetMute()
                 icon_volume = self._get_volume_icon()
                 level_volume = (
-                    self._mute_text if mute_status == 1 else f"{round(self.volume.GetMasterVolumeLevelScalar() * 100)}%"
+                    self.config.mute_text
+                    if mute_status == 1
+                    else f"{round(self.volume.GetMasterVolumeLevelScalar() * 100)}%"
                 )
 
             except Exception as e:
@@ -589,10 +563,10 @@ class VolumeWidget(BaseWidget):
 
         label_options = {"{icon}": icon_volume, "{level}": level_volume}
 
-        if self._progress_bar["enabled"] and self.progress_widget and self.volume is not None:
+        if self.config.progress_bar.enabled and self.progress_widget and self.volume is not None:
             if self._widget_container_layout.indexOf(self.progress_widget) == -1:
                 self._widget_container_layout.insertWidget(
-                    0 if self._progress_bar["position"] == "left" else self._widget_container_layout.count(),
+                    0 if self.config.progress_bar.position == "left" else self._widget_container_layout.count(),
                     self.progress_widget,
                 )
             numeric_value = int(re.search(r"\d+", level_volume).group()) if re.search(r"\d+", level_volume) else 0
@@ -637,18 +611,18 @@ class VolumeWidget(BaseWidget):
     def _get_volume_icon(self):
         current_mute_status = self.volume.GetMute()
         current_volume_level = round(self.volume.GetMasterVolumeLevelScalar() * 100)
-        if self._tooltip:
+        if self.config.tooltip:
             set_tooltip(self, f"Volume {current_volume_level}% {'(Muted)' if current_mute_status == 1 else ''}")
         if current_mute_status == 1:
-            volume_icon = self._volume_icons[0]
+            volume_icon = self.config.volume_icons[0]
         elif 0 <= current_volume_level < 11:
-            volume_icon = self._volume_icons[1]
+            volume_icon = self.config.volume_icons[1]
         elif 11 <= current_volume_level < 30:
-            volume_icon = self._volume_icons[2]
+            volume_icon = self.config.volume_icons[2]
         elif 30 <= current_volume_level < 60:
-            volume_icon = self._volume_icons[3]
+            volume_icon = self.config.volume_icons[3]
         else:
-            volume_icon = self._volume_icons[4]
+            volume_icon = self.config.volume_icons[4]
         return volume_icon
 
     def _increase_volume(self):
@@ -656,7 +630,7 @@ class VolumeWidget(BaseWidget):
             return
         try:
             current_volume = self.volume.GetMasterVolumeLevelScalar()
-            new_volume = min(current_volume + self._scroll_step, 1.0)
+            new_volume = min(current_volume + (self.config.scroll_step / 100), 1.0)
             self.volume.SetMasterVolumeLevelScalar(new_volume, None)
             if self.volume.GetMute() and new_volume > 0.0:
                 self.volume.SetMute(False, None)
@@ -670,7 +644,7 @@ class VolumeWidget(BaseWidget):
             return
         try:
             current_volume = self.volume.GetMasterVolumeLevelScalar()
-            new_volume = max(current_volume - self._scroll_step, 0.0)
+            new_volume = max(current_volume - (self.config.scroll_step / 100), 0.0)
             self.volume.SetMasterVolumeLevelScalar(new_volume, None)
             if new_volume == 0.0:
                 self.volume.SetMute(True, None)
@@ -688,8 +662,8 @@ class VolumeWidget(BaseWidget):
             self._decrease_volume()
 
     def toggle_mute(self):
-        if self._animation["enabled"]:
-            AnimationManager.animate(self, self._animation["type"], self._animation["duration"])
+        if self.config.animation.enabled:
+            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
         if self.volume is None:
             return
         try:

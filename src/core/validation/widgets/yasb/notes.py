@@ -1,117 +1,52 @@
-DEFAULTS = {
-    "label": "<span>\udb82\udd0c</span> {count}",
-    "label_alt": "{count} notes",
-    "class_name": "",
-    "data_path": "",
-    "container_padding": {"top": 0, "left": 0, "bottom": 0, "right": 0},
-    "animation": {"enabled": True, "type": "fadeInOut", "duration": 200},
-    "menu": {
-        "blur": True,
-        "round_corners": True,
-        "round_corners_type": "normal",
-        "border_color": "System",
-        "alignment": "right",
-        "direction": "down",
-        "offset_top": 6,
-        "offset_left": 0,
-        "max_title_size": 150,
-        "show_date_time": True,
-    },
-    "icons": {
-        "note": "\udb82\udd0c",
-        "delete": "\ueab8",
-        "copy": "\uebcc",
-    },
-    "callbacks": {"on_left": "toggle_menu", "on_middle": "do_nothing", "on_right": "toggle_label"},
-}
+from pydantic import ConfigDict, Field
 
-VALIDATION_SCHEMA = {
-    "label": {"type": "string", "default": DEFAULTS["label"]},
-    "label_alt": {"type": "string", "default": DEFAULTS["label_alt"]},
-    "class_name": {"type": "string", "required": False, "default": DEFAULTS["class_name"]},
-    "data_path": {"type": "string", "required": False, "default": DEFAULTS["data_path"]},
-    "container_padding": {
-        "type": "dict",
-        "required": False,
-        "schema": {
-            "top": {"type": "integer", "default": DEFAULTS["container_padding"]["top"]},
-            "left": {"type": "integer", "default": DEFAULTS["container_padding"]["left"]},
-            "bottom": {"type": "integer", "default": DEFAULTS["container_padding"]["bottom"]},
-            "right": {"type": "integer", "default": DEFAULTS["container_padding"]["right"]},
-        },
-        "default": DEFAULTS["container_padding"],
-    },
-    "animation": {
-        "type": "dict",
-        "required": False,
-        "schema": {
-            "enabled": {"type": "boolean", "default": DEFAULTS["animation"]["enabled"]},
-            "type": {"type": "string", "default": DEFAULTS["animation"]["type"]},
-            "duration": {"type": "integer", "default": DEFAULTS["animation"]["duration"]},
-        },
-        "default": DEFAULTS["animation"],
-    },
-    "menu": {
-        "type": "dict",
-        "required": False,
-        "schema": {
-            "blur": {"type": "boolean", "default": DEFAULTS["menu"]["blur"]},
-            "round_corners": {"type": "boolean", "default": DEFAULTS["menu"]["round_corners"]},
-            "round_corners_type": {
-                "type": "string",
-                "default": DEFAULTS["menu"]["round_corners_type"],
-                "allowed": ["normal", "small"],
-            },
-            "border_color": {"type": "string", "default": DEFAULTS["menu"]["border_color"]},
-            "alignment": {"type": "string", "default": DEFAULTS["menu"]["alignment"]},
-            "direction": {"type": "string", "default": DEFAULTS["menu"]["direction"]},
-            "offset_top": {"type": "integer", "default": DEFAULTS["menu"]["offset_top"]},
-            "offset_left": {"type": "integer", "default": DEFAULTS["menu"]["offset_left"]},
-            "max_title_size": {"type": "integer", "default": DEFAULTS["menu"]["max_title_size"]},
-            "show_date_time": {"type": "boolean", "default": DEFAULTS["menu"]["show_date_time"]},
-        },
-        "default": DEFAULTS["menu"],
-    },
-    "icons": {
-        "type": "dict",
-        "required": False,
-        "schema": {
-            "note": {"type": "string", "default": DEFAULTS["icons"]["note"]},
-            "delete": {"type": "string", "default": DEFAULTS["icons"]["delete"]},
-            "copy": {"type": "string", "default": DEFAULTS["icons"]["copy"]},
-        },
-        "default": DEFAULTS["icons"],
-    },
-    "label_shadow": {
-        "type": "dict",
-        "required": False,
-        "schema": {
-            "enabled": {"type": "boolean", "default": False},
-            "color": {"type": "string", "default": "black"},
-            "offset": {"type": "list", "default": [1, 1]},
-            "radius": {"type": "integer", "default": 3},
-        },
-        "default": {"enabled": False, "color": "black", "offset": [1, 1], "radius": 3},
-    },
-    "container_shadow": {
-        "type": "dict",
-        "required": False,
-        "schema": {
-            "enabled": {"type": "boolean", "default": False},
-            "color": {"type": "string", "default": "black"},
-            "offset": {"type": "list", "default": [1, 1]},
-            "radius": {"type": "integer", "default": 3},
-        },
-        "default": {"enabled": False, "color": "black", "offset": [1, 1], "radius": 3},
-    },
-    "callbacks": {
-        "type": "dict",
-        "required": False,
-        "schema": {
-            "on_left": {"type": "string", "default": DEFAULTS["callbacks"]["on_left"]},
-            "on_middle": {"type": "string", "default": DEFAULTS["callbacks"]["on_middle"]},
-            "on_right": {"type": "string", "default": DEFAULTS["callbacks"]["on_right"]},
-        },
-        "default": DEFAULTS["callbacks"],
-    },
-}
+from core.validation.widgets.base_model import (
+    AnimationConfig,
+    CallbacksConfig,
+    CustomBaseModel,
+    KeybindingConfig,
+    PaddingConfig,
+    ShadowConfig,
+)
+
+
+class MenuConfig(CustomBaseModel):
+    blur: bool = True
+    round_corners: bool = True
+    round_corners_type: str = "normal"
+    border_color: str = "System"
+    alignment: str = "right"
+    direction: str = "down"
+    offset_top: int = 6
+    offset_left: int = 0
+    max_title_size: int = 150
+    show_date_time: bool = True
+
+
+class IconsConfig(CustomBaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    note: str = "\udb82\udd0c"
+    delete: str = "\ueab8"
+    copy_icon: str = Field(default="\uebcc", alias="copy")
+
+
+class NotesCallbacksConfig(CallbacksConfig):
+    on_left: str = "toggle_menu"
+    on_middle: str = "do_nothing"
+    on_right: str = "toggle_label"
+
+
+class NotesConfig(CustomBaseModel):
+    label: str = "<span>\udb82\udd0c</span> {count}"
+    label_alt: str = "{count} notes"
+    class_name: str = ""
+    data_path: str = ""
+    container_padding: PaddingConfig = PaddingConfig()
+    animation: AnimationConfig = AnimationConfig()
+    menu: MenuConfig = MenuConfig()
+    icons: IconsConfig = IconsConfig()
+    label_shadow: ShadowConfig = ShadowConfig()
+    container_shadow: ShadowConfig = ShadowConfig()
+    keybindings: list[KeybindingConfig] = []
+    callbacks: NotesCallbacksConfig = NotesCallbacksConfig()
