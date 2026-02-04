@@ -191,10 +191,12 @@ class ChatInputEdit(ContextMenuMixin, QTextEdit):
         super().__init__(parent)
         self._is_streaming = False
         self.setProperty("class", "chat-input")
-        self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self.setFrameShape(QTextEdit.Shape.NoFrame)
         self._init_context_menu(is_input_widget=True)
         self.textChanged.connect(self.text_changed.emit)
+        self.document().contentsChanged.connect(self.updateGeometry)
 
     def focusInEvent(self, event):
         super().focusInEvent(event)
@@ -227,6 +229,16 @@ class ChatInputEdit(ContextMenuMixin, QTextEdit):
             except Exception:
                 pass
         self.insertPlainText(source.text())
+
+    def sizeHint(self):
+        """Return size hint based on document content height"""
+        doc = self.document()
+        doc_height = int(doc.size().height())
+        return QSize(super().sizeHint().width(), doc_height)
+
+    def minimumSizeHint(self):
+        """Return minimum size hint based on document content height"""
+        return self.sizeHint()
 
 
 class ChatMessageBrowser(ContextMenuMixin, QTextBrowser):
