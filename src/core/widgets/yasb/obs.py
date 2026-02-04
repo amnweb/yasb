@@ -5,40 +5,28 @@ from PyQt6.QtWidgets import QFrame, QGraphicsOpacityEffect, QHBoxLayout, QLabel
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import refresh_widget_style
 from core.utils.widgets.obs.obs_client import ObsWebSocketClient, ObsWorker
-from core.validation.widgets.yasb.obs import VALIDATION_SCHEMA
+from core.validation.widgets.yasb.obs import ObsConfig
 from core.widgets.base import BaseWidget
 
 
 class ObsWidget(BaseWidget):
-    validation_schema = VALIDATION_SCHEMA
+    validation_schema = ObsConfig
 
     _opacity_timer: QTimer | None = None
     _time_timer: QTimer | None = None
     _subscribers: list = []
 
-    def __init__(
-        self,
-        icons: dict[str, str],
-        connection: dict[str, str],
-        hide_when_not_recording: bool,
-        blinking_icon: bool,
-        show_record_time: bool,
-        show_virtual_cam: bool,
-        show_studio_mode: bool,
-        tooltip: bool,
-        container_padding: dict,
-        keybindings: list = None,
-    ):
+    def __init__(self, config: ObsConfig):
         super().__init__(class_name="obs-widget")
 
-        self._icons = icons
-        self._connection = connection
-        self._hide_when_not_recording = hide_when_not_recording
-        self._blinking_icon = blinking_icon
-        self._show_record_time = show_record_time
-        self._show_virtual_cam = show_virtual_cam
-        self._show_studio_mode = show_studio_mode
-        self._tooltip = tooltip
+        self._icons = config.icons.model_dump()
+        self._connection = config.connection.model_dump()
+        self._hide_when_not_recording = config.hide_when_not_recording
+        self._blinking_icon = config.blinking_icon
+        self._show_record_time = config.show_record_time
+        self._show_virtual_cam = config.show_virtual_cam
+        self._show_studio_mode = config.show_studio_mode
+        self._tooltip = config.tooltip
         self._is_recording = False
         self._is_paused = False
         self._virtual_cam_active = False
@@ -66,8 +54,8 @@ class ObsWidget(BaseWidget):
         self._record_btn = QLabel(self._icons["stopped"])
         self._record_btn.setProperty("class", "icon record stopped")
         self._record_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        self._record_btn.mousePressEvent = (
-            lambda e: self.toggle_record() if e.button() == Qt.MouseButton.LeftButton else None
+        self._record_btn.mousePressEvent = lambda e: (
+            self.toggle_record() if e.button() == Qt.MouseButton.LeftButton else None
         )
         if self._tooltip:
             set_tooltip(self._record_btn, "Toggle Recording", position="top")
@@ -80,8 +68,8 @@ class ObsWidget(BaseWidget):
         self._virtual_cam_btn = QLabel(self._icons["virtual_cam_off"])
         self._virtual_cam_btn.setProperty("class", "icon virtual-cam off")
         self._virtual_cam_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        self._virtual_cam_btn.mousePressEvent = (
-            lambda e: self.toggle_virtual_cam() if e.button() == Qt.MouseButton.LeftButton else None
+        self._virtual_cam_btn.mousePressEvent = lambda e: (
+            self.toggle_virtual_cam() if e.button() == Qt.MouseButton.LeftButton else None
         )
         if self._tooltip:
             set_tooltip(self._virtual_cam_btn, "Toggle Virtual Camera", position="top")
@@ -93,8 +81,8 @@ class ObsWidget(BaseWidget):
         self._studio_mode_btn = QLabel(self._icons["studio_mode_off"])
         self._studio_mode_btn.setProperty("class", "icon studio-mode off")
         self._studio_mode_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        self._studio_mode_btn.mousePressEvent = (
-            lambda e: self.toggle_studio_mode() if e.button() == Qt.MouseButton.LeftButton else None
+        self._studio_mode_btn.mousePressEvent = lambda e: (
+            self.toggle_studio_mode() if e.button() == Qt.MouseButton.LeftButton else None
         )
         if self._tooltip:
             set_tooltip(self._studio_mode_btn, "Toggle Studio Mode", position="top")

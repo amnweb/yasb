@@ -21,12 +21,18 @@ from core.event_service import EventService
 from core.utils.utilities import add_shadow, is_windows_10, refresh_widget_style
 from core.utils.widgets.komorebi.animation import KomorebiAnimation
 from core.utils.win32.utilities import apply_qmenu_style
-from core.validation.widgets.yasb.windows_desktops import VALIDATION_SCHEMA
+from core.validation.widgets.yasb.windows_desktops import WindowsDesktopsConfig
 from core.widgets.base import BaseWidget
 
 
 class WorkspaceButton(QPushButton):
-    def __init__(self, workspace_index: int, label: str = None, active_label: str = None, parent=None):
+    def __init__(
+        self,
+        workspace_index: int,
+        label: str | None = None,
+        active_label: str | None = None,
+        parent: WorkspaceWidget | None = None,
+    ):
         super().__init__(parent)
 
         self.workspace_index = workspace_index
@@ -36,8 +42,8 @@ class WorkspaceButton(QPushButton):
         self.setText(self.default_label)
         self.clicked.connect(self.activate_workspace)
         self.parent_widget = parent
-        self.workspace_animation = getattr(self.parent_widget, "_switch_workspace_animation", False)
-        self.animation = getattr(self.parent_widget, "_animation", False)
+        self.workspace_animation = parent.config.switch_workspace_animation if parent else False
+        self.animation = parent.config.animation if parent else False
         self.setCursor(Qt.CursorShape.PointingHandCursor)
 
     def update_text(self, text: str):
@@ -47,6 +53,9 @@ class WorkspaceButton(QPushButton):
         self.setText(text)
 
     def update_visible_buttons(self):
+        if not self.parent_widget:
+            return
+
         visible_buttons = self.parent_widget._workspace_buttons
         for index, button in enumerate(visible_buttons):
             current_class = button.property("class")
@@ -56,9 +65,8 @@ class WorkspaceButton(QPushButton):
             refresh_widget_style(button)
         if self.animation:
             try:
-                parent = self.parent_widget
-                prev_idx = getattr(parent, "_prev_workspace_index", None)
-                curr_idx = getattr(parent, "_curr_workspace_index", None)
+                prev_idx = getattr(self.parent_widget, "_prev_workspace_index", None)
+                curr_idx = getattr(self.parent_widget, "_curr_workspace_index", None)
                 if self.workspace_index in (prev_idx, curr_idx):
                     self.animate_buttons()
             except Exception:
@@ -67,7 +75,7 @@ class WorkspaceButton(QPushButton):
     def activate_workspace(self):
         try:
             VirtualDesktop(self.workspace_index).go()
-            if isinstance(self.parent_widget, WorkspaceWidget):
+            if self.parent_widget:
                 self.parent_widget._event_service.emit_event("virtual_desktop_changed", {"index": self.workspace_index})
         except Exception:
             logging.exception(f"Failed to focus desktop at index {self.workspace_index}")
@@ -165,9 +173,11 @@ class WorkspaceButton(QPushButton):
         if ok and new_name:
             try:
                 VirtualDesktop(self.workspace_index).rename(new_name)
-                if isinstance(self.parent_widget, WorkspaceWidget):
+                if self.parent_widget:
                     self.parent_widget._event_service.emit_event(
-                        "virtual_desktop_update", {"index": self.workspace_index}, {"update_buttons": True}
+                        "virtual_desktop_update",
+                        {"index": self.workspace_index},
+                        {"update_buttons": True},
                     )
             except Exception as e:
                 logging.exception(f"Failed to rename desktop: {e}")
@@ -177,7 +187,7 @@ class WorkspaceButton(QPushButton):
     def delete_desktop(self):
         try:
             VirtualDesktop(self.workspace_index).remove()
-            if isinstance(self.parent_widget, WorkspaceWidget):
+            if self.parent_widget:
                 self.parent_widget.on_update_desktops()
         except Exception as e:
             logging.exception(f"Failed to delete desktop: {e}")
@@ -185,7 +195,7 @@ class WorkspaceButton(QPushButton):
     def create_new_desktop(self):
         try:
             VirtualDesktop.create()
-            if isinstance(self.parent_widget, WorkspaceWidget):
+            if self.parent_widget:
                 self.parent_widget.on_update_desktops()
         except Exception as e:
             logging.exception("Failed to create new desktop", exc_info=e)
@@ -194,22 +204,13 @@ class WorkspaceButton(QPushButton):
 class WorkspaceWidget(BaseWidget):
     d_signal_virtual_desktop_changed = pyqtSignal(dict)
     d_signal_virtual_desktop_update = pyqtSignal(dict, dict)
-    validation_schema = VALIDATION_SCHEMA
+    validation_schema = WindowsDesktopsConfig
     _instances: list["WorkspaceWidget"] = []
     _shared_timer: QTimer | None = None
 
-    def __init__(
-        self,
-        label_workspace_btn: str,
-        label_workspace_active_btn: str,
-        switch_workspace_animation: bool,
-        animation: bool,
-        container_padding: dict,
-        btn_shadow: dict = None,
-        container_shadow: dict = None,
-        keybindings: list = None,
-    ):
+    def __init__(self, config: WindowsDesktopsConfig):
         super().__init__(class_name="windows-desktops")
+        self.config = config
         self._event_service = EventService()
 
         self.d_signal_virtual_desktop_changed.connect(self._on_desktop_changed)
@@ -218,13 +219,6 @@ class WorkspaceWidget(BaseWidget):
         self.d_signal_virtual_desktop_update.connect(self._on_update_desktops)
         self._event_service.register_event("virtual_desktop_update", self.d_signal_virtual_desktop_update)
 
-        self._label_workspace_btn = label_workspace_btn
-        self._label_workspace_active_btn = label_workspace_active_btn
-
-        self._switch_workspace_animation = switch_workspace_animation
-        self._animation = animation
-        self._btn_shadow = btn_shadow
-        self._container_shadow = container_shadow
         self._virtual_desktops = range(1, len(get_virtual_desktops()) + 1)
         self._prev_workspace_index = None
         self._curr_workspace_index = VirtualDesktop.current().number
@@ -240,7 +234,7 @@ class WorkspaceWidget(BaseWidget):
         self._workspace_container = QFrame()
         self._workspace_container.setLayout(self._workspace_container_layout)
         self._workspace_container.setProperty("class", "widget-container")
-        add_shadow(self._workspace_container, self._container_shadow)
+        add_shadow(self._workspace_container, self.config.container_shadow.model_dump())
         self.widget_layout.addWidget(self._workspace_container)
 
         self.register_callback("update_desktops", self.on_update_desktops)
@@ -373,7 +367,7 @@ class WorkspaceWidget(BaseWidget):
             self._clear_container_layout()
             for workspace_btn in self._workspace_buttons:
                 self._workspace_container_layout.addWidget(workspace_btn)
-                add_shadow(workspace_btn, self._btn_shadow)
+                add_shadow(workspace_btn, self.config.btn_shadow.model_dump())
             try:
                 QTimer.singleShot(0, lambda: [btn.update_visible_buttons() for btn in self._workspace_buttons])
                 for btn in self._workspace_buttons:
@@ -392,8 +386,8 @@ class WorkspaceWidget(BaseWidget):
             ws_name = ""
         if not ws_name or not ws_name.strip():
             ws_name = f"{workspace_index}"
-        label = self._label_workspace_btn.format(index=workspace_index, name=ws_name)
-        active_label = self._label_workspace_active_btn.format(index=workspace_index, name=ws_name)
+        label = self.config.label_workspace_btn.format(index=workspace_index, name=ws_name)
+        active_label = self.config.label_workspace_active_btn.format(index=workspace_index, name=ws_name)
         return label, active_label
 
     def _try_add_workspace_button(self, workspace_index: int) -> WorkspaceButton:

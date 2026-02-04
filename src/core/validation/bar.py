@@ -1,173 +1,90 @@
-BAR_DEFAULTS = {
-    "enabled": True,
-    "screens": ["*"],
-    "class_name": "yasb-bar",
-    "context_menu": True,
-    "alignment": {"position": "top", "center": False, "align": "center"},
-    "blur_effect": {
-        "enabled": False,
-        "dark_mode": False,
-        "acrylic": False,
-        "round_corners": False,
-        "round_corners_type": "normal",
-        "border_color": "System",
-    },
-    "animation": {"enabled": True, "duration": 500, "type": "slide"},
-    "window_flags": {"always_on_top": False, "windows_app_bar": False, "hide_on_fullscreen": False, "auto_hide": False},
-    "dimensions": {"width": "100%", "height": 30},
-    "padding": {"top": 0, "left": 0, "bottom": 0, "right": 0},
-    "widgets": {"left": [], "center": [], "right": []},
-    "layouts": {
-        "left": {"alignment": "left", "stretch": True},
-        "center": {"alignment": "center", "stretch": True},
-        "right": {"alignment": "right", "stretch": True},
-    },
-}
+from typing import Literal
 
-BAR_SCHEMA = {
-    "type": "dict",
-    "required": True,
-    "schema": {
-        "enabled": {"type": "boolean", "required": True, "default": BAR_DEFAULTS["enabled"]},
-        "screens": {"type": "list", "schema": {"type": "string"}, "default": BAR_DEFAULTS["screens"]},
-        "class_name": {"type": "string", "default": BAR_DEFAULTS["class_name"]},
-        "context_menu": {"type": "boolean", "default": BAR_DEFAULTS["context_menu"]},
-        "alignment": {
-            "type": "dict",
-            "schema": {
-                "position": {
-                    "type": "string",
-                    "allowed": ["top", "bottom"],
-                    "default": BAR_DEFAULTS["alignment"]["position"],
-                },
-                "center": {"type": "boolean", "default": BAR_DEFAULTS["alignment"]["center"]},  # deprecated
-                "align": {
-                    "type": "string",
-                    "allowed": ["left", "center", "right"],
-                    "default": BAR_DEFAULTS["alignment"]["align"],
-                },
-            },
-            "default": BAR_DEFAULTS["alignment"],
-        },
-        "blur_effect": {
-            "type": "dict",
-            "schema": {
-                "enabled": {"type": "boolean", "default": BAR_DEFAULTS["blur_effect"]["enabled"]},
-                "dark_mode": {"type": "boolean", "default": BAR_DEFAULTS["blur_effect"]["dark_mode"]},
-                "acrylic": {"type": "boolean", "default": BAR_DEFAULTS["blur_effect"]["acrylic"]},
-                "round_corners": {"type": "boolean", "default": BAR_DEFAULTS["blur_effect"]["round_corners"]},
-                "round_corners_type": {
-                    "type": "string",
-                    "allowed": ["normal", "small"],
-                    "default": BAR_DEFAULTS["blur_effect"]["round_corners_type"],
-                },
-                "border_color": {"type": "string", "default": BAR_DEFAULTS["blur_effect"]["border_color"]},
-            },
-            "default": BAR_DEFAULTS["blur_effect"],
-        },
-        "animation": {
-            "type": "dict",
-            "required": False,
-            "schema": {
-                "enabled": {"type": "boolean", "default": BAR_DEFAULTS["animation"]["enabled"]},
-                "duration": {"type": "integer", "min": 0, "default": BAR_DEFAULTS["animation"]["duration"]},
-                "type": {
-                    "type": "string",
-                    "allowed": ["slide", "fade"],
-                    "default": BAR_DEFAULTS["animation"]["type"],
-                },
-            },
-            "default": BAR_DEFAULTS["animation"],
-        },
-        "window_flags": {
-            "type": "dict",
-            "schema": {
-                "always_on_top": {"type": "boolean", "default": BAR_DEFAULTS["window_flags"]["always_on_top"]},
-                "windows_app_bar": {"type": "boolean", "default": BAR_DEFAULTS["window_flags"]["windows_app_bar"]},
-                "hide_on_fullscreen": {
-                    "type": "boolean",
-                    "default": BAR_DEFAULTS["window_flags"]["hide_on_fullscreen"],
-                },
-                "auto_hide": {"type": "boolean", "default": BAR_DEFAULTS["window_flags"]["auto_hide"]},
-            },
-            "default": BAR_DEFAULTS["window_flags"],
-        },
-        "dimensions": {
-            "type": "dict",
-            "schema": {
-                "width": {
-                    "anyof": [
-                        {"type": "string", "minlength": 2, "maxlength": 4, "regex": "\\d+%"},
-                        {"type": "string", "allowed": ["auto"]},
-                        {"type": "integer", "min": 0},
-                    ],
-                    "default": BAR_DEFAULTS["dimensions"]["width"],
-                },
-                "height": {"type": "integer", "min": 0, "default": BAR_DEFAULTS["dimensions"]["height"]},
-            },
-            "default": BAR_DEFAULTS["dimensions"],
-        },
-        "padding": {
-            "type": "dict",
-            "schema": {
-                "top": {"type": "integer", "default": BAR_DEFAULTS["padding"]["top"]},
-                "left": {"type": "integer", "default": BAR_DEFAULTS["padding"]["left"]},
-                "bottom": {"type": "integer", "default": BAR_DEFAULTS["padding"]["bottom"]},
-                "right": {"type": "integer", "default": BAR_DEFAULTS["padding"]["right"]},
-            },
-            "default": BAR_DEFAULTS["padding"],
-        },
-        "widgets": {
-            "type": "dict",
-            "schema": {
-                "left": {"type": "list", "schema": {"type": "string"}, "default": BAR_DEFAULTS["widgets"]["left"]},
-                "center": {"type": "list", "schema": {"type": "string"}, "default": BAR_DEFAULTS["widgets"]["center"]},
-                "right": {"type": "list", "schema": {"type": "string"}, "default": BAR_DEFAULTS["widgets"]["right"]},
-            },
-            "default": BAR_DEFAULTS["widgets"],
-        },
-        "layouts": {
-            "type": "dict",
-            "schema": {
-                "left": {
-                    "type": "dict",
-                    "schema": {
-                        "alignment": {
-                            "type": "string",
-                            "allowed": ["left", "center", "right"],
-                            "default": BAR_DEFAULTS["layouts"]["left"]["alignment"],
-                        },
-                        "stretch": {"type": "boolean", "default": BAR_DEFAULTS["layouts"]["left"]["stretch"]},
-                    },
-                    "default": BAR_DEFAULTS["layouts"]["left"],
-                },
-                "center": {
-                    "type": "dict",
-                    "schema": {
-                        "alignment": {
-                            "type": "string",
-                            "allowed": ["left", "center", "right"],
-                            "default": BAR_DEFAULTS["layouts"]["center"]["alignment"],
-                        },
-                        "stretch": {"type": "boolean", "default": BAR_DEFAULTS["layouts"]["center"]["stretch"]},
-                    },
-                    "default": BAR_DEFAULTS["layouts"]["center"],
-                },
-                "right": {
-                    "type": "dict",
-                    "schema": {
-                        "alignment": {
-                            "type": "string",
-                            "allowed": ["left", "center", "right"],
-                            "default": BAR_DEFAULTS["layouts"]["right"]["alignment"],
-                        },
-                        "stretch": {"type": "boolean", "default": BAR_DEFAULTS["layouts"]["right"]["stretch"]},
-                    },
-                    "default": BAR_DEFAULTS["layouts"]["right"],
-                },
-            },
-            "default": BAR_DEFAULTS["layouts"],
-        },
-    },
-    "default": BAR_DEFAULTS,
-}
+from pydantic import Field, field_validator
+
+from core.validation.widgets.base_model import CustomBaseModel
+
+
+class BarAlignment(CustomBaseModel):
+    position: Literal["top", "bottom"] = "top"
+    center: bool = False  # deprecated
+    align: Literal["left", "center", "right"] = "center"
+
+
+class BarBlurEffect(CustomBaseModel):
+    enabled: bool = False
+    dark_mode: bool = False
+    acrylic: bool = False
+    round_corners: bool = False
+    round_corners_type: Literal["normal", "small"] = "normal"
+    border_color: str = "System"
+
+
+class BarAnimation(CustomBaseModel):
+    enabled: bool = True
+    duration: int = Field(default=500, ge=0)
+    type: Literal["slide", "fade"] = "slide"
+
+
+class BarWindowFlags(CustomBaseModel):
+    always_on_top: bool = False
+    windows_app_bar: bool = False
+    hide_on_fullscreen: bool = False
+    auto_hide: bool = False
+
+
+class BarDimensions(CustomBaseModel):
+    width: str | int = "100%"
+    height: int = Field(default=30, ge=0)
+
+    @field_validator("width")
+    @classmethod
+    def validate_width(cls, v: str | int) -> str | int:
+        if isinstance(v, int):
+            if v < 0:
+                raise ValueError("Width must be non-negative")
+            return v
+        if v == "auto":
+            return v
+        if v.endswith("%") and v[:-1].isdigit():
+            return v
+        raise ValueError("Width must be an integer, 'auto', or a percentage string (e.g. '100%')")
+
+
+class BarPadding(CustomBaseModel):
+    top: int = 0
+    left: int = 0
+    bottom: int = 0
+    right: int = 0
+
+
+class BarWidgets(CustomBaseModel):
+    left: list[str] = []
+    center: list[str] = []
+    right: list[str] = []
+
+
+class BarLayout(CustomBaseModel):
+    alignment: Literal["left", "center", "right"] = "left"
+    stretch: bool = True
+
+
+class BarLayouts(CustomBaseModel):
+    left: BarLayout = BarLayout(alignment="left")
+    center: BarLayout = BarLayout(alignment="center")
+    right: BarLayout = BarLayout(alignment="right")
+
+
+class BarConfig(CustomBaseModel):
+    enabled: bool = True
+    screens: list[str] = ["*"]
+    class_name: str = "yasb-bar"
+    context_menu: bool = True
+    alignment: BarAlignment = BarAlignment()
+    blur_effect: BarBlurEffect = BarBlurEffect()
+    animation: BarAnimation = BarAnimation()
+    window_flags: BarWindowFlags = BarWindowFlags()
+    dimensions: BarDimensions = BarDimensions()
+    padding: BarPadding = BarPadding()
+    widgets: BarWidgets = BarWidgets()
+    layouts: BarLayouts = BarLayouts()

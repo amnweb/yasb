@@ -21,7 +21,7 @@ from core.utils.utilities import add_shadow, is_windows_10, refresh_widget_style
 from core.utils.widgets.power_menu.power_commands import PowerOperations
 from core.utils.win32.win32_accent import Blur
 from core.utils.win32.window_actions import force_foreground_focus
-from core.validation.widgets.yasb.power_menu import VALIDATION_SCHEMA
+from core.validation.widgets.yasb.power_menu import PowerMenuConfig
 from core.widgets.base import BaseWidget
 
 
@@ -109,57 +109,34 @@ class OverlayWidget(BaseStyledWidget, AnimatedWidget):
 
 
 class PowerMenuWidget(BaseWidget):
-    validation_schema = VALIDATION_SCHEMA
+    validation_schema = PowerMenuConfig
 
-    def __init__(
-        self,
-        label: str,
-        uptime: bool,
-        blur: bool,
-        blur_background: bool,
-        animation_duration: int,
-        button_row: int,
-        container_padding: dict[str, int],
-        buttons: dict[str, list[str]],
-        label_shadow: dict = None,
-        container_shadow: dict = None,
-        keybindings: list = None,
-    ):
+    def __init__(self, config: PowerMenuConfig):
         super().__init__(0, class_name="power-menu-widget")
+        self.config = config
 
-        self.buttons = buttons
-        self.blur = blur
-        self.uptime = uptime
-        self.blur_background = blur_background
-        self.animation_duration = animation_duration
-        self.button_row = button_row
-
-        self._label_shadow = label_shadow
-        self._container_shadow = container_shadow
-
-        self._button = QLabel(label)
+        self._button = QLabel(self.config.label)
         self._button.setProperty("class", "label power-button")
         self._button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self._button.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        add_shadow(self._button, self._label_shadow)
+        add_shadow(self._button, self.config.label_shadow.model_dump())
+
         # Construct container
         self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
         self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
-        # Initialize container
 
         self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
-        add_shadow(self._widget_container, self._container_shadow)
+        add_shadow(self._widget_container, self.config.container_shadow.model_dump())
+
         # Add the container to the main widget layout
         self.widget_layout.addWidget(self._widget_container)
         self._widget_container_layout.addWidget(self._button)
 
         self.register_callback("show_main_window", self._show_main_window)
-
-        callbacks = {"on_left": "show_main_window"}
-        self.callback_left = callbacks["on_left"]
+        self.callback_left = "show_main_window"
 
         self.main_window = None
 
@@ -170,12 +147,12 @@ class PowerMenuWidget(BaseWidget):
         else:
             self.main_window = MainWindow(
                 self._button,
-                self.uptime,
-                self.blur,
-                self.blur_background,
-                self.animation_duration,
-                self.button_row,
-                self.buttons,
+                self.config.uptime,
+                self.config.blur,
+                self.config.blur_background,
+                self.config.animation_duration,
+                self.config.button_row,
+                self.config.buttons.model_dump(exclude_none=True),
             )
             self.main_window.overlay.fade_in()
             self.main_window.overlay.show()

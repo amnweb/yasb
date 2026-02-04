@@ -1,21 +1,28 @@
 import logging
 import re
 import subprocess
-from typing import Callable, Union
+from typing import Any, Callable, Union
 
+from pydantic import BaseModel
 from PyQt6.QtCore import Qt, QThread, QTimer, pyqtSignal
 from PyQt6.QtGui import QMouseEvent
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QWidget
 
 from core.event_service import EventService
 from core.utils.win32.system_function import function_map
+from core.widgets.registry import register_widget_class
 
 
 class BaseWidget(QWidget):
-    validation_schema: dict = None
+    validation_schema: dict[str, Any] | type[BaseModel] | None = None
     event_listener: QThread = None
 
     _hotkey_signal = pyqtSignal(str, str, str)
+
+    def __init_subclass__(cls, **kwargs: Any):
+        """Register the widget class with the registry"""
+        super().__init_subclass__(**kwargs)
+        register_widget_class(cls)
 
     def __init__(self, timer_interval: int = None, class_name: str = ""):
         super().__init__()

@@ -1,49 +1,25 @@
-DEFAULTS = {
-    "windows_update": {"enabled": False, "label": "{count}", "tooltip": True, "interval": 1440, "exclude": []},
-    "winget_update": {"enabled": False, "label": "{count}", "tooltip": True, "interval": 240, "exclude": []},
-}
+from pydantic import Field
 
-VALIDATION_SCHEMA = {
-    "windows_update": {
-        "type": "dict",
-        "schema": {
-            "enabled": {"type": "boolean", "default": DEFAULTS["windows_update"]["enabled"]},
-            "label": {"type": "string", "default": DEFAULTS["windows_update"]["label"]},
-            "tooltip": {"type": "boolean", "required": False, "default": DEFAULTS["windows_update"]["tooltip"]},
-            "interval": {"type": "integer", "default": DEFAULTS["windows_update"]["interval"], "min": 30, "max": 10080},
-            "exclude": {"type": "list", "default": DEFAULTS["windows_update"]["exclude"], "schema": {"type": "string"}},
-        },
-    },
-    "label_shadow": {
-        "type": "dict",
-        "required": False,
-        "schema": {
-            "enabled": {"type": "boolean", "default": False},
-            "color": {"type": "string", "default": "black"},
-            "offset": {"type": "list", "default": [1, 1]},
-            "radius": {"type": "integer", "default": 3},
-        },
-        "default": {"enabled": False, "color": "black", "offset": [1, 1], "radius": 3},
-    },
-    "container_shadow": {
-        "type": "dict",
-        "required": False,
-        "schema": {
-            "enabled": {"type": "boolean", "default": False},
-            "color": {"type": "string", "default": "black"},
-            "offset": {"type": "list", "default": [1, 1]},
-            "radius": {"type": "integer", "default": 3},
-        },
-        "default": {"enabled": False, "color": "black", "offset": [1, 1], "radius": 3},
-    },
-    "winget_update": {
-        "type": "dict",
-        "schema": {
-            "enabled": {"type": "boolean", "default": DEFAULTS["winget_update"]["enabled"]},
-            "label": {"type": "string", "default": DEFAULTS["winget_update"]["label"]},
-            "tooltip": {"type": "boolean", "required": False, "default": DEFAULTS["windows_update"]["tooltip"]},
-            "interval": {"type": "integer", "default": DEFAULTS["winget_update"]["interval"], "min": 10, "max": 10080},
-            "exclude": {"type": "list", "default": DEFAULTS["winget_update"]["exclude"], "schema": {"type": "string"}},
-        },
-    },
-}
+from core.validation.widgets.base_model import CustomBaseModel, ShadowConfig
+
+
+class UpdateConfig(CustomBaseModel):
+    enabled: bool = False
+    label: str = "{count}"
+    tooltip: bool = True
+    exclude: list[str] = []
+
+
+class WindowsUpdateConfig(UpdateConfig):
+    interval: int = Field(default=1440, ge=30, le=10080)
+
+
+class WingetUpdateConfig(UpdateConfig):
+    interval: int = Field(default=240, ge=10, le=10080)
+
+
+class UpdateCheckWidgetConfig(CustomBaseModel):
+    windows_update: WindowsUpdateConfig = WindowsUpdateConfig()
+    winget_update: WingetUpdateConfig = WingetUpdateConfig()
+    label_shadow: ShadowConfig = ShadowConfig()
+    container_shadow: ShadowConfig = ShadowConfig()

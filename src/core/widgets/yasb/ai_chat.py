@@ -32,43 +32,30 @@ from core.utils.widgets.ai_chat.ui_helpers import FloatingWindowController, Focu
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.win32.utilities import apply_qmenu_style
 from core.utils.win32.window_actions import force_foreground_focus
-from core.validation.widgets.yasb.ai_chat import VALIDATION_SCHEMA
+from core.validation.widgets.yasb.ai_chat import AiChatConfig
 from core.widgets.base import BaseWidget
 
 
 class AiChatWidget(BaseWidget):
-    validation_schema = VALIDATION_SCHEMA
+    validation_schema = AiChatConfig
     _persistent_chat_history = {}
 
-    def __init__(
-        self,
-        label: str,
-        chat: dict,
-        icons: dict,
-        notification_dot: dict[str, Any],
-        animation: dict[str, str],
-        container_padding: dict[str, int],
-        callbacks: dict[str, str],
-        start_floating: bool = False,
-        label_shadow: dict = None,
-        container_shadow: dict = None,
-        providers: list = None,
-        keybindings: list = None,
-    ):
+    def __init__(self, config: AiChatConfig):
         super().__init__(class_name="ai-chat-widget")
-        self._label_content = label
-        self._icons = icons
-        self._notification_dot: dict[str, Any] = notification_dot
-        self._start_floating = start_floating
-        self._providers = providers or []
+        self.config = config
+        self._label_content = config.label
+        self._icons = config.icons.model_dump(by_alias=True)
+        self._notification_dot: dict[str, Any] = config.notification_dot.model_dump()
+        self._start_floating = config.start_floating
+        self._providers = [x.model_dump() for x in config.providers]
         self._provider = None
         self._provider_config = None
         self._model = None
         self._popup_chat = None
-        self._animation = animation
-        self._chat = chat
-        self._label_shadow = label_shadow
-        self._container_shadow = container_shadow
+        self._animation = config.animation.model_dump()
+        self._chat = config.chat.model_dump()
+        self._label_shadow = config.label_shadow.model_dump()
+        self._container_shadow = config.container_shadow.model_dump()
         self._notification_label: NotificationLabel | None = None
         self._input_draft = ""
         self._attachments: list[dict[str, Any]] = []
@@ -104,9 +91,9 @@ class AiChatWidget(BaseWidget):
         self._label_builder.create_dynamically_label(self._label_content)
 
         self.register_callback("toggle_chat", self._toggle_chat)
-        self.callback_left = callbacks["on_left"]
-        self.callback_right = callbacks["on_right"]
-        self.callback_middle = callbacks["on_middle"]
+        self.callback_left = self.config.callbacks.on_left
+        self.callback_right = self.config.callbacks.on_right
+        self.callback_middle = self.config.callbacks.on_middle
         self._new_notification = False
 
     def _update_label(self):

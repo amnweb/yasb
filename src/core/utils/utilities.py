@@ -11,6 +11,8 @@ from pathlib import Path
 from threading import Lock
 from typing import Any, TypeGuard, cast, override
 
+import yaml
+from pydantic import ValidationError
 from PyQt6 import sip
 from PyQt6.QtCore import (
     QEasingCurve,
@@ -405,6 +407,30 @@ class LoaderLine(QWidget):
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         line_color = self.palette().color(QPalette.ColorRole.WindowText)
         painter.fillRect(x, 0, segment_w, h, QColor(line_color))
+
+
+def format_pydantic_errors_to_yaml(exc: ValidationError) -> str:
+    """Format a Pydantic ValidationError to a YAML string."""
+    tree = {}
+    for error in exc.errors():
+        current = tree
+        loc = error["loc"]
+
+        # Walk through the path (e.g., ('nested', 0, 'field'))
+        for i, part in enumerate(loc):
+            # If we are at the last part, it's the actual error location
+            if i == len(loc) - 1:
+                if part not in current:
+                    current[part] = []
+                # Handle cases where Pydantic returns multiple errors for one field
+                current[part].append(error["msg"])
+            else:
+                # If the path doesn't exist, create a dict for the next level
+                if part not in current or not isinstance(current[part], dict):
+                    current[part] = {}
+                current = current[part]
+
+    return yaml.dump(tree, default_flow_style=False, sort_keys=False)
 
 
 def build_widget_label(self, content: str, content_alt: str = None, content_shadow: dict = None):

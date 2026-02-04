@@ -9,7 +9,7 @@ from core.event_service import EventService
 from core.utils.utilities import is_valid_percentage_str, percent_to_float
 from core.utils.win32.utilities import get_monitor_hwnd
 from core.utils.win32.win32_accent import Blur
-from core.validation.bar import BAR_DEFAULTS
+from core.validation.bar import BarConfig
 from settings import APP_BAR_TITLE
 
 try:
@@ -29,37 +29,29 @@ class Bar(QWidget):
         bar_name: str,
         bar_screen: QScreen,
         stylesheet: str,
-        widgets: dict[str, list],
-        layouts: dict[str, dict[str, bool | str]],
-        widget_config: dict = None,
+        widgets: dict[str, list[QWidget]],
+        config: BarConfig,
         init: bool = False,
-        class_name: str = BAR_DEFAULTS["class_name"],
-        context_menu: bool = BAR_DEFAULTS["context_menu"],
-        alignment: dict = BAR_DEFAULTS["alignment"],
-        blur_effect: dict = BAR_DEFAULTS["blur_effect"],
-        animation: dict = BAR_DEFAULTS["animation"],
-        window_flags: dict = BAR_DEFAULTS["window_flags"],
-        dimensions: dict = BAR_DEFAULTS["dimensions"],
-        padding: dict = BAR_DEFAULTS["padding"],
     ):
         super().__init__()
+        self.config = config
         self._event_service = EventService()
         self.hide()
         self.setScreen(bar_screen)
         self._bar_id = bar_id
         self._bar_name = bar_name
-        self._alignment = alignment
+        self._alignment = self.config.alignment.model_dump()
         self._align = self._alignment["align"]
-        self._window_flags = window_flags
-        self._dimensions = dimensions
-        self._padding = padding
-        self._animation = animation
-        self._context_menu = context_menu
-        self._layouts = layouts
+        self._window_flags = self.config.window_flags.model_dump()
+        self._dimensions = self.config.dimensions.model_dump()
+        self._padding = self.config.padding.model_dump()
+        self._animation = self.config.animation.model_dump()
+        self._context_menu = self.config.context_menu
+        self._layouts = self.config.layouts
         self._autohide_bar = self._window_flags["auto_hide"]
         self._widgets = widgets  # Store widgets reference for context menu
-        self._widget_config_map = widget_config or {}
-        self._is_auto_width = str(dimensions["width"]).lower() == "auto"
+        self._widget_config_map = self.config.widgets.model_dump() or {}
+        self._is_auto_width = str(self.config.dimensions.width).lower() == "auto"
         self._current_auto_width = 0
         self._os_theme_manager = None
         self._autohide_manager = None
@@ -79,7 +71,7 @@ class Bar(QWidget):
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
 
         self._bar_frame = QFrame(self)
-        self._bar_frame.setProperty("class", f"bar {class_name}")
+        self._bar_frame.setProperty("class", f"bar {self.config.class_name}")
 
         if IMPORT_APP_BAR_MANAGER_SUCCESSFUL:
             self.app_bar_manager = app_bar.Win32AppBar()
@@ -107,14 +99,14 @@ class Bar(QWidget):
             self._bar_frame.installEventFilter(self)
             QTimer.singleShot(0, self._sync_auto_width)
 
-        if blur_effect["enabled"]:
+        if self.config.blur_effect.enabled:
             Blur(
                 self.winId(),
-                Acrylic=blur_effect["acrylic"],
-                DarkMode=blur_effect["dark_mode"],
-                RoundCorners=blur_effect["round_corners"],
-                RoundCornersType=blur_effect["round_corners_type"],
-                BorderColor=blur_effect["border_color"],
+                Acrylic=self.config.blur_effect.acrylic,
+                DarkMode=self.config.blur_effect.dark_mode,
+                RoundCorners=self.config.blur_effect.round_corners,
+                RoundCornersType=self.config.blur_effect.round_corners_type,
+                BorderColor=self.config.blur_effect.border_color,
             )
 
         self._target_screen.geometryChanged.connect(self.on_geometry_changed, Qt.ConnectionType.QueuedConnection)
@@ -277,7 +269,7 @@ class Bar(QWidget):
         bar_layout.setSpacing(0)
 
         for column_num, layout_type in enumerate(["left", "center", "right"]):
-            config = self._layouts[layout_type]
+            config = self.config.layouts.model_dump()[layout_type]
             layout = QHBoxLayout()
             layout.setContentsMargins(0, 0, 0, 0)
             layout.setSpacing(0)

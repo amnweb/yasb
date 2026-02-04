@@ -49,7 +49,7 @@ from core.utils.widgets.launchpad.icon_extractor import IconExtractorUtil, UrlEx
 from core.utils.win32.utilities import apply_qmenu_style, get_foreground_hwnd, set_foreground_hwnd
 from core.utils.win32.win32_accent import Blur
 from core.utils.win32.window_actions import force_foreground_focus
-from core.validation.widgets.yasb.launchpad import VALIDATION_SCHEMA
+from core.validation.widgets.yasb.launchpad import LaunchpadConfig
 from core.widgets.base import BaseWidget
 
 _ICON_CACHE = {}
@@ -603,43 +603,25 @@ class TransparentOverlay(QWidget):
 
 
 class LaunchpadWidget(BaseWidget):
-    validation_schema = VALIDATION_SCHEMA
+    validation_schema = LaunchpadConfig
 
-    def __init__(
-        self,
-        label: str,
-        search_placeholder: str,
-        app_icon_size: int,
-        window: Dict[str, Any],
-        window_style: Dict[str, Any],
-        window_animation: Dict[str, int],
-        animation: Dict[str, Any],
-        shortcuts: Dict[str, str],
-        container_padding: Dict[str, int],
-        callbacks: Dict[str, str],
-        group_apps: bool = False,
-        label_shadow: Dict = None,
-        container_shadow: Dict = None,
-        app_title_shadow: Dict = None,
-        app_icon_shadow: Dict = None,
-        keybindings: list = None,
-    ):
+    def __init__(self, config: LaunchpadConfig):
         super().__init__(class_name="launchpad-widget")
-
-        self._label = label
-        self._search_placeholder = search_placeholder
-        self._app_icon_size = app_icon_size
-        self._window = window
-        self._window_style = window_style
-        self._window_animation = window_animation
-        self._animation = animation
-        self._shortcuts = shortcuts
-
-        self._group_apps = group_apps
-        self._label_shadow = label_shadow
-        self._container_shadow = container_shadow
-        self._app_title_shadow = app_title_shadow
-        self._app_icon_shadow = app_icon_shadow
+        self.config = config
+        self._label = config.label
+        self._search_placeholder = config.search_placeholder
+        self._app_icon_size = config.app_icon_size
+        self._window = config.window.model_dump()
+        self._window_style = config.window_style.model_dump()
+        self._window_animation = config.window_animation.model_dump()
+        self._animation = config.animation.model_dump()
+        self._shortcuts = config.shortcuts.model_dump()
+        self._padding = config.container_padding.model_dump()
+        self._group_apps = config.group_apps
+        self._label_shadow = config.label_shadow.model_dump()
+        self._container_shadow = config.container_shadow.model_dump()
+        self._app_title_shadow = config.app_title_shadow.model_dump()
+        self._app_icon_shadow = config.app_icon_shadow.model_dump()
         self._dpr = 1.0
         # Setup directories and files
         self._launchpad_dir = os.path.join(HOME_CONFIGURATION_DIR, "launchpad")
@@ -674,9 +656,9 @@ class LaunchpadWidget(BaseWidget):
 
         # Register callbacks
         self.register_callback("toggle_launchpad", self._toggle_launchpad)
-        self.callback_left = callbacks["on_left"]
-        self.callback_right = callbacks["on_right"]
-        self.callback_middle = callbacks["on_middle"]
+        self.callback_left = self.config.callbacks.on_left
+        self.callback_right = self.config.callbacks.on_right
+        self.callback_middle = self.config.callbacks.on_middle
 
     def _toggle_launchpad(self):
         if self._animation["enabled"]:

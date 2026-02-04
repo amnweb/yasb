@@ -4,15 +4,16 @@
 
 ```py
 class MyWidget(BaseWidget):
-    validation_schema = VALIDATION_SCHEMA
-    def __init__(self, label: str, label_alt: str, container_padding: dict[str, int], animation: dict[str, str]):
+    validation_schema = MyWidgetConfig
+    def __init__(self, config: MyWidgetConfig):
         super().__init__(class_name="my-widget")
         # Your initialization code here
 ```
 
 ## 2. Define options, callbacks, and layout:
 
--   Add your constructor parameters (e.g., labels, icons, update intervals).
+-   Constructor only accepts one parameter: `config`.
+-   `config` is a Pydantic `BaseModel` defined in `src/core/validation/widgets/`.
 -   Handle animations, container padding, or special keys.
 
 ## 3. Set up the widget container and layout:
@@ -101,13 +102,47 @@ build_widget_label(self, self._label_content, None, None)
 ## 5. Create validation schema for your widget options:
 
 -   validation files are located in `src/core/validation/widgets/`
+-   `validation_schema` is Pydantic model that inherits from `CustomBaseModel` located in `src/core/validation/widgets/base_model.py`
+-   `strict` typing is required for all fields in the validation model. Otherwise, Pydantic validation will fail.
+-   main validation model name should be in the format of `<WidgetName>Config` for example `CpuConfig` or `BrightnessConfig`.
+-   secondary validation models (also inherited from `CustomBaseModel`) can be named arbitrarily, but it's recommended to use `<FieldName>Config` for consistency.
+-   `base_model.py` also contains shared models like `ShadowConfig`, `KeybindingConfig`, `CallbacksConfig`, etc.
+-   if custom defaults are required for those shared models then a new secondary model should be defined and it should inherit from on of those base shared models.
+-   mutable defaults are accepted in Pydantic models (for example `keybindings: list[KeybindingConfig] = []`). `default_factory` is not required unless specifically needed in that case.
 
 ```py
-from core.validation.widgets.yasb.my_widget import VALIDATION_SCHEMA
+from core.validation.widgets.yasb.my_widget import MyWidgetConfig
 
 class MyWidget(BaseWidget):
-    validation_schema = VALIDATION_SCHEMA
+    validation_schema = MyWidgetConfig
 ```
+
+```py
+# Secondary model inheriting from CustomBaseModel
+class ProgressBarConfig(CustomBaseModel):
+    enabled: bool = False
+    size: int = Field(default=18, ge=8, le=64)
+    thickness: int = Field(default=3, ge=1, le=10)
+    color: str | list[str] = "#00C800"
+    background_color: str = "#3C3C3C"
+    position: str = "left"
+    animation: bool = True
+
+# Secondary model inheriting from shared CallbacksConfig
+class BrightnessCallbacksConfig(CallbacksConfig):
+    on_left: str = "toggle_label"
+
+# Main model inheriting from CustomBaseModel
+class BrightnessConfig(CustomBaseModel):
+    label: str = "{icon}"
+    label_alt: str = "Brightness {percent}%"
+    progress_bar: ProgressBarConfig = ProgressBarConfig()
+    callbacks: BrightnessCallbacksConfig = BrightnessCallbacksConfig()
+    keybindings: list[KeybindingConfig] = [] # <-- Mutable defaults are accepted in Pydantic models
+    # other fields...
+```
+
+For more information on Pydantic models refer to the [Pydantic documentation](https://docs.pydantic.dev/latest/usage/models/).
 
 ## 6. Use real-world examples for reference:
 
