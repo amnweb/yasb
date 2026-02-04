@@ -4,7 +4,7 @@ import logging
 import win32con
 import win32gui
 from PIL import Image
-from PyQt6.QtCore import QEasingCurve, QMimeData, QPropertyAnimation, Qt, QTimer, pyqtSignal
+from PyQt6.QtCore import QEasingCurve, QMimeData, QPoint, QPropertyAnimation, QRect, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QCursor, QDrag, QImage, QMouseEvent, QPixmap
 from PyQt6.QtWidgets import QApplication, QFrame, QHBoxLayout, QLabel, QSizePolicy, QWidget
 
@@ -66,8 +66,26 @@ class DraggableAppButton(QFrame):
     def enterEvent(self, event):
         try:
             if self._taskbar._preview_enabled and not self._dragging:
-                self._preview_timer.start()
-
+                # Check if there's already a preview showing for this hwnd
+                if (
+                    self._taskbar._thumbnail_mgr
+                    and self._taskbar._thumbnail_mgr._preview_popup
+                    and self._taskbar._thumbnail_mgr._preview_popup.isVisible()
+                    and hasattr(self._taskbar._thumbnail_mgr._preview_popup, "_src_hwnd")
+                    and self._taskbar._thumbnail_mgr._preview_popup._src_hwnd == self._hwnd
+                ):
+                    # Preview already exists for this hwnd, just stop any hide timer and keep it visible
+                    preview = self._taskbar._thumbnail_mgr._preview_popup
+                    if hasattr(preview, "_hide_timer") and preview._hide_timer:
+                        try:
+                            preview._hide_timer.stop()
+                        except RuntimeError:
+                            pass
+                    # Don't start a new timer - keep existing preview
+                    return
+                else:
+                    # No preview for this hwnd, start normal timer
+                    self._preview_timer.start()
         except Exception:
             pass
         try:
@@ -79,11 +97,29 @@ class DraggableAppButton(QFrame):
         try:
             self._preview_timer.stop()
             if self._taskbar._preview_enabled:
-                self._taskbar.hide_preview()
+                # Use a longer delay to allow mouse to move to preview
+                QTimer.singleShot(200, self._check_hide_preview)
         except Exception:
             pass
         try:
             super().leaveEvent(event)
+        except Exception:
+            pass
+
+    def _check_hide_preview(self):
+        """Check if mouse moved to preview window before hiding."""
+        try:
+            if self._taskbar._thumbnail_mgr and self._taskbar._thumbnail_mgr._preview_popup:
+                preview = self._taskbar._thumbnail_mgr._preview_popup
+                if preview.isVisible():
+                    # Check full geometric bounds, not just masked area
+                    cursor_pos = QCursor.pos()
+                    preview_rect = QRect(preview.mapToGlobal(QPoint(0, 0)), preview.size())
+                    if preview_rect.contains(cursor_pos):
+                        # Mouse is within preview bounds (including thumbnail area), don't hide
+                        return
+            # Mouse is not over preview, safe to hide
+            self._taskbar.hide_preview()
         except Exception:
             pass
 

@@ -87,6 +87,7 @@ taskbar:
 .taskbar-preview {}
 .taskbar-preview .header {}
 .taskbar-preview .header .title {}
+.taskbar-preview .close-button {} /* Close button on the preview */
 ```
 
 ## Style Example
@@ -128,5 +129,18 @@ taskbar:
     font-family: "Segoe UI";
     font-weight: 600;
     font-size: 13px;
+}
+.taskbar-preview .close-button {
+    color: #999;
+    font-size: 20px;
+    background-color: transparent;
+    border: none;
+    min-width: 20px;
+    border-radius: 4px;
+    min-height: 20px;
+}
+.taskbar-preview .close-button:hover {
+    color: rgb(255, 255, 255);
+    background-color: rgb(226, 0, 0);
 }
 ```
