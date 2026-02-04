@@ -57,7 +57,7 @@ Changelog = "https://github.com/amnweb/yasb/releases/latest"
 [project.optional-dependencies]
 dev = [
     "pre-commit",
-    "ruff",
+    "ruff>=0.15.0",
     "pyqt6-stubs",
     "types-pillow",
 ]
