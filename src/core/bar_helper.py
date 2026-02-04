@@ -344,6 +344,11 @@ class AppBarManager(QAbstractNativeEventFilter):
 
     # Default window classes to exclude from fullscreen detection
     EXCLUDED_WINDOW_CLASSES = {
+        "Progman",
+        "WorkerW",
+        "XamlWindow",
+        "Shell_TrayWnd",
+        "XamlExplorerHostIslandWindow",
         "CEF-OSC-WIDGET",
         "CEFCLIENT",
     }
