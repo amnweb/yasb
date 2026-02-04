@@ -34,7 +34,7 @@ from core.utils.utilities import PopupWidget, add_shadow, build_widget_label, re
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.win32.utilities import apply_qmenu_style
 from core.utils.win32.win32_accent import Blur
-from core.validation.widgets.yasb.clock import VALIDATION_SCHEMA
+from core.validation.widgets.yasb.clock import ClockConfig
 from core.widgets.base import BaseWidget
 from settings import SCRIPT_PATH
 
@@ -332,68 +332,49 @@ class CustomCalendar(QCalendarWidget):
 
 
 class ClockWidget(BaseWidget):
-    validation_schema = VALIDATION_SCHEMA
+    validation_schema = ClockConfig
 
-    def __init__(
-        self,
-        label: str,
-        label_alt: str,
-        class_name: str,
-        locale: str,
-        tooltip: bool,
-        update_interval: int,
-        calendar: dict[str, str],
-        timezones: list[str],
-        animation: dict[str, str],
-        container_padding: dict[str, int],
-        callbacks: dict[str, str],
-        icons: dict[str, str] = None,
-        alarm_icons: dict[str, str] = None,
-        label_shadow: dict = None,
-        container_shadow: dict = None,
-    ):
-        super().__init__(update_interval, class_name=f"clock-widget {class_name}")
-        self._locale = locale
-        self._tooltip = tooltip
+    def __init__(self, config: ClockConfig):
+        super().__init__(config.update_interval, class_name=f"clock-widget {config.class_name}")
+        self.config = config
+        self._locale = self.config.locale
+        self._tooltip = self.config.tooltip
         self._active_tz = None
-        self._timezones_list = self._validate_timezones(timezones if timezones else [None])
+        self._timezones_list = self._validate_timezones(self.config.timezones if self.config.timezones else [None])
         self._timezones = cycle(self._timezones_list)
         self._active_datetime_format_str = ""
         self._active_datetime_format = None
-        self._animation = animation
-        self._label_content = label
-        self._calendar = calendar
-        self._padding = container_padding
-        self._label_alt_content = label_alt
-        self._label_shadow = label_shadow
-        self._container_shadow = container_shadow
-        self._icons = icons or {}
-        self._alarm_icons = alarm_icons
+        self._animation = self.config.animation
+        self._label_content = self.config.label
+        self._calendar = self.config.calendar
+        self._label_alt_content = self.config.label_alt
+        self._label_shadow = self.config.label_shadow
+        self._container_shadow = self.config.container_shadow
+        self._icons = self.config.icons or {}
+        self._alarm_icons = self.config.alarm_icons
         self._current_hour = None
         self._current_minute = None
         self._previous_alarm_state = False
         self._timer_visible = False
-        self._country_code = self._calendar["country_code"] or self.get_country_code()
-        self._subdivision = self._calendar.get("subdivision")
+        self._country_code = self.config.calendar.country_code or self.get_country_code()
+        self._subdivision = self.config.calendar.subdivision
         self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(
-            self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
-        )
+        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
         self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
-        add_shadow(self._widget_container, self._container_shadow)
+        add_shadow(self._widget_container, self.config.container_shadow.model_dump())
         self.widget_layout.addWidget(self._widget_container)
 
-        build_widget_label(self, self._label_content, self._label_alt_content, self._label_shadow)
+        build_widget_label(self, self._label_content, self._label_alt_content, self.config.label_shadow.model_dump())
 
         self._timer_label = QLabel()
         self._timer_label.setProperty("class", "label timer")
         self._timer_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._timer_label.setCursor(Qt.CursorShape.PointingHandCursor)
         self._timer_label.hide()
-        add_shadow(self._timer_label, self._label_shadow)
+        add_shadow(self._timer_label, self.config.label_shadow.model_dump())
         self._widget_container_layout.addWidget(self._timer_label)
 
         self.register_callback("toggle_label", self._toggle_label)
@@ -403,9 +384,9 @@ class ClockWidget(BaseWidget):
         self.register_callback("context_menu", self._show_context_menu)
         self.register_callback("timer_tick", self._on_timer_tick)
 
-        self.callback_left = callbacks["on_left"]
-        self.callback_right = callbacks["on_right"]
-        self.callback_middle = callbacks["on_middle"]
+        self.callback_left = self.config.callbacks.on_left
+        self.callback_right = self.config.callbacks.on_right
+        self.callback_middle = self.config.callbacks.on_middle
         self.callback_timer = "timer_tick"
 
         self._show_alt_label = False
@@ -416,7 +397,7 @@ class ClockWidget(BaseWidget):
         self._next_timezone()
         self._update_label()
 
-        if self._calendar["show_holidays"]:
+        if self.config.calendar.show_holidays:
             QTimer.singleShot(0, _get_holidays_module)
 
     def _on_timer_tick(self):
@@ -446,14 +427,14 @@ class ClockWidget(BaseWidget):
 
     def _toggle_calendar(self):
         """Show the calendar popup, optionally using an animation."""
-        if self._animation["enabled"]:
-            AnimationManager.animate(self, self._animation["type"], self._animation["duration"])
+        if self.config.animation.enabled:
+            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
         self.show_calendar()
 
     def _toggle_label(self):
         """Toggle between primary and alternate label layouts."""
-        if self._animation["enabled"]:
-            AnimationManager.animate(self, self._animation["type"], self._animation["duration"])
+        if self.config.animation.enabled:
+            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
         self._show_alt_label = not self._show_alt_label
         for widget in self._widgets:
             widget.setVisible(not self._show_alt_label)
@@ -553,12 +534,12 @@ class ClockWidget(BaseWidget):
                             refresh_widget_style(active_widgets[widget_index])
                     elif icon_placeholder == "{alarm}":
                         if self._shared_state._snoozed_alarms:
-                            active_widgets[widget_index].setText(self._alarm_icons["snooze"])
+                            active_widgets[widget_index].setText(self.config.alarm_icons.snooze)
                             active_widgets[widget_index].setProperty("class", "icon alarm snooze")
                             active_widgets[widget_index].setVisible(True)
                             refresh_widget_style(active_widgets[widget_index])
                         elif self._has_enabled_alarms():
-                            active_widgets[widget_index].setText(self._alarm_icons["enabled"])
+                            active_widgets[widget_index].setText(self.config.alarm_icons.enabled)
                             active_widgets[widget_index].setProperty("class", "icon alarm")
                             active_widgets[widget_index].setVisible(True)
                             refresh_widget_style(active_widgets[widget_index])
@@ -577,9 +558,9 @@ class ClockWidget(BaseWidget):
 
                     if "{alarm}" in part:
                         if self._shared_state._snoozed_alarms:
-                            part = part.replace("{alarm}", self._alarm_icons["snooze"])
+                            part = part.replace("{alarm}", self.config.alarm_icons.snooze)
                         elif self._has_enabled_alarms():
-                            part = part.replace("{alarm}", self._alarm_icons["enabled"])
+                            part = part.replace("{alarm}", self.config.alarm_icons.enabled)
                         else:
                             part = part.replace("{alarm}", "")
                     try:
@@ -671,9 +652,9 @@ class ClockWidget(BaseWidget):
         if self.year_label:
             self.year_label.setText(str(date.year()))
         self.date_label.setText(date.toString("d"))
-        if self._calendar["show_week_numbers"]:
+        if self.config.calendar.show_week_numbers:
             self.update_week_label(date)
-        if self._calendar["show_holidays"]:
+        if self.config.calendar.show_holidays:
             self.update_holiday_label(date)
 
     def update_week_label(self, qdate: QDate):
@@ -706,7 +687,7 @@ class ClockWidget(BaseWidget):
 
     def get_country_code(self):
         """Try to detect the user's country code from Windows geo APIs."""
-        if not self._calendar["show_holidays"]:
+        if not self.config.calendar.show_holidays:
             return None
         import ctypes
 
@@ -728,10 +709,10 @@ class ClockWidget(BaseWidget):
         """Build and show the calendar popup (includes optional extended UI)."""
         self._yasb_calendar = PopupWidget(
             self,
-            self._calendar["blur"],
-            self._calendar["round_corners"],
-            self._calendar["round_corners_type"],
-            self._calendar["border_color"],
+            self.config.calendar.blur,
+            self.config.calendar.round_corners,
+            self.config.calendar.round_corners_type,
+            self.config.calendar.border_color,
         )
         self._yasb_calendar.setProperty("class", "clock-popup calendar")
 
@@ -762,7 +743,7 @@ class ClockWidget(BaseWidget):
         date_layout.addWidget(self.month_label)
 
         self.year_label = None
-        if self._calendar.get("show_years", True):
+        if self.config.calendar.show_years:
             self.year_label = QLabel(str(datetime_now.year))
             self.year_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             self.year_label.setProperty("class", "year-label")
@@ -773,14 +754,14 @@ class ClockWidget(BaseWidget):
         self.date_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         date_layout.addWidget(self.date_label)
 
-        if self._calendar["show_week_numbers"]:
+        if self.config.calendar.show_week_numbers:
             week_number = QDate(datetime_now.year, datetime_now.month, datetime_now.day).weekNumber()[0]
             self.week_label = QLabel(f"Week {week_number}")
             self.week_label.setProperty("class", "week-label")
             self.week_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             date_layout.addWidget(self.week_label)
             self.update_week_label(QDate(datetime_now.year, datetime_now.month, datetime_now.day))
-        if self._calendar["show_holidays"]:
+        if self.config.calendar.show_holidays:
             self.holiday_label = QLabel("")
             self.holiday_label.setProperty("class", "holiday-label")
             self.holiday_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -795,8 +776,8 @@ class ClockWidget(BaseWidget):
             self._active_tz,
             self._country_code,
             subdivision=self._subdivision,
-            show_holidays=self._calendar["show_holidays"],
-            holiday_color=self._calendar["holiday_color"],
+            show_holidays=self.config.calendar.show_holidays,
+            holiday_color=self.config.calendar.holiday_color,
         )
         self.calendar.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         self.calendar.currentPageChanged.connect(self.update_month_label)
@@ -804,7 +785,7 @@ class ClockWidget(BaseWidget):
 
         layout.addWidget(self.calendar)
 
-        if self._calendar["extended"]:
+        if self.config.calendar.extended:
             actions_layout = QVBoxLayout()
             actions_layout.setContentsMargins(0, 0, 0, 0)
             actions_layout.setSpacing(0)
@@ -857,7 +838,7 @@ class ClockWidget(BaseWidget):
                 upcoming_widgets.append(lbl)
 
             try:
-                if self._calendar["show_holidays"] and _holidays_cache["supported_countries"] is not None:
+                if self.config.calendar.show_holidays and _holidays_cache["supported_countries"] is not None:
                     country = None
                     if (
                         self._country_code
@@ -892,10 +873,10 @@ class ClockWidget(BaseWidget):
         self._yasb_calendar.adjustSize()
 
         self._yasb_calendar.setPosition(
-            alignment=self._calendar["alignment"],
-            direction=self._calendar["direction"],
-            offset_left=self._calendar["offset_left"],
-            offset_top=self._calendar["offset_top"],
+            alignment=self.config.calendar.alignment,
+            direction=self.config.calendar.direction,
+            offset_left=self.config.calendar.offset_left,
+            offset_top=self.config.calendar.offset_top,
         )
 
         self._yasb_calendar.show()
@@ -981,7 +962,9 @@ class ClockWidget(BaseWidget):
             days_str = ", ".join([day_names[d] for d in sorted(days)])
 
         enabled_str = (
-            f"{self._alarm_icons['enabled']} " if alarm.get("enabled", True) else f"{self._alarm_icons['disabled']} "
+            f"{self.config.alarm_icons.enabled} "
+            if alarm.get("enabled", True)
+            else f"{self.config.alarm_icons.disabled} "
         )
         return f"{enabled_str} {time_str} ({days_str})"
 
@@ -1033,10 +1016,10 @@ class ClockWidget(BaseWidget):
         """Create a configured PopupWidget used for dialogs (timer/alarm)."""
         popup = PopupWidget(
             self,
-            self._calendar["blur"],
-            self._calendar["round_corners"],
-            self._calendar["round_corners_type"],
-            self._calendar["border_color"],
+            self.config.calendar.blur,
+            self.config.calendar.round_corners,
+            self.config.calendar.round_corners_type,
+            self.config.calendar.border_color,
         )
         popup.setProperty("class", f"clock-popup {class_name}")
         return popup
@@ -1304,10 +1287,10 @@ class ClockWidget(BaseWidget):
 
         popup.adjustSize()
         popup.setPosition(
-            alignment=self._calendar["alignment"],
-            direction=self._calendar["direction"],
-            offset_left=self._calendar["offset_left"],
-            offset_top=self._calendar["offset_top"],
+            alignment=self.config.calendar.alignment,
+            direction=self.config.calendar.direction,
+            offset_left=self.config.calendar.offset_left,
+            offset_top=self.config.calendar.offset_top,
         )
 
         popup.show()
@@ -1369,7 +1352,7 @@ class ClockWidget(BaseWidget):
         layout.setSpacing(0)
         layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
-        title_text_icon = self._alarm_icons["disabled"]
+        title_text_icon = self.config.alarm_icons.disabled
         title_icon = QLabel(title_text_icon)
         title_icon.setProperty("class", "alarm-title-icon")
         title_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -1547,10 +1530,10 @@ class ClockWidget(BaseWidget):
 
         popup.adjustSize()
         popup.setPosition(
-            alignment=self._calendar["alignment"],
-            direction=self._calendar["direction"],
-            offset_left=self._calendar["offset_left"],
-            offset_top=self._calendar["offset_top"],
+            alignment=self.config.calendar.alignment,
+            direction=self.config.calendar.direction,
+            offset_left=self.config.calendar.offset_left,
+            offset_top=self.config.calendar.offset_top,
         )
 
         popup.show()

@@ -2,10 +2,11 @@ import logging
 from ctypes import byref, wintypes
 
 import win32gui
-from PyQt6.QtCore import QEasingCurve, QPoint, QPropertyAnimation, QRect, Qt
+from PyQt6.QtCore import QEasingCurve, QPoint, QPropertyAnimation, QRect, Qt, QTimer
 from PyQt6.QtGui import QFontMetrics, QPixmap, QRegion
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QWidget
 
+from core.utils.tooltip import set_tooltip
 from core.utils.utilities import refresh_widget_style
 from core.utils.win32.bindings.dwmapi import (
     DwmQueryThumbnailSourceSize,
@@ -20,8 +21,39 @@ from core.utils.win32.constants import (
     DWM_TNP_VISIBLE,
 )
 from core.utils.win32.structs import DWM_THUMBNAIL_PROPERTIES, RECT, SIZE
+from core.utils.win32.window_actions import close_application
 
 logger = logging.getLogger(__name__)
+
+
+class ThumbnailHost(QWidget):
+    """Custom widget to host DWM thumbnail and capture mouse clicks."""
+
+    def __init__(self, preview_popup, parent=None):
+        super().__init__(parent)
+        self._preview_popup = preview_popup
+        # Copy bar_id from preview if available for autohide detection
+        self.bar_id = getattr(preview_popup, "bar_id", None) if preview_popup else None
+        self.setMouseTracking(True)
+
+    def enterEvent(self, event):
+        """Notify preview that mouse entered thumbnail."""
+        if self._preview_popup and hasattr(self._preview_popup, "_on_thumbnail_enter"):
+            self._preview_popup._on_thumbnail_enter()
+        super().enterEvent(event)
+
+    def leaveEvent(self, event):
+        """Notify preview that mouse left thumbnail."""
+        if self._preview_popup and hasattr(self._preview_popup, "_on_thumbnail_leave"):
+            self._preview_popup._on_thumbnail_leave()
+        super().leaveEvent(event)
+
+    def mousePressEvent(self, event):
+        """Forward click to preview to bring window to foreground."""
+        if self._preview_popup:
+            self._preview_popup.mousePressEvent(event)
+        else:
+            super().mousePressEvent(event)
 
 
 class PreviewAnimation:
@@ -98,8 +130,8 @@ class PreviewPopup(QFrame):
             | Qt.WindowType.Tool
             | Qt.WindowType.WindowStaysOnTopHint
             | Qt.WindowType.NoDropShadowWindowHint
-            | Qt.WindowType.WindowDoesNotAcceptFocus
         )
+        self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
 
         self._thumb = wintypes.HANDLE(0)
@@ -118,6 +150,7 @@ class PreviewPopup(QFrame):
         self._header_layout = QHBoxLayout(self._header)
         self._header_layout.setContentsMargins(0, 0, 0, 0)
         self._header_layout.setSpacing(self.HEADER_SPACING)
+        self._header_layout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
 
         self._icon_label = QLabel(self._header)
         self._icon_label.setFixedSize(self.ICON_SIZE, self.ICON_SIZE)
@@ -126,11 +159,23 @@ class PreviewPopup(QFrame):
         self._title_label = QLabel(self._header)
         self._title_label.setProperty("class", "title")
 
-        self._header_layout.addWidget(self._icon_label)
-        self._header_layout.addWidget(self._title_label, 1)
+        self._close_button = QLabel(self._header)
+        self._close_button.setProperty("class", "close-button")
+        self._close_button.setText("\u2715")
+        self._close_button.setFixedSize(self.ICON_SIZE, self.ICON_SIZE)
+        self._close_button.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._close_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._close_button.mousePressEvent = lambda e: self._on_close_clicked()
+
+        self._header_layout.addWidget(self._icon_label, 0, Qt.AlignmentFlag.AlignVCenter)
+        self._header_layout.addWidget(self._title_label, 1, Qt.AlignmentFlag.AlignVCenter)
+        self._header_layout.addWidget(self._close_button, 0, Qt.AlignmentFlag.AlignVCenter)
 
         self._fade_anim = PreviewAnimation(self, self._animation_duration)
         self._header_title_full = ""
+        self._thumbnail_manager = None
+        # Set bar_id from parent for autohide detection
+        self.bar_id = getattr(parent, "bar_id", None) if parent else None
 
     def get_dpr(self) -> float:
         """Return device pixel ratio for this preview (per-screen)."""
@@ -157,7 +202,25 @@ class PreviewPopup(QFrame):
             self._fade_anim.stop()
         except Exception:
             pass
+        if hasattr(self, "_hide_timer") and self._hide_timer:
+            try:
+                self._hide_timer.stop()
+            except RuntimeError:
+                pass
         self._cleanup_thumb()
+        # Restart autohide timer only if mouse is not on the bar
+        try:
+            from PyQt6.QtGui import QCursor
+
+            from core.global_state import get_autohide_owner_for_widget
+
+            bar = get_autohide_owner_for_widget(self)
+            if bar and not bar.geometry().contains(QCursor.pos()):
+                mgr = bar._autohide_manager
+                if mgr._hide_timer:
+                    mgr._hide_timer.start(mgr._autohide_delay)
+        except Exception:
+            pass
         super().hideEvent(event)
 
     def closeEvent(self, event):
@@ -343,11 +406,108 @@ class PreviewPopup(QFrame):
         text = self._header_title_full or ""
         fm = QFontMetrics(self._title_label.font())
         inner_w = self.width() - (2 * self._padding)
-        avail = inner_w - self._icon_label.width() - self.HEADER_SPACING
+        avail = inner_w - self._icon_label.width() - self._close_button.width() - (2 * self.HEADER_SPACING)
         if avail <= 0:
             self._title_label.setText("")
         else:
-            self._title_label.setText(fm.elidedText(text, Qt.TextElideMode.ElideRight, avail))
+            elided_text = fm.elidedText(text, Qt.TextElideMode.ElideRight, avail)
+            self._title_label.setText(elided_text)
+            # Set tooltip with full title if text was elided
+            if elided_text != text and text:
+                set_tooltip(self._title_label, text, delay=0, position="top")
+            else:
+                set_tooltip(self._title_label, "", delay=0)  # Remove tooltip
+
+    def _on_close_clicked(self):
+        """Handle close button click - close the window associated with this preview."""
+        try:
+            if hasattr(self, "_src_hwnd") and win32gui.IsWindow(self._src_hwnd):
+                close_application(self._src_hwnd)
+            # Hide the preview after closing the window
+            if self._thumbnail_manager:
+                self._thumbnail_manager.hide_preview()
+        except Exception:
+            logger.exception("Failed to close window")
+
+    def mousePressEvent(self, event):
+        """Handle click on preview - bring window to foreground using taskbar's method."""
+        try:
+            if hasattr(self, "_src_hwnd") and win32gui.IsWindow(self._src_hwnd):
+                if self._thumbnail_manager and hasattr(self._thumbnail_manager, "_taskbar"):
+                    self._thumbnail_manager._taskbar.bring_to_foreground(self._src_hwnd)
+                    self._thumbnail_manager.hide_preview()
+        except Exception:
+            logger.exception("Failed to bring window to foreground")
+        super().mousePressEvent(event)
+
+    def enterEvent(self, event):
+        """Cancel hide when mouse enters."""
+        if hasattr(self, "_hide_timer") and self._hide_timer:
+            try:
+                self._hide_timer.stop()
+            except RuntimeError:
+                pass
+        # Stop bar's autohide timer
+        try:
+            from core.global_state import get_autohide_owner_for_widget
+
+            mgr = get_autohide_owner_for_widget(self)._autohide_manager
+            if mgr._hide_timer:
+                mgr._hide_timer.stop()
+        except Exception:
+            pass
+        super().enterEvent(event)
+
+    def leaveEvent(self, event):
+        """Start hide timer when mouse leaves."""
+
+        if not hasattr(self, "_hide_timer") or not self._hide_timer:
+            self._hide_timer = QTimer(self)
+            self._hide_timer.setSingleShot(True)
+            self._hide_timer.timeout.connect(self._do_hide)
+        try:
+            self._hide_timer.start(300)
+        except RuntimeError:
+            # Timer was deleted - widget is being destroyed
+            pass
+        super().leaveEvent(event)
+
+    def _on_thumbnail_enter(self):
+        """Called when mouse enters the thumbnail host."""
+        if hasattr(self, "_hide_timer") and self._hide_timer:
+            try:
+                self._hide_timer.stop()
+            except RuntimeError:
+                pass
+        # Stop bar's autohide timer
+        try:
+            from core.global_state import get_autohide_owner_for_widget
+
+            mgr = get_autohide_owner_for_widget(self)._autohide_manager
+            if mgr._hide_timer:
+                mgr._hide_timer.stop()
+        except Exception:
+            pass
+
+    def _on_thumbnail_leave(self):
+        """Called when mouse leaves the thumbnail host."""
+        if not hasattr(self, "_hide_timer") or not self._hide_timer:
+            self._hide_timer = QTimer(self)
+            self._hide_timer.setSingleShot(True)
+            self._hide_timer.timeout.connect(self._do_hide)
+        try:
+            self._hide_timer.start(300)
+        except RuntimeError:
+            # Timer was deleted - widget is being destroyed
+            pass
+
+    def _do_hide(self):
+        """Hide preview."""
+        if not self.isVisible():
+            return
+
+        if self._thumbnail_manager:
+            self._thumbnail_manager.hide_preview()
 
     def start_animation(self):
         try:
@@ -401,7 +561,7 @@ class TaskbarThumbnailManager:
 
     def _ensure_thumb_host(self):
         if self._thumb_host is None:
-            host = QWidget(None)
+            host = ThumbnailHost(self._preview_popup)
             host.setWindowFlags(
                 Qt.WindowType.FramelessWindowHint
                 | Qt.WindowType.Tool
@@ -411,7 +571,6 @@ class TaskbarThumbnailManager:
             )
             host.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, False)
             host.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating, True)
-            host.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
             host.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground, False)
             self._thumb_host = host
             try:
@@ -460,6 +619,12 @@ class TaskbarThumbnailManager:
             self._preview_popup = PreviewPopup(
                 self._taskbar, self.width, self.padding, self.margin, self.animation_duration
             )
+            self._preview_popup._thumbnail_manager = self
+
+            # Update thumb host's preview reference so it can forward clicks
+            if self._thumb_host and isinstance(self._thumb_host, ThumbnailHost):
+                self._thumb_host._preview_popup = self._preview_popup
+
             title = icon = None
             data = getattr(self._taskbar, "_window_buttons", {}).get(hwnd)
             if data:

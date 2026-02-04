@@ -20,19 +20,21 @@ from PyQt6.QtWidgets import (
 from core.utils.alert_dialog import raise_info_alert
 from core.utils.utilities import add_shadow, build_widget_label, refresh_widget_style
 from core.utils.widgets.animation_manager import AnimationManager
-from core.validation.widgets.yasb.whkd import VALIDATION_SCHEMA
+from core.validation.widgets.yasb.whkd import WhkdConfig
 from core.widgets.base import BaseWidget
 from settings import SCRIPT_PATH
 
 
 class KeybindsDialog(QDialog):
-    def __init__(self, content, file_path, animation, special_keys, parent=None):
+    def __init__(self, content, file_path, config: WhkdConfig, parent=None):
         super().__init__(parent)
 
         self.file_path = file_path
         self.original_content = content
-        self.animation = animation
-        self.special_keys = special_keys or {}
+        self.config = config
+        self.special_keys = (
+            {item.key: item.key_replace for item in self.config.special_keys} if self.config.special_keys else {}
+        )
         self.setWindowTitle("WHKD Keybinds")
         self.setProperty("class", "whkd-popup")
 
@@ -250,51 +252,33 @@ class KeybindsDialog(QDialog):
 
 
 class WhkdWidget(BaseWidget):
-    validation_schema = VALIDATION_SCHEMA
+    validation_schema = WhkdConfig
 
-    def __init__(
-        self,
-        label: str,
-        animation: dict[str, str],
-        special_keys: list = None,
-        container_padding: dict = None,
-        callbacks: dict = None,
-        label_shadow: dict = None,
-        container_shadow: dict = None,
-    ):
+    def __init__(self, config: WhkdConfig):
         super().__init__(class_name="whkd-widget")
-        self._label_content = label
-        self._padding = container_padding
-        self._animation = animation
-        self._label_shadow = label_shadow
-        self._container_shadow = container_shadow
-        # Handle the case where special_keys is not provided - initialize as empty
-        special_keys = special_keys or []
-        self._special_keys = {item["key"]: item["key_replace"] for item in special_keys}
+        self.config = config
+
         # Construct container
         self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(
-            self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
-        )
+        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
         # Initialize container
         self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
-        add_shadow(self._widget_container, self._container_shadow)
+        add_shadow(self._widget_container, self.config.container_shadow.model_dump())
 
         # Add the container to the main widget layout
         self.widget_layout.addWidget(self._widget_container)
 
-        build_widget_label(self, self._label_content, None, self._label_shadow)
+        build_widget_label(self, self.config.label, None, self.config.label_shadow.model_dump())
 
         self.register_callback("open_popup", self._open_popup)
-        callbacks = {"on_left": "open_popup"}
-        self.callback_left = callbacks["on_left"]
+        self.callback_left = "open_popup"
 
     def _open_popup(self):
-        if self._animation.get("enabled"):
-            AnimationManager.animate(self, self._animation.get("type"), self._animation.get("duration"))
+        if self.config.animation.enabled:
+            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
 
         # Determine config file location
         whkd_config_home = os.getenv("WHKD_CONFIG_HOME")
@@ -322,7 +306,7 @@ class WhkdWidget(BaseWidget):
             return
 
         content = self._process_file(raw_lines)
-        dialog = KeybindsDialog(content, file_path, self._animation, self._special_keys, self)
+        dialog = KeybindsDialog(content, file_path, self.config, self)
         dialog.exec()
 
     def _process_file(self, lines):

@@ -103,7 +103,7 @@ class IconExtractorUtil:
             def filter_logos(logofiles, qualifiers, values):
                 for qualifier in qualifiers:
                     for value in values:
-                        filtered_files = list(filter(lambda x: (qualifier + "-" + value in x), logofiles))
+                        filtered_files = list(filter(lambda x: qualifier + "-" + value in x, logofiles))
                         if filtered_files:
                             return filtered_files
                 return logofiles

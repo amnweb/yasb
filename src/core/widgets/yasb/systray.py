@@ -34,7 +34,7 @@ from core.utils.win32.constants import (
     NIF_TIP,
 )
 from core.utils.win32.utilities import apply_qmenu_style
-from core.validation.widgets.yasb.systray import VALIDATION_SCHEMA
+from core.validation.widgets.yasb.systray import SystrayWidgetConfig
 from core.widgets.base import BaseWidget
 
 logger = logging.getLogger("systray_widget")
@@ -59,7 +59,7 @@ class SystrayMonitorThread(QThread):
 
 
 class SystrayWidget(BaseWidget):
-    validation_schema: dict[str, Any] = VALIDATION_SCHEMA
+    validation_schema = SystrayWidgetConfig
     _systray_instance = None
     _systray_thread = None
     _tasks_service_instance = None
@@ -81,56 +81,25 @@ class SystrayWidget(BaseWidget):
             cls._systray_thread,
         )
 
-    def __init__(
-        self,
-        class_name: str,
-        label_collapsed: str,
-        label_expanded: str,
-        label_position: str,
-        icon_size: int,
-        pin_click_modifier: str,
-        show_unpinned: bool,
-        show_unpinned_button: bool,
-        show_battery: bool,
-        show_volume: bool,
-        show_network: bool,
-        tooltip: bool,
-        container_padding: dict[str, int],
-        container_shadow: dict[str, Any],
-        unpinned_shadow: dict[str, Any],
-        pinned_shadow: dict[str, Any],
-        unpinned_vis_btn_shadow: dict[str, Any],
-        btn_shadow: dict[str, Any],
-    ):
-        super().__init__(class_name=class_name)
-        self.label_collapsed = label_collapsed
-        self.label_expanded = label_expanded
-        self.label_position = label_position if label_position in {"left", "right"} else "left"
-        self.icon_size = icon_size
-        self.show_unpinned = show_unpinned
-        self.show_unpinned_button = show_unpinned_button
-        self.container_padding = container_padding
-        self.container_shadow = container_shadow
-        self.unpinned_shadow = unpinned_shadow
-        self.pinned_shadow = pinned_shadow
-        self.unpinned_vis_btn_shadow = unpinned_vis_btn_shadow
-        self.btn_shadow = btn_shadow
+    def __init__(self, config: SystrayWidgetConfig):
+        super().__init__(class_name=config.class_name)
+        self.config = config
 
         self.filtered_guids: set[UUID] = set()
-        if not show_battery:
+        if not self.config.show_battery:
             self.filtered_guids.add(BATTERY_ICON_GUID)
-        if not show_volume:
+        if not self.config.show_volume:
             self.filtered_guids.add(VOLUME_ICON_GUID)
-        if not show_network:
+        if not self.config.show_network:
             self.filtered_guids.add(NETWORK_GUID)
 
-        IconWidget.icon_size = icon_size
-        IconWidget.enable_tooltips = tooltip
+        IconWidget.icon_size = self.config.icon_size
+        IconWidget.enable_tooltips = self.config.tooltip
         IconWidget.pin_modifier_key = {
             "ctrl": Qt.KeyboardModifier.ControlModifier,
             "alt": Qt.KeyboardModifier.AltModifier,
             "shift": Qt.KeyboardModifier.ShiftModifier,
-        }.get(pin_click_modifier.lower(), Qt.KeyboardModifier.AltModifier)
+        }.get(self.config.pin_click_modifier.lower(), Qt.KeyboardModifier.AltModifier)
 
         self.icons: list[IconWidget] = []
         self.current_state: dict[str, IconState] = {}
@@ -151,12 +120,7 @@ class SystrayWidget(BaseWidget):
 
         self.widget_container_layout = QHBoxLayout()
         self.widget_container_layout.setSpacing(0)
-        self.widget_container_layout.setContentsMargins(
-            self.container_padding["left"],
-            self.container_padding["top"],
-            self.container_padding["right"],
-            self.container_padding["bottom"],
-        )
+        self.widget_container_layout.setContentsMargins(0, 0, 0, 0)
 
         self.widget_container = QFrame(self)
         self.widget_container.setLayout(self.widget_container_layout)
@@ -185,22 +149,22 @@ class SystrayWidget(BaseWidget):
         self.pinned_widget.drag_started.connect(self.on_drag_started)
         self.pinned_widget.drag_ended.connect(self.on_drag_ended)
 
-        add_shadow(self.widget_container, self.container_shadow)
-        add_shadow(self.unpinned_widget, self.unpinned_shadow)
-        add_shadow(self.pinned_widget, self.pinned_shadow)
-        add_shadow(self.unpinned_vis_btn, self.unpinned_vis_btn_shadow)
+        add_shadow(self.widget_container, self.config.container_shadow.model_dump())
+        add_shadow(self.unpinned_widget, self.config.unpinned_shadow.model_dump())
+        add_shadow(self.pinned_widget, self.config.pinned_shadow.model_dump())
+        add_shadow(self.unpinned_vis_btn, self.config.unpinned_vis_btn_shadow.model_dump())
 
         self.widget_container_layout.addWidget(self.unpinned_widget)
         self.widget_container_layout.addWidget(self.pinned_widget)
 
-        if self.label_position == "left":
+        if self.config.label_position == "left":
             self.widget_container_layout.insertWidget(0, self.unpinned_vis_btn)
         else:
             self.widget_container_layout.insertWidget(-1, self.unpinned_vis_btn)
 
         self.widget_layout.addWidget(self.widget_container)
 
-        self.unpinned_vis_btn.setVisible(self.show_unpinned_button)
+        self.unpinned_vis_btn.setVisible(self.config.show_unpinned_button)
 
         QTimer.singleShot(0, self.setup_client)
         QTimer.singleShot(0, self.set_containers_visibility)
@@ -269,9 +233,11 @@ class SystrayWidget(BaseWidget):
 
     def set_containers_visibility(self):
         """Update the containers visibility based on the show_unpinned_button setting"""
-        self.unpinned_vis_btn.setChecked(self.show_unpinned)
-        self.unpinned_vis_btn.setText(self.label_expanded if self.show_unpinned else self.label_collapsed)
-        self.unpinned_widget.setVisible(self.show_unpinned or not self.show_unpinned_button)
+        self.unpinned_vis_btn.setChecked(self.config.show_unpinned)
+        self.unpinned_vis_btn.setText(
+            self.config.label_expanded if self.config.show_unpinned else self.config.label_collapsed
+        )
+        self.unpinned_widget.setVisible(self.config.show_unpinned or not self.config.show_unpinned_button)
 
     def on_thread_started(self):
         logger.debug("Systray thread started")
@@ -311,7 +277,7 @@ class SystrayWidget(BaseWidget):
                     IconState(index=-1, is_pinned=False),
                 ),
             )
-            add_shadow(icon, self.btn_shadow)
+            add_shadow(icon, self.config.btn_shadow.model_dump())
 
             # Place the new icon in the correct layout and index
             icon.is_pinned = saved_data.is_pinned
@@ -456,10 +422,10 @@ class SystrayWidget(BaseWidget):
         """On button click, toggle the visibility of the unpinned widget."""
         if self.unpinned_vis_btn.isChecked():
             self.unpinned_widget.setVisible(True)
-            self.unpinned_vis_btn.setText(self.label_expanded)
+            self.unpinned_vis_btn.setText(self.config.label_expanded)
         else:
             self.unpinned_widget.setVisible(False)
-            self.unpinned_vis_btn.setText(self.label_collapsed)
+            self.unpinned_vis_btn.setText(self.config.label_collapsed)
 
     def sort_icons(self):
         """Sorts pinned and unpinned widgets based on their state index"""

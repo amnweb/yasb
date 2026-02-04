@@ -10,6 +10,9 @@ import settings
 shell32 = windll.shell32
 user32 = windll.user32
 
+# Custom callback message for AppBar notifications (WM_USER + 100)
+APPBAR_CALLBACK_MESSAGE = 0x0400 + 100  # WM_USER = 0x0400
+
 """
 Application Desktop Toolbar (with added support for PyQt6)
 
@@ -50,6 +53,18 @@ class AppBarMessage:
     SetAutoHideBarEx = 12
 
 
+class AppBarNotify:
+    """
+    AppBar notification codes sent via callback message
+    Documentation: https://docs.microsoft.com/en-us/windows/win32/shell/abn-fullscreenapp
+    """
+
+    StateChange = 0  # ABN_STATECHANGE
+    PosChanged = 1  # ABN_POSCHANGED
+    FullScreenApp = 2  # ABN_FULLSCREENAPP
+    WindowArrange = 3  # ABN_WINDOWARRANGE
+
+
 class AppBarData(Structure):
     """
     AppBarData struct
@@ -74,6 +89,7 @@ class Win32AppBar:
         self,
     ):
         self.app_bar_data = None
+        self.callback_message = APPBAR_CALLBACK_MESSAGE
 
     def create_appbar(
         self,
@@ -83,19 +99,25 @@ class Win32AppBar:
         screen: QScreen,
         scale_screen: bool = False,
         bar_name: str = None,
+        reserve_space: bool = True,
+        always_on_top: bool = False,
     ):
         self.app_bar_data = AppBarData()
         self.app_bar_data.cbSize = wintypes.DWORD(sizeof(self.app_bar_data))
         self.app_bar_data.uEdge = edge
         self.app_bar_data.hWnd = hwnd
         self.register_new()
-        self.position_bar(app_bar_height, screen, scale_screen, bar_name)
-        self.set_position()
 
-        exStyle = windll.user32.GetWindowLongPtrW(hwnd, win32con.GWL_EXSTYLE)
-        windll.user32.SetWindowLongPtrW(
-            hwnd, win32con.GWL_EXSTYLE, exStyle | win32con.WS_EX_NOACTIVATE | win32con.WS_EX_TOPMOST
-        )
+        current_ex_style = windll.user32.GetWindowLongPtrW(hwnd, win32con.GWL_EXSTYLE)
+        updated_ex_style = current_ex_style | win32con.WS_EX_NOACTIVATE
+        if always_on_top:
+            updated_ex_style |= win32con.WS_EX_TOPMOST
+        windll.user32.SetWindowLongPtrW(hwnd, win32con.GWL_EXSTYLE, updated_ex_style)
+
+        self.position_bar(app_bar_height, screen, scale_screen, bar_name)
+        # Only reserve screen space if requested windows_app_bar: true
+        if reserve_space:
+            self.set_position()
 
     def position_bar(
         self, app_bar_height: int, screen: QScreen, scale_screen: bool = False, bar_name: str = None
@@ -120,6 +142,7 @@ class Win32AppBar:
             )
 
     def register_new(self):
+        self.app_bar_data.uCallbackMessage = self.callback_message
         shell32.SHAppBarMessage(AppBarMessage.New, P_APPBAR_DATA(self.app_bar_data))
 
     def window_pos_changed(self):

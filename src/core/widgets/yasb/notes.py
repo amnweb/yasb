@@ -23,72 +23,52 @@ from PyQt6.QtWidgets import (
 from core.config import HOME_CONFIGURATION_DIR
 from core.utils.utilities import PopupWidget, add_shadow, build_widget_label
 from core.utils.widgets.animation_manager import AnimationManager
-from core.validation.widgets.yasb.notes import VALIDATION_SCHEMA
+from core.validation.widgets.yasb.notes import NotesConfig
 from core.widgets.base import BaseWidget
 from settings import DEBUG
 
 
 class NotesWidget(BaseWidget):
-    validation_schema = VALIDATION_SCHEMA
-    _instances = []
+    validation_schema = NotesConfig
+    _instances: List[NotesWidget] = []
 
-    def __init__(
-        self,
-        label: str,
-        label_alt: str,
-        class_name: str,
-        data_path: str,
-        container_padding: dict,
-        animation: dict,
-        menu: dict,
-        icons: dict,
-        callbacks: dict,
-        label_shadow: dict = None,
-        container_shadow: dict = None,
-    ):
-        super().__init__(class_name=f"notes-widget {class_name}")
+    def __init__(self, config: NotesConfig):
+        super().__init__(class_name=f"notes-widget {config.class_name}")
+        self.config = config
         NotesWidget._instances.append(self)
 
         self._show_alt_label = False
-        self._label_content = label
-        self._label_alt_content = label_alt
-        self._animation = animation
-        self._padding = container_padding
-        self._menu_config = menu
-        self._icons = icons
-        self._label_shadow = label_shadow
-        self._container_shadow = container_shadow
+        self._label_content = self.config.label
+        self._label_alt_content = self.config.label_alt
 
         # Use custom data path if provided, otherwise use default
-        if data_path and data_path.strip():
-            self._notes_file = os.path.expanduser(data_path)
+        if config.data_path and config.data_path.strip():
+            self._notes_file = os.path.expanduser(config.data_path)
         else:
             self._notes_file = os.path.join(HOME_CONFIGURATION_DIR, "notes.json")
-        self._notes = self._load_notes()
+        self._notes: list[dict[str, str]] = self._load_notes()
 
         # Initialize container layout
         self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(
-            self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
-        )
+        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
 
         # Initialize container widget
         self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
-        add_shadow(self._widget_container, self._container_shadow)
+        add_shadow(self._widget_container, config.container_shadow.model_dump())
         self.widget_layout.addWidget(self._widget_container)
 
-        build_widget_label(self, self._label_content, self._label_alt_content, self._label_shadow)
+        build_widget_label(self, self._label_content, self._label_alt_content, config.label_shadow.model_dump())
 
         self.register_callback("toggle_label", self._toggle_label)
         self.register_callback("toggle_menu", self._toggle_menu)
         self.register_callback("update_label", self._update_label)
 
-        self.callback_left = callbacks["on_left"]
-        self.callback_right = callbacks["on_right"]
-        self.callback_middle = callbacks["on_middle"]
+        self.callback_left = config.callbacks.on_left
+        self.callback_right = config.callbacks.on_right
+        self.callback_middle = config.callbacks.on_middle
         self.callback_timer = "update_label"
 
         self._update_label()
@@ -108,8 +88,8 @@ class NotesWidget(BaseWidget):
             instance._update_label()
 
     def _toggle_label(self):
-        if self._animation["enabled"]:
-            AnimationManager.animate(self, self._animation["type"], self._animation["duration"])
+        if self.config.animation.enabled:
+            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
 
         self._show_alt_label = not self._show_alt_label
 
@@ -122,8 +102,8 @@ class NotesWidget(BaseWidget):
         self._update_label()
 
     def _toggle_menu(self):
-        if self._animation["enabled"]:
-            AnimationManager.animate(self, self._animation["type"], self._animation["duration"])
+        if self.config.animation.enabled:
+            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
         self._show_menu()
 
     def _update_label(self):
@@ -152,10 +132,10 @@ class NotesWidget(BaseWidget):
     def _show_menu(self):
         self._menu = PopupWidget(
             self,
-            self._menu_config["blur"],
-            self._menu_config["round_corners"],
-            self._menu_config["round_corners_type"],
-            self._menu_config["border_color"],
+            self.config.menu.blur,
+            self.config.menu.round_corners,
+            self.config.menu.round_corners_type,
+            self.config.menu.border_color,
         )
         self._menu.setProperty("class", "notes-menu")
 
@@ -232,7 +212,7 @@ class NotesWidget(BaseWidget):
                 self._add_note_to_menu(note, scroll_layout)
         else:
             # Show empty state
-            empty_label = QLabel(f"{self._icons['note']}  No notes yet!")
+            empty_label = QLabel(f"{self.config.icons.note}  No notes yet!")
             empty_label.setProperty("class", "empty-list")
             empty_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             scroll_layout.addWidget(empty_label)
@@ -244,10 +224,10 @@ class NotesWidget(BaseWidget):
 
         self._menu.adjustSize()
         self._menu.setPosition(
-            alignment=self._menu_config["alignment"],
-            direction=self._menu_config["direction"],
-            offset_left=self._menu_config["offset_left"],
-            offset_top=self._menu_config["offset_top"],
+            alignment=self.config.menu.alignment,
+            direction=self.config.menu.direction,
+            offset_left=self.config.menu.offset_left,
+            offset_top=self.config.menu.offset_top,
         )
         self._menu.show()
         self._note_input.setFocus()
@@ -293,7 +273,7 @@ class NotesWidget(BaseWidget):
         container_layout.setSpacing(5)
 
         # Note icon
-        icon_label = QLabel(self._icons["note"])
+        icon_label = QLabel(self.config.icons.note)
         icon_label.setProperty("class", "icon")
         container_layout.addWidget(icon_label)
 
@@ -305,8 +285,8 @@ class NotesWidget(BaseWidget):
 
         # Title
         display_title = re.sub(r"[\n\t\r]+", "", note["title"])
-        if len(display_title) > self._menu_config["max_title_size"]:
-            display_title = display_title[: (self._menu_config["max_title_size"] - 3)] + "..."
+        if len(display_title) > self.config.menu.max_title_size:
+            display_title = display_title[: (self.config.menu.max_title_size - 3)] + "..."
         title_label = QLabel(display_title)
         title_label.setProperty("class", "title")
         title_label.setWordWrap(True)
@@ -314,14 +294,14 @@ class NotesWidget(BaseWidget):
         text_layout.addWidget(title_label)
 
         # Date under title
-        if "timestamp" in note and self._menu_config["show_date_time"]:
+        if "timestamp" in note and self.config.menu.show_date_time:
             try:
                 timestamp = datetime.datetime.fromisoformat(note["timestamp"])
                 date_str = timestamp.strftime("%Y-%m-%d %H:%M")
                 date_label = QLabel(date_str)
                 date_label.setProperty("class", "date")
                 text_layout.addWidget(date_label)
-            except (ValueError, TypeError):
+            except ValueError, TypeError:
                 pass
 
         container_layout.addWidget(text_container)
@@ -337,13 +317,13 @@ class NotesWidget(BaseWidget):
         buttons_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)  # Center the buttons vertically
 
         # Copy button on top
-        copy_button = QPushButton(self._icons["copy"])
+        copy_button = QPushButton(self.config.icons.copy_icon)
         copy_button.setProperty("class", "copy-button")
         copy_button.clicked.connect(lambda: self._copy_note(note))
         buttons_layout.addWidget(copy_button, 0, Qt.AlignmentFlag.AlignCenter)
 
         # Delete button on bottom
-        delete_button = QPushButton(self._icons["delete"])
+        delete_button = QPushButton(self.config.icons.delete)
         delete_button.setProperty("class", "delete-button")
         delete_button.clicked.connect(lambda: self._delete_note(note))
         buttons_layout.addWidget(delete_button, 0, Qt.AlignmentFlag.AlignCenter)

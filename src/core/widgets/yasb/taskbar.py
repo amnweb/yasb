@@ -4,7 +4,7 @@ import logging
 import win32con
 import win32gui
 from PIL import Image
-from PyQt6.QtCore import QEasingCurve, QMimeData, QPropertyAnimation, Qt, QTimer, pyqtSignal
+from PyQt6.QtCore import QEasingCurve, QMimeData, QPoint, QPropertyAnimation, QRect, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QCursor, QDrag, QImage, QMouseEvent, QPixmap
 from PyQt6.QtWidgets import QApplication, QFrame, QHBoxLayout, QLabel, QSizePolicy, QWidget
 
@@ -28,7 +28,7 @@ from core.utils.win32.window_actions import (
     set_foreground,
     show_window,
 )
-from core.validation.widgets.yasb.taskbar import VALIDATION_SCHEMA
+from core.validation.widgets.yasb.taskbar import TaskbarConfig
 from core.widgets.base import BaseWidget
 from settings import DEBUG
 
@@ -66,8 +66,26 @@ class DraggableAppButton(QFrame):
     def enterEvent(self, event):
         try:
             if self._taskbar._preview_enabled and not self._dragging:
-                self._preview_timer.start()
-
+                # Check if there's already a preview showing for this hwnd
+                if (
+                    self._taskbar._thumbnail_mgr
+                    and self._taskbar._thumbnail_mgr._preview_popup
+                    and self._taskbar._thumbnail_mgr._preview_popup.isVisible()
+                    and hasattr(self._taskbar._thumbnail_mgr._preview_popup, "_src_hwnd")
+                    and self._taskbar._thumbnail_mgr._preview_popup._src_hwnd == self._hwnd
+                ):
+                    # Preview already exists for this hwnd, just stop any hide timer and keep it visible
+                    preview = self._taskbar._thumbnail_mgr._preview_popup
+                    if hasattr(preview, "_hide_timer") and preview._hide_timer:
+                        try:
+                            preview._hide_timer.stop()
+                        except RuntimeError:
+                            pass
+                    # Don't start a new timer - keep existing preview
+                    return
+                else:
+                    # No preview for this hwnd, start normal timer
+                    self._preview_timer.start()
         except Exception:
             pass
         try:
@@ -79,11 +97,29 @@ class DraggableAppButton(QFrame):
         try:
             self._preview_timer.stop()
             if self._taskbar._preview_enabled:
-                self._taskbar.hide_preview()
+                # Use a longer delay to allow mouse to move to preview
+                QTimer.singleShot(200, self._check_hide_preview)
         except Exception:
             pass
         try:
             super().leaveEvent(event)
+        except Exception:
+            pass
+
+    def _check_hide_preview(self):
+        """Check if mouse moved to preview window before hiding."""
+        try:
+            if self._taskbar._thumbnail_mgr and self._taskbar._thumbnail_mgr._preview_popup:
+                preview = self._taskbar._thumbnail_mgr._preview_popup
+                if preview.isVisible():
+                    # Check full geometric bounds, not just masked area
+                    cursor_pos = QCursor.pos()
+                    preview_rect = QRect(preview.mapToGlobal(QPoint(0, 0)), preview.size())
+                    if preview_rect.contains(cursor_pos):
+                        # Mouse is within preview bounds (including thumbnail area), don't hide
+                        return
+            # Mouse is not over preview, safe to hide
+            self._taskbar.hide_preview()
         except Exception:
             pass
 
@@ -422,54 +458,36 @@ class TaskbarDropWidget(QFrame):
 
 
 class TaskbarWidget(BaseWidget):
-    validation_schema = VALIDATION_SCHEMA
+    validation_schema = TaskbarConfig
 
-    def __init__(
-        self,
-        icon_size: int,
-        animation: dict[str, str] | bool,
-        title_label: dict[str, str],
-        monitor_exclusive: bool,
-        strict_filtering: bool,
-        show_only_visible: bool,
-        tooltip: bool,
-        ignore_apps: dict[str, list[str]],
-        hide_empty: bool,
-        container_padding: dict,
-        callbacks: dict[str, str],
-        label_shadow: dict = None,
-        container_shadow: dict = None,
-        preview: dict | None = None,
-    ):
+    def __init__(self, config: TaskbarConfig):
         super().__init__(class_name="taskbar-widget")
+        self.config = config
         self._dpi = None
-        self._label_icon_size = icon_size
         self._animation = (
-            {"enabled": animation, "type": "fadeInOut", "duration": 200} if isinstance(animation, bool) else animation
+            {"enabled": config.animation, "type": "fadeInOut", "duration": 200}
+            if isinstance(config.animation, bool)
+            else config.animation.model_dump()
         )
-        self._title_label = title_label
-        self._monitor_exclusive = monitor_exclusive
-        self._strict_filtering = strict_filtering
-        self._show_only_visible = show_only_visible
-        self._ignore_apps = ignore_apps
-        self._hide_empty = hide_empty
-        self._label_shadow = label_shadow
-        self._container_shadow = container_shadow
+        self._strict_filtering = self.config.strict_filtering
+        self._show_only_visible = self.config.show_only_visible
+        self._ignore_apps = self.config.ignore_apps.model_dump()
+
         self._widget_monitor_handle = None
         self._context_menu_open = False
 
-        self._preview_enabled = preview["enabled"]
-        self._preview_width = preview["width"]
-        self._preview_delay = preview["delay"]
-        self._preview_padding = preview["padding"]
-        self._preview_margin = preview["margin"]
+        self._preview_enabled = self.config.preview.enabled
+        self._preview_width = self.config.preview.width
+        self._preview_delay = self.config.preview.delay
+        self._preview_padding = self.config.preview.padding
+        self._preview_margin = self.config.preview.margin
 
-        self._tooltip = tooltip if not self._preview_enabled else False
-        self._tooltip_enabled = tooltip  # Store original tooltip setting for pinned apps
+        self._tooltip = self.config.tooltip if not self._preview_enabled else False
+        self._tooltip_enabled = self.config.tooltip  # Store original tooltip setting for pinned apps
 
-        self._ignore_apps["classes"] = list(set(self._ignore_apps.get("classes", [])))
-        self._ignore_apps["processes"] = list(set(self._ignore_apps.get("processes", [])))
-        self._ignore_apps["titles"] = list(set(self._ignore_apps.get("titles", [])))
+        self.config.ignore_apps.classes = list(set(self.config.ignore_apps.classes))
+        self.config.ignore_apps.processes = list(set(self.config.ignore_apps.processes))
+        self.config.ignore_apps.titles = list(set(self.config.ignore_apps.titles))
 
         self._icon_cache = {}
         self._hwnd_to_widget = {}
@@ -487,7 +505,7 @@ class TaskbarWidget(BaseWidget):
         self._widget_container.setContentsMargins(0, 0, 0, 0)
         self._widget_container_layout = self._widget_container.main_layout
         self._widget_container.setProperty("class", "widget-container")
-        add_shadow(self._widget_container, self._container_shadow)
+        add_shadow(self._widget_container, self.config.container_shadow.model_dump())
         self.widget_layout.addWidget(self._widget_container)
 
         self._widget_container.drag_started.connect(lambda: self._set_dragging(True))
@@ -497,9 +515,9 @@ class TaskbarWidget(BaseWidget):
         self.register_callback("close_app", self._on_close_app)
         self.register_callback("context_menu", self._on_context_menu)
 
-        self.callback_left = callbacks["on_left"]
-        self.callback_right = callbacks["on_right"]
-        self.callback_middle = callbacks["on_middle"]
+        self.callback_left = self.config.callbacks.on_left
+        self.callback_right = self.config.callbacks.on_right
+        self.callback_middle = self.config.callbacks.on_middle
 
         if QApplication.instance():
             QApplication.instance().aboutToQuit.connect(self._stop_events)
@@ -771,18 +789,18 @@ class TaskbarWidget(BaseWidget):
         content_wrapper = QFrame()
 
         # Apply shadow effect to content wrapper
-        add_shadow(content_wrapper, self._label_shadow)
+        add_shadow(content_wrapper, self.config.label_shadow.model_dump())
 
         content_layout = QHBoxLayout(content_wrapper)
         content_layout.setContentsMargins(0, 0, 0, 0)
         content_layout.setSpacing(0)
 
         # Only create icon label if icon_size > 0
-        if self._label_icon_size > 0:
+        if self.config.icon_size > 0:
             icon_label = QLabel()
             icon_label.setProperty("class", "app-icon")
             try:
-                icon_label.setFixedSize(self._label_icon_size, self._label_icon_size)
+                icon_label.setFixedSize(self.config.icon_size, self.config.icon_size)
             except Exception:
                 pass
             if icon is not None:
@@ -808,7 +826,7 @@ class TaskbarWidget(BaseWidget):
 
         # Normal apps use PinManager cache
         dpi = self.screen().devicePixelRatio() if self.screen() else 1.0
-        return self._pin_manager.load_cached_icon(unique_id, self._label_icon_size, dpi)
+        return self._pin_manager.load_cached_icon(unique_id, self.config.icon_size, dpi)
 
     def _on_recycle_bin_update(self, info: dict) -> None:
         """Update pinned Recycle Bin icons when bin state changes."""
@@ -837,7 +855,7 @@ class TaskbarWidget(BaseWidget):
 
     def _get_recycle_bin_icon(self, is_empty: bool) -> QPixmap | None:
         """Get Recycle Bin icon from Windows stock icons with caching."""
-        if self._label_icon_size <= 0:
+        if self.config.icon_size <= 0:
             return None
         try:
             # Use a special cache key for Recycle Bin: ("RECYCLE_BIN", is_empty, dpi)
@@ -853,7 +871,7 @@ class TaskbarWidget(BaseWidget):
                 return None
 
             dpi = self._dpi
-            target_size = int(self._label_icon_size * dpi)
+            target_size = int(self.config.icon_size * dpi)
             icon_img = icon_img.resize((target_size, target_size), Image.LANCZOS).convert("RGBA")
 
             # Convert to QPixmap
@@ -942,7 +960,7 @@ class TaskbarWidget(BaseWidget):
             pass
 
         try:
-            if not self._hwnd_to_widget and not self._pin_manager.pinned_apps and self._hide_empty:
+            if not self._hwnd_to_widget and not self._pin_manager.pinned_apps and self.config.hide_empty:
                 QTimer.singleShot(0, self._hide_taskbar_widget)
         except Exception:
             pass
@@ -1047,7 +1065,7 @@ class TaskbarWidget(BaseWidget):
                                 self._widget_container_layout.insertWidget(insert_pos, container)
 
                             # Show taskbar if it was hidden and hide_empty is enabled
-                            if self._hide_empty and len(self._hwnd_to_widget) > 0:
+                            if self.config.hide_empty and len(self._hwnd_to_widget) > 0:
                                 self._show_taskbar_widget()
 
             elif action == "unpin":
@@ -1072,7 +1090,7 @@ class TaskbarWidget(BaseWidget):
                         self._update_pinned_status(hwnd, is_pinned=False)
 
                 # Check if taskbar should be hidden after unpinning
-                if self._hide_empty and len(self._hwnd_to_widget) < 1 and not self._pending_pinned_recreations:
+                if self.config.hide_empty and len(self._hwnd_to_widget) < 1 and not self._pending_pinned_recreations:
                     self._hide_taskbar_widget()
 
             elif action == "reorder":
@@ -1163,7 +1181,7 @@ class TaskbarWidget(BaseWidget):
     def _on_window_monitor_changed(self, hwnd, window_data):
         """Handle window monitor changed signal from task manager"""
         # For monitor exclusive mode, check if window should be shown/hidden
-        if self._monitor_exclusive:
+        if self.config.monitor_exclusive:
             if self._should_show_window(hwnd, window_data):
                 # Window moved to our monitor - add if not already present
                 if hwnd not in self._window_buttons:
@@ -1202,7 +1220,7 @@ class TaskbarWidget(BaseWidget):
         if proc is None:
             return False
 
-        if self._monitor_exclusive:
+        if self.config.monitor_exclusive:
             window_monitor = window_data.get("monitor_handle")
             # If monitor is unknown (transient), keep existing items but do not add new ones
             if window_monitor is None:
@@ -1322,7 +1340,7 @@ class TaskbarWidget(BaseWidget):
         else:
             self._widget_container_layout.insertWidget(position, container)
 
-        if self._hide_empty and len(self._hwnd_to_widget) > 0:
+        if self.config.hide_empty and len(self._hwnd_to_widget) > 0:
             self._show_taskbar_widget()
 
     def _remove_window_ui(self, hwnd, window_data, *, immediate: bool = False):
@@ -1388,7 +1406,7 @@ class TaskbarWidget(BaseWidget):
                     )
 
         # Only hide taskbar if no widgets left AND no pending pinned recreations (from any previous events)
-        if self._hide_empty and len(self._hwnd_to_widget) < 1 and not self._pending_pinned_recreations:
+        if self.config.hide_empty and len(self._hwnd_to_widget) < 1 and not self._pending_pinned_recreations:
             self._hide_taskbar_widget()
 
     def _update_window_ui(self, hwnd, window_data):
@@ -1443,14 +1461,14 @@ class TaskbarWidget(BaseWidget):
                 icon_label.setPixmap(icon)
 
         try:
-            if self._title_label["enabled"]:
+            if self.config.title_label.enabled:
                 title_wrapper = self._get_title_wrapper(widget)
                 title_label = self._get_title_label(title_wrapper)
                 if title_label:
                     formatted_title = self._format_title(title)
                     if title_label.text() != formatted_title:
                         title_label.setText(formatted_title)
-                if self._title_label["show"] == "focused" and title_wrapper:
+                if self.config.title_label.show == "focused" and title_wrapper:
                     if not self._context_menu_open:
                         desired_visible = self._get_title_visibility(hwnd)
                         if desired_visible != title_wrapper.isVisible():
@@ -1480,7 +1498,7 @@ class TaskbarWidget(BaseWidget):
             set_tooltip(widget, title, delay=0)
 
     def _refresh_title_visibility(self, hwnd: int) -> None:
-        if not (self._title_label.get("enabled") and self._title_label.get("show") == "focused"):
+        if not (self.config.title_label.enabled and self.config.title_label.show == "focused"):
             return
         container = self._hwnd_to_widget.get(hwnd)
         if not container:
@@ -1613,7 +1631,7 @@ class TaskbarWidget(BaseWidget):
 
         def _handle_hide():
             self._context_menu_open = False
-            if self._title_label.get("enabled") and self._title_label.get("show") == "focused":
+            if self.config.title_label.enabled and self.config.title_label.show == "focused":
                 for taskbar_hwnd in list(self._hwnd_to_widget.keys()):
                     if taskbar_hwnd > 0:
                         self._refresh_title_visibility(taskbar_hwnd)
@@ -1645,7 +1663,7 @@ class TaskbarWidget(BaseWidget):
                         pass
 
                 # Check if taskbar should be hidden after unpinning
-                if self._hide_empty and len(self._hwnd_to_widget) < 1 and not self._pending_pinned_recreations:
+                if self.config.hide_empty and len(self._hwnd_to_widget) < 1 and not self._pending_pinned_recreations:
                     self._hide_taskbar_widget()
 
         except Exception as e:
@@ -1683,12 +1701,12 @@ class TaskbarWidget(BaseWidget):
 
     def _format_title(self, title: str) -> str:
         """Format a window title according to max and min length settings."""
-        if len(title) > self._title_label["max_length"]:
-            formatted_title = title[: self._title_label["max_length"]] + ".."
+        if len(title) > self.config.title_label.max_length:
+            formatted_title = title[: self.config.title_label.max_length] + ".."
         else:
             formatted_title = title
 
-        min_length = self._title_label.get("min_length", 0)
+        min_length = self.config.title_label.min_length
         if len(formatted_title) < min_length:
             formatted_title = formatted_title.ljust(min_length)
 
@@ -1711,18 +1729,18 @@ class TaskbarWidget(BaseWidget):
         content_wrapper = QFrame()
 
         # Apply shadow effect to content wrapper
-        add_shadow(content_wrapper, self._label_shadow)
+        add_shadow(content_wrapper, self.config.label_shadow.model_dump())
 
         content_layout = QHBoxLayout(content_wrapper)
         content_layout.setContentsMargins(0, 0, 0, 0)
         content_layout.setSpacing(0)
 
         # Only create icon label if icon_size > 0
-        if self._label_icon_size > 0:
+        if self.config.icon_size > 0:
             icon_label = QLabel()
             icon_label.setProperty("class", "app-icon")
             try:
-                icon_label.setFixedSize(self._label_icon_size, self._label_icon_size)
+                icon_label.setFixedSize(self.config.icon_size, self.config.icon_size)
             except Exception:
                 pass
             if icon is not None:
@@ -1730,7 +1748,7 @@ class TaskbarWidget(BaseWidget):
             icon_label.setProperty("hwnd", hwnd)
             content_layout.addWidget(icon_label)
 
-        if self._title_label["enabled"]:
+        if self.config.title_label.enabled:
             # Wrap the label to animate only wrapper width and reduce reflow
             title_wrapper = QFrame()
             title_wrapper.setProperty("hwnd", hwnd)
@@ -1753,7 +1771,7 @@ class TaskbarWidget(BaseWidget):
             tw_layout.addWidget(title_label)
             content_layout.addWidget(title_wrapper)
 
-            if self._title_label["show"] == "focused":
+            if self.config.title_label.show == "focused":
                 initial_visible = self._get_title_visibility(hwnd)
                 title_wrapper.setVisible(initial_visible)
                 if not initial_visible:
@@ -1815,7 +1833,7 @@ class TaskbarWidget(BaseWidget):
 
     def _get_app_icon(self, hwnd: int, title: str) -> QPixmap | None:
         """Return a QPixmap for the given window handle, using a DPI-aware cache."""
-        if self._label_icon_size <= 0:
+        if self.config.icon_size <= 0:
             return None
         try:
             # Check if this is a Recycle Bin window - use monitored state instead of window icon
@@ -1830,10 +1848,9 @@ class TaskbarWidget(BaseWidget):
                 icon_img = self._icon_cache[cache_key]
             else:
                 icon_img = get_window_icon(hwnd)
-                if icon_img:
-                    icon_img = icon_img.resize(
-                        (int(self._label_icon_size * self._dpi), int(self._label_icon_size * self._dpi)), Image.LANCZOS
-                    ).convert("RGBA")
+                if icon_img and self._dpi is not None:
+                    pixel_size = int(self.config.icon_size * self._dpi)
+                    icon_img = icon_img.resize((pixel_size, pixel_size), Image.LANCZOS).convert("RGBA")
                     self._icon_cache[cache_key] = icon_img
 
             if not icon_img:
@@ -2015,7 +2032,7 @@ class TaskbarWidget(BaseWidget):
 
                 if w.property("class") != new_cls:
                     w.setProperty("class", new_cls)
-                    if self._title_label.get("enabled") and self._title_label.get("show") == "focused":
+                    if self.config.title_label.enabled and self.config.title_label.show == "focused":
                         title_wrapper = self._get_title_wrapper(w)
                         if title_wrapper:
                             want_visible = target_hwnd is not None and hwnd == target_hwnd
@@ -2067,7 +2084,7 @@ class TaskbarWidget(BaseWidget):
                 # Title wrapper index depends on whether icon exists
                 # If icon_size > 0: icon at index 0, title_wrapper at index 1
                 # If icon_size <= 0: title_wrapper at index 0
-                title_idx = 1 if self._label_icon_size > 0 else 0
+                title_idx = 1 if self.config.icon_size > 0 else 0
                 if content_layout.count() > title_idx:
                     title_wrapper = content_layout.itemAt(title_idx).widget()
                     if isinstance(title_wrapper, QWidget):
@@ -2111,7 +2128,7 @@ class TaskbarWidget(BaseWidget):
 
                 # Check if we should hide taskbar after animation completes
                 # Don't hide if there are pending pinned recreations scheduled
-                if self._hide_empty and len(self._hwnd_to_widget) < 1 and not self._pending_pinned_recreations:
+                if self.config.hide_empty and len(self._hwnd_to_widget) < 1 and not self._pending_pinned_recreations:
                     self._hide_taskbar_widget()
             else:
                 # Clear width constraint so future content changes (e.g., focused title)

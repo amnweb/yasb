@@ -2,7 +2,7 @@ import re
 from datetime import datetime
 
 from PyQt6.QtCore import QRect, Qt, QTimer
-from PyQt6.QtGui import QWheelEvent
+from PyQt6.QtGui import QShowEvent, QWheelEvent
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QSlider, QVBoxLayout
 
 from core.utils.tooltip import CustomToolTip, set_tooltip
@@ -10,81 +10,46 @@ from core.utils.utilities import PopupWidget, add_shadow, build_progress_widget,
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.widgets.brightness.service import BrightnessService
 from core.utils.win32.bindings.user32 import MONITOR_DEFAULTTONEAREST, user32
-from core.validation.widgets.yasb.brightness import VALIDATION_SCHEMA
+from core.validation.widgets.yasb.brightness import BrightnessConfig
 from core.widgets.base import BaseWidget
 
 
 class BrightnessWidget(BaseWidget):
-    validation_schema = VALIDATION_SCHEMA
+    validation_schema = BrightnessConfig
 
-    def __init__(
-        self,
-        label: str,
-        label_alt: str,
-        tooltip: bool,
-        scroll_step: int,
-        brightness_icons: list[str],
-        brightness_toggle_level: list[int],
-        brightness_menu: dict[str, str],
-        hide_unsupported: bool,  # deprecated: widget always hides when unsupported
-        auto_light: bool,
-        auto_light_icon: str,
-        auto_light_night_level: int,
-        auto_light_night_start_time: str,
-        auto_light_night_end_time: str,
-        auto_light_day_level: int,
-        container_padding: dict[str, int],
-        animation: dict[str, str],
-        callbacks: dict[str, str],
-        label_shadow: dict = None,
-        container_shadow: dict = None,
-        progress_bar: dict = None,
-    ):
+    def __init__(self, config: BrightnessConfig):
         super().__init__(class_name="brightness-widget")
+        self.config = config
         self._show_alt_label = False
-        self._label_content = label
-        self._label_alt_content = label_alt
-        self._tooltip = tooltip
-        self._padding = container_padding
-        self._brightness_icons = brightness_icons
-        self._brightness_toggle_level = brightness_toggle_level
-        self._brightness_menu = brightness_menu
-        self._auto_light = auto_light
-        self._auto_light_icon = auto_light_icon
-        self._auto_light_night_level = auto_light_night_level
-        self._auto_light_night_start = datetime.strptime(auto_light_night_start_time, "%H:%M").time()
-        self._auto_light_night_end = datetime.strptime(auto_light_night_end_time, "%H:%M").time()
-        self._auto_light_day_level = auto_light_day_level
-        self._step = scroll_step
-        self._current_mode = None
-        self._animation = animation
-        self._label_shadow = label_shadow
-        self._container_shadow = container_shadow
-        self._progress_bar = progress_bar
+        self._widgets: list[QLabel] = []
+        self._widgets_alt: list[QLabel] = []
 
         # Current state
         self._hmonitor = None
         self.current_brightness = None
+        self._auto_light_timer: QTimer | None = None
+        self._initialized = False
+        self._auto_light_started = False
+        self._slider_tooltip = None
+        self._current_mode = None
 
         # Get brightness service singleton
         self._service = BrightnessService.instance()
         self._service.brightness_changed.connect(self._on_brightness_changed)
 
         # Build UI
-        self.progress_widget = build_progress_widget(self, self._progress_bar)
+        self.progress_widget = build_progress_widget(self, self.config.progress_bar.model_dump())
 
         self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(
-            self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
-        )
+        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
         self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
-        add_shadow(self._widget_container, self._container_shadow)
+        add_shadow(self._widget_container, self.config.container_shadow.model_dump())
         self.widget_layout.addWidget(self._widget_container)
 
-        build_widget_label(self, self._label_content, self._label_alt_content, self._label_shadow)
+        build_widget_label(self, self.config.label, self.config.label_alt, self.config.label_shadow.model_dump())
 
         # Register callbacks
         self.register_callback("toggle_label", self._toggle_label)
@@ -92,9 +57,9 @@ class BrightnessWidget(BaseWidget):
         self.register_callback("toggle_level_prev", self._toggle_level_prev)
         self.register_callback("toggle_brightness_menu", self._toggle_brightness_menu)
 
-        self.callback_left = callbacks["on_left"]
-        self.callback_right = callbacks["on_right"]
-        self.callback_middle = callbacks["on_middle"]
+        self.callback_left = config.callbacks.on_left
+        self.callback_right = config.callbacks.on_right
+        self.callback_middle = config.callbacks.on_middle
 
         self._hmonitor = None
         self._initialized = False
@@ -109,9 +74,9 @@ class BrightnessWidget(BaseWidget):
         except Exception:
             return None
 
-    def showEvent(self, event):
+    def showEvent(self, a0: QShowEvent | None):
         """Handle widget show event detect monitor and check support."""
-        super().showEvent(event)
+        super().showEvent(a0)
         if not self._initialized:
             self._initialized = True
             self._hmonitor = self._get_hmonitor()
@@ -129,7 +94,7 @@ class BrightnessWidget(BaseWidget):
         """Handle brightness change from service (thread-safe via signal)."""
         if hmonitor == self._hmonitor:
             # Start auto light timer once on first successful brightness read
-            if brightness is not None and not self._auto_light_started and self._auto_light:
+            if brightness is not None and not self._auto_light_started and self.config.auto_light:
                 self._auto_light_started = True
                 self._auto_light_timer = QTimer()
                 self._auto_light_timer.timeout.connect(self._check_auto_light)
@@ -157,8 +122,8 @@ class BrightnessWidget(BaseWidget):
             self._update_label()
 
     def _toggle_label(self):
-        if self._animation["enabled"]:
-            AnimationManager.animate(self, self._animation["type"], self._animation["duration"])
+        if self.config.animation.enabled:
+            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
         self._show_alt_label = not self._show_alt_label
         for widget in self._widgets:
             widget.setVisible(not self._show_alt_label)
@@ -168,29 +133,29 @@ class BrightnessWidget(BaseWidget):
 
     def _toggle_level_next(self):
         current = self.get_brightness()
-        if current is None or not self._brightness_toggle_level:
+        if current is None or not self.config.brightness_toggle_level:
             return
-        levels = self._brightness_toggle_level
+        levels = self.config.brightness_toggle_level
         next_levels = [level for level in levels if level > current]
         self.set_brightness(next_levels[0] if next_levels else levels[0])
 
     def _toggle_level_prev(self):
         current = self.get_brightness()
-        if current is None or not self._brightness_toggle_level:
+        if current is None or not self.config.brightness_toggle_level:
             return
-        levels = self._brightness_toggle_level
+        levels = self.config.brightness_toggle_level
         prev_levels = [level for level in levels if level < current]
         self.set_brightness(prev_levels[-1] if prev_levels else levels[-1])
 
     def _toggle_brightness_menu(self):
-        if self._animation["enabled"]:
-            AnimationManager.animate(self, self._animation["type"], self._animation["duration"])
+        if self.config.animation.enabled:
+            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
         self._show_brightness_menu()
 
     def _update_label(self):
         """Update the widget label with current brightness."""
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
-        active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
+        active_label_content = self.config.label_alt if self._show_alt_label else self.config.label
         label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
         label_parts = [part for part in label_parts if part]
         widget_index = 0
@@ -205,15 +170,15 @@ class BrightnessWidget(BaseWidget):
             self.show()
 
         icon = self._get_brightness_icon(percent)
-        if self._tooltip:
+        if self.config.tooltip:
             set_tooltip(self, f"Brightness {percent}%")
 
         label_options = {"{icon}": icon, "{percent}": percent}
 
         # Update progress bar
-        if self._progress_bar["enabled"] and self.progress_widget:
+        if self.config.progress_bar.enabled and self.progress_widget:
             if self._widget_container_layout.indexOf(self.progress_widget) == -1:
-                pos = 0 if self._progress_bar["position"] == "left" else self._widget_container_layout.count()
+                pos = 0 if self.config.progress_bar.position == "left" else self._widget_container_layout.count()
                 self._widget_container_layout.insertWidget(pos, self.progress_widget)
             self.progress_widget.set_value(percent)
 
@@ -224,30 +189,29 @@ class BrightnessWidget(BaseWidget):
                 formatted_text = part
                 for option, value in label_options.items():
                     formatted_text = formatted_text.replace(option, str(value))
-                if isinstance(active_widgets[widget_index], QLabel):
-                    active_widgets[widget_index].setText(formatted_text)
+                active_widgets[widget_index].setText(formatted_text)
                 widget_index += 1
 
     def _get_brightness_icon(self, brightness: int) -> str:
         """Get icon based on brightness level."""
-        if self._auto_light:
-            return self._auto_light_icon
+        if self.config.auto_light:
+            return self.config.auto_light_icon
         if brightness <= 25:
-            return self._brightness_icons[0]
+            return self.config.brightness_icons[0]
         elif brightness <= 50:
-            return self._brightness_icons[1]
+            return self.config.brightness_icons[1]
         elif brightness <= 75:
-            return self._brightness_icons[2]
-        return self._brightness_icons[3]
+            return self.config.brightness_icons[2]
+        return self.config.brightness_icons[3]
 
     def _show_brightness_menu(self):
         """Show brightness slider popup."""
         self.dialog = PopupWidget(
             self,
-            self._brightness_menu["blur"],
-            self._brightness_menu["round_corners"],
-            self._brightness_menu["round_corners_type"],
-            self._brightness_menu["border_color"],
+            self.config.brightness_menu.blur,
+            self.config.brightness_menu.round_corners,
+            self.config.brightness_menu.round_corners_type,
+            self.config.brightness_menu.border_color,
         )
         self.dialog.setProperty("class", "brightness-menu")
 
@@ -271,10 +235,10 @@ class BrightnessWidget(BaseWidget):
         self.dialog.setLayout(layout)
         self.dialog.adjustSize()
         self.dialog.setPosition(
-            alignment=self._brightness_menu["alignment"],
-            direction=self._brightness_menu["direction"],
-            offset_left=self._brightness_menu["offset_left"],
-            offset_top=self._brightness_menu["offset_top"],
+            alignment=self.config.brightness_menu.alignment,
+            direction=self.config.brightness_menu.direction,
+            offset_left=self.config.brightness_menu.offset_left,
+            offset_top=self.config.brightness_menu.offset_top,
         )
         self.dialog.show()
 
@@ -293,7 +257,7 @@ class BrightnessWidget(BaseWidget):
 
     def _show_slider_tooltip(self, value: int):
         """Show tooltip above slider handle during drag."""
-        if not self._tooltip or not self.brightness_slider.isSliderDown():
+        if not self.config.tooltip or not self.brightness_slider.isSliderDown():
             return
 
         # Calculate handle position
@@ -317,28 +281,33 @@ class BrightnessWidget(BaseWidget):
     def _check_auto_light(self):
         """Check and apply auto light settings."""
         current_time = datetime.now().time()
+        start = self.config.auto_light_night_start_time
+        end = self.config.auto_light_night_end_time
 
         # Handle midnight crossing
-        if self._auto_light_night_start <= self._auto_light_night_end:
-            is_night = self._auto_light_night_start <= current_time <= self._auto_light_night_end
+        if start <= end:
+            is_night = start <= current_time <= end
         else:
-            is_night = current_time >= self._auto_light_night_start or current_time <= self._auto_light_night_end
+            is_night = current_time >= start or current_time <= end
 
         new_mode = "night" if is_night else "day"
         if new_mode != self._current_mode:
             self._current_mode = new_mode
-            level = self._auto_light_night_level if is_night else self._auto_light_day_level
+            level = self.config.auto_light_night_level if is_night else self.config.auto_light_day_level
             self.set_brightness(level)
 
-    def wheelEvent(self, event: QWheelEvent):
+    def wheelEvent(self, a0: QWheelEvent | None):
         """Handle mouse wheel for brightness adjustment."""
+        if a0 is None:
+            return
+
         current = self.get_brightness()
         if current is None:
             return
 
-        if event.angleDelta().y() > 0:
-            new_value = min(current + self._step, 100)
+        if a0.angleDelta().y() > 0:
+            new_value = min(current + self.config.scroll_step, 100)
         else:
-            new_value = max(current - self._step, 0)
+            new_value = max(current - self.config.scroll_step, 0)
 
         self.set_brightness(new_value)

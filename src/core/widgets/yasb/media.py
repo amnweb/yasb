@@ -39,7 +39,7 @@ from core.utils.win32.aumid import (
     GetApplicationUserModelId,
     OpenProcess,
 )
-from core.validation.widgets.yasb.media import VALIDATION_SCHEMA
+from core.validation.widgets.yasb.media import MediaWidgetConfig
 from core.widgets.base import BaseWidget
 
 logger = logging.getLogger("MediaWidget")
@@ -64,65 +64,15 @@ class ProgressBarAlignment(StrEnum):
 
 
 class MediaWidget(BaseWidget):
-    validation_schema = VALIDATION_SCHEMA
+    validation_schema = MediaWidgetConfig
 
     _popup_play_button = None
     _popup_next_label = None
     _popup_prev_label = None
 
-    def __init__(
-        self,
-        label: str,
-        label_alt: str,
-        separator: str,
-        class_name: str,
-        hide_empty: bool,
-        callbacks: dict[str, str],
-        max_field_size: dict[str, int],
-        show_thumbnail: bool,
-        controls_only: bool,
-        controls_left: bool,
-        controls_hide: bool,
-        thumbnail_alpha: int,
-        thumbnail_padding: int,
-        thumbnail_corner_radius: int,
-        thumbnail_edge_fade: bool,
-        symmetric_corner_radius: bool,
-        icons: dict[str, str],
-        animation: dict[str, Any],
-        container_padding: dict[str, int],
-        media_menu: dict[str, Any],
-        media_menu_icons: dict[str, str],
-        scrolling_label: dict[str, Any],
-        progress_bar: dict[str, Any],
-        label_shadow: dict[str, Any],
-        container_shadow: dict[str, Any],
-    ):
-        super().__init__(class_name=f"media-widget {class_name}")
-        self._label_content = label
-        self._label_alt_content = label_alt
-        self._separator = separator
-
-        self._max_field_size = max_field_size
-        self._show_thumbnail = show_thumbnail
-        self._thumbnail_alpha = thumbnail_alpha
-        self._media_button_icons = icons
-        self._controls_only = controls_only
-        self._controls_left = controls_left
-        self._controls_hide = controls_hide
-        self._thumbnail_padding = thumbnail_padding
-        self._thumbnail_corner_radius = thumbnail_corner_radius
-        self._thumbnail_edge_fade = thumbnail_edge_fade
-        self._symmetric_corner_radius = symmetric_corner_radius
-        self._hide_empty = hide_empty
-        self._padding = container_padding
-        self._menu_config = media_menu
-        self._menu_config_icons = media_menu_icons
-        self._label_shadow = label_shadow
-        self._container_shadow = container_shadow
-        self._scrolling_label = scrolling_label
-        self._progress_bar_config = progress_bar
-        self.animation = animation
+    def __init__(self, config: MediaWidgetConfig):
+        super().__init__(class_name=f"media-widget {config.class_name}")
+        self.config = config
 
         # Construct container
         self._widget_container_layout = QHBoxLayout()
@@ -132,10 +82,10 @@ class MediaWidget(BaseWidget):
         self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
-        add_shadow(self._widget_container, self._container_shadow)
+        add_shadow(self._widget_container, self.config.container_shadow.model_dump())
         # Add the container to the main widget layout
         self.widget_layout.addWidget(self._widget_container)
-        if self._hide_empty:
+        if self.config.hide_empty:
             self.hide()
 
         # Get media manager
@@ -146,40 +96,40 @@ class MediaWidget(BaseWidget):
         self.thumbnail_stack.setContentsMargins(0, 0, 0, 0)
         self.thumbnail_stack.setSpacing(0)
 
-        if self._controls_left:
+        if self.config.controls_left:
             self._prev_label, self._play_label, self._next_label = self._create_media_buttons()
-            if not controls_only:
+            if not self.config.controls_only:
                 self._widget_container_layout.addLayout(self.thumbnail_stack)
         else:
-            if not controls_only:
+            if not self.config.controls_only:
                 self._widget_container_layout.addLayout(self.thumbnail_stack)
             self._prev_label, self._play_label, self._next_label = self._create_media_buttons()
 
         # Label
-        if self._scrolling_label["enabled"]:
+        if self.config.scrolling_label.enabled:
             self._label = ScrollingLabel(
                 self,
-                max_width=self._max_field_size["label"],
-                options=self._scrolling_label,
+                max_width=self.config.max_field_size.label,
+                options=self.config.scrolling_label.model_dump(),
             )
         else:
             self._label = QLabel(self)
         self._label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._label.setCursor(Qt.CursorShape.PointingHandCursor)
-        add_shadow(self._label, self._label_shadow)
+        add_shadow(self._label, self.config.label_shadow.model_dump())
 
         # Label Alt
-        if self._scrolling_label["enabled"]:
+        if self.config.scrolling_label.enabled:
             self._label_alt = ScrollingLabel(
                 self,
-                max_width=self._max_field_size["label_alt"],
-                options=self._scrolling_label,
+                max_width=self.config.max_field_size.label_alt,
+                options=self.config.scrolling_label.model_dump(),
             )
         else:
             self._label_alt = QLabel(self)
         self._label_alt.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._label.setCursor(Qt.CursorShape.PointingHandCursor)
-        add_shadow(self._label_alt, self._label_shadow)
+        add_shadow(self._label_alt, self.config.label_shadow.model_dump())
 
         self._thumbnail_label = QLabel(self)
         self._thumbnail_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -193,7 +143,7 @@ class MediaWidget(BaseWidget):
         progress_bar_container.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
 
         progress_bar_layout = QHBoxLayout(progress_bar_container)
-        progress_bar_layout.setAlignment(ProgressBarAlignment(self._progress_bar_config["alignment"]).to_qt())
+        progress_bar_layout.setAlignment(ProgressBarAlignment(self.config.progress_bar.alignment).to_qt())
         progress_bar_layout.setContentsMargins(0, 0, 0, 0)
         progress_bar_layout.setSpacing(0)
 
@@ -211,14 +161,14 @@ class MediaWidget(BaseWidget):
         self.thumbnail_stack.addWidget(self._label_alt, 0, 0)
         self.thumbnail_stack.addWidget(self._label, 0, 0)
 
-        if self._controls_only:
+        if self.config.controls_only:
             # Initial hide labels and thumbnail
             self._label.hide()
             self._label_alt.hide()
             self._thumbnail_label.hide()
             progress_bar_container.hide()
 
-        if not self._progress_bar_config["enabled"]:
+        if not self.config.progress_bar.enabled:
             progress_bar_container.hide()
 
         # Set configure signals and register them as callbacks
@@ -228,12 +178,12 @@ class MediaWidget(BaseWidget):
         self.media.timeline_info_changed.connect(self._on_timeline_properties_changed)
         self.media.playback_info_changed.connect(self._on_playback_info_changed)
 
-        self.callback_left = callbacks["on_left"]
-        self.callback_right = callbacks["on_right"]
-        self.callback_middle = callbacks["on_middle"]
+        self.callback_left = self.config.callbacks.on_left
+        self.callback_right = self.config.callbacks.on_right
+        self.callback_middle = self.config.callbacks.on_middle
 
         self.register_callback("toggle_media_menu", self._toggle_media_menu)
-        if not self._controls_only:
+        if not self.config.controls_only:
             self.register_callback("toggle_play_pause", self._toggle_play_pause)
             self.register_callback("toggle_label", self._toggle_label)
             self._label.show()
@@ -265,17 +215,17 @@ class MediaWidget(BaseWidget):
             self._on_playback_info_changed()
 
     def _toggle_media_menu(self):
-        if self.animation["enabled"]:
-            AnimationManager.animate(self, self.animation["type"], self.animation["duration"])
+        if self.config.animation.enabled:
+            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
         self.show_menu()
 
     def show_menu(self):
         self.dialog = PopupWidget(
             self,
-            self._menu_config["blur"],
-            self._menu_config["round_corners"],
-            self._menu_config["round_corners_type"],
-            self._menu_config["border_color"],
+            self.config.media_menu.blur,
+            self.config.media_menu.round_corners,
+            self.config.media_menu.round_corners_type,
+            self.config.media_menu.border_color,
         )
 
         self.dialog.setProperty("class", "media-menu")
@@ -295,7 +245,7 @@ class MediaWidget(BaseWidget):
             self._popup_thumbnail_label.setProperty("class", "thumbnail")
             self._popup_thumbnail_label.setContentsMargins(0, 0, 0, 0)
             self._popup_thumbnail_label.setFixedSize(
-                self._menu_config["thumbnail_size"], self._menu_config["thumbnail_size"]
+                self.config.media_menu.thumbnail_size, self.config.media_menu.thumbnail_size
             )
             try:
                 # Use thumbnail if available, otherwise create a default one
@@ -347,14 +297,16 @@ class MediaWidget(BaseWidget):
                 prev_button = ClickableLabel(self)
                 prev_button.setProperty("class", "btn prev")
                 prev_button.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                prev_button.setText(self._menu_config_icons["prev_track"])
+                prev_button.setText(self.config.media_menu_icons.prev_track)
                 prev_button.data = self.media.prev
                 self._popup_prev_label = prev_button
 
                 play_button = ClickableLabel(self)
                 play_button.setProperty("class", "btn play")
                 play_button.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                play_icon = self._menu_config_icons["pause" if self._is_playing else "play"]
+                play_icon = (
+                    self.config.media_menu_icons.pause if self._is_playing else self.config.media_menu_icons.play
+                )
                 play_button.setText(play_icon)
                 play_button.data = self.media.play_pause
                 self._popup_play_button = play_button
@@ -362,7 +314,7 @@ class MediaWidget(BaseWidget):
                 next_button = ClickableLabel(self)
                 next_button.setProperty("class", "btn next")
                 next_button.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                next_button.setText(self._menu_config_icons["next_track"])
+                next_button.setText(self.config.media_menu_icons.next_track)
                 next_button.data = self.media.next
                 self._popup_next_label = next_button
 
@@ -373,7 +325,7 @@ class MediaWidget(BaseWidget):
                 control_layout.addStretch(1)
 
                 source_name, source_class_name = self._get_source_app_name()
-                if source_name is not None and self._menu_config["show_source"]:
+                if source_name is not None and self.config.media_menu.show_source:
                     self._popup_source_label = QLabel(source_name)
                     self._popup_source_label.setContentsMargins(0, 0, 0, 0)
                     self._popup_source_label.setProperty("class", f"source {source_class_name}")
@@ -387,7 +339,7 @@ class MediaWidget(BaseWidget):
                 content_layout.addLayout(text_layout)
 
                 # Per-app vertical volume slider
-                if self._menu_config["show_volume_slider"]:
+                if self.config.media_menu.show_volume_slider:
                     try:
                         self._vol_container = QFrame()
                         self._vol_container.setProperty("class", "app-volume-container")
@@ -506,10 +458,10 @@ class MediaWidget(BaseWidget):
 
         self.dialog.adjustSize()
         self.dialog.setPosition(
-            alignment=self._menu_config["alignment"],
-            direction=self._menu_config["direction"],
-            offset_left=self._menu_config["offset_left"],
-            offset_top=self._menu_config["offset_top"],
+            alignment=self.config.media_menu.alignment,
+            direction=self.config.media_menu.direction,
+            offset_left=self.config.media_menu.offset_left,
+            offset_top=self.config.media_menu.offset_top,
         )
         self._update_popup_menu_buttons()
         self.dialog.show()
@@ -518,7 +470,7 @@ class MediaWidget(BaseWidget):
         self._wheel_filter = WheelEventFilter(self)
         self.dialog.installEventFilter(self._wheel_filter)
 
-        if self._menu_config["show_volume_slider"]:
+        if self.config.media_menu.show_volume_slider:
             self._updateapp_volume_slider()
             self._update_app_mute_button()
 
@@ -539,7 +491,7 @@ class MediaWidget(BaseWidget):
     def _update_popup_menu_buttons(self):
         try:
             is_playing = self._is_playing
-            play_icon = self._menu_config_icons["pause" if is_playing else "play"]
+            play_icon = self.config.media_menu_icons.pause if is_playing else self.config.media_menu_icons.play
 
             # Get control states directly from playback info, not from main UI buttons
             if self.current_session is not None and (pb_info := self.current_session.playback_info) is not None:
@@ -588,8 +540,8 @@ class MediaWidget(BaseWidget):
             return f"{minutes:01d}:{seconds:02d}"
 
     def _toggle_label(self):
-        if self.animation["enabled"]:
-            AnimationManager.animate(self, self.animation["type"], self.animation["duration"])
+        if self.config.animation.enabled:
+            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
         self._show_alt_label = not self._show_alt_label
 
         if self._show_alt_label:
@@ -602,8 +554,8 @@ class MediaWidget(BaseWidget):
         self.media.force_update()
 
     def _toggle_play_pause(self):
-        if self.animation["enabled"]:
-            AnimationManager.animate(self, self.animation["type"], self.animation["duration"])
+        if self.config.animation.enabled:
+            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
         _ = self.media.play_pause()
 
     def _on_timeline_properties_changed(self):
@@ -684,7 +636,7 @@ class MediaWidget(BaseWidget):
             self.show()
 
             # If we do not only have controls, make sure the label is shown
-            if not self._controls_only:
+            if not self.config.controls_only:
                 active_label.show()
 
         else:
@@ -692,9 +644,9 @@ class MediaWidget(BaseWidget):
             self._thumbnail_label.hide()
             active_label.hide()
             active_label.setText("")
-            if not self._controls_hide:
+            if not self.config.controls_hide:
                 if self._play_label is not None:
-                    self._play_label.setText(self._media_button_icons["play"])
+                    self._play_label.setText(self.config.icons.play)
                     self._play_label.setProperty("class", "btn play disabled")
                     refresh_widget_style(self._play_label)
 
@@ -707,7 +659,7 @@ class MediaWidget(BaseWidget):
                     refresh_widget_style(self._next_label)
 
             # If we want to hide the widget when no music is playing, hide it!
-            if self._hide_empty:
+            if self.config.hide_empty:
                 self.hide()
 
     def _on_playback_info_changed(self):
@@ -721,8 +673,8 @@ class MediaWidget(BaseWidget):
         is_next_enabled = playback_info.controls.is_next_enabled
         self._is_playing = is_playing
 
-        if not self._controls_hide:
-            play_icon = self._media_button_icons["pause" if is_playing else "play"]
+        if not self.config.controls_hide:
+            play_icon = self.config.icons.pause if is_playing else self.config.icons.play
             # We need to clear any inline styles: setStyleSheet("")
             # Related to https://github.com/amnweb/yasb/issues/481
             if self._play_label is not None:
@@ -753,7 +705,9 @@ class MediaWidget(BaseWidget):
         # Update popup if it's currently open
         try:
             if hasattr(self, "dialog") and self.dialog.isVisible():
-                play_icon_popup = self._menu_config_icons["pause" if is_playing else "play"]
+                play_icon_popup = (
+                    self.config.media_menu_icons.pause if is_playing else self.config.media_menu_icons.play
+                )
                 if self._popup_play_button is not None:
                     self._popup_play_button.setText(play_icon_popup)
                     self._popup_play_button.setProperty(
@@ -826,10 +780,10 @@ class MediaWidget(BaseWidget):
             logger.error(f"Error updating popup content: {e}")
 
         active_label = self._label_alt if self._show_alt_label else self._label
-        active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
+        active_label_content = self.config.label_alt if self._show_alt_label else self.config.label
 
         # If we only have controls, stop update here
-        if self._controls_only:
+        if self.config.controls_only:
             return
 
         # Process label content
@@ -839,7 +793,7 @@ class MediaWidget(BaseWidget):
                     ("title", self.current_session.title),
                     ("artist", self.current_session.artist),
                 )
-                formatted_info: dict[str, str] = {"s": self._separator}
+                formatted_info: dict[str, str] = {"s": self.config.separator}
                 for k, v in items:
                     formatted_info[k] = self._format_max_field_size(v)
 
@@ -850,7 +804,7 @@ class MediaWidget(BaseWidget):
                 formatted_label = cleaned_content.format_map(formatted_info)
 
                 # Finally, truncate the label if necessary
-                if self._max_field_size.get("truncate_whole_label"):
+                if self.config.max_field_size.truncate_whole_label:
                     formatted_label = self._format_max_field_size(formatted_label)
             except Exception as e:
                 logger.error(f"Error formatting label: {e}", exc_info=True)
@@ -861,7 +815,7 @@ class MediaWidget(BaseWidget):
             active_label.setText(formatted_label)
 
         # If we don't want the thumbnail, stop here
-        if not self._show_thumbnail:
+        if not self.config.show_thumbnail:
             return
 
         # If no media in session, hide thumbnail and stop here
@@ -884,8 +838,8 @@ class MediaWidget(BaseWidget):
     def _create_empty_thumbnail(self):
         """Create a default thumbnail with an eighth note icon."""
         try:
-            size = self._menu_config["thumbnail_size"]
-            corner_radius = self._menu_config["thumbnail_corner_radius"]
+            size = self.config.media_menu.thumbnail_size
+            corner_radius = self.config.media_menu.thumbnail_corner_radius
             # Create base image with dark background
             large_size = size * 2  # Create at higher resolution for better quality
             large_img = Image.new("RGBA", (large_size, large_size), (0, 0, 0, 255))
@@ -958,9 +912,9 @@ class MediaWidget(BaseWidget):
     def _create_thumbnail_for_popup(self, img: Image.Image):
         """Process image thumbnail into a square with rounded corners for popup display."""
         try:
-            square_size = self._menu_config["thumbnail_size"]
+            square_size = self.config.media_menu.thumbnail_size
             # Increase corner radius for more visible rounded corners (25% instead of 15%)
-            corner_radius = self._menu_config["thumbnail_corner_radius"]
+            corner_radius = self.config.media_menu.thumbnail_corner_radius
 
             # Calculate aspect ratio
             aspect = img.width / img.height
@@ -1017,8 +971,8 @@ class MediaWidget(BaseWidget):
         # Calculate dimensions while respecting container padding
         available_width = active_label_width
 
-        if not self._scrolling_label["enabled"]:
-            available_width = available_width + self._thumbnail_padding
+        if not self.config.scrolling_label.enabled:
+            available_width = available_width + self.config.thumbnail_padding
         # Preserve aspect ratio during resize
         aspect_ratio = thumbnail.width / thumbnail.height
         new_height = int(available_width / aspect_ratio)
@@ -1037,13 +991,13 @@ class MediaWidget(BaseWidget):
             thumbnail = thumbnail.convert("RGBA")
 
         # Create base alpha channel filled with the thumbnail alpha value
-        base_alpha = Image.new("L", thumbnail.size, color=self._thumbnail_alpha)
+        base_alpha = Image.new("L", thumbnail.size, color=self.config.thumbnail_alpha)
 
         # Apply effects based on priorities
-        if self._thumbnail_edge_fade:
+        if self.config.thumbnail_edge_fade:
             # If edge fade is enabled, use it without corner radius
             base_alpha = self._apply_edge_fade(base_alpha)
-        elif self._thumbnail_corner_radius > 0:
+        elif self.config.thumbnail_corner_radius > 0:
             # Only apply corner radius if edge fade is disabled
             base_alpha = self._create_corner_mask(thumbnail.size, base_alpha)
 
@@ -1054,14 +1008,14 @@ class MediaWidget(BaseWidget):
     def _create_corner_mask(self, image_size: tuple[int, int], base_mask: Image.Image) -> Image.Image:
         """Create a rounded corner mask compatible with the base alpha mask."""
         # Determine which corners to round
-        corners = (False, True, True, False) if self._controls_left else (True, False, False, True)
-        if self._symmetric_corner_radius:
+        corners = (False, True, True, False) if self.config.controls_left else (True, False, False, True)
+        if self.config.symmetric_corner_radius:
             corners = (True, True, True, True)
 
         # Use a higher resolution for better antialiasing
         scale_factor = 2
         hr_size = (image_size[0] * scale_factor, image_size[1] * scale_factor)
-        hr_radius = self._thumbnail_corner_radius * scale_factor
+        hr_radius = self.config.thumbnail_corner_radius * scale_factor
 
         # Create the high-resolution mask
         corner_mask = Image.new("L", hr_size, color=0)
@@ -1072,7 +1026,7 @@ class MediaWidget(BaseWidget):
             painter.rounded_rectangle(
                 (0, 0, hr_size[0] - 1, hr_size[1] - 1),
                 hr_radius,
-                self._thumbnail_alpha,
+                self.config.thumbnail_alpha,
                 None,
                 0,
                 corners=corners,
@@ -1111,14 +1065,16 @@ class MediaWidget(BaseWidget):
 
     def _format_max_field_size(self, text: str, field_type: FieldTypes = "default"):
         if field_type == "popup_title":
-            max_size = self._menu_config["max_title_size"]
+            max_size = self.config.media_menu.max_title_size
         elif field_type == "popup_artist":
-            max_size = self._menu_config["max_artist_size"]
+            max_size = self.config.media_menu.max_artist_size
         else:
             # If we are using scrolling labels, return the original text without formatting
-            if self._scrolling_label["enabled"]:
+            if self.config.scrolling_label.enabled:
                 return text
-            max_size = self._max_field_size["label_alt" if self._show_alt_label else "label"]
+            max_size = (
+                self.config.max_field_size.label_alt if self._show_alt_label else self.config.max_field_size.label
+            )
 
         if len(text) > max_size:
             return text[: max_size - 3] + "..."
@@ -1126,7 +1082,7 @@ class MediaWidget(BaseWidget):
             return text
 
     def _create_media_button(self, icon: str, action: Callable[..., Any]):
-        if not self._controls_hide:
+        if not self.config.controls_hide:
             label = ClickableLabel(self)
             label.setProperty("class", "btn disabled")
             label.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -1137,9 +1093,9 @@ class MediaWidget(BaseWidget):
 
     def _create_media_buttons(self):
         return (
-            self._create_media_button(self._media_button_icons["prev_track"], self.media.prev),
-            self._create_media_button(self._media_button_icons["play"], self.media.play_pause),
-            self._create_media_button(self._media_button_icons["next_track"], self.media.next),
+            self._create_media_button(self.config.icons.prev_track, self.media.prev),
+            self._create_media_button(self.config.icons.play, self.media.play_pause),
+            self._create_media_button(self.config.icons.next_track, self.media.next),
         )
 
     def execute_code(self, func: Callable[..., Any]):
@@ -1389,7 +1345,7 @@ class MediaWidget(BaseWidget):
             self._app_is_muted = is_muted
 
             icon_key = "unmute" if is_muted else "mute"
-            self._app_mute_button.setText(self._menu_config_icons[icon_key])
+            self._app_mute_button.setText(getattr(self.config.media_menu_icons, icon_key))
             self._app_mute_button.setProperty("class", f"{icon_key}-button")
             self._app_mute_button.setEnabled(True)
             refresh_widget_style(self._app_mute_button)
@@ -1411,9 +1367,9 @@ class ClickableLabel(QLabel):
         if ev.button() == Qt.MouseButton.LeftButton and self.data:
             if self.parent_widget is None:
                 return
-            if self.parent_widget.animation["enabled"]:
+            if self.parent_widget.config.animation.enabled:
                 AnimationManager.animate(
-                    self, self.parent_widget.animation["type"], self.parent_widget.animation["duration"]
+                    self, self.parent_widget.config.animation.type, self.parent_widget.config.animation.duration
                 )
             self.parent_widget.execute_code(self.data)
 

@@ -40,6 +40,18 @@ from ctypes.wintypes import (
 WNDPROC = WINFUNCTYPE(LPARAM, HWND, UINT, WPARAM, LPARAM)
 
 
+class KBDLLHOOKSTRUCT(ct.Structure):
+    """Windows KBDLLHOOKSTRUCT for low-level keyboard hook."""
+
+    _fields_ = [
+        ("vkCode", DWORD),
+        ("scanCode", DWORD),
+        ("flags", DWORD),
+        ("time", DWORD),
+        ("dwExtraInfo", ct.POINTER(ULONG)),
+    ]
+
+
 class SYSTEM_INFO(ct.Structure):
     """Windows SYSTEM_INFO structure for processor information."""
 

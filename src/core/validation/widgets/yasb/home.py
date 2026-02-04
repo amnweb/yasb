@@ -1,125 +1,58 @@
-DEFAULTS = {
-    "label": "\ue71a",
-    "container_padding": {"top": 0, "left": 0, "bottom": 0, "right": 0},
-    "power_menu": True,
-    "system_menu": True,
-    "blur": False,
-    "round_corners": True,
-    "round_corners_type": "normal",
-    "border_color": "System",
-    "alignment": "left",
-    "direction": "down",
-    "distance": 6,  # deprecated
-    "offset_top": 6,
-    "offset_left": 0,
-    "menu_labels": {
-        "shutdown": "Shutdown",
-        "restart": "Restart",
-        "hibernate": "Hibernate",
-        "logout": "Logout",
-        "lock": "Lock",
-        "sleep": "Sleep",
-        "system": "System Settings",
-        "about": "About This PC",
-        "task_manager": "Task Manager",
-    },
-    "animation": {"enabled": True, "type": "fadeInOut", "duration": 200},
-    "callbacks": {"on_left": "toggle_menu"},
-}
+from core.validation.widgets.base_model import (
+    AnimationConfig,
+    CallbacksConfig,
+    CustomBaseModel,
+    KeybindingConfig,
+    PaddingConfig,
+    ShadowConfig,
+)
 
-VALIDATION_SCHEMA = {
-    "label": {"type": "string", "default": DEFAULTS["label"]},
-    "menu_list": {
-        "required": False,
-        "type": "list",
-        "schema": {
-            "type": "dict",
-            "schema": {
-                "title": {"type": "string"},
-                "path": {"type": "string", "required": False},
-                "uri": {"type": "string", "required": False},
-                "command": {"type": "string", "required": False},
-                "separator": {"type": "boolean", "required": False},
-                "args": {"type": "list", "required": False, "schema": {"type": "string"}},
-                "shell": {"type": "boolean", "required": False},
-                "show_window": {"type": "boolean", "required": False},
-            },
-        },
-    },
-    "container_padding": {
-        "type": "dict",
-        "required": False,
-        "schema": {
-            "top": {"type": "integer", "default": DEFAULTS["container_padding"]["top"]},
-            "left": {"type": "integer", "default": DEFAULTS["container_padding"]["left"]},
-            "bottom": {"type": "integer", "default": DEFAULTS["container_padding"]["bottom"]},
-            "right": {"type": "integer", "default": DEFAULTS["container_padding"]["right"]},
-        },
-        "default": DEFAULTS["container_padding"],
-    },
-    "power_menu": {"type": "boolean", "default": DEFAULTS["power_menu"], "required": False},
-    "system_menu": {"type": "boolean", "default": DEFAULTS["system_menu"], "required": False},
-    "blur": {"type": "boolean", "default": DEFAULTS["blur"], "required": False},
-    "round_corners": {"type": "boolean", "default": DEFAULTS["round_corners"], "required": False},
-    "round_corners_type": {"type": "string", "default": DEFAULTS["round_corners_type"], "required": False},
-    "border_color": {"type": "string", "default": DEFAULTS["border_color"], "required": False},
-    "alignment": {"type": "string", "default": DEFAULTS["alignment"], "required": False},
-    "direction": {"type": "string", "default": DEFAULTS["direction"], "required": False},
-    "distance": {"type": "integer", "default": DEFAULTS["distance"], "required": False},
-    "offset_top": {"type": "integer", "default": DEFAULTS["offset_top"], "required": False},
-    "offset_left": {"type": "integer", "default": DEFAULTS["offset_left"], "required": False},
-    "menu_labels": {
-        "type": "dict",
-        "required": False,
-        "schema": {
-            "shutdown": {"type": "string", "default": DEFAULTS["menu_labels"]["shutdown"]},
-            "restart": {"type": "string", "default": DEFAULTS["menu_labels"]["restart"]},
-            "hibernate": {"type": "string", "default": DEFAULTS["menu_labels"]["hibernate"]},
-            "logout": {"type": "string", "default": DEFAULTS["menu_labels"]["logout"]},
-            "lock": {"type": "string", "default": DEFAULTS["menu_labels"]["lock"]},
-            "sleep": {"type": "string", "default": DEFAULTS["menu_labels"]["sleep"]},
-            "system": {"type": "string", "default": DEFAULTS["menu_labels"]["system"]},
-            "about": {"type": "string", "default": DEFAULTS["menu_labels"]["about"]},
-            "task_manager": {"type": "string", "default": DEFAULTS["menu_labels"]["task_manager"]},
-        },
-        "default": DEFAULTS["menu_labels"],
-    },
-    "animation": {
-        "type": "dict",
-        "required": False,
-        "schema": {
-            "enabled": {"type": "boolean", "default": DEFAULTS["animation"]["enabled"]},
-            "type": {"type": "string", "default": DEFAULTS["animation"]["type"]},
-            "duration": {"type": "integer", "default": DEFAULTS["animation"]["duration"]},
-        },
-        "default": DEFAULTS["animation"],
-    },
-    "label_shadow": {
-        "type": "dict",
-        "required": False,
-        "schema": {
-            "enabled": {"type": "boolean", "default": False},
-            "color": {"type": "string", "default": "black"},
-            "offset": {"type": "list", "default": [1, 1]},
-            "radius": {"type": "integer", "default": 3},
-        },
-        "default": {"enabled": False, "color": "black", "offset": [1, 1], "radius": 3},
-    },
-    "container_shadow": {
-        "type": "dict",
-        "required": False,
-        "schema": {
-            "enabled": {"type": "boolean", "default": False},
-            "color": {"type": "string", "default": "black"},
-            "offset": {"type": "list", "default": [1, 1]},
-            "radius": {"type": "integer", "default": 3},
-        },
-        "default": {"enabled": False, "color": "black", "offset": [1, 1], "radius": 3},
-    },
-    "callbacks": {
-        "required": False,
-        "type": "dict",
-        "schema": {"on_left": {"type": "string", "default": DEFAULTS["callbacks"]["on_left"]}},
-        "default": DEFAULTS["callbacks"],
-    },
-}
+
+class MenuItemConfig(CustomBaseModel):
+    title: str | None = None
+    path: str | None = None
+    uri: str | None = None
+    command: str | None = None
+    separator: bool | None = None
+    args: list[str] | None = None
+    shell: bool | None = None
+    show_window: bool | None = None
+
+
+class MenuLabelsConfig(CustomBaseModel):
+    shutdown: str = "Shutdown"
+    restart: str = "Restart"
+    hibernate: str = "Hibernate"
+    logout: str = "Logout"
+    lock: str = "Lock"
+    sleep: str = "Sleep"
+    system: str = "System Settings"
+    about: str = "About This PC"
+    task_manager: str = "Task Manager"
+
+
+class CallbacksHomeConfig(CallbacksConfig):
+    on_left: str = "toggle_menu"
+
+
+class HomeConfig(CustomBaseModel):
+    label: str = "\ue71a"
+    menu_list: list[MenuItemConfig] | None = None
+    container_padding: PaddingConfig = PaddingConfig()
+    power_menu: bool = True
+    system_menu: bool = True
+    blur: bool = False
+    round_corners: bool = True
+    round_corners_type: str = "normal"
+    border_color: str = "System"
+    alignment: str = "left"
+    direction: str = "down"
+    distance: int = 6
+    offset_top: int = 6
+    offset_left: int = 0
+    menu_labels: MenuLabelsConfig = MenuLabelsConfig()
+    animation: AnimationConfig = AnimationConfig()
+    label_shadow: ShadowConfig = ShadowConfig()
+    container_shadow: ShadowConfig = ShadowConfig()
+    keybindings: list[KeybindingConfig] = []
+    callbacks: CallbacksHomeConfig = CallbacksHomeConfig()

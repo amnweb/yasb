@@ -16,68 +16,40 @@ from core.utils.utilities import (
 )
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.widgets.microphone.service import AudioInputService
-from core.validation.widgets.yasb.microphone import VALIDATION_SCHEMA
+from core.validation.widgets.yasb.microphone import MicrophoneConfig
 from core.widgets.base import BaseWidget
 
 
 class MicrophoneWidget(BaseWidget):
-    validation_schema = VALIDATION_SCHEMA
+    validation_schema = MicrophoneConfig
 
-    def __init__(
-        self,
-        label: str,
-        label_alt: str,
-        class_name: str,
-        mute_text: str,
-        tooltip: bool,
-        scroll_step: int,
-        icons: dict[str, str],
-        mic_menu: dict[str, str],
-        animation: dict[str, str],
-        container_padding: dict[str, int],
-        callbacks: dict[str, str],
-        label_shadow: dict = None,
-        container_shadow: dict = None,
-        progress_bar: dict = None,
-    ):
-        super().__init__(class_name=f"microphone-widget {class_name}")
+    def __init__(self, config: MicrophoneConfig):
+        super().__init__(class_name=f"microphone-widget {config.class_name}")
+        self.config = config
         self.audio_endpoint = None
         self._show_alt_label = False
-        self._label_content = label
-        self._label_alt_content = label_alt
-        self._mute_text = mute_text
-        self._tooltip = tooltip
-        self._scroll_step = int(scroll_step) / 100
-        self._icons = icons
-        self._mic_menu = mic_menu
-        self._padding = container_padding
-        self._animation = animation
-        self._label_shadow = label_shadow
-        self._container_shadow = container_shadow
-        self._progress_bar = progress_bar
+        self._scroll_step = self.config.scroll_step / 100
 
-        self.progress_widget = build_progress_widget(self, self._progress_bar)
+        self.progress_widget = build_progress_widget(self, self.config.progress_bar.model_dump())
 
         self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(
-            self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
-        )
+        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
         self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
-        add_shadow(self._widget_container, self._container_shadow)
+        add_shadow(self._widget_container, self.config.container_shadow.model_dump())
         self.widget_layout.addWidget(self._widget_container)
 
-        build_widget_label(self, self._label_content, self._label_alt_content, self._label_shadow)
+        build_widget_label(self, self.config.label, self.config.label_alt, self.config.label_shadow.model_dump())
 
         self.register_callback("toggle_label", self._toggle_label)
         self.register_callback("toggle_mute", self.toggle_mute)
         self.register_callback("toggle_mic_menu", self.show_menu)
 
-        self.callback_left = callbacks["on_left"]
-        self.callback_right = callbacks["on_right"]
-        self.callback_middle = callbacks["on_middle"]
+        self.callback_left = self.config.callbacks.on_left
+        self.callback_right = self.config.callbacks.on_right
+        self.callback_middle = self.config.callbacks.on_middle
 
         self._service = AudioInputService()
         self._service.register_widget(self)
@@ -105,8 +77,8 @@ class MicrophoneWidget(BaseWidget):
         self._update_label()
 
     def _toggle_label(self):
-        if self._animation["enabled"]:
-            AnimationManager.animate(self, self._animation["type"], self._animation["duration"])
+        if self.config.animation.enabled:
+            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
         self._show_alt_label = not self._show_alt_label
         for widget in self._widgets:
             widget.setVisible(not self._show_alt_label)
@@ -116,7 +88,7 @@ class MicrophoneWidget(BaseWidget):
 
     def _update_label(self):
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
-        active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
+        active_label_content = self.config.label_alt if self._show_alt_label else self.config.label
         label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
         label_parts = [part for part in label_parts if part]
         widget_index = 0
@@ -131,17 +103,17 @@ class MicrophoneWidget(BaseWidget):
                 mute_status = self.audio_endpoint.GetMute()
                 mic_level = round(self.audio_endpoint.GetMasterVolumeLevelScalar() * 100)
                 min_icon = self._get_mic_icon()
-                min_level = self._mute_text if mute_status == 1 else f"{mic_level}%"
+                min_level = self.config.mute_text if mute_status == 1 else f"{mic_level}%"
             except Exception as e:
                 logging.error(f"Failed to get microphone info: {e}")
                 return
 
         label_options = {"{icon}": min_icon, "{level}": min_level}
 
-        if self._progress_bar["enabled"] and self.progress_widget:
+        if self.config.progress_bar.enabled and self.progress_widget:
             if self._widget_container_layout.indexOf(self.progress_widget) == -1:
                 self._widget_container_layout.insertWidget(
-                    0 if self._progress_bar["position"] == "left" else self._widget_container_layout.count(),
+                    0 if self.config.progress_bar.position == "left" else self._widget_container_layout.count(),
                     self.progress_widget,
                 )
             numeric_value = int(re.search(r"\d+", min_level).group()) if re.search(r"\d+", min_level) else 0
@@ -210,7 +182,7 @@ class MicrophoneWidget(BaseWidget):
 
     def _show_slider_tooltip(self, slider, value):
         """Show tooltip above slider handle during drag."""
-        if not self._tooltip or not slider.isSliderDown():
+        if not self.config.tooltip or not slider.isSliderDown():
             return
 
         # Calculate handle position
@@ -236,25 +208,25 @@ class MicrophoneWidget(BaseWidget):
     def _get_mic_icon(self):
         """Get appropriate microphone icon based on mute status."""
         if self.audio_endpoint is None:
-            if self._tooltip:
+            if self.config.tooltip:
                 set_tooltip(self, "No microphone device connected")
-            return self._icons["muted"]
+            return self.config.icons.muted
 
         current_mute_status = self.audio_endpoint.GetMute()
         current_level = round(self.audio_endpoint.GetMasterVolumeLevelScalar() * 100)
         if current_mute_status == 1:
-            mic_icon = self._icons["muted"]
+            mic_icon = self.config.icons.muted
             tooltip = f"Muted: Volume {current_level}%"
         else:
-            mic_icon = self._icons["normal"]
+            mic_icon = self.config.icons.normal
             tooltip = f"Volume {current_level}%"
-        if self._tooltip:
+        if self.config.tooltip:
             set_tooltip(self, tooltip)
         return mic_icon
 
     def toggle_mute(self):
-        if self._animation["enabled"]:
-            AnimationManager.animate(self, self._animation["type"], self._animation["duration"])
+        if self.config.animation.enabled:
+            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
         if self.audio_endpoint is None:
             return
         try:
@@ -305,10 +277,10 @@ class MicrophoneWidget(BaseWidget):
 
         self.dialog = PopupWidget(
             self,
-            self._mic_menu["blur"],
-            self._mic_menu["round_corners"],
-            self._mic_menu["round_corners_type"],
-            self._mic_menu["border_color"],
+            self.config.mic_menu.blur,
+            self.config.mic_menu.round_corners,
+            self.config.mic_menu.round_corners_type,
+            self.config.mic_menu.border_color,
         )
         self.dialog.setProperty("class", "microphone-menu")
 
@@ -379,10 +351,10 @@ class MicrophoneWidget(BaseWidget):
         self.dialog.setLayout(layout)
         self.dialog.adjustSize()
         self.dialog.setPosition(
-            alignment=self._mic_menu["alignment"],
-            direction=self._mic_menu["direction"],
-            offset_left=self._mic_menu["offset_left"],
-            offset_top=self._mic_menu["offset_top"],
+            alignment=self.config.mic_menu.alignment,
+            direction=self.config.mic_menu.direction,
+            offset_left=self.config.mic_menu.offset_left,
+            offset_top=self.config.mic_menu.offset_top,
         )
         self.dialog.show()
 

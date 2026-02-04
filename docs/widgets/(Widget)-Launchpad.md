@@ -1,6 +1,6 @@
 # Launchpad Widget
 
-The Launchpad widget provides a customizable application launcher grid, similar to macOS Launchpad. It allows you to quickly launch, add, edit, or remove applications from a visually organized popup. Launchpad supports drag-and-drop functionality, search, and context menus for managing your applications. It supports UWP apps, executables, and URLs, making it a versatile tool for accessing your favorite programs.
+The Launchpad widget provides a customizable application launcher grid for quick access to your applications. It allows you to launch, add, edit, or remove applications from a visually organized popup. Launchpad supports drag-and-drop functionality, search, app grouping, and context menus for managing your applications. It supports UWP apps, executables, and URLs, making it a versatile tool for accessing your favorite programs.
 
 ## Options
 
@@ -13,6 +13,7 @@ The Launchpad widget provides a customizable application launcher grid, similar 
 | `window_style`        | dict     | `{enable_blur: true, round_corners: true, round_corners_type: "normal", border_color: "system"}`                | Popup window styling (blur, corners, border, etc).                          |
 | `window_animation`    | dict     | `{fade_in_duration: 400, fade_out_duration: 400}`                | Animation settings for showing/hiding the popup.                            |
 | `animation`           | dict     | `{enabled: true, type: "fadeInOut", duration: 200}`                | Widget animation settings.                                                  |
+| `group_apps`          | bool     | `false`                | Enable grouping to organize apps by category.                               |
 | `callbacks`           | dict     | `{on_left: "toggle_launchpad", on_right: "do_nothing", on_middle: "do_nothing"}` | Mouse event callbacks.      |
 | `label_shadow`        | dict     | `None`                 | Label shadow options.                                                       |
 | `container_shadow`    | dict     | `None`                 | Container shadow options.                                                   |
@@ -31,8 +32,8 @@ launchpad:
     app_icon_size: 48
     window:
       fullscreen: false
-      width: 800
-      height: 600
+      width: 1024
+      height: 768
       overlay_block: true
     window_style:
       enable_blur: true
@@ -40,8 +41,9 @@ launchpad:
       round_corners_type: "normal"
       border_color: "system"
     window_animation:
-      fade_in_duration: 200
-      fade_out_duration: 200
+      fade_in_duration: 120
+      fade_out_duration: 100
+    group_apps: false
     callbacks:
       on_left: "toggle_launchpad"
     app_title_shadow:
@@ -133,17 +135,19 @@ launchpad:
   - **Shift+F10**: Open the context menu for additional actions.
 
 ## Widget Description
-The Launchpad widget is a powerful and user-friendly application launcher designed for quick access to your favorite programs, scripts, files, or web links. Inspired by the macOS Launchpad, it presents your apps in a visually organized grid popup, complete with search, drag-and-drop reordering, and context menu actions. All your launchpad app entries and their icons are safely stored in your configuration directory, making it easy to back up, migrate, or edit your app list manually if needed
+
+The Launchpad widget is a powerful application launcher designed for quick access to your favorite programs, scripts, files, or web links. It presents your apps in a visually organized grid popup, complete with search, drag-and-drop reordering, app grouping, and context menu actions. All your launchpad app entries and their icons are safely stored in your configuration directory, making it easy to back up, migrate, or edit your app list manually if needed.
 
 **Key Features:**
 - **App Grid:** Displays your applications as icons with titles in a grid layout.
 - **Quick Launch:** Click any icon to instantly launch the associated executable, script, or open a URL in your default browser.
-- **Search:** Filter your apps in real-time using the search bar.
-- **Drag & Drop:** Drag and drop shortcut icons or executables into the grid to add them to your launchpad. Reorder apps by dragging them around.
-- **Context Menu:** Right-click any app for options to edit, delete, or change the order of your apps (A-Z, Z-A, recent, oldest).
-- **Add/Edit Apps:** Easily add new apps or edit existing ones, including setting a custom icon and title.
+- **Search:** Filter your apps in real-time using the search bar. Use `group:name` to filter by group.
+- **App Grouping:** Organize apps into groups that appear as group icons. Click groups to browse their contents.
+- **Drag & Drop:** Drag and drop shortcut icons or executables into the grid to add them to your launchpad. Reorder apps by dragging them around. Dropping apps into a group automatically assigns it to that group.
+- **Context Menu:** Right-click any app for options to edit, delete, assign to group, or change the order of your apps (A-Z, Z-A, recent, oldest). Right-click groups to rename them.
+- **Add/Edit Apps:** Easily add new apps or edit existing ones, including setting a custom icon, title, and group.
 - **Customizable Appearance:** Supports custom icon sizes, window blur, rounded corners, shadows, and more via configuration.
-- **Keyboard Navigation:** Navigate the grid and launch apps using arrow keys and Enter.
+- **Keyboard Navigation:** Navigate the grid and launch apps using arrow keys and Enter. Press Backspace to exit groups.
 - **Animations:** Smooth fade-in and fade-out animations for the popup window.
 
 > **Note:**
@@ -223,7 +227,8 @@ If you want to use different styles for the context menu, you can target the `.l
 }
 .launchpad .app-dialog .title-field,
 .launchpad .app-dialog .path-field,
-.launchpad .app-dialog .icon-field {
+.launchpad .app-dialog .icon-field,
+.launchpad .app-dialog .group-field{
     background-color: #181818;
     border: 1px solid #303030;
     border-radius: 4px;
@@ -379,9 +384,69 @@ If you want to use different styles for the context menu, you can target the `.l
     padding: 0;
     margin: 0
 }
+
+/* Group icon styling */
+.launchpad .group-icon {
+    background-color: rgba(102, 10, 10, 0);
+    border-radius: 12px;
+    border: 2px solid rgba(112, 76, 32, 0);
+    padding-top: 10px;
+    margin: 24px 6px 6px 6px;
+    max-width: 110px;
+    min-width: 110px;
+    min-height: 110px;
+    max-height: 110px;
+}
+.launchpad .group-icon:focus {
+    border: 2px solid #89b4fa;
+    background-color: rgba(255, 255, 255, 0.06);
+}
+.launchpad .group-icon:hover {
+    border: 2px solid #89b4fa;
+    background-color: rgba(255, 255, 255, 0.13);
+}
+.launchpad .group-icon .group-icon-container {
+    background-color: rgb(39, 40, 43);
+    border: 1px solid rgb(47, 49, 53);
+    border-radius: 8px;
+}
+.launchpad .group-icon .title {
+    color: #a6adc8;
+    font-family: 'Segoe UI';
+    font-size: 14px;
+    margin-top: 2px;
+    font-weight: 600;
+}
+
+/* Per-group styling
+   Each group gets a class based on its group name:
+   - Lowercase conversion
+   - Spaces replaced with hyphens
+   Examples:
+   - "Browsers" group → .browsers
+   - "My Apps" group → .my-apps
+   - "Work Tools" group → .work-tools
+*/
+.launchpad .group-icon .group-icon-container.browser {
+    background-color: rgb(33, 47, 71);
+    border-color: rgb(34, 57, 94);
+}
+
+/* Back button when inside a group */
+.launchpad .group-back-button {
+    background-color: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 18px;
+    font-family: "Segoe UI";
+    font-weight: 400;
+    text-align: left;
+    padding: 0 32px;
+}
+.launchpad .group-back-button:hover {
+    color: #ffffff;
+}
 ```
-> [!NOTE]
-> Launchpad widget supports toggle visibility using the `toggle-widget launchpad` command in the CLI. More information about the CLI commands can be found in the [CLI documentation](https://github.com/amnweb/yasb/wiki/CLI#toggle-widget-visibility).
 
 ## Preview
 

@@ -42,7 +42,6 @@ from PyQt6.QtWidgets import (
 )
 
 from core.config import HOME_CONFIGURATION_DIR
-from core.event_service import EventService
 from core.utils.utilities import add_shadow, build_widget_label, refresh_widget_style
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.widgets.launchpad.app_loader import AppListLoader, ShortcutResolver
@@ -50,7 +49,7 @@ from core.utils.widgets.launchpad.icon_extractor import IconExtractorUtil, UrlEx
 from core.utils.win32.utilities import apply_qmenu_style, get_foreground_hwnd, set_foreground_hwnd
 from core.utils.win32.win32_accent import Blur
 from core.utils.win32.window_actions import force_foreground_focus
-from core.validation.widgets.yasb.launchpad import VALIDATION_SCHEMA
+from core.validation.widgets.yasb.launchpad import LaunchpadConfig
 from core.widgets.base import BaseWidget
 
 _ICON_CACHE = {}
@@ -132,13 +131,26 @@ class UrlFetchWorker(QThread):
 class AppDialog(QDialog):
     """Dialog for adding or editing an application in the launchpad"""
 
-    def __init__(self, parent=None, app_data=None, icons_dir=None):
+    def __init__(
+        self,
+        parent=None,
+        app_data=None,
+        icons_dir=None,
+        all_groups=None,
+        title=None,
+        message=None,
+        show_only_group=False,
+        default_group=None,
+    ):
         super().__init__(parent)
         self.app_data = app_data or {}
         self.is_edit_mode = app_data is not None
         self.icons_dir = icons_dir
+        self.all_groups = all_groups or []
+        self.show_only_group = show_only_group
+        self.default_group = default_group
 
-        self.setWindowTitle("Edit App" if self.is_edit_mode else "Add New App")
+        self.setWindowTitle(title or ("Edit App" if self.is_edit_mode else "Add New App"))
         self.setMinimumSize(460, 200)
         self.setProperty("class", "app-dialog")
         self.setWindowFlags(
@@ -161,9 +173,14 @@ class AppDialog(QDialog):
 
         self._warning_label = QLabel("")
         self._warning_label.setProperty("class", "warning-message")
-
         self._warning_label.hide()
         content_layout.addWidget(self._warning_label)
+
+        # Optional message label
+        if message:
+            message_label = QLabel(message)
+            message_label.setProperty("class", "message")
+            content_layout.addWidget(message_label)
 
         # Title field
         self.title_edit = QLineEdit()
@@ -174,44 +191,83 @@ class AppDialog(QDialog):
         self.title_edit.returnPressed.connect(self._on_title_edit_return)
         title_edit_palette = self.title_edit.palette()
         self.title_edit.setPalette(title_edit_palette)
-        content_layout.addWidget(self.title_edit)
+        if not show_only_group:
+            content_layout.addWidget(self.title_edit)
 
         # App Path field
-        h1 = QHBoxLayout()
-        self.path_edit = QLineEdit()
-        self.lineedit_context_menu(self.path_edit)
-        self.path_edit.setPlaceholderText("Application executable, command or url...")
-        self.path_edit.setText(self.app_data.get("path", ""))
-        self.path_edit.setProperty("class", "path-field")
-        self.path_edit.returnPressed.connect(self.accept)
-        self.path_edit_palette = self.path_edit.palette()
-        self.path_edit.setPalette(self.path_edit_palette)
-        self.path_edit.editingFinished.connect(self._fetch_url_info)
-        h1.addWidget(self.path_edit)
+        if not show_only_group:
+            h1 = QHBoxLayout()
+            self.path_edit = QLineEdit()
+            self.lineedit_context_menu(self.path_edit)
+            self.path_edit.setPlaceholderText("Application executable, command or url...")
+            self.path_edit.setText(self.app_data.get("path", ""))
+            self.path_edit.setProperty("class", "path-field")
+            self.path_edit.returnPressed.connect(self.accept)
+            self.path_edit_palette = self.path_edit.palette()
+            self.path_edit.setPalette(self.path_edit_palette)
+            self.path_edit.editingFinished.connect(self._fetch_url_info)
+            h1.addWidget(self.path_edit)
 
-        browse_btn = QPushButton("Browse")
-        browse_btn.setProperty("class", "button")
-        browse_btn.clicked.connect(self.browse_path)
-        h1.addWidget(browse_btn)
-        content_layout.addLayout(h1)
+            browse_btn = QPushButton("Browse")
+            browse_btn.setProperty("class", "button")
+            browse_btn.clicked.connect(self.browse_path)
+            h1.addWidget(browse_btn)
+            content_layout.addLayout(h1)
 
         # Icon field
-        h2 = QHBoxLayout()
-        self.icon_edit = QLineEdit()
-        self.lineedit_context_menu(self.icon_edit)
-        self.icon_edit.setPlaceholderText("Icon file path...")
-        self.icon_edit.setText(self.app_data.get("icon", ""))
-        self.icon_edit.setProperty("class", "icon-field")
-        self.icon_edit.returnPressed.connect(self.accept)
-        self.icon_edit_palette = self.icon_edit.palette()
-        self.icon_edit.setPalette(self.icon_edit_palette)
-        h2.addWidget(self.icon_edit)
+        if not show_only_group:
+            h2 = QHBoxLayout()
+            self.icon_edit = QLineEdit()
+            self.lineedit_context_menu(self.icon_edit)
+            self.icon_edit.setPlaceholderText("Icon file path...")
+            self.icon_edit.setText(self.app_data.get("icon", ""))
+            self.icon_edit.setProperty("class", "icon-field")
+            self.icon_edit.returnPressed.connect(self.accept)
+            self.icon_edit_palette = self.icon_edit.palette()
+            self.icon_edit.setPalette(self.icon_edit_palette)
+            h2.addWidget(self.icon_edit)
 
-        browse_icon_btn = QPushButton("Browse Icon")
-        browse_icon_btn.setProperty("class", "button")
-        browse_icon_btn.clicked.connect(self.browse_icon)
-        h2.addWidget(browse_icon_btn)
-        content_layout.addLayout(h2)
+            browse_icon_btn = QPushButton("Browse Icon")
+            browse_icon_btn.setProperty("class", "button")
+            browse_icon_btn.clicked.connect(self.browse_icon)
+            h2.addWidget(browse_icon_btn)
+            content_layout.addLayout(h2)
+
+        # Group field
+        self.group_edit = QLineEdit()
+        self.lineedit_context_menu(self.group_edit)
+        self.group_edit.setPlaceholderText("Group name..." if show_only_group else "Group (optional)...")
+        # Set group from app_data, or use default_group if provided
+        group_value = self.app_data.get("group", "") or self.default_group or ""
+        self.group_edit.setText(group_value)
+        self.group_edit.setProperty("class", "group-field")
+        self.group_edit.returnPressed.connect(self.accept)
+        self.group_edit_palette = self.group_edit.palette()
+        self.group_edit.setPalette(self.group_edit_palette)
+        content_layout.addWidget(self.group_edit)
+
+        # Setup group autocomplete
+        self._group_completer = QCompleter(self.all_groups)
+        self._group_completer.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
+        self._group_completer.setFilterMode(Qt.MatchFlag.MatchContains)
+        self._group_completer.setMaxVisibleItems(5)
+        self.group_edit.setCompleter(self._group_completer)
+        group_popup = self._group_completer.popup()
+        group_popup.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        group_popup.setStyleSheet("""
+            QListView::item {
+                padding: 8px;
+            }
+            QListView::item:selected,
+            QListView::item:focus,
+            QListView::item:selected:focus {
+                background-color: rgba(0, 120, 212, 0.521);
+            }
+            QListView:focus {
+                outline: none;
+                border: none;
+            }
+        """)
 
         layout.addWidget(content_container)
 
@@ -400,6 +456,13 @@ class AppDialog(QDialog):
             self.icon_edit.setText(icon_path)
 
     def get_app_data(self):
+        # If only group field is shown (rename mode)
+        if self.show_only_group:
+            group = self.group_edit.text().strip()
+            return {
+                "group": group if group else None,
+            }
+
         icon_path = self.icon_edit.text().strip()
         original_icon = self.app_data.get("icon", "") if self.is_edit_mode else ""
         icon_changed = icon_path != original_icon
@@ -418,20 +481,34 @@ class AppDialog(QDialog):
                 icon_path = new_icon_path
             except Exception as e:
                 logging.error(f"Failed to copy icon: {e}")
+
         path = self.path_edit.text().strip()
 
         if path.startswith("http://") or path.startswith("https://"):
             entry_type = "url"
         else:
             entry_type = "app"
+
+        group = self.group_edit.text().strip()
         return {
             "title": self.title_edit.text().strip(),
             "path": self.path_edit.text().strip(),
             "icon": icon_path,
             "type": entry_type,
+            "group": group if group else None,
         }
 
     def accept(self):
+        # If only showing group field (rename mode), skip validation
+        if self.show_only_group:
+            group = self.group_edit.text().strip()
+            if not group:
+                self._show_warning("Please enter a group name.")
+                self.group_edit.setFocus()
+                return
+            super().accept()
+            return
+
         title = self.title_edit.text().strip()
         path = self.path_edit.text().strip()
         icon = self.icon_edit.text().strip()
@@ -526,41 +603,25 @@ class TransparentOverlay(QWidget):
 
 
 class LaunchpadWidget(BaseWidget):
-    validation_schema = VALIDATION_SCHEMA
-    handle_widget_cli = pyqtSignal(str, str)
+    validation_schema = LaunchpadConfig
 
-    def __init__(
-        self,
-        label: str,
-        search_placeholder: str,
-        app_icon_size: int,
-        window: Dict[str, Any],
-        window_style: Dict[str, Any],
-        window_animation: Dict[str, int],
-        animation: Dict[str, Any],
-        shortcuts: Dict[str, str],
-        container_padding: Dict[str, int],
-        callbacks: Dict[str, str],
-        label_shadow: Dict = None,
-        container_shadow: Dict = None,
-        app_title_shadow: Dict = None,
-        app_icon_shadow: Dict = None,
-    ):
+    def __init__(self, config: LaunchpadConfig):
         super().__init__(class_name="launchpad-widget")
-
-        self._label = label
-        self._search_placeholder = search_placeholder
-        self._app_icon_size = app_icon_size
-        self._window = window
-        self._window_style = window_style
-        self._window_animation = window_animation
-        self._animation = animation
-        self._shortcuts = shortcuts
-        self._padding = container_padding
-        self._label_shadow = label_shadow
-        self._container_shadow = container_shadow
-        self._app_title_shadow = app_title_shadow
-        self._app_icon_shadow = app_icon_shadow
+        self.config = config
+        self._label = config.label
+        self._search_placeholder = config.search_placeholder
+        self._app_icon_size = config.app_icon_size
+        self._window = config.window.model_dump()
+        self._window_style = config.window_style.model_dump()
+        self._window_animation = config.window_animation.model_dump()
+        self._animation = config.animation.model_dump()
+        self._shortcuts = config.shortcuts.model_dump()
+        self._padding = config.container_padding.model_dump()
+        self._group_apps = config.group_apps
+        self._label_shadow = config.label_shadow.model_dump()
+        self._container_shadow = config.container_shadow.model_dump()
+        self._app_title_shadow = config.app_title_shadow.model_dump()
+        self._app_icon_shadow = config.app_icon_shadow.model_dump()
         self._dpr = 1.0
         # Setup directories and files
         self._launchpad_dir = os.path.join(HOME_CONFIGURATION_DIR, "launchpad")
@@ -585,9 +646,7 @@ class LaunchpadWidget(BaseWidget):
         # Create a container widget for layout
         self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(
-            self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
-        )
+        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
         self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
@@ -597,21 +656,9 @@ class LaunchpadWidget(BaseWidget):
 
         # Register callbacks
         self.register_callback("toggle_launchpad", self._toggle_launchpad)
-        self.callback_left = callbacks["on_left"]
-        self.callback_right = callbacks["on_right"]
-        self.callback_middle = callbacks["on_middle"]
-
-        self._event_service = EventService()
-        self.handle_widget_cli.connect(self._handle_widget_cli)
-        self._event_service.register_event("handle_widget_cli", self.handle_widget_cli)
-
-    def _handle_widget_cli(self, widget: str, screen: str):
-        """Handle widget CLI commands"""
-        if widget == "launchpad":
-            current_screen = self.window().screen() if self.window() else None
-            current_screen_name = current_screen.name() if current_screen else None
-            if not screen or (current_screen_name and screen.lower() == current_screen_name.lower()):
-                self._toggle_launchpad()
+        self.callback_left = self.config.callbacks.on_left
+        self.callback_right = self.config.callbacks.on_right
+        self.callback_middle = self.config.callbacks.on_middle
 
     def _toggle_launchpad(self):
         if self._animation["enabled"]:
@@ -825,8 +872,14 @@ class LaunchpadWidget(BaseWidget):
                 apps.insert(target_index, source_app)
                 self._save_apps(apps)
                 if self._launchpad_popup:
-                    current_search = self._launchpad_popup.search_input.text()
-                    self._populate_grid(current_search)
+                    # If we're in a group, refresh the group view
+                    if hasattr(self, "_current_group"):
+                        updated_apps = self._load_apps()
+                        group_apps_list = [app for app in updated_apps if app.get("group") == self._current_group]
+                        self._open_group(self._current_group, group_apps_list)
+                    else:
+                        current_search = self._launchpad_popup.search_input.text()
+                        self._populate_grid(current_search)
 
         except Exception as e:
             logging.error(f"Failed to reorder apps: {e}")
@@ -862,6 +915,49 @@ class LaunchpadWidget(BaseWidget):
         add_action = QAction("Add New App", menu_parent)
         add_action.triggered.connect(self._add_new_app)
         menu.addAction(add_action)
+
+        if app_data:
+            # Context-aware group menu
+            all_groups = self._get_all_groups()
+            inside_group = hasattr(self, "_current_group")
+
+            if inside_group:
+                # Inside a group view: show "Remove from [GroupName]" + "Move to Group" with other groups
+                menu.addSeparator()
+
+                # Direct "Remove from [GroupName]" action
+                remove_action = QAction(f"Remove from {self._current_group}", menu_parent)
+                remove_action.triggered.connect(lambda: self._set_app_group(app_data, None))
+                menu.addAction(remove_action)
+
+                # "Move to Group" submenu with other groups (exclude current)
+                other_groups = [g for g in all_groups if g != self._current_group]
+                if other_groups:
+                    move_menu = QMenu("Move to Group", menu)
+                    move_menu.setProperty("class", "context-menu")
+                    apply_qmenu_style(move_menu)
+
+                    for group in other_groups:
+                        move_action = QAction(group, menu_parent)
+                        move_action.triggered.connect(lambda checked, c=group, a=app_data: self._set_app_group(a, c))
+                        move_menu.addAction(move_action)
+
+                    menu.addMenu(move_menu)
+            else:
+                # Main view (not inside group): show "Add to Group" with all groups
+                if all_groups:
+                    menu.addSeparator()
+
+                    group_menu = QMenu("Add to Group", menu)
+                    group_menu.setProperty("class", "context-menu")
+                    apply_qmenu_style(group_menu)
+
+                    for group in all_groups:
+                        group_action = QAction(group, menu_parent)
+                        group_action.triggered.connect(lambda checked, c=group, a=app_data: self._set_app_group(a, c))
+                        group_menu.addAction(group_action)
+
+                    menu.addMenu(group_menu)
 
         menu.addSeparator()
 
@@ -1142,11 +1238,22 @@ class LaunchpadWidget(BaseWidget):
                 "icon": app_data[2],
                 "id": int(time.time() * 1000),
             }
+            # If we're in a group, automatically set the group
+            if hasattr(self, "_current_group"):
+                app_dict["group"] = self._current_group
+
             apps = self._load_apps()
             apps.append(app_dict)
             self._save_apps(apps)
             if self._launchpad_popup and refresh_grid:
-                self._populate_grid()
+                # If in group, refresh the group view
+                if hasattr(self, "_current_group"):
+                    # Reload apps to get the fresh list
+                    updated_apps = self._load_apps()
+                    group_apps_list = [app for app in updated_apps if app.get("group") == self._current_group]
+                    self._open_group(self._current_group, group_apps_list)
+                else:
+                    self._populate_grid()
 
     def _popup_drag_enter_event(self, event):
         if event.mimeData().hasUrls():
@@ -1167,7 +1274,16 @@ class LaunchpadWidget(BaseWidget):
             file_paths = [url.toLocalFile() for url in event.mimeData().urls()]
             for file_path in file_paths:
                 self._handle_file_drop(file_path, refresh_grid=False)
-            self._populate_grid()  # Refresh only once after all files are added
+
+            # Refresh only once after all files are added
+            if hasattr(self, "_current_group"):
+                # If in group, refresh the group view
+                updated_apps = self._load_apps()
+                group_apps_list = [app for app in updated_apps if app.get("group") == self._current_group]
+                self._open_group(self._current_group, group_apps_list)
+            else:
+                self._populate_grid()
+
             event.acceptProposedAction()
         else:
             event.ignore()
@@ -1188,8 +1304,20 @@ class LaunchpadWidget(BaseWidget):
         elif event.key() in [Qt.Key.Key_Return, Qt.Key.Key_Enter]:
             focused_icon = next((icon for icon in self._app_icons if icon.hasFocus()), None)
             if focused_icon:
-                self._launch_app(focused_icon.app_data)
+                # Check if it's a group or an app
+                if hasattr(focused_icon, "is_group") and focused_icon.is_group:
+                    self._open_group(focused_icon.group_name, focused_icon.apps_in_group)
+                else:
+                    self._launch_app(focused_icon.app_data)
             event.accept()
+
+        elif event.key() == Qt.Key.Key_Backspace:
+            # If we're in a group, go back to main grid
+            if hasattr(self, "_current_group"):
+                self._close_group()
+                event.accept()
+            else:
+                event.ignore()
 
         elif event.key() == Qt.Key.Key_Tab:
             if self._launchpad_popup.search_input.hasFocus():
@@ -1273,20 +1401,30 @@ class LaunchpadWidget(BaseWidget):
         if not self._launchpad_popup:
             return
         grid_layout = self._launchpad_popup.grid_layout
-        grid_container = self._launchpad_popup.grid_container
         for i in reversed(range(grid_layout.count())):
             child = grid_layout.itemAt(i).widget()
             if child:
                 child.setParent(None)
         self._app_icons.clear()
         self._all_apps = self._load_apps()
+
+        # Filter apps based on search text
         filtered_apps = []
         if search_text:
-            for app_data in self._all_apps:
-                if search_text.lower() in app_data.get("title", "").lower():
-                    filtered_apps.append(app_data)
+            # Support group:name syntax for filtering by group
+            if search_text.startswith("group:"):
+                group_filter = search_text[6:].strip().lower()
+                for app_data in self._all_apps:
+                    app_group = (app_data.get("group") or "").lower()
+                    if group_filter in app_group:
+                        filtered_apps.append(app_data)
+            else:
+                for app_data in self._all_apps:
+                    if search_text.lower() in app_data.get("title", "").lower():
+                        filtered_apps.append(app_data)
         else:
             filtered_apps = self._all_apps
+
         if not filtered_apps:
             no_apps_label = QLabel(
                 f"No applications found<div style='font-size:14pt;margin-top:12px;font-weight:400'>press <b>{self._shortcuts['add_app']}</b> to add new apps</div>"
@@ -1296,6 +1434,17 @@ class LaunchpadWidget(BaseWidget):
             no_apps_label.setStyleSheet("font-size: 24pt;font-family: 'Segoe UI';padding: 40px")
             grid_layout.addWidget(no_apps_label, 0, 0, 1, 1)
             return
+
+        # Create group-style grid or flat grid based on grouping and search
+        if self._group_apps and not search_text and not hasattr(self, "_current_group"):
+            self._populate_grouped_grid(filtered_apps)
+        else:
+            self._populate_flat_grid(filtered_apps)
+
+    def _populate_flat_grid(self, filtered_apps: List[Dict[str, Any]]):
+        """Populate grid without grouping (original behavior)"""
+        grid_layout = self._launchpad_popup.grid_layout
+
         for app_data in filtered_apps:
             app_icon = self._create_app_icon_widget(app_data)
             self._app_icons.append(app_icon)
@@ -1316,8 +1465,7 @@ class LaunchpadWidget(BaseWidget):
             total_height = rows * icon_height
 
             # Set the grid container to the exact height needed
-            grid_container = self._launchpad_popup.grid_container
-            grid_container.setFixedHeight(total_height)
+            self._launchpad_popup.grid_container.setFixedHeight(total_height)
 
         for index, app_icon in enumerate(self._app_icons):
             # Ensure _grid_columns is not 0 before using modulo
@@ -1326,6 +1474,7 @@ class LaunchpadWidget(BaseWidget):
             row = index // self._grid_columns
             col = index % self._grid_columns
             grid_layout.addWidget(app_icon, row, col)
+
         icon_requests = []
         for app_data in filtered_apps:
             icon_path = app_data.get("icon", "")
@@ -1335,6 +1484,273 @@ class LaunchpadWidget(BaseWidget):
                     icon_requests.append((icon_path, self._app_icon_size, self._dpr))
         if icon_requests:
             self._start_background_loading(icon_requests)
+
+    def _populate_grouped_grid(self, filtered_apps: List[Dict[str, Any]]):
+        """Populate grid with icons for group"""
+        grid_layout = self._launchpad_popup.grid_layout
+
+        # Group apps by group field
+        grouped_apps = {}
+        uncategorized_apps = []
+
+        for app_data in filtered_apps:
+            group = app_data.get("group")
+            if group:
+                if group not in grouped_apps:
+                    grouped_apps[group] = []
+                grouped_apps[group].append(app_data)
+            else:
+                uncategorized_apps.append(app_data)
+
+        # Create list of items to display: group + uncategorized apps
+        display_items = []
+
+        for group_name in sorted(grouped_apps.keys()):
+            display_items.append({"type": "group", "group": group_name, "apps": grouped_apps[group_name]})
+
+        # Add uncategorized apps
+        for app_data in uncategorized_apps:
+            display_items.append({"type": "app", "data": app_data})
+
+        # Create widgets for all items
+        for item in display_items:
+            if item["type"] == "group":
+                group_widget = self._create_group_widget(item["group"], item["apps"])
+                self._app_icons.append(group_widget)
+            else:
+                app_icon = self._create_app_icon_widget(item["data"])
+                self._app_icons.append(app_icon)
+
+        if self._app_icons:
+            first_icon = self._app_icons[0]
+            first_icon.setParent(self._launchpad_popup.grid_container)
+            first_icon.updateGeometry()
+
+            self._recalculate_grid_columns()
+
+            if self._grid_columns <= 0:
+                self._grid_columns = 1
+
+            rows = (len(self._app_icons) + self._grid_columns - 1) // self._grid_columns
+            icon_height = self._app_icons[0].height()
+            total_height = rows * icon_height
+            self._launchpad_popup.grid_container.setFixedHeight(total_height)
+
+        for index, widget in enumerate(self._app_icons):
+            if self._grid_columns <= 0:
+                self._grid_columns = 1
+            row = index // self._grid_columns
+            col = index % self._grid_columns
+            grid_layout.addWidget(widget, row, col)
+
+        # Load icons in background for uncategorized apps only
+        icon_requests = []
+        for app_data in uncategorized_apps:
+            icon_path = app_data.get("icon", "")
+            if icon_path and os.path.isfile(icon_path):
+                cache_key = f"{icon_path}_{self._app_icon_size}_{self._dpr}"
+                if cache_key not in _ICON_CACHE:
+                    icon_requests.append((icon_path, self._app_icon_size, self._dpr))
+        if icon_requests:
+            self._start_background_loading(icon_requests)
+
+    def _create_group_widget(self, group_name: str, apps: List[Dict[str, Any]]):
+        group_widget = QFrame()
+        group_widget.setProperty("class", "group-icon")
+        group_widget.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        group_widget.setCursor(Qt.CursorShape.PointingHandCursor)
+        group_widget.is_group = True
+        group_widget.group_name = group_name
+        group_widget.apps_in_group = apps
+
+        # Use same layout structure as regular app icons
+        container_layout = QVBoxLayout(group_widget)
+        container_layout.setContentsMargins(0, 0, 0, 0)
+        container_layout.setSpacing(0)
+        container_layout.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
+
+        icon_container = QFrame()
+
+        group_class = group_name.lower().replace(" ", "-")
+        icon_container.setProperty("class", f"group-icon-container {group_class}")
+        icon_container.setFixedSize(self._app_icon_size, self._app_icon_size)
+
+        mini_layout = QGridLayout(icon_container)
+        margin = 6
+        spacing = 6
+        mini_layout.setContentsMargins(margin, margin, margin, margin)
+        mini_layout.setSpacing(spacing)
+
+        # Available space = container_size - (2 * margin)
+        # For 2x2 grid: 2 icons + 1 spacing = available_space
+        # So: icon_size = (available_space - spacing) / 2
+        available_space = self._app_icon_size - (2 * margin)
+        mini_icon_size = (available_space - spacing) // 2
+        for i, app in enumerate(apps[:4]):
+            if i >= 4:
+                break
+            row = i // 2
+            col = i % 2
+            mini_icon_label = QLabel()
+            mini_icon_label.setFixedSize(mini_icon_size, mini_icon_size)
+            mini_icon_label.setScaledContents(True)
+
+            # Load mini icon
+            icon_path = app.get("icon", "")
+            if icon_path and os.path.isfile(icon_path):
+                try:
+                    pixmap = load_and_scale_icon(icon_path, mini_icon_size, self._dpr)
+                    if not pixmap.isNull():
+                        mini_icon_label.setPixmap(pixmap)
+                except:
+                    pass
+
+            mini_layout.addWidget(mini_icon_label, row, col)
+
+        # Add icon container with same alignment as regular apps
+        container_layout.addWidget(
+            icon_container, stretch=1, alignment=Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter
+        )
+
+        title_label = QLabel(group_name)
+        title_label.setProperty("class", "title")
+        title_label.setWordWrap(True)
+        title_label.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
+        add_shadow(title_label, self._app_title_shadow)
+
+        # Add title with same alignment as regular apps
+        container_layout.addWidget(title_label, stretch=2, alignment=Qt.AlignmentFlag.AlignHCenter)
+
+        def mouseReleaseEvent(event):
+            if event.button() == Qt.MouseButton.LeftButton:
+                self._open_group(group_name, apps)
+
+        group_widget.mouseReleaseEvent = mouseReleaseEvent
+
+        # Add right-click context menu
+        def mousePressEvent(event):
+            if event.button() == Qt.MouseButton.RightButton:
+                self._show_group_context_menu(event.pos(), group_name, group_widget, event)
+
+        group_widget.mousePressEvent = mousePressEvent
+
+        return group_widget
+
+    def _open_group(self, group_name: str, apps: List[Dict[str, Any]]):
+        self._current_group = group_name
+
+        # Hide search input and show back button
+        if self._launchpad_popup.search_input:
+            self._launchpad_popup.search_input.hide()
+
+        # Create back button once if needed
+        if not hasattr(self._launchpad_popup, "back_button"):
+            back_button = QPushButton()
+            back_button.setProperty("class", "group-back-button")
+            back_button.setCursor(Qt.CursorShape.PointingHandCursor)
+            back_button.setFixedHeight(40)
+            back_button.clicked.connect(self._close_group)
+            self._launchpad_popup.search_container.layout().insertWidget(0, back_button)
+            self._launchpad_popup.back_button = back_button
+            back_button.hide()
+
+        self._launchpad_popup.back_button.setText(f"\U0001f860 {group_name}")
+        self._launchpad_popup.back_button.show()
+
+        # Clear grid and app icons
+        grid_layout = self._launchpad_popup.grid_layout
+        for i in reversed(range(grid_layout.count())):
+            child = grid_layout.itemAt(i).widget()
+            if child:
+                child.setParent(None)
+        self._app_icons.clear()
+
+        self._populate_flat_grid(apps)
+
+    def _close_group(self):
+        if hasattr(self, "_current_group"):
+            delattr(self, "_current_group")
+
+        # Toggle back button and search
+        if hasattr(self._launchpad_popup, "back_button"):
+            self._launchpad_popup.back_button.hide()
+        if self._launchpad_popup.search_input:
+            self._launchpad_popup.search_input.show()
+            self._launchpad_popup.search_input.clear()
+
+        self._populate_grid()
+
+    def _show_group_context_menu(self, pos, group_name, parent_widget, event):
+        """Show context menu for group"""
+        menu_parent = parent_widget
+        menu = QMenu(menu_parent.window())
+        menu.setProperty("class", "context-menu")
+        apply_qmenu_style(menu)
+
+        open_action = QAction(f"Open {group_name}", menu_parent)
+        open_action.triggered.connect(lambda: self._open_group(group_name, parent_widget.apps_in_group))
+        menu.addAction(open_action)
+
+        menu.addSeparator()
+
+        rename_action = QAction("Rename Group", menu_parent)
+        rename_action.triggered.connect(lambda: self._rename_group(group_name))
+        menu.addAction(rename_action)
+
+        menu.addSeparator()
+
+        exit_action = QAction("Exit Launchpad", menu_parent)
+        exit_action.triggered.connect(self._hide_launchpad)
+        menu.addAction(exit_action)
+
+        menu.exec(parent_widget.mapToGlobal(event.pos()))
+
+    def _rename_group(self, old_group: str):
+        """Rename a group"""
+        # Create a minimal app data with just the group field
+        dialog = AppDialog(
+            parent=self._launchpad_popup,
+            app_data={"group": old_group},
+            title="Rename Group",
+            all_groups=self._get_all_groups(),
+            show_only_group=True,
+        )
+
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            new_name = dialog.get_app_data().get("group", "").strip()
+            if new_name and new_name != old_group:
+                # Update all apps with this group
+                apps = self._load_apps()
+                for app in apps:
+                    if app.get("group") == old_group:
+                        app["group"] = new_name
+                self._save_apps(apps)
+
+                # Refresh grid
+                if hasattr(self, "_current_group") and self._current_group == old_group:
+                    self._close_group()
+                else:
+                    self._populate_grid()
+
+    def _set_app_group(self, app_data: Dict[str, Any], group: str):
+        """Set group for an app"""
+        apps = self._load_apps()
+        for app in apps:
+            if app.get("id") == app_data.get("id"):
+                app["group"] = group
+                break
+        self._save_apps(apps)
+
+        # Refresh grid
+        if hasattr(self, "_current_group"):
+            updated_apps = self._load_apps()
+            group_apps_list = [app for app in updated_apps if app.get("group") == self._current_group]
+            if group_apps_list:
+                self._open_group(self._current_group, group_apps_list)
+            else:
+                self._close_group()
+        else:
+            self._populate_grid()
 
     def _fade_in_popup(self):
         if self._window_animation["fade_in_duration"] > 0 and self._launchpad_popup:
@@ -1380,6 +1796,10 @@ class LaunchpadWidget(BaseWidget):
             self._all_apps.clear()
             self._is_closing = False
             AppListLoader.clear_cache()
+
+            # Clear group state when closing launchpad
+            if hasattr(self, "_current_group"):
+                delattr(self, "_current_group")
 
             # Restore focus to previous window
             if self._previous_hwnd:
@@ -1459,7 +1879,15 @@ class LaunchpadWidget(BaseWidget):
         return screen
 
     def _add_new_app(self):
-        dialog = AppDialog(self._launchpad_popup if self._launchpad_popup else None, None, self._icons_dir)
+        all_groups = self._get_all_groups()
+        default_group = self._current_group if hasattr(self, "_current_group") else None
+        dialog = AppDialog(
+            self._launchpad_popup if self._launchpad_popup else None,
+            None,
+            self._icons_dir,
+            all_groups,
+            default_group=default_group,
+        )
         if dialog.exec() == QDialog.DialogCode.Accepted:
             app_data = dialog.get_app_data()
             app_data["id"] = int(time.time() * 1000)
@@ -1467,10 +1895,19 @@ class LaunchpadWidget(BaseWidget):
             apps.append(app_data)
             self._save_apps(apps)
             if self._launchpad_popup:
-                self._populate_grid()
+                # If we're in a group, refresh the group view
+                if hasattr(self, "_current_group"):
+                    updated_apps = self._load_apps()
+                    group_apps_list = [app for app in updated_apps if app.get("group") == self._current_group]
+                    self._open_group(self._current_group, group_apps_list)
+                else:
+                    self._populate_grid()
 
     def _edit_app(self, app_data: Dict[str, Any]):
-        dialog = AppDialog(self._launchpad_popup if self._launchpad_popup else None, app_data, self._icons_dir)
+        all_groups = self._get_all_groups()
+        dialog = AppDialog(
+            self._launchpad_popup if self._launchpad_popup else None, app_data, self._icons_dir, all_groups
+        )
         if dialog.exec() == QDialog.DialogCode.Accepted:
             updated_data = dialog.get_app_data()
             updated_data["id"] = app_data.get("id", int(time.time() * 1000))
@@ -1598,7 +2035,19 @@ class LaunchpadWidget(BaseWidget):
             self._save_apps(apps)
             self._cleanup_unused_icons()
             if self._launchpad_popup:
-                self._populate_grid()
+                # If we're in a group, check if there are apps left in the group
+                if hasattr(self, "_current_group"):
+                    group_apps = [app for app in apps if app.get("group") == self._current_group]
+                    if group_apps:
+                        # Still apps in group, refresh the group view
+                        self._open_group(self._current_group, group_apps)
+                    else:
+                        # No apps left in group, go back to main window
+                        self._close_group()
+                else:
+                    # Not in a group, just refresh the grid
+                    self._populate_grid()
+
                 if self._app_icons:
                     if prev_focus_index is not None and 0 <= prev_focus_index < len(self._app_icons):
                         self._app_icons[prev_focus_index].setFocus()
@@ -1639,6 +2088,16 @@ class LaunchpadWidget(BaseWidget):
         except Exception as e:
             logging.error(f"Failed to load apps from {self._data_file}: {e}")
         return []
+
+    def _get_all_groups(self) -> List[str]:
+        """Get all unique groups from apps"""
+        apps = self._load_apps()
+        groups = set()
+        for app in apps:
+            group = app.get("group")
+            if group:
+                groups.add(group)
+        return sorted(list(groups))
 
     def _order_apps(self, order_type: str):
         """Order apps based on the specified type"""

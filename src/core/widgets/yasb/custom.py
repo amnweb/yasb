@@ -10,7 +10,7 @@ from core.utils.tooltip import set_tooltip
 from core.utils.utilities import add_shadow
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.win32.system_function import function_map
-from core.validation.widgets.yasb.custom import VALIDATION_SCHEMA
+from core.validation.widgets.yasb.custom import CustomConfig
 from core.widgets.base import BaseWidget
 
 
@@ -18,7 +18,14 @@ class CustomWorker(QObject):
     finished = pyqtSignal()
     data_ready = pyqtSignal(object)
 
-    def __init__(self, cmd, use_shell, encoding, return_type, hide_empty):
+    def __init__(
+        self,
+        cmd: list[str] | None,
+        use_shell: bool,
+        encoding: str | None,
+        return_type: str,
+        hide_empty: bool,
+    ):
         super().__init__()
         self.cmd = cmd
         self.use_shell = use_shell
@@ -59,68 +66,39 @@ class CustomWorker(QObject):
 
 
 class CustomWidget(BaseWidget):
-    validation_schema = VALIDATION_SCHEMA
+    validation_schema = CustomConfig
 
-    def __init__(
-        self,
-        label: str,
-        label_alt: str,
-        label_placeholder: str,
-        label_max_length: int,
-        exec_options: dict,
-        callbacks: dict,
-        animation: dict[str, str],
-        container_padding: dict[str, int],
-        class_name: str,
-        tooltip: bool = False,
-        tooltip_label: str | None = None,
-        label_shadow: dict | None = None,
-        container_shadow: dict | None = None,
-    ):
-        super().__init__(exec_options["run_interval"], class_name=f"custom-widget {class_name}")
-        self._label_max_length = label_max_length
-        self._exec_data = None
-        self._exec_cmd = exec_options["run_cmd"].split(" ") if exec_options.get("run_cmd", False) else None
-        self._exec_return_type = exec_options["return_format"]
-        self._exec_shell = exec_options["use_shell"]
-        self._exec_encoding = exec_options["encoding"]
-        self._hide_empty = exec_options["hide_empty"]
+    def __init__(self, config: CustomConfig):
+        super().__init__(config.exec_options.run_interval, class_name=f"custom-widget {config.class_name}")
+        self.config = config
+        self._exec_data: dict | str | None = None
+        self._exec_cmd = self.config.exec_options.run_cmd.split(" ") if self.config.exec_options.run_cmd else None
         self._show_alt_label = False
-        self._label_content = label
-        self._label_alt_content = label_alt
-        self._label_placeholder = label_placeholder
-        self._animation = animation
-        self._padding = container_padding
-        self._label_shadow = label_shadow
-        self._container_shadow = container_shadow
-        self._tooltip = tooltip
-        self._tooltip_label = tooltip_label
         self._worker = None  # Keep reference to worker for cleanup
+
         # Construct container
         self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(
-            self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
-        )
+        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
         # Initialize container
         self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
-        add_shadow(self._widget_container, self._container_shadow)
+        add_shadow(self._widget_container, self.config.container_shadow.model_dump())
         # Add the container to the main widget layout
         self.widget_layout.addWidget(self._widget_container)
 
         self.register_callback("toggle_label", self._toggle_label)
         self.register_callback("exec_custom", self._exec_callback)
 
-        self.callback_left = callbacks["on_left"]
-        self.callback_right = callbacks["on_right"]
-        self.callback_middle = callbacks["on_middle"]
+        self.callback_left = self.config.callbacks.on_left
+        self.callback_right = self.config.callbacks.on_right
+        self.callback_middle = self.config.callbacks.on_middle
         self.callback_timer = "exec_custom"
 
-        self._create_dynamically_label(self._label_content, self._label_alt_content)
+        self._create_dynamically_label(self.config.label, self.config.label_alt)
 
-        if exec_options["run_once"]:
+        if self.config.exec_options.run_once:
             self._exec_callback()
         else:
             self.start_timer()
@@ -130,8 +108,8 @@ class CustomWidget(BaseWidget):
             label.setCursor(Qt.CursorShape.PointingHandCursor)
 
     def _toggle_label(self):
-        if self._animation["enabled"]:
-            AnimationManager.animate(self, self._animation["type"], self._animation["duration"])
+        if self.config.animation.enabled:
+            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
         self._show_alt_label = not self._show_alt_label
         for widget in self._widgets:
             widget.setVisible(not self._show_alt_label)
@@ -156,10 +134,10 @@ class CustomWidget(BaseWidget):
                 else:
                     label = QLabel(part)
                     label.setProperty("class", "label alt" if is_alt else "label")
-                    label.setText(self._label_placeholder)
+                    label.setText(self.config.label_placeholder)
                 label.setAlignment(Qt.AlignmentFlag.AlignCenter)
                 self._set_cursor(label)
-                add_shadow(label, self._label_shadow)
+                add_shadow(label, self.config.label_shadow.model_dump())
                 self._widget_container_layout.addWidget(label)
                 widgets.append(label)
                 if is_alt:
@@ -173,13 +151,13 @@ class CustomWidget(BaseWidget):
         self._widgets_alt = process_content(content_alt, is_alt=True)
 
     def _truncate_label(self, label):
-        if self._label_max_length and len(label) > self._label_max_length:
-            return label[: self._label_max_length] + "..."
+        if self.config.label_max_length and len(label) > self.config.label_max_length:
+            return label[: self.config.label_max_length] + "..."
         return label
 
     def _update_label(self):
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
-        active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
+        active_label_content = self.config.label_alt if self._show_alt_label else self.config.label
         label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
         widget_index = 0
         try:
@@ -191,7 +169,7 @@ class CustomWidget(BaseWidget):
                         active_widgets[widget_index].setText(icon)
                     else:
                         active_widgets[widget_index].setText(self._truncate_label(part.format(data=self._exec_data)))
-                    if self._hide_empty:
+                    if self.config.exec_options.hide_empty:
                         if self._exec_data:
                             self.setVisible(True)
                             # active_widgets[widget_index].show()
@@ -207,16 +185,16 @@ class CustomWidget(BaseWidget):
 
     def _update_tooltip(self):
         """Update the tooltip text based on configuration and data."""
-        if not self._tooltip or not self._exec_data:
+        if not self.config.tooltip or not self._exec_data:
             return
 
         tooltip_text = None
 
         # If custom tooltip_label provided, use it with formatting
-        if self._tooltip_label:
+        if self.config.tooltip_label:
             try:
-                tooltip_text = self._tooltip_label.format(data=self._exec_data)
-            except (KeyError, AttributeError, TypeError, IndexError):
+                tooltip_text = self.config.tooltip_label.format(data=self._exec_data)
+            except KeyError, AttributeError, TypeError, IndexError:
                 # If formatting fails, fall back to showing raw data
                 tooltip_text = str(self._exec_data)
         else:
@@ -233,7 +211,11 @@ class CustomWidget(BaseWidget):
                 self._worker.stop()
 
             self._worker = CustomWorker(
-                self._exec_cmd, self._exec_shell, self._exec_encoding, self._exec_return_type, self._hide_empty
+                self._exec_cmd,
+                self.config.exec_options.use_shell,
+                self.config.exec_options.encoding,
+                self.config.exec_options.return_format,
+                self.config.exec_options.hide_empty,
             )
             worker_thread = threading.Thread(target=self._worker.run)
             self._worker.data_ready.connect(self._handle_exec_data)
@@ -260,5 +242,7 @@ class CustomWidget(BaseWidget):
             function_map[cmd]()
         else:
             subprocess.Popen(
-                [cmd, *cmd_args] if cmd_args else [cmd], shell=self._exec_shell, encoding=self._exec_encoding
+                [cmd, *cmd_args] if cmd_args else [cmd],
+                shell=self.config.exec_options.use_shell,
+                encoding=self.config.exec_options.encoding,
             )

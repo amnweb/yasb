@@ -14,7 +14,7 @@ from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import add_shadow, build_widget_label
 from core.utils.widgets.animation_manager import AnimationManager
-from core.validation.widgets.yasb.bluetooth import VALIDATION_SCHEMA
+from core.validation.widgets.yasb.bluetooth import BluetoothConfig
 from core.widgets.base import BaseWidget
 from settings import DEBUG
 
@@ -209,39 +209,12 @@ class BluetoothThread(QThread):
 
 
 class BluetoothWidget(BaseWidget):
-    validation_schema = VALIDATION_SCHEMA
+    validation_schema = BluetoothConfig
 
-    def __init__(
-        self,
-        label: str,
-        label_alt: str,
-        class_name: str,
-        label_no_device: str,
-        label_device_separator: str,
-        max_length: int,
-        max_length_ellipsis: str,
-        tooltip: bool,
-        icons: dict[str, str],
-        device_aliases: list[dict[str, str]],
-        animation: dict[str, str],
-        container_padding: dict[str, int],
-        callbacks: dict[str, str],
-        label_shadow: dict = None,
-        container_shadow: dict = None,
-    ):
-        super().__init__(class_name=f"bluetooth-widget {class_name}")
+    def __init__(self, config: BluetoothConfig):
+        super().__init__(class_name=f"bluetooth-widget {config.class_name}")
+        self.config = config
         self._show_alt_label = False
-        self._label_content = label
-        self._label_alt_content = label_alt
-        self._label_no_device = label_no_device
-        self._label_devices_separator = label_device_separator
-        self._max_length = max_length
-        self._max_length_ellipsis = max_length_ellipsis
-        self._device_aliases = device_aliases
-        self._tooltip = tooltip
-        self._padding = container_padding
-        self._label_shadow = label_shadow
-        self._container_shadow = container_shadow
         try:
             self.bt_api = get_bluetooth_api()
         except RuntimeError as e:
@@ -249,29 +222,25 @@ class BluetoothWidget(BaseWidget):
                 logging.error(f"Bluetooth support unavailable: {e}")
             self.bt_api = None
         self.current_status = None
-        self._icons = icons
-        self._animation = animation
         self.bluetooth_icon = None
         self.connected_devices = None
 
         self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(
-            self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
-        )
+        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
         self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
-        add_shadow(self._widget_container, self._container_shadow)
+        add_shadow(self._widget_container, self.config.container_shadow.model_dump())
         self.widget_layout.addWidget(self._widget_container)
 
-        build_widget_label(self, self._label_content, self._label_alt_content, self._label_shadow)
+        build_widget_label(self, self.config.label, self.config.label_alt, self.config.label_shadow.model_dump())
 
         self.register_callback("toggle_label", self._toggle_label)
 
-        self.callback_left = callbacks["on_left"]
-        self.callback_right = callbacks["on_right"]
-        self.callback_middle = callbacks["on_middle"]
+        self.callback_left = self.config.callbacks.on_left
+        self.callback_right = self.config.callbacks.on_right
+        self.callback_middle = self.config.callbacks.on_middle
 
         self.current_status = None  # Store the current Bluetooth status
         self.bluetooth_thread = BluetoothThread(self.bt_api)
@@ -283,7 +252,7 @@ class BluetoothWidget(BaseWidget):
         self.timer.start(3000)
 
         self.start_bluetooth_thread()
-        self._update_label(self._icons["bluetooth_off"])
+        self._update_label(self.config.icons.bluetooth_off)
 
     def start_bluetooth_thread(self):
         if not self.bluetooth_thread.isRunning():
@@ -298,8 +267,8 @@ class BluetoothWidget(BaseWidget):
             self.bluetooth_thread.wait()
 
     def _toggle_label(self):
-        if self._animation["enabled"]:
-            AnimationManager.animate(self, self._animation["type"], self._animation["duration"])
+        if self.config.animation.enabled:
+            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
         self._show_alt_label = not self._show_alt_label
         for widget in self._widgets:
             widget.setVisible(not self._show_alt_label)
@@ -309,29 +278,29 @@ class BluetoothWidget(BaseWidget):
 
     def _update_label(self, icon, connected_devices=None):
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
-        active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
+        active_label_content = self.config.label_alt if self._show_alt_label else self.config.label
         label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
         label_parts = [part for part in label_parts if part]
         widget_index = 0
 
         if connected_devices:
-            if self._device_aliases:
+            if self.config.device_aliases:
                 connected_devices = [
                     next(
-                        (alias["alias"] for alias in self._device_aliases if alias["name"].strip() == device.strip()),
+                        (alias.alias for alias in self.config.device_aliases if alias.name.strip() == device.strip()),
                         device,
                     )
                     for device in connected_devices
                 ]
-            device_names = self._label_devices_separator.join(connected_devices)
+            device_names = self.config.label_device_separator.join(connected_devices)
             tooltip_text = (
                 "Connected devices\n" + "\n".join(f"• {name}" for name in connected_devices)
                 if connected_devices
                 else "No devices connected"
             )
         else:
-            device_names = self._label_no_device
-            tooltip_text = self._label_no_device
+            device_names = self.config.label_no_device
+            tooltip_text = self.config.label_no_device
 
         label_options = {
             "{icon}": icon,
@@ -349,13 +318,13 @@ class BluetoothWidget(BaseWidget):
                     if widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
                         active_widgets[widget_index].setText(formatted_text)
                 else:
-                    if self._max_length and len(formatted_text) > self._max_length:
-                        formatted_text = formatted_text[: self._max_length] + self._max_length_ellipsis
+                    if self.config.max_length and len(formatted_text) > self.config.max_length:
+                        formatted_text = formatted_text[: self.config.max_length] + self.config.max_length_ellipsis
                     if widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
                         active_widgets[widget_index].setText(formatted_text)
                 widget_index += 1
 
-        if self._tooltip:
+        if self.config.tooltip:
             set_tooltip(self._widget_container, tooltip_text)
 
     def _update_state(self, status):
@@ -364,16 +333,16 @@ class BluetoothWidget(BaseWidget):
             logging.info(f"Bluetooth: {self.current_status}")
 
         if not self.current_status:  # Handle None case
-            return self._icons["bluetooth_off"]
+            return self.config.icons.bluetooth_off
 
         if self.current_status == "Bluetooth is disabled.":
-            bluetooth_icon = self._icons["bluetooth_off"]
+            bluetooth_icon = self.config.icons.bluetooth_off
             connected_devices = None
         elif "Connected to" in self.current_status:
-            bluetooth_icon = self._icons["bluetooth_connected"]
+            bluetooth_icon = self.config.icons.bluetooth_connected
             connected_devices = self.current_status.replace("Connected to: ", "").split(", ")
         else:
-            bluetooth_icon = self._icons["bluetooth_on"]
+            bluetooth_icon = self.config.icons.bluetooth_on
             connected_devices = None
         self.bluetooth_icon = bluetooth_icon
         self.connected_devices = connected_devices

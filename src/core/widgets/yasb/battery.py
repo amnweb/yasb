@@ -1,6 +1,5 @@
 import re
 from datetime import timedelta
-from typing import Union
 
 import humanize
 from PyQt6.QtCore import QTimer
@@ -10,84 +9,52 @@ from core.utils.utilities import add_shadow, build_widget_label, refresh_widget_
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.widgets.battery.battery_api import BatteryAPI
 from core.utils.win32.constants import POWER_TIME_UNKNOWN, POWER_TIME_UNLIMITED
-from core.validation.widgets.yasb.battery import VALIDATION_SCHEMA
+from core.validation.widgets.yasb.battery import BatteryConfig
 from core.widgets.base import BaseWidget
 
 
 class BatteryWidget(BaseWidget):
-    validation_schema = VALIDATION_SCHEMA
+    validation_schema = BatteryConfig
 
-    def __init__(
-        self,
-        label: str,
-        label_alt: str,
-        class_name: str,
-        update_interval: int,
-        time_remaining_natural: bool,
-        hide_unsupported: bool,
-        charging_options: dict[str, Union[str, bool]],
-        status_thresholds: dict[str, int],
-        status_icons: dict[str, str],
-        animation: dict[str, str],
-        callbacks: dict[str, str],
-        container_padding: dict[str, int],
-        label_shadow: dict = None,
-        container_shadow: dict = None,
-    ):
-        super().__init__(update_interval, class_name=f"battery-widget {class_name}")
-        self._time_remaining_natural = time_remaining_natural
-        self._status_thresholds = status_thresholds
-        self._status_icons = status_icons
+    def __init__(self, config: BatteryConfig):
+        super().__init__(config.update_interval, class_name=f"battery-widget {config.class_name}")
+        self.config = config
         self._battery_api = BatteryAPI.instance()
         self._battery_state = None
-        self._show_alt = False
-        self._last_threshold = None
-        self._animation = animation
-        self._icon_charging_format = charging_options["icon_format"]
-        self._icon_charging_blink = charging_options["blink_charging_icon"]
-        self._icon_charging_blink_interval = charging_options["blink_interval"]
-        self._hide_unsupported = hide_unsupported
-        self._padding = container_padding
-        self._label_shadow = label_shadow
-        self._container_shadow = container_shadow
-
         self._show_alt_label = False
-        self._label_content = label
-        self._label_alt_content = label_alt
+
         # Construct container
         self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(
-            self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
-        )
+        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
         # Initialize container
         self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
-        add_shadow(self._widget_container, self._container_shadow)
+        add_shadow(self._widget_container, self.config.container_shadow.model_dump())
         # Add the container to the main widget layout
         self.widget_layout.addWidget(self._widget_container)
 
-        build_widget_label(self, self._label_content, self._label_alt_content, self._label_shadow)
+        build_widget_label(self, self.config.label, self.config.label_alt, self.config.label_shadow.model_dump())
 
         self.register_callback("update_label", self._update_label)
         self.register_callback("toggle_label", self._toggle_label)
 
-        self.callback_left = callbacks["on_left"]
-        self.callback_right = callbacks["on_right"]
-        self.callback_middle = callbacks["on_middle"]
+        self.callback_left = self.config.callbacks.on_left
+        self.callback_right = self.config.callbacks.on_right
+        self.callback_middle = self.config.callbacks.on_middle
         self.callback_timer = "update_label"
 
         self._charging_blink_timer = QTimer(self)
-        self._charging_blink_timer.setInterval(self._icon_charging_blink_interval)
+        self._charging_blink_timer.setInterval(self.config.charging_options.blink_interval)
         self._charging_blink_timer.timeout.connect(self._charging_blink)
         self._charging_icon_label = None
 
         self.start_timer()
 
     def _toggle_label(self):
-        if self._animation["enabled"]:
-            AnimationManager.animate(self, self._animation["type"], self._animation["duration"])
+        if self.config.animation.enabled:
+            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
         self._show_alt_label = not self._show_alt_label
         for widget in self._widgets:
             widget.setVisible(not self._show_alt_label)
@@ -101,9 +68,9 @@ class BatteryWidget(BaseWidget):
             time_left = "unlimited"
         elif secs_left == POWER_TIME_UNKNOWN:
             time_left = "unknown"
-        elif isinstance(secs_left, int) and secs_left >= 0:
+        elif secs_left >= 0:
             time_left = timedelta(seconds=secs_left)
-            time_left = humanize.naturaldelta(time_left) if self._time_remaining_natural else str(time_left)
+            time_left = humanize.naturaldelta(time_left) if self.config.time_remaining_natural else str(time_left)
         else:
             time_left = "unknown"
         return time_left
@@ -114,22 +81,25 @@ class BatteryWidget(BaseWidget):
 
     def _get_battery_threshold(self):
         percent = self._battery_state.percent
+        thresholds = self.config.status_thresholds
 
-        if percent <= self._status_thresholds["critical"]:
+        if percent <= thresholds.critical:
             return "critical"
-        elif self._status_thresholds["critical"] < percent <= self._status_thresholds["low"]:
+        elif thresholds.critical < percent <= thresholds.low:
             return "low"
-        elif self._status_thresholds["low"] < percent <= self._status_thresholds["medium"]:
+        elif thresholds.low < percent <= thresholds.medium:
             return "medium"
-        elif self._status_thresholds["medium"] < percent <= self._status_thresholds["high"]:
+        elif thresholds.medium < percent <= thresholds.high:
             return "high"
-        elif self._status_thresholds["high"] < percent <= self._status_thresholds["full"]:
+        elif thresholds.high < percent <= thresholds.full:
             return "full"
 
     def _get_charging_icon(self, threshold: str) -> str:
-        icon = self._status_icons[f"icon_{threshold}"]
+        icon = getattr(self.config.status_icons, f"icon_{threshold}")
         if self._battery_state.power_plugged:
-            return self._icon_charging_format.format(charging_icon=self._status_icons["icon_charging"], icon=icon)
+            return self.config.charging_options.icon_format.format(
+                charging_icon=self.config.status_icons.icon_charging, icon=icon
+            )
         return icon
 
     def _charging_blink(self):
@@ -151,14 +121,14 @@ class BatteryWidget(BaseWidget):
 
     def _update_label(self):
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
-        active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
+        active_label_content = self.config.label_alt if self._show_alt_label else self.config.label
         label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
         label_parts = [part for part in label_parts if part]
         widget_index = 0
         self._battery_state = self._get_battery_state()
 
         if self._battery_state is None:
-            if self._hide_unsupported:
+            if self.config.hide_unsupported:
                 self.hide()
                 self.timer.stop()
                 return
@@ -220,7 +190,7 @@ class BatteryWidget(BaseWidget):
                     refresh_widget_style(widget_label)
 
                     # only blink when plugged AND blink_enabled
-                    if self._battery_state.power_plugged and self._icon_charging_blink:
+                    if self._battery_state.power_plugged and self.config.charging_options.blink_charging_icon:
                         self._charging_icon_label = widget_label
                         if not self._charging_blink_timer.isActive():
                             self._charging_blink_timer.start()

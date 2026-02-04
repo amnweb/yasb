@@ -23,6 +23,7 @@ from ctypes.wintypes import (
     LPCWSTR,
     LPDWORD,
     LPVOID,
+    MSG,
     RECT,
     UINT,
     WPARAM,
@@ -65,6 +66,26 @@ user32.SetWinEventHook.restype = HANDLE
 user32.UnhookWinEvent.argtypes = [HANDLE]
 user32.UnhookWinEvent.restype = BOOL
 
+# Low-level keyboard hook functions
+HOOKPROC = WINFUNCTYPE(c_long, c_int, WPARAM, LPARAM)
+
+user32.SetWindowsHookExW.argtypes = [INT, HOOKPROC, HINSTANCE, DWORD]
+user32.SetWindowsHookExW.restype = HANDLE
+
+user32.UnhookWindowsHookEx.argtypes = [HANDLE]
+user32.UnhookWindowsHookEx.restype = BOOL
+
+user32.CallNextHookEx.argtypes = [HANDLE, INT, WPARAM, LPARAM]
+user32.CallNextHookEx.restype = c_long
+
+user32.GetMessageW.argtypes = [POINTER(MSG), HWND, UINT, UINT]
+user32.GetMessageW.restype = INT
+
+user32.PeekMessageW.argtypes = [POINTER(MSG), HWND, UINT, UINT, UINT]
+user32.PeekMessageW.restype = BOOL
+
+user32.PostThreadMessageW.argtypes = [DWORD, UINT, WPARAM, LPARAM]
+user32.PostThreadMessageW.restype = BOOL
 
 user32.DefWindowProcW.argtypes = [HWND, UINT, WPARAM, LPARAM]
 user32.DefWindowProcW.restype = c_long
@@ -178,6 +199,9 @@ user32.IsWindowVisible.restype = BOOL
 
 user32.GetKeyState.argtypes = [INT]
 user32.GetKeyState.restype = INT
+
+user32.GetAsyncKeyState.argtypes = [INT]
+user32.GetAsyncKeyState.restype = INT
 
 user32.GetWindowLongW.argtypes = [HWND, INT]
 user32.GetWindowLongW.restype = c_long

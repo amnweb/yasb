@@ -8,80 +8,52 @@ from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel
 from core.utils.utilities import add_shadow, build_progress_widget, build_widget_label, refresh_widget_style
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.widgets.cpu.cpu_api import CpuAPI
-from core.validation.widgets.yasb.cpu import VALIDATION_SCHEMA
+from core.validation.widgets.yasb.cpu import CpuConfig
 from core.widgets.base import BaseWidget
 
 
 class CpuWidget(BaseWidget):
-    validation_schema = VALIDATION_SCHEMA
+    validation_schema = CpuConfig
 
     # Class-level shared data and timer
     _instances: list["CpuWidget"] = []
     _shared_timer: QTimer | None = None
 
-    def __init__(
-        self,
-        label: str,
-        label_alt: str,
-        class_name: str,
-        histogram_icons: list[str],
-        histogram_num_columns: int,
-        update_interval: int,
-        animation: dict[str, str],
-        container_padding: dict[str, int],
-        callbacks: dict[str, str],
-        cpu_thresholds: dict[str, int],
-        label_shadow: dict = None,
-        container_shadow: dict = None,
-        progress_bar: dict = None,
-        hide_decimal: bool = False,
-    ):
-        super().__init__(class_name=f"cpu-widget {class_name}")
-        self._histogram_icons = histogram_icons
-        self._cpu_freq_history = deque([0] * histogram_num_columns, maxlen=histogram_num_columns)
-        self._cpu_perc_history = deque([0] * histogram_num_columns, maxlen=histogram_num_columns)
+    def __init__(self, config: CpuConfig):
+        super().__init__(class_name=f"cpu-widget {config.class_name}")
+        self.config = config
+        self._cpu_freq_history = deque([0] * config.histogram_num_columns, maxlen=config.histogram_num_columns)
+        self._cpu_perc_history = deque([0] * config.histogram_num_columns, maxlen=config.histogram_num_columns)
         self._show_alt_label = False
-        self._label_content = label
-        self._label_alt_content = label_alt
-        self._animation = animation
-        self._padding = container_padding
-        self._label_shadow = label_shadow
-        self._container_shadow = container_shadow
-        self._cpu_thresholds = cpu_thresholds
-        self._progress_bar = progress_bar
-        self._hide_decimal = hide_decimal
-
         self.progress_widget = None
-        self.progress_widget = build_progress_widget(self, self._progress_bar)
+        self.progress_widget = build_progress_widget(self, self.config.progress_bar.model_dump())
 
         self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(
-            self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
-        )
+        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
         # Initialize container
         self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
-        add_shadow(self._widget_container, self._container_shadow)
+        add_shadow(self._widget_container, self.config.container_shadow.model_dump())
         # Add the container to the main widget layout
         self.widget_layout.addWidget(self._widget_container)
 
-        build_widget_label(self, self._label_content, self._label_alt_content, self._label_shadow)
+        build_widget_label(self, self.config.label, self.config.label_alt, self.config.label_shadow.model_dump())
 
         self.register_callback("toggle_label", self._toggle_label)
 
-        self.callback_left = callbacks["on_left"]
-        self.callback_right = callbacks["on_right"]
-        self.callback_middle = callbacks["on_middle"]
+        self.callback_left = self.config.callbacks.on_left
+        self.callback_right = self.config.callbacks.on_right
+        self.callback_middle = self.config.callbacks.on_middle
 
         # Add this instance to the shared instances list
         if self not in CpuWidget._instances:
             CpuWidget._instances.append(self)
 
-        if update_interval > 0 and CpuWidget._shared_timer is None:
+        if self.config.update_interval > 0 and CpuWidget._shared_timer is None:
             CpuWidget._shared_timer = QTimer(self)
-            CpuWidget._shared_timer.setInterval(update_interval)
+            CpuWidget._shared_timer.setInterval(self.config.update_interval)
             CpuWidget._shared_timer.timeout.connect(CpuWidget._notify_instances)
             CpuWidget._shared_timer.start()
 
@@ -122,7 +94,7 @@ class CpuWidget(BaseWidget):
         self._cpu_freq_history.append(data.freq.current)
         self._cpu_perc_history.append(data.percent)
 
-        _round = lambda value: round(value) if self._hide_decimal else value
+        _round = lambda value: round(value) if self.config.hide_decimal else value
         cpu_info = {
             "cores": {"physical": data.cores_physical, "total": data.cores_logical},
             "freq": {"min": _round(data.freq.min), "max": _round(data.freq.max), "current": _round(data.freq.current)},
@@ -139,15 +111,15 @@ class CpuWidget(BaseWidget):
         }
 
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
-        active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
+        active_label_content = self.config.label_alt if self._show_alt_label else self.config.label
         label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
         label_parts = [part for part in label_parts if part]
         widget_index = 0
 
-        if self._progress_bar["enabled"] and self.progress_widget:
+        if self.config.progress_bar.enabled and self.progress_widget:
             if self._widget_container_layout.indexOf(self.progress_widget) == -1:
                 self._widget_container_layout.insertWidget(
-                    0 if self._progress_bar["position"] == "left" else self._widget_container_layout.count(),
+                    0 if self.config.progress_bar.position == "left" else self._widget_container_layout.count(),
                     self.progress_widget,
                 )
             self.progress_widget.set_value(data.percent)
@@ -170,8 +142,8 @@ class CpuWidget(BaseWidget):
                 widget_index += 1
 
     def _toggle_label(self):
-        if self._animation["enabled"]:
-            AnimationManager.animate(self, self._animation["type"], self._animation["duration"])
+        if self.config.animation.enabled:
+            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
         self._show_alt_label = not self._show_alt_label
         for widget in self._widgets:
             widget.setVisible(not self._show_alt_label)
@@ -179,19 +151,19 @@ class CpuWidget(BaseWidget):
             widget.setVisible(self._show_alt_label)
         CpuWidget._notify_instances()
 
-    def _get_histogram_bar(self, num, num_min, num_max):
+    def _get_histogram_bar(self, num: float, num_min: float, num_max: float) -> str:
         if num_max == num_min:
-            return self._histogram_icons[0]
-        bar_index = int((num - num_min) / (num_max - num_min) * (len(self._histogram_icons) - 1))
-        bar_index = min(max(bar_index, 0), len(self._histogram_icons) - 1)
-        return self._histogram_icons[bar_index]
+            return self.config.histogram_icons[0]
+        bar_index = int((num - num_min) / (num_max - num_min) * (len(self.config.histogram_icons) - 1))
+        bar_index = min(max(bar_index, 0), len(self.config.histogram_icons) - 1)
+        return self.config.histogram_icons[bar_index]
 
     def _get_cpu_threshold(self, percent: float) -> str:
-        if percent <= self._cpu_thresholds["low"]:
+        if percent <= self.config.cpu_thresholds.low:
             return "low"
-        elif self._cpu_thresholds["low"] < percent <= self._cpu_thresholds["medium"]:
+        elif self.config.cpu_thresholds.low < percent <= self.config.cpu_thresholds.medium:
             return "medium"
-        elif self._cpu_thresholds["medium"] < percent <= self._cpu_thresholds["high"]:
+        elif self.config.cpu_thresholds.medium < percent <= self.config.cpu_thresholds.high:
             return "high"
-        elif self._cpu_thresholds["high"] < percent:
+        elif self.config.cpu_thresholds.high < percent:
             return "critical"

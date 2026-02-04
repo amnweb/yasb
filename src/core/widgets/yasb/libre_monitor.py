@@ -9,78 +9,32 @@ from PyQt6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QLabel, QVBoxLayou
 
 from core.utils.utilities import PopupWidget, add_shadow, build_widget_label
 from core.utils.widgets.animation_manager import AnimationManager
-from core.validation.widgets.yasb.libre_monitor import VALIDATION_SCHEMA
+from core.validation.widgets.yasb.libre_monitor import LibreMonitorConfig
 from core.widgets.base import BaseWidget
 
 
 class LibreHardwareMonitorWidget(BaseWidget):
-    validation_schema = VALIDATION_SCHEMA
+    validation_schema = LibreMonitorConfig
 
-    def __init__(
-        self,
-        class_name: str,
-        label: str,
-        label_alt: str,
-        update_interval: int,
-        sensor_id: str,
-        histogram_icons: list[str],
-        histogram_num_columns: int,
-        precision: int,
-        history_size: int,
-        histogram_fixed_min: float | None,
-        histogram_fixed_max: float | None,
-        sensor_id_error_label,
-        connection_error_label,
-        auth_error_label,
-        server_host: str,
-        server_port: int,
-        server_username: str,
-        server_password: str,
-        animation: dict[str, str],
-        container_padding: dict[str, int],
-        callbacks: dict,
-        libre_menu: dict,
-        label_shadow: dict = None,
-        container_shadow: dict = None,
-    ):
-        super().__init__(update_interval, class_name=class_name)
+    def __init__(self, config: LibreMonitorConfig):
+        super().__init__(config.update_interval, class_name=config.class_name)
+        self.config = config
         self._show_alt_label = False
-        self._label_content = label
-        self._label_alt_content = label_alt
-        self._sensor_id = sensor_id
-        self._precision = precision
-        self._history = deque([0.0] * histogram_num_columns, maxlen=histogram_num_columns)
-        self._history_long: deque[float] = deque([], maxlen=history_size)
-        self._histogram_fixed_min = histogram_fixed_min
-        self._histogram_fixed_max = histogram_fixed_max
-        self._sensor_id_error_label = sensor_id_error_label
-        self._connection_error_label = connection_error_label
-        self._auth_error_label = auth_error_label
-        self._histogram_icons = histogram_icons
-        self._histogram_num_columns = histogram_num_columns
-        self._server_host = server_host
-        self._server_port = server_port
-        self._server_username = server_username
-        self._server_password = server_password
-        self._animation = animation
-        self._padding = container_padding
-        self._label_shadow = label_shadow
-        self._container_shadow = container_shadow
-        self._libre_menu = libre_menu
+        self._history = deque([0.0] * self.config.histogram_num_columns, maxlen=self.config.histogram_num_columns)
+        self._history_long: deque[float] = deque([], maxlen=self.config.history_size)
+
         # UI
         self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(
-            self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
-        )
+        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
 
         self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
-        add_shadow(self._widget_container, self._container_shadow)
+        add_shadow(self._widget_container, self.config.container_shadow.model_dump())
         self.widget_layout.addWidget(self._widget_container)
 
-        build_widget_label(self, self._label_content, self._label_alt_content, self._label_shadow)
+        build_widget_label(self, self.config.label, self.config.label_alt, self.config.label_shadow.model_dump())
 
         self.register_callback("toggle_label", self._toggle_label)
         self.register_callback("update_label", self._update_label)
@@ -95,7 +49,9 @@ class LibreHardwareMonitorWidget(BaseWidget):
         self._network_manager.authenticationRequired.connect(self._handle_authentication)
 
         # Create a request
-        url = QUrl(f"http://{self._server_host}:{self._server_port}/Sensor?action=Get&id={quote(self._sensor_id)}")
+        url = QUrl(
+            f"http://{self.config.server_host}:{self.config.server_port}/Sensor?action=Get&id={quote(self.config.sensor_id)}"
+        )
         self.request = QNetworkRequest(url)
         self.request.setHeader(
             QNetworkRequest.KnownHeaders.ContentTypeHeader,
@@ -103,9 +59,9 @@ class LibreHardwareMonitorWidget(BaseWidget):
         )
 
         # Callbacks
-        self.callback_left = callbacks["on_left"]
-        self.callback_right = callbacks["on_right"]
-        self.callback_middle = callbacks["on_middle"]
+        self.callback_left = self.config.callbacks.on_left
+        self.callback_right = self.config.callbacks.on_right
+        self.callback_middle = self.config.callbacks.on_middle
         self.callback_timer = "update_label"
 
         # Timer
@@ -113,8 +69,8 @@ class LibreHardwareMonitorWidget(BaseWidget):
 
     def _toggle_label(self):
         """Toggle between main and alt labels"""
-        if self._animation["enabled"]:
-            AnimationManager.animate(self, self._animation["type"], self._animation["duration"])
+        if self.config.animation.enabled:
+            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
         self._show_alt_label = not self._show_alt_label
         for widget in self._widgets:
             widget.setVisible(not self._show_alt_label)
@@ -124,18 +80,18 @@ class LibreHardwareMonitorWidget(BaseWidget):
 
     def _toggle_menu(self):
         """Toggle the popup menu"""
-        if self._animation["enabled"]:
-            AnimationManager.animate(self, self._animation["type"], self._animation["duration"])
+        if self.config.animation.enabled:
+            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
         self._show_popup_menu()
 
     def _show_popup_menu(self):
         """Shows a popup menu with sensors information"""
         self._menu = PopupWidget(
             self,
-            self._libre_menu["blur"],
-            self._libre_menu["round_corners"],
-            self._libre_menu["round_corners_type"],
-            self._libre_menu["border_color"],
+            self.config.libre_menu.blur,
+            self.config.libre_menu.round_corners,
+            self.config.libre_menu.round_corners_type,
+            self.config.libre_menu.border_color,
         )
         self._menu.setProperty("class", "libre-menu")
 
@@ -143,8 +99,8 @@ class LibreHardwareMonitorWidget(BaseWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
-        if self._libre_menu["header_label"]:
-            header_label = QLabel(self._libre_menu["header_label"])
+        if self.config.libre_menu.header_label:
+            header_label = QLabel(self.config.libre_menu.header_label)
             header_label.setProperty("class", "header")
             header_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             layout.addWidget(header_label)
@@ -153,11 +109,11 @@ class LibreHardwareMonitorWidget(BaseWidget):
         self.sensor_value_labels = {}
 
         self.sensors_layout = QGridLayout(self.sensors_container)
-        col_count = self._libre_menu["columns"]
+        col_count = self.config.libre_menu.columns
 
-        for idx, sensor in enumerate(self._libre_menu["sensors"]):
-            sensor_id = sensor["id"]
-            sensor_name = sensor["name"]
+        for idx, sensor in enumerate(self.config.libre_menu.sensors):
+            sensor_id = sensor.id
+            sensor_name = sensor.name or sensor_id
 
             sensor_widget = QFrame()
             sensor_widget.setProperty("class", "sensor-item")
@@ -184,10 +140,10 @@ class LibreHardwareMonitorWidget(BaseWidget):
         self._menu.setLayout(layout)
         self._menu.adjustSize()
         self._menu.setPosition(
-            self._libre_menu["alignment"],
-            self._libre_menu["direction"],
-            self._libre_menu["offset_left"],
-            self._libre_menu["offset_top"],
+            self.config.libre_menu.alignment,
+            self.config.libre_menu.direction,
+            self.config.libre_menu.offset_left,
+            self.config.libre_menu.offset_top,
         )
         self._menu.show()
         self._update_menu_content()
@@ -195,8 +151,8 @@ class LibreHardwareMonitorWidget(BaseWidget):
     def _update_menu_content(self):
         """Update only the values in the existing labels if popup is open"""
         if self._is_menu_visible():
-            for sensor in self._libre_menu["sensors"]:
-                sensor_id = sensor["id"]
+            for sensor in self.config.libre_menu.sensors:
+                sensor_id = sensor.id
                 value_label = self.sensor_value_labels.get(sensor_id)
                 if value_label is not None and isinstance(value_label, QLabel):
                     try:
@@ -208,7 +164,9 @@ class LibreHardwareMonitorWidget(BaseWidget):
         """Update just the value for a specific sensor"""
         if not self._is_menu_visible():
             return
-        url = QUrl(f"http://{self._server_host}:{self._server_port}/Sensor?action=Get&id={quote(sensor_id)}")
+        url = QUrl(
+            f"http://{self.config.server_host}:{self.config.server_port}/Sensor?action=Get&id={quote(sensor_id)}"
+        )
         request = QNetworkRequest(url)
         request.setHeader(QNetworkRequest.KnownHeaders.ContentTypeHeader, "application/x-www-form-urlencoded")
         manager = QNetworkAccessManager()
@@ -223,7 +181,7 @@ class LibreHardwareMonitorWidget(BaseWidget):
             if data.get("result") == "ok":
                 value = data.get("value", "N/A")
                 unit = data.get("format", "").split(" ")[-1]
-                value_label.setText(f"{value:.{self._libre_menu['precision']}f} {unit}")
+                value_label.setText(f"{value:.{self.config.libre_menu.precision}f} {unit}")
             else:
                 # Sensor missing or not found
                 value_label.setText("N/A")
@@ -234,18 +192,18 @@ class LibreHardwareMonitorWidget(BaseWidget):
         try:
             if getattr(self, "_menu", None) is not None and isinstance(self._menu, QWidget) and self._menu.isVisible():
                 return True
-        except (RuntimeError, AttributeError):
+        except RuntimeError, AttributeError:
             return False
 
     def _get_histogram_bar(self, value: float, value_min: float, value_max: float):
         """Gets the appropriate histogram element from the icons list based on the value and min/max"""
         bar_index = int((value - value_min) / max((value_max - value_min), 0.00001) * 10)
         bar_index = min(abs(bar_index), 8)
-        return self._histogram_icons[bar_index]
+        return self.config.histogram_icons[bar_index]
 
     def _update_label(self):
         """Make a request and update the label with the received data"""
-        if self._sensor_id:
+        if self.config.sensor_id:
             # If sensor_id is empty skip call
             self._make_request()
         info = {
@@ -263,12 +221,12 @@ class LibreHardwareMonitorWidget(BaseWidget):
             self._history_long.append(float(value))
             history_min_value = min(self._history_long)
             history_max_value = max(self._history_long)
-            min_val = history_min_value if self._histogram_fixed_min is None else self._histogram_fixed_min
-            max_val = history_max_value if self._histogram_fixed_max is None else self._histogram_fixed_max
+            min_val = history_min_value if self.config.histogram_fixed_min is None else self.config.histogram_fixed_min
+            max_val = history_max_value if self.config.histogram_fixed_max is None else self.config.histogram_fixed_max
 
-            info["value"] = f"{value:.{self._precision}f}"
-            info["min"] = f"{history_min_value:.{self._precision}f}"
-            info["max"] = f"{history_max_value:.{self._precision}f}"
+            info["value"] = f"{value:.{self.config.precision}f}"
+            info["min"] = f"{history_min_value:.{self.config.precision}f}"
+            info["max"] = f"{history_max_value:.{self.config.precision}f}"
             info["unit"] = self._data.get("format", "Error Error").split(" ")[-1]
             info["histogram"] = (
                 "".join([self._get_histogram_bar(val, min_val, max_val) for val in self._history])
@@ -279,7 +237,7 @@ class LibreHardwareMonitorWidget(BaseWidget):
             info["value"] = self._data.get("status", "")
 
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
-        active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
+        active_label_content = self.config.label_alt if self._show_alt_label else self.config.label
         label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
         label_parts = [part for part in label_parts if part]
         widget_index = 0
@@ -313,26 +271,26 @@ class LibreHardwareMonitorWidget(BaseWidget):
             if self._data.get("result") == "ok":
                 self._data["status"] = "Connected..."
             else:
-                self._data["status"] = self._sensor_id_error_label
-                self._data["histogram"] = self._sensor_id_error_label
+                self._data["status"] = self.config.sensor_id_error_label
+                self._data["histogram"] = self.config.sensor_id_error_label
         elif reply.error() == QNetworkReply.NetworkError.AuthenticationRequiredError:
             self._data = {
-                "status": self._auth_error_label,
+                "status": self.config.auth_error_label,
                 "result": "fail",
                 "value": "",
-                "histogram": self._auth_error_label,
+                "histogram": self.config.auth_error_label,
             }
         else:
             self._data = {
-                "status": self._connection_error_label,
+                "status": self.config.connection_error_label,
                 "result": "fail",
                 "value": "",
-                "histogram": self._auth_error_label,
+                "histogram": self.config.auth_error_label,
             }
         reply.deleteLater()
 
     def _handle_authentication(self, _: QNetworkReply, auth: QAuthenticator):
         """If server requests auth, this will be called and username and password will be set"""
-        if self._server_username and self._server_password:
-            auth.setUser(self._server_username)
-            auth.setPassword(self._server_password)
+        if self.config.server_username and self.config.server_password:
+            auth.setUser(self.config.server_username)
+            auth.setPassword(self.config.server_password)

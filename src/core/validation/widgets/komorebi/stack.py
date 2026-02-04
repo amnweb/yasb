@@ -1,88 +1,33 @@
-DEFAULTS = {
-    "label_offline": "Komorebi Offline",
-    "label_window": "{title}",
-    "label_window_active": "{title}",
-    "label_no_window": "",
-    "label_zero_index": False,
-    "show_icons": "never",
-    "icon_size": 16,
-    "max_length": None,
-    "max_length_ellipsis": "...",
-    "hide_if_offline": False,
-    "show_only_stack": False,
-    "rewrite": [],
-    "animation": False,
-    "enable_scroll_switching": False,
-    "reverse_scroll_direction": False,
-    "container_padding": {"top": 0, "left": 0, "bottom": 0, "right": 0},
-}
+from typing import Literal
 
-VALIDATION_SCHEMA = {
-    "label_offline": {"type": "string", "default": DEFAULTS["label_offline"]},
-    "label_window": {"type": "string", "default": DEFAULTS["label_window"]},
-    "label_window_active": {"type": "string", "default": DEFAULTS["label_window_active"]},
-    "label_no_window": {"type": "string", "default": DEFAULTS["label_no_window"]},
-    "label_zero_index": {"type": "boolean", "default": DEFAULTS["label_zero_index"]},
-    "hide_if_offline": {"type": "boolean", "default": DEFAULTS["hide_if_offline"]},
-    "show_icons": {"type": "string", "allowed": ["focused", "always", "never"], "default": DEFAULTS["show_icons"]},
-    "icon_size": {"type": "integer", "min": 0, "default": DEFAULTS["icon_size"]},
-    "show_only_stack": {"type": "boolean", "default": DEFAULTS["show_only_stack"]},
-    "max_length": {"type": "integer", "min": 1, "nullable": True, "default": DEFAULTS["max_length"]},
-    "max_length_active": {"type": "integer", "min": 1, "nullable": True, "default": DEFAULTS["max_length"]},
-    "max_length_overall": {"type": "integer", "min": 1, "nullable": True, "default": DEFAULTS["max_length"]},
-    "max_length_ellipsis": {"type": "string", "default": DEFAULTS["max_length_ellipsis"]},
-    "animation": {"type": "boolean", "default": DEFAULTS["animation"]},
-    "rewrite": {
-        "type": "list",
-        "required": False,
-        "schema": {
-            "type": "dict",
-            "schema": {
-                "pattern": {"type": "string", "required": True},
-                "replacement": {"type": "string", "required": True},
-                "case": {
-                    "type": "string",
-                    "required": False,
-                    "allowed": ["lower", "upper", "title", "capitalize"],
-                },
-            },
-        },
-        "default": DEFAULTS["rewrite"],
-    },
-    "enable_scroll_switching": {"type": "boolean", "default": DEFAULTS["enable_scroll_switching"]},
-    "reverse_scroll_direction": {"type": "boolean", "default": DEFAULTS["reverse_scroll_direction"]},
-    "container_padding": {"type": "dict", "default": DEFAULTS["container_padding"], "required": False},
-    "btn_shadow": {
-        "type": "dict",
-        "required": False,
-        "schema": {
-            "enabled": {"type": "boolean", "default": False},
-            "color": {"type": "string", "default": "black"},
-            "offset": {"type": "list", "default": [1, 1]},
-            "radius": {"type": "integer", "default": 3},
-        },
-        "default": {"enabled": False, "color": "black", "offset": [1, 1], "radius": 3},
-    },
-    "label_shadow": {
-        "type": "dict",
-        "required": False,
-        "schema": {
-            "enabled": {"type": "boolean", "default": False},
-            "color": {"type": "string", "default": "black"},
-            "offset": {"type": "list", "default": [1, 1]},
-            "radius": {"type": "integer", "default": 3},
-        },
-        "default": {"enabled": False, "color": "black", "offset": [1, 1], "radius": 3},
-    },
-    "container_shadow": {
-        "type": "dict",
-        "required": False,
-        "schema": {
-            "enabled": {"type": "boolean", "default": False},
-            "color": {"type": "string", "default": "black"},
-            "offset": {"type": "list", "default": [1, 1]},
-            "radius": {"type": "integer", "default": 3},
-        },
-        "default": {"enabled": False, "color": "black", "offset": [1, 1], "radius": 3},
-    },
-}
+from core.validation.widgets.base_model import CustomBaseModel, PaddingConfig, ShadowConfig
+
+
+class RewriteConfig(CustomBaseModel):
+    pattern: str
+    replacement: str
+    case: Literal["lower", "upper", "title", "capitalize"] | None = None
+
+
+class StackConfig(CustomBaseModel):
+    label_offline: str = "Komorebi Offline"
+    label_window: str = "{title}"
+    label_window_active: str = "{title}"
+    label_no_window: str = ""
+    label_zero_index: bool = False
+    hide_if_offline: bool = False
+    show_icons: Literal["focused", "always", "never"] = "never"
+    icon_size: int = 16
+    show_only_stack: bool = False
+    max_length: int | None = None
+    max_length_active: int | None = None
+    max_length_overall: int | None = None
+    max_length_ellipsis: str = "..."
+    animation: bool = False
+    rewrite: list[RewriteConfig] = []
+    enable_scroll_switching: bool = False
+    reverse_scroll_direction: bool = False
+    container_padding: PaddingConfig = PaddingConfig()
+    btn_shadow: ShadowConfig = ShadowConfig()
+    label_shadow: ShadowConfig = ShadowConfig()
+    container_shadow: ShadowConfig = ShadowConfig()

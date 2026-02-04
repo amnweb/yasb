@@ -6,29 +6,14 @@ from typing import Any
 from PyQt6.QtCore import QBuffer, QIODevice, QSize
 from PyQt6.QtGui import QImage, QImageReader
 
+from core.utils.widgets.ai_chat.constants import (
+    FORMAT_TO_EXT,
+    FORMAT_TO_MIME,
+    IMAGE_EXTENSIONS,
+    IMAGE_READER_ALLOCATION_LIMIT,
+    MAX_IMAGE_DIMENSION,
+)
 from settings import DEBUG
-
-FORMAT_TO_MIME = {
-    "PNG": "image/png",
-    "JPEG": "image/jpeg",
-    "JPG": "image/jpeg",
-    "GIF": "image/gif",
-    "WEBP": "image/webp",
-}
-
-FORMAT_TO_EXT = {
-    "PNG": "png",
-    "JPEG": "jpg",
-    "JPG": "jpg",
-    "GIF": "gif",
-    "WEBP": "webp",
-}
-
-IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".webp"}
-
-# For the OpenAI Vision API, the recommended maximum dimension for optimal processing and token efficiency
-# is to resize the image so that the longest side is no more than 2048 pixels
-MAX_IMAGE_DIMENSION = 2048
 
 
 def process_image(
@@ -53,7 +38,7 @@ def process_image(
         buffer.setData(image_bytes)
         buffer.open(QIODevice.OpenModeFlag.ReadOnly)
         reader = QImageReader(buffer)
-        reader.setAllocationLimit(1024)
+        reader.setAllocationLimit(IMAGE_READER_ALLOCATION_LIMIT)
 
         # Auto-detect format from image data
         detected = reader.format().data().decode().upper() if reader.format() else ""

@@ -18,6 +18,11 @@
 | `collapsed_label`   | string  | `"\uf053"`| Icon/label shown when grouper is collapsed. |
 | `label_position`    | string  | `"right"` | Position of collapse button: `"left"` or `"right"`.                   |
 
+### Keybindings
+| Action            | Description                                      |
+|-------------------|--------------------------------------------------|
+| `toggle_collapse` | Toggle the collapsed/expanded state of the grouper. |
+
 ## Example Configuration
 
 ```yaml
@@ -58,6 +63,25 @@ glazewm-grouper:
     ]
     collapse_options:
       enabled: false  # Disable collapse functionality
+
+systeminfo-grouper-with-keybindings:
+  type: "yasb.grouper.GrouperWidget"
+  options:
+    class_name: "systeminfo-grouper"
+    widgets: [
+      "memory",
+      "disk",
+      "battery"
+    ]
+    collapse_options:
+      enabled: true
+      exclude_widgets: ["battery"]
+      expanded_label: "\uf054"
+      collapsed_label: "\uf053"
+      label_position: "right"
+    keybindings:
+      - keys: "ctrl+g"
+        action: "toggle_collapse"
 ```
 
 ## Note on usage

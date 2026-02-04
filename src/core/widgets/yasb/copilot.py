@@ -15,7 +15,7 @@ from core.utils.tooltip import CustomToolTip, set_tooltip
 from core.utils.utilities import PopupWidget, add_shadow, build_widget_label, refresh_widget_style
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.widgets.copilot.api import CopilotDataManager, CopilotUsageData
-from core.validation.widgets.yasb.copilot import VALIDATION_SCHEMA
+from core.validation.widgets.yasb.copilot import CopilotConfig
 from core.widgets.base import BaseWidget
 
 
@@ -260,10 +260,17 @@ class UsageChartWidget(QFrame):
         tension = 0.3
         for i in range(len(pts) - 1):
             p0, p1, p2, p3 = pts[max(0, i - 1)], pts[i], pts[i + 1], pts[min(len(pts) - 1, i + 2)]
+
             cp1_x = p1.x() + (p2.x() - p0.x()) * tension
             cp1_y = p1.y() + (p2.y() - p0.y()) * tension
             cp2_x = p2.x() - (p3.x() - p1.x()) * tension
             cp2_y = p2.y() - (p3.y() - p1.y()) * tension
+
+            min_y = min(p1.y(), p2.y())
+            max_y = max(p1.y(), p2.y())
+            cp1_y = max(min_y, min(cp1_y, max_y))
+            cp2_y = max(min_y, min(cp2_y, max_y))
+
             path.cubicTo(cp1_x, cp1_y, cp2_x, cp2_y, p2.x(), p2.y())
         return path
 
@@ -271,42 +278,16 @@ class UsageChartWidget(QFrame):
 class CopilotWidget(BaseWidget):
     """GitHub Copilot Usage Widget with shared instance support."""
 
-    validation_schema = VALIDATION_SCHEMA
+    validation_schema = CopilotConfig
     _instances: list["CopilotWidget"] = []
     _shared_timer: QTimer | None = None
     _initialized = False
 
-    def __init__(
-        self,
-        label: str,
-        label_alt: str,
-        token: str,
-        plan: str,
-        tooltip: bool,
-        update_interval: int,
-        icons: dict[str, str],
-        thresholds: dict[str, int],
-        menu: dict,
-        animation: dict[str, str],
-        callbacks: dict[str, str],
-        label_shadow: dict = None,
-        container_shadow: dict = None,
-    ):
+    def __init__(self, config: CopilotConfig):
         super().__init__(timer_interval=None, class_name="copilot-widget")
+        self.config = config
 
         self._show_alt_label = False
-        self._label_content = label
-        self._label_alt_content = label_alt
-        self._tooltip_enabled = tooltip
-        self._plan = plan
-        self._chart_enabled = menu.get("chart", True)
-        self._update_interval = update_interval
-        self._icons = icons
-        self._thresholds = thresholds
-        self._menu_config = menu
-        self._animation = animation
-        self._label_shadow = label_shadow
-        self._container_shadow = container_shadow
         self._menu: PopupWidget | None = None
 
         self._widget_container_layout = QHBoxLayout()
@@ -316,17 +297,17 @@ class CopilotWidget(BaseWidget):
         self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
-        add_shadow(self._widget_container, self._container_shadow)
+        add_shadow(self._widget_container, self.config.container_shadow.model_dump())
         self.widget_layout.addWidget(self._widget_container)
 
-        build_widget_label(self, label, label_alt, self._label_shadow)
+        build_widget_label(self, self.config.label, self.config.label_alt, self.config.label_shadow.model_dump())
 
         self.register_callback("toggle_label", self._toggle_label)
         self.register_callback("toggle_popup", self._toggle_popup)
         self.register_callback("refresh", lambda: CopilotDataManager.refresh())
-        self.callback_left = callbacks["on_left"]
-        self.callback_right = callbacks["on_right"]
-        self.callback_middle = callbacks["on_middle"]
+        self.callback_left = self.config.callbacks.on_left
+        self.callback_right = self.config.callbacks.on_right
+        self.callback_middle = self.config.callbacks.on_middle
 
         # Register instance
         if self not in CopilotWidget._instances:
@@ -335,15 +316,18 @@ class CopilotWidget(BaseWidget):
         # Initialize shared resources once
         if not CopilotWidget._initialized:
             CopilotWidget._initialized = True
-            token_val = token if token != "env" else os.getenv("YASB_COPILOT_TOKEN", "")
+            token_val = self.config.token if self.config.token != "env" else os.getenv("YASB_COPILOT_TOKEN", "")
             CopilotDataManager.initialize(
-                token=token_val, plan=plan, update_interval=update_interval, chart=self._chart_enabled
+                token=token_val,
+                plan=self.config.plan,
+                update_interval=self.config.update_interval,
+                chart=self.config.menu.chart,
             )
             CopilotDataManager.register_callback(CopilotWidget._on_data_update)
 
             CopilotWidget._shared_timer = QTimer()
             CopilotWidget._shared_timer.timeout.connect(CopilotDataManager.refresh)
-            CopilotWidget._shared_timer.start(update_interval * 1000)
+            CopilotWidget._shared_timer.start(self.config.update_interval * 1000)
 
         # Cleanup on destroy
         try:
@@ -370,13 +354,13 @@ class CopilotWidget(BaseWidget):
                 cls._instances.remove(inst)
 
     def _toggle_popup(self):
-        if self._animation["enabled"]:
-            AnimationManager.animate(self, self._animation["type"], self._animation["duration"])
+        if self.config.animation.enabled:
+            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
         self._show_popup()
 
     def _toggle_label(self):
-        if self._animation["enabled"]:
-            AnimationManager.animate(self, self._animation["type"], self._animation["duration"])
+        if self.config.animation.enabled:
+            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
         self._show_alt_label = not self._show_alt_label
         for w in self._widgets:
             w.setVisible(not self._show_alt_label)
@@ -391,11 +375,11 @@ class CopilotWidget(BaseWidget):
         pct = (used * 100 // allowance) if allowance else 0
 
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
-        active_label = self._label_alt_content if self._show_alt_label else self._label_content
+        active_label = self.config.label_alt if self._show_alt_label else self.config.label
         label_parts = [p for p in re.split(r"(<span.*?>.*?</span>)", active_label) if p]
 
         label_options = {
-            "{icon}": self._icons["copilot"],
+            "{icon}": self.config.icons.copilot,
             "{used}": str(used),
             "{allowance}": str(allowance),
             "{percentage}": str(pct),
@@ -415,15 +399,15 @@ class CopilotWidget(BaseWidget):
         # Update tooltip and state classes
         state_class = (
             "critical"
-            if pct >= self._thresholds["critical"]
+            if pct >= self.config.thresholds.critical
             else "warning"
-            if pct >= self._thresholds["warning"]
+            if pct >= self.config.thresholds.warning
             else ""
         )
         tip = f"Error: {data.error}" if data.error else f"Copilot: {used}/{allowance} ({pct}%)"
 
         for widget in active_widgets:
-            if self._tooltip_enabled:
+            if self.config.tooltip:
                 set_tooltip(widget, tip)
             classes = [c for c in widget.property("class").split() if c not in ("warning", "critical")]
             if state_class:
@@ -436,10 +420,10 @@ class CopilotWidget(BaseWidget):
 
         self._menu = PopupWidget(
             self,
-            blur=self._menu_config["blur"],
-            round_corners=self._menu_config["round_corners"],
-            round_corners_type=self._menu_config["round_corners_type"],
-            border_color=self._menu_config["border_color"],
+            blur=self.config.menu.blur,
+            round_corners=self.config.menu.round_corners,
+            round_corners_type=self.config.menu.round_corners_type,
+            border_color=self.config.menu.border_color,
         )
         self._menu.setProperty("class", "copilot-menu")
 
@@ -452,27 +436,27 @@ class CopilotWidget(BaseWidget):
 
         if data.error:
             layout.addWidget(self._create_error_section(data.error))
-        elif data.total_requests or data.requests_by_model:
+        elif data.total_requests or data.requests_by_model or data.daily_usage:
             layout.addWidget(self._create_progress_section(data))
             layout.addWidget(self._create_spending_section(data))
             if data.requests_by_model:
                 layout.addWidget(self._create_model_section(data))
-            if self._chart_enabled and data.daily_usage:
+            if self.config.menu.chart and data.daily_usage:
                 layout.addWidget(self._create_chart_section(data))
         else:
             self._create_empty_state(layout)
 
         self._menu.adjustSize()
         self._menu.setPosition(
-            alignment=self._menu_config["alignment"],
-            direction=self._menu_config["direction"],
-            offset_left=self._menu_config["offset_left"],
-            offset_top=self._menu_config["offset_top"],
+            alignment=self.config.menu.alignment,
+            direction=self.config.menu.direction,
+            offset_left=self.config.menu.offset_left,
+            offset_top=self.config.menu.offset_top,
         )
         self._menu.show()
 
     def _create_empty_state(self, layout: QVBoxLayout) -> None:
-        icon_lbl = QLabel(self._icons["copilot"])
+        icon_lbl = QLabel(self.config.icons.copilot)
         icon_lbl.setProperty("class", "empty-icon")
 
         msg = QLabel("Loading usage data...")
@@ -517,7 +501,7 @@ class CopilotWidget(BaseWidget):
         bar = ProgressBar()
         bar.setMinimumHeight(8)
         bar.set_value(data.total_requests, data.allowance)
-        bar.set_thresholds(self._thresholds["warning"], self._thresholds["critical"])
+        bar.set_thresholds(self.config.thresholds.warning, self.config.thresholds.critical)
         layout.addWidget(bar)
 
         stats = QHBoxLayout()
@@ -638,7 +622,7 @@ class CopilotWidget(BaseWidget):
         layout.setContentsMargins(12, 12, 12, 12)
         layout.setSpacing(4)
 
-        icon = QLabel(self._icons["error"])
+        icon = QLabel(self.config.icons.error)
         icon.setProperty("class", "error-icon")
         icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(icon)

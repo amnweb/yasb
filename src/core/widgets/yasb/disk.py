@@ -13,7 +13,7 @@ from core.utils.utilities import (
     refresh_widget_style,
 )
 from core.utils.widgets.animation_manager import AnimationManager
-from core.validation.widgets.yasb.disk import VALIDATION_SCHEMA
+from core.validation.widgets.yasb.disk import DiskConfig
 from core.widgets.base import BaseWidget
 
 
@@ -31,69 +31,40 @@ class ClickableDiskWidget(QWidget):
 
 
 class DiskWidget(BaseWidget):
-    validation_schema = VALIDATION_SCHEMA
+    validation_schema = DiskConfig
 
-    def __init__(
-        self,
-        label: str,
-        label_alt: str,
-        class_name: str,
-        volume_label: str,
-        decimal_display: int,
-        update_interval: int,
-        group_label: dict[str, str],
-        container_padding: dict[str, int],
-        animation: dict[str, str],
-        callbacks: dict[str, str],
-        disk_thresholds: dict[str, int],
-        label_shadow: dict = None,
-        container_shadow: dict = None,
-        progress_bar: dict = None,
-    ):
-        super().__init__(int(update_interval * 1000), class_name=f"disk-widget {class_name}")
-        self._decimal_display = decimal_display
+    def __init__(self, config: DiskConfig):
+        super().__init__(int(config.update_interval * 1000), class_name=f"disk-widget {config.class_name}")
+        self.config = config
         self._show_alt_label = False
-        self._label_content = label
-        self._label_alt_content = label_alt
-        self._volume_label = volume_label.upper()
-        self._padding = container_padding
-        self._group_label = group_label
-        self._animation = animation
-        self._label_shadow = label_shadow
-        self._container_shadow = container_shadow
-        self._disk_thresholds = disk_thresholds
-        self._progress_bar = progress_bar
-
         self.progress_widget = None
-        self.progress_widget = build_progress_widget(self, self._progress_bar)
+        self.progress_widget = build_progress_widget(self, self.config.progress_bar.model_dump())
 
         self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(
-            self._padding["left"], self._padding["top"], self._padding["right"], self._padding["bottom"]
-        )
+        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
         # Initialize container
         self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
-        add_shadow(self._widget_container, self._container_shadow)
+        add_shadow(self._widget_container, self.config.container_shadow.model_dump())
         # Add the container to the main widget layout
         self.widget_layout.addWidget(self._widget_container)
 
-        build_widget_label(self, self._label_content, self._label_alt_content, self._label_shadow)
+        build_widget_label(self, self.config.label, self.config.label_alt, self.config.label_shadow.model_dump())
 
         self.register_callback("toggle_label", self._toggle_label)
         self.register_callback("toggle_group", self._toggle_group)
         self.register_callback("update_label", self._update_label)
-        self.callback_left = callbacks["on_left"]
-        self.callback_right = callbacks["on_right"]
-        self.callback_middle = callbacks["on_middle"]
+        self.callback_left = self.config.callbacks.on_left
+        self.callback_right = self.config.callbacks.on_right
+        self.callback_middle = self.config.callbacks.on_middle
         self.callback_timer = "update_label"
         self.start_timer()
 
     def _toggle_label(self):
-        if self._animation["enabled"]:
-            AnimationManager.animate(self, self._animation["type"], self._animation["duration"])
+        if self.config.animation.enabled:
+            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
         self._show_alt_label = not self._show_alt_label
         for widget in self._widgets:
             widget.setVisible(not self._show_alt_label)
@@ -102,13 +73,13 @@ class DiskWidget(BaseWidget):
         self._update_label()
 
     def _toggle_group(self):
-        if self._animation["enabled"]:
-            AnimationManager.animate(self, self._animation["type"], self._animation["duration"])
+        if self.config.animation.enabled:
+            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
         self.show_group_label()
 
     def _update_label(self):
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
-        active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
+        active_label_content = self.config.label_alt if self._show_alt_label else self.config.label
         label_parts = re.split(r"(<span.*?>.*?</span>)", active_label_content)
         label_parts = [part for part in label_parts if part]
         widget_index = 0
@@ -116,10 +87,10 @@ class DiskWidget(BaseWidget):
         disk_space = self._get_space()
         percent_value = float(disk_space["used"]["percent"].rstrip("%")) if disk_space else 0
 
-        if self._progress_bar["enabled"] and self.progress_widget:
+        if self.config.progress_bar.enabled and self.progress_widget:
             if self._widget_container_layout.indexOf(self.progress_widget) == -1:
                 self._widget_container_layout.insertWidget(
-                    0 if self._progress_bar["position"] == "left" else self._widget_container_layout.count(),
+                    0 if self.config.progress_bar.position == "left" else self._widget_container_layout.count(),
                     self.progress_widget,
                 )
 
@@ -136,7 +107,9 @@ class DiskWidget(BaseWidget):
                     # Update label with formatted content
                     label_class = "label alt" if self._show_alt_label else "label"
                     formatted_text = (
-                        part.format(space=disk_space, volume_label=self._volume_label) if disk_space else part
+                        part.format(space=disk_space, volume_label=self.config.volume_label.upper())
+                        if disk_space
+                        else part
                     )
                     active_widgets[widget_index].setProperty(
                         "class", f"{label_class} status-{self._get_disk_threshold(percent_value)}"
@@ -145,8 +118,8 @@ class DiskWidget(BaseWidget):
                     refresh_widget_style(active_widgets[widget_index])
                 widget_index += 1
 
-    def _get_volume_label(self, drive_letter):
-        if not self._group_label["show_label_name"]:
+    def _get_volume_label(self, drive_letter: str) -> str | None:
+        if not self.config.group_label.show_label_name:
             return None
         try:
             volume_label = win32api.GetVolumeInformation(f"{drive_letter}:\\")[0]
@@ -157,15 +130,15 @@ class DiskWidget(BaseWidget):
     def show_group_label(self):
         self.dialog = PopupWidget(
             self,
-            self._group_label["blur"],
-            self._group_label["round_corners"],
-            self._group_label["round_corners_type"],
-            self._group_label["border_color"],
+            self.config.group_label.blur,
+            self.config.group_label.round_corners,
+            self.config.group_label.round_corners_type,
+            self.config.group_label.border_color,
         )
         self.dialog.setProperty("class", "disk-group")
 
         layout = QVBoxLayout()
-        for label in self._group_label["volume_labels"]:
+        for label in self.config.group_label.volume_labels:
             disk_space = self._get_space(label)
             if disk_space is None:
                 continue
@@ -226,19 +199,19 @@ class DiskWidget(BaseWidget):
         # Position the dialog
         self.dialog.adjustSize()
         self.dialog.setPosition(
-            alignment=self._group_label["alignment"],
-            direction=self._group_label["direction"],
-            offset_left=self._group_label["offset_left"],
-            offset_top=self._group_label["offset_top"],
+            alignment=self.config.group_label.alignment,
+            direction=self.config.group_label.direction,
+            offset_left=self.config.group_label.offset_left,
+            offset_top=self.config.group_label.offset_top,
         )
         self.dialog.show()
 
     def open_explorer(self, label):
         os.startfile(f"{label}:\\")
 
-    def _get_space(self, volume_label=None):
+    def _get_space(self, volume_label: str | None = None):
         if volume_label is None:
-            volume_label = self._volume_label
+            volume_label = self.config.volume_label.upper()
 
         try:
             free_bytes, total_bytes, _ = win32api.GetDiskFreeSpaceEx(f"{volume_label}:\\")
@@ -251,7 +224,7 @@ class DiskWidget(BaseWidget):
         used_bytes = total_bytes - free_bytes
         percent_used = (used_bytes / total_bytes) * 100
         percent_free = 100 - percent_used
-        d = self._decimal_display
+        d = self.config.decimal_display
 
         return {
             "total": {
@@ -273,12 +246,12 @@ class DiskWidget(BaseWidget):
             },
         }
 
-    def _get_disk_threshold(self, disk_percent) -> str:
-        if disk_percent <= self._disk_thresholds["low"]:
+    def _get_disk_threshold(self, disk_percent: float) -> str:
+        if disk_percent <= self.config.disk_thresholds.low:
             return "low"
-        elif self._disk_thresholds["low"] < disk_percent <= self._disk_thresholds["medium"]:
+        elif self.config.disk_thresholds.low < disk_percent <= self.config.disk_thresholds.medium:
             return "medium"
-        elif self._disk_thresholds["medium"] < disk_percent <= self._disk_thresholds["high"]:
+        elif self.config.disk_thresholds.medium < disk_percent <= self.config.disk_thresholds.high:
             return "high"
-        elif self._disk_thresholds["high"] < disk_percent:
+        elif self.config.disk_thresholds.high < disk_percent:
             return "critical"
