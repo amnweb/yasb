@@ -114,22 +114,19 @@ class Bar(QWidget):
         self.handle_bar_management.connect(self._handle_bar_management)
         self._event_service.register_event("handle_bar_cli", self.handle_bar_management)
 
-        # Initialize autohide manager
-        if self._window_flags["auto_hide"]:
-            self._autohide_manager = AutoHideManager(self, self)
-            self._autohide_manager.setup_autohide()
-
         # Initialize animation manager
         self._animation_manager = BarAnimationManager(self, self)
         # If animation is enabled, initial show uses fade effect because of DWM issues
         self._initial_show = True
 
-        # Register with AppBarManager for fullscreen notifications only if hide_on_fullscreen is enabled
-        if self._hide_on_fullscreen and self.app_bar_manager:
+        if (self._hide_on_fullscreen or self._window_flags["windows_app_bar"]) and self.app_bar_manager:
             AppBarManager().register_bar(int(self.winId()), self)
 
-        # Register AppBar once at initialization
         self.update_app_bar()
+
+        if self._window_flags["auto_hide"]:
+            self._autohide_manager = AutoHideManager(self, self)
+            self._autohide_manager.setup_autohide()
 
         self.show()
 
