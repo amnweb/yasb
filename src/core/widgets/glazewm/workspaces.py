@@ -584,7 +584,7 @@ class GlazewmWorkspacesWidget(BaseWidget):
                     GlazewmWorkspacesWidget._display_name_cache[workspace.name] = (
                         workspace.display_name
                     )
-                if workspace.is_focused_workspace:
+                if workspace.focus:
                     global_focused_ws = workspace.name
 
         # Ensure persistent workspace buttons exist first
@@ -636,7 +636,7 @@ class GlazewmWorkspacesWidget(BaseWidget):
             for workspace in mon.workspaces:
                 if workspace.name not in self.workspaces:
                     # Create button if workspace is focused OR has windows
-                    if workspace.is_focused_workspace or workspace.num_windows > 0:
+                    if workspace.focus or workspace.num_windows > 0:
                         cached_display_name = (
                             GlazewmWorkspacesWidget._display_name_cache.get(
                                 workspace.name
@@ -675,9 +675,7 @@ class GlazewmWorkspacesWidget(BaseWidget):
             btn.display_name = workspace.display_name
             btn.workspace_window_count = workspace.num_windows
             btn.is_displayed = workspace.is_displayed
-            btn.is_focused = (
-                workspace.is_focused_workspace
-            )  # Use global focus from GlazeWM
+            btn.is_focused = workspace.focus  # hasFocus is globally unique
             if self.workspace_app_icons_enabled:
                 btn.windows = workspace.windows
 
@@ -718,7 +716,7 @@ class GlazewmWorkspacesWidget(BaseWidget):
             for workspace in mon.workspaces:
                 all_workspace_info[workspace.name] = (
                     workspace.num_windows,
-                    workspace.is_focused_workspace,
+                    workspace.focus,
                 )
 
         for btn in self.workspaces.values():

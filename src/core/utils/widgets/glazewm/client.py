@@ -33,9 +33,8 @@ class Window:
 class Workspace:
     name: str
     display_name: str
-    focus: bool = False
+    focus: bool = False  # Global focus - only ONE workspace has this True
     is_displayed: bool = False
-    is_focused_workspace: bool = False  # Global focus from GlazeWM
     num_windows: int = 0
     windows: list[Window] = field(default_factory=list)
 
@@ -185,7 +184,6 @@ class GlazewmClient(QObject):
                     display_name=child.get("displayName", ""),
                     is_displayed=child.get("isDisplayed", False),
                     focus=child.get("hasFocus", False),
-                    is_focused_workspace=child.get("isFocusedWorkspace", False),
                     num_windows=len(child.get("children", [])),
                     windows=self._read_windows(child),
                 )
