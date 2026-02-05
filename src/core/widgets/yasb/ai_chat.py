@@ -166,11 +166,9 @@ class AiChatWidget(BaseWidget):
         # Skip if menu was just closed (flag set by aboutToHide)
         if getattr(menu, "_just_closed", False):
             return
-        # Block popup deactivation while menu is open
         if self._popup_chat:
             self._popup_chat.set_block_deactivate(True)
         menu.exec(button.mapToGlobal(button.rect().bottomLeft()))
-        # Re-enable deactivation after menu closes
         if self._popup_chat:
             self._popup_chat.set_block_deactivate(False)
 

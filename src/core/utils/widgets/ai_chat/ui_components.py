@@ -141,8 +141,8 @@ class AiChatPopup(PopupWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._block_deactivate = False
         self._is_floating = False
+        self._block_deactivate = False
         self.setWindowFlags(
             Qt.WindowType.Tool
             | Qt.WindowType.FramelessWindowHint
@@ -164,15 +164,13 @@ class AiChatPopup(PopupWidget):
         refresh_widget_style(self, *self.findChildren(QWidget))
 
     def eventFilter(self, obj, event):
-        # Don't close if _block_deactivate is set (e.g., dropdown menu is open)
-        if getattr(self, "_block_deactivate", False):
+        if self._is_floating or self._block_deactivate:
             return False
         return super().eventFilter(obj, event)
 
     def event(self, event):
         if event.type() == QEvent.Type.WindowDeactivate:
-            # Don't auto-close when floating or when file picker is active
-            if getattr(self, "_block_deactivate", False) or getattr(self, "_is_floating", False):
+            if self._is_floating or self._block_deactivate:
                 event.accept()
                 return True
             self.hide_animated()
