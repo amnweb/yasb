@@ -38,14 +38,20 @@ class ThumbnailHost(QWidget):
 
     def enterEvent(self, event):
         """Notify preview that mouse entered thumbnail."""
-        if self._preview_popup and hasattr(self._preview_popup, "_on_thumbnail_enter"):
-            self._preview_popup._on_thumbnail_enter()
+        try:
+            if self._preview_popup and hasattr(self._preview_popup, "_on_thumbnail_enter"):
+                self._preview_popup._on_thumbnail_enter()
+        except RuntimeError:
+            pass
         super().enterEvent(event)
 
     def leaveEvent(self, event):
         """Notify preview that mouse left thumbnail."""
-        if self._preview_popup and hasattr(self._preview_popup, "_on_thumbnail_leave"):
-            self._preview_popup._on_thumbnail_leave()
+        try:
+            if self._preview_popup and hasattr(self._preview_popup, "_on_thumbnail_leave"):
+                self._preview_popup._on_thumbnail_leave()
+        except RuntimeError:
+            pass
         super().leaveEvent(event)
 
     def mousePressEvent(self, event):
