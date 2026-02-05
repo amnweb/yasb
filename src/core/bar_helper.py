@@ -29,13 +29,18 @@ from PyQt6.QtWidgets import (
     QWidget,
     QWidgetAction,
 )
-from win32con import SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE
+from win32con import HWND_NOTOPMOST, HWND_TOPMOST, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE
 
 from core.utils.controller import exit_application, reload_application
 from core.utils.utilities import refresh_widget_style
 from core.utils.win32.app_bar import APPBAR_CALLBACK_MESSAGE, AppBarNotify
+from core.utils.win32.bindings import SetWindowPos
+from core.utils.win32.bindings.user32 import KillTimer, RegisterWindowMessage, SetTimer
 from core.utils.win32.structs import MSG
 from core.utils.win32.utilities import apply_qmenu_style
+
+# Register TaskbarCreated message to detect Explorer restarts
+WM_TASKBARCREATED = RegisterWindowMessage("TaskbarCreated")
 
 
 class BarAnimationManager(QObject):
@@ -236,6 +241,15 @@ class AutoHideManager(QObject):
         except Exception:
             pass
 
+        # Remove reserved screen space when autohide is enabled
+        if hasattr(self.bar_widget, "app_bar_manager") and self.bar_widget.app_bar_manager:
+            try:
+                SystrayAppBarHelper.execute_without_systray_interference(
+                    lambda: self.bar_widget.app_bar_manager.remove_appbar()
+                )
+            except Exception as e:
+                logging.error(f"Failed to remove AppBar reservation: {e}")
+
         # Set up detection zone after a short delay
         QTimer.singleShot(self._autohide_delay, self.setup_detection_zone)
 
@@ -326,6 +340,14 @@ class AutoHideManager(QObject):
             self._detection_zone.hide()
             self._detection_zone.deleteLater()
         self._is_enabled = False
+
+        # Restore reserved screen space when autohide is disabled and only if windows_app_bar was enabled
+        if hasattr(self.bar_widget, "update_app_bar") and self.bar_widget._window_flags["windows_app_bar"]:
+            try:
+                SystrayAppBarHelper.execute_without_systray_interference(lambda: self.bar_widget.update_app_bar())
+            except Exception as e:
+                logging.error(f"Failed to restore AppBar reservation: {e}")
+
         # Unregister global autohide registration for this bar
         try:
             from core.global_state import unset_autohide_owner_for_bar
@@ -334,6 +356,50 @@ class AutoHideManager(QObject):
                 unset_autohide_owner_for_bar(self.bar_widget.bar_id)
         except Exception:
             pass
+
+
+class SystrayAppBarHelper:
+    """Helper class to manage systray window state during AppBar operations"""
+
+    @staticmethod
+    def execute_without_systray_interference(callback):
+        """
+        Execute a callback with systray timer temporarily killed.
+        This prevents systray from continuously reasserting HWND_TOPMOST every 100ms,
+        which interferes with AppBar registration by triggering work area recalculations.
+        """
+        systray_hwnd = SystrayAppBarHelper._get_systray_hwnd()
+        flags = SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE
+
+        try:
+            if systray_hwnd:
+                # Kill the systray timer (ID 1) to prevent HWND_TOPMOST interference
+                KillTimer(systray_hwnd, 1)
+                # Demote systray to non-topmost
+                SetWindowPos(systray_hwnd, HWND_NOTOPMOST, 0, 0, 0, 0, flags)
+
+            callback()
+
+        finally:
+            if systray_hwnd:
+                # Restore systray to topmost
+                SetWindowPos(systray_hwnd, HWND_TOPMOST, 0, 0, 0, 0, flags)
+                # Restart the timer (ID 1, 100ms interval)
+                SetTimer(systray_hwnd, 1, 100, None)
+
+    @staticmethod
+    def _get_systray_hwnd():
+        """Get the systray monitor window hwnd if active"""
+        try:
+            from core.widgets.yasb.systray import SystrayWidget
+
+            if SystrayWidget._systray_instance and hasattr(SystrayWidget._systray_instance, "hwnd"):
+                hwnd = SystrayWidget._systray_instance.hwnd
+                if hwnd and hwnd != 0:
+                    return hwnd
+        except Exception:
+            pass
+        return None
 
 
 class AppBarManager(QAbstractNativeEventFilter):
@@ -353,12 +419,17 @@ class AppBarManager(QAbstractNativeEventFilter):
         "CEFCLIENT",
     }
 
+    # Suffixes for version-dependent window classes (e.g. Qt653QWindowIcon)
+    EXCLUDED_WINDOW_CLASS_SUFFIXES = ("QWindowIcon",)
+
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
             cls._instance._bars = {}
             cls._instance._bar_intended_state = {}  # Track intended visibility (True=visible, False=hidden)
             cls._instance._swp_flags = SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE
+            cls._instance._ready = False  # Enabled after first bar registers
+            cls._instance._reregister_pending = False  # Coalesces multiple WM_TASKBARCREATED into one
         return cls._instance
 
     def __init__(self):
@@ -379,17 +450,37 @@ class AppBarManager(QAbstractNativeEventFilter):
         self._ensure_installed()
         self._bars[hwnd] = bar_widget
         self._bar_intended_state[hwnd] = True  # Initially visible
+        self._ready = True
 
     def unregister_bar(self, hwnd: int):
         """Unregister a bar from receiving fullscreen notifications"""
         self._bars.pop(hwnd, None)
         self._bar_intended_state.pop(hwnd, None)
 
+    def suppress(self):
+        """Temporarily suppress WM_TASKBARCREATED handling.
+        Used when our own code broadcasts TaskbarCreated (e.g. systray init)."""
+        self._ready = False
+
+    def unsuppress(self):
+        """Re-enable WM_TASKBARCREATED handling after suppress()."""
+        self._ready = True
+
     def nativeEventFilter(self, eventType, message):
-        """Filter native Windows messages for AppBar fullscreen notifications"""
+        """Filter native Windows messages for AppBar fullscreen notifications and Explorer restarts"""
         try:
             if eventType == b"windows_generic_MSG":
                 msg = ctypes.cast(int(message), ctypes.POINTER(MSG)).contents
+
+                # Handle TaskbarCreated message (Explorer restart)
+                if msg.message == WM_TASKBARCREATED:
+                    # Only handle if fully initialized and not already scheduled.
+                    # WM_TASKBARCREATED is broadcast to all top-level windows, so we
+                    # coalesce multiple messages into a single deferred re-registration.
+                    if self._ready and not self._reregister_pending and self._bars:
+                        self._reregister_pending = True
+                        QTimer.singleShot(0, self._deferred_reregister)
+                    return False, 0
 
                 if msg.message == APPBAR_CALLBACK_MESSAGE:
                     hwnd = msg.hwnd
@@ -403,15 +494,66 @@ class AppBarManager(QAbstractNativeEventFilter):
 
         return False, 0
 
-    def _get_foreground_window_class(self) -> str:
-        """Get the window class name of the current foreground window"""
+    def _deferred_reregister(self):
+        """Deferred handler that runs once per event loop iteration,
+        coalescing all WM_TASKBARCREATED messages from the same batch."""
+        self._reregister_pending = False
+        if not self._ready or not self._bars:
+            return
+
+        # Collect bars that actually need re-registration
+        bars_to_reregister = []
+        needs_systray_workaround = False
+        for bw in self._bars.values():
+            flags = getattr(bw, "_window_flags", {})
+            app_bar = flags.get("windows_app_bar", False)
+            fullscreen = getattr(bw, "_hide_on_fullscreen", False)
+            if not app_bar and not fullscreen:
+                continue
+            if hasattr(bw, "_autohide_manager") and bw._autohide_manager and bw._autohide_manager.is_enabled():
+                continue
+            if not hasattr(bw, "update_app_bar"):
+                continue
+            bars_to_reregister.append((bw, app_bar))
+            if app_bar:
+                needs_systray_workaround = True
+
+        if not bars_to_reregister:
+            return
+
+        count = len(bars_to_reregister)
+        logging.info("AppBarManager need to re-register %d %s", count, "bar" if count == 1 else "bars")
+
+        def reregister():
+            for bw, app_bar in bars_to_reregister:
+                try:
+                    if hasattr(bw, "app_bar_manager") and bw.app_bar_manager:
+                        bw.app_bar_manager.remove_appbar()
+                    bw.update_app_bar()
+                    reason = "space reservation + fullscreen" if app_bar else "fullscreen detection"
+                    logging.info(f"Re-registered AppBar for {getattr(bw, 'bar_id', '?')} ({reason})")
+                except Exception as e:
+                    logging.error(f"Failed to re-register bar: {e}")
+
+        if needs_systray_workaround:
+            SystrayAppBarHelper.execute_without_systray_interference(reregister)
+        else:
+            reregister()
+
+    def _is_foreground_excluded(self) -> bool:
+        """Check if the foreground window should be excluded from fullscreen detection."""
         try:
             hwnd = win32gui.GetForegroundWindow()
-            if hwnd:
-                return win32gui.GetClassName(hwnd)
+            if not hwnd:
+                return False
+            window_class = win32gui.GetClassName(hwnd)
+            if window_class in self.EXCLUDED_WINDOW_CLASSES or window_class.endswith(
+                self.EXCLUDED_WINDOW_CLASS_SUFFIXES
+            ):
+                return True
         except Exception:
             pass
-        return ""
+        return False
 
     def _handle_fullscreen(self, hwnd: int, is_fullscreen_opening: bool):
         """Handle fullscreen notification for a bar"""
@@ -421,10 +563,9 @@ class AppBarManager(QAbstractNativeEventFilter):
 
         intended_visible = self._bar_intended_state.get(hwnd, True)
 
-        # Check if the fullscreen app's window class is excluded
+        # Check if the fullscreen app's window should be excluded
         if is_fullscreen_opening:
-            window_class = self._get_foreground_window_class()
-            if window_class in self.EXCLUDED_WINDOW_CLASSES:
+            if self._is_foreground_excluded():
                 return
 
         should_hide_bar = getattr(bar_widget, "_hide_on_fullscreen", False)
