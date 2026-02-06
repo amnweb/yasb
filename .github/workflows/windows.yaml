@@ -408,7 +408,7 @@ jobs:
           const changelog = (process.env.CHANGELOG || '').trim();
           let body = '';
           if (summary && summary.length > 50) {
-            body = `${summary}\n\n<br>\n\n${changelog}`;
+            body = `${summary}\n\n\n\n${changelog}`;
           } else {
             body = changelog;
           }
