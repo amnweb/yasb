@@ -11900,92 +11900,6 @@
       "title": "WindowStyleConfig",
       "type": "object"
     },
-    "WindowsDesktopsConfig": {
-      "additionalProperties": false,
-      "properties": {
-        "label_workspace_btn": {
-          "default": "{index}",
-          "title": "Label Workspace Btn",
-          "type": "string"
-        },
-        "label_workspace_active_btn": {
-          "default": "{index}",
-          "title": "Label Workspace Active Btn",
-          "type": "string"
-        },
-        "switch_workspace_animation": {
-          "default": true,
-          "title": "Switch Workspace Animation",
-          "type": "boolean"
-        },
-        "animation": {
-          "default": false,
-          "title": "Animation",
-          "type": "boolean"
-        },
-        "btn_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
-        "container_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
-        "container_padding": {
-          "$ref": "#/$defs/PaddingConfig",
-          "default": {
-            "top": 0,
-            "left": 0,
-            "bottom": 0,
-            "right": 0
-          }
-        },
-        "keybindings": {
-          "default": [],
-          "items": {
-            "$ref": "#/$defs/KeybindingConfig"
-          },
-          "title": "Keybindings",
-          "type": "array"
-        }
-      },
-      "title": "WindowsDesktopsConfig",
-      "type": "object"
-    },
-    "WindowsDesktopsEntry": {
-      "properties": {
-        "type": {
-          "const": "yasb.windows_desktops.WorkspaceWidget",
-          "title": "Type",
-          "type": "string"
-        },
-        "options": {
-          "$ref": "#/$defs/WindowsDesktopsConfig"
-        }
-      },
-      "required": [
-        "type",
-        "options"
-      ],
-      "title": "WindowsDesktopsEntry",
-      "type": "object"
-    },
     "WindowsUpdateConfig": {
       "additionalProperties": false,
       "properties": {
@@ -13553,9 +13467,6 @@
           },
           {
             "$ref": "#/$defs/WifiEntry"
-          },
-          {
-            "$ref": "#/$defs/WindowsDesktopsEntry"
           },
           {
             "$ref": "#/$defs/WindowControlsEntry"
