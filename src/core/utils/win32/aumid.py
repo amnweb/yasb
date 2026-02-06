@@ -234,7 +234,6 @@ def get_aumid_from_shortcut(shortcut_path: str) -> str | None:
             store.contents.lpVtbl.contents.Release(store)
         except Exception:
             pass
-
     return aumid
 
 
@@ -248,7 +247,7 @@ def activate_app_by_aumid(aumid: str) -> bool:
     Returns:
         True if a window was found and activation was attempted, False otherwise.
     """
-    from core.utils.win32.window_actions import set_foreground
+    from core.utils.win32.window_actions import force_foreground_focus, restore_window
 
     found_hwnd = None
 
@@ -266,7 +265,9 @@ def activate_app_by_aumid(aumid: str) -> bool:
     user32.EnumWindows(WNDENUMPROC(enum_window_callback), 0)
 
     if found_hwnd:
-        set_foreground(found_hwnd)
+        if user32.IsIconic(found_hwnd):
+            restore_window(found_hwnd)
+        force_foreground_focus(found_hwnd)
         return True
 
     return False
