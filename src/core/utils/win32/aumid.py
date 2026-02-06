@@ -247,7 +247,6 @@ def activate_app_by_aumid(aumid: str) -> bool:
     Returns:
         True if a window was found and activation was attempted, False otherwise.
     """
-    from core.utils.win32.window_actions import force_foreground_focus, restore_window
 
     found_hwnd = None
 
@@ -265,9 +264,46 @@ def activate_app_by_aumid(aumid: str) -> bool:
     user32.EnumWindows(WNDENUMPROC(enum_window_callback), 0)
 
     if found_hwnd:
+        # 1. Restore if minimized
         if user32.IsIconic(found_hwnd):
-            restore_window(found_hwnd)
-        force_foreground_focus(found_hwnd)
+            # SW_RESTORE = 9
+            user32.ShowWindow(found_hwnd, 9)
+
+        # 2. Robust Focus Stealing
+        # We need to attach to BOTH the current foreground thread (to get permission to switch)
+        # AND the target thread (to effectively set focus).
+
+        fg_hwnd = user32.GetForegroundWindow()
+        # We use the existing GetWindowThreadProcessId wrapper but need a dummy PID
+        dummy_pid = wt.DWORD(0)
+        fg_tid = GetWindowThreadProcessId(wt.HWND(fg_hwnd), byref(dummy_pid))
+        target_tid = GetWindowThreadProcessId(wt.HWND(found_hwnd), byref(dummy_pid))
+        my_tid = kernel32.GetCurrentThreadId()
+
+        attached_fg = False
+        attached_target = False
+
+        try:
+            # Attach to current foreground thread
+            if fg_tid != my_tid and fg_tid:
+                attached_fg = bool(user32.AttachThreadInput(my_tid, fg_tid, True))
+
+            # Attach to target thread
+            if target_tid != my_tid and target_tid != fg_tid and target_tid:
+                attached_target = bool(user32.AttachThreadInput(my_tid, target_tid, True))
+
+            # Perform activation
+            user32.SetForegroundWindow(found_hwnd)
+            user32.SetFocus(found_hwnd)
+            user32.BringWindowToTop(found_hwnd)
+
+        finally:
+            # Detach
+            if attached_target:
+                user32.AttachThreadInput(my_tid, target_tid, False)
+            if attached_fg:
+                user32.AttachThreadInput(my_tid, fg_tid, False)
+
         return True
 
     return False
