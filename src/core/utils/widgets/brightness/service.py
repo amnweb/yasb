@@ -242,6 +242,16 @@ class BrightnessService(QObject):
         return False
 
     # DDC/CI operations
+    def _destroy_physical_monitors(self, monitors, count: int) -> None:
+        """Destroy all physical monitor handles to prevent leaks."""
+        for i in range(count):
+            handle = monitors[i].hPhysicalMonitor
+            if handle is not None:
+                try:
+                    dxva2.DestroyPhysicalMonitor(handle)
+                except Exception:
+                    pass
+
     def _test_ddc(self, hmonitor: int) -> bool:
         """Test if monitor supports DDC/CI brightness control."""
         try:
@@ -253,20 +263,20 @@ class BrightnessService(QObject):
             if not dxva2.GetPhysicalMonitorsFromHMONITOR(hmonitor, count.value, monitors):
                 return False
 
-            handle = monitors[0].hPhysicalMonitor
-            actual_handle = handle if handle is not None else 0
-
             try:
-                current, maximum = DWORD(), DWORD()
-                for _ in range(3):
-                    if dxva2.GetVCPFeatureAndVCPFeatureReply(
-                        actual_handle, BYTE(VCP_BRIGHTNESS), None, byref(current), byref(maximum)
-                    ):
-                        return True
+                for i in range(count.value):
+                    handle = monitors[i].hPhysicalMonitor
+                    actual_handle = handle if handle is not None else 0
+                    current, maximum = DWORD(), DWORD()
+                    for attempt in range(50):
+                        if dxva2.GetVCPFeatureAndVCPFeatureReply(
+                            actual_handle, BYTE(VCP_BRIGHTNESS), None, byref(current), byref(maximum)
+                        ):
+                            return True
+                        time.sleep(0.02 if attempt < 20 else 0.1)
                 return False
             finally:
-                if handle is not None:
-                    dxva2.DestroyPhysicalMonitor(handle)
+                self._destroy_physical_monitors(monitors, count.value)
         except Exception:
             return False
 
@@ -281,20 +291,20 @@ class BrightnessService(QObject):
             if not dxva2.GetPhysicalMonitorsFromHMONITOR(hmonitor, count.value, monitors):
                 return None
 
-            handle = monitors[0].hPhysicalMonitor
-            actual_handle = handle if handle is not None else 0
-
             try:
-                current, maximum = DWORD(), DWORD()
-                for _ in range(3):
-                    if dxva2.GetVCPFeatureAndVCPFeatureReply(
-                        actual_handle, BYTE(VCP_BRIGHTNESS), None, byref(current), byref(maximum)
-                    ):
-                        return int((current.value / max(maximum.value, 1)) * 100)
+                for i in range(count.value):
+                    handle = monitors[i].hPhysicalMonitor
+                    actual_handle = handle if handle is not None else 0
+                    current, maximum = DWORD(), DWORD()
+                    for attempt in range(50):
+                        if dxva2.GetVCPFeatureAndVCPFeatureReply(
+                            actual_handle, BYTE(VCP_BRIGHTNESS), None, byref(current), byref(maximum)
+                        ):
+                            return round((current.value / max(maximum.value, 1)) * 100)
+                        time.sleep(0.02 if attempt < 20 else 0.1)
                 return None
             finally:
-                if handle is not None:
-                    dxva2.DestroyPhysicalMonitor(handle)
+                self._destroy_physical_monitors(monitors, count.value)
         except Exception:
             return None
 
@@ -309,17 +319,33 @@ class BrightnessService(QObject):
             if not dxva2.GetPhysicalMonitorsFromHMONITOR(hmonitor, count.value, monitors):
                 return False
 
-            handle = monitors[0].hPhysicalMonitor
-            actual_handle = handle if handle is not None else 0
-
             try:
-                for _ in range(3):
-                    if dxva2.SetVCPFeature(actual_handle, BYTE(VCP_BRIGHTNESS), DWORD(value)):
-                        return True
+                for i in range(count.value):
+                    handle = monitors[i].hPhysicalMonitor
+                    actual_handle = handle if handle is not None else 0
+
+                    # Read the monitor's max VCP value to scale correctly
+                    current_val, maximum = DWORD(), DWORD()
+                    max_val = 100  # default
+                    for attempt in range(50):
+                        if dxva2.GetVCPFeatureAndVCPFeatureReply(
+                            actual_handle, BYTE(VCP_BRIGHTNESS), None, byref(current_val), byref(maximum)
+                        ):
+                            max_val = maximum.value if maximum.value > 0 else 100
+                            break
+                        time.sleep(0.02 if attempt < 20 else 0.1)
+
+                    # Convert percentage (0-100) to monitor's native VCP range
+                    native_value = round(value * max_val / 100)
+                    native_value = max(0, min(native_value, max_val))
+
+                    for attempt in range(50):
+                        if dxva2.SetVCPFeature(actual_handle, BYTE(VCP_BRIGHTNESS), DWORD(native_value)):
+                            return True
+                        time.sleep(0.02 if attempt < 20 else 0.1)
                 return False
             finally:
-                if handle is not None:
-                    dxva2.DestroyPhysicalMonitor(handle)
+                self._destroy_physical_monitors(monitors, count.value)
         except Exception:
             return False
 
