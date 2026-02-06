@@ -82,6 +82,14 @@ def restore_window(hwnd: int) -> None:
             u32.ShowWindow(hwnd, win32con.SW_RESTORE)
 
 
+def maximize_window(hwnd: int) -> None:
+    if not send_sys_command(hwnd, win32con.SC_MAXIMIZE):
+        try:
+            u32.ShowWindowAsync(int(hwnd), win32con.SW_MAXIMIZE)
+        except Exception:
+            u32.ShowWindow(hwnd, win32con.SW_MAXIMIZE)
+
+
 def minimize_window(hwnd: int) -> None:
     if not send_sys_command(hwnd, win32con.SC_MINIMIZE):
         try:

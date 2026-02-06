@@ -35,7 +35,7 @@ from core.utils.controller import exit_application, reload_application
 from core.utils.utilities import refresh_widget_style
 from core.utils.win32.app_bar import APPBAR_CALLBACK_MESSAGE, AppBarNotify
 from core.utils.win32.bindings import SetWindowPos
-from core.utils.win32.bindings.user32 import KillTimer, RegisterWindowMessage, SetTimer
+from core.utils.win32.bindings.user32 import KillTimer, RegisterWindowMessage, SetTimer, user32
 from core.utils.win32.structs import MSG
 from core.utils.win32.utilities import apply_qmenu_style
 
@@ -601,6 +601,104 @@ class AppBarManager(QAbstractNativeEventFilter):
                 if has_autohide and bar_widget._autohide_manager._detection_zone:
                     bar_widget._autohide_manager._detection_zone.show()
                 bar_widget._skip_animation = False
+
+
+class MaximizedWindowWatcher(QObject):
+    """Watches for any maximized window on the bar's monitor and toggles autohide accordingly."""
+
+    def __init__(self, bar_widget, parent=None):
+        super().__init__(parent)
+        self.bar_widget = bar_widget
+        self._is_autohide_active = False
+        self._had_autohide_before = False
+
+        self._poll_timer = QTimer(self)
+        self._poll_timer.setInterval(500)
+        self._poll_timer.timeout.connect(self._check_maximized_windows)
+        self._poll_timer.start()
+
+    def _check_maximized_windows(self):
+        """Check if any top-level window is maximized on the bar's monitor."""
+        try:
+            from core.utils.win32.utilities import get_monitor_hwnd, is_window_maximized
+
+            bar_monitor = getattr(self.bar_widget, "monitor_hwnd", None)
+            if not bar_monitor:
+                return
+
+            has_maximized = False
+
+            def enum_callback(hwnd, _):
+                nonlocal has_maximized
+                if has_maximized:
+                    return False
+                try:
+                    if not win32gui.IsWindowVisible(hwnd):
+                        return True
+                    if not win32gui.GetWindowText(hwnd):
+                        return True
+                    cls_name = win32gui.GetClassName(hwnd)
+                    if cls_name in AppBarManager.EXCLUDED_WINDOW_CLASSES:
+                        return True
+                    if cls_name.endswith(AppBarManager.EXCLUDED_WINDOW_CLASS_SUFFIXES):
+                        return True
+                    window_monitor = get_monitor_hwnd(hwnd)
+                    if window_monitor != bar_monitor:
+                        return True
+                    if is_window_maximized(hwnd):
+                        has_maximized = True
+                        return False
+                except Exception:
+                    pass
+                return True
+
+            WNDENUMPROC = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.wintypes.HWND, ctypes.POINTER(ctypes.c_long))
+            callback = WNDENUMPROC(enum_callback)
+            user32.EnumWindows(callback, 0)
+
+            if has_maximized and not self._is_autohide_active:
+                self._enable_autohide()
+            elif not has_maximized and self._is_autohide_active:
+                self._disable_autohide()
+
+        except Exception:
+            logging.exception("Failed to check maximized windows")
+
+    def _enable_autohide(self):
+        """Enable autohide because a maximized window was detected."""
+        self._is_autohide_active = True
+        # Remember if autohide was already active before we touched it
+        self._had_autohide_before = (
+            hasattr(self.bar_widget, "_autohide_manager")
+            and self.bar_widget._autohide_manager is not None
+            and self.bar_widget._autohide_manager.is_enabled()
+        )
+        if self._had_autohide_before:
+            return
+        if not self.bar_widget._autohide_manager:
+            self.bar_widget._autohide_manager = AutoHideManager(self.bar_widget, self.bar_widget)
+        if not self.bar_widget._autohide_manager.is_enabled():
+            self.bar_widget._autohide_manager.setup_autohide()
+
+    def _disable_autohide(self):
+        """Disable autohide because no maximized windows remain."""
+        self._is_autohide_active = False
+        # If user already had autohide enabled before, don't disable it
+        if self._had_autohide_before:
+            self._had_autohide_before = False
+            return
+        if hasattr(self.bar_widget, "_autohide_manager") and self.bar_widget._autohide_manager:
+            self.bar_widget._autohide_manager.cleanup()
+            self.bar_widget._autohide_manager = None
+        # Ensure bar is visible
+        if not self.bar_widget.isVisible():
+            self.bar_widget.show()
+
+    def cleanup(self):
+        """Clean up resources."""
+        self._poll_timer.stop()
+        if self._is_autohide_active:
+            self._disable_autohide()
 
 
 class OsThemeManager(QObject):

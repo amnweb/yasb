@@ -4,7 +4,14 @@ from PyQt6.QtCore import QEvent, QRect, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QScreen
 from PyQt6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QWidget
 
-from core.bar_helper import AppBarManager, AutoHideManager, BarAnimationManager, BarContextMenu, OsThemeManager
+from core.bar_helper import (
+    AppBarManager,
+    AutoHideManager,
+    BarAnimationManager,
+    BarContextMenu,
+    MaximizedWindowWatcher,
+    OsThemeManager,
+)
 from core.event_service import EventService
 from core.utils.utilities import is_valid_percentage_str, percent_to_float
 from core.utils.win32.utilities import get_monitor_hwnd
@@ -55,6 +62,7 @@ class Bar(QWidget):
         self._current_auto_width = 0
         self._os_theme_manager = None
         self._autohide_manager = None
+        self._maximized_watcher = None
         self._animation_manager = None
         self._target_screen = bar_screen
 
@@ -99,16 +107,6 @@ class Bar(QWidget):
             self._bar_frame.installEventFilter(self)
             QTimer.singleShot(0, self._sync_auto_width)
 
-        if self.config.blur_effect.enabled:
-            Blur(
-                self.winId(),
-                Acrylic=self.config.blur_effect.acrylic,
-                DarkMode=self.config.blur_effect.dark_mode,
-                RoundCorners=self.config.blur_effect.round_corners,
-                RoundCornersType=self.config.blur_effect.round_corners_type,
-                BorderColor=self.config.blur_effect.border_color,
-            )
-
         self._target_screen.geometryChanged.connect(self.on_geometry_changed, Qt.ConnectionType.QueuedConnection)
 
         self.handle_bar_management.connect(self._handle_bar_management)
@@ -127,6 +125,19 @@ class Bar(QWidget):
         if self._window_flags["auto_hide"]:
             self._autohide_manager = AutoHideManager(self, self)
             self._autohide_manager.setup_autohide()
+
+        if self._window_flags["hide_on_maximized"] and not self._window_flags["windows_app_bar"]:
+            self._maximized_watcher = MaximizedWindowWatcher(self, self)
+
+        if self.config.blur_effect.enabled:
+            Blur(
+                self.winId(),
+                Acrylic=self.config.blur_effect.acrylic,
+                DarkMode=self.config.blur_effect.dark_mode,
+                RoundCorners=self.config.blur_effect.round_corners,
+                RoundCornersType=self.config.blur_effect.round_corners_type,
+                BorderColor=self.config.blur_effect.border_color,
+            )
 
         self.show()
 
@@ -318,6 +329,8 @@ class Bar(QWidget):
         if self._hide_on_fullscreen and self.app_bar_manager:
             AppBarManager().unregister_bar(int(self.winId()))
 
+        if self._maximized_watcher:
+            self._maximized_watcher.cleanup()
         if self._autohide_manager:
             self._autohide_manager.cleanup()
         if self._animation_manager:
