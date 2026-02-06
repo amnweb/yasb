@@ -1049,6 +1049,7 @@
             "always_on_top": false,
             "windows_app_bar": false,
             "hide_on_fullscreen": false,
+            "hide_on_maximized": false,
             "auto_hide": false
           }
         },
@@ -1246,6 +1247,11 @@
         "hide_on_fullscreen": {
           "default": false,
           "title": "Hide On Fullscreen",
+          "type": "boolean"
+        },
+        "hide_on_maximized": {
+          "default": false,
+          "title": "Hide On Maximized",
           "type": "boolean"
         },
         "auto_hide": {
@@ -1866,6 +1872,33 @@
         }
       },
       "title": "BrightnessMenuConfig",
+      "type": "object"
+    },
+    "ButtonLabelsConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "minimize": {
+          "default": "\uea71",
+          "title": "Minimize",
+          "type": "string"
+        },
+        "maximize": {
+          "default": "\uea71",
+          "title": "Maximize",
+          "type": "string"
+        },
+        "restore": {
+          "default": "\uea71",
+          "title": "Restore",
+          "type": "string"
+        },
+        "close": {
+          "default": "\uea71",
+          "title": "Close",
+          "type": "string"
+        }
+      },
+      "title": "ButtonLabelsConfig",
       "type": "object"
     },
     "CallbacksBatteryConfig": {
@@ -11758,6 +11791,84 @@
       "title": "WindowConfig",
       "type": "object"
     },
+    "WindowControlsConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "class_name": {
+          "default": "",
+          "title": "Class Name",
+          "type": "string"
+        },
+        "show_app_name": {
+          "default": false,
+          "title": "Show App Name",
+          "type": "boolean"
+        },
+        "maximized_only": {
+          "default": true,
+          "title": "Maximized Only",
+          "type": "boolean"
+        },
+        "buttons": {
+          "default": [
+            "minimize",
+            "maximize",
+            "close"
+          ],
+          "items": {
+            "enum": [
+              "minimize",
+              "maximize",
+              "close"
+            ],
+            "type": "string"
+          },
+          "title": "Buttons",
+          "type": "array"
+        },
+        "button_labels": {
+          "$ref": "#/$defs/ButtonLabelsConfig",
+          "default": {
+            "minimize": "\uea71",
+            "maximize": "\uea71",
+            "restore": "\uea71",
+            "close": "\uea71"
+          }
+        },
+        "monitor_exclusive": {
+          "default": true,
+          "title": "Monitor Exclusive",
+          "type": "boolean"
+        },
+        "animation_duration": {
+          "default": 120,
+          "maximum": 2000,
+          "minimum": 0,
+          "title": "Animation Duration",
+          "type": "integer"
+        }
+      },
+      "title": "WindowControlsConfig",
+      "type": "object"
+    },
+    "WindowControlsEntry": {
+      "properties": {
+        "type": {
+          "const": "yasb.window_controls.WindowControlsWidget",
+          "title": "Type",
+          "type": "string"
+        },
+        "options": {
+          "$ref": "#/$defs/WindowControlsConfig"
+        }
+      },
+      "required": [
+        "type",
+        "options"
+      ],
+      "title": "WindowControlsEntry",
+      "type": "object"
+    },
     "WindowStyleConfig": {
       "additionalProperties": false,
       "properties": {
@@ -13285,6 +13396,7 @@
             "always_on_top": false,
             "auto_hide": false,
             "hide_on_fullscreen": false,
+            "hide_on_maximized": false,
             "windows_app_bar": false
           }
         }
@@ -13444,6 +13556,9 @@
           },
           {
             "$ref": "#/$defs/WindowsDesktopsEntry"
+          },
+          {
+            "$ref": "#/$defs/WindowControlsEntry"
           }
         ]
       },
