@@ -51,6 +51,7 @@ class AiChatWidget(BaseWidget):
         self._provider = None
         self._provider_config = None
         self._model = None
+        self._model_index = None
         self._popup_chat = None
         self._animation = config.animation.model_dump()
         self._chat = config.chat.model_dump()
@@ -120,6 +121,8 @@ class AiChatWidget(BaseWidget):
         """Get the configuration for the current model"""
         if not (self._provider_config and self._provider_config.get("models")):
             return None
+        if self._model_index is not None and 0 <= self._model_index < len(self._provider_config["models"]):
+            return self._provider_config["models"][self._model_index]
         return next((m for m in self._provider_config["models"] if m["name"] == self._model), None)
 
     def _toggle_chat(self):
@@ -228,10 +231,7 @@ class AiChatWidget(BaseWidget):
             lambda: (
                 [
                     action.setChecked(
-                        any(
-                            action.data() == model_cfg["name"] and model_cfg["name"] == self._model
-                            for model_cfg in self._provider_config["models"]
-                        )
+                        action.data() == self._model_index
                         if self._provider_config and self._provider_config.get("models")
                         else False
                     )
@@ -483,8 +483,8 @@ class AiChatWidget(BaseWidget):
         self.chat_layout.insertWidget(insert_pos, row)
 
     def _on_clear_chat(self):
-        self._chat_session.clear_history(self._provider, self._model)
-        self._stream_worker_manager.reset_copilot_session(self._provider, self._model)
+        self._chat_session.clear_history(self._provider, self._model_index)
+        self._stream_worker_manager.reset_copilot_session(self._provider, self._model_index)
         self._chat_render.render_chat_history()
         self._attachments = []
         self._attachment_manager.refresh_attachments_ui()
