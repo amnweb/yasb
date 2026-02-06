@@ -236,3 +236,37 @@ def get_aumid_from_shortcut(shortcut_path: str) -> str | None:
             pass
 
     return aumid
+
+
+def activate_app_by_aumid(aumid: str) -> bool:
+    """
+    Find and activate validity window for the given AUMID.
+
+    Args:
+        aumid: The App User Model ID to find.
+
+    Returns:
+        True if a window was found and activation was attempted, False otherwise.
+    """
+    from core.utils.win32.window_actions import set_foreground
+
+    found_hwnd = None
+
+    WNDENUMPROC = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.wintypes.HWND, ctypes.wintypes.LPARAM)
+
+    def enum_window_callback(hwnd, _):
+        nonlocal found_hwnd
+        if user32.IsWindowVisible(hwnd):
+            curr_aumid = get_aumid_for_window(hwnd)
+            if curr_aumid == aumid:
+                found_hwnd = hwnd
+                return False  # Stop enumeration
+        return True
+
+    user32.EnumWindows(WNDENUMPROC(enum_window_callback), 0)
+
+    if found_hwnd:
+        set_foreground(found_hwnd)
+        return True
+
+    return False
