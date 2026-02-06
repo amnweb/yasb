@@ -15,7 +15,6 @@ from PyQt6.QtWidgets import (
     QMenu,
     QPushButton,
 )
-from pyvda import VirtualDesktop, get_virtual_desktops, set_wallpaper_for_all_desktops
 
 from core.event_service import EventService
 from core.utils.utilities import add_shadow, is_windows_10, refresh_widget_style
@@ -23,6 +22,13 @@ from core.utils.widgets.komorebi.animation import KomorebiAnimation
 from core.utils.win32.utilities import apply_qmenu_style
 from core.validation.widgets.yasb.windows_desktops import WindowsDesktopsConfig
 from core.widgets.base import BaseWidget
+
+try:
+    from pyvda import VirtualDesktop, get_virtual_desktops, set_wallpaper_for_all_desktops
+except Exception:
+    VirtualDesktop = None
+    get_virtual_desktops = None
+    set_wallpaper_for_all_desktops = None
 
 
 class WorkspaceButton(QPushButton):
