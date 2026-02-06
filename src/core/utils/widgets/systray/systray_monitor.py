@@ -15,7 +15,7 @@ from uuid import UUID
 from PIL import Image
 from PIL.ImageFilter import SHARPEN
 from PIL.ImageQt import ImageQt
-from PyQt6.QtCore import QObject, pyqtSignal
+from PyQt6.QtCore import QObject, QTimer, pyqtSignal
 from PyQt6.QtGui import QPixmap
 from win32con import (
     HWND_BROADCAST,
@@ -33,6 +33,7 @@ from win32con import (
 )
 
 import core.utils.widgets.systray.utils as utils
+from core.bar_helper import AppBarManager
 from core.utils.widgets.systray.utils import (
     NativeWindowEx,
     array_to_str,
@@ -152,9 +153,12 @@ class SystrayMonitor(QObject):
     @staticmethod
     def send_taskbar_created():
         """Send the taskbar created message to Windows"""
+        mgr = AppBarManager()
+        mgr.suppress()
         taskbar_created_msg = RegisterWindowMessage("TaskbarCreated")
         SendNotifyMessage(HWND_BROADCAST, taskbar_created_msg, 0, 0)
         logger.debug(f"Sending TaskbarCreated message: {taskbar_created_msg}")
+        QTimer.singleShot(0, mgr.unsuppress)
 
     def set_taskbar_list_hwnd(self):
         """Set the TaskbandHWND prop to the Yasb systray window on TaskbarCreated message"""

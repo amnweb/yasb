@@ -113,6 +113,7 @@ Valid options are:
 | `always_on_top`   | boolean | `false`       | Whether the status bar should always stay on top of other windows. |
 | `windows_app_bar` | boolean | `true`        | Whether the status bar should behave like a Windows app bar. |
 | `hide_on_fullscreen` | boolean | `false`    | Whether the status bar should hide when a window is in fullscreen mode. |
+| `hide_on_maximized` | boolean | `false`    | Whether the status bar should auto-hide when any window is maximized on the bar's monitor. Only works when `windows_app_bar` is `false`. |
 | `auto_hide` | boolean | `false`    | Whether the status bar should auto-hide when not in use. |
 
 ### Layouts Configuration

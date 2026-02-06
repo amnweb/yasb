@@ -147,6 +147,9 @@ user32.PostMessageW.restype = c_int
 user32.SetTimer.argtypes = [HWND, UINT, UINT, LPVOID]
 user32.SetTimer.restype = c_int
 
+user32.KillTimer.argtypes = [HWND, UINT]
+user32.KillTimer.restype = BOOL
+
 user32.FindWindowW.argtypes = [LPCWSTR, LPCWSTR]
 user32.FindWindowW.restype = HWND
 
@@ -312,6 +315,10 @@ def PostMessage(hwnd: int, msg: int, wParam: int, lParam: int) -> int:
 
 def SetTimer(hwnd: int, nIDEvent: int, uElapse: int, lpTimerFunc: LPVOID | None):
     return user32.SetTimer(hwnd, nIDEvent, uElapse, lpTimerFunc)
+
+
+def KillTimer(hwnd: int, uIDEvent: int):
+    return user32.KillTimer(hwnd, uIDEvent)
 
 
 def FindWindow(lpClassName: str | None, lpWindowName: str | None):

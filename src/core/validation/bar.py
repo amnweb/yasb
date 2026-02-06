@@ -30,6 +30,7 @@ class BarWindowFlags(CustomBaseModel):
     always_on_top: bool = False
     windows_app_bar: bool = False
     hide_on_fullscreen: bool = False
+    hide_on_maximized: bool = False
     auto_hide: bool = False
 
 

@@ -281,6 +281,27 @@ jobs:
             throw error;
           }
 
+    - name: Install dependencies for schema generation
+      run: |
+        .\venv\Scripts\Activate
+        pip install --force --no-cache .
+      shell: pwsh
+
+    - name: Generate schema.json
+      run: |
+        .\venv\Scripts\Activate
+        python src/core/validation/export_schema.py
+      shell: pwsh
+
+    - name: Commit schema.json
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git add schema.json
+        git diff --cached --quiet || git commit -m "chore(schema): update schema.json for v${{ steps.get_version.outputs.VERSION }}"
+        git push
+      shell: pwsh
+
     - name: Fetch all tags
       run: git fetch --tags
       shell: pwsh
@@ -387,7 +408,7 @@ jobs:
           const changelog = (process.env.CHANGELOG || '').trim();
           let body = '';
           if (summary && summary.length > 50) {
-            body = `${summary}\n\n<br>\n\n${changelog}`;
+            body = `${summary}\n\n\n\n${changelog}`;
           } else {
             body = changelog;
           }

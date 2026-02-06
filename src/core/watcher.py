@@ -88,7 +88,7 @@ class FileModifiedEventHandler(PatternMatchingEventHandler):
                 self._last_config_hash = new_hash
                 self.bar_manager.config_modified.emit()
                 logging.debug(f"Config file modified: {event.src_path}")
-        elif normalized_path in self._imported_stylesheets and self.bar_manager.config["watch_stylesheet"]:
+        elif normalized_path in self._imported_stylesheets and self.bar_manager.config.watch_stylesheet:
             new_hash = self._file_hash(event.src_path)
             if new_hash and self._imported_hashes.get(normalized_path) != new_hash:
                 self._imported_hashes[normalized_path] = new_hash

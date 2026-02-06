@@ -431,7 +431,7 @@ If you want to use different styles for the context menu, you can target the `.a
     background-color: rgba(37, 37, 37, 0.4);
     border: 1px solid #3f3f3f;
     border-radius: 8px;
-    max-height: 32px;
+    max-height: 64px;
     min-height: 32px;
     padding: 5px 8px 3px 8px;
 }
@@ -440,8 +440,8 @@ If you want to use different styles for the context menu, you can target the `.a
     font-family: "Segoe UI Variable","Segoe UI";
     font-size: 14px;
     color: #ffffff;
-
 }
+
 .ai-chat-popup .chat-footer .chat-input-wrapper.focused {
     border-color: #0078d7;
 }
