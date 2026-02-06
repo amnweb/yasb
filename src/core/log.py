@@ -71,7 +71,8 @@ def _qt_message_handler(msg_type: QtMsgType, context, message: str):
     else:
         # qInstallMessageHandler returns None when replacing the default C++ handler.
         formatted = qFormatLogMessage(msg_type, context, message)
-        sys.stderr.write(formatted + "\n")
+        if sys.stderr is not None:
+            sys.stderr.write(formatted + "\n")
 
 
 def _install_qt_message_filter():
