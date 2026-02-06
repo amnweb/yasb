@@ -35,7 +35,7 @@ class ChatRender:
                 widget.setParent(None)
                 widget.deleteLater()
 
-        history = self._owner._chat_session.get_history(self._owner._provider, self._owner._model)
+        history = self._owner._chat_session.get_history(self._owner._provider, self._owner._model_index)
 
         streaming_partial = None
         if self._owner._chat_session.stream.in_progress:

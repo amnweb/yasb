@@ -42,7 +42,7 @@ class BarManager(QObject):
         self._hotkey_listener: HotkeyListener | None = None
         self._hotkey_dispatcher: HotkeyDispatcher | None = None
         self._collected_keybindings: list[HotkeyBinding] = []
-        self._bar_id_to_screen: dict[str, str] = {}
+        self._registered_hotkey_widgets: set[tuple[str, str]] = set()  # (widget_name, screen_name)
 
         self.styles_modified.connect(self.on_styles_modified)
         self.config_modified.connect(self.on_config_modified)
@@ -189,6 +189,10 @@ class BarManager(QObject):
                         f"Hotkey conflict: '{binding.hotkey}' is already assigned to '{existing_widget}', "
                         f"overriding with '{widget_name}'"
                     )
+                    # Remove the old binding so the new one actually takes effect
+                    self._collected_keybindings = [
+                        b for b in self._collected_keybindings if b.hotkey.lower() != hotkey_lower
+                    ]
                 seen_hotkeys[hotkey_lower] = widget_name
                 self._collected_keybindings.append(binding)
 
@@ -201,7 +205,6 @@ class BarManager(QObject):
         self._hotkey_listener = HotkeyListener(
             self._collected_keybindings,
             self._hotkey_dispatcher,
-            self._bar_id_to_screen,
         )
         self._hotkey_listener.start()
         logging.info("Starting HotkeyListener...")
@@ -209,8 +212,25 @@ class BarManager(QObject):
     def create_bar(self, config: BarConfig, name: str, screen: QScreen, init: bool = False) -> None:
         screen_name = screen.name().replace("\\", "").replace(".", "")
         bar_id = f"{name}_{screen_name}_{str(uuid.uuid4())[:8]}"
-        self._bar_id_to_screen[bar_id] = screen.name()  # Store mapping for hotkey dispatch
         bar_widgets, widget_event_listeners = self._widget_builder.build_widgets(config.widgets.model_dump())
+
+        # Set screen_name on all widgets and disable duplicate hotkey handlers
+        widgets_with_keybindings = {
+            name for name, cfg in self.config.widgets.items() if cfg.get("options", {}).get("keybindings")
+        }
+        for widget_list in bar_widgets.values():
+            for widget in widget_list:
+                widget.screen_name = screen.name()
+                if widget.widget_name in widgets_with_keybindings:
+                    key = (widget.widget_name, screen.name())
+                    if key in self._registered_hotkey_widgets:
+                        widget._hotkey_enabled = False
+                        logging.info(
+                            f"{widget.widget_name} on screen {screen.name()} already has hotkey handler "
+                            f"registered from another bar."
+                        )
+                    else:
+                        self._registered_hotkey_widgets.add(key)
 
         self.widget_event_listeners = self.widget_event_listeners.union(widget_event_listeners)
         self.bars.append(

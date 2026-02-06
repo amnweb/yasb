@@ -52,6 +52,10 @@ class ProviderModelManager:
     def __init__(self, owner):
         self._owner = owner
 
+    def _apply_model_selection(self, model_index: int, model_cfg: dict):
+        self._owner._model_index = model_index
+        self._owner._model = model_cfg.get("name")
+
     def initialize_provider_and_model(self):
         """Initialize provider and model by finding the model with default: true flag.
 
@@ -61,9 +65,9 @@ class ProviderModelManager:
 
         # Find all models with default flag set to true
         for provider_cfg in self._owner._providers:
-            for model_cfg in provider_cfg.get("models", []):
+            for model_index, model_cfg in enumerate(provider_cfg.get("models", [])):
                 if model_cfg.get("default", False):
-                    default_models.append((provider_cfg["provider"], model_cfg["name"]))
+                    default_models.append((provider_cfg["provider"], model_index))
 
         # Logs warning if more than one model has default flag set
         if len(default_models) > 1:
@@ -74,13 +78,21 @@ class ProviderModelManager:
         # Set the default provider and model if found
         if default_models:
             self._owner._provider = default_models[0][0]
-            self._owner._model = default_models[0][1]
+            self._owner._model_index = default_models[0][1]
 
         # Set provider config
         if self._owner._provider:
             self._owner._provider_config = next(
                 (p for p in self._owner._providers if p["provider"] == self._owner._provider), None
             )
+            if (
+                self._owner._provider_config
+                and self._owner._provider_config.get("models")
+                and self._owner._model_index is not None
+                and 0 <= self._owner._model_index < len(self._owner._provider_config["models"])
+            ):
+                model_cfg = self._owner._provider_config["models"][self._owner._model_index]
+                self._apply_model_selection(self._owner._model_index, model_cfg)
 
     def populate_provider_menu(self):
         self._owner.provider_menu.clear()
@@ -133,7 +145,7 @@ class ProviderModelManager:
             return
 
         added_separator = False
-        for model_cfg in self._owner._provider_config["models"]:
+        for model_index, model_cfg in enumerate(self._owner._provider_config["models"]):
             # Add separator after free models
             if (
                 not added_separator
@@ -152,23 +164,27 @@ class ProviderModelManager:
             display_label = f"{base_label}\t{multiplier_label}" if multiplier_label else base_label
             action = self._owner.model_menu.addAction(display_label)
             action.setCheckable(True)
-            action.setChecked(model_name == self._owner._model)
-            action.setData(model_name)
-            action.triggered.connect(lambda checked, m=model_name: self.on_model_changed_by_label(m))
+            action.setChecked(model_index == self._owner._model_index)
+            action.setData(model_index)
+            action.triggered.connect(lambda checked, idx=model_index: self.on_model_changed_by_index(idx))
         try:
             self._owner.model_btn.setEnabled(True)
-            if self._owner._model and any(
-                m["name"] == self._owner._model for m in self._owner._provider_config["models"]
+            selected_index = None
+            if self._owner._model_index is not None and 0 <= self._owner._model_index < len(
+                self._owner._provider_config["models"]
             ):
-                selected_model = next(
-                    m for m in self._owner._provider_config["models"] if m["name"] == self._owner._model
-                )
-                self._owner.model_btn.setText(_strip_multiplier(selected_model.get("label", self._owner._model)))
-            else:
-                self._owner._model = self._owner._provider_config["models"][0]["name"]
-                self._owner.model_btn.setText(
-                    _strip_multiplier(self._owner._provider_config["models"][0].get("label", self._owner._model))
-                )
+                selected_index = self._owner._model_index
+            elif self._owner._model is not None:
+                for idx, model_cfg in enumerate(self._owner._provider_config["models"]):
+                    if model_cfg.get("name") == self._owner._model:
+                        selected_index = idx
+                        break
+            if selected_index is None:
+                selected_index = 0
+
+            selected_model = self._owner._provider_config["models"][selected_index]
+            self._apply_model_selection(selected_index, selected_model)
+            self._owner.model_btn.setText(_strip_multiplier(selected_model.get("label", self._owner._model)))
         except RuntimeError:
             return
 
@@ -243,7 +259,7 @@ class ProviderModelManager:
             return
 
     def on_provider_changed(self, provider_name):
-        self._owner._chat_session.save_history(self._owner._provider, self._owner._model)
+        self._owner._chat_session.save_history(self._owner._provider, self._owner._model_index)
         if provider_name != self._owner._provider:
             self._owner._provider = provider_name
             self._owner.provider_btn.setText(provider_name)
@@ -263,19 +279,20 @@ class ProviderModelManager:
         for action in self._owner.provider_menu.actions():
             action.setChecked(action.text() == provider_name)
 
-    def on_model_changed_by_label(self, model_name):
-        self._owner._chat_session.save_history(self._owner._provider, self._owner._model)
+    def on_model_changed_by_index(self, model_index: int):
+        self._owner._chat_session.save_history(self._owner._provider, self._owner._model_index)
         if not hasattr(self._owner, "_provider_config") or not self._owner._provider_config:
             return
-        for model_cfg in self._owner._provider_config["models"]:
-            if model_cfg["name"] == model_name:
-                self._owner._model = model_cfg["name"]
-                self._owner.model_btn.setText(_strip_multiplier(model_cfg.get("label", self._owner._model)))
-                self._owner._chat_render.render_chat_history()
-                self._owner._attachment_manager.prune_attachments_for_model()
-                self._owner._attachment_manager.refresh_attachments_ui()
-                self._owner._input_controller.update_send_button_state()
-                break
+        if model_index < 0 or model_index >= len(self._owner._provider_config["models"]):
+            return
+
+        model_cfg = self._owner._provider_config["models"][model_index]
+        self._apply_model_selection(model_index, model_cfg)
+        self._owner.model_btn.setText(_strip_multiplier(model_cfg.get("label", self._owner._model)))
+        self._owner._chat_render.render_chat_history()
+        self._owner._attachment_manager.prune_attachments_for_model()
+        self._owner._attachment_manager.refresh_attachments_ui()
+        self._owner._input_controller.update_send_button_state()
 
         for action in self._owner.model_menu.actions():
-            action.setChecked(action.data() == model_name)
+            action.setChecked(action.data() == model_index)

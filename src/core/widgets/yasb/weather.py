@@ -15,6 +15,7 @@ from core.utils.tooltip import set_tooltip
 from core.utils.utilities import PopupWidget, add_shadow, refresh_widget_style
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.widgets.weather.api import IconFetcher, WeatherDataFetcher
+from core.utils.widgets.weather.models import WeatherApiResponse
 from core.utils.widgets.weather.widgets import (
     ClickableWidget,
     HourlyData,
@@ -427,16 +428,19 @@ class WeatherWidget(BaseWidget):
                 f"Min {self._weather_data['{min_temp}']} / Max {self._weather_data['{max_temp}']}"
             )
 
-            rain = self._weather_data["{hourly_chance_of_rain}"]
-            snow = self._weather_data["{hourly_chance_of_snow}"]
+            try:
+                rain = self._weather_data["{hourly_chance_of_rain}"]
+                snow = self._weather_data["{hourly_chance_of_snow}"]
 
-            if rain != "N/A" and snow != "N/A" and (int(rain.rstrip("%")) > 0 or int(snow.rstrip("%")) > 0):
-                precip: list[str] = []
-                if int(rain.rstrip("%")) > 0:
-                    precip.append(f"Rain {rain}")
-                if int(snow.rstrip("%")) > 0:
-                    precip.append(f"Snow {snow}")
-                tooltip += f"<br><br>Precipitation<br>{' / '.join(precip)}"
+                if rain != "N/A" and snow != "N/A" and (float(rain.rstrip("%")) > 0 or float(snow.rstrip("%")) > 0):
+                    precip: list[str] = []
+                    if float(rain.rstrip("%")) > 0:
+                        precip.append(f"Rain {rain}")
+                    if float(snow.rstrip("%")) > 0:
+                        precip.append(f"Snow {snow}")
+                    tooltip += f"<br><br>Precipitation<br>{' / '.join(precip)}"
+            except (ValueError, KeyError) as e:
+                logging.debug(f"Could not parse precipitation for tooltip: {e}")
 
             set_tooltip(self, tooltip)
 
@@ -497,84 +501,104 @@ class WeatherWidget(BaseWidget):
         try:
             if not weather_data:
                 raise Exception("Weather data is empty.")
-            alerts = weather_data["alerts"]
-            forecast = weather_data["forecast"]["forecastday"][0]["day"]
-            forecast1 = weather_data["forecast"]["forecastday"][1]
-            forecast2 = weather_data["forecast"]["forecastday"][2]
 
-            self._hourly_data_today = weather_data["forecast"]["forecastday"][0]["hour"]
-            self._hourly_data_2 = forecast1["hour"]
-            self._hourly_data_3 = forecast2["hour"]
-            self._current_time = datetime.strptime(weather_data["location"]["localtime"], "%Y-%m-%d %H:%M")
-            all_hourly_data = self._hourly_data_today + self._hourly_data_2 + self._hourly_data_3
+            # Validate the raw API response through Pydantic.
+            data = WeatherApiResponse.model_validate(weather_data)
 
-            current: dict[str, Any] = weather_data["current"]
-            conditions_data = current["condition"]["text"]
-            conditions_code = current["condition"]["code"]
+            current = data.current
+            location = data.location
+            alerts = data.alerts
+
+            if len(data.forecast.forecastday) < 3:
+                raise Exception(f"Expected 3 forecast days, got {len(data.forecast.forecastday)}.")
+
+            fc_today = data.forecast.forecastday[0]
+            fc_day1 = data.forecast.forecastday[1]
+            fc_day2 = data.forecast.forecastday[2]
+
+            forecast = fc_today.day
+
+            # Store hourly data as plain dicts for the card widgets
+            self._hourly_data_today = [h.model_dump() for h in fc_today.hour]
+            self._hourly_data_2 = [h.model_dump() for h in fc_day1.hour]
+            self._hourly_data_3 = [h.model_dump() for h in fc_day2.hour]
+            self._current_time = datetime.strptime(location.localtime, "%Y-%m-%d %H:%M")
+            all_hourly = fc_today.hour + fc_day1.hour + fc_day2.hour
+
+            conditions_data = current.condition.text
+            conditions_code = current.condition.code
 
             # Get the weather icon string and weather text based on the code and time of day
-            weather_icon_string, weather_text = get_weather(conditions_code, current["is_day"])
+            weather_icon_string, weather_text = get_weather(conditions_code, current.is_day)
 
             # Load icons images into cache for current and future forecasts if not already cached
             img_icon_keys = [
-                f"http:{day['condition']['icon']}"
-                for day in [forecast] + [forecast1["day"], forecast2["day"]] + all_hourly_data
+                f"http:{day.condition.icon}" for day in [forecast, fc_day1.day, fc_day2.day] + list(all_hourly)
             ]
             self._icon_fetcher.fetch_icons(list(set(img_icon_keys)))
 
+            # Safely read hourly chance values
+            hourly_rain: float = 0.0
+            hourly_snow: float = 0.0
+            if fc_today.hour and self._current_time:
+                hour_idx = min(self._current_time.hour, len(fc_today.hour) - 1)
+                hourly_rain = fc_today.hour[hour_idx].chance_of_rain
+                hourly_snow = fc_today.hour[hour_idx].chance_of_snow
+
+            # First alert (if any)
+            first_alert = alerts.alert[0] if alerts.alert else None
+
             self._weather_data = {
                 # Current conditions
-                "{temp}": self._format_temp(current["temp_f"], current["temp_c"]),
-                "{feelslike}": self._format_temp(current["feelslike_f"], current["feelslike_c"]),
-                "{humidity}": f"{current['humidity']}%",
-                "{cloud}": current["cloud"],
+                "{temp}": self._format_temp(current.temp_f, current.temp_c),
+                "{feelslike}": self._format_temp(current.feelslike_f, current.feelslike_c),
+                "{humidity}": f"{current.humidity}%",
+                "{cloud}": current.cloud,
                 # Forecast today
-                "{min_temp}": self._format_temp(forecast["mintemp_f"], forecast["mintemp_c"]),
-                "{max_temp}": self._format_temp(forecast["maxtemp_f"], forecast["maxtemp_c"]),
+                "{min_temp}": self._format_temp(forecast.mintemp_f, forecast.mintemp_c),
+                "{max_temp}": self._format_temp(forecast.maxtemp_f, forecast.maxtemp_c),
                 # Rain/Snow chances (daily)
-                "{daily_chance_of_rain}": f"{forecast.get('daily_chance_of_rain', 0)}%",
-                "{daily_chance_of_snow}": f"{forecast.get('daily_chance_of_snow', 0)}%",
+                "{daily_chance_of_rain}": f"{forecast.daily_chance_of_rain}%",
+                "{daily_chance_of_snow}": f"{forecast.daily_chance_of_snow}%",
                 # Rain/Snow chances (hourly)
-                "{hourly_chance_of_rain}": f"{self._hourly_data_today[self._current_time.hour].get('chance_of_rain', 0) if self._hourly_data_today and self._current_time else 0}%",
-                "{hourly_chance_of_snow}": f"{self._hourly_data_today[self._current_time.hour].get('chance_of_snow', 0) if self._hourly_data_today and self._current_time else 0}%",
+                "{hourly_chance_of_rain}": f"{hourly_rain}%",
+                "{hourly_chance_of_snow}": f"{hourly_snow}%",
                 # Location and conditions
-                "{location}": weather_data["location"]["name"],
-                "{location_region}": weather_data["location"]["region"],
-                "{location_country}": weather_data["location"]["country"],
-                "{time_zone}": weather_data["location"]["tz_id"],
-                "{localtime}": weather_data["location"]["localtime"],
+                "{location}": location.name,
+                "{location_region}": location.region,
+                "{location_country}": location.country,
+                "{time_zone}": location.tz_id,
+                "{localtime}": location.localtime,
                 "{conditions}": conditions_data,
                 "{condition_text}": weather_text,
-                "{is_day}": "Day" if current["is_day"] else "Night",
+                "{is_day}": "Day" if current.is_day else "Night",
                 # Icons
                 "{icon}": weather_icon_string,
                 "{icon_class}": weather_icon_string,
-                "{day0_icon}": f"http:{forecast['condition']['icon']}",
+                "{day0_icon}": f"http:{forecast.condition.icon}",
                 # Wind data
-                "{wind}": self._format_measurement(current["wind_mph"], "mph", current["wind_kph"], "km/h"),
-                "{wind_dir}": current["wind_dir"],
-                "{wind_degree}": current["wind_degree"],
+                "{wind}": self._format_measurement(current.wind_mph, "mph", current.wind_kph, "km/h"),
+                "{wind_dir}": current.wind_dir,
+                "{wind_degree}": current.wind_degree,
                 # Other measurements
-                "{pressure}": self._format_measurement(current["pressure_in"], "in", current["pressure_mb"], "mb"),
-                "{precip}": self._format_measurement(current["precip_in"], "in", current["precip_mm"], "mm"),
-                "{vis}": self._format_measurement(current["vis_miles"], "mi", current["vis_km"], "km"),
-                "{uv}": current["uv"],
+                "{pressure}": self._format_measurement(current.pressure_in, "in", current.pressure_mb, "mb"),
+                "{precip}": self._format_measurement(current.precip_in, "in", current.precip_mm, "mm"),
+                "{vis}": self._format_measurement(current.vis_miles, "mi", current.vis_km, "km"),
+                "{uv}": current.uv,
                 # Future forecasts
-                "{day1_name}": self._format_date_string(forecast1["date"]),
-                "{day1_min_temp}": self._format_temp(forecast1["day"]["mintemp_f"], forecast1["day"]["mintemp_c"]),
-                "{day1_max_temp}": self._format_temp(forecast1["day"]["maxtemp_f"], forecast1["day"]["maxtemp_c"]),
-                "{day1_icon}": f"http:{forecast1['day']['condition']['icon']}",
-                "{day2_name}": self._format_date_string(forecast2["date"]),
-                "{day2_min_temp}": self._format_temp(forecast2["day"]["mintemp_f"], forecast2["day"]["mintemp_c"]),
-                "{day2_max_temp}": self._format_temp(forecast2["day"]["maxtemp_f"], forecast2["day"]["maxtemp_c"]),
-                "{day2_icon}": f"http:{forecast2['day']['condition']['icon']}",
+                "{day1_name}": self._format_date_string(fc_day1.date),
+                "{day1_min_temp}": self._format_temp(fc_day1.day.mintemp_f, fc_day1.day.mintemp_c),
+                "{day1_max_temp}": self._format_temp(fc_day1.day.maxtemp_f, fc_day1.day.maxtemp_c),
+                "{day1_icon}": f"http:{fc_day1.day.condition.icon}",
+                "{day2_name}": self._format_date_string(fc_day2.date),
+                "{day2_min_temp}": self._format_temp(fc_day2.day.mintemp_f, fc_day2.day.mintemp_c),
+                "{day2_max_temp}": self._format_temp(fc_day2.day.maxtemp_f, fc_day2.day.maxtemp_c),
+                "{day2_icon}": f"http:{fc_day2.day.condition.icon}",
                 # Alerts
-                "{alert_title}": alerts["alert"][0]["headline"]
-                if alerts["alert"] and alerts["alert"][0]["headline"]
-                else None,
-                "{alert_desc}": alerts["alert"][0]["desc"] if alerts["alert"] and alerts["alert"][0]["desc"] else None,
-                "{alert_end_date}": self._format_alert_datetime(alerts["alert"][0]["expires"])
-                if alerts["alert"] and alerts["alert"][0]["expires"]
+                "{alert_title}": first_alert.headline if first_alert and first_alert.headline else None,
+                "{alert_desc}": first_alert.desc if first_alert and first_alert.desc else None,
+                "{alert_end_date}": self._format_alert_datetime(first_alert.expires)
+                if first_alert and first_alert.expires
                 else None,
             }
             self._has_valid_weather_data = True

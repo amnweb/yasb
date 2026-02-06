@@ -100,7 +100,7 @@ class StreamWorkerManager:
 
         chat_history = [
             msg
-            for msg in self._owner._chat_session.get_history(self._owner._provider, self._owner._model)
+            for msg in self._owner._chat_session.get_history(self._owner._provider, self._owner._model_index)
             if not msg.get("stopped")
         ]
         provider_type = (self._owner._provider_config.get("provider_type") or "openai").lower()
@@ -117,7 +117,7 @@ class StreamWorkerManager:
 
         copilot_client = None
         if provider_type == "copilot":
-            copilot_client = self._get_copilot_client(self._owner._provider, self._owner._model)
+            copilot_client = self._get_copilot_client(self._owner._provider, self._owner._model_index)
 
         self._owner._thread = QThread()
         self._owner._worker = _StreamWorker(
@@ -168,7 +168,7 @@ class StreamWorkerManager:
         msg_label = self._owner._chat_session.stream.msg_label
         self._owner._stream_ui.stop_thinking_animation()
 
-        key = self._owner._chat_session.history_key(self._owner._provider, self._owner._model)
+        key = self._owner._chat_session.history_key(self._owner._provider, self._owner._model_index)
         if getattr(self._owner, "_stop_event", False):
             if hasattr(self._owner, "_thread") and self._owner._thread:
                 QTimer.singleShot(SCROLL_DELAY_MS, self.clear_thread_reference)
@@ -176,7 +176,12 @@ class StreamWorkerManager:
 
         # Store response in history
         if not self._owner._chat_session.history.update_last_assistant(key, text):
-            self._owner._chat_session.add_to_history(self._owner._provider, self._owner._model, "assistant", text)
+            self._owner._chat_session.add_to_history(
+                self._owner._provider,
+                self._owner._model_index,
+                "assistant",
+                text,
+            )
 
         if self._owner._is_popup_valid() and msg_label is not None:
             try:
@@ -209,7 +214,7 @@ class StreamWorkerManager:
             return
 
         # We do not want to store error messages in history - they're transient API failures
-        key = self._owner._chat_session.history_key(self._owner._provider, self._owner._model)
+        key = self._owner._chat_session.history_key(self._owner._provider, self._owner._model_index)
         self._owner._chat_session.history.remove_last_assistant_if_empty(key)
         self._owner._chat_session.history.remove_last_user(key)
 

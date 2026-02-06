@@ -59,7 +59,7 @@ class InputController:
         self._owner._append_message("user", ui_text)
         self._owner._chat_session.add_to_history(
             self._owner._provider,
-            self._owner._model,
+            self._owner._model_index,
             "user",
             payload_text,
             user_text=user_text,
@@ -92,7 +92,7 @@ class InputController:
             stopped_display = f"*{stopped_text}*"
         self._owner._stream_ui.stop_thinking_animation()
         self._owner._chat_session.stream.msg_label = None
-        history = self._owner._chat_session.get_history(self._owner._provider, self._owner._model)
+        history = self._owner._chat_session.get_history(self._owner._provider, self._owner._model_index)
         if not partial_text:
             for entry in reversed(history):
                 if entry.get("role") == "user" and not entry.get("stopped"):
@@ -101,7 +101,7 @@ class InputController:
         if not history or history[-1]["role"] != "assistant":
             entry = self._owner._chat_session.add_to_history(
                 self._owner._provider,
-                self._owner._model,
+                self._owner._model_index,
                 "assistant",
                 stopped_text,
             )

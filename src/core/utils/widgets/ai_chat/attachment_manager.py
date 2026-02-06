@@ -82,8 +82,7 @@ class AttachmentManager:
         popup = self._owner._popup_chat
         try:
             popup.set_auto_close_enabled(False)
-            if hasattr(popup, "set_block_deactivate"):
-                popup.set_block_deactivate(True)
+            popup.set_block_deactivate(True)
 
             files, _ = QFileDialog.getOpenFileNames(
                 popup,
@@ -94,8 +93,7 @@ class AttachmentManager:
         finally:
             if popup and self._owner._is_popup_valid():
                 popup.set_auto_close_enabled(True)
-                if hasattr(popup, "set_block_deactivate"):
-                    popup.set_block_deactivate(False)
+                popup.set_block_deactivate(False)
 
         if not files:
             return

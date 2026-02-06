@@ -135,8 +135,8 @@ class PowerMenuWidget(BaseWidget):
         self.widget_layout.addWidget(self._widget_container)
         self._widget_container_layout.addWidget(self._button)
 
-        self.register_callback("show_main_window", self._show_main_window)
-        self.callback_left = "show_main_window"
+        self.register_callback("toggle_power_menu", self._show_main_window)
+        self.callback_left = "toggle_power_menu"
 
         self.main_window = None
 

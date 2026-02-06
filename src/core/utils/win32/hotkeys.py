@@ -246,16 +246,16 @@ class HotkeyDispatcher(QObject):
         self._event_service = EventService()
 
     @pyqtSlot(str, str, str)
-    def dispatch(self, widget_name: str, action: str, bar_id: str) -> None:
+    def dispatch(self, widget_name: str, action: str, screen_name: str) -> None:
         """
         Dispatch a hotkey event to widgets via EventService.
 
         Args:
             widget_name: The widget config name that should handle this hotkey
             action: The callback action to invoke
-            bar_id: The bar_id where the hotkey should be handled
+            screen_name: The screen where the hotkey should be handled
         """
-        self._event_service.emit_event("handle_widget_hotkey", widget_name, action, bar_id)
+        self._event_service.emit_event("handle_widget_hotkey", widget_name, action, screen_name)
 
 
 class HotkeyListener(QThread):
@@ -268,7 +268,6 @@ class HotkeyListener(QThread):
         self,
         bindings: list[HotkeyBinding],
         dispatcher: HotkeyDispatcher,
-        bar_id_to_screen: dict[str, str] | None = None,
     ) -> None:
         super().__init__()
         self._bindings = bindings
@@ -291,12 +290,6 @@ class HotkeyListener(QThread):
 
         # Key state cache - reset on each hook callback
         self._key_state_cache: dict[int, bool] = {}
-
-        # Invert screen mapping for O(1) lookup: screen_name -> bar_id
-        self._screen_to_bar_id: dict[str, str] = {}
-        if bar_id_to_screen:
-            for bar_id, screen_name in bar_id_to_screen.items():
-                self._screen_to_bar_id[screen_name] = bar_id
 
     def __str__(self) -> str:
         return "HotkeyListener"
@@ -447,16 +440,13 @@ class HotkeyListener(QThread):
         available_screens = get_bar_screens()
         screen_name = find_focused_screen(follow_mouse=False, follow_window=True, screens=available_screens)
 
-        # O(1) lookup for bar_id from screen name
-        target_bar_id = self._screen_to_bar_id.get(screen_name, "") if screen_name else ""
-
         QMetaObject.invokeMethod(
             self._dispatcher,
             "dispatch",
             Qt.ConnectionType.QueuedConnection,
             Q_ARG(str, binding.widget_name),
             Q_ARG(str, binding.action),
-            Q_ARG(str, target_bar_id),
+            Q_ARG(str, screen_name or ""),
         )
 
     def run(self) -> None:

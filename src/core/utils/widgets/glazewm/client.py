@@ -115,11 +115,11 @@ class GlazewmClient(QObject):
     def connect(self):
         if self._websocket.state() == QAbstractSocket.SocketState.ConnectedState:
             return
-        logger.debug(f"Connecting to {self._uri}...")
+        logger.debug(f"Connecting to {self._uri.toString()}")
         self._websocket.open(self._uri)
 
     def _on_connected(self) -> None:
-        logger.debug(f"Connected to {self._uri}")
+        logger.debug(f"Connected to {self._uri.toString()}")
         for message in self.initial_messages:
             logger.debug(f"Sent initial message: {message}")
             self._websocket.sendTextMessage(message)
@@ -132,7 +132,7 @@ class GlazewmClient(QObject):
         self.glazewm_connection_status.emit(state == QAbstractSocket.SocketState.ConnectedState)
 
     def _on_error(self, error: QAbstractSocket.SocketError) -> None:
-        logger.warning(f"WebSocket error: {error}\nReconnecting...")
+        logger.warning(f"WebSocket error: {error}. Reconnecting...")
         self._reconnect_timer.start()
 
     def _handle_message(self, message: str):

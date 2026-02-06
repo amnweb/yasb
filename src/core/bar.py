@@ -4,7 +4,14 @@ from PyQt6.QtCore import QEvent, QRect, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QScreen
 from PyQt6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QWidget
 
-from core.bar_helper import AppBarManager, AutoHideManager, BarAnimationManager, BarContextMenu, OsThemeManager
+from core.bar_helper import (
+    AppBarManager,
+    AutoHideManager,
+    BarAnimationManager,
+    BarContextMenu,
+    MaximizedWindowWatcher,
+    OsThemeManager,
+)
 from core.event_service import EventService
 from core.utils.utilities import is_valid_percentage_str, percent_to_float
 from core.utils.win32.utilities import get_monitor_hwnd
@@ -55,6 +62,7 @@ class Bar(QWidget):
         self._current_auto_width = 0
         self._os_theme_manager = None
         self._autohide_manager = None
+        self._maximized_watcher = None
         self._animation_manager = None
         self._target_screen = bar_screen
 
@@ -99,6 +107,28 @@ class Bar(QWidget):
             self._bar_frame.installEventFilter(self)
             QTimer.singleShot(0, self._sync_auto_width)
 
+        self._target_screen.geometryChanged.connect(self.on_geometry_changed, Qt.ConnectionType.QueuedConnection)
+
+        self.handle_bar_management.connect(self._handle_bar_management)
+        self._event_service.register_event("handle_bar_cli", self.handle_bar_management)
+
+        # Initialize animation manager
+        self._animation_manager = BarAnimationManager(self, self)
+        # If animation is enabled, initial show uses fade effect because of DWM issues
+        self._initial_show = True
+
+        if (self._hide_on_fullscreen or self._window_flags["windows_app_bar"]) and self.app_bar_manager:
+            AppBarManager().register_bar(int(self.winId()), self)
+
+        self.update_app_bar()
+
+        if self._window_flags["auto_hide"]:
+            self._autohide_manager = AutoHideManager(self, self)
+            self._autohide_manager.setup_autohide()
+
+        if self._window_flags["hide_on_maximized"] and not self._window_flags["windows_app_bar"]:
+            self._maximized_watcher = MaximizedWindowWatcher(self, self)
+
         if self.config.blur_effect.enabled:
             Blur(
                 self.winId(),
@@ -108,28 +138,6 @@ class Bar(QWidget):
                 RoundCornersType=self.config.blur_effect.round_corners_type,
                 BorderColor=self.config.blur_effect.border_color,
             )
-
-        self._target_screen.geometryChanged.connect(self.on_geometry_changed, Qt.ConnectionType.QueuedConnection)
-
-        self.handle_bar_management.connect(self._handle_bar_management)
-        self._event_service.register_event("handle_bar_cli", self.handle_bar_management)
-
-        # Initialize autohide manager
-        if self._window_flags["auto_hide"]:
-            self._autohide_manager = AutoHideManager(self, self)
-            self._autohide_manager.setup_autohide()
-
-        # Initialize animation manager
-        self._animation_manager = BarAnimationManager(self, self)
-        # If animation is enabled, initial show uses fade effect because of DWM issues
-        self._initial_show = True
-
-        # Register with AppBarManager for fullscreen notifications only if hide_on_fullscreen is enabled
-        if self._hide_on_fullscreen and self.app_bar_manager:
-            AppBarManager().register_bar(int(self.winId()), self)
-
-        # Register AppBar once at initialization
-        self.update_app_bar()
 
         self.show()
 
@@ -321,6 +329,8 @@ class Bar(QWidget):
         if self._hide_on_fullscreen and self.app_bar_manager:
             AppBarManager().unregister_bar(int(self.winId()))
 
+        if self._maximized_watcher:
+            self._maximized_watcher.cleanup()
         if self._autohide_manager:
             self._autohide_manager.cleanup()
         if self._animation_manager:

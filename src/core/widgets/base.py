@@ -34,6 +34,8 @@ class BaseWidget(QWidget):
         self.bar_id = None
         self.monitor_hwnd = None
         self.widget_name = None  # Set by WidgetBuilder after construction
+        self.screen_name = None  # Set by BarManager when bar is created
+        self._hotkey_enabled = True  # Set to False by BarManager for duplicate widgets
 
         if class_name:
             self._widget_frame.setProperty("class", f"widget {class_name}")
@@ -68,20 +70,20 @@ class BaseWidget(QWidget):
         self._hotkey_signal.connect(self._handle_hotkey_event)
         self._event_service.register_event("handle_widget_hotkey", self._hotkey_signal)
 
-    def _handle_hotkey_event(self, widget_name: str, action: str, bar_id: str) -> None:
+    def _handle_hotkey_event(self, widget_name: str, action: str, target_screen: str) -> None:
         """
         Handle incoming hotkey events.
-        Only processes events meant for this widget (by name) on the matching bar.
         """
+        if not self._hotkey_enabled:
+            return
+
         # Check if this event is for our widget (by config name)
         if widget_name != self.widget_name:
             return
 
-        # Check if this widget is on the target bar
-        if self.bar_id and bar_id:
-            # Only respond if we're on the target bar
-            if bar_id != self.bar_id:
-                return
+        # Only respond if screens match exactly
+        if not target_screen or self.screen_name != target_screen:
+            return
 
         # Execute the callback
         if action:

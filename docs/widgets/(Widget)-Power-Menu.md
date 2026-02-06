@@ -50,6 +50,23 @@ power_menu:
 - **container_shadow:** Container shadow options.
 - **label_shadow:** Label shadow options.
 
+## Callbacks (Hotkey Only)
+This widget does not expose mouse callback configuration, but it does register a hotkey callback:
+
+| Callback | Description |
+|----------|-------------|
+| `toggle_power_menu` | Toggle the power menu overlay and popup window. |
+
+Example keybinding:
+
+```yaml
+power_menu:
+    type: "yasb.power_menu.PowerMenuWidget"
+    options:
+        keybindings:
+            - keys: "win+p"
+                action: "toggle_power_menu"
+
 ## Available Styles
 ```css
 .uptime {}

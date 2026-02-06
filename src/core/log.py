@@ -1,8 +1,11 @@
 import logging
+import sys
 import warnings
 from dataclasses import dataclass
 from logging.handlers import RotatingFileHandler
 from os.path import join
+
+from PyQt6.QtCore import QtMsgType, qFormatLogMessage, qInstallMessageHandler
 
 from core.config import get_config_dir
 from settings import APP_NAME, BUILD_VERSION, DEFAULT_LOG_FILENAME
@@ -55,8 +58,31 @@ def _suppress_third_party_warnings():
     warnings.filterwarnings("ignore", category=UserWarning, module="pycaw")
 
 
+# Suppress Qt internal messages (e.g. QObject::disconnect wildcard warnings from QWebSocket)
+_QT_SUPPRESSED_PREFIXES = ("QObject::disconnect",)
+_original_qt_handler = None
+
+
+def _qt_message_handler(msg_type: QtMsgType, context, message: str):
+    if message and message.startswith(_QT_SUPPRESSED_PREFIXES):
+        return
+    if _original_qt_handler:
+        _original_qt_handler(msg_type, context, message)
+    else:
+        # qInstallMessageHandler returns None when replacing the default C++ handler.
+        formatted = qFormatLogMessage(msg_type, context, message)
+        if sys.stderr is not None:
+            sys.stderr.write(formatted + "\n")
+
+
+def _install_qt_message_filter():
+    global _original_qt_handler
+    _original_qt_handler = qInstallMessageHandler(_qt_message_handler)
+
+
 def init_logger():
     _suppress_third_party_warnings()
+    _install_qt_message_filter()
     # File handler should be without colors
     file_handler = RotatingFileHandler(
         join(get_config_dir(), DEFAULT_LOG_FILENAME), maxBytes=1024 * 1024, backupCount=5, encoding="utf-8"
