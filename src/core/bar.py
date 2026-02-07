@@ -159,10 +159,11 @@ class Bar(QWidget):
         if self._is_auto_width:
             QTimer.singleShot(0, self._sync_auto_width)
 
-    def update_app_bar(self, scale_screen_height=False) -> None:
+    def update_app_bar(self) -> None:
         if self.app_bar_manager:
             # Always register AppBar for notifications, but only reserve space when windows_app_bar is true
             reserve_space = self._window_flags["windows_app_bar"]
+            scale_screen_height = self._target_screen.devicePixelRatio() > 1.0
             self.app_bar_manager.create_appbar(
                 self.winId().__int__(),
                 self.app_bar_edge,
