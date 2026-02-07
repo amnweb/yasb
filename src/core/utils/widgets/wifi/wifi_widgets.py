@@ -21,7 +21,6 @@ from PyQt6.QtWidgets import (
     QLabel,
     QLineEdit,
     QMenu,
-    QProgressBar,
     QPushButton,
     QScrollArea,
     QSizePolicy,
@@ -31,7 +30,7 @@ from PyQt6.QtWidgets import (
 )
 from winrt.windows.devices.wifi import WiFiConnectionStatus
 
-from core.utils.utilities import PopupWidget, is_valid_qobject, refresh_widget_style
+from core.utils.utilities import LoaderLine, PopupWidget, is_valid_qobject, refresh_widget_style
 from core.utils.widgets.wifi.wifi_managers import (
     NetworkInfo,
     ScanResultStatus,
@@ -455,12 +454,10 @@ class WifiMenu(QObject):
         header_label = QLabel("WiFi Networks")
         header_label.setProperty("class", "header")
 
-        self.menu_progress_bar = QProgressBar(self.popup_window)
-        self.menu_progress_bar.setRange(0, 0)  # Undetermined progress bar
-        self.menu_progress_bar.setTextVisible(False)
-        self.menu_progress_bar.setContentsMargins(0, 0, 0, 0)
-        self.menu_progress_bar.setProperty("class", "progress-bar")
+        self.menu_progress_bar = LoaderLine(self.popup_window)
+        self.menu_progress_bar.configure(class_name="progress-bar", segment_ratio=0.40)
         self.menu_progress_bar.setHidden(True)
+        self.menu_progress_bar.start()
 
         self.error_message = ClickableLabel(self.popup_window)
         self.error_message.setAlignment(Qt.AlignmentFlag.AlignCenter)
