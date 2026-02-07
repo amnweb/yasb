@@ -108,7 +108,6 @@ wifi:
 ```css
 .wifi-menu {}
 .wifi-menu .progress-bar {}
-.wifi-menu .progress-bar::chunk {}
 .wifi-menu .header {}
 .wifi-menu .error-message {}
 .wifi-menu .wifi-list {}
@@ -144,10 +143,7 @@ wifi:
 
 .wifi-menu .progress-bar {
     max-height: 2px;
-}
-
-.wifi-menu .progress-bar::chunk {
-    background-color: #4cc2ff;
+    color: #4cc2ff;
 }
 
 .wifi-menu .header {

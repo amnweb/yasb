@@ -15,6 +15,7 @@ from ctypes import (
 from ctypes.wintypes import DWORD, HANDLE, LPWSTR
 from dataclasses import dataclass
 from enum import IntFlag, StrEnum, auto
+from typing import override
 
 from PyQt6.QtCore import QObject, QThread, pyqtSignal
 from winrt.windows.devices.wifi import (
@@ -23,6 +24,7 @@ from winrt.windows.devices.wifi import (
     WiFiNetworkReport,
     WiFiReconnectionKind,
 )
+from winrt.windows.networking.connectivity import NetworkConnectivityLevel, NetworkInformation
 from winrt.windows.security.credentials import PasswordCredential
 
 from core.utils.win32.bindings import (
@@ -84,7 +86,18 @@ class ScanResultStatus(StrEnum):
 
 
 @dataclass
+class WiFiInfo:
+    """Info used by wifi widget"""
+
+    bars: int
+    name: str
+    exact_quality: int
+
+
+@dataclass
 class NetworkInfo:
+    """Info used by wifi popup"""
+
     ssid: str = ""
     quality: int = 0
     icon: str = ""
@@ -92,6 +105,81 @@ class NetworkInfo:
     auth_alg: int = 0
     profile_exists: bool = False
     auto_connect: bool = False
+
+
+class WiFiWorker(QThread):
+    """Singleton worker thread that periodically fetches WiFi info"""
+
+    result = pyqtSignal(WiFiInfo)
+    _instance = None
+
+    def __new__(cls, get_exact: bool = False, poll_interval: int = 1000):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+            cls._instance._initialized = False
+        return cls._instance
+
+    def __init__(self, get_exact: bool = False, poll_interval: int = 1000):
+        if self._initialized:
+            return
+        super().__init__()
+        self._get_exact = get_exact
+        self._poll_interval = poll_interval
+        self._initialized = True
+        self._running = False
+        self._wifi_manager = WiFiManager()
+
+    def stop(self):
+        """Stop the worker"""
+        self._running = False
+
+    @override
+    def run(self):
+        """Run the worker"""
+        threading.current_thread().name = "WiFiWorker"
+        self._running = True
+        while self._running:
+            try:
+                bars = self._get_wifi_strength()
+                name = self._get_wifi_name()
+                exact_quality = self._get_exact_quality()
+                self.result.emit(WiFiInfo(bars, name, exact_quality))
+            except Exception as e:
+                logger.error(f"WiFiWorker error: {e}")
+                self.result.emit(WiFiInfo(0, "Error", -1))
+            self.msleep(self._poll_interval)
+
+    def _get_wifi_strength(self) -> int:
+        """
+        Get WiFi signal strength in bars
+        Imprecise, but does not require location permissions
+        """
+        connections = NetworkInformation.get_connection_profiles()
+        for connection in connections:
+            if connection.get_network_connectivity_level() == NetworkConnectivityLevel.INTERNET_ACCESS:
+                signal_strength = connection.get_signal_bars()
+                if signal_strength is not None:
+                    return int(signal_strength)
+        return 0
+
+    def _get_wifi_name(self) -> str:
+        connections = NetworkInformation.get_connection_profiles()
+        for connection in connections:
+            if connection.get_network_connectivity_level() == NetworkConnectivityLevel.INTERNET_ACCESS:
+                return connection.profile_name
+        return "Disconnected"
+
+    def _get_exact_quality(self) -> int:
+        """Get exact WiFi quality via WLAN API. Returns -1 if unavailable."""
+        if not self._get_exact:
+            return -1
+        try:
+            network_info = self._wifi_manager.get_current_connection()
+            if network_info:
+                return network_info.quality
+        except Exception as e:
+            logger.debug(f"Could not get exact WiFi quality: {e}")
+        return -1
 
 
 class WiFiConnectWorker(QThread):

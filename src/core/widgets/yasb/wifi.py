@@ -8,11 +8,11 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
 )
-from winrt.windows.networking.connectivity import NetworkConnectivityLevel, NetworkInformation
+from winrt.windows.networking.connectivity import NetworkInformation
 
 from core.utils.utilities import add_shadow
 from core.utils.widgets.animation_manager import AnimationManager
-from core.utils.widgets.wifi.wifi_managers import NetworkInfo
+from core.utils.widgets.wifi.wifi_managers import NetworkInfo, WiFiInfo, WiFiWorker
 from core.utils.widgets.wifi.wifi_widgets import WifiMenu
 from core.validation.widgets.yasb.wifi import WifiConfig
 from core.widgets.base import BaseWidget
@@ -29,7 +29,14 @@ class WifiWidget(BaseWidget):
         self.config = config
         self._show_alt_label = False
         self._ethernet_active = False
-        self._wifi_menu = WifiMenu(self, self.config.menu_config.model_dump())
+        self._wifi_menu = WifiMenu(self, self.config.menu_config)
+
+        self._cached_wifi_info = WiFiInfo(0, "Disconnected", -1)
+
+        # Worker thread that will fetch wifi info on an interval
+        self._wifi_worker = WiFiWorker(self.config.get_exact_wifi_strength, self.config.update_interval)
+        self._wifi_worker.result.connect(self._on_wifi_info_result)
+        self._wifi_worker.start()
 
         # Construct container
         self._widget_container_layout = QHBoxLayout()
@@ -52,15 +59,11 @@ class WifiWidget(BaseWidget):
         )
 
         self.register_callback("toggle_label", self._toggle_label)
-        self.register_callback("update_label", self._update_label)
         self.register_callback("toggle_menu", self._wifi_menu.show_menu)
 
         self.callback_left = self.config.callbacks.on_left
         self.callback_right = self.config.callbacks.on_right
         self.callback_middle = self.config.callbacks.on_middle
-        self.callback_timer = "update_label"
-
-        self.start_timer()
 
     def _display_correct_label(self):
         active_widget_group = "ethernet" if self._ethernet_active else "wifi"
@@ -122,6 +125,11 @@ class WifiWidget(BaseWidget):
             self._widgets = process_content(content)
             self._widgets_alt = process_content(content_alt, is_alt=True)
 
+    def _on_wifi_info_result(self, wifi_info: WiFiInfo):
+        """Handle WiFi info result from worker thread."""
+        self._cached_wifi_info = wifi_info
+        self._update_label()
+
     def _update_label(self):
         try:
             connection_info = NetworkInformation.get_internet_connection_profile()
@@ -132,17 +140,12 @@ class WifiWidget(BaseWidget):
                 if was_ethernet and self.config.hide_if_ethernet:
                     self.show()
 
-                # NOTE: Optionally get the exact wifi strength from winapi (won't work if location services are disabled)
-                winapi_connection_info: NetworkInfo | None = None
-                if self.config.get_exact_wifi_strength:
-                    winapi_connection_info = self._wifi_menu.wifi_manager.get_current_connection()
-
-                if winapi_connection_info:
-                    wifi_strength = winapi_connection_info.quality
+                if self.config.get_exact_wifi_strength and self._cached_wifi_info.exact_quality >= 0:
+                    wifi_strength = self._cached_wifi_info.exact_quality
                 else:
-                    wifi_strength = min(self._get_wifi_strength_safe(), 4) * 25
+                    wifi_strength = min(self._cached_wifi_info.bars, 4) * 25
                 wifi_icon = self._get_wifi_icon(wifi_strength)
-                wifi_name = self._get_wifi_name_safe()
+                wifi_name = self._cached_wifi_info.name
             else:
                 self._ethernet_active = True
                 if self.config.hide_if_ethernet:
@@ -185,24 +188,6 @@ class WifiWidget(BaseWidget):
                 if widget_index < len(active_widgets):
                     active_widgets[widget_index].setText(formatted_text)
                 widget_index += 1
-
-    def _get_wifi_strength_safe(self) -> int:
-        """Get the WiFi signal bars safely, not requiring location permissions"""
-        connections = NetworkInformation.get_connection_profiles()
-        for connection in connections:
-            if connection.get_network_connectivity_level() == NetworkConnectivityLevel.INTERNET_ACCESS:
-                signal_strength = connection.get_signal_bars()
-                if signal_strength is not None:
-                    return int(signal_strength)
-        return 0
-
-    def _get_wifi_name_safe(self) -> str:
-        """Get the WiFi name safely, not requiring location permissions"""
-        connections = NetworkInformation.get_connection_profiles()
-        for connection in connections:
-            if connection.get_network_connectivity_level() == NetworkConnectivityLevel.INTERNET_ACCESS:
-                return connection.profile_name
-        return "Disconnected"
 
     def _get_wifi_icon(self, strength: int) -> str:
         if strength >= 80:
