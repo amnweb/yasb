@@ -2,7 +2,7 @@ import logging
 import os
 from dataclasses import replace
 from functools import partial
-from typing import Any, override
+from typing import override
 
 from PyQt6.QtCore import (
     QEvent,
@@ -40,7 +40,8 @@ from core.utils.widgets.wifi.wifi_managers import (
     WiFiManager,
     WifiState,
 )
-from core.utils.win32.utilities import apply_qmenu_style  # type: ignore
+from core.utils.win32.utilities import apply_qmenu_style
+from core.validation.widgets.yasb.wifi import WifiMenuConfig  # type: ignore
 
 logger = logging.getLogger("wifi_widget")
 
@@ -418,7 +419,7 @@ class WifiMenu(QObject):
     def __init__(
         self,
         parent: QWidget,
-        menu_config: dict[str, Any],
+        menu_config: WifiMenuConfig,
     ):
         super().__init__(parent)
         self._parent = parent
@@ -441,10 +442,10 @@ class WifiMenu(QObject):
     def show_menu(self):
         self.popup_window = PopupWidget(
             self._parent,
-            self.menu_config["blur"],
-            self.menu_config["round_corners"],
-            self.menu_config["round_corners_type"],
-            self.menu_config["border_color"],
+            self.menu_config.blur,
+            self.menu_config.round_corners,
+            self.menu_config.round_corners_type,
+            self.menu_config.border_color,
         )
         self.popup_window.setProperty("class", "wifi-menu")
         main_layout = QVBoxLayout(self.popup_window)
@@ -503,10 +504,10 @@ class WifiMenu(QObject):
 
         self.popup_window.adjustSize()
         self.popup_window.setPosition(
-            alignment=self.menu_config["alignment"],
-            direction=self.menu_config["direction"],
-            offset_left=self.menu_config["offset_left"],
-            offset_top=self.menu_config["offset_top"],
+            alignment=self.menu_config.alignment,
+            direction=self.menu_config.direction,
+            offset_left=self.menu_config.offset_left,
+            offset_top=self.menu_config.offset_top,
         )
 
         self.popup_window.destroyed.connect(self._on_wifi_menu_deleted)  # pyright: ignore[reportUnknownMemberType]
@@ -749,9 +750,9 @@ class WifiMenu(QObject):
         """Get the WiFi icon based on the signal strength"""
         level = min(strength // 25, 3)
         if secured:
-            return self.menu_config["wifi_icons_secured"][level]
+            return self.menu_config.wifi_icons_secured[level]
         else:
-            return self.menu_config["wifi_icons_unsecured"][level]
+            return self.menu_config.wifi_icons_unsecured[level]
 
     def _run_and_hide(self, command: str) -> None:
         """Run a command and hide the popup window if exists"""
