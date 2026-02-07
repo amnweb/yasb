@@ -10,7 +10,7 @@
 | `focused_empty_label`    | string  | `'{name}'`                                       | Optional label for the currently focused workspace (has no windows opened). Falls back to `active_empty_label` if not set. |
 | `hide_empty_workspaces`  | boolean | `true`                                           | Whether to hide empty workspaces.                                           |
 | `hide_if_offline`        | boolean | `false`                                          | Whether to hide workspaces widget if GlazeWM is offline.                    |
-| `persistent_workspaces`  | dict    | `{}`                                             | Number of workspaces to always show. Use `{"*": N}` for all monitors. Display_names from GlazeWM are cached. |
+| `persistent_workspaces`  | dict    | `{}`                                             | Number of workspaces to always show. Use `"*": N` for all monitors. Display_names from GlazeWM are cached. |
 | `glazewm_server_uri`     | string  | `'ws://localhost:6123'`                          | Optional GlazeWM server uri.                                                |
 | `enable_scroll_switching` | boolean | `true`      | Enable scroll switching between workspaces.                                 |
 | `reverse_scroll_direction` | boolean | `false`      | Reverse scroll direction.                                                  |
@@ -28,7 +28,8 @@ glazewm_workspaces:
     offline_label: "GlazeWM Offline"
     hide_empty_workspaces: true
     hide_if_offline: false
-    persistent_workspaces: {"*": 9}  # Show 9 workspaces on all monitors (display_names are cached from GlazeWM)
+    persistent_workspaces:
+      "*": 9  # Show 9 workspaces on all monitors (display_names are cached from GlazeWM)
     enable_scroll_switching: true
     btn_shadow:
       enabled: true
@@ -64,7 +65,7 @@ glazewm_workspaces:
 - **focused_empty_label:** Optional label for the currently focused workspace (has no windows opened). If not set, **active_empty_label** will be used, falling back to name or display_name from GlazeWM.
 - **hide_empty_workspaces:** Whether to hide empty workspaces.
 - **hide_if_offline:** Whether to hide workspaces widget if GlazeWM is offline.
-- **persistent_workspaces:** Number of workspaces to always show. Use `{"*": 9}` for 9 workspaces on all monitors. Display_names are automatically cached from GlazeWM when workspaces become active.
+- **persistent_workspaces:** Number of workspaces to always show. Use `"*": 9` for 9 workspaces on all monitors. Display_names are automatically cached from GlazeWM when workspaces become active.
 - **glazewm_server_uri:** Optional GlazeWM server uri if it ever changes on GlazeWM side.
 - **enable_scroll_switching:** Enable scroll switching between workspaces.
 - **reverse_scroll_direction:** Reverse scroll direction for switching workspaces.
