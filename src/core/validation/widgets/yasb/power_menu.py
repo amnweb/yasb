@@ -1,5 +1,6 @@
 from pydantic import Field
 
+from core.validation.utilities import PreserveOrderMixin
 from core.validation.widgets.base_model import (
     CustomBaseModel,
     KeybindingConfig,
@@ -8,7 +9,7 @@ from core.validation.widgets.base_model import (
 )
 
 
-class PowerMenuButtonsConfig(CustomBaseModel):
+class PowerMenuButtonsConfig(PreserveOrderMixin, CustomBaseModel):
     lock: list[str] | None = None
     signout: list[str] | None = None
     sleep: list[str] | None = None
