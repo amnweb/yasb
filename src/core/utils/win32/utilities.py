@@ -133,31 +133,47 @@ def get_app_name_from_pid(pid: int) -> str | None:
                     package_full_name = buf.value
                     CloseHandle(h_process)
 
-                    # Use WinRT API to get the SHORT name
+                    # Direct lookup by full name is much faster than iterating all packages, so try that first
+                    try:
+                        package = PackageManager().find_package_by_user_security_id_package_full_name(
+                            "", package_full_name
+                        )
+                        if package:
+                            try:
+                                app_entries = package.get_app_list_entries()
+                                if app_entries and len(app_entries) > 0:
+                                    short_name = app_entries[0].display_info.display_name
+                                    if short_name and short_name.strip():
+                                        return short_name.strip()
+                            except Exception:
+                                pass
+                            display_name = package.display_name
+                            if display_name and display_name.strip():
+                                return display_name.strip()
+                    except Exception as e:
+                        logging.debug(f"Direct UWP lookup failed for {package_full_name}: {e}")
+
+                    # Fallback: iterate all packages if direct lookup failed
                     try:
                         package_manager = PackageManager()
 
-                        # Find the package by full name
                         for package in package_manager.find_packages_by_user_security_id(""):
                             if package.id.full_name == package_full_name:
-                                # Try to get SHORT name from app list entries first
                                 try:
                                     app_entries = package.get_app_list_entries()
                                     if app_entries and len(app_entries) > 0:
-                                        # Use the first app entry's short name
                                         short_name = app_entries[0].display_info.display_name
                                         if short_name and short_name.strip():
                                             return short_name.strip()
                                 except Exception:
                                     pass
 
-                                # Fallback to package display name
                                 display_name = package.display_name
                                 if display_name and display_name.strip():
                                     return display_name.strip()
                                 break
                     except Exception as e:
-                        logging.debug(f"Failed to get UWP package display name for {package_full_name}: {e}")
+                        logging.debug(f"Fallback UWP lookup failed for {package_full_name}: {e}")
 
                     # If WinRT fails, we already closed the handle, so return None
                     return None

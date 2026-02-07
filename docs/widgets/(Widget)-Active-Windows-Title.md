@@ -41,8 +41,8 @@ active_window:
 ```
 
 ## Description of Options
-- **label:** The format string for the active window title. You can use placeholders like `{win[title]}` to dynamically insert window information.
-- **label_alt:** The alternative format string for the active window. Useful for displaying additional window details.
+- **label:** The format string for the active window title. You can use placeholders to dynamically insert window information. See [Label Format Placeholders](#label-format-placeholders) below.
+- **label_alt:** The alternative format string for the active window. Useful for displaying additional window details. Supports the same placeholders as `label`.
 - **class_name:** Additional CSS class name for the widget. This allows for custom styling.
 - **label_no_window:** The text to display when no window is active. If not specified, it defaults to an empty string.
 - **label_icon:** A boolean indicating whether to display the window icon.
@@ -55,7 +55,41 @@ active_window:
 - **animation:** A dictionary specifying the animation settings for the widget. It contains three keys: `enabled`, `type`, and `duration`. The `type` can be `fadeInOut` and the `duration` is the animation duration in milliseconds.
 - **container_shadow:** Container shadow options.
 - **label_shadow:** Label shadow options.
-- **rewrite:** A dictionary containing rewrite options for the widget. This can include settings for how the widget should behave or display information.
+- **rewrite:** A dictionary containing rewrite options for the widget. Rewrite rules are applied to `title`, `process.name`, and `app_name`. See [Rewrite Options](#rewrite-options) below.
+
+## Label Format Placeholders
+
+You can use the following placeholders in `label` and `label_alt`:
+
+| Placeholder | Description | Example |
+|---|---|---|
+| `{win[title]}` | Window title | `"Document1 - Microsoft Word"` |
+| `{win[app_name]}` | Friendly application name (resolved from process). | `"Photos"` |
+| `{win[class_name]}` | Window class name | `"Chrome_WidgetWin_1"` |
+| `{win[hwnd]}` | Window handle (HWND) | `1234567` |
+| `{win[process][name]}` | Process executable name | `"explorer.exe"` |
+| `{win[process][pid]}` | Process ID | `12345` |
+| `{win[process][path]}` | Full path to the executable | `"C:\Windows\explorer.exe"` |
+| `{win[monitor_hwnd]}` | Monitor handle | `65537` |
+
+
+### Label Examples
+```yaml
+# Show just the window title
+label: "{win[title]}"
+
+# Show friendly app name
+label: "{win[app_name]}"
+
+# Show app name followed by window title
+label: "{win[app_name]} - {win[title]}"
+
+# Show process name and title
+label: "{win[process][name]}: {win[title]}"
+
+# Show detailed info on alt label
+label_alt: "[{win[app_name]}] class='{win[class_name]}' exe='{win[process][name]}' pid={win[process][pid]}"
+```
 
 ## Rewrite Options
 

@@ -4,6 +4,7 @@ import os
 import re
 
 import win32gui
+import win32process
 from PIL import Image
 from PyQt6.QtCore import QElapsedTimer, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QImage, QPixmap
@@ -13,7 +14,7 @@ from core.event_service import EventService
 from core.utils.utilities import add_shadow
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.win32.app_icons import get_window_icon
-from core.utils.win32.utilities import get_hwnd_info
+from core.utils.win32.utilities import get_app_name_from_aumid, get_app_name_from_pid, get_hwnd_info
 from core.utils.win32.windows import WinEvent
 from core.validation.widgets.yasb.active_window import ActiveWindowConfig
 from core.widgets.base import BaseWidget
@@ -87,6 +88,7 @@ class ActiveWindowWidget(BaseWidget):
         self._ignore_window.processes += IGNORED_PROCESSES
         self._ignore_window.titles += IGNORED_TITLES
         self._icon_cache = dict()
+        self._app_name_cache = dict()
         if self.config.label_icon:
             self._widget_container_layout.addWidget(self._window_icon_label)
         self._widget_container_layout.addWidget(self._window_title_text)
@@ -291,6 +293,67 @@ class ActiveWindowWidget(BaseWidget):
             process = win_info["process"]
             class_name = win_info["class_name"]
 
+            # For UWP apps, ApplicationFrameHost.exe owns the window;
+            # enumerate child windows to find the real app PID
+            pid_for_name = process["pid"]
+            is_uwp = class_name == "ApplicationFrameWindow"
+            if is_uwp:
+                try:
+                    parent_pid = process["pid"]
+
+                    def _find_real_pid(child_hwnd, _):
+                        _, child_pid = win32process.GetWindowThreadProcessId(child_hwnd)
+                        if child_pid and child_pid != parent_pid:
+                            return False
+                        return True
+
+                    found_pids = []
+
+                    def _collect_pids(child_hwnd, _):
+                        _, child_pid = win32process.GetWindowThreadProcessId(child_hwnd)
+                        if child_pid and child_pid != parent_pid:
+                            found_pids.append(child_pid)
+                            return False
+                        return True
+
+                    try:
+                        win32gui.EnumChildWindows(hwnd, _collect_pids, None)
+                    except Exception:
+                        pass
+                    if found_pids:
+                        pid_for_name = found_pids[0]
+                except Exception:
+                    pass
+
+            # If UWP child process isn't attached yet, retry after a short delay
+            if is_uwp and pid_for_name == process["pid"]:
+                if not hasattr(self, "_uwp_retry_count"):
+                    self._uwp_retry_count = 0
+                if self._uwp_retry_count < 5:
+                    self._uwp_retry_count += 1
+                    QTimer.singleShot(100, lambda h=hwnd: self._on_focus_change_event(h, WinEvent.WinEventOutOfContext))
+                    return
+            self._uwp_retry_count = 0
+
+            # Use cached app name if available, otherwise resolve and cache
+            app_name = self._app_name_cache.get(pid_for_name)
+            if app_name is None:
+                # For UWP apps with no separate child process (WinUI 3), use AUMID lookup
+                if is_uwp and pid_for_name == process["pid"]:
+                    try:
+                        from core.utils.win32.aumid import get_aumid_for_window
+
+                        aumid = get_aumid_for_window(hwnd)
+                        if aumid:
+                            app_name = get_app_name_from_aumid(aumid)
+                    except Exception:
+                        pass
+                # For apps with a separate child PID or Win32 apps, use PID lookup
+                if not app_name:
+                    app_name = get_app_name_from_pid(pid_for_name) or process["name"] or title
+                self._app_name_cache[pid_for_name] = app_name
+            win_info["app_name"] = app_name
+
             if self.config.label_icon:
                 cache_key = (hwnd, title, self.dpi)
 
@@ -326,6 +389,8 @@ class ActiveWindowWidget(BaseWidget):
                     win_info["title"] = self._rewrite_filter(win_info["title"])
                 if "process" in win_info and "name" in win_info["process"]:
                     win_info["process"]["name"] = self._rewrite_filter(win_info["process"]["name"])
+                if "app_name" in win_info and win_info["app_name"]:
+                    win_info["app_name"] = self._rewrite_filter(win_info["app_name"])
 
                 if self.config.max_length and len(win_info["title"]) > self.config.max_length:
                     truncated_title = f"{win_info['title'][: self.config.max_length]}{self.config.max_length_ellipsis}"
