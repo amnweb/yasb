@@ -19,6 +19,7 @@ class ObsWebSocketClient:
 
     EVENT_OUTPUTS = 1 << 6
     EVENT_UI = 1 << 10
+    EVENT_SCENES = 1 << 2
 
     def __init__(self, host: str = "localhost", port: int = 4455, auth_key: str = "", event_subscriptions: int = 0):
         self.host = host
@@ -342,8 +343,10 @@ class ObsWorker(QThread):
 
     connection_signal = pyqtSignal(bool)
     state_signal = pyqtSignal(dict)
+    stream_signal = pyqtSignal(dict)
     virtual_cam_signal = pyqtSignal(bool)
     studio_mode_signal = pyqtSignal(bool)
+    scene_signal = pyqtSignal(str)
 
     _instance: "ObsWorker | None" = None
     _users = 0
@@ -380,7 +383,9 @@ class ObsWorker(QThread):
                         host=self._connection.get("host", "localhost"),
                         port=self._connection.get("port", 4455),
                         auth_key=self._connection.get("password", ""),
-                        event_subscriptions=ObsWebSocketClient.EVENT_OUTPUTS | ObsWebSocketClient.EVENT_UI,
+                        event_subscriptions=ObsWebSocketClient.EVENT_OUTPUTS
+                        | ObsWebSocketClient.EVENT_UI
+                        | ObsWebSocketClient.EVENT_SCENES,
                     )
                     self.client.register_event_callback(self._on_event)
                     self.client.register_connection_callback(self._on_connection)
@@ -425,7 +430,11 @@ class ObsWorker(QThread):
     def _on_event(self, event_type: str, event_data: dict):
         if event_type == "RecordStateChanged":
             self.state_signal.emit(event_data)
+        elif event_type == "StreamStateChanged":
+            self.stream_signal.emit(event_data)
         elif event_type == "VirtualcamStateChanged":
             self.virtual_cam_signal.emit(event_data.get("outputActive", False))
         elif event_type == "StudioModeStateChanged":
             self.studio_mode_signal.emit(event_data.get("studioModeEnabled", False))
+        elif event_type == "CurrentProgramSceneChanged":
+            self.scene_signal.emit(event_data.get("sceneName", ""))

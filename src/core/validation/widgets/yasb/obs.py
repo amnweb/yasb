@@ -9,6 +9,8 @@ class ObsIconsConfig(CustomBaseModel):
     virtual_cam_off: str = "\udb81\udda0"
     studio_mode_on: str = "\udb84\uddd8"
     studio_mode_off: str = "\udb84\uddd8"
+    streaming: str = "\udb82\udd02"
+    streaming_stopped: str = "\udb82\udd02"
 
 
 class ObsConnectionConfig(CustomBaseModel):
@@ -25,6 +27,10 @@ class ObsConfig(CustomBaseModel):
     show_record_time: bool = False
     show_virtual_cam: bool = False
     show_studio_mode: bool = False
+    show_stream: bool = False
+    show_stream_time: bool = False
+    show_scene_name: bool = False
+    show_stream_stats: bool = False
     tooltip: bool = True
     container_padding: PaddingConfig = PaddingConfig()
     keybindings: list[KeybindingConfig] = []
