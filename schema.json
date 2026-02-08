@@ -7817,7 +7817,9 @@
             "virtual_cam_on": "\udb81\udda0",
             "virtual_cam_off": "\udb81\udda0",
             "studio_mode_on": "\udb84\uddd8",
-            "studio_mode_off": "\udb84\uddd8"
+            "studio_mode_off": "\udb84\uddd8",
+            "streaming": "\udb82\udd02",
+            "streaming_stopped": "\udb82\udd02"
           }
         },
         "connection": {
@@ -7851,6 +7853,26 @@
         "show_studio_mode": {
           "default": false,
           "title": "Show Studio Mode",
+          "type": "boolean"
+        },
+        "show_stream": {
+          "default": false,
+          "title": "Show Stream",
+          "type": "boolean"
+        },
+        "show_stream_time": {
+          "default": false,
+          "title": "Show Stream Time",
+          "type": "boolean"
+        },
+        "show_scene_name": {
+          "default": false,
+          "title": "Show Scene Name",
+          "type": "boolean"
+        },
+        "show_stream_stats": {
+          "default": false,
+          "title": "Show Stream Stats",
           "type": "boolean"
         },
         "tooltip": {
@@ -7955,6 +7977,16 @@
         "studio_mode_off": {
           "default": "\udb84\uddd8",
           "title": "Studio Mode Off",
+          "type": "string"
+        },
+        "streaming": {
+          "default": "\udb82\udd02",
+          "title": "Streaming",
+          "type": "string"
+        },
+        "streaming_stopped": {
+          "default": "\udb82\udd02",
+          "title": "Streaming Stopped",
           "type": "string"
         }
       },
@@ -8314,6 +8346,11 @@
           "title": "Uptime",
           "type": "boolean"
         },
+        "show_user": {
+          "default": false,
+          "title": "Show User",
+          "type": "boolean"
+        },
         "blur": {
           "default": false,
           "title": "Blur",
@@ -8333,7 +8370,7 @@
         },
         "button_row": {
           "default": 3,
-          "maximum": 5,
+          "maximum": 6,
           "minimum": 1,
           "title": "Button Row",
           "type": "integer"
@@ -11900,6 +11937,92 @@
       "title": "WindowStyleConfig",
       "type": "object"
     },
+    "WindowsDesktopsConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "label_workspace_btn": {
+          "default": "{index}",
+          "title": "Label Workspace Btn",
+          "type": "string"
+        },
+        "label_workspace_active_btn": {
+          "default": "{index}",
+          "title": "Label Workspace Active Btn",
+          "type": "string"
+        },
+        "switch_workspace_animation": {
+          "default": true,
+          "title": "Switch Workspace Animation",
+          "type": "boolean"
+        },
+        "animation": {
+          "default": false,
+          "title": "Animation",
+          "type": "boolean"
+        },
+        "btn_shadow": {
+          "$ref": "#/$defs/ShadowConfig",
+          "default": {
+            "enabled": false,
+            "color": "black",
+            "offset": [
+              1,
+              1
+            ],
+            "radius": 3
+          }
+        },
+        "container_shadow": {
+          "$ref": "#/$defs/ShadowConfig",
+          "default": {
+            "enabled": false,
+            "color": "black",
+            "offset": [
+              1,
+              1
+            ],
+            "radius": 3
+          }
+        },
+        "container_padding": {
+          "$ref": "#/$defs/PaddingConfig",
+          "default": {
+            "top": 0,
+            "left": 0,
+            "bottom": 0,
+            "right": 0
+          }
+        },
+        "keybindings": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/KeybindingConfig"
+          },
+          "title": "Keybindings",
+          "type": "array"
+        }
+      },
+      "title": "WindowsDesktopsConfig",
+      "type": "object"
+    },
+    "WindowsDesktopsEntry": {
+      "properties": {
+        "type": {
+          "const": "yasb.windows_desktops.WorkspaceWidget",
+          "title": "Type",
+          "type": "string"
+        },
+        "options": {
+          "$ref": "#/$defs/WindowsDesktopsConfig"
+        }
+      },
+      "required": [
+        "type",
+        "options"
+      ],
+      "title": "WindowsDesktopsEntry",
+      "type": "object"
+    },
     "WindowsUpdateConfig": {
       "additionalProperties": false,
       "properties": {
@@ -13467,6 +13590,9 @@
           },
           {
             "$ref": "#/$defs/WifiEntry"
+          },
+          {
+            "$ref": "#/$defs/WindowsDesktopsEntry"
           },
           {
             "$ref": "#/$defs/WindowControlsEntry"
