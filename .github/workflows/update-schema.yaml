@@ -1,0 +1,57 @@
+name: Update schema
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  PYTHON_VERSION: '3.14'
+
+jobs:
+  update-schema:
+    runs-on: windows-latest
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Create virtual environment
+      run: |
+        python -m venv venv
+      shell: pwsh
+
+    - name: Install dependencies
+      run: |
+        .\venv\Scripts\Activate
+        python -m pip install --upgrade pip
+        pip install --force --no-cache .
+      shell: pwsh
+
+    - name: Generate schema.json
+      run: |
+        .\venv\Scripts\Activate
+        python src/core/validation/export_schema.py
+      shell: pwsh
+
+    - name: Get version
+      id: get_version
+      run: |
+        .\venv\Scripts\Activate
+        $version = (Get-Content src/settings.py | Select-String -Pattern 'BUILD_VERSION\s*=\s*"([^"]+)"').Matches.Groups[1].Value
+        echo "VERSION=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+      shell: pwsh
+
+    - name: Commit schema.json
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git add schema.json
+        git diff --cached --quiet || git commit -m "chore(schema): update schema.json for v${{ steps.get_version.outputs.VERSION }}"
+        git push
+      shell: pwsh
