@@ -1,16 +1,12 @@
-import logging
-import os
 import re
-import shutil
 from collections import deque
-from subprocess import PIPE, Popen
 
 from humanize import naturalsize
-from PyQt6.QtCore import QTimer
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel
 
 from core.utils.utilities import add_shadow, build_progress_widget, build_widget_label, refresh_widget_style
 from core.utils.widgets.animation_manager import AnimationManager
+from core.utils.widgets.gpu.gpu_worker import GpuData, GpuWorker
 from core.validation.widgets.yasb.gpu import GpuConfig
 from core.widgets.base import BaseWidget
 
@@ -18,10 +14,9 @@ from core.widgets.base import BaseWidget
 class GpuWidget(BaseWidget):
     validation_schema = GpuConfig
 
-    # Class-level shared data and timer
+    # Class-level shared data and worker
     _instances: list["GpuWidget"] = []
-    _shared_timer: QTimer | None = None
-    _nvidia_smi_path: str | None = None  # Cache for resolved nvidia-smi path
+    _worker: GpuWorker | None = None
 
     def __init__(self, config: GpuConfig):
         super().__init__(class_name=f"gpu-widget {config.class_name}")
@@ -29,6 +24,7 @@ class GpuWidget(BaseWidget):
         self._gpu_util_history = deque([0] * config.histogram_num_columns, maxlen=config.histogram_num_columns)
         self._gpu_mem_history = deque([0] * config.histogram_num_columns, maxlen=config.histogram_num_columns)
         self._show_alt_label = False
+        self._last_gpu_data: GpuData | None = None
 
         self.progress_widget = None
         self.progress_widget = build_progress_widget(self, self.config.progress_bar.model_dump())
@@ -56,94 +52,45 @@ class GpuWidget(BaseWidget):
         if self not in GpuWidget._instances:
             GpuWidget._instances.append(self)
 
-        if self.config.update_interval > 0 and GpuWidget._shared_timer is None:
-            GpuWidget._shared_timer = QTimer(self)
-            GpuWidget._shared_timer.setInterval(self.config.update_interval)
-            GpuWidget._shared_timer.timeout.connect(GpuWidget._notify_instances)
-            GpuWidget._shared_timer.start()
+        # Start the shared GPU worker thread
+        if self.config.update_interval > 0 and GpuWidget._worker is None:
+            worker = GpuWorker.get_instance(self.config.update_interval)
+            worker.data_ready.connect(GpuWidget._on_gpu_data)
+            worker.start()
+            GpuWidget._worker = worker
 
         self._show_placeholder()
 
+    @classmethod
+    def _on_gpu_data(cls, gpu_data_list: list[GpuData]):
+        """Slot called on main thread when GPU worker emits data."""
+        for inst in cls._instances[:]:
+            try:
+                gpu_data = next((g for g in gpu_data_list if g.index == inst.config.gpu_index), None)
+                if gpu_data:
+                    inst._update_label(gpu_data)
+                else:
+                    inst._show_placeholder()
+            except RuntimeError:
+                cls._instances.remove(inst)
+
     def _show_placeholder(self):
         """Display placeholder GPU data without any subprocess calls."""
-
-        class DummyGpu:
-            index = 0
-            utilization = 0
-            mem_total = 0
-            mem_used = 0
-            mem_free = 0
-            temp = 0
-            fan_speed = 0
-            power_draw = 0
-
-        gpu_data = DummyGpu()
+        gpu_data = GpuData(
+            index=0,
+            utilization=0,
+            mem_total=0,
+            mem_used=0,
+            mem_free=0,
+            temp=0,
+            fan_speed=0,
+            power_draw="0",
+        )
         self._update_label(gpu_data)
 
-    @classmethod
-    def _get_nvidia_smi_path(cls):
-        if cls._nvidia_smi_path is not None:
-            return cls._nvidia_smi_path
-        path = shutil.which("nvidia-smi")
-        if path:
-            cls._nvidia_smi_path = path
-        else:
-            cls._nvidia_smi_path = os.path.join(
-                os.environ["SystemDrive"] + "\\", "Program Files", "NVIDIA Corporation", "NVSMI", "nvidia-smi.exe"
-            )
-        return cls._nvidia_smi_path
-
-    @classmethod
-    def _notify_instances(cls):
-        """Fetch GPU data and update all instances."""
-        if not cls._instances:
-            return
-        try:
-            nvidia_smi = cls._get_nvidia_smi_path()
-            gpu = Popen(
-                [
-                    nvidia_smi,
-                    "--query-gpu=index,utilization.gpu,memory.total,memory.used,memory.free,temperature.gpu,fan.speed,power.draw",
-                    "--format=csv,noheader,nounits",
-                ],
-                stdout=PIPE,
-                stderr=PIPE,
-                creationflags=0x08000000,  # CREATE_NO_WINDOW
-            )
-            stdout, stderr = gpu.communicate(timeout=2)
-            if gpu.returncode != 0 or not stdout:
-                lines = []
-            else:
-                lines = stdout.decode("utf-8").strip().split("\n")
-            for inst in cls._instances[:]:
-                try:
-                    # Find the line for the correct GPU index
-                    gpu_line = next((l for l in lines if l.startswith(str(inst.config.gpu_index) + ",")), None)
-                    if gpu_line:
-                        fields = [f.strip() for f in gpu_line.split(",")]
-
-                        class GpuData:
-                            index = int(fields[0])
-                            utilization = int(fields[1])
-                            mem_total = int(fields[2])
-                            mem_used = int(fields[3])
-                            mem_free = int(fields[4])
-                            temp = int(fields[5])
-                            fan_speed = int(fields[6]) if fields[6].isdigit() else 0
-                            power_draw = fields[7].strip() if len(fields) > 7 else 0
-
-                        inst._update_label(GpuData)
-                    else:
-                        inst._show_placeholder()
-                except Exception:
-                    cls._instances.remove(inst)
-        except Exception as e:
-            logging.error(f"Error updating shared GPU data: {e}")
-            for inst in cls._instances[:]:
-                inst._show_placeholder()
-
-    def _update_label(self, gpu_data):
+    def _update_label(self, gpu_data: GpuData):
         """Update the label with GPU data."""
+        self._last_gpu_data = gpu_data
         self._gpu_util_history.append(gpu_data.utilization)
         self._gpu_mem_history.append(gpu_data.mem_used)
         _temp = gpu_data.temp if self.config.units == "metric" else (gpu_data.temp * (9 / 5) + 32)
@@ -223,4 +170,8 @@ class GpuWidget(BaseWidget):
             widget.setVisible(not self._show_alt_label)
         for widget in self._widgets_alt:
             widget.setVisible(self._show_alt_label)
-        GpuWidget._notify_instances()
+        for inst in GpuWidget._instances[:]:
+            try:
+                inst._update_label(inst._last_gpu_data)
+            except RuntimeError:
+                GpuWidget._instances.remove(inst)
