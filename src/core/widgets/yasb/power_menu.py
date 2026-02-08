@@ -20,7 +20,7 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
 )
 
-from core.utils.utilities import add_shadow, refresh_widget_style
+from core.utils.utilities import PopupWidget, add_shadow, refresh_widget_style
 from core.utils.widgets.power_menu.power_commands import PowerOperations
 from core.utils.win32.win32_accent import Blur
 from core.utils.win32.window_actions import force_foreground_focus
@@ -39,9 +39,35 @@ def _get_windows_username():
 def _get_account_type():
     """Get account type: Administrator or Standard User."""
     try:
-        return "Administrator" if ctypes.windll.shell32.IsUserAnAdmin() else "Standard User"
+        token = win32security.OpenProcessToken(win32api.GetCurrentProcess(), win32con.TOKEN_QUERY)
+        admin_sid = win32security.ConvertStringSidToSid("S-1-5-32-544")
+        groups = win32security.GetTokenInformation(token, win32security.TokenGroups)
+        for sid, _ in groups:
+            if sid == admin_sid:
+                return "Administrator"
+        return "Standard User"
     except Exception:
         return "Standard User"
+
+
+def _get_user_email():
+    """Get the email address associated with the current Windows user account."""
+    try:
+        # Try UserPrincipalName (works for domain/Azure AD accounts)
+        return win32api.GetUserNameEx(8)  # NameUserPrincipal
+    except Exception:
+        pass
+    try:
+        # Try Microsoft account email from registry
+        with winreg.OpenKey(
+            winreg.HKEY_CURRENT_USER,
+            r"Software\Microsoft\IdentityCRL\UserExtendedProperties",
+        ) as key:
+            if winreg.QueryInfoKey(key)[0] > 0:
+                return winreg.EnumKey(key, 0)
+    except Exception:
+        pass
+    return None
 
 
 def _get_user_avatar_path():
@@ -176,6 +202,7 @@ class PowerMenuWidget(BaseWidget):
         self.callback_left = "toggle_power_menu"
 
         self.main_window = None
+        self._popup = None
 
     def _cleanup_main_window(self):
         if self.main_window:
@@ -184,6 +211,9 @@ class PowerMenuWidget(BaseWidget):
             self.main_window = None
 
     def _show_main_window(self):
+        if self.config.menu_style == "popup":
+            self._show_popup_menu()
+            return
         if self.main_window and self.main_window.isVisible():
             self.main_window.fade_out()
             self.main_window.overlay.fade_out()
@@ -204,6 +234,156 @@ class PowerMenuWidget(BaseWidget):
             self.main_window.overlay.show()
             self.main_window.show()
             force_foreground_focus(int(self.main_window.winId()))
+
+    def _show_popup_menu(self):
+        popup_cfg = self.config.popup
+        self._popup = PopupWidget(
+            self,
+            popup_cfg.blur,
+            popup_cfg.round_corners,
+            popup_cfg.round_corners_type,
+            popup_cfg.border_color,
+        )
+        self._popup.setProperty("class", "power-menu-compact")
+
+        main_layout = QVBoxLayout(self._popup)
+        main_layout.setSpacing(0)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+
+        if self.config.show_user:
+            profile_frame = QFrame()
+            profile_frame.setProperty("class", "profile-info")
+            profile_layout = QVBoxLayout(profile_frame)
+            profile_layout.setSpacing(0)
+            profile_layout.setContentsMargins(0, 0, 0, 0)
+
+            avatar_label = QLabel()
+            avatar_label.setProperty("class", "profile-avatar")
+            avatar_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            avatar_label.setFixedSize(48, 48)
+            avatar_path = _get_user_avatar_path()
+            if avatar_path:
+                pixmap = QPixmap(avatar_path)
+                if not pixmap.isNull():
+                    size = 48
+                    pixmap = pixmap.scaled(
+                        size,
+                        size,
+                        Qt.AspectRatioMode.KeepAspectRatioByExpanding,
+                        Qt.TransformationMode.SmoothTransformation,
+                    )
+                    if pixmap.width() > size or pixmap.height() > size:
+                        pixmap = pixmap.copy((pixmap.width() - size) // 2, (pixmap.height() - size) // 2, size, size)
+                    rounded = QPixmap(size, size)
+                    rounded.fill(Qt.GlobalColor.transparent)
+                    painter = QPainter(rounded)
+                    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+                    path = QPainterPath()
+                    path.addEllipse(0, 0, size, size)
+                    painter.setClipPath(path)
+                    painter.drawPixmap(0, 0, pixmap)
+                    painter.end()
+                    avatar_label.setPixmap(rounded)
+            profile_layout.addWidget(avatar_label, alignment=Qt.AlignmentFlag.AlignCenter)
+
+            username_label = QLabel(_get_windows_username())
+            username_label.setProperty("class", "profile-username")
+            username_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            profile_layout.addWidget(username_label, alignment=Qt.AlignmentFlag.AlignCenter)
+
+            account_type_label = QLabel(_get_account_type())
+            account_type_label.setProperty("class", "profile-account-type")
+            account_type_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            profile_layout.addWidget(account_type_label, alignment=Qt.AlignmentFlag.AlignCenter)
+
+            user_email = _get_user_email()
+            if user_email:
+                email_label = QLabel(user_email)
+                email_label.setProperty("class", "profile-email")
+                email_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                profile_layout.addWidget(email_label, alignment=Qt.AlignmentFlag.AlignCenter)
+
+            manage_btn = QPushButton("Manage accounts")
+            manage_btn.setProperty("class", "manage-accounts")
+            manage_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+            manage_btn.clicked.connect(lambda: (self._popup.hide(), os.startfile("ms-settings:accounts")))
+            profile_layout.addWidget(manage_btn, alignment=Qt.AlignmentFlag.AlignCenter)
+
+            main_layout.addWidget(profile_frame)
+
+        buttons_frame = QFrame()
+        buttons_frame.setProperty("class", "buttons")
+        buttons_layout = QVBoxLayout(buttons_frame)
+        buttons_layout.setSpacing(0)
+        buttons_layout.setContentsMargins(0, 0, 0, 0)
+
+        power_operations = PowerOperations(self._popup)
+        buttons = self.config.buttons.model_dump(exclude_none=True)
+        for button_name, button_info in buttons.items():
+            if button_name == "cancel":
+                continue
+            icon_text, label_text = button_info
+            action = getattr(power_operations, button_name, None)
+            if action is None:
+                continue
+
+            btn_frame = QFrame()
+            btn_frame.setProperty("class", f"button {button_name.replace('_', '-')}")
+            btn_frame.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+            btn_layout = QHBoxLayout(btn_frame)
+            btn_layout.setSpacing(0)
+            btn_layout.setContentsMargins(0, 0, 0, 0)
+
+            if icon_text:
+                icon_label = QLabel(icon_text)
+                icon_label.setProperty("class", "icon")
+                icon_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+                icon_label.setTextFormat(Qt.TextFormat.RichText)
+                btn_layout.addWidget(icon_label)
+
+            text_label = QLabel(label_text)
+            text_label.setProperty("class", "label")
+            text_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+            btn_layout.addWidget(text_label)
+            btn_layout.addStretch()
+
+            btn_frame._action = action
+            btn_frame.mousePressEvent = lambda _, a=action: a()
+            btn_frame.installEventFilter(self)
+            buttons_layout.addWidget(btn_frame)
+
+        main_layout.addWidget(buttons_frame)
+
+        self._popup.adjustSize()
+        self._popup.setPosition(
+            alignment=popup_cfg.alignment,
+            direction=popup_cfg.direction,
+            offset_left=popup_cfg.offset_left,
+            offset_top=popup_cfg.offset_top,
+        )
+        self._popup.show()
+
+    def eventFilter(self, source, event):
+        if isinstance(source, QFrame) and hasattr(source, "_action"):
+            if event.type() == QtCore.QEvent.Type.Enter:
+                base = source.property("class")
+                if "hover" not in base:
+                    source.setProperty("class", f"{base} hover")
+                    refresh_widget_style(source)
+                    for child in source.findChildren(QLabel):
+                        child_base = child.property("class")
+                        if "hover" not in child_base:
+                            child.setProperty("class", f"{child_base} hover")
+                        refresh_widget_style(child)
+            elif event.type() == QtCore.QEvent.Type.Leave:
+                base = source.property("class")
+                source.setProperty("class", base.replace(" hover", ""))
+                refresh_widget_style(source)
+                for child in source.findChildren(QLabel):
+                    child_base = child.property("class")
+                    child.setProperty("class", child_base.replace(" hover", ""))
+                    refresh_widget_style(child)
+        return super().eventFilter(source, event)
 
 
 class MainWindow(AnimatedWidget):
@@ -269,12 +449,19 @@ class MainWindow(AnimatedWidget):
             username_label = QLabel(_get_windows_username(), self)
             username_label.setProperty("class", "profile-username")
             username_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            profile_layout.addWidget(username_label)
+            profile_layout.addWidget(username_label, alignment=Qt.AlignmentFlag.AlignCenter)
 
             account_type_label = QLabel(_get_account_type(), self)
             account_type_label.setProperty("class", "profile-account-type")
             account_type_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            profile_layout.addWidget(account_type_label)
+            profile_layout.addWidget(account_type_label, alignment=Qt.AlignmentFlag.AlignCenter)
+
+            user_email = _get_user_email()
+            if user_email:
+                email_label = QLabel(user_email, self)
+                email_label.setProperty("class", "profile-email")
+                email_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                profile_layout.addWidget(email_label, alignment=Qt.AlignmentFlag.AlignCenter)
 
             main_layout.addWidget(profile_frame)
 

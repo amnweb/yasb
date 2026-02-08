@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import Field
 
 from core.validation.utilities import PreserveOrderMixin
@@ -21,6 +23,17 @@ class PowerMenuButtonsConfig(PreserveOrderMixin, CustomBaseModel):
     force_restart: list[str] | None = None
 
 
+class PowerMenuPopupConfig(CustomBaseModel):
+    blur: bool = True
+    round_corners: bool = True
+    round_corners_type: str = "normal"
+    border_color: str = "System"
+    alignment: str = "right"
+    direction: str = "down"
+    offset_top: int = 6
+    offset_left: int = 0
+
+
 class PowerMenuConfig(CustomBaseModel):
     label: str = "power"
     uptime: bool = True
@@ -29,6 +42,8 @@ class PowerMenuConfig(CustomBaseModel):
     blur_background: bool = True
     animation_duration: int = Field(default=200, ge=0, le=2000)
     button_row: int = Field(default=3, ge=1, le=6)
+    menu_style: Literal["fullscreen", "popup"] = "fullscreen"
+    popup: PowerMenuPopupConfig = PowerMenuPopupConfig()
     container_padding: PaddingConfig = PaddingConfig()
     label_shadow: ShadowConfig = ShadowConfig()
     container_shadow: ShadowConfig = ShadowConfig()
