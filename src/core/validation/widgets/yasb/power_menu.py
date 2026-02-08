@@ -24,10 +24,11 @@ class PowerMenuButtonsConfig(PreserveOrderMixin, CustomBaseModel):
 class PowerMenuConfig(CustomBaseModel):
     label: str = "power"
     uptime: bool = True
+    show_user: bool = False
     blur: bool = False
     blur_background: bool = True
     animation_duration: int = Field(default=200, ge=0, le=2000)
-    button_row: int = Field(default=3, ge=1, le=5)
+    button_row: int = Field(default=3, ge=1, le=6)
     container_padding: PaddingConfig = PaddingConfig()
     label_shadow: ShadowConfig = ShadowConfig()
     container_shadow: ShadowConfig = ShadowConfig()

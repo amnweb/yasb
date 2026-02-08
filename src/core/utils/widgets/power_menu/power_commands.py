@@ -120,8 +120,6 @@ class PowerOperations:
         )
 
     def cancel(self):
-        if hasattr(self.overlay, "timer"):
-            self.overlay.timer.stop()
         if self.overlay:
             self.overlay.fade_out()
         self.main_window.fade_out()
