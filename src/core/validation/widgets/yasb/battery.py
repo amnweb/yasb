@@ -31,6 +31,7 @@ class StatusIconsConfig(CustomBaseModel):
     icon_medium: str = "\uf242"
     icon_high: str = "\uf241"
     icon_full: str = "\uf240"
+    icon_unlimited: str = "unlimited"
 
 
 class CallbacksBatteryConfig(CallbacksConfig):
