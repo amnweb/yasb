@@ -197,6 +197,42 @@ For more information about configuration options, please visit the Wiki https://
 .power-menu-popup .button.cancel.hover .label {
     color: rgb(255, 255, 255)
 }
+
+/* Menu Widget Popup */
+.menu-popup {
+    background-color: var(--bg-color1);
+    border-radius: 8px;
+    padding: 4px;
+}
+
+.menu-popup .menu-item {
+    background-color: transparent;
+    border-radius: 4px;
+    padding: 8px;
+    margin: 2px 0;
+}
+
+.menu-popup .menu-item:hover {
+    background-color: var(--bg-color2);
+}
+
+.menu-popup .menu-item .icon {
+    color: var(--text2);
+    font-size: 16px;
+    min-width: 20px;
+}
+
+.menu-popup .menu-item .label {
+    color: var(--text1);
+    font-size: 13px;
+    font-weight: 400;
+}
+
+.menu-popup .menu-item:hover .icon,
+.menu-popup .menu-item:hover .label {
+    color: var(--text0);
+}
+
 .uptime {
     font-size: 14px;
     margin-bottom: 10px;
