@@ -33,7 +33,7 @@ class Window:
 class Workspace:
     name: str
     display_name: str
-    focus: bool = False
+    focus: bool = False  # Global focus - only ONE workspace has this True
     is_displayed: bool = False
     num_windows: int = 0
     windows: list[Window] = field(default_factory=list)

@@ -22,6 +22,7 @@ class GlazewmWorkspacesConfig(CustomBaseModel):
     focused_empty_label: str | None = None
     hide_empty_workspaces: bool = True
     hide_if_offline: bool = False
+    persistent_workspaces: dict[str, int | str] = {}
     glazewm_server_uri: str = "ws://localhost:6123"
     enable_scroll_switching: bool = True
     reverse_scroll_direction: bool = False
