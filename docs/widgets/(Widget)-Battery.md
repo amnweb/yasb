@@ -7,10 +7,11 @@
 | `class_name`            | string  | `""`                                         | Additional CSS class name for the widget.                                    |
 | `update_interval`       | integer | `5000`                                       | The interval in milliseconds to update the widget.                          |
 | `time_remaining_natural`| boolean | `False`                                      | Whether to display the remaining time in a natural format.                  |
+| `time_remaining_unlimited_icon`| string | `unlimited`                                      | Which string to use to display unlimited time remaining.                  |
 | `hide_unsupported`| boolean | `True`                                      | Whether to hide the widget if the current system does not have battery info.                  |
 | `charging_options`      | dict    | `{icon_format: '{charging_icon}', blink_charging_icon: True, blink_interval: 500}` | Options for charging state display.                                         |
 | `status_thresholds`     | dict    | `{critical: 10, low: 25, medium: 75, high: 95, full: 100}` | Thresholds for different battery statuses.                                  |
-| `status_icons`          | dict    | `{icon_charging: '\uf0e7', icon_critical: '\uf244', icon_low: '\uf243', icon_medium: '\uf242', icon_high: '\uf241', icon_full: '\uf240', icon_unlimited: '\u221e'}` | Icons for different battery statuses.                                       |
+| `status_icons`          | dict    | `{icon_charging: '\uf0e7', icon_critical: '\uf244', icon_low: '\uf243', icon_medium: '\uf242', icon_high: '\uf241', icon_full: '\uf240'}` | Icons for different battery statuses.                                       |
 | `callbacks`             | dict    | `{on_left: 'toggle_label', on_middle: 'do_nothing', on_right: 'do_nothing'}` | Callback functions for different mouse button actions.                      |
 | `animation`         | dict    | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
 | `container_shadow`   | dict   | `None`                  | Container shadow options.                       |
@@ -78,6 +79,7 @@ battery:
 - **class_name**: Additional CSS class name for the widget. This allows for custom styling.
 - **update_interval**: The interval in milliseconds to update the widget.
 - **time_remaining_natural**: A boolean indicating whether to display the remaining time in a natural format.
+- **time_remaining_unlimited_icon**: A string to display unlimited time remaining.
 - **hide_unsupported**: A boolean indicating whether to hide the widget if the current system does not have battery information.
 - **charging_options**: A dictionary specifying options for displaying the charging state. It contains:
   - **icon_format**: The format string for the charging icon. You can use placeholders like `{charging_icon}` and `{icon}`.
@@ -96,7 +98,6 @@ battery:
   - **icon_medium**: The icon for medium status.
   - **icon_high**: The icon for high status.
   - **icon_full**: The icon for full status.
-  - **icon_unlimited**: The icon for unlimited time remaining.
 - **callbacks**: A dictionary specifying the callbacks for mouse events. It contains:
   - **on_left**: The name of the callback function for left mouse button click.
   - **on_middle**: The name of the callback function for middle mouse button click.
