@@ -38,6 +38,7 @@ from core.utils.win32.aumid import (
     CloseHandle,
     GetApplicationUserModelId,
     OpenProcess,
+    activate_app_by_aumid,
 )
 from core.validation.widgets.yasb.media import MediaWidgetConfig
 from core.widgets.base import BaseWidget
@@ -187,6 +188,8 @@ class MediaWidget(BaseWidget):
             self.register_callback("toggle_play_pause", self._toggle_play_pause)
             self.register_callback("toggle_label", self._toggle_label)
             self._label.show()
+
+        self.register_callback("open_media_source", self._open_media_source)
 
         self._label_alt.hide()
         self._show_alt_label = False
@@ -557,6 +560,12 @@ class MediaWidget(BaseWidget):
         if self.config.animation.enabled:
             AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
         _ = self.media.play_pause()
+
+    def _open_media_source(self):
+        if self.config.animation.enabled:
+            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
+        if self.current_session and self.current_session.app_id:
+            activate_app_by_aumid(self.current_session.app_id)
 
     def _on_timeline_properties_changed(self):
         """Handle timeline property updates."""
