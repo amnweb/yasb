@@ -37,7 +37,7 @@ from core.utils.win32.app_bar import APPBAR_CALLBACK_MESSAGE, AppBarNotify
 from core.utils.win32.bindings import SetWindowPos
 from core.utils.win32.bindings.user32 import KillTimer, RegisterWindowMessage, SetTimer, user32
 from core.utils.win32.structs import MSG
-from core.utils.win32.utilities import apply_qmenu_style
+from core.utils.win32.utilities import apply_qmenu_style, is_window_fullscreen
 
 # Register TaskbarCreated message to detect Explorer restarts
 WM_TASKBARCREATED = RegisterWindowMessage("TaskbarCreated")
@@ -550,6 +550,8 @@ class AppBarManager(QAbstractNativeEventFilter):
             if window_class in self.EXCLUDED_WINDOW_CLASSES or window_class.endswith(
                 self.EXCLUDED_WINDOW_CLASS_SUFFIXES
             ):
+                return True
+            if not is_window_fullscreen(hwnd):
                 return True
         except Exception:
             pass

@@ -281,6 +281,14 @@ def is_window_maximized(hwnd: int) -> bool:
     return window_placement[1] == SW_MAXIMIZE
 
 
+def is_window_fullscreen(hwnd: int) -> bool:
+    """Check if a window covers the entire monitor it is on."""
+    rect = GetWindowRect(hwnd)
+    monitor_info = GetMonitorInfo(int(MonitorFromWindow(hwnd)))
+    mon = monitor_info["Monitor"]  # (left, top, right, bottom)
+    return rect[0] <= mon[0] and rect[1] <= mon[1] and rect[2] >= mon[2] and rect[3] >= mon[3]
+
+
 def get_hwnd_info(hwnd: int) -> dict:
     with suppress(Exception):
         monitor_hwnd = get_monitor_hwnd(hwnd)
