@@ -37,7 +37,12 @@ from core.utils.win32.app_bar import APPBAR_CALLBACK_MESSAGE, AppBarNotify
 from core.utils.win32.bindings import SetWindowPos
 from core.utils.win32.bindings.user32 import KillTimer, RegisterWindowMessage, SetTimer, user32
 from core.utils.win32.structs import MSG
-from core.utils.win32.utilities import apply_qmenu_style, is_window_fullscreen
+from core.utils.win32.utilities import (
+    apply_qmenu_style,
+    is_process_fullscreen_on_monitor,
+    is_window_fullscreen,
+    is_window_maximized,
+)
 
 # Register TaskbarCreated message to detect Explorer restarts
 WM_TASKBARCREATED = RegisterWindowMessage("TaskbarCreated")
@@ -551,7 +556,18 @@ class AppBarManager(QAbstractNativeEventFilter):
                 self.EXCLUDED_WINDOW_CLASS_SUFFIXES
             ):
                 return True
-            if not is_window_fullscreen(hwnd):
+            if is_window_fullscreen(hwnd):
+                if is_window_maximized(hwnd):
+                    # Maximized windows cover the screen but are not fullscreen apps
+                    return True
+                # True fullscreen (not maximized) allow hiding the bar
+                return False
+            # Foreground not fullscreen check if a sibling window from the
+            # same process is fullscreen (e.g. Firefox HTML5 fullscreen video)
+            process_fs = is_process_fullscreen_on_monitor(
+                hwnd, self.EXCLUDED_WINDOW_CLASSES, self.EXCLUDED_WINDOW_CLASS_SUFFIXES
+            )
+            if not process_fs:
                 return True
         except Exception:
             pass

@@ -7,6 +7,7 @@ from ctypes import GetLastError, byref, c_ulong, create_unicode_buffer
 
 import win32api
 import win32gui
+import win32process
 from PyQt6.QtGui import QCursor
 from PyQt6.QtWidgets import QApplication, QWidget
 from win32api import GetMonitorInfo, MonitorFromWindow
@@ -283,10 +284,59 @@ def is_window_maximized(hwnd: int) -> bool:
 
 def is_window_fullscreen(hwnd: int) -> bool:
     """Check if a window covers the entire monitor it is on."""
+    if win32gui.IsIconic(hwnd):
+        return False
     rect = GetWindowRect(hwnd)
     monitor_info = GetMonitorInfo(int(MonitorFromWindow(hwnd)))
     mon = monitor_info["Monitor"]  # (left, top, right, bottom)
     return rect[0] <= mon[0] and rect[1] <= mon[1] and rect[2] >= mon[2] and rect[3] >= mon[3]
+
+
+def is_process_fullscreen_on_monitor(
+    hwnd: int,
+    excluded_classes: set[str] | None = None,
+    excluded_suffixes: tuple[str, ...] | None = None,
+) -> bool:
+    """Check if any visible window belonging to the same process as hwnd
+    is fullscreen on the same monitor. This should handles apps like Firefox
+    that use a separate child window for HTML5 fullscreen video."""
+    try:
+        _, target_pid = win32process.GetWindowThreadProcessId(hwnd)
+        if target_pid == 0:
+            return False
+
+        target_monitor = int(MonitorFromWindow(hwnd))
+        _excluded_classes = excluded_classes or set()
+        _excluded_suffixes = excluded_suffixes or ()
+        found = False
+
+        def _enum_cb(candidate_hwnd, _):
+            nonlocal found
+            try:
+                if not win32gui.IsWindowVisible(candidate_hwnd):
+                    return True
+                _, c_pid = win32process.GetWindowThreadProcessId(candidate_hwnd)
+                if c_pid != target_pid:
+                    return True
+                cls = GetClassName(candidate_hwnd)
+                if cls in _excluded_classes or cls.endswith(_excluded_suffixes):
+                    return True
+                if int(MonitorFromWindow(candidate_hwnd)) != target_monitor:
+                    return True
+                if is_window_fullscreen(candidate_hwnd):
+                    found = True
+                    return False
+            except Exception:
+                pass
+            return True
+
+        try:
+            win32gui.EnumWindows(_enum_cb, 0)
+        except Exception:
+            pass
+        return found
+    except Exception:
+        return False
 
 
 def get_hwnd_info(hwnd: int) -> dict:
