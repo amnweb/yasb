@@ -261,18 +261,19 @@ widgets:
     type: "yasb.power_menu.PowerMenuWidget"
     options:
       label: "\uf011"
-      uptime: True
-      blur: False
-      blur_background: True
-      animation_duration: 200
-      button_row: 5
+      uptime: true
+      show_user: true
+      blur: false
+      blur_background: true
+      animation_duration: 120 # Milliseconds
+      button_row: 3 # Number of buttons in a row, min 1 max 6
       buttons:
-        shutdown: ["\uf011", "Shut Down"]
         restart: ["\uead2", "Restart"]
+        shutdown: ["\uf011", "Shut Down"]
         signout: ["\udb80\udf43", "Sign out"]
         hibernate: ["\uf28e", "Hibernate"]
-        sleep: ["\u23fe", "Sleep"]
-        cancel: ["", "Cancel"]
+        lock: ["\uea75", "Lock"]
+        cancel: ["\udb81\udf3a", "Cancel"]
   notifications:
     type: "yasb.notifications.NotificationsWidget"
     options:

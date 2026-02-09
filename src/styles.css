@@ -152,55 +152,69 @@ For more information about configuration options, please visit the Wiki https://
     font-size: 13px;
 }
 .power-menu-popup {
-    background-color: transparent
+    background-color: rgba(255, 255, 255, 0.04);
+    padding: 32px;
+    border-radius: 32px;
 }
 .power-menu-popup .button {
     padding: 0;
-    width: 180px;
-    height: 230px;
-    border-radius: 8px;
-    background-color: var(--bg-color1);
-    border: 4px solid transparent;
-    margin: 0px;
+    min-width: 140px;
+    max-width: 140px;
+    min-height: 80px;
+    border-radius: 12px;
+    background-color: #ffffff11;
+    border: 8px solid rgba(255, 255, 255, 0)
 }
 .power-menu-popup .button.hover {
-    background-color: var(--bg-color1);
-    border: 4px solid var(--bg-color1);
+    background-color: #134c96;
+    border: 8px solid #134c96;
 }
 .power-menu-popup .button .label {
-    margin-bottom: 8px;
-    font-size: 16px;
-    font-weight: 500;
-    color: var(--text3)
+    font-size: 13px;
+    font-weight: 600;
+    font-family: 'Segoe UI';
+    color: #a9a9ac;
 }
 .power-menu-popup .button .icon {
-    font-size: 64px;
-    padding-top: 32px;
-    color: var(--text4)
+    font-size: 32px;
+    color: rgba(255, 255, 255, 0.4)
 }
 .power-menu-popup .button.hover .label,
 .power-menu-popup .button.hover .icon {
-    color: rgba(255, 255, 255, 0.808)
+    color: #ffffff
 }
-.power-menu-popup .button.cancel .icon {
-    padding: 0;
-    margin: 0;
+.power-menu-popup .profile-info {
+    padding: 0 0 16px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    background-color: transparent;
+    margin-bottom: 16px;
 }
-.power-menu-popup .button.cancel .label {
-    color: var(--red);
-    margin: 0;
+.power-menu-popup .profile-info .profile-username {
+    font-size: 24px;
+    font-weight: 600;
+    color: #cdd6f4;
+    margin-top: 0;
+    font-family: 'Segoe UI';
 }
-.power-menu-popup .button.cancel {
-    height: 32px;
-    border-radius: 4px;
+.power-menu-popup .profile-info .profile-account-type {
+    font-size: 15px;
+    color: rgba(205, 214, 244, 0.6);
+    margin-top: 8px;
+    font-family: 'Segoe UI'
 }
-.power-menu-popup .button.cancel.hover .label {
-    color: rgb(255, 255, 255)
+.power-menu-popup .profile-info .profile-email {
+    font-size: 13px;
+    color: rgba(205, 214, 244, 0.4);
+    margin-top: 4px;
+    font-family: 'Segoe UI'
 }
-.uptime {
-    font-size: 14px;
-    margin-bottom: 10px;
-    color: var(--text4);
+.power-menu-overlay {
+    background-color: rgba(0, 0, 0, 0.15);
+}
+.power-menu-overlay .uptime {
+    font-size: 16px;
+    margin-bottom: 20px;
+    color: #9ea2b4;
     font-weight: 600;
 }
 .microphone-widget {
