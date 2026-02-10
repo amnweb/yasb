@@ -12,6 +12,7 @@ from typing import Optional
 from core.utils.win32.bindings.kernel32 import kernel32
 from core.utils.win32.bindings.setupapi import setupapi
 from core.utils.win32.constants import (
+    BATTERY_CHARGING,
     BATTERY_INFO_LEVEL_INFORMATION,
     BATTERY_INFO_LEVEL_TEMPERATURE,
     BATTERY_UNKNOWN_CAPACITY,
@@ -158,7 +159,7 @@ class BatteryAPI:
 
         percent = int(status.BatteryLifePercent)
         power_plugged = status.ACLineStatus == 1
-        is_charging = bool(status.BatteryFlag & 0x08) or (power_plugged and percent < 100)
+        is_charging = bool(status.BatteryFlag & 0x08)
 
         if status.BatteryLifeTime == 0xFFFFFFFF:
             time_remaining = POWER_TIME_UNLIMITED if power_plugged else POWER_TIME_UNKNOWN
@@ -178,6 +179,7 @@ class BatteryAPI:
             "temperature": None,
             "cycle_count": None,
             "chemistry": None,
+            "is_charging": None,
         }
 
         h_battery = kernel32.CreateFileW(
@@ -259,6 +261,8 @@ class BatteryAPI:
                 byref(bytes_returned),
                 None,
             ):
+                result["is_charging"] = bool(battery_status.PowerState & BATTERY_CHARGING)
+
                 if battery_status.Rate != BATTERY_UNKNOWN_RATE:
                     rate_mw = c_long(battery_status.Rate).value
                     result["rate"] = rate_mw / 1000.0  # mW to W
@@ -324,7 +328,11 @@ class BatteryAPI:
                 "temperature": None,
                 "cycle_count": None,
                 "chemistry": None,
+                "is_charging": None,
             }
+
+        if extended["is_charging"] is not None:
+            is_charging = extended["is_charging"]
 
         health_percent = None
         if extended["full_capacity"] and extended["designed_capacity"]:

@@ -91,12 +91,12 @@ class BatteryWidget(BaseWidget):
             return "medium"
         elif thresholds.medium < percent <= thresholds.high:
             return "high"
-        elif thresholds.high < percent <= thresholds.full:
+        else:
             return "full"
 
     def _get_charging_icon(self, threshold: str) -> str:
         icon = getattr(self.config.status_icons, f"icon_{threshold}")
-        if self._battery_state.power_plugged:
+        if self._battery_state.is_charging:
             return self.config.charging_options.icon_format.format(
                 charging_icon=self.config.status_icons.icon_charging, icon=icon
             )
@@ -143,9 +143,9 @@ class BatteryWidget(BaseWidget):
             return
 
         original_threshold = self._get_battery_threshold()
-        threshold = "charging" if self._battery_state.power_plugged else original_threshold
+        threshold = "charging" if self._battery_state.is_charging else original_threshold
         time_remaining = self._get_time_remaining()
-        is_charging_str = "yes" if self._battery_state.power_plugged else "no"
+        is_charging_str = "yes" if self._battery_state.is_charging else "no"
         charging_icon = self._get_charging_icon(original_threshold)
 
         # Extended battery info formatting
@@ -190,7 +190,7 @@ class BatteryWidget(BaseWidget):
                     refresh_widget_style(widget_label)
 
                     # only blink when plugged AND blink_enabled
-                    if self._battery_state.power_plugged and self.config.charging_options.blink_charging_icon:
+                    if self._battery_state.is_charging and self.config.charging_options.blink_charging_icon:
                         self._charging_icon_label = widget_label
                         if not self._charging_blink_timer.isActive():
                             self._charging_blink_timer.start()
