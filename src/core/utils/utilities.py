@@ -433,8 +433,13 @@ def format_pydantic_errors_to_yaml(exc: ValidationError) -> str:
     return yaml.dump(tree, default_flow_style=False, sort_keys=False)
 
 
-def build_widget_label(self, content: str, content_alt: str = None, content_shadow: dict = None):
-    def process_content(content, is_alt=False):
+def build_widget_label(
+    self: QWidget,
+    content: str,
+    content_alt: str | None = None,
+    content_shadow: dict[str, Any] | None = None,
+):
+    def process_content(content: str, is_alt: bool = False) -> list[QLabel]:
         label_parts = re.split("(<span.*?>.*?</span>)", content)
         label_parts = [part for part in label_parts if part]
         widgets = []
