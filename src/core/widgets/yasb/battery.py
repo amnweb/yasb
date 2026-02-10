@@ -91,7 +91,7 @@ class BatteryWidget(BaseWidget):
             return "medium"
         elif thresholds.medium < percent <= thresholds.high:
             return "high"
-        elif thresholds.high < percent <= thresholds.full:
+        else:
             return "full"
 
     def _get_charging_icon(self, threshold: str) -> str:
