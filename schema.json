@@ -8375,6 +8375,28 @@
           "title": "Button Row",
           "type": "integer"
         },
+        "menu_style": {
+          "default": "fullscreen",
+          "enum": [
+            "fullscreen",
+            "popup"
+          ],
+          "title": "Menu Style",
+          "type": "string"
+        },
+        "popup": {
+          "$ref": "#/$defs/PowerMenuPopupConfig",
+          "default": {
+            "blur": true,
+            "round_corners": true,
+            "round_corners_type": "normal",
+            "border_color": "System",
+            "alignment": "right",
+            "direction": "down",
+            "offset_top": 6,
+            "offset_left": 0
+          }
+        },
         "container_padding": {
           "$ref": "#/$defs/PaddingConfig",
           "default": {
@@ -8442,6 +8464,53 @@
         "options"
       ],
       "title": "PowerMenuEntry",
+      "type": "object"
+    },
+    "PowerMenuPopupConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "blur": {
+          "default": true,
+          "title": "Blur",
+          "type": "boolean"
+        },
+        "round_corners": {
+          "default": true,
+          "title": "Round Corners",
+          "type": "boolean"
+        },
+        "round_corners_type": {
+          "default": "normal",
+          "title": "Round Corners Type",
+          "type": "string"
+        },
+        "border_color": {
+          "default": "System",
+          "title": "Border Color",
+          "type": "string"
+        },
+        "alignment": {
+          "default": "right",
+          "title": "Alignment",
+          "type": "string"
+        },
+        "direction": {
+          "default": "down",
+          "title": "Direction",
+          "type": "string"
+        },
+        "offset_top": {
+          "default": 6,
+          "title": "Offset Top",
+          "type": "integer"
+        },
+        "offset_left": {
+          "default": 0,
+          "title": "Offset Left",
+          "type": "integer"
+        }
+      },
+      "title": "PowerMenuPopupConfig",
       "type": "object"
     },
     "PowerPlanCallbacksConfig": {
