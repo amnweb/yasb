@@ -480,7 +480,6 @@ class MainWindow(AnimatedWidget):
                 row = QHBoxLayout()
                 row.setSpacing(0)
                 row.setContentsMargins(0, 0, 0, 0)
-                row.insertStretch(0)
                 row_layouts.append(row)
                 buttons_layout.addLayout(row)
 
@@ -508,10 +507,6 @@ class MainWindow(AnimatedWidget):
             row_layouts[-1].addWidget(button)
             button.clicked.connect(action)
             button.installEventFilter(self)
-
-        # Add trailing stretch to center buttons in each row
-        for row in row_layouts:
-            row.addStretch()
 
         main_layout.addWidget(buttons_frame)
         self.setLayout(main_layout)
