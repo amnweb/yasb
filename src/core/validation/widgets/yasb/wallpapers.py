@@ -1,6 +1,6 @@
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, field_validator
 
 from core.validation.widgets.base_model import (
     AnimationConfig,
@@ -20,8 +20,23 @@ class GalleryConfig(CustomBaseModel):
     gallery_columns: int = Field(default=0, ge=0, le=64)
     horizontal_position: Literal["left", "center", "right"] = "center"
     vertical_position: Literal["top", "center", "bottom"] = "center"
-    position_offset: int | list[int] = Field(default=0, ge=-2000, le=2000)
+    position_offset: int | list[int] = Field(default=0)
     respect_work_area: bool = True
+
+    @field_validator("position_offset")
+    @classmethod
+    def validate_position_offset(cls, v: int | list[int]) -> int | list[int]:
+        if isinstance(v, list):
+            if len(v) not in (2, 4):
+                raise ValueError(f"position_offset list must have exactly 2 or 4 elements, got {len(v)}")
+            for val in v:
+                if not -2000 <= val <= 2000:
+                    raise ValueError(f"position_offset values must be between -2000 and 2000, got {val}")
+        else:
+            if not -2000 <= v <= 2000:
+                raise ValueError(f"position_offset must be between -2000 and 2000, got {v}")
+        return v
+
     image_corner_radius: int = Field(default=0, ge=0, le=50)
     show_buttons: bool = True
     orientation: Literal["landscape", "portrait"] = "landscape"
