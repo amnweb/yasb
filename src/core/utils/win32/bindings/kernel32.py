@@ -148,6 +148,19 @@ kernel32.GetSystemPowerStatus.restype = BOOL
 kernel32.GetSystemInfo.argtypes = [LPVOID]
 kernel32.GetSystemInfo.restype = None
 
+# Process enumeration and termination
+kernel32.CreateToolhelp32Snapshot.argtypes = [DWORD, DWORD]
+kernel32.CreateToolhelp32Snapshot.restype = HANDLE
+
+kernel32.Process32FirstW.argtypes = [HANDLE, LPVOID]
+kernel32.Process32FirstW.restype = BOOL
+
+kernel32.Process32NextW.argtypes = [HANDLE, LPVOID]
+kernel32.Process32NextW.restype = BOOL
+
+kernel32.TerminateProcess.argtypes = [HANDLE, DWORD]
+kernel32.TerminateProcess.restype = BOOL
+
 # GetLogicalProcessorInformationEx - Processor topology
 kernel32.GetLogicalProcessorInformationEx.argtypes = [ULONG, LPVOID, POINTER(DWORD)]
 kernel32.GetLogicalProcessorInformationEx.restype = BOOL

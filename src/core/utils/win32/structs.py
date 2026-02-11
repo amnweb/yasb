@@ -155,6 +155,21 @@ class PROCESSENTRY32(ct.Structure):
     ]
 
 
+class PROCESS_MEMORY_COUNTERS(ct.Structure):
+    _fields_ = [
+        ("cb", DWORD),
+        ("PageFaultCount", DWORD),
+        ("PeakWorkingSetSize", c_size_t),
+        ("WorkingSetSize", c_size_t),
+        ("QuotaPeakPagedPoolUsage", c_size_t),
+        ("QuotaPagedPoolUsage", c_size_t),
+        ("QuotaPeakNonPagedPoolUsage", c_size_t),
+        ("QuotaNonPagedPoolUsage", c_size_t),
+        ("PagefileUsage", c_size_t),
+        ("PeakPagefileUsage", c_size_t),
+    ]
+
+
 class GUID(ct.Structure):
     _fields_ = [
         ("Data1", ULONG),
