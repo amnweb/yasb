@@ -1,6 +1,6 @@
 # Keybindings
 
-YASB supports global keyboard shortcuts (hotkeys) to trigger widget actions. Keybindings are configured per-widget in the widget's `options` section. This feature uses native Windows low-level keyboard hooks and requires no third-party dependencies.
+YASB supports global keyboard shortcuts (hotkeys) to trigger widget actions. Keybindings are configured per-widget in the widget's `options` section. This feature uses the native Windows `RegisterHotKey` API and requires no third-party dependencies.
 
 ## Overview
 
@@ -8,6 +8,7 @@ YASB supports global keyboard shortcuts (hotkeys) to trigger widget actions. Key
 - **Multiple keybindings**: A single widget can have multiple keybindings for different actions
 - **Screen-aware**: Hotkeys trigger the widget on the currently focused screen
 - **Zero overhead**: If no keybindings are defined, no hotkey listener is started
+- **No auto-repeat**: Holding a hotkey fires only once (uses `MOD_NOREPEAT`)
 
 ## Configuration
 
@@ -53,16 +54,12 @@ volume:
 
 | Key Name | Description |
 |----------|-------------|
-| `win`, `windows`, `super`, `meta` | Either Windows key (left or right) |
-| `lwin`, `leftwin`, `left_win` | Left Windows key only |
-| `rwin`, `rightwin`, `right_win` | Right Windows key only |
-| `alt` | Either Alt key (left or right) |
-| `lalt`, `leftalt`, `left_alt` | Left Alt key only |
-| `ralt`, `rightalt`, `right_alt` | Right Alt key only |
-| `ctrl`, `control` | Either Control key (left or right) |
-| `lctrl`, `leftctrl`, `left_ctrl` | Left Control key only |
-| `rctrl`, `rightctrl`, `right_ctrl` | Right Control key only |
+| `win`, `windows`, `super`, `meta` | Windows key |
+| `alt` | Alt key |
+| `ctrl`, `control` | Control key |
 | `shift` | Shift key |
+
+> **Note:** `RegisterHotKey` does not distinguish between left and right modifier keys.
 
 ### Function Keys
 
@@ -134,68 +131,6 @@ volume:
 | `backslash` | \\ key |
 | `quote` | ' key |
 
-## Win Key Specificity
-
-YASB supports distinguishing between the left and right Windows keys:
-
-| Configuration | Behavior |
-|--------------|----------|
-| `"win+c"` | Triggered by **either** left or right Win key + C |
-| `"lwin+c"` | Triggered **only** by left Win key + C |
-| `"rwin+c"` | Triggered **only** by right Win key + C |
-
-### Example: Different Actions for Left/Right Win
-
-```yaml
-clock:
-  type: "yasb.clock.ClockWidget"
-  options:
-    keybindings:
-      - keys: "lwin+c"
-        action: "toggle_calendar"
-      - keys: "rwin+c"
-        action: "toggle_label"
-```
-
-## Alt/Ctrl Key Specificity
-
-Similarly, you can distinguish between left and right Alt or Ctrl keys:
-
-| Configuration | Behavior |
-|--------------|----------|
-| `"alt+x"` | Triggered by **either** left or right Alt key + X |
-| `"lalt+x"` | Triggered **only** by left Alt key + X |
-| `"ralt+x"` | Triggered **only** by right Alt key + X |
-| `"ctrl+x"` | Triggered by **either** left or right Ctrl key + X |
-| `"lctrl+x"` | Triggered **only** by left Ctrl key + X |
-| `"rctrl+x"` | Triggered **only** by right Ctrl key + X |
-
-### Example: Left Alt vs Right Alt
-
-```yaml
-volume:
-  type: "yasb.volume.VolumeWidget"
-  options:
-    keybindings:
-      - keys: "lalt+v"
-        action: "toggle_menu"
-      - keys: "ralt+v"
-        action: "toggle_mute"
-```
-
-## Extra Modifier Rejection
-
-YASB uses **exact modifier matching**. If you register `alt+x`, pressing `ctrl+alt+x` will **not** trigger it because Ctrl is an extra modifier that wasn't specified.
-
-| Registered | User Presses | Result |
-|------------|--------------|--------|
-| `alt+x` | Alt + X | Triggers |
-| `alt+x` | Ctrl + Alt + X | Blocked (extra Ctrl) |
-| `ctrl+alt+x` | Ctrl + Alt + X | Triggers |
-| `ctrl+alt+x` | Ctrl + Alt + Shift + X | Blocked (extra Shift) |
-
-This prevents accidental triggers when using similar hotkeys in other applications.
-
 ## Limitations
 
 ### No Multi-Key Combos
@@ -207,7 +142,11 @@ YASB only supports **modifier + single key** combinations. You cannot bind multi
 | `"alt+a"` | Yes |
 | `"ctrl+shift+f1"` | Yes |
 | `"a+b"` | No - two non-modifier keys |
-| `"ctrl+a+b"` | No - two non-modifier keys |
+| `"f13+h"` | No - two non-modifier keys |
+
+### Windows Key Limitations
+
+Windows Explorer pre-registers many `Win+key` shortcuts (e.g., `Win+S`, `Win+W`, `Win+Shift+S`). `RegisterHotKey` cannot override these — the registration will silently fail. Use `Alt`, `Ctrl`, or `Ctrl+Shift` based combinations instead for reliable hotkeys.
 
 ### Modifier-Only Hotkeys Not Supported
 
@@ -219,14 +158,9 @@ You cannot use a modifier key alone as a hotkey:
 | `"alt+shift"` | No - no main key |
 | `"win+a"` | Yes |
 
-### Press Order Matters
+### Extra Modifiers Don't Block
 
-Hotkeys are triggered when the **main key** is pressed while modifiers are held. This means:
-
-- Hold Alt, then press X → Triggers `alt+x`
-- Hold X, then press Alt → Does NOT trigger `alt+x`
-
-This is standard behavior for all hotkey systems (Windows `RegisterHotKey`, AutoHotkey, etc.).
+Unlike a low-level hook, `RegisterHotKey` does **not** reject extra modifiers. If you register `alt+x`, pressing `ctrl+alt+x` **will also trigger it**. Keep this in mind when choosing key combinations.
 
 ## Available Actions
 
@@ -260,9 +194,11 @@ If the same key combination is assigned to multiple widgets, YASB will:
 2. Use the **last** defined keybinding (later widgets override earlier ones)
 
 ```
-WARNING: Hotkey conflict: 'win+c' is already assigned to 'yasb.clock.ClockWidget', 
+WARNING: Hotkey conflict: 'win+c' is already assigned to 'yasb.clock.ClockWidget',
 overriding with 'yasb.volume.VolumeWidget'
 ```
+
+If another application has already registered the same hotkey with Windows, YASB will log a warning and that hotkey will not work.
 
 To avoid conflicts, use unique key combinations for each widget action.
 
@@ -270,19 +206,13 @@ To avoid conflicts, use unique key combinations for each widget action.
 
 ### Hotkey Not Working
 
-1. **Check the logs**: Enable debug logging to see if the hotkey is being registered
+1. **Check the logs**: Enable debug logging to see if the hotkey was registered successfully
 2. **Verify key names**: Ensure you're using supported key names from the tables above
-3. **Check for conflicts**: Another application might be using the same hotkey
-4. **Elevated apps**: If an elevated (admin) application has focus, hotkeys may not be captured due to Windows UIPI security. This is normal - hotkeys will work again once a non-elevated window has focus
+3. **Check for conflicts**: Another application may have registered the same combination — `RegisterHotKey` is first-come-first-served
+4. **Reserved Windows combos**: `Win+L` (lock screen) and `Ctrl+Alt+Delete` cannot be overridden
 
-### Hotkey Conflicts with Windows
+### Hotkey Registered but Not Responding
 
-Some key combinations are reserved by Windows and may not work:
-- `win+l` (Lock screen)
-- `ctrl+alt+del` (Security options)
-
-Consider using alternative combinations or disabling the Windows shortcuts via Group Policy if needed.
-
-### Keybinding Not in Config
-
-If you don't define any `keybindings` in your widget options, the hotkey listener won't start at all. When keybindings are configured, the listener uses a low-level keyboard hook which has negligible overhead.
+If the log shows the hotkey was registered successfully but it doesn't trigger:
+- Ensure the widget has the corresponding action callback
+- Check that the widget's `keybindings` config matches the expected action name
