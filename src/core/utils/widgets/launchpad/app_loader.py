@@ -56,6 +56,17 @@ class AppListLoader(QThread):
                     seen_keys.add(key)
                     seen_names.add(name.lower())
 
+            # Also scan .url files (e.g. Steam games)
+            for url_file in glob.glob(os.path.join(dir, "**", "*.url"), recursive=True):
+                name = os.path.splitext(os.path.basename(url_file))[0]
+                if should_filter_app(name):
+                    continue
+                key = (name.lower(), url_file.lower())
+                if key not in seen_keys:
+                    apps.append((name, url_file, None))
+                    seen_keys.add(key)
+                    seen_names.add(name.lower())
+
         try:
             ps_script = "Get-StartApps | ForEach-Object { [PSCustomObject]@{Name=$_.Name;AppID=$_.AppID} } | ConvertTo-Json -Compress"
             result = subprocess.run(
