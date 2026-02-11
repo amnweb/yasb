@@ -430,6 +430,10 @@ class QuickLaunchWidget(BaseWidget):
         if not (0 <= index < len(self._result_data)):
             return
         result = self._result_data[index]
-        self._launched_app = True
-        self._hide_popup()
-        QTimer.singleShot(0, lambda r=result: self._service.execute_result(r))
+        should_close = self._service.execute_result(result)
+        if should_close:
+            self._launched_app = True
+            QTimer.singleShot(0, self._hide_popup)
+        elif self._popup:
+            text = self._popup.search_input.text()
+            self._update_results(text)
