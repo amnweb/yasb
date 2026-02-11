@@ -162,8 +162,14 @@ class PomodoroWidget(BaseWidget):
         status = "Paused" if self._is_paused else "Break" if self._is_break else "Work"
         class_name = "paused" if self._is_paused else "break" if self._is_break else "work"
 
+        total_work_elapsed = self._session_count * self.config.work_duration * 60
+        if not self._is_break:
+            # Add current work session progress
+            total_work_elapsed += (self.config.work_duration * 60) - self._remaining_time
+
         label_options = {
             "{remaining}": remaining_str,
+            "{elapsed}": self._format_time(total_work_elapsed),
             "{status}": status,
             "{session}": str(self._session_count + 1),
             "{total_sessions}": str(self.config.session_target) if self.config.session_target > 0 else "∞",
