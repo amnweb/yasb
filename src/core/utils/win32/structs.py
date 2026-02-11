@@ -40,18 +40,6 @@ from ctypes.wintypes import (
 WNDPROC = WINFUNCTYPE(LPARAM, HWND, UINT, WPARAM, LPARAM)
 
 
-class KBDLLHOOKSTRUCT(ct.Structure):
-    """Windows KBDLLHOOKSTRUCT for low-level keyboard hook."""
-
-    _fields_ = [
-        ("vkCode", DWORD),
-        ("scanCode", DWORD),
-        ("flags", DWORD),
-        ("time", DWORD),
-        ("dwExtraInfo", ct.POINTER(ULONG)),
-    ]
-
-
 class SYSTEM_INFO(ct.Structure):
     """Windows SYSTEM_INFO structure for processor information."""
 
@@ -152,6 +140,21 @@ class PROCESSENTRY32(ct.Structure):
         ("pcPriClassBase", LONG),
         ("dwFlags", DWORD),
         ("szExeFile", WCHAR * MAX_PATH),
+    ]
+
+
+class PROCESS_MEMORY_COUNTERS(ct.Structure):
+    _fields_ = [
+        ("cb", DWORD),
+        ("PageFaultCount", DWORD),
+        ("PeakWorkingSetSize", c_size_t),
+        ("WorkingSetSize", c_size_t),
+        ("QuotaPeakPagedPoolUsage", c_size_t),
+        ("QuotaPagedPoolUsage", c_size_t),
+        ("QuotaPeakNonPagedPoolUsage", c_size_t),
+        ("QuotaNonPagedPoolUsage", c_size_t),
+        ("PagefileUsage", c_size_t),
+        ("PeakPagefileUsage", c_size_t),
     ]
 
 
