@@ -1,4 +1,5 @@
 import ast
+import logging
 import math
 import operator
 import re
@@ -19,7 +20,9 @@ _OPS = {
     ast.USub: operator.neg,
 }
 
-_NAMES: dict[str, float | callable] = {
+_MAX_EXPONENT = 10000
+
+_NAMES: dict[str, float | object] = {
     "pi": math.pi,
     "e": math.e,
     "abs": abs,
@@ -51,7 +54,11 @@ def _eval(node: ast.AST) -> int | float:
     if isinstance(node, ast.UnaryOp) and type(node.op) in _OPS:
         return _OPS[type(node.op)](_eval(node.operand))
     if isinstance(node, ast.BinOp) and type(node.op) in _OPS:
-        return _OPS[type(node.op)](_eval(node.left), _eval(node.right))
+        left, right = _eval(node.left), _eval(node.right)
+        if isinstance(node.op, ast.Pow) and isinstance(right, (int, float)) and abs(right) > _MAX_EXPONENT:
+            logging.error("Calculator: exponent too large (max %d)", _MAX_EXPONENT)
+            return 0
+        return _OPS[type(node.op)](left, right)
     if (
         isinstance(node, ast.Call)
         and isinstance(node.func, ast.Name)

@@ -143,15 +143,18 @@ class BookmarksProvider(BaseProvider):
         results: list[dict] = []
         tmp: str | None = None
         try:
-            tmp = os.path.join(tempfile.gettempdir(), "yasb_ff_bm.sqlite")
+            fd, tmp = tempfile.mkstemp(suffix=".sqlite", prefix="yasb_ff_bm_")
+            os.close(fd)
             shutil.copy2(db_path, tmp)
             conn = sqlite3.connect(f"file:{tmp}?mode=ro", uri=True)
-            rows = conn.execute(
-                "SELECT b.title, p.url "
-                "FROM moz_bookmarks b JOIN moz_places p ON b.fk = p.id "
-                "WHERE b.type = 1 AND p.url NOT LIKE 'place:%'"
-            ).fetchall()
-            conn.close()
+            try:
+                rows = conn.execute(
+                    "SELECT b.title, p.url "
+                    "FROM moz_bookmarks b JOIN moz_places p ON b.fk = p.id "
+                    "WHERE b.type = 1 AND p.url NOT LIKE 'place:%'"
+                ).fetchall()
+            finally:
+                conn.close()
             for title, url in rows:
                 results.append({"title": title or url, "url": url, "folder": ""})
         except Exception as e:

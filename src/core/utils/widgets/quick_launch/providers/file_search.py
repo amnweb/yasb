@@ -7,7 +7,6 @@ import sys
 import webbrowser
 import winreg
 
-import win32com.client
 from PyQt6.QtCore import QTimer
 
 from core.utils.widgets.quick_launch.base_provider import BaseProvider, ProviderResult
@@ -220,6 +219,8 @@ class _WindowsSearchBackend:
 
     def search(self, query: str, max_results: int = 20) -> list[dict]:
         try:
+            import win32com.client
+
             conn = win32com.client.Dispatch("ADODB.Connection")
             conn.Open("Provider=Search.CollatorDSO;Extended Properties='Application=Windows';")
             # Strip to safe filename characters only, ADODB doesn't support parameterized queries

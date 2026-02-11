@@ -34,14 +34,14 @@ class AppsProvider(BaseProvider):
 
         if not text_stripped:
             if show_recent:
-                # Recent apps first (up to max_recent), then the rest alphabetically
+                # Recent apps first (by last_used timestamp) then the rest alphabetically
                 recent = []
                 rest = []
                 for name, path, extra in svc.apps:
                     key = f"{name}::{path}"
-                    s = svc.get_frecency_score(key)
-                    if s > 0:
-                        recent.append((s, name, path, extra))
+                    entry = svc.launch_history.get(key)
+                    if entry:
+                        recent.append((entry.get("last_used", 0), name, path, extra))
                     else:
                         rest.append((name, path, extra))
                 recent.sort(key=lambda x: x[0], reverse=True)

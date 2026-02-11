@@ -15,7 +15,6 @@ from core.utils.utilities import PopupWidget, add_shadow, build_widget_label
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.widgets.quick_launch.base_provider import ProviderResult
 from core.utils.widgets.quick_launch.service import QuickLaunchService
-from core.utils.win32.utilities import get_foreground_hwnd, set_foreground_hwnd
 from core.utils.win32.window_actions import force_foreground_focus
 from core.validation.widgets.yasb.quick_launch import QuickLaunchConfig
 from core.widgets.base import BaseWidget
@@ -54,8 +53,6 @@ class QuickLaunchWidget(BaseWidget):
         # Popup state
         self._popup: PopupWidget | None = None
         self._dpr = 1.0
-        self._previous_hwnd = 0
-        self._launched_app = False
 
         # Result state
         self._result_items: list[QFrame] = []
@@ -100,19 +97,17 @@ class QuickLaunchWidget(BaseWidget):
 
     def _show_popup(self):
         self._dpr = self.screen().devicePixelRatio()
-        self._previous_hwnd = get_foreground_hwnd()
-        self._launched_app = False
         if not self._popup:
             self._popup = self._create_popup()
         self._center_popup_on_screen()
-        self._popup.show()
         self._popup.search_input.blockSignals(True)
         self._popup.search_input.clear()
         self._popup.search_input.blockSignals(False)
-        self._update_results("", immediate=True)
+        self._popup.show()
         force_foreground_focus(int(self._popup.winId()))
-        QTimer.singleShot(0, self._reset_scroll_position)
+        self._update_results("", immediate=True)
         self._popup.search_input.setFocus()
+        QTimer.singleShot(0, self._reset_scroll_position)
 
     def _hide_popup(self):
         if not self._popup or self._popup._is_closing:
@@ -126,11 +121,6 @@ class QuickLaunchWidget(BaseWidget):
         self._popup = None
         self._result_items.clear()
         self._result_data.clear()
-        # Don't restore foreground if we just launched an app - let it keep focus
-        if self._previous_hwnd and not self._launched_app:
-            set_foreground_hwnd(self._previous_hwnd)
-        self._previous_hwnd = 0
-        self._launched_app = False
 
     def _center_popup_on_screen(self):
         if not self._popup:
@@ -432,7 +422,6 @@ class QuickLaunchWidget(BaseWidget):
         result = self._result_data[index]
         should_close = self._service.execute_result(result)
         if should_close:
-            self._launched_app = True
             QTimer.singleShot(0, self._hide_popup)
         elif self._popup:
             text = self._popup.search_input.text()
