@@ -1,13 +1,11 @@
-import logging
 import re
 
 from humanize import naturalsize
-from PyQt6.QtCore import QTimer
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel
 
 from core.utils.utilities import add_shadow, build_progress_widget, build_widget_label, refresh_widget_style
 from core.utils.widgets.animation_manager import AnimationManager
-from core.utils.widgets.memory.memory_api import MemoryAPI
+from core.utils.widgets.memory.memory_api import MemoryData, MemoryWorker, SwapMemory, VirtualMemory
 from core.validation.widgets.yasb.memory import MemoryConfig
 from core.widgets.base import BaseWidget
 
@@ -16,12 +14,13 @@ class MemoryWidget(BaseWidget):
     validation_schema = MemoryConfig
 
     _instances: list["MemoryWidget"] = []
-    _shared_timer: QTimer | None = None
+    _worker: MemoryWorker | None = None
 
     def __init__(self, config: MemoryConfig):
         super().__init__(class_name=f"memory-widget {config.class_name}")
         self.config = config
         self._show_alt_label = False
+        self._last_data: MemoryData | None = None
 
         self.progress_widget = None
         self.progress_widget = build_progress_widget(self, self.config.progress_bar.model_dump())
@@ -49,48 +48,30 @@ class MemoryWidget(BaseWidget):
         if self not in MemoryWidget._instances:
             MemoryWidget._instances.append(self)
 
-        if self.config.update_interval > 0 and MemoryWidget._shared_timer is None:
-            MemoryWidget._shared_timer = QTimer(self)
-            MemoryWidget._shared_timer.setInterval(self.config.update_interval)
-            MemoryWidget._shared_timer.timeout.connect(MemoryWidget._notify_instances)
-            MemoryWidget._shared_timer.start()
+        # Start the shared memory worker thread
+        if self.config.update_interval > 0 and MemoryWidget._worker is None:
+            worker = MemoryWorker.get_instance(self.config.update_interval)
+            worker.data_ready.connect(MemoryWidget._on_data_ready)
+            worker.start()
+            MemoryWidget._worker = worker
 
         self._show_placeholder()
 
     def _show_placeholder(self):
         """Display placeholder (zero/default) memory data."""
-
-        class DummyMem:
-            free = 0
-            percent = 0
-            total = 0
-            available = 0
-            used = 0
-
-        virtual_mem = DummyMem()
-        swap_mem = DummyMem()
-
+        virtual_mem = VirtualMemory(total=0, available=0, percent=0.0, used=0, free=0)
+        swap_mem = SwapMemory(total=0, used=0, free=0, percent=0.0)
         self._update_label(virtual_mem, swap_mem)
 
     @classmethod
-    def _notify_instances(cls):
-        """Fetch memory data and update all instances."""
-        if not cls._instances:
-            return
-
-        try:
-            virtual_mem = MemoryAPI.virtual_memory()
-            swap_mem = MemoryAPI.swap_memory()
-
-            # Update each instance using the shared data
-            for inst in cls._instances[:]:
-                try:
-                    inst._update_label(virtual_mem, swap_mem)
-                except RuntimeError:
-                    cls._instances.remove(inst)
-
-        except Exception as e:
-            logging.error(f"Error updating shared memory data: {e}")
+    def _on_data_ready(cls, data: MemoryData):
+        """Slot called on main thread when new memory data arrives from the worker."""
+        for inst in cls._instances[:]:
+            try:
+                inst._last_data = data
+                inst._update_label(data.virtual, data.swap)
+            except RuntimeError:
+                cls._instances.remove(inst)
 
     def _update_label(self, virtual_mem, swap_mem):
         """Update label using shared memory data."""
@@ -151,7 +132,9 @@ class MemoryWidget(BaseWidget):
             widget.setVisible(not self._show_alt_label)
         for widget in self._widgets_alt:
             widget.setVisible(self._show_alt_label)
-        MemoryWidget._notify_instances()
+        # Re-render with last known data
+        if self._last_data is not None:
+            self._update_label(self._last_data.virtual, self._last_data.swap)
 
     def _get_virtual_memory_threshold(self, virtual_memory_percent: float) -> str:
         if virtual_memory_percent <= self.config.memory_thresholds.low:
