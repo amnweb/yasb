@@ -72,9 +72,9 @@ class EmojiProvider(BaseProvider):
                 group = entry.get("group", "")
                 results.append(
                     ProviderResult(
-                        title=f"{emoji_char}  {name}",
+                        title=name,
                         description=f"{group} - press Enter to copy",
-                        icon_char="",
+                        icon_char=emoji_char,
                         provider=self.name,
                         action_data={"emoji": emoji_char, "name": name},
                     )
