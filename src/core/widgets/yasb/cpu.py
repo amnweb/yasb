@@ -1,13 +1,11 @@
-import logging
 import re
 from collections import deque
 
-from PyQt6.QtCore import QTimer
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel
 
 from core.utils.utilities import add_shadow, build_progress_widget, build_widget_label, refresh_widget_style
 from core.utils.widgets.animation_manager import AnimationManager
-from core.utils.widgets.cpu.cpu_api import CpuAPI
+from core.utils.widgets.cpu.cpu_api import CpuData, CpuFreq, CpuWorker
 from core.validation.widgets.yasb.cpu import CpuConfig
 from core.widgets.base import BaseWidget
 
@@ -15,9 +13,8 @@ from core.widgets.base import BaseWidget
 class CpuWidget(BaseWidget):
     validation_schema = CpuConfig
 
-    # Class-level shared data and timer
     _instances: list["CpuWidget"] = []
-    _shared_timer: QTimer | None = None
+    _worker: CpuWorker | None = None
 
     def __init__(self, config: CpuConfig):
         super().__init__(class_name=f"cpu-widget {config.class_name}")
@@ -25,6 +22,7 @@ class CpuWidget(BaseWidget):
         self._cpu_freq_history = deque([0] * config.histogram_num_columns, maxlen=config.histogram_num_columns)
         self._cpu_perc_history = deque([0] * config.histogram_num_columns, maxlen=config.histogram_num_columns)
         self._show_alt_label = False
+        self._last_data: CpuData | None = None
         self.progress_widget = None
         self.progress_widget = build_progress_widget(self, self.config.progress_bar.model_dump())
 
@@ -51,18 +49,19 @@ class CpuWidget(BaseWidget):
         if self not in CpuWidget._instances:
             CpuWidget._instances.append(self)
 
-        if self.config.update_interval > 0 and CpuWidget._shared_timer is None:
-            CpuWidget._shared_timer = QTimer(self)
-            CpuWidget._shared_timer.setInterval(self.config.update_interval)
-            CpuWidget._shared_timer.timeout.connect(CpuWidget._notify_instances)
-            CpuWidget._shared_timer.start()
+        # Start the shared CPU worker thread
+        if self.config.update_interval > 0 and CpuWidget._worker is None:
+            worker = CpuWorker.get_instance(self.config.update_interval)
+            worker.data_ready.connect(CpuWidget._on_data_ready)
+            worker.start()
+            CpuWidget._worker = worker
 
         self._show_placeholder()
 
     def _show_placeholder(self):
         """Display placeholder (zero/default) CPU data."""
-        data = CpuAPI.CpuData(
-            freq=CpuAPI.CpuFreq(current=0, min=0, max=0),
+        data = CpuData(
+            freq=CpuFreq(current=0, min=0, max=0),
             percent=0,
             percent_per_core=[0],
             cores_physical=1,
@@ -71,25 +70,16 @@ class CpuWidget(BaseWidget):
         self._update_label(data)
 
     @classmethod
-    def _notify_instances(cls):
-        """Fetch CPU data and update all instances."""
-        if not cls._instances:
-            return
+    def _on_data_ready(cls, data: CpuData):
+        """Slot called on the main thread when new CPU data arrives from the worker."""
+        for inst in cls._instances[:]:
+            try:
+                inst._last_data = data
+                inst._update_label(data)
+            except RuntimeError:
+                cls._instances.remove(inst)
 
-        try:
-            data = CpuAPI.get_data()
-
-            # Update each instance using the shared data
-            for inst in cls._instances[:]:
-                try:
-                    inst._update_label(data)
-                except RuntimeError:
-                    cls._instances.remove(inst)
-
-        except Exception as e:
-            logging.error(f"Error updating shared CPU data: {e}")
-
-    def _update_label(self, data: CpuAPI.CpuData):
+    def _update_label(self, data: CpuData):
         """Update the label with CPU data."""
         self._cpu_freq_history.append(data.freq.current)
         self._cpu_perc_history.append(data.percent)
@@ -149,7 +139,9 @@ class CpuWidget(BaseWidget):
             widget.setVisible(not self._show_alt_label)
         for widget in self._widgets_alt:
             widget.setVisible(self._show_alt_label)
-        CpuWidget._notify_instances()
+        # Re-render with last known data
+        if self._last_data is not None:
+            self._update_label(self._last_data)
 
     def _get_histogram_bar(self, num: float, num_min: float, num_max: float) -> str:
         if num_max == num_min:
