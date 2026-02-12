@@ -18,6 +18,7 @@ from core.utils.widgets.quick_launch.providers.currency import CurrencyProvider
 from core.utils.widgets.quick_launch.providers.emoji import EmojiProvider
 from core.utils.widgets.quick_launch.providers.file_search import FileSearchProvider
 from core.utils.widgets.quick_launch.providers.kill_process import KillProcessProvider
+from core.utils.widgets.quick_launch.providers.port_viewer import PortViewerProvider
 from core.utils.widgets.quick_launch.providers.settings import SettingsProvider
 from core.utils.widgets.quick_launch.providers.system_commands import SystemCommandsProvider
 from core.utils.widgets.quick_launch.providers.unit_converter import UnitConverterProvider
@@ -32,6 +33,7 @@ PROVIDER_REGISTRY: dict[str, type[BaseProvider]] = {
     "emoji": EmojiProvider,
     "file_search": FileSearchProvider,
     "kill_process": KillProcessProvider,
+    "port_viewer": PortViewerProvider,
     "settings": SettingsProvider,
     "system_commands": SystemCommandsProvider,
     "unit_converter": UnitConverterProvider,

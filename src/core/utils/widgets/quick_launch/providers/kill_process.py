@@ -132,7 +132,7 @@ class KillProcessProvider(BaseProvider):
             results.append(
                 ProviderResult(
                     title=f"Kill {entry['name']}",
-                    description=f"{count_str}  •  {mem_mb:.1f} MB",
+                    description=f"{count_str}, {mem_mb:.1f} MB",
                     icon_char="\ue71a",
                     provider=self.name,
                     action_data={"name": entry["name"], "pids": entry["pids"]},

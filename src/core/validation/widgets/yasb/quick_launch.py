@@ -102,6 +102,14 @@ class ColorConverterProviderConfig(CustomBaseModel):
     priority: int = 0
 
 
+class PortViewerProviderConfig(CustomBaseModel):
+    enabled: bool = True
+    prefix: str = "pv"
+    priority: int = 0
+    tcp_listening_only: bool = True
+    include_established: bool = False
+
+
 class QuickLaunchProvidersConfig(CustomBaseModel):
     apps: AppsProviderConfig = AppsProviderConfig()
     bookmarks: BookmarksProviderConfig = BookmarksProviderConfig()
@@ -115,6 +123,7 @@ class QuickLaunchProvidersConfig(CustomBaseModel):
     unit_converter: UnitConverterProviderConfig = UnitConverterProviderConfig()
     emoji: EmojiProviderConfig = EmojiProviderConfig()
     color_converter: ColorConverterProviderConfig = ColorConverterProviderConfig()
+    port_viewer: PortViewerProviderConfig = PortViewerProviderConfig()
 
 
 class QuickLaunchConfig(CustomBaseModel):

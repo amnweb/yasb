@@ -35,6 +35,22 @@ The Quick Launch widget provides a Spotlight style search launcher accessible fr
 
 Quick Launch uses a plugin-based provider system. Each provider handles a specific type of search and can be enabled/disabled independently. Providers are activated either automatically or via a prefix character typed into the search field.
 
+**Provider Index**
+
+- [Apps](#apps-provider)
+- [Calculator](#calculator-provider)
+- [Currency](#currency-provider)
+- [Web Search](#web-search-provider)
+- [Bookmarks](#bookmarks-provider)
+- [System Commands](#system-commands-provider)
+- [Settings](#settings-provider)
+- [Kill Process](#kill-process-provider)
+- [Port Viewer](#port-viewer-provider)
+- [File Search](#file-search-provider)
+- [Unit Converter](#unit-converter-provider)
+- [Emoji](#emoji-provider)
+- [Color Converter](#color-converter-provider)
+
 ### Apps Provider
 
 Searches installed applications (Start Menu shortcuts). This is the default provider when no prefix is used.
@@ -152,6 +168,32 @@ Search and terminate running processes. Type `!` followed by a process name (e.g
 | `enabled`  | bool   | `true`  | Enable/disable the kill process provider.   |
 | `prefix`   | string | `"!"`  | Trigger prefix. Use `"*"` to include in default results. |
 | `priority` | int    | `0`     | Sort order when multiple providers share the same prefix. Lower values appear first. |
+
+### Port Viewer Provider
+
+View TCP/UDP ports (via `netstat`) and the owning PID/process name.
+
+Type `pv` followed by optional filters (e.g. `pv 80`, `pv tcp 443`, `pv kill 80`):
+- `pv 80` - show entries for local port 80
+- `pv tcp 443` - show TCP entries for local port 443
+- `pv udp 53` - show UDP entries for local port 53
+- `pv process chrome.exe` - show ports for a process (includes connected TCP entries)
+- `pv proccess chrome.exe` - alias for `process`
+- `pv kill 80` - kill the owning process for port 80 (if resolvable)
+- `pv kill 12345` - kill PID 12345 (heuristic: numbers > 65535 are treated as PID)
+
+Port numbers are matched by digits (substring match). For example, `pv udp 5` can match ports like `500`, `5353`, `5985`, etc.
+
+Selecting a normal (non-`kill`) result copies a short summary string to the clipboard.
+
+| Option                | Type   | Default | Description |
+|-----------------------|--------|---------|-------------|
+| `enabled`             | bool   | `true`  | Enable/disable the port viewer provider. |
+| `prefix`              | string | `"pv"` | Trigger prefix. |
+| `priority`            | int    | `0`     | Sort order when multiple providers share the same prefix. Lower values appear first. |
+| `tcp_listening_only`  | bool   | `true`  | Only show `LISTENING` TCP entries by default. |
+| `include_established` | bool   | `false` | Include non-`LISTENING` TCP entries (e.g. `ESTABLISHED`). |
+
 ### File Search Provider
 
 Search files and folders on the system. Type `/` followed by a filename (e.g., `/readme.txt`). Uses the bundled [Everything](https://www.voidtools.com/) SDK for instant results or falls back to Windows Search.
