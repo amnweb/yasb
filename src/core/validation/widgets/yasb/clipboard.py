@@ -7,7 +7,6 @@ from core.validation.widgets.base_model import (
     CallbacksConfig,
     CustomBaseModel,
     KeybindingConfig,
-    PaddingConfig,
     ShadowConfig,
 )
 
@@ -29,9 +28,8 @@ class ClipboardMenuConfig(CustomBaseModel):
 class ClipboardIconsConfig(CustomBaseModel):
     """Configuration for clipboard widget icons."""
 
-    clipboard: str = "\udb80\udd4d"
-    clear: str = "\uf1f8"
-    search_clear: str = "\uf00d"
+    clear_icon: str = "\uf1f8"
+    delete_icon: str = "\uf1f8"
 
 
 class ClipboardCallbacksConfig(CallbacksConfig):
@@ -44,15 +42,15 @@ class ClipboardCallbacksConfig(CallbacksConfig):
 class ClipboardConfig(CustomBaseModel):
     """Main configuration model for the Clipboard widget."""
 
-    label: str = "<span>\udb80\udd4d</span> {clipboard}"
+    label: str = "<span>\udb80\udd4d</span>"
     label_alt: str = "{clipboard}"
     class_name: str = ""
+    copied_feedback: str = "<b><font color='#a6e3a1'>Copied!</font></b>"
     max_length: int = Field(default=30, ge=5, le=100)
     max_history: int = Field(default=50, ge=10, le=500)
     menu: ClipboardMenuConfig = ClipboardMenuConfig()
     icons: ClipboardIconsConfig = ClipboardIconsConfig()
     animation: AnimationConfig = AnimationConfig()
-    container_padding: PaddingConfig = PaddingConfig()
     label_shadow: ShadowConfig = ShadowConfig()
     container_shadow: ShadowConfig = ShadowConfig()
     keybindings: list[KeybindingConfig] = []
