@@ -120,6 +120,9 @@
     padding-top: 8px;
     color: #cdd6f4
 }
+.server-menu-header .loader-line {
+    color: #2d8fff;
+}
 .server-menu-container {
     background-color:rgba(17, 17, 27, 0.74);
 } 
@@ -171,16 +174,6 @@
     padding:50px 8px;
     min-width: 300px;
     background-color:transparent    
-}
-.server-menu-overlay {
-    background-color: rgba(17, 17, 27, 0.85);
-}
-.server-menu-overlay .text{
-    padding: 8px;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    font-size: 16px;
-    font-weight: 600;
-    color: #cdd6f4;
 }
 ```
 
