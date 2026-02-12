@@ -70,13 +70,14 @@ def set_accent_policy(hwnd, accent_state, gradient_color=0, accent_flags=0):
 
 def set_dark_mode(hwnd):
     """Enable dark mode for a window."""
-    data = WINDOWCOMPOSITIONATTRIBDATA()
-    data.Attribute = 26  # WCA_USEDARKMODECOLORS
-    data.SizeOfData = ctypes.sizeof(ctypes.c_int)
-    data.Data = ctypes.cast(ctypes.pointer(ctypes.c_int(1)), ctypes.POINTER(ctypes.c_int))
-
-    result = _SCA(hwnd, ctypes.byref(data))
-    if result == 0:
+    value = ctypes.c_int(1)
+    result = DwmSetWindowAttribute(
+        hwnd,
+        20,
+        ctypes.byref(value),
+        ctypes.sizeof(value),
+    )
+    if result != 0:
         raise ctypes.WinError()
 
 

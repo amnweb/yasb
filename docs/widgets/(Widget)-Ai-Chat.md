@@ -1,6 +1,6 @@
 # AI Chat Widget
 
-The AI Chat widget provides a flexible, interactive chat interface that works with any provider offering an OpenAI-compatible API (such as OpenAI, Ollama, LocalAI, and others) or GitHub Copilot via the Copilot CLI. You can define multiple providers and models in your configuration, and switch between them at runtime—chat history is saved per provider/model combination.
+The AI Chat widget provides a flexible, interactive chat interface that works with any provider offering an OpenAI-compatible API (such as OpenAI, Ollama, LocalAI, and others) or GitHub Copilot via the Copilot CLI. You can define multiple providers and models in your configuration, and switch between them at runtime-chat history is saved per provider/model combination.
 
 
 | Option              | Type    | Default         | Description |
@@ -134,7 +134,7 @@ To get list of available Copilot models enable debug in YASB config, start copil
   - Set `max_image_size: 0` to disable image attachments for a model
   - Set `max_attachment_size: 0` to disable text file attachments for a model
 - Enter your message and send; responses stream in real time
-- Switch providers/models at any time—your chat history is preserved
+- Switch providers/models at any time-your chat history is preserved
 - API credentials can be set as environment variables (recommended for security) or in the config file
 - Instructions for the AI can be provided as a string or as a path to a markdown file ending with `_chatmode.md`
 
@@ -253,9 +253,9 @@ If you want to use different styles for the context menu, you can target the `.a
 
 > [!NOTE]
 > The chat input uses a two-element structure for proper CSS `border-radius` support:
-> - `.chat-input-wrapper` — The outer wrapper (QFrame). Use this for `border`, `border-radius`, and `background-color`.
-> - `.chat-input` — The inner text field (QTextEdit). Use this for `font-family`, `font-size`, and `color`.
-> - `.chat-input-wrapper.focused` — Applied when the input has focus (use instead of `:focus` pseudo-class).
+> - `.chat-input-wrapper` - The outer wrapper (QFrame). Use this for `border`, `border-radius`, and `background-color`.
+> - `.chat-input` - The inner text field (QTextEdit). Use this for `font-family`, `font-size`, and `color`.
+> - `.chat-input-wrapper.focused` - Applied when the input has focus (use instead of `:focus` pseudo-class).
 
 
 ## Example CSS
