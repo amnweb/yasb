@@ -6,6 +6,7 @@ Window Controls widget provides buttons for minimizing, maximizing/restoring, an
 |---------------------|---------|-------------------------------------------------------------------------|-----------------------------------------------------------------------------|
 | `class_name`        | string  | `""`                                                                    | Additional CSS class name for the widget.                                   |
 | `show_app_name`     | boolean | `false`                                                                 | Show the friendly application name (e.g., "Firefox", "Windows Terminal") as a label next to the buttons. |
+| `app_name_position` | string  | `"right"`                                                               | Position of the app name label relative to buttons. Valid values: `left`, `right`. |
 | `maximized_only`    | boolean | `true`                                                                  | When `true`, widget only appears for maximized windows. When `false`, appears for any focused window. |
 | `buttons`           | list    | `["minimize", "maximize", "close"]`                                     | Ordered list of buttons to display. Valid values: `minimize`, `maximize`, `restore`, `close`. |
 | `button_labels`     | dict    | `{minimize: "\uea71", maximize: "\uea71", restore: "\uea71", close: "\uea71"}` | Custom labels/icons for each button. |
@@ -19,6 +20,7 @@ window_controls:
   type: "yasb.window_controls.WindowControlsWidget"
   options:
     show_app_name: true
+    app_name_position: "left"
     maximized_only: false
     buttons: ["minimize", "maximize", "close"]
     button_labels:
@@ -34,6 +36,7 @@ window_controls:
 
 - **class_name:** Additional CSS class name for the widget. This allows for custom styling.
 - **show_app_name:** When `true`, displays the friendly application name (e.g., "Firefox", "Windows Terminal", "Visual Studio Code") as a label next to the buttons.
+- **app_name_position:** Controls where the app name label appears relative to the buttons. Use `left` to show title before buttons, `right` (default) to show it after buttons.
 - **maximized_only:** When `true` (default), the widget only appears when a maximized window is focused, and hides when the window is restored. When `false`, the widget appears for any focused window regardless of its state.
 - **buttons:** An ordered list of buttons to display. You can include any combination of `minimize`, `maximize`, `restore`, and `close` in any order. The `maximize` button automatically toggles between maximize and restore icons based on window state. The `restore` button always restores.
 - **button_labels:** A dictionary mapping each button name to its display text or icon. The `maximize` button uses `maximize` label when the window is normal and `restore` label when maximized.

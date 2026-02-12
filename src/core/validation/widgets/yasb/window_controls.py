@@ -17,6 +17,7 @@ class ButtonLabelsConfig(CustomBaseModel):
 class WindowControlsConfig(CustomBaseModel):
     class_name: str = ""
     show_app_name: bool = False
+    app_name_position: Literal["left", "right"] = "right"
     maximized_only: bool = True
     buttons: list[Literal["minimize", "maximize", "close"]] = ["minimize", "maximize", "close"]
     button_labels: ButtonLabelsConfig = ButtonLabelsConfig()
