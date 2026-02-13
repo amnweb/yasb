@@ -810,43 +810,6 @@
       "title": "ApplicationsWidgetEntry",
       "type": "object"
     },
-    "AppsProviderConfig": {
-      "additionalProperties": false,
-      "properties": {
-        "enabled": {
-          "default": true,
-          "title": "Enabled",
-          "type": "boolean"
-        },
-        "prefix": {
-          "default": "*",
-          "title": "Prefix",
-          "type": "string"
-        },
-        "priority": {
-          "default": 0,
-          "title": "Priority",
-          "type": "integer"
-        },
-        "show_recent": {
-          "default": true,
-          "title": "Show Recent",
-          "type": "boolean"
-        },
-        "max_recent": {
-          "default": 10,
-          "title": "Max Recent",
-          "type": "integer"
-        },
-        "show_path": {
-          "default": false,
-          "title": "Show Path",
-          "type": "boolean"
-        }
-      },
-      "title": "AppsProviderConfig",
-      "type": "object"
-    },
     "AudioMenuConfig": {
       "additionalProperties": false,
       "properties": {
@@ -1651,38 +1614,6 @@
       "title": "BluetoothIconsConfig",
       "type": "object"
     },
-    "BookmarksProviderConfig": {
-      "additionalProperties": false,
-      "properties": {
-        "enabled": {
-          "default": true,
-          "title": "Enabled",
-          "type": "boolean"
-        },
-        "prefix": {
-          "default": "*",
-          "title": "Prefix",
-          "type": "string"
-        },
-        "priority": {
-          "default": 0,
-          "title": "Priority",
-          "type": "integer"
-        },
-        "browser": {
-          "default": "all",
-          "title": "Browser",
-          "type": "string"
-        },
-        "profile": {
-          "default": "Default",
-          "title": "Profile",
-          "type": "string"
-        }
-      },
-      "title": "BookmarksProviderConfig",
-      "type": "object"
-    },
     "BrightnessCallbacksConfig": {
       "additionalProperties": false,
       "properties": {
@@ -1968,28 +1899,6 @@
         }
       },
       "title": "ButtonLabelsConfig",
-      "type": "object"
-    },
-    "CalculatorProviderConfig": {
-      "additionalProperties": false,
-      "properties": {
-        "enabled": {
-          "default": true,
-          "title": "Enabled",
-          "type": "boolean"
-        },
-        "prefix": {
-          "default": "=",
-          "title": "Prefix",
-          "type": "string"
-        },
-        "priority": {
-          "default": 0,
-          "title": "Priority",
-          "type": "integer"
-        }
-      },
-      "title": "CalculatorProviderConfig",
       "type": "object"
     },
     "CallbacksBatteryConfig": {
@@ -2933,28 +2842,6 @@
       "title": "ClockEntry",
       "type": "object"
     },
-    "ColorConverterProviderConfig": {
-      "additionalProperties": false,
-      "properties": {
-        "enabled": {
-          "default": true,
-          "title": "Enabled",
-          "type": "boolean"
-        },
-        "prefix": {
-          "default": "c:",
-          "title": "Prefix",
-          "type": "string"
-        },
-        "priority": {
-          "default": 0,
-          "title": "Priority",
-          "type": "integer"
-        }
-      },
-      "title": "ColorConverterProviderConfig",
-      "type": "object"
-    },
     "CopilotCallbacksConfig": {
       "additionalProperties": false,
       "properties": {
@@ -3389,28 +3276,6 @@
       "title": "CpuThresholdsConfig",
       "type": "object"
     },
-    "CurrencyProviderConfig": {
-      "additionalProperties": false,
-      "properties": {
-        "enabled": {
-          "default": true,
-          "title": "Enabled",
-          "type": "boolean"
-        },
-        "prefix": {
-          "default": "$",
-          "title": "Prefix",
-          "type": "string"
-        },
-        "priority": {
-          "default": 0,
-          "title": "Priority",
-          "type": "integer"
-        }
-      },
-      "title": "CurrencyProviderConfig",
-      "type": "object"
-    },
     "CustomCallbacksConfig": {
       "additionalProperties": false,
       "properties": {
@@ -3820,28 +3685,6 @@
       "title": "DiskThresholdsConfig",
       "type": "object"
     },
-    "EmojiProviderConfig": {
-      "additionalProperties": false,
-      "properties": {
-        "enabled": {
-          "default": true,
-          "title": "Enabled",
-          "type": "boolean"
-        },
-        "prefix": {
-          "default": ":",
-          "title": "Prefix",
-          "type": "string"
-        },
-        "priority": {
-          "default": 0,
-          "title": "Priority",
-          "type": "integer"
-        }
-      },
-      "title": "EmojiProviderConfig",
-      "type": "object"
-    },
     "ExecOptionsConfig": {
       "additionalProperties": false,
       "properties": {
@@ -3901,33 +3744,6 @@
         }
       },
       "title": "ExecOptionsConfig",
-      "type": "object"
-    },
-    "FileSearchProviderConfig": {
-      "additionalProperties": false,
-      "properties": {
-        "enabled": {
-          "default": true,
-          "title": "Enabled",
-          "type": "boolean"
-        },
-        "prefix": {
-          "default": "/",
-          "title": "Prefix",
-          "type": "string"
-        },
-        "priority": {
-          "default": 0,
-          "title": "Priority",
-          "type": "integer"
-        },
-        "backend": {
-          "default": "auto",
-          "title": "Backend",
-          "type": "string"
-        }
-      },
-      "title": "FileSearchProviderConfig",
       "type": "object"
     },
     "GalleryConfig": {
@@ -3997,6 +3813,8 @@
             }
           ],
           "default": 0,
+          "ge": -2000,
+          "le": 2000,
           "title": "Position Offset"
         },
         "respect_work_area": {
@@ -5599,28 +5417,6 @@
         "action"
       ],
       "title": "KeybindingConfig",
-      "type": "object"
-    },
-    "KillProcessProviderConfig": {
-      "additionalProperties": false,
-      "properties": {
-        "enabled": {
-          "default": true,
-          "title": "Enabled",
-          "type": "boolean"
-        },
-        "prefix": {
-          "default": "!",
-          "title": "Prefix",
-          "type": "string"
-        },
-        "priority": {
-          "default": 0,
-          "title": "Priority",
-          "type": "integer"
-        }
-      },
-      "title": "KillProcessProviderConfig",
       "type": "object"
     },
     "KomorebiConfig": {
@@ -8419,38 +8215,6 @@
       "title": "PomodoroEntry",
       "type": "object"
     },
-    "PortViewerProviderConfig": {
-      "additionalProperties": false,
-      "properties": {
-        "enabled": {
-          "default": true,
-          "title": "Enabled",
-          "type": "boolean"
-        },
-        "prefix": {
-          "default": "pv",
-          "title": "Prefix",
-          "type": "string"
-        },
-        "priority": {
-          "default": 0,
-          "title": "Priority",
-          "type": "integer"
-        },
-        "tcp_listening_only": {
-          "default": true,
-          "title": "Tcp Listening Only",
-          "type": "boolean"
-        },
-        "include_established": {
-          "default": false,
-          "title": "Include Established",
-          "type": "boolean"
-        }
-      },
-      "title": "PortViewerProviderConfig",
-      "type": "object"
-    },
     "PowerMenuButtonsConfig": {
       "additionalProperties": false,
       "properties": {
@@ -9040,379 +8804,6 @@
       "title": "ProviderConfig",
       "type": "object"
     },
-    "QuickLaunchCallbacksConfig": {
-      "additionalProperties": false,
-      "properties": {
-        "on_left": {
-          "default": "toggle_quick_launch",
-          "title": "On Left",
-          "type": "string"
-        },
-        "on_middle": {
-          "default": "do_nothing",
-          "title": "On Middle",
-          "type": "string"
-        },
-        "on_right": {
-          "default": "do_nothing",
-          "title": "On Right",
-          "type": "string"
-        }
-      },
-      "title": "QuickLaunchCallbacksConfig",
-      "type": "object"
-    },
-    "QuickLaunchConfig": {
-      "additionalProperties": false,
-      "properties": {
-        "label": {
-          "default": "\uf002",
-          "title": "Label",
-          "type": "string"
-        },
-        "search_placeholder": {
-          "default": "Search applications...",
-          "title": "Search Placeholder",
-          "type": "string"
-        },
-        "max_results": {
-          "default": 50,
-          "title": "Max Results",
-          "type": "integer"
-        },
-        "show_icons": {
-          "default": true,
-          "title": "Show Icons",
-          "type": "boolean"
-        },
-        "icon_size": {
-          "default": 32,
-          "title": "Icon Size",
-          "type": "integer"
-        },
-        "providers": {
-          "$ref": "#/$defs/QuickLaunchProvidersConfig",
-          "default": {
-            "apps": {
-              "enabled": true,
-              "max_recent": 10,
-              "prefix": "*",
-              "priority": 0,
-              "show_path": false,
-              "show_recent": true
-            },
-            "bookmarks": {
-              "browser": "all",
-              "enabled": true,
-              "prefix": "*",
-              "priority": 0,
-              "profile": "Default"
-            },
-            "calculator": {
-              "enabled": true,
-              "prefix": "=",
-              "priority": 0
-            },
-            "currency": {
-              "enabled": true,
-              "prefix": "$",
-              "priority": 0
-            },
-            "web_search": {
-              "enabled": true,
-              "engine": "google",
-              "prefix": "?",
-              "priority": 0
-            },
-            "system_commands": {
-              "enabled": true,
-              "prefix": ">",
-              "priority": 0
-            },
-            "settings": {
-              "enabled": true,
-              "prefix": "@",
-              "priority": 0
-            },
-            "kill_process": {
-              "enabled": true,
-              "prefix": "!",
-              "priority": 0
-            },
-            "file_search": {
-              "backend": "auto",
-              "enabled": true,
-              "prefix": "/",
-              "priority": 0
-            },
-            "unit_converter": {
-              "enabled": true,
-              "prefix": "~",
-              "priority": 0
-            },
-            "emoji": {
-              "enabled": true,
-              "prefix": ":",
-              "priority": 0
-            },
-            "color_converter": {
-              "enabled": true,
-              "prefix": "c:",
-              "priority": 0
-            },
-            "port_viewer": {
-              "enabled": true,
-              "include_established": false,
-              "prefix": "pv",
-              "priority": 0,
-              "tcp_listening_only": true
-            }
-          }
-        },
-        "popup": {
-          "$ref": "#/$defs/QuickLaunchPopupConfig",
-          "default": {
-            "width": 640,
-            "height": 480,
-            "blur": true,
-            "round_corners": true,
-            "round_corners_type": "normal",
-            "border_color": "System",
-            "dark_mode": false
-          }
-        },
-        "animation": {
-          "$ref": "#/$defs/AnimationConfig",
-          "default": {
-            "enabled": true,
-            "type": "fadeInOut",
-            "duration": 200
-          }
-        },
-        "label_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
-        "container_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
-        "keybindings": {
-          "default": [],
-          "items": {
-            "$ref": "#/$defs/KeybindingConfig"
-          },
-          "title": "Keybindings",
-          "type": "array"
-        },
-        "callbacks": {
-          "$ref": "#/$defs/QuickLaunchCallbacksConfig",
-          "default": {
-            "on_left": "toggle_quick_launch",
-            "on_middle": "do_nothing",
-            "on_right": "do_nothing"
-          }
-        }
-      },
-      "title": "QuickLaunchConfig",
-      "type": "object"
-    },
-    "QuickLaunchEntry": {
-      "properties": {
-        "type": {
-          "const": "yasb.quick_launch.QuickLaunchWidget",
-          "title": "Type",
-          "type": "string"
-        },
-        "options": {
-          "$ref": "#/$defs/QuickLaunchConfig"
-        }
-      },
-      "required": [
-        "type",
-        "options"
-      ],
-      "title": "QuickLaunchEntry",
-      "type": "object"
-    },
-    "QuickLaunchPopupConfig": {
-      "additionalProperties": false,
-      "properties": {
-        "width": {
-          "default": 640,
-          "title": "Width",
-          "type": "integer"
-        },
-        "height": {
-          "default": 480,
-          "title": "Height",
-          "type": "integer"
-        },
-        "blur": {
-          "default": true,
-          "title": "Blur",
-          "type": "boolean"
-        },
-        "round_corners": {
-          "default": true,
-          "title": "Round Corners",
-          "type": "boolean"
-        },
-        "round_corners_type": {
-          "default": "normal",
-          "title": "Round Corners Type",
-          "type": "string"
-        },
-        "border_color": {
-          "default": "System",
-          "title": "Border Color",
-          "type": "string"
-        },
-        "dark_mode": {
-          "default": false,
-          "title": "Dark Mode",
-          "type": "boolean"
-        }
-      },
-      "title": "QuickLaunchPopupConfig",
-      "type": "object"
-    },
-    "QuickLaunchProvidersConfig": {
-      "additionalProperties": false,
-      "properties": {
-        "apps": {
-          "$ref": "#/$defs/AppsProviderConfig",
-          "default": {
-            "enabled": true,
-            "prefix": "*",
-            "priority": 0,
-            "show_recent": true,
-            "max_recent": 10,
-            "show_path": false
-          }
-        },
-        "bookmarks": {
-          "$ref": "#/$defs/BookmarksProviderConfig",
-          "default": {
-            "enabled": true,
-            "prefix": "*",
-            "priority": 0,
-            "browser": "all",
-            "profile": "Default"
-          }
-        },
-        "calculator": {
-          "$ref": "#/$defs/CalculatorProviderConfig",
-          "default": {
-            "enabled": true,
-            "prefix": "=",
-            "priority": 0
-          }
-        },
-        "currency": {
-          "$ref": "#/$defs/CurrencyProviderConfig",
-          "default": {
-            "enabled": true,
-            "prefix": "$",
-            "priority": 0
-          }
-        },
-        "web_search": {
-          "$ref": "#/$defs/WebSearchProviderConfig",
-          "default": {
-            "enabled": true,
-            "prefix": "?",
-            "priority": 0,
-            "engine": "google"
-          }
-        },
-        "system_commands": {
-          "$ref": "#/$defs/SystemCommandsProviderConfig",
-          "default": {
-            "enabled": true,
-            "prefix": ">",
-            "priority": 0
-          }
-        },
-        "settings": {
-          "$ref": "#/$defs/SettingsProviderConfig",
-          "default": {
-            "enabled": true,
-            "prefix": "@",
-            "priority": 0
-          }
-        },
-        "kill_process": {
-          "$ref": "#/$defs/KillProcessProviderConfig",
-          "default": {
-            "enabled": true,
-            "prefix": "!",
-            "priority": 0
-          }
-        },
-        "file_search": {
-          "$ref": "#/$defs/FileSearchProviderConfig",
-          "default": {
-            "enabled": true,
-            "prefix": "/",
-            "priority": 0,
-            "backend": "auto"
-          }
-        },
-        "unit_converter": {
-          "$ref": "#/$defs/UnitConverterProviderConfig",
-          "default": {
-            "enabled": true,
-            "prefix": "~",
-            "priority": 0
-          }
-        },
-        "emoji": {
-          "$ref": "#/$defs/EmojiProviderConfig",
-          "default": {
-            "enabled": true,
-            "prefix": ":",
-            "priority": 0
-          }
-        },
-        "color_converter": {
-          "$ref": "#/$defs/ColorConverterProviderConfig",
-          "default": {
-            "enabled": true,
-            "prefix": "c:",
-            "priority": 0
-          }
-        },
-        "port_viewer": {
-          "$ref": "#/$defs/PortViewerProviderConfig",
-          "default": {
-            "enabled": true,
-            "prefix": "pv",
-            "priority": 0,
-            "tcp_listening_only": true,
-            "include_established": false
-          }
-        }
-      },
-      "title": "QuickLaunchProvidersConfig",
-      "type": "object"
-    },
     "RecycleBinCallbacksConfig": {
       "additionalProperties": false,
       "properties": {
@@ -9851,28 +9242,6 @@
       "title": "ServerMonitorEntry",
       "type": "object"
     },
-    "SettingsProviderConfig": {
-      "additionalProperties": false,
-      "properties": {
-        "enabled": {
-          "default": true,
-          "title": "Enabled",
-          "type": "boolean"
-        },
-        "prefix": {
-          "default": "@",
-          "title": "Prefix",
-          "type": "string"
-        },
-        "priority": {
-          "default": 0,
-          "title": "Priority",
-          "type": "integer"
-        }
-      },
-      "title": "SettingsProviderConfig",
-      "type": "object"
-    },
     "SgvRangeConfig": {
       "additionalProperties": false,
       "properties": {
@@ -10228,28 +9597,6 @@
         }
       },
       "title": "StatusThresholdsConfig",
-      "type": "object"
-    },
-    "SystemCommandsProviderConfig": {
-      "additionalProperties": false,
-      "properties": {
-        "enabled": {
-          "default": true,
-          "title": "Enabled",
-          "type": "boolean"
-        },
-        "prefix": {
-          "default": ">",
-          "title": "Prefix",
-          "type": "string"
-        },
-        "priority": {
-          "default": 0,
-          "title": "Priority",
-          "type": "integer"
-        }
-      },
-      "title": "SystemCommandsProviderConfig",
       "type": "object"
     },
     "SystrayWidgetConfig": {
@@ -10961,28 +10308,6 @@
         "options"
       ],
       "title": "TrafficWidgetEntry",
-      "type": "object"
-    },
-    "UnitConverterProviderConfig": {
-      "additionalProperties": false,
-      "properties": {
-        "enabled": {
-          "default": true,
-          "title": "Enabled",
-          "type": "boolean"
-        },
-        "prefix": {
-          "default": "~",
-          "title": "Prefix",
-          "type": "string"
-        },
-        "priority": {
-          "default": 0,
-          "title": "Priority",
-          "type": "integer"
-        }
-      },
-      "title": "UnitConverterProviderConfig",
       "type": "object"
     },
     "UpdateCheckWidgetConfig": {
@@ -12164,33 +11489,6 @@
       "title": "WeatherWidgetEntry",
       "type": "object"
     },
-    "WebSearchProviderConfig": {
-      "additionalProperties": false,
-      "properties": {
-        "enabled": {
-          "default": true,
-          "title": "Enabled",
-          "type": "boolean"
-        },
-        "prefix": {
-          "default": "?",
-          "title": "Prefix",
-          "type": "string"
-        },
-        "priority": {
-          "default": 0,
-          "title": "Priority",
-          "type": "integer"
-        },
-        "engine": {
-          "default": "google",
-          "title": "Engine",
-          "type": "string"
-        }
-      },
-      "title": "WebSearchProviderConfig",
-      "type": "object"
-    },
     "WhkdConfig": {
       "additionalProperties": false,
       "properties": {
@@ -12616,15 +11914,6 @@
           "default": false,
           "title": "Show App Name",
           "type": "boolean"
-        },
-        "app_name_position": {
-          "default": "right",
-          "enum": [
-            "left",
-            "right"
-          ],
-          "title": "App Name Position",
-          "type": "string"
         },
         "maximized_only": {
           "default": true,
@@ -14336,9 +13625,6 @@
           },
           {
             "$ref": "#/$defs/PowerPlanEntry"
-          },
-          {
-            "$ref": "#/$defs/QuickLaunchEntry"
           },
           {
             "$ref": "#/$defs/RecycleBinEntry"
