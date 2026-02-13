@@ -4,8 +4,7 @@ from enum import StrEnum, auto
 from typing import override
 
 from PIL import Image
-from PyQt6.QtCore import pyqtSlot  # type: ignore
-from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtCore import Qt, QTimer, pyqtSlot
 from PyQt6.QtGui import QCursor, QImage, QMouseEvent, QPixmap, QShowEvent, QWheelEvent
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QWidget
 
