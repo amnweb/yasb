@@ -80,31 +80,13 @@ class GlazewmWorkspaceButton(QPushButton):
         self.glazewm_client.activate_workspace(self.workspace_name)
 
     def _update_status(self):
-        if self.monitor_exclusive:
-            if self.is_displayed:
-                if self.is_focused:
-                    if self.workspace_window_count > 0:
-                        self.status = WorkspaceStatus.FOCUSED_POPULATED
-                    else:
-                        self.status = WorkspaceStatus.FOCUSED_EMPTY
-                elif self.workspace_window_count > 0:
-                    self.status = WorkspaceStatus.ACTIVE_POPULATED
-                else:
-                    self.status = WorkspaceStatus.ACTIVE_EMPTY
-            elif self.workspace_window_count > 0:
-                self.status = WorkspaceStatus.POPULATED
-            else:
-                self.status = WorkspaceStatus.EMPTY
+        is_populated = self.workspace_window_count > 0
+        if self.is_focused:
+            self.status = WorkspaceStatus.FOCUSED_POPULATED if is_populated else WorkspaceStatus.FOCUSED_EMPTY
+        elif self.monitor_exclusive and self.is_displayed:
+            self.status = WorkspaceStatus.ACTIVE_POPULATED if is_populated else WorkspaceStatus.ACTIVE_EMPTY
         else:
-            if self.is_focused:
-                if self.workspace_window_count > 0:
-                    self.status = WorkspaceStatus.FOCUSED_POPULATED
-                else:
-                    self.status = WorkspaceStatus.FOCUSED_EMPTY
-            elif self.workspace_window_count > 0:
-                self.status = WorkspaceStatus.POPULATED
-            else:
-                self.status = WorkspaceStatus.EMPTY
+            self.status = WorkspaceStatus.POPULATED if is_populated else WorkspaceStatus.EMPTY
 
     def _update_label(self):
         replacements = {
@@ -260,31 +242,13 @@ class GlazewmWorkspaceButtonWithIcons(QFrame):
         self.glazewm_client.activate_workspace(self.workspace_name)
 
     def _update_status(self):
-        if self.monitor_exclusive:
-            if self.is_displayed:
-                if self.is_focused:
-                    if self.workspace_window_count > 0:
-                        self.status = WorkspaceStatus.FOCUSED_POPULATED
-                    else:
-                        self.status = WorkspaceStatus.FOCUSED_EMPTY
-                elif self.workspace_window_count > 0:
-                    self.status = WorkspaceStatus.ACTIVE_POPULATED
-                else:
-                    self.status = WorkspaceStatus.ACTIVE_EMPTY
-            elif self.workspace_window_count > 0:
-                self.status = WorkspaceStatus.POPULATED
-            else:
-                self.status = WorkspaceStatus.EMPTY
+        is_populated = self.workspace_window_count > 0
+        if self.is_focused:
+            self.status = WorkspaceStatus.FOCUSED_POPULATED if is_populated else WorkspaceStatus.FOCUSED_EMPTY
+        elif self.monitor_exclusive and self.is_displayed:
+            self.status = WorkspaceStatus.ACTIVE_POPULATED if is_populated else WorkspaceStatus.ACTIVE_EMPTY
         else:
-            if self.is_focused:
-                if self.workspace_window_count > 0:
-                    self.status = WorkspaceStatus.FOCUSED_POPULATED
-                else:
-                    self.status = WorkspaceStatus.FOCUSED_EMPTY
-            elif self.workspace_window_count > 0:
-                self.status = WorkspaceStatus.POPULATED
-            else:
-                self.status = WorkspaceStatus.EMPTY
+            self.status = WorkspaceStatus.POPULATED if is_populated else WorkspaceStatus.EMPTY
 
     def _get_all_windows_in_workspace(self) -> list[Window]:
         windows = self.windows or []

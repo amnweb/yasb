@@ -4551,11 +4551,6 @@
           "title": "Hide If Offline",
           "type": "boolean"
         },
-        "monitor_exclusive": {
-          "default": true,
-          "title": "Monitor Exclusive",
-          "type": "boolean"
-        },
         "glazewm_server_uri": {
           "default": "ws://localhost:6123",
           "title": "Glazewm Server Uri",
