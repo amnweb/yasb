@@ -33,7 +33,7 @@ class Window:
 class Workspace:
     name: str
     display_name: str
-    focus: bool = False
+    focus: bool = False  # Global focus - only ONE workspace has this True
     is_displayed: bool = False
     num_windows: int = 0
     windows: list[Window] = field(default_factory=list)
@@ -111,6 +111,12 @@ class GlazewmClient(QObject):
 
     def focus_prev_workspace(self):
         self._websocket.sendTextMessage("command focus --prev-active-workspace-on-monitor")
+
+    def focus_next_workspace_global(self):
+        self._websocket.sendTextMessage("command focus --next-active-workspace")
+
+    def focus_prev_workspace_global(self):
+        self._websocket.sendTextMessage("command focus --prev-active-workspace")
 
     def connect(self):
         if self._websocket.state() == QAbstractSocket.SocketState.ConnectedState:
