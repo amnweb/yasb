@@ -20,8 +20,9 @@ class GlazewmWorkspacesConfig(CustomBaseModel):
     active_empty_label: str | None = None
     focused_populated_label: str | None = None
     focused_empty_label: str | None = None
-    hide_empty_workspaces: bool = True
+    hide_empty_workspaces: bool = True  # deprecated
     hide_if_offline: bool = False
+    monitor_exclusive: bool = True
     glazewm_server_uri: str = "ws://localhost:6123"
     enable_scroll_switching: bool = True
     reverse_scroll_direction: bool = False

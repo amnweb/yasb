@@ -4,16 +4,12 @@ from enum import StrEnum, auto
 from typing import override
 
 from PIL import Image
-from PyQt6.QtCore import (
-    Qt,
-    QTimer,
-    pyqtSlot,  # type: ignore
-)
+from PyQt6.QtCore import Qt, QTimer, pyqtSlot
 from PyQt6.QtGui import QCursor, QImage, QMouseEvent, QPixmap, QShowEvent, QWheelEvent
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QWidget
 
 from core.utils.utilities import add_shadow, refresh_widget_style
-from core.utils.widgets.glazewm.client import GlazewmClient, Monitor, Window
+from core.utils.widgets.glazewm.client import GlazewmClient, Monitor, Window, Workspace
 from core.utils.win32.app_icons import get_window_icon
 from core.utils.win32.utilities import get_monitor_hwnd, get_process_info
 from core.validation.widgets.glazewm.workspaces import GlazewmWorkspacesConfig
@@ -47,17 +43,16 @@ class GlazewmWorkspaceButton(QPushButton):
         self,
         workspace_name: str,
         client: GlazewmClient,
-        parent_widget: "GlazewmWorkspacesWidget",
         config: GlazewmWorkspacesConfig,
         display_name: str | None = None,
     ):
         super().__init__()
         self.setProperty("class", "ws-btn")
         self.glazewm_client = client
-        self.parent_widget = parent_widget
         self.config = config
         self.workspace_name = workspace_name
         self.display_name = display_name
+        self.monitor_exclusive = config.monitor_exclusive
         self.is_displayed = False
         self.is_focused = False
         self.workspace_window_count = 0
@@ -85,20 +80,13 @@ class GlazewmWorkspaceButton(QPushButton):
         self.glazewm_client.activate_workspace(self.workspace_name)
 
     def _update_status(self):
-        if self.is_displayed:
-            if self.is_focused:
-                if self.workspace_window_count > 0:
-                    self.status = WorkspaceStatus.FOCUSED_POPULATED
-                else:
-                    self.status = WorkspaceStatus.FOCUSED_EMPTY
-            elif self.workspace_window_count > 0:
-                self.status = WorkspaceStatus.ACTIVE_POPULATED
-            else:
-                self.status = WorkspaceStatus.ACTIVE_EMPTY
-        elif self.workspace_window_count > 0:
-            self.status = WorkspaceStatus.POPULATED
+        is_populated = self.workspace_window_count > 0
+        if self.is_focused:
+            self.status = WorkspaceStatus.FOCUSED_POPULATED if is_populated else WorkspaceStatus.FOCUSED_EMPTY
+        elif self.monitor_exclusive and self.is_displayed:
+            self.status = WorkspaceStatus.ACTIVE_POPULATED if is_populated else WorkspaceStatus.ACTIVE_EMPTY
         else:
-            self.status = WorkspaceStatus.EMPTY
+            self.status = WorkspaceStatus.POPULATED if is_populated else WorkspaceStatus.EMPTY
 
     def _update_label(self):
         replacements = {
@@ -110,7 +98,6 @@ class GlazewmWorkspaceButton(QPushButton):
         empty_label = self.config.empty_label or self.display_name or self.workspace_name
         active_populated_label = self.config.active_populated_label or self.display_name or self.workspace_name
         active_empty_label = self.config.active_empty_label or self.display_name or self.workspace_name
-
         # have focused_ label variants fall back to equivalent active_ label variants if they are set (preserves previous functionality)
         focused_populated_label = (
             self.config.focused_populated_label or active_populated_label or self.display_name or self.workspace_name
@@ -163,6 +150,7 @@ class GlazewmWorkspaceButtonWithIcons(QFrame):
         self.display_name = display_name
         self.parent_widget = parent_widget
         self.config = config
+        self.monitor_exclusive = config.monitor_exclusive
         self.is_displayed = False
         self.is_focused = False
         self.status = WorkspaceStatus.EMPTY
@@ -212,7 +200,6 @@ class GlazewmWorkspaceButtonWithIcons(QFrame):
         empty_label = self.config.empty_label or self.display_name or self.workspace_name
         active_populated_label = self.config.active_populated_label or self.display_name or self.workspace_name
         active_empty_label = self.config.active_empty_label or self.display_name or self.workspace_name
-
         # have focused_ label variants fall back to equivalent active_ label variants if they are set (preserves previous functionality)
         focused_populated_label = (
             self.config.focused_populated_label or active_populated_label or self.display_name or self.workspace_name
@@ -255,20 +242,13 @@ class GlazewmWorkspaceButtonWithIcons(QFrame):
         self.glazewm_client.activate_workspace(self.workspace_name)
 
     def _update_status(self):
-        if self.is_displayed:
-            if self.is_focused:
-                if self.workspace_window_count > 0:
-                    self.status = WorkspaceStatus.FOCUSED_POPULATED
-                else:
-                    self.status = WorkspaceStatus.FOCUSED_EMPTY
-            elif self.workspace_window_count > 0:
-                self.status = WorkspaceStatus.ACTIVE_POPULATED
-            else:
-                self.status = WorkspaceStatus.ACTIVE_EMPTY
-        elif self.workspace_window_count > 0:
-            self.status = WorkspaceStatus.POPULATED
+        is_populated = self.workspace_window_count > 0
+        if self.is_focused:
+            self.status = WorkspaceStatus.FOCUSED_POPULATED if is_populated else WorkspaceStatus.FOCUSED_EMPTY
+        elif self.monitor_exclusive and self.is_displayed:
+            self.status = WorkspaceStatus.ACTIVE_POPULATED if is_populated else WorkspaceStatus.ACTIVE_EMPTY
         else:
-            self.status = WorkspaceStatus.EMPTY
+            self.status = WorkspaceStatus.POPULATED if is_populated else WorkspaceStatus.EMPTY
 
     def _get_all_windows_in_workspace(self) -> list[Window]:
         windows = self.windows or []
@@ -309,7 +289,12 @@ class GlazewmWorkspaceButtonWithIcons(QFrame):
                         ),
                         Image.LANCZOS,
                     ).convert("RGBA")
-                    qimage = QImage(icon_img.tobytes(), icon_img.width, icon_img.height, QImage.Format.Format_RGBA8888)
+                    qimage = QImage(
+                        icon_img.tobytes(),
+                        icon_img.width,
+                        icon_img.height,
+                        QImage.Format.Format_RGBA8888,
+                    )
                     pixmap = QPixmap.fromImage(qimage)
                     pixmap.setDevicePixelRatio(self.dpi)
                     pixmap.glazewm_id = window.id
@@ -417,6 +402,7 @@ class GlazewmWorkspacesWidget(BaseWidget):
         super().__init__(class_name="glazewm-workspaces")
         self.config = config
         self.workspaces: dict[str, GlazewmWorkspaceButton | GlazewmWorkspaceButtonWithIcons] = {}
+
         self.monitor_handle: int | None = None
         self.workspace_container_layout = QHBoxLayout()
         self.workspace_container_layout.setSpacing(0)
@@ -464,12 +450,25 @@ class GlazewmWorkspacesWidget(BaseWidget):
 
     @pyqtSlot(list)
     def _update_workspaces(self, message: list[Monitor]):
-        # Find the target monitor
         current_mon = next((m for m in message if m.hwnd == self.monitor_handle), None)
         if not current_mon:
             return
-        for workspace in current_mon.workspaces:
-            # Get or create workspace button if it's not present
+
+        global_focused_ws: str | None = None
+        all_workspaces: dict[str, Workspace] = {}
+
+        for mon in message:
+            for workspace in mon.workspaces:
+                all_workspaces[workspace.name] = workspace
+                if workspace.focus:
+                    global_focused_ws = workspace.name
+
+        if self.config.monitor_exclusive:
+            workspace_source = {workspace.name: workspace for workspace in current_mon.workspaces}
+        else:
+            workspace_source = {workspace.name: workspace for workspace in all_workspaces.values()}
+
+        for workspace in workspace_source.values():
             if (btn := self.workspaces.get(workspace.name)) is None:
                 if self.workspace_app_icons_enabled:
                     btn = self.workspaces[workspace.name] = GlazewmWorkspaceButtonWithIcons(
@@ -484,38 +483,69 @@ class GlazewmWorkspacesWidget(BaseWidget):
                     btn = self.workspaces[workspace.name] = GlazewmWorkspaceButton(
                         workspace.name,
                         self.glazewm_client,
-                        parent_widget=self,
                         config=self.config,
                         display_name=workspace.display_name,
                     )
                 add_shadow(btn, self.config.btn_shadow.model_dump())
 
-            # Update workspace state
+            btn.monitor_exclusive = self.config.monitor_exclusive
             btn.workspace_name = workspace.name
             btn.display_name = workspace.display_name
             btn.workspace_window_count = workspace.num_windows
             btn.is_displayed = workspace.is_displayed
-            btn.is_focused = workspace.focus
-            if isinstance(btn, GlazewmWorkspaceButtonWithIcons):
+            btn.is_focused = btn.workspace_name == global_focused_ws if global_focused_ws else workspace.focus
+            if self.workspace_app_icons_enabled:
                 btn.windows = workspace.windows
 
-        # Insert the new widget if it's not present
         for i, ws_name in enumerate(sorted(self.workspaces.keys(), key=natural_sort_key)):
             if self.workspace_container_layout.indexOf(self.workspaces[ws_name]) != i:
                 self.workspace_container_layout.insertWidget(i, self.workspaces[ws_name])
 
-        # Update workspaces
-        current_ws_names = {ws.name for ws in current_mon.workspaces}
+        current_ws_names = set(workspace_source.keys())
+
         for btn in self.workspaces.values():
-            if btn.workspace_name not in current_ws_names:
+            btn.monitor_exclusive = self.config.monitor_exclusive
+            is_current_ipc_workspace = btn.workspace_name in current_ws_names
+
+            if is_current_ipc_workspace:
+                workspace = workspace_source[btn.workspace_name]
+                btn.display_name = workspace.display_name
+                btn.workspace_window_count = workspace.num_windows
+                btn.is_displayed = workspace.is_displayed
+                btn.is_focused = btn.workspace_name == global_focused_ws if global_focused_ws else workspace.focus
+                if self.workspace_app_icons_enabled:
+                    btn.windows = workspace.windows
+            else:
+                workspace = all_workspaces.get(btn.workspace_name)
                 btn.is_displayed = False
                 btn.workspace_window_count = 0
-                btn.setHidden(self.config.hide_empty_workspaces)
+                btn.is_focused = False
+                if self.workspace_app_icons_enabled:
+                    btn.windows = []
+
+            is_focused = btn.is_focused
+
+            if not self.config.monitor_exclusive:
+                if is_current_ipc_workspace or is_focused:
+                    btn.setHidden(False)
+                else:
+                    btn.setHidden(True)
+            else:
+                if is_current_ipc_workspace:
+                    btn.setHidden(False)
+                else:
+                    btn.setHidden(True)
+
             btn.update_button()
 
-    def _get_active_workspace(self) -> GlazewmWorkspaceButton | GlazewmWorkspaceButtonWithIcons | None:
+    def _get_active_workspace(
+        self,
+    ) -> GlazewmWorkspaceButton | GlazewmWorkspaceButtonWithIcons | None:
         for btn in self.workspaces.values():
-            if btn.status in (WorkspaceStatus.ACTIVE_EMPTY, WorkspaceStatus.ACTIVE_POPULATED):
+            if btn.status in (
+                WorkspaceStatus.ACTIVE_EMPTY,
+                WorkspaceStatus.ACTIVE_POPULATED,
+            ):
                 return btn
         return None
 
@@ -526,6 +556,12 @@ class GlazewmWorkspacesWidget(BaseWidget):
         if self.config.reverse_scroll_direction:
             direction = -direction
         if direction < 0:
-            self.glazewm_client.focus_next_workspace()
+            if self.config.monitor_exclusive:
+                self.glazewm_client.focus_next_workspace()
+            else:
+                self.glazewm_client.focus_next_workspace_global()
         elif direction > 0:
-            self.glazewm_client.focus_prev_workspace()
+            if self.config.monitor_exclusive:
+                self.glazewm_client.focus_prev_workspace()
+            else:
+                self.glazewm_client.focus_prev_workspace_global()

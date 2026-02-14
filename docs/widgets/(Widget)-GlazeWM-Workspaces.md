@@ -10,6 +10,7 @@
 | `focused_empty_label`    | string  | `'{name}'`                                       | Optional label for the currently focused workspace (has no windows opened). Falls back to `active_empty_label` if not set. |
 | `hide_empty_workspaces`  | boolean | `true`                                           | Whether to hide empty workspaces.                                           |
 | `hide_if_offline`        | boolean | `false`                                          | Whether to hide workspaces widget if GlazeWM is offline.                    |
+| `monitor_exclusive`      | boolean | `true`                                           | If `true`, show monitor-local workspaces (default). If `false`, aggregate active workspaces from GlazeWM IPC and show them on every bar. |
 | `glazewm_server_uri`     | string  | `'ws://localhost:6123'`                          | Optional GlazeWM server uri.                                                |
 | `enable_scroll_switching` | boolean | `true`      | Enable scroll switching between workspaces.                                 |
 | `reverse_scroll_direction` | boolean | `false`      | Reverse scroll direction.                                                  |
@@ -27,6 +28,7 @@ glazewm_workspaces:
     offline_label: "GlazeWM Offline"
     hide_empty_workspaces: true
     hide_if_offline: false
+    monitor_exclusive: true
     enable_scroll_switching: true
     btn_shadow:
       enabled: true
@@ -62,6 +64,7 @@ glazewm_workspaces:
 - **focused_empty_label:** Optional label for the currently focused workspace (has no windows opened). If not set, **active_empty_label** will be used, falling back to name or display_name from GlazeWM.
 - **hide_empty_workspaces:** Whether to hide empty workspaces.
 - **hide_if_offline:** Whether to hide workspaces widget if GlazeWM is offline.
+- **monitor_exclusive:** If enabled (default), follows monitor-local workspace rendering. If disabled, the widget renders active workspaces from GlazeWM IPC on all bars and highlights the globally focused workspace using IPC focus state.
 - **glazewm_server_uri:** Optional GlazeWM server uri if it ever changes on GlazeWM side.
 - **enable_scroll_switching:** Enable scroll switching between workspaces.
 - **reverse_scroll_direction:** Reverse scroll direction for switching workspaces.
