@@ -79,13 +79,6 @@ def connect_taskbar(widget):
     except Exception as e:
         logger.warning(f"Unable to obtain Qt window handle for shell hook: {e}")
 
-    # Propagate preference: keep cloaked tasks only when show_only_visible is False
-    try:
-        keep_cloaked = bool(getattr(widget, "_show_only_visible", True) is False)
-        setattr(task_manager, "_keep_cloaked_tasks", keep_cloaked)
-    except Exception:
-        setattr(task_manager, "_keep_cloaked_tasks", False)
-
     # Start the task manager using the Qt hwnd
     task_manager.start(hwnd)
 
@@ -478,34 +471,32 @@ class TaskbarWindowManager(QObject):
             logger.error(f"Error handling monitor change for {hwnd}: {e}")
 
     def _on_window_cloaked(self, hwnd):
-        """Cloaked: keep or remove based on preference (_keep_cloaked_tasks)."""
+        """Cloaked event handling.
+
+        Keep tracking cloaked windows so taskbar widgets can apply their own
+        visibility policy (show_only_visible) independently.
+        """
         try:
             if hwnd in self._windows:
                 app_window = self._windows[hwnd]
-                if getattr(self, "_keep_cloaked_tasks", False):
-                    # Keep and refresh so widgets can react
-                    self._schedule_window_update(hwnd)
-                else:
-                    # When strict filtering is off, tolerate transient UWP cloaks by keeping and refreshing
-                    # We only need this when we have fullscreen UWP apps and using tiling manager
-                    is_uwp = False
-                    if not self._strict_filtering:
-                        try:
-                            cls = (app_window.class_name or "").strip()
-                            pname = (app_window._get_process_name() or "").strip()
-                            is_uwp = (
-                                cls in ("Windows.UI.Core.CoreWindow", "ApplicationFrameWindow")
-                                or pname == "ApplicationFrameHost.exe"
-                            )
-                        except Exception:
-                            is_uwp = False
 
-                    if is_uwp:
-                        # Keep and refresh _update_window has the UWP transient-keep heuristic
-                        self._schedule_window_update(hwnd)
-                    else:
-                        # Remove when not keeping cloaked tasks
-                        self._remove_window(hwnd)
+                # Preserve explicit UWP transient handling for readability/debugging.
+                # We still keep tracking in all cases to avoid cross-widget config coupling.
+                if not self._strict_filtering:
+                    try:
+                        cls = (app_window.class_name or "").strip()
+                        process_name = (app_window.process_name or "").strip()
+                        is_uwp = (
+                            cls in ("Windows.UI.Core.CoreWindow", "ApplicationFrameWindow")
+                            or process_name == "ApplicationFrameHost.exe"
+                        )
+                        if is_uwp:
+                            self._schedule_window_update(hwnd)
+                            return
+                    except Exception:
+                        pass
+
+                self._schedule_window_update(hwnd)
         except Exception as e:
             logger.error(f"Error handling window cloaked for {hwnd}: {e}")
 
@@ -535,6 +526,12 @@ class TaskbarWindowManager(QObject):
         """HIDE event remove from taskbar tracking."""
         try:
             if hwnd in self._windows:
+                try:
+                    if self._windows[hwnd]._is_cloaked():
+                        self._schedule_window_update(hwnd)
+                        return
+                except Exception:
+                    pass
                 self._remove_window(hwnd)
         except Exception as e:
             logger.error(f"Error handling window hide for {hwnd}: {e}")
@@ -658,13 +655,13 @@ class TaskbarWindowManager(QObject):
                                 return
                         except Exception:
                             pass
-                    # If cloaked and preference says keep cloaked tasks, keep and emit
+                    # If cloaked, keep tracked and emit; per-widget filters decide visibility.
                     try:
                         is_cloaked = bool(app_window._is_cloaked())
                     except Exception:
                         is_cloaked = False
 
-                    if is_cloaked and getattr(self, "_keep_cloaked_tasks", False):
+                    if is_cloaked:
                         new_data = app_window.as_dict()
                         self.window_updated.emit(hwnd, new_data)
                         return

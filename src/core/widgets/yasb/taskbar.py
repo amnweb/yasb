@@ -1220,6 +1220,10 @@ class TaskbarWidget(BaseWidget):
         if proc is None:
             return False
 
+        # Per-widget visibility policy: hide cloaked windows when show_only_visible is enabled.
+        if self._show_only_visible and bool(window_data.get("is_cloaked", False)):
+            return False
+
         if self.config.monitor_exclusive:
             window_monitor = window_data.get("monitor_handle")
             # If monitor is unknown (transient), keep existing items but do not add new ones
