@@ -7,6 +7,7 @@
 | `class_name`            | string  | `""`                                         | Additional CSS class name for the widget.                                    |
 | `update_interval`       | integer | `5000`                                       | The interval in milliseconds to update the widget.                          |
 | `time_remaining_natural`| boolean | `False`                                      | Whether to display the remaining time in a natural format.                  |
+| `time_remaining_unlimited_icon`| string | `unlimited`                                      | Which string to use to display unlimited time remaining.                  |
 | `hide_unsupported`| boolean | `True`                                      | Whether to hide the widget if the current system does not have battery info.                  |
 | `charging_options`      | dict    | `{icon_format: '{charging_icon}', blink_charging_icon: True, blink_interval: 500}` | Options for charging state display.                                         |
 | `status_thresholds`     | dict    | `{critical: 10, low: 25, medium: 75, high: 95, full: 100}` | Thresholds for different battery statuses.                                  |
@@ -78,6 +79,7 @@ battery:
 - **class_name**: Additional CSS class name for the widget. This allows for custom styling.
 - **update_interval**: The interval in milliseconds to update the widget.
 - **time_remaining_natural**: A boolean indicating whether to display the remaining time in a natural format.
+- **time_remaining_unlimited_icon**: A string to display unlimited time remaining.
 - **hide_unsupported**: A boolean indicating whether to hide the widget if the current system does not have battery information.
 - **charging_options**: A dictionary specifying options for displaying the charging state. It contains:
   - **icon_format**: The format string for the charging icon. You can use placeholders like `{charging_icon}` and `{icon}`.

@@ -43,6 +43,7 @@ class BatteryConfig(CustomBaseModel):
     class_name: str = ""
     update_interval: int = Field(default=5000, ge=0, le=60000)
     time_remaining_natural: bool = False
+    time_remaining_unlimited_icon: str = "unlimited"
     hide_unsupported: bool = True
     charging_options: ChargingOptionsConfig = ChargingOptionsConfig()
     status_thresholds: StatusThresholdsConfig = StatusThresholdsConfig()
