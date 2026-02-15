@@ -22,7 +22,12 @@ from PyQt6.QtWidgets import (
 )
 from qasync import asyncSlot  # type: ignore
 
-from core.utils.utilities import PopupWidget, ScrollingLabel, add_shadow, refresh_widget_style
+from core.utils.utilities import (
+    PopupWidget,
+    ScrollingLabel,
+    add_shadow,
+    refresh_widget_style,
+)
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.widgets.media.aumid_process import get_process_name_for_aumid
 from core.utils.widgets.media.media import MediaSession, SessionState, WindowsMedia
@@ -38,6 +43,7 @@ from core.utils.win32.aumid import (
     CloseHandle,
     GetApplicationUserModelId,
     OpenProcess,
+    activate_app_by_aumid,
 )
 from core.validation.widgets.yasb.media import MediaWidgetConfig
 from core.widgets.base import BaseWidget
@@ -188,6 +194,8 @@ class MediaWidget(BaseWidget):
             self.register_callback("toggle_label", self._toggle_label)
             self._label.show()
 
+        self.register_callback("open_media_source", self._open_media_source)
+
         self._label_alt.hide()
         self._show_alt_label = False
 
@@ -245,7 +253,8 @@ class MediaWidget(BaseWidget):
             self._popup_thumbnail_label.setProperty("class", "thumbnail")
             self._popup_thumbnail_label.setContentsMargins(0, 0, 0, 0)
             self._popup_thumbnail_label.setFixedSize(
-                self.config.media_menu.thumbnail_size, self.config.media_menu.thumbnail_size
+                self.config.media_menu.thumbnail_size,
+                self.config.media_menu.thumbnail_size,
             )
             try:
                 # Use thumbnail if available, otherwise create a default one
@@ -435,7 +444,10 @@ class MediaWidget(BaseWidget):
 
         # Initialize slider position
         if self.current_session is not None and self.current_session.duration > 0:
-            percent = min(1000, int((self.current_session.current_pos / self.current_session.duration) * 1000))
+            percent = min(
+                1000,
+                int((self.current_session.current_pos / self.current_session.duration) * 1000),
+            )
             self._progress_slider.setValue(percent)
         else:
             self._progress_slider.setValue(0)
@@ -558,6 +570,18 @@ class MediaWidget(BaseWidget):
             AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
         _ = self.media.play_pause()
 
+    def _open_media_source(self):
+        if self.config.animation.enabled:
+            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
+        if self.current_session and self.current_session.app_id:
+            # Try to get process name from mapping for fallback
+            fallback_process = None
+            mapping = get_source_app_mapping(self.current_session.app_id)
+            if mapping and isinstance(mapping, dict):
+                fallback_process = mapping.get("process")
+
+            activate_app_by_aumid(self.current_session.app_id, fallback_process_name=fallback_process)
+
     def _on_timeline_properties_changed(self):
         """Handle timeline property updates."""
         if not self.current_session:
@@ -588,7 +612,10 @@ class MediaWidget(BaseWidget):
             # Update widget progress bar first (hide progress bar if duration is too long)
             if self.current_session.timeline_enabled and (0 < self.current_session.duration < MAX_TIMLINE_DURATION):
                 self._progress_bar.setHidden(False)
-                new_pos = min(1000, int((self.current_session.current_pos / self.current_session.duration) * 1000))
+                new_pos = min(
+                    1000,
+                    int((self.current_session.current_pos / self.current_session.duration) * 1000),
+                )
                 self._progress_bar.setValue(new_pos)
             else:
                 self._progress_bar.setHidden(True)
@@ -880,7 +907,10 @@ class MediaWidget(BaseWidget):
 
             # Draw the note head (circle)
             draw.ellipse(
-                [(head_x - head_radius, head_y - head_radius), (head_x + head_radius, head_y + head_radius)],
+                [
+                    (head_x - head_radius, head_y - head_radius),
+                    (head_x + head_radius, head_y + head_radius),
+                ],
                 fill=note_color,
             )
 
@@ -1369,7 +1399,9 @@ class ClickableLabel(QLabel):
                 return
             if self.parent_widget.config.animation.enabled:
                 AnimationManager.animate(
-                    self, self.parent_widget.config.animation.type, self.parent_widget.config.animation.duration
+                    self,
+                    self.parent_widget.config.animation.type,
+                    self.parent_widget.config.animation.duration,
                 )
             self.parent_widget.execute_code(self.data)
 
