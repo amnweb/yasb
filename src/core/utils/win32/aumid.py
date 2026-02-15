@@ -66,13 +66,25 @@ PKEY_AppUserModel_ID = PROPERTYKEY(GUID("9F4C2855-9F79-4B39-A8D0-E1D42DE1D5F3"),
 
 class IPropertyStoreVtbl(ctypes.Structure):
     _fields_ = [
-        ("QueryInterface", WINFUNCTYPE(ctypes.c_long, c_void_p, POINTER(GUID), POINTER(c_void_p))),
+        (
+            "QueryInterface",
+            WINFUNCTYPE(ctypes.c_long, c_void_p, POINTER(GUID), POINTER(c_void_p)),
+        ),
         ("AddRef", WINFUNCTYPE(ctypes.c_ulong, c_void_p)),
         ("Release", WINFUNCTYPE(ctypes.c_ulong, c_void_p)),
         ("GetCount", WINFUNCTYPE(ctypes.c_long, c_void_p, POINTER(ctypes.c_uint))),
-        ("GetAt", WINFUNCTYPE(ctypes.c_long, c_void_p, ctypes.c_uint, POINTER(PROPERTYKEY))),
-        ("GetValue", WINFUNCTYPE(ctypes.c_long, c_void_p, POINTER(PROPERTYKEY), POINTER(PROPVARIANT))),
-        ("SetValue", WINFUNCTYPE(ctypes.c_long, c_void_p, POINTER(PROPERTYKEY), POINTER(PROPVARIANT))),
+        (
+            "GetAt",
+            WINFUNCTYPE(ctypes.c_long, c_void_p, ctypes.c_uint, POINTER(PROPERTYKEY)),
+        ),
+        (
+            "GetValue",
+            WINFUNCTYPE(ctypes.c_long, c_void_p, POINTER(PROPERTYKEY), POINTER(PROPVARIANT)),
+        ),
+        (
+            "SetValue",
+            WINFUNCTYPE(ctypes.c_long, c_void_p, POINTER(PROPERTYKEY), POINTER(PROPVARIANT)),
+        ),
         ("Commit", WINFUNCTYPE(ctypes.c_long, c_void_p)),
     ]
 
@@ -92,7 +104,13 @@ SHGetPropertyStoreForWindow.restype = ctypes.c_long
 
 # SHGetPropertyStoreFromParsingName - to read properties from files (shortcuts)
 SHGetPropertyStoreFromParsingName = shell32.SHGetPropertyStoreFromParsingName
-SHGetPropertyStoreFromParsingName.argtypes = [wt.LPCWSTR, c_void_p, ctypes.c_uint32, POINTER(GUID), POINTER(c_void_p)]
+SHGetPropertyStoreFromParsingName.argtypes = [
+    wt.LPCWSTR,
+    c_void_p,
+    ctypes.c_uint32,
+    POINTER(GUID),
+    POINTER(c_void_p),
+]
 SHGetPropertyStoreFromParsingName.restype = ctypes.c_long
 
 # PropVariantClear is exported by Ole32.dll
@@ -234,5 +252,71 @@ def get_aumid_from_shortcut(shortcut_path: str) -> str | None:
             store.contents.lpVtbl.contents.Release(store)
         except Exception:
             pass
+    return aumid
 
     return aumid
+
+
+def activate_app_by_aumid(aumid: str, fallback_process_name: str | None = None) -> bool:
+    """
+    Find and activate validity window for the given AUMID.
+
+    Args:
+        aumid: The App User Model ID to find.
+        fallback_process_name: Optional process name (e.g. "firefox.exe") to match if AUMID fails.
+
+    Returns:
+        True if a window was found and activation was attempted, False otherwise.
+    """
+    from core.utils.win32.window_actions import force_foreground_focus, restore_window
+
+    found_hwnd = None
+
+    WNDENUMPROC = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.wintypes.HWND, ctypes.wintypes.LPARAM)
+
+    def enum_window_callback(hwnd, _):
+        nonlocal found_hwnd
+        if user32.IsWindowVisible(hwnd):
+            # 1. Try exact AUMID match
+            curr_aumid = get_aumid_for_window(hwnd)
+            if curr_aumid == aumid:
+                found_hwnd = hwnd
+                return False  # Stop enumeration
+
+            # 2. Fallback: Try process name match if provided
+            if fallback_process_name:
+                pid = wt.DWORD(0)
+                GetWindowThreadProcessId(wt.HWND(hwnd), byref(pid))
+                if pid.value:
+                    # We need to open the process to get its image name
+                    # PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+                    hProcess = OpenProcess(0x1000, False, pid.value)
+                    if hProcess:
+                        try:
+                            buf = ctypes.create_unicode_buffer(1024)
+                            size = wt.DWORD(1024)
+                            # QueryFullProcessImageNameW is in kernel32
+                            if hasattr(kernel32, "QueryFullProcessImageNameW"):
+                                if kernel32.QueryFullProcessImageNameW(hProcess, 0, buf, byref(size)):
+                                    full_path = buf.value
+                                    if full_path.lower().endswith(fallback_process_name.lower()):
+                                        found_hwnd = hwnd
+                                        return False
+                        finally:
+                            CloseHandle(hProcess)
+
+        return True
+
+    user32.EnumWindows(WNDENUMPROC(enum_window_callback), 0)
+
+    if found_hwnd:
+        # 1. Force Focus (helps switch workspace)
+        force_foreground_focus(found_hwnd)
+
+        # 2. Restore if minimized (now that it's potentially active/on current workspace)
+        if user32.IsIconic(found_hwnd):
+            restore_window(found_hwnd)
+
+        return True
+
+    return False

@@ -169,6 +169,7 @@ media:
 - `toggle_label`: Toggles the visibility of the label.
 - `toggle_play_pause`: Toggles between play and pause states.
 - `toggle_media_menu`: Toggles the visibility of the media menu popup.
+- `open_media_source`: Opens the the source that is playing the media.
 - `do_nothing`: A placeholder callback that does nothing when triggered.
 
 ## Description of Options
