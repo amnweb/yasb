@@ -289,15 +289,18 @@ class ResultItemDelegate(QStyledItemDelegate):
         title_fm = QFontMetrics(title_font)
 
         if result.description:
-            title_rect = QRect(x, rect.y(), text_w, title_fm.height())
+            desc_font = self._get_desc_font()
+            desc_color = self._get_desc_color()
+            desc_fm = QFontMetrics(desc_font)
+            text_block_h = title_fm.height() + 3 + desc_fm.height()
+            text_y = rect.y() + (rect.height() - text_block_h) // 2
+
+            title_rect = QRect(x, text_y, text_w, title_fm.height())
             painter.setFont(title_font)
             painter.setPen(title_color)
             elided = title_fm.elidedText(result.title, Qt.TextElideMode.ElideRight, text_w)
             painter.drawText(title_rect, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, elided)
 
-            desc_font = self._get_desc_font()
-            desc_color = self._get_desc_color()
-            desc_fm = QFontMetrics(desc_font)
             desc_rect = QRect(x, title_rect.bottom() + 3, text_w, desc_fm.height())
             painter.setFont(desc_font)
             painter.setPen(desc_color)
