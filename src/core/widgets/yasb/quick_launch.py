@@ -362,7 +362,9 @@ class QuickLaunchWidget(BaseWidget):
         self._service.request_refresh.connect(self._on_request_refresh)
         self._service.icon_ready.connect(self._on_icon_ready)
         self._service.query_finished.connect(self._on_query_finished)
-        self._service.configure_providers(self.config.providers.model_dump(), self.config.max_results, self.config.show_icons)
+        self._service.configure_providers(
+            self.config.providers.model_dump(), self.config.max_results, self.config.show_icons
+        )
 
         self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
