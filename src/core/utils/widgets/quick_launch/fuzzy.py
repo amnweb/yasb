@@ -28,7 +28,18 @@ def _split_camel(name: str) -> str:
 
 
 def fuzzy_score(query: str, target: str) -> int | None:
-    """Score how well *query* matches *target*."""
+    """Score how well *query* matches *target*.
+
+    Returns an integer tier (higher = better match) or None for no match.
+
+    Tiers:
+        6  Exact initials match  (query == initials)
+        5  Initials starts-with  (initials.startswith(query))
+        4  Full prefix           (target starts with query)
+        3  Word prefix           (a word in target starts with query)
+        2  Substring             (query found inside target)
+        1  Subsequence           (characters appear in order)
+    """
     if not query or not target:
         return 0 if not query else None
 
@@ -38,33 +49,27 @@ def fuzzy_score(query: str, target: str) -> int | None:
     # Initials match (highest priority)
     initials = _get_initials(target)
     if initials.startswith(q):
-        # More of the initials covered -> higher score
-        score = 200 + len(q) * 10
-        # Bonus for exact initials match
-        if q == initials:
-            score += 20
-        return score
+        return 6 if q == initials else 5
 
-    # Prefix match (query starts the target or a word in the target)
+    # Prefix match
     if t.startswith(q):
-        return 200 + len(q) * 5
+        return 4
 
-    # Check if query is a prefix of any word in the target
+    # Word prefix match
     for word in t.split():
         if word.startswith(q):
-            return 150 + len(q) * 5
+            return 3
 
-    # Substring match (query found anywhere inside target)
-    idx = t.find(q)
-    if idx != -1:
-        return 100 + len(q) * 5
+    # Substring match
+    if q in t:
+        return 2
 
-    # Subsequence match (characters appear in order, e.g. "np" in "Notepad")
+    # Subsequence match (characters appear in order)
     qi = 0
     for ch in t:
         if qi < len(q) and ch == q[qi]:
             qi += 1
     if qi == len(q):
-        return 50
+        return 1
 
     return None

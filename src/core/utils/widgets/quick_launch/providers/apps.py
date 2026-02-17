@@ -53,6 +53,12 @@ class LaunchHistory:
         self.save()
 
     def get_frecency_score(self, app_key: str) -> float:
+        """Return a frecency boost in range [0.0, 3.0].
+
+        Can promote an app by up to ~2 tiers so frequently/recently used
+        apps outrank apps with a slightly better match quality but no usage
+        history.
+        """
         entry = self._history.get(app_key)
         if not entry:
             return 0.0
@@ -66,7 +72,7 @@ class LaunchHistory:
             recency = 0.6
         else:
             recency = 0.4
-        return count * recency
+        return min(count * recency * 1.5, 3.0)
 
     def save(self):
         try:
@@ -321,39 +327,40 @@ class AppsProvider(BaseProvider):
                 apps = [(n, p) for n, p, _ in sorted(svc.apps, key=lambda a: (_is_subfolder_app(a[1]), a[0].lower()))]
         else:
             # Search query fuzzy match by name, fallback to app id
-            scored_apps: list[tuple[int, str, str]] = []
+            scored_apps: list[tuple[float, str, str]] = []
             for n, p, _ in svc.apps:
                 fs = fuzzy_score(text_lower, n)
                 if fs is None and p.startswith("UWP::"):
                     appid = p[5:].split("!")[0].split("_")[0]
                     pkg_name = appid.rsplit(".", 1)[-1] if "." in appid else appid
-                    # Split CamelCase into words (WindowsTerminal -> Windows Terminal)
-                    # and run fuzzy matching on the human-readable form, but cap
-                    # the score so package-name matches never outrank direct
-                    # display-name matches.
+                    # Split CamelCase (WindowsTerminal -> Windows Terminal)
+                    # and match against the human-readable form.
                     pkg_words = _split_camel(pkg_name)
                     pkg_fs = fuzzy_score(text_lower, pkg_words)
                     if pkg_fs is not None:
-                        fs = min(pkg_fs, 90)
+                        # Cap package-name matches between word-prefix (3)
+                        # and prefix (4). Frecency can bridge the gap to
+                        # higher tiers for frequently used apps.
+                        fs = min(pkg_fs, 3.5)
                 if fs is not None:
-                    # Heavily demote apps with default icon (system shortcuts,
+                    # Demote apps with default icon (system shortcuts,
                     # not real apps) so they sink below real app matches.
                     icon = svc.icon_paths.get(f"{n}::{p}", "")
                     if icon.endswith("_default_app.png"):
-                        fs = min(fs, 30)
-                    scored_apps.append((fs, n, p))
+                        fs = min(fs, 0.5)
+                    scored_apps.append((float(fs), n, p))
 
             if show_recent:
+                for i, (fs, n, p) in enumerate(scored_apps):
+                    # Only boost apps with a reasonable match quality
+                    # (tier >= 3: word-prefix or better).  Weak matches
+                    # like subsequence shouldn't be promoted by history.
+                    if fs >= 3.0:
+                        key = f"{n}::{p}"
+                        frecency = self._history.get_frecency_score(key)
+                        scored_apps[i] = (fs + frecency, n, p)
 
-                def score(app: tuple) -> float:
-                    fuzzy_s, name, path = app
-                    key = f"{name}::{path}"
-                    frecency = self._history.get_frecency_score(key)
-                    return fuzzy_s + frecency
-
-                scored_apps.sort(key=score, reverse=True)
-            else:
-                scored_apps.sort(key=lambda x: x[0], reverse=True)
+            scored_apps.sort(key=lambda x: x[0], reverse=True)
 
             apps = [(n, p) for _, n, p in scored_apps]
 
