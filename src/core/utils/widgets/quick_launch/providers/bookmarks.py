@@ -7,8 +7,7 @@ import tempfile
 import webbrowser
 
 from core.utils.widgets.quick_launch.base_provider import BaseProvider, ProviderResult
-
-_ICON_BOOKMARK = "\ue735"
+from core.utils.widgets.quick_launch.providers.resources.icons import ICON_BOOKMARK
 
 # Chromium-based browser data dirs relative to %LOCALAPPDATA%
 _CHROMIUM_PATHS: dict[str, str] = {
@@ -26,6 +25,9 @@ class BookmarksProvider(BaseProvider):
     """Search and open browser bookmarks."""
 
     name = "bookmarks"
+    display_name = "Browser Bookmarks"
+    input_placeholder = "Search bookmarks..."
+    icon = ICON_BOOKMARK
 
     def __init__(self, config: dict | None = None):
         super().__init__(config)
@@ -161,13 +163,14 @@ class BookmarksProvider(BaseProvider):
             logging.debug("Bookmarks: firefox parse error: %s", e)
         finally:
             if tmp:
-                try:
-                    os.remove(tmp)
-                except OSError:
-                    pass
+                for suffix in ("", "-shm", "-wal"):
+                    try:
+                        os.remove(tmp + suffix)
+                    except OSError:
+                        pass
         return results
 
-    def get_results(self, text: str) -> list[ProviderResult]:
+    def get_results(self, text: str, **kwargs) -> list[ProviderResult]:
         query = self.get_query_text(text)
         self._load_bookmarks()
 
@@ -176,7 +179,7 @@ class BookmarksProvider(BaseProvider):
                 ProviderResult(
                     title="No bookmarks found",
                     description="Check browser setting in Quick Launch config",
-                    icon_char=_ICON_BOOKMARK,
+                    icon_char=ICON_BOOKMARK,
                     provider=self.name,
                 )
             ]
@@ -198,7 +201,7 @@ class BookmarksProvider(BaseProvider):
                 ProviderResult(
                     title=f"No bookmarks matching \u201c{query}\u201d",
                     description="Try a different search",
-                    icon_char=_ICON_BOOKMARK,
+                    icon_char=ICON_BOOKMARK,
                     provider=self.name,
                 )
             ]
@@ -213,7 +216,7 @@ class BookmarksProvider(BaseProvider):
         return ProviderResult(
             title=title,
             description=desc,
-            icon_char=_ICON_BOOKMARK,
+            icon_char=ICON_BOOKMARK,
             provider=self.name,
             action_data={"url": url},
         )

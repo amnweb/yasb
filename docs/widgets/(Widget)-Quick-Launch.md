@@ -8,9 +8,11 @@ The Quick Launch widget provides a Spotlight style search launcher accessible fr
 |----------------------|--------|----------------------------|-----------------------------------------------------------|
 | `label`              | string | `"\uf002"`                 | The label/icon for the widget on the bar.                 |
 | `search_placeholder` | string | `"Search applications..."` | Placeholder text for the search field.                    |
-| `max_results`        | int    | `50`                       | Maximum number of results displayed.                      |
+| `max_results`        | int    | `50`                       | Maximum number of results displayed (1–500).              |
 | `show_icons`         | bool   | `true`                     | Show icons next to search results.                        |
 | `icon_size`          | int    | `32`                       | Size of result icons in pixels.                           |
+| `home_page`          | bool   | `true`                     | Show provider shortcut tiles when search is empty.        |
+| `compact_mode`       | bool   | `false`                    | When enabled, the popup starts collapsed to just the search bar and only expands to show results when you start typing. |
 | `providers`          | dict   | See below                  | Configuration for each search provider.                   |
 | `popup`              | dict   | See below                  | Popup window appearance settings.                         |
 | `animation`          | dict   | `{enabled: true, type: "fadeInOut", duration: 200}` | Widget animation settings.       |
@@ -23,13 +25,13 @@ The Quick Launch widget provides a Spotlight style search launcher accessible fr
 
 | Option               | Type   | Default    | Description                                                     |
 |----------------------|--------|------------|-----------------------------------------------------------------|
-| `width`              | int    | `560`      | Width of the popup window in pixels.                            |
+| `width`              | int    | `720`      | Width of the popup window in pixels.                            |
 | `height`             | int    | `480`      | Height of the popup window in pixels.                           |
 | `blur`               | bool   | `true`     | Enable background blur effect (Windows 11).                     |
 | `round_corners`      | bool   | `true`     | Enable rounded corners on the popup window.                     |
 | `round_corners_type` | string | `"normal"` | Corner rounding type (`"normal"` or `"small"`).                 |
 | `border_color`       | string | `"System"` | Border color of the popup (`"System"`, HEX value, or `"None"`). |
-| `dark_mode`          | bool   | `false`    | Force dark mode colors for the popup (Windows 11).              |
+| `dark_mode`          | bool   | `true`     | Force dark mode colors for the popup (Windows 11).              |
 
 ## Providers
 
@@ -38,18 +40,21 @@ Quick Launch uses a plugin-based provider system. Each provider handles a specif
 **Provider Index**
 
 - [Apps](#apps-provider)
-- [Calculator](#calculator-provider)
-- [Currency](#currency-provider)
-- [Web Search](#web-search-provider)
 - [Bookmarks](#bookmarks-provider)
-- [System Commands](#system-commands-provider)
-- [Settings](#settings-provider)
+- [Calculator](#calculator-provider)
+- [Clipboard History](#clipboard-history-provider)
+- [Color Converter](#color-converter-provider)
+- [Currency](#currency-provider)
+- [Emoji](#emoji-provider)
+- [File Search](#file-search-provider)
 - [Kill Process](#kill-process-provider)
 - [Port Viewer](#port-viewer-provider)
-- [File Search](#file-search-provider)
+- [Settings](#settings-provider)
+- [Snippets](#snippets-provider)
+- [System Commands](#system-commands-provider)
 - [Unit Converter](#unit-converter-provider)
-- [Emoji](#emoji-provider)
-- [Color Converter](#color-converter-provider)
+- [Web Search](#web-search-provider)
+- [World Clock](#world-clock-provider)
 
 ### Apps Provider
 
@@ -62,7 +67,7 @@ Searches installed applications (Start Menu shortcuts). This is the default prov
 | `priority`    | int    | `0`     | Sort order when multiple providers share the same prefix. Lower values appear first. |
 | `show_recent` | bool   | `true`  | Show recently launched apps at the top.          |
 | `max_recent`  | int    | `10`    | Maximum number of recent apps to display.        |
-| `show_path`   | bool   | `false` | Show the full path of the application shortcut.  |
+| `show_description` | bool | `false` | Show a short description of the application. |
 
 ### Calculator Provider
 
@@ -70,9 +75,27 @@ Inline math evaluation. Type `=` followed by a math expression (e.g., `=2+2`, `=
 
 | Option    | Type   | Default | Description                            |
 |-----------|--------|---------|----------------------------------------|
-| `enabled`  | bool   | `true`  | Enable/disable the calculator provider. |
+| `enabled`  | bool   | `false`  | Enable/disable the calculator provider. |
 | `prefix`   | string | `"="`  | Trigger prefix. Use `"*"` to include in default results. |
 | `priority` | int    | `0`     | Sort order when multiple providers share the same prefix. Lower values appear first. |
+
+### Clipboard History Provider
+
+Browse and restore Windows Clipboard History entries. Type `cb` to list recent items, `cb <term>` to filter, or `cb clear` to reveal the "Clear clipboard history" action. Supports plain text, rich text (HTML), and images with previews, press Enter to restore an item to the clipboard.
+
+| Option      | Type   | Default | Description                                                         |
+|-------------|--------|---------|---------------------------------------------------------------------|
+| `enabled`   | bool   | `false`  | Enable/disable the clipboard history provider.                      |
+| `prefix`    | string | `"cb"` | Trigger prefix. Use `"*"` to include in default results.          |
+| `priority`  | int    | `0`     | Sort order when multiple providers share the same prefix. Lower values appear first. |
+| `max_items` | int    | `30`    | Maximum number of clipboard history items to show.                  |
+
+Usage:
+- Press Enter on a result to restore it to the clipboard.
+- Right-click a result for `Copy to clipboard` or `Delete from history` actions.
+
+> [!NOTE]
+> Clipboard History requires Windows' Clipboard History feature. If the feature is disabled or access is denied, Quick Launch will show an explanatory message and can open the Windows Clipboard settings.
 
 ### Currency Provider
 
@@ -80,7 +103,7 @@ Convert between currencies using ECB (European Central Bank) daily rates. Type `
 
 | Option    | Type | Default | Description                            |
 |-----------|------|---------|----------------------------------------|
-| `enabled`  | bool   | `true`  | Enable/disable the currency provider.   |
+| `enabled`  | bool   | `false`  | Enable/disable the currency provider.   |
 | `prefix`   | string | `"$"`  | Trigger prefix. Use `"*"` to include in default results. |
 | `priority` | int    | `0`     | Sort order when multiple providers share the same prefix. Lower values appear first. |
 
@@ -102,7 +125,7 @@ Opens a web search in the default browser. Type `?` followed by a search query (
 
 | Option    | Type   | Default    | Description                                                   |
 |-----------|--------|------------|---------------------------------------------------------------|
-| `enabled`  | bool   | `true`     | Enable/disable the web search provider.                       |
+| `enabled`  | bool   | `false`     | Enable/disable the web search provider.                       |
 | `prefix`   | string | `"?"`     | Trigger prefix. Use `"*"` to include in default results.     |
 | `priority` | int    | `0`        | Sort order when multiple providers share the same prefix. Lower values appear first. |
 | `engine`   | string | `"google"` | Preferred (first) search engine. All other engines are shown below it. |
@@ -126,7 +149,7 @@ Search and open browser bookmarks. Type `*` followed by a search term (e.g., `*g
 
 | Option     | Type   | Default     | Description                                                                     |
 |------------|--------|-------------|---------------------------------------------------------------------------------|
-| `enabled`  | bool   | `true`      | Enable/disable the bookmarks provider.                                          |
+| `enabled`  | bool   | `false`      | Enable/disable the bookmarks provider.                                          |
 | `prefix`   | string | `"*"`      | Trigger prefix. `"*"` means included in default results.                       |
 | `priority` | int    | `0`         | Sort order when multiple providers share the same prefix. Lower values appear first. |
 | `browser`  | string | `"all"`     | Browser to read bookmarks from (`"all"`, `"chrome"`, `"edge"`, `"brave"`, `"firefox"`, `"vivaldi"`, `"chromium"`). |
@@ -143,7 +166,7 @@ Exposes common system actions. Type `>` followed by a command name (e.g., `>shut
 
 | Option    | Type | Default | Description                                  |
 |-----------|------|---------|----------------------------------------------|
-| `enabled`  | bool   | `true`  | Enable/disable the system commands provider.  |
+| `enabled`  | bool   | `false`  | Enable/disable the system commands provider.  |
 | `prefix`   | string | `">"`  | Trigger prefix. Use `"*"` to include in default results. |
 | `priority` | int    | `0`     | Sort order when multiple providers share the same prefix. Lower values appear first. |
 
@@ -155,7 +178,7 @@ Quick access to Windows Settings pages. Type `@` followed by a setting name (e.g
 
 | Option    | Type | Default | Description                             |
 |-----------|------|---------|-----------------------------------------|
-| `enabled`  | bool   | `true`  | Enable/disable the settings provider.    |
+| `enabled`  | bool   | `false`  | Enable/disable the settings provider.    |
 | `prefix`   | string | `"@"`  | Trigger prefix. Use `"*"` to include in default results. |
 | `priority` | int    | `0`     | Sort order when multiple providers share the same prefix. Lower values appear first. |
 
@@ -165,7 +188,7 @@ Search and terminate running processes. Type `!` followed by a process name (e.g
 
 | Option    | Type | Default | Description                                |
 |-----------|------|---------|--------------------------------------------|
-| `enabled`  | bool   | `true`  | Enable/disable the kill process provider.   |
+| `enabled`  | bool   | `false`  | Enable/disable the kill process provider.   |
 | `prefix`   | string | `"!"`  | Trigger prefix. Use `"*"` to include in default results. |
 | `priority` | int    | `0`     | Sort order when multiple providers share the same prefix. Lower values appear first. |
 
@@ -177,18 +200,18 @@ Type `pv` followed by optional filters (e.g. `pv 80`, `pv tcp 443`, `pv kill 80`
 - `pv 80` - show entries for local port 80
 - `pv tcp 443` - show TCP entries for local port 443
 - `pv udp 53` - show UDP entries for local port 53
-- `pv process chrome.exe` - show ports for a process (includes connected TCP entries)
-- `pv proccess chrome.exe` - alias for `process`
+- `pv chrome` - show ports for processes matching "chrome" (includes all TCP states)
 - `pv kill 80` - kill the owning process for port 80 (if resolvable)
 - `pv kill 12345` - kill PID 12345 (heuristic: numbers > 65535 are treated as PID)
+- `pv kill chrome` - kill processes matching "chrome"
 
-Port numbers are matched by digits (substring match). For example, `pv udp 5` can match ports like `500`, `5353`, `5985`, etc.
+Port numbers are matched by digits (substring match). For example, `pv udp 5` can match ports like `500`, `5353`, `5985`, etc. Text filters search across process names, addresses, protocols and states.
 
 Selecting a normal (non-`kill`) result copies a short summary string to the clipboard.
 
 | Option                | Type   | Default | Description |
 |-----------------------|--------|---------|-------------|
-| `enabled`             | bool   | `true`  | Enable/disable the port viewer provider. |
+| `enabled`             | bool   | `false`  | Enable/disable the port viewer provider. |
 | `prefix`              | string | `"pv"` | Trigger prefix. |
 | `priority`            | int    | `0`     | Sort order when multiple providers share the same prefix. Lower values appear first. |
 | `tcp_listening_only`  | bool   | `true`  | Only show `LISTENING` TCP entries by default. |
@@ -196,17 +219,30 @@ Selecting a normal (non-`kill`) result copies a short summary string to the clip
 
 ### File Search Provider
 
-Search files and folders on the system. Type `/` followed by a filename (e.g., `/readme.txt`). Uses the bundled [Everything](https://www.voidtools.com/) SDK for instant results or falls back to Windows Search.
+Search files and folders on the system. Type `/` followed by a filename (e.g., `/readme.txt`). Supports glob patterns like `/*.mp3` or `/config*.json`.
 
 | Option            | Type   | Default | Description                                                                     |
 |-------------------|--------|---------|---------------------------------------------------------------------------------|
-| `enabled`         | bool   | `true`  | Enable/disable the file search provider.                                        |
+| `enabled`         | bool   | `false`  | Enable/disable the file search provider.                                        |
 | `prefix`          | string | `"/"`  | Trigger prefix. Use `"*"` to include in default results.                       |
 | `priority`        | int    | `0`     | Sort order when multiple providers share the same prefix. Lower values appear first. |
-| `backend`         | string | `"auto"`| Search backend: `"auto"`, `"everything"`, or `"windows_search"`.                |
+| `backend`         | string | `"auto"`| Search backend: `"auto"`, `"everything"`, `"index"`, or `"disk"`.              |
+| `show_path`       | bool   | `true`  | Show the parent folder path and file size in the result description.            |
+
+#### Backends
+
+| Backend        | Description |
+|----------------|-------------|
+| `"auto"`       | Tries Everything first, then Index, then Disk as a final fallback. |
+| `"everything"` | Uses the bundled [Everything](https://www.voidtools.com/) SDK for instant indexed search. Requires the Everything service to be running. |
+| `"index"`      | Uses the Windows Search indexer via ADODB/SystemIndex. Only searches indexed locations. |
+| `"disk"`       | Full disk scan using Win32 `FindFirstFileExW`. No index required. Works on any system but slower than Everything. |
 
 > [!NOTE]
-> The Everything SDK DLL is bundled with the widget - no manual SDK setup is required. When `backend` is set to `"auto"`, the provider will try Everything SDK first and fall back to Windows Search if Everything is not running. For best performance, install [Everything](https://www.voidtools.com/) by voidtools.
+> The Everything SDK DLL is bundled with the widget - no manual SDK setup is required. For best performance, install [Everything](https://www.voidtools.com/) by voidtools.
+
+> [!NOTE]
+> The `"disk"` backend only scans fixed local drives. Removable drives (USB), network drives, and CD/DVD drives are automatically skipped. System directories like `Windows`, `$Recycle.Bin`, `node_modules`, `.git`, and other common cache/build folders are also excluded for performance.
 
 ### Unit Converter Provider
 
@@ -214,7 +250,7 @@ Convert between units of measurement. Type `~` followed by a value and unit (e.g
 
 | Option     | Type   | Default | Description                                |
 |------------|--------|---------|--------------------------------------------|
-| `enabled`  | bool   | `true`  | Enable/disable the unit converter provider. |
+| `enabled`  | bool   | `false`  | Enable/disable the unit converter provider. |
 | `prefix`   | string | `"~"`  | Trigger prefix. Use `"*"` to include in default results. |
 | `priority` | int    | `0`     | Sort order when multiple providers share the same prefix. Lower values appear first. |
 
@@ -235,7 +271,7 @@ Search and copy emojis to the clipboard. Type `:` followed by a name (e.g., `:sm
 
 | Option     | Type   | Default | Description                           |
 |------------|--------|---------|---------------------------------------|
-| `enabled`  | bool   | `true`  | Enable/disable the emoji provider.    |
+| `enabled`  | bool   | `false`  | Enable/disable the emoji provider.    |
 | `prefix`   | string | `":"`  | Trigger prefix. Use `"*"` to include in default results. |
 | `priority` | int    | `0`     | Sort order when multiple providers share the same prefix. Lower values appear first. |
 
@@ -247,7 +283,7 @@ Convert colors between HEX, RGB, HSL, HSV, HWB, LAB, LCH, OKLAB, and OKLCH forma
 
 | Option     | Type   | Default | Description                                  |
 |------------|--------|---------|----------------------------------------------|
-| `enabled`  | bool   | `true`  | Enable/disable the color converter provider.  |
+| `enabled`  | bool   | `false`  | Enable/disable the color converter provider.  |
 | `prefix`   | string | `"c:"` | Trigger prefix. Use `"*"` to include in default results. |
 | `priority` | int    | `0`     | Sort order when multiple providers share the same prefix. Lower values appear first. |
 
@@ -264,27 +300,73 @@ Accepted input formats:
 
 Shows all nine representations (HEX, RGB, HSL, HSV, HWB, LAB, LCH, OKLAB, OKLCH). Press Enter on a result to copy the value.
 
+### Snippets Provider
+
+Save and type text snippets into the previously focused window. Type `;` to see all your snippets sorted by recent use, or `;meeting` to filter by name or content. Selecting a snippet closes the popup and types the text into whatever window was focused before, using SendInput. You can also create and edit snippets inline using the preview panel.
+
+Snippets support template variables that get resolved at the moment you use them:
+
+| Variable                | Description                                      |
+|-------------------------|--------------------------------------------------|
+| `{{date}}`              | Current date (default format: YYYY-MM-DD).       |
+| `{{date:%d/%m/%Y}}`     | Current date with a custom format.               |
+| `{{time}}`              | Current time (default format: HH:MM:SS).         |
+| `{{time:%I:%M %p}}`     | Current time with a custom format.               |
+| `{{datetime}}`          | Current date and time.                           |
+| `{{clipboard}}`         | Current clipboard text.                          |
+| `{{username}}`          | Windows username.                                |
+
+Right-click a snippet for options like Copy to clipboard, Edit, or Delete.
+
+| Option       | Type   | Default | Description                                                         |
+|--------------|--------|---------|---------------------------------------------------------------------|
+| `enabled`    | bool   | `false`  | Enable/disable the snippets provider.                               |
+| `prefix`     | string | `";"`  | Trigger prefix. Use `"*"` to include in default results.          |
+| `priority`   | int    | `0`     | Sort order when multiple providers share the same prefix. Lower values appear first. |
+| `type_delay` | int    | `200`   | Delay in milliseconds before typing starts after the popup closes. Increase if the target window needs more time to regain focus. |
+
+### World Clock Provider
+
+Show current time in cities around the world. Type `tz` to see your pinned cities (or a default set if nothing is pinned), or `tz tokyo` to filter by city name. Click a result to copy the formatted time to the clipboard. Right-click a city to pin or unpin it. Pinned cities appear first when searching and are shown as the default view.
+
+| Option      | Type   | Default | Description                                  |
+|-------------|--------|---------|----------------------------------------------|
+| `enabled`   | bool   | `false`  | Enable/disable the world clock provider.      |
+| `prefix`    | string | `"tz"` | Trigger prefix. Use `"*"` to include in default results. |
+| `priority`  | int    | `0`     | Sort order when multiple providers share the same prefix. Lower values appear first. |
+
+
+Each result displays:
+- **Title:** City name and current time (e.g., `Tokyo  -  2:30 AM`)
+- **Description:** Date, UTC offset, and difference from local time (e.g., `Wed, Feb 14 - UTC+9 (14h ahead)`)
+
+> [!NOTE]
+> World Clock uses Python's built-in `zoneinfo` module - no API calls or external dependencies required. Times are always live and accurate.
+
 ## Provider Prefixes Reference
 
 Prefixes are configurable per provider. Set `prefix` to `"*"` to include a provider in the default (unprefixed) results. These are the defaults:
 
-| Prefix   | Provider         | Example               |
-|----------|------------------|-----------------------|
-| `*`      | Apps             | `notepad`             |
-| `=`      | Calculator       | `=2*pi`               |
-| `$`      | Currency         | `$100 usd eur`        |
-| `*`      | Bookmarks        | `*github`             |
-| `?`      | Web Search       | `?python tutorial`    |
-| `>`      | System Commands  | `>lock`               |
-| `@`      | Settings         | `@wifi`               |
-| `!`      | Kill Process     | `!chrome`             |
-| `/`      | File Search      | `/report.docx`        |
-| `~`      | Unit Converter   | `~10 kg to lb`        |
-| `:`      | Emoji            | `:fire`               |
-| `c:`     | Color Converter  | `c:#FF5500`           |
+| Prefix   | Provider          | Example               |
+|----------|-------------------|-----------------------|
+| `*`      | Apps              | `notepad`             |
+| `*`      | Bookmarks         | `*github`             |
+| `=`      | Calculator        | `=2*pi`               |
+| `cb`     | Clipboard History | `cb notepad`          |
+| `c:`     | Color Converter   | `c:#FF5500`           |
+| `$`      | Currency          | `$100 usd eur`        |
+| `:`      | Emoji             | `:fire`               |
+| `/`      | File Search       | `/report.docx`        |
+| `!`      | Kill Process      | `!chrome`             |
+| `;`      | Snippets          | `;meeting notes`      |
+| `@`      | Settings          | `@wifi`               |
+| `>`      | System Commands   | `>lock`               |
+| `~`      | Unit Converter    | `~10 kg to lb`        |
+| `?`      | Web Search        | `?python tutorial`    |
+| `tz`     | World Clock       | `tz tokyo`            |
 
 
-## Example Minimal Configuration
+## Example Minimal Configuration enabling just the apps provider
 
 ```yaml
 quick_launch:
@@ -292,16 +374,16 @@ quick_launch:
   options:
     label: "<span>\uf002</span>"
     search_placeholder: "Search applications..."
-    max_results: 50
+    max_results: 30
     show_icons: true
-    icon_size: 24
+    icon_size: 32
     popup:
-      width: 640
+      width: 720
       height: 480
       blur: true
       round_corners: true
       round_corners_type: "normal"
-      border_color: "System"
+      border_color: "system"
       dark_mode: true
     callbacks:
       on_left: "toggle_quick_launch"
@@ -309,7 +391,7 @@ quick_launch:
       - keys: "alt+space"
         action: "toggle_quick_launch"
 ```
-## Example Configuration
+## Example Configuration enabling multiple providers
 
 ```yaml
 quick_launch:
@@ -326,63 +408,84 @@ quick_launch:
         prefix: "*"
         priority: 0
         show_recent: true
-        max_recent: 10
-        show_path: false
+        max_recent: 5
+        show_description: true
       calculator:
         enabled: true
         prefix: "="
-        priority: 0
+        priority: 1
+      clipboard_history:
+        enabled: true
+        prefix: "cb"
+        priority: 2
+        max_items: 30
       currency:
         enabled: true
         prefix: "$"
-        priority: 0
+        priority: 3
       bookmarks:
         enabled: true
         prefix: "*"
-        priority: 0
+        priority: 4
         browser: "all"
         profile: "Default"
       web_search:
         enabled: true
         prefix: "?"
-        priority: 0
+        priority: 5
         engine: "google"
       system_commands:
         enabled: true
         prefix: ">"
-        priority: 0
+        priority: 6
       settings:
         enabled: true
         prefix: "@"
-        priority: 0
+        priority: 7
       kill_process:
         enabled: true
         prefix: "!"
-        priority: 0
+        priority: 8
+      port_viewer:
+        enabled: true
+        prefix: "pv"
+        priority: 9
+        tcp_listening_only: true
+        include_established: false
       file_search:
         enabled: true
         prefix: "/"
-        priority: 0
+        priority: 10
         backend: "auto"
+        show_path: true
       unit_converter:
         enabled: true
         prefix: "~"
-        priority: 0
+        priority: 11
       emoji:
         enabled: true
         prefix: ":"
-        priority: 0
+        priority: 12
       color_converter:
         enabled: true
         prefix: "c:"
-        priority: 0
+        priority: 13
+      world_clock:
+        enabled: true
+        prefix: "tz"
+        priority: 14
+      snippets:
+        enabled: true
+        prefix: ";"
+        priority: 15
+        type_delay: 200
     popup:
-      width: 640
+      width: 720
       height: 480
       blur: true
       round_corners: true
       round_corners_type: "normal"
-      border_color: "System"
+      border_color: "system"
       dark_mode: true
     callbacks:
       on_left: "toggle_quick_launch"
@@ -398,18 +501,24 @@ quick_launch:
 - **max_results:** Maximum number of results displayed across all providers.
 - **show_icons:** Whether to show icons next to each result.
 - **icon_size:** The size of application icons (in pixels). Only applies to image-based icons.
+- **home_page:** When true, show provider shortcut tiles (home page) when the search input is empty.
 - **providers:** Configuration for each search provider. Each provider can be individually enabled/disabled and configured.
   - ***apps:*** Application search with frecency-ranked results. See Apps Provider table above.
+  - ***bookmarks:*** Search and open browser bookmarks (Chrome, Edge, Brave, Vivaldi, Chromium, Firefox). Configurable `browser` and `profile` options.
   - ***calculator:*** Inline math evaluation with prefix `=`.
+  - ***clipboard_history:*** Browse and restore Windows Clipboard History entries (text, rich text, images). Use `max_items` to limit how many entries are shown.
   - ***currency:*** Currency conversion using ECB daily rates with prefix `$`. Rates cached for 12 hours.
   - ***web_search:*** Browser-based web search with prefix `?`. Shows all engines (Google, Bing, DuckDuckGo, Wikipedia, GitHub, YouTube, Reddit, Stack Overflow) with the preferred engine listed first.
   - ***system_commands:*** System actions (shutdown, restart, lock, etc.) with prefix `>`.
   - ***settings:*** Quick access to Windows Settings pages with prefix `@`.
   - ***kill_process:*** Process search and termination with prefix `!`.
-  - ***file_search:*** File and folder search with prefix `/`. Uses Everything SDK or Windows Search.
+  - ***file_search:*** File and folder search with prefix `/`. Uses Everything SDK, Windows Search indexer, or full disk scan.
+  - ***port_viewer:*** View TCP/UDP ports and the owning PID/process name (via `netstat`). Supports filtering and kill actions.
   - ***unit_converter:*** Convert between units (length, weight, volume, speed, data, time, temperature) with prefix `~`.
   - ***emoji:*** Search and copy emojis to clipboard with prefix `:`.
   - ***color_converter:*** Convert colors between HEX, RGB, HSL, HSV with prefix `c:`.
+  - ***world_clock:*** Show current time in cities worldwide with prefix `tz`. Pin cities via right-click.
+  - ***snippets:*** Save and type text snippets with prefix `;`. Supports template variables and inline editing.
 - **popup:** Popup window appearance settings.
   - ***width:*** Width of the popup window in pixels.
   - ***height:*** Height of the popup window in pixels.
@@ -429,7 +538,7 @@ quick_launch:
 ## Example Style
 
 ```css
-/* Bar widget */
+/* Quick Launch Widget */
 .quick-launch-widget .icon {
     font-size: 14px;
     padding: 0 4px;
@@ -437,28 +546,35 @@ quick_launch:
 .quick-launch-widget .icon:hover {
     color: #fff;
 }
+
+/* Quick Launch Popup - main window */
 .quick-launch-popup .container {
-    background-color:rgba(30, 30, 30, 0.9)
+    background-color:rgba(29, 29, 29, 0.452);
 }
+/* Search bar container */
 .quick-launch-popup .search {
     padding: 12px 16px;
     background-color: transparent;
     border-bottom: 1px solid rgba(255, 255, 255, 0.15);
 }
-.quick-launch-popup .search-icon {
+/* Search loader line color */
+.quick-launch-popup .search .loader-line {
+    color: #449bff;
+}
+.quick-launch-popup .search .search-icon {
     font-family: "Segoe Fluent Icons";
     font-size: 18px;
     color: rgba(255, 255, 255, 0.6);
     padding-right: 8px;
     min-width: 18px;
 }
-.quick-launch-popup .search-submit-icon {
+.quick-launch-popup .search .search-submit-icon {
     font-family: "Segoe Fluent Icons";
     font-size: 18px;
     color: rgba(255, 255, 255, 0.6);
     min-width: 18px;
 }
-.quick-launch-popup .search-input {
+.quick-launch-popup .search .search-input {
     background: transparent;
     border: none;
     color: #ffffff;
@@ -466,49 +582,159 @@ quick_launch:
     font-family: 'Segoe UI';
     font-weight: 400;
     padding: 4px 0;
-} 
+}
+/* Search prefix styling (e.g., ">" for commands) */
+.quick-launch-popup .search .prefix {
+    background: #2167d8;
+    border-radius: 6px;
+    color: #ffffff;
+    padding: -2px 8px 0px 8px;
+    margin-top: 2px;
+    margin-right:4px;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: 'Segoe UI';
+    max-height: 28px;
+}
+
+/* Results list */
 .quick-launch-popup .results {
     background: transparent;
     padding: 8px;
 }
-.quick-launch-popup .results .item {
-    padding: 16px;
-    border-radius: 8px;
-}
-.quick-launch-popup .results .item:hover,
-.quick-launch-popup .results .item.selected {
-    background-color: rgba(128, 130, 158, 0.15);
-} 
-.quick-launch-popup .results .item-title {
-    font-size: 15px;
+/* Individual result item here you can set font szie for title */
+.quick-launch-popup .results-list-view {
+    font-size: 16px;
     font-family: 'Segoe UI';
     font-weight: 600;
     color: #ffffff;
 }
-.quick-launch-popup .results .item-description {
+.quick-launch-popup .results-list-view .description {
+    color: rgba(255, 255, 255, 0.6);
     font-size: 11px;
-    font-weight: 600;
     font-family: 'Segoe UI';
-    color: rgba(255, 255, 255, 0.6);     
+    font-weight: 600;
 }
-.quick-launch-popup .results .item-icon-char {
-    font-family: "Segoe Fluent Icons";
-    font-size: 18px;
-    color: #c6cad8;
-    margin: 0;
-    padding: 0;
+/* Result item hover and selected states */
+.quick-launch-popup .results-list-view::item {
+    padding: 12px;
+    border-radius: 8px;
 }
-.quick-launch-popup .results-empty {
+.quick-launch-popup .results-list-view::item:hover,
+.quick-launch-popup .results-list-view::item:selected {
+    background-color: rgba(128, 130, 158, 0.1);
+}
+/* Empty state when no results found */
+.quick-launch-popup .results-empty-text {
     font-size: 24px;
     font-family: 'Segoe UI';
-    color: rgba(255, 255, 255, 0.6);
-    padding-top: 32px;
+    color: rgb(255, 255, 255);
+    padding-top: 8px;
+}
+
+/* Preview Pane */
+.quick-launch-popup .preview {
+    background: rgba(0, 0, 0, 0.0);
+    border-left: 1px solid rgba(255, 255, 255, 0.06);
+}
+.quick-launch-popup .preview .preview-text {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.85);
+    padding: 8px 12px;
+    font-family: "Segoe UI";
+    background-color: rgba(255, 255, 255, 0.03);
+    border: none;
+}
+.quick-launch-popup .preview .preview-image {
+    background-color: rgba(255, 255, 255, 0.03);
+    padding: 8px 12px;
+}
+.quick-launch-popup .preview .preview-meta {
+    padding: 6px 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    font-family: "Segoe UI";
+}
+.quick-launch-popup .preview .preview-meta .preview-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: rgb(255, 255, 255);
+    font-family: "Segoe UI";
+    margin-bottom: 10px;
+    margin-left: -2px;
+}
+
+.quick-launch-popup .preview .preview-meta .preview-subtitle {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.8);
+    font-family: "Segoe UI";
+    padding-bottom: 1px;
+}
+
+
+/* Preview inline edit form (.preview.edit) */
+.quick-launch-popup .preview.edit .preview-title {
+    font-size: 13px;
+    font-family: 'Segoe UI';
+    font-weight: 600;
+    color: #ffffff;
+    padding: 8px 12px 4px 12px;
+}
+.quick-launch-popup .preview.edit .preview-line-edit {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 4px;
+    color: #ffffff;
+    font-size: 13px;
+    font-family: 'Segoe UI';
+    padding: 6px 8px;
+    margin: 0 12px;
+}
+.quick-launch-popup .preview.edit .preview-line-edit:focus {
+    border-color: rgba(255, 255, 255, 0.3);
+}
+.quick-launch-popup .preview.edit .preview-text-edit {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 4px;
+    color: #ffffff;
+    font-size: 13px;
+    font-family: 'Segoe UI';
+    padding: 6px 8px;
+    margin: 0 12px;
+}
+.quick-launch-popup .preview.edit .preview-text-edit:focus {
+    border-color: rgba(255, 255, 255, 0.3);
+}
+.quick-launch-popup .preview.edit .preview-actions {
+    padding: 8px 12px;
+}
+.quick-launch-popup .preview.edit .preview-btn {
+    background: rgb(45, 46, 48);
+    border: none;
+    border-radius: 4px;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 12px;
+    font-family: 'Segoe UI';
+    font-weight: 600;
+    padding: 4px 16px;
+}
+.quick-launch-popup .preview.edit .preview-btn:hover {
+    background: rgb(59, 60, 63);
+}
+.quick-launch-popup .preview.edit .preview-btn.save {
+    background: rgb(12, 81, 190);
+    color: #ffffff;
+}
+.quick-launch-popup .preview.edit .preview-btn.save:hover {
+    background:  rgb(19, 90, 204);
 }
 ```
 
 > [!NOTE]
-> All provider icons use **Segoe Fluent Icons** (built into Windows 11). The `font-family: "Segoe Fluent Icons"` must be set on `.search-icon`, `.search-enter-icon`, and `.result-icon-char` for icons to render correctly.
+> This widget uses SVG icons by default, which cannot be styled with CSS. Also, keep in mind that styling may be limited for certain elements.
+
+> [!IMPORTANT]  
+> Quick Launch widget uses the `QMenu`, which supports various styles. You can customize the appearance of the menu using CSS styles. For more information on styling, refer to the [Styling](https://github.com/amnweb/yasb/wiki/Styling#context-menu-styling).
 
 ## Preview 
 ![QL Widget Preview](assets/3c5a8b2f-e7d1f4a9-6c8b-4d2e-9f1a3e5c7b2d.png)
-

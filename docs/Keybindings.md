@@ -146,7 +146,7 @@ YASB only supports **modifier + single key** combinations. You cannot bind multi
 
 ### Windows Key Limitations
 
-Windows Explorer pre-registers many `Win+key` shortcuts (e.g., `Win+S`, `Win+W`, `Win+Shift+S`). `RegisterHotKey` cannot override these — the registration will silently fail. Use `Alt`, `Ctrl`, or `Ctrl+Shift` based combinations instead for reliable hotkeys.
+Windows Explorer pre-registers many `Win+key` shortcuts (e.g., `Win+S`, `Win+W`, `Win+Shift+S`). `RegisterHotKey` cannot override these - the registration will silently fail. Use `Alt`, `Ctrl`, or `Ctrl+Shift` based combinations instead for reliable hotkeys.
 
 ### Modifier-Only Hotkeys Not Supported
 
@@ -208,7 +208,7 @@ To avoid conflicts, use unique key combinations for each widget action.
 
 1. **Check the logs**: Enable debug logging to see if the hotkey was registered successfully
 2. **Verify key names**: Ensure you're using supported key names from the tables above
-3. **Check for conflicts**: Another application may have registered the same combination — `RegisterHotKey` is first-come-first-served
+3. **Check for conflicts**: Another application may have registered the same combination - `RegisterHotKey` is first-come-first-served
 4. **Reserved Windows combos**: `Win+L` (lock screen) and `Ctrl+Alt+Delete` cannot be overridden
 
 ### Hotkey Registered but Not Responding

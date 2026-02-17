@@ -4,8 +4,7 @@ import re
 from PyQt6.QtWidgets import QApplication
 
 from core.utils.widgets.quick_launch.base_provider import BaseProvider, ProviderResult
-
-_ICON = "\ue790"
+from core.utils.widgets.quick_launch.providers.resources.icons import ICON_COLOR
 
 
 def _hex_to_rgb(hex_str: str) -> tuple[int, int, int, int]:
@@ -417,6 +416,9 @@ class ColorConverterProvider(BaseProvider):
     """Convert colors between HEX, RGB, HSL, HSV, HWB, LAB, LCH, OKLAB, and OKLCH."""
 
     name = "color_converter"
+    display_name = "Color Converter"
+    input_placeholder = "Enter a color value..."
+    icon = ICON_COLOR
 
     def match(self, text: str) -> bool:
         text = text.strip()
@@ -424,14 +426,14 @@ class ColorConverterProvider(BaseProvider):
             return True
         return False
 
-    def get_results(self, text: str) -> list[ProviderResult]:
+    def get_results(self, text: str, **kwargs) -> list[ProviderResult]:
         query = self.get_query_text(text).strip()
         if not query:
             return [
                 ProviderResult(
                     title="Color Converter",
                     description="Enter a color: #hex, #hexAlpha, rgba(), hsl(), hwb(), lab(), lch(), oklab(), oklch(), or a name",
-                    icon_char=_ICON,
+                    icon_char=ICON_COLOR,
                     provider=self.name,
                 )
             ]
@@ -442,7 +444,7 @@ class ColorConverterProvider(BaseProvider):
                 ProviderResult(
                     title="Invalid color",
                     description="Try: #FF550090, rgba(255,85,0,0.5), hsl(20,100,50), lab(50,0,0), oklab(0.5,0,0)",
-                    icon_char=_ICON,
+                    icon_char=ICON_COLOR,
                     provider=self.name,
                 )
             ]
@@ -472,63 +474,63 @@ class ColorConverterProvider(BaseProvider):
             ProviderResult(
                 title=f"{hex_val}",
                 description="HEX - press Enter to copy",
-                icon_char=_ICON,
+                icon_char=ICON_COLOR,
                 provider=self.name,
                 action_data={"value": hex_val},
             ),
             ProviderResult(
                 title=f"{rgb_val}",
                 description="RGBA - press Enter to copy" if has_alpha else "RGB - press Enter to copy",
-                icon_char=_ICON,
+                icon_char=ICON_COLOR,
                 provider=self.name,
                 action_data={"value": rgb_val},
             ),
             ProviderResult(
                 title=f"{hsl_val}",
                 description="HSLA - press Enter to copy" if has_alpha else "HSL - press Enter to copy",
-                icon_char=_ICON,
+                icon_char=ICON_COLOR,
                 provider=self.name,
                 action_data={"value": hsl_val},
             ),
             ProviderResult(
                 title=f"{hsv_val}",
                 description="HSVA - press Enter to copy" if has_alpha else "HSV - press Enter to copy",
-                icon_char=_ICON,
+                icon_char=ICON_COLOR,
                 provider=self.name,
                 action_data={"value": hsv_val},
             ),
             ProviderResult(
                 title=f"{hwb_val}",
                 description="HWB - press Enter to copy",
-                icon_char=_ICON,
+                icon_char=ICON_COLOR,
                 provider=self.name,
                 action_data={"value": hwb_val},
             ),
             ProviderResult(
                 title=f"{lab_val}",
                 description="CIE LAB - press Enter to copy",
-                icon_char=_ICON,
+                icon_char=ICON_COLOR,
                 provider=self.name,
                 action_data={"value": lab_val},
             ),
             ProviderResult(
                 title=f"{lch_val}",
                 description="CIE LCH - press Enter to copy",
-                icon_char=_ICON,
+                icon_char=ICON_COLOR,
                 provider=self.name,
                 action_data={"value": lch_val},
             ),
             ProviderResult(
                 title=f"{oklab_val}",
                 description="OKLAB - press Enter to copy",
-                icon_char=_ICON,
+                icon_char=ICON_COLOR,
                 provider=self.name,
                 action_data={"value": oklab_val},
             ),
             ProviderResult(
                 title=f"{oklch_val}",
                 description="OKLCH - press Enter to copy",
-                icon_char=_ICON,
+                icon_char=ICON_COLOR,
                 provider=self.name,
                 action_data={"value": oklch_val},
             ),

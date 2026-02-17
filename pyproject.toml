@@ -38,6 +38,7 @@ dependencies = [
     "winrt.windows.management.deployment==3.2.1",
     "winrt.windows.applicationmodel==3.2.1",
     "winrt.windows.applicationmodel.core==3.2.1",
+    "winrt.windows.applicationmodel.datatransfer==3.2.1",
     "winrt.windows.networking==3.2.1",
     "winrt.windows.networking.connectivity==3.2.1",
     "winrt.windows.storage==3.2.1",

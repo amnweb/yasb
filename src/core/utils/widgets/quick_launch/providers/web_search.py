@@ -1,54 +1,72 @@
 import webbrowser
 
 from core.utils.widgets.quick_launch.base_provider import BaseProvider, ProviderResult
+from core.utils.widgets.quick_launch.providers.resources.icons import (
+    ICON_BING,
+    ICON_DUCKDUCKGO,
+    ICON_GITHUB,
+    ICON_GOOGLE,
+    ICON_REDDIT,
+    ICON_STACKOVERFLOW,
+    ICON_WEB_SEARCH,
+    ICON_WIKIPEDIA,
+    ICON_X_TWITTER,
+    ICON_YOUTUBE,
+)
 
 _ENGINES = {
     "google": {
         "name": "Google",
         "url": "https://www.google.com/search?q={}",
-        "icon": "\ue774",
+        "icon": ICON_GOOGLE,
         "description": "Search the web with Google",
     },
     "bing": {
         "name": "Bing",
         "url": "https://www.bing.com/search?q={}",
-        "icon": "\uf6fa",
+        "icon": ICON_BING,
         "description": "Search the web with Bing",
     },
     "duckduckgo": {
         "name": "DuckDuckGo",
         "url": "https://duckduckgo.com/?q={}",
-        "icon": "\uea18",
+        "icon": ICON_DUCKDUCKGO,
         "description": "Private web search",
     },
     "wikipedia": {
         "name": "Wikipedia",
         "url": "https://en.wikipedia.org/w/index.php?search={}",
-        "icon": "\ue82d",
+        "icon": ICON_WIKIPEDIA,
         "description": "Search Wikipedia articles",
     },
     "github": {
         "name": "GitHub",
         "url": "https://github.com/search?q={}",
-        "icon": "\ue943",
+        "icon": ICON_GITHUB,
         "description": "Search GitHub repositories and code",
     },
     "youtube": {
         "name": "YouTube",
         "url": "https://www.youtube.com/results?search_query={}",
-        "icon": "\ue714",
+        "icon": ICON_YOUTUBE,
         "description": "Search YouTube videos",
     },
     "reddit": {
         "name": "Reddit",
         "url": "https://www.reddit.com/search/?q={}",
-        "icon": "\ue8f2",
+        "icon": ICON_REDDIT,
         "description": "Search Reddit posts and communities",
+    },
+    "x": {
+        "name": "X (Twitter)",
+        "url": "https://twitter.com/search?q={}",
+        "icon": ICON_X_TWITTER,
+        "description": "Search X (formerly Twitter) posts",
     },
     "stackoverflow": {
         "name": "Stack Overflow",
         "url": "https://stackoverflow.com/search?q={}",
-        "icon": "\ue897",
+        "icon": ICON_STACKOVERFLOW,
         "description": "Search programming Q&A",
     },
 }
@@ -62,6 +80,9 @@ class WebSearchProvider(BaseProvider):
     """
 
     name = "web_search"
+    display_name = "Web Search"
+    input_placeholder = "Search the web..."
+    icon = ICON_WEB_SEARCH
 
     def match(self, text: str) -> bool:
         if self.prefix:
@@ -79,7 +100,7 @@ class WebSearchProvider(BaseProvider):
                 ordered.append((key, info))
         return ordered
 
-    def get_results(self, text: str) -> list[ProviderResult]:
+    def get_results(self, text: str, **kwargs) -> list[ProviderResult]:
         query = self.get_query_text(text)
         engines = self._ordered_engines()
 
@@ -89,7 +110,7 @@ class WebSearchProvider(BaseProvider):
                 ProviderResult(
                     title=f"Search {preferred_name}...",
                     description="Type your search query",
-                    icon_char="\ue774",
+                    icon_char=ICON_WEB_SEARCH,
                     provider=self.name,
                 )
             ]
@@ -98,7 +119,7 @@ class WebSearchProvider(BaseProvider):
         for key, info in engines:
             results.append(
                 ProviderResult(
-                    title=f"Search {info['name']} for \u201c{query}\u201d",
+                    title=f'Search {info["name"]} for "{query}"',
                     description=info["description"],
                     icon_char=info["icon"],
                     provider=self.name,

@@ -30,7 +30,16 @@ class AppListLoader(QThread):
         import glob
         import subprocess
 
-        filter_keywords = {"uninstall", "readme", "help", "documentation", "license", "setup", "installer"}
+        filter_keywords = {
+            "uninstall",
+            "readme",
+            "help",
+            "documentation",
+            "license",
+            "setup",
+            "installer",
+            "administrative tools",
+        }
 
         start_menu_dirs = [
             os.path.expandvars(r"%APPDATA%\Microsoft\Windows\Start Menu\Programs"),
