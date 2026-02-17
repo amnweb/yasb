@@ -17,7 +17,7 @@ from core.utils.widgets.quick_launch.base_provider import (
     ProviderMenuActionResult,
     ProviderResult,
 )
-from core.utils.widgets.quick_launch.fuzzy import fuzzy_score
+from core.utils.widgets.quick_launch.fuzzy import _split_camel, fuzzy_score
 from core.utils.widgets.quick_launch.providers.resources.icons import ICON_APPS
 
 
@@ -327,12 +327,20 @@ class AppsProvider(BaseProvider):
                 if fs is None and p.startswith("UWP::"):
                     appid = p[5:].split("!")[0].split("_")[0]
                     pkg_name = appid.rsplit(".", 1)[-1] if "." in appid else appid
-                    fs = fuzzy_score(text_lower, pkg_name)
+                    # Split CamelCase into words (WindowsTerminal -> Windows Terminal)
+                    # and run fuzzy matching on the human-readable form, but cap
+                    # the score so package-name matches never outrank direct
+                    # display-name matches.
+                    pkg_words = _split_camel(pkg_name)
+                    pkg_fs = fuzzy_score(text_lower, pkg_words)
+                    if pkg_fs is not None:
+                        fs = min(pkg_fs, 90)
                 if fs is not None:
-                    # Demote apps with default icon (system services, not real apps)
+                    # Heavily demote apps with default icon (system shortcuts,
+                    # not real apps) so they sink below real app matches.
                     icon = svc.icon_paths.get(f"{n}::{p}", "")
                     if icon.endswith("_default_app.png"):
-                        fs -= 50
+                        fs = min(fs, 30)
                     scored_apps.append((fs, n, p))
 
             if show_recent:

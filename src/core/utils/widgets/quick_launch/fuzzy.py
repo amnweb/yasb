@@ -1,3 +1,8 @@
+import re
+
+_CAMEL_RE = re.compile(r"(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])")
+
+
 def _get_initials(target: str) -> str:
     """Extract initials (word-boundary characters) from *target*."""
     initials: list[str] = []
@@ -9,6 +14,17 @@ def _get_initials(target: str) -> str:
         elif target[i - 1] == " " and ch != " ":
             initials.append(ch.lower())
     return "".join(initials)
+
+
+def _split_camel(name: str) -> str:
+    """Split a CamelCase name into space-separated words.
+
+    Examples:
+        WindowsTerminal -> Windows Terminal
+        WindowsAlarms   -> Windows Alarms
+        VLC             -> VLC
+    """
+    return _CAMEL_RE.sub(" ", name)
 
 
 def fuzzy_score(query: str, target: str) -> int | None:
