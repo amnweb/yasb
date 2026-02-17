@@ -47,7 +47,6 @@ class AppListLoader(QThread):
         ]
         apps = []
         seen_names = set()
-        seen_keys = set()
 
         def should_filter_app(name):
             """Check if app name contains any filter keywords"""
@@ -59,10 +58,8 @@ class AppListLoader(QThread):
                 name = os.path.splitext(os.path.basename(lnk))[0]
                 if should_filter_app(name):
                     continue
-                key = (name.lower(), lnk.lower())
-                if key not in seen_keys:
+                if name.lower() not in seen_names:
                     apps.append((name, lnk, None))
-                    seen_keys.add(key)
                     seen_names.add(name.lower())
 
             # Also scan .url files (e.g. Steam games)
@@ -70,10 +67,8 @@ class AppListLoader(QThread):
                 name = os.path.splitext(os.path.basename(url_file))[0]
                 if should_filter_app(name):
                     continue
-                key = (name.lower(), url_file.lower())
-                if key not in seen_keys:
+                if name.lower() not in seen_names:
                     apps.append((name, url_file, None))
-                    seen_keys.add(key)
                     seen_names.add(name.lower())
 
         try:

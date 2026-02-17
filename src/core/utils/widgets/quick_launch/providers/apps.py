@@ -17,6 +17,7 @@ from core.utils.widgets.quick_launch.base_provider import (
     ProviderMenuActionResult,
     ProviderResult,
 )
+from core.utils.widgets.quick_launch.fuzzy import fuzzy_score
 from core.utils.widgets.quick_launch.providers.resources.icons import ICON_APPS
 
 
@@ -319,19 +320,34 @@ class AppsProvider(BaseProvider):
             else:
                 apps = [(n, p) for n, p, _ in sorted(svc.apps, key=lambda a: (_is_subfolder_app(a[1]), a[0].lower()))]
         else:
-            # Search query: filter by name, boost frecency
-            apps = [(n, p) for n, p, _ in svc.apps if text_lower in n.lower()]
+            # Search query fuzzy match by name, fallback to app id
+            scored_apps: list[tuple[int, str, str]] = []
+            for n, p, _ in svc.apps:
+                fs = fuzzy_score(text_lower, n)
+                if fs is None and p.startswith("UWP::"):
+                    appid = p[5:].split("!")[0].split("_")[0]
+                    pkg_name = appid.rsplit(".", 1)[-1] if "." in appid else appid
+                    fs = fuzzy_score(text_lower, pkg_name)
+                if fs is not None:
+                    # Demote apps with default icon (system services, not real apps)
+                    icon = svc.icon_paths.get(f"{n}::{p}", "")
+                    if icon.endswith("_default_app.png"):
+                        fs -= 50
+                    scored_apps.append((fs, n, p))
+
             if show_recent:
 
                 def score(app: tuple) -> float:
-                    name, path = app
+                    fuzzy_s, name, path = app
                     key = f"{name}::{path}"
-                    s = self._history.get_frecency_score(key)
-                    if name.lower().startswith(text_lower):
-                        s += 50
-                    return s
+                    frecency = self._history.get_frecency_score(key)
+                    return fuzzy_s + frecency
 
-                apps.sort(key=score, reverse=True)
+                scored_apps.sort(key=score, reverse=True)
+            else:
+                scored_apps.sort(key=lambda x: x[0], reverse=True)
+
+            apps = [(n, p) for _, n, p in scored_apps]
 
         show_description = self.config.get("show_description", False)
         results = []
