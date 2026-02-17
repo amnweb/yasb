@@ -4,8 +4,11 @@ from .calculator import *
 from .clipboard_history import *
 from .color_converter import *
 from .currency import *
+from .dev_tools import *
 from .emoji import *
 from .file_search import *
+from .hacker_news import *
+from .ip_info import *
 from .kill_process import *
 from .port_viewer import *
 from .settings import *

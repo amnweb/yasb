@@ -667,6 +667,7 @@ class QuickLaunchWidget(BaseWidget):
         full_text = (self._active_prefix + " " + search_text) if self._active_prefix else search_text
         self._pending_search_text = full_text
         if not full_text.strip() and self.config.home_page:
+            self._pending_query_id = None
             self._stop_loader()
             self._show_home_page()
             return
@@ -1018,8 +1019,9 @@ class QuickLaunchWidget(BaseWidget):
         # Home page item - activate prefix chip
         if result.action_data.get("_home"):
             prefix = result.action_data.get("prefix", "")
+            initial_text = result.action_data.get("initial_text", "")
             if prefix and self._popup:
-                self._set_prefix_chip(prefix)
+                self._set_prefix_chip(prefix, initial_text)
             return
         should_close = None
         provider = self._get_provider(result.provider)

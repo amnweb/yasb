@@ -55,6 +55,7 @@ Quick Launch uses a plugin-based provider system. Each provider handles a specif
 - [Unit Converter](#unit-converter-provider)
 - [Web Search](#web-search-provider)
 - [World Clock](#world-clock-provider)
+- [Hacker News](#hacker-news-provider)
 
 ### Apps Provider
 
@@ -343,6 +344,119 @@ Each result displays:
 > [!NOTE]
 > World Clock uses Python's built-in `zoneinfo` module - no API calls or external dependencies required. Times are always live and accurate.
 
+### Hacker News Provider
+
+Browse and search Hacker News stories directly from Quick Launch. Type `hn` to see available topics (Front Page, Newest, Best, Ask HN, Show HN, Jobs, Best Comments, Active), then click a topic to load stories. You can also type a keyword after a topic to filter (e.g., `hn newest rust`), or type any keyword directly to search all of HN (e.g., `hn python`).
+
+Clicking a story opens it in your default browser. Right-click a story to open the HN comments page or copy the URL.
+
+| Option      | Type   | Default | Description                                  |
+|-------------|--------|---------|----------------------------------------------|
+| `enabled`   | bool   | `false` | Enable/disable the Hacker News provider.     |
+| `prefix`    | string | `"hn"` | Trigger prefix to activate the provider.     |
+| `priority`  | int    | `0`     | Sort order when multiple providers share the same prefix. Lower values appear first. |
+| `cache_ttl` | int    | `300`   | How long (in seconds) to cache feed results before fetching again. |
+| `max_items` | int    | `30`    | Maximum number of stories to fetch per topic (hnrss.org limit is 100). |
+
+**Available topics:**
+
+| Topic          | Description                                      |
+|----------------|--------------------------------------------------|
+| `frontpage`    | Top stories on the HN front page                 |
+| `newest`       | Most recently submitted stories                  |
+| `best`         | Highest-voted stories overall                    |
+| `ask`          | Ask HN posts and discussions                     |
+| `show`         | Show HN community projects and launches          |
+| `jobs`         | Job postings from YC companies                   |
+| `bestcomments` | Highly voted comments from across Hacker News    |
+| `active`       | Posts with the most active ongoing discussions    |
+
+**Usage examples:**
+- `hn` — Show all topic tiles
+- `hn frontpage` — Load front page stories
+- `hn newest rust` — Search newest stories for "rust"
+- `hn python` — Search all of HN for "python"
+- `hn ask` — Browse Ask HN posts
+
+Each story result displays:
+- **Title:** The story title
+- **Description:** Points, comment count, author, and relative time (e.g., `42 points │ 15 comments │ by username │ 3h ago`)
+
+**Context menu actions:**
+- **Open HN comments** — Opens the Hacker News discussion page
+- **Copy URL** — Copies the story URL to clipboard
+
+> [!NOTE]
+> Hacker News provider uses [hnrss.org](https://hnrss.org) RSS feeds. Results are cached in memory and on disk to minimize network requests. No API key is required.
+
+### Developer Tools Provider
+
+A collection of common developer utilities accessible from Quick Launch. All operations are local — no network requests, no API keys, instant results.
+
+| Option      | Type   | Default | Description                                  |
+|-------------|--------|---------|----------------------------------------------|
+| `enabled`   | bool   | `false` | Enable/disable the Developer Tools provider. |
+| `prefix`    | string | `"dev"` | Prefix to activate the provider.             |
+| `priority`  | int    | `0`     | Display priority (higher = shown first).     |
+
+**Available tools:**
+
+| Command     | Description                                         | Example                         |
+|-------------|-----------------------------------------------------|---------------------------------|
+| `uuid`      | Generate UUID v4 values (optional count)            | `dev uuid` or `dev uuid 10`    |
+| `hash`      | MD5, SHA1, SHA256, SHA512 hashes                    | `dev hash hello world`          |
+| `base64`    | Base64 encode (and auto-decode if valid)            | `dev base64 hello`              |
+| `url`       | URL percent-encode/decode                           | `dev url hello world`           |
+| `jwt`       | Decode JWT token payload                            | `dev jwt eyJhbG...`             |
+| `lorem`     | Generate lorem ipsum paragraphs/words               | `dev lorem`                     |
+| `ts`        | Convert between unix timestamps and dates           | `dev ts 1700000000`             |
+| `pw`        | Generate secure random passwords (optional length)  | `dev pw` or `dev pw 32`         |
+
+**Usage examples:**
+- Type `dev` to see all available tools as tiles
+- Type `dev uuid` to generate 5 random UUIDs (click to copy)
+- Type `dev hash mypassword` to see MD5/SHA1/SHA256/SHA512 hashes
+- Type `dev base64 hello` to encode; paste Base64 text to auto-decode
+- Type `dev jwt <token>` to decode JWT payload with timestamp formatting
+- Type `dev ts` to see current unix timestamp; type `dev ts 1700000000` to convert
+- Type `dev pw 24` to generate 24-character passwords
+
+> [!NOTE]
+> All Developer Tools operations run entirely offline using Python's standard library. Click any result to copy it to the clipboard.
+
+### IP / Network Info Provider
+
+Provides local network interface details, public IP lookup, subnet calculator, IP analysis, DNS lookup, and MAC address listing. All operations except public IP are fully offline.
+
+| Option      | Type   | Default | Description                                   |
+|-------------|--------|---------|-----------------------------------------------|
+| `enabled`   | bool   | `false` | Enable/disable the IP / Network Info provider.|
+| `prefix`    | string | `"ip"`  | Prefix to activate the provider.              |
+| `priority`  | int    | `0`     | Display priority (higher = shown first).      |
+
+**Available tools:**
+
+| Command     | Description                                         | Example                         |
+|-------------|-----------------------------------------------------|---------------------------------|
+| `info`      | Show local interfaces (IP, MAC, subnet mask)        | `ip info`                       |
+| `public`    | Fetch your external IP, ISP, location (online)      | `ip public`                     |
+| `calc`      | Subnet calculator from CIDR notation                | `ip calc 192.168.1.0/24`        |
+| `check`     | Analyze IP (type, class, binary, hex, reverse DNS)  | `ip check 10.0.0.1`            |
+| `dns`       | Resolve hostname to IP addresses                    | `ip dns google.com`             |
+| `mac`       | List all adapter MAC addresses                      | `ip mac`                        |
+
+**Usage examples:**
+- Type `ip` to see all available tools as tiles
+- Type `ip info` to list all local network interfaces with IPv4, IPv6, MAC, and subnet mask
+- Type `ip public` to fetch your public IP with ISP, location, and timezone
+- Type `ip calc 10.0.0.0/16` to see network, broadcast, host range, total hosts
+- Type `ip check 172.16.5.1` to see type (Private), class (B), binary, hex representation
+- Type `ip dns github.com` to resolve IPv4 and IPv6 addresses
+- Type `ip mac` to list all adapter MAC addresses
+
+> [!NOTE]
+> Public IP uses [ip-api.com](http://ip-api.com)
+
 ## Provider Prefixes Reference
 
 Prefixes are configurable per provider. Set `prefix` to `"*"` to include a provider in the default (unprefixed) results. These are the defaults:
@@ -364,6 +478,9 @@ Prefixes are configurable per provider. Set `prefix` to `"*"` to include a provi
 | `~`      | Unit Converter    | `~10 kg to lb`        |
 | `?`      | Web Search        | `?python tutorial`    |
 | `tz`     | World Clock       | `tz tokyo`            |
+| `hn`     | Hacker News       | `hn frontpage`        |
+| `dev`    | Developer Tools   | `dev uuid`            |
+| `ip`     | IP / Network Info | `ip info`             |
 
 
 ## Example Minimal Configuration enabling just the apps provider
@@ -479,6 +596,20 @@ quick_launch:
         prefix: ";"
         priority: 15
         type_delay: 200
+      hacker_news:
+        enabled: true
+        prefix: "hn"
+        priority: 16
+        cache_ttl: 300
+        max_items: 30
+      dev_tools:
+        enabled: true
+        prefix: "dev"
+        priority: 17
+      ip_info:
+        enabled: true
+        prefix: "ip"
+        priority: 18
     popup:
       width: 720
       height: 480

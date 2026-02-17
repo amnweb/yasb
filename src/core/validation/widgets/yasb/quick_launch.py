@@ -135,6 +135,26 @@ class WorldClockProviderConfig(CustomBaseModel):
     priority: int = 0
 
 
+class HackerNewsProviderConfig(CustomBaseModel):
+    enabled: bool = False
+    prefix: str = "hn"
+    priority: int = 0
+    cache_ttl: int = 300
+    max_items: int = 30
+
+
+class DevToolsProviderConfig(CustomBaseModel):
+    enabled: bool = False
+    prefix: str = "dev"
+    priority: int = 0
+
+
+class IpInfoProviderConfig(CustomBaseModel):
+    enabled: bool = False
+    prefix: str = "ip"
+    priority: int = 0
+
+
 class QuickLaunchProvidersConfig(CustomBaseModel):
     apps: AppsProviderConfig = AppsProviderConfig()
     bookmarks: BookmarksProviderConfig = BookmarksProviderConfig()
@@ -152,6 +172,9 @@ class QuickLaunchProvidersConfig(CustomBaseModel):
     color_converter: ColorConverterProviderConfig = ColorConverterProviderConfig()
     port_viewer: PortViewerProviderConfig = PortViewerProviderConfig()
     world_clock: WorldClockProviderConfig = WorldClockProviderConfig()
+    hacker_news: HackerNewsProviderConfig = HackerNewsProviderConfig()
+    dev_tools: DevToolsProviderConfig = DevToolsProviderConfig()
+    ip_info: IpInfoProviderConfig = IpInfoProviderConfig()
 
 
 class QuickLaunchConfig(CustomBaseModel):
