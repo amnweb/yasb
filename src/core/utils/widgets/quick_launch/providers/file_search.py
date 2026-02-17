@@ -245,6 +245,20 @@ class _EverythingBackend:
                                 return candidate
             except OSError:
                 continue
+        # Check Scoop installations
+        scoop_dirs = [
+            os.environ.get("SCOOP") or os.path.join(os.path.expanduser("~"), "scoop"),
+            os.environ.get("SCOOP_GLOBAL") or os.path.join(os.environ.get("PROGRAMDATA", ""), "scoop"),
+        ]
+        for scoop_root in scoop_dirs:
+            if not scoop_root or not os.path.isabs(scoop_root):
+                continue
+            app_dir = os.path.join(scoop_root, "apps", "everything", "current")
+            for name in self._EXE_NAMES:
+                candidate = os.path.join(app_dir, name)
+                if os.path.isfile(candidate):
+                    self._exe_path = candidate
+                    return candidate
         # Check common install locations
         for base in (os.environ.get("PROGRAMFILES", ""), os.environ.get("PROGRAMFILES(X86)", "")):
             if not base:
@@ -873,25 +887,22 @@ class FileSearchProvider(BaseProvider):
 
     def _everything_not_running_results(self) -> list[ProviderResult]:
         exe = self._everything._find_exe()
-        results = []
         if exe:
-            results.append(
+            return [
                 ProviderResult(
-                    title="Everything service is not running",
+                    title="Everything is not running",
                     description="Click to launch Everything",
                     icon_char=ICON_WARNING,
                     provider=self.name,
                     action_data={"action": "launch_everything"},
                 )
+            ]
+        return [
+            ProviderResult(
+                title="Everything is not installed",
+                description="Click to download from voidtools.com",
+                icon_char=ICON_WARNING,
+                provider=self.name,
+                action_data={"action": "install_everything"},
             )
-        else:
-            results.append(
-                ProviderResult(
-                    title="Everything is not installed",
-                    description="Click to download from voidtools.com",
-                    icon_char=ICON_WARNING,
-                    provider=self.name,
-                    action_data={"action": "install_everything"},
-                )
-            )
-        return results
+        ]

@@ -32,6 +32,18 @@ The Quick Launch widget provides a Spotlight style search launcher accessible fr
 | `round_corners_type` | string | `"normal"` | Corner rounding type (`"normal"` or `"small"`).                 |
 | `border_color`       | string | `"System"` | Border color of the popup (`"System"`, HEX value, or `"None"`). |
 | `dark_mode`          | bool   | `true`     | Force dark mode colors for the popup (Windows 11).              |
+| `screen`             | string | `"focus"`  | Which screen to show the popup on: `"focus"`, `"cursor"`, or `"primary"`. |
+
+#### Screen Modes
+
+| Mode        | Description |
+|-------------|-------------|
+| `"focus"`   | Show popup on the screen where the currently focused window is. |
+| `"cursor"`  | Show popup on the screen where the mouse cursor is.             |
+| `"primary"` | Always show popup on the primary monitor.                       |
+
+> [!NOTE]
+> When using multiple monitors with bars on each screen, only one popup is shown at a time regardless of which screen triggers it.
 
 ## Providers
 
@@ -56,6 +68,8 @@ Quick Launch uses a plugin-based provider system. Each provider handles a specif
 - [Web Search](#web-search-provider)
 - [World Clock](#world-clock-provider)
 - [Hacker News](#hacker-news-provider)
+- [Developer Tools](#developer-tools-provider)
+- [IP / Network Info](#ip--network-info-provider)
 
 ### Apps Provider
 
@@ -235,12 +249,12 @@ Search files and folders on the system. Type `/` followed by a filename (e.g., `
 | Backend        | Description |
 |----------------|-------------|
 | `"auto"`       | Tries Everything first, then Index, then Disk as a final fallback. |
-| `"everything"` | Uses the bundled [Everything](https://www.voidtools.com/) SDK for instant indexed search. Requires the Everything service to be running. |
+| `"everything"` | Uses the bundled [Everything](https://www.voidtools.com/) SDK for instant indexed search. Requires the Everything process to be running. Supports installations via installer, portable, or [Scoop](https://scoop.sh/). |
 | `"index"`      | Uses the Windows Search indexer via ADODB/SystemIndex. Only searches indexed locations. |
 | `"disk"`       | Full disk scan using Win32 `FindFirstFileExW`. No index required. Works on any system but slower than Everything. |
 
 > [!NOTE]
-> The Everything SDK DLL is bundled with the widget - no manual SDK setup is required. For best performance, install [Everything](https://www.voidtools.com/) by voidtools.
+> The Everything SDK DLL is bundled with the widget - no manual SDK setup is required. For best performance, install [Everything](https://www.voidtools.com/) by voidtools. The widget automatically detects Everything installed via the official installer, Scoop package manager, or in the standard Program Files directory. If Everything is not running, the widget shows a prompt to launch it.
 
 > [!NOTE]
 > The `"disk"` backend only scans fixed local drives. Removable drives (USB), network drives, and CD/DVD drives are automatically skipped. System directories like `Windows`, `$Recycle.Bin`, `node_modules`, `.git`, and other common cache/build folders are also excluded for performance.
@@ -497,6 +511,7 @@ quick_launch:
     popup:
       width: 720
       height: 480
+      screen: "focus"
       blur: true
       round_corners: true
       round_corners_type: "normal"
@@ -613,6 +628,7 @@ quick_launch:
     popup:
       width: 720
       height: 480
+      screen: "focus"
       blur: true
       round_corners: true
       round_corners_type: "normal"
@@ -653,6 +669,7 @@ quick_launch:
 - **popup:** Popup window appearance settings.
   - ***width:*** Width of the popup window in pixels.
   - ***height:*** Height of the popup window in pixels.
+  - ***screen:*** Which screen to show the popup on (`"focus"`, `"cursor"`, or `"primary"`).
   - ***blur:*** Enable background blur effect (requires Windows 11).
   - ***round_corners:*** Enable rounded corners on the popup.
   - ***round_corners_type:*** Type of corner rounding (`"normal"` or `"small"`).

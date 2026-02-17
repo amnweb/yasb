@@ -41,6 +41,7 @@ from core.utils.widgets.quick_launch.providers.resources.icons import (
     ICON_SUBMIT,
 )
 from core.utils.widgets.quick_launch.service import QuickLaunchService
+from core.utils.win32.utilities import find_focused_screen
 from core.utils.win32.window_actions import force_foreground_focus
 from core.validation.widgets.yasb.quick_launch import QuickLaunchConfig
 from core.widgets.base import BaseWidget
@@ -343,6 +344,7 @@ class ResultListView(QListView):
 
 class QuickLaunchWidget(BaseWidget):
     validation_schema = QuickLaunchConfig
+    _active_instance: "QuickLaunchWidget | None" = None
 
     def __init__(self, config: QuickLaunchConfig):
         super().__init__(class_name="quick-launch-widget")
@@ -387,12 +389,14 @@ class QuickLaunchWidget(BaseWidget):
     def _toggle_quick_launch(self):
         if self.config.animation.enabled:
             AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
-        if self._popup and self._popup.isVisible():
-            self._hide_popup()
+        active = QuickLaunchWidget._active_instance
+        if active is not None and active._popup and active._popup.isVisible() and not active._popup._is_closing:
+            active._hide_popup()
         else:
             self._show_popup()
 
     def _show_popup(self):
+        QuickLaunchWidget._active_instance = self
         self._dpr = self.screen().devicePixelRatio()
         if not self._popup:
             self._popup = self._create_popup()
@@ -428,6 +432,8 @@ class QuickLaunchWidget(BaseWidget):
         self._loader = None
         self._result_model = None
         self._selected_index = -1
+        if QuickLaunchWidget._active_instance is self:
+            QuickLaunchWidget._active_instance = None
 
     def _stop_loader(self):
         if not self._loader:
@@ -440,14 +446,27 @@ class QuickLaunchWidget(BaseWidget):
     def _center_popup_on_screen(self):
         if not self._popup:
             return
-        screen = QApplication.screenAt(self.mapToGlobal(self.rect().center()))
-        if screen is None:
-            screen = QApplication.primaryScreen()
+        screen = self._get_target_screen()
         geo = screen.geometry()
         cfg = self.config.popup
         x = (geo.width() - cfg.width) // 2 + geo.x()
         y = (geo.height() - cfg.height) // 3 + geo.y()
         self._popup.move(x, y)
+
+    def _get_target_screen(self):
+
+        mode = self.config.popup.screen
+        if mode == "cursor":
+            screen_name = find_focused_screen(follow_mouse=True, follow_window=False)
+        elif mode == "focus":
+            screen_name = find_focused_screen(follow_mouse=False, follow_window=True)
+        else:
+            return QApplication.primaryScreen() or QApplication.screens()[0]
+        if screen_name:
+            for s in QApplication.screens():
+                if s.name() == screen_name:
+                    return s
+        return QApplication.primaryScreen() or QApplication.screens()[0]
 
     def _set_compact_visible(self, show_results: bool):
         """Toggle results area visibility and resize popup for compact mode."""
@@ -645,6 +664,11 @@ class QuickLaunchWidget(BaseWidget):
     def _on_search_text_changed(self, search_text: str):
         """Handle text changes in the search input, detecting prefix activation."""
         if not self._popup:
+            return
+        # Prevent leading spaces in the search input
+        stripped = search_text.lstrip()
+        if stripped != search_text:
+            self._popup.search_input.setText(stripped)
             return
         # Check if the typed text matches a provider prefix
         if not self._active_prefix and search_text:
