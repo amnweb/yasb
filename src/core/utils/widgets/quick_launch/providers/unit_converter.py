@@ -3,8 +3,7 @@ import re
 from PyQt6.QtWidgets import QApplication
 
 from core.utils.widgets.quick_launch.base_provider import BaseProvider, ProviderResult
-
-_ICON = "\ue8ef"
+from core.utils.widgets.quick_launch.providers.resources.icons import ICON_UNIT
 
 # Each category maps unit aliases to (canonical_name, factor_to_base).
 
@@ -242,6 +241,9 @@ class UnitConverterProvider(BaseProvider):
     """Convert between units of measurement."""
 
     name = "unit_converter"
+    display_name = "Unit Converter"
+    input_placeholder = "Convert units, e.g. 10 kg to lb..."
+    icon = ICON_UNIT
 
     def match(self, text: str) -> bool:
         text = text.strip()
@@ -249,14 +251,14 @@ class UnitConverterProvider(BaseProvider):
             return True
         return False
 
-    def get_results(self, text: str) -> list[ProviderResult]:
+    def get_results(self, text: str, **kwargs) -> list[ProviderResult]:
         query = self.get_query_text(text).strip()
         if not query:
             return [
                 ProviderResult(
                     title="Unit Converter",
                     description="e.g. 10 kg to lb, 100 mi to km, 72 f to c, 1 gb to mb",
-                    icon_char=_ICON,
+                    icon_char=ICON_UNIT,
                     provider=self.name,
                 )
             ]
@@ -267,7 +269,7 @@ class UnitConverterProvider(BaseProvider):
                 ProviderResult(
                     title="Invalid format",
                     description="Try: 10 kg to lb, 100 f to c, 500 mb to gb",
-                    icon_char=_ICON,
+                    icon_char=ICON_UNIT,
                     provider=self.name,
                 )
             ]
@@ -292,7 +294,7 @@ class UnitConverterProvider(BaseProvider):
                 ProviderResult(
                     title=f"Unknown unit: {from_unit}",
                     description="Supported: length, weight, volume, speed, data, time, temperature",
-                    icon_char=_ICON,
+                    icon_char=ICON_UNIT,
                     provider=self.name,
                 )
             ]
@@ -305,7 +307,7 @@ class UnitConverterProvider(BaseProvider):
                     ProviderResult(
                         title=f"Cannot convert {from_name} to {to_unit}",
                         description=f"Both units must be in the same category ({cat_name})",
-                        icon_char=_ICON,
+                        icon_char=ICON_UNIT,
                         provider=self.name,
                     )
                 ]
@@ -316,7 +318,7 @@ class UnitConverterProvider(BaseProvider):
                 ProviderResult(
                     title=f"{display} {to_name}",
                     description=f"{_format_number(value)} {from_name} - press Enter to copy",
-                    icon_char=_ICON,
+                    icon_char=ICON_UNIT,
                     provider=self.name,
                     action_data={"value": display},
                 )
@@ -332,7 +334,7 @@ class UnitConverterProvider(BaseProvider):
                 ProviderResult(
                     title=f"{display} {to_name}",
                     description=f"{_format_number(value)} {from_name} - press Enter to copy",
-                    icon_char=_ICON,
+                    icon_char=ICON_UNIT,
                     provider=self.name,
                     action_data={"value": display},
                 )
@@ -351,7 +353,7 @@ class UnitConverterProvider(BaseProvider):
                 ProviderResult(
                     title=f"{display} {to_label}",
                     description=f"{_format_number(value)} {from_label} - press Enter to copy",
-                    icon_char=_ICON,
+                    icon_char=ICON_UNIT,
                     provider=self.name,
                     action_data={"value": display},
                 )
@@ -366,7 +368,7 @@ class UnitConverterProvider(BaseProvider):
                 ProviderResult(
                     title=f"{display} {to_label}",
                     description=f"{_format_number(value)} {from_label} - press Enter to copy",
-                    icon_char=_ICON,
+                    icon_char=ICON_UNIT,
                     provider=self.name,
                     action_data={"value": display},
                 )

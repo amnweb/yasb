@@ -111,7 +111,7 @@ class _ForegroundPoller:
             if pid == CURRENT_PROCESS_ID:
                 return
 
-            # Fast path — same window as last poll, only re-check dynamic state
+            # Fast path - same window as last poll, only re-check dynamic state
             if hwnd == self._last_hwnd and self._last_result is not None and self._last_result.valid:
                 try:
                     maximized = is_window_maximized(hwnd)
@@ -155,13 +155,13 @@ class _ForegroundPoller:
                 except Exception:
                     pass
 
-            # Resolve app name (cached by pid — handles UWP + Win32 apps)
+            # Resolve app name (cached by pid - handles UWP + Win32 apps)
             app_name = self._app_name_cache.get(pid_for_name)
             if app_name is None:
                 app_name = get_app_name_from_pid(pid_for_name) or title
                 # For UWP only cache if we got the real child PID (not ApplicationFrameHost)
                 if is_uwp and pid_for_name == pid:
-                    # CoreWindow not ready yet — don't cache, don't set _last_hwnd
+                    # CoreWindow not ready yet - don't cache, don't set _last_hwnd
                     # so next poll retries the full path
                     self._last_hwnd = 0
                 else:

@@ -9,8 +9,7 @@ from PyQt6.QtWidgets import QApplication
 
 from core.utils.utilities import app_data_path
 from core.utils.widgets.quick_launch.base_provider import BaseProvider, ProviderResult
-
-_ICON_CURRENCY = "\ue8cb"
+from core.utils.widgets.quick_launch.providers.resources.icons import ICON_CURRENCY
 
 _ECB_URL = "https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml"
 _ECB_NS = {
@@ -63,6 +62,9 @@ class CurrencyProvider(BaseProvider):
     """Convert between currencies using ECB daily rates (cached 12h)."""
 
     name = "currency"
+    display_name = "Currency Converter"
+    input_placeholder = "Convert currency, e.g. 100 usd eur..."
+    icon = ICON_CURRENCY
 
     def __init__(self, config: dict | None = None):
         super().__init__(config)
@@ -75,14 +77,14 @@ class CurrencyProvider(BaseProvider):
             return text.strip().startswith(self.prefix)
         return True
 
-    def get_results(self, text: str) -> list[ProviderResult]:
+    def get_results(self, text: str, **kwargs) -> list[ProviderResult]:
         query = self.get_query_text(text).strip()
         if not query:
             return [
                 ProviderResult(
                     title="Type currency conversion",
                     description="e.g. 100 usd eur, 50 gbp jpy, usd eur",
-                    icon_char=_ICON_CURRENCY,
+                    icon_char=ICON_CURRENCY,
                     provider=self.name,
                 )
             ]
@@ -93,7 +95,7 @@ class CurrencyProvider(BaseProvider):
                 ProviderResult(
                     title="Currency rates unavailable",
                     description="No internet connection and no cached rates",
-                    icon_char=_ICON_CURRENCY,
+                    icon_char=ICON_CURRENCY,
                     provider=self.name,
                 )
             ]
@@ -128,7 +130,7 @@ class CurrencyProvider(BaseProvider):
                         ProviderResult(
                             title=f"{code}",
                             description=f"{sym} · Type amount and target e.g. 100 {code.lower()} usd",
-                            icon_char=_ICON_CURRENCY,
+                            icon_char=ICON_CURRENCY,
                             provider=self.name,
                         )
                     )
@@ -138,7 +140,7 @@ class CurrencyProvider(BaseProvider):
             ProviderResult(
                 title="Invalid format",
                 description="Use: [amount] SRC DST  e.g. 100 usd eur",
-                icon_char=_ICON_CURRENCY,
+                icon_char=ICON_CURRENCY,
                 provider=self.name,
             )
         ]
@@ -159,7 +161,7 @@ class CurrencyProvider(BaseProvider):
                 ProviderResult(
                     title=f"Unknown currency: {src}",
                     description="Check currency code",
-                    icon_char=_ICON_CURRENCY,
+                    icon_char=ICON_CURRENCY,
                     provider=self.name,
                 )
             ]
@@ -168,7 +170,7 @@ class CurrencyProvider(BaseProvider):
                 ProviderResult(
                     title=f"Unknown currency: {dst}",
                     description="Check currency code",
-                    icon_char=_ICON_CURRENCY,
+                    icon_char=ICON_CURRENCY,
                     provider=self.name,
                 )
             ]
@@ -195,7 +197,7 @@ class CurrencyProvider(BaseProvider):
             ProviderResult(
                 title=f"{dst_sym}{display} {dst}",
                 description=f"{amt_display} {src} → {dst} · Rate: {rate:.6f}".rstrip("0").rstrip("."),
-                icon_char=_ICON_CURRENCY,
+                icon_char=ICON_CURRENCY,
                 provider=self.name,
                 action_data={"copy_value": display},
             )
@@ -231,7 +233,7 @@ class CurrencyProvider(BaseProvider):
                 ProviderResult(
                     title=f"{dst_sym}{display} {dst}",
                     description=f"{amt_display} {src} → {dst}",
-                    icon_char=_ICON_CURRENCY,
+                    icon_char=ICON_CURRENCY,
                     provider=self.name,
                     action_data={"copy_value": display},
                 )

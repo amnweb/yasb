@@ -1,3 +1,4 @@
+import ctypes
 import logging
 import os
 import subprocess
@@ -7,10 +8,10 @@ from dataclasses import dataclass
 from PyQt6.QtWidgets import QApplication
 
 from core.utils.widgets.quick_launch.base_provider import BaseProvider, ProviderResult
+from core.utils.widgets.quick_launch.providers.resources.icons import ICON_PORT
 from core.utils.win32.bindings.kernel32 import kernel32
-from core.utils.win32.constants import PROCESS_QUERY_LIMITED_INFORMATION, PROCESS_TERMINATE
-
-_ICON_PORT = "\uec27"
+from core.utils.win32.constants import PROCESS_QUERY_LIMITED_INFORMATION, PROCESS_TERMINATE, TH32CS_SNAPPROCESS
+from core.utils.win32.structs import PROCESSENTRY32
 
 _DEFAULT_APP_ICON_PNG: str | None = None
 
@@ -61,8 +62,6 @@ def _get_default_app_icon_png() -> str:
 
 def _get_process_exe_path(pid: int) -> str:
     """Return full exe path for PID using QueryFullProcessImageNameW, or ""."""
-
-    import ctypes
 
     h = kernel32.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, int(pid))
     if not h:
@@ -166,11 +165,6 @@ def _terminate_process(pid: int) -> bool:
 
 def _enumerate_processes() -> dict[int, str]:
     """Return {pid: exe_name} for all running processes."""
-
-    import ctypes
-
-    from core.utils.win32.constants import TH32CS_SNAPPROCESS
-    from core.utils.win32.structs import PROCESSENTRY32
 
     proc_map: dict[int, str] = {}
     snapshot = kernel32.CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0)
@@ -288,21 +282,24 @@ class PortViewerProvider(BaseProvider):
     """View TCP/UDP ports (netstat) and optionally kill owning processes."""
 
     name = "port_viewer"
+    display_name = "Port Viewer"
+    input_placeholder = "Search open ports..."
+    icon = ICON_PORT
 
     def __init__(self, config: dict | None = None):
         super().__init__(config)
         self._tcp_listening_only: bool = bool(self.config.get("tcp_listening_only", True))
         self._include_established: bool = bool(self.config.get("include_established", False))
 
-    def get_results(self, text: str) -> list[ProviderResult]:
+    def get_results(self, text: str, **kwargs) -> list[ProviderResult]:
         query_raw = self.get_query_text(text)
         query = query_raw.strip()
         if not query:
             return [
                 ProviderResult(
                     title="Port Viewer",
-                    description="e.g. pv 80, pv tcp 443, pv proc, pv kill 80",
-                    icon_char=_ICON_PORT,
+                    description="e.g. pv 80, pv tcp 443, pv chrome, pv kill 80",
+                    icon_char=ICON_PORT,
                     provider=self.name,
                 )
             ]
@@ -327,27 +324,9 @@ class PortViewerProvider(BaseProvider):
         pid_filter: int | None = None
         name_filter = ""
 
-        # Process keyword mode: `pv process chrome.exe` / `pv proc chrome.exe`
-        # This is intended to show *connected* ports too, so we override TCP filtering.
-        process_mode = False
-        if tokens_lower and tokens_lower[0] in {"process", "proccess", "proc"}:
-            process_mode = True
-            tokens = tokens[1:]
-            tokens_lower = tokens_lower[1:]
-            if not tokens_lower:
-                return [
-                    ProviderResult(
-                        title="Type a process name",
-                        description="e.g. pv process chrome.exe, pv proc chrome.exe, pv proccess chrome.exe",
-                        icon_char=_ICON_PORT,
-                        provider=self.name,
-                    )
-                ]
-            name_filter = " ".join(tokens_lower).strip()
-
         # If kill_mode and first token is numeric, accept either PID or port.
         # If not kill_mode, numeric implies port.
-        if tokens_lower and not process_mode:
+        if tokens_lower:
             first = tokens_lower[0]
             if first.isdigit():
                 val = int(first)
@@ -363,7 +342,7 @@ class PortViewerProvider(BaseProvider):
                 tokens = tokens[1:]
                 tokens_lower = tokens_lower[1:]
 
-        if tokens_lower and not name_filter:
+        if tokens_lower:
             name_filter = " ".join(tokens_lower).strip()
 
         try:
@@ -380,13 +359,12 @@ class PortViewerProvider(BaseProvider):
                 ProviderResult(
                     title="No ports found",
                     description="netstat returned no results or failed to run",
-                    icon_char=_ICON_PORT,
+                    icon_char=ICON_PORT,
                     provider=self.name,
                 )
             ]
 
         results: list[ProviderResult] = []
-        max_results = int(self.config.get("_max_results", 50))
 
         default_icon = _get_default_app_icon_png()
 
@@ -395,8 +373,9 @@ class PortViewerProvider(BaseProvider):
                 continue
 
             # kill mode should include connected TCP rows so users can find a process by remote port too.
-            effective_include_established = self._include_established or process_mode or kill_mode
-            effective_tcp_listening_only = self._tcp_listening_only and not process_mode
+            # When filtering by name, show all connections (not just LISTENING).
+            effective_include_established = self._include_established or bool(name_filter) or kill_mode
+            effective_tcp_listening_only = self._tcp_listening_only and not name_filter
 
             if e.protocol == "tcp" and effective_tcp_listening_only and not effective_include_established:
                 if e.state.upper() != "LISTENING":
@@ -489,15 +468,15 @@ class PortViewerProvider(BaseProvider):
                     )
                 )
 
-            if len(results) >= max_results:
+            if len(results) >= self.max_results:
                 break
 
         if not results:
             return [
                 ProviderResult(
                     title="No matching ports",
-                    description="Try: pv 80, pv tcp 443, pv process chrome.exe (or proc), pv kill 80",
-                    icon_char=_ICON_PORT,
+                    description="Try: pv 80, pv tcp 443, pv chrome, pv kill 80",
+                    icon_char=ICON_PORT,
                     provider=self.name,
                 )
             ]

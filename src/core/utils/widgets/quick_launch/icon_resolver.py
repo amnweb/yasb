@@ -128,12 +128,20 @@ class IconResolverWorker(QThread):
             from PIL import Image
 
             with Image.open(ico_path) as img:
-                # Get the largest available size
-                sizes = img.info.get("sizes", set())
-                if sizes:
-                    largest = max(sizes, key=lambda s: s[0] * s[1])
-                    img.size = largest
-                    img = img.resize(largest)
+                # Select the largest frame in the ICO file
+                best_frame = None
+                best_area = 0
+                try:
+                    for frame_idx in range(img.n_frames):
+                        img.seek(frame_idx)
+                        w, h = img.size
+                        if w * h > best_area:
+                            best_area = w * h
+                            best_frame = frame_idx
+                except EOFError, AttributeError:
+                    pass
+                if best_frame is not None:
+                    img.seek(best_frame)
                 img = img.convert("RGBA").resize((48, 48), Image.Resampling.LANCZOS)
                 img.save(temp_png, format="PNG")
             return temp_png
@@ -181,11 +189,15 @@ class IconResolverWorker(QThread):
                 return None
             large, small = result
             if not large and icon_index != 0:
+                # Destroy handles from the failed first attempt before retrying
+                self._destroy_icon_handles(large, small)
                 result = win32gui.ExtractIconEx(file_path, 0, 1)
                 if not isinstance(result, tuple) or len(result) != 2:
                     return None
                 large, small = result
             if not large:
+                # Destroy any remaining small handles before returning
+                self._destroy_icon_handles(large, small)
                 return None
 
             hicon = large[0]
@@ -204,6 +216,16 @@ class IconResolverWorker(QThread):
         except Exception as e:
             logging.debug(f"Icon extraction failed for {file_path}: {e}")
             return None
+
+    @staticmethod
+    def _destroy_icon_handles(large, small):
+        """Destroy all icon handles returned by ExtractIconEx."""
+        if large:
+            for h in large:
+                win32gui.DestroyIcon(h)
+        if small:
+            for h in small:
+                win32gui.DestroyIcon(h)
 
     def _resolve_uwp_icon(self, path: str) -> str | None:
         appid = path.replace("UWP::", "")

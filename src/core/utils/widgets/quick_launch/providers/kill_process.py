@@ -2,6 +2,7 @@ import ctypes
 import logging
 
 from core.utils.widgets.quick_launch.base_provider import BaseProvider, ProviderResult
+from core.utils.widgets.quick_launch.providers.resources.icons import ICON_KILL_PROCESS
 from core.utils.win32.bindings.kernel32 import kernel32
 from core.utils.win32.bindings.psapi import psapi
 from core.utils.win32.constants import PROCESS_QUERY_LIMITED_INFORMATION, PROCESS_TERMINATE, TH32CS_SNAPPROCESS
@@ -74,6 +75,9 @@ class KillProcessProvider(BaseProvider):
     """Search and kill running processes."""
 
     name = "kill_process"
+    display_name = "Process Killer"
+    input_placeholder = "Type a process name to kill..."
+    icon = ICON_KILL_PROCESS
 
     def match(self, text: str) -> bool:
         text = text.strip()
@@ -84,7 +88,7 @@ class KillProcessProvider(BaseProvider):
             return True
         return False
 
-    def get_results(self, text: str) -> list[ProviderResult]:
+    def get_results(self, text: str, **kwargs) -> list[ProviderResult]:
         if self.prefix and text.strip().startswith(self.prefix):
             query = self.get_query_text(text).lower()
         elif text.strip().lower().startswith("kill "):
@@ -97,7 +101,7 @@ class KillProcessProvider(BaseProvider):
                 ProviderResult(
                     title="Type a process name to kill",
                     description="e.g. !notepad, !chrome, kill firefox",
-                    icon_char="\ue71a",
+                    icon_char=ICON_KILL_PROCESS,
                     provider=self.name,
                 )
             ]
@@ -133,7 +137,7 @@ class KillProcessProvider(BaseProvider):
                 ProviderResult(
                     title=f"Kill {entry['name']}",
                     description=f"{count_str}, {mem_mb:.1f} MB",
-                    icon_char="\ue71a",
+                    icon_char=ICON_KILL_PROCESS,
                     provider=self.name,
                     action_data={"name": entry["name"], "pids": entry["pids"]},
                 )

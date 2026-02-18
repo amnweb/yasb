@@ -7,6 +7,7 @@ import re
 from PyQt6.QtWidgets import QApplication
 
 from core.utils.widgets.quick_launch.base_provider import BaseProvider, ProviderResult
+from core.utils.widgets.quick_launch.providers.resources.icons import ICON_CALCULATOR
 
 _OPS = {
     ast.Add: operator.add,
@@ -79,6 +80,9 @@ class CalculatorProvider(BaseProvider):
     """Evaluate math expressions inline."""
 
     name = "calculator"
+    display_name = "Calculator"
+    input_placeholder = "Type a math expression..."
+    icon = ICON_CALCULATOR
 
     def match(self, text: str) -> bool:
         text = text.strip()
@@ -94,14 +98,14 @@ class CalculatorProvider(BaseProvider):
         )
         return has_digit and has_operator
 
-    def get_results(self, text: str) -> list[ProviderResult]:
+    def get_results(self, text: str, **kwargs) -> list[ProviderResult]:
         query = self.get_query_text(text) if text.startswith("=") else text.strip()
         if not query:
             return [
                 ProviderResult(
                     title="Type a math expression",
                     description="e.g. 2+2, sqrt(144), 15% of 200",
-                    icon_char="\ue8ef",
+                    icon_char=ICON_CALCULATOR,
                     provider=self.name,
                 )
             ]
@@ -129,7 +133,7 @@ class CalculatorProvider(BaseProvider):
                 ProviderResult(
                     title=display,
                     description=f"{query} - press Enter to copy",
-                    icon_char="\ue8ef",
+                    icon_char=ICON_CALCULATOR,
                     provider=self.name,
                     action_data={"value": display},
                 )
@@ -139,7 +143,7 @@ class CalculatorProvider(BaseProvider):
                 ProviderResult(
                     title=query,
                     description="Continue typing a valid expression",
-                    icon_char="\ue8ef",
+                    icon_char=ICON_CALCULATOR,
                     provider=self.name,
                 )
             ]

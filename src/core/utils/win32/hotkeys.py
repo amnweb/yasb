@@ -196,10 +196,10 @@ class HotkeyListener(QThread):
             mods = binding.modifiers | MOD_NOREPEAT
             if user32.RegisterHotKey(None, hotkey_id, mods, binding.vk):
                 self._id_to_binding[hotkey_id] = binding
-                logging.debug(f"Registered hotkey '{binding.hotkey}' (id={hotkey_id})")
+                logging.debug(f"Registered hotkey {binding.hotkey}")
             else:
                 logging.warning(
-                    f"Failed to register hotkey '{binding.hotkey}' — it may be in use by another application."
+                    f"Failed to register hotkey {binding.hotkey} - it may be in use by another application."
                 )
 
     def _unregister_hotkeys(self) -> None:
@@ -239,7 +239,7 @@ class HotkeyListener(QThread):
         if not self._id_to_binding:
             return
 
-        # Message loop — GetMessageW returns WM_HOTKEY for thread-level hotkeys
+        # Message loop - GetMessageW returns WM_HOTKEY for thread-level hotkeys
         while True:
             result = user32.GetMessageW(byref(msg), None, 0, 0)
             if result == -1:

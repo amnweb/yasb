@@ -1,62 +1,71 @@
 import logging
 
 from core.utils.widgets.quick_launch.base_provider import BaseProvider, ProviderResult
+from core.utils.widgets.quick_launch.providers.resources.icons import (
+    ICON_HIBERNATE,
+    ICON_LOCK,
+    ICON_RESTART,
+    ICON_SHUTDOWN,
+    ICON_SIGN_OUT,
+    ICON_SLEEP,
+    ICON_SYSTEM,
+)
 
 _SYSTEM_COMMANDS = [
     {
         "keywords": ["shutdown", "shut down", "power off", "turn off"],
         "title": "Shutdown",
         "description": "Shut down the computer",
-        "icon": "\ue7e8",
+        "icon": ICON_SHUTDOWN,
         "action": "shutdown",
     },
     {
         "keywords": ["restart", "reboot"],
         "title": "Restart",
         "description": "Restart the computer",
-        "icon": "\ue72c",
+        "icon": ICON_RESTART,
         "action": "restart",
     },
     {
         "keywords": ["sleep", "stand by", "standby"],
         "title": "Sleep",
         "description": "Put the computer to sleep",
-        "icon": "\ue708",
+        "icon": ICON_SLEEP,
         "action": "sleep",
     },
     {
         "keywords": ["hibernate"],
         "title": "Hibernate",
         "description": "Hibernate the computer",
-        "icon": "\ue945",
+        "icon": ICON_HIBERNATE,
         "action": "hibernate",
     },
     {
         "keywords": ["lock", "lock screen"],
         "title": "Lock",
         "description": "Lock the workstation",
-        "icon": "\ue72e",
+        "icon": ICON_LOCK,
         "action": "lock",
     },
     {
         "keywords": ["sign out", "signout", "log out", "logout", "log off", "logoff"],
         "title": "Sign out",
         "description": "Sign out of the current session",
-        "icon": "\uf3b1",
+        "icon": ICON_SIGN_OUT,
         "action": "signout",
     },
     {
         "keywords": ["force shutdown", "force shut down"],
         "title": "Force Shutdown",
         "description": "Force shutdown (skip app close prompts)",
-        "icon": "\ue7e8",
+        "icon": ICON_SHUTDOWN,
         "action": "force_shutdown",
     },
     {
         "keywords": ["force restart", "force reboot"],
         "title": "Force Restart",
         "description": "Force restart (skip app close prompts)",
-        "icon": "\ue72c",
+        "icon": ICON_RESTART,
         "action": "force_restart",
     },
 ]
@@ -66,6 +75,9 @@ class SystemCommandsProvider(BaseProvider):
     """Provide system commands like shutdown, restart, lock, sleep."""
 
     name = "system_commands"
+    display_name = "System Commands"
+    input_placeholder = "Search system commands..."
+    icon = ICON_SYSTEM
 
     def __init__(self, config: dict | None = None):
         super().__init__(config)
@@ -92,7 +104,7 @@ class SystemCommandsProvider(BaseProvider):
                         return True
         return False
 
-    def get_results(self, text: str) -> list[ProviderResult]:
+    def get_results(self, text: str, **kwargs) -> list[ProviderResult]:
         query = (
             self.get_query_text(text).lower() if self.prefix and text.startswith(self.prefix) else text.strip().lower()
         )
