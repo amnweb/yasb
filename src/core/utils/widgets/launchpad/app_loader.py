@@ -1,4 +1,7 @@
+import glob
 import os
+import re
+import subprocess
 
 from PyQt6.QtCore import (
     QThread,
@@ -27,19 +30,22 @@ class AppListLoader(QThread):
             self.apps_loaded.emit(_APPS_CACHE)
             return
 
-        import glob
-        import subprocess
-
         filter_keywords = {
-            "uninstall",
             "readme",
             "help",
             "documentation",
             "license",
             "setup",
-            "installer",
             "administrative tools",
         }
+
+        strict_filter_keywords = {
+            "uninstall",
+            "installer",
+        }
+
+        # Pre-compile regex for strict keywords
+        strict_pattern = re.compile(r"\b(" + "|".join(map(re.escape, strict_filter_keywords)) + r")\b")
 
         start_menu_dirs = [
             os.path.expandvars(r"%APPDATA%\Microsoft\Windows\Start Menu\Programs"),
@@ -51,7 +57,16 @@ class AppListLoader(QThread):
         def should_filter_app(name):
             """Check if app name contains any filter keywords"""
             name_lower = name.lower()
-            return any(keyword in name_lower for keyword in filter_keywords)
+
+            # Check loose keywords (substring match)
+            if any(keyword in name_lower for keyword in filter_keywords):
+                return True
+
+            # Check strict keywords (whole word match)
+            if strict_pattern.search(name_lower):
+                return True
+
+            return False
 
         for dir in start_menu_dirs:
             for lnk in glob.glob(os.path.join(dir, "**", "*.lnk"), recursive=True):
