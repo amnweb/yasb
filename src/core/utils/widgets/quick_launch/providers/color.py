@@ -1,10 +1,24 @@
 import math
 import re
 
-from PyQt6.QtWidgets import QApplication
+from PyQt6.QtCore import QRectF, Qt, QTimer, pyqtSignal
+from PyQt6.QtGui import (
+    QColor,
+    QCursor,
+    QFont,
+    QFontMetrics,
+    QImage,
+    QPainter,
+    QPainterPath,
+    QPen,
+    QPixmap,
+)
+from PyQt6.QtWidgets import QApplication, QWidget
 
 from core.utils.widgets.quick_launch.base_provider import BaseProvider, ProviderResult
-from core.utils.widgets.quick_launch.providers.resources.icons import ICON_COLOR
+from core.utils.widgets.quick_launch.providers.resources.icons import ICON_COLOR, ICON_COLOR_PICKER
+
+# Color Conversion Helpers
 
 
 def _hex_to_rgb(hex_str: str) -> tuple[int, int, int, int]:
@@ -232,7 +246,8 @@ def _oklch_to_rgb(L: float, C: float, H: float) -> tuple[int, int, int]:
     return _oklab_to_rgb(L, a, b_val)
 
 
-# Patterns for parsing color inputs
+# Color Parsing
+
 _HEX_RE = re.compile(r"^#?([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$")
 _RGB_RE = re.compile(r"^rgb\s*\(\s*(\d{1,3})\s*[,\s]\s*(\d{1,3})\s*[,\s]\s*(\d{1,3})\s*\)$", re.IGNORECASE)
 _RGBA_RE = re.compile(
@@ -319,27 +334,22 @@ def _parse_color(text: str) -> tuple[int, int, int, int] | None:
     """Try to parse a color string into (R, G, B, A). Returns None on failure."""
     text = text.strip()
 
-    # Named color
     if text.lower() in _NAMED_COLORS:
         return _hex_to_rgb(_NAMED_COLORS[text.lower()])
 
-    # HEX (3, 4, 6, or 8 digits)
     m = _HEX_RE.match(text)
     if m:
         return _hex_to_rgb(m.group(1))
 
-    # rgba(r, g, b, a)
     m = _RGBA_RE.match(text)
     if m:
         r, g, b = int(m.group(1)), int(m.group(2)), int(m.group(3))
         a_raw = float(m.group(4))
-        # Treat values > 1 as 0-255, values <= 1 as fraction
         a = round(a_raw) if a_raw > 1 else round(a_raw * 255)
         if all(0 <= v <= 255 for v in (r, g, b, a)):
             return r, g, b, a
         return None
 
-    # rgb(r, g, b)
     m = _RGB_RE.match(text)
     if m:
         r, g, b = int(m.group(1)), int(m.group(2)), int(m.group(3))
@@ -347,7 +357,6 @@ def _parse_color(text: str) -> tuple[int, int, int, int] | None:
             return r, g, b, 255
         return None
 
-    # Plain "r, g, b" or "r g b"
     m = _RGB_PLAIN_RE.match(text)
     if m:
         r, g, b = int(m.group(1)), int(m.group(2)), int(m.group(3))
@@ -355,7 +364,6 @@ def _parse_color(text: str) -> tuple[int, int, int, int] | None:
             return r, g, b, 255
         return None
 
-    # hsl(h, s%, l%)
     m = _HSL_RE.match(text)
     if m:
         h, s, l = int(m.group(1)), int(m.group(2)), int(m.group(3))
@@ -364,7 +372,6 @@ def _parse_color(text: str) -> tuple[int, int, int, int] | None:
             return r, g, b, 255
         return None
 
-    # hwb(h, w%, b%)
     m = _HWB_RE.match(text)
     if m:
         h, w, bk = int(m.group(1)), int(m.group(2)), int(m.group(3))
@@ -373,7 +380,6 @@ def _parse_color(text: str) -> tuple[int, int, int, int] | None:
             return r, g, b, 255
         return None
 
-    # lab(L, a, b)
     m = _LAB_RE.match(text)
     if m:
         L, a, b = float(m.group(1)), float(m.group(2)), float(m.group(3))
@@ -382,7 +388,6 @@ def _parse_color(text: str) -> tuple[int, int, int, int] | None:
             return r, g, b, 255
         return None
 
-    # lch(L, C, H)
     m = _LCH_RE.match(text)
     if m:
         L, C, H = float(m.group(1)), float(m.group(2)), float(m.group(3))
@@ -391,7 +396,6 @@ def _parse_color(text: str) -> tuple[int, int, int, int] | None:
             return r, g, b, 255
         return None
 
-    # oklab(L, a, b)
     m = _OKLAB_RE.match(text)
     if m:
         L, a, b = float(m.group(1)), float(m.group(2)), float(m.group(3))
@@ -400,7 +404,6 @@ def _parse_color(text: str) -> tuple[int, int, int, int] | None:
             return r, g, b, 255
         return None
 
-    # oklch(L, C, H)
     m = _OKLCH_RE.match(text)
     if m:
         L, C, H = float(m.group(1)), float(m.group(2)), float(m.group(3))
@@ -412,13 +415,208 @@ def _parse_color(text: str) -> tuple[int, int, int, int] | None:
     return None
 
 
-class ColorConverterProvider(BaseProvider):
-    """Convert colors between HEX, RGB, HSL, HSV, HWB, LAB, LCH, OKLAB, and OKLCH."""
+# Color Picker
 
-    name = "color_converter"
-    display_name = "Color Converter"
+
+class _ColorPickerOverlay(QWidget):
+    """Small floating loupe centered on the cursor for picking colors."""
+
+    color_picked = pyqtSignal(str)
+
+    GRID_SIZE = 11
+    CELL_SIZE = 12
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowFlags(
+            Qt.WindowType.FramelessWindowHint
+            | Qt.WindowType.WindowStaysOnTopHint
+            | Qt.WindowType.Tool
+            | Qt.WindowType.BypassWindowManagerHint
+        )
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+        self.setCursor(Qt.CursorShape.BlankCursor)
+
+        self._src_img: QImage | None = None
+        self._current_color = QColor(0, 0, 0)
+        self._dpr: float = 1.0
+        self._screen_x = 0
+        self._screen_y = 0
+
+        grid_px = self.GRID_SIZE * self.CELL_SIZE
+        loupe_r = grid_px // 2 + 4
+        self._loupe_r = loupe_r
+        self._grid_px = grid_px
+        self._win_w = loupe_r * 2 + 6
+        self._win_h = loupe_r * 2 + 6 + 36
+        self.setFixedSize(self._win_w, self._win_h)
+        self._wcx = self._win_w // 2
+        self._wcy = loupe_r + 3
+
+        self._grid_overlay = QPixmap(grid_px, grid_px)
+        self._grid_overlay.fill(Qt.GlobalColor.transparent)
+        p = QPainter(self._grid_overlay)
+        p.setPen(QPen(QColor(255, 255, 255, 40), 1))
+        for i in range(1, self.GRID_SIZE):
+            coord = i * self.CELL_SIZE
+            p.drawLine(coord, 0, coord, grid_px)
+            p.drawLine(0, coord, grid_px, coord)
+        p.end()
+
+        self._label_font = QFont("Segoe UI", 9)
+        self._label_font.setBold(True)
+        self._label_fm = QFontMetrics(self._label_font)
+
+        self._timer = QTimer(self)
+        self._timer.setInterval(16)
+        self._timer.timeout.connect(self._on_tick)
+
+    def start(self):
+        self._capture_screens()
+        self._reposition()
+        self.show()
+        self._timer.start()
+
+    def _capture_screens(self):
+        screens = QApplication.screens()
+        if not screens:
+            return
+        combined = screens[0].geometry()
+        for s in screens[1:]:
+            combined = combined.united(s.geometry())
+        self._screen_x = combined.x()
+        self._screen_y = combined.y()
+        self._dpr = screens[0].devicePixelRatio()
+        px_w = int(combined.width() * self._dpr)
+        px_h = int(combined.height() * self._dpr)
+        img = QImage(px_w, px_h, QImage.Format.Format_RGB32)
+        img.setDevicePixelRatio(self._dpr)
+        img.fill(Qt.GlobalColor.black)
+        painter = QPainter(img)
+        for s in screens:
+            geo = s.geometry()
+            grab = s.grabWindow(0, 0, 0, geo.width(), geo.height())
+            painter.drawPixmap(geo.x() - combined.x(), geo.y() - combined.y(), grab)
+        painter.end()
+        self._src_img = img.copy()
+        self._src_img.setDevicePixelRatio(1.0)
+
+    def _reposition(self):
+        pos = QCursor.pos()
+        self.move(pos.x() - self._wcx, pos.y() - self._wcy)
+
+    def _on_tick(self):
+        self._reposition()
+        self.update()
+
+    def paintEvent(self, event):
+        if not self._src_img:
+            return
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        pos = QCursor.pos()
+        cx = pos.x() - self._screen_x
+        cy = pos.y() - self._screen_y
+        half = self.GRID_SIZE // 2
+        cell = self.CELL_SIZE
+        grid_px = self._grid_px
+        loupe_r = self._loupe_r
+        wcx = self._wcx
+        wcy = self._wcy
+
+        src_x = int((cx - half) * self._dpr)
+        src_y = int((cy - half) * self._dpr)
+        crop = self._src_img.copy(src_x, src_y, self.GRID_SIZE, self.GRID_SIZE)
+        zoomed = crop.scaled(
+            grid_px,
+            grid_px,
+            Qt.AspectRatioMode.IgnoreAspectRatio,
+            Qt.TransformationMode.FastTransformation,
+        )
+
+        csx = int(cx * self._dpr)
+        csy = int(cy * self._dpr)
+        if 0 <= csx < self._src_img.width() and 0 <= csy < self._src_img.height():
+            center_color = QColor(self._src_img.pixel(csx, csy))
+        else:
+            center_color = QColor(0, 0, 0)
+        self._current_color = center_color
+
+        loupe_rect = QRectF(wcx - grid_px / 2, wcy - grid_px / 2, grid_px, grid_px)
+        circle_rect = QRectF(wcx - loupe_r, wcy - loupe_r, loupe_r * 2, loupe_r * 2)
+
+        painter.save()
+        clip_path = QPainterPath()
+        clip_path.addEllipse(circle_rect)
+        painter.setClipPath(clip_path)
+        painter.drawImage(loupe_rect, zoomed)
+        painter.drawPixmap(int(loupe_rect.x()), int(loupe_rect.y()), self._grid_overlay)
+        painter.restore()
+
+        painter.setPen(QPen(QColor(40, 40, 40, 220), 2.5))
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+        painter.drawEllipse(circle_rect)
+
+        center_rect = QRectF(loupe_rect.x() + half * cell, loupe_rect.y() + half * cell, cell, cell)
+        luma = 0.299 * center_color.red() + 0.587 * center_color.green() + 0.114 * center_color.blue()
+        hl = QColor(255, 255, 255) if luma < 128 else QColor(0, 0, 0)
+        painter.setPen(QPen(hl, 2))
+        painter.drawRect(center_rect)
+
+        hex_str = center_color.name().upper()
+        label_y = int(circle_rect.bottom()) + 6
+        painter.setFont(self._label_font)
+        text_w = self._label_fm.horizontalAdvance(hex_str) + 16
+        text_h = self._label_fm.height() + 8
+        swatch_sz = text_h - 6
+        total_w = swatch_sz + 4 + text_w
+        pill_x = wcx - total_w / 2
+
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(QColor(20, 20, 20, 210))
+        painter.drawRoundedRect(QRectF(pill_x, label_y, total_w, text_h), text_h / 2, text_h / 2)
+
+        swatch_rect = QRectF(pill_x + 5, label_y + 3, swatch_sz, swatch_sz)
+        painter.setBrush(center_color)
+        painter.setPen(QPen(QColor(255, 255, 255, 100), 1))
+        painter.drawRoundedRect(swatch_rect, 2, 2)
+
+        painter.setPen(QColor(255, 255, 255))
+        painter.drawText(
+            QRectF(swatch_rect.right() + 4, label_y, text_w, text_h),
+            Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft,
+            hex_str,
+        )
+        painter.end()
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self._timer.stop()
+            self.color_picked.emit(self._current_color.name().upper())
+            self.close()
+        elif event.button() == Qt.MouseButton.RightButton:
+            self._timer.stop()
+            self.close()
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key.Key_Escape:
+            self._timer.stop()
+            self.close()
+
+
+# Color Provider
+
+
+class ColorProvider(BaseProvider):
+    """Pick colors and convert between HEX, RGB, HSL, HSV, HWB, LAB, LCH, OKLAB, and OKLCH."""
+
+    name = "color"
+    display_name = "Color"
     input_placeholder = "Enter a color value..."
     icon = ICON_COLOR
+
+    _picker_overlay = None
 
     def match(self, text: str) -> bool:
         text = text.strip()
@@ -431,11 +629,18 @@ class ColorConverterProvider(BaseProvider):
         if not query:
             return [
                 ProviderResult(
+                    title="Pick Color from Screen",
+                    description="Open a magnifying loupe to pick any color from the desktop",
+                    icon_char=ICON_COLOR_PICKER,
+                    provider=self.name,
+                    action_data={"_pick_color": True},
+                ),
+                ProviderResult(
                     title="Color Converter",
                     description="Enter a color: #hex, #hexAlpha, rgba(), hsl(), hwb(), lab(), lch(), oklab(), oklch(), or a name",
                     icon_char=ICON_COLOR,
                     provider=self.name,
-                )
+                ),
             ]
 
         parsed = _parse_color(query)
@@ -537,9 +742,46 @@ class ColorConverterProvider(BaseProvider):
         ]
 
     def execute(self, result: ProviderResult) -> bool:
+        if result.action_data.get("_pick_color"):
+            return self._launch_color_picker()
         value = result.action_data.get("value", "")
         if value:
             clipboard = QApplication.clipboard()
             if clipboard:
                 clipboard.setText(value)
         return True
+
+    def _launch_color_picker(self) -> bool:
+        """Open the floating color picker loupe."""
+        overlay = _ColorPickerOverlay()
+        ColorProvider._picker_overlay = overlay
+        overlay.color_picked.connect(lambda hex_val: self._on_color_picked(hex_val))
+        overlay.destroyed.connect(lambda: setattr(ColorProvider, "_picker_overlay", None))
+        QTimer.singleShot(100, overlay.start)
+        return True
+
+    def _on_color_picked(self, hex_color: str):
+        """Handle the picked color by reopening quick launch with the color filled in."""
+        from core.widgets.yasb.quick_launch import QuickLaunchWidget
+
+        ColorProvider._picker_overlay = None
+
+        def _reopen():
+            widget = QuickLaunchWidget._active_instance
+            if widget is None:
+                for w in QApplication.topLevelWidgets():
+                    ql = w.findChild(QuickLaunchWidget)
+                    if ql:
+                        widget = ql
+                        break
+            if widget is None:
+                for w in QApplication.allWidgets():
+                    if isinstance(w, QuickLaunchWidget):
+                        widget = w
+                        break
+            if widget:
+                widget._show_popup()
+                if self.prefix:
+                    widget._set_prefix_chip(self.prefix, hex_color)
+
+        QTimer.singleShot(100, _reopen)

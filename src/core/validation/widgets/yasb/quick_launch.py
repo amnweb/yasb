@@ -109,7 +109,7 @@ class SnippetsProviderConfig(CustomBaseModel):
     type_delay: int = 200
 
 
-class ColorConverterProviderConfig(CustomBaseModel):
+class ColorProviderConfig(CustomBaseModel):
     enabled: bool = True
     prefix: str = "c:"
     priority: int = 0
@@ -170,7 +170,7 @@ class QuickLaunchProvidersConfig(CustomBaseModel):
     unit_converter: UnitConverterProviderConfig = UnitConverterProviderConfig()
     emoji: EmojiProviderConfig = EmojiProviderConfig()
     snippets: SnippetsProviderConfig = SnippetsProviderConfig()
-    color_converter: ColorConverterProviderConfig = ColorConverterProviderConfig()
+    color: ColorProviderConfig = ColorProviderConfig()
     port_viewer: PortViewerProviderConfig = PortViewerProviderConfig()
     world_clock: WorldClockProviderConfig = WorldClockProviderConfig()
     hacker_news: HackerNewsProviderConfig = HackerNewsProviderConfig()

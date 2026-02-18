@@ -2,7 +2,7 @@ from .apps import *
 from .bookmarks import *
 from .calculator import *
 from .clipboard_history import *
-from .color_converter import *
+from .color import *
 from .currency import *
 from .dev_tools import *
 from .emoji import *

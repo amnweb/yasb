@@ -55,7 +55,7 @@ Quick Launch uses a plugin-based provider system. Each provider handles a specif
 - [Bookmarks](#bookmarks-provider)
 - [Calculator](#calculator-provider)
 - [Clipboard History](#clipboard-history-provider)
-- [Color Converter](#color-converter-provider)
+- [Color](#color-provider)
 - [Currency](#currency-provider)
 - [Emoji](#emoji-provider)
 - [File Search](#file-search-provider)
@@ -292,13 +292,13 @@ Search and copy emojis to the clipboard. Type `:` followed by a name (e.g., `:sm
 
 Searches emoji names, aliases, and tags. Click a result to copy the emoji character to the clipboard.
 
-### Color Converter Provider
+### Color Provider
 
-Convert colors between HEX, RGB, HSL, HSV, HWB, LAB, LCH, OKLAB, and OKLCH formats. Type `c:` followed by a color value (e.g., `c:#FF5500`, `c:rgb(255,85,0)`, `c:coral`).
+Pick colors from the screen and convert between HEX, RGB, HSL, HSV, HWB, LAB, LCH, OKLAB, and OKLCH formats. Type `c:` followed by a color value (e.g., `c:#FF5500`, `c:rgb(255,85,0)`, `c:coral`).
 
 | Option     | Type   | Default | Description                                  |
 |------------|--------|---------|----------------------------------------------|
-| `enabled`  | bool   | `false`  | Enable/disable the color converter provider.  |
+| `enabled`  | bool   | `false`  | Enable/disable the color provider.            |
 | `prefix`   | string | `"c:"` | Trigger prefix. Use `"*"` to include in default results. |
 | `priority` | int    | `0`     | Sort order when multiple providers share the same prefix. Lower values appear first. |
 
@@ -481,7 +481,7 @@ Prefixes are configurable per provider. Set `prefix` to `"*"` to include a provi
 | `*`      | Bookmarks         | `*github`             |
 | `=`      | Calculator        | `=2*pi`               |
 | `cb`     | Clipboard History | `cb notepad`          |
-| `c:`     | Color Converter   | `c:#FF5500`           |
+| `c:`     | Color             | `c:#FF5500`           |
 | `$`      | Currency          | `$100 usd eur`        |
 | `:`      | Emoji             | `:fire`               |
 | `/`      | File Search       | `/report.docx`        |
@@ -598,7 +598,7 @@ quick_launch:
         enabled: true
         prefix: ":"
         priority: 12
-      color_converter:
+      color:
         enabled: true
         prefix: "c:"
         priority: 13
@@ -663,7 +663,7 @@ quick_launch:
   - ***port_viewer:*** View TCP/UDP ports and the owning PID/process name (via `netstat`). Supports filtering and kill actions.
   - ***unit_converter:*** Convert between units (length, weight, volume, speed, data, time, temperature) with prefix `~`.
   - ***emoji:*** Search and copy emojis to clipboard with prefix `:`.
-  - ***color_converter:*** Convert colors between HEX, RGB, HSL, HSV with prefix `c:`.
+  - ***color:*** Pick colors from screen and convert between HEX, RGB, HSL, HSV, HWB, LAB, LCH, OKLAB, OKLCH with prefix `c:`.
   - ***world_clock:*** Show current time in cities worldwide with prefix `tz`. Pin cities via right-click.
   - ***snippets:*** Save and type text snippets with prefix `;`. Supports template variables and inline editing.
 - **popup:** Popup window appearance settings.
