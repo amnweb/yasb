@@ -60,10 +60,8 @@ ai_chat:
           label: "Gemma3"
       - provider: "GitHub Copilot"
         provider_type: "copilot"
-        copilot_cli_url: "http://localhost:4321"
       - provider: "Copilot"
         provider_type: "copilot"
-        copilot_cli_url: "http://localhost:4321"
         models:
           - name: "gpt-4.1"
             label: "Copilot GPT‑4.1"
@@ -93,17 +91,13 @@ ai_chat:
 ```
 > [!IMPORTANT]  
 > If you are using the installed version of YASB, make sure the Copilot CLI is installed and accessible in your system PATH.
-> And always use `copilot_cli_url` to connect to the Copilot CLI server, in that case, YASB can manage the CLI process properly.
 
 Copilot uses the Copilot CLI for auth, `api_endpoint/credential` are not used.  
 Copilot SDK does not document temperature, top_p, or max_tokens, so they are omitted.
 
 **Copilot CLI URL**
-Set `copilot_cli_url` to connect to a specific Copilot CLI server, e.g. `localhost:4321` or `192.167.123.22:5500`.
-
-- If `copilot_cli_url` is provided and points to localhost, YASB will start the CLI server in the background and connect to it.
-- If `copilot_cli_url` is provided and points to a remote host, YASB will only connect (no server start).
-- If `copilot_cli_url` is omitted or empty, YASB lets the SDK manage the CLI process by itself.
+Optionally set `copilot_cli_url` to connect to a remote Copilot CLI server, e.g. `192.168.1.100:5500`.
+If omitted, the SDK manages its own CLI process automatically.
 
 **Copilot Models**
 If you don’t have defined models, YASB will fetch all available models from the Copilot API.

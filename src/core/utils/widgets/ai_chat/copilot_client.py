@@ -21,7 +21,6 @@ from core.utils.widgets.ai_chat.constants import (
     FORMAT_TO_MIME,
     MESSAGE_QUEUE_TIMEOUT_SECONDS,
 )
-from core.utils.widgets.ai_chat.copilot_server import copilot_cli_server, register_client, unregister_client
 from settings import DEBUG
 
 try:
@@ -30,20 +29,13 @@ except ImportError:
     CopilotClient = None
 
 
-def _get_copilot_cli_url(provider_config: dict | None) -> str | None:
+def _build_copilot_client_options(provider_config: dict | None) -> dict[str, Any]:
     if not provider_config:
-        return None
+        return {}
     cli_url = provider_config.get("copilot_cli_url")
     if isinstance(cli_url, str) and cli_url.strip():
-        return cli_url.strip()
-    return None
-
-
-def _build_copilot_client_options(provider_config: dict | None) -> dict[str, Any]:
-    cli_url = copilot_cli_server(_get_copilot_cli_url(provider_config))
-    if not cli_url:
-        return {}
-    return {"cli_url": cli_url}
+        return {"cli_url": cli_url.strip()}
+    return {}
 
 
 def _run_async(coro_factory):
@@ -184,10 +176,9 @@ def _sort_models_free_first(models: list[dict[str, Any]]) -> list[dict[str, Any]
 
 
 class CopilotAiChatClient:
-    def __init__(self, provider_config: dict, model_name: str):
+    def __init__(self, provider_config: dict):
         self.provider_config = provider_config
-        self.provider = provider_config.get("provider", "Copilot")
-        self.model = model_name
+        self._model: str | None = None
         self._cancelled = False
         self._session = None
         self._client = None
@@ -203,11 +194,11 @@ class CopilotAiChatClient:
         self._active_idle: asyncio.Event | None = None
         self._session_handler_registered = False
         self._session_system_message: str | None = None
+        self._session_model: str | None = None
         self._saw_delta = False
         self._had_output = False
 
         self._start_event_loop()
-        register_client(self)
 
     def stop(self):
         """Abort the current request. Session remains usable for new messages."""
@@ -219,10 +210,9 @@ class CopilotAiChatClient:
                 logging.debug(f"Error aborting Copilot session: {e}")
 
     def close(self):
-        """Destroy session and release all resources."""
-        unregister_client(self)
+        """Stop the client and release all resources (kills copilot.exe)."""
         try:
-            self._run_coroutine(self._destroy_session())
+            self._run_coroutine(self._stop_client())
         except Exception as e:
             if DEBUG:
                 logging.debug(f"Error destroying Copilot session: {e}")
@@ -237,8 +227,11 @@ class CopilotAiChatClient:
     def chat(
         self,
         messages: list[dict[str, Any]],
+        model_name: str | None = None,
     ) -> Iterable[str]:
         self._cancelled = False
+        if model_name:
+            self._model = model_name
 
         with self._request_lock:
             system_message, prompt, attachments = self._build_prompt_and_attachments(messages)
@@ -416,12 +409,21 @@ class CopilotAiChatClient:
 
     async def _ensure_session(self, system_message: str | None) -> None:
         with self._session_lock:
-            if not self._client or not self._session:
-                await self._create_session(system_message)
-                return
+            needs_new_session = False
 
-            if self._session_system_message != system_message:
+            if not self._client:
+                needs_new_session = True
+            elif not self._session:
+                needs_new_session = True
+            elif self._session_model != self._model:
+                # Model changed destroy session
                 await self._destroy_session()
+                needs_new_session = True
+            elif self._session_system_message != system_message:
+                await self._destroy_session()
+                needs_new_session = True
+
+            if needs_new_session:
                 await self._create_session(system_message)
 
     async def _create_session(self, system_message: str | None) -> None:
@@ -429,30 +431,31 @@ class CopilotAiChatClient:
             logging.error("copilot-sdk package is required for Copilot provider")
             raise RuntimeError("copilot-sdk package is required")
 
-        client = CopilotClient(_build_copilot_client_options(self.provider_config))
-        try:
-            await client.start()
-            auth_status = await client.get_auth_status()
-            if not getattr(auth_status, "isAuthenticated", False):
-                logging.error("Copilot CLI is not authenticated. Run `copilot` to sign in.")
-                await client.stop()
-                self._client = None
-                self._session = None
-                return
-        except FileNotFoundError:
-            logging.error("Copilot CLI not found. Please install GitHub Copilot CLI.")
-            raise RuntimeError("Copilot CLI not found")
-        except ConnectionError as e:
-            logging.error(f"Could not connect to Copilot CLI server: {e}")
-            raise RuntimeError("Could not connect to Copilot CLI server")
-        except Exception as e:
-            logging.error(f"Failed to start Copilot client: {e}")
-            raise RuntimeError("Failed to start Copilot client")
-
-        self._client = client
+        # Reuse existing client (single copilot.exe) or start a new one
+        if not self._client:
+            client = CopilotClient(_build_copilot_client_options(self.provider_config))
+            try:
+                await client.start()
+                auth_status = await client.get_auth_status()
+                if not getattr(auth_status, "isAuthenticated", False):
+                    logging.error("Copilot CLI is not authenticated. Run `copilot` to sign in.")
+                    await client.stop()
+                    self._client = None
+                    self._session = None
+                    return
+            except FileNotFoundError:
+                logging.error("Copilot CLI not found. Please install GitHub Copilot CLI.")
+                raise RuntimeError("Copilot CLI not found")
+            except ConnectionError as e:
+                logging.error(f"Could not connect to Copilot CLI server: {e}")
+                raise RuntimeError("Could not connect to Copilot CLI server")
+            except Exception as e:
+                logging.error(f"Failed to start Copilot client: {e}")
+                raise RuntimeError("Failed to start Copilot client")
+            self._client = client
 
         session_args: dict[str, Any] = {
-            "model": self.model,
+            "model": self._model,
             "streaming": True,
             "on_permission_request": self._handle_permission_request,
             "available_tools": list(DEFAULT_ALLOWED_TOOLS),
@@ -461,36 +464,27 @@ class CopilotAiChatClient:
             session_args["system_message"] = {"mode": "append", "content": system_message}
 
         try:
-            self._session = await client.create_session(session_args)
+            self._session = await self._client.create_session(session_args)
         except Exception as e:
             logging.error(f"Failed to create Copilot session: {e}")
-            # Clean up client if session creation fails
-            try:
-                await client.stop()
-            except Exception:
-                pass
-            self._client = None
+            self._session = None
             raise
 
         self._session_system_message = system_message
+        self._session_model = self._model
 
         if not self._session_handler_registered:
             self._session.on(self._handle_event)
             self._session_handler_registered = True
 
     async def _destroy_session(self) -> None:
+        """Destroy the current session. The client (copilot.exe) stays alive."""
         if self._session:
             try:
                 await self._session.destroy()
             except Exception:
                 pass
-        if self._client:
-            try:
-                await self._client.stop()
-            except Exception:
-                pass
         self._session = None
-        self._client = None
         self._session_handler_registered = False
         for path in self._temp_files:
             try:
@@ -498,6 +492,16 @@ class CopilotAiChatClient:
             except Exception:
                 pass
         self._temp_files.clear()
+
+    async def _stop_client(self) -> None:
+        """Destroy session and stop the client (kills copilot.exe)."""
+        await self._destroy_session()
+        if self._client:
+            try:
+                await self._client.stop()
+            except Exception:
+                pass
+        self._client = None
 
     async def _abort_session(self) -> None:
         if self._session and hasattr(self._session, "abort"):

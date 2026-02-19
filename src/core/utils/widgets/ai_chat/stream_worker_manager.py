@@ -14,7 +14,7 @@ class StreamWorkerManager:
         self._owner = owner
         self._pending_text = ""
         self._flush_timer = None
-        self._copilot_clients: dict[tuple[str | None, str | None], CopilotAiChatClient] = {}
+        self._copilot_clients: dict[str, CopilotAiChatClient] = {}  # provider_name -> client
 
     def stop_and_reset_stream(self):
         """Stop throttled UI updates and clear any pending text."""
@@ -117,7 +117,7 @@ class StreamWorkerManager:
 
         copilot_client = None
         if provider_type == "copilot":
-            copilot_client = self._get_copilot_client(self._owner._provider, self._owner._model_index)
+            copilot_client = self._get_copilot_client(self._owner._provider)
 
         self._owner._thread = QThread()
         self._owner._worker = _StreamWorker(
@@ -259,15 +259,31 @@ class StreamWorkerManager:
                 self._owner._thread = None
 
     def reset_copilot_session(self, provider: str | None, model: str | None):
-        """Remove cached Copilot client so a fresh session is created on next message."""
-        key = (provider, model)
-        self._copilot_clients.pop(key, None)
+        """Close the Copilot client for the given provider so a fresh one is created."""
+        if not provider:
+            return
+        client = self._copilot_clients.pop(provider, None)
+        if client is not None:
+            try:
+                client.close()
+            except Exception:
+                pass
 
-    def _get_copilot_client(self, provider: str | None, model: str | None):
-        key = (provider, model)
+    def close_all_copilot_clients(self):
+        """Close all cached Copilot clients and their CLI processes."""
+        for client in self._copilot_clients.values():
+            try:
+                client.close()
+            except Exception:
+                pass
+        self._copilot_clients.clear()
+
+    def _get_copilot_client(self, provider: str | None):
+        """Get or create a shared CopilotAiChatClient for the given provider."""
+        key = provider or "_default"
         client = self._copilot_clients.get(key)
         if client is None:
-            client = CopilotAiChatClient(self._owner._provider_config, self._owner._model)
+            client = CopilotAiChatClient(self._owner._provider_config)
             self._copilot_clients[key] = client
         return client
 
@@ -304,12 +320,12 @@ class _StreamWorker(QObject):
         try:
             provider_type = (self.provider_config.get("provider_type") or "openai").lower()
             if provider_type == "copilot":
-                self.client = self._copilot_client or CopilotAiChatClient(self.provider_config, self.model)
+                self.client = self._copilot_client or CopilotAiChatClient(self.provider_config)
             else:
                 self.client = AiChatClient(self.provider_config, self.model, self.max_tokens)
             full_text = ""
             if provider_type == "copilot":
-                chunk_iter = self.client.chat(self.chat_history)
+                chunk_iter = self.client.chat(self.chat_history, model_name=self.model)
             else:
                 chunk_iter = self.client.chat(self.chat_history, temperature=self.temperature, top_p=self.top_p)
             for chunk in chunk_iter:
