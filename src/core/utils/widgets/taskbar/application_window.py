@@ -83,6 +83,7 @@ class ApplicationWindow:
             "hwnd": self.hwnd,
             "title": self.title,
             "class_name": self.class_name,
+            "is_cloaked": self._is_cloaked(),
             "is_active": self.is_active,
             "is_flashing": self.is_flashing,
             "monitor_handle": monitor_handle,
