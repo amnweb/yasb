@@ -145,7 +145,9 @@ class WallpaperManager(QObject):
                 formatted_command = command.replace("{image}", f'"{new_wallpaper}"')
                 if DEBUG:
                     logging.debug(f"Running command: {formatted_command}")
-                result = subprocess.run(formatted_command, shell=True, capture_output=True, text=True)
+                result = subprocess.run(
+                    formatted_command, shell=True, capture_output=True, text=True, encoding="utf-8", errors="replace"
+                )
                 if result.stderr:
                     logging.error(f"error: {result.stderr}")
 
