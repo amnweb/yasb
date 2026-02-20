@@ -80,7 +80,9 @@ bdist_msi_options = {
     "initial_target_dir": r"[ProgramFiles64Folder]\YASB",
     "all_users": True,
     "skip_build": True,
-    "target_name": f"yasb-{BUILD_VERSION if RELEASE_CHANNEL == 'stable' else 'dev'}-{msi_arch_suffix}.msi",
+    "output_name": f"yasb-{BUILD_VERSION if RELEASE_CHANNEL == 'stable' else 'dev'}-{msi_arch_suffix}.msi",
+    "product_name": "YASB Reborn",
+    "product_version": BUILD_VERSION,
     "summary_data": {
         "author": "AmN",
         "comments": "A highly configurable Windows status bar",
