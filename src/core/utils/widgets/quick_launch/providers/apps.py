@@ -3,8 +3,6 @@ import ctypes.wintypes
 import json
 import logging
 import os
-import shlex
-import subprocess
 import threading
 import time
 import webbrowser
@@ -394,33 +392,13 @@ class AppsProvider(BaseProvider):
         return True
 
     @staticmethod
-    def _launch_detached(exe_path: str, arguments: str = "", working_dir: str = None) -> None:
-        """Launch an executable fully detached from YASB"""
-        if not working_dir or not os.path.exists(working_dir):
-            working_dir = os.path.dirname(exe_path)
-        if not os.path.exists(working_dir):
-            working_dir = None
-        try:
-            cmd = [exe_path]
-            if arguments:
-                try:
-                    parsed_args = shlex.split(arguments, posix=False)
-                    cmd.extend(arg.strip('"') for arg in parsed_args)
-                except ValueError:
-                    cmd.extend(arguments.split())
-            subprocess.Popen(
-                cmd,
-                cwd=working_dir,
-                creationflags=subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP,
-                close_fds=True,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
-        except OSError as e:
-            if getattr(e, "winerror", None) == 740:
-                ctypes.windll.shell32.ShellExecuteW(None, "runas", exe_path, arguments or None, working_dir or None, 1)
-            else:
-                raise
+    def _launch_detached(target: str, arguments: str = "", elevated: bool = False) -> None:
+        """Launch detached process, optionally with admin rights."""
+        cmd_args = f'/c start "" "{target}"'
+        if arguments:
+            cmd_args += f" {arguments}"
+        verb = "runas" if elevated else "open"
+        ctypes.windll.shell32.ShellExecuteW(None, verb, "cmd.exe", cmd_args, None, 0)
 
     @staticmethod
     def _launch(name: str, path: str):
@@ -431,29 +409,7 @@ class AppsProvider(BaseProvider):
             elif path.startswith(("http://", "https://")):
                 webbrowser.open(path)
             elif os.path.isfile(path):
-                ext = os.path.splitext(path)[1].lower()
-                if ext == ".lnk":
-                    target = None
-                    arguments = ""
-                    working_dir = ""
-                    try:
-                        link = pythoncom.CoCreateInstance(
-                            shell.CLSID_ShellLink, None, pythoncom.CLSCTX_INPROC_SERVER, shell.IID_IShellLink
-                        )
-                        link.QueryInterface(pythoncom.IID_IPersistFile).Load(path)
-                        target = link.GetPath(0)[0]
-                        arguments = link.GetArguments() or ""
-                        working_dir = link.GetWorkingDirectory() or ""
-                    except Exception:
-                        pass
-                    if target and os.path.isfile(target):
-                        AppsProvider._launch_detached(target, arguments, working_dir or None)
-                    else:
-                        os.startfile(path)
-                elif ext == ".exe":
-                    AppsProvider._launch_detached(path)
-                else:
-                    os.startfile(path)
+                AppsProvider._launch_detached(path)
             else:
                 logging.warning("Quick Launch: path not found: %s", path)
         except Exception as e:
@@ -502,7 +458,7 @@ class AppsProvider(BaseProvider):
                     aumid = path.replace("UWP::", "")
                     ctypes.windll.shell32.ShellExecuteW(None, "runas", f"shell:AppsFolder\\{aumid}", None, None, 1)
                 elif os.path.isfile(path):
-                    ctypes.windll.shell32.ShellExecuteW(None, "runas", path, None, None, 1)
+                    self._launch_detached(path, elevated=True)
                 self._history.record(name, path)
             except Exception as e:
                 logging.debug(f"Failed to run as admin: {e}")
