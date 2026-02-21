@@ -1,9 +1,11 @@
 # Update Check Widget
 
-This widget checks for available updates using Windows Update and Winget.
+This widget checks for available updates using Windows Update, Winget, and Scoop.
 
 > [!IMPORTANT]  
-> Winget must be [installed](https://learn.microsoft.com/en-us/windows/package-manager/winget/) and configured to use this widget, otherwise it will not work. 
+> - [Winget](https://learn.microsoft.com/en-us/windows/package-manager/winget/) must be installed and configured for Winget update checking to work.
+> - [Scoop](https://scoop.sh/) must be installed and configured for Scoop update checking to work.
+> - Each source can be enabled or disabled independently.
 
 ## Options
 
@@ -13,19 +15,29 @@ This widget checks for available updates using Windows Update and Winget.
 |-----------------|---------|------------|--------------------------------------------------------------|
 | `enabled`       | boolean | `false`    | Enable Windows Update checking.                              |
 | `label`         | string  | `'{count}'`| Format string for the widget label. `{count}` shows update count. |
-| `tooltip`  | boolean  | `true`        | Whether to show the tooltip on hover. |
+| `tooltip`       | boolean | `true`     | Whether to show the tooltip on hover.                        |
 | `interval`      | integer | `1440`     | Check interval in minutes (30 to 10080).                     |
-| `exclude`       | list    | `[]`       | List of updates to exclude from checking.                    |
+| `exclude`       | list    | `[]`       | List of updates to exclude (matched against name).           |
 
 ### Winget Update Options
 
 | Option          | Type    | Default    | Description                                                  |
 |-----------------|---------|------------|--------------------------------------------------------------|
-| `enabled`       | boolean | `False`    | Enable Winget package update checking.                       |
+| `enabled`       | boolean | `false`    | Enable Winget package update checking.                       |
 | `label`         | string  | `'{count}'`| Format string for the widget label. `{count}` shows update count. |
-| `tooltip`  | boolean  | `True`        | Whether to show the tooltip on hover. |
+| `tooltip`       | boolean | `true`     | Whether to show the tooltip on hover.                        |
 | `interval`      | integer | `240`      | Check interval in minutes (10 to 10080).                     |
-| `exclude`       | list    | `[]`       | List of packages to exclude from checking.                   |
+| `exclude`       | list    | `[]`       | List of packages to exclude (matched against name and id).   |
+
+### Scoop Update Options
+
+| Option          | Type    | Default    | Description                                                  |
+|-----------------|---------|------------|--------------------------------------------------------------|
+| `enabled`       | boolean | `false`    | Enable Scoop package update checking.                        |
+| `label`         | string  | `'{count}'`| Format string for the widget label. `{count}` shows update count. |
+| `tooltip`       | boolean | `true`     | Whether to show the tooltip on hover.                        |
+| `interval`      | integer | `240`      | Check interval in minutes (10 to 10080).                     |
+| `exclude`       | list    | `[]`       | List of packages to exclude (matched against name).          |
 
 ## Widget Shadow Options
 | Option          | Type    | Default    | Description                                                  |
@@ -35,10 +47,10 @@ This widget checks for available updates using Windows Update and Winget.
 
 
 ## Click Handlers
-- Left-clicking the Winget widget will open the Winget package manager in PowerShell or pwsh.
-- Left-clicking the Windows Update widget will open the Windows Update settings.
-- Right-clicking the Winget widget will run check for updates.
-- Right-clicking the Windows Update widget will run check for updates.
+- **Left-click** on Winget container: opens a terminal to upgrade all detected Winget packages.
+- **Left-click** on Scoop container: opens a terminal to upgrade all detected Scoop packages.
+- **Left-click** on Windows Update container: opens Windows Update settings.
+- **Right-click** on any container: forces a re-check for that source.
 
 ## Example Configuration
 
@@ -49,12 +61,17 @@ update_check:
     windows_update:
       enabled: true
       label: "<span>\uf0ab</span> {count}"
-      interval: 240
+      interval: 1440
       exclude: []
     winget_update:
       enabled: true
       label: "<span>\uf0ab</span> {count}"
-      interval: 60
+      interval: 240
+      exclude: ["Microsoft.Edge"]
+    scoop_update:
+      enabled: true
+      label: "<span>\uf0ab</span> {count}"
+      interval: 240
       exclude: []
     label_shadow:
       enabled: true
@@ -69,66 +86,86 @@ update_check:
 .update-check-widget {}
 .update-check-widget .widget-container {}
 .update-check-widget .widget-container.winget {}
+.update-check-widget .widget-container.scoop {}
 .update-check-widget .widget-container.windows {}
-.update-check-widget .widget-container.paired {}
+.update-check-widget .widget-container.paired-left {}
+.update-check-widget .widget-container.paired-right {}
 .update-check-widget .label {}
 .update-check-widget .icon {}
 ```
 
 ### State Classes
 
-When both Windows Update and Winget containers are visible, each container gets the `paired` class. This is intended for styling the inner gap between the two buttons without affecting the outer margins.
+When two or more source containers are visible, each container gets positional classes based on its neighbors:
 
-Example to keep 4px outer margin and 4px inner gap:
+- `paired-left` - has a visible container to the left
+- `paired-right` - has a visible container to the right
+
+This allows you to add margin only on the side that faces another container, keeping outer edges untouched.
+
+| Visible Sources | winget | scoop | windows |
+|---|---|---|---|
+| all 3 | `paired-right` | `paired-left paired-right` | `paired-left` |
+| winget + windows | `paired-right` | - | `paired-left` |
+| winget + scoop | `paired-right` | `paired-left` | - |
+| scoop + windows | - | `paired-right` | `paired-left` |
+| 1 only | (none) | (none) | (none) |
+
+Example:
 
 ```css
-.update-check-widget .widget-container.winget,
-.update-check-widget .widget-container.windows {
-  margin: 4px;
+.update-check-widget .widget-container.paired-left {
+    margin-left: 4px;
 }
-
-.update-check-widget .widget-container.winget.paired { margin-right: 2px; }
-.update-check-widget .widget-container.windows.paired { margin-left: 2px; }
+.update-check-widget .widget-container.paired-right {
+    margin-right: 4px;
+}
 ```
 
 ## Example
 
 ```css
 .update-check-widget {
-    padding: 0 6px 0 6px;
+    padding: 0 4px;
 }
 .update-check-widget .icon {
     font-size: 14px;
 }
 .update-check-widget .widget-container.winget,
+.update-check-widget .widget-container.scoop,
 .update-check-widget .widget-container.windows {
-    background: #eba0ac;
+    background: #6549e6;
     margin: 6px 2px;
-    border-radius: 8px;
-    border: 2px solid #f38ba8;
+    border-radius: 4px;
+    border: 1px solid #8267ff;
 }
-.update-check-widget .widget-container.winget.paired {
-    margin-right: 1px;
+ 
+.update-check-widget .widget-container.paired-left {
+    margin-left: 2px;
 }
-.update-check-widget .widget-container.windows.paired {
-    margin-left: 1px;
+.update-check-widget .widget-container.paired-right {
+    margin-right: 2px;
 }
 .update-check-widget .widget-container.windows {
-    background: #b4befe;
-    margin: 6px 2px 6px 2px;
-    border-radius: 8px;
-    border: 2px solid #89b4fa;
+    background: #3353e4;
+    border: 1px solid #5574fc;
+}
+.update-check-widget .widget-container.scoop {
+    background: #2b9e78;
+    border: 1px solid #4ac59c;
 }
 .update-check-widget .widget-container.winget .icon,
+.update-check-widget .widget-container.scoop .icon,
 .update-check-widget .widget-container.windows .icon {
-    color: #1e1e2e;
+    color: #ffffff;
     margin: 0 1px 0 6px;
 }
 .update-check-widget .widget-container.winget .label,
+.update-check-widget .widget-container.scoop .label,
 .update-check-widget .widget-container.windows .label {
     margin: 0 6px 0 1px;
-    color: #1e1e2e;
-    font-weight: 900;
+    color: #ffffff;
+    font-weight: 600;
     font-size: 14px;
 } 
 ```
