@@ -25,7 +25,9 @@ from core.utils.widgets.quick_launch.providers import (
     SnippetsProvider,
     SystemCommandsProvider,
     UnitConverterProvider,
+    VSCodeProvider,
     WebSearchProvider,
+    WindowSwitcherProvider,
     WorldClockProvider,
 )
 from core.utils.widgets.quick_launch.workers import QueryWorker, StartMenuWatcherThread
@@ -49,7 +51,9 @@ PROVIDER_REGISTRY: dict[str, type[BaseProvider]] = {
     "system_commands": SystemCommandsProvider,
     "unit_converter": UnitConverterProvider,
     "web_search": WebSearchProvider,
+    "window_switcher": WindowSwitcherProvider,
     "world_clock": WorldClockProvider,
+    "vscode": VSCodeProvider,
 }
 
 

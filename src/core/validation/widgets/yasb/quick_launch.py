@@ -156,6 +156,18 @@ class IpInfoProviderConfig(CustomBaseModel):
     priority: int = 0
 
 
+class VSCodeProviderConfig(CustomBaseModel):
+    enabled: bool = False
+    prefix: str = "vsc"
+    priority: int = 0
+
+
+class WindowSwitcherProviderConfig(CustomBaseModel):
+    enabled: bool = False
+    prefix: str = "win"
+    priority: int = 0
+
+
 class QuickLaunchProvidersConfig(CustomBaseModel):
     apps: AppsProviderConfig = AppsProviderConfig()
     bookmarks: BookmarksProviderConfig = BookmarksProviderConfig()
@@ -176,6 +188,8 @@ class QuickLaunchProvidersConfig(CustomBaseModel):
     hacker_news: HackerNewsProviderConfig = HackerNewsProviderConfig()
     dev_tools: DevToolsProviderConfig = DevToolsProviderConfig()
     ip_info: IpInfoProviderConfig = IpInfoProviderConfig()
+    vscode: VSCodeProviderConfig = VSCodeProviderConfig()
+    window_switcher: WindowSwitcherProviderConfig = WindowSwitcherProviderConfig()
 
 
 class QuickLaunchConfig(CustomBaseModel):
