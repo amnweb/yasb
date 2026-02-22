@@ -10,12 +10,13 @@ from core.validation.widgets.base_model import (
 
 
 class PrayerTimesCallbacksConfig(CallbacksConfig):
-    on_left: str = "toggle_label"
+    on_left: str = "toggle_card"
     on_middle: str = "do_nothing"
-    on_right: str = "do_nothing"
+    on_right: str = "toggle_label"
 
 
 class PrayerTimesIconsConfig(CustomBaseModel):
+    mosque: str = "\uf67f"
     fajr: str = "\uf185"
     sunrise: str = "\uf185"
     dhuhr: str = "\uf185"
@@ -23,8 +24,20 @@ class PrayerTimesIconsConfig(CustomBaseModel):
     maghrib: str = "\uf186"
     isha: str = "\uf186"
     imsak: str = "\uf185"
+    sunset: str = "\uf185"
     midnight: str = "\uf186"
     default: str = "\uf017"
+
+
+class PrayerTimesMenuConfig(CustomBaseModel):
+    blur: bool = True
+    round_corners: bool = True
+    round_corners_type: str = "normal"
+    border_color: str = "System"
+    alignment: str = "right"
+    direction: str = "down"
+    offset_top: int = 6
+    offset_left: int = 0
 
 
 class PrayerTimesConfig(CustomBaseModel):
@@ -43,6 +56,7 @@ class PrayerTimesConfig(CustomBaseModel):
     update_interval: int = Field(default=3600, ge=60, le=86400)
     tooltip: bool = True
     icons: PrayerTimesIconsConfig = PrayerTimesIconsConfig()
+    menu: PrayerTimesMenuConfig = PrayerTimesMenuConfig()
     animation: AnimationConfig = AnimationConfig()
     label_shadow: ShadowConfig = ShadowConfig()
     container_shadow: ShadowConfig = ShadowConfig()
