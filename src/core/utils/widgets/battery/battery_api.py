@@ -7,7 +7,6 @@ import logging
 from ctypes import byref, c_long, c_void_p, create_string_buffer, sizeof, wstring_at
 from ctypes.wintypes import DWORD, ULONG
 from dataclasses import dataclass
-from typing import Optional
 
 from core.utils.win32.bindings.kernel32 import kernel32
 from core.utils.win32.bindings.setupapi import setupapi
@@ -47,6 +46,21 @@ from core.utils.win32.structs import (
 
 
 @dataclass
+class BatteryExtendedInfo:
+    """Extended battery information from IOCTL queries."""
+
+    rate: float | None = None
+    voltage: float | None = None
+    capacity: int | None = None
+    full_capacity: int | None = None
+    designed_capacity: int | None = None
+    temperature: float | None = None
+    cycle_count: int | None = None
+    chemistry: str | None = None
+    is_charging: bool | None = None
+
+
+@dataclass
 class BatteryData:
     """Complete battery information."""
 
@@ -54,15 +68,15 @@ class BatteryData:
     is_charging: bool
     power_plugged: bool
     time_remaining: int
-    rate: Optional[float]
-    voltage: Optional[float]
-    capacity: Optional[int]
-    full_capacity: Optional[int]
-    designed_capacity: Optional[int]
-    temperature: Optional[float]
-    cycle_count: Optional[int]
-    chemistry: Optional[str]
-    health_percent: Optional[float]
+    rate: float | None
+    voltage: float | None
+    capacity: int | None
+    full_capacity: int | None
+    designed_capacity: int | None
+    temperature: float | None
+    cycle_count: int | None
+    chemistry: str | None
+    health_percent: float | None
 
 
 class BatteryAPI:
@@ -70,7 +84,7 @@ class BatteryAPI:
     Singleton class to access battery information
     """
 
-    _instance: Optional["BatteryAPI"] = None
+    _instance: "BatteryAPI | None" = None
     _initialized: bool = False
 
     def __new__(cls) -> "BatteryAPI":
@@ -90,7 +104,7 @@ class BatteryAPI:
         for i, b in enumerate(GUID_DEVCLASS_BATTERY[3]):
             self._battery_guid.Data4[i] = b
 
-        self._device_path: Optional[str] = None
+        self._device_path: str | None = None
         self._last_error_logged: bool = False
 
     @classmethod
@@ -100,7 +114,7 @@ class BatteryAPI:
             cls._instance = cls()
         return cls._instance
 
-    def _get_battery_device_path(self) -> Optional[str]:
+    def _get_battery_device_path(self) -> str | None:
         """Get the device path for the first battery."""
         if self._device_path:
             return self._device_path
@@ -148,7 +162,7 @@ class BatteryAPI:
         finally:
             setupapi.SetupDiDestroyDeviceInfoList(h_dev_info)
 
-    def _get_basic_status(self) -> Optional[tuple[int, bool, bool, int]]:
+    def _get_basic_status(self) -> tuple[int, bool, bool, int] | None:
         """Get basic battery status from GetSystemPowerStatus."""
         status = SYSTEM_POWER_STATUS()
         if not kernel32.GetSystemPowerStatus(byref(status)):
@@ -168,19 +182,9 @@ class BatteryAPI:
 
         return percent, is_charging, power_plugged, time_remaining
 
-    def _get_extended_info(self, device_path: str) -> dict:
+    def _get_extended_info(self, device_path: str) -> BatteryExtendedInfo:
         """Get extended battery info via IOCTL."""
-        result = {
-            "rate": None,
-            "voltage": None,
-            "capacity": None,
-            "full_capacity": None,
-            "designed_capacity": None,
-            "temperature": None,
-            "cycle_count": None,
-            "chemistry": None,
-            "is_charging": None,
-        }
+        result = BatteryExtendedInfo()
 
         h_battery = kernel32.CreateFileW(
             device_path,
@@ -232,15 +236,15 @@ class BatteryAPI:
                 None,
             ):
                 if battery_info.DesignedCapacity != BATTERY_UNKNOWN_CAPACITY:
-                    result["designed_capacity"] = battery_info.DesignedCapacity
+                    result.designed_capacity = battery_info.DesignedCapacity
                 if battery_info.FullChargedCapacity != BATTERY_UNKNOWN_CAPACITY:
-                    result["full_capacity"] = battery_info.FullChargedCapacity
+                    result.full_capacity = battery_info.FullChargedCapacity
                 if battery_info.CycleCount > 0:
-                    result["cycle_count"] = battery_info.CycleCount
+                    result.cycle_count = battery_info.CycleCount
 
                 chemistry = battery_info.Chemistry.decode("ascii", errors="ignore").strip("\x00")
                 if chemistry:
-                    result["chemistry"] = chemistry
+                    result.chemistry = chemistry
 
             # Query battery status (rate, voltage, current capacity)
             wait_status = BATTERY_WAIT_STATUS()
@@ -261,17 +265,17 @@ class BatteryAPI:
                 byref(bytes_returned),
                 None,
             ):
-                result["is_charging"] = bool(battery_status.PowerState & BATTERY_CHARGING)
+                result.is_charging = bool(battery_status.PowerState & BATTERY_CHARGING)
 
                 if battery_status.Rate != BATTERY_UNKNOWN_RATE:
                     rate_mw = c_long(battery_status.Rate).value
-                    result["rate"] = rate_mw / 1000.0  # mW to W
+                    result.rate = rate_mw / 1000.0  # mW to W
 
                 if battery_status.Voltage != BATTERY_UNKNOWN_VOLTAGE:
-                    result["voltage"] = battery_status.Voltage / 1000.0  # mV to V
+                    result.voltage = battery_status.Voltage / 1000.0  # mV to V
 
                 if battery_status.Capacity != BATTERY_UNKNOWN_CAPACITY:
-                    result["capacity"] = battery_status.Capacity
+                    result.capacity = battery_status.Capacity
 
             # Query temperature if supported
             query_info.InformationLevel = BATTERY_INFO_LEVEL_TEMPERATURE
@@ -291,7 +295,7 @@ class BatteryAPI:
                     kelvin = temperature.value / 10.0
                     celsius = kelvin - 273.15
                     if -40 <= celsius <= 100:  # Sanity check
-                        result["temperature"] = round(celsius, 1)
+                        result.temperature = round(celsius, 1)
 
         except Exception as e:
             if not self._last_error_logged:
@@ -302,7 +306,7 @@ class BatteryAPI:
 
         return result
 
-    def get_status(self) -> Optional[BatteryData]:
+    def get_status(self) -> BatteryData | None:
         """
         Get comprehensive battery status.
 
@@ -319,39 +323,29 @@ class BatteryAPI:
         if device_path:
             extended = self._get_extended_info(device_path)
         else:
-            extended = {
-                "rate": None,
-                "voltage": None,
-                "capacity": None,
-                "full_capacity": None,
-                "designed_capacity": None,
-                "temperature": None,
-                "cycle_count": None,
-                "chemistry": None,
-                "is_charging": None,
-            }
+            extended = BatteryExtendedInfo()
 
-        if extended["is_charging"] is not None:
-            is_charging = extended["is_charging"]
+        if extended.is_charging is not None:
+            is_charging = extended.is_charging
 
         health_percent = None
-        if extended["full_capacity"] and extended["designed_capacity"]:
-            if extended["designed_capacity"] > 0:
-                health_percent = round((extended["full_capacity"] / extended["designed_capacity"]) * 100, 1)
+        if extended.full_capacity and extended.designed_capacity:
+            if extended.designed_capacity > 0:
+                health_percent = round((extended.full_capacity / extended.designed_capacity) * 100, 1)
 
         return BatteryData(
             percent=percent,
             is_charging=is_charging,
             power_plugged=power_plugged,
             time_remaining=time_remaining,
-            rate=extended["rate"],
-            voltage=extended["voltage"],
-            capacity=extended["capacity"],
-            full_capacity=extended["full_capacity"],
-            designed_capacity=extended["designed_capacity"],
-            temperature=extended["temperature"],
-            cycle_count=extended["cycle_count"],
-            chemistry=extended["chemistry"],
+            rate=extended.rate,
+            voltage=extended.voltage,
+            capacity=extended.capacity,
+            full_capacity=extended.full_capacity,
+            designed_capacity=extended.designed_capacity,
+            temperature=extended.temperature,
+            cycle_count=extended.cycle_count,
+            chemistry=extended.chemistry,
             health_percent=health_percent,
         )
 
