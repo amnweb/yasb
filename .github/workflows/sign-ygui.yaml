@@ -3,6 +3,11 @@ name: Sign YASB GUI Artifacts
 on:
   repository_dispatch:
     types: [sign-external]
+
+permissions:
+  contents: read
+  actions: write
+
 jobs:
   sign:
     runs-on: windows-latest
