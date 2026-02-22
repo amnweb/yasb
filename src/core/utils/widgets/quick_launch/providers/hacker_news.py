@@ -5,12 +5,12 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
-import webbrowser
 from datetime import datetime, timezone
 from xml.etree import ElementTree
 
 from PyQt6.QtWidgets import QApplication
 
+from core.utils.shell_utils import shell_open
 from core.utils.utilities import app_data_path
 from core.utils.widgets.quick_launch.base_provider import (
     BaseProvider,
@@ -124,7 +124,7 @@ class HackerNewsProvider(BaseProvider):
         data = result.action_data
         url = data.get("url", "")
         if url:
-            webbrowser.open(url)
+            shell_open(url)
             return True
         return None
 
@@ -144,7 +144,7 @@ class HackerNewsProvider(BaseProvider):
         if action_id == "open_comments":
             url = data.get("comments_url", "")
             if url:
-                webbrowser.open(url)
+                shell_open(url)
             return ProviderMenuActionResult(close_popup=True)
         if action_id == "copy_url":
             url = data.get("url", "")

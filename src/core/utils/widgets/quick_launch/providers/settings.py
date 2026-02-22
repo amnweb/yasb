@@ -1,7 +1,4 @@
-import logging
-import os
-import threading
-
+from core.utils.shell_utils import shell_open
 from core.utils.widgets.quick_launch.base_provider import BaseProvider, ProviderResult
 from core.utils.widgets.quick_launch.providers.resources.icons import (
     ICON_SETTINGS,
@@ -359,12 +356,5 @@ class SettingsProvider(BaseProvider):
         uri = result.action_data.get("uri", "")
         if not uri:
             return False
-        threading.Thread(target=self._launch_uri, args=(uri,), daemon=True).start()
+        shell_open(uri)
         return True
-
-    @staticmethod
-    def _launch_uri(uri: str):
-        try:
-            os.startfile(uri)
-        except Exception as e:
-            logging.error(f"Settings launch failed for '{uri}': {e}")

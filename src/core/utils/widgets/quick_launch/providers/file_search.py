@@ -6,14 +6,13 @@ import os
 import re
 import string
 import struct
-import subprocess
 import sys
-import webbrowser
 import winreg
 
 from PyQt6.QtCore import QTimer
 from PyQt6.QtWidgets import QApplication
 
+from core.utils.shell_utils import shell_open
 from core.utils.widgets.quick_launch.base_provider import (
     BaseProvider,
     ProviderMenuAction,
@@ -39,6 +38,7 @@ from core.utils.widgets.quick_launch.providers.resources.icons import (
     ICON_VIDEO,
     ICON_WARNING,
 )
+from core.utils.win32.constants import SW_HIDE
 
 _EXT_ICON_MAP: dict[str, str] = {}
 for _icon, _exts in (
@@ -283,10 +283,7 @@ class _EverythingBackend:
         if not exe:
             return False
         try:
-            subprocess.Popen(
-                [exe, "-startup"],
-                creationflags=subprocess.CREATE_NO_WINDOW,
-            )
+            shell_open(exe, parameters="-startup", show_cmd=SW_HIDE)
             self._ipc_error = False
             self._available = None  # Reset so next query retries
             return True
@@ -744,13 +741,13 @@ class FileSearchProvider(BaseProvider):
             self._wait_for_everything_ipc()
             return False  # Keep popup open
         if action == "install_everything":
-            webbrowser.open("https://www.voidtools.com/")
+            shell_open("https://www.voidtools.com/")
             return True
         path = result.action_data.get("path", "")
         if not path or not os.path.exists(path):
             return False
         try:
-            os.startfile(path)
+            shell_open(path)
             return True
         except Exception as e:
             logging.error(f"Failed to open: {e}")
@@ -779,13 +776,10 @@ class FileSearchProvider(BaseProvider):
 
         if action_id == "reveal_in_explorer":
             try:
-                if is_folder:
-                    os.startfile(path)
-                else:
-                    subprocess.Popen(["explorer", "/select,", path])
+                shell_open("explorer.exe", parameters=f'/select, "{path}"')
             except Exception as e:
                 logging.debug(f"Failed to reveal in Explorer: {e}")
-            return ProviderMenuActionResult()
+            return ProviderMenuActionResult(close_popup=True)
 
         if action_id == "copy_path":
             clipboard = QApplication.clipboard()

@@ -3,7 +3,6 @@ import os
 import shutil
 import subprocess
 import threading
-import webbrowser
 from pathlib import Path
 
 from PyQt6.QtCore import QEvent, QSize, Qt
@@ -14,6 +13,7 @@ from core.bar_manager import BarManager
 from core.config import get_config
 from core.ui.windows.about import AboutDialog
 from core.utils.controller import exit_application, reload_application
+from core.utils.shell_utils import shell_open
 from core.utils.win32.utilities import apply_qmenu_style, disable_autostart, enable_autostart, is_autostart_enabled
 from settings import (
     APP_NAME,
@@ -249,7 +249,7 @@ class SystemTrayManager(QSystemTrayIcon):
 
     def _open_in_browser(self, url):
         try:
-            webbrowser.open(url)
+            shell_open(url)
         except Exception as e:
             logging.error(f"Failed to open browser: {e}")
 

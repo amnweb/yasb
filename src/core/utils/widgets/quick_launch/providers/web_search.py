@@ -1,5 +1,4 @@
-import webbrowser
-
+from core.utils.shell_utils import shell_open
 from core.utils.widgets.quick_launch.base_provider import BaseProvider, ProviderResult
 from core.utils.widgets.quick_launch.providers.resources.icons import (
     ICON_BING,
@@ -135,5 +134,5 @@ class WebSearchProvider(BaseProvider):
         if query:
             from urllib.parse import quote_plus
 
-            webbrowser.open(engine_info["url"].format(quote_plus(query)))
+            shell_open(engine_info["url"].format(quote_plus(query)))
         return True

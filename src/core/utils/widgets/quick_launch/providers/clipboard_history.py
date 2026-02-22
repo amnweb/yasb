@@ -1,9 +1,8 @@
 import io
 import logging
-import os
-import threading
 from typing import Any
 
+from core.utils.shell_utils import shell_open
 from core.utils.widgets.quick_launch.base_provider import (
     BaseProvider,
     ProviderMenuAction,
@@ -330,7 +329,7 @@ class ClipboardHistoryProvider(BaseProvider):
                 return False
 
             if action == "open_settings":
-                threading.Thread(target=lambda: os.startfile("ms-settings:clipboard"), daemon=True).start()
+                shell_open("ms-settings:clipboard")
                 return True
 
             if action == "restore":

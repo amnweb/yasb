@@ -162,8 +162,7 @@ Tips
       etc.) and read them from self.config in __init__.
 """
 
-import webbrowser
-
+from core.utils.shell_utils import shell_open
 from core.utils.widgets.quick_launch.base_provider import (
     BaseProvider,
     ProviderMenuAction,
@@ -253,7 +252,7 @@ class ExampleProvider(BaseProvider):
     def execute(self, result: ProviderResult) -> bool | None:
         url = result.action_data.get("url", "")
         if url:
-            webbrowser.open(url)
+            shell_open(url)
             return True
         return False
 
@@ -271,7 +270,7 @@ class ExampleProvider(BaseProvider):
     def execute_context_menu_action(self, action_id: str, result: ProviderResult) -> ProviderMenuActionResult:
         url = result.action_data.get("url", "")
         if action_id == "open_url" and url:
-            webbrowser.open(url)
+            shell_open(url)
             return ProviderMenuActionResult(close_popup=True)
         if action_id == "copy_url" and url:
             from PyQt6.QtWidgets import QApplication

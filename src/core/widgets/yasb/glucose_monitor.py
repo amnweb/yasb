@@ -4,12 +4,12 @@ import json
 import os
 import re
 import urllib.request
-import webbrowser
 from typing import Callable
 
 from PyQt6.QtCore import QThread, QTimer, pyqtSignal
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel
 
+from core.utils.shell_utils import shell_open
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import ToastNotifier, add_shadow, build_widget_label, refresh_widget_style
 from core.validation.widgets.yasb.glucose_monitor import GlucoseMonitorConfig
@@ -137,7 +137,7 @@ class GlucoseMonitor(BaseWidget):
             self._worker.start()
 
     def _open_cgm(self) -> None:
-        webbrowser.open(self.config.host)
+        shell_open(self.config.host)
 
     def _update_label(self) -> None:
         for widget in self._widgets:

@@ -5,7 +5,6 @@ import shutil
 import subprocess
 import tempfile
 import time
-import webbrowser
 from functools import lru_cache
 from typing import Any, Dict, List
 
@@ -42,6 +41,7 @@ from PyQt6.QtWidgets import (
 )
 
 from core.config import HOME_CONFIGURATION_DIR
+from core.utils.shell_utils import shell_open
 from core.utils.utilities import add_shadow, build_widget_label, refresh_widget_style
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.widgets.launchpad.app_loader import AppListLoader, ShortcutResolver
@@ -886,19 +886,42 @@ class LaunchpadWidget(BaseWidget):
         except Exception as e:
             logging.error(f"Failed to reorder apps: {e}")
 
+    _SHELL_APPS_FOLDER = "explorer.exe shell:AppsFolder\\"
+
     def _launch_app(self, app_data: Dict[str, Any]):
         path = app_data.get("path", "")
         if path:
             try:
                 if path.startswith("http://") or path.startswith("https://"):
-                    webbrowser.open(path)
+                    shell_open(path)
+                elif path.startswith(self._SHELL_APPS_FOLDER):
+                    shell_open(path[len("explorer.exe ") :])
                 elif os.path.isfile(path):
-                    subprocess.Popen([path], shell=True, creationflags=subprocess.CREATE_NO_WINDOW)
+                    shell_open(path)
                 else:
-                    subprocess.Popen(path, shell=True, creationflags=subprocess.CREATE_NO_WINDOW)
+                    parts = path.split(None, 1)
+                    shell_open(parts[0], parameters=parts[1] if len(parts) > 1 else None)
                 self._hide_launchpad()
             except Exception as e:
                 logging.error(f"Failed to launch app {app_data.get('title', 'Unknown')}: {e}")
+
+    def _launch_app_elevated(self, app_data: Dict[str, Any]):
+        """Launch an app with administrator privileges (UAC prompt)."""
+        path = app_data.get("path", "")
+        if path:
+            try:
+                if path.startswith("http://") or path.startswith("https://"):
+                    shell_open(path)
+                elif path.startswith(self._SHELL_APPS_FOLDER):
+                    shell_open(path[len("explorer.exe ") :], verb="runas")
+                elif os.path.isfile(path):
+                    shell_open(path, verb="runas")
+                else:
+                    parts = path.split(None, 1)
+                    shell_open(parts[0], verb="runas", parameters=parts[1] if len(parts) > 1 else None)
+                self._hide_launchpad()
+            except Exception as e:
+                logging.error(f"Failed to launch app elevated {app_data.get('title', 'Unknown')}: {e}")
 
     def _show_context_menu(self, pos, app_data=None, parent_widget=None, event=None):
         """
@@ -913,6 +936,12 @@ class LaunchpadWidget(BaseWidget):
             edit_action = QAction("Edit", menu_parent)
             edit_action.triggered.connect(lambda: self._edit_app(app_data))
             menu.addAction(edit_action)
+
+            path = app_data.get("path", "")
+            if path and not path.startswith("http://") and not path.startswith("https://"):
+                admin_action = QAction("Run as Administrator", menu_parent)
+                admin_action.triggered.connect(lambda: self._launch_app_elevated(app_data))
+                menu.addAction(admin_action)
 
         add_action = QAction("Add New App", menu_parent)
         add_action.triggered.connect(self._add_new_app)

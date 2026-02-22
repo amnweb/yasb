@@ -4,8 +4,8 @@ import os
 import shutil
 import sqlite3
 import tempfile
-import webbrowser
 
+from core.utils.shell_utils import shell_open
 from core.utils.widgets.quick_launch.base_provider import BaseProvider, ProviderResult
 from core.utils.widgets.quick_launch.providers.resources.icons import ICON_BOOKMARK
 
@@ -224,5 +224,5 @@ class BookmarksProvider(BaseProvider):
     def execute(self, result: ProviderResult) -> bool:
         url = result.action_data.get("url", "")
         if url:
-            webbrowser.open(url)
+            shell_open(url)
         return True

@@ -2,10 +2,10 @@ import json
 import logging
 import os
 import sqlite3
-import subprocess
 import urllib.parse
 from pathlib import Path
 
+from core.utils.shell_utils import shell_open
 from core.utils.widgets.quick_launch.base_provider import (
     BaseProvider,
     ProviderResult,
@@ -19,6 +19,7 @@ from core.utils.widgets.quick_launch.providers.resources.icons import (
     ICON_TEXT,
     ICON_VSCODE,
 )
+from core.utils.win32.constants import SW_HIDE
 
 _EXT_ICON_MAP: dict[str, str] = {}
 for _icon, _exts in (
@@ -218,14 +219,7 @@ class VSCodeProvider(BaseProvider):
 
         try:
             flag = "--folder-uri" if is_folder else "--file-uri"
-            subprocess.Popen(
-                ["code", flag, uri],
-                creationflags=subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP,
-                close_fds=True,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                shell=True,
-            )
+            shell_open("code", parameters=f"{flag} {uri}", show_cmd=SW_HIDE)
             return True
         except Exception as e:
             logging.error(f"Failed to open VSCode: {e}")

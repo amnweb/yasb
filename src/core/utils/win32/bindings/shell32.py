@@ -4,12 +4,40 @@ This module exposes the `shell32` handle and sets argtypes/restype for the Shell
 functions we call from Python so ctypes marshaling is explicit and safe.
 """
 
-from ctypes import HRESULT, c_wchar_p, windll
+from ctypes import HRESULT, c_int, c_void_p, c_wchar_p, windll
 
 import comtypes
 from comtypes import COMMETHOD, GUID
 
+from core.utils.win32.constants import SW_SHOWNORMAL
+
 shell32 = windll.shell32
+
+# https://learn.microsoft.com/en-us/windows/win32/api/shellapi/nf-shellapi-shellexecutew
+shell32.ShellExecuteW.argtypes = [c_void_p, c_wchar_p, c_wchar_p, c_wchar_p, c_wchar_p, c_int]
+shell32.ShellExecuteW.restype = c_void_p
+
+
+def shell_execute(
+    file: str,
+    verb: str = "open",
+    parameters: str | None = None,
+    directory: str | None = None,
+    show_cmd: int = SW_SHOWNORMAL,
+) -> int:
+    """Launch a file, URL, or shortcut via ShellExecuteW.
+
+    Args:
+        file: Path to the file, URL, or shortcut to open.
+        verb: Shell verb - "open", "runas", "edit", "print", etc.
+        parameters: Optional command-line arguments.
+        directory: Optional working directory.
+        show_cmd: Window show state (SW_SHOWNORMAL=1, SW_HIDE=0, etc).
+
+    Returns:
+        Handle value >32 on success, <=32 on error.
+    """
+    return shell32.ShellExecuteW(None, verb, file, parameters, directory, show_cmd)
 
 
 # IDesktopWallpaper COM interface for Windows 10/11
