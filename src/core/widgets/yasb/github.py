@@ -231,7 +231,7 @@ class GithubWidget(BaseWidget):
 
     def _mark_all_as_read(self):
         """Mark all notifications as read."""
-        GitHubDataManager.mark_as_read(self.github_token)
+        GitHubDataManager.mark_all_as_read(self.github_token)
         self._menu.hide()
 
     def _handle_mouse_press_event(
