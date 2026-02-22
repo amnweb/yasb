@@ -7,7 +7,7 @@ from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel
 
 from core.utils.utilities import add_shadow, build_widget_label, refresh_widget_style
 from core.utils.widgets.animation_manager import AnimationManager
-from core.utils.widgets.battery.battery_api import BatteryAPI
+from core.utils.widgets.battery.battery_api import BatteryAPI, BatteryData
 from core.utils.win32.constants import POWER_TIME_UNKNOWN, POWER_TIME_UNLIMITED
 from core.validation.widgets.yasb.battery import BatteryConfig
 from core.widgets.base import BaseWidget
@@ -19,8 +19,12 @@ class BatteryWidget(BaseWidget):
     def __init__(self, config: BatteryConfig):
         super().__init__(config.update_interval, class_name=f"battery-widget {config.class_name}")
         self.config = config
+
+        self._widgets: list[QLabel] = []
+        self._widgets_alt: list[QLabel] = []
+
         self._battery_api = BatteryAPI.instance()
-        self._battery_state = None
+        self._battery_state: BatteryData | None = None
         self._show_alt_label = False
 
         # Construct container
@@ -48,7 +52,7 @@ class BatteryWidget(BaseWidget):
         self._charging_blink_timer = QTimer(self)
         self._charging_blink_timer.setInterval(self.config.charging_options.blink_interval)
         self._charging_blink_timer.timeout.connect(self._charging_blink)
-        self._charging_icon_label = None
+        self._charging_icon_label: QLabel | None = None
 
         self.start_timer()
 
@@ -63,23 +67,31 @@ class BatteryWidget(BaseWidget):
         self._update_label()
 
     def _get_time_remaining(self) -> str:
+        if not self._battery_state:
+            return "unknown"
+
         secs_left = self._battery_state.time_remaining
         if secs_left == POWER_TIME_UNLIMITED:
             time_left = self.config.time_remaining_unlimited_icon
         elif secs_left == POWER_TIME_UNKNOWN:
             time_left = "unknown"
         elif secs_left >= 0:
-            time_left = timedelta(seconds=secs_left)
-            time_left = humanize.naturaldelta(time_left) if self.config.time_remaining_natural else str(time_left)
+            time_left_delta = timedelta(seconds=secs_left)
+            time_left = (
+                humanize.naturaldelta(time_left_delta) if self.config.time_remaining_natural else str(time_left_delta)
+            )
         else:
             time_left = "unknown"
         return time_left
 
-    def _get_battery_state(self):
+    def _get_battery_state(self) -> BatteryData | None:
         """Get battery state from the shared BatteryAPI instance."""
         return self._battery_api.get_status()
 
-    def _get_battery_threshold(self):
+    def _get_battery_threshold(self) -> str:
+        if not self._battery_state:
+            return "unknown"
+
         percent = self._battery_state.percent
         thresholds = self.config.status_thresholds
 
@@ -95,8 +107,11 @@ class BatteryWidget(BaseWidget):
             return "full"
 
     def _get_charging_icon(self, threshold: str) -> str:
+        if not self._battery_state:
+            return getattr(self.config.status_icons, f"icon_{threshold}", "")
+
         icon = getattr(self.config.status_icons, f"icon_{threshold}")
-        if self._battery_state.is_charging:
+        if self._battery_state.is_charging or self._battery_state.power_plugged:
             return self.config.charging_options.icon_format.format(
                 charging_icon=self.config.status_icons.icon_charging, icon=icon
             )
@@ -135,7 +150,7 @@ class BatteryWidget(BaseWidget):
 
             for part in label_parts:
                 part = part.strip()
-                if widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
+                if widget_index < len(active_widgets):
                     if "<span" in part and "</span>" in part:
                         active_widgets[widget_index].hide()
                     active_widgets[widget_index].setText("Battery info not available")
@@ -162,7 +177,7 @@ class BatteryWidget(BaseWidget):
 
         for part in label_parts:
             part = part.strip()
-            if part and widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
+            if part and widget_index < len(active_widgets):
                 battery_status = (
                     part.replace("{percent}", str(self._battery_state.percent))
                     .replace("{time_remaining}", time_remaining)
