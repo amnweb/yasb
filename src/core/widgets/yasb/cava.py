@@ -554,7 +554,7 @@ class CavaWidget(BaseWidget):
         lines.append("[smoothing]")
         lines.append(f"monstercat = {self.config.monstercat}")
         lines.append(f"waves = {self.config.waves}")
-        lines.append(f"noise_reduction = {self.config.noise_reduction}")
+        lines.append(f"noise_reduction = {int(self.config.noise_reduction)}")
 
         config_template = "\n".join(lines) + "\n"
 

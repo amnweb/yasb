@@ -16,12 +16,12 @@
 | `lower_cutoff_freq` | integer | 50 | Lower cutoff frequencies for lowest bars |
 | `higher_cutoff_freq` | integer | 10000 | Higher cutoff frequencies for highest bars |
 | `framerate` | integer | 60 | Accepts only non-negative values |
-| `noise_reduction` | float | 0.77 | Noise reduction, 0-100. Higher = smoother but slower, lower = faster but noisier |
+| `noise_reduction` | integer | 77 | Noise reduction, 0-100. Higher = smoother but slower, lower = faster but noisier |
 | `channels` | string | "stereo" | Visual channels. Can be 'stereo' or 'mono' |
 | `mono_option` | string | "average" | Set mono to take input from 'left', 'right' or 'average' |
 | `reverse` | integer | 0 | Set to 1 to display frequencies the other way around |
 | `waveform` | integer | 0 | Show waveform instead of frequency spectrum, 1 = on, 0 = off |
-| `monstercat` | integer | 0 | Disables or enables the so-called "Monstercat smoothing" with or without "waves". Set to 0 to disable. |
+| `monstercat` | integer | 1 | Disables or enables the so-called "Monstercat smoothing" with or without "waves". Set to 0 to disable. |
 | `waves` | integer | 0 | Related to monstercat, 1 = on, 0 = off |
 | `foreground` | string | "#ffffff" | Foreground color in hex format |
 | `gradient` | integer | 1 | Gradient mode, 1 = on, 0 = off |
@@ -73,7 +73,7 @@
 - **mono_option**: Set mono to take input from 'left', 'right' or 'average'.
 - **reverse**: Set to 1 to display frequencies the other way around.
 - **waveform**: Show waveform instead of frequency spectrum, 1 = on, 0 = off.
-- **monstercat**: Disables or enables the so-called "Monstercat smoothing" with or without "waves". Set to 0 to disable.
+- **monstercat**: Disables or enables the so-called "Monstercat smoothing" (spatial bar blending) with or without "waves". Set to 0 to disable.
 - **waves**: Related to monstercat, 1 = on, 0 = off.
 - **foreground**: Foreground color in hex format.
 - **gradient**: Gradient mode, 1 = on, 0 = off.

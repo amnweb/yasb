@@ -26,7 +26,7 @@ class CavaConfig(CustomBaseModel):
     lower_cutoff_freq: int = 50
     higher_cutoff_freq: int = 10000
     framerate: int = 60
-    noise_reduction: float = 0.77
+    noise_reduction: int = 77
     channels: str = "stereo"
     mono_option: str = "average"
     reverse: int = 0
@@ -36,7 +36,7 @@ class CavaConfig(CustomBaseModel):
     gradient_color_1: str | None = None
     gradient_color_2: str | None = None
     gradient_color_3: str | None = None
-    monstercat: int = 0
+    monstercat: int = 1
     waves: int = 0
     hide_empty: bool = False
     bar_type: Literal["bars", "bars_mirrored", "waves", "waves_mirrored"] = "bars"
