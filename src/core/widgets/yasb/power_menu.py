@@ -390,7 +390,17 @@ class PowerMenuWidget(BaseWidget):
 
 class MainWindow(AnimatedWidget):
     def __init__(
-        self, parent, parent_button, uptime, blur, blur_background, animation_duration, button_row, buttons, show_user, profile_size
+        self,
+        parent,
+        parent_button,
+        uptime,
+        blur,
+        blur_background,
+        animation_duration,
+        button_row,
+        buttons,
+        show_user,
+        profile_size,
     ):
         super().__init__(animation_duration, parent)
 
