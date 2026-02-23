@@ -48,8 +48,8 @@ class AppListLoader(QThread):
         strict_pattern = re.compile(r"\b(" + "|".join(map(re.escape, strict_filter_keywords)) + r")\b")
 
         start_menu_dirs = [
-            os.path.expandvars(r"%APPDATA%\Microsoft\Windows\Start Menu\Programs"),
-            os.path.expandvars(r"%PROGRAMDATA%\Microsoft\Windows\Start Menu\Programs"),
+            os.path.expandvars(r"%APPDATA%\Microsoft\Windows\Start Menu"),
+            os.path.expandvars(r"%PROGRAMDATA%\Microsoft\Windows\Start Menu"),
         ]
         apps = []
         seen_names = set()
