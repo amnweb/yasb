@@ -7,7 +7,6 @@ from core.validation.widgets.base_model import (
     CallbacksConfig,
     CustomBaseModel,
     KeybindingConfig,
-    PaddingConfig,
     ShadowConfig,
 )
 
@@ -88,7 +87,6 @@ class OpenMeteoWidgetConfig(CustomBaseModel):
     icons: OpenMeteoIconsConfig = OpenMeteoIconsConfig()
     weather_card: OpenMeteoCardConfig = OpenMeteoCardConfig()
     animation: AnimationConfig = AnimationConfig()
-    container_padding: PaddingConfig = PaddingConfig()
     label_shadow: ShadowConfig = ShadowConfig()
     container_shadow: ShadowConfig = ShadowConfig()
     keybindings: list[KeybindingConfig] = []

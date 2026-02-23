@@ -103,7 +103,7 @@ class OpenMeteoWidget(BaseWidget):
         if self._location_data:
             self._start_weather_fetcher()
         else:
-            self._set_label_text("Set location…")
+            self._set_label_text("Setup location")
             logger.info(f"No saved location for {self._widget_id}. Awaiting user setup.")
 
     def _start_weather_fetcher(self):
@@ -148,14 +148,14 @@ class OpenMeteoWidget(BaseWidget):
             self.config.weather_card.round_corners_type,
             self.config.weather_card.border_color,
         )
-        self.dialog.setProperty("class", "weather-card")
+        self.dialog.setProperty("class", "open-meteo-card")
 
-        # No location → show setup UI
+        # No location show setup UI
         if not self._location_data:
             self._show_location_setup()
             return
 
-        # No weather data → show placeholder
+        # No weather data placeholder
         if self._weather_data is None or not self._has_valid_weather_data:
             self._show_placeholder()
             return
@@ -168,18 +168,18 @@ class OpenMeteoWidget(BaseWidget):
         layout.setContentsMargins(24, 24, 24, 24)
         layout.setSpacing(12)
 
-        title = QLabel("Set Location")
+        title = QLabel("Setup Location")
         title.setProperty("class", "search-head")
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(title)
 
-        info = QLabel("Search for a city to set your weather location")
+        info = QLabel("Search for a location to set your weather widget")
         info.setProperty("class", "search-description")
         info.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(info)
 
         search_input = QLineEdit()
-        search_input.setPlaceholderText("Search city…")
+        search_input.setPlaceholderText("Search location...")
         search_input.setProperty("class", "search-input")
         search_input.setMinimumWidth(280)
         layout.addWidget(search_input)
@@ -264,15 +264,14 @@ class OpenMeteoWidget(BaseWidget):
     def _show_placeholder(self):
         layout = QVBoxLayout()
         layout.setContentsMargins(24, 24, 24, 24)
-        layout.setSpacing(12)
+        layout.setSpacing(0)
 
         icon_label = QLabel(self.config.icons.default)
-        icon_label.setStyleSheet("font-size: 72px;")
-        icon_label.setProperty("class", "placeholder-icon")
+        icon_label.setProperty("class", "no-data-icon")
         icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         info_label = QLabel("Weather data not available")
-        info_label.setProperty("class", "label")
+        info_label.setProperty("class", "no-data-text")
         info_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         layout.addWidget(icon_label)
@@ -349,7 +348,7 @@ class OpenMeteoWidget(BaseWidget):
 
         # Today section
         frame_today = QWidget()
-        frame_today.setProperty("class", "weather-card-today")
+        frame_today.setProperty("class", "open-meteo-card-today")
         layout_today = QVBoxLayout(frame_today)
 
         today_label0 = QLabel(f"{self._weather_data['{location}']} {self._weather_data['{temp}']}")
@@ -363,12 +362,12 @@ class OpenMeteoWidget(BaseWidget):
         today_sunrise_sunset.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         today_label1 = QLabel(
-            f"Feels like {self._weather_data['{feelslike}']} - "
-            f"{self._weather_data['{condition_text}']} - "
-            f"Humidity {self._weather_data['{humidity}']}\n"
-            f"Pressure {self._weather_data['{pressure}']} - "
+            f"Feels like {self._weather_data['{feelslike}']} \u2022 "
+            f"{self._weather_data['{condition_text}']} \u2022 "
+            f"Humidity {self._weather_data['{humidity}']} \u2022 "
+            f"Pressure {self._weather_data['{pressure}']} \u2022 "
             f"Cloud {self._weather_data['{cloud}']}%\n"
-            f"Rain chance {self._weather_data['{precipitation_probability}']} - "
+            f"Rain chance {self._weather_data['{precipitation_probability}']} \u2022 "
             f"UV Index {self._weather_data['{uv}']}"
         )
         today_label1.setProperty("class", "label")
@@ -409,9 +408,9 @@ class OpenMeteoWidget(BaseWidget):
             hourly_data_widget.update_weather(parsed_data, current_time)
             for i, w in enumerate(self._weather_card_daily_widgets):
                 if i == day_idx:
-                    w.setProperty("class", "weather-card-day active")
+                    w.setProperty("class", "open-meteo-card-day active")
                 else:
-                    w.setProperty("class", "weather-card-day")
+                    w.setProperty("class", "open-meteo-card-day")
 
         day_widgets: list[QWidget] = []
         self._weather_card_daily_widgets = []
@@ -420,13 +419,14 @@ class OpenMeteoWidget(BaseWidget):
             self._weather_card_daily_widgets.append(frame_day)
             if self._hourly_data[0] and self.config.weather_card.show_hourly_forecast:
                 frame_day.clicked.connect(partial(switch_hourly_data, i))
-            frame_day.setProperty("class", "weather-card-day")
+            frame_day.setProperty("class", "open-meteo-card-day")
 
             if i == 0:
-                day_short = "Today"
+                day_text = "Today"
+            elif i == 1:
+                day_text = "Tomorrow"
             else:
-                day_short = self._weather_data.get(f"{{day{i}_short_name}}", "")
-            day_num = self._weather_data.get(f"{{day{i}_number}}", "")
+                day_text = self._weather_data.get(f"{{day{i}_full_name}}", "")
             min_temp = self._weather_data[f"{{day{i}_min_temp}}"]
             max_temp = self._weather_data[f"{{day{i}_max_temp}}"]
 
@@ -434,26 +434,10 @@ class OpenMeteoWidget(BaseWidget):
             layout_day = QVBoxLayout()
             layout_day.setContentsMargins(8, 6, 8, 6)
             layout_day.setSpacing(4)
+            layout_day.setAlignment(Qt.AlignmentFlag.AlignCenter)
             frame_day.setLayout(layout_day)
 
-            # Header row: day number + day name
-            header_row = QHBoxLayout()
-            header_row.setContentsMargins(0, 0, 0, 0)
-            day_num_label = QLabel(str(day_num))
-            day_num_label.setProperty("class", "day-number")
-            day_name_label = QLabel(day_short)
-            day_name_label.setProperty("class", "day-name")
-            day_name_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-            header_row.addWidget(day_num_label)
-            header_row.addWidget(day_name_label)
-            layout_day.addLayout(header_row)
-
-            # Content row: icon + temps
-            content_row = QHBoxLayout()
-            content_row.setContentsMargins(0, 0, 0, 0)
-            content_row.setSpacing(4)
-
-            # SVG icon
+            # 1. SVG icon
             row_day_icon_label = QLabel()
             day_code = self._weather_data.get(f"{{day{i}_weather_code}}", 0)
             svg_str, _, _ = get_weather_icon(int(day_code), True)
@@ -461,21 +445,25 @@ class OpenMeteoWidget(BaseWidget):
             pixmap = render_svg_to_pixmap(svg_str, self.config.weather_card.icon_size, dpr)
             row_day_icon_label.setPixmap(pixmap)
             row_day_icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            content_row.addWidget(row_day_icon_label)
+            layout_day.addWidget(row_day_icon_label)
 
-            # Temp column: max (bold) on top, min below
-            temp_col = QVBoxLayout()
-            temp_col.setContentsMargins(0, 0, 0, 0)
-            temp_col.setSpacing(0)
+            # 2. Day name
+            day_name_label = QLabel(day_text)
+            day_name_label.setProperty("class", "day-name")
+            day_name_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            layout_day.addWidget(day_name_label)
+
+            # 3. Max Temp
             max_label = QLabel(str(max_temp))
             max_label.setProperty("class", "day-temp-max")
+            max_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            layout_day.addWidget(max_label)
+
+            # 4. Min Temp
             min_label = QLabel(str(min_temp))
             min_label.setProperty("class", "day-temp-min")
-            temp_col.addWidget(max_label)
-            temp_col.addWidget(min_label)
-            content_row.addLayout(temp_col)
-
-            layout_day.addLayout(content_row)
+            min_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            layout_day.addWidget(min_label)
             day_widgets.append(frame_day)
 
         days_layout = QHBoxLayout()
@@ -582,12 +570,6 @@ class OpenMeteoWidget(BaseWidget):
                 f"<strong>{self._weather_data['{location}']}</strong><br><br>Temperature<br>"
                 f"Min {self._weather_data['{min_temp}']} / Max {self._weather_data['{max_temp}']}"
             )
-            try:
-                precip = self._weather_data["{precipitation_probability}"]
-                if precip != "N/A":
-                    tooltip += f"<br><br>Precipitation<br>{precip}"
-            except KeyError:
-                pass
             set_tooltip(self, tooltip)
 
         widget_index = 0
@@ -750,13 +732,16 @@ class OpenMeteoWidget(BaseWidget):
                     date_obj = datetime.strptime(daily_times[i], "%Y-%m-%d")
                     day_name = date_obj.strftime("%B %d")
                     day_short = date_obj.strftime("%a")
+                    day_full = date_obj.strftime("%A")
                     day_number = date_obj.strftime("%d").lstrip("0")
                 else:
                     day_name = "N/A"
                     day_short = "N/A"
+                    day_full = "N/A"
                     day_number = ""
                 self._weather_data[f"{{day{i}_name}}"] = day_name
                 self._weather_data[f"{{day{i}_short_name}}"] = day_short
+                self._weather_data[f"{{day{i}_full_name}}"] = day_full
                 self._weather_data[f"{{day{i}_number}}"] = day_number
                 self._weather_data[f"{{day{i}_min_temp}}"] = fmt_temp(daily_min[i]) if i < len(daily_min) else "N/A"
                 self._weather_data[f"{{day{i}_max_temp}}"] = fmt_temp(daily_max[i]) if i < len(daily_max) else "N/A"

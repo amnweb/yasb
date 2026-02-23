@@ -19,156 +19,36 @@ WMO Weather interpretation codes (WW):
 
 #  SVG Icon Constants
 
-SVG_SUNNY_DAY = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <circle cx="32" cy="32" r="14" fill="#FFD93D" stroke="#F4A900" stroke-width="2"/>
-  <g stroke="#FFD93D" stroke-width="2.5" stroke-linecap="round">
-    <line x1="32" y1="4" x2="32" y2="12"/>
-    <line x1="32" y1="52" x2="32" y2="60"/>
-    <line x1="4" y1="32" x2="12" y2="32"/>
-    <line x1="52" y1="32" x2="60" y2="32"/>
-    <line x1="12.2" y1="12.2" x2="17.9" y2="17.9"/>
-    <line x1="46.1" y1="46.1" x2="51.8" y2="51.8"/>
-    <line x1="12.2" y1="51.8" x2="17.9" y2="46.1"/>
-    <line x1="46.1" y1="17.9" x2="51.8" y2="12.2"/>
-  </g>
-</svg>"""
+SVG_SUNNY_DAY = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><defs><linearGradient id="a" x1="213.99" x2="298.01" y1="183.24" y2="328.76" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#fbbf24"/><stop offset=".45" stop-color="#fbbf24"/><stop offset="1" stop-color="#f59e0b"/></linearGradient></defs><circle cx="256" cy="256" r="84" fill="url(#a)" stroke="#f8af18" stroke-miterlimit="10" stroke-width="6"/><path fill="none" stroke="#fbbf24" stroke-linecap="round" stroke-miterlimit="10" stroke-width="24" d="M256 125.66V76m0 360v-49.66m92.17-222.51 35.11-35.11M128.72 383.28l35.11-35.11m0-184.34L128.72 128.72m254.56 254.56-35.11-35.11M125.66 256H76m360 0h-49.66"/></svg>
+"""
 
-SVG_CLEAR_NIGHT = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <path d="M38 10 A22 22 0 1 0 54 38 A17 17 0 1 1 38 10Z" fill="#C4C9D4" stroke="#A0A8B8" stroke-width="1.5"/>
-  <circle cx="48" cy="12" r="1.5" fill="#E8E8E8"/>
-  <circle cx="54" cy="22" r="1" fill="#E8E8E8"/>
-  <circle cx="44" cy="6" r="1" fill="#E8E8E8"/>
-</svg>"""
+SVG_CLEAR_NIGHT = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><defs><linearGradient id="a" x1="175.33" x2="308.18" y1="150.03" y2="380.13" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#86c3db"/><stop offset=".45" stop-color="#86c3db"/><stop offset="1" stop-color="#5eafcf"/></linearGradient></defs><path fill="url(#a)" stroke="#72b9d5" stroke-linecap="round" stroke-linejoin="round" stroke-width="6" d="M373.25 289.63C299.13 289.63 239 230.35 239 157.21A130.48 130.48 0 0 1 243.47 124C176.29 131.25 124 187.37 124 255.58 124 328.71 184.09 388 258.21 388 320.69 388 373 345.82 388 288.79a135.56 135.56 0 0 1-14.75.84Z"/></svg>"""
 
-SVG_CLOUDY_DAY = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <circle cx="22" cy="22" r="10" fill="#FFD93D" stroke="#F4A900" stroke-width="1.5"/>
-  <g stroke="#FFD93D" stroke-width="2" stroke-linecap="round">
-    <line x1="22" y1="6" x2="22" y2="10"/>
-    <line x1="22" y1="34" x2="22" y2="38"/>
-    <line x1="6" y1="22" x2="10" y2="22"/>
-    <line x1="34" y1="22" x2="38" y2="22"/>
-    <line x1="10.7" y1="10.7" x2="13.5" y2="13.5"/>
-    <line x1="30.5" y1="30.5" x2="33.3" y2="33.3"/>
-    <line x1="10.7" y1="33.3" x2="13.5" y2="30.5"/>
-    <line x1="30.5" y1="13.5" x2="33.3" y2="10.7"/>
-  </g>
-  <path d="M20 52 Q20 42 28 40 Q30 32 38 30 Q48 30 50 38 Q58 38 58 46 Q58 52 52 52Z" fill="#B0BEC5" stroke="#90A4AE" stroke-width="1.5"/>
-</svg>"""
+SVG_CLOUDY_DAY = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><defs><linearGradient id="a" x1="146" x2="186" y1="172.35" y2="241.65" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#fbbf24"/><stop offset=".45" stop-color="#fbbf24"/><stop offset="1" stop-color="#f59e0b"/></linearGradient><linearGradient id="b" x1="180.45" x2="313.64" y1="175.68" y2="406.37" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#f3f7fe"/><stop offset=".45" stop-color="#f3f7fe"/><stop offset="1" stop-color="#deeafb"/></linearGradient></defs><circle cx="166" cy="207" r="40" fill="url(#a)" stroke="#f8af18" stroke-miterlimit="10" stroke-width="4"/><path fill="none" stroke="#fbbf24" stroke-linecap="round" stroke-miterlimit="10" stroke-width="12" d="M166 140.38V115m0 184v-25.38m47.11-113.73L231.05 142M101 272.05l17.94-17.94m0-94.22L101 142m130.1 130.1-17.94-17.94M74 207h25.38M258 207h-25.38"/><path fill="url(#b)" stroke="#e6effc" stroke-miterlimit="10" stroke-width="6" d="M372 252c-.85 0-1.68.09-2.53.13A83.9 83.9 0 0 0 216.6 187.92 55.91 55.91 0 0 0 132 236a56.56 56.56 0 0 0 .8 9.08A60 60 0 0 0 144 364c1.35 0 2.67-.11 4-.2v.2h224a56 56 0 0 0 0-112Z"/></svg>"""
 
-SVG_CLOUDY_NIGHT = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <path d="M16 18 A10 10 0 1 0 28 26 A7 7 0 1 1 16 18Z" fill="#C4C9D4" stroke="#A0A8B8" stroke-width="1"/>
-  <path d="M20 52 Q20 42 28 40 Q30 32 38 30 Q48 30 50 38 Q58 38 58 46 Q58 52 52 52Z" fill="#90A4AE" stroke="#78909C" stroke-width="1.5"/>
-</svg>"""
+SVG_CLOUDY_NIGHT = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><defs><linearGradient id="a" x1="114.67" x2="199.21" y1="139.56" y2="285.99" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#86c3db"/><stop offset=".45" stop-color="#86c3db"/><stop offset="1" stop-color="#5eafcf"/></linearGradient><linearGradient id="b" x1="180.45" x2="313.64" y1="175.68" y2="406.37" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#f3f7fe"/><stop offset=".45" stop-color="#f3f7fe"/><stop offset="1" stop-color="#deeafb"/></linearGradient></defs><path fill="url(#a)" stroke="#72b9d5" stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M240.62 228.4c-47.17 0-85.41-37.73-85.41-84.26A83.31 83.31 0 0 1 158 123C115.27 127.61 82 163.33 82 206.73 82 253.27 120.24 291 167.41 291A85.16 85.16 0 0 0 250 227.87a88 88 0 0 1-9.38.53Z"/><path fill="url(#b)" stroke="#e6effc" stroke-miterlimit="10" stroke-width="6" d="M372 252c-.85 0-1.68.09-2.53.13A83.9 83.9 0 0 0 216.6 187.92 55.91 55.91 0 0 0 132 236a56.56 56.56 0 0 0 .8 9.08A60 60 0 0 0 144 364c1.35 0 2.67-.11 4-.2v.2h224a56 56 0 0 0 0-112Z"/></svg>"""
 
-SVG_FOGGY_DAY = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <circle cx="24" cy="16" r="8" fill="#FFD93D" opacity="0.5"/>
-  <g stroke="#B0BEC5" stroke-width="3" stroke-linecap="round" opacity="0.8">
-    <line x1="10" y1="30" x2="54" y2="30"/>
-    <line x1="14" y1="38" x2="50" y2="38"/>
-    <line x1="10" y1="46" x2="54" y2="46"/>
-    <line x1="18" y1="54" x2="46" y2="54"/>
-  </g>
-</svg>"""
+SVG_FOGGY_DAY = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><defs><linearGradient id="a" x1="213.99" x2="298.01" y1="183.24" y2="328.76" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#fbbf24"/><stop offset=".45" stop-color="#fbbf24"/><stop offset="1" stop-color="#f59e0b"/></linearGradient></defs><circle cx="256" cy="256" r="84" fill="url(#a)" stroke="#f8af18" stroke-miterlimit="10" stroke-width="6"/><path fill="none" stroke="#fbbf24" stroke-linecap="round" stroke-miterlimit="10" stroke-width="24" d="M256 125.66V76m0 360v-49.66m92.17-222.51 35.11-35.11M128.72 383.28l35.11-35.11m0-184.34L128.72 128.72m254.56 254.56-35.11-35.11M125.66 256H76m360 0h-49.66"/><path fill="none" stroke="#d4d7dd" stroke-linecap="round" stroke-miterlimit="10" stroke-width="24" d="M136 348h240"/><path fill="none" stroke="#bec1c6" stroke-linecap="round" stroke-miterlimit="10" stroke-width="24" d="M136 396h240"/></svg>"""
 
-SVG_FOGGY_NIGHT = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <path d="M20 12 A7 7 0 1 0 30 18 A5 5 0 1 1 20 12Z" fill="#C4C9D4" opacity="0.5"/>
-  <g stroke="#90A4AE" stroke-width="3" stroke-linecap="round" opacity="0.8">
-    <line x1="10" y1="30" x2="54" y2="30"/>
-    <line x1="14" y1="38" x2="50" y2="38"/>
-    <line x1="10" y1="46" x2="54" y2="46"/>
-    <line x1="18" y1="54" x2="46" y2="54"/>
-  </g>
-</svg>"""
+SVG_FOGGY_NIGHT = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><defs><linearGradient id="a" x1="175.33" x2="308.18" y1="150.03" y2="380.13" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#86c3db"/><stop offset=".45" stop-color="#86c3db"/><stop offset="1" stop-color="#5eafcf"/></linearGradient></defs><path fill="url(#a)" stroke="#72b9d5" stroke-linecap="round" stroke-linejoin="round" stroke-width="6" d="M373.25 289.63C299.13 289.63 239 230.35 239 157.21A130.48 130.48 0 0 1 243.47 124C176.29 131.25 124 187.37 124 255.58 124 328.71 184.09 388 258.21 388 320.69 388 373 345.82 388 288.79a135.56 135.56 0 0 1-14.75.84Z"/><path fill="none" stroke="#d4d7dd" stroke-linecap="round" stroke-miterlimit="10" stroke-width="24" d="M136 420h240"/><path fill="none" stroke="#bec1c6" stroke-linecap="round" stroke-miterlimit="10" stroke-width="24" d="M136 458h240"/></svg>"""
 
-SVG_DRIZZLE_DAY = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <circle cx="20" cy="14" r="7" fill="#FFD93D" stroke="#F4A900" stroke-width="1"/>
-  <path d="M16 42 Q16 34 22 32 Q24 26 30 24 Q38 24 40 30 Q46 30 46 36 Q46 42 40 42Z" fill="#B0BEC5" stroke="#90A4AE" stroke-width="1.5"/>
-  <g stroke="#64B5F6" stroke-width="1.5" stroke-linecap="round">
-    <line x1="24" y1="46" x2="23" y2="50"/>
-    <line x1="32" y1="46" x2="31" y2="50"/>
-    <line x1="28" y1="52" x2="27" y2="56"/>
-  </g>
-</svg>"""
+SVG_DRIZZLE_DAY = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><defs><linearGradient id="b" x1="180.45" x2="313.64" y1="175.68" y2="406.37" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#f3f7fe"/><stop offset=".45" stop-color="#f3f7fe"/><stop offset="1" stop-color="#deeafb"/></linearGradient></defs><path fill="url(#b)" stroke="#e6effc" stroke-miterlimit="10" stroke-width="6" d="M372 252c-.85 0-1.68.09-2.53.13A83.9 83.9 0 0 0 216.6 187.92 55.91 55.91 0 0 0 132 236a56.56 56.56 0 0 0 .8 9.08A60 60 0 0 0 144 364c1.35 0 2.67-.11 4-.2v.2h224a56 56 0 0 0 0-112Z"/><path fill="#0a5ad4" stroke="#0a5ad4" stroke-miterlimit="10" d="M200 376a8 8 0 0 1-8-8v-12a8 8 0 0 1 16 0v12a8 8 0 0 1-8 8Z"/><path fill="#0a5ad4" stroke="#0a5ad4" stroke-miterlimit="10" d="M256 456a8 8 0 0 1-8-8v-12a8 8 0 0 1 16 0v12a8 8 0 0 1-8 8Z"/><path fill="#0a5ad4" stroke="#0a5ad4" stroke-miterlimit="10" d="M312 406a8 8 0 0 1-8-8v-12a8 8 0 0 1 16 0v12a8 8 0 0 1-8 8Z"/></svg>"""
 
-SVG_DRIZZLE_NIGHT = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <path d="M14 10 A6 6 0 1 0 24 16 A4 4 0 1 1 14 10Z" fill="#C4C9D4" stroke="#A0A8B8" stroke-width="0.8"/>
-  <path d="M16 42 Q16 34 22 32 Q24 26 30 24 Q38 24 40 30 Q46 30 46 36 Q46 42 40 42Z" fill="#90A4AE" stroke="#78909C" stroke-width="1.5"/>
-  <g stroke="#5C9FD4" stroke-width="1.5" stroke-linecap="round">
-    <line x1="24" y1="46" x2="23" y2="50"/>
-    <line x1="32" y1="46" x2="31" y2="50"/>
-    <line x1="28" y1="52" x2="27" y2="56"/>
-  </g>
-</svg>"""
+SVG_DRIZZLE_NIGHT = SVG_DRIZZLE_DAY
 
-SVG_RAINY_DAY = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <circle cx="20" cy="14" r="7" fill="#FFD93D" stroke="#F4A900" stroke-width="1"/>
-  <path d="M14 40 Q14 32 20 30 Q22 24 28 22 Q36 22 38 28 Q44 28 44 34 Q44 40 38 40Z" fill="#B0BEC5" stroke="#90A4AE" stroke-width="1.5"/>
-  <g stroke="#42A5F5" stroke-width="2" stroke-linecap="round">
-    <line x1="20" y1="44" x2="18" y2="52"/>
-    <line x1="28" y1="44" x2="26" y2="52"/>
-    <line x1="36" y1="44" x2="34" y2="52"/>
-    <line x1="24" y1="54" x2="22" y2="60"/>
-    <line x1="32" y1="54" x2="30" y2="60"/>
-  </g>
-</svg>"""
+SVG_RAINY_DAY = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><defs><linearGradient id="b" x1="180.45" x2="313.64" y1="175.68" y2="406.37" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#f3f7fe"/><stop offset=".45" stop-color="#f3f7fe"/><stop offset="1" stop-color="#deeafb"/></linearGradient></defs><path fill="url(#b)" stroke="#e6effc" stroke-miterlimit="10" stroke-width="6" d="M372 252c-.85 0-1.68.09-2.53.13A83.9 83.9 0 0 0 216.6 187.92 55.91 55.91 0 0 0 132 236a56.56 56.56 0 0 0 .8 9.08A60 60 0 0 0 144 364c1.35 0 2.67-.11 4-.2v.2h224a56 56 0 0 0 0-112Z"/><path fill="#0a5ad4" stroke="#0a5ad4" stroke-miterlimit="10" d="M200 400a8 8 0 0 1-8-8v-40a8 8 0 0 1 16 0v40a8 8 0 0 1-8 8Z"/><path fill="#0a5ad4" stroke="#0a5ad4" stroke-miterlimit="10" d="M256 453a8 8 0 0 1-8-8v-40a8 8 0 0 1 16 0v40a8 8 0 0 1-8 8Z"/><path fill="#0a5ad4" stroke="#0a5ad4" stroke-miterlimit="10" d="M312 418a8 8 0 0 1-8-8v-40a8 8 0 0 1 16 0v40a8 8 0 0 1-8 8Z"/></svg>"""
 
-SVG_RAINY_NIGHT = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <path d="M14 10 A6 6 0 1 0 24 16 A4 4 0 1 1 14 10Z" fill="#C4C9D4" stroke="#A0A8B8" stroke-width="0.8"/>
-  <path d="M14 40 Q14 32 20 30 Q22 24 28 22 Q36 22 38 28 Q44 28 44 34 Q44 40 38 40Z" fill="#90A4AE" stroke="#78909C" stroke-width="1.5"/>
-  <g stroke="#3D8FCC" stroke-width="2" stroke-linecap="round">
-    <line x1="20" y1="44" x2="18" y2="52"/>
-    <line x1="28" y1="44" x2="26" y2="52"/>
-    <line x1="36" y1="44" x2="34" y2="52"/>
-    <line x1="24" y1="54" x2="22" y2="60"/>
-    <line x1="32" y1="54" x2="30" y2="60"/>
-  </g>
-</svg>"""
+SVG_RAINY_NIGHT = SVG_RAINY_DAY
 
-SVG_SNOWY_DAY = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <circle cx="20" cy="14" r="7" fill="#FFD93D" stroke="#F4A900" stroke-width="1"/>
-  <path d="M14 38 Q14 30 20 28 Q22 22 28 20 Q36 20 38 26 Q44 26 44 32 Q44 38 38 38Z" fill="#B0BEC5" stroke="#90A4AE" stroke-width="1.5"/>
-  <g fill="#E0E0E0">
-    <circle cx="20" cy="46" r="2.5"/>
-    <circle cx="30" cy="44" r="2"/>
-    <circle cx="38" cy="48" r="2.5"/>
-    <circle cx="24" cy="54" r="2"/>
-    <circle cx="34" cy="56" r="2.5"/>
-  </g>
-</svg>"""
+SVG_SNOWY_DAY = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><defs><linearGradient id="b" x1="180.45" x2="313.64" y1="175.68" y2="406.37" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#f3f7fe"/><stop offset=".45" stop-color="#f3f7fe"/><stop offset="1" stop-color="#deeafb"/></linearGradient></defs><path fill="url(#b)" stroke="#e6effc" stroke-miterlimit="10" stroke-width="6" d="M372 252c-.85 0-1.68.09-2.53.13A83.9 83.9 0 0 0 216.6 187.92 55.91 55.91 0 0 0 132 236a56.56 56.56 0 0 0 .8 9.08A60 60 0 0 0 144 364c1.35 0 2.67-.11 4-.2v.2h224a56 56 0 0 0 0-112Z"/><g stroke="#86c3db" stroke-width="5" stroke-linecap="round"><line x1="200" y1="383" x2="200" y2="407"/><line x1="188" y1="389" x2="212" y2="401"/><line x1="188" y1="401" x2="212" y2="389"/></g><g stroke="#86c3db" stroke-width="5" stroke-linecap="round"><line x1="256" y1="425" x2="256" y2="461"/><line x1="243" y1="432" x2="269" y2="454"/><line x1="243" y1="454" x2="269" y2="432"/></g><g stroke="#86c3db" stroke-width="5" stroke-linecap="round"><line x1="312" y1="390" x2="312" y2="414"/><line x1="300" y1="396" x2="324" y2="408"/><line x1="300" y1="408" x2="324" y2="396"/></g></svg>"""
 
-SVG_SNOWY_NIGHT = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <path d="M14 10 A6 6 0 1 0 24 16 A4 4 0 1 1 14 10Z" fill="#C4C9D4" stroke="#A0A8B8" stroke-width="0.8"/>
-  <path d="M14 38 Q14 30 20 28 Q22 22 28 20 Q36 20 38 26 Q44 26 44 32 Q44 38 38 38Z" fill="#90A4AE" stroke="#78909C" stroke-width="1.5"/>
-  <g fill="#D0D0D0">
-    <circle cx="20" cy="46" r="2.5"/>
-    <circle cx="30" cy="44" r="2"/>
-    <circle cx="38" cy="48" r="2.5"/>
-    <circle cx="24" cy="54" r="2"/>
-    <circle cx="34" cy="56" r="2.5"/>
-  </g>
-</svg>"""
+SVG_SNOWY_NIGHT = SVG_SNOWY_DAY
 
-SVG_THUNDERSTORM_DAY = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <path d="M12 38 Q12 28 20 26 Q22 18 30 16 Q40 16 42 24 Q50 24 50 32 Q50 38 44 38Z" fill="#78909C" stroke="#607D8B" stroke-width="1.5"/>
-  <polygon points="30,38 24,50 30,50 26,62 38,46 32,46 36,38" fill="#FFD93D" stroke="#F4A900" stroke-width="0.8"/>
-  <g stroke="#42A5F5" stroke-width="1.5" stroke-linecap="round">
-    <line x1="16" y1="42" x2="14" y2="50"/>
-    <line x1="44" y1="42" x2="42" y2="50"/>
-  </g>
-</svg>"""
+SVG_THUNDERSTORM_DAY = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><defs><linearGradient id="a" x1="146" x2="186" y1="172.35" y2="241.65" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#fbbf24"/><stop offset=".45" stop-color="#fbbf24"/><stop offset="1" stop-color="#f59e0b"/></linearGradient><linearGradient id="b" x1="180.45" x2="313.64" y1="175.68" y2="406.37" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#f3f7fe"/><stop offset=".45" stop-color="#f3f7fe"/><stop offset="1" stop-color="#deeafb"/></linearGradient><linearGradient id="e" x1="213.9" x2="286.11" y1="308.07" y2="433.14" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#f7b23b"/><stop offset=".45" stop-color="#f7b23b"/><stop offset="1" stop-color="#f59e0b"/></linearGradient></defs><circle cx="166" cy="207" r="40" fill="url(#a)" stroke="#f8af18" stroke-miterlimit="10" stroke-width="4"/><path fill="none" stroke="#fbbf24" stroke-linecap="round" stroke-miterlimit="10" stroke-width="12" d="M166 140.38V115m0 184v-25.38m47.11-113.73L231.05 142M101 272.05l17.94-17.94m0-94.22L101 142m130.1 130.1-17.94-17.94M74 207h25.38M258 207h-25.38"/><path fill="url(#b)" stroke="#e6effc" stroke-miterlimit="10" stroke-width="6" d="M372 252c-.85 0-1.68.09-2.53.13A83.9 83.9 0 0 0 216.6 187.92 55.91 55.91 0 0 0 132 236a56.56 56.56 0 0 0 .8 9.08A60 60 0 0 0 144 364c1.35 0 2.67-.11 4-.2v.2h224a56 56 0 0 0 0-112Z"/><path fill="url(#e)" stroke="#f6a823" stroke-miterlimit="10" stroke-width="4" d="M240 293 L208 389 H240 L224 469 L304 357 H256 L288 293 Z"/></svg>"""
 
-SVG_THUNDERSTORM_NIGHT = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <path d="M12 38 Q12 28 20 26 Q22 18 30 16 Q40 16 42 24 Q50 24 50 32 Q50 38 44 38Z" fill="#607D8B" stroke="#546E7A" stroke-width="1.5"/>
-  <polygon points="30,38 24,50 30,50 26,62 38,46 32,46 36,38" fill="#FFD93D" stroke="#F4A900" stroke-width="0.8"/>
-  <g stroke="#3D8FCC" stroke-width="1.5" stroke-linecap="round">
-    <line x1="16" y1="42" x2="14" y2="50"/>
-    <line x1="44" y1="42" x2="42" y2="50"/>
-  </g>
-</svg>"""
+SVG_THUNDERSTORM_NIGHT = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><defs><linearGradient id="a" x1="114.67" x2="199.21" y1="139.56" y2="285.99" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#86c3db"/><stop offset=".45" stop-color="#86c3db"/><stop offset="1" stop-color="#5eafcf"/></linearGradient><linearGradient id="b" x1="180.45" x2="313.64" y1="175.68" y2="406.37" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#f3f7fe"/><stop offset=".45" stop-color="#f3f7fe"/><stop offset="1" stop-color="#deeafb"/></linearGradient><linearGradient id="e" x1="213.9" x2="286.11" y1="308.07" y2="433.14" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#f7b23b"/><stop offset=".45" stop-color="#f7b23b"/><stop offset="1" stop-color="#f59e0b"/></linearGradient></defs><path fill="url(#a)" stroke="#72b9d5" stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M240.62 228.4c-47.17 0-85.41-37.73-85.41-84.26A83.31 83.31 0 0 1 158 123C115.27 127.61 82 163.33 82 206.73 82 253.27 120.24 291 167.41 291A85.16 85.16 0 0 0 250 227.87a88 88 0 0 1-9.38.53Z"/><path fill="url(#b)" stroke="#e6effc" stroke-miterlimit="10" stroke-width="6" d="M372 252c-.85 0-1.68.09-2.53.13A83.9 83.9 0 0 0 216.6 187.92 55.91 55.91 0 0 0 132 236a56.56 56.56 0 0 0 .8 9.08A60 60 0 0 0 144 364c1.35 0 2.67-.11 4-.2v.2h224a56 56 0 0 0 0-112Z"/><path fill="url(#e)" stroke="#f6a823" stroke-miterlimit="10" stroke-width="4" d="M240 293 L208 389 H240 L224 469 L304 357 H256 L288 293 Z"/></svg>"""
 
-SVG_DEFAULT = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <path d="M16 46 Q16 36 24 34 Q26 26 34 24 Q44 24 46 32 Q54 32 54 40 Q54 46 48 46Z" fill="#B0BEC5" stroke="#90A4AE" stroke-width="1.5"/>
-</svg>"""
+SVG_DEFAULT = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><defs><linearGradient id="b" x1="180.45" x2="313.64" y1="175.68" y2="406.37" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#f3f7fe"/><stop offset=".45" stop-color="#f3f7fe"/><stop offset="1" stop-color="#deeafb"/></linearGradient></defs><path fill="url(#b)" stroke="#e6effc" stroke-miterlimit="10" stroke-width="6" d="M372 252c-.85 0-1.68.09-2.53.13A83.9 83.9 0 0 0 216.6 187.92 55.91 55.91 0 0 0 132 236a56.56 56.56 0 0 0 .8 9.08A60 60 0 0 0 144 364c1.35 0 2.67-.11 4-.2v.2h224a56 56 0 0 0 0-112Z"/></svg>"""
 
 
 # Maps icon key names to SVG strings

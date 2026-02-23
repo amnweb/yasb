@@ -65,91 +65,91 @@ Default icon mapping (using Nerd Font glyphs):
 
 ```yaml
 open_meteo:
-    type: "yasb.open_meteo.OpenMeteoWidget"
-    options:
-        label: "<span>{icon}</span> {temp}"
-        label_alt: "{location}: Min {min_temp}, Max {max_temp}, Humidity {humidity}"
-        tooltip: true
-        update_interval: 600
-        hide_decimal: true
-        units: "metric"
-        callbacks:
-            on_left: "toggle_card"
-            on_middle: "do_nothing"
-            on_right: "toggle_label"
+  type: "yasb.open_meteo.OpenMeteoWidget"
+  options:
+    label: "<span>{icon}</span> {temp}"
+    label_alt: "{location}: Min {min_temp}, Max {max_temp}, Humidity {humidity}"
+    tooltip: true
+    update_interval: 600
+    hide_decimal: true
+    units: "metric"
+    callbacks:
+      on_left: "toggle_card"
+      on_middle: "do_nothing"
+      on_right: "toggle_label"
 ```
 
 ## Advanced Configuration
 
 ```yaml
 open_meteo:
-    type: "yasb.open_meteo.OpenMeteoWidget"
-    options:
-        label: "<span>{icon}</span> {temp}"
-        label_alt: "{location}: Min {min_temp}, Max {max_temp}, Humidity {humidity}"
-        tooltip: true
-        update_interval: 600
-        hide_decimal: true
-        units: "metric"
-        callbacks:
-            on_left: "toggle_card"
-            on_middle: "do_nothing"
-            on_right: "toggle_label"
-        icons:
-            sunnyDay: "\ue30d"
-            clearNight: "\ue32b"
-            cloudyDay: "\ue312"
-            cloudyNight: "\ue311"
-            drizzleDay: "\udb81\ude7e"
-            drizzleNight: "\udb81\ude7e"
-            rainyDay: "\ue308"
-            rainyNight: "\ue333"
-            snowyDay: "\ue30a"
-            snowyNight: "\ue335"
-            foggyDay: "\ue303"
-            foggyNight: "\ue346"
-            thunderstormDay: "\ue30f"
-            thunderstormNight: "\ue338"
-            default: "\uebaa"
-        weather_card:
-            blur: true
-            round_corners: true
-            round_corners_type: "normal"
-            border_color: "system"
-            alignment: "right"
-            direction: "down"
-            icon_size: 64
-            show_hourly_forecast: true
-            time_format: "24h"
-            hourly_point_spacing: 76
-            hourly_icon_size: 32
-            icon_smoothing: true
-            temp_line_width: 2
-            current_line_color: "#8EAEE8"
-            current_line_width: 1
-            current_line_style: "dot"
-            hourly_gradient:
-                enabled: false
-                top_color: "#8EAEE8"
-                bottom_color: "#2A3E68"
-            hourly_forecast_buttons:
-                enabled: true
-                default_view: "temperature"
-                temperature_icon: "\udb81\udd99"
-                rain_icon: "\udb81\udd96"
-                snow_icon: "\udb81\udd98"
-            weather_animation:
-                enabled: false
-                snow_overrides_rain: true
-                temp_line_animation_style: both
-                rain_effect_intensity: 1.0
-                snow_effect_intensity: 1.0
-                scale_with_chance: true
-        label_shadow:
-            enabled: true
-            color: "black"
-            radius: 3
-            offset: [1, 1]
+  type: "yasb.open_meteo.OpenMeteoWidget"
+  options:
+    label: "<span>{icon}</span> {temp}"
+    label_alt: "{location}: Min {min_temp}, Max {max_temp}, Humidity {humidity}"
+    tooltip: true
+    update_interval: 600
+    hide_decimal: true
+    units: "metric"
+    callbacks:
+      on_left: "toggle_card"
+      on_middle: "do_nothing"
+      on_right: "toggle_label"
+    icons:
+      sunnyDay: "\ue30d"
+      clearNight: "\ue32b"
+      cloudyDay: "\ue312"
+      cloudyNight: "\ue311"
+      drizzleDay: "\udb81\ude7e"
+      drizzleNight: "\udb81\ude7e"
+      rainyDay: "\ue308"
+      rainyNight: "\ue333"
+      snowyDay: "\ue30a"
+      snowyNight: "\ue335"
+      foggyDay: "\ue303"
+      foggyNight: "\ue346"
+      thunderstormDay: "\ue30f"
+      thunderstormNight: "\ue338"
+      default: "\uebaa"
+    weather_card:
+      blur: true
+      round_corners: true
+      round_corners_type: "normal"
+      border_color: "system"
+      alignment: "right"
+      direction: "down"
+      icon_size: 64
+      show_hourly_forecast: true
+      time_format: "24h"
+      hourly_point_spacing: 76
+      hourly_icon_size: 32
+      icon_smoothing: true
+      temp_line_width: 2
+      current_line_color: "#8EAEE8"
+      current_line_width: 1
+      current_line_style: "dot"
+      hourly_gradient:
+        enabled: false
+        top_color: "#8EAEE8"
+        bottom_color: "#2A3E68"
+      hourly_forecast_buttons:
+        enabled: true
+        default_view: "temperature"
+        temperature_icon: "\udb81\udd99"
+        rain_icon: "\udb81\udd96"
+        snow_icon: "\udb81\udd98"
+      weather_animation:
+        enabled: false
+        snow_overrides_rain: true
+        temp_line_animation_style: both
+        rain_effect_intensity: 1.0
+        snow_effect_intensity: 1.0
+        scale_with_chance: true
+    label_shadow:
+      enabled: true
+      color: "black"
+      radius: 3
+      offset: [1, 1]
 ```
 
 ## Description of Options
@@ -163,41 +163,41 @@ open_meteo:
 - **units:** The units for the weather data. Can be `'metric'` (°C, km/h) or `'imperial'` (°F, mph).
 - **icons:** A dictionary of icons for different weather conditions. The icon keys are mapped from WMO weather codes. See [Icons](#icons) for the full list.
 - **weather_card:** Configuration for the weather card popup display.
-    - **blur:** Enable blur effect for the weather card.
-    - **round_corners:** Enable round corners for weather card.
-    - **round_corners_type:** Border type for weather card can be `normal` and `small`. Default is `normal`.
-    - **border_color:** Border color for weather card can be `None`, `System` or `Hex Color` `"#ff0000"`.
-    - **alignment:** Alignment of the weather card. Possible values are `left`, `center`, and `right`.
-    - **direction:** Direction of the weather card. Possible values are `up` and `down`.
-    - **offset_top:** Offset from the top of the widget in pixels.
-    - **offset_left:** Offset from the left of the widget in pixels.
-    - **icon_size:** Size of the weather icon in pixels.
-    - **show_hourly_forecast:** Whether to show the hourly forecast in the weather card. Set to `false` to disable.
-    - **time_format:** Time format for the weather card. Possible values are `12h` and `24h`.
-    - **hourly_point_spacing:** Spacing between hourly points on the curve.
-    - **hourly_icon_size:** Size of the hourly icon.Better to set 16, 32 or 64 for better quality.
-    - **icon_smoothing:** Whether to smooth the icon on hourly view.
-    - **temp_line_width:** Width of the temperature line. Setting this to `0` will hide the temperature line.
-    - **current_line_color:** Color of the current hour line.
-    - **current_line_width:** Width of the current hour line. Setting this to `0` will hide it.
-    - **current_line_style:** Style of the current hour line. Possible values are `solid`, `dash`, `dot`, `dashDot`, `dashDotDot`.
-    - **hourly_gradient:** Configuration for the gradient effect under the hourly line.
-        - **enabled:** Whether to enable the gradient effect under the hourly line.
-        - **top_color:** Top color of the gradient.
-        - **bottom_color:** Bottom color of the gradient.
-    - **hourly_forecast_buttons:** Configuration for the data type toggle buttons in the hourly forecast view.
-        - **enabled:** Whether to show the toggle buttons.
-        - **default_view:** Which data type to show by default. Options: `"temperature"` (default), `"rain"`, or `"snow"`.
-        - **temperature_icon:** Icon for the temperature button.
-        - **rain_icon:** Icon for the rain chance button.
-        - **snow_icon:** Icon for the snow chance button.
-    - **weather_animation:** Configuration for the weather animation effects.
-        - **enabled:** Whether to enable rain/snow animation effects.
-        - **snow_overrides_rain:** Whether to override the rain animation with the snow animation (if overlapping).
-        - **temp_line_animation_style:** Which animation style to use for the temperature line. Options: `rain`, `snow`, `both`, or `none`.
-        - **rain_effect_intensity:** Intensity of the rain animation. (0.01 - 10.0, Default: 1.0)
-        - **snow_effect_intensity:** Intensity of the snow animation. (0.01 - 10.0, Default: 1.0)
-        - **scale_with_chance:** Whether to scale the animation intensity with the chance of rain/snow.
+  - **blur:** Enable blur effect for the weather card.
+  - **round_corners:** Enable round corners for weather card.
+  - **round_corners_type:** Border type for weather card can be `normal` and `small`. Default is `normal`.
+  - **border_color:** Border color for weather card can be `None`, `System` or `Hex Color` `"#ff0000"`.
+  - **alignment:** Alignment of the weather card. Possible values are `left`, `center`, and `right`.
+  - **direction:** Direction of the weather card. Possible values are `up` and `down`.
+  - **offset_top:** Offset from the top of the widget in pixels.
+  - **offset_left:** Offset from the left of the widget in pixels.
+  - **icon_size:** Size of the weather icon in pixels.
+  - **show_hourly_forecast:** Whether to show the hourly forecast in the weather card. Set to `false` to disable.
+  - **time_format:** Time format for the weather card. Possible values are `12h` and `24h`.
+  - **hourly_point_spacing:** Spacing between hourly points on the curve.
+  - **hourly_icon_size:** Size of the hourly icon.Better to set 16, 32 or 64 for better quality.
+  - **icon_smoothing:** Whether to smooth the icon on hourly view.
+  - **temp_line_width:** Width of the temperature line. Setting this to `0` will hide the temperature line.
+  - **current_line_color:** Color of the current hour line.
+  - **current_line_width:** Width of the current hour line. Setting this to `0` will hide it.
+  - **current_line_style:** Style of the current hour line. Possible values are `solid`, `dash`, `dot`, `dashDot`, `dashDotDot`.
+  - **hourly_gradient:** Configuration for the gradient effect under the hourly line.
+    - **enabled:** Whether to enable the gradient effect under the hourly line.
+    - **top_color:** Top color of the gradient.
+    - **bottom_color:** Bottom color of the gradient.
+  - **hourly_forecast_buttons:** Configuration for the data type toggle buttons in the hourly forecast view.
+    - **enabled:** Whether to show the toggle buttons.
+    - **default_view:** Which data type to show by default. Options: `"temperature"` (default), `"rain"`, or `"snow"`.
+    - **temperature_icon:** Icon for the temperature button.
+    - **rain_icon:** Icon for the rain chance button.
+    - **snow_icon:** Icon for the snow chance button.
+  - **weather_animation:** Configuration for the weather animation effects.
+    - **enabled:** Whether to enable rain/snow animation effects.
+    - **snow_overrides_rain:** Whether to override the rain animation with the snow animation (if overlapping).
+    - **temp_line_animation_style:** Which animation style to use for the temperature line. Options: `rain`, `snow`, `both`, or `none`.
+    - **rain_effect_intensity:** Intensity of the rain animation. (0.01 - 10.0, Default: 1.0)
+    - **snow_effect_intensity:** Intensity of the snow animation. (0.01 - 10.0, Default: 1.0)
+    - **scale_with_chance:** Whether to scale the animation intensity with the chance of rain/snow.
 - **callbacks:** A dictionary specifying the callbacks for mouse events. Available callback functions are `toggle_card`, `toggle_label`, `do_nothing`.
 - **animation:** A dictionary specifying the animation settings for the widget. It contains three keys: `enabled`, `type`, and `duration`. The `type` can be `fadeInOut` and the `duration` is the animation duration in milliseconds.
 - **container_shadow:** Container shadow options.
@@ -214,7 +214,7 @@ When you first open the weather card (click on the widget), a location search di
 
 The location is stored in `%LOCALAPPDATA%/YASB/weather.json`. Each widget instance on different screens gets its own entry, so you can have different locations for different monitors.
 
-To change the location, delete your widget entry from `weather.json` and re-open the card.
+To change the location, delete `weather.json` restart YASB, and open the weather card again to trigger the location search dialog.
 
 ## 7-Day Forecast Card
 
@@ -228,158 +228,189 @@ The weather card shows:
 ## Example Style
 
 ```css
-.open-meteo-widget {
-}
-.open-meteo-widget .widget-container {
-}
-.open-meteo-widget .label {
-}
-.open-meteo-widget .label.alt {
-}
-.open-meteo-widget .icon {
-}
+.open-meteo-widget {}
+.open-meteo-widget .widget-container {}
+.open-meteo-widget .label {}
+.open-meteo-widget .label.alt {}
+.open-meteo-widget .icon {}
 
 /* Individual weather icons */
-.open-meteo-widget .icon.sunnyDay {
-}
-.open-meteo-widget .icon.clearNight {
-}
-.open-meteo-widget .icon.cloudyDay {
-}
-.open-meteo-widget .icon.cloudyNight {
-}
-.open-meteo-widget .icon.drizzleDay {
-}
-.open-meteo-widget .icon.drizzleNight {
-}
-.open-meteo-widget .icon.rainyDay {
-}
-.open-meteo-widget .icon.rainyNight {
-}
-.open-meteo-widget .icon.snowyDay {
-}
-.open-meteo-widget .icon.snowyNight {
-}
-.open-meteo-widget .icon.foggyDay {
-}
-.open-meteo-widget .icon.foggyNight {
-}
-.open-meteo-widget .icon.thunderstormDay {
-}
-.open-meteo-widget .icon.thunderstormNight {
-}
-.open-meteo-widget .icon.default {
-}
+.open-meteo-widget .icon.sunnyDay {}
+.open-meteo-widget .icon.clearNight {}
+.open-meteo-widget .icon.cloudyDay {}
+.open-meteo-widget .icon.cloudyNight {}
+.open-meteo-widget .icon.drizzleDay {}
+.open-meteo-widget .icon.drizzleNight {}
+.open-meteo-widget .icon.rainyDay {}
+.open-meteo-widget .icon.rainyNight {}
+.open-meteo-widget .icon.snowyDay {}
+.open-meteo-widget .icon.snowyNight {}
+.open-meteo-widget .icon.foggyDay {}
+.open-meteo-widget .icon.foggyNight {}
+.open-meteo-widget .icon.thunderstormDay {}
+.open-meteo-widget .icon.thunderstormNight {}
+.open-meteo-widget .icon.default {}
 
 /* Weather card style */
-.weather-card {
-	background-color: rgba(17, 17, 27, 0.5);
+.open-meteo-widget {
+    padding: 0 6px;
 }
-.weather-card-today {
-	border: 1px solid #282936;
-	border-radius: 8px;
-	background-color: rgba(17, 17, 27, 0.2);
+.open-meteo-widget .icon {
+    font-size: 18px;
+    color: rgba(255, 255, 255, 0.8);
 }
-.weather-card-today .label {
-	font-size: 12px;
+.open-meteo-widget .label {
+    font-size: 13px;
+    font-family: 'Segoe UI';
+    font-weight: 400;
+    color: rgba(255, 255, 255, 0.8);
+    padding-left: 4px;
 }
-.weather-card-today .label.location {
-	font-size: 24px;
-	font-weight: 700;
+.open-meteo-card {
+    background-color: rgba(27, 26, 26, 0.5);
 }
-.weather-card-day {
-	border: 1px solid #45475a;
-	border-radius: 8px;
-	background-color: rgba(17, 17, 27, 0.2);
+.open-meteo-card-today .label {
+    font-size: 13px;
+    font-family: 'Segoe UI';
+    font-weight: 400;
+    color: rgb(163, 163, 163);
 }
-
-.weather-card-day.active {
-	background-color: rgba(40, 40, 60, 0.6);
-	border: 1px solid rgba(50, 50, 75, 1);
+.open-meteo-card-today .label.location {
+    font-size: 32px;
+    font-weight: 700;
+    font-family: 'Segoe UI';
+    color: rgb(255, 255, 255);
 }
-
-.weather-card-day:hover {
-	background-color: rgba(40, 40, 60, 0.6);
+.open-meteo-card-today .label.sunrisesunset {
+    font-size: 18px;
+    font-family: 'Segoe UI';
+    font-weight: 600;
+    color: rgb(201, 204, 159);
 }
-
-.weather-card-day .label {
-	font-size: 12px;
+.open-meteo-card-day {
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    background-color: rgba(0, 0, 0, 0);
+    padding: 4px;
 }
-
-.weather-card .hourly-container {
-	border: 1px solid #282936;
-	background-color: #3c5fa0;
-	border-radius: 8px;
-	min-height: 150px;
+.open-meteo-card-day .day-name {
+    font-family: 'Segoe UI';
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 12px;
+    font-weight: 600;
 }
-
-.weather-card .hourly-data {
-	font-size: 12px;
-	font-weight: bold;
+.open-meteo-card-day .day-temp-max {
+    font-family: 'Segoe UI';
+    font-weight: 700;
+    font-size: 16px;
+    color: rgb(255, 255, 255);
 }
-
-.weather-card .hourly-data.temperature {
-	background-color: #fae93f;
+.open-meteo-card-day .day-temp-min {
+    font-family: 'Segoe UI';
+    color: rgb(255, 255, 255);
+    font-weight: 400;
+    font-size: 13px;
 }
-
-.weather-card .hourly-data.rain {
-	background-color: #4a90e2;
+.open-meteo-card-day.active {
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
 }
-
-.weather-card .hourly-data.snow {
-	background-color: #a0c4ff;
+.open-meteo-card-day:hover {
+    background-color: rgba(255, 255, 255, 0.04);
 }
-
-.weather-card .hourly-data .hourly-rain-animation {
-	color: rgba(150, 200, 255, 40);
-	background-color: rgba(0, 0, 0, 0.1);
+.open-meteo-card .hourly-container {
+    border: none;
+    background-color: transparent;
+    min-height: 120px;
 }
-
-.weather-card .hourly-data .hourly-snow-animation {
-	color: rgba(255, 255, 255, 150);
-	background-color: rgba(0, 0, 0, 0.1);
+.open-meteo-card .hourly-data {
+    font-size: 11px;
+    font-weight: 700;
+    font-family: 'Segoe UI';
 }
-
-/* Hourly forecast toggle buttons */
-.weather-card .hourly-data-buttons {
-	margin: 0px;
+.open-meteo-card .hourly-data.temperature {
+    background-color: #c9be48;
 }
-.weather-card .hourly-data-button {
-	border-radius: 4px;
-	min-height: 24px;
-	min-width: 24px;
-	max-width: 24px;
-	max-height: 24px;
-	font-size: 14px;
-	color: rgba(255, 255, 255, 0.3);
-	border: 1px solid transparent;
+.open-meteo-card .hourly-data.rain {
+    background-color: #4a90e2;
 }
-.weather-card .hourly-data-button.active {
-	color: #fff;
-	background-color: rgba(255, 255, 255, 0.1);
-	border: 1px solid rgba(255, 255, 255, 0.1);
+.open-meteo-card .hourly-data.snow {
+    background-color: #a0c4ff;
 }
-
-/* Location search dialog */
-.weather-card .search-input {
-	padding: 8px 12px;
-	border: 1px solid #45475a;
-	border-radius: 6px;
-	background-color: rgba(17, 17, 27, 0.4);
-	color: #cdd6f4;
-	font-size: 14px;
+.open-meteo-card .hourly-data .hourly-rain-animation {
+    color: rgba(150, 200, 255, 40);
+    background-color: rgba(0, 0, 0, 0);
 }
-.weather-card .search-results {
-	border: 1px solid #45475a;
-	border-radius: 6px;
-	background-color: rgba(17, 17, 27, 0.4);
-	color: #cdd6f4;
-	font-size: 13px;
+.open-meteo-card .hourly-data .hourly-snow-animation {
+    color: rgba(255, 255, 255, 150);
+    background-color: rgba(0, 0, 0, 0);
 }
-.weather-card .search-results::item {
-	padding: 6px 12px;
+.open-meteo-card .hourly-data-buttons {
+    margin-top: 11px;
+    margin-left: 11px;
 }
-.weather-card .search-results::item:hover {
-	background-color: rgba(40, 40, 60, 0.6);
+.open-meteo-card .hourly-data-button {
+    border-radius: 4px;
+    min-height: 24px;
+    min-width: 24px;
+    max-width: 24px;
+    max-height: 24px;
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.3);
+    border: 1px solid transparent;
+}
+.open-meteo-card .hourly-data-button.active {
+    color: #fff;
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.open-meteo-card .search-head {
+    font-size: 18px;
+    font-family: 'Segoe UI';
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.9);
+}
+.open-meteo-card .search-description {
+    font-size: 14px;
+    font-family: 'Segoe UI';
+    font-weight: 400;
+    color: rgba(255, 255, 255, 0.7);
+    padding-bottom: 8px;
+}
+.open-meteo-card .no-data-icon {
+    font-size: 88px;
+}
+.open-meteo-card .no-data-text {
+    font-size: 16px;
+    font-family: 'Segoe UI';
+    font-weight: 400;
+}
+/* search dialog */
+.open-meteo-card .search-input {
+    padding: 8px 12px;
+    border: 1px solid #5e6070;
+    border-radius: 6px;
+    background-color: rgba(17, 17, 27, 0.1);
+    color: #cdd6f4;
+    font-family: 'Segoe UI';
+    font-size: 14px;
+}
+.open-meteo-card .search-input:focus {
+    border: 1px solid #89b4fa;
+    background-color: rgba(17, 17, 27, 0.2);
+}
+.open-meteo-card .search-results {
+    border: 1px solid #45475a00;
+    border-radius: 6px;
+    background-color: rgba(0, 0, 0, 0);
+    color: #cbced8;
+    font-size: 13px;
+    font-family: 'Segoe UI';
+}
+.open-meteo-card .search-results::item {
+    padding: 6px
+}
+.open-meteo-card .search-results::item:hover {
+    background-color: rgba(255, 255, 255, 0.05);
 }
 ```
