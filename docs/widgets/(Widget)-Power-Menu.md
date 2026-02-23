@@ -11,6 +11,7 @@
 | `button_row`        | integer | `3`         | The number of buttons in a row. Must be between 1 and 6. (fullscreen mode only) |
 | `menu_style`        | string  | `"fullscreen"` | The menu display style: `"fullscreen"` for full-screen overlay or `"popup"` for compact popup anchored to the bar button. |
 | `popup`             | dict    | see below   | Popup appearance/position options. Only used when `menu_style` is `"popup"`. |
+| `profile_image_size`| integer | `64`        | Profile avatar size in pixels. Must be between 16 and 256.                    |
 | `buttons`           | dict    | `{}`        | A dictionary defining the buttons and their properties.                     |
 | `container_shadow`  | dict    | `None`      | Container shadow options.                                                   |
 | `label_shadow`      | dict    | `None`      | Label shadow options.                                                       |
@@ -57,6 +58,7 @@ power_menu:
     blur_background: true
     animation_duration: 120 # Milliseconds
     button_row: 3 # Number of buttons in a row, min 1 max 6
+    profile_image_size: 80 # Avatar size in pixels
     buttons:
       restart: ["\uead2", "Restart"]
       shutdown: ["\uf011", "Shut Down"]
@@ -90,6 +92,7 @@ power_menu:
       direction: "down"
       offset_top: 6
       offset_left: 0
+    profile_image_size: 64
     buttons:
       lock: ["\uea75", "Lock"]
       signout: ["\udb80\udf43", "Sign out"]
@@ -110,6 +113,7 @@ power_menu:
 - **button_row:** The number of buttons in a row. Must be between 1 and 6. (fullscreen mode only)
 - **menu_style:** The menu display style. `"fullscreen"` shows a centered dialog with full-screen overlay (default behavior). `"popup"` shows a compact dropdown popup anchored to the bar button.
 - **popup:** Popup configuration (blur, round_corners, alignment, direction, offsets). Only used when `menu_style` is `"popup"`.
+- **profile_image_size:** Profile avatar size in pixels. Must be between 16 and 256.
 - **buttons:** A dictionary defining the buttons and their properties. Possible properties are: `lock`, `signout`, `sleep`, `shutdown`, `restart`, `hibernate`, `cancel`, `force_shutdown`, `force_restart`. Note: `cancel` button is not shown in popup mode since the popup auto-closes on outside click.
 - **container_shadow:** Container shadow options.
 - **label_shadow:** Label shadow options.

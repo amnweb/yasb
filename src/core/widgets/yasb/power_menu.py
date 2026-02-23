@@ -229,6 +229,7 @@ class PowerMenuWidget(BaseWidget):
                 self.config.button_row,
                 self.config.buttons.model_dump(exclude_none=True),
                 self.config.show_user,
+                self.config.profile_image_size,
             )
             self.main_window.overlay.fade_in()
             self.main_window.overlay.show()
@@ -260,12 +261,13 @@ class PowerMenuWidget(BaseWidget):
             avatar_label = QLabel()
             avatar_label.setProperty("class", "profile-avatar")
             avatar_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            avatar_label.setFixedSize(48, 48)
+            avatar_size = self.config.profile_image_size
+            avatar_label.setFixedSize(avatar_size, avatar_size)
             avatar_path = _get_user_avatar_path()
             if avatar_path:
                 pixmap = QPixmap(avatar_path)
                 if not pixmap.isNull():
-                    size = 48
+                    size = avatar_size
                     pixmap = pixmap.scaled(
                         size,
                         size,
@@ -388,7 +390,17 @@ class PowerMenuWidget(BaseWidget):
 
 class MainWindow(AnimatedWidget):
     def __init__(
-        self, parent, parent_button, uptime, blur, blur_background, animation_duration, button_row, buttons, show_user
+        self,
+        parent,
+        parent_button,
+        uptime,
+        blur,
+        blur_background,
+        animation_duration,
+        button_row,
+        buttons,
+        show_user,
+        profile_size,
     ):
         super().__init__(animation_duration, parent)
 
@@ -420,12 +432,12 @@ class MainWindow(AnimatedWidget):
             avatar_label = QLabel(self)
             avatar_label.setProperty("class", "profile-avatar")
             avatar_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            avatar_label.setFixedSize(64, 64)
+            avatar_label.setFixedSize(profile_size, profile_size)
             avatar_path = _get_user_avatar_path()
             if avatar_path:
                 pixmap = QPixmap(avatar_path)
                 if not pixmap.isNull():
-                    size = 64
+                    size = profile_size
                     pixmap = pixmap.scaled(
                         size,
                         size,
