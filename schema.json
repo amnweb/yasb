@@ -810,6 +810,43 @@
       "title": "ApplicationsWidgetEntry",
       "type": "object"
     },
+    "AppsProviderConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "default": true,
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "prefix": {
+          "default": "*",
+          "title": "Prefix",
+          "type": "string"
+        },
+        "priority": {
+          "default": 0,
+          "title": "Priority",
+          "type": "integer"
+        },
+        "show_recent": {
+          "default": true,
+          "title": "Show Recent",
+          "type": "boolean"
+        },
+        "max_recent": {
+          "default": 10,
+          "title": "Max Recent",
+          "type": "integer"
+        },
+        "show_description": {
+          "default": true,
+          "title": "Show Description",
+          "type": "boolean"
+        }
+      },
+      "title": "AppsProviderConfig",
+      "type": "object"
+    },
     "AudioMenuConfig": {
       "additionalProperties": false,
       "properties": {
@@ -1293,6 +1330,11 @@
           "title": "Time Remaining Natural",
           "type": "boolean"
         },
+        "time_remaining_unlimited_icon": {
+          "default": "unlimited",
+          "title": "Time Remaining Unlimited Icon",
+          "type": "string"
+        },
         "hide_unsupported": {
           "default": true,
           "title": "Hide Unsupported",
@@ -1614,6 +1656,38 @@
       "title": "BluetoothIconsConfig",
       "type": "object"
     },
+    "BookmarksProviderConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "default": false,
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "prefix": {
+          "default": "*",
+          "title": "Prefix",
+          "type": "string"
+        },
+        "priority": {
+          "default": 0,
+          "title": "Priority",
+          "type": "integer"
+        },
+        "browser": {
+          "default": "all",
+          "title": "Browser",
+          "type": "string"
+        },
+        "profile": {
+          "default": "Default",
+          "title": "Profile",
+          "type": "string"
+        }
+      },
+      "title": "BookmarksProviderConfig",
+      "type": "object"
+    },
     "BrightnessCallbacksConfig": {
       "additionalProperties": false,
       "properties": {
@@ -1899,6 +1973,28 @@
         }
       },
       "title": "ButtonLabelsConfig",
+      "type": "object"
+    },
+    "CalculatorProviderConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "default": false,
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "prefix": {
+          "default": "=",
+          "title": "Prefix",
+          "type": "string"
+        },
+        "priority": {
+          "default": 0,
+          "title": "Priority",
+          "type": "integer"
+        }
+      },
+      "title": "CalculatorProviderConfig",
       "type": "object"
     },
     "CallbacksBatteryConfig": {
@@ -2296,9 +2392,9 @@
           "type": "integer"
         },
         "noise_reduction": {
-          "default": 0.77,
+          "default": 77,
           "title": "Noise Reduction",
-          "type": "number"
+          "type": "integer"
         },
         "channels": {
           "default": "stereo",
@@ -2367,7 +2463,7 @@
           "title": "Gradient Color 3"
         },
         "monstercat": {
-          "default": 0,
+          "default": 1,
           "title": "Monstercat",
           "type": "integer"
         },
@@ -2536,6 +2632,33 @@
         }
       },
       "title": "ChatConfig",
+      "type": "object"
+    },
+    "ClipboardHistoryProviderConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "default": true,
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "prefix": {
+          "default": "cb",
+          "title": "Prefix",
+          "type": "string"
+        },
+        "priority": {
+          "default": 0,
+          "title": "Priority",
+          "type": "integer"
+        },
+        "max_items": {
+          "default": 30,
+          "title": "Max Items",
+          "type": "integer"
+        }
+      },
+      "title": "ClipboardHistoryProviderConfig",
       "type": "object"
     },
     "ClockAlarmIconsConfig": {
@@ -2840,6 +2963,28 @@
         "options"
       ],
       "title": "ClockEntry",
+      "type": "object"
+    },
+    "ColorProviderConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "default": true,
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "prefix": {
+          "default": "c:",
+          "title": "Prefix",
+          "type": "string"
+        },
+        "priority": {
+          "default": 0,
+          "title": "Priority",
+          "type": "integer"
+        }
+      },
+      "title": "ColorProviderConfig",
       "type": "object"
     },
     "CopilotCallbacksConfig": {
@@ -3276,6 +3421,28 @@
       "title": "CpuThresholdsConfig",
       "type": "object"
     },
+    "CurrencyProviderConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "default": false,
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "prefix": {
+          "default": "$",
+          "title": "Prefix",
+          "type": "string"
+        },
+        "priority": {
+          "default": 0,
+          "title": "Priority",
+          "type": "integer"
+        }
+      },
+      "title": "CurrencyProviderConfig",
+      "type": "object"
+    },
     "CustomCallbacksConfig": {
       "additionalProperties": false,
       "properties": {
@@ -3459,6 +3626,28 @@
         }
       },
       "title": "DesktopNotificationsConfig",
+      "type": "object"
+    },
+    "DevToolsProviderConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "default": false,
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "prefix": {
+          "default": "dev",
+          "title": "Prefix",
+          "type": "string"
+        },
+        "priority": {
+          "default": 0,
+          "title": "Priority",
+          "type": "integer"
+        }
+      },
+      "title": "DevToolsProviderConfig",
       "type": "object"
     },
     "DirectionIconsConfig": {
@@ -3685,6 +3874,28 @@
       "title": "DiskThresholdsConfig",
       "type": "object"
     },
+    "EmojiProviderConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "default": false,
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "prefix": {
+          "default": ":",
+          "title": "Prefix",
+          "type": "string"
+        },
+        "priority": {
+          "default": 0,
+          "title": "Priority",
+          "type": "integer"
+        }
+      },
+      "title": "EmojiProviderConfig",
+      "type": "object"
+    },
     "ExecOptionsConfig": {
       "additionalProperties": false,
       "properties": {
@@ -3744,6 +3955,44 @@
         }
       },
       "title": "ExecOptionsConfig",
+      "type": "object"
+    },
+    "FileSearchProviderConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "default": false,
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "prefix": {
+          "default": "/",
+          "title": "Prefix",
+          "type": "string"
+        },
+        "priority": {
+          "default": 0,
+          "title": "Priority",
+          "type": "integer"
+        },
+        "backend": {
+          "default": "auto",
+          "enum": [
+            "auto",
+            "everything",
+            "index",
+            "disk"
+          ],
+          "title": "Backend",
+          "type": "string"
+        },
+        "show_path": {
+          "default": true,
+          "title": "Show Path",
+          "type": "boolean"
+        }
+      },
+      "title": "FileSearchProviderConfig",
       "type": "object"
     },
     "GalleryConfig": {
@@ -3813,8 +4062,6 @@
             }
           ],
           "default": 0,
-          "ge": -2000,
-          "le": 2000,
           "title": "Position Offset"
         },
         "respect_work_area": {
@@ -4551,6 +4798,11 @@
           "title": "Hide If Offline",
           "type": "boolean"
         },
+        "monitor_exclusive": {
+          "default": true,
+          "title": "Monitor Exclusive",
+          "type": "boolean"
+        },
         "glazewm_server_uri": {
           "default": "ws://localhost:6123",
           "title": "Glazewm Server Uri",
@@ -5162,6 +5414,38 @@
       "title": "GrouperWidgetEntry",
       "type": "object"
     },
+    "HackerNewsProviderConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "default": false,
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "prefix": {
+          "default": "hn",
+          "title": "Prefix",
+          "type": "string"
+        },
+        "priority": {
+          "default": 0,
+          "title": "Priority",
+          "type": "integer"
+        },
+        "cache_ttl": {
+          "default": 300,
+          "title": "Cache Ttl",
+          "type": "integer"
+        },
+        "max_items": {
+          "default": 30,
+          "title": "Max Items",
+          "type": "integer"
+        }
+      },
+      "title": "HackerNewsProviderConfig",
+      "type": "object"
+    },
     "HomeConfig": {
       "additionalProperties": false,
       "properties": {
@@ -5395,6 +5679,28 @@
       "title": "IgnoreWindowConfig",
       "type": "object"
     },
+    "IpInfoProviderConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "default": false,
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "prefix": {
+          "default": "ip",
+          "title": "Prefix",
+          "type": "string"
+        },
+        "priority": {
+          "default": 0,
+          "title": "Priority",
+          "type": "integer"
+        }
+      },
+      "title": "IpInfoProviderConfig",
+      "type": "object"
+    },
     "KeybindingConfig": {
       "additionalProperties": false,
       "properties": {
@@ -5412,6 +5718,28 @@
         "action"
       ],
       "title": "KeybindingConfig",
+      "type": "object"
+    },
+    "KillProcessProviderConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "default": false,
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "prefix": {
+          "default": "!",
+          "title": "Prefix",
+          "type": "string"
+        },
+        "priority": {
+          "default": 0,
+          "title": "Priority",
+          "type": "integer"
+        }
+      },
+      "title": "KillProcessProviderConfig",
       "type": "object"
     },
     "KomorebiConfig": {
@@ -7993,6 +8321,518 @@
       "title": "ObsIconsConfig",
       "type": "object"
     },
+    "OpenMeteoCardAnimationConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "default": false,
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "snow_overrides_rain": {
+          "default": true,
+          "title": "Snow Overrides Rain",
+          "type": "boolean"
+        },
+        "temp_line_animation_style": {
+          "default": "both",
+          "enum": [
+            "rain",
+            "snow",
+            "both",
+            "none"
+          ],
+          "title": "Temp Line Animation Style",
+          "type": "string"
+        },
+        "rain_effect_intensity": {
+          "default": 1.0,
+          "maximum": 10.0,
+          "minimum": 0.01,
+          "title": "Rain Effect Intensity",
+          "type": "number"
+        },
+        "snow_effect_intensity": {
+          "default": 1.0,
+          "maximum": 10.0,
+          "minimum": 0.01,
+          "title": "Snow Effect Intensity",
+          "type": "number"
+        },
+        "scale_with_chance": {
+          "default": true,
+          "title": "Scale With Chance",
+          "type": "boolean"
+        }
+      },
+      "title": "OpenMeteoCardAnimationConfig",
+      "type": "object"
+    },
+    "OpenMeteoCardButtonsConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "default": false,
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "default_view": {
+          "default": "temperature",
+          "enum": [
+            "temperature",
+            "rain",
+            "snow"
+          ],
+          "title": "Default View",
+          "type": "string"
+        },
+        "snow_icon": {
+          "default": "\udb81\udd98",
+          "title": "Snow Icon",
+          "type": "string"
+        },
+        "rain_icon": {
+          "default": "\udb81\udd96",
+          "title": "Rain Icon",
+          "type": "string"
+        },
+        "temperature_icon": {
+          "default": "\udb81\udd99",
+          "title": "Temperature Icon",
+          "type": "string"
+        }
+      },
+      "title": "OpenMeteoCardButtonsConfig",
+      "type": "object"
+    },
+    "OpenMeteoCardConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "blur": {
+          "default": true,
+          "title": "Blur",
+          "type": "boolean"
+        },
+        "round_corners": {
+          "default": true,
+          "title": "Round Corners",
+          "type": "boolean"
+        },
+        "round_corners_type": {
+          "default": "normal",
+          "enum": [
+            "normal",
+            "small"
+          ],
+          "title": "Round Corners Type",
+          "type": "string"
+        },
+        "border_color": {
+          "default": "System",
+          "title": "Border Color",
+          "type": "string"
+        },
+        "alignment": {
+          "default": "right",
+          "title": "Alignment",
+          "type": "string"
+        },
+        "direction": {
+          "default": "down",
+          "title": "Direction",
+          "type": "string"
+        },
+        "offset_top": {
+          "default": 6,
+          "title": "Offset Top",
+          "type": "integer"
+        },
+        "offset_left": {
+          "default": 0,
+          "title": "Offset Left",
+          "type": "integer"
+        },
+        "icon_size": {
+          "default": 64,
+          "title": "Icon Size",
+          "type": "integer"
+        },
+        "show_hourly_forecast": {
+          "default": false,
+          "title": "Show Hourly Forecast",
+          "type": "boolean"
+        },
+        "time_format": {
+          "default": "24h",
+          "enum": [
+            "12h",
+            "24h"
+          ],
+          "title": "Time Format",
+          "type": "string"
+        },
+        "hourly_point_spacing": {
+          "default": 76,
+          "title": "Hourly Point Spacing",
+          "type": "integer"
+        },
+        "hourly_icon_size": {
+          "default": 32,
+          "maximum": 64,
+          "minimum": 8,
+          "title": "Hourly Icon Size",
+          "type": "integer"
+        },
+        "icon_smoothing": {
+          "default": true,
+          "title": "Icon Smoothing",
+          "type": "boolean"
+        },
+        "temp_line_width": {
+          "default": 2,
+          "maximum": 10,
+          "minimum": 0,
+          "title": "Temp Line Width",
+          "type": "integer"
+        },
+        "current_line_color": {
+          "default": "#8EAEE8",
+          "title": "Current Line Color",
+          "type": "string"
+        },
+        "current_line_width": {
+          "default": 1,
+          "maximum": 10,
+          "minimum": 0,
+          "title": "Current Line Width",
+          "type": "integer"
+        },
+        "current_line_style": {
+          "default": "dot",
+          "enum": [
+            "solid",
+            "dash",
+            "dot",
+            "dashDot",
+            "dashDotDot"
+          ],
+          "title": "Current Line Style",
+          "type": "string"
+        },
+        "hourly_gradient": {
+          "$ref": "#/$defs/OpenMeteoCardGradientConfig",
+          "default": {
+            "enabled": false,
+            "top_color": "#8EAEE8",
+            "bottom_color": "#2A3E68"
+          }
+        },
+        "hourly_forecast_buttons": {
+          "$ref": "#/$defs/OpenMeteoCardButtonsConfig",
+          "default": {
+            "enabled": false,
+            "default_view": "temperature",
+            "snow_icon": "\udb81\udd98",
+            "rain_icon": "\udb81\udd96",
+            "temperature_icon": "\udb81\udd99"
+          }
+        },
+        "weather_animation": {
+          "$ref": "#/$defs/OpenMeteoCardAnimationConfig",
+          "default": {
+            "enabled": false,
+            "snow_overrides_rain": true,
+            "temp_line_animation_style": "both",
+            "rain_effect_intensity": 1.0,
+            "snow_effect_intensity": 1.0,
+            "scale_with_chance": true
+          }
+        }
+      },
+      "title": "OpenMeteoCardConfig",
+      "type": "object"
+    },
+    "OpenMeteoCardGradientConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "default": false,
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "top_color": {
+          "default": "#8EAEE8",
+          "title": "Top Color",
+          "type": "string"
+        },
+        "bottom_color": {
+          "default": "#2A3E68",
+          "title": "Bottom Color",
+          "type": "string"
+        }
+      },
+      "title": "OpenMeteoCardGradientConfig",
+      "type": "object"
+    },
+    "OpenMeteoIconsConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "sunnyDay": {
+          "default": "\ue30d",
+          "title": "Sunnyday",
+          "type": "string"
+        },
+        "clearNight": {
+          "default": "\ue32b",
+          "title": "Clearnight",
+          "type": "string"
+        },
+        "cloudyDay": {
+          "default": "\ue312",
+          "title": "Cloudyday",
+          "type": "string"
+        },
+        "cloudyNight": {
+          "default": "\ue311",
+          "title": "Cloudynight",
+          "type": "string"
+        },
+        "drizzleDay": {
+          "default": "\udb81\ude7e",
+          "title": "Drizzleday",
+          "type": "string"
+        },
+        "drizzleNight": {
+          "default": "\udb81\ude7e",
+          "title": "Drizzlenight",
+          "type": "string"
+        },
+        "rainyDay": {
+          "default": "\udb81\ude7e",
+          "title": "Rainyday",
+          "type": "string"
+        },
+        "rainyNight": {
+          "default": "\udb81\ude7e",
+          "title": "Rainynight",
+          "type": "string"
+        },
+        "snowyDay": {
+          "default": "\udb81\udd98",
+          "title": "Snowyday",
+          "type": "string"
+        },
+        "snowyNight": {
+          "default": "\udb81\udd98",
+          "title": "Snowynight",
+          "type": "string"
+        },
+        "foggyDay": {
+          "default": "\ue303",
+          "title": "Foggyday",
+          "type": "string"
+        },
+        "foggyNight": {
+          "default": "\ue346",
+          "title": "Foggynight",
+          "type": "string"
+        },
+        "thunderstormDay": {
+          "default": "\ue30f",
+          "title": "Thunderstormday",
+          "type": "string"
+        },
+        "thunderstormNight": {
+          "default": "\ue338",
+          "title": "Thunderstormnight",
+          "type": "string"
+        },
+        "default": {
+          "type": "string",
+          "default": "\uebaa",
+          "title": "Default"
+        }
+      },
+      "title": "OpenMeteoIconsConfig",
+      "type": "object"
+    },
+    "OpenMeteoWidgetConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "label": {
+          "default": "{icon}",
+          "title": "Label",
+          "type": "string"
+        },
+        "label_alt": {
+          "default": "{temp}",
+          "title": "Label Alt",
+          "type": "string"
+        },
+        "class_name": {
+          "default": "",
+          "title": "Class Name",
+          "type": "string"
+        },
+        "update_interval": {
+          "default": 3600,
+          "maximum": 36000000,
+          "minimum": 60,
+          "title": "Update Interval",
+          "type": "integer"
+        },
+        "hide_decimal": {
+          "default": false,
+          "title": "Hide Decimal",
+          "type": "boolean"
+        },
+        "units": {
+          "default": "metric",
+          "enum": [
+            "metric",
+            "imperial"
+          ],
+          "title": "Units",
+          "type": "string"
+        },
+        "tooltip": {
+          "default": true,
+          "title": "Tooltip",
+          "type": "boolean"
+        },
+        "icons": {
+          "$ref": "#/$defs/OpenMeteoIconsConfig",
+          "default": {
+            "sunnyDay": "\ue30d",
+            "clearNight": "\ue32b",
+            "cloudyDay": "\ue312",
+            "cloudyNight": "\ue311",
+            "drizzleDay": "\udb81\ude7e",
+            "drizzleNight": "\udb81\ude7e",
+            "rainyDay": "\udb81\ude7e",
+            "rainyNight": "\udb81\ude7e",
+            "snowyDay": "\udb81\udd98",
+            "snowyNight": "\udb81\udd98",
+            "foggyDay": "\ue303",
+            "foggyNight": "\ue346",
+            "thunderstormDay": "\ue30f",
+            "thunderstormNight": "\ue338",
+            "default": "\uebaa"
+          }
+        },
+        "weather_card": {
+          "$ref": "#/$defs/OpenMeteoCardConfig",
+          "default": {
+            "blur": true,
+            "round_corners": true,
+            "round_corners_type": "normal",
+            "border_color": "System",
+            "alignment": "right",
+            "direction": "down",
+            "offset_top": 6,
+            "offset_left": 0,
+            "icon_size": 64,
+            "show_hourly_forecast": false,
+            "time_format": "24h",
+            "hourly_point_spacing": 76,
+            "hourly_icon_size": 32,
+            "icon_smoothing": true,
+            "temp_line_width": 2,
+            "current_line_color": "#8EAEE8",
+            "current_line_width": 1,
+            "current_line_style": "dot",
+            "hourly_gradient": {
+              "bottom_color": "#2A3E68",
+              "enabled": false,
+              "top_color": "#8EAEE8"
+            },
+            "hourly_forecast_buttons": {
+              "default_view": "temperature",
+              "enabled": false,
+              "rain_icon": "\udb81\udd96",
+              "snow_icon": "\udb81\udd98",
+              "temperature_icon": "\udb81\udd99"
+            },
+            "weather_animation": {
+              "enabled": false,
+              "rain_effect_intensity": 1.0,
+              "scale_with_chance": true,
+              "snow_effect_intensity": 1.0,
+              "snow_overrides_rain": true,
+              "temp_line_animation_style": "both"
+            }
+          }
+        },
+        "animation": {
+          "$ref": "#/$defs/AnimationConfig",
+          "default": {
+            "enabled": true,
+            "type": "fadeInOut",
+            "duration": 200
+          }
+        },
+        "label_shadow": {
+          "$ref": "#/$defs/ShadowConfig",
+          "default": {
+            "enabled": false,
+            "color": "black",
+            "offset": [
+              1,
+              1
+            ],
+            "radius": 3
+          }
+        },
+        "container_shadow": {
+          "$ref": "#/$defs/ShadowConfig",
+          "default": {
+            "enabled": false,
+            "color": "black",
+            "offset": [
+              1,
+              1
+            ],
+            "radius": 3
+          }
+        },
+        "keybindings": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/KeybindingConfig"
+          },
+          "title": "Keybindings",
+          "type": "array"
+        },
+        "callbacks": {
+          "$ref": "#/$defs/CallbacksConfig",
+          "default": {
+            "on_left": "do_nothing",
+            "on_middle": "do_nothing",
+            "on_right": "do_nothing"
+          }
+        }
+      },
+      "title": "OpenMeteoWidgetConfig",
+      "type": "object"
+    },
+    "OpenMeteoWidgetEntry": {
+      "properties": {
+        "type": {
+          "const": "yasb.open_meteo.OpenMeteoWidget",
+          "title": "Type",
+          "type": "string"
+        },
+        "options": {
+          "$ref": "#/$defs/OpenMeteoWidgetConfig"
+        }
+      },
+      "required": [
+        "type",
+        "options"
+      ],
+      "title": "OpenMeteoWidgetEntry",
+      "type": "object"
+    },
     "PaddingConfig": {
       "additionalProperties": false,
       "properties": {
@@ -8210,6 +9050,38 @@
       "title": "PomodoroEntry",
       "type": "object"
     },
+    "PortViewerProviderConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "default": false,
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "prefix": {
+          "default": "pv",
+          "title": "Prefix",
+          "type": "string"
+        },
+        "priority": {
+          "default": 0,
+          "title": "Priority",
+          "type": "integer"
+        },
+        "tcp_listening_only": {
+          "default": true,
+          "title": "Tcp Listening Only",
+          "type": "boolean"
+        },
+        "include_established": {
+          "default": false,
+          "title": "Include Established",
+          "type": "boolean"
+        }
+      },
+      "title": "PortViewerProviderConfig",
+      "type": "object"
+    },
     "PowerMenuButtonsConfig": {
       "additionalProperties": false,
       "properties": {
@@ -8396,6 +9268,13 @@
             "offset_top": 6,
             "offset_left": 0
           }
+        },
+        "profile_image_size": {
+          "default": 64,
+          "maximum": 256,
+          "minimum": 16,
+          "title": "Profile Image Size",
+          "type": "integer"
         },
         "container_padding": {
           "$ref": "#/$defs/PaddingConfig",
@@ -8799,6 +9678,516 @@
       "title": "ProviderConfig",
       "type": "object"
     },
+    "QuickLaunchCallbacksConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "on_left": {
+          "default": "toggle_quick_launch",
+          "title": "On Left",
+          "type": "string"
+        },
+        "on_middle": {
+          "default": "do_nothing",
+          "title": "On Middle",
+          "type": "string"
+        },
+        "on_right": {
+          "default": "do_nothing",
+          "title": "On Right",
+          "type": "string"
+        }
+      },
+      "title": "QuickLaunchCallbacksConfig",
+      "type": "object"
+    },
+    "QuickLaunchConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "label": {
+          "default": "\uf002",
+          "title": "Label",
+          "type": "string"
+        },
+        "search_placeholder": {
+          "default": "Search applications...",
+          "title": "Search Placeholder",
+          "type": "string"
+        },
+        "max_results": {
+          "default": 50,
+          "maximum": 500,
+          "minimum": 1,
+          "title": "Max Results",
+          "type": "integer"
+        },
+        "show_icons": {
+          "default": true,
+          "title": "Show Icons",
+          "type": "boolean"
+        },
+        "icon_size": {
+          "default": 32,
+          "title": "Icon Size",
+          "type": "integer"
+        },
+        "home_page": {
+          "default": false,
+          "title": "Home Page",
+          "type": "boolean"
+        },
+        "compact_mode": {
+          "default": false,
+          "title": "Compact Mode",
+          "type": "boolean"
+        },
+        "providers": {
+          "$ref": "#/$defs/QuickLaunchProvidersConfig",
+          "default": {
+            "apps": {
+              "enabled": true,
+              "max_recent": 10,
+              "prefix": "*",
+              "priority": 0,
+              "show_description": true,
+              "show_recent": true
+            },
+            "bookmarks": {
+              "browser": "all",
+              "enabled": false,
+              "prefix": "*",
+              "priority": 0,
+              "profile": "Default"
+            },
+            "calculator": {
+              "enabled": false,
+              "prefix": "=",
+              "priority": 0
+            },
+            "clipboard_history": {
+              "enabled": true,
+              "max_items": 30,
+              "prefix": "cb",
+              "priority": 0
+            },
+            "currency": {
+              "enabled": false,
+              "prefix": "$",
+              "priority": 0
+            },
+            "web_search": {
+              "enabled": false,
+              "engine": "google",
+              "prefix": "?",
+              "priority": 0
+            },
+            "system_commands": {
+              "enabled": false,
+              "prefix": ">",
+              "priority": 0
+            },
+            "settings": {
+              "enabled": false,
+              "prefix": "@",
+              "priority": 0
+            },
+            "kill_process": {
+              "enabled": false,
+              "prefix": "!",
+              "priority": 0
+            },
+            "file_search": {
+              "backend": "auto",
+              "enabled": false,
+              "prefix": "/",
+              "priority": 0,
+              "show_path": true
+            },
+            "unit_converter": {
+              "enabled": false,
+              "prefix": "~",
+              "priority": 0
+            },
+            "emoji": {
+              "enabled": false,
+              "prefix": ":",
+              "priority": 0
+            },
+            "snippets": {
+              "enabled": true,
+              "prefix": ";",
+              "priority": 0,
+              "type_delay": 200
+            },
+            "color": {
+              "enabled": true,
+              "prefix": "c:",
+              "priority": 0
+            },
+            "port_viewer": {
+              "enabled": false,
+              "include_established": false,
+              "prefix": "pv",
+              "priority": 0,
+              "tcp_listening_only": true
+            },
+            "world_clock": {
+              "enabled": false,
+              "prefix": "tz",
+              "priority": 0
+            },
+            "hacker_news": {
+              "cache_ttl": 300,
+              "enabled": false,
+              "max_items": 30,
+              "prefix": "hn",
+              "priority": 0
+            },
+            "dev_tools": {
+              "enabled": false,
+              "prefix": "dev",
+              "priority": 0
+            },
+            "ip_info": {
+              "enabled": false,
+              "prefix": "ip",
+              "priority": 0
+            },
+            "vscode": {
+              "enabled": false,
+              "prefix": "vsc",
+              "priority": 0
+            },
+            "window_switcher": {
+              "enabled": false,
+              "prefix": "win",
+              "priority": 0
+            }
+          }
+        },
+        "popup": {
+          "$ref": "#/$defs/QuickLaunchPopupConfig",
+          "default": {
+            "width": 720,
+            "height": 480,
+            "blur": true,
+            "round_corners": true,
+            "round_corners_type": "normal",
+            "border_color": "System",
+            "dark_mode": true,
+            "screen": "focus"
+          }
+        },
+        "animation": {
+          "$ref": "#/$defs/AnimationConfig",
+          "default": {
+            "enabled": true,
+            "type": "fadeInOut",
+            "duration": 200
+          }
+        },
+        "label_shadow": {
+          "$ref": "#/$defs/ShadowConfig",
+          "default": {
+            "enabled": false,
+            "color": "black",
+            "offset": [
+              1,
+              1
+            ],
+            "radius": 3
+          }
+        },
+        "container_shadow": {
+          "$ref": "#/$defs/ShadowConfig",
+          "default": {
+            "enabled": false,
+            "color": "black",
+            "offset": [
+              1,
+              1
+            ],
+            "radius": 3
+          }
+        },
+        "keybindings": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/KeybindingConfig"
+          },
+          "title": "Keybindings",
+          "type": "array"
+        },
+        "callbacks": {
+          "$ref": "#/$defs/QuickLaunchCallbacksConfig",
+          "default": {
+            "on_left": "toggle_quick_launch",
+            "on_middle": "do_nothing",
+            "on_right": "do_nothing"
+          }
+        }
+      },
+      "title": "QuickLaunchConfig",
+      "type": "object"
+    },
+    "QuickLaunchEntry": {
+      "properties": {
+        "type": {
+          "const": "yasb.quick_launch.QuickLaunchWidget",
+          "title": "Type",
+          "type": "string"
+        },
+        "options": {
+          "$ref": "#/$defs/QuickLaunchConfig"
+        }
+      },
+      "required": [
+        "type",
+        "options"
+      ],
+      "title": "QuickLaunchEntry",
+      "type": "object"
+    },
+    "QuickLaunchPopupConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "width": {
+          "default": 720,
+          "title": "Width",
+          "type": "integer"
+        },
+        "height": {
+          "default": 480,
+          "title": "Height",
+          "type": "integer"
+        },
+        "blur": {
+          "default": true,
+          "title": "Blur",
+          "type": "boolean"
+        },
+        "round_corners": {
+          "default": true,
+          "title": "Round Corners",
+          "type": "boolean"
+        },
+        "round_corners_type": {
+          "default": "normal",
+          "title": "Round Corners Type",
+          "type": "string"
+        },
+        "border_color": {
+          "default": "System",
+          "title": "Border Color",
+          "type": "string"
+        },
+        "dark_mode": {
+          "default": true,
+          "title": "Dark Mode",
+          "type": "boolean"
+        },
+        "screen": {
+          "default": "focus",
+          "enum": [
+            "primary",
+            "focus",
+            "cursor"
+          ],
+          "title": "Screen",
+          "type": "string"
+        }
+      },
+      "title": "QuickLaunchPopupConfig",
+      "type": "object"
+    },
+    "QuickLaunchProvidersConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "apps": {
+          "$ref": "#/$defs/AppsProviderConfig",
+          "default": {
+            "enabled": true,
+            "prefix": "*",
+            "priority": 0,
+            "show_recent": true,
+            "max_recent": 10,
+            "show_description": true
+          }
+        },
+        "bookmarks": {
+          "$ref": "#/$defs/BookmarksProviderConfig",
+          "default": {
+            "enabled": false,
+            "prefix": "*",
+            "priority": 0,
+            "browser": "all",
+            "profile": "Default"
+          }
+        },
+        "calculator": {
+          "$ref": "#/$defs/CalculatorProviderConfig",
+          "default": {
+            "enabled": false,
+            "prefix": "=",
+            "priority": 0
+          }
+        },
+        "clipboard_history": {
+          "$ref": "#/$defs/ClipboardHistoryProviderConfig",
+          "default": {
+            "enabled": true,
+            "prefix": "cb",
+            "priority": 0,
+            "max_items": 30
+          }
+        },
+        "currency": {
+          "$ref": "#/$defs/CurrencyProviderConfig",
+          "default": {
+            "enabled": false,
+            "prefix": "$",
+            "priority": 0
+          }
+        },
+        "web_search": {
+          "$ref": "#/$defs/WebSearchProviderConfig",
+          "default": {
+            "enabled": false,
+            "prefix": "?",
+            "priority": 0,
+            "engine": "google"
+          }
+        },
+        "system_commands": {
+          "$ref": "#/$defs/SystemCommandsProviderConfig",
+          "default": {
+            "enabled": false,
+            "prefix": ">",
+            "priority": 0
+          }
+        },
+        "settings": {
+          "$ref": "#/$defs/SettingsProviderConfig",
+          "default": {
+            "enabled": false,
+            "prefix": "@",
+            "priority": 0
+          }
+        },
+        "kill_process": {
+          "$ref": "#/$defs/KillProcessProviderConfig",
+          "default": {
+            "enabled": false,
+            "prefix": "!",
+            "priority": 0
+          }
+        },
+        "file_search": {
+          "$ref": "#/$defs/FileSearchProviderConfig",
+          "default": {
+            "enabled": false,
+            "prefix": "/",
+            "priority": 0,
+            "backend": "auto",
+            "show_path": true
+          }
+        },
+        "unit_converter": {
+          "$ref": "#/$defs/UnitConverterProviderConfig",
+          "default": {
+            "enabled": false,
+            "prefix": "~",
+            "priority": 0
+          }
+        },
+        "emoji": {
+          "$ref": "#/$defs/EmojiProviderConfig",
+          "default": {
+            "enabled": false,
+            "prefix": ":",
+            "priority": 0
+          }
+        },
+        "snippets": {
+          "$ref": "#/$defs/SnippetsProviderConfig",
+          "default": {
+            "enabled": true,
+            "prefix": ";",
+            "priority": 0,
+            "type_delay": 200
+          }
+        },
+        "color": {
+          "$ref": "#/$defs/ColorProviderConfig",
+          "default": {
+            "enabled": true,
+            "prefix": "c:",
+            "priority": 0
+          }
+        },
+        "port_viewer": {
+          "$ref": "#/$defs/PortViewerProviderConfig",
+          "default": {
+            "enabled": false,
+            "prefix": "pv",
+            "priority": 0,
+            "tcp_listening_only": true,
+            "include_established": false
+          }
+        },
+        "world_clock": {
+          "$ref": "#/$defs/WorldClockProviderConfig",
+          "default": {
+            "enabled": false,
+            "prefix": "tz",
+            "priority": 0
+          }
+        },
+        "hacker_news": {
+          "$ref": "#/$defs/HackerNewsProviderConfig",
+          "default": {
+            "enabled": false,
+            "prefix": "hn",
+            "priority": 0,
+            "cache_ttl": 300,
+            "max_items": 30
+          }
+        },
+        "dev_tools": {
+          "$ref": "#/$defs/DevToolsProviderConfig",
+          "default": {
+            "enabled": false,
+            "prefix": "dev",
+            "priority": 0
+          }
+        },
+        "ip_info": {
+          "$ref": "#/$defs/IpInfoProviderConfig",
+          "default": {
+            "enabled": false,
+            "prefix": "ip",
+            "priority": 0
+          }
+        },
+        "vscode": {
+          "$ref": "#/$defs/VSCodeProviderConfig",
+          "default": {
+            "enabled": false,
+            "prefix": "vsc",
+            "priority": 0
+          }
+        },
+        "window_switcher": {
+          "$ref": "#/$defs/WindowSwitcherProviderConfig",
+          "default": {
+            "enabled": false,
+            "prefix": "win",
+            "priority": 0
+          }
+        }
+      },
+      "title": "QuickLaunchProvidersConfig",
+      "type": "object"
+    },
     "RecycleBinCallbacksConfig": {
       "additionalProperties": false,
       "properties": {
@@ -8987,6 +10376,43 @@
         "replacement"
       ],
       "title": "RewriteConfig",
+      "type": "object"
+    },
+    "ScoopUpdateConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "default": false,
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "label": {
+          "default": "{count}",
+          "title": "Label",
+          "type": "string"
+        },
+        "tooltip": {
+          "default": true,
+          "title": "Tooltip",
+          "type": "boolean"
+        },
+        "exclude": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Exclude",
+          "type": "array"
+        },
+        "interval": {
+          "default": 240,
+          "maximum": 10080,
+          "minimum": 10,
+          "title": "Interval",
+          "type": "integer"
+        }
+      },
+      "title": "ScoopUpdateConfig",
       "type": "object"
     },
     "ScrollingLabelConfig": {
@@ -9237,6 +10663,28 @@
       "title": "ServerMonitorEntry",
       "type": "object"
     },
+    "SettingsProviderConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "default": false,
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "prefix": {
+          "default": "@",
+          "title": "Prefix",
+          "type": "string"
+        },
+        "priority": {
+          "default": 0,
+          "title": "Priority",
+          "type": "integer"
+        }
+      },
+      "title": "SettingsProviderConfig",
+      "type": "object"
+    },
     "SgvRangeConfig": {
       "additionalProperties": false,
       "properties": {
@@ -9312,6 +10760,33 @@
         }
       },
       "title": "ShortcutsConfig",
+      "type": "object"
+    },
+    "SnippetsProviderConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "default": true,
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "prefix": {
+          "default": ";",
+          "title": "Prefix",
+          "type": "string"
+        },
+        "priority": {
+          "default": 0,
+          "title": "Priority",
+          "type": "integer"
+        },
+        "type_delay": {
+          "default": 200,
+          "title": "Type Delay",
+          "type": "integer"
+        }
+      },
+      "title": "SnippetsProviderConfig",
       "type": "object"
     },
     "SpeedThresholdConfig": {
@@ -9592,6 +11067,28 @@
         }
       },
       "title": "StatusThresholdsConfig",
+      "type": "object"
+    },
+    "SystemCommandsProviderConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "default": false,
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "prefix": {
+          "default": ">",
+          "title": "Prefix",
+          "type": "string"
+        },
+        "priority": {
+          "default": 0,
+          "title": "Priority",
+          "type": "integer"
+        }
+      },
+      "title": "SystemCommandsProviderConfig",
       "type": "object"
     },
     "SystrayWidgetConfig": {
@@ -10305,6 +11802,28 @@
       "title": "TrafficWidgetEntry",
       "type": "object"
     },
+    "UnitConverterProviderConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "default": false,
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "prefix": {
+          "default": "~",
+          "title": "Prefix",
+          "type": "string"
+        },
+        "priority": {
+          "default": 0,
+          "title": "Priority",
+          "type": "integer"
+        }
+      },
+      "title": "UnitConverterProviderConfig",
+      "type": "object"
+    },
     "UpdateCheckWidgetConfig": {
       "additionalProperties": false,
       "properties": {
@@ -10320,6 +11839,16 @@
         },
         "winget_update": {
           "$ref": "#/$defs/WingetUpdateConfig",
+          "default": {
+            "enabled": false,
+            "label": "{count}",
+            "tooltip": true,
+            "exclude": [],
+            "interval": 240
+          }
+        },
+        "scoop_update": {
+          "$ref": "#/$defs/ScoopUpdateConfig",
           "default": {
             "enabled": false,
             "label": "{count}",
@@ -10593,6 +12122,28 @@
         }
       },
       "title": "VSCodeMenuConfig",
+      "type": "object"
+    },
+    "VSCodeProviderConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "default": false,
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "prefix": {
+          "default": "vsc",
+          "title": "Prefix",
+          "type": "string"
+        },
+        "priority": {
+          "default": 0,
+          "title": "Priority",
+          "type": "integer"
+        }
+      },
+      "title": "VSCodeProviderConfig",
       "type": "object"
     },
     "VolumeCallbacksConfig": {
@@ -11484,6 +13035,33 @@
       "title": "WeatherWidgetEntry",
       "type": "object"
     },
+    "WebSearchProviderConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "default": false,
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "prefix": {
+          "default": "?",
+          "title": "Prefix",
+          "type": "string"
+        },
+        "priority": {
+          "default": 0,
+          "title": "Priority",
+          "type": "integer"
+        },
+        "engine": {
+          "default": "google",
+          "title": "Engine",
+          "type": "string"
+        }
+      },
+      "title": "WebSearchProviderConfig",
+      "type": "object"
+    },
     "WhkdConfig": {
       "additionalProperties": false,
       "properties": {
@@ -11910,6 +13488,15 @@
           "title": "Show App Name",
           "type": "boolean"
         },
+        "app_name_position": {
+          "default": "right",
+          "enum": [
+            "left",
+            "right"
+          ],
+          "title": "App Name Position",
+          "type": "string"
+        },
         "maximized_only": {
           "default": true,
           "title": "Maximized Only",
@@ -12004,6 +13591,28 @@
         }
       },
       "title": "WindowStyleConfig",
+      "type": "object"
+    },
+    "WindowSwitcherProviderConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "default": false,
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "prefix": {
+          "default": "win",
+          "title": "Prefix",
+          "type": "string"
+        },
+        "priority": {
+          "default": 0,
+          "title": "Priority",
+          "type": "integer"
+        }
+      },
+      "title": "WindowSwitcherProviderConfig",
       "type": "object"
     },
     "WindowsDesktopsConfig": {
@@ -12164,6 +13773,28 @@
         }
       },
       "title": "WingetUpdateConfig",
+      "type": "object"
+    },
+    "WorldClockProviderConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "default": false,
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "prefix": {
+          "default": "tz",
+          "title": "Prefix",
+          "type": "string"
+        },
+        "priority": {
+          "default": 0,
+          "title": "Priority",
+          "type": "integer"
+        }
+      },
+      "title": "WorldClockProviderConfig",
       "type": "object"
     },
     "core__validation__widgets__glazewm__workspaces__AppIconsConfig": {
@@ -13613,6 +15244,9 @@
             "$ref": "#/$defs/ObsEntry"
           },
           {
+            "$ref": "#/$defs/OpenMeteoWidgetEntry"
+          },
+          {
             "$ref": "#/$defs/PomodoroEntry"
           },
           {
@@ -13620,6 +15254,9 @@
           },
           {
             "$ref": "#/$defs/PowerPlanEntry"
+          },
+          {
+            "$ref": "#/$defs/QuickLaunchEntry"
           },
           {
             "$ref": "#/$defs/RecycleBinEntry"
