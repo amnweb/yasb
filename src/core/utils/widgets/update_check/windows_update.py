@@ -10,6 +10,7 @@ threads (QThread workers).
 import logging
 import subprocess
 
+import pywintypes
 import win32com.client
 
 
@@ -51,8 +52,13 @@ def check_updates() -> list[dict[str, str]]:
             )
         return results
 
-    except Exception:
-        logging.exception("Error checking Windows updates")
+    except Exception as e:
+        # When offline, Search("IsInstalled=0") raises a COM Error
+        # e.g., pywintypes.com_error: (-2147352567, 'Exception occurred.', ...)
+        if isinstance(e, pywintypes.com_error) and e.args and e.args[0] == -2147352567:
+            logging.warning("Offline or network issue while checking Windows updates.")
+        else:
+            logging.exception("Error checking Windows updates")
         return []
 
 
