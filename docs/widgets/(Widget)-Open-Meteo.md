@@ -85,7 +85,7 @@ open_meteo:
 open_meteo:
   type: "yasb.open_meteo.OpenMeteoWidget"
   options:
-  label: "<span>{icon}</span> {temp}"
+    label: "<span>{icon}</span> {temp}"
     label_alt: "{location}: Min {min_temp}, Max {max_temp}, Humidity {humidity}"
     tooltip: true
     update_interval: 600
