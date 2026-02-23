@@ -8,6 +8,7 @@ from sys import argv
 from types import TracebackType
 
 import qasync
+from PyQt6.QtCore import Qt
 
 import settings
 from core.application import YASBApplication
@@ -88,6 +89,7 @@ def single_instance_lock(name: str = "yasb_reborn"):
 
 def main():
     """Main entry point"""
+    YASBApplication.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
     app = YASBApplication(argv)
     asyncio.run(main_async(app), loop_factory=qasync.QEventLoop)
 
