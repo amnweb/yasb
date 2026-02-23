@@ -94,6 +94,7 @@ https://github.com/user-attachments/assets/aab8d8e8-248f-46a1-919c-9b0601236ac1
 - **[Cava](https://github.com/amnweb/yasb/wiki/(Widget)-Cava)**: Displays audio visualizer using Cava.
 - **[Copilot](https://github.com/amnweb/yasb/wiki/(Widget)-Copilot)**: GitHub Copilot usage with a detailed menu showing statistics
 - **[CPU](https://github.com/amnweb/yasb/wiki/(Widget)-CPU)**: Shows the current CPU usage.
+- **[Clipboard](https://github.com/amnweb/yasb/wiki/(Widget)-Clipboard)**: A native lightweight clipboard manager for YASB.
 - **[Clock](https://github.com/amnweb/yasb/wiki/(Widget)-Clock)**: Displays the current time and date.
 - **[Custom](https://github.com/amnweb/yasb/wiki/(Widget)-Custom)**: Create a custom widget.
 - **[Github](https://github.com/amnweb/yasb/wiki/(Widget)-Github)**: Shows notifications from GitHub.
