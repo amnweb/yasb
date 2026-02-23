@@ -11,9 +11,17 @@
 | `button_row`        | integer | `3`         | The number of buttons in a row. Must be between 1 and 6. (fullscreen mode only) |
 | `menu_style`        | string  | `"fullscreen"` | The menu display style: `"fullscreen"` for full-screen overlay or `"popup"` for compact popup anchored to the bar button. |
 | `popup`             | dict    | see below   | Popup appearance/position options. Only used when `menu_style` is `"popup"`. |
+| `profile_size`      | dict    | see below   | Profile avatar size options for fullscreen and menu modes.                   |
 | `buttons`           | dict    | `{}`        | A dictionary defining the buttons and their properties.                     |
 | `container_shadow`  | dict    | `None`      | Container shadow options.                                                   |
 | `label_shadow`      | dict    | `None`      | Label shadow options.                                                       |
+
+### Profile Size Options
+
+| Option              | Type    | Default     | Description                                                                 |
+|---------------------|---------|-------------|-----------------------------------------------------------------------------|
+| `fullscreen`       | integer | `64`        | Avatar size in fullscreen mode. Must be between 16 and 256.                  |
+| `menu`             | integer | `48`        | Avatar size in popup menu mode. Must be between 16 and 256.                 |
 
 ### Popup Options (when `menu_style: "popup"`)
 
@@ -57,6 +65,9 @@ power_menu:
     blur_background: true
     animation_duration: 120 # Milliseconds
     button_row: 3 # Number of buttons in a row, min 1 max 6
+    profile_size:
+      fullscreen: 80 # Avatar size in fullscreen mode
+      menu: 48 # Avatar size in popup mode
     buttons:
       restart: ["\uead2", "Restart"]
       shutdown: ["\uf011", "Shut Down"]
@@ -90,6 +101,9 @@ power_menu:
       direction: "down"
       offset_top: 6
       offset_left: 0
+    profile_size:
+      fullscreen: 64
+      menu: 64 # Larger avatar in popup mode
     buttons:
       lock: ["\uea75", "Lock"]
       signout: ["\udb80\udf43", "Sign out"]
@@ -110,6 +124,7 @@ power_menu:
 - **button_row:** The number of buttons in a row. Must be between 1 and 6. (fullscreen mode only)
 - **menu_style:** The menu display style. `"fullscreen"` shows a centered dialog with full-screen overlay (default behavior). `"popup"` shows a compact dropdown popup anchored to the bar button.
 - **popup:** Popup configuration (blur, round_corners, alignment, direction, offsets). Only used when `menu_style` is `"popup"`.
+- **profile_size:** Profile avatar size options. `fullscreen` sets the avatar size in fullscreen mode, `menu` sets the avatar size in popup mode. Must be between 16 and 256.
 - **buttons:** A dictionary defining the buttons and their properties. Possible properties are: `lock`, `signout`, `sleep`, `shutdown`, `restart`, `hibernate`, `cancel`, `force_shutdown`, `force_restart`. Note: `cancel` button is not shown in popup mode since the popup auto-closes on outside click.
 - **container_shadow:** Container shadow options.
 - **label_shadow:** Label shadow options.
