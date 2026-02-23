@@ -85,7 +85,7 @@ open_meteo:
 open_meteo:
   type: "yasb.open_meteo.OpenMeteoWidget"
   options:
-    label: "<span>{icon}</span> {temp}"
+  label: "<span>{icon}</span> {temp}"
     label_alt: "{location}: Min {min_temp}, Max {max_temp}, Humidity {humidity}"
     tooltip: true
     update_interval: 600
@@ -118,11 +118,11 @@ open_meteo:
       border_color: "system"
       alignment: "right"
       direction: "down"
-      icon_size: 64
+      icon_size: 48
       show_hourly_forecast: true
       time_format: "24h"
       hourly_point_spacing: 76
-      hourly_icon_size: 32
+      hourly_icon_size: 24
       icon_smoothing: true
       temp_line_width: 2
       current_line_color: "#8EAEE8"
@@ -214,7 +214,7 @@ When you first open the weather card (click on the widget), a location search di
 
 The location is stored in `%LOCALAPPDATA%/YASB/weather.json`. Each widget instance on different screens gets its own entry, so you can have different locations for different monitors.
 
-To change the location, delete `weather.json` restart YASB, and open the weather card again to trigger the location search dialog.
+To change the location, click on the **location name / current temperature** displayed at the very top of the weather card. This will reset the widget and show the location search dialog again.
 
 ## 7-Day Forecast Card
 
@@ -253,164 +253,174 @@ The weather card shows:
 
 /* Weather card style */
 .open-meteo-widget {
-    padding: 0 6px;
+	padding: 0 6px;
 }
 .open-meteo-widget .icon {
-    font-size: 18px;
-    color: rgba(255, 255, 255, 0.8);
+	font-size: 18px;
+	color: rgba(255, 255, 255, 0.8);
 }
 .open-meteo-widget .label {
-    font-size: 13px;
-    font-family: 'Segoe UI';
-    font-weight: 400;
-    color: rgba(255, 255, 255, 0.8);
-    padding-left: 4px;
+	font-size: 13px;
+	font-family: "Segoe UI";
+	font-weight: 400;
+	color: rgba(255, 255, 255, 0.8);
+	padding-left: 4px;
 }
 .open-meteo-card {
-    background-color: rgba(27, 26, 26, 0.5);
+	background-color: rgba(27, 26, 26, 0.5);
+    min-width: 500px;
 }
 .open-meteo-card-today .label {
-    font-size: 13px;
-    font-family: 'Segoe UI';
-    font-weight: 400;
-    color: rgb(163, 163, 163);
+	font-size: 13px;
+	font-family: "Segoe UI";
+	font-weight: 400;
+	color: rgb(163, 163, 163);
 }
 .open-meteo-card-today .label.location {
-    font-size: 32px;
-    font-weight: 700;
-    font-family: 'Segoe UI';
-    color: rgb(255, 255, 255);
+	font-size: 32px;
+	font-weight: 700;
+	font-family: "Segoe UI";
+	color: rgb(255, 255, 255);
 }
 .open-meteo-card-today .label.sunrisesunset {
-    font-size: 18px;
-    font-family: 'Segoe UI';
-    font-weight: 600;
-    color: rgb(201, 204, 159);
+	font-size: 18px;
+	font-family: "Segoe UI";
+	font-weight: 600;
+	color: rgb(201, 204, 159);
+}
+.open-meteo-card-today .label.sunrisesunset-icon {
+	font-size: 18px;
+	color: rgb(201, 204, 159);
+	font-family: "JetBrainsMono NFP";
 }
 .open-meteo-card-day {
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 8px;
-    background-color: rgba(0, 0, 0, 0);
-    padding: 4px;
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	border-radius: 8px;
+	background-color: rgba(0, 0, 0, 0);
+	padding: 4px;
+	min-width: 70px;
 }
 .open-meteo-card-day .day-name {
-    font-family: 'Segoe UI';
-    color: rgba(255, 255, 255, 0.6);
-    font-size: 12px;
-    font-weight: 600;
+	font-family: "Segoe UI";
+	color: rgba(255, 255, 255, 0.6);
+	font-size: 12px;
+	font-weight: 600;
 }
 .open-meteo-card-day .day-temp-max {
-    font-family: 'Segoe UI';
-    font-weight: 700;
-    font-size: 16px;
-    color: rgb(255, 255, 255);
+	font-family: "Segoe UI";
+	font-weight: 700;
+	font-size: 16px;
+	color: rgb(255, 255, 255);
 }
 .open-meteo-card-day .day-temp-min {
-    font-family: 'Segoe UI';
-    color: rgb(255, 255, 255);
-    font-weight: 400;
-    font-size: 13px;
+	font-family: "Segoe UI";
+	color: rgb(255, 255, 255);
+	font-weight: 400;
+	font-size: 13px;
 }
 .open-meteo-card-day.active {
-    background-color: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+	background-color: rgba(255, 255, 255, 0.05);
+	border: 1px solid rgba(255, 255, 255, 0.08);
 }
 .open-meteo-card-day:hover {
-    background-color: rgba(255, 255, 255, 0.04);
+	background-color: rgba(255, 255, 255, 0.04);
 }
 .open-meteo-card .hourly-container {
-    border: none;
-    background-color: transparent;
-    min-height: 120px;
+	border: none;
+	background-color: transparent;
+	min-height: 120px;
 }
 .open-meteo-card .hourly-data {
-    font-size: 11px;
-    font-weight: 700;
-    font-family: 'Segoe UI';
+	font-size: 11px;
+	font-weight: 700;
+	font-family: "Segoe UI";
 }
 .open-meteo-card .hourly-data.temperature {
-    background-color: #c9be48;
+	background-color: #c9be48;
 }
 .open-meteo-card .hourly-data.rain {
-    background-color: #4a90e2;
+	background-color: #4a90e2;
 }
 .open-meteo-card .hourly-data.snow {
-    background-color: #a0c4ff;
+	background-color: #a0c4ff;
 }
 .open-meteo-card .hourly-data .hourly-rain-animation {
-    color: rgba(150, 200, 255, 40);
-    background-color: rgba(0, 0, 0, 0);
+	color: rgba(150, 200, 255, 40);
+	background-color: rgba(0, 0, 0, 0);
 }
 .open-meteo-card .hourly-data .hourly-snow-animation {
-    color: rgba(255, 255, 255, 150);
-    background-color: rgba(0, 0, 0, 0);
+	color: rgba(255, 255, 255, 150);
+	background-color: rgba(0, 0, 0, 0);
 }
 .open-meteo-card .hourly-data-buttons {
-    margin-top: 11px;
-    margin-left: 11px;
+	margin-top: 11px;
+	margin-left: 11px;
 }
 .open-meteo-card .hourly-data-button {
-    border-radius: 4px;
-    min-height: 24px;
-    min-width: 24px;
-    max-width: 24px;
-    max-height: 24px;
-    font-size: 14px;
-    color: rgba(255, 255, 255, 0.3);
-    border: 1px solid transparent;
+	border-radius: 4px;
+	min-height: 24px;
+	min-width: 24px;
+	max-width: 24px;
+	max-height: 24px;
+	font-size: 14px;
+	color: rgba(255, 255, 255, 0.3);
+	border: 1px solid transparent;
 }
 .open-meteo-card .hourly-data-button.active {
-    color: #fff;
-    background-color: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+	color: #fff;
+	background-color: rgba(255, 255, 255, 0.1);
+	border: 1px solid rgba(255, 255, 255, 0.1);
 }
 .open-meteo-card .search-head {
-    font-size: 18px;
-    font-family: 'Segoe UI';
-    font-weight: 600;
-    color: rgba(255, 255, 255, 0.9);
+	font-size: 18px;
+	font-family: "Segoe UI";
+	font-weight: 600;
+	color: rgba(255, 255, 255, 0.9);
 }
 .open-meteo-card .search-description {
-    font-size: 14px;
-    font-family: 'Segoe UI';
-    font-weight: 400;
-    color: rgba(255, 255, 255, 0.7);
-    padding-bottom: 8px;
+	font-size: 14px;
+	font-family: "Segoe UI";
+	font-weight: 400;
+	color: rgba(255, 255, 255, 0.7);
+	padding-bottom: 8px;
 }
 .open-meteo-card .no-data-icon {
-    font-size: 88px;
+	font-size: 88px;
 }
 .open-meteo-card .no-data-text {
-    font-size: 16px;
-    font-family: 'Segoe UI';
-    font-weight: 400;
+	font-size: 16px;
+	font-family: "Segoe UI";
+	font-weight: 400;
 }
 /* search dialog */
 .open-meteo-card .search-input {
-    padding: 8px 12px;
-    border: 1px solid #5e6070;
-    border-radius: 6px;
-    background-color: rgba(17, 17, 27, 0.1);
-    color: #cdd6f4;
-    font-family: 'Segoe UI';
-    font-size: 14px;
+	padding: 8px 12px;
+	border: 1px solid #5e6070;
+	border-radius: 6px;
+	background-color: rgba(17, 17, 27, 0.1);
+	color: #cdd6f4;
+	font-family: "Segoe UI";
+	font-size: 14px;
 }
 .open-meteo-card .search-input:focus {
-    border: 1px solid #89b4fa;
-    background-color: rgba(17, 17, 27, 0.2);
+	border: 1px solid #89b4fa;
+	background-color: rgba(17, 17, 27, 0.2);
 }
 .open-meteo-card .search-results {
-    border: 1px solid #45475a00;
-    border-radius: 6px;
-    background-color: rgba(0, 0, 0, 0);
-    color: #cbced8;
-    font-size: 13px;
-    font-family: 'Segoe UI';
+	border: 1px solid #45475a00;
+	border-radius: 6px;
+	background-color: rgba(0, 0, 0, 0);
+	color: #cbced8;
+	font-size: 13px;
+	font-family: "Segoe UI";
 }
 .open-meteo-card .search-results::item {
-    padding: 6px
+	padding: 6px;
 }
 .open-meteo-card .search-results::item:hover {
-    background-color: rgba(255, 255, 255, 0.05);
+	background-color: rgba(255, 255, 255, 0.05);
 }
 ```
+
+## Preview of the Weather Card
+![Popup Menu Demo](assets/28a7c57d-7641-41dc-80f8-6fb0147aea62.png)

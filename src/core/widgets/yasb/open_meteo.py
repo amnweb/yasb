@@ -1,5 +1,6 @@
 import logging
 import re
+import time
 import traceback
 from datetime import datetime
 from functools import partial
@@ -26,7 +27,9 @@ from core.utils.widgets.open_meteo.icons import get_weather_icon
 from core.utils.widgets.open_meteo.location import (
     get_widget_id,
     load_location,
+    load_weather_cache,
     save_location,
+    save_weather_cache,
 )
 from core.utils.widgets.open_meteo.widgets import (
     ClickableWidget,
@@ -101,12 +104,29 @@ class OpenMeteoWidget(BaseWidget):
         self._location_data = load_location(self._widget_id)
 
         if self._location_data:
-            self._start_weather_fetcher()
+            cached_data, last_updated_ms = load_weather_cache(self._widget_id)
+            is_cache_valid = False
+
+            if cached_data:
+                time_diff_ms = int(time.time() * 1000) - last_updated_ms
+                update_interval_ms = self.config.update_interval * 1000
+                is_cache_valid = time_diff_ms < update_interval_ms
+
+                # Load the cached data instantly to prevent "weather loading..." flash
+                try:
+                    self.process_weather_data(cached_data)
+                    self._update_label(True)
+                except Exception as e:
+                    logger.warning(f"Failed to load cached weather data: {e}")
+                    is_cache_valid = False
+
+            # If the cache is fresh, start the delayed timer. Otherwise, start querying immediately.
+            self._start_weather_fetcher(delayed=is_cache_valid)
         else:
             self._set_label_text("Setup location")
             logger.info(f"No saved location for {self._widget_id}. Awaiting user setup.")
 
-    def _start_weather_fetcher(self):
+    def _start_weather_fetcher(self, delayed: bool = False):
         """Start fetching weather data with saved coordinates."""
         if not self._location_data:
             return
@@ -119,7 +139,13 @@ class OpenMeteoWidget(BaseWidget):
         )
         self._weather_fetcher.finished.connect(self.process_weather_data)
         self._weather_fetcher.finished.connect(lambda *_: self._update_label(True))
-        self._weather_fetcher.start()
+        self._weather_fetcher.finished.connect(self._save_weather_cache)
+        self._weather_fetcher.start(delayed=delayed)
+
+    def _save_weather_cache(self, data: dict[str, Any]):
+        """Persist fresh API data to the local disk cache."""
+        if data and self._widget_id:
+            save_weather_cache(self._widget_id, data)
 
     def _retry_fetch(self):
         if self._weather_fetcher:
@@ -242,6 +268,7 @@ class OpenMeteoWidget(BaseWidget):
                 selected = self._search_results[idx]
                 save_location(self._widget_id, selected)
                 self._location_data = load_location(self._widget_id)
+                self._set_label_text("Fetching data...")
                 # Close the dialog and start fetching weather data
                 self.dialog.hide()
                 self._start_weather_fetcher()
@@ -354,27 +381,61 @@ class OpenMeteoWidget(BaseWidget):
         today_label0 = QLabel(f"{self._weather_data['{location}']} {self._weather_data['{temp}']}")
         today_label0.setProperty("class", "label location")
         today_label0.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        today_label0.setCursor(Qt.CursorShape.PointingHandCursor)
+        set_tooltip(today_label0, "Click to change location", delay=400, position="bottom")
 
-        today_sunrise_sunset = QLabel(
-            f"\u2600 {self._weather_data.get('{sunrise}', 'N/A')}  \u263d {self._weather_data.get('{sunset}', 'N/A')}"
-        )
-        today_sunrise_sunset.setProperty("class", "label sunrisesunset")
-        today_sunrise_sunset.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        today_label0.mousePressEvent = self.reset_location
+
+        # Sunrise/Sunset wrapper
+        today_sunrise_sunset_container = QWidget()
+        today_sunrise_sunset_container_layout = QHBoxLayout(today_sunrise_sunset_container)
+        today_sunrise_sunset_container_layout.setContentsMargins(0, 0, 0, 0)
+        today_sunrise_sunset_container_layout.setSpacing(4)
+        today_sunrise_sunset_container_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        sunrise_icon_label = QLabel(self.config.icons.sunnyDay)
+        sunrise_icon_label.setProperty("class", "label sunrisesunset-icon")
+        sunrise_text_label = QLabel(f"{self._weather_data.get('{sunrise}', 'N/A')}")
+        sunrise_text_label.setProperty("class", "label sunrisesunset")
+
+        sunset_icon_label = QLabel(self.config.icons.clearNight)
+        sunset_icon_label.setProperty("class", "label sunrisesunset-icon")
+        sunset_text_label = QLabel(f"{self._weather_data.get('{sunset}', 'N/A')}")
+        sunset_text_label.setProperty("class", "label sunrisesunset")
+
+        today_sunrise_sunset_container_layout.addWidget(sunrise_icon_label)
+        today_sunrise_sunset_container_layout.addWidget(sunrise_text_label)
+        today_sunrise_sunset_container_layout.addSpacing(16)
+        today_sunrise_sunset_container_layout.addWidget(sunset_icon_label)
+        today_sunrise_sunset_container_layout.addWidget(sunset_text_label)
+
+        rain_c = self._weather_data.get("{rain_chance}", 0)
+        snow_c = self._weather_data.get("{snow_chance}", 0)
+        precip_parts = []
+        if rain_c != "N/A" and isinstance(rain_c, (int, float)) and rain_c > 0:
+            precip_parts.append(f"Rain chance {rain_c}%")
+        if snow_c != "N/A" and isinstance(snow_c, (int, float)) and snow_c > 0:
+            precip_parts.append(f"Snow chance {snow_c}%")
+
+        if not precip_parts:
+            precip_str = ""
+        else:
+            precip_str = " \u2022 ".join(precip_parts) + " \u2022 "
 
         today_label1 = QLabel(
             f"Feels like {self._weather_data['{feelslike}']} \u2022 "
             f"{self._weather_data['{condition_text}']} \u2022 "
             f"Humidity {self._weather_data['{humidity}']} \u2022 "
-            f"Pressure {self._weather_data['{pressure}']} \u2022 "
-            f"Cloud {self._weather_data['{cloud}']}%\n"
-            f"Rain chance {self._weather_data['{precipitation_probability}']} \u2022 "
+            f"Pressure {self._weather_data['{pressure}']}\n"
+            f"Cloud {self._weather_data['{cloud}']}% \u2022 "
+            f"{precip_str}"
             f"UV Index {self._weather_data['{uv}']}"
         )
         today_label1.setProperty("class", "label")
         today_label1.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         layout_today.addWidget(today_label0)
-        layout_today.addWidget(today_sunrise_sunset)
+        layout_today.addWidget(today_sunrise_sunset_container)
         layout_today.addWidget(today_label1)
 
         # Switch hourly data by day
@@ -498,6 +559,21 @@ class OpenMeteoWidget(BaseWidget):
         # Scroll to current hour
         if hsb := hourly_scroll_area.horizontalScrollBar():
             hsb.setValue(self.config.weather_card.hourly_point_spacing // 2 - 5)
+
+    def reset_location(self, ev: QMouseEvent | None = None):
+        """Clear the current location data and revert to the setup UI."""
+        self.dialog.hide()
+        self._weather_data = None
+        self._has_valid_weather_data = False
+        self._location_data = None
+        save_location(self._widget_id, None)
+
+        # Hide icons when reverting to setup mode
+        for widget in self._widgets + self._widgets_alt:
+            if widget.property("class") and "icon" in (widget.property("class") or ""):
+                widget.hide()
+
+        self._set_label_text("Setup location")
 
     def _create_dynamically_label(self, content: str, content_alt: str):
         def process_content(content: str, is_alt: bool = False) -> list[QLabel]:
@@ -631,6 +707,8 @@ class OpenMeteoWidget(BaseWidget):
             hourly_codes = hourly.get("weather_code", [])
             hourly_wind = hourly.get("wind_speed_10m", [])
             hourly_precip_prob = hourly.get("precipitation_probability", [])
+            hourly_rain_vol = hourly.get("rain", [])
+            hourly_snow_vol = hourly.get("snowfall", [])
 
             # Determine sunrise/sunset for is_day per hour
             daily_sunrise = daily.get("sunrise", [])
@@ -700,6 +778,24 @@ class OpenMeteoWidget(BaseWidget):
             if self._location_data:
                 location_name = self._location_data.get("name", "Unknown")
 
+            today_precip_prob = hourly_precip_prob[:24] if hourly_precip_prob else []
+            today_rain_vol = hourly_rain_vol[:24] if hourly_rain_vol else []
+            today_snow_vol = hourly_snow_vol[:24] if hourly_snow_vol else []
+
+            max_rain_chance = 0
+            max_snow_chance = 0
+
+            for i, prob in enumerate(today_precip_prob):
+                if prob is None:
+                    continue
+                vol_rain = today_rain_vol[i] if i < len(today_rain_vol) else 0
+                vol_snow = today_snow_vol[i] if i < len(today_snow_vol) else 0
+
+                if vol_rain is not None and vol_rain > 0 and prob > max_rain_chance:
+                    max_rain_chance = prob
+                if vol_snow is not None and vol_snow > 0 and prob > max_snow_chance:
+                    max_snow_chance = prob
+
             self._weather_data = {
                 # Current conditions
                 "{temp}": fmt_temp(current.get("temperature_2m", 0)),
@@ -723,6 +819,8 @@ class OpenMeteoWidget(BaseWidget):
                 "{min_temp}": fmt_temp(daily_min[0]) if daily_min else "N/A",
                 "{max_temp}": fmt_temp(daily_max[0]) if daily_max else "N/A",
                 "{precipitation_probability}": f"{daily_precip_max[0]}%" if daily_precip_max else "N/A",
+                "{rain_chance}": max_rain_chance,
+                "{snow_chance}": max_snow_chance,
                 "{uv}": f"{daily_uv[0]}" if daily_uv else "N/A",
             }
 

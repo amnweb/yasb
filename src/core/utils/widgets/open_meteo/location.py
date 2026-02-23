@@ -7,6 +7,7 @@ Stores location data (lat, lon, name, etc.) per widget instance in
 import json
 import logging
 import re
+import time
 from pathlib import Path
 from typing import Any
 
@@ -73,14 +74,21 @@ def load_location(widget_id: str) -> dict[str, Any] | None:
     return data.get(widget_id)
 
 
-def save_location(widget_id: str, location: dict[str, Any]) -> None:
+def save_location(widget_id: str, location: dict[str, Any] | None) -> None:
     """Save location data for the given widget ID.
 
     Args:
         widget_id: Unique identifier for the widget instance.
         location: Dict containing at minimum ``latitude`` and ``longitude``.
+                  If None, the location is deleted.
     """
+    if location is None:
+        delete_location(widget_id)
+        return
+
     data = _read_file()
+    existing_cache = data.get(widget_id, {})
+
     data[widget_id] = {
         "latitude": location.get("latitude"),
         "longitude": location.get("longitude"),
@@ -90,9 +98,34 @@ def save_location(widget_id: str, location: dict[str, Any]) -> None:
         "admin2": location.get("admin2", ""),
         "admin3": location.get("admin3", ""),
         "timezone": location.get("timezone", "auto"),
+        # Preserve weather cache when changing names, not coordinates
+        "cached_data": existing_cache.get("cached_data", None)
+        if location.get("latitude") == existing_cache.get("latitude")
+        else None,
+        "last_updated_ms": existing_cache.get("last_updated_ms", 0)
+        if location.get("latitude") == existing_cache.get("latitude")
+        else 0,
     }
     _write_file(data)
     logger.info(f"Saved location for {widget_id}: {data[widget_id]['name']}")
+
+
+def save_weather_cache(widget_id: str, weather_data: dict[str, Any]) -> None:
+    """Save raw Open-Meteo API response to local disk cache."""
+    data = _read_file()
+    if widget_id not in data:
+        return
+
+    data[widget_id]["cached_data"] = weather_data
+    data[widget_id]["last_updated_ms"] = int(time.time() * 1000)
+    _write_file(data)
+
+
+def load_weather_cache(widget_id: str) -> tuple[dict[str, Any] | None, int]:
+    """Retrieve the cached Open-Meteo metadata and its last updated timestamp."""
+    data = _read_file()
+    widget_data = data.get(widget_id, {})
+    return widget_data.get("cached_data", None), widget_data.get("last_updated_ms", 0)
 
 
 def delete_location(widget_id: str) -> None:

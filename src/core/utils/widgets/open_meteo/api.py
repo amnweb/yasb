@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 import traceback
 from typing import Any
 
@@ -16,7 +17,7 @@ FORECAST_BASE_URL = "https://api.open-meteo.com/v1/forecast"
 GEOCODING_BASE_URL = "https://geocoding-api.open-meteo.com/v1/search"
 
 # Hourly variables to request
-HOURLY_VARS = "temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m,precipitation_probability"
+HOURLY_VARS = "temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m,precipitation_probability,rain,snowfall"
 
 # Daily variables to request
 DAILY_VARS = (
@@ -73,9 +74,10 @@ class OpenMeteoDataFetcher(QObject):
             f"&wind_speed_unit={wind_unit}"
         )
 
-    def start(self):
+    def start(self, delayed: bool = False):
         """Start fetching weather data periodically."""
-        QTimer.singleShot(200, self.make_request)
+        if not delayed:
+            QTimer.singleShot(200, self.make_request)
         self._fetch_timer.start(self._timeout)
         self.started = True
 
@@ -128,12 +130,20 @@ class GeocodingFetcher(QObject):
         super().__init__(parent)
         self._manager = QNetworkAccessManager(self)
         self._manager.finished.connect(self._handle_response)
+        self._current_country_filter: str | None = None
 
     def search(self, query: str, count: int = 100):
         """Search for locations matching the query string."""
         if not query or len(query.strip()) < 3:
             self.results_ready.emit([])
             return
+
+        # Check for a trailing 2-letter country code
+        self._current_country_filter = None
+        match = re.search(r"^(.*?)(?:,\s*|\s+)([A-Za-z]{2})$", query.strip())
+        if match:
+            query = match.group(1).strip()
+            self._current_country_filter = match.group(2).upper()
 
         url = QUrl(
             f"{GEOCODING_BASE_URL}"
@@ -153,7 +163,15 @@ class GeocodingFetcher(QObject):
             error = reply.error()
             if error == QNetworkReply.NetworkError.NoError:
                 data = json.loads(reply.readAll().data().decode())
-                results = data.get("results", [])
+                raw_results: list[dict[str, Any]] = data.get("results", [])
+
+                if self._current_country_filter:
+                    # Filter results by the extracted 2-letter country code
+                    results = [
+                        r for r in raw_results if r.get("country_code", "").upper() == self._current_country_filter
+                    ]
+                else:
+                    results = raw_results
             else:
                 logger.warning(f"Geocoding search failed: {error.name}")
         except json.JSONDecodeError as e:
@@ -161,5 +179,6 @@ class GeocodingFetcher(QObject):
         except Exception as e:
             logger.error(f"Geocoding fetch error: {e}")
         finally:
+            self._current_country_filter = None
             self.results_ready.emit(results)
             reply.deleteLater()
