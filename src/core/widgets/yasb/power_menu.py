@@ -261,7 +261,7 @@ class PowerMenuWidget(BaseWidget):
             avatar_label = QLabel()
             avatar_label.setProperty("class", "profile-avatar")
             avatar_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            avatar_size = self.config.profile_size.menu
+            avatar_size = self.config.profile_size.popup
             avatar_label.setFixedSize(avatar_size, avatar_size)
             avatar_path = _get_user_avatar_path()
             if avatar_path:

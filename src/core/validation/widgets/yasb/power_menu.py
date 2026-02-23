@@ -36,7 +36,7 @@ class PowerMenuPopupConfig(CustomBaseModel):
 
 class ProfileSizeConfig(CustomBaseModel):
     fullscreen: int = Field(default=64, ge=16, le=256)
-    menu: int = Field(default=48, ge=16, le=256)
+    popup: int = Field(default=48, ge=16, le=256)
 
 
 class PowerMenuConfig(CustomBaseModel):
