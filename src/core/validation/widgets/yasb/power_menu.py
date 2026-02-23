@@ -34,11 +34,6 @@ class PowerMenuPopupConfig(CustomBaseModel):
     offset_left: int = 0
 
 
-class ProfileSizeConfig(CustomBaseModel):
-    fullscreen: int = Field(default=64, ge=16, le=256)
-    popup: int = Field(default=48, ge=16, le=256)
-
-
 class PowerMenuConfig(CustomBaseModel):
     label: str = "power"
     uptime: bool = True
@@ -49,7 +44,7 @@ class PowerMenuConfig(CustomBaseModel):
     button_row: int = Field(default=3, ge=1, le=6)
     menu_style: Literal["fullscreen", "popup"] = "fullscreen"
     popup: PowerMenuPopupConfig = PowerMenuPopupConfig()
-    profile_size: ProfileSizeConfig = ProfileSizeConfig()
+    profile_image_size: int = Field(default=64, ge=16, le=256)
     container_padding: PaddingConfig = PaddingConfig()
     label_shadow: ShadowConfig = ShadowConfig()
     container_shadow: ShadowConfig = ShadowConfig()

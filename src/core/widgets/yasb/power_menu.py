@@ -229,7 +229,7 @@ class PowerMenuWidget(BaseWidget):
                 self.config.button_row,
                 self.config.buttons.model_dump(exclude_none=True),
                 self.config.show_user,
-                self.config.profile_size.fullscreen,
+                self.config.profile_image_size,
             )
             self.main_window.overlay.fade_in()
             self.main_window.overlay.show()
@@ -261,7 +261,7 @@ class PowerMenuWidget(BaseWidget):
             avatar_label = QLabel()
             avatar_label.setProperty("class", "profile-avatar")
             avatar_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            avatar_size = self.config.profile_size.popup
+            avatar_size = self.config.profile_image_size
             avatar_label.setFixedSize(avatar_size, avatar_size)
             avatar_path = _get_user_avatar_path()
             if avatar_path:
