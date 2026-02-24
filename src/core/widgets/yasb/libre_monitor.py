@@ -92,6 +92,7 @@ class LibreHardwareMonitorWidget(BaseWidget):
             self.config.libre_menu.round_corners,
             self.config.libre_menu.round_corners_type,
             self.config.libre_menu.border_color,
+            animation_duration=self.config.libre_menu.animation_duration,
         )
         self._menu.setProperty("class", "libre-menu")
 

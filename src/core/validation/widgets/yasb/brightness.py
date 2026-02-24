@@ -23,6 +23,7 @@ class BrightnessMenuConfig(CustomBaseModel):
     distance: int = 6  # deprecated
     offset_top: int = 6
     offset_left: int = 0
+    animation_duration: int = 80
 
 
 class ProgressBarConfig(CustomBaseModel):

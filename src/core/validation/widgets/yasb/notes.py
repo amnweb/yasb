@@ -19,6 +19,7 @@ class MenuConfig(CustomBaseModel):
     direction: str = "down"
     offset_top: int = 6
     offset_left: int = 0
+    animation_duration: int = 80
     max_title_size: int = 150
     show_date_time: bool = True
 
