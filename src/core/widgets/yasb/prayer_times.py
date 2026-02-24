@@ -4,7 +4,8 @@ import urllib.parse
 from datetime import datetime, timedelta
 from typing import Any
 
-from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtCore import Qt, QTimer, QVariantAnimation, QEasingCurve
+from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
 from core.utils.utilities import PopupWidget, add_shadow, build_widget_label, refresh_widget_style
@@ -70,6 +71,15 @@ class PrayerTimesWidget(BaseWidget):
         self._minute_timer.timeout.connect(self._on_minute_tick)
         self._minute_timer.start()
 
+        # --- Flash animation ---
+        self._flash_anim = QVariantAnimation(self)
+        self._flash_anim.setEasingCurve(QEasingCurve.Type.InOutSine)
+        self._flash_anim.valueChanged.connect(self._on_flash_frame)
+        self._flash_anim.finished.connect(self._on_flash_half_done)
+        self._flash_stop_timer = QTimer(self)
+        self._flash_stop_timer.setSingleShot(True)
+        self._flash_stop_timer.timeout.connect(self._stop_flash)
+
         # Show loading placeholder immediately before first API response
         self._update_label()
 
@@ -125,6 +135,8 @@ class PrayerTimesWidget(BaseWidget):
             self._fetcher.make_request()
             return
         self._update_label()
+        if self.config.flash.enabled and self._check_prayer_time():
+            self._start_flash()
         if self._popup is not None:
             try:
                 self._refresh_popup_rows()
@@ -132,16 +144,17 @@ class PrayerTimesWidget(BaseWidget):
                 self._popup = None
 
     def _all_prayers_passed(self) -> bool:
-        """Return True if every prayer in prayers_to_show has already passed today."""
+        """Return True if every prayer in prayers_to_show has already passed today (including grace period)."""
         prayers = self.config.prayers_to_show or ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"]
         now = datetime.now()
+        grace = timedelta(minutes=self.config.grace_period)
         for name in prayers:
             time_str = self._timings.get(name, "")
             if not time_str or time_str == "--:--":
                 continue
             try:
                 h, m = int(time_str[:2]), int(time_str[3:5])
-                if now.replace(hour=h, minute=m, second=0, microsecond=0) > now:
+                if now.replace(hour=h, minute=m, second=0, microsecond=0) + grace > now:
                     return False
             except (ValueError, IndexError):
                 continue
@@ -152,11 +165,16 @@ class PrayerTimesWidget(BaseWidget):
     # ------------------------------------------------------------------
 
     def _get_next_prayer(self) -> tuple[str, str]:
-        """Return (prayer_name, time_str) for the next upcoming prayer in prayers_to_show."""
+        """Return (prayer_name, time_str) for the current or next upcoming prayer.
+
+        A prayer is considered 'current' for grace_period minutes after its time,
+        so the label doesn't immediately jump to the next prayer when the time hits.
+        """
         if not self._timings:
             return ("—", "--:--")
         prayers = self.config.prayers_to_show or ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"]
         now = datetime.now()
+        grace = timedelta(minutes=self.config.grace_period)
         target_date = now + timedelta(days=self._date_offset)
         for name in prayers:
             time_str = self._timings.get(name, "")
@@ -164,7 +182,7 @@ class PrayerTimesWidget(BaseWidget):
                 continue
             try:
                 h, m = int(time_str[:2]), int(time_str[3:5])
-                if target_date.replace(hour=h, minute=m, second=0, microsecond=0) > now:
+                if target_date.replace(hour=h, minute=m, second=0, microsecond=0) + grace > now:
                     return (name, time_str)
             except ValueError, IndexError:
                 continue
@@ -181,7 +199,12 @@ class PrayerTimesWidget(BaseWidget):
             h, m = int(time_str[:2]), int(time_str[3:5])
             target = target_date.replace(hour=h, minute=m, second=0, microsecond=0)
             delta = target - now
+            grace = timedelta(minutes=self.config.grace_period)
             if delta.total_seconds() < 0:
+                # Within grace period: show how many minutes into the prayer we are
+                if abs(delta) < grace:
+                    elapsed_min = int(abs(delta).total_seconds() // 60)
+                    return f"{elapsed_min}m ago"
                 return "passed"
             total_min = int(delta.total_seconds() // 60)
             hours, mins = divmod(total_min, 60)
@@ -257,6 +280,68 @@ class PrayerTimesWidget(BaseWidget):
                     widget.setProperty("class", f"{base} {next_name}")
                     refresh_widget_style(widget)
             widget_index += 1
+
+    # ------------------------------------------------------------------
+    # Prayer-time flash
+    # ------------------------------------------------------------------
+
+    def _check_prayer_time(self) -> bool:
+        """Return True if the current minute matches any prayer in prayers_to_show."""
+        if not self._timings or self._loading:
+            return False
+        prayers = self.config.prayers_to_show or ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"]
+        now = datetime.now()
+        for name in prayers:
+            time_str = self._timings.get(name, "")
+            if not time_str or time_str == "--:--":
+                continue
+            try:
+                h, m = int(time_str[:2]), int(time_str[3:5])
+                if now.hour == h and now.minute == m:
+                    return True
+            except (ValueError, IndexError):
+                continue
+        return False
+
+    def _start_flash(self) -> None:
+        """Start a smooth ping-pong color animation for the configured duration."""
+        if self._flash_stop_timer.isActive():
+            return
+        flash_cfg = self.config.flash
+        self._flash_anim.stop()
+        self._flash_anim.setDuration(flash_cfg.interval)
+        self._flash_anim.setStartValue(QColor(flash_cfg.color_b))
+        self._flash_anim.setEndValue(QColor(flash_cfg.color_a))
+        self._flash_anim.start()
+        # Set label to flash text class immediately
+        active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
+        base = "label alt" if self._show_alt_label else "label"
+        for widget in active_widgets:
+            if isinstance(widget, QLabel):
+                widget.setProperty("class", f"{base} flash")
+                refresh_widget_style(widget)
+        self._flash_stop_timer.start(flash_cfg.duration * 1000)
+
+    def _on_flash_half_done(self) -> None:
+        """Reverse the animation on each half-cycle to create a ping-pong effect."""
+        if not self._flash_stop_timer.isActive():
+            return
+        start = self._flash_anim.startValue()
+        end = self._flash_anim.endValue()
+        self._flash_anim.setStartValue(end)
+        self._flash_anim.setEndValue(start)
+        self._flash_anim.start()
+
+    def _on_flash_frame(self, color: QColor) -> None:
+        """Apply interpolated background color to the entire widget container each frame."""
+        hex_color = color.name()
+        self._widget_container.setStyleSheet(f"background-color: {hex_color}; border-color: {hex_color};")
+
+    def _stop_flash(self) -> None:
+        """Stop the flash animation and restore all styles."""
+        self._flash_anim.stop()
+        self._widget_container.setStyleSheet("")
+        self._update_label(update_class=True)
 
     # ------------------------------------------------------------------
     # Popup card
