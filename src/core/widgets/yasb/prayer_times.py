@@ -156,7 +156,7 @@ class PrayerTimesWidget(BaseWidget):
                 h, m = int(time_str[:2]), int(time_str[3:5])
                 if now.replace(hour=h, minute=m, second=0, microsecond=0) + grace > now:
                     return False
-            except (ValueError, IndexError):
+            except ValueError, IndexError:
                 continue
         return True
 
@@ -228,9 +228,15 @@ class PrayerTimesWidget(BaseWidget):
         options["{next_prayer_time}"] = next_time
         ic = self.config.icons
         icon_map = {
-            "Fajr": ic.fajr, "Sunrise": ic.sunrise, "Dhuhr": ic.dhuhr,
-            "Asr": ic.asr, "Sunset": ic.sunset, "Maghrib": ic.maghrib,
-            "Isha": ic.isha, "Imsak": ic.imsak, "Midnight": ic.midnight,
+            "Fajr": ic.fajr,
+            "Sunrise": ic.sunrise,
+            "Dhuhr": ic.dhuhr,
+            "Asr": ic.asr,
+            "Sunset": ic.sunset,
+            "Maghrib": ic.maghrib,
+            "Isha": ic.isha,
+            "Imsak": ic.imsak,
+            "Midnight": ic.midnight,
         }
         options["{icon}"] = icon_map.get(next_name, ic.default)
         if self._hijri:
@@ -299,7 +305,7 @@ class PrayerTimesWidget(BaseWidget):
                 h, m = int(time_str[:2]), int(time_str[3:5])
                 if now.hour == h and now.minute == m:
                     return True
-            except (ValueError, IndexError):
+            except ValueError, IndexError:
                 continue
         return False
 
@@ -413,9 +419,15 @@ class PrayerTimesWidget(BaseWidget):
         prayers = self.config.prayers_to_show or ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"]
         ic = self.config.icons
         icon_map = {
-            "Fajr": ic.fajr, "Sunrise": ic.sunrise, "Dhuhr": ic.dhuhr,
-            "Asr": ic.asr, "Sunset": ic.sunset, "Maghrib": ic.maghrib,
-            "Isha": ic.isha, "Imsak": ic.imsak, "Midnight": ic.midnight,
+            "Fajr": ic.fajr,
+            "Sunrise": ic.sunrise,
+            "Dhuhr": ic.dhuhr,
+            "Asr": ic.asr,
+            "Sunset": ic.sunset,
+            "Maghrib": ic.maghrib,
+            "Isha": ic.isha,
+            "Imsak": ic.imsak,
+            "Midnight": ic.midnight,
         }
 
         rows_container = QWidget()
