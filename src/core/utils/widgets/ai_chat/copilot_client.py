@@ -7,6 +7,8 @@ import base64
 import logging
 import os
 import queue
+import shutil
+import sys
 import tempfile
 import threading
 from dataclasses import asdict, is_dataclass
@@ -29,12 +31,23 @@ except ImportError:
     CopilotClient = None
 
 
+def _resolve_copilot_cli_path() -> str | None:
+    """Find copilot CLI on the system PATH (required for frozen builds
+    where the SDK's bundled binary is not available)."""
+    return shutil.which("copilot") or shutil.which("copilot.exe")
+
+
 def _build_copilot_client_options(provider_config: dict | None) -> dict[str, Any]:
     if not provider_config:
-        return {}
+        provider_config = {}
     cli_url = provider_config.get("copilot_cli_url")
     if isinstance(cli_url, str) and cli_url.strip():
         return {"cli_url": cli_url.strip()}
+    # In a frozen exe the SDK cannot locate its bundled binary resolve from system PATH.
+    if getattr(sys, "frozen", False):
+        cli_path = _resolve_copilot_cli_path()
+        if cli_path:
+            return {"cli_path": cli_path}
     return {}
 
 
