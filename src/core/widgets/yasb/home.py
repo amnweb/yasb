@@ -85,6 +85,7 @@ class HomeWidget(BaseWidget):
             self.config.round_corners,
             self.config.round_corners_type,
             self.config.border_color,
+            animation_duration=self.config.animation_duration,
         )
         self._menu.setProperty("class", "home-menu")
 

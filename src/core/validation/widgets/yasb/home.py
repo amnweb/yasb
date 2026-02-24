@@ -50,6 +50,7 @@ class HomeConfig(CustomBaseModel):
     distance: int = 6
     offset_top: int = 6
     offset_left: int = 0
+    animation_duration: int = 80
     menu_labels: MenuLabelsConfig = MenuLabelsConfig()
     animation: AnimationConfig = AnimationConfig()
     label_shadow: ShadowConfig = ShadowConfig()

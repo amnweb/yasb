@@ -19,6 +19,7 @@ class LanguageMenuConfig(CustomBaseModel):
     direction: str = "down"
     offset_top: int = 6
     offset_left: int = 0
+    animation_duration: int = 80
     layout_icon: str = "\uf11c"
     show_layout_icon: bool = True
 

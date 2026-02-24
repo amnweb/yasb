@@ -494,11 +494,11 @@ class QuickLaunchWidget(BaseWidget):
             round_corners_type=cfg.round_corners_type,
             border_color=cfg.border_color,
             dark_mode=cfg.dark_mode,
+            animation_duration=cfg.animation_duration,
         )
         popup.setProperty("class", "quick-launch-popup")
         popup._popup_content.setProperty("class", "container")
         popup.setFixedSize(cfg.width, cfg.height)
-        popup._fade_animation.setDuration(40)
         popup._fade_animation.finished.connect(self._on_popup_closed)
 
         main_layout = QVBoxLayout(popup._popup_content)

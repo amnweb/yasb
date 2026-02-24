@@ -173,6 +173,7 @@ class OpenMeteoWidget(BaseWidget):
             self.config.weather_card.round_corners,
             self.config.weather_card.round_corners_type,
             self.config.weather_card.border_color,
+            animation_duration=self.config.weather_card.animation_duration,
         )
         self.dialog.setProperty("class", "open-meteo-card")
 

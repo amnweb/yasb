@@ -150,6 +150,7 @@ class PowerPlanWidget(BaseWidget):
             self.config.menu.round_corners,
             self.config.menu.round_corners_type,
             self.config.menu.border_color,
+            animation_duration=self.config.menu.animation_duration,
         )
         self._popup_menu.setProperty("class", "power-plan-menu")
 
