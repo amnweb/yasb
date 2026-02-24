@@ -4,7 +4,7 @@ import urllib.parse
 from datetime import datetime, timedelta
 from typing import Any
 
-from PyQt6.QtCore import Qt, QTimer, QVariantAnimation, QEasingCurve
+from PyQt6.QtCore import QEasingCurve, Qt, QTimer, QVariantAnimation
 from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
