@@ -564,6 +564,7 @@ class PopupWidget(QWidget):
         round_corners_type: str = "normal",
         border_color: str = "None",
         dark_mode: bool = False,
+        animation_duration: int = 80,
     ):
         super().__init__(parent)
 
@@ -587,7 +588,7 @@ class PopupWidget(QWidget):
         self._popup_content = QFrame(self)
 
         self._fade_animation = QPropertyAnimation(self, b"windowOpacity")
-        self._fade_animation.setDuration(80)
+        self._fade_animation.setDuration(animation_duration)
         self._fade_animation.finished.connect(self._on_animation_finished)
 
         self._is_closing = False

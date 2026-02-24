@@ -64,6 +64,7 @@ class WeatherCardConfig(CustomBaseModel):
     distance: int = 6  # deprecated
     offset_top: int = 6
     offset_left: int = 0
+    animation_duration: int = 80
     icon_size: int = 64
     show_hourly_forecast: bool = False
     time_format: Literal["12h", "24h"] = "24h"

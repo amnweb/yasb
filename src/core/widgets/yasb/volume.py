@@ -317,6 +317,7 @@ class VolumeWidget(BaseWidget):
             self.config.audio_menu.round_corners,
             self.config.audio_menu.round_corners_type,
             self.config.audio_menu.border_color,
+            animation_duration=self.config.audio_menu.animation_duration,
         )
         self.dialog.setProperty("class", "audio-menu")
 

@@ -20,6 +20,7 @@ class QuickLaunchPopupConfig(CustomBaseModel):
     border_color: str = "System"
     dark_mode: bool = True
     screen: Literal["primary", "focus", "cursor"] = "focus"
+    animation_duration: int = 80
 
 
 class QuickLaunchCallbacksConfig(CallbacksConfig):
