@@ -212,6 +212,7 @@ class BrightnessWidget(BaseWidget):
             self.config.brightness_menu.round_corners,
             self.config.brightness_menu.round_corners_type,
             self.config.brightness_menu.border_color,
+            animation_duration=self.config.brightness_menu.animation_duration,
         )
         self.dialog.setProperty("class", "brightness-menu")
 

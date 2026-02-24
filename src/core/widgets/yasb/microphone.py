@@ -281,6 +281,7 @@ class MicrophoneWidget(BaseWidget):
             self.config.mic_menu.round_corners,
             self.config.mic_menu.round_corners_type,
             self.config.mic_menu.border_color,
+            animation_duration=self.config.mic_menu.animation_duration,
         )
         self.dialog.setProperty("class", "microphone-menu")
 

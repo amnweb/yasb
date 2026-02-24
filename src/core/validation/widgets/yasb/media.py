@@ -37,6 +37,7 @@ class MediaMenuConfig(CustomBaseModel):
     direction: Literal["up", "down"] = "down"
     offset_top: int = 6
     offset_left: int = 0
+    animation_duration: int = 80
     thumbnail_size: int = 100
     thumbnail_corner_radius: int = 8
     max_title_size: int = 150
