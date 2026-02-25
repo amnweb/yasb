@@ -16,6 +16,8 @@ class ProviderResult:
     action_data: dict = field(default_factory=dict)
     preview: dict = field(default_factory=dict)
     css_class: str = ""
+    is_separator: bool = False
+    is_loading: bool = False
 
 
 @dataclass
@@ -77,6 +79,9 @@ class BaseProvider(ABC):
     def handle_preview_action(self, action_id: str, result: ProviderResult, data: dict) -> ProviderMenuActionResult:
         """Handle an action from an inline edit form in the preview panel."""
         return ProviderMenuActionResult()
+
+    def on_deactivate(self) -> None:
+        """Called when the popup is closed. Override to clear caches or state."""
 
     def get_query_text(self, text: str) -> str:
         """Strip prefix from query text."""
