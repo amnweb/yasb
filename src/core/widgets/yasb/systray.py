@@ -62,8 +62,6 @@ class SystrayWidget(BaseWidget):
     validation_schema = SystrayWidgetConfig
     _systray_instance = None
     _systray_thread = None
-    _tasks_service_instance = None
-    _tasks_thread = None
 
     @classmethod
     def get_client_instance(cls):
@@ -226,8 +224,9 @@ class SystrayWidget(BaseWidget):
             if cls._systray_instance is not None:
                 cls._systray_instance.destroy()
 
-            if cls._tasks_service_instance is not None:
-                cls._tasks_service_instance.destroy()
+            if cls._systray_thread is not None and cls._systray_thread.isRunning():
+                cls._systray_thread.wait(3000)
+
         except Exception as e:
             logger.debug(f"Error during thread cleanup: {e}")
 

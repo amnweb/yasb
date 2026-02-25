@@ -96,6 +96,7 @@ class NativeWindowEx:
         if self.hwnd != 0:
             logger.debug(f"Destroying window {self.hwnd}")
             PostMessage(self.hwnd, WM_CLOSE, 0, 0)
+            self.hwnd = 0
 
 
 def cursor_position():
