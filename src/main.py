@@ -157,7 +157,6 @@ async def main_async(app: YASBApplication):
         logging.error(f"Error during application shutdown: {e}")
     finally:
         app.quit()
-        sys.exit()
 
 
 if __name__ == "__main__":

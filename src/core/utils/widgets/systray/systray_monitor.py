@@ -170,18 +170,18 @@ class SystrayMonitor(QObject):
 
     def _window_proc(self, hwnd: int, uMsg: int, wParam: int, lParam: int) -> int:
         """Main window procedure for handling window messages"""
-        if self._is_destroyed:
-            return DefWindowProc(hwnd, uMsg, wParam, lParam)
         if uMsg == WM_CLOSE:
             logger.debug(f"WM_CLOSE received, destroying window {hwnd}")
             DestroyWindow(hwnd)
             return 0
-        elif uMsg == WM_TASKBARCREATED:
-            self.set_taskbar_list_hwnd()
-            return 0
         elif uMsg == WM_DESTROY:
             logger.debug(f"WM_DESTROY received for window {hwnd}")
             user32.PostQuitMessage(0)
+            return 0
+        if self._is_destroyed:
+            return DefWindowProc(hwnd, uMsg, wParam, lParam)
+        if uMsg == WM_TASKBARCREATED:
+            self.set_taskbar_list_hwnd()
             return 0
         elif uMsg == WM_TIMER:
             # We need to set our window topmost to have the priority over the native system tray
