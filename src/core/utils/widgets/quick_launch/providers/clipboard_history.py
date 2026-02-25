@@ -1,5 +1,6 @@
 import io
 import logging
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
 from core.utils.shell_utils import shell_open
@@ -114,12 +115,18 @@ class ClipboardHistoryProvider(BaseProvider):
             logging.debug("Clipboard image read failed: %s", exc)
             return b"", (0, 0)
 
+    @staticmethod
+    def _get_history_items_mta():
+        """Call the blocking WinRT API from an MTA thread to avoid STA restriction."""
+        return Clipboard.get_history_items_async().get()
+
     def _load_history(self) -> tuple[str, list[dict[str, Any]]]:
         if Clipboard is None or ClipboardHistoryItemsResultStatus is None:
             return "unavailable", []
 
         try:
-            result = Clipboard.get_history_items_async().get()
+            with ThreadPoolExecutor(max_workers=1) as pool:
+                result = pool.submit(self._get_history_items_mta).result(timeout=5)
         except Exception as exc:
             logging.debug("Clipboard history query failed: %s", exc)
             return "error", []

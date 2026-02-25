@@ -220,7 +220,13 @@ class ResultItemDelegate(QStyledItemDelegate):
     """Delegate that paints result items using QListView CSS for styling."""
 
     def __init__(
-        self, icon_size: int, show_icons: bool, desc_style_label: QLabel, sep_style_label: QLabel, parent=None
+        self,
+        icon_size: int,
+        show_icons: bool,
+        desc_style_label: QLabel,
+        sep_style_label: QLabel,
+        compact_text: bool = False,
+        parent=None,
     ):
         super().__init__(parent)
         self._icon_size = icon_size
@@ -228,6 +234,7 @@ class ResultItemDelegate(QStyledItemDelegate):
         self._spacing = 12
         self._desc_style_label = desc_style_label
         self._sep_style_label = sep_style_label
+        self._compact_text = compact_text
 
     def _get_desc_font(self) -> QFont:
         """Get description font from CSS style probe."""
@@ -245,7 +252,7 @@ class ResultItemDelegate(QStyledItemDelegate):
             return QSize(option.rect.width(), fm.height() + m.top() + m.bottom())
         title_fm = QFontMetrics(option.font)
         text_h = title_fm.height()
-        if result and result.description:
+        if result and result.description and not self._compact_text:
             desc_fm = QFontMetrics(self._get_desc_font())
             text_h += 4 + desc_fm.height()
         content_h = max(text_h, self._icon_size if self._show_icons else 0)
@@ -309,7 +316,28 @@ class ResultItemDelegate(QStyledItemDelegate):
         title_color = option.palette.color(QPalette.ColorRole.Text)
         title_fm = QFontMetrics(title_font)
 
-        if result.description:
+        if result.description and self._compact_text:
+            desc_font = self._get_desc_font()
+            desc_color = self._get_desc_color()
+            desc_fm = QFontMetrics(desc_font)
+            # Reserve at most half the row for the description, then give the rest to the title
+            desc_natural_w = desc_fm.horizontalAdvance(result.description)
+            desc_max_w = max(0, text_w // 2)
+            desc_w = min(desc_natural_w, desc_max_w)
+            title_w = max(0, text_w - desc_w - self._spacing)
+
+            title_rect = QRect(x, rect.y(), title_w, rect.height())
+            painter.setFont(title_font)
+            painter.setPen(title_color)
+            elided = title_fm.elidedText(result.title, Qt.TextElideMode.ElideRight, title_w)
+            painter.drawText(title_rect, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, elided)
+
+            desc_rect = QRect(rect.right() - desc_w, rect.y(), desc_w, rect.height())
+            painter.setFont(desc_font)
+            painter.setPen(desc_color)
+            elided_desc = desc_fm.elidedText(result.description, Qt.TextElideMode.ElideRight, desc_w)
+            painter.drawText(desc_rect, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter, elided_desc)
+        elif result.description:
             desc_font = self._get_desc_font()
             desc_color = self._get_desc_color()
             desc_fm = QFontMetrics(desc_font)
@@ -624,7 +652,12 @@ class QuickLaunchWidget(BaseWidget):
         sep_style_label.setVisible(False)
 
         delegate = ResultItemDelegate(
-            self.config.icon_size, self.config.show_icons, desc_style_label, sep_style_label, results_view
+            self.config.icon_size,
+            self.config.show_icons,
+            desc_style_label,
+            sep_style_label,
+            compact_text=self.config.compact_text,
+            parent=results_view,
         )
         results_view.setItemDelegate(delegate)
 
@@ -750,6 +783,7 @@ class QuickLaunchWidget(BaseWidget):
         self._apply_results(results)
 
     def _apply_results(self, results: list):
+        prev_selected = self._selected_index
         self._selected_index = -1
 
         if not results:
@@ -771,7 +805,11 @@ class QuickLaunchWidget(BaseWidget):
         if count > 0:
             scroll_val = self._pending_scroll_value
             self._pending_scroll_value = -1
-            self._set_selected(self._next_selectable(-1, 1, count))
+            # Preserve current selection when refreshing; only reset on first load
+            if prev_selected > 0 and prev_selected < count:
+                self._set_selected(prev_selected)
+            else:
+                self._set_selected(self._next_selectable(-1, 1, count))
             if scroll_val >= 0:
                 QTimer.singleShot(
                     0,
