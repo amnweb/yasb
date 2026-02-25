@@ -17,6 +17,7 @@ from core.utils.widgets.quick_launch.providers import (
     DevToolsProvider,
     EmojiProvider,
     FileSearchProvider,
+    GithubNotificationsProvider,
     HackerNewsProvider,
     IpInfoProvider,
     KillProcessProvider,
@@ -27,6 +28,7 @@ from core.utils.widgets.quick_launch.providers import (
     UnitConverterProvider,
     VSCodeProvider,
     WebSearchProvider,
+    WindowsTerminalProvider,
     WindowSwitcherProvider,
     WorldClockProvider,
 )
@@ -52,8 +54,10 @@ PROVIDER_REGISTRY: dict[str, type[BaseProvider]] = {
     "unit_converter": UnitConverterProvider,
     "web_search": WebSearchProvider,
     "window_switcher": WindowSwitcherProvider,
+    "windows_terminal": WindowsTerminalProvider,
     "world_clock": WorldClockProvider,
     "vscode": VSCodeProvider,
+    "github_notifications": GithubNotificationsProvider,
 }
 
 
