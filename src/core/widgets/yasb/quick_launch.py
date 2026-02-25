@@ -64,10 +64,12 @@ class ResultListModel(QAbstractListModel):
         self._dpr: float = 1.0
 
     def flags(self, index: QModelIndex) -> Qt.ItemFlag:
-        default = super().flags(index)
         if not index.isValid():
-            return default
+            return super().flags(index)
         result = self.result_at(index.row())
+        if result and result.is_separator:
+            return Qt.ItemFlag.ItemIsEnabled
+        default = super().flags(index)
         if result and result.action_data.get("path"):
             return default | Qt.ItemFlag.ItemIsDragEnabled
         return default
@@ -217,12 +219,22 @@ class ResultListModel(QAbstractListModel):
 class ResultItemDelegate(QStyledItemDelegate):
     """Delegate that paints result items using QListView CSS for styling."""
 
-    def __init__(self, icon_size: int, show_icons: bool, desc_style_label: QLabel, parent=None):
+    def __init__(
+        self,
+        icon_size: int,
+        show_icons: bool,
+        desc_style_label: QLabel,
+        sep_style_label: QLabel,
+        compact_text: bool = False,
+        parent=None,
+    ):
         super().__init__(parent)
         self._icon_size = icon_size
         self._show_icons = show_icons
         self._spacing = 12
         self._desc_style_label = desc_style_label
+        self._sep_style_label = sep_style_label
+        self._compact_text = compact_text
 
     def _get_desc_font(self) -> QFont:
         """Get description font from CSS style probe."""
@@ -234,12 +246,15 @@ class ResultItemDelegate(QStyledItemDelegate):
 
     def sizeHint(self, option: QStyleOptionViewItem, index: QModelIndex) -> QSize:
         result: ProviderResult | None = index.data(ResultListModel.RESULT_ROLE)
-        title_font = option.font
-        title_fm = QFontMetrics(title_font)
+        if result and result.is_separator:
+            m = self._sep_style_label.contentsMargins()
+            fm = QFontMetrics(self._sep_style_label.font())
+            return QSize(option.rect.width(), fm.height() + m.top() + m.bottom())
+        title_fm = QFontMetrics(option.font)
         text_h = title_fm.height()
-        if result and result.description:
+        if result and result.description and not self._compact_text:
             desc_fm = QFontMetrics(self._get_desc_font())
-            text_h += 3 + desc_fm.height()
+            text_h += 4 + desc_fm.height()
         content_h = max(text_h, self._icon_size if self._show_icons else 0)
         # Let Qt style system add CSS padding from ::item { padding: ... }
         opt = QStyleOptionViewItem(option)
@@ -257,16 +272,28 @@ class ResultItemDelegate(QStyledItemDelegate):
         painter.setClipping(True)
         painter.setClipRect(option.rect)
 
-        # Let Qt draw the item background (handles ::item, ::item:hover, ::item:selected CSS)
+        result: ProviderResult | None = index.data(ResultListModel.RESULT_ROLE)
+
+        if result and result.is_separator:
+            m = self._sep_style_label.contentsMargins()
+            painter.setFont(self._sep_style_label.font())
+            painter.setPen(self._sep_style_label.palette().color(QPalette.ColorRole.WindowText))
+            painter.drawText(
+                option.rect.adjusted(m.left(), m.top(), -m.right(), -m.bottom()),
+                Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
+                result.title,
+            )
+            painter.restore()
+            return
+
         opt = QStyleOptionViewItem(option)
         self.initStyleOption(opt, index)
         opt.text = ""
         opt.icon = QIcon()
         opt.decorationSize = QSize(0, 0)
         style = opt.widget.style() if opt.widget else QApplication.style()
-        style.drawPrimitive(QStyle.PrimitiveElement.PE_PanelItemViewItem, opt, painter, opt.widget)
 
-        result: ProviderResult | None = index.data(ResultListModel.RESULT_ROLE)
+        style.drawPrimitive(QStyle.PrimitiveElement.PE_PanelItemViewItem, opt, painter, opt.widget)
         if not result:
             painter.restore()
             return
@@ -289,11 +316,32 @@ class ResultItemDelegate(QStyledItemDelegate):
         title_color = option.palette.color(QPalette.ColorRole.Text)
         title_fm = QFontMetrics(title_font)
 
-        if result.description:
+        if result.description and self._compact_text:
             desc_font = self._get_desc_font()
             desc_color = self._get_desc_color()
             desc_fm = QFontMetrics(desc_font)
-            text_block_h = title_fm.height() + 3 + desc_fm.height()
+            # Reserve at most half the row for the description, then give the rest to the title
+            desc_natural_w = desc_fm.horizontalAdvance(result.description)
+            desc_max_w = max(0, text_w // 2)
+            desc_w = min(desc_natural_w, desc_max_w)
+            title_w = max(0, text_w - desc_w - self._spacing)
+
+            title_rect = QRect(x, rect.y(), title_w, rect.height())
+            painter.setFont(title_font)
+            painter.setPen(title_color)
+            elided = title_fm.elidedText(result.title, Qt.TextElideMode.ElideRight, title_w)
+            painter.drawText(title_rect, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, elided)
+
+            desc_rect = QRect(rect.right() - desc_w, rect.y(), desc_w, rect.height())
+            painter.setFont(desc_font)
+            painter.setPen(desc_color)
+            elided_desc = desc_fm.elidedText(result.description, Qt.TextElideMode.ElideRight, desc_w)
+            painter.drawText(desc_rect, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter, elided_desc)
+        elif result.description:
+            desc_font = self._get_desc_font()
+            desc_color = self._get_desc_color()
+            desc_fm = QFontMetrics(desc_font)
+            text_block_h = title_fm.height() + 4 + desc_fm.height()
             text_y = rect.y() + (rect.height() - text_block_h) // 2
 
             title_rect = QRect(x, text_y, text_w, title_fm.height())
@@ -302,7 +350,7 @@ class ResultItemDelegate(QStyledItemDelegate):
             elided = title_fm.elidedText(result.title, Qt.TextElideMode.ElideRight, text_w)
             painter.drawText(title_rect, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, elided)
 
-            desc_rect = QRect(x, title_rect.bottom() + 3, text_w, desc_fm.height())
+            desc_rect = QRect(x, title_rect.bottom() + 4, text_w, desc_fm.height())
             painter.setFont(desc_font)
             painter.setPen(desc_color)
             elided_desc = desc_fm.elidedText(result.description, Qt.TextElideMode.ElideRight, text_w)
@@ -426,6 +474,12 @@ class QuickLaunchWidget(BaseWidget):
         """Called when the fade-out animation finishes."""
         if not (self._popup and self._popup._is_closing):
             return
+        # Notify all active providers of deactivation so they can clear caches
+        for p in self._service.providers:
+            try:
+                p.on_deactivate()
+            except Exception:
+                pass
         self._pending_query_id = None
         self._active_prefix = None
         self._popup = None
@@ -550,19 +604,19 @@ class QuickLaunchWidget(BaseWidget):
             .results-list-view QScrollBar:vertical {
                 border: none;
                 background: transparent;
-                width: 6px;
-                margin: 4px 2px 4px 0;
+                width: 4px;
+                margin: 0;
             }
             .results-list-view QScrollBar::handle:vertical {
-                background: rgba(255, 255, 255, 0.2);
-                min-height: 20px;
-                border-radius: 3px;
+                background: rgba(255, 255, 255, 0.15);
+                min-height: 30px;
+                border-radius: 2px;
             }
             .results-list-view QScrollBar::handle:vertical:hover {
-                background: rgba(255, 255, 255, 0.3);
+                background: rgba(255, 255, 255, 0.25);
             }
             .results-list-view QScrollBar::handle:vertical:pressed {
-                background: rgba(255, 255, 255, 0.35);
+                background: rgba(255, 255, 255, 0.3);
             }
             .results-list-view QScrollBar::add-line:vertical,
             .results-list-view QScrollBar::sub-line:vertical {
@@ -588,12 +642,23 @@ class QuickLaunchWidget(BaseWidget):
         self._result_model = ResultListModel(results_view)
         results_view.setModel(self._result_model)
 
-        # Hidden style probe for description CSS
+        # Hidden style probes for CSS
         desc_style_label = QLabel(results_view)
         desc_style_label.setProperty("class", "description")
         desc_style_label.setVisible(False)
 
-        delegate = ResultItemDelegate(self.config.icon_size, self.config.show_icons, desc_style_label, results_view)
+        sep_style_label = QLabel(results_view)
+        sep_style_label.setProperty("class", "separator")
+        sep_style_label.setVisible(False)
+
+        delegate = ResultItemDelegate(
+            self.config.icon_size,
+            self.config.show_icons,
+            desc_style_label,
+            sep_style_label,
+            compact_text=self.config.compact_text,
+            parent=results_view,
+        )
         results_view.setItemDelegate(delegate)
 
         # View signals
@@ -718,6 +783,7 @@ class QuickLaunchWidget(BaseWidget):
         self._apply_results(results)
 
     def _apply_results(self, results: list):
+        prev_selected = self._selected_index
         self._selected_index = -1
 
         if not results:
@@ -735,10 +801,15 @@ class QuickLaunchWidget(BaseWidget):
         self._result_model.set_results(results, self.config.icon_size, self._dpr)
         self._clear_preview()
 
-        if self._result_model.rowCount() > 0:
+        count = self._result_model.rowCount()
+        if count > 0:
             scroll_val = self._pending_scroll_value
             self._pending_scroll_value = -1
-            self._set_selected(0)
+            # Preserve current selection when refreshing; only reset on first load
+            if prev_selected > 0 and prev_selected < count:
+                self._set_selected(prev_selected)
+            else:
+                self._set_selected(self._next_selectable(-1, 1, count))
             if scroll_val >= 0:
                 QTimer.singleShot(
                     0,
@@ -780,7 +851,7 @@ class QuickLaunchWidget(BaseWidget):
         if not self._result_model:
             return
         result = self._result_model.result_at(index)
-        if not result:
+        if not result or result.is_separator:
             return
 
         provider = self._get_provider(result.provider)
@@ -802,10 +873,10 @@ class QuickLaunchWidget(BaseWidget):
         if 0 <= index < self._result_model.rowCount():
             model_index = self._result_model.index(index)
             self._popup.results_view.setCurrentIndex(model_index)
-            if index > 0:
-                self._popup.results_view.scrollTo(model_index, QListView.ScrollHint.EnsureVisible)
-            else:
+            if index <= 1:
                 self._popup.results_view.scrollToTop()
+            else:
+                self._popup.results_view.scrollTo(model_index, QListView.ScrollHint.EnsureVisible)
             self._update_preview(index)
         else:
             self._popup.results_view.clearSelection()
@@ -1010,17 +1081,27 @@ class QuickLaunchWidget(BaseWidget):
             return
         if not self._popup or not self._popup.isVisible():
             return
-        self._stop_loader()
+        if not any(getattr(r, "is_loading", False) for r in results):
+            self._stop_loader()
         self._apply_results(results)
+
+    def _next_selectable(self, current: int, direction: int, count: int) -> int:
+        idx = current + direction
+        while 0 <= idx < count:
+            result = self._result_model.result_at(idx)
+            if not result or not result.is_separator:
+                return idx
+            idx += direction
+        return current
 
     def _handle_key_press(self, event):
         key = event.key()
         count = self._result_model.rowCount() if self._result_model else 0
         if key == Qt.Key.Key_Down and count > 0:
-            self._set_selected(min(self._selected_index + 1, count - 1))
+            self._set_selected(self._next_selectable(self._selected_index, 1, count))
             return event.accept()
         if key == Qt.Key.Key_Up and count > 0:
-            self._set_selected(max(self._selected_index - 1, 0))
+            self._set_selected(self._next_selectable(self._selected_index, -1, count))
             return event.accept()
         if key in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
             if 0 <= self._selected_index < count:
@@ -1038,7 +1119,7 @@ class QuickLaunchWidget(BaseWidget):
         if not self._result_model:
             return
         result = self._result_model.result_at(index)
-        if not result:
+        if not result or result.is_separator:
             return
         # Home page item - activate prefix chip
         if result.action_data.get("_home"):

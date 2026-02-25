@@ -32,7 +32,6 @@ class AppListLoader(QThread):
 
         filter_keywords = {
             "readme",
-            "help",
             "documentation",
             "license",
             "setup",
@@ -42,6 +41,7 @@ class AppListLoader(QThread):
         strict_filter_keywords = {
             "uninstall",
             "installer",
+            "help",
         }
 
         # Pre-compile regex for strict keywords

@@ -7,6 +7,7 @@ from .currency import *
 from .dev_tools import *
 from .emoji import *
 from .file_search import *
+from .github_notifications import *
 from .hacker_news import *
 from .ip_info import *
 from .kill_process import *
@@ -18,4 +19,6 @@ from .unit_converter import *
 from .vscode import *
 from .web_search import *
 from .window_switcher import *
+from .windows_terminal import *
 from .world_clock import *
+from .wsl import *
