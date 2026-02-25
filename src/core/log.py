@@ -10,6 +10,10 @@ from PyQt6.QtCore import QtMsgType, qFormatLogMessage, qInstallMessageHandler
 from core.config import get_config_dir
 from settings import APP_NAME, BUILD_VERSION, DEFAULT_LOG_FILENAME
 
+# Silence qasync debug logs
+qasync_logger = logging.getLogger("qasync")
+qasync_logger.setLevel(logging.WARNING)
+
 LOG_PATH = join(get_config_dir(), DEFAULT_LOG_FILENAME)
 
 LOG_FORMAT = "%(asctime)s,%(msecs)03d [%(levelname)s] [%(threadName)s] [%(name)s/%(filename)s:%(lineno)d]: %(message)s"
