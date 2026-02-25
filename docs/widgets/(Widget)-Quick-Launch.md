@@ -13,6 +13,7 @@ The Quick Launch widget provides a Spotlight style search launcher accessible fr
 | `icon_size`          | int    | `32`                                                                                | Size of result icons in pixels.                                                                                         |
 | `home_page`          | bool   | `true`                                                                              | Show provider shortcut tiles when search is empty.                                                                      |
 | `compact_mode`       | bool   | `false`                                                                             | When enabled, the popup starts collapsed to just the search bar and only expands to show results when you start typing. |
+| `compact_text`       | bool   | `false`                                                                             | When enabled, each result row is single-line: the description is shown inline on the right side instead of on a second line below the title. |
 | `providers`          | dict   | See below                                                                           | Configuration for each search provider.                                                                                 |
 | `popup`              | dict   | See below                                                                           | Popup window appearance settings.                                                                                       |
 | `animation`          | dict   | `{enabled: true, type: "fadeInOut", duration: 200}`                                 | Widget animation settings.                                                                                              |
@@ -74,6 +75,7 @@ Quick Launch uses a plugin-based provider system. Each provider handles a specif
 - [Window Switcher](#window-switcher-provider)
 - [Windows Terminal](#windows-terminal-provider)
 - [World Clock](#world-clock-provider)
+- [WSL](#wsl-provider)
 
 ### Apps Provider
 
@@ -551,6 +553,26 @@ Browse and launch Windows Terminal profiles. Type `wt` to list all available pro
 > [!NOTE]
 > The provider re-discovers installed terminals each time the popup is opened, so newly installed variants or profiles are picked up automatically.
 
+### WSL Provider
+
+Browse and manage Windows Subsystem for Linux (WSL) distributions. Type `wsl` to list all installed distributions with their running state. Supports starting and stopping distros, opening a shell, setting the default, and unregistering. Optionally shows distributions available to install from the online catalog.
+
+| Option        | Type   | Default  | Description                                                                          |
+| ------------- | ------ | -------- | ------------------------------------------------------------------------------------ |
+| `enabled`     | bool   | `false`  | Enable/disable the WSL provider.                                                     |
+| `prefix`      | string | `"wsl"`  | Trigger prefix. Use `"*"` to include in default results.                             |
+| `priority`    | int    | `0`      | Sort order when multiple providers share the same prefix. Lower values appear first. |
+| `show_online` | bool   | `true`   | Show distributions available to install from the online catalog below installed ones. |
+
+**Usage examples:**
+
+- Type `wsl` to list all installed distributions.
+- Type `wsl ubuntu` to filter by name.
+- Press **Enter** on a running distro to **stop** it.
+- Press **Enter** on a stopped distro to **start** it.
+- Right-click a distro for **Open shell**, **Start/Stop**, **Set as default**, and **Unregister**.
+- Type `wsl` and press Enter on an online distro to open a terminal and run `wsl --install -d <name>`.
+
 ### World Clock Provider
 
 Show current time in cities around the world. Type `tz` to see your pinned cities (or a default set if nothing is pinned), or `tz tokyo` to filter by city name. Click a result to copy the formatted time to the clipboard. Right-click a city to pin or unpin it. Pinned cities appear first when searching and are shown as the default view.
@@ -598,6 +620,7 @@ Prefixes are configurable per provider. Set `prefix` to `"*"` to include a provi
 | `win`  | Window Switcher      | `win notepad`      |
 | `wt`   | Windows Terminal     | `wt powershell`    |
 | `tz`   | World Clock          | `tz tokyo`         |
+| `wsl`  | WSL                  | `wsl ubuntu`       |
 
 ## Example Minimal Configuration enabling just the apps provider
 
@@ -745,6 +768,11 @@ quick_launch:
         enabled: true
         prefix: "tz"
         priority: 22
+      wsl:
+        enabled: true
+        prefix: "wsl"
+        priority: 23
+        show_online: true
     popup:
       width: 720
       height: 480
@@ -793,6 +821,8 @@ quick_launch:
     - **_window_switcher:_** Search and switch to open application windows with prefix `win`.
     - **_windows_terminal:_** Browse and launch Windows Terminal profiles (Stable, Preview, Canary) with prefix `wt`.
     - **_world_clock:_** Show current time in cities worldwide with prefix `tz`. Pin cities via right-click.
+    - **_wsl:_** Browse and manage WSL distributions with prefix `wsl`. Start/stop distros, open a shell, set default, and unregister. Optionally shows the online install catalog.
+- **compact_text:** When enabled, each result row is rendered as a single line with the description shown inline on the right. Useful when you want a denser list with more results visible at once.
 - **popup:** Popup window appearance settings.
     - **_width:_** Width of the popup window in pixels.
     - **_height:_** Height of the popup window in pixels.

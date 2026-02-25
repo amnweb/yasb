@@ -181,6 +181,13 @@ class GithubNotificationsProviderConfig(CustomBaseModel):
     token: str = "env"
 
 
+class WslProviderConfig(CustomBaseModel):
+    enabled: bool = False
+    prefix: str = "wsl"
+    priority: int = 0
+    show_online: bool = True
+
+
 class QuickLaunchProvidersConfig(CustomBaseModel):
     apps: AppsProviderConfig = AppsProviderConfig()
     bookmarks: BookmarksProviderConfig = BookmarksProviderConfig()
@@ -205,6 +212,7 @@ class QuickLaunchProvidersConfig(CustomBaseModel):
     window_switcher: WindowSwitcherProviderConfig = WindowSwitcherProviderConfig()
     windows_terminal: WindowsTerminalProviderConfig = WindowsTerminalProviderConfig()
     world_clock: WorldClockProviderConfig = WorldClockProviderConfig()
+    wsl: WslProviderConfig = WslProviderConfig()
 
 
 class QuickLaunchConfig(CustomBaseModel):
@@ -215,6 +223,7 @@ class QuickLaunchConfig(CustomBaseModel):
     icon_size: int = 32
     home_page: bool = False
     compact_mode: bool = False
+    compact_text: bool = False
     providers: QuickLaunchProvidersConfig = QuickLaunchProvidersConfig()
     popup: QuickLaunchPopupConfig = QuickLaunchPopupConfig()
     animation: AnimationConfig = AnimationConfig()

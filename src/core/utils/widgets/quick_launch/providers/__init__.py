@@ -21,3 +21,4 @@ from .web_search import *
 from .window_switcher import *
 from .windows_terminal import *
 from .world_clock import *
+from .wsl import *

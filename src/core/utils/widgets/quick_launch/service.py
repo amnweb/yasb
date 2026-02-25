@@ -31,6 +31,7 @@ from core.utils.widgets.quick_launch.providers import (
     WindowsTerminalProvider,
     WindowSwitcherProvider,
     WorldClockProvider,
+    WslProvider,
 )
 from core.utils.widgets.quick_launch.workers import QueryWorker, StartMenuWatcherThread
 
@@ -58,6 +59,7 @@ PROVIDER_REGISTRY: dict[str, type[BaseProvider]] = {
     "world_clock": WorldClockProvider,
     "vscode": VSCodeProvider,
     "github_notifications": GithubNotificationsProvider,
+    "wsl": WslProvider,
 }
 
 
