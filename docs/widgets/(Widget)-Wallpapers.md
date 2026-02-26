@@ -5,7 +5,7 @@
 | `tooltip`  | boolean  | `true`        | Whether to show the tooltip on hover. |
 | `update_interval`  | integer  | 60        | The interval in seconds to update the wallpaper. Must be between 60 and 86400. |
 | `change_automatically` | boolean | `false`       | Whether to automatically change the wallpaper. |
-| `image_path`      | string/list   | `""`        | The path(s) to the folder(s) containing images for the wallpaper. Can be a single string or a list of strings. This field is required. |
+| `image_path`      | string/list   | `""`        | The path(s) to the folder(s) containing images for the wallpaper. Can be a single string or a list of strings. Supports Windows environment variables (e.g., `%USERPROFILE%`, `%USERNAME%`, `%APPDATA%`). This field is required. |
 | `gallery`         | object   | `{}`        | The gallery options for the wallpaper widget. |
 | `run_after`       | list     | `[]`        | A list of functions to run after the wallpaper is updated. |
 | `animation`         | dict    | `{'enabled': true, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
@@ -20,7 +20,8 @@ wallpapers:
   options:
     label: "<span>\udb83\ude09</span>"
     # Example path to folder with images. Can be a single string or a list of strings.
-    image_path: "C:\\Users\\{Username}\\Images" 
+    # Supports Windows environment variables like %USERPROFILE%, %USERNAME%, %APPDATA%, etc.
+    image_path: "%USERPROFILE%\\Images"
     gallery:
         enabled: true
         blur: true
@@ -41,9 +42,10 @@ wallpapers:
   options:
     label: "<span>\udb83\ude09</span>"
     # Example path to folder with images. Can be a single string or a list of strings.
-    # image_path: "C:\\Users\\{Username}\\Images" 
+    # Supports Windows environment variables like %USERPROFILE%, %USERNAME%, %APPDATA%, etc.
+    # image_path: "%USERPROFILE%\\Images" 
     image_path: 
-      - "C:\\Users\\{Username}\\Images"
+      - "%USERPROFILE%\\Images"
       - "D:\\Wallpapers\\Nature"
     change_automatically: false # Automatically change wallpaper
     update_interval: 60 # If change_automatically is true, update interval in seconds
@@ -82,7 +84,7 @@ wallpapers:
 - **update_interval:** The interval in seconds to update the wallpaper. Must be between 60 and 86400.
 - **tooltip:** Whether to show the tooltip on hover.
 - **change_automatically:** Whether to automatically change the wallpaper.
-- **image_path:** The path(s) to the folder(s) containing images for the wallpaper. Can be a single string or a list of strings. This field is required.
+- **image_path:** The path(s) to the folder(s) containing images for the wallpaper. Can be a single string or a list of strings. Supports Windows environment variables (e.g., `%USERPROFILE%`, `%USERNAME%`, `%APPDATA%`). This field is required.
 - **gallery:** The gallery options for the wallpaper widget.
   - **enabled:** Whether to enable the gallery.
   - **blur:** Whether to blur the background when the gallery is open.

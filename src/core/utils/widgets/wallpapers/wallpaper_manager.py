@@ -41,9 +41,13 @@ class WallpaperManager(QObject):
 
         self._event_service = EventService()
 
-        # Register Set Wallpaper handler
         self._set_wallpaper_signal.connect(self.change_background)
         self._event_service.register_event("set_wallpaper_signal", self._set_wallpaper_signal)
+
+    @staticmethod
+    def _expand_path(path: str) -> str:
+        """Expand environment variables in the path."""
+        return os.path.expandvars(path)
 
     def configure(
         self, image_path: str | list[str], update_interval: int, change_automatically: bool, run_after: list[str]
@@ -105,11 +109,12 @@ class WallpaperManager(QObject):
 
         wallpapers = []
         for path in self._image_paths:
-            if not os.path.exists(path):
-                logging.warning(f"Invalid image path: {path}")
+            expanded_path = self._expand_path(path)
+            if not os.path.exists(expanded_path):
+                logging.warning(f"Invalid image path: {expanded_path}")
                 continue
 
-            for root, _, files in os.walk(path):
+            for root, _, files in os.walk(expanded_path):
                 for f in files:
                     if f.lower().endswith((".png", ".jpg", ".jpeg", ".bmp", ".gif")):
                         wallpapers.append(os.path.join(root, f))

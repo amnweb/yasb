@@ -233,6 +233,11 @@ class ImageLoader(QRunnable):
 class ImageGallery(QMainWindow, BaseStyledWidget):
     """ImageGallery displays a gallery of images with navigation and lazy loading features."""
 
+    @staticmethod
+    def _expand_path(path: str) -> str:
+        """Expand environment variables in the path."""
+        return os.path.expandvars(path)
+
     def __init__(self, image_paths, gallery):
         super().__init__()
         self.gallery = gallery
@@ -245,8 +250,9 @@ class ImageGallery(QMainWindow, BaseStyledWidget):
 
         all_files = []
         for path in self.image_paths:
-            if os.path.exists(path):
-                for root, dirs, files in os.walk(path):
+            expanded_path = self._expand_path(path)
+            if os.path.exists(expanded_path):
+                for root, dirs, files in os.walk(expanded_path):
                     for f in files:
                         if f.lower().endswith(("png", "jpg", "jpeg", "gif", "bmp")):
                             all_files.append(os.path.join(root, f))
