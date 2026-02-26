@@ -36,7 +36,7 @@ from core.utils.widgets.open_meteo.widgets import (
     HourlyData,
     HourlyDataLineWidget,
     HourlyTemperatureScrollArea,
-    render_svg_to_pixmap,
+    get_weather_icon_pixmap,
 )
 from core.validation.widgets.yasb.open_meteo import OpenMeteoWidgetConfig
 from core.widgets.base import BaseWidget
@@ -498,12 +498,12 @@ class OpenMeteoWidget(BaseWidget):
             layout_day.setAlignment(Qt.AlignmentFlag.AlignCenter)
             frame_day.setLayout(layout_day)
 
-            # 1. SVG icon
+            # 1. Weather icon
             row_day_icon_label = QLabel()
             day_code = self._weather_data.get(f"{{day{i}_weather_code}}", 0)
-            svg_str, _, _ = get_weather_icon(int(day_code), True)
+            _, icon_key, _ = get_weather_icon(int(day_code), True)
             dpr = row_day_icon_label.devicePixelRatioF()
-            pixmap = render_svg_to_pixmap(svg_str, self.config.weather_card.icon_size, dpr)
+            pixmap = get_weather_icon_pixmap(icon_key, self.config.weather_card.icon_size, dpr)
             row_day_icon_label.setPixmap(pixmap)
             row_day_icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             layout_day.addWidget(row_day_icon_label)

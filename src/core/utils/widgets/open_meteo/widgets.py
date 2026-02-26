@@ -2,6 +2,8 @@ import re
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
+from functools import lru_cache
+from pathlib import Path
 from typing import Any, cast, override
 
 from PyQt6.QtCore import QPoint, QPointF, QRectF, QSize, Qt, pyqtSignal
@@ -22,9 +24,10 @@ from PyQt6.QtGui import (
 from PyQt6.QtSvg import QSvgRenderer
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QScrollArea, QWidget
 
+from core.config import get_config_dir
 from core.utils.utilities import refresh_widget_style
 from core.utils.widgets.open_meteo.animation import WeatherAnimationManager
-from core.utils.widgets.open_meteo.icons import get_weather_icon
+from core.utils.widgets.open_meteo.icons import ICON_MAP, get_weather_icon
 from core.utils.widgets.open_meteo.utils import (
     ColorFetchWidget,
     copy_painter_state,
@@ -180,13 +183,52 @@ class HourlyTemperatureScrollArea(QScrollArea):
 def render_svg_to_pixmap(svg_data: str, size: int, dpr: float = 1.0) -> QPixmap:
     """Render an SVG string to a QPixmap at the requested size."""
     renderer = QSvgRenderer(svg_data.encode("utf-8"))
-    pixmap = QPixmap(int(size * dpr), int(size * dpr))
-    pixmap.setDevicePixelRatio(dpr)
+    logical_size = float(size)
+    physical_size = int(logical_size * dpr)
+
+    pixmap = QPixmap(physical_size, physical_size)
     pixmap.fill(Qt.GlobalColor.transparent)
+    pixmap.setDevicePixelRatio(dpr)
+
     painter = QPainter(pixmap)
-    renderer.render(painter)
+    renderer.render(painter, QRectF(0.0, 0.0, logical_size, logical_size))
     painter.end()
     return pixmap
+
+
+@lru_cache(maxsize=32)
+def get_weather_icon_pixmap(icon_key: str, size: int, dpr: float = 1.0) -> QPixmap:
+    """Get a QPixmap for a weather icon, checking config directory first.
+
+    Checks ``.config/yasb/icons/openmeteo/{icon_key}.png`` and then ``.svg``
+    before falling back to the default inline SVG.
+    """
+    config_dir = get_config_dir()
+    icon_path_png = Path(config_dir) / "icons" / "openmeteo" / f"{icon_key}.png"
+    icon_path_svg = Path(config_dir) / "icons" / "openmeteo" / f"{icon_key}.svg"
+
+    if icon_path_png.exists():
+        pixmap = QPixmap(str(icon_path_png))
+        if not pixmap.isNull():
+            scaled_pixmap = pixmap.scaled(
+                int(size * dpr),
+                int(size * dpr),
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation,
+            )
+            scaled_pixmap.setDevicePixelRatio(dpr)
+            return scaled_pixmap
+
+    if icon_path_svg.exists():
+        try:
+            with open(icon_path_svg, "r", encoding="utf-8") as f:
+                svg_data = f.read()
+            return render_svg_to_pixmap(svg_data, size, dpr)
+        except OSError:
+            pass
+
+    svg_data = ICON_MAP.get(icon_key, ICON_MAP["default"])
+    return render_svg_to_pixmap(svg_data, size, dpr)
 
 
 class HourlyDataLineWidget(QFrame):
@@ -410,11 +452,11 @@ class HourlyDataLineWidget(QFrame):
             fg_painter.drawText(QPointF(data_x, data_y), data_text)
 
             # Draw SVG icon
-            svg_str, _, _ = get_weather_icon(
+            _, icon_key, _ = get_weather_icon(
                 self.hourly_data[i].weather_code,
                 self.hourly_data[i].is_day,
             )
-            pixmap = render_svg_to_pixmap(svg_str, icon_size.width(), dpr)
+            pixmap = get_weather_icon_pixmap(icon_key, icon_size.width(), dpr)
             icon_x = x_offset - icon_size.width() / 2
             icon_y = data_y - data_rect.height() - icon_size.height()
             fg_painter.drawPixmap(
