@@ -95,10 +95,6 @@ class GithubNotificationsProvider(BaseProvider):
         self._cache_time: float = 0
         self._cache_ttl: float = 60  # Keep cache for 60 seconds after popup closes
 
-    def on_deactivate(self) -> None:
-        """Record deactivation time; cache stays valid for ``_cache_ttl`` seconds."""
-        self._cache_time = time.monotonic()
-
     def _fetch_in_background(self):
         """Fetch notifications via GitHubDataManager in a background thread."""
 
@@ -107,6 +103,7 @@ class GithubNotificationsProvider(BaseProvider):
                 data = GitHubDataManager.fetch_all_notifications(self._token)
                 self._cached_data = data
                 self._fetch_error = None
+                self._cache_time = time.monotonic()
                 # Refresh bar widget so it picks up the latest data (only if there are unread items)
                 if self._token and self._token == GitHubDataManager._token:
                     if any(n.get("unread") for n in data):
