@@ -80,6 +80,9 @@ class BaseProvider(ABC):
         """Handle an action from an inline edit form in the preview panel."""
         return ProviderMenuActionResult()
 
+    def cancel_edit(self) -> None:
+        """Called when the preview panel edit form is dismissed. Override to reset editing state."""
+
     def on_deactivate(self) -> None:
         """Called when the popup is closed. Override to clear caches or state."""
 

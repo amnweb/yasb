@@ -159,6 +159,7 @@ class GithubNotificationsProvider(BaseProvider):
         ):
             self._cached_data = None
             self._fetch_error = None
+            self._cache_time = 0
 
         # Fetch fresh data when cache is empty (first call or after popup was closed)
         if self._cached_data is None:

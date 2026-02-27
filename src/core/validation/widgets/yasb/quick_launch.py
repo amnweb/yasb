@@ -116,7 +116,7 @@ class ColorProviderConfig(CustomBaseModel):
 
 
 class ClipboardHistoryProviderConfig(CustomBaseModel):
-    enabled: bool = True
+    enabled: bool = False
     prefix: str = "cb"
     priority: int = 0
     max_items: int = 30
@@ -188,6 +188,13 @@ class WslProviderConfig(CustomBaseModel):
     show_online: bool = True
 
 
+class SshProviderConfig(CustomBaseModel):
+    enabled: bool = False
+    prefix: str = "ssh"
+    priority: int = 0
+    ssh_config_path: str = ""
+
+
 class QuickLaunchProvidersConfig(CustomBaseModel):
     apps: AppsProviderConfig = AppsProviderConfig()
     bookmarks: BookmarksProviderConfig = BookmarksProviderConfig()
@@ -205,6 +212,7 @@ class QuickLaunchProvidersConfig(CustomBaseModel):
     port_viewer: PortViewerProviderConfig = PortViewerProviderConfig()
     settings: SettingsProviderConfig = SettingsProviderConfig()
     snippets: SnippetsProviderConfig = SnippetsProviderConfig()
+    ssh: SshProviderConfig = SshProviderConfig()
     system_commands: SystemCommandsProviderConfig = SystemCommandsProviderConfig()
     unit_converter: UnitConverterProviderConfig = UnitConverterProviderConfig()
     vscode: VSCodeProviderConfig = VSCodeProviderConfig()

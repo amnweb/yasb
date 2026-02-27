@@ -805,8 +805,11 @@ class QuickLaunchWidget(BaseWidget):
         if count > 0:
             scroll_val = self._pending_scroll_value
             self._pending_scroll_value = -1
-            # Preserve current selection when refreshing; only reset on first load
-            if prev_selected > 0 and prev_selected < count:
+            # Only preserve the previous selection during an in-place refresh
+            # (context-menu action). scroll_val >= 0 is set exclusively by
+            # _show_item_context_menu before calling _update_results, so it
+            # distinguishes a refresh from a new query / provider switch.
+            if scroll_val >= 0 and prev_selected > 0 and prev_selected < count:
                 self._set_selected(prev_selected)
             else:
                 self._set_selected(self._next_selectable(-1, 1, count))
@@ -858,6 +861,11 @@ class QuickLaunchWidget(BaseWidget):
         if not provider:
             return
 
+        # Clear stale edit form when right-clicking a different row
+        if index != self._selected_index and self._popup.preview_frame.property("class") == "preview edit":
+            self._clear_preview()
+        self._selected_index = index
+
         menu_result = QuickLaunchContextMenuService.show(self.window(), provider, result, global_pos)
         if menu_result.refresh_results and self._popup and self._popup.isVisible():
             sb = self._popup.results_view.verticalScrollBar()
@@ -886,10 +894,16 @@ class QuickLaunchWidget(BaseWidget):
         """Hide the preview pane and clear its content."""
         if not self._popup:
             return
+        # If an edit form is being dismissed, let the provider silently reset its
+        # edit state (no refresh triggered).
+        if self._popup.preview_frame.property("class") == "preview edit":
+            for p in self._service.providers:
+                p.cancel_edit()
         layout = self._popup.preview_layout
         while layout.count():
             child = layout.takeAt(0)
             if child.widget():
+                child.widget().hide()
                 child.widget().deleteLater()
         self._popup.preview_frame.setProperty("class", "preview")
         self._popup.preview_frame.setVisible(False)
@@ -1137,7 +1151,10 @@ class QuickLaunchWidget(BaseWidget):
         elif should_close is False and self._popup:
             text = self._popup.search_input.text()
             self._update_results(text)
-        # None means no action needed (e.g. inline edit form is already visible)
+        elif should_close is None:
+            # Provider wants the popup to stay open with its preview form visible.
+            # Ensure the clicked/selected row is highlighted and its preview rendered.
+            self._set_selected(index)
 
     def _set_prefix_chip(self, prefix: str, initial_text: str = ""):
         """Activate a prefix chip in the search bar."""

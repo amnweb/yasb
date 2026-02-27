@@ -14,6 +14,7 @@ from .kill_process import *
 from .port_viewer import *
 from .settings import *
 from .snippets import *
+from .ssh import *
 from .system_commands import *
 from .unit_converter import *
 from .vscode import *

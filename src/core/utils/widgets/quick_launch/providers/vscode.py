@@ -188,26 +188,47 @@ class VSCodeProvider(BaseProvider):
             # Sort by score descending, then keep original recency order
             scored_items.sort(key=lambda x: x[0], reverse=True)
 
-        for score, is_folder, uri, unquoted, path, name in scored_items:
-            action_data = {
-                "uri": uri,
-                "is_folder": is_folder,
-            }
-
-            icon = _get_vscode_icon(name, is_folder)
-
-            results.append(
-                ProviderResult(
-                    title=name,
-                    description=str(path),
-                    icon_char=icon,
-                    provider=self.name,
-                    action_data=action_data,
+        if query:
+            # Flat list sorted by score when searching
+            for score, is_folder, uri, unquoted, path, name in scored_items:
+                if len(results) >= self.max_results:
+                    break
+                action_data = {"uri": uri, "is_folder": is_folder}
+                icon = _get_vscode_icon(name, is_folder)
+                results.append(
+                    ProviderResult(
+                        title=name,
+                        description=str(path),
+                        icon_char=icon,
+                        provider=self.name,
+                        action_data=action_data,
+                    )
                 )
-            )
+        else:
+            folders = [item for item in scored_items if item[1]]
+            files = [item for item in scored_items if not item[1]]
 
-            if len(results) >= self.max_results:
-                break
+            def _append_group(group, label):
+                if not group:
+                    return
+                results.append(ProviderResult(title=label, provider=self.name, is_separator=True))
+                for score, is_folder, uri, unquoted, path, name in group:
+                    if len(results) >= self.max_results:
+                        break
+                    action_data = {"uri": uri, "is_folder": is_folder}
+                    icon = _get_vscode_icon(name, is_folder)
+                    results.append(
+                        ProviderResult(
+                            title=name,
+                            description=str(path),
+                            icon_char=icon,
+                            provider=self.name,
+                            action_data=action_data,
+                        )
+                    )
+
+            _append_group(folders, "Folders & Workspaces")
+            _append_group(files, "Files")
 
         return results
 

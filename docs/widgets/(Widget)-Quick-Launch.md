@@ -68,6 +68,7 @@ Quick Launch uses a plugin-based provider system. Each provider handles a specif
 - [Port Viewer](#port-viewer-provider)
 - [Settings](#settings-provider)
 - [Snippets](#snippets-provider)
+- [SSH Connections](#ssh-provider)
 - [System Commands](#system-commands-provider)
 - [Unit Converter](#unit-converter-provider)
 - [VSCode](#vscode-provider)
@@ -438,6 +439,28 @@ Right-click a snippet for options like Copy to clipboard, Edit, or Delete.
 | `priority`   | int    | `0`     | Sort order when multiple providers share the same prefix. Lower values appear first.                                              |
 | `type_delay` | int    | `200`   | Delay in milliseconds before typing starts after the popup closes. Increase if the target window needs more time to regain focus. |
 
+### SSH Provider
+
+Browse and launch SSH connections from your `~/.ssh/config` file. Type `ssh` to list all defined hosts. Supports opening a terminal session normally or as administrator, and copying the SSH command to the clipboard.
+
+| Option            | Type   | Default            | Description                                                                          |
+| ----------------- | ------ | ------------------ | ------------------------------------------------------------------------------------ |
+| `enabled`         | bool   | `false`            | Enable/disable the SSH provider.                                                     |
+| `prefix`          | string | `"ssh"`            | Trigger prefix. Use `"*"` to include in default results.                             |
+| `priority`        | int    | `0`                | Sort order when multiple providers share the same prefix. Lower values appear first. |
+| `ssh_config_path` | string | `"~/.ssh/config"` | Path to the SSH config file to read hosts from.                                      |
+
+**Usage examples:**
+
+- Type `ssh` to list all hosts defined in your SSH config.
+- Type `ssh webserver` to filter by host name, hostname, or username.
+- Click a host to open a terminal session.
+- Right-click a host for **Open**, **Open as Administrator**, **Copy SSH Command**, or **Edit connection**.
+- Select **Edit connection** to open an inline form in the preview panel where you can change the host alias, hostname/IP, user, port, and identity file. The changes are written back to your SSH config file immediately on save.
+
+> [!NOTE]
+> Hosts with a wildcard name (e.g. `Host *`) are automatically skipped. The provider re-reads the config file each time the popup is opened, so newly added hosts are picked up immediately. Editing a host rewrites only that `Host` block — all other entries, comments, and blank lines are preserved.
+
 ### System Commands Provider
 
 Exposes common system actions. Type `>` followed by a command name (e.g., `>shutdown`, `>lock`).
@@ -613,6 +636,7 @@ Prefixes are configurable per provider. Set `prefix` to `"*"` to include a provi
 | `pv`   | Port Viewer          | `pv 80`            |
 | `@`    | Settings             | `@wifi`            |
 | `;`    | Snippets             | `;meeting notes`   |
+| `ssh`  | SSH Connections      | `ssh webserver`    |
 | `>`    | System Commands      | `>lock`            |
 | `~`    | Unit Converter       | `~10 kg to lb`     |
 | `vsc`  | VSCode               | `vsc project`      |
