@@ -20,6 +20,7 @@ class PowerPlanMenuConfig(CustomBaseModel):
     direction: Literal["up", "down"] = "down"
     offset_top: int = 6
     offset_left: int = 0
+    animation_duration: int = 80
 
 
 class PowerPlanCallbacksConfig(CallbacksConfig):

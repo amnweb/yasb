@@ -713,6 +713,7 @@ class ClockWidget(BaseWidget):
             self.config.calendar.round_corners,
             self.config.calendar.round_corners_type,
             self.config.calendar.border_color,
+            animation_duration=self.config.calendar.animation_duration,
         )
         self._yasb_calendar.setProperty("class", "clock-popup calendar")
 
@@ -1020,6 +1021,7 @@ class ClockWidget(BaseWidget):
             self.config.calendar.round_corners,
             self.config.calendar.round_corners_type,
             self.config.calendar.border_color,
+            animation_duration=self.config.calendar.animation_duration,
         )
         popup.setProperty("class", f"clock-popup {class_name}")
         return popup

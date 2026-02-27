@@ -147,6 +147,7 @@ class LanguageWidget(BaseWidget):
             self.config.language_menu.round_corners,
             self.config.language_menu.round_corners_type,
             self.config.language_menu.border_color,
+            animation_duration=self.config.language_menu.animation_duration,
         )
         self._menu.setProperty("class", "language-menu")
 
