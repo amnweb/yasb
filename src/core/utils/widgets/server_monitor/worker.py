@@ -8,7 +8,7 @@ from urllib.parse import urlparse
 
 from PyQt6.QtCore import QThread, pyqtSignal
 
-from settings import DEBUG
+logger = logging.getLogger("server_monitor")
 
 
 class ServerCheckWorker(QThread):
@@ -49,14 +49,14 @@ class ServerCheckWorker(QThread):
 
     def check_single_server(self, server: str, ssl_verify: bool, ssl_check: bool, timeout: int) -> dict:
         ping_result = self.ping_server(server, ssl_verify, ssl_check, timeout)
-        if DEBUG:
-            logging.debug(f"Server: {server} - {ping_result}")
+
         return {
             "name": server,
             "ssl": ping_result["ssl"],
             "response_time": f"{ping_result['response_time']}ms" if ping_result["response_time"] else None,
             "response_code": ping_result["response_code"],
             "status": ping_result["status"],
+            "no_internet": ping_result.get("no_internet", False),
         }
 
     def ping_server(self, server: str, ssl_verify: bool, ssl_check: bool, timeout: int) -> dict:
@@ -87,15 +87,34 @@ class ServerCheckWorker(QThread):
             if http_status is not None:
                 response_time = int((datetime.now() - start_time).total_seconds() * 1000)
 
-        except OSError:
-            pass
+        except OSError as e:
+            reason = str(e).lower()
+            if "getaddrinfo" in reason or "name or service not known" in reason:
+                logger.debug("Server '%s' is unreachable: no internet connection", server)
+                return {
+                    "status": "Offline",
+                    "response_time": None,
+                    "response_code": None,
+                    "ssl": None,
+                    "no_internet": True,
+                }
+            elif "timed out" in reason:
+                logger.debug("Server '%s' is unreachable: connection timed out", server)
+            else:
+                logger.debug("Server '%s' is unreachable: connection failed", server)
 
         status = "Online" if http_status is not None and http_status < 500 else "Offline"
 
         # Only attempt SSL expiry checks when online.
         ssl_days = self.check_ssl_expiry(final_hostname, timeout) if (ssl_check and status == "Online") else None
 
-        return {"status": status, "response_time": response_time, "response_code": http_status, "ssl": ssl_days}
+        return {
+            "status": status,
+            "response_time": response_time,
+            "response_code": http_status,
+            "ssl": ssl_days,
+            "no_internet": False,
+        }
 
     def check_ssl_expiry(self, hostname: str, timeout: int) -> int | None:
         try:
@@ -105,5 +124,10 @@ class ServerCheckWorker(QThread):
                     cert = ssock.getpeercert()
                     exp_date = datetime.strptime(cert["notAfter"], "%b %d %H:%M:%S %Y %Z")
                     return (exp_date - datetime.now()).days
-        except OSError:
+        except OSError as e:
+            reason = str(e).lower()
+            if "getaddrinfo" in reason or "name or service not known" in reason:
+                logger.debug("SSL check skipped for '%s': no internet connection", hostname)
+            else:
+                logger.debug("SSL check failed for '%s': connection error", hostname)
             return None

@@ -3,7 +3,8 @@ import os
 import re
 from datetime import datetime
 
-from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, Qt
+from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, Qt, QUrl
+from PyQt6.QtGui import QDesktopServices
 from PyQt6.QtWidgets import QFrame, QGraphicsOpacityEffect, QHBoxLayout, QLabel, QScrollArea, QVBoxLayout, QWidget
 
 from core.utils.tooltip import set_tooltip
@@ -88,6 +89,9 @@ class ServerMonitor(BaseWidget):
 
         online_count = sum(1 for s in status_list if s.get("status") == "Online")
         offline_count = sum(1 for s in status_list if s.get("status") == "Offline")
+        no_internet = offline_count > 0 and all(
+            s.get("no_internet") for s in status_list if s.get("status") == "Offline"
+        )
         ssl_values = [s["ssl"] for s in status_list if isinstance(s.get("ssl"), int)]
         min_ssl = min(ssl_values) if ssl_values else None
         ssl_warning = bool(min_ssl is not None and min_ssl < self.config.ssl_warning)
@@ -97,13 +101,14 @@ class ServerMonitor(BaseWidget):
                 "online_count": online_count,
                 "offline_count": offline_count,
                 "ssl_warning": ssl_warning,
+                "no_internet": no_internet,
             }
         )
 
         self._server_status_data = status_list
         self._last_refresh_time = datetime.now()
         self._update_label()
-        self._send_notification(run_id, offline_count, ssl_warning)
+        self._send_notification(run_id, offline_count, ssl_warning, no_internet)
 
         if hasattr(self, "dialog") and self.dialog:
             try:
@@ -199,7 +204,7 @@ class ServerMonitor(BaseWidget):
                 self._widget_container, f"{online_count} online, {offline_count} offline of {total_count} servers"
             )
 
-    def _send_notification(self, run_id: int, offline_count: int, ssl_warning: bool) -> None:
+    def _send_notification(self, run_id: int, offline_count: int, ssl_warning: bool, no_internet: bool = False) -> None:
         # Dedupe across multiple widget instances for the same shared-service run.
         service_id = id(self._service)
         if ServerMonitor._last_notified_run_by_service.get(service_id) == run_id:
@@ -207,7 +212,7 @@ class ServerMonitor(BaseWidget):
         ServerMonitor._last_notified_run_by_service[service_id] = run_id
 
         toaster = ToastNotifier()
-        if offline_count > 0 and self.config.desktop_notifications.offline:
+        if offline_count > 0 and self.config.desktop_notifications.offline and not no_internet:
             toaster.show(self._icon_path, "Server Monitor", f"{offline_count} server(s) are offline")
         if ssl_warning and self.config.desktop_notifications.ssl:
             toaster.show(self._icon_path, "Server Monitor", "Some servers have SSL certificate expiring soon")
@@ -388,6 +393,11 @@ class ServerMonitor(BaseWidget):
                     self._animations.append(animation)  # Store animation reference
 
                 row_widget.setProperty("class", f"row {class_name}")
+                row_widget.setCursor(Qt.CursorShape.PointingHandCursor)
+                _server_url = (
+                    f"https://{server_data['name']}" if self.config.ssl_check else f"http://{server_data['name']}"
+                )
+                row_widget.mousePressEvent = lambda _, url=_server_url: (QDesktopServices.openUrl(QUrl(url)), None)[1]
                 row_widget_layout = QVBoxLayout(row_widget)
                 row_widget_layout.setContentsMargins(0, 0, 0, 0)
                 row_widget_layout.setSpacing(0)
