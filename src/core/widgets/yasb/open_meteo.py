@@ -25,6 +25,7 @@ from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.widgets.open_meteo.api import GeocodingFetcher, OpenMeteoDataFetcher
 from core.utils.widgets.open_meteo.icons import get_weather_icon
 from core.utils.widgets.open_meteo.location import (
+    cleanup_stale_entries,
     get_widget_id,
     load_location,
     load_weather_cache,
@@ -41,14 +42,18 @@ from core.utils.widgets.open_meteo.widgets import (
 from core.validation.widgets.yasb.open_meteo import OpenMeteoWidgetConfig
 from core.widgets.base import BaseWidget
 
-logger = logging.getLogger("open_meteo")
-
 
 class OpenMeteoWidget(BaseWidget):
     validation_schema = OpenMeteoWidgetConfig
 
+    # Shared state: one fetcher and instance list per widget_id (widget name)
+    _shared_fetchers: dict[str, "OpenMeteoDataFetcher"] = {}
+    _shared_instances: dict[str, list["OpenMeteoWidget"]] = {}
+    _pending_init_count: int = 0
+
     def __init__(self, config: OpenMeteoWidgetConfig):
         super().__init__(class_name=f"open-meteo-widget {config.class_name}")
+        OpenMeteoWidget._pending_init_count += 1
         self.config = config
         self._label_content = config.label
         self._label_alt_content = config.label_alt
@@ -62,7 +67,6 @@ class OpenMeteoWidget(BaseWidget):
         self._weather_card_daily_widgets: list[ClickableWidget] = []
 
         # Network
-        self._weather_fetcher: OpenMeteoDataFetcher | None = None
         self._geocoding_fetcher: GeocodingFetcher | None = None
 
         # Location
@@ -101,6 +105,12 @@ class OpenMeteoWidget(BaseWidget):
     def _deferred_init(self):
         """Called after the framework has set screen_name / widget_name."""
         self._widget_id = get_widget_id(self)
+
+        # Register this instance in the shared instance list
+        if self._widget_id not in OpenMeteoWidget._shared_instances:
+            OpenMeteoWidget._shared_instances[self._widget_id] = []
+        OpenMeteoWidget._shared_instances[self._widget_id].append(self)
+
         self._location_data = load_location(self._widget_id)
 
         if self._location_data:
@@ -117,39 +127,67 @@ class OpenMeteoWidget(BaseWidget):
                     self.process_weather_data(cached_data)
                     self._update_label(True)
                 except Exception as e:
-                    logger.warning(f"Failed to load cached weather data: {e}")
+                    logging.warning(f"Failed to load cached weather data: {e}")
                     is_cache_valid = False
 
-            # If the cache is fresh, start the delayed timer. Otherwise, start querying immediately.
-            self._start_weather_fetcher(delayed=is_cache_valid)
+            # Only start a fetcher if one isn't already running for this widget_id
+            if self._widget_id not in OpenMeteoWidget._shared_fetchers:
+                self._start_weather_fetcher(delayed=is_cache_valid)
         else:
             self._set_label_text("Setup location")
-            logger.info(f"No saved location for {self._widget_id}. Awaiting user setup.")
+            logging.info(f"No saved location for {self._widget_id}. Awaiting user setup.")
+
+        # Clean up stale entries once all widgets have initialized
+        OpenMeteoWidget._pending_init_count -= 1
+        if OpenMeteoWidget._pending_init_count == 0:
+            cleanup_stale_entries(set(OpenMeteoWidget._shared_instances.keys()))
 
     def _start_weather_fetcher(self, delayed: bool = False):
-        """Start fetching weather data with saved coordinates."""
+        """Start fetching weather data with saved coordinates.
+
+        Creates a single shared fetcher per widget_id so that identical
+        widgets on different screens/bars reuse the same API call.
+        """
         if not self._location_data:
             return
-        self._weather_fetcher = OpenMeteoDataFetcher(
+        # If a shared fetcher already exists for this widget_id, skip
+        if self._widget_id in OpenMeteoWidget._shared_fetchers:
+            return
+
+        fetcher = OpenMeteoDataFetcher(
             self,
             latitude=self._location_data["latitude"],
             longitude=self._location_data["longitude"],
             timeout=self.config.update_interval * 1000,
             units=self.config.units,
         )
-        self._weather_fetcher.finished.connect(self.process_weather_data)
-        self._weather_fetcher.finished.connect(lambda *_: self._update_label(True))
-        self._weather_fetcher.finished.connect(self._save_weather_cache)
-        self._weather_fetcher.start(delayed=delayed)
+        OpenMeteoWidget._shared_fetchers[self._widget_id] = fetcher
+        fetcher.finished.connect(self._on_shared_weather_data)
+        fetcher.start(delayed=delayed)
 
-    def _save_weather_cache(self, data: dict[str, Any]):
-        """Persist fresh API data to the local disk cache."""
-        if data and self._widget_id:
-            save_weather_cache(self._widget_id, data)
+    def _on_shared_weather_data(self, data: dict[str, Any]):
+        """Handle data from the shared fetcher: cache once, broadcast to all instances."""
+        try:
+            if data and self._widget_id:
+                save_weather_cache(self._widget_id, data)
+        except Exception as e:
+            logging.error(f"Failed to save weather cache: {e}")
+
+        for instance in OpenMeteoWidget._shared_instances.get(self._widget_id, []):
+            try:
+                instance.process_weather_data(data)
+                instance._update_label(True)
+            except Exception as e:
+                logging.error(f"Failed to update weather instance: {e}")
+
+        # Retry on empty (failed) responses
+        if not data and not self._retry_timer.isActive():
+            self._retry_timer.start(10000)
 
     def _retry_fetch(self):
-        if self._weather_fetcher:
-            self._weather_fetcher.make_request()
+        fetcher = OpenMeteoWidget._shared_fetchers.get(self._widget_id)
+        if fetcher:
+            fetcher.make_request()
 
     def _toggle_label(self):
         if self.config.animation.enabled:
@@ -267,8 +305,11 @@ class OpenMeteoWidget(BaseWidget):
             if 0 <= idx < len(self._search_results):
                 selected = self._search_results[idx]
                 save_location(self._widget_id, selected)
-                self._location_data = load_location(self._widget_id)
-                self._set_label_text("Fetching data...")
+                location = load_location(self._widget_id)
+                # Update all instances sharing this widget_id
+                for inst in OpenMeteoWidget._shared_instances.get(self._widget_id, []):
+                    inst._location_data = location
+                    inst._set_label_text("Fetching data...")
                 # Close the dialog and start fetching weather data
                 self.dialog.hide()
                 self._start_weather_fetcher()
@@ -561,19 +602,30 @@ class OpenMeteoWidget(BaseWidget):
             hsb.setValue(self.config.weather_card.hourly_point_spacing // 2 - 5)
 
     def reset_location(self, ev: QMouseEvent | None = None):
-        """Clear the current location data and revert to the setup UI."""
+        """Clear the current location data and revert to the setup UI for all shared instances."""
         self.dialog.hide()
-        self._weather_data = None
-        self._has_valid_weather_data = False
-        self._location_data = None
+
+        # Stop and remove the shared fetcher
+        fetcher = OpenMeteoWidget._shared_fetchers.pop(self._widget_id, None)
+        if fetcher:
+            fetcher.stop()
+
         save_location(self._widget_id, None)
 
-        # Hide icons when reverting to setup mode
-        for widget in self._widgets + self._widgets_alt:
-            if widget.property("class") and "icon" in (widget.property("class") or ""):
-                widget.hide()
+        # Reset all instances sharing this widget_id
+        for instance in OpenMeteoWidget._shared_instances.get(self._widget_id, []):
+            instance._weather_data = None
+            instance._has_valid_weather_data = False
+            instance._location_data = None
+            instance._hourly_data = [[] for _ in range(7)]
+            instance._current_time = None
+            for widget in instance._widgets + instance._widgets_alt:
+                if widget.property("class") and "icon" in (widget.property("class") or ""):
+                    widget.hide()
+            instance._set_label_text("Setup location")
 
-        self._set_label_text("Setup location")
+        # Reopen the popup with the location setup UI
+        self._popup_card()
 
     def _create_dynamically_label(self, content: str, content_alt: str):
         def process_content(content: str, is_alt: bool = False) -> list[QLabel]:
@@ -672,7 +724,7 @@ class OpenMeteoWidget(BaseWidget):
                     active_widgets[widget_index].show()
                 widget_index += 1
         except Exception as e:
-            logger.exception(f"Failed to update label: {e}")
+            logging.exception(f"Failed to update label: {e}")
 
     @pyqtSlot(dict)
     def process_weather_data(self, weather_data: dict[str, Any]):
@@ -848,12 +900,10 @@ class OpenMeteoWidget(BaseWidget):
             self._has_valid_weather_data = True
 
         except Exception as e:
-            if not self._retry_timer.isActive():
-                err = f"Error processing Open-Meteo data: {e}. Retrying in 10s."
-                if isinstance(e, (IndexError, KeyError, TypeError)):
-                    err += f"\n{traceback.format_exc()}"
-                logger.warning(err)
-                self._retry_timer.start(10000)
+            err = f"Error processing Open-Meteo data: {e}"
+            if isinstance(e, (IndexError, KeyError, TypeError)):
+                err += f"\n{traceback.format_exc()}"
+            logging.warning(err)
             self._has_valid_weather_data = False
             if self._weather_data is None:
                 self._weather_data = {
