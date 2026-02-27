@@ -13,6 +13,7 @@ from typing import Any
 
 from core.utils.utilities import app_data_path
 
+logger = logging.getLogger("open_meteo")
 _LOCATION_FILE = "weather.json"
 
 
@@ -34,7 +35,7 @@ def _read_file() -> dict[str, Any]:
         with open(path, "r", encoding="utf-8") as f:
             return json.load(f)
     except (json.JSONDecodeError, OSError) as e:
-        logging.warning(f"Failed to read {path}: {e}")
+        logger.warning(f"Failed to read {path}: {e}")
         return {}
 
 
@@ -44,7 +45,7 @@ def _write_file(data: dict[str, Any]) -> None:
         with open(path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
     except OSError as e:
-        logging.error(f"Failed to write {path}: {e}")
+        logger.error(f"Failed to write {path}: {e}")
 
 
 def load_location(widget_id: str) -> dict[str, Any] | None:
@@ -91,7 +92,6 @@ def save_location(widget_id: str, location: dict[str, Any] | None) -> None:
         else 0,
     }
     _write_file(data)
-    logging.info(f"Saved location for {widget_id}: {data[widget_id]['name']}")
 
 
 def save_weather_cache(widget_id: str, weather_data: dict[str, Any]) -> None:
@@ -118,7 +118,7 @@ def delete_location(widget_id: str) -> None:
     if widget_id in data:
         del data[widget_id]
         _write_file(data)
-        logging.info(f"Deleted location for {widget_id}")
+        logger.info(f"Deleted location for {widget_id}")
 
 
 def cleanup_stale_entries(active_widget_ids: set[str]) -> None:
@@ -129,5 +129,5 @@ def cleanup_stale_entries(active_widget_ids: set[str]) -> None:
         return
     for key in stale_keys:
         del data[key]
-        logging.info(f"Removed stale weather entry: {key}")
+        logger.info(f"Removed stale weather entry: {key}")
     _write_file(data)

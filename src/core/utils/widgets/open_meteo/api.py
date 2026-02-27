@@ -7,6 +7,8 @@ from typing import Any
 from PyQt6.QtCore import QObject, QTimer, QUrl, pyqtSignal
 from PyQt6.QtNetwork import QNetworkAccessManager, QNetworkReply, QNetworkRequest
 
+logger = logging.getLogger("open_meteo")
+
 HEADER = (b"User-Agent", b"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:129.0) Gecko/20100101 Firefox/129.0")
 CACHE_CONTROL = (b"Cache-Control", b"no-cache")
 
@@ -99,20 +101,20 @@ class OpenMeteoDataFetcher(QObject):
                 data = json.loads(reply.readAll().data().decode())
                 self.finished.emit(data)
             elif error == QNetworkReply.NetworkError.HostNotFoundError:
-                logging.error("No internet connection or host not found. Unable to fetch weather.")
+                logger.error("No internet connection or host not found. Unable to fetch weather.")
                 self.finished.emit({})
             elif status in {400, 401, 403}:
                 data = json.loads(reply.readAll().data().decode())
-                logging.error(f"Open-Meteo API error {status}: {data.get('reason', 'Unknown')}")
+                logger.error(f"Open-Meteo API error {status}: {data.get('reason', 'Unknown')}")
                 self.finished.emit({})
             else:
-                logging.error(f"Open-Meteo response error {status}: {error.name} {error.value}")
+                logger.error(f"Open-Meteo response error {status}: {error.name} {error.value}")
                 self.finished.emit({})
         except json.JSONDecodeError as e:
-            logging.error(f"Open-Meteo invalid JSON response: {e}")
+            logger.error(f"Open-Meteo invalid JSON response: {e}")
             self.finished.emit({})
         except Exception as e:
-            logging.error(f"Open-Meteo fetch error: {e}\n{traceback.format_exc()}")
+            logger.error(f"Open-Meteo fetch error: {e}\n{traceback.format_exc()}")
             self.finished.emit({})
         finally:
             reply.deleteLater()
@@ -170,11 +172,11 @@ class GeocodingFetcher(QObject):
                 else:
                     results = raw_results
             else:
-                logging.warning(f"Geocoding search failed: {error.name}")
+                logger.warning(f"Geocoding search failed: {error.name}")
         except json.JSONDecodeError as e:
-            logging.error(f"Geocoding invalid JSON response: {e}")
+            logger.error(f"Geocoding invalid JSON response: {e}")
         except Exception as e:
-            logging.error(f"Geocoding fetch error: {e}")
+            logger.error(f"Geocoding fetch error: {e}")
         finally:
             self._current_country_filter = None
             self.results_ready.emit(results)
