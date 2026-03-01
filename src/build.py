@@ -113,6 +113,12 @@ executables = [
         copyright=f"Copyright (C) {datetime.datetime.now().year} AmN",
         target_name="yasbc",
     ),
+    Executable(
+        "core/utils/yasb_service.py",
+        base="Console",
+        copyright=f"Copyright (C) {datetime.datetime.now().year} AmN",
+        target_name="yasb_service",
+    ),
 ]
 
 setup(
