@@ -143,9 +143,9 @@ class SystrayWidget(BaseWidget):
         self.unpinned_widget.setProperty("class", "unpinned-container")
         self.unpinned_vis_btn.setProperty("class", "unpinned-visibility-btn")
 
-        self.unpinned_widget.drag_started.connect(self.on_drag_started)
+        self.unpinned_widget.drag_started.connect(self.on_unpinned_drag_started)
         self.unpinned_widget.drag_ended.connect(self.on_drag_ended)
-        self.pinned_widget.drag_started.connect(self.on_drag_started)
+        self.pinned_widget.drag_started.connect(self.on_pinned_drag_started)
         self.pinned_widget.drag_ended.connect(self.on_drag_ended)
 
         add_shadow(self.widget_container, self.config.container_shadow.model_dump())
@@ -171,7 +171,7 @@ class SystrayWidget(BaseWidget):
             self.unpinned_layout = self._systray_popup.grid_widget.main_layout
 
             # Connect popup grid drag signals
-            self._systray_popup.grid_widget.drag_started.connect(self.on_drag_started)
+            self._systray_popup.grid_widget.drag_started.connect(self.on_unpinned_drag_started)
             self._systray_popup.grid_widget.drag_ended.connect(self.on_drag_ended)
 
             # Only pinned widget and button go in the bar
@@ -279,8 +279,21 @@ class SystrayWidget(BaseWidget):
         QTimer.singleShot(200, SystrayMonitor.send_taskbar_created)
 
     @pyqtSlot(int)
-    def on_drag_started(self, icon_width: int = 0):
+    def on_pinned_drag_started(self, icon_width: int = 0):
+        self.on_drag_started(icon_width, from_pinned=True)
+
+    @pyqtSlot(int)
+    def on_unpinned_drag_started(self, icon_width: int = 0):
+        self.on_drag_started(icon_width, from_pinned=False)
+
+    def on_drag_started(self, icon_width: int = 0, from_pinned: bool = False):
         """Handle drag started signal for drag-and-drop functionality"""
+        if self.config.show_in_popup and from_pinned and not self._systray_popup.is_visible:
+            # Keep the unpinned grid available as a drop target while dragging from pinned.
+            self._systray_popup.open(self.config.label_expanded)
+        if self.config.show_in_popup and from_pinned:
+            self._systray_popup.grid_widget.set_drop_target_style(True)
+
         # Always show pinned widget during drag operations
         self.update_pinned_widget_visibility(force_show=True)
         # When pinned container is empty, expand it to match one icon button size
@@ -292,6 +305,9 @@ class SystrayWidget(BaseWidget):
     @pyqtSlot()
     def on_drag_ended(self):
         """Handle drag ended signal for drag-and-drop functionality"""
+        if self.config.show_in_popup:
+            self._systray_popup.grid_widget.set_drop_target_style(False)
+
         # Clear drop-target indicator and restore min width
         self.pinned_widget.set_drop_target_style(False)
         self.pinned_widget.setMinimumWidth(16)

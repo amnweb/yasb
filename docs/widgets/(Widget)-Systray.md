@@ -142,54 +142,44 @@ Show unpinned button has a right click menu that allows you to refresh the systr
     border: none;
     margin: 0;
 }
-
 .systray .unpinned-container {
-    background: darkblue;
-    border-radius: 8px;
+    background: transparent;
 }
-
 .systray .pinned-container {
     background: transparent;
 }
-
-.systray .pinned-container[forceshow=true] {
-    background: red;
-}
-
 .systray .button {
     border-radius: 4px;
-    padding: 2px 2px;
+    padding: 2px;
 }
 
 .systray .button:hover {
-    background: #727272;
+    background: rgba(255, 255, 255, 0.2);
 }
 /* Icon being dragged, we already apply some transparency to it so you don't need to use it */
 .systray .button.dragging {}
 
 .systray .button.drag-over {
-    background: #505050;
+     background: rgba(255, 255, 255, 0.4);
 }
 
 .systray .pinned-container.drop-target {
     background: rgba(255, 255, 255, 0.1);
-    border: 1px dashed #888;
 }
-
 .systray .unpinned-visibility-btn {
     border-radius: 4px;
     height: 20px;
     width: 16px;
+    border: none;
+    outline: none;
 }
 
 .systray .unpinned-visibility-btn:checked {
-    background: darkblue;
+    background: transparent;
 }
 
 .systray .unpinned-visibility-btn:hover {
-    border: 1px solid #AAAAAA;
-    border-radius: 4px;
-    border-color: #AAAAAA;
+    background: rgba(255, 255, 255, 0.1);
 }
 
 /* Popup styles (when show_in_popup is true) */
@@ -204,12 +194,10 @@ Show unpinned button has a right click menu that allows you to refresh the systr
 .systray .pinned-container.pinned-container.drop-target {
     background-color: rgba(255, 255, 255, 0.1);
 }
-
 .systray-popup {
     background-color: rgba(48, 48, 48, 0.6);
     padding: 4px;
 }
-
 .systray-popup .button {
     padding: 10px;
     margin: 0;
