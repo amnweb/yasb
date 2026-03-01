@@ -84,6 +84,8 @@ class SystrayPopup(QWidget):
         self._grid_widget.add_icon_to_grid(icon)
 
     def toggle(self, label_expanded: str):
+        if self._is_closing:
+            return
         self.hide_animated() if self.is_visible else self.open(label_expanded)
 
     def open(self, label_expanded: str):
@@ -202,6 +204,7 @@ class SystrayPopup(QWidget):
     def _on_animation_finished(self):
         if self._is_closing:
             QWidget.hide(self)
+            self._is_closing = False
 
     def hideEvent(self, event):
         self._watch_timer.stop()
