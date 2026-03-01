@@ -2,7 +2,6 @@ import json
 import logging
 import os
 import shutil
-import subprocess
 import tempfile
 import time
 from functools import lru_cache
@@ -44,8 +43,8 @@ from core.config import HOME_CONFIGURATION_DIR
 from core.utils.shell_utils import shell_open
 from core.utils.utilities import add_shadow, build_widget_label, refresh_widget_style
 from core.utils.widgets.animation_manager import AnimationManager
-from core.utils.widgets.launchpad.app_loader import AppListLoader, ShortcutResolver
-from core.utils.widgets.launchpad.icon_extractor import IconExtractorUtil, UrlExtractorUtil
+from core.utils.win32.app_loader import AppListLoader, ShortcutResolver
+from core.utils.win32.icon_extractor import IconExtractorUtil, UrlExtractorUtil
 from core.utils.win32.utilities import apply_qmenu_style, get_foreground_hwnd, set_foreground_hwnd
 from core.utils.win32.win32_accent import Blur
 from core.utils.win32.window_actions import force_foreground_focus
@@ -317,48 +316,26 @@ class AppDialog(QDialog):
         def on_title_selected(text):
             for name, path, _ in self._installed_apps:
                 if name.lower() == text.lower():
-                    if path.startswith("UWP::"):
+                    if path.startswith("CPL::"):
+                        # Control Panel item - launch via control.exe
+                        canonical = path.split("::", 2)[-1]
+                        self.path_edit.setText(f"control.exe /name {canonical}")
+                        temp_dir = tempfile.gettempdir()
+                        icon_path = IconExtractorUtil.extract_cpl_icon(path, temp_dir, size=256)
+                        if icon_path:
+                            self.icon_edit.setText(icon_path)
+                        else:
+                            self._show_warning("Could not extract icon for this Control Panel item.")
+                            self.icon_edit.setText("")
+
+                    elif path.startswith("UWP::"):
                         appid = path.replace("UWP::", "")
                         self.path_edit.setText(f"explorer.exe shell:AppsFolder\\{appid}")
-                        install_location = None
-                        try:
-                            ps_get_location = (
-                                f"Get-AppxPackage | Where-Object {{$_.PackageFamilyName -eq '{appid.split('!')[0]}'}} | "
-                                f"Select-Object -ExpandProperty InstallLocation"
-                            )
-                            result = subprocess.run(
-                                [
-                                    "powershell",
-                                    "-NoProfile",
-                                    "-NonInteractive",
-                                    "-NoLogo",
-                                    "-ExecutionPolicy",
-                                    "Bypass",
-                                    "-Command",
-                                    ps_get_location,
-                                ],
-                                capture_output=True,
-                                text=True,
-                                encoding="utf-8",
-                                errors="replace",
-                                timeout=5,
-                                creationflags=subprocess.CREATE_NO_WINDOW,
-                            )
-                            if result.returncode == 0:
-                                install_location = result.stdout.strip()
-                        except Exception:
-                            install_location = None
 
-                        uwp_icon = None
-                        if install_location:
-                            uwp_icon = IconExtractorUtil.extract_uwp_icon(appid, install_location=install_location)
-                        if uwp_icon and os.path.isfile(uwp_icon):
-                            ext = os.path.splitext(uwp_icon)[1].lower()
-                            if ext == ".png":
-                                self.icon_edit.setText(uwp_icon)
-                            else:
-                                self._show_warning("Failed to extract icon from UWP package.")
-                                self.icon_edit.setText("")
+                        temp_dir = tempfile.gettempdir()
+                        shell_icon = IconExtractorUtil.extract_shell_appid_icon(appid, temp_dir, size=256)
+                        if shell_icon:
+                            self.icon_edit.setText(shell_icon)
                         else:
                             self.icon_edit.setText("")
                             self._show_warning("Could not locate icon for this UWP app.")
@@ -366,13 +343,8 @@ class AppDialog(QDialog):
                     else:
                         self.path_edit.setText(path)
                         temp_dir = tempfile.gettempdir()
-                        # If .lnk, resolve to target for icon extraction
-                        ext = os.path.splitext(path)[1].lower()
-                        icon_source = path
-                        if ext == ".lnk":
-                            _, icon_source, _ = ShortcutResolver.resolve_lnk_target(path, self._show_warning)
-                        if icon_source and isinstance(icon_source, str) and os.path.isfile(icon_source):
-                            icon_path = IconExtractorUtil.extract_icon_from_path(icon_source, temp_dir)
+                        if os.path.isfile(path):
+                            icon_path = IconExtractorUtil.extract_icon_from_path(path, temp_dir, size=256)
                             if icon_path:
                                 self.icon_edit.setText(icon_path)
                             else:
@@ -1240,7 +1212,7 @@ class LaunchpadWidget(BaseWidget):
                 return
             if not icon_path:
                 icon_path = target_path
-            icon_png = IconExtractorUtil.extract_icon_from_path(icon_path, self._icons_dir)
+            icon_png = IconExtractorUtil.extract_icon_from_path(icon_path, self._icons_dir, size=256)
             if not icon_png:
                 self._warning_dialog(
                     f"Failed to extract icon for application<br><b>{file_path}</b><br>Please select an icon manually."
@@ -1253,7 +1225,7 @@ class LaunchpadWidget(BaseWidget):
             if not title:
                 self._warning_dialog(f"Failed to get description for executable: {file_path}")
                 return
-            icon_png = IconExtractorUtil.extract_icon_from_path(file_path, self._icons_dir)
+            icon_png = IconExtractorUtil.extract_icon_from_path(file_path, self._icons_dir, size=256)
 
             if not icon_png:
                 self._warning_dialog(

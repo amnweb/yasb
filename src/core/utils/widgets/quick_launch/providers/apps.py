@@ -236,8 +236,10 @@ class DescriptionResolverWorker(QThread):
                         uwp_lookup[fn] = dn
         except Exception:
             pass
-        for _name, path, _ in self._apps:
-            if path.startswith("UWP::"):
+        for _name, path, extra in self._apps:
+            if path.startswith("CPL::"):
+                cache[path] = extra if extra else "Control Panel"
+            elif path.startswith("UWP::"):
                 aumid = path[5:]
                 family = aumid.split("!")[0] if "!" in aumid else aumid
                 cache[path] = uwp_lookup.get(family, "Windows App")
@@ -390,6 +392,9 @@ class AppsProvider(BaseProvider):
             if path.startswith("UWP::"):
                 aumid = path.replace("UWP::", "")
                 shell_open(f"shell:AppsFolder\\{aumid}")
+            elif path.startswith("CPL::"):
+                canonical = path[5:].split("::", 1)[-1] if "::" in path[5:] else path[5:]
+                shell_open("control.exe", parameters=f"/name {canonical}")
             elif path.startswith(("http://", "https://")):
                 shell_open(path)
             elif os.path.isfile(path):
@@ -407,17 +412,20 @@ class AppsProvider(BaseProvider):
             return []
 
         is_uwp = path.startswith("UWP::")
+        is_cpl = path.startswith("CPL::")
         is_url = path.startswith(("http://", "https://"))
         actions: list[ProviderMenuAction] = []
 
         if not is_url:
             actions.append(ProviderMenuAction(id="run_as_admin", label="Run as administrator"))
 
-        if not is_uwp and not is_url and os.path.isfile(path):
+        if not is_uwp and not is_cpl and not is_url and os.path.isfile(path):
             actions.append(ProviderMenuAction(id="open_file_location", label="Open file location"))
 
         if is_uwp:
             actions.append(ProviderMenuAction(id="copy_app_id", label="Copy App ID"))
+        elif is_cpl:
+            actions.append(ProviderMenuAction(id="copy_canonical_name", label="Copy canonical name"))
         elif not is_url:
             actions.append(ProviderMenuAction(id="copy_path", label="Copy path"))
 
@@ -427,7 +435,7 @@ class AppsProvider(BaseProvider):
                 ProviderMenuAction(id="remove_from_recent", label="Remove from recent", separator_before=True)
             )
 
-        if not is_url:
+        if not is_url and not is_cpl:
             actions.append(ProviderMenuAction(id="uninstall", label="Uninstall", separator_before=True))
 
         return actions
@@ -443,6 +451,9 @@ class AppsProvider(BaseProvider):
                 if path.startswith("UWP::"):
                     aumid = path.replace("UWP::", "")
                     shell_open(f"shell:AppsFolder\\{aumid}", verb="runas")
+                elif path.startswith("CPL::"):
+                    canonical = path[5:].split("::", 1)[-1] if "::" in path[5:] else path[5:]
+                    shell_open("control.exe", parameters=f"/name {canonical}", verb="runas")
                 elif os.path.isfile(path):
                     shell_open(path, verb="runas")
                 self._history.record(name, path)
@@ -469,6 +480,13 @@ class AppsProvider(BaseProvider):
             clipboard = QApplication.clipboard()
             if clipboard:
                 clipboard.setText(path[5:] if path.startswith("UWP::") else path)
+            return ProviderMenuActionResult()
+
+        if action_id == "copy_canonical_name":
+            clipboard = QApplication.clipboard()
+            if clipboard:
+                canonical = path[5:].split("::", 1)[-1] if path.startswith("CPL::") and "::" in path[5:] else path[5:]
+                clipboard.setText(canonical)
             return ProviderMenuActionResult()
 
         if action_id == "remove_from_recent":

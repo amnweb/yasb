@@ -1,3 +1,6 @@
+import json
+import logging
+
 from PyQt6.QtCore import QAbstractListModel, QEvent, QMimeData, QModelIndex, QPoint, QRect, QSize, Qt, QTimer, QUrl
 from PyQt6.QtGui import (
     QColor,
@@ -16,10 +19,12 @@ from PyQt6.QtGui import (
 from PyQt6.QtWidgets import (
     QApplication,
     QFrame,
+    QGraphicsOpacityEffect,
     QHBoxLayout,
     QLabel,
     QLineEdit,
     QListView,
+    QMenu,
     QPlainTextEdit,
     QPushButton,
     QScrollArea,
@@ -29,7 +34,7 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
 )
 
-from core.utils.utilities import LoaderLine, PopupWidget, add_shadow, build_widget_label
+from core.utils.utilities import LoaderLine, PopupWidget, add_shadow, app_data_path, build_widget_label
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.widgets.quick_launch.base_provider import ProviderResult
 from core.utils.widgets.quick_launch.context_menu import QuickLaunchContextMenuService
@@ -41,7 +46,7 @@ from core.utils.widgets.quick_launch.providers.resources.icons import (
     ICON_SUBMIT,
 )
 from core.utils.widgets.quick_launch.service import QuickLaunchService
-from core.utils.win32.utilities import find_focused_screen
+from core.utils.win32.utilities import apply_qmenu_style, find_focused_screen
 from core.utils.win32.window_actions import force_foreground_focus
 from core.validation.widgets.yasb.quick_launch import QuickLaunchConfig
 from core.widgets.base import BaseWidget
@@ -393,6 +398,7 @@ class ResultListView(QListView):
 class QuickLaunchWidget(BaseWidget):
     validation_schema = QuickLaunchConfig
     _active_instance: "QuickLaunchWidget | None" = None
+    _SETTINGS_FILE = "quick_launch_settings.json"
 
     def __init__(self, config: QuickLaunchConfig):
         super().__init__(class_name="quick-launch-widget")
@@ -411,12 +417,17 @@ class QuickLaunchWidget(BaseWidget):
 
         self._active_prefix: str | None = None
 
+        self._position_locked = True
+        self._saved_position: QPoint | None = None
+        self._drag_offset: QPoint | None = None
+        self._load_saved_position()
+
         self._service = QuickLaunchService.instance()
         self._service.request_refresh.connect(self._on_request_refresh)
         self._service.icon_ready.connect(self._on_icon_ready)
         self._service.query_finished.connect(self._on_query_finished)
         self._service.configure_providers(
-            self.config.providers.model_dump(), self.config.max_results, self.config.show_icons
+            self.config.providers.model_dump(), self.config.max_results, self.config.show_icons, self.config.icon_size
         )
 
         self._widget_container_layout = QHBoxLayout()
@@ -454,7 +465,7 @@ class QuickLaunchWidget(BaseWidget):
         self._popup.search_input.blockSignals(False)
         if self.config.compact_mode:
             self._set_compact_visible(False)
-        self._center_popup_on_screen()
+        self._position_popup()
         self._popup.show()
         force_foreground_focus(int(self._popup.winId()))
         if not self.config.compact_mode:
@@ -474,6 +485,8 @@ class QuickLaunchWidget(BaseWidget):
         """Called when the fade-out animation finishes."""
         if not (self._popup and self._popup._is_closing):
             return
+        if not self._position_locked:
+            self._position_locked = True
         # Notify all active providers of deactivation so they can clear caches
         for p in self._service.providers:
             try:
@@ -496,6 +509,15 @@ class QuickLaunchWidget(BaseWidget):
             self._loader.stop()
         except RuntimeError:
             pass
+
+    def _position_popup(self):
+        """Place the popup at the saved position (if locked) or center it on screen."""
+        if not self._popup:
+            return
+        if self._position_locked and self._saved_position is not None:
+            self._popup.move(self._saved_position)
+        else:
+            self._center_popup_on_screen()
 
     def _center_popup_on_screen(self):
         if not self._popup:
@@ -576,7 +598,8 @@ class QuickLaunchWidget(BaseWidget):
         search_layout.addWidget(prefix_chip)
 
         search_input = QLineEdit()
-        search_input.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
+        search_input.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        search_input.customContextMenuRequested.connect(self._on_search_input_context_menu)
         search_input.setProperty("class", "search-input")
         search_input.setPlaceholderText(self.config.search_placeholder)
         search_input.textChanged.connect(self._on_search_text_changed)
@@ -1182,15 +1205,118 @@ class QuickLaunchWidget(BaseWidget):
             self._popup.prefix_chip.setText("")
             self._popup.search_input.setPlaceholderText(self.config.search_placeholder)
 
+    def _on_search_input_context_menu(self, pos):
+        """Show a context menu on the search input."""
+        if not self._popup:
+            return
+        search = self._popup.search_input
+        menu = QMenu(self._popup)
+        menu.setProperty("class", "context-menu")
+        apply_qmenu_style(menu)
+
+        has_selection = search.hasSelectedText()
+        has_text = bool(search.text())
+        clipboard = QApplication.clipboard()
+        clipboard_has_text = bool(clipboard and clipboard.text())
+
+        # Text editing actions
+        cut_action = menu.addAction("Cut")
+        cut_action.setEnabled(has_selection)
+        copy_action = menu.addAction("Copy")
+        copy_action.setEnabled(has_selection)
+        paste_action = menu.addAction("Paste")
+        paste_action.setEnabled(clipboard_has_text)
+
+        menu.addSeparator()
+
+        select_all_action = menu.addAction("Select All")
+        select_all_action.setEnabled(has_text)
+
+        menu.addSeparator()
+
+        # Lock / Unlock position
+        if self._position_locked:
+            lock_action = menu.addAction("Unlock position")
+        else:
+            lock_action = menu.addAction("Lock position")
+
+        # Reset to centre (only visible when a custom position is saved)
+        reset_action = None
+        if self._saved_position is not None:
+            reset_action = menu.addAction("Reset position")
+
+        global_pos = search.mapToGlobal(pos)
+        # Native menus ignore widget setCursor — override is the only way
+        QApplication.setOverrideCursor(QCursor(Qt.CursorShape.ArrowCursor))
+        selected = menu.exec(global_pos)
+        QApplication.restoreOverrideCursor()
+        if not selected:
+            return
+
+        if selected is cut_action:
+            search.cut()
+        elif selected is copy_action:
+            search.copy()
+        elif selected is paste_action:
+            search.paste()
+        elif selected is select_all_action:
+            search.selectAll()
+        elif selected is lock_action:
+            self._toggle_position_lock()
+        elif reset_action and selected is reset_action:
+            self._reset_position()
+
+    def _toggle_position_lock(self):
+        """Toggle between locked (fixed position) and unlocked (draggable)."""
+        self._position_locked = not self._position_locked
+        if self._popup:
+            if self._position_locked:
+                self._saved_position = self._popup.pos()
+                self._persist_position()
+            self._apply_drag_cursor()
+
+    def _reset_position(self):
+        """Clear saved position and re-centre the popup."""
+        self._saved_position = None
+        self._position_locked = True
+        self._delete_saved_position()
+        if self._popup:
+            self._apply_drag_cursor()
+            self._center_popup_on_screen()
+
+    def _apply_drag_cursor(self):
+        """Set or remove the move cursor on the popup search input."""
+        if not self._popup:
+            return
+        search = self._popup.search_input
+        if self._position_locked:
+            search.setCursor(QCursor(Qt.CursorShape.IBeamCursor))
+        else:
+            search.setCursor(QCursor(Qt.CursorShape.SizeAllCursor))
+
     def eventFilter(self, obj, event):
-        """Intercept Backspace on the search input to remove the prefix chip."""
-        if (
-            event.type() == QEvent.Type.KeyPress
-            and event.key() == Qt.Key.Key_Backspace
-            and self._active_prefix
-            and self._popup
-            and obj is self._popup.search_input
-        ):
+        """Intercept mouse events on search_input for drag-to-move and prefix removal."""
+        if not self._popup or obj is not self._popup.search_input:
+            return super().eventFilter(obj, event)
+
+        etype = event.type()
+
+        # Drag-to-move (only when position is unlocked)
+        if not self._position_locked:
+            if etype == QEvent.Type.MouseButtonPress and event.button() == Qt.MouseButton.LeftButton:
+                self._drag_offset = event.globalPosition().toPoint() - self._popup.pos()
+                self._set_drag_opacity(0.5)
+                return True
+            if etype == QEvent.Type.MouseMove and self._drag_offset is not None:
+                self._popup.move(event.globalPosition().toPoint() - self._drag_offset)
+                return True
+            if etype == QEvent.Type.MouseButtonRelease and self._drag_offset is not None:
+                self._drag_offset = None
+                self._set_drag_opacity(1.0)
+                return True
+
+        # Backspace to remove prefix chip
+        if etype == QEvent.Type.KeyPress and event.key() == Qt.Key.Key_Backspace and self._active_prefix:
             if self._popup.search_input.cursorPosition() == 0 and not self._popup.search_input.hasSelectedText():
                 self._clear_prefix_chip()
                 text = self._popup.search_input.text()
@@ -1199,4 +1325,65 @@ class QuickLaunchWidget(BaseWidget):
                 else:
                     self._update_results(text)
                 return True
+
         return super().eventFilter(obj, event)
+
+    def _set_drag_opacity(self, opacity: float):
+        """Set the visual opacity of the popup content during drag."""
+        if not self._popup:
+            return
+        content = self._popup._popup_content
+        if opacity >= 1.0:
+            content.setGraphicsEffect(None)
+        else:
+            effect = QGraphicsOpacityEffect(content)
+            effect.setOpacity(opacity)
+            content.setGraphicsEffect(effect)
+
+    def _load_settings(self) -> dict:
+        """Load the quick launch settings from disk."""
+        try:
+            path = app_data_path(self._SETTINGS_FILE)
+            if path.is_file():
+                return json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+        return {}
+
+    def _save_settings(self, settings: dict):
+        """Write the quick launch settings to disk."""
+        try:
+            path = app_data_path(self._SETTINGS_FILE)
+            path.write_text(json.dumps(settings, indent=2), encoding="utf-8")
+        except Exception as e:
+            logging.debug(f"Failed to save quick launch settings: {e}")
+
+    def _load_saved_position(self):
+        """Load the saved popup position from the settings file."""
+        data = self._load_settings()
+        pos = data.get("position")
+        if isinstance(pos, dict) and "x" in pos and "y" in pos:
+            self._saved_position = QPoint(pos["x"], pos["y"])
+            self._position_locked = True
+
+    def _persist_position(self):
+        """Save the current popup position to the settings file."""
+        if self._saved_position is None:
+            return
+        settings = self._load_settings()
+        settings["position"] = {"x": self._saved_position.x(), "y": self._saved_position.y()}
+        self._save_settings(settings)
+
+    def _delete_saved_position(self):
+        """Remove the saved position from the settings file."""
+        settings = self._load_settings()
+        settings.pop("position", None)
+        if settings:
+            self._save_settings(settings)
+        else:
+            try:
+                path = app_data_path(self._SETTINGS_FILE)
+                if path.is_file():
+                    path.unlink()
+            except Exception:
+                pass
