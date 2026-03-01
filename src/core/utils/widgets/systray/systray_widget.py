@@ -23,6 +23,8 @@ from PyQt6.QtGui import (
 )
 from PyQt6.QtWidgets import (
     QFrame,
+    QGraphicsOpacityEffect,
+    QGridLayout,
     QHBoxLayout,
     QPushButton,
     QWidget,
@@ -73,13 +75,13 @@ class IconWidget(QPushButton):
     pin_modifier_key = Qt.KeyboardModifier.AltModifier
     icon_size = 16
     enable_tooltips = True
+    _drag_in_progress = False
 
     def __init__(self):
         super().__init__()
         self.data: IconData | None = None
         self.last_cursor_pos = QPoint()
         self.setProperty("class", "button")
-        self.setProperty("dragging", False)
         self.setIconSize(QSize(self.icon_size, self.icon_size))
         self.scaled_pixmap = None
         self.is_pinned = False
@@ -114,13 +116,29 @@ class IconWidget(QPushButton):
 
         # Only start drag if left mouse button is pressed and moved more than 10 pixels
         if self.lmb_pressed and (a0.pos() - self.last_cursor_pos).manhattanLength() > 10:
-            drag = QDrag(self)
-            if self.scaled_pixmap is not None:
-                drag.setPixmap(self.scaled_pixmap)
-            mime_data = QMimeData()
-            mime_data.setText(self.text())
-            drag.setMimeData(mime_data)
-            drag.exec(Qt.DropAction.MoveAction)
+            IconWidget._drag_in_progress = True
+            # Dim the icon while it is being dragged
+            effect = QGraphicsOpacityEffect(self)
+            effect.setOpacity(0.3)
+            self.setGraphicsEffect(effect)
+            try:
+                drag = QDrag(self)
+                if self.scaled_pixmap is not None:
+                    drag.setPixmap(self.scaled_pixmap)
+                mime_data = QMimeData()
+                mime_data.setText(self.text())
+                drag.setMimeData(mime_data)
+                result = drag.exec(Qt.DropAction.MoveAction)
+                if result == Qt.DropAction.IgnoreAction:
+                    # Drag was cancelled when dropped outside
+                    # of any valid drop target notify parent
+                    parent = self.parent()
+                    if isinstance(parent, DropWidget):
+                        parent.drag_ended.emit()
+            finally:
+                self.setGraphicsEffect(None)
+                self.lmb_pressed = False
+                IconWidget._drag_in_progress = False
 
         return super().mouseMoveEvent(a0)
 
@@ -202,217 +220,222 @@ class IconWidget(QPushButton):
         if not self.data or self.data.hIcon == 0:
             return
         if self.enable_tooltips:
-            set_tooltip(self, self.data.szTip or self.data.exe, delay=0)
+            set_tooltip(self, self.data.szTip or self.data.exe, delay=50)
         icon = self.data.icon_image
         if icon:
             self.setIcon(QIcon(icon))
 
 
 class DropWidget(QFrame):
-    drag_started = pyqtSignal()
+    """Drop target container for systray icons."""
+
+    drag_started = pyqtSignal(int)
     drag_ended = pyqtSignal()
 
-    def __init__(self, parent: QWidget | None = None):
+    def __init__(self, parent: QWidget | None = None, *, grid_cols: int = 0):
         super().__init__(parent)
         self.setAcceptDrops(True)
+        self._grid_cols = grid_cols
 
-        # Use a horizontal layout
-        self.main_layout = QHBoxLayout(self)
+        if grid_cols > 0:
+            self.main_layout = QGridLayout(self)
+        else:
+            self.main_layout = QHBoxLayout(self)
+            self.setMaximumHeight(32)
+
         self.main_layout.setSpacing(0)
         self.main_layout.setContentsMargins(0, 0, 0, 0)
-        self.setMaximumHeight(32)
         self.setLayout(self.main_layout)
 
-        # Create the drop indicator but don't add it to the layout
-        self.drop_indicator = QFrame(self)
-        self.drop_indicator.setFixedSize(4, 32)
-        self.drop_indicator.setStyleSheet("background: #FF5500; border-radius: 2px;")
-        self.drop_indicator.hide()
-
-        # Track the dragged button
         self.dragged_button: IconWidget | None = None
+        self._hover_btn: IconWidget | None = None
 
-        # Keep track of the indicator's position to avoid unnecessary updates
-        self.current_indicator_index = -1
+    @staticmethod
+    def _set_class(widget: QWidget, name: str, add: bool):
+        """Add or remove a CSS class and refresh the widget style."""
+        cls = (widget.property("class") or "").split()
+        if add:
+            if name not in cls:
+                cls.append(name)
+        else:
+            if name in cls:
+                cls.remove(name)
+        widget.setProperty("class", " ".join(cls))
+        refresh_widget_style(widget)
 
     @override
     def dragEnterEvent(self, a0: QDragEnterEvent | None):
         if a0 is None:
             return
-
         source = a0.source()
         if isinstance(source, IconWidget):
             self.dragged_button = source
-            self.dragged_button.setProperty("dragging", True)
-            self.refresh_styles()
+            self._set_class(source, "dragging", True)
             a0.acceptProposedAction()
-
-            self.drag_started.emit()
+            self.drag_started.emit(source.width())
 
     @override
     def dragMoveEvent(self, a0: QDragMoveEvent | None):
         if a0 is None or not isinstance(a0.source(), IconWidget):
             return
-
-        drop_position = a0.position().toPoint()
-        insert_index = self.get_insert_index(drop_position)
-
-        # Only update indicator if position has changed
-        if insert_index != self.current_indicator_index:
-            self.update_drop_indicator(insert_index)
-            self.current_indicator_index = insert_index
-
+        hovered = self._find_icon_at(a0.position().toPoint())
+        if isinstance(hovered, IconWidget) and hovered is not self.dragged_button:
+            self._highlight_hover(hovered)
+        else:
+            self._clear_hover_highlight()
         a0.acceptProposedAction()
-
-        self.drag_started.emit()
+        self.drag_started.emit(self.dragged_button.width() if self.dragged_button else 0)
 
     @override
     def dragLeaveEvent(self, a0: QDragLeaveEvent | None):
         if a0 is None:
             return
-
-        self.hide_drop_indicator()
-
+        self._clear_hover_highlight()
         if self.dragged_button:
-            self.dragged_button.setProperty("dragging", False)
-            self.refresh_styles()
+            self._set_class(self.dragged_button, "dragging", False)
             self.dragged_button = None
-
-        self.current_indicator_index = -1
 
     @override
     def dropEvent(self, a0: QDropEvent | None):
         if a0 is None:
             return
-
         source = a0.source()
         if not isinstance(source, IconWidget):
             return
+        self._set_class(source, "dragging", False)
+        self._clear_hover_highlight()
 
-        source.setProperty("dragging", False)
-        self.refresh_styles()
+        if self._grid_cols:
+            self._drop_grid(source, a0)
+        else:
+            self._drop_inline(source, a0)
+
+    def _drop_inline(self, source: IconWidget, a0: QDropEvent):
         drop_position = a0.position().toPoint()
         insert_index = self.get_insert_index(drop_position)
 
-        # Only move the button if it's coming from another parent or the position is different
         button_current_index = -1
         for i in range(self.main_layout.count()):
             if (w := self.main_layout.itemAt(i)) and w.widget() == source:
                 button_current_index = i
                 break
 
-        # If the button is already in this layout
         if source.parent() == self:
-            # If it would be placed at the same index or right after itself, do nothing
             if insert_index == button_current_index or insert_index == button_current_index + 1:
-                self.hide_drop_indicator()
                 a0.acceptProposedAction()
                 self.drag_ended.emit()
                 return
-
-            # Adjust index if moving within the same parent and to a later position
             if button_current_index != -1 and insert_index > button_current_index:
                 insert_index -= 1
-
-            # Remove it from its current position
             self.main_layout.removeWidget(source)
         else:
-            # Set this as the new parent
             source.setParent(self)
 
-        # Insert at the new position
         self.main_layout.insertWidget(insert_index, source)
-
-        # Show the button and update styles
         source.show()
-        self.refresh_styles()
-
-        # Hide the indicator and reset tracking
-        self.hide_drop_indicator()
         self.dragged_button = None
-        self.current_indicator_index = -1
-
         a0.acceptProposedAction()
-
         self.drag_ended.emit()
+        source.icon_moved.emit(source)
 
+    def _drop_grid(self, source: IconWidget, a0: QDropEvent):
+        icons = self._get_all_icons()
+        hovered = self._find_icon_at(a0.position().toPoint())
+
+        def _insert_index(target: IconWidget) -> int:
+            """Return insert index: after target if cursor is on its right half."""
+            idx = icons.index(target)
+            if a0.position().toPoint().x() >= target.geometry().center().x():
+                idx += 1
+            return idx
+
+        if source in icons:
+            # Reorder within grid
+            if isinstance(hovered, IconWidget) and hovered is not source and hovered in icons:
+                icons.remove(source)
+                idx = _insert_index(hovered)
+                # Clamp after removal shifted indices
+                idx = min(idx, len(icons))
+                icons.insert(idx, source)
+        else:
+            # Cross-container drop (from pinned bar into grid)
+            source.setParent(self)
+            if isinstance(hovered, IconWidget) and hovered in icons:
+                icons.insert(_insert_index(hovered), source)
+            else:
+                icons.append(source)
+
+        self.relayout_grid(icons)
+        self.dragged_button = None
+        a0.acceptProposedAction()
+        self.drag_ended.emit()
         source.icon_moved.emit(source)
 
     def get_insert_index(self, drop_position: QPoint) -> int:
-        """
-        Find the position in the layout to insert the button
-        """
-        # If there are no items, insert at the beginning
         if self.main_layout.count() == 0:
             return 0
-
-        # Calculate insertion position based on mouse position relative to widgets
         for i in range(self.main_layout.count()):
             item = self.main_layout.itemAt(i)
             if not item or not item.widget():
                 continue
-
-            widget = item.widget()
-            if not widget:
-                continue
-            widget_center = widget.geometry().center().x()
-
-            # If mouse is to the left of this widget's center, insert before it
-            if drop_position.x() < widget_center:
+            if drop_position.x() < item.widget().geometry().center().x():
                 return i
-
-        # If we get here, insert at the end
         return self.main_layout.count()
 
-    def update_drop_indicator(self, index: int):
-        """
-        Update the drop indicator's position without removing/re-adding it to the layout.
-        """
-        self.drop_indicator.show()
+    def add_icon_to_grid(self, icon: IconWidget):
+        count = len(self._get_all_icons())
+        cols = self._grid_cols
+        self.main_layout.addWidget(icon, count // cols, count % cols)
 
-        # Calculate the position for the indicator
-        if self.main_layout.count() == 0:
-            # If empty, position in the middle
-            x = self.rect().center().x()
-            self.drop_indicator.move(
-                x - self.drop_indicator.width() // 2,
-                (self.height() - self.drop_indicator.height()) // 2,
-            )
-        elif index >= self.main_layout.count():
-            # Position after the last widget
-            item = self.main_layout.itemAt(self.main_layout.count() - 1)
-            if not item:
-                return
-            last_widget = item.widget()
-            if last_widget:
-                x = last_widget.geometry().right() + self.main_layout.spacing() // 2
-                self.drop_indicator.move(
-                    x - self.drop_indicator.width() // 2,
-                    (self.height() - self.drop_indicator.height()) // 2,
-                )
-        else:
-            # Position before the widget at the current index
-            item = self.main_layout.itemAt(index)
-            if not item:
-                return
-            widget = item.widget()
-            if widget:
-                x = widget.geometry().left() - self.main_layout.spacing() // 2
-                self.drop_indicator.move(
-                    x - self.drop_indicator.width() // 2,
-                    (self.height() - self.drop_indicator.height()) // 2,
-                )
+    def relayout_grid(self, icons: list[IconWidget] | None = None):
+        if icons is None:
+            icons = self._get_all_icons()
+        layout = self.main_layout
+        for icon in icons:
+            layout.removeWidget(icon)
+        for r in range(layout.rowCount()):
+            layout.setRowMinimumHeight(r, 0)
+            layout.setRowStretch(r, 0)
+        for c in range(layout.columnCount()):
+            layout.setColumnMinimumWidth(c, 0)
+            layout.setColumnStretch(c, 0)
+        cols = self._grid_cols
+        for idx, icon in enumerate(icons):
+            layout.addWidget(icon, idx // cols, idx % cols)
+            icon.show()
+        layout.invalidate()
 
-    def hide_drop_indicator(self):
-        """
-        Hide the drop indicator without affecting the layout.
-        """
-        self.drop_indicator.hide()
-        self.current_indicator_index = -1
+    def _get_all_icons(self) -> list[IconWidget]:
+        return [
+            item.widget()
+            for i in range(self.main_layout.count())
+            if (item := self.main_layout.itemAt(i)) is not None
+            and item.widget() is not None
+            and isinstance(item.widget(), IconWidget)
+        ]
+
+    def _find_icon_at(self, pos: QPoint):
+        w = self.childAt(pos)
+        while w is not None and not isinstance(w, IconWidget):
+            w = w.parentWidget()
+        return w
+
+    def _highlight_hover(self, btn: IconWidget):
+        if self._hover_btn is btn:
+            return
+        self._clear_hover_highlight()
+        self._hover_btn = btn
+        self._set_class(btn, "drag-over", True)
+
+    def _clear_hover_highlight(self):
+        if self._hover_btn:
+            self._set_class(self._hover_btn, "drag-over", False)
+            self._hover_btn = None
+
+    def set_drop_target_style(self, active: bool):
+        """Show or hide a visual drop-target indicator on this container."""
+        self._set_class(self, "drop-target", active)
 
     def refresh_styles(self):
-        """
-        Refresh styles for the widget and dragged button.
-        """
         if self.dragged_button is not None:
-            refresh_widget_style(self, self.dragged_button)
+            refresh_widget_style(self.dragged_button)
