@@ -45,6 +45,7 @@ YASB_RELEASE_CHANNEL = RELEASE_CHANNEL
 
 INSTALLATION_PATH = os.path.abspath(os.path.join(__file__, "../../.."))
 EXE_PATH = os.path.join(INSTALLATION_PATH, "yasb.exe")
+SERVICE_EXE_PATH = os.path.join(INSTALLATION_PATH, "yasb_service.exe")
 AUTOSTART_FILE = EXE_PATH if os.path.exists(EXE_PATH) else None
 
 CLI_SERVER_PIPE_NAME = r"\\.\pipe\yasb_pipe_cli"
@@ -346,6 +347,17 @@ class CLIHandler:
             add_help=False,
         )
 
+        service_parser = subparsers.add_parser(
+            "service",
+            help="Manage the YASB launcher service",
+            prog="yasbc service",
+        )
+        service_parser.add_argument(
+            "action",
+            choices=["install", "start", "stop", "remove"],
+            help="install: register the service and enable auto-start | start: start now | stop: stop | remove: uninstall",
+        )
+
         subparsers.add_parser(
             "help",
             help="Show help message",
@@ -586,6 +598,24 @@ class CLIHandler:
             print("Reset complete.")
             sys.exit(0)
 
+        elif args.command == "service":
+            if not self.task_handler.is_admin():
+                print("This command requires administrator privileges. Please run as administrator.")
+                sys.exit(1)
+            if not os.path.exists(SERVICE_EXE_PATH):
+                print(f"yasb_service.exe not found at {SERVICE_EXE_PATH}")
+                sys.exit(1)
+            if args.action == "install":
+                result = subprocess.run([SERVICE_EXE_PATH, "--startup", "auto", "install"])
+                if result.returncode == 0:
+                    subprocess.run([SERVICE_EXE_PATH, "start"])
+            elif args.action == "remove":
+                subprocess.run([SERVICE_EXE_PATH, "stop"])
+                subprocess.run([SERVICE_EXE_PATH, "remove"])
+            else:
+                subprocess.run([SERVICE_EXE_PATH, args.action])
+            sys.exit(0)
+
         elif args.command == "help" or args.help:
             print(
                 textwrap.dedent(f"""\
@@ -606,6 +636,7 @@ class CLIHandler:
                   set-channel               Switch release channels (stable, dev)
                   update                    Update the application
                   log                       Tail yasb process logs (cancel with Ctrl-C)
+                  service                   Manage the YASB launcher service (install, start, stop, remove)
                   reset                     Restore default config files and clear cache
                   help                      Print this message
 
