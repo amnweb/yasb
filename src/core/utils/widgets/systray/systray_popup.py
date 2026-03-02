@@ -185,6 +185,10 @@ class SystrayPopup(QWidget):
         """Hide with a fade-out animation."""
         if self._is_closing:
             return
+        # Update button state immediately
+        self._toggle_btn.setChecked(False)
+        if self._label_collapsed:
+            self._toggle_btn.setText(self._label_collapsed)
         try:
             if self._fade_animation.state() == QPropertyAnimation.State.Running:
                 self._fade_animation.stop()
@@ -243,6 +247,9 @@ class SystrayPopup(QWidget):
             self._watch_timer.stop()
         elif IconWidget._drag_in_progress:
             pass  # Suppress close during drag-and-drop
+        elif self._toggle_btn and self._toggle_btn.rect().contains(self._toggle_btn.mapFromGlobal(QCursor.pos())):
+            # User clicked the toggle button let the button's clicked handler decide
+            pass
         elif self._popup_rect().contains(QCursor.pos()):
             self._watch_ticks = 0
             self._watch_timer.start()
