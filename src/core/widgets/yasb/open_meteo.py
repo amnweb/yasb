@@ -475,7 +475,7 @@ class OpenMeteoWidget(BaseWidget):
         today_label1.setProperty("class", "label")
         today_label1.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        layout_today.addWidget(today_label0)
+        layout_today.addWidget(today_label0, alignment=Qt.AlignmentFlag.AlignHCenter)
         layout_today.addWidget(today_sunrise_sunset_container)
         layout_today.addWidget(today_label1)
 
