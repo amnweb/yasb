@@ -12,6 +12,8 @@ class UpdateConfig(CustomBaseModel):
 
 class WindowsUpdateConfig(UpdateConfig):
     interval: int = Field(default=1440, ge=30, le=10080)
+    show_popup_menu: bool = False
+    popup_menu_padding: int = Field(default=8, ge=0, le=80)
 
 
 class WingetUpdateConfig(UpdateConfig):

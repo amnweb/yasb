@@ -18,6 +18,8 @@ This widget checks for available updates using Windows Update, Winget, and Scoop
 | `tooltip`       | boolean | `true`     | Whether to show the tooltip on hover.                        |
 | `interval`      | integer | `1440`     | Check interval in minutes (30 to 10080).                     |
 | `exclude`       | list    | `[]`       | List of updates to exclude (matched against name).           |
+| `show_popup_menu` | boolean    | `false`  | Whether to show a popup menu on left click. This allows the user to choose between opening Windows Update in Settings or executing a command (with a UAC elevation prompt) to directly update Windows Defender Virus' security intelligence updates. |
+| `popup_menu_padding` | integer | `8`   | Padding (in pixels) around the menu items if `show_popup_menu: true`. (Valid range: 0 - 80) |
 
 ### Winget Update Options
 
@@ -92,6 +94,14 @@ update_check:
 .update-check-widget .widget-container.paired-right {}
 .update-check-widget .label {}
 .update-check-widget .icon {}
+/* Styles for the new optional Windows Update popup menu */
+.widget-container.windows.menu-popup {}
+.widget-container.windows.menu-popup .menu-item {}
+.widget-container.windows.menu-popup .menu-item:hover {}
+.widget-container.windows.menu-popup .menu-item .icon {}
+.widget-container.windows.menu-popup .menu-item .label {}
+.widget-container.windows.menu-popup .menu-item:hover .icon {}
+.widget-container.windows.menu-popup .menu-item:hover .label {}
 ```
 
 ### State Classes
@@ -168,4 +178,36 @@ Example:
     font-weight: 600;
     font-size: 14px;
 } 
+/* Styles for the new optional Windows Update popup menu */
+.widget-container.windows.menu-popup {
+    background-color: var(--surface0);
+    border-radius: 4px;
+}
+
+.widget-container.windows.menu-popup .menu-item {
+    background-color: var(--surface1);
+    border-radius: 4px;
+    padding: 4px;
+}
+
+.widget-container.windows.menu-popup .menu-item:hover {
+    background-color: var(--surface2);
+}
+
+.widget-container.windows.menu-popup .menu-item .icon {
+    color: var(--text);
+    font-size: 16px;
+    min-width: 20px;
+}
+
+.widget-container.windows.menu-popup .menu-item .label {
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 400;
+}
+
+.widget-container.windows.menu-popup .menu-item:hover .icon,
+.widget-container.windows.menu-popup .menu-item:hover .label {
+    color: var(--text);
+}
 ```
