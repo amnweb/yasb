@@ -12,6 +12,7 @@ class SystrayPopupConfig(CustomBaseModel):
     direction: str = "down"
     offset_top: int = 6
     offset_left: int = 0
+    animation_duration: int = Field(default=80, ge=0, le=2000)
 
 
 class SystrayWidgetConfig(CustomBaseModel):
