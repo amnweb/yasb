@@ -211,17 +211,6 @@ class SystrayWidget(BaseWidget):
             return
         refresh_action.triggered.connect(self.refresh_systray)
 
-        def _on_menu_about_to_hide():
-            from core.global_state import get_autohide_owner_for_widget
-
-            try:
-                mgr = get_autohide_owner_for_widget(self)._autohide_manager  # type: ignore
-                if mgr._hide_timer:  # type: ignore
-                    mgr._hide_timer.start(mgr._autohide_delay)  # type: ignore
-            except Exception:
-                pass
-
-        menu.aboutToHide.connect(_on_menu_about_to_hide)
         menu.popup(self.unpinned_vis_btn.mapToGlobal(pos))
         try:
             menu.activateWindow()

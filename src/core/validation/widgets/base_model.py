@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict
 
 
@@ -28,6 +30,7 @@ class CallbacksConfig(CustomBaseModel):
 class KeybindingConfig(CustomBaseModel):
     keys: str
     action: str
+    screen: Literal["active", "cursor", "primary"] = "active"
 
 
 class PaddingConfig(CustomBaseModel):

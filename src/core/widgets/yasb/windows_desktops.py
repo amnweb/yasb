@@ -124,18 +124,6 @@ class WorkspaceButton(QPushButton):
             act_set_wall_all.triggered.connect(self.set_wallpaper_all)
             menu.addAction(act_set_wall_all)
 
-        def _on_menu_about_to_hide():
-            from core.global_state import get_autohide_owner_for_widget
-
-            try:
-                mgr = get_autohide_owner_for_widget(self)._autohide_manager
-                if mgr._hide_timer:
-                    mgr._hide_timer.start(mgr._autohide_delay)
-            except Exception:
-                pass
-
-        menu.aboutToHide.connect(_on_menu_about_to_hide)
-
         menu.popup(self.mapToGlobal(event.pos()))
         try:
             menu.activateWindow()

@@ -340,8 +340,8 @@ def set_foreground_hwnd(hwnd):
         SetForegroundWindow(int(hwnd))
 
 
-def find_focused_screen(follow_mouse, follow_window, screens=None):
-    """Find the screen that should be focused based on mouse position or active window."""
+def find_focused_screen(follow_mouse, follow_window, follow_primary=False, screens=None):
+    """Find the screen that should be focused based on mouse position, active window, or primary screen."""
 
     qt_screens = QApplication.screens()
     primary_screen = QApplication.primaryScreen()
@@ -357,6 +357,10 @@ def find_focused_screen(follow_mouse, follow_window, screens=None):
         for screen in qt_screens
         for geo in [screen.geometry()]
     }
+
+    if follow_primary:
+        if primary_screen is not None and is_valid(primary_screen.name()):
+            return primary_screen.name()
 
     if follow_mouse:
         try:

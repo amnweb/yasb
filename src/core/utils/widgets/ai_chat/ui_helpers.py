@@ -36,7 +36,11 @@ class FloatingWindowController:
             self._owner._original_position = self._owner._popup_chat.pos()
             self._owner._is_floating = True
             self._owner._popup_chat.set_floating(True)
-            screen = self._owner._popup_chat.screen()
+            screen = (
+                self._owner._get_target_screen()
+                if hasattr(self._owner, "_get_target_screen")
+                else self._owner._popup_chat.screen()
+            )
             if screen:
                 screen_geometry = screen.availableGeometry()
                 popup_size = self._owner._popup_chat.size()

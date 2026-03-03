@@ -581,8 +581,6 @@ class PopupWidget(QWidget):
         self._dark_mode = dark_mode
         self._parent = parent
         self._suspend_close = False
-        # We need bar_id for global_state autohide manager
-        self.bar_id = getattr(self._parent, "bar_id", None)
         # Create the inner frame
         self._popup_content = QFrame(self)
 
@@ -817,16 +815,6 @@ class PopupWidget(QWidget):
     def hideEvent(self, event):
         if self._is_closing:
             QApplication.instance().removeEventFilter(self)
-
-            try:
-                # Restart autohide timer if applicable
-                from core.global_state import get_autohide_owner_for_widget
-
-                mgr = get_autohide_owner_for_widget(self)._autohide_manager
-                if mgr._hide_timer:
-                    mgr._hide_timer.start(mgr._autohide_delay)
-            except Exception:
-                pass
 
         super().hideEvent(event)
 

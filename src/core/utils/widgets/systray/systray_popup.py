@@ -173,7 +173,6 @@ class SystrayPopup(QWidget):
                 self._fade_animation.stop()
         except Exception:
             pass
-
         self.setWindowOpacity(0.0)
         super().showEvent(event)
         self.activateWindow()
@@ -213,15 +212,6 @@ class SystrayPopup(QWidget):
 
     def hideEvent(self, event):
         self._watch_timer.stop()
-        if self._is_closing:
-            try:
-                from core.global_state import get_autohide_owner_for_widget
-
-                mgr = get_autohide_owner_for_widget(self)._autohide_manager
-                if mgr._hide_timer:
-                    mgr._hide_timer.start(mgr._autohide_delay)
-            except Exception:
-                pass
         super().hideEvent(event)
         self.closed.emit()
 

@@ -115,21 +115,6 @@ class SystemTrayManager(QSystemTrayIcon):
         """
         self.menu.setStyleSheet(style_sheet)
 
-        def _on_menu_about_to_hide():
-            # Restart autohide timers for all registered autohide owners.
-            # Use the central global_state registry so we don't need a widget with a bar_id here.
-            from core.global_state import get_all_autohide_owners
-
-            try:
-                for owner in get_all_autohide_owners():
-                    mgr = getattr(owner, "_autohide_manager", None)
-                    if mgr and getattr(mgr, "_hide_timer", None):
-                        mgr._hide_timer.start(getattr(mgr, "_autohide_delay", 400))
-            except Exception:
-                pass
-
-        self.menu.aboutToHide.connect(_on_menu_about_to_hide)
-
         open_config_action = self.menu.addAction("Open Config")
         open_config_action.triggered.connect(self._open_config)
         if os.path.exists(THEME_EXE_PATH):
