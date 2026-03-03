@@ -9,7 +9,6 @@ from PyQt6.QtWidgets import QApplication
 from core.bar import Bar
 from core.config import get_config, get_stylesheet
 from core.event_service import EventService
-from core.global_state import set_bar_screens
 from core.utils.controller import reload_application
 from core.utils.utilities import get_screen_by_name
 from core.utils.widget_builder import WidgetBuilder
@@ -161,7 +160,7 @@ class BarManager(QObject):
                         self.create_bar(bar_config, bar_name, screen, init)
                         initialized_screens.add(screen.name())
 
-        set_bar_screens(initialized_screens)
+        self._initialized_screens = initialized_screens
         self._collect_keybindings()
         self._start_hotkey_listener()
         self.run_listeners_in_threads()
@@ -206,6 +205,7 @@ class BarManager(QObject):
         self._hotkey_listener = HotkeyListener(
             self._collected_keybindings,
             self._hotkey_dispatcher,
+            self._initialized_screens,
         )
         self._hotkey_listener.start()
         logging.info("Starting HotkeyListener...")
