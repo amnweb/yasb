@@ -530,19 +530,24 @@ class QuickLaunchWidget(BaseWidget):
         self._popup.move(x, y)
 
     def _get_target_screen(self):
-
-        mode = self.config.popup.screen
-        if mode == "cursor":
+        screen_mode = "cursor"
+        for kb in self.config.keybindings:
+            if kb.action == "toggle_quick_launch":
+                screen_mode = kb.screen
+                break
+        if screen_mode == "cursor":
             screen_name = find_focused_screen(follow_mouse=True, follow_window=False)
-        elif mode == "focus":
+        elif screen_mode == "active":
             screen_name = find_focused_screen(follow_mouse=False, follow_window=True)
-        else:
+        elif screen_mode == "primary":
             return QApplication.primaryScreen() or QApplication.screens()[0]
+        else:
+            return self.screen() or QApplication.primaryScreen() or QApplication.screens()[0]
         if screen_name:
             for s in QApplication.screens():
                 if s.name() == screen_name:
                     return s
-        return QApplication.primaryScreen() or QApplication.screens()[0]
+        return self.screen() or QApplication.primaryScreen() or QApplication.screens()[0]
 
     def _set_compact_visible(self, show_results: bool):
         """Toggle results area visibility and resize popup for compact mode."""

@@ -800,7 +800,6 @@ quick_launch:
     popup:
       width: 720
       height: 480
-      screen: "focus"
       blur: true
       round_corners: true
       round_corners_type: "normal"
@@ -850,7 +849,6 @@ quick_launch:
 - **popup:** Popup window appearance settings.
     - **_width:_** Width of the popup window in pixels.
     - **_height:_** Height of the popup window in pixels.
-    - **_screen:_** Which screen to show the popup on (`"focus"`, `"cursor"`, or `"primary"`).
     - **_blur:_** Enable background blur effect (requires Windows 11).
     - **_round_corners:_** Enable rounded corners on the popup.
     - **_round_corners_type:_** Type of corner rounding (`"normal"` or `"small"`).
