@@ -148,16 +148,25 @@ def list_copilot_models(provider_config: dict | None = None) -> list[dict[str, A
         await client.start()
         auth_status = await client.get_auth_status()
         if not getattr(auth_status, "isAuthenticated", False):
-            await client.stop()
             logging.error("Copilot CLI is not authenticated. Run `copilot` to sign in.")
+            try:
+                await client.stop()
+            except ExceptionGroup:
+                pass
             return []
         try:
             models = await client.list_models()
         except Exception as exc:
             logging.warning("Copilot models unavailable: %s", exc)
-            await client.stop()
+            try:
+                await client.stop()
+            except ExceptionGroup:
+                pass
             return []
-        await client.stop()
+        try:
+            await client.stop()
+        except ExceptionGroup:
+            pass  # stop() completes all cleanup before raising; result already obtained
         return _normalize_models(models)
 
     try:
@@ -512,8 +521,8 @@ class CopilotAiChatClient:
         if self._client:
             try:
                 await self._client.stop()
-            except Exception:
-                pass
+            except ExceptionGroup:
+                pass  # stop() completes all cleanup before raising; safe to ignore
         self._client = None
 
     async def _abort_session(self) -> None:
