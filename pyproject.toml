@@ -27,7 +27,7 @@ dependencies = [
     "github-copilot-sdk==0.1.29",
     "openai==2.24.0",
     "pyvda==0.5.0",
-    "python-dotenv==1.2.1",
+    "python-dotenv==1.2.2",
     "tzdata==2025.3",
     "winmica==1.0.3",
     "winrt.windows.foundation==3.2.1",
