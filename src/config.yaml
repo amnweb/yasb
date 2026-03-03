@@ -41,29 +41,29 @@ bars:
       right: 4
     widgets:
       left:
-      - "home"
-      - "komorebi_workspaces"
-      - "komorebi_active_layout"
-      - "active_window"
+        - "home"
+        - "komorebi_workspaces"
+        - "komorebi_active_layout"
+        - "active_window"
       center:
-      - "clock"
+        - "clock"
       right:
-      - "media"
-      - "weather"
-      - "microphone"
-      - "volume"
-      - "notifications"
-      - "power_menu"
+        - "media"
+        - "weather"
+        - "microphone"
+        - "volume"
+        - "notifications"
+        - "power_menu"
 widgets:
   home:
     type: "yasb.home.HomeWidget"
     options:
       label: "<span>\udb81\udf17</span>"
       menu_list:
-      - { title: "User Home", path: "~" }
-      - { title: "Download", path: "~\\Downloads" }
-      - { title: "Documents", path: "~\\Documents" }
-      - { title: "Pictures", path: "~\\Pictures" }
+        - { title: "User Home", path: "~" }
+        - { title: "Download", path: "~\\Downloads" }
+        - { title: "Documents", path: "~\\Documents" }
+        - { title: "Pictures", path: "~\\Pictures" }
       system_menu: true
       power_menu: true
       blur: false
@@ -133,7 +133,7 @@ widgets:
       label: "{%a, %d %b %H:%M}"
       label_alt: "{%A, %d %B %Y %H:%M}"
       timezones: []
-      calendar: 
+      calendar:
         blur: false
         round_corners: false
         alignment: "center"
