@@ -9,7 +9,6 @@ from typing import Optional
 from PyQt6.QtCore import Q_ARG, QMetaObject, QObject, Qt, QThread, pyqtSlot
 
 from core.event_service import EventService
-from core.global_state import get_bar_screens
 from core.utils.win32.bindings import user32
 from core.utils.win32.bindings.kernel32 import GetCurrentThreadId
 
@@ -99,6 +98,7 @@ class HotkeyBinding:
     action: str
     vk: int
     modifiers: int
+    screen: str = "active"
 
 
 def parse_hotkey(hotkey: str) -> Optional[tuple[int, int]]:
@@ -177,10 +177,11 @@ class HotkeyDispatcher(QObject):
 class HotkeyListener(QThread):
     """Background thread that registers global hotkeys via RegisterHotKey."""
 
-    def __init__(self, bindings: list[HotkeyBinding], dispatcher: HotkeyDispatcher) -> None:
+    def __init__(self, bindings: list[HotkeyBinding], dispatcher: HotkeyDispatcher, bar_screens: set[str]) -> None:
         super().__init__()
         self._bindings = bindings
         self._dispatcher = dispatcher
+        self._bar_screens = bar_screens
         self._thread_id: int | None = None
 
         # Map hotkey ID -> binding for WM_HOTKEY dispatch
@@ -212,8 +213,15 @@ class HotkeyListener(QThread):
         """Emit a hotkey event to the dispatcher on the main thread."""
         from core.utils.win32.utilities import find_focused_screen
 
-        available_screens = get_bar_screens()
-        screen_name = find_focused_screen(follow_mouse=False, follow_window=True, screens=available_screens)
+        follow_primary = binding.screen == "primary"
+        follow_mouse = binding.screen == "cursor"
+        follow_window = binding.screen == "active"
+        screen_name = find_focused_screen(
+            follow_mouse=follow_mouse,
+            follow_window=follow_window,
+            follow_primary=follow_primary,
+            screens=self._bar_screens,
+        )
 
         QMetaObject.invokeMethod(
             self._dispatcher,
@@ -288,6 +296,7 @@ def collect_widget_keybindings(widget_name: str, keybindings: list[dict]) -> lis
             action=action,
             vk=vk,
             modifiers=modifiers,
+            screen=kb.get("screen", "active"),
         )
         bindings.append(binding)
 
