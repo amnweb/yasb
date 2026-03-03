@@ -3,10 +3,10 @@ import os
 import tempfile
 
 from PyQt6.QtCore import QFileSystemWatcher, QObject, QTimer, pyqtSignal
+from PyQt6.QtWidgets import QApplication
 
-from core.utils.widgets.launchpad.app_loader import AppListLoader
 from core.utils.widgets.quick_launch.base_provider import BaseProvider
-from core.utils.widgets.quick_launch.icon_resolver import IconResolverWorker
+from core.utils.widgets.quick_launch.icon_resolver import IconResolverWorker, compute_extraction_size
 from core.utils.widgets.quick_launch.providers import (
     AppsProvider,
     BookmarksProvider,
@@ -35,6 +35,7 @@ from core.utils.widgets.quick_launch.providers import (
     WslProvider,
 )
 from core.utils.widgets.quick_launch.workers import QueryWorker, StartMenuWatcherThread
+from core.utils.win32.app_loader import AppListLoader
 
 PROVIDER_REGISTRY: dict[str, type[BaseProvider]] = {
     "apps": AppsProvider,
@@ -116,7 +117,10 @@ class QuickLaunchService(QObject):
     def icon_paths(self) -> dict[str, str]:
         return self._icon_paths
 
-    def configure_providers(self, providers_config: dict, max_results: int = 50, show_icons: bool = True):
+    def configure_providers(
+        self, providers_config: dict, max_results: int = 50, show_icons: bool = True, icon_size: int = 32
+    ):
+        self._icon_size = icon_size
         if self._providers and self._providers_config == providers_config:
             return
         self._providers_config = providers_config
@@ -177,7 +181,13 @@ class QuickLaunchService(QObject):
             self._icon_worker.icon_ready.disconnect(self._on_icon_ready)
             self._icon_worker.stop()
             self._icon_worker.wait()
-        self._icon_worker = IconResolverWorker(self._apps, self._icons_dir)
+
+        dpr = 1.0
+        screen = QApplication.primaryScreen()
+        if screen:
+            dpr = screen.devicePixelRatio()
+        size = compute_extraction_size(self._icon_size, dpr)
+        self._icon_worker = IconResolverWorker(self._apps, self._icons_dir, size=size)
         self._icon_worker.icon_ready.connect(self._on_icon_ready)
         self._icon_worker.start()
 

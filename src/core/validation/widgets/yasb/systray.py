@@ -3,6 +3,17 @@ from pydantic import Field
 from core.validation.widgets.base_model import CustomBaseModel, PaddingConfig, ShadowConfig
 
 
+class SystrayPopupConfig(CustomBaseModel):
+    blur: bool = True
+    round_corners: bool = True
+    round_corners_type: str = "normal"
+    border_color: str = "System"
+    alignment: str = "right"
+    direction: str = "down"
+    offset_top: int = 6
+    offset_left: int = 0
+
+
 class SystrayWidgetConfig(CustomBaseModel):
     class_name: str = "systray"
     label_collapsed: str = "▼"
@@ -12,6 +23,9 @@ class SystrayWidgetConfig(CustomBaseModel):
     pin_click_modifier: str = "alt"
     show_unpinned: bool = True
     show_unpinned_button: bool = True
+    show_in_popup: bool = False
+    icons_per_row: int = Field(default=5, ge=1, le=12)
+    popup: SystrayPopupConfig = SystrayPopupConfig()
     show_battery: bool = False
     show_volume: bool = False
     show_network: bool = False

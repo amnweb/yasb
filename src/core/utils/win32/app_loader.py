@@ -1,7 +1,9 @@
+import ctypes
 import glob
 import os
 import re
 import subprocess
+import winreg
 
 from PyQt6.QtCore import (
     QThread,
@@ -9,6 +11,58 @@ from PyQt6.QtCore import (
 )
 
 _APPS_CACHE = None
+
+_CPL_NS_KEY = r"SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\ControlPanel\NameSpace"
+
+
+def _load_indirect_string(resource: str) -> str | None:
+    """Resolve a @resource.dll,-123 string to its localized value via SHLoadIndirectString."""
+    buf = ctypes.create_unicode_buffer(1024)
+    hr = ctypes.windll.shlwapi.SHLoadIndirectString(resource, buf, len(buf), None)
+    return buf.value if hr == 0 else None
+
+
+def _reg_value(key, name: str, default=None):
+    """Read a single registry value, returning *default* on failure."""
+    try:
+        val, _ = winreg.QueryValueEx(key, name)
+        return val
+    except OSError:
+        return default
+
+
+def _resolve_reg_string(key, value_name: str) -> str | None:
+    """Read a registry string and resolve it if it is a @resource reference."""
+    raw = _reg_value(key, value_name)
+    if not raw:
+        return None
+    if raw.startswith("@"):
+        return _load_indirect_string(raw)
+    return raw
+
+
+def _enumerate_control_panel_items():
+    """Yield (name, clsid, canonical_name, description) for each Control Panel item."""
+    with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, _CPL_NS_KEY) as ns:
+        i = 0
+        while True:
+            try:
+                clsid = winreg.EnumKey(ns, i)
+            except OSError:
+                break
+            i += 1
+            try:
+                with winreg.OpenKey(winreg.HKEY_CLASSES_ROOT, f"CLSID\\{clsid}") as ck:
+                    canonical = _reg_value(ck, "System.ApplicationName")
+                    if not canonical:
+                        continue
+                    name = _resolve_reg_string(ck, "LocalizedString") or _reg_value(ck, "")
+                    if not name or name.startswith("@"):
+                        continue
+                    desc = _resolve_reg_string(ck, "InfoTip")
+                    yield name, clsid, canonical, desc
+            except OSError:
+                continue
 
 
 class AppListLoader(QThread):
@@ -68,23 +122,39 @@ class AppListLoader(QThread):
 
             return False
 
+        def is_duplicate(name):
+            """Check if name (or its space-stripped form) was already seen.
+
+            Some shortcuts use CamelCase without spaces (e.g. "LiveCaptions")
+            while Get-StartApps returns the spaced form ("Live captions").
+            Checking both forms prevents duplicates.
+            """
+            lower = name.lower()
+            stripped = lower.replace(" ", "")
+            return lower in seen_names or stripped in seen_names
+
+        def mark_seen(name):
+            lower = name.lower()
+            seen_names.add(lower)
+            seen_names.add(lower.replace(" ", ""))
+
         for dir in start_menu_dirs:
             for lnk in glob.glob(os.path.join(dir, "**", "*.lnk"), recursive=True):
                 name = os.path.splitext(os.path.basename(lnk))[0]
                 if should_filter_app(name):
                     continue
-                if name.lower() not in seen_names:
+                if not is_duplicate(name):
                     apps.append((name, lnk, None))
-                    seen_names.add(name.lower())
+                    mark_seen(name)
 
             # Also scan .url files (e.g. Steam games)
             for url_file in glob.glob(os.path.join(dir, "**", "*.url"), recursive=True):
                 name = os.path.splitext(os.path.basename(url_file))[0]
                 if should_filter_app(name):
                     continue
-                if name.lower() not in seen_names:
+                if not is_duplicate(name):
                     apps.append((name, url_file, None))
-                    seen_names.add(name.lower())
+                    mark_seen(name)
 
         try:
             ps_script = "Get-StartApps | ForEach-Object { [PSCustomObject]@{Name=$_.Name;AppID=$_.AppID} } | ConvertTo-Json -Compress"
@@ -115,9 +185,18 @@ class AppListLoader(QThread):
                 for entry in uwp_list:
                     name = entry.get("Name")
                     appid = entry.get("AppID")
-                    if name and appid and name.lower() not in seen_names and not should_filter_app(name):
+                    if name and appid and not is_duplicate(name) and not should_filter_app(name):
                         apps.append((name, f"UWP::{appid}", None))
-                        seen_names.add(name.lower())
+                        mark_seen(name)
+        except Exception:
+            pass
+
+        # Source 3: Control Panel items from registry (Device Manager, Programs and Features, etc.)
+        try:
+            for name, clsid, canonical, desc in _enumerate_control_panel_items():
+                if not is_duplicate(name):
+                    apps.append((name, f"CPL::{clsid}::{canonical}", desc))
+                    mark_seen(name)
         except Exception:
             pass
 
