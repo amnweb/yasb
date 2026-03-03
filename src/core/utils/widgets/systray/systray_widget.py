@@ -360,6 +360,7 @@ class DropWidget(QFrame):
         else:
             # Cross-container drop (from pinned bar into grid)
             source.setParent(self)
+            source.show()
             if isinstance(hovered, IconWidget) and hovered in icons:
                 icons.insert(_insert_index(hovered), source)
             else:
@@ -400,9 +401,13 @@ class DropWidget(QFrame):
             layout.setColumnMinimumWidth(c, 0)
             layout.setColumnStretch(c, 0)
         cols = self._grid_cols
-        for idx, icon in enumerate(icons):
-            layout.addWidget(icon, idx // cols, idx % cols)
+        visible_idx = 0
+        for icon in icons:
+            if icon.isHidden():
+                continue
+            layout.addWidget(icon, visible_idx // cols, visible_idx % cols)
             icon.show()
+            visible_idx += 1
         layout.invalidate()
 
     def _get_all_icons(self) -> list[IconWidget]:
