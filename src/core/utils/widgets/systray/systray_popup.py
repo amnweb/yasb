@@ -90,6 +90,8 @@ class SystrayPopup(QWidget):
 
     def open(self, label_expanded: str):
         self._grid_widget.relayout_grid()
+        self.show()
+        self._grid_widget.updateGeometry()
         self.adjustSize()
         self._set_position(
             alignment=self._popup_config.alignment,
@@ -97,7 +99,6 @@ class SystrayPopup(QWidget):
             offset_left=self._popup_config.offset_left,
             offset_top=self._popup_config.offset_top,
         )
-        self.show()
         self._toggle_btn.setChecked(True)
         self._toggle_btn.setText(label_expanded)
 
