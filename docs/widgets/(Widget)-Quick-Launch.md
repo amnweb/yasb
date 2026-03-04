@@ -124,10 +124,11 @@ Browse and restore Windows Clipboard History entries. Type `cb` to list recent i
 
 | Option      | Type   | Default | Description                                                                          |
 | ----------- | ------ | ------- | ------------------------------------------------------------------------------------ |
-| `enabled`   | bool   | `false` | Enable/disable the clipboard history provider.                                       |
-| `prefix`    | string | `"cb"`  | Trigger prefix. Use `"*"` to include in default results.                             |
-| `priority`  | int    | `0`     | Sort order when multiple providers share the same prefix. Lower values appear first. |
-| `max_items` | int    | `30`    | Maximum number of clipboard history items to show.                                   |
+| `enabled`      | bool   | `false` | Enable/disable the clipboard history provider.                                       |
+| `prefix`       | string | `"cb"`  | Trigger prefix. Use `"*"` to include in default results.                             |
+| `priority`     | int    | `0`     | Sort order when multiple providers share the same prefix. Lower values appear first. |
+| `max_items`    | int    | `30`    | Maximum number of clipboard history items to show.                                   |
+| `show_preview` | bool   | `true`  | Show the preview panel with text content or image preview. Press `Alt+P` to toggle at runtime. |
 
 Usage:
 
@@ -238,11 +239,12 @@ Search files and folders on the system. Type `/` followed by a filename (e.g., `
 
 | Option      | Type   | Default  | Description                                                                          |
 | ----------- | ------ | -------- | ------------------------------------------------------------------------------------ |
-| `enabled`   | bool   | `false`  | Enable/disable the file search provider.                                             |
-| `prefix`    | string | `"/"`    | Trigger prefix. Use `"*"` to include in default results.                             |
-| `priority`  | int    | `0`      | Sort order when multiple providers share the same prefix. Lower values appear first. |
-| `backend`   | string | `"auto"` | Search backend: `"auto"`, `"everything"`, `"index"`, or `"disk"`.                    |
-| `show_path` | bool   | `true`   | Show the parent folder path and file size in the result description.                 |
+| `enabled`      | bool   | `false`  | Enable/disable the file search provider.                                             |
+| `prefix`       | string | `"/"`    | Trigger prefix. Use `"*"` to include in default results.                             |
+| `priority`     | int    | `0`      | Sort order when multiple providers share the same prefix. Lower values appear first. |
+| `backend`      | string | `"auto"` | Search backend: `"auto"`, `"everything"`, `"index"`, or `"disk"`.                    |
+| `show_path`    | bool   | `true`   | Show the parent folder path and file size in the result description.                 |
+| `show_preview` | bool   | `false`  | Show the preview panel with file icon and metadata. Press `Alt+P` to toggle at runtime. |
 
 #### Backends
 

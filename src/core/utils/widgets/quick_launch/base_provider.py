@@ -52,6 +52,7 @@ class BaseProvider(ABC):
         self.prefix: str | None = None if raw == "*" else raw
         self.priority: int = self.config.get("priority", 0)
         self.max_results: int = self.config.get("_max_results", 50)
+        self.show_preview: bool = self.config.get("show_preview", True)
         self.request_refresh: Callable[[], None] | None = None
 
     def match(self, text: str) -> bool:

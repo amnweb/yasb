@@ -73,6 +73,7 @@ class FileSearchProviderConfig(CustomBaseModel):
     priority: int = 0
     backend: Literal["auto", "everything", "index", "disk"] = "auto"
     show_path: bool = True
+    show_preview: bool = False
 
 
 class CurrencyProviderConfig(CustomBaseModel):
@@ -119,6 +120,7 @@ class ClipboardHistoryProviderConfig(CustomBaseModel):
     prefix: str = "cb"
     priority: int = 0
     max_items: int = 30
+    show_preview: bool = True
 
 
 class PortViewerProviderConfig(CustomBaseModel):

@@ -1,5 +1,6 @@
 import ctypes
 import ctypes.wintypes
+import datetime
 import fnmatch
 import logging
 import os
@@ -722,6 +723,7 @@ class FileSearchProvider(BaseProvider):
                 description = f"{size_str} - {parent}" if size_str else parent
             else:
                 description = ""
+            preview = self._build_file_preview(path, name, is_folder, size)
             results.append(
                 ProviderResult(
                     title=name,
@@ -729,9 +731,30 @@ class FileSearchProvider(BaseProvider):
                     icon_char=_get_file_icon(name, is_folder),
                     provider=self.name,
                     action_data={"path": path, "is_folder": is_folder},
+                    preview=preview,
                 )
             )
         return results
+
+    def _build_file_preview(self, path: str, name: str, is_folder: bool, size: int) -> dict:
+        """Build a toggleable preview dict with file/folder metadata."""
+        metadata = []
+        try:
+            st = os.stat(path)
+            if not is_folder:
+                metadata.append(["File Size", _format_size(st.st_size) or _format_size(size)])
+            metadata.append(["Created", datetime.datetime.fromtimestamp(st.st_ctime).strftime("%Y-%m-%d %H:%M")])
+            metadata.append(["Last Modified", datetime.datetime.fromtimestamp(st.st_mtime).strftime("%Y-%m-%d %H:%M")])
+        except OSError:
+            if size and not is_folder:
+                metadata.append(["File Size", _format_size(size)])
+        return {
+            "kind": "text",
+            "icon": _get_file_icon(name, is_folder),
+            "title": name,
+            "subtitle": path,
+            "metadata": metadata,
+        }
 
     def execute(self, result: ProviderResult) -> bool:
         action = result.action_data.get("action", "")

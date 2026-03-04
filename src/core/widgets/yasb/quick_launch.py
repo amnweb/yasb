@@ -20,6 +20,7 @@ from PyQt6.QtWidgets import (
     QApplication,
     QFrame,
     QGraphicsOpacityEffect,
+    QGridLayout,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -416,6 +417,8 @@ class QuickLaunchWidget(BaseWidget):
         self._loader: LoaderLine | None = None
 
         self._active_prefix: str | None = None
+        self._prediction_text: str = ""
+        self._preview_visible: bool = False
 
         self._position_locked = True
         self._saved_position: QPoint | None = None
@@ -495,6 +498,7 @@ class QuickLaunchWidget(BaseWidget):
                 pass
         self._pending_query_id = None
         self._active_prefix = None
+        self._preview_visible = False
         self._popup = None
         self._loader = None
         self._result_model = None
@@ -609,6 +613,20 @@ class QuickLaunchWidget(BaseWidget):
         search_input.setPlaceholderText(self.config.search_placeholder)
         search_input.textChanged.connect(self._on_search_text_changed)
         search_input.installEventFilter(self)
+
+        # Prediction/autocomplete overlay — a read-only QLineEdit on top of the real one.
+        # Same widget type = identical internal text positioning with any font.
+        prediction_input = QLineEdit(search_input)
+        prediction_input.setProperty("class", "search-input")
+        prediction_input.setReadOnly(True)
+        prediction_input.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        prediction_input.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+        prediction_input.setFrame(False)
+        prediction_effect = QGraphicsOpacityEffect(prediction_input)
+        prediction_effect.setOpacity(0.4)
+        prediction_input.setGraphicsEffect(prediction_effect)
+        prediction_input.setVisible(False)
+
         search_layout.addWidget(search_input)
 
         enter_icon = QLabel(ICON_SUBMIT)
@@ -743,6 +761,7 @@ class QuickLaunchWidget(BaseWidget):
         popup.content_widget = content_widget
         popup.prefix_chip = prefix_chip
         popup.search_input = search_input
+        popup.prediction_label = prediction_input
         popup.results_view = results_view
         popup.empty_widget = empty_widget
         popup.empty_icon = empty_icon
@@ -758,6 +777,9 @@ class QuickLaunchWidget(BaseWidget):
         """Handle text changes in the search input, detecting prefix activation."""
         if not self._popup:
             return
+        # Hide prediction immediately; it will reappear when new results arrive
+        self._popup.prediction_label.setVisible(False)
+        self._prediction_text = ""
         # Prevent leading spaces in the search input
         stripped = search_text.lstrip()
         if stripped != search_text:
@@ -918,6 +940,11 @@ class QuickLaunchWidget(BaseWidget):
             self._popup.results_view.clearSelection()
             self._clear_preview()
 
+    @staticmethod
+    def _wrappable_text(text: str) -> str:
+        """Insert zero-width spaces after common break characters for clean word wrapping."""
+        return text.replace("\\", "\\\u200b").replace("/", "/\u200b").replace("-", "-\u200b").replace("_", "_\u200b")
+
     def _clear_preview(self):
         """Hide the preview pane and clear its content."""
         if not self._popup:
@@ -947,6 +974,11 @@ class QuickLaunchWidget(BaseWidget):
             return
         preview = result.preview
         if not preview:
+            self._clear_preview()
+            return
+        # Check provider's show_preview config; Alt+P overrides at runtime
+        provider = self._get_provider(result.provider)
+        if provider and not provider.show_preview and not self._preview_visible:
             self._clear_preview()
             return
 
@@ -980,6 +1012,24 @@ class QuickLaunchWidget(BaseWidget):
             text_label.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
             text_area.setWidget(text_label)
             layout.addWidget(text_area, stretch=1)
+        elif kind == "text" and preview.get("icon"):
+            # Icon-based preview (e.g. file search): large SVG icon centered
+            icon_frame = QFrame()
+            icon_frame.setProperty("class", "preview-icon-frame")
+            icon_layout = QVBoxLayout(icon_frame)
+            icon_layout.setContentsMargins(0, 0, 0, 0)
+            icon_layout.setSpacing(4)
+            icon_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            icon_svg = preview["icon"]
+            icon_label = QLabel()
+            icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            pixmap = svg_to_pixmap(icon_svg, 96, self._dpr)
+            if not pixmap.isNull():
+                icon_label.setPixmap(pixmap)
+            else:
+                icon_label.setText(icon_svg)
+            icon_layout.addWidget(icon_label)
+            layout.addWidget(icon_frame, stretch=1)
         elif kind == "image" and preview.get("image_data"):
             img_label = QLabel()
             img_label.setProperty("class", "preview-image")
@@ -1008,17 +1058,33 @@ class QuickLaunchWidget(BaseWidget):
             meta_layout.setContentsMargins(0, 0, 0, 0)
             meta_layout.setSpacing(2)
             if title:
-                lbl = QLabel(title)
+                lbl = QLabel(self._wrappable_text(title))
                 lbl.setProperty("class", "preview-title")
                 lbl.setWordWrap(True)
                 meta_layout.addWidget(lbl)
             if subtitle:
                 for line in subtitle.split("\n"):
                     if line.strip():
-                        lbl = QLabel(line.strip())
+                        lbl = QLabel(self._wrappable_text(line.strip()))
                         lbl.setProperty("class", "preview-subtitle")
                         lbl.setWordWrap(True)
                         meta_layout.addWidget(lbl)
+            # Structured metadata as two-column grid (label | value)
+            metadata = preview.get("metadata")
+            if metadata:
+                grid = QGridLayout()
+                grid.setContentsMargins(0, 12, 0, 0)
+                grid.setHorizontalSpacing(12)
+                grid.setVerticalSpacing(2)
+                for row, (label, value) in enumerate(metadata):
+                    key_lbl = QLabel(label)
+                    key_lbl.setProperty("class", "preview-subtitle")
+                    val_lbl = QLabel(value)
+                    val_lbl.setProperty("class", "preview-subtitle")
+                    val_lbl.setAlignment(Qt.AlignmentFlag.AlignRight)
+                    grid.addWidget(key_lbl, row, 0)
+                    grid.addWidget(val_lbl, row, 1)
+                meta_layout.addLayout(grid)
             layout.addWidget(meta_frame)
 
         self._popup.preview_frame.setVisible(True)
@@ -1126,6 +1192,31 @@ class QuickLaunchWidget(BaseWidget):
         if not any(getattr(r, "is_loading", False) for r in results):
             self._stop_loader()
         self._apply_results(results)
+        self._update_prediction()
+
+    def _update_prediction(self):
+        """Show autocomplete ghost text from the first apps-provider result matching the typed text."""
+        if not self._popup or not self._result_model:
+            self._prediction_text = ""
+            return
+        overlay = self._popup.prediction_label
+        search_input = self._popup.search_input
+        typed = search_input.text()
+        prediction = ""
+        if typed and search_input.cursorPosition() == len(typed):
+            for i in range(self._result_model.rowCount()):
+                result = self._result_model.result_at(i)
+                if result and not result.is_separator and result.provider == "apps":
+                    if result.title.lower().startswith(typed.lower()) and len(result.title) > len(typed):
+                        prediction = typed + result.title[len(typed) :]
+                    break
+        self._prediction_text = prediction
+        if prediction:
+            overlay.setText(prediction)
+            overlay.resize(search_input.size())
+            overlay.setVisible(True)
+        else:
+            overlay.setVisible(False)
 
     def _next_selectable(self, current: int, direction: int, count: int) -> int:
         idx = current + direction
@@ -1318,6 +1409,32 @@ class QuickLaunchWidget(BaseWidget):
             if etype == QEvent.Type.MouseButtonRelease and self._drag_offset is not None:
                 self._drag_offset = None
                 self._set_drag_opacity(1.0)
+                return True
+
+        # Alt+P to toggle preview panel
+        if (
+            etype == QEvent.Type.KeyPress
+            and event.key() == Qt.Key.Key_P
+            and event.modifiers() == Qt.KeyboardModifier.AltModifier
+        ):
+            count = self._result_model.rowCount() if self._result_model else 0
+            self._preview_visible = not self._preview_visible
+            if self._preview_visible and 0 <= self._selected_index < count:
+                self._update_preview(self._selected_index)
+            else:
+                self._clear_preview()
+            return True
+
+        # Right Arrow to accept prediction autocomplete
+        if etype == QEvent.Type.KeyPress and event.key() == Qt.Key.Key_Right:
+            if (
+                self._prediction_text
+                and self._popup.prediction_label.isVisible()
+                and self._popup.search_input.cursorPosition() == len(self._popup.search_input.text())
+            ):
+                accepted = self._prediction_text
+                self._popup.search_input.setText(accepted)
+                self._popup.search_input.setCursorPosition(len(accepted))
                 return True
 
         # Backspace to remove prefix chip

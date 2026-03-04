@@ -118,8 +118,26 @@ _SendInput.restype = ctypes.wintypes.UINT
 
 def _send_unicode_string(text: str):
     """Type a string into the focused window using SendInput with KEYEVENTF_UNICODE."""
+    VK_RETURN = 0x0D
     inputs = []
     for char in text:
+        if char == "\r":
+            continue  # skip \r, handle \n as Enter
+        if char == "\n":
+            # Send a virtual Enter key press for line breaks
+            down = _INPUT(type=INPUT_KEYBOARD)
+            down.ki.wVk = VK_RETURN
+            down.ki.wScan = 0
+            down.ki.dwFlags = 0
+            inputs.append(down)
+
+            up = _INPUT(type=INPUT_KEYBOARD)
+            up.ki.wVk = VK_RETURN
+            up.ki.wScan = 0
+            up.ki.dwFlags = KEYEVENTF_KEYUP
+            inputs.append(up)
+            continue
+
         code = ord(char)
         down = _INPUT(type=INPUT_KEYBOARD)
         down.ki.wVk = 0
