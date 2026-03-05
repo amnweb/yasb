@@ -1,23 +1,4 @@
-import ctypes.wintypes
-
 from core.event_enums import Event
-
-user32 = ctypes.windll.user32
-user32.SetWinEventHook.restype = ctypes.wintypes.HANDLE
-ole32 = ctypes.windll.ole32
-ole32.CoInitialize(0)
-msg = ctypes.wintypes.MSG()
-
-WinEventProcType = ctypes.WINFUNCTYPE(
-    None,
-    ctypes.wintypes.HANDLE,
-    ctypes.wintypes.DWORD,
-    ctypes.wintypes.HWND,
-    ctypes.wintypes.LONG,
-    ctypes.wintypes.LONG,
-    ctypes.wintypes.DWORD,
-    ctypes.wintypes.DWORD,
-)
 
 
 class WinEvent(Event):
