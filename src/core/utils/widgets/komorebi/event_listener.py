@@ -1,6 +1,6 @@
 import json
 import logging
-import time
+import threading
 import uuid
 
 import pywintypes
@@ -21,7 +21,7 @@ class KomorebiEventListener(QThread):
     def __init__(self, pipe_name: str = KOMOREBI_PIPE_NAME, buffer_size: int = KOMOREBI_PIPE_BUFF_SIZE):
         super().__init__()
         self._komorebic = KomorebiClient()
-        self._app_running = True
+        self._stop_event = threading.Event()
         self.pipe_name = f"{pipe_name}-{uuid.uuid1()}"
         self.buffer_size = buffer_size
         self.event_service = EventService()
@@ -29,6 +29,10 @@ class KomorebiEventListener(QThread):
 
     def __str__(self):
         return "Komorebi Event Listener"
+
+    @property
+    def _app_running(self) -> bool:
+        return not self._stop_event.is_set()
 
     def _create_pipe(self) -> None:
         open_mode = win32pipe.PIPE_ACCESS_DUPLEX
@@ -50,8 +54,17 @@ class KomorebiEventListener(QThread):
         )
         logging.info(f"Created named pipe {self.pipe_name}")
 
+    def _close_pipe(self):
+        if self.pipe:
+            try:
+                win32file.CloseHandle(self.pipe)
+            except Exception:
+                pass
+            self.pipe = None
+
     def run(self):
         while self._app_running:
+            should_reconnect = True
             try:
                 self._create_pipe()
                 self._wait_until_komorebi_online()
@@ -60,7 +73,8 @@ class KomorebiEventListener(QThread):
                     try:
                         buffer, bytes_to_read, result = win32pipe.PeekNamedPipe(self.pipe, 1)
                         if not bytes_to_read:
-                            time.sleep(0.05)
+                            if self._stop_event.wait(0.05):
+                                break
                             continue
 
                         result, data = win32file.ReadFile(self.pipe, bytes_to_read, None)
@@ -86,14 +100,20 @@ class KomorebiEventListener(QThread):
             except BaseException, Exception:
                 logging.exception(f"Komorebi has disconnected from the named pipe {self.pipe_name}")
             finally:
-                if self.pipe:
-                    win32file.CloseHandle(self.pipe)
+                self._close_pipe()
                 self.event_service.emit_event(KomorebiEvent.KomorebiDisconnect)
-                logging.info("Attempting to reconnect to Komorebi...")
-                time.sleep(3)
+                if not self._app_running:
+                    should_reconnect = False
+                elif should_reconnect:
+                    logging.info("Attempting to reconnect to Komorebi...")
+                    if self._stop_event.wait(3):
+                        should_reconnect = False
+            if not should_reconnect:
+                break
 
     def stop(self):
-        self._app_running = False
+        self._stop_event.set()
+        self._close_pipe()
 
     def _emit_event(self, event: dict, state: dict) -> None:
         if isinstance(event, str):
@@ -118,7 +138,8 @@ class KomorebiEventListener(QThread):
                 logging.warning(f"Komorebi failed to subscribe named pipe. {stderr_str}")
 
         while self._app_running and proc.returncode != 0:
-            time.sleep(5)
+            if self._stop_event.wait(5):
+                return
             stderr, proc = self._komorebic.wait_until_subscribed_to_pipe(self.pipe_name)
 
         win32pipe.ConnectNamedPipe(self.pipe, None)
@@ -130,7 +151,8 @@ class KomorebiEventListener(QThread):
                 "Failed to retrieve komorebi state before starting event listener: None returned. "
                 "Retrying in 2 second... Is komorebi online and its binaries added to $PATH?"
             )
-            time.sleep(2)
+            if self._stop_event.wait(2):
+                return
             state = self._komorebic.query_state()
 
         self.event_service.emit_event(KomorebiEvent.KomorebiConnect, state)

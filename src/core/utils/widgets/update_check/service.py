@@ -5,6 +5,7 @@ import threading
 
 from PyQt6.QtCore import QObject, Qt, QThread, QTimer, pyqtSignal
 
+from core.utils.utilities import is_valid_qobject
 from core.utils.widgets.update_check import scoop as scoop_mgr
 from core.utils.widgets.update_check import windows_update as wu_mgr
 from core.utils.widgets.update_check import winget as winget_mgr
@@ -178,11 +179,18 @@ class UpdateCheckService(QObject):
             worker = self._workers.pop(source)
             worker.deleteLater()
 
-    @staticmethod
-    def _push_to_widget(widget, source: str, result: dict):
+    def _push_to_widget(self, widget, source: str, result: dict):
         """Call the widget's update method for a specific source."""
+        if not is_valid_qobject(widget):
+            if widget in self._widgets:
+                self._widgets.remove(widget)
+            return
         try:
             widget.on_update(source, result)
+        except RuntimeError:
+            # Widget's C++ object was deleted during the call
+            if widget in self._widgets:
+                self._widgets.remove(widget)
         except Exception:
             logging.exception("Error pushing %s update to widget", source)
 

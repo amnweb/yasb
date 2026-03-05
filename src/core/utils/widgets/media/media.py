@@ -238,7 +238,12 @@ class WindowsMedia(QObject, metaclass=QSingleton):
         """Create a callback bridge to run from WinRT thread"""
 
         def wrapper(s: Any, _a: Any) -> None:
-            self._loop.call_soon_threadsafe(lambda: asyncio.create_task(callback(s)))
+            if not self._running:
+                return
+            try:
+                self._loop.call_soon_threadsafe(lambda: self._loop.create_task(callback(s)) if self._running else None)
+            except RuntimeError:
+                pass
 
         return wrapper
 

@@ -40,6 +40,7 @@ class UpdateCheckWidget(BaseWidget):
         self._service.register_widget(self)
 
         self._update_visibility()
+        self.destroyed.connect(lambda: self._service.unregister_widget(self))
 
     def on_update(self, source: str, result: dict):
         """Receive update data from the service."""

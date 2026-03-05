@@ -45,10 +45,16 @@ class BarManager(QObject):
 
         self.styles_modified.connect(self.on_styles_modified)
         self.config_modified.connect(self.on_config_modified)
-        app = QApplication.instance()
-        app.screenAdded.connect(self.on_screens_update)
-        app.screenRemoved.connect(self.on_screens_update)
-        app.aboutToQuit.connect(self.stop_listener_threads)
+        self._app = QApplication.instance()
+        self._app.screenAdded.connect(self.on_screens_update)
+        self._app.screenRemoved.connect(self.on_screens_update)
+        self._app.aboutToQuit.connect(self.stop_listener_threads)
+
+    def _disconnect_reload_signals(self):
+        with suppress(TypeError):
+            self._app.screenAdded.disconnect(self.on_screens_update)
+            self._app.screenRemoved.disconnect(self.on_screens_update)
+            self.config_modified.disconnect(self.on_config_modified)
 
     @pyqtSlot()
     def on_styles_modified(self):
@@ -71,6 +77,7 @@ class BarManager(QObject):
 
             if config.model_dump(exclude=exclude) != self.config.model_dump(exclude=exclude):
                 self.config = config
+                self._disconnect_reload_signals()
                 reload_application("Reloading Application because of config change.")
             else:
                 self.config = config
@@ -80,6 +87,7 @@ class BarManager(QObject):
     @pyqtSlot(QScreen)
     def on_screens_update(self, _screen: QScreen) -> None:
         logging.info("Screens updated. Re-initialising all bars.")
+        self._disconnect_reload_signals()
         reload_application("Reloading Application because of screen update.")
 
     def run_listeners_in_threads(self):
