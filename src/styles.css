@@ -507,3 +507,37 @@ For more information about configuration options, please visit the Wiki https://
     color: rgb(255, 255, 255);
     margin-top: -20px;
 }
+
+/* Styles for the new optional Windows Update popup menu */
+
+.widget-container.windows.menu-popup {
+    background-color: var(--surface0);
+    border-radius: 4px;
+}
+
+.widget-container.windows.menu-popup .menu-item {
+    background-color: var(--surface1);
+    border-radius: 4px;
+    padding: 4px;
+}
+
+.widget-container.windows.menu-popup .menu-item:hover {
+    background-color: var(--surface2);
+}
+
+.widget-container.windows.menu-popup .menu-item .icon {
+    color: var(--text);
+    font-size: 16px;
+    min-width: 20px;
+}
+
+.widget-container.windows.menu-popup .menu-item .label {
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 400;
+}
+
+.widget-container.windows.menu-popup .menu-item:hover .icon,
+.widget-container.windows.menu-popup .menu-item:hover .label {
+    color: var(--text);
+}
