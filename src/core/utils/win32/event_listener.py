@@ -12,7 +12,6 @@ from core.utils.win32.bindings.user32 import user32
 from core.utils.win32.structs import WINEVENTPROC
 from core.utils.win32.windows import WinEvent
 
-ole32.CoInitialize(0)
 msg = ctypes.wintypes.MSG()
 
 
@@ -53,22 +52,25 @@ class SystemEventListener(QThread):
             self._event_service.emit_event(foreground_event, foreground_window_hwnd, foreground_event)
 
     def run(self):
-        self._thread_id = GetCurrentThreadId()
-        self._hook = self._build_event_hook()
-
-        if self._hook == 0:
-            logging.warning("SetWinEventHook failed. Retrying indefinitely...")
-
-        while self._hook == 0:
-            time.sleep(1)
+        ole32.CoInitialize(0)
+        try:
+            self._thread_id = GetCurrentThreadId()
             self._hook = self._build_event_hook()
 
-        self._emit_foreground_window_event()
+            if self._hook == 0:
+                logging.warning("SetWinEventHook failed. Retrying indefinitely...")
 
-        user32.GetMessageW(ctypes.byref(msg), 0, 0, 0)
+            while self._hook == 0:
+                time.sleep(1)
+                self._hook = self._build_event_hook()
+
+            self._emit_foreground_window_event()
+
+            user32.GetMessageW(ctypes.byref(msg), 0, 0, 0)
+        finally:
+            ole32.CoUninitialize()
 
     def stop(self):
         user32.UnhookWinEvent(self._hook)
         # Post WM_QUIT to unblock GetMessageW
         user32.PostThreadMessageW(self._thread_id, 0x0012, 0, 0)
-        ole32.CoUninitialize()

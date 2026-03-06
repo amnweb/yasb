@@ -46,9 +46,9 @@ class BarManager(QObject):
         self.styles_modified.connect(self.on_styles_modified)
         self.config_modified.connect(self.on_config_modified)
         self._app = QApplication.instance()
+        self._app.aboutToQuit.connect(self.stop_listener_threads)
         self._app.screenAdded.connect(self.on_screens_update)
         self._app.screenRemoved.connect(self.on_screens_update)
-        self._app.aboutToQuit.connect(self.stop_listener_threads)
 
     def _disconnect_reload_signals(self):
         with suppress(TypeError):
@@ -103,7 +103,7 @@ class BarManager(QObject):
             logging.info("Stopping HotkeyListener...")
             with suppress(Exception):
                 self._hotkey_listener.stop()
-                self._hotkey_listener.wait(5000)
+                self._hotkey_listener.wait(1000)
             self._hotkey_listener = None
             self._hotkey_dispatcher = None
 
@@ -121,7 +121,7 @@ class BarManager(QObject):
                         thread.quit()
                     except Exception:
                         pass
-                thread.wait(5000)
+                thread.wait(1000)
         self._threads.clear()
         self.widget_event_listeners.clear()
 

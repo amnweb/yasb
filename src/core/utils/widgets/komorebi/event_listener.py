@@ -142,6 +142,9 @@ class KomorebiEventListener(QThread):
                 return
             stderr, proc = self._komorebic.wait_until_subscribed_to_pipe(self.pipe_name)
 
+        if not self._app_running or self.pipe is None:
+            return
+
         win32pipe.ConnectNamedPipe(self.pipe, None)
         logging.info(f"Komorebi connected to named pipe: {self.pipe_name}")
         state = self._komorebic.query_state()

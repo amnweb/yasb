@@ -89,7 +89,11 @@ def single_instance_lock(name: str = "yasb_reborn"):
 def main():
     """Main entry point"""
     app = YASBApplication(argv)
-    asyncio.run(main_async(app), loop_factory=qasync.QEventLoop)
+    loop = qasync.QEventLoop(app)
+    try:
+        loop.run_until_complete(main_async(app))
+    finally:
+        loop.close()
 
 
 async def main_async(app: YASBApplication):
@@ -120,42 +124,44 @@ async def main_async(app: YASBApplication):
 
     # Initialise bars and background event listeners
     manager = BarManager(config, stylesheet)
-    manager.initialize_bars(init=True)
 
-    # Initialise file watcher if needed
-    observer = create_observer(manager) if config.watch_config or config.watch_stylesheet else None
-    if observer:
-        observer.start()
-
-    def stop_observer():
-        if observer:
-            observer.stop()
-            observer.join()
-
-    app.aboutToQuit.connect(stop_observer)
-
-    # Build system tray icon
-    if config.show_systray:
-        tray_manager = SystemTrayManager(manager)
-        tray_manager.show()
-
-    # Initialize auto update service
-    if config.update_check:
-        try:
-            update_service = get_update_service()
-            if update_service.is_update_supported():
-                start_update_checker()
-        except Exception as e:
-            logging.error(f"Failed to start auto update service: {e}")
-
-    # Wait for application shutdown
     try:
+        manager.initialize_bars(init=True)
+        # Initialise file watcher if needed
+        observer = create_observer(manager) if config.watch_config or config.watch_stylesheet else None
+        if observer:
+            observer.start()
+
+        def stop_observer():
+            if observer:
+                observer.stop()
+                observer.join()
+
+        app.aboutToQuit.connect(stop_observer)
+
+        # Build system tray icon
+        if config.show_systray:
+            tray_manager = SystemTrayManager(manager)
+            tray_manager.show()
+
+        # Initialize auto update service
+        if config.update_check:
+            try:
+                update_service = get_update_service()
+                if update_service.is_update_supported():
+                    start_update_checker()
+            except Exception as e:
+                logging.error(f"Failed to start auto update service: {e}")
+
         await app_close_event.wait()
-    except asyncio.CancelledError:
-        logging.info("Application closes...")
-    except Exception as e:
-        logging.error(f"Error during application shutdown: {e}")
     finally:
+        # Cancel async tasks while loop is still running
+        current = asyncio.current_task()
+        tasks = [t for t in asyncio.all_tasks() if t is not current and not t.done()]
+        for t in tasks:
+            t.cancel()
+        if tasks:
+            await asyncio.gather(*tasks, return_exceptions=True)
         app.quit()
 
 
