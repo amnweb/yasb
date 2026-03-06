@@ -9,8 +9,15 @@ from core.application import YASBApplication
 from core.event_service import EventService
 from core.utils.cli_server import CliPipeHandler
 
+_reload_in_progress = False
+
 
 def reload_application(msg: str = "Reloading Application..."):
+    global _reload_in_progress
+    if _reload_in_progress:
+        logging.error("reload_application already in progress, ignoring duplicate call.")
+        return
+    _reload_in_progress = True
     try:
         logging.info(msg)
         if hasattr(sys, "_cli_pipe_handler") and sys._cli_pipe_handler is not None:

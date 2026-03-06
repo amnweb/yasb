@@ -91,6 +91,7 @@ class WindowsMedia(QObject, metaclass=QSingleton):
                 await asyncio.sleep(REFRESH_INTERVAL)
         except Exception as e:
             logger.error(f"Failed to start WindowsMedia worker: {e}", exc_info=True)
+        finally:
             self._running = False
 
     async def stop(self):
