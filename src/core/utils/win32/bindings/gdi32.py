@@ -10,6 +10,7 @@ from ctypes.wintypes import (
     DWORD,
     HANDLE,
     HDC,
+    LPCWSTR,
     LPVOID,
 )
 
@@ -30,6 +31,9 @@ gdi32.GetDIBits.restype = c_int
 gdi32.DeleteObject.argtypes = [HANDLE]
 gdi32.DeleteObject.restype = BOOL
 
+gdi32.AddFontResourceW.argtypes = [LPCWSTR]
+gdi32.AddFontResourceW.restype = c_int
+
 
 def GetDIBits(
     hdc: int,
@@ -49,3 +53,7 @@ def DeleteObject(hObject: int) -> bool:
 
 def GetObject(hgdiobj: int, cbBuffer: int, lpvObject: CArgObject) -> int:
     return gdi32.GetObjectW(hgdiobj, cbBuffer, lpvObject)
+
+
+def AddFontResource(font_path: str) -> int:
+    return gdi32.AddFontResourceW(font_path)
