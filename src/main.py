@@ -89,7 +89,11 @@ def single_instance_lock(name: str = "yasb_reborn"):
 def main():
     """Main entry point"""
     app = YASBApplication(argv)
-    asyncio.run(main_async(app), loop_factory=qasync.QEventLoop)
+    loop = qasync.QEventLoop(app)
+    try:
+        loop.run_until_complete(main_async(app))
+    finally:
+        loop.close()
 
 
 async def main_async(app: YASBApplication):
@@ -121,6 +125,28 @@ async def main_async(app: YASBApplication):
     # Initialise bars and background event listeners
     manager = BarManager(config, stylesheet)
     manager.initialize_bars(init=True)
+
+    # --- TEST: rapid-fire on_screens_update to reproduce reload crash ---
+    if "--test-reload" in sys.argv:
+        from PyQt6.QtCore import QTimer
+
+        _test_count = [0]
+        _test_max = 10
+        _test_delay = 100  # ms
+
+        def _test_fire():
+            _test_count[0] += 1
+            logging.info(f"[TEST] on_screens_update #{_test_count[0]}/{_test_max}")
+            manager.on_screens_update(None)
+            if _test_count[0] >= _test_max:
+                _test_timer.stop()
+
+        _test_timer = QTimer()
+        _test_timer.setInterval(_test_delay)
+        _test_timer.timeout.connect(_test_fire)
+        _test_timer.start()
+        logging.info(f"[TEST] Will fire on_screens_update {_test_max}x every {_test_delay}ms")
+    # --- END TEST ---
 
     # Initialise file watcher if needed
     observer = create_observer(manager) if config.watch_config or config.watch_stylesheet else None
