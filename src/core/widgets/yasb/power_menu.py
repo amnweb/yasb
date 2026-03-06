@@ -244,6 +244,7 @@ class PowerMenuWidget(BaseWidget):
             popup_cfg.round_corners,
             popup_cfg.round_corners_type,
             popup_cfg.border_color,
+            animation_duration=popup_cfg.animation_duration,
         )
         self._popup.setProperty("class", "power-menu-compact")
 

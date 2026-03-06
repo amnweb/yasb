@@ -424,6 +424,7 @@ class CopilotWidget(BaseWidget):
             round_corners=self.config.menu.round_corners,
             round_corners_type=self.config.menu.round_corners_type,
             border_color=self.config.menu.border_color,
+            animation_duration=self.config.menu.animation_duration,
         )
         self._menu.setProperty("class", "copilot-menu")
 

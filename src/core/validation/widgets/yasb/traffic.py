@@ -24,6 +24,7 @@ class MenuConfig(CustomBaseModel):
     direction: str = "down"
     offset_top: int = 6
     offset_left: int = 0
+    animation_duration: int = 80
     show_interface_name: bool = True
     show_internet_info: bool = True
 
