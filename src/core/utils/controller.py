@@ -1,6 +1,7 @@
 import logging
 import os
 import sys
+import threading
 
 from PyQt6.QtCore import QMetaObject, QProcess, Qt
 from PyQt6.QtWidgets import QApplication
@@ -9,15 +10,13 @@ from core.application import YASBApplication
 from core.event_service import EventService
 from core.utils.cli_server import CliPipeHandler
 
-_reload_in_progress = False
+_reload_lock = threading.Lock()
 
 
 def reload_application(msg: str = "Reloading Application..."):
-    global _reload_in_progress
-    if _reload_in_progress:
-        logging.error("reload_application already in progress, ignoring duplicate call.")
+    if not _reload_lock.acquire(blocking=False):
+        logging.warning("Reload already in progress, ignoring additional reload request.")
         return
-    _reload_in_progress = True
     try:
         logging.info(msg)
         if hasattr(sys, "_cli_pipe_handler") and sys._cli_pipe_handler is not None:
