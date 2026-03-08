@@ -103,7 +103,7 @@ class BarManager(QObject):
             logging.info("Stopping HotkeyListener...")
             with suppress(Exception):
                 self._hotkey_listener.stop()
-                self._hotkey_listener.wait(5000)
+                self._hotkey_listener.wait(3000)
             self._hotkey_listener = None
             self._hotkey_dispatcher = None
 
@@ -121,7 +121,7 @@ class BarManager(QObject):
                         thread.quit()
                     except Exception:
                         pass
-                thread.wait(5000)
+                thread.wait(3000)
         self._threads.clear()
         self.widget_event_listeners.clear()
 

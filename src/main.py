@@ -89,7 +89,11 @@ def single_instance_lock(name: str = "yasb_reborn"):
 def main():
     """Main entry point"""
     app = YASBApplication(argv)
-    asyncio.run(main_async(app), loop_factory=qasync.QEventLoop)
+    loop = qasync.QEventLoop(app)
+    try:
+        loop.run_until_complete(main_async(app))
+    finally:
+        loop.close()
 
 
 async def main_async(app: YASBApplication):
