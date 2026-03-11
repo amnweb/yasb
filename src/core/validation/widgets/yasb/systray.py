@@ -29,6 +29,7 @@ class SystrayWidgetConfig(CustomBaseModel):
     show_battery: bool = False
     show_volume: bool = False
     show_network: bool = False
+    hide_icons: list[str] = []
     tooltip: bool = True
     container_padding: PaddingConfig = PaddingConfig()
     container_shadow: ShadowConfig = ShadowConfig()

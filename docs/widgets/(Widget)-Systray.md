@@ -15,6 +15,7 @@
 | `show_battery`            | boolean | `false`     | Whether to show battery icon (from the original systray).                               |
 | `show_volume`             | boolean | `false`     | Whether to show volume icon (from the original systray).                                |
 | `show_network`            | boolean | `false`     | Whether to show network icon (from the original systray).                               |
+| `hide_icons`              | list    | `[]`        | List of process names to hide from the systray (exact match, case-insensitive).         |
 | `tooltip`                 | boolean | `true`      | Whether to show tooltips when hovering over systray icons.                              |
 | `container_shadow`        | dict    | `None`      | Container shadow options.                                                               |
 | `unpinned_shadow`         | dict    | `None`      | Unpinned container shadow options.                                                      |
@@ -51,6 +52,7 @@ systray:
     show_battery: false
     show_volume: false
     show_network: false
+    hide_icons: [] # Optional, list of process names to hide (e.g. ["discord"])
     btn_shadow:
       enabled: true
       color: "black"
@@ -109,6 +111,7 @@ There are some limitations with the systray widget:
 - **show_battery:** Whether to show battery icon (from the original systray).
 - **show_volume:** Whether to show volume icon (from the original systray).
 - **show_network:** Whether to show network icon (from the original systray).
+- **hide_icons:** A list of process names to hide from the systray. Each entry is matched exactly (case-insensitive) against the executable name without extension. For example, to hide Discord set `hide_icons: ["discord"]` which matches `Discord.exe`.
 - **tooltip:** Whether to show tooltips when hovering over systray icons.
 - **container_shadow:** Container shadow options.
 - **unpinned_shadow:** Unpinned container shadow options.
