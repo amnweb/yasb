@@ -92,6 +92,8 @@ class SystrayWidget(BaseWidget):
         if not self.config.show_network:
             self.filtered_guids.add(NETWORK_GUID)
 
+        self.hidden_icons_lower: list[str] = [h.lower() for h in self.config.hide_icons]
+
         IconWidget.icon_size = self.config.icon_size
         IconWidget.enable_tooltips = self.config.tooltip
         IconWidget.pin_modifier_key = {
@@ -302,10 +304,23 @@ class SystrayWidget(BaseWidget):
         self.pinned_widget.setMinimumWidth(16)
         self.update_pinned_widget_visibility()
 
+    def _is_hidden_icon(self, data: IconData) -> bool:
+        if not self.hidden_icons_lower:
+            return False
+        exe = data.exe.lower()
+        tip = data.szTip.lower()
+        exe_path = data.exe_path.lower()
+        for entry in self.hidden_icons_lower:
+            if entry == exe or entry in tip or entry in exe_path:
+                return True
+        return False
+
     @pyqtSlot(IconData)
     def on_icon_modified(self, data: IconData):
         """Handle icon modified signal sent by the tray monitor"""
         if data.guid in self.filtered_guids:
+            return
+        if self._is_hidden_icon(data):
             return
         icon = self.find_icon(data.guid, data.hWnd, data.uID)
         if icon is None:
