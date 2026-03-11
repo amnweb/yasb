@@ -307,13 +307,7 @@ class SystrayWidget(BaseWidget):
     def _is_hidden_icon(self, data: IconData) -> bool:
         if not self.hidden_icons_lower:
             return False
-        exe = data.exe.lower()
-        tip = data.szTip.lower()
-        exe_path = data.exe_path.lower()
-        for entry in self.hidden_icons_lower:
-            if entry == exe or entry in tip or entry in exe_path:
-                return True
-        return False
+        return data.exe.lower() in self.hidden_icons_lower
 
     @pyqtSlot(IconData)
     def on_icon_modified(self, data: IconData):
