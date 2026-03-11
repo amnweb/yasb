@@ -10,24 +10,10 @@ from pycaw.pycaw import AudioUtilities
 from PyQt6 import QtCore
 from PyQt6.QtCore import QEvent, QObject, Qt, QTimer, pyqtSlot
 from PyQt6.QtGui import QMouseEvent, QPixmap, QWheelEvent
-from PyQt6.QtWidgets import (
-    QFrame,
-    QGridLayout,
-    QHBoxLayout,
-    QLabel,
-    QProgressBar,
-    QSizePolicy,
-    QSlider,
-    QVBoxLayout,
-)
+from PyQt6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QLabel, QProgressBar, QSizePolicy, QSlider, QVBoxLayout
 from qasync import asyncSlot  # type: ignore
 
-from core.utils.utilities import (
-    PopupWidget,
-    ScrollingLabel,
-    add_shadow,
-    refresh_widget_style,
-)
+from core.utils.utilities import PopupWidget, ScrollingLabel, add_shadow, refresh_widget_style
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.widgets.media.aumid_process import get_process_name_for_aumid
 from core.utils.widgets.media.media import MediaSession, SessionState, WindowsMedia
@@ -115,6 +101,7 @@ class MediaWidget(BaseWidget):
         if self.config.scrolling_label.enabled:
             self._label = ScrollingLabel(
                 self,
+                size_mode=self.config.size_mode,
                 max_width=self.config.max_field_size.label,
                 options=self.config.scrolling_label.model_dump(),
             )
@@ -852,7 +839,10 @@ class MediaWidget(BaseWidget):
         # Only update the thumbnail if the title/artist changes or if we did a toggle (resize)
         try:
             if self.current_session and self.current_session.title and self.current_session.thumbnail:
-                thumbnail = self._crop_thumbnail(self.current_session.thumbnail, active_label.sizeHint().width())
+                if self.config.size_mode == "max":
+                    thumbnail = self._crop_thumbnail(self.current_session.thumbnail, active_label.maximumWidth())
+                else:
+                    thumbnail = self._crop_thumbnail(self.current_session.thumbnail, active_label.sizeHint().width())
                 pixmap = QPixmap.fromImage(ImageQt(thumbnail))
                 self._thumbnail_label.setPixmap(pixmap)
 
