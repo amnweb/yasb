@@ -33,8 +33,11 @@ from core.utils.win32.constants import (
 )
 
 
-def get_monitor_hwnd(window_hwnd: int) -> int:
-    return int(MonitorFromWindow(window_hwnd))
+def get_monitor_hwnd(window_hwnd: int) -> int | None:
+    monitor = MonitorFromWindow(window_hwnd)
+    if monitor is None:
+        return None
+    return int(monitor)
 
 
 def get_monitor_info(monitor_hwnd: int) -> dict:
@@ -375,10 +378,11 @@ def find_focused_screen(follow_mouse, follow_window, follow_primary=False, scree
         hwnd = win32gui.GetForegroundWindow()
         if hwnd:
             monitor = get_monitor_hwnd(hwnd)
-            device_name = win32api.GetMonitorInfo(monitor).get("Device")
-            screen_name = device_to_screen.get(device_name)
-            if screen_name and is_valid(screen_name):
-                return screen_name
+            if monitor is not None:
+                device_name = win32api.GetMonitorInfo(monitor).get("Device")
+                screen_name = device_to_screen.get(device_name)
+                if screen_name and is_valid(screen_name):
+                    return screen_name
 
     # Fallback to primary screen
     if primary_screen is not None and is_valid(primary_screen.name()):

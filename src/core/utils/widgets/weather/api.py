@@ -77,7 +77,7 @@ class WeatherDataFetcher(QObject):
                 data = json.loads(reply.readAll().data().decode())
                 raise BadRequestError(f"Weather response error {status}: {data['error']['message']}")
             else:
-                raise Exception(f"Weather response error {status}: {error.name} {error.value}.")
+                logging.warning(f"Weather API returned error {status}. Will retry on next interval.")
         except json.JSONDecodeError as e:
             logging.error(f"Weather API invalid JSON response: {e}")
         except (BadRequestError, HostNotFoundError) as e:
