@@ -227,7 +227,8 @@ class UpdateCheckService(QObject):
     def _stop_all(self):
         """Stop all timers and workers."""
         for timer in self._timers.values():
-            timer.stop()
+            if is_valid_qobject(timer):
+                timer.stop()
         self._timers.clear()
 
         for worker in self._workers.values():
