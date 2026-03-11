@@ -418,6 +418,8 @@ class AppsProvider(BaseProvider):
 
         if not is_url:
             actions.append(ProviderMenuAction(id="run_as_admin", label="Run as administrator"))
+        if not is_url and not is_uwp and not is_cpl:
+            actions.append(ProviderMenuAction(id="run_as_diff_user", label="Run as different user"))
 
         if not is_uwp and not is_cpl and not is_url and os.path.isfile(path):
             actions.append(ProviderMenuAction(id="open_file_location", label="Open file location"))
@@ -445,20 +447,21 @@ class AppsProvider(BaseProvider):
         path = result.action_data.get("path", "")
         if not path:
             return ProviderMenuActionResult()
-
-        if action_id == "run_as_admin":
+        if action_id.startswith("run_as"):
+            as_user = action_id.endswith("user")
+            launch_verb = "runas" + "user" if as_user else ""
             try:
                 if path.startswith("UWP::"):
                     aumid = path.replace("UWP::", "")
-                    shell_open(f"shell:AppsFolder\\{aumid}", verb="runas")
+                    shell_open(f"shell:AppsFolder\\{aumid}", verb=launch_verb)
                 elif path.startswith("CPL::"):
                     canonical = path[5:].split("::", 1)[-1] if "::" in path[5:] else path[5:]
-                    shell_open("control.exe", parameters=f"/name {canonical}", verb="runas")
+                    shell_open("control.exe", parameters=f"/name {canonical}", verb=launch_verb)
                 elif os.path.isfile(path):
-                    shell_open(path, verb="runas")
+                    shell_open(path, verb=launch_verb)
                 self._history.record(name, path)
             except Exception as e:
-                logging.debug(f"Failed to run as admin: {e}")
+                logging.debug(f"Failed to run as {'user' if as_user else 'admin'}: {e}")
             return ProviderMenuActionResult(close_popup=True)
 
         if action_id == "open_file_location":
