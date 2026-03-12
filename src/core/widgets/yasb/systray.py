@@ -355,6 +355,7 @@ class SystrayWidget(BaseWidget):
         icon = self.find_icon(data.guid, data.hWnd, data.uID)
         if icon is not None:
             self.icons.remove(icon)
+            icon.hide()
             icon.deleteLater()
             if self.config.show_in_popup:
                 self._relayout_popup_grid()
@@ -405,6 +406,7 @@ class SystrayWidget(BaseWidget):
         for icon in self.icons[:]:
             if icon.data is not None and not IsWindow(icon.data.hWnd):
                 self.icons.remove(icon)
+                icon.hide()
                 icon.deleteLater()
                 icons_changed = True
 
