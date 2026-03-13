@@ -7,6 +7,7 @@ from typing import Any, Callable
 
 from PIL import Image
 from PyQt6.QtCore import QObject, pyqtSignal
+from PyQt6.QtWidgets import QApplication
 from qasync import asyncSlot  # type: ignore
 from winrt.windows.media.control import (
     GlobalSystemMediaTransportControlsSession,
@@ -68,6 +69,10 @@ class WindowsMedia(QObject, metaclass=QSingleton):
 
         self._loop.create_task(self.run())
 
+        app = QApplication.instance()
+        if app is not None:
+            app.aboutToQuit.connect(self._on_quit)
+
     @property
     def current_session(self) -> SessionState | None:
         """Get the current session state"""
@@ -96,9 +101,16 @@ class WindowsMedia(QObject, metaclass=QSingleton):
         finally:
             self._running = False
 
-    async def stop(self):
-        """Stop the WindowsMedia worker refresh loop"""
+    def _on_quit(self):
+        """Unsubscribe all WinRT event handlers on application quit"""
         self._running = False
+        for state in list(self._trackers.values()):
+            for cb in state.cleanup_callbacks:
+                try:
+                    cb()
+                except Exception:
+                    pass
+        self._trackers.clear()
 
     async def _refresh_sessions(self, manager: SessionManager):
         """Refresh session states from the manager"""
