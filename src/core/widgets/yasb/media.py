@@ -145,7 +145,8 @@ class MediaWidget(BaseWidget):
 
         progress_bar_container = QFrame()
         progress_bar_container.setContentsMargins(0, 0, 0, 0)
-        progress_bar_container.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
+        progress_bar_container.setMinimumWidth(0)
+        progress_bar_container.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Minimum)
         progress_bar_container.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
 
         progress_bar_layout = QHBoxLayout(progress_bar_container)
@@ -154,7 +155,8 @@ class MediaWidget(BaseWidget):
         progress_bar_layout.setSpacing(0)
 
         self._progress_bar = QProgressBar()
-        self._progress_bar.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
+        self._progress_bar.setMinimumWidth(0)
+        self._progress_bar.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Minimum)
         self._progress_bar.setProperty("class", "progress-bar")
         self._progress_bar.setRange(0, 1000)
         self._progress_bar.setTextVisible(False)
