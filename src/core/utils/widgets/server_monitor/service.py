@@ -5,6 +5,8 @@ from PyQt6.QtCore import QObject, QTimer, pyqtSignal
 
 from core.utils.widgets.server_monitor.worker import ServerCheckWorker
 
+logger = logging.getLogger("server_monitor")
+
 
 class ServerCheckService(QObject):
     """Server-check runner."""
@@ -61,6 +63,7 @@ class ServerCheckService(QObject):
         self._timer.start(max(int(update_interval_s), 1) * 1000)
 
         self._start_if_idle()
+        logger.info("ServerCheckWorker started...")
 
     def release(self) -> None:
         self._refcount -= 1
@@ -95,7 +98,6 @@ class ServerCheckService(QObject):
                 self._run_id += 1
                 self.refresh_started.emit()
                 self._worker.start()
-                logging.info("ServerCheckWorker started...")
         except RuntimeError:
             return
 

@@ -5,6 +5,7 @@ from .gdi32 import *
 from .iphlpapi import *
 from .kernel32 import *
 from .ntdll import *
+from .ole32 import *
 from .pdh import *
 from .powrprof import *
 from .psapi import *

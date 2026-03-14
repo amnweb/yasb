@@ -53,20 +53,15 @@ class BarAnimationManager(QObject):
         self._animation = None
         self._target_geo = None
         self._full_height = None
-        self._pending_action = None  # 'show' or 'hide' queued while animating
+        self._pending_action = None
 
     def show_bar(self):
         if not self.bar_widget._animation.get("enabled"):
-            self.bar_widget._skip_animation = True
             self.bar_widget.show()
-            self.bar_widget._skip_animation = False
             return
-
-        # If animation running, queue this action
         if self._animation and self._animation.state() == QVariantAnimation.State.Running:
             self._pending_action = "show"
             return
-
         self._pending_action = None
         if self.bar_widget._animation.get("type") == "fade":
             self._start_fade(True)
@@ -79,12 +74,9 @@ class BarAnimationManager(QObject):
             self.bar_widget.hide()
             self.bar_widget._skip_animation = False
             return
-
-        # If animation running, queue this action
         if self._animation and self._animation.state() == QVariantAnimation.State.Running:
             self._pending_action = "hide"
             return
-
         self._pending_action = None
         if self.bar_widget._animation.get("type") == "fade":
             self._start_fade(False)
@@ -104,8 +96,7 @@ class BarAnimationManager(QObject):
         self._animation.setStartValue(0.0 if show else 1.0)
         self._animation.setEndValue(1.0 if show else 0.0)
         self._animation.setEasingCurve(QEasingCurve.Type.OutQuad if show else QEasingCurve.Type.InQuad)
-        self._animation.finished.connect(self._on_show_finished if show else self._on_fade_hide_finished)
-
+        self._animation.finished.connect(self._on_show_finished if show else self._on_hide_finished)
         if show:
             self.bar_widget.setWindowOpacity(0.0)
             self.bar_widget.show()
@@ -115,16 +106,27 @@ class BarAnimationManager(QObject):
         self._stop_animation()
         bar = self.bar_widget
 
-        # Recalculate position using bar's existing method
         bar.position_bar()
         geo = bar.geometry()
         self._target_geo = (geo.x(), geo.y(), geo.width(), geo.height())
         self._full_height = geo.height()
 
+        screen_geo = bar.screen().geometry()
+        is_top = bar._alignment["position"] == "top"
+        if is_top:
+            self._edge_y = screen_geo.y()
+            padding = geo.y() - self._edge_y
+        else:
+            self._edge_y = screen_geo.y() + screen_geo.height()
+            padding = self._edge_y - geo.y() - self._full_height
+
+        total_slide = self._full_height + padding
+        self._phase_point = self._full_height / total_slide if total_slide > 0 else 1.0
+        self._padding = padding
+
         if show:
             bar._bar_frame.resize(geo.width(), geo.height())
             self._update_slide(0.0)
-            bar.show()
 
         self._animation = QVariantAnimation(bar)
         self._animation.setDuration(bar._animation.get("duration", 300))
@@ -132,32 +134,59 @@ class BarAnimationManager(QObject):
         self._animation.setEndValue(1.0 if show else 0.0)
         self._animation.setEasingCurve(QEasingCurve.Type.OutQuad if show else QEasingCurve.Type.InQuad)
         self._animation.valueChanged.connect(self._update_slide)
-        self._animation.finished.connect(self._on_show_finished if show else self._on_slide_hide_finished)
+        self._animation.finished.connect(self._on_show_finished if show else self._on_hide_finished)
         self._animation.start()
 
+        if show and not bar.isVisible():
+            bar.show()
+
     def _update_slide(self, value: float):
-        h = int(self._full_height * value)
         x, y, w, full_h = self._target_geo
-        if self.bar_widget._alignment["position"] == "top":
-            new_geo = (x, y, w, max(1, h))
-            frame_y = h - full_h
-            self.bar_widget.setGeometry(*new_geo)
-            self.bar_widget._bar_frame.move(0, frame_y)
+        pp = self._phase_point
+        is_top = self.bar_widget._alignment["position"] == "top"
+
+        if value <= pp and pp > 0:
+            t = value / pp
+            h = max(1, round(full_h * t))
+            if is_top:
+                self.bar_widget.setGeometry(x, self._edge_y, w, h)
+                self.bar_widget._bar_frame.move(0, h - full_h)
+            else:
+                self.bar_widget.setGeometry(x, self._edge_y - h, w, h)
+                self.bar_widget._bar_frame.move(0, 0)
         else:
-            win_y = y + full_h - h
-            new_geo = (x, win_y, w, max(1, h))
-            self.bar_widget.setGeometry(*new_geo)
+            t = (value - pp) / (1.0 - pp) if pp < 1.0 else 1.0
+            if is_top:
+                self.bar_widget.setGeometry(x, round(self._edge_y + self._padding * t), w, full_h)
+            else:
+                self.bar_widget.setGeometry(x, round(self._edge_y - full_h - self._padding * t), w, full_h)
             self.bar_widget._bar_frame.move(0, 0)
 
     def _on_show_finished(self):
         if self._target_geo:
-            x, y, w, h = self._target_geo
-            self.bar_widget.setGeometry(x, y, w, h)
+            self.bar_widget.setGeometry(*self._target_geo)
         self.bar_widget._bar_frame.move(0, 0)
         self._animation = None
         self._process_pending()
 
-    def _on_fade_hide_finished(self):
+        # Check if mouse left during the animation
+        if (
+            hasattr(self.bar_widget, "_autohide_manager")
+            and self.bar_widget._autohide_manager is not None
+            and self.bar_widget._autohide_manager._is_enabled
+        ):
+            cursor_pos = QCursor.pos()
+            bar_geometry = self.bar_widget.geometry()
+            autohide_mgr = self.bar_widget._autohide_manager
+
+            # If not in the bar, and not in the safe zone (padding gap), start the timer
+            if not bar_geometry.contains(cursor_pos) and not autohide_mgr._is_mouse_in_safe_zone(
+                cursor_pos, bar_geometry
+            ):
+                if autohide_mgr._hide_timer:
+                    autohide_mgr._hide_timer.start(autohide_mgr._autohide_delay)
+
+    def _on_hide_finished(self):
         self.bar_widget._skip_animation = True
         self.bar_widget.hide()
         self.bar_widget._skip_animation = False
@@ -165,19 +194,12 @@ class BarAnimationManager(QObject):
         self._animation = None
         self._process_pending()
 
-    def _on_slide_hide_finished(self):
-        self.bar_widget._skip_animation = True
-        self.bar_widget.hide()
-        self.bar_widget._skip_animation = False
-        self._animation = None
-        self._process_pending()
-
     def _process_pending(self):
-        if self._pending_action == "show":
-            self._pending_action = None
+        action = self._pending_action
+        self._pending_action = None
+        if action == "show" and not self.bar_widget.isVisible():
             self.show_bar()
-        elif self._pending_action == "hide":
-            self._pending_action = None
+        elif action == "hide" and self.bar_widget.isVisible():
             self.hide_bar()
 
     def cleanup(self):
@@ -233,15 +255,6 @@ class AutoHideManager(QObject):
         # Install event filter on the bar
         self.bar_widget.installEventFilter(self)
 
-        # Register this bar_id as autohide owner globally
-        try:
-            from core import global_state
-
-            if hasattr(self.bar_widget, "bar_id"):
-                global_state.set_autohide_owner_for_bar(self.bar_widget.bar_id, self.bar_widget)
-        except Exception:
-            pass
-
         # Remove reserved screen space when autohide is enabled
         if hasattr(self.bar_widget, "app_bar_manager") and self.bar_widget.app_bar_manager:
             try:
@@ -281,17 +294,51 @@ class AutoHideManager(QObject):
         if not self.bar_widget.isVisible() and self._is_enabled:
             self.bar_widget.show()
 
+    def _is_child_of_bar(self, widget):
+        """Walk parent chain to check if widget belongs to this bar."""
+        p = widget.parent() if widget else None
+        while p:
+            if p is self.bar_widget:
+                return True
+            p = p.parent()
+        return False
+
+    def _should_stay_visible(self):
+        """Check if bar should stay visible because a child popup/menu is open."""
+        # Qt::Popup windows (QMenu, PopupWidget)
+        if QApplication.activePopupWidget():
+            return True
+        # Qt::Tool windows that called activateWindow() (SystrayPopup)
+        active = QApplication.activeWindow()
+        if active and active is not self.bar_widget and self._is_child_of_bar(active):
+            return True
+        # Check all visible top-level widgets
+        cursor_pos = QCursor.pos()
+        for w in QApplication.topLevelWidgets():
+            if w is self.bar_widget or w is self._detection_zone or not w.isVisible():
+                continue
+            # Child of bar (parent chain intact) — e.g. SystrayPopup after losing focus
+            if self._is_child_of_bar(w):
+                return True
+            # Cursor is over it (parent chain severed) — e.g. ThumbnailHost
+            if w.geometry().contains(cursor_pos):
+                return True
+        return False
+
     def hide_bar(self):
         """Hide the bar and show detection zone"""
         if self._is_enabled and self.bar_widget.isVisible():
+            if self._should_stay_visible():
+                self._hide_timer.start(self._autohide_delay)
+                return
             self.bar_widget.hide()
             if self._detection_zone:
                 self._detection_zone.show()
                 self._detection_zone.raise_()
 
     def eventFilter(self, watched, event):
-        """Filter events to detect mouse movement"""
-        if watched == self.bar_widget and self._is_enabled:
+        """Filter bar Enter/Leave events for hide timer"""
+        if watched is self.bar_widget and self._is_enabled:
             if event.type() == QEvent.Type.Enter:
                 if self._hide_timer:
                     self._hide_timer.stop()
@@ -299,13 +346,10 @@ class AutoHideManager(QObject):
                 cursor_pos = QCursor.pos()
                 bar_geometry = self.bar_widget.geometry()
 
-                # Check if mouse is in the gap between bar and detection zone
                 if self._is_mouse_in_safe_zone(cursor_pos, bar_geometry):
-                    # Don't start hide timer if mouse is in the safe zone
                     return False
 
-                # Only start timer if mouse is really outside the bar and safe zone
-                if not bar_geometry.contains(cursor_pos) and self._hide_timer:
+                if self._hide_timer:
                     self._hide_timer.start(self._autohide_delay)
         return False
 
@@ -348,15 +392,6 @@ class AutoHideManager(QObject):
                 SystrayAppBarHelper.execute_without_systray_interference(lambda: self.bar_widget.update_app_bar())
             except Exception as e:
                 logging.error(f"Failed to restore AppBar reservation: {e}")
-
-        # Unregister global autohide registration for this bar
-        try:
-            from core.global_state import unset_autohide_owner_for_bar
-
-            if hasattr(self.bar_widget, "bar_id"):
-                unset_autohide_owner_for_bar(self.bar_widget.bar_id)
-        except Exception:
-            pass
 
 
 class SystrayAppBarHelper:

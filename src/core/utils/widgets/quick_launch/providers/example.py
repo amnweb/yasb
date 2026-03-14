@@ -69,6 +69,11 @@ What's optional
         Call self.request_refresh() to re-trigger the current search, for example
         after loading data in the background.
 
+    Lifecycle hook:
+        on_deactivate()   Called when the popup is closed. Override to clear
+                          caches, reset state, or release resources so that
+                          the next popup open starts fresh.
+
 
 ProviderResult fields
 
@@ -87,6 +92,32 @@ ProviderResult fields
                   See "Preview pane" below.
     css_class     Optional. Extra CSS class(es) added to the item. The widget
                   always adds "item provider-<name>" automatically.
+    is_separator  Optional. When True the result renders as a non-selectable
+                  visual separator (thin line). Set title to the label text
+                  shown next to the line. The delegate draws it with CSS from
+                  a hidden ".separator" QLabel probe. Example:
+
+                      ProviderResult(
+                          title="Older",
+                          provider=self.name,
+                          is_separator=True,
+                      )
+
+    is_loading    Optional. When True the widget keeps the spinner/loader
+                  visible even though get_results() has already returned.
+                  Use this when get_results() returns a temporary placeholder
+                  while a background fetch is still in progress. Once the
+                  real results arrive via request_refresh(), the loader stops
+                  automatically. Example:
+
+                      # In get_results(), return early while fetching:
+                      return [
+                          ProviderResult(
+                              title="Loading...",
+                              provider=self.name,
+                              is_loading=True,
+                          )
+                      ]
 
 
 Preview pane

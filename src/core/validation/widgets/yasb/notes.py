@@ -29,6 +29,9 @@ class IconsConfig(CustomBaseModel):
     note: str = "\udb82\udd0c"
     delete: str = "\ueab8"
     copy_icon: str = Field(default="\uebcc", alias="copy")
+    float_on: str = "\udb84\udcac"
+    float_off: str = "\udb84\udca9"
+    close: str = "\uf00d"
 
 
 class NotesCallbacksConfig(CallbacksConfig):
@@ -42,6 +45,9 @@ class NotesConfig(CustomBaseModel):
     label_alt: str = "{count} notes"
     class_name: str = ""
     data_path: str = ""
+    start_floating: bool = False
+    paste_plain_text: bool = False
+    enter_to_add_note: bool = True
     container_padding: PaddingConfig = PaddingConfig()
     animation: AnimationConfig = AnimationConfig()
     menu: MenuConfig = MenuConfig()

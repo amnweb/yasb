@@ -18,7 +18,11 @@ _CHROMIUM_PATHS: dict[str, str] = {
     "chromium": os.path.join("Chromium", "User Data"),
 }
 
-_FIREFOX_ROOT = os.path.join(os.environ.get("APPDATA", ""), "Mozilla", "Firefox", "Profiles")
+# Firefox-based browser profile dirs relative to %APPDATA%
+_FIREFOX_PATHS: dict[str, str] = {
+    "firefox": os.path.join("Mozilla", "Firefox", "Profiles"),
+    "zen": os.path.join("zen", "Profiles"),
+}
 
 
 class BookmarksProvider(BaseProvider):
@@ -36,7 +40,7 @@ class BookmarksProvider(BaseProvider):
         self._loaded = False
 
     def _get_sources(self) -> list[tuple[str, str]]:
-        """Return [(kind, filepath), ...] for bookmark files."""
+        """Return [(browser_name, filepath), ...] for bookmark files."""
         browser = self.config.get("browser", "all")
 
         if browser == "all":
@@ -44,15 +48,16 @@ class BookmarksProvider(BaseProvider):
 
         local = os.environ.get("LOCALAPPDATA", "")
 
-        if browser == "firefox":
-            return self._get_firefox_sources()
+        ff_rel = _FIREFOX_PATHS.get(browser)
+        if ff_rel:
+            return self._get_firefox_sources(browser, ff_rel)
 
         rel = _CHROMIUM_PATHS.get(browser)
         if rel:
             profile = self.config.get("profile", "Default")
             bf = os.path.join(local, rel, profile, "Bookmarks")
             if os.path.isfile(bf):
-                return [("chromium", bf)]
+                return [(browser, bf)]
         return []
 
     def _get_all_sources(self) -> list[tuple[str, str]]:
@@ -60,22 +65,25 @@ class BookmarksProvider(BaseProvider):
         local = os.environ.get("LOCALAPPDATA", "")
         sources: list[tuple[str, str]] = []
 
-        for _browser, rel in _CHROMIUM_PATHS.items():
+        for browser_name, rel in _CHROMIUM_PATHS.items():
             bf = os.path.join(local, rel, "Default", "Bookmarks")
             if os.path.isfile(bf):
-                sources.append(("chromium", bf))
+                sources.append((browser_name, bf))
 
-        sources.extend(self._get_firefox_sources())
+        for name, rel in _FIREFOX_PATHS.items():
+            sources.extend(self._get_firefox_sources(name, rel))
         return sources
 
     @staticmethod
-    def _get_firefox_sources() -> list[tuple[str, str]]:
+    def _get_firefox_sources(browser_name: str, rel: str) -> list[tuple[str, str]]:
+        appdata = os.environ.get("APPDATA", "")
+        root = os.path.join(appdata, rel)
         sources: list[tuple[str, str]] = []
-        if os.path.isdir(_FIREFOX_ROOT):
-            for p in os.listdir(_FIREFOX_ROOT):
-                db = os.path.join(_FIREFOX_ROOT, p, "places.sqlite")
+        if os.path.isdir(root):
+            for p in os.listdir(root):
+                db = os.path.join(root, p, "places.sqlite")
                 if os.path.isfile(db):
-                    sources.append(("firefox", db))
+                    sources.append((browser_name, db))
         return sources
 
     def _needs_reload(self, sources: list[tuple[str, str]]) -> bool:
@@ -95,20 +103,21 @@ class BookmarksProvider(BaseProvider):
             return
 
         bookmarks: list[dict] = []
-        for kind, fpath in sources:
+        for browser_name, fpath in sources:
             try:
-                if kind == "chromium":
-                    bookmarks.extend(self._parse_chromium(fpath))
+                if browser_name in _FIREFOX_PATHS:
+                    parsed = self._parse_firefox(fpath)
                 else:
-                    bookmarks.extend(self._parse_firefox(fpath))
+                    parsed = self._parse_chromium(fpath)
+                for bm in parsed:
+                    bm["browser"] = browser_name
+                bookmarks.extend(parsed)
                 self._last_mtime[fpath] = os.path.getmtime(fpath)
             except OSError:
                 pass
 
         self._bookmarks = bookmarks
         self._loaded = True
-
-    # Chromium (Chrome / Edge / Brave / Vivaldi)
 
     def _parse_chromium(self, filepath: str) -> list[dict]:
         results: list[dict] = []
@@ -138,8 +147,6 @@ class BookmarksProvider(BaseProvider):
             sub = f"{folder}/{name}" if folder else name
             for child in node.get("children", []):
                 self._walk_node(child, out, sub)
-
-    # Firefox
 
     def _parse_firefox(self, db_path: str) -> list[dict]:
         results: list[dict] = []
@@ -199,7 +206,7 @@ class BookmarksProvider(BaseProvider):
         if not matches:
             return [
                 ProviderResult(
-                    title=f"No bookmarks matching \u201c{query}\u201d",
+                    title=f"No bookmarks matching {query}",
                     description="Try a different search",
                     icon_char=ICON_BOOKMARK,
                     provider=self.name,
@@ -212,7 +219,14 @@ class BookmarksProvider(BaseProvider):
         title = bm.get("title") or bm.get("url", "")
         url = bm.get("url", "")
         folder = bm.get("folder", "")
-        desc = f"{folder}  \u2022  {url}" if folder else url
+        browser = bm.get("browser", "")
+        parts: list[str] = []
+        if browser:
+            parts.append(browser.capitalize())
+        if folder:
+            parts.append(folder)
+        parts.append(url)
+        desc = "  \u2022  ".join(parts)
         return ProviderResult(
             title=title,
             description=desc,

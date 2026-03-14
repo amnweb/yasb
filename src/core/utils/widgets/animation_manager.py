@@ -3,6 +3,8 @@ import logging
 from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, QTimer
 from PyQt6.QtWidgets import QGraphicsOpacityEffect, QWidget
 
+from core.utils.utilities import is_valid_qobject
+
 
 class AnimationManager:
     _instances = {}
@@ -92,7 +94,8 @@ class AnimationManager:
 
             # Clean up any graphics effect
             try:
-                widget.setGraphicsEffect(None)
+                if is_valid_qobject(widget):
+                    widget.setGraphicsEffect(None)
             except Exception:
                 pass
 
@@ -103,6 +106,8 @@ class AnimationManager:
         self._animation_timer = None
 
     def _animate(self, widget):
+        if not is_valid_qobject(widget):
+            return
         animation_method = getattr(self, self.animation_type, None)
         if animation_method:
             animation_method(widget)

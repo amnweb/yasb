@@ -1,32 +1,46 @@
 # Notes Widget Configuration
 
-| Option              | Type   | Default Value                           | Description                                                                                                              |
-|---------------------|--------|-----------------------------------------|--------------------------------------------------------------------------------------------------------------------------|
-| `label`           | String | `<span>\udb82\udd0c</span> {count}`      | Primary label template, supports the `{count}` placeholder which is replaced with the number of notes.                  |
-| `label_alt`       | String | `{count} notes`                         | Alternative label format used when switching widget modes.                                                             |
-| `class_name`      | String | `""`                                    | Additional CSS class name for the widget.                                    |
-| `data_path`       | String | `""`                                    | Custom path to JSON file for storing notes. Leave empty to use default location (`~/.config/yasb/notes.json`). Supports `~` for home directory. |
-| `animation`       | Dict   | `{ enabled: true, type: "fadeInOut", duration: 200 }` | Controls animation settings; `enabled` turns animations on/off, `type` defines style, and `duration` is in ms. |
-| `menu`            | Dict   | See below                               | Popup menu settings. See details below.                                                                                |
-| `icons`           | Dict   | `{ note: "\udb82\udd0c", delete: "\ueab8", copy: "\uebcc" }` | Icons for note, delete action and copy text                                                                  |
-| `callbacks`       | Dict   | `{ on_left: "toggle_menu", on_middle: "do_nothing", on_right: "toggle_label" }` | Maps mouse actions to widget functions (e.g., toggling the menu or label).                                              |
-| `container_shadow`   | dict   | `None`                  | Container shadow options.                       |
-| `label_shadow`         | dict   | `None`                  | Label shadow options.                 |
+| Option                | Type     | Default Value                                                                   | Description                                                                                                                                     |
+| --------------------- | -------- | -----------------------------------------                                       | --------------------------------------------------------------------------------------------------------------------------                      |
+| `label`               | String   | `<span>\udb82\udd0c</span> {count}`                                             | Primary label template, supports the `{count}` placeholder which is replaced with the number of notes.                                          |
+| `label_alt`           | String   | `{count} notes`                                                                 | Alternative label format used when switching widget modes.                                                                                      |
+| `class_name`          | String   | `""`                                                                            | Additional CSS class name for the widget.                                                                                                       |
+| `data_path`           | String   | `""`                                                                            | Custom path to JSON file for storing notes. Leave empty to use default location (`~/.config/yasb/notes.json`). Supports `~` for home directory. |
+| `start_floating`      | Boolean  | `false`                                                                         | Whether the menu should start in floating mode.                                                                                                 |
+| `paste_plain_text`    | Boolean  | `false`                                                                         | If true, the widget will paste plain text from the clipboard by default, while Shift+Ctrl+V will paste rich text.                               |
+| `enter_to_add_note`   | Boolean  | `true`                                                                          | If true, pressing Enter in the input field will add a new note and Shift+Enter will add a new line.                                             |
+| `animation`           | Dict     | `{ enabled: true, type: "fadeInOut", duration: 200 }`                           | Controls animation settings; `enabled` turns animations on/off, `type` defines style, and `duration` is in ms.                                  |
+| `menu`                | Dict     | See below                                                                       | Popup menu settings. See details below.                                                                                                         |
+| `icons`               | Dict     | See below                                                                       | Icons used within the widget. See details below.                                                                                                |
+| `callbacks`           | Dict     | `{ on_left: "toggle_menu", on_middle: "do_nothing", on_right: "toggle_label" }` | Maps mouse actions to widget functions (e.g., toggling the menu or label).                                                                      |
+| `container_shadow`    | dict     | `None`                                                                          | Container shadow options.                                                                                                                       |
+| `label_shadow`        | dict     | `None`                                                                          | Label shadow options.                                                                                                                           |
 
 ### Menu Options
 
-| Option              | Type     | Default Value | Description                                                                                  |
-|---------------------|----------|---------------|----------------------------------------------------------------------------------------------|
-| `blur`            | Boolean  | `true`        | Enables a blur effect in the menu popup.                                                     |
-| `round_corners`   | Boolean  | `true`        | If `true`, the menu has rounded corners.                                                     |
-| `round_corners_type` | String | `"normal"`    | Determines the corner style; allowed values are `normal` and `small`.                          |
-| `border_color`    | String   | `"System"`    | Sets the border color for the menu.                                                          |
-| `alignment`       | String   | `"right"`     | Horizontal alignment of the menu relative to the widget (e.g., left, right, center).           |
-| `direction`       | String   | `"down"`      | Direction in which the menu opens.                                                           |
-| `offset_top`      | Integer  | `6`           | Vertical offset for fine positioning of the menu.                                            |
-| `offset_left`     | Integer  | `0`           | Horizontal offset for fine positioning.                                                      |
-| `max_title_size`  | Integer  | `150`         | Maximum characters for note titles before truncation.                                        |
-| `show_date_time`  | Boolean  | `true`        | Indicates whether to display the note’s timestamp.                                           |
+| Option                | Type       | Default Value   | Description                                                                                    |
+| --------------------- | ---------- | --------------- | ---------------------------------------------------------------------------------------------- |
+| `blur`                | Boolean    | `true`          | Enables a blur effect in the menu popup.                                                       |
+| `round_corners`       | Boolean    | `true`          | If `true`, the menu has rounded corners.                                                       |
+| `round_corners_type`  | String     | `"normal"`      | Determines the corner style; allowed values are `normal` and `small`.                          |
+| `border_color`        | String     | `"System"`      | Sets the border color for the menu.                                                            |
+| `alignment`           | String     | `"right"`       | Horizontal alignment of the menu relative to the widget (e.g., left, right, center).           |
+| `direction`           | String     | `"down"`        | Direction in which the menu opens.                                                             |
+| `offset_top`          | Integer    | `6`             | Vertical offset for fine positioning of the menu.                                              |
+| `offset_left`         | Integer    | `0`             | Horizontal offset for fine positioning.                                                        |
+| `max_title_size`      | Integer    | `150`           | Maximum characters for note titles before truncation.                                          |
+| `show_date_time`      | Boolean    | `true`          | Indicates whether to display the note’s timestamp.                                             |
+
+### Icons Options
+
+| Option                | Type       | Default Value    | Description                                                                                    |
+| --------------------- | ---------- | ---------------  | ---------------------------------------------------------------------------------------------- |
+| `note`                | String     | `"\udb82\udd0c"` | Icon representing a note.                                                                      |
+| `delete`              | String     | `"\ueab8"`       | Icon used for the delete action.                                                               |
+| `copy`                | String     | `"\uebcc"`       | Icon for copying text.                                                                         |
+| `float_on`            | String     | `"\udb84\udcac"` | Icon shown when floating can be enabled.                                                       |
+| `float_off`           | String     | `"\udb84\udca9"` | Icon shown when floating can be disabled.                                                      |
+| `close`               | String     | `"\uf00d"`       | Icon for the close button in the header.                                                       |
 
 > [!IMPORTANT]  
 > This widget will save notes in JSON format in `.config/yasb/notes.json`. You can just backup this file to save your notes and restore them later. 
@@ -71,6 +85,9 @@ notes:
 - **label_alt** Alternative label format used when switching modes.
 - **class_name** Additional CSS class name for the widget. This allows for custom styling.
 - **data_path** Optional custom path to the JSON file where notes are stored. If empty or not specified, uses the default location (`~/.config/yasb/notes.json`). Supports `~` for home directory expansion (e.g., `~/Documents/my-notes.json` or `C:/Users/YourName/my-notes.json`).
+- **enter_to_add_note** If true, pressing Enter in the input field will add a new note and Shift+Enter will add a new line. If false it's reversed.
+- **paste_plain_text** If true, the widget will paste plain text from the clipboard by default, while Shift+Ctrl+V will paste rich text. If false it's reversed
+- **start_floating** If true, the menu will start in floating mode.
 - **animation** A dictionary to control widget animation:
   - **enabled**: Boolean flag to turn animations on or off.
   - **type**: The animation style (e.g., "fadeInOut").
@@ -107,6 +124,16 @@ notes:
 .notes-widget .icon {}
 /* Popup menu */
 .notes-menu {}
+/* Floating popup menu */
+.notes-menu.floating {}
+/* Popup menu header */
+.notes-menu .notes-header {}
+/* Header title */
+.notes-menu .notes-header .header-title {}
+/* Floating toggle button */
+.notes-menu .notes-header .float-button {}
+/* Close button */
+.notes-menu .notes-header .close-button {}
 /* Note items inside the menu */
 .notes-menu .note-item {}
 /* Title text within each note item */
@@ -124,6 +151,10 @@ notes:
 .notes-menu .note-input {}
 /* Focus style for the note input */
 .notes-menu .note-input:focus {}
+/* Copy button inside the input field */
+.notes-menu .input-copy-button {}
+.notes-menu .input-copy-button:hover {}
+.notes-menu .input-copy-button:pressed {}
 /* Button to delete a note */
 .notes-menu .delete-button {}
 /* Button hover effect */
@@ -157,6 +188,37 @@ notes:
     min-width: 400px;
     max-width: 400px;
     background-color: rgba(17, 17, 27, 0.4);
+}
+/* Floating state - can have different size */
+.notes-menu.floating {
+    min-width: 600px;
+    max-width: 600px;
+    min-height: 600px;
+    max-height: 600px;
+}
+/* Notes Widget Menu Header */
+.notes-menu .notes-header {
+    background-color: rgba(0, 0, 0, 0);
+    padding: 4px 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+.notes-menu .notes-header .header-title {
+    font-size: 16px;
+    font-weight: 800;
+    color: white;
+}
+.notes-menu .notes-header .float-button,
+.notes-menu .notes-header .close-button {
+    background-color: transparent;
+    border: none;
+    color: #cfcfcf;
+    font-size: 16px;
+    padding: 4px;
+}
+.notes-menu .notes-header .float-button:hover,
+.notes-menu .notes-header .close-button:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
 }
 .notes-menu .note-item {
     background-color:transparent;
@@ -208,9 +270,9 @@ notes:
     color: rgba(255, 255, 255, 0.2);
     font-size: 24px;
     font-weight: 600;
-    padding: 10px 0 20px 0;     
+    padding: 10px 0 20px 0;
 }
-.notes-menu .add-button,  
+.notes-menu .add-button,
 .notes-menu .cancel-button {
     padding: 8px;
     background-color: rgba(255, 255, 255, 0.1);
@@ -242,6 +304,20 @@ notes:
 }
 .note-input:focus {
     border: 1px solid #89b4fa;
+}
+.notes-menu .input-copy-button {
+    color: #babfd3;
+    background: transparent;
+    border: none;
+    font-size: 14px;
+    padding: 2px 4px;
+    border-radius: 3px;
+}
+.notes-menu .input-copy-button:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+.notes-menu .input-copy-button:pressed {
+    color: #ffffff;
 }
 ```
 

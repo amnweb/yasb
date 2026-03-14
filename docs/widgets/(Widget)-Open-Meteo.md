@@ -61,6 +61,28 @@ Default icon mapping (using Nerd Font glyphs):
 | `thunderstormNight` | `\ue338`       | Thunderstorm (night)                          |
 | `default`           | `\uebaa`       | Unknown/fallback                              |
 
+## Custom Icons for Popup Menu
+
+You can use custom PNG or SVG icons for the weather card popup and hourly forecast. The widget checks for custom icons in your configuration directory before falling back to the default SVGs.
+
+To use custom icons, place your files in:
+`C:/Users/{username}/.config/yasb/icons/openmeteo/`
+
+The file names must match the following icon keys (with `.png` or `.svg` extension):
+
+*   `sunnyDay`, `clearNight`
+*   `cloudyDay`, `cloudyNight`
+*   `foggyDay`, `foggyNight`
+*   `drizzleDay`, `drizzleNight`
+*   `rainyDay`, `rainyNight`
+*   `snowyDay`, `snowyNight`
+*   `thunderstormDay`, `thunderstormNight`
+*   `default`
+
+For example, `sunnyDay.png` or `sunnyDay.svg` in that folder will override the default icon for clear skies.
+
+> **Note**: Custom icons are cached in memory. If you add or change your custom icon files, you will need to **restart YASB** for the changes to take effect.
+
 ## Minimal Configuration
 
 ```yaml

@@ -30,7 +30,7 @@ from core.utils.widgets.ai_chat.stream_worker_manager import StreamWorkerManager
 from core.utils.widgets.ai_chat.ui_components import AiChatPopup, ChatInputEdit, ChatMessageBrowser, NotificationLabel
 from core.utils.widgets.ai_chat.ui_helpers import FloatingWindowController, FocusManager, LabelBuilder
 from core.utils.widgets.animation_manager import AnimationManager
-from core.utils.win32.utilities import apply_qmenu_style
+from core.utils.win32.utilities import apply_qmenu_style, find_focused_screen
 from core.utils.win32.window_actions import force_foreground_focus
 from core.validation.widgets.yasb.ai_chat import AiChatConfig
 from core.widgets.base import BaseWidget
@@ -374,6 +374,26 @@ class AiChatWidget(BaseWidget):
         footer_layout.addLayout(input_row)
         layout.addWidget(footer)
         self._attachment_manager.refresh_attachments_ui()
+
+    def _get_target_screen(self):
+        screen_mode = "cursor"
+        for kb in self.config.keybindings:
+            if kb.action == "toggle_chat":
+                screen_mode = kb.screen
+                break
+        if screen_mode == "cursor":
+            screen_name = find_focused_screen(follow_mouse=True, follow_window=False)
+        elif screen_mode == "active":
+            screen_name = find_focused_screen(follow_mouse=False, follow_window=True)
+        elif screen_mode == "primary":
+            return QApplication.primaryScreen() or QApplication.screens()[0]
+        else:
+            return self.screen() or QApplication.primaryScreen() or QApplication.screens()[0]
+        if screen_name:
+            for s in QApplication.screens():
+                if s.name() == screen_name:
+                    return s
+        return self.screen() or QApplication.primaryScreen() or QApplication.screens()[0]
 
     def _show_chat(self):
         """Show the AI chat popup with all components initialized."""

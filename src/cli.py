@@ -558,6 +558,8 @@ class CLIHandler:
                         print(f"Failed to delete {fpath}: {e}")
 
             # Clear all files in app_data_folder if it exists
+            import tempfile
+
             from core.utils.utilities import app_data_path
 
             app_data_folder = app_data_path()
@@ -572,6 +574,14 @@ class CLIHandler:
                             print(f"Deleted folder {child}")
                     except Exception as e:
                         print(f"Failed to delete {child}: {e}")
+
+            icons_cache = Path(tempfile.gettempdir()) / "yasb_quick_launch_icons"
+            if icons_cache.exists() and icons_cache.is_dir():
+                try:
+                    shutil.rmtree(icons_cache)
+                    print(f"Deleted folder {icons_cache}")
+                except Exception as e:
+                    print(f"Failed to delete {icons_cache}: {e}")
 
             print("Reset complete.")
             sys.exit(0)

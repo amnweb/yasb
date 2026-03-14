@@ -14,7 +14,6 @@ from typing import Any
 from core.utils.utilities import app_data_path
 
 logger = logging.getLogger("open_meteo")
-
 _LOCATION_FILE = "weather.json"
 
 
@@ -23,23 +22,9 @@ def _get_file_path() -> Path:
 
 
 def get_widget_id(widget: Any) -> str:
-    """Build a unique identifier for a widget instance.
-
-    Combines the screen name and widget name (both set by the
-    framework after construction) into a clean underscore-separated
-    string.
-
-    Args:
-        widget: A BaseWidget instance with ``screen_name`` and
-            ``widget_name`` attributes.
-
-    Returns:
-        A sanitised identifier string, e.g. ``"DELL1234_open_meteo"``.
-    """
-    screen = getattr(widget, "screen_name", None) or "default"
+    """Build a unique identifier for a widget based on its name."""
     name = getattr(widget, "widget_name", None) or "open_meteo"
-    raw_id = f"{screen}_{name}"
-    return re.sub(r"\W+", "_", raw_id).strip("_")
+    return re.sub(r"\W+", "_", name).strip("_")
 
 
 def _read_file() -> dict[str, Any]:
@@ -107,7 +92,6 @@ def save_location(widget_id: str, location: dict[str, Any] | None) -> None:
         else 0,
     }
     _write_file(data)
-    logger.info(f"Saved location for {widget_id}: {data[widget_id]['name']}")
 
 
 def save_weather_cache(widget_id: str, weather_data: dict[str, Any]) -> None:
@@ -135,3 +119,15 @@ def delete_location(widget_id: str) -> None:
         del data[widget_id]
         _write_file(data)
         logger.info(f"Deleted location for {widget_id}")
+
+
+def cleanup_stale_entries(active_widget_ids: set[str]) -> None:
+    """Remove entries from weather.json that are not in the active widget set."""
+    data = _read_file()
+    stale_keys = [key for key in data if key not in active_widget_ids]
+    if not stale_keys:
+        return
+    for key in stale_keys:
+        del data[key]
+        logger.info(f"Removed stale weather entry: {key}")
+    _write_file(data)

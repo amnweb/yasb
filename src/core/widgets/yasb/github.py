@@ -221,7 +221,7 @@ class GithubWidget(BaseWidget):
 
     def mark_as_read(self, notification_id: str, container_label: QFrame) -> None:
         # Update in GitHubDataManager and sync with GitHub API
-        GitHubDataManager.mark_as_read(notification_id, sync_to_github=True, token=self.github_token)
+        GitHubDataManager.mark_as_read(notification_id, token=self.github_token)
         current_classes = container_label.property("class").split()
         if "new" in current_classes:
             current_classes.remove("new")

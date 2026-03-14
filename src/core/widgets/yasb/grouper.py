@@ -141,6 +141,7 @@ class GrouperWidget(BaseWidget):
                 try:
                     cw.bar_id = self.bar_id
                     cw.monitor_hwnd = self.monitor_hwnd
+                    cw.screen_name = self.screen_name
                     cw.parent_layout_type = getattr(self, "parent_layout_type", None)
                 except Exception:
                     pass

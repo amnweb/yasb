@@ -98,7 +98,6 @@ class OpenMeteoDataFetcher(QObject):
             error = reply.error()
             status = reply.attribute(QNetworkRequest.Attribute.HttpStatusCodeAttribute)
             if error == QNetworkReply.NetworkError.NoError:
-                logger.info("Fetched new Open-Meteo weather data")
                 data = json.loads(reply.readAll().data().decode())
                 self.finished.emit(data)
             elif error == QNetworkReply.NetworkError.HostNotFoundError:

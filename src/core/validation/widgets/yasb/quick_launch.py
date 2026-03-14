@@ -19,7 +19,6 @@ class QuickLaunchPopupConfig(CustomBaseModel):
     round_corners_type: str = "normal"
     border_color: str = "System"
     dark_mode: bool = True
-    screen: Literal["primary", "focus", "cursor"] = "focus"
 
 
 class QuickLaunchCallbacksConfig(CallbacksConfig):
@@ -74,6 +73,7 @@ class FileSearchProviderConfig(CustomBaseModel):
     priority: int = 0
     backend: Literal["auto", "everything", "index", "disk"] = "auto"
     show_path: bool = True
+    show_preview: bool = False
 
 
 class CurrencyProviderConfig(CustomBaseModel):
@@ -116,10 +116,11 @@ class ColorProviderConfig(CustomBaseModel):
 
 
 class ClipboardHistoryProviderConfig(CustomBaseModel):
-    enabled: bool = True
+    enabled: bool = False
     prefix: str = "cb"
     priority: int = 0
     max_items: int = 30
+    show_preview: bool = True
 
 
 class PortViewerProviderConfig(CustomBaseModel):
@@ -168,28 +169,59 @@ class WindowSwitcherProviderConfig(CustomBaseModel):
     priority: int = 0
 
 
+class WindowsTerminalProviderConfig(CustomBaseModel):
+    enabled: bool = False
+    prefix: str = "wt"
+    priority: int = 0
+
+
+class GithubNotificationsProviderConfig(CustomBaseModel):
+    enabled: bool = False
+    prefix: str = "gh"
+    priority: int = 0
+    token: str = "env"
+
+
+class WslProviderConfig(CustomBaseModel):
+    enabled: bool = False
+    prefix: str = "wsl"
+    priority: int = 0
+    show_online: bool = True
+
+
+class SshProviderConfig(CustomBaseModel):
+    enabled: bool = False
+    prefix: str = "ssh"
+    priority: int = 0
+    ssh_config_path: str = ""
+
+
 class QuickLaunchProvidersConfig(CustomBaseModel):
     apps: AppsProviderConfig = AppsProviderConfig()
     bookmarks: BookmarksProviderConfig = BookmarksProviderConfig()
     calculator: CalculatorProviderConfig = CalculatorProviderConfig()
     clipboard_history: ClipboardHistoryProviderConfig = ClipboardHistoryProviderConfig()
-    currency: CurrencyProviderConfig = CurrencyProviderConfig()
-    web_search: WebSearchProviderConfig = WebSearchProviderConfig()
-    system_commands: SystemCommandsProviderConfig = SystemCommandsProviderConfig()
-    settings: SettingsProviderConfig = SettingsProviderConfig()
-    kill_process: KillProcessProviderConfig = KillProcessProviderConfig()
-    file_search: FileSearchProviderConfig = FileSearchProviderConfig()
-    unit_converter: UnitConverterProviderConfig = UnitConverterProviderConfig()
-    emoji: EmojiProviderConfig = EmojiProviderConfig()
-    snippets: SnippetsProviderConfig = SnippetsProviderConfig()
     color: ColorProviderConfig = ColorProviderConfig()
-    port_viewer: PortViewerProviderConfig = PortViewerProviderConfig()
-    world_clock: WorldClockProviderConfig = WorldClockProviderConfig()
-    hacker_news: HackerNewsProviderConfig = HackerNewsProviderConfig()
+    currency: CurrencyProviderConfig = CurrencyProviderConfig()
     dev_tools: DevToolsProviderConfig = DevToolsProviderConfig()
+    emoji: EmojiProviderConfig = EmojiProviderConfig()
+    file_search: FileSearchProviderConfig = FileSearchProviderConfig()
+    github_notifications: GithubNotificationsProviderConfig = GithubNotificationsProviderConfig()
+    hacker_news: HackerNewsProviderConfig = HackerNewsProviderConfig()
     ip_info: IpInfoProviderConfig = IpInfoProviderConfig()
+    kill_process: KillProcessProviderConfig = KillProcessProviderConfig()
+    port_viewer: PortViewerProviderConfig = PortViewerProviderConfig()
+    settings: SettingsProviderConfig = SettingsProviderConfig()
+    snippets: SnippetsProviderConfig = SnippetsProviderConfig()
+    ssh: SshProviderConfig = SshProviderConfig()
+    system_commands: SystemCommandsProviderConfig = SystemCommandsProviderConfig()
+    unit_converter: UnitConverterProviderConfig = UnitConverterProviderConfig()
     vscode: VSCodeProviderConfig = VSCodeProviderConfig()
+    web_search: WebSearchProviderConfig = WebSearchProviderConfig()
     window_switcher: WindowSwitcherProviderConfig = WindowSwitcherProviderConfig()
+    windows_terminal: WindowsTerminalProviderConfig = WindowsTerminalProviderConfig()
+    world_clock: WorldClockProviderConfig = WorldClockProviderConfig()
+    wsl: WslProviderConfig = WslProviderConfig()
 
 
 class QuickLaunchConfig(CustomBaseModel):
@@ -200,6 +232,7 @@ class QuickLaunchConfig(CustomBaseModel):
     icon_size: int = 32
     home_page: bool = False
     compact_mode: bool = False
+    compact_text: bool = False
     providers: QuickLaunchProvidersConfig = QuickLaunchProvidersConfig()
     popup: QuickLaunchPopupConfig = QuickLaunchPopupConfig()
     animation: AnimationConfig = AnimationConfig()

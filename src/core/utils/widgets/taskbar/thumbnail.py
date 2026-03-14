@@ -32,8 +32,6 @@ class ThumbnailHost(QWidget):
     def __init__(self, preview_popup, parent=None):
         super().__init__(parent)
         self._preview_popup = preview_popup
-        # Copy bar_id from preview if available for autohide detection
-        self.bar_id = getattr(preview_popup, "bar_id", None) if preview_popup else None
         self.setMouseTracking(True)
 
     def enterEvent(self, event):
@@ -180,8 +178,6 @@ class PreviewPopup(QFrame):
         self._fade_anim = PreviewAnimation(self, self._animation_duration)
         self._header_title_full = ""
         self._thumbnail_manager = None
-        # Set bar_id from parent for autohide detection
-        self.bar_id = getattr(parent, "bar_id", None) if parent else None
 
     def get_dpr(self) -> float:
         """Return device pixel ratio for this preview (per-screen)."""
@@ -214,19 +210,6 @@ class PreviewPopup(QFrame):
             except RuntimeError:
                 pass
         self._cleanup_thumb()
-        # Restart autohide timer only if mouse is not on the bar
-        try:
-            from PyQt6.QtGui import QCursor
-
-            from core.global_state import get_autohide_owner_for_widget
-
-            bar = get_autohide_owner_for_widget(self)
-            if bar and not bar.geometry().contains(QCursor.pos()):
-                mgr = bar._autohide_manager
-                if mgr._hide_timer:
-                    mgr._hide_timer.start(mgr._autohide_delay)
-        except Exception:
-            pass
         super().hideEvent(event)
 
     def closeEvent(self, event):
@@ -453,15 +436,6 @@ class PreviewPopup(QFrame):
                 self._hide_timer.stop()
             except RuntimeError:
                 pass
-        # Stop bar's autohide timer
-        try:
-            from core.global_state import get_autohide_owner_for_widget
-
-            mgr = get_autohide_owner_for_widget(self)._autohide_manager
-            if mgr._hide_timer:
-                mgr._hide_timer.stop()
-        except Exception:
-            pass
         super().enterEvent(event)
 
     def leaveEvent(self, event):
@@ -485,15 +459,6 @@ class PreviewPopup(QFrame):
                 self._hide_timer.stop()
             except RuntimeError:
                 pass
-        # Stop bar's autohide timer
-        try:
-            from core.global_state import get_autohide_owner_for_widget
-
-            mgr = get_autohide_owner_for_widget(self)._autohide_manager
-            if mgr._hide_timer:
-                mgr._hide_timer.stop()
-        except Exception:
-            pass
 
     def _on_thumbnail_leave(self):
         """Called when mouse leaves the thumbnail host."""

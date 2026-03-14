@@ -17,6 +17,7 @@ from core.utils.win32.bindings import (
     UnhookWinEvent,
 )
 from core.utils.win32.bindings import user32 as _user32_raw
+from core.utils.win32.bindings.ole32 import ole32
 from core.utils.win32.structs import MSG
 
 logger = logging.getLogger(__name__)
@@ -164,7 +165,7 @@ class TaskbarWindowManager(QObject):
 
         # Windows API setup
         self._user32 = _user32_raw
-        self._ole32 = ctypes.windll.ole32
+        self._ole32 = ole32
 
         # COM initialization
         try:

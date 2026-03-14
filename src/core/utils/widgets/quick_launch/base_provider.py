@@ -16,6 +16,8 @@ class ProviderResult:
     action_data: dict = field(default_factory=dict)
     preview: dict = field(default_factory=dict)
     css_class: str = ""
+    is_separator: bool = False
+    is_loading: bool = False
 
 
 @dataclass
@@ -50,6 +52,7 @@ class BaseProvider(ABC):
         self.prefix: str | None = None if raw == "*" else raw
         self.priority: int = self.config.get("priority", 0)
         self.max_results: int = self.config.get("_max_results", 50)
+        self.show_preview: bool = self.config.get("show_preview", True)
         self.request_refresh: Callable[[], None] | None = None
 
     def match(self, text: str) -> bool:
@@ -77,6 +80,12 @@ class BaseProvider(ABC):
     def handle_preview_action(self, action_id: str, result: ProviderResult, data: dict) -> ProviderMenuActionResult:
         """Handle an action from an inline edit form in the preview panel."""
         return ProviderMenuActionResult()
+
+    def cancel_edit(self) -> None:
+        """Called when the preview panel edit form is dismissed. Override to reset editing state."""
+
+    def on_deactivate(self) -> None:
+        """Called when the popup is closed. Override to clear caches or state."""
 
     def get_query_text(self, text: str) -> str:
         """Strip prefix from query text."""

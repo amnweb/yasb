@@ -7,6 +7,8 @@ import base64
 import logging
 import os
 import queue
+import shutil
+import sys
 import tempfile
 import threading
 from dataclasses import asdict, is_dataclass
@@ -29,12 +31,23 @@ except ImportError:
     CopilotClient = None
 
 
+def _resolve_copilot_cli_path() -> str | None:
+    """Find copilot CLI on the system PATH (required for frozen builds
+    where the SDK's bundled binary is not available)."""
+    return shutil.which("copilot") or shutil.which("copilot.exe")
+
+
 def _build_copilot_client_options(provider_config: dict | None) -> dict[str, Any]:
     if not provider_config:
-        return {}
+        provider_config = {}
     cli_url = provider_config.get("copilot_cli_url")
     if isinstance(cli_url, str) and cli_url.strip():
         return {"cli_url": cli_url.strip()}
+    # In a frozen exe the SDK cannot locate its bundled binary resolve from system PATH.
+    if getattr(sys, "frozen", False):
+        cli_path = _resolve_copilot_cli_path()
+        if cli_path:
+            return {"cli_path": cli_path}
     return {}
 
 
@@ -135,16 +148,25 @@ def list_copilot_models(provider_config: dict | None = None) -> list[dict[str, A
         await client.start()
         auth_status = await client.get_auth_status()
         if not getattr(auth_status, "isAuthenticated", False):
-            await client.stop()
             logging.error("Copilot CLI is not authenticated. Run `copilot` to sign in.")
+            try:
+                await client.stop()
+            except ExceptionGroup:
+                pass
             return []
         try:
             models = await client.list_models()
         except Exception as exc:
             logging.warning("Copilot models unavailable: %s", exc)
-            await client.stop()
+            try:
+                await client.stop()
+            except ExceptionGroup:
+                pass
             return []
-        await client.stop()
+        try:
+            await client.stop()
+        except ExceptionGroup:
+            pass  # stop() completes all cleanup before raising; result already obtained
         return _normalize_models(models)
 
     try:
@@ -499,8 +521,8 @@ class CopilotAiChatClient:
         if self._client:
             try:
                 await self._client.stop()
-            except Exception:
-                pass
+            except ExceptionGroup:
+                pass  # stop() completes all cleanup before raising; safe to ignore
         self._client = None
 
     async def _abort_session(self) -> None:

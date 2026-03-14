@@ -10,6 +10,12 @@ Whkd is a simple hotkey daemon for Windows that reacts to input events by execut
 | `container_shadow`   | dict   | `None`                  | Container shadow options.                       |
 | `label_shadow`         | dict   | `None`                  | Label shadow options.                 |
 
+## Callbacks
+
+| Callback | Description |
+|----------|-------------|
+| `open_popup` | Opens the whkd shortcuts list window |
+
 ## Example Configuration
 
 ```yaml

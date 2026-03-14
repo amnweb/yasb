@@ -79,6 +79,11 @@ class GitHubDataManager:
             )
 
     @classmethod
+    def refresh(cls) -> None:
+        """Trigger an immediate data refresh (same as a timer tick)."""
+        cls._on_timer()
+
+    @classmethod
     def register_callback(cls, callback: Callable) -> None:
         """Register a callback to be called when data is updated."""
         with cls._lock:
@@ -140,31 +145,36 @@ class GitHubDataManager:
         threading.Thread(target=_fetch, daemon=True).start()
 
     @classmethod
-    def mark_as_read(cls, notification_id: str, sync_to_github: bool = False, token: str = None) -> None:
+    def mark_as_read(cls, notification_id: str, token: str | None = None) -> None:
         """
-        Mark a notification as read in the shared data and notify all widgets.
-        Optionally sync with GitHub API in background thread.
+        Mark a single notification as read.
+        - Always syncs to GitHub API in a background thread.
+        - Updates local shared data and notifies bar widget callbacks only
+          when the given token matches the bar widget's token.
         """
-        with cls._lock:
-            for notification in cls._shared_data:
-                if notification["id"] == notification_id:
-                    notification["unread"] = False
-                    break
+        effective_token = token or cls._token
 
-            # Get current data and callbacks
-            data_copy = cls._shared_data.copy()
-            callbacks = cls._callbacks.copy()
+        # Update local data only if same account as bar widget
+        if effective_token and effective_token == cls._token:
+            with cls._lock:
+                for notification in cls._shared_data:
+                    if notification["id"] == notification_id:
+                        notification["unread"] = False
+                        break
+                data_copy = cls._shared_data.copy()
+                callbacks = cls._callbacks.copy()
 
-        # Notify all callbacks about the change
-        for callback in callbacks:
-            try:
-                callback(data_copy)
-            except Exception as e:
-                logging.error(f"GitHubDataManager error calling callback: {e}")
+            for callback in callbacks:
+                try:
+                    callback(data_copy)
+                except Exception as e:
+                    logging.error(f"GitHubDataManager error calling callback: {e}")
 
-        # Optionally sync with GitHub API in background
-        if sync_to_github and token:
-            threading.Thread(target=lambda: cls._sync_notification_read(notification_id, token), daemon=True).start()
+        # Sync to GitHub API in background
+        if effective_token:
+            threading.Thread(
+                target=lambda: cls._sync_notification_read(notification_id, effective_token), daemon=True
+            ).start()
 
     @classmethod
     def _sync_notification_read(cls, notification_id: str, token: str) -> None:
@@ -174,36 +184,38 @@ class GitHubDataManager:
         req = urllib.request.Request(url, headers=headers, method="PATCH")
         try:
             with urllib.request.urlopen(req):
-                pass  # Successfully marked as read on GitHub
+                pass
         except urllib.error.HTTPError as e:
-            logging.error(f"GitHubDataManager HTTP Error marking notification as read: {e.code} - {e.reason}")
+            logging.error(f"GitHubDataManager HTTP error marking notification as read: {e.code} - {e.reason}")
+        except urllib.error.URLError:
+            logging.error("GitHubDataManager no internet connection. Unable to mark notification as read.")
         except Exception as e:
-            logging.error(f"GitHubDataManager Error marking notification as read: {e}")
+            logging.error(f"GitHubDataManager error marking notification as read: {e}")
 
     @classmethod
     def mark_all_as_read(cls, token: str) -> None:
         """
-        Mark all unread notifications as read.
-        Uses GitHub's single API call to mark all notifications as read at once.
+        Mark all notifications as read.
+        - Always syncs to GitHub API in a background thread.
+        - Updates local shared data and notifies bar widget callbacks only
+          when the given token matches the bar widget's token.
         """
-        with cls._lock:
-            # Mark all as read locally
-            for notification in cls._shared_data:
-                notification["unread"] = False
+        # Update local data only if same account as bar widget
+        if token and token == cls._token:
+            with cls._lock:
+                for notification in cls._shared_data:
+                    notification["unread"] = False
+                data_copy = cls._shared_data.copy()
+                callbacks = cls._callbacks.copy()
 
-            # Get current data and callbacks
-            data_copy = cls._shared_data.copy()
-            callbacks = cls._callbacks.copy()
+            for callback in callbacks:
+                try:
+                    callback(data_copy)
+                except Exception as e:
+                    logging.error(f"GitHubDataManager error calling callback: {e}")
 
-        # Notify all callbacks about the change
-        for callback in callbacks:
-            try:
-                callback(data_copy)
-            except Exception as e:
-                logging.error(f"GitHubDataManager Error calling callback: {e}")
-
-        # Sync with GitHub API in background thread using single API call
-        def _sync_to_github():
+        # Sync to GitHub API in background
+        def _sync():
             try:
                 from datetime import datetime, timezone
 
@@ -212,21 +224,20 @@ class GitHubDataManager:
                     "Accept": "application/vnd.github.v3+json",
                     "Content-Type": "application/json",
                 }
-                # ISO 8601 timestamp for last_read_at
                 last_read_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
                 data = json.dumps({"last_read_at": last_read_at}).encode("utf-8")
-
                 url = "https://api.github.com/notifications"
                 req = urllib.request.Request(url, headers=headers, data=data, method="PUT")
-
                 with urllib.request.urlopen(req):
                     logging.info("GitHubDataManager marked all notifications as read on GitHub")
             except urllib.error.HTTPError as e:
                 logging.error(f"GitHubDataManager HTTP error marking all as read: {e.code} - {e.reason}")
+            except urllib.error.URLError:
+                logging.error("GitHubDataManager no internet connection. Unable to mark all as read.")
             except Exception as e:
-                logging.error(f"GitHubDataManager Error marking all as read on GitHub: {e}")
+                logging.error(f"GitHubDataManager error marking all as read: {e}")
 
-        threading.Thread(target=_sync_to_github, daemon=True).start()
+        threading.Thread(target=_sync, daemon=True).start()
 
     @classmethod
     def _get_github_notifications(
@@ -237,80 +248,9 @@ class GitHubDataManager:
         reason_filters: list[str] | None = None,
         show_comment_count: bool = False,
     ) -> list[dict[str, Any]]:
-        """Fetch notifications from GitHub API."""
-        headers = {"Authorization": f"token {token}", "Accept": "application/vnd.github.v3+json"}
-        params = {
-            "all": "false" if only_unread else "true",
-            "participating": "false",
-            "per_page": max_notification,
-        }
-
-        url = "https://api.github.com/notifications"
-        query_string = "&".join(f"{k}={v}" for k, v in params.items())
-        full_url = f"{url}?{query_string}"
-
-        req = urllib.request.Request(full_url, headers=headers)
-
+        """Fetch notifications from GitHub API. Returns [] on any error."""
         try:
-            with urllib.request.urlopen(req) as response:
-                notifications = json.loads(response.read().decode())
-
-            result = []
-            if notifications:
-                for notification in notifications:
-                    # Extract nested values once
-                    repository = notification["repository"]
-                    subject = notification["subject"]
-                    repo_full_name = repository["full_name"]
-                    subject_type = subject["type"]
-                    subject_url = subject["url"]
-                    if subject_type == "PullRequest":
-                        github_url = subject_url.replace("api.github.com/repos", "github.com").replace(
-                            "/pulls/", "/pull/"
-                        )
-                    elif subject_type == "Release":
-                        github_url = f"https://github.com/{repo_full_name}/releases"
-                    elif subject_type in ("Issue", "Discussion"):
-                        github_url = subject_url.replace("api.github.com/repos", "github.com")
-                    elif subject_type == "CheckSuite":
-                        # CheckSuite notifications don't provide a direct URL in the API
-                        github_url = f"https://github.com/{repo_full_name}/actions"
-                    else:
-                        github_url = repository["html_url"]
-
-                    result.append(
-                        {
-                            "id": notification["id"],
-                            "repository": repo_full_name,
-                            "title": subject["title"],
-                            "type": subject_type,
-                            "url": github_url,
-                            "unread": notification["unread"],
-                            "reason": notification.get("reason", ""),
-                            "comment_count": None,
-                            "updated_at": notification.get("updated_at", ""),
-                            "__subject_api_url": subject_url,
-                        }
-                    )
-
-            # Filter by reason (set lookup is O(1) vs list lookup O(n))
-            if reason_filters:
-                normalized_filters = {reason.lower() for reason in reason_filters if reason}
-                if normalized_filters:
-                    result = [item for item in result if item.get("reason", "").lower() in normalized_filters]
-
-            if token:
-                cls._enrich_notifications(
-                    token,
-                    result,
-                    include_comment_count=show_comment_count,
-                )
-
-            for item in result:
-                item.pop("__subject_api_url", None)
-
-            return result
-
+            return cls._get_all_notifications(token, only_unread, max_notification, reason_filters, show_comment_count)
         except urllib.error.URLError:
             logging.error("GitHubDataManager no internet connection. Unable to fetch notifications.")
             return []
@@ -320,6 +260,126 @@ class GitHubDataManager:
         except Exception as e:
             logging.error(f"GitHubDataManager an unexpected error occurred: {str(e)}")
             return []
+
+    @classmethod
+    def fetch_all_notifications(cls, token: str, max_notification: int = 100) -> list[dict[str, Any]]:
+        """Fetch all notifications (read + unread) for a given token.
+
+        This is the public entry point for on-demand fetching by the quick launch
+        provider and any other consumer.  Unlike ``_get_github_notifications`` this
+        method lets exceptions propagate so callers can show proper error messages.
+        """
+        return cls._get_all_notifications(token, only_unread=False, max_notification=max_notification)
+
+    @staticmethod
+    def _parse_link_header(header: str) -> dict[str, str]:
+        """Parse the GitHub ``Link`` header into a dict of rel -> URL."""
+        links: dict[str, str] = {}
+        for part in header.split(","):
+            section = part.split(";")
+            if len(section) < 2:
+                continue
+            url = section[0].strip().strip("<>")
+            for param in section[1:]:
+                param = param.strip()
+                if param.startswith('rel="') and param.endswith('"'):
+                    rel = param[5:-1]
+                    links[rel] = url
+        return links
+
+    @classmethod
+    def _get_all_notifications(
+        cls,
+        token: str,
+        only_unread: bool,
+        max_notification: int,
+        reason_filters: list[str] | None = None,
+        show_comment_count: bool = False,
+    ) -> list[dict[str, Any]]:
+        """Core fetch + GraphQL enrichment logic. Raises on network/API errors."""
+        headers = {"Authorization": f"token {token}", "Accept": "application/vnd.github.v3+json"}
+        per_page = min(max_notification, 50)  # GitHub API caps per_page at 50
+        params = {
+            "all": "false" if only_unread else "true",
+            "participating": "false",
+            "per_page": per_page,
+        }
+
+        url = "https://api.github.com/notifications"
+        query_string = "&".join(f"{k}={v}" for k, v in params.items())
+        next_url: str | None = f"{url}?{query_string}"
+
+        all_notifications: list[dict] = []
+        while next_url and len(all_notifications) < max_notification:
+            req = urllib.request.Request(next_url, headers=headers)
+            with urllib.request.urlopen(req) as response:
+                page = json.loads(response.read().decode())
+                all_notifications.extend(page)
+
+                # Check for next page via Link header
+                link_header = response.getheader("Link")
+                if link_header:
+                    links = cls._parse_link_header(link_header)
+                    next_url = links.get("next")
+                else:
+                    next_url = None
+
+        # Trim to requested maximum
+        all_notifications = all_notifications[:max_notification]
+
+        result = []
+        if all_notifications:
+            for notification in all_notifications:
+                # Extract nested values once
+                repository = notification["repository"]
+                subject = notification["subject"]
+                repo_full_name = repository["full_name"]
+                subject_type = subject["type"]
+                subject_url = subject["url"]
+                if subject_type == "PullRequest":
+                    github_url = subject_url.replace("api.github.com/repos", "github.com").replace("/pulls/", "/pull/")
+                elif subject_type == "Release":
+                    github_url = f"https://github.com/{repo_full_name}/releases"
+                elif subject_type in ("Issue", "Discussion"):
+                    github_url = subject_url.replace("api.github.com/repos", "github.com")
+                elif subject_type == "CheckSuite":
+                    # CheckSuite notifications don't provide a direct URL in the API
+                    github_url = f"https://github.com/{repo_full_name}/actions"
+                else:
+                    github_url = repository["html_url"]
+
+                result.append(
+                    {
+                        "id": notification["id"],
+                        "repository": repo_full_name,
+                        "title": subject["title"],
+                        "type": subject_type,
+                        "url": github_url,
+                        "unread": notification["unread"],
+                        "reason": notification.get("reason", ""),
+                        "comment_count": None,
+                        "updated_at": notification.get("updated_at", ""),
+                        "__subject_api_url": subject_url,
+                    }
+                )
+
+        # Filter by reason (set lookup is O(1) vs list lookup O(n))
+        if reason_filters:
+            normalized_filters = {reason.lower() for reason in reason_filters if reason}
+            if normalized_filters:
+                result = [item for item in result if item.get("reason", "").lower() in normalized_filters]
+
+        if token:
+            cls._enrich_notifications(
+                token,
+                result,
+                include_comment_count=show_comment_count,
+            )
+
+        for item in result:
+            item.pop("__subject_api_url", None)
+
+        return result
 
     @classmethod
     def _enrich_notifications(

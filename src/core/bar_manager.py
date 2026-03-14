@@ -9,7 +9,6 @@ from PyQt6.QtWidgets import QApplication
 from core.bar import Bar
 from core.config import get_config, get_stylesheet
 from core.event_service import EventService
-from core.global_state import set_bar_screens
 from core.utils.controller import reload_application
 from core.utils.utilities import get_screen_by_name
 from core.utils.widget_builder import WidgetBuilder
@@ -46,10 +45,16 @@ class BarManager(QObject):
 
         self.styles_modified.connect(self.on_styles_modified)
         self.config_modified.connect(self.on_config_modified)
-        app = QApplication.instance()
-        app.screenAdded.connect(self.on_screens_update)
-        app.screenRemoved.connect(self.on_screens_update)
-        app.aboutToQuit.connect(self.stop_listener_threads)
+        self._app = QApplication.instance()
+        self._app.aboutToQuit.connect(self.stop_listener_threads)
+        self._app.screenAdded.connect(self.on_screens_update)
+        self._app.screenRemoved.connect(self.on_screens_update)
+
+    def _disconnect_reload_signals(self):
+        with suppress(TypeError):
+            self._app.screenAdded.disconnect(self.on_screens_update)
+            self._app.screenRemoved.disconnect(self.on_screens_update)
+            self.config_modified.disconnect(self.on_config_modified)
 
     @pyqtSlot()
     def on_styles_modified(self):
@@ -72,6 +77,7 @@ class BarManager(QObject):
 
             if config.model_dump(exclude=exclude) != self.config.model_dump(exclude=exclude):
                 self.config = config
+                self._disconnect_reload_signals()
                 reload_application("Reloading Application because of config change.")
             else:
                 self.config = config
@@ -81,6 +87,7 @@ class BarManager(QObject):
     @pyqtSlot(QScreen)
     def on_screens_update(self, _screen: QScreen) -> None:
         logging.info("Screens updated. Re-initialising all bars.")
+        self._disconnect_reload_signals()
         reload_application("Reloading Application because of screen update.")
 
     def run_listeners_in_threads(self):
@@ -96,7 +103,7 @@ class BarManager(QObject):
             logging.info("Stopping HotkeyListener...")
             with suppress(Exception):
                 self._hotkey_listener.stop()
-                self._hotkey_listener.quit()
+                self._hotkey_listener.wait(1000)
             self._hotkey_listener = None
             self._hotkey_dispatcher = None
 
@@ -114,6 +121,7 @@ class BarManager(QObject):
                         thread.quit()
                     except Exception:
                         pass
+                thread.wait(1000)
         self._threads.clear()
         self.widget_event_listeners.clear()
 
@@ -160,7 +168,7 @@ class BarManager(QObject):
                         self.create_bar(bar_config, bar_name, screen, init)
                         initialized_screens.add(screen.name())
 
-        set_bar_screens(initialized_screens)
+        self._initialized_screens = initialized_screens
         self._collect_keybindings()
         self._start_hotkey_listener()
         self.run_listeners_in_threads()
@@ -205,6 +213,7 @@ class BarManager(QObject):
         self._hotkey_listener = HotkeyListener(
             self._collected_keybindings,
             self._hotkey_dispatcher,
+            self._initialized_screens,
         )
         self._hotkey_listener.start()
         logging.info("Starting HotkeyListener...")

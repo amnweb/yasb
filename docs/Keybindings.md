@@ -15,6 +15,7 @@ YASB supports global keyboard shortcuts (hotkeys) to trigger widget actions. Key
 Add a `keybindings` list to any widget's options. Each keybinding requires:
 - `keys`: The key combination (e.g., `"win+c"`, `"ctrl+shift+f1"`)
 - `action`: The callback action to trigger (e.g., `"toggle_calendar"`, `"toggle_label"`)
+- `screen` (optional): `"active"`, `"cursor"`, or `"primary"` to specify which screen to target if multiple are present (defaults to `"active"` — the focused window's screen)
 
 ### Basic Example
 
@@ -39,6 +40,7 @@ clock:
     keybindings:
       - keys: "win+c"
         action: "toggle_calendar"
+        screen: "cursor"
 
 volume:
   type: "yasb.volume.VolumeWidget"
@@ -181,11 +183,15 @@ Refer to individual widget documentation for widget-specific actions. For exampl
 
 ## Screen Targeting
 
-When a hotkey is triggered, YASB determines which screen's widget should respond based on:
-1. The currently focused window's screen
-2. If no window is focused, falls back to the primary screen
+When a hotkey is triggered, YASB determines which screen's widget should respond. You can control this per-keybinding with the `screen` option:
 
-This means pressing `win+c` will toggle the calendar on the monitor where you're currently working.
+| Value | Behavior |
+|-------|----------|
+| `"active"` (default) | Targets the screen containing the currently focused window. Falls back to primary if no window is focused. |
+| `"cursor"` | Targets the screen where the mouse cursor is currently located. |
+| `"primary"` | Always targets the primary screen. |
+
+This means pressing `win+c` will toggle the calendar on the monitor where you're currently working (by default), or you can override this to follow the mouse cursor or always use the primary screen.
 
 ## Conflict Handling
 

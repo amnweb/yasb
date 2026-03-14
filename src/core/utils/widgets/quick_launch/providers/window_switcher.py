@@ -12,7 +12,6 @@ from core.utils.widgets.quick_launch.base_provider import BaseProvider, Provider
 from core.utils.widgets.quick_launch.fuzzy import fuzzy_score
 from core.utils.widgets.quick_launch.providers.resources.icons import ICON_WINDOWS_SWITCHER
 from core.utils.widgets.taskbar.window_manager import get_shared_task_manager
-from core.utils.win32.app_icons import get_window_icon
 from core.utils.win32.window_actions import (
     force_foreground_focus,
     resolve_base_and_focus,
@@ -117,6 +116,8 @@ class WindowSwitcherProvider(BaseProvider):
         return results
 
     def _get_window_icon_path(self, win) -> str:
+        from core.utils.win32.app_icons import get_window_icon
+
         is_uwp = win.class_name == "ApplicationFrameWindow"
 
         if win.process_path and os.path.isfile(win.process_path) and not is_uwp:
