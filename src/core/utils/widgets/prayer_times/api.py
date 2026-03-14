@@ -7,6 +7,7 @@ from PyQt6.QtCore import QObject, QTimer, QUrl, pyqtSignal
 from PyQt6.QtNetwork import QNetworkAccessManager, QNetworkReply, QNetworkRequest
 
 HEADER = (b"User-Agent", b"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:129.0) Gecko/20100101 Firefox/129.0")
+RETRY_INTERVAL_MS = 5_000  # retry every 5 s when the network is unavailable
 
 
 class PrayerTimesDataFetcher(QObject):
@@ -30,6 +31,10 @@ class PrayerTimesDataFetcher(QObject):
         self._timer = QTimer(self)
         self._timer.setInterval(timeout_ms)
         self._timer.timeout.connect(self.make_request)
+        # Single-shot timer used to retry quickly after a network failure.
+        self._retry_timer = QTimer(self)
+        self._retry_timer.setSingleShot(True)
+        self._retry_timer.timeout.connect(self.make_request)
 
     def start(self) -> None:
         """Begin periodic fetching. The first request fires immediately."""
@@ -55,21 +60,32 @@ class PrayerTimesDataFetcher(QObject):
                 raw = reply.readAll().data().decode("utf-8", errors="replace")
                 data = json.loads(raw)
                 if data.get("code") == 200:
+                    self._retry_timer.stop()
                     self.finished.emit(data)
                 else:
                     logging.error(f"Prayer times API returned non-200 code: {data.get('code')} 窶・{data.get('status')}")
                     self.finished.emit({})
+                    self._schedule_retry()
             elif error == QNetworkReply.NetworkError.HostNotFoundError:
                 logging.warning("Prayer times: no internet connection or host not found.")
                 self.finished.emit({})
+                self._schedule_retry()
             else:
                 logging.error(f"Prayer times API network error {status}: {error}")
                 self.finished.emit({})
+                self._schedule_retry()
         except json.JSONDecodeError as e:
             logging.error(f"Prayer times: invalid JSON in response: {e}")
             self.finished.emit({})
+            self._schedule_retry()
         except Exception as e:
             logging.error(f"Prayer times: unexpected error: {e}\n{traceback.format_exc()}")
             self.finished.emit({})
+            self._schedule_retry()
         finally:
             reply.deleteLater()
+
+    def _schedule_retry(self) -> None:
+        """Schedule a quick retry if one is not already pending."""
+        if not self._retry_timer.isActive():
+            self._retry_timer.start(RETRY_INTERVAL_MS)
