@@ -20,7 +20,7 @@ Displays Islamic prayer times fetched from the [Aladhan API](https://aladhan.com
 | `prayers_to_show`   | list    | `["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"]`                                        | Ordered list of prayers used to determine the active/next prayer, popup rows, and tooltip. Must match Aladhan names exactly.             |
 | `grace_period`      | integer | `15`                                                                                  | Minutes to stay on the current prayer after its time before advancing to the next. Min `0`, max `120`.                                   |
 | `update_interval`   | integer | `3600`                                                                                | How often (in seconds) to re-fetch prayer times from the API. Min `60`, max `86400`.                                                     |
-| `tooltip`           | boolean | `true`                                                                                | Show a tooltip listing all prayer times in `prayers_to_show` on hover.                                                                   |
+| `tooltip`           | boolean | `true`                                                                                | Show a hover tooltip summarising prayer times. Displays a **"Today's Prayers"** (or **"Tomorrow's Prayers"**) header, each prayer in `prayers_to_show` with its time, and a `◀` marker on the next upcoming prayer. |
 | `icons`             | dict    | *(see below)*                                                                         | Nerd Font icon per prayer name. Includes `mosque` shown in the popup header.                                                             |
 | `menu`              | dict    | *(see below)*                                                                         | Appearance and position settings for the popup card.                                                                                     |
 | `flash`             | dict    | *(see below)*                                                                         | Smooth animated glow effect triggered when a prayer time arrives.                                                                        |
@@ -62,10 +62,10 @@ icons:
   sunrise: "\uf185"
   dhuhr: "\uf185"
   asr: "\uf185"
-  sunset: "\uf185"
   maghrib: "\uf186"
   isha: "\uf186"
   imsak: "\uf185"
+  sunset: "\uf185"
   midnight: "\uf186"
   default: "\uf017"   # Fallback when no matching icon is found
 ```
@@ -92,6 +92,7 @@ Controls the smooth animated glow effect that triggers when a prayer time arrive
 | Option     | Type    | Default     | Description                                                                                               |
 |------------|---------|-------------|-----------------------------------------------------------------------------------------------------------|
 | `enabled`  | boolean | `true`      | Whether to enable the flash effect.                                                                       |
+| `debug`    | boolean | `false`     | Trigger the flash animation immediately on widget startup (useful for testing colors and timing).          |
 | `duration` | integer | `30`        | How long (in seconds) to run the flash after the prayer time arrives. Min `1`, max `3600`.                |
 | `interval` | integer | `500`       | Duration in milliseconds of one half-cycle (fade to `color_a`, then back). Min `100`, max `5000`.         |
 | `color_a`  | string  | `"#ff8c00"` | The bright peak color the background pulses to on each cycle.                                             |
@@ -183,6 +184,7 @@ prayer_times:
       offset_left: 0
     flash:
       enabled: true
+      debug: false
       duration: 60                    # Flash for 60 seconds
       interval: 800                   # 800ms per half-cycle
       color_a: "#ff8c00"              # Bright glow color
@@ -246,8 +248,9 @@ For the full list and custom (`method=99`) options, see the [Aladhan API docs](h
 .prayer-times-widget .label {}
 .prayer-times-widget .label.alt {}          /* Alt label (toggle_label) */
 .prayer-times-widget .label.loading {}      /* While API is fetching */
+.prayer-times-widget .icon {}               /* Span elements without an explicit class (e.g. <span>\uf67f</span>) */
 
-/* Per-prayer label classes (active while that prayer is current) */
+/* Per-prayer label classes (applied while that prayer is active/current) */
 .prayer-times-widget .label.fajr {}
 .prayer-times-widget .label.sunrise {}
 .prayer-times-widget .label.dhuhr {}
@@ -258,10 +261,9 @@ For the full list and custom (`method=99`) options, see the [Aladhan API docs](h
 .prayer-times-widget .label.imsak {}
 .prayer-times-widget .label.midnight {}
 
-/* Flash: text color applied to label during the animated background glow */
-.prayer-times-widget .label.flash {}        /* Background is interpolated in Python via QVariantAnimation */
-
-.prayer-times-widget .icon {}
+/* Flash: applied to the label during the animated background glow */
+.prayer-times-widget .label.flash {}        /* Background color is animated in Python via QVariantAnimation */
+.prayer-times-widget .label.alt.flash {}    /* Same, when the alt label is currently shown */
 
 /* ── Popup card ──────────────────────────────────────────────────── */
 .prayer-times-menu {}
@@ -327,6 +329,9 @@ For the full list and custom (`method=99`) options, see the [Aladhan API docs](h
 
 /* Flash: text color during the animated background glow */
 .prayer-times-widget .label.flash {
+    color: #ff8c00;
+}
+.prayer-times-widget .label.alt.flash {
     color: #ff8c00;
 }
 
