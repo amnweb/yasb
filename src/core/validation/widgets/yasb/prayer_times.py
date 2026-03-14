@@ -42,6 +42,7 @@ class PrayerTimesMenuConfig(CustomBaseModel):
 
 class PrayerTimesFlashConfig(CustomBaseModel):
     enabled: bool = True
+    debug: bool = False
     duration: int = Field(default=30, ge=1, le=3600)
     interval: int = Field(default=500, ge=100, le=5000)
     color_a: str = "#ff8c00"

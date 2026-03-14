@@ -83,6 +83,10 @@ class PrayerTimesWidget(BaseWidget):
         # Show loading placeholder immediately before first API response
         self._update_label()
 
+        # Trigger flash immediately for debugging
+        if config.flash.enabled and config.flash.debug:
+            QTimer.singleShot(500, self._start_flash)
+
     # ------------------------------------------------------------------
     # URL builder
     # ------------------------------------------------------------------
