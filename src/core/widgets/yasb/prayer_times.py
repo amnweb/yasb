@@ -8,6 +8,7 @@ from PyQt6.QtCore import QEasingCurve, Qt, QTimer, QVariantAnimation
 from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
+from core.utils.tooltip import set_tooltip
 from core.utils.utilities import PopupWidget, add_shadow, build_widget_label, refresh_widget_style
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.widgets.prayer_times.api import PrayerTimesDataFetcher
@@ -16,9 +17,24 @@ from core.widgets.base import BaseWidget
 
 # Canonical ordering as returned by the Aladhan API.
 ALL_PRAYER_NAMES = ["Imsak", "Fajr", "Sunrise", "Dhuhr", "Asr", "Sunset", "Maghrib", "Isha", "Midnight"]
+_DEFAULT_PRAYERS: list[str] = ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"]
+_DELTA_PASSED = "passed"
+
+# Fixed column widths for popup prayer rows (pixels).
+_POPUP_ICON_COL_W = 32
+_POPUP_NAME_COL_W = 80
+_POPUP_TIME_COL_W = 52
 
 
 class PrayerTimesWidget(BaseWidget):
+    """Widget that displays Islamic prayer times sourced from the Aladhan API.
+
+    Renders the next upcoming prayer on the bar, supports an alternate label
+    for a quick all-prayer overview, and opens a popup card with individual
+    prayer rows and Hijri date information.  A configurable flash animation
+    fires at the exact minute of each prayer.
+    """
+
     validation_schema = PrayerTimesConfig
 
     def __init__(self, config: PrayerTimesConfig):
@@ -29,7 +45,7 @@ class PrayerTimesWidget(BaseWidget):
         self._hijri: dict[str, Any] = {}
         self._meta: dict[str, Any] = {}
         self._popup: PopupWidget | None = None
-        self._popup_row_widgets: dict[str, dict[str, QLabel]] = {}
+        self._popup_row_widgets: dict[str, dict[str, QWidget]] = {}
         self._loading: bool = True
         self._date_offset: int = 0
         self._current_date: str = datetime.now().strftime("%Y-%m-%d")
@@ -110,6 +126,38 @@ class PrayerTimesWidget(BaseWidget):
         return f"https://api.aladhan.com/v1/timings/{today}?{urllib.parse.urlencode(params)}"
 
     # ------------------------------------------------------------------
+    # Helpers
+    # ------------------------------------------------------------------
+
+    @property
+    def _prayers(self) -> list[str]:
+        """Return the configured list of prayers to show, falling back to defaults."""
+        return self.config.prayers_to_show or _DEFAULT_PRAYERS
+
+    @property
+    def _icon_map(self) -> dict[str, str]:
+        """Return a mapping from prayer name to its configured icon character."""
+        ic = self.config.icons
+        return {
+            "Fajr": ic.fajr,
+            "Sunrise": ic.sunrise,
+            "Dhuhr": ic.dhuhr,
+            "Asr": ic.asr,
+            "Sunset": ic.sunset,
+            "Maghrib": ic.maghrib,
+            "Isha": ic.isha,
+            "Imsak": ic.imsak,
+            "Midnight": ic.midnight,
+        }
+
+    def _parse_hhmm(self, time_str: str) -> tuple[int, int] | None:
+        """Parse a 'HH:MM' string, returning (hour, minute) or None on failure."""
+        try:
+            return int(time_str[:2]), int(time_str[3:5])
+        except ValueError, IndexError:
+            return None
+
+    # ------------------------------------------------------------------
     # Data handling
     # ------------------------------------------------------------------
 
@@ -149,19 +197,18 @@ class PrayerTimesWidget(BaseWidget):
 
     def _all_prayers_passed(self) -> bool:
         """Return True if every prayer in prayers_to_show has already passed today (including grace period)."""
-        prayers = self.config.prayers_to_show or ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"]
         now = datetime.now()
         grace = timedelta(minutes=self.config.grace_period)
-        for name in prayers:
+        for name in self._prayers:
             time_str = self._timings.get(name, "")
             if not time_str or time_str == "--:--":
                 continue
-            try:
-                h, m = int(time_str[:2]), int(time_str[3:5])
-                if now.replace(hour=h, minute=m, second=0, microsecond=0) + grace > now:
-                    return False
-            except ValueError, IndexError:
+            parsed = self._parse_hhmm(time_str)
+            if parsed is None:
                 continue
+            h, m = parsed
+            if now.replace(hour=h, minute=m, second=0, microsecond=0) + grace > now:
+                return False
         return True
 
     # ------------------------------------------------------------------
@@ -176,47 +223,46 @@ class PrayerTimesWidget(BaseWidget):
         """
         if not self._timings:
             return ("—", "--:--")
-        prayers = self.config.prayers_to_show or ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"]
         now = datetime.now()
         grace = timedelta(minutes=self.config.grace_period)
         target_date = now + timedelta(days=self._date_offset)
-        for name in prayers:
+        for name in self._prayers:
             time_str = self._timings.get(name, "")
             if not time_str or time_str == "--:--":
                 continue
-            try:
-                h, m = int(time_str[:2]), int(time_str[3:5])
-                if target_date.replace(hour=h, minute=m, second=0, microsecond=0) + grace > now:
-                    return (name, time_str)
-            except ValueError, IndexError:
+            parsed = self._parse_hhmm(time_str)
+            if parsed is None:
                 continue
-        first = prayers[0]
+            h, m = parsed
+            if target_date.replace(hour=h, minute=m, second=0, microsecond=0) + grace > now:
+                return (name, time_str)
+        first = self._prayers[0]
         return (first, self._timings.get(first, "--:--"))
 
     def _time_delta_text(self, time_str: str) -> str:
         """Return human-readable remaining/elapsed label for a prayer time string."""
         if not time_str or time_str == "--:--":
             return ""
-        try:
-            now = datetime.now()
-            target_date = now + timedelta(days=self._date_offset)
-            h, m = int(time_str[:2]), int(time_str[3:5])
-            target = target_date.replace(hour=h, minute=m, second=0, microsecond=0)
-            delta = target - now
-            grace = timedelta(minutes=self.config.grace_period)
-            if delta.total_seconds() < 0:
-                # Within grace period: show how many minutes into the prayer we are
-                if abs(delta) < grace:
-                    elapsed_min = int(abs(delta).total_seconds() // 60)
-                    return f"{elapsed_min}m ago"
-                return "passed"
-            total_min = int(delta.total_seconds() // 60)
-            hours, mins = divmod(total_min, 60)
-            if hours > 0:
-                return f"in {hours}h {mins:02d}m"
-            return f"in {mins}m"
-        except Exception:
+        parsed = self._parse_hhmm(time_str)
+        if parsed is None:
             return ""
+        now = datetime.now()
+        target_date = now + timedelta(days=self._date_offset)
+        h, m = parsed
+        target = target_date.replace(hour=h, minute=m, second=0, microsecond=0)
+        delta = target - now
+        grace = timedelta(minutes=self.config.grace_period)
+        if delta.total_seconds() < 0:
+            # Within grace period: show how many minutes into the prayer we are
+            if abs(delta) < grace:
+                elapsed_min = int(abs(delta).total_seconds() // 60)
+                return f"{elapsed_min}m ago"
+            return _DELTA_PASSED
+        total_min = int(delta.total_seconds() // 60)
+        hours, mins = divmod(total_min, 60)
+        if hours > 0:
+            return f"in {hours}h {mins:02d}m"
+        return f"in {mins}m"
 
     # ------------------------------------------------------------------
     # Label options dict
@@ -230,19 +276,7 @@ class PrayerTimesWidget(BaseWidget):
         next_name, next_time = self._get_next_prayer()
         options["{next_prayer}"] = next_name
         options["{next_prayer_time}"] = next_time
-        ic = self.config.icons
-        icon_map = {
-            "Fajr": ic.fajr,
-            "Sunrise": ic.sunrise,
-            "Dhuhr": ic.dhuhr,
-            "Asr": ic.asr,
-            "Sunset": ic.sunset,
-            "Maghrib": ic.maghrib,
-            "Isha": ic.isha,
-            "Imsak": ic.imsak,
-            "Midnight": ic.midnight,
-        }
-        options["{icon}"] = icon_map.get(next_name, ic.default)
+        options["{icon}"] = self._icon_map.get(next_name, self.config.icons.default)
         if self._hijri:
             options["{hijri_day}"] = self._hijri.get("day", "")
             options["{hijri_month}"] = self._hijri.get("month", {}).get("en", "")
@@ -290,6 +324,20 @@ class PrayerTimesWidget(BaseWidget):
                     widget.setProperty("class", f"{base} {next_name}")
                     refresh_widget_style(widget)
             widget_index += 1
+        self._update_tooltip()
+
+    def _update_tooltip(self) -> None:
+        """Update the hover tooltip with a summary of today's (or tomorrow's) prayer times."""
+        if not self.config.tooltip or not self._timings:
+            return
+        next_name, _ = self._get_next_prayer()
+        label = "Tomorrow" if self._date_offset > 0 else "Today"
+        lines: list[str] = [f"<strong>{label}'s Prayers</strong>"]
+        for name in self._prayers:
+            time_str = self._timings.get(name, "--:--")
+            marker = " ◀" if name == next_name else ""
+            lines.append(f"{name}: {time_str}{marker}")
+        set_tooltip(self, "<br>".join(lines))
 
     # ------------------------------------------------------------------
     # Prayer-time flash
@@ -299,18 +347,17 @@ class PrayerTimesWidget(BaseWidget):
         """Return True if the current minute matches any prayer in prayers_to_show."""
         if not self._timings or self._loading:
             return False
-        prayers = self.config.prayers_to_show or ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"]
         now = datetime.now()
-        for name in prayers:
+        for name in self._prayers:
             time_str = self._timings.get(name, "")
             if not time_str or time_str == "--:--":
                 continue
-            try:
-                h, m = int(time_str[:2]), int(time_str[3:5])
-                if now.hour == h and now.minute == m:
-                    return True
-            except ValueError, IndexError:
+            parsed = self._parse_hhmm(time_str)
+            if parsed is None:
                 continue
+            h, m = parsed
+            if now.hour == h and now.minute == m:
+                return True
         return False
 
     def _start_flash(self) -> None:
@@ -371,8 +418,32 @@ class PrayerTimesWidget(BaseWidget):
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
+        layout.addWidget(self._build_popup_header())
 
-        # ── Header ────────────────────────────────────────────────────
+        if self._loading:
+            loading_lbl = QLabel("Fetching prayer times...")
+            loading_lbl.setProperty("class", "loading-placeholder")
+            loading_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            layout.addWidget(loading_lbl)
+        else:
+            next_name, _ = self._get_next_prayer()
+            layout.addWidget(self._build_popup_rows(next_name))
+            footer = self._build_popup_footer()
+            if footer is not None:
+                layout.addWidget(footer)
+
+        self._popup.setLayout(layout)
+        self._popup.adjustSize()
+        self._popup.setPosition(
+            alignment=m.alignment,
+            direction=m.direction,
+            offset_left=m.offset_left,
+            offset_top=m.offset_top,
+        )
+        self._popup.show()
+
+    def _build_popup_header(self) -> QWidget:
+        """Build the popup header containing the mosque icon, title, and Hijri date."""
         header = QWidget()
         header.setProperty("class", "header")
         header_layout = QHBoxLayout(header)
@@ -399,40 +470,12 @@ class PrayerTimesWidget(BaseWidget):
             hijri_lbl.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignRight)
             header_layout.addWidget(hijri_lbl)
 
-        layout.addWidget(header)
+        return header
 
-        # ── Loading placeholder ───────────────────────────────────────
-        if self._loading:
-            loading_lbl = QLabel("Fetching prayer times...")
-            loading_lbl.setProperty("class", "loading-placeholder")
-            loading_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            layout.addWidget(loading_lbl)
-            self._popup.setLayout(layout)
-            self._popup.adjustSize()
-            self._popup.setPosition(
-                alignment=m.alignment,
-                direction=m.direction,
-                offset_left=m.offset_left,
-                offset_top=m.offset_top,
-            )
-            self._popup.show()
-            return
-
-        # ── Prayer rows ───────────────────────────────────────────────
-        next_name, _ = self._get_next_prayer()
-        prayers = self.config.prayers_to_show or ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"]
+    def _build_popup_rows(self, next_name: str) -> QWidget:
+        """Build the prayer rows container and populate _popup_row_widgets."""
+        icon_map = self._icon_map
         ic = self.config.icons
-        icon_map = {
-            "Fajr": ic.fajr,
-            "Sunrise": ic.sunrise,
-            "Dhuhr": ic.dhuhr,
-            "Asr": ic.asr,
-            "Sunset": ic.sunset,
-            "Maghrib": ic.maghrib,
-            "Isha": ic.isha,
-            "Imsak": ic.imsak,
-            "Midnight": ic.midnight,
-        }
 
         rows_container = QWidget()
         rows_container.setProperty("class", "rows-container")
@@ -440,11 +483,11 @@ class PrayerTimesWidget(BaseWidget):
         rows_layout.setContentsMargins(0, 0, 0, 0)
         rows_layout.setSpacing(0)
 
-        for name in prayers:
+        for name in self._prayers:
             time_str = self._timings.get(name, "--:--")
             delta_text = self._time_delta_text(time_str)
             is_next = name == next_name
-            is_passed = delta_text == "passed"
+            is_passed = delta_text == _DELTA_PASSED
 
             row = QFrame()
             row_class = "prayer-row"
@@ -460,17 +503,17 @@ class PrayerTimesWidget(BaseWidget):
             icon_lbl = QLabel(icon_map.get(name, ic.default))
             icon_lbl.setProperty("class", "prayer-icon")
             icon_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            icon_lbl.setFixedWidth(32)
+            icon_lbl.setFixedWidth(_POPUP_ICON_COL_W)
 
             name_lbl = QLabel(name)
             name_lbl.setProperty("class", "prayer-name")
             name_lbl.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
-            name_lbl.setFixedWidth(80)
+            name_lbl.setFixedWidth(_POPUP_NAME_COL_W)
 
             time_lbl = QLabel(time_str)
             time_lbl.setProperty("class", "prayer-time")
             time_lbl.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
-            time_lbl.setFixedWidth(52)
+            time_lbl.setFixedWidth(_POPUP_TIME_COL_W)
 
             remaining_lbl = QLabel(delta_text)
             remaining_lbl.setProperty("class", "prayer-remaining")
@@ -483,32 +526,24 @@ class PrayerTimesWidget(BaseWidget):
             row_layout.addWidget(remaining_lbl)
 
             rows_layout.addWidget(row)
-            self._popup_row_widgets[name] = {"row": row, "remaining": remaining_lbl}  # type: ignore
+            self._popup_row_widgets[name] = {"row": row, "remaining": remaining_lbl}
 
-        layout.addWidget(rows_container)
+        return rows_container
 
-        # ── Footer ────────────────────────────────────────────────────
+    def _build_popup_footer(self) -> QWidget | None:
+        """Build the popup footer showing the calculation method name, or None if unavailable."""
         method_name = self._meta.get("method", {}).get("name", "")
-        if method_name:
-            footer = QWidget()
-            footer.setProperty("class", "footer")
-            footer_layout = QHBoxLayout(footer)
-            footer_layout.setContentsMargins(16, 8, 16, 8)
-            method_lbl = QLabel(method_name)
-            method_lbl.setProperty("class", "method-name")
-            method_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            footer_layout.addWidget(method_lbl)
-            layout.addWidget(footer)
-
-        self._popup.setLayout(layout)
-        self._popup.adjustSize()
-        self._popup.setPosition(
-            alignment=m.alignment,
-            direction=m.direction,
-            offset_left=m.offset_left,
-            offset_top=m.offset_top,
-        )
-        self._popup.show()
+        if not method_name:
+            return None
+        footer = QWidget()
+        footer.setProperty("class", "footer")
+        footer_layout = QHBoxLayout(footer)
+        footer_layout.setContentsMargins(16, 8, 16, 8)
+        method_lbl = QLabel(method_name)
+        method_lbl.setProperty("class", "method-name")
+        method_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        footer_layout.addWidget(method_lbl)
+        return footer
 
     def _refresh_popup_rows(self) -> None:
         """Update remaining-time labels and active/passed CSS classes every minute."""
@@ -524,7 +559,7 @@ class PrayerTimesWidget(BaseWidget):
             row_class = "prayer-row"
             if name == next_name:
                 row_class += " active"
-            elif delta_text == "passed":
+            elif delta_text == _DELTA_PASSED:
                 row_class += " passed"
             row.setProperty("class", row_class)
             refresh_widget_style(row)
