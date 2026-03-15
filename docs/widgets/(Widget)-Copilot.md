@@ -19,32 +19,20 @@ The Copilot widget displays your GitHub Copilot premium request usage with a det
 ## Requirements
 
 - **GitHub Copilot Pro or Pro+** subscription
-- **GitHub Fine-grained Personal Access Token** with **Plan (read)** permission
 
-## Getting Your GitHub Token
+## Authentication
 
-### Step 1: Create a Fine-grained Personal Access Token
+The Copilot widget supports three ways to authenticate:
 
-1. Go to [GitHub Fine-grained Token Settings](https://github.com/settings/personal-access-tokens/new)
-2. Fill in the token details below
+1. **OAuth sign-in (recommended)** - Leave the `token` option empty. When you click the widget it will open a sign-in dialog where you authorize with GitHub through your browser. The token is saved automatically and persists across restarts.
 
-### Step 2: Configure the Token
+2. **Fine-grained Personal Access Token** - Create one at [GitHub Token Settings](https://github.com/settings/personal-access-tokens/new) with the **Plan (read)** account permission and paste it into the `token` option.
 
-1. **Token name**: Enter a name (e.g., `YASB Copilot Widget`)
-2. **Expiration**: Choose your preference (e.g., 90 days, 1 year, or no expiration)
-3. **Repository access**: Select **"Public Repositories (read-only)"** or **"No access"**
+3. **Environment variable** - Set `token: env` and define the `YASB_COPILOT_TOKEN` environment variable with your token.
 
-### Step 3: Set Account Permissions
+### Token storage
 
-1. Expand the **"Account permissions"** section
-2. Find **"Plan"** in the list
-3. Set it to **"Read-only"**
-
-### Step 4: Generate and Copy
-
-1. Click **"Generate token"**
-2. **Copy the token** (starts with `github_pat_...`)
-3. Save it securely - you won't be able to see it again!
+OAuth tokens are stored in `%LOCALAPPDATA%\YASB\github_copilot_token`. To sign out, simply delete this file and restart YASB.
 
 ## Configuration
 
@@ -86,7 +74,7 @@ copilot:
 |--------|------|---------|-------------|
 | `label` | string | `"{icon}"` | Label format for the bar. Supports `{icon}`, `{used}`, `{allowance}`, `{percentage}`, `{total_cost}` |
 | `label_alt` | string | `"{used}/{allowance}"` | Alternative label (toggle with right-click) |
-| `token` | string | `""` | GitHub fine-grained PAT (or `"env"` to use `YASB_COPILOT_TOKEN` env var) |
+| `token` | string | `""` | GitHub token. Leave empty to use OAuth sign-in, or set to `"env"` to read from `YASB_COPILOT_TOKEN` env var |
 | `plan` | string | `"pro"` | Your Copilot plan: `"pro"` (300 requests) or `"pro_plus"` (1500 requests) |
 | `tooltip` | boolean | `true` | Show tooltip on hover |
 | `update_interval` | integer | `3600` | Refresh interval in seconds (min: 300, max: 86400) |

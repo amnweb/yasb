@@ -84,6 +84,12 @@ class GitHubDataManager:
         cls._on_timer()
 
     @classmethod
+    def set_token(cls, token: str) -> None:
+        """Update the token after OAuth and trigger an immediate fetch."""
+        cls._token = token
+        cls._on_timer()
+
+    @classmethod
     def register_callback(cls, callback: Callable) -> None:
         """Register a callback to be called when data is updated."""
         with cls._lock:

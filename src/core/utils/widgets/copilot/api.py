@@ -103,6 +103,13 @@ class CopilotDataManager:
         return cls._data
 
     @classmethod
+    def set_token(cls, token: str) -> None:
+        """Update the token after OAuth and trigger an immediate fetch."""
+        cls._token = token
+        cls._username = ""  # Reset cached username so it is re-fetched with new token
+        cls.get_instance()._start_update()
+
+    @classmethod
     def refresh(cls) -> None:
         """Manually trigger a data refresh."""
         cls.get_instance()._start_update()
