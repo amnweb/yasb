@@ -63,7 +63,9 @@ class PrayerTimesDataFetcher(QObject):
                     self._retry_timer.stop()
                     self.finished.emit(data)
                 else:
-                    logging.error(f"Prayer times API returned non-200 code: {data.get('code')} 窶・{data.get('status')}")
+                    logging.error(
+                        f"Prayer times API returned non-200 code: {data.get('code')} 窶・{data.get('status')}"
+                    )
                     self.finished.emit({})
                     self._schedule_retry()
             elif error == QNetworkReply.NetworkError.HostNotFoundError:
