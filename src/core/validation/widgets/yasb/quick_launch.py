@@ -19,6 +19,8 @@ class QuickLaunchPopupConfig(CustomBaseModel):
     round_corners_type: str = "normal"
     border_color: str = "System"
     dark_mode: bool = True
+    screen: Literal["primary", "focus", "cursor"] = "focus"
+    animation_duration: int = Field(default=80, ge=0, le=2000)
 
 
 class QuickLaunchCallbacksConfig(CallbacksConfig):

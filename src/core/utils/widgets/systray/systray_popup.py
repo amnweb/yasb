@@ -61,7 +61,7 @@ class SystrayPopup(QWidget):
 
         # Fade animation
         self._fade_animation = QPropertyAnimation(self, b"windowOpacity")
-        self._fade_animation.setDuration(80)
+        self._fade_animation.setDuration(getattr(popup_config, "animation_duration", 80))
         self._fade_animation.finished.connect(self._on_animation_finished)
 
         # Watch timer for native mouse-poll (context-menu interaction)

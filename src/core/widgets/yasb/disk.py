@@ -134,6 +134,7 @@ class DiskWidget(BaseWidget):
             self.config.group_label.round_corners,
             self.config.group_label.round_corners_type,
             self.config.group_label.border_color,
+            animation_duration=self.config.group_label.animation_duration,
         )
         self.dialog.setProperty("class", "disk-group")
 

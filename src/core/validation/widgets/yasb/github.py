@@ -36,6 +36,7 @@ class GithubMenuConfig(CustomBaseModel):
     direction: str = "down"
     offset_top: int = 6
     offset_left: int = 0
+    animation_duration: int = 80
     show_categories: bool = False
     categories_order: list[str] = [
         "PullRequest",

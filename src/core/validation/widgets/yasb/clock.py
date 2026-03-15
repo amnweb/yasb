@@ -23,6 +23,7 @@ class ClockCalendarConfig(CustomBaseModel):
     distance: int = 6  # deprecated
     offset_top: int = 6
     offset_left: int = 0
+    animation_duration: int = 80
     country_code: str | None = None
     subdivision: str | None = None
     show_holidays: bool = False
