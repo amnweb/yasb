@@ -7,6 +7,7 @@ import urllib.error
 from core.utils.shell_utils import shell_open
 from core.utils.utilities import get_relative_time
 from core.utils.widgets.github.api import GitHubDataManager
+from core.utils.widgets.github.auth import get_saved_token
 from core.utils.widgets.quick_launch.base_provider import (
     BaseProvider,
     ProviderMenuAction,
@@ -83,8 +84,7 @@ class GithubNotificationsProvider(BaseProvider):
 
     def __init__(self, config: dict | None = None):
         super().__init__(config)
-        token_cfg = self.config.get("token", "env")
-        self._token: str = os.getenv("YASB_GITHUB_TOKEN", "") if token_cfg == "env" else token_cfg
+        self._token_cfg: str = self.config.get("token", "env")
 
         # Local cache — uses GitHubDataManager for all API calls but keeps its own
         # data copy.  None means "never fetched yet"; empty list means
@@ -94,18 +94,28 @@ class GithubNotificationsProvider(BaseProvider):
         self._fetch_error: str | None = None
         self._cache_time: float = 0
         self._cache_ttl: float = 60  # Keep cache for 60 seconds after popup closes
+        self._auth_dialog = None
+
+    def _resolve_token(self) -> str:
+        """Resolve the effective token at call time so OAuth tokens are picked up immediately."""
+        if self._token_cfg == "env":
+            return os.getenv("YASB_GITHUB_TOKEN", "") or GitHubDataManager._token or get_saved_token()
+        elif self._token_cfg:
+            return self._token_cfg
+        return GitHubDataManager._token or get_saved_token() or os.getenv("YASB_GITHUB_TOKEN", "")
 
     def _fetch_in_background(self):
         """Fetch notifications via GitHubDataManager in a background thread."""
+        token = self._resolve_token()
 
         def _do_fetch():
             try:
-                data = GitHubDataManager.fetch_all_notifications(self._token)
+                data = GitHubDataManager.fetch_all_notifications(token)
                 self._cached_data = data
                 self._fetch_error = None
                 self._cache_time = time.monotonic()
                 # Refresh bar widget so it picks up the latest data (only if there are unread items)
-                if self._token and self._token == GitHubDataManager._token:
+                if token and token == GitHubDataManager._token:
                     if any(n.get("unread") for n in data):
                         GitHubDataManager.refresh()
             except urllib.error.HTTPError as e:
@@ -138,13 +148,15 @@ class GithubNotificationsProvider(BaseProvider):
         return True
 
     def get_results(self, text: str, **kwargs) -> list[ProviderResult]:
-        if not self._token:
+        token = self._resolve_token()
+        if not token:
             return [
                 ProviderResult(
-                    title="GitHub token not configured",
-                    description="Set YASB_GITHUB_TOKEN env variable or add token in config",
+                    title="Sign in to GitHub",
+                    description="Click to authorize YASB via GitHub OAuth",
                     icon_char=ICON_GITHUB,
                     provider=self.name,
+                    action_data={"action": "oauth"},
                 )
             ]
 
@@ -245,6 +257,31 @@ class GithubNotificationsProvider(BaseProvider):
 
     def execute(self, result: ProviderResult) -> bool | None:
         data = result.action_data
+
+        # No token open the OAuth dialog
+        if data.get("action") == "oauth":
+            if self._auth_dialog is not None:
+                self._auth_dialog.activateWindow()
+                return True
+
+            from core.utils.widgets.github.api import GitHubDataManager
+            from core.utils.widgets.github.auth_dialog import GitHubAuthDialog
+
+            def _on_auth_completed(token: str):
+                GitHubDataManager.set_token(token)
+                self._cached_data = None
+                if self.request_refresh:
+                    self.request_refresh()
+
+            def _on_dialog_closed():
+                self._auth_dialog = None
+
+            self._auth_dialog = GitHubAuthDialog()
+            self._auth_dialog.auth_completed.connect(_on_auth_completed)
+            self._auth_dialog.finished.connect(_on_dialog_closed)
+            self._auth_dialog.show()
+            return True
+
         url = data.get("url", "")
         notification_id = data.get("notification_id", "")
 
@@ -259,7 +296,7 @@ class GithubNotificationsProvider(BaseProvider):
                     if n["id"] == notification_id:
                         n["unread"] = False
                         break
-            GitHubDataManager.mark_as_read(notification_id, token=self._token)
+            GitHubDataManager.mark_as_read(notification_id, token=self._resolve_token())
 
         return True
 
@@ -295,14 +332,14 @@ class GithubNotificationsProvider(BaseProvider):
                         if n["id"] == nid:
                             n["unread"] = False
                             break
-                GitHubDataManager.mark_as_read(nid, token=self._token)
+                GitHubDataManager.mark_as_read(nid, token=self._resolve_token())
             return ProviderMenuActionResult(refresh_results=True)
 
         if action_id == "mark_all_read":
             if self._cached_data:
                 for n in self._cached_data:
                     n["unread"] = False
-            GitHubDataManager.mark_all_as_read(self._token)
+            GitHubDataManager.mark_all_as_read(self._resolve_token())
             return ProviderMenuActionResult(refresh_results=True)
 
         if action_id == "refresh":

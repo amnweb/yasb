@@ -187,7 +187,7 @@ Click a result to copy the converted value to the clipboard.
 
 ### Developer Tools Provider
 
-A collection of common developer utilities accessible from Quick Launch. All operations are local — no network requests, no API keys, instant results.
+A collection of common developer utilities accessible from Quick Launch. All operations are local - no network requests, no API keys, instant results.
 
 | Option     | Type   | Default | Description                                  |
 | ---------- | ------ | ------- | -------------------------------------------- |
@@ -278,15 +278,16 @@ Browse GitHub notifications directly from Quick Launch. Type `gh` to see your no
 - Type `gh review` to filter notifications by title, repo, type, or reason.
 - Click a notification to open it in the browser and mark as read.
 - Right-click a notification for:
-  - **Copy URL** — copy the notification URL to clipboard.
-  - **Mark as read** — mark a single notification as read.
-  - **Mark all as read** — mark every notification as read.
+  - **Copy URL** - copy the notification URL to clipboard.
+  - **Mark as read** - mark a single notification as read.
+  - **Mark all as read** - mark every notification as read.
 
 > [!NOTE]
 > The provider fetches fresh notifications every time the popup opens (no stale cache). If the same GitHub token is used for both the bar widget and this provider, the bar widget automatically refreshes when the provider fetches new data or marks notifications as read.
 
-> [!NOTE]
-> You need a GitHub Personal Access Token (classic) with the `notifications` scope. Generate one at https://github.com/settings/tokens. You can set the token via the `YASB_GITHUB_TOKEN` environment variable (recommended) or directly in the config.
+**Authentication:**
+
+You can set a [Personal Access Token (classic)](https://github.com/settings/tokens) with the `notifications` scope in the `token` option, use `"env"` to read from the `YASB_GITHUB_TOKEN` environment variable, or leave it empty. When no token is configured, clicking the `gh` prefix result will open a sign-in dialog where you authorize with GitHub through your browser. The OAuth token is stored in `%LOCALAPPDATA%\YASB\github_token`.
 
 ### Hacker News Provider
 
@@ -317,11 +318,11 @@ Clicking a story opens it in your default browser. Right-click a story to open t
 
 **Usage examples:**
 
-- `hn` — Show all topic tiles
-- `hn frontpage` — Load front page stories
-- `hn newest rust` — Search newest stories for "rust"
-- `hn python` — Search all of HN for "python"
-- `hn ask` — Browse Ask HN posts
+- `hn` - Show all topic tiles
+- `hn frontpage` - Load front page stories
+- `hn newest rust` - Search newest stories for "rust"
+- `hn python` - Search all of HN for "python"
+- `hn ask` - Browse Ask HN posts
 
 Each story result displays:
 
@@ -330,8 +331,8 @@ Each story result displays:
 
 **Context menu actions:**
 
-- **Open HN comments** — Opens the Hacker News discussion page
-- **Copy URL** — Copies the story URL to clipboard
+- **Open HN comments** - Opens the Hacker News discussion page
+- **Copy URL** - Copies the story URL to clipboard
 
 > [!NOTE]
 > Hacker News provider uses [hnrss.org](https://hnrss.org) RSS feeds. Results are cached in memory and on disk to minimize network requests. No API key is required.
@@ -461,7 +462,7 @@ Browse and launch SSH connections from your `~/.ssh/config` file. Type `ssh` to 
 - Select **Edit connection** to open an inline form in the preview panel where you can change the host alias, hostname/IP, user, port, and identity file. The changes are written back to your SSH config file immediately on save.
 
 > [!NOTE]
-> Hosts with a wildcard name (e.g. `Host *`) are automatically skipped. The provider re-reads the config file each time the popup is opened, so newly added hosts are picked up immediately. Editing a host rewrites only that `Host` block — all other entries, comments, and blank lines are preserved.
+> Hosts with a wildcard name (e.g. `Host *`) are automatically skipped. The provider re-reads the config file each time the popup is opened, so newly added hosts are picked up immediately. Editing a host rewrites only that `Host` block - all other entries, comments, and blank lines are preserved.
 
 ### System Commands Provider
 

@@ -10,6 +10,8 @@ from core.utils.tooltip import set_tooltip
 from core.utils.utilities import PopupWidget, add_shadow, get_relative_time, refresh_widget_style
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.widgets.github.api import GitHubDataManager
+from core.utils.widgets.github.auth import get_saved_token
+from core.utils.widgets.github.auth_dialog import GitHubAuthDialog
 from core.validation.widgets.yasb.github import Corner, GithubConfig
 from core.widgets.base import BaseWidget
 
@@ -82,7 +84,14 @@ class GithubWidget(BaseWidget):
         super().__init__(class_name="github-widget")
         self.config = config
         self._show_alt_label = False
-        self.github_token = self.config.token if self.config.token != "env" else os.getenv("YASB_GITHUB_TOKEN", "")
+        self._auth_dialog: GitHubAuthDialog | None = None
+
+        if self.config.token == "env":
+            self.github_token = os.getenv("YASB_GITHUB_TOKEN", "")
+        else:
+            self.github_token = self.config.token
+        if not self.github_token:
+            self.github_token = get_saved_token()
 
         self._notification_label: NotificationLabel | None = None
         self._notification_label_alt: NotificationLabel | None = None
@@ -119,7 +128,25 @@ class GithubWidget(BaseWidget):
             show_comment_count=self.config.show_comment_count,
         )
 
+    def _start_oauth_flow(self):
+        if self._auth_dialog is not None:
+            return
+        self._auth_dialog = GitHubAuthDialog()
+        self._auth_dialog.auth_completed.connect(self._on_oauth_completed)
+        self._auth_dialog.finished.connect(self._on_auth_dialog_closed)
+        self._auth_dialog.show()
+
+    def _on_oauth_completed(self, token: str):
+        self.github_token = token
+        GitHubDataManager.set_token(token)
+
+    def _on_auth_dialog_closed(self):
+        self._auth_dialog = None
+
     def _toggle_menu(self):
+        if not self.github_token:
+            self._start_oauth_flow()
+            return
         if self.config.animation.enabled:
             AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
         self.show_menu()
@@ -163,6 +190,8 @@ class GithubWidget(BaseWidget):
                 label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
                 label.setAlignment(Qt.AlignmentFlag.AlignCenter)
                 add_shadow(label, self.config.label_shadow.model_dump())
+                if not self.github_token and self.config.tooltip:
+                    set_tooltip(label, "Error: Token not configured")
                 self._widget_container_layout.addWidget(label)
 
                 widgets.append(label)

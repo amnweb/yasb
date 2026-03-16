@@ -15,6 +15,8 @@ from core.utils.tooltip import CustomToolTip, set_tooltip
 from core.utils.utilities import PopupWidget, add_shadow, build_widget_label, refresh_widget_style
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.widgets.copilot.api import CopilotDataManager, CopilotUsageData
+from core.utils.widgets.github.auth import get_saved_token, save_token
+from core.utils.widgets.github.auth_dialog import GitHubAuthDialog
 from core.validation.widgets.yasb.copilot import CopilotConfig
 from core.widgets.base import BaseWidget
 
@@ -286,6 +288,7 @@ class CopilotWidget(BaseWidget):
     def __init__(self, config: CopilotConfig):
         super().__init__(timer_interval=None, class_name="copilot-widget")
         self.config = config
+        self._auth_dialog = None
 
         self._show_alt_label = False
         self._menu: PopupWidget | None = None
@@ -316,7 +319,11 @@ class CopilotWidget(BaseWidget):
         # Initialize shared resources once
         if not CopilotWidget._initialized:
             CopilotWidget._initialized = True
-            token_val = self.config.token if self.config.token != "env" else os.getenv("YASB_COPILOT_TOKEN", "")
+            # Token resolution: config value → env var → saved OAuth token
+            if self.config.token == "env":
+                token_val = os.getenv("YASB_COPILOT_TOKEN", "") or get_saved_token("copilot")
+            else:
+                token_val = self.config.token or get_saved_token("copilot")
             CopilotDataManager.initialize(
                 token=token_val,
                 plan=self.config.plan,
@@ -356,7 +363,26 @@ class CopilotWidget(BaseWidget):
     def _toggle_popup(self):
         if self.config.animation.enabled:
             AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
+        if not CopilotDataManager._token:
+            self._start_oauth_flow()
+            return
         self._show_popup()
+
+    def _start_oauth_flow(self):
+        if self._auth_dialog is not None:
+            self._auth_dialog.activateWindow()
+            return
+
+        self._auth_dialog = GitHubAuthDialog(
+            name="copilot",
+            save_fn=lambda t: save_token(t, "copilot"),
+        )
+        self._auth_dialog.auth_completed.connect(self._on_oauth_completed)
+        self._auth_dialog.finished.connect(lambda: setattr(self, "_auth_dialog", None))
+        self._auth_dialog.show()
+
+    def _on_oauth_completed(self, token: str):
+        CopilotDataManager.set_token(token)
 
     def _toggle_label(self):
         if self.config.animation.enabled:

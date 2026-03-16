@@ -6,7 +6,7 @@
 | `label_alt`         | string  | `'{data} Notifications'` | The alternative format string for the label. Useful for displaying additional notification details.             |
 | `tooltip`           | boolean | `true` | Whether to show the tooltip on hover.                                                                           |
 | `update_interval`   | integer | `600` | The interval in seconds to update the notifications. Must be between 60 and 3600.                               |
-| `token`             | string  | `""` | The GitHub personal access token.                                                                               |
+| `token`             | string  | `""` | GitHub personal access token. Leave empty to use OAuth sign-in, or set to `"env"` to read from `YASB_GITHUB_TOKEN`.   |
 | `max_notification`  | integer | `30` | The maximum number of notifications to display in the menu.                                                     |
 | `notification_dot`  | dict    | `{'enabled': true, 'corner': 'bottom_left', 'color': 'red', 'margin': [1, 1]}` | A dictionary specifying the notification dot settings for the widget. |
 | `only_unread`       | boolean | `false` | Whether to show only unread notifications.                                                                      |
@@ -72,7 +72,7 @@ github:
   - **comment:** The icon that prefixes the comment count badge when `show_comment_count` is enabled.
 - **tooltip:** Whether to show the tooltip on hover.
 - **update_interval:** The interval in seconds to update the notifications. Must be between 60 and 3600.
-- **token:** The GitHub personal access token. GitHub Personal access tokens (classic) https://github.com/settings/tokens you can set `token: env`, this means you have to set YASB_GITHUB_TOKEN in environment variable.
+- **token:** The GitHub personal access token. You can set `token: env` to read from the `YASB_GITHUB_TOKEN` environment variable, paste a [Personal Access Token (classic)](https://github.com/settings/tokens) directly, or leave it empty to sign in via OAuth when you click the widget.
 - **max_notification:** The maximum number of notifications to display in the menu, max 50.
 - **notification_dot:** A dictionary specifying the notification dot settings for the widget. This will show a dot on the icon (enclosed with the <span> tag).
   - **enabled:** Enable notification dot.
@@ -100,6 +100,20 @@ github:
 - **animation:** A dictionary specifying the animation settings for the widget. It contains three keys: `enabled`, `type`, and `duration`. The `type` can be `fadeInOut` and the `duration` is the animation duration in milliseconds.
 - **container_shadow:** Container shadow options.
 - **label_shadow:** Label shadow options.
+
+## Authentication
+
+The GitHub widget supports three ways to authenticate:
+
+1. **OAuth sign-in (recommended)** - Leave the `token` option empty. When you click the widget it will open a sign-in dialog where you authorize with GitHub through your browser. The token is saved automatically and persists across restarts.
+
+2. **Personal Access Token** - Generate a [Personal Access Token (classic)](https://github.com/settings/tokens) with the `notifications` scope and paste it into the `token` option.
+
+3. **Environment variable** - Set `token: env` and define the `YASB_GITHUB_TOKEN` environment variable with your token.
+
+### Token storage
+
+OAuth tokens are stored in `%LOCALAPPDATA%\YASB\github_token`. To sign out, simply delete this file and restart YASB.
 
 ## Widget Style
 ```css
