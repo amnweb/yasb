@@ -49,7 +49,7 @@ bars:
       - "clock"
       right:
       - "media"
-      - "weather"
+      - "open_meteo"
       - "microphone"
       - "volume"
       - "notifications"
@@ -108,8 +108,8 @@ widgets:
         offset: [ 1, 1 ]
       scrolling_label:
         enabled: true
-        update_interval_ms: 50
-        style: "left"  # can be "left", "right", "bounce", "bounce-ease"
+        update_interval_ms: 40
+        style: "bounce"  # can be "left", "right", "bounce", "bounce-ease"
         separator: " | "
         label_padding: 1
       callbacks:
@@ -186,50 +186,46 @@ widgets:
         on_left: "next_layout"
         on_middle: "toggle_monocle"
         on_right: "prev_layout"
-  weather:
-    type: "yasb.weather.WeatherWidget"
+  open_meteo:
+    type: "yasb.open_meteo.OpenMeteoWidget"
     options:
       label: "<span>{icon}</span> {temp}"
       label_alt: "{location}: Min {min_temp}, Max {max_temp}, Humidity {humidity}"
-      api_key: env
+      tooltip: true
       update_interval: 600
       hide_decimal: true
-      location: env
+      units: "metric"
       callbacks:
         on_left: "toggle_card"
         on_middle: "do_nothing"
         on_right: "toggle_label"
-      icons:
-        sunnyDay: "\ue30d"
-        clearNight: "\ue32b"
-        cloudyDay: "\ue312"
-        cloudyNight: "\ue311"
-        rainyDay: "\ue308"
-        rainyNight: "\ue333"
-        snowyDay: "\ue30a"
-        snowyNight: "\ue335"
-        blizzardDay: "\udb83\udf36"
-        blizzardNight: "\udb83\udf36"
-        foggyDay: "\ue303"
-        foggyNight: "\ue346"
-        thunderstormDay: "\ue30f"
-        thunderstormNight: "\ue338"
-        default: "\uebaa"
       weather_card:
         blur: false
-        round_corners: false
         alignment: "right"
         direction: "down"
-        icon_size: 64
+        icon_size: 32
         show_hourly_forecast: true
         time_format: "24h"
         hourly_point_spacing: 76
-        hourly_icon_size: 32
+        hourly_icon_size: 16
         icon_smoothing: true
         temp_line_width: 2
         current_line_color: "#8EAEE8"
         current_line_width: 1
         current_line_style: "dot"
+        hourly_forecast_buttons:
+          enabled: true
+          default_view: "temperature"
+          temperature_icon: "\udb81\udd99"
+          rain_icon: "\udb81\udd96"
+          snow_icon: "\udb81\udd98"
+        weather_animation:
+          enabled: true
+          snow_overrides_rain: true
+          temp_line_animation_style: both
+          rain_effect_intensity: 1.0
+          snow_effect_intensity: 1.0
+          scale_with_chance: true
   volume:
     type: "yasb.volume.VolumeWidget"
     options:

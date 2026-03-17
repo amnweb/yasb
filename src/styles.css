@@ -41,11 +41,14 @@ For more information about configuration options, please visit the Wiki https://
 .context-menu,
 .context-menu .menu-checkbox {
     background-color: var(--bg-color1);
-    border: none;
     padding: 4px 0px;
     font-family: 'Segoe UI';
     font-size: 12px;
     color: var(--text1)
+}
+.context-menu {
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.075);
 }
 .context-menu::right-arrow {
     width: 8px;
@@ -66,7 +69,6 @@ For more information about configuration options, please visit the Wiki https://
     background-color: var(--bg-color2);
     color: #FFFFFF;
 }
-
 .context-menu::separator {
     height: 1px;
     background-color: #404040;
@@ -76,7 +78,6 @@ For more information about configuration options, please visit the Wiki https://
     color: #666666;
     background-color: transparent;
 }
-
 .context-menu .menu-checkbox .checkbox {
     border: none;
     padding: 8px 16px;
@@ -109,7 +110,6 @@ For more information about configuration options, please visit the Wiki https://
 .context-menu .menu-checkbox .checkbox:focus {
     outline: none;
 }
-
 .widget {
     padding: 0 12px;
     margin: 0;
@@ -231,57 +231,177 @@ For more information about configuration options, please visit the Wiki https://
     color: var(--blue);
     margin: 0px 2px 0 0;
 }
-.weather-widget,
+.open-meteo-widget,
 .volume-widget {
     padding: 0 6px;
 }
-.weather-widget .icon {
+.open-meteo-widget .icon {
     font-size: 18px;
     margin: 0 2px 1px 0;
     color: var(--yellow);
 }
-.weather-card {
+.open-meteo-widget .label {
+    font-size: 13px;
+    font-family: "Segoe UI";
+    font-weight: 400;
+    color: rgba(255, 255, 255, 0.8);
+    padding-left: 4px;
+}
+.open-meteo-card {
     background-color: var(--bg-color1);
     border-radius: 8px;
-    min-width: 540px;
     border: 1px solid var(--bg-color2);
+    min-width: 500px;
 }
-.weather-card-today .label {
-    font-size: 12px;
+.open-meteo-card-today .label {
+    font-size: 13px;
+    font-family: "Segoe UI";
+    font-weight: 400;
+    color: rgb(163, 163, 163);
 }
-.weather-card-today .label.location {
-    font-size: 24px;
+.open-meteo-card-today .label.location {
+    font-size: 32px;
     font-weight: 700;
+    font-family: "Segoe UI";
+    color: rgb(255, 255, 255);
 }
-.weather-card-today .label.alert {
-    font-size: 12px;
-    font-weight: 700;
-    background-color: rgba(247, 199, 42, 0.05);
-    border: 1px solid rgba(247, 209, 42, 0.1);
-    color: rgba(196, 181, 162, 0.85);
-    border-radius: 6px;
-    padding: 5px 0;
+.open-meteo-card-today .label.sunrisesunset {
+    font-size: 18px;
+    font-family: "Segoe UI";
+    font-weight: 600;
+    color: rgb(201, 204, 159);
 }
-.weather-card-day {
-    border: 1px solid transparent;
+.open-meteo-card-today .label.sunrisesunset-icon {
+    font-size: 18px;
+    color: rgb(201, 204, 159);
+    font-family: "JetBrainsMono NFP";
+}
+.open-meteo-card-day {
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 8px;
+    background-color: rgba(0, 0, 0, 0);
+    padding: 4px;
+    min-width: 70px;
+}
+.open-meteo-card-day .day-name {
+    font-family: "Segoe UI";
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 12px;
+    font-weight: 600;
+}
+.open-meteo-card-day .day-temp-max {
+    font-family: "Segoe UI";
+    font-weight: 700;
+    font-size: 16px;
+    color: rgb(255, 255, 255);
+}
+.open-meteo-card-day .day-temp-min {
+    font-family: "Segoe UI";
+    color: rgb(255, 255, 255);
+    font-weight: 400;
+    font-size: 13px;
+}
+.open-meteo-card-day.active {
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.open-meteo-card-day:hover {
+    background-color: rgba(255, 255, 255, 0.04);
+}
+.open-meteo-card .hourly-container {
+    border: none;
+    background-color: transparent;
+    min-height: 120px;
+}
+.open-meteo-card .hourly-data {
+    font-size: 11px;
+    font-weight: 700;
+    font-family: "Segoe UI";
+}
+.open-meteo-card .hourly-data.temperature {
+    background-color: #c9be48;
+}
+.open-meteo-card .hourly-data.rain {
+    background-color: #4a90e2;
+}
+.open-meteo-card .hourly-data.snow {
+    background-color: #a0c4ff;
+}
+.open-meteo-card .hourly-data .hourly-rain-animation {
+    color: rgba(150, 200, 255, 40);
+    background-color: rgba(0, 0, 0, 0);
+}
+.open-meteo-card .hourly-data .hourly-snow-animation {
+    color: rgba(255, 255, 255, 150);
+    background-color: rgba(0, 0, 0, 0);
+}
+.open-meteo-card .hourly-data-buttons {
+    margin-top: 11px;
+    margin-left: 11px;
+}
+.open-meteo-card .hourly-data-button {
+    border-radius: 4px;
+    min-height: 24px;
+    min-width: 24px;
+    max-width: 24px;
+    max-height: 24px;
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.3);
+    border: 1px solid transparent;
+}
+.open-meteo-card .hourly-data-button.active {
+    color: #fff;
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.open-meteo-card .search-head {
+    font-size: 18px;
+    font-family: "Segoe UI";
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.9);
+}
+.open-meteo-card .search-description {
+    font-size: 14px;
+    font-family: "Segoe UI";
+    font-weight: 400;
+    color: rgba(255, 255, 255, 0.7);
+    padding-bottom: 8px;
+}
+.open-meteo-card .no-data-icon {
+    font-size: 88px;
+}
+.open-meteo-card .no-data-text {
+    font-size: 16px;
+    font-family: "Segoe UI";
+    font-weight: 400;
+}
+/* search dialog */
+.open-meteo-card .search-input {
+    padding: 8px 12px;
+    border: 1px solid #5e6070;
+    border-radius: 6px;
+    background-color: rgba(17, 17, 27, 0.1);
+    color: #cdd6f4;
+    font-family: "Segoe UI";
+    font-size: 14px;
+}
+.open-meteo-card .search-input:focus {
+    border: 1px solid #89b4fa;
     background-color: rgba(17, 17, 27, 0.2);
 }
-.weather-card-day.active {
-    border: 1px solid rgb(61, 61, 80);
+.open-meteo-card .search-results {
+    border: 1px solid #45475a00;
+    border-radius: 6px;
+    background-color: rgba(0, 0, 0, 0);
+    color: #cbced8;
+    font-size: 13px;
+    font-family: "Segoe UI";
 }
-.weather-card-day .label {
-    font-size: 12px;
+.open-meteo-card .search-results::item {
+    padding: 6px;
 }
-.weather-card .hourly-container {
-    background-color: transparent;
-    min-height: 150px;
-    border: none
-}
-.weather-card .hourly-data {
-    background-color: #FAE93F;
-    font-size: 12px;
-    font-weight: bold;
+.open-meteo-card .search-results::item:hover {
+    background-color: rgba(255, 255, 255, 0.05);
 }
 .media-widget {
     padding: 0;
