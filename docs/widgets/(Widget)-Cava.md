@@ -1,6 +1,6 @@
 # Cava Widget Configuration
 
-> NOTE: This widget requires `cava` version >= 0.10.4 to be installed on your system. You can install it using winget (`winget install karlstav.cava`) or from the [official repository](https://github.com/karlstav/cava/releases). Cava needs to be accessible in the system PATH. YASB will create temporary configuration files for cava in the `%LOCALAPPDATA%\YASB` directory.
+> NOTE: This widget requires `cava` version >= 0.10.4 to be installed on your system. You can install the latest MSI from the [Cava releases page](https://github.com/karlstav/cava/releases). Cava needs to be accessible in the system PATH. After installing, fully stop YASB and start it again (do not use restart) so that YASB can pick up the new environment variables. If it still does not work, restart your PC.
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
