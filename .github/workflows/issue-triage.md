@@ -11,6 +11,16 @@ on:
         type: string
   roles: all
   skip-bots: [dependabot, renovate, github-actions]
+  steps:
+    - name: Skip feature requests
+      id: skip_feature
+      env:
+        LABELS: ${{ toJSON(github.event.issue.labels.*.name) }}
+      run: |
+        if echo "$LABELS" | grep -q '"feature-request"'; then
+          exit 1
+        fi
+if: needs.pre_activation.outputs.skip_feature_result == 'success'
 permissions:
   contents: read
   issues: read
@@ -20,6 +30,8 @@ tools:
     toolsets: [default]
 safe-outputs:
   footer: false
+  noop:
+    report-as-issue: false
   add-comment:
     max: 1
   add-labels:
@@ -64,6 +76,7 @@ YASB is a customizable status bar for Windows 10/11. Key features:
 - **Weather widget not working**: Requires valid ``api_key`` from weatherapi.com and correct ``location`` in widget config. API key can be stored in ``.env`` file as ``YASB_WEATHER_API_KEY``
 - **Slow startup**: Use ``yasbc enable-autostart --task`` to create a scheduled task
 - **Sensitive config values (API keys, tokens)**: Store in a ``.env`` file in the config directory instead of directly in config.yaml
+- **Cava widget showing "CAVA not installed" or not reacting to audio**: Install the latest MSI from the [Cava releases page](https://github.com/karlstav/cava/releases). After installing, fully stop YASB and start it again (do not use restart) so that YASB can pick up the new environment variables. If it still does not work, restart the PC to ensure the PATH is updated
 
 ### Resources
 - Wiki: https://github.com/amnweb/yasb/wiki
