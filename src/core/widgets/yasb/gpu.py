@@ -6,7 +6,7 @@ from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel
 
 from core.utils.utilities import add_shadow, build_progress_widget, build_widget_label, refresh_widget_style
 from core.utils.widgets.animation_manager import AnimationManager
-from core.utils.widgets.gpu.gpu_worker import GpuData, GpuWorker
+from core.utils.widgets.gpu.gpu_api import GpuData, GpuWorker
 from core.validation.widgets.yasb.gpu import GpuConfig
 from core.widgets.base import BaseWidget
 
@@ -53,13 +53,15 @@ class GpuWidget(BaseWidget):
             GpuWidget._instances.append(self)
 
         # Start the shared GPU worker thread
-        if self.config.update_interval > 0 and GpuWidget._worker is None:
+        if self.config.update_interval > 0:
             worker = GpuWorker.get_instance(self.config.update_interval)
-            worker.data_ready.connect(GpuWidget._on_gpu_data)
-            worker.start()
-            GpuWidget._worker = worker
+            worker.add_index(self.config.gpu_index)
+            if GpuWidget._worker is None:
+                worker.data_ready.connect(GpuWidget._on_gpu_data)
+                worker.start()
+                GpuWidget._worker = worker
 
-        self._show_placeholder()
+        self.hide()
 
     @classmethod
     def _on_gpu_data(cls, gpu_data_list: list[GpuData]):
@@ -68,25 +70,13 @@ class GpuWidget(BaseWidget):
             try:
                 gpu_data = next((g for g in gpu_data_list if g.index == inst.config.gpu_index), None)
                 if gpu_data:
+                    if inst.isHidden():
+                        inst.show()
                     inst._update_label(gpu_data)
-                else:
-                    inst._show_placeholder()
+                elif not inst.isHidden():
+                    inst.hide()
             except RuntimeError:
                 cls._instances.remove(inst)
-
-    def _show_placeholder(self):
-        """Display placeholder GPU data without any subprocess calls."""
-        gpu_data = GpuData(
-            index=0,
-            utilization=0,
-            mem_total=0,
-            mem_used=0,
-            mem_free=0,
-            temp=0,
-            fan_speed=0,
-            power_draw="0",
-        )
-        self._update_label(gpu_data)
 
     def _update_label(self, gpu_data: GpuData):
         """Update the label with GPU data."""
@@ -95,17 +85,22 @@ class GpuWidget(BaseWidget):
         self._gpu_mem_history.append(gpu_data.mem_used)
         _temp = gpu_data.temp if self.config.units == "metric" else (gpu_data.temp * (9 / 5) + 32)
         _temp = round(_temp) if self.config.hide_decimal else _temp
-        _power_draw = str(gpu_data.power_draw).strip() or 0
-        _naturalsize = lambda value: naturalsize(value, True, True, "%.0f" if self.config.hide_decimal else "%.1f")
+        _fmt = "%.0f" if self.config.hide_decimal else "%.1f"
+        _naturalsize = lambda value: naturalsize(value, True, True, _fmt)
+        _round = round if self.config.hide_decimal else lambda v: round(v, 1)
         gpu_info = {
             "index": gpu_data.index,
-            "utilization": gpu_data.utilization,
-            "mem_total": _naturalsize(gpu_data.mem_total * 1024 * 1024),
-            "mem_used": _naturalsize(gpu_data.mem_used * 1024 * 1024),
-            "mem_free": _naturalsize(gpu_data.mem_free * 1024 * 1024),
+            "name": gpu_data.name,
+            "utilization": _round(gpu_data.utilization),
+            "mem_total": _naturalsize(gpu_data.mem_total),
+            "mem_used": _naturalsize(gpu_data.mem_used),
+            "mem_free": _naturalsize(gpu_data.mem_free),
+            "mem_shared": _naturalsize(gpu_data.mem_shared_used),
+            "mem_shared_total": _naturalsize(gpu_data.mem_shared_total),
+            "mem_shared_used": _naturalsize(gpu_data.mem_shared_used),
             "temp": _temp,
             "fan_speed": gpu_data.fan_speed,
-            "power_draw": _power_draw,
+            "power_draw": _round(gpu_data.power_draw),
             "histograms": {
                 "utilization": "".join([self._get_histogram_bar(val, 0, 100) for val in self._gpu_util_history]),
                 "mem_used": "".join(

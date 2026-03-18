@@ -1,37 +1,25 @@
 # GPU Widget Configuration
 
-> [!NOTE]
-> This widget currently works only with NVIDIA GPUs and requires the `nvidia-smi` tool to be available (either in your system PATH or accessible by full path). In most cases, `nvidia-smi` is installed automatically with the NVIDIA driver and added to your PATH, but on some systems you may need to add it manually or use the full path to the executable. It will not function with AMD or Intel GPUs.
-
-**How to verify `nvidia-smi` is available:**
-
-Open a terminal or command prompt and run:
-
-```sh
-nvidia-smi
-```
-
-If you see a table with your GPU information, `nvidia-smi` is available. If you get an error like "command not found" or "not recognized as an internal or external command," you may need to add it to your PATH or use the full path to the executable (e.g., `C:\Program Files\NVIDIA Corporation\NVSMI\nvidia-smi.exe`).
 
 | Option                | Type    | Default                                                                 | Description                                                                 |
 |-----------------------|---------|-------------------------------------------------------------------------|-----------------------------------------------------------------------------|
 | `label`               | string  | `"<span>\uf4bc</span> {info[utilization]}%"`                              | The primary label format.                                                   |
-| `label_alt`           | string  | `"<span>\uf4bc</span> {info[temp]}°C | {info[mem_used]} / {info[mem_total]}"`                 | The alternative label format.                                               |
-| `class_name`        | string  | `""`                                                                                  | Additional CSS class name for the widget.                                    |
-| `gpu_index`          | integer | `0`                                                                     | The index of the GPU to monitor (0 for the first GPU, 1 for the second, etc.). |
+| `label_alt`           | string  | `"<span>\uf4bc</span> {info[temp]}°C | {info[mem_used]} / {info[mem_total]}"` | The alternative label format.                                               |
+| `class_name`          | string  | `""`                                                                    | Additional CSS class name for the widget.                                   |
+| `gpu_index`           | integer | `0`                                                                     | The index of the GPU to monitor (0 for the first GPU, 1 for the second, etc.). |
 | `update_interval`     | integer | `1000`                                                                  | The interval in milliseconds to update the widget.                          |
 | `histogram_icons`     | list    | `["\u2581", "\u2581", "\u2582", "\u2583", "\u2584", "\u2585", "\u2586", "\u2587", "\u2588"]` | Icons representing GPU utilization histograms.                              |
-| `histogram_num_columns` | integer | `10`                                                                    | The number of columns in the histogram.                                     |
+| `histogram_num_columns` | integer | `10`                                                                  | The number of columns in the histogram.                                     |
 | `callbacks`           | dict    | `{'on_left': 'toggle_label', 'on_middle': 'do_nothing', 'on_right': 'do_nothing'}` | Callback functions for different mouse button actions.                      |
 | `gpu_thresholds`      | dict    | `{'low': 25, 'medium': 50, 'high': 90}`                                 | Thresholds for GPU utilization levels.                                      |
 | `animation`           | dict    | `{'enabled': true, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
-| `container_shadow`    | dict    | `{"enabled": False, "color": "black", "offset": [1, 1], "radius": 3}`                                                                  | Container shadow options.                                                   |
-| `label_shadow`        | dict    | `{"enabled": False, "color": "black", "offset": [1, 1], "radius": 3}`                                                                  | Label shadow options.                                                       |
+| `container_shadow`    | dict    | `{"enabled": False, "color": "black", "offset": [1, 1], "radius": 3}`  | Container shadow options.                                                   |
+| `label_shadow`        | dict    | `{"enabled": False, "color": "black", "offset": [1, 1], "radius": 3}`  | Label shadow options.                                                       |
 | `progress_bar`        | dict    | `{'enabled': false, 'position': 'left', 'size': 14, 'thickness': 2, 'color': '#57948a', 'animation': false}` | Progress bar settings.                                                      |
-| `hide_decimal`        | bool    | `false`                                                                 | Whether to hide decimal places in the GPU widget.                          |
-| `units`               | string  | `"metric"`                                                              | Whether the temperature is converted to Fahrenheit (if set to `"imperial"`) or Celsius (if not set or explicitly set to `"metric"`) |
+| `hide_decimal`        | bool    | `false`                                                                 | Hide decimal places for utilization, temperature, and power draw values.    |
+| `units`               | string  | `"metric"`                                                              | Temperature unit: `"metric"` for Celsius, `"imperial"` for Fahrenheit.     |
 
-> **About `index`:** If you have multiple NVIDIA GPUs, you can set the `gpu_index` option to select which GPU to monitor. Create multiple GPU widgets with different `gpu_index` values (e.g., 0, 1, 2, ...) to display stats for each card separately.
+> **About `gpu_index`:** If you have multiple GPUs, set `gpu_index` to select which one to monitor. Create multiple GPU widgets with different `gpu_index` values (e.g., 0, 1, 2, ...) to display stats for each card separately.
 
 ## Example Configuration
 
@@ -86,16 +74,23 @@ gpu:
 
 ## Available Placeholders
 
-- `{info[index]}` - GPU index (index of the GPU in the system, starting from 0)
-- `{info[utilization]}` - GPU utilization percentage
-- `{info[mem_total]}` - Total GPU memory
-- `{info[mem_used]}` - Used GPU memory
-- `{info[mem_free]}` - Free GPU memory
-- `{info[temp]}` - GPU temperature (°C)
-- `{info[fan_speed]}` - GPU fan speed (if available, in percentage)
-- `{info[power_draw]}` - GPU power draw exactly in watts if available.
-- `{info[histograms][utilization]}` - GPU utilization histogram using configured icons
-- `{info[histograms][mem_used]}` - GPU memory usage histogram using configured icons
+| Placeholder | Description |
+|-------------|-------------|
+| `{info[index]}` | GPU index (starting from 0) |
+| `{info[name]}` | GPU name |
+| `{info[utilization]}` | GPU utilization (%) |
+| `{info[mem_total]}` | Total dedicated VRAM |
+| `{info[mem_used]}` | Dedicated VRAM in use |
+| `{info[mem_free]}` | Dedicated VRAM free |
+| `{info[mem_shared_total]}` | Total shared system memory available to the GPU (useful for integrated GPUs) |
+| `{info[mem_shared_used]}` | Shared system memory currently in use by the GPU |
+| `{info[temp]}` | GPU temperature (°C or °F depending on `units`) |
+| `{info[fan_speed]}` | Fan speed (%, 0 if unavailable) |
+| `{info[power_draw]}` | Power draw (W, 0 if unavailable) |
+| `{info[histograms][utilization]}` | Utilization history histogram |
+| `{info[histograms][mem_used]}` | Memory usage history histogram |
+
+> **Note on `mem_shared_*`:** Integrated GPUs (e.g., Intel HD Graphics, AMD Radeon integrated) have little or no dedicated VRAM and use system RAM instead. For these GPUs use `mem_shared_total` / `mem_shared_used` to see the actual memory usage.
 
 
 ## Example Style
@@ -112,5 +107,4 @@ gpu:
 .gpu-widget .label.status-high {}
 .gpu-widget .label.status-critical {}
 /* GPU progress bar styles if enabled */
-.gpu-widget .progress-circle {} 
-```
+.gpu-widget .progress-circle {}```

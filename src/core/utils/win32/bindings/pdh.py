@@ -17,5 +17,8 @@ pdh.PdhCollectQueryData.restype = LONG
 pdh.PdhGetFormattedCounterValue.argtypes = [HANDLE, DWORD, POINTER(DWORD), c_void_p]
 pdh.PdhGetFormattedCounterValue.restype = LONG
 
+pdh.PdhGetFormattedCounterArrayW.argtypes = [HANDLE, DWORD, POINTER(DWORD), POINTER(DWORD), c_void_p]
+pdh.PdhGetFormattedCounterArrayW.restype = LONG
+
 pdh.PdhCloseQuery.argtypes = [HANDLE]
 pdh.PdhCloseQuery.restype = LONG
