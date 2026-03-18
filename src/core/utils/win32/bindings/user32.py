@@ -178,6 +178,9 @@ user32.ReleaseDC.restype = c_int
 user32.EnumWindows.argtypes = [LPVOID, LPARAM]
 user32.EnumWindows.restype = BOOL
 
+user32.GetClassNameW.argtypes = [HWND, LPCWSTR, INT]
+user32.GetClassNameW.restype = INT
+
 user32.SetForegroundWindow.argtypes = [HWND]
 user32.SetForegroundWindow.restype = BOOL
 
@@ -385,6 +388,14 @@ def UnhookWinEvent(hWinEventHook: int) -> bool:
 
 def EnumWindows(lpEnumFunc: LPVOID, lParam: int) -> bool:
     return bool(user32.EnumWindows(lpEnumFunc, lParam))
+
+
+def GetClassName(hwnd: int, buf_size: int = 256) -> str:
+    from ctypes import create_unicode_buffer
+
+    buf = create_unicode_buffer(buf_size)
+    user32.GetClassNameW(hwnd, buf, buf_size)
+    return buf.value
 
 
 def SetForegroundWindow(hwnd: int) -> bool:
