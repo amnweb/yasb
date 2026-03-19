@@ -1,11 +1,19 @@
+import collections
 import re
 
 from humanize import naturalsize
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel
 
-from core.utils.utilities import add_shadow, build_progress_widget, build_widget_label, refresh_widget_style
+from core.utils.utilities import (
+    PopupWidget,
+    add_shadow,
+    build_progress_widget,
+    build_widget_label,
+    refresh_widget_style,
+)
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.widgets.memory.memory_api import MemoryData, MemoryWorker, SwapMemory, VirtualMemory
+from core.utils.widgets.stat_popup import build_stat_popup
 from core.validation.widgets.yasb.memory import MemoryConfig
 from core.widgets.base import BaseWidget
 
@@ -21,6 +29,7 @@ class MemoryWidget(BaseWidget):
         self.config = config
         self._show_alt_label = False
         self._last_data: MemoryData | None = None
+        self._history: collections.deque = collections.deque(maxlen=config.menu.graph_history_size)
 
         self.progress_widget = None
         self.progress_widget = build_progress_widget(self, self.config.progress_bar.model_dump())
@@ -39,6 +48,7 @@ class MemoryWidget(BaseWidget):
         build_widget_label(self, self.config.label, self.config.label_alt, self.config.label_shadow.model_dump())
 
         self.register_callback("toggle_label", self._toggle_label)
+        self.register_callback("toggle_menu", self._show_popup)
 
         self.callback_left = self.config.callbacks.on_left
         self.callback_right = self.config.callbacks.on_right
@@ -70,8 +80,86 @@ class MemoryWidget(BaseWidget):
             try:
                 inst._last_data = data
                 inst._update_label(data.virtual, data.swap)
+                if inst.config.menu.enabled:
+                    inst._history.append(data.virtual.percent)
+                    inst._update_popup(data)
             except RuntimeError:
                 cls._instances.remove(inst)
+
+    def _update_popup(self, data: MemoryData):
+        """Push fresh data into the open popup if visible."""
+        popup = PopupWidget._open_popups.get(id(self))
+        if popup is None or not popup.isVisible():
+            return
+        try:
+            if popup._graph is not None:
+                popup._graph.set_data(list(self._history))
+            format_size = popup._format_size
+            labels = popup._stat_labels
+            labels["used"].setText(format_size(data.virtual.used))
+            labels["total"].setText(format_size(data.virtual.total))
+            labels["cached"].setText(format_size(data.cached_bytes))
+            labels["avail"].setText(format_size(data.virtual.available))
+            labels["swap"].setText(format_size(data.swap.used))
+            labels["util"].setText(f"{data.virtual.percent:.0f}%")
+        except Exception:
+            pass
+
+    def _show_popup(self):
+        """Build and show or toggle the memory details popup."""
+        if not self.config.menu.enabled:
+            return
+        menu = self.config.menu
+        format_size = lambda v: naturalsize(v, True, False, "%.1f").replace("i", "")
+        data = self._last_data
+
+        stat_rows = [
+            (
+                "In use",
+                "used",
+                format_size(data.virtual.used) if data else "\u2014",
+                "All memory",
+                "total",
+                format_size(data.virtual.total) if data else "\u2014",
+            ),
+            (
+                "Cached",
+                "cached",
+                format_size(data.cached_bytes) if data else "\u2014",
+                "Available",
+                "avail",
+                format_size(data.virtual.available) if data else "\u2014",
+            ),
+            (
+                "Swap used",
+                "swap",
+                format_size(data.swap.used) if data else "\u2014",
+                "Utilization",
+                "util",
+                f"{data.virtual.percent:.0f}%" if data else "\u2014",
+            ),
+        ]
+
+        popup = build_stat_popup(
+            parent=self,
+            menu_config=menu,
+            popup_class_name="memory-popup",
+            title="<b>Memory</b> Usage",
+            history=self._history,
+            stat_rows=stat_rows,
+            graph_class="memory-graph",
+        )
+        popup._format_size = format_size
+
+        if menu.show_graph and popup._graph is not None:
+            main_layout = popup.layout()
+            graph_container = popup._graph.parentWidget()
+            graph_idx = main_layout.indexOf(graph_container)
+            util_label = QLabel("Utilization")
+            util_label.setProperty("class", "graph-title")
+            main_layout.insertWidget(graph_idx, util_label)
+
+        popup.show()
 
     def _update_label(self, virtual_mem, swap_mem):
         """Update label using shared memory data."""

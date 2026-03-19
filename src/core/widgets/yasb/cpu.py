@@ -3,9 +3,16 @@ from collections import deque
 
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel
 
-from core.utils.utilities import add_shadow, build_progress_widget, build_widget_label, refresh_widget_style
+from core.utils.utilities import (
+    PopupWidget,
+    add_shadow,
+    build_progress_widget,
+    build_widget_label,
+    refresh_widget_style,
+)
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.widgets.cpu.cpu_api import CpuData, CpuFreq, CpuWorker
+from core.utils.widgets.stat_popup import build_stat_popup
 from core.validation.widgets.yasb.cpu import CpuConfig
 from core.widgets.base import BaseWidget
 
@@ -23,6 +30,7 @@ class CpuWidget(BaseWidget):
         self._cpu_perc_history = deque([0] * config.histogram_num_columns, maxlen=config.histogram_num_columns)
         self._show_alt_label = False
         self._last_data: CpuData | None = None
+        self._history: deque = deque(maxlen=config.menu.graph_history_size)
         self.progress_widget = None
         self.progress_widget = build_progress_widget(self, self.config.progress_bar.model_dump())
 
@@ -40,6 +48,7 @@ class CpuWidget(BaseWidget):
         build_widget_label(self, self.config.label, self.config.label_alt, self.config.label_shadow.model_dump())
 
         self.register_callback("toggle_label", self._toggle_label)
+        self.register_callback("toggle_menu", self._show_popup)
 
         self.callback_left = self.config.callbacks.on_left
         self.callback_right = self.config.callbacks.on_right
@@ -76,8 +85,73 @@ class CpuWidget(BaseWidget):
             try:
                 inst._last_data = data
                 inst._update_label(data)
+                if inst.config.menu.enabled:
+                    inst._history.append(data.percent)
+                    inst._update_popup(data)
             except RuntimeError:
                 cls._instances.remove(inst)
+
+    def _update_popup(self, data: CpuData):
+        """Push fresh data into the open popup if visible."""
+        popup = PopupWidget._open_popups.get(id(self))
+        if popup is None or not popup.isVisible():
+            return
+        try:
+            if popup._graph is not None:
+                popup._graph.set_data(list(self._history))
+            labels = popup._stat_labels
+            labels["usage"].setText(f"{data.percent:.0f}%")
+            labels["freq"].setText(f"{data.freq.current:.0f} MHz")
+            labels["cores"].setText(f"{data.cores_physical} / {data.cores_logical}")
+            labels["max_freq"].setText(f"{data.freq.max:.0f} MHz")
+        except Exception:
+            pass
+
+    def _show_popup(self):
+        """Build and show or toggle the CPU details popup."""
+        if not self.config.menu.enabled:
+            return
+        menu = self.config.menu
+        data = self._last_data
+
+        stat_rows = [
+            (
+                "Usage",
+                "usage",
+                f"{data.percent:.0f}%" if data else "\u2014",
+                "Frequency",
+                "freq",
+                f"{data.freq.current:.0f} MHz" if data else "\u2014",
+            ),
+            (
+                "Cores (P / L)",
+                "cores",
+                f"{data.cores_physical} / {data.cores_logical}" if data else "\u2014",
+                "Max frequency",
+                "max_freq",
+                f"{data.freq.max:.0f} MHz" if data else "\u2014",
+            ),
+        ]
+
+        popup = build_stat_popup(
+            parent=self,
+            menu_config=menu,
+            popup_class_name="cpu-popup",
+            title="<b>CPU</b> Usage",
+            history=self._history,
+            stat_rows=stat_rows,
+            graph_class="cpu-graph",
+        )
+
+        if menu.show_graph and popup._graph is not None:
+            main_layout = popup.layout()
+            graph_container = popup._graph.parentWidget()
+            graph_idx = main_layout.indexOf(graph_container)
+            util_label = QLabel("Utilization")
+            util_label.setProperty("class", "graph-title")
+            main_layout.insertWidget(graph_idx, util_label)
+
+        popup.show()
 
     def _update_label(self, data: CpuData):
         """Update the label with CPU data."""

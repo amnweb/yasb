@@ -30,6 +30,24 @@ class ProgressBarConfig(CustomBaseModel):
 
 class CallbacksCpuConfig(CallbacksConfig):
     on_left: str = "toggle_label"
+    on_right: str = "do_nothing"
+
+
+class CpuMenuConfig(CustomBaseModel):
+    enabled: bool = False
+    blur: bool = True
+    round_corners: bool = True
+    round_corners_type: str = "normal"
+    border_color: str = "System"
+    alignment: Literal["left", "center", "right"] = "right"
+    direction: Literal["up", "down"] = "down"
+    offset_top: int = 6
+    offset_left: int = 0
+    graph_history_size: int = Field(default=60, ge=10, le=180)
+    show_graph: bool = True
+    show_graph_grid: bool = False
+    pin_icon: str = "\ue718"
+    unpin_icon: str = "\ue77a"
 
 
 class CpuConfig(CustomBaseModel):
@@ -62,3 +80,4 @@ class CpuConfig(CustomBaseModel):
     progress_bar: ProgressBarConfig = ProgressBarConfig()
     keybindings: list[KeybindingConfig] = []
     callbacks: CallbacksCpuConfig = CallbacksCpuConfig()
+    menu: CpuMenuConfig = CpuMenuConfig()

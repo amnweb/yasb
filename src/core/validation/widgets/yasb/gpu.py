@@ -28,8 +28,26 @@ class ProgressBarConfig(CustomBaseModel):
     animation: bool = True
 
 
+class GpuMenuConfig(CustomBaseModel):
+    enabled: bool = False
+    blur: bool = True
+    round_corners: bool = True
+    round_corners_type: str = "normal"
+    border_color: str = "System"
+    alignment: Literal["left", "center", "right"] = "right"
+    direction: Literal["up", "down"] = "down"
+    offset_top: int = 6
+    offset_left: int = 0
+    graph_history_size: int = Field(default=60, ge=10, le=180)
+    show_graph: bool = True
+    show_graph_grid: bool = False
+    pin_icon: str = "\ue718"
+    unpin_icon: str = "\ue77a"
+
+
 class CallbacksGpuConfig(CallbacksConfig):
     on_left: str = "toggle_label"
+    on_right: str = "do_nothing"
 
 
 class GpuConfig(CustomBaseModel):
@@ -62,5 +80,6 @@ class GpuConfig(CustomBaseModel):
     label_shadow: ShadowConfig = ShadowConfig()
     container_shadow: ShadowConfig = ShadowConfig()
     progress_bar: ProgressBarConfig = ProgressBarConfig()
+    menu: GpuMenuConfig = GpuMenuConfig()
     keybindings: list[KeybindingConfig] = []
     callbacks: CallbacksGpuConfig = CallbacksGpuConfig()

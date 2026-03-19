@@ -9,10 +9,16 @@ from PyQt6.QtCore import QThread, pyqtSignal
 from PyQt6.QtWidgets import QApplication
 
 from core.utils.win32.bindings.kernel32 import kernel32
+from core.utils.win32.bindings.ntdll import SystemMemoryListInformation, ntdll
 from core.utils.win32.bindings.pdh import pdh
 from core.utils.win32.bindings.psapi import psapi
 from core.utils.win32.constants import PDH_FMT_DOUBLE
-from core.utils.win32.structs import MEMORYSTATUSEX, PDH_FMT_COUNTERVALUE_DOUBLE, PERFORMANCE_INFORMATION
+from core.utils.win32.structs import (
+    MEMORYSTATUSEX,
+    PDH_FMT_COUNTERVALUE_DOUBLE,
+    PERFORMANCE_INFORMATION,
+    SYSTEM_MEMORY_LIST_INFORMATION,
+)
 
 
 class VirtualMemory(NamedTuple):
@@ -39,6 +45,7 @@ class MemoryData(NamedTuple):
 
     virtual: VirtualMemory
     swap: SwapMemory
+    cached_bytes: int = 0
 
 
 class MemoryAPI:
@@ -98,6 +105,38 @@ class MemoryAPI:
             return 0.0
         except Exception:
             return 0.0
+
+    @classmethod
+    def _get_cached_bytes(cls) -> int:
+        """Get cached RAM bytes (standby + modified pages), matching Task Manager."""
+        try:
+            info = SYSTEM_MEMORY_LIST_INFORMATION()
+            ret_len = wintypes.ULONG(0)
+            status = ntdll.NtQuerySystemInformation(
+                SystemMemoryListInformation, ctypes.byref(info), ctypes.sizeof(info), ctypes.byref(ret_len)
+            )
+            if status != 0:
+                return cls._get_cached_bytes_fallback()
+            perf = PERFORMANCE_INFORMATION()
+            perf.cb = ctypes.sizeof(PERFORMANCE_INFORMATION)
+            if not psapi.GetPerformanceInfo(ctypes.byref(perf), perf.cb):
+                return 0
+            standby_pages = sum(info.PageCountByPriority[i] for i in range(8))
+            return (standby_pages + info.ModifiedPageCount) * perf.PageSize
+        except Exception:
+            return cls._get_cached_bytes_fallback()
+
+    @classmethod
+    def _get_cached_bytes_fallback(cls) -> int:
+        """Fallback: SystemCache working set (less accurate than standby+modified)."""
+        try:
+            perf = PERFORMANCE_INFORMATION()
+            perf.cb = ctypes.sizeof(PERFORMANCE_INFORMATION)
+            if not psapi.GetPerformanceInfo(ctypes.byref(perf), perf.cb):
+                return 0
+            return perf.SystemCache * perf.PageSize
+        except Exception:
+            return 0
 
     @classmethod
     def virtual_memory(cls) -> VirtualMemory:
@@ -163,6 +202,7 @@ class MemoryAPI:
         return MemoryData(
             virtual=cls.virtual_memory(),
             swap=cls.swap_memory(),
+            cached_bytes=cls._get_cached_bytes(),
         )
 
 

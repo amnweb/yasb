@@ -15,5 +15,17 @@ ntdll.NtQueryInformationProcess.argtypes = [
 ]
 ntdll.NtQueryInformationProcess.restype = LONG
 
+# NtQuerySystemInformation - used for memory list information, etc.
+ntdll.NtQuerySystemInformation.argtypes = [
+    ULONG,  # SystemInformationClass
+    c_void_p,  # SystemInformation
+    ULONG,  # SystemInformationLength
+    POINTER(ULONG),  # ReturnLength
+]
+ntdll.NtQuerySystemInformation.restype = LONG
+
 # Process information class constants
 ProcessCommandLineInformation = 60
+
+# System information class constants
+SystemMemoryListInformation = 80

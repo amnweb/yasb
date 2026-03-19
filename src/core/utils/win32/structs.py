@@ -96,6 +96,21 @@ class PERFORMANCE_INFORMATION(ct.Structure):
     ]
 
 
+class SYSTEM_MEMORY_LIST_INFORMATION(ct.Structure):
+    """Memory list information returned by NtQuerySystemInformation (class 80)."""
+
+    _fields_ = [
+        ("ZeroPageCount", c_size_t),
+        ("FreePageCount", c_size_t),
+        ("ModifiedPageCount", c_size_t),
+        ("ModifiedNoWritePageCount", c_size_t),
+        ("BadPageCount", c_size_t),
+        ("PageCountByPriority", c_size_t * 8),
+        ("RepurposedPageCountByPriority", c_size_t * 8),
+        ("ModifiedPageCountPageFile", c_size_t),
+    ]
+
+
 class UNICODE_STRING(ct.Structure):
     """Windows UNICODE_STRING structure used by NT APIs."""
 

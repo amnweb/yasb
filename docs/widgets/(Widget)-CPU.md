@@ -15,6 +15,7 @@
 | `label_shadow`         | dict   | `None`                  | Label shadow options.                 |
 | `progress_bar`       | dict    | `{'enabled': false, 'position': 'left', 'size': 14, 'thickness': 2, 'color': '#57948a', 'animation': false}` | Progress bar settings.                                                      |
 | `hide_decimal`       | bool    | `false`                                                                 | Whether to hide decimal places in the CPU widget.                          |
+| `menu`               | dict    | See below                                                               | Configuration for the popup menu with graph and stats. |
 
 ## Example Configuration
 
@@ -47,6 +48,11 @@ cpu:
       color: "black"
       radius: 3
       offset: [ 1, 1 ]
+    menu:
+      enabled: true
+      show_graph: true
+      show_graph_grid: true
+      graph_history_size: 60
 ```
 
 ## Description of Options
@@ -71,6 +77,21 @@ cpu:
   - **color**: The color of the progress bar. Color can be single color or gradient. For example, `color: "#57948a"` or `color: ["#57948a", "#ff0000"]"` for a gradient.
   - **background_color**: The background color of the progress bar.
   - **animation**: Whether to enable smooth change of the progress bar value.
+- **menu**: Configuration for the popup menu that displays a usage graph and detailed CPU statistics. It includes:
+  - **enabled**: Whether the popup menu is enabled. Default: `false`.
+  - **blur**: Whether to apply a blur effect to the popup background. Default: `true`.
+  - **round_corners**: Whether the popup has rounded corners. Default: `true`.
+  - **round_corners_type**: The type of rounded corners, either `"normal"` or `"small"`. Default: `"normal"`.
+  - **border_color**: The border color of the popup. Default: `"System"`.
+  - **alignment**: Horizontal alignment of the popup relative to the widget: `"left"`, `"center"`, or `"right"`. Default: `"right"`.
+  - **direction**: Whether the popup opens `"up"` or `"down"`. Default: `"down"`.
+  - **offset_top**: Vertical offset in pixels from the widget. Default: `6`.
+  - **offset_left**: Horizontal offset in pixels from the widget. Default: `0`.
+  - **show_graph**: Whether to show the usage history graph. Default: `true`.
+  - **show_graph_grid**: Whether to display a square grid overlay on the graph. Default: `false`.
+  - **graph_history_size**: Number of data points to keep in the graph history. Must be between 10 and 180. Default: `60`.
+  - **pin_icon**: Icon displayed on the pin button when the popup is unpinned. Default: `"\ue718"`.
+  - **unpin_icon**: Icon displayed on the pin button when the popup is pinned. Default: `"\ue77a"`.
 
 ## Available Placeholders
 
@@ -81,7 +102,6 @@ cpu:
 #### Frequency Information
 - `{info[freq][current]}` - Current CPU frequency in MHz (includes turbo boost, matches Windows Task Manager)
 - `{info[freq][max]}` - Base/nominal CPU frequency in MHz  
-- `{info[freq][min]}` - Always 0 (not available on Windows)
 
 #### Usage Percentages
 - `{info[percent][total]}` - Total CPU usage percentage (0-100)
@@ -120,6 +140,81 @@ cpu:
 /* Custom class styling */
 .cpu-widget.your-class-name {}
 .cpu-widget.your-class-name .label {}
+```
+
+### Popup Menu Styles
+```css
+.cpu-popup {
+    background-color: rgba(28, 28, 28, 0.7);
+    min-width: 400px;
+}
+
+.cpu-popup .header {
+    background: transparent;
+    padding: 12px 16px;
+}
+.cpu-popup .header .text {
+    font-size: 16px;
+    font-family: "Segoe UI";
+    color: rgb(255, 255, 255);
+}
+.cpu-popup .header .pin-btn {
+    font-size: 14px;
+    background: transparent;
+    font-family: "Segoe Fluent Icons";
+    border: none;
+    padding: 6px;
+    color: rgba(255, 255, 255, 0.6);
+}
+.cpu-popup .header .pin-btn:hover {
+    color: rgba(255, 255, 255, 0.6);
+}
+.cpu-popup .header .pin-btn.pinned {
+    color: #ffffff;
+}
+/* Graph area */
+.cpu-popup .graph-container {
+    background:  transparent;
+    min-height: 64px;
+}
+.cpu-popup .cpu-graph {
+    color: #0f6bff;   /* <-- set the graph line/fill color */
+}
+.cpu-popup .cpu-graph-grid {
+    color: rgba(255, 255, 255, 0.05);  /* set the grid line color */
+}
+.cpu-popup .graph-title {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.5);
+    font-family: 'Segoe UI';
+    padding: 0px 0px 4px 14px;
+}
+/* Stats grid */
+.cpu-popup .stats {
+    background: transparent;
+    padding: 16px;
+}
+.cpu-popup .stats .stat-item {
+    background-color: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    border-radius: 8px;
+    padding: 8px 12px;
+    margin: 8px;
+}
+.cpu-popup .stats .stat-label {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.65);
+    font-family: 'Segoe UI';
+    font-weight: 400;
+    padding: 6px 4px 2px 4px;
+}
+.cpu-popup .stats .stat-value {
+    font-size: 20px;
+    font-weight: 700;
+    color: #ffffff;
+    font-family: 'Segoe UI';
+    padding: 0 4px 12px 4px;
+}
 ```
 
 ## Full CSS Example
