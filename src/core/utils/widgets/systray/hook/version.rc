@@ -1,0 +1,34 @@
+#include <winver.h>
+
+VS_VERSION_INFO VERSIONINFO
+FILEVERSION    1,0,0,0
+PRODUCTVERSION 1,0,0,0
+FILEFLAGSMASK  VS_FFI_FILEFLAGSMASK
+FILEFLAGS      0
+FILEOS         VOS_NT
+FILETYPE       VFT_DLL
+FILESUBTYPE    VFT2_UNKNOWN
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904B0"
+        BEGIN
+            VALUE "CompanyName",      "YASB Reborn"
+            VALUE "FileDescription",  "YASB System Tray Monitor Hook"
+            VALUE "FileVersion",      "1.0.0.0"
+            VALUE "InternalName",     "YASBTrayHook"
+            VALUE "LegalCopyright",   "MIT License"
+#if defined(BUILD_ARM64)
+            VALUE "OriginalFilename", "YASBTrayHook_arm64.dll"
+#else
+            VALUE "OriginalFilename", "YASBTrayHook.dll"
+#endif
+            VALUE "ProductName",      "YASB - Yet Another Status Bar"
+            VALUE "ProductVersion",   "1.0.0.0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x0409, 0x04B0
+    END
+END

@@ -429,8 +429,8 @@ class SystrayAppBarHelper:
         try:
             from core.widgets.yasb.systray import SystrayWidget
 
-            if SystrayWidget._systray_instance and hasattr(SystrayWidget._systray_instance, "hwnd"):
-                hwnd = SystrayWidget._systray_instance.hwnd
+            if SystrayWidget._systray_client_instance and hasattr(SystrayWidget._systray_client_instance, "hwnd"):
+                hwnd = SystrayWidget._systray_client_instance.hwnd
                 if hwnd and hwnd != 0:
                     return hwnd
         except Exception:

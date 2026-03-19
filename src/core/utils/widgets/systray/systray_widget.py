@@ -20,6 +20,7 @@ from PyQt6.QtGui import (
     QDropEvent,
     QIcon,
     QMouseEvent,
+    QPixmap,
 )
 from PyQt6.QtWidgets import (
     QFrame,
@@ -91,7 +92,8 @@ class IconWidget(QPushButton):
     def update_scaled_pixmap(self):
         """Pre-compute the scaled pixmap."""
         if self.data is not None and self.data.icon_image is not None:
-            self.scaled_pixmap = self.data.icon_image.scaled(16, 16, Qt.AspectRatioMode.KeepAspectRatio)
+            pixmap = QPixmap.fromImage(self.data.icon_image)
+            self.scaled_pixmap = pixmap.scaled(16, 16, Qt.AspectRatioMode.KeepAspectRatio)
         else:
             self.scaled_pixmap = None
 
@@ -223,7 +225,7 @@ class IconWidget(QPushButton):
             set_tooltip(self, self.data.szTip or self.data.exe, delay=50)
         icon = self.data.icon_image
         if icon:
-            self.setIcon(QIcon(icon))
+            self.setIcon(QIcon(QPixmap.fromImage(icon)))
 
 
 class DropWidget(QFrame):

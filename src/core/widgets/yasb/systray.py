@@ -20,12 +20,17 @@ from PyQt6.QtWidgets import (
     QMenu,
     QPushButton,
 )
+from win32con import HWND_BROADCAST
 
+from core.bar_helper import AppBarManager
 from core.utils.utilities import add_shadow, app_data_path, refresh_widget_style
+from core.utils.widgets.systray.systray_hook import SystrayHook
 from core.utils.widgets.systray.systray_monitor import IconData, SystrayMonitor
 from core.utils.widgets.systray.systray_popup import SystrayPopup
 from core.utils.widgets.systray.systray_widget import DropWidget, IconState, IconWidget
+from core.utils.widgets.systray.utils import hook_dll_exists
 from core.utils.win32.bindings import IsWindow
+from core.utils.win32.bindings.user32 import RegisterWindowMessage, SendNotifyMessage
 from core.utils.win32.constants import (
     NIF_GUID,
     NIF_ICON,
@@ -34,7 +39,7 @@ from core.utils.win32.constants import (
     NIF_STATE,
     NIF_TIP,
 )
-from core.utils.win32.utilities import apply_qmenu_style
+from core.utils.win32.utilities import apply_qmenu_style, get_windows_host_arch, is_running_under_emulation
 from core.validation.widgets.yasb.systray import SystrayWidgetConfig
 from core.widgets.base import BaseWidget
 
@@ -55,29 +60,48 @@ class SystrayMonitorThread(QThread):
     @override
     def run(self):
         threading.current_thread().name = "SystrayMonitor"
-        logger.debug("Systray thread is starting...")
+        logger.debug("Systray monitor thread is starting...")
+        self.client.run()
+
+
+class SystrayHookThread(QThread):
+    """Separate thread to run SystrayHookClient"""
+
+    def __init__(self, client: SystrayHook):
+        super().__init__()
+        self.client = client
+
+    @override
+    def run(self):
+        threading.current_thread().name = "SystrayHook"
+        logger.debug("Systray hook thread is starting...")
         self.client.run()
 
 
 class SystrayWidget(BaseWidget):
     validation_schema = SystrayWidgetConfig
-    _systray_instance = None
-    _systray_thread = None
+    _systray_client_instance = None
+    _systray_client_thread = None
+    _systray_refresh_signal = None
+    _systray_about_to_quit_signal = None
 
     @classmethod
-    def get_client_instance(cls):
+    def get_monitor_instance(cls, hook: bool = False):
         """
-        Since we don't want multiple systray monitors,
-        as they will just bounce messages between each other and cause issues,
-        we create a single instance of the SystrayMonitor and use it for all widgets.
+        Since we don't want multiple systray monitors or hooks,
+        we create a single instance of the SystrayMonitor or SystrayHook and use it for all widgets.
         """
-        if cls._systray_instance is None:
-            cls._systray_instance = SystrayMonitor()
-            cls._systray_thread = SystrayMonitorThread(cls._systray_instance)
+        if cls._systray_client_instance is None:
+            if hook:
+                cls._systray_client_instance = SystrayHook()
+                cls._systray_client_thread = SystrayHookThread(cls._systray_client_instance)
+            else:
+                cls._systray_client_instance = SystrayMonitor()
+                cls._systray_client_thread = SystrayMonitorThread(cls._systray_client_instance)
 
         return (
-            cls._systray_instance,
-            cls._systray_thread,
+            cls._systray_client_instance,
+            cls._systray_client_thread,
         )
 
     def __init__(self, config: SystrayWidgetConfig):
@@ -110,6 +134,11 @@ class SystrayWidget(BaseWidget):
         self.icon_check_timer = QTimer(self)
         self.icon_check_timer.timeout.connect(self.check_icons)
         self.icon_check_timer.start(5000)
+
+        self.refresh_systray_timer = QTimer(self)
+        self.refresh_systray_timer.timeout.connect(self.refresh_systray)
+        self.refresh_systray_timer.setInterval(200)
+        self.refresh_systray_timer.setSingleShot(True)
 
         self.sort_timer = QTimer(self)
         self.sort_timer.timeout.connect(self.sort_icons)
@@ -198,8 +227,12 @@ class SystrayWidget(BaseWidget):
 
         self.widget_layout.addWidget(self.widget_container)
 
-        QTimer.singleShot(0, self.setup_client)
-        QTimer.singleShot(0, self.set_containers_visibility)
+        if self.config.use_hook:
+            self.setup_client()
+            self.set_containers_visibility()
+        else:
+            QTimer.singleShot(0, self.setup_client)
+            QTimer.singleShot(0, self.set_containers_visibility)
 
     def show_context_menu(self, pos: QPoint):
         """Show the context menu for the unpinned visibility button"""
@@ -221,34 +254,60 @@ class SystrayWidget(BaseWidget):
 
     def refresh_systray(self):
         """Refresh the icons by sending a message to the tray monitor"""
-        SystrayMonitor.send_taskbar_created()
+        mgr = AppBarManager()
+        mgr.suppress()
+        taskbar_created_msg = RegisterWindowMessage("TaskbarCreated")
+        SendNotifyMessage(HWND_BROADCAST, taskbar_created_msg, 0, 0)
+        logger.debug(f"Sending TaskbarCreated message: {taskbar_created_msg}")
+        QTimer.singleShot(0, mgr.unsuppress)
         logger.debug("Systray icons refreshed")
 
     def setup_client(self):
         """Setup the tray monitor client and connect signals"""
+        is_platform_supported = get_windows_host_arch() in ("AMD64", "ARM64")
+        if self.config.use_hook:
+            if is_running_under_emulation():
+                logger.debug("Running under emulation. Systray hook disabled; falling back to legacy mode.")
+                self.config.use_hook = False
+            elif not is_platform_supported:
+                logger.debug("Platform not supported by systray hook. Reverting to legacy mode.")
+                self.config.use_hook = False
+            elif not hook_dll_exists():
+                logger.warning("Systray hook DLL missing. Reverting to legacy mode.")
+                self.config.use_hook = False
+
         self.load_state()
-        systray_client, systray_thread = SystrayWidget.get_client_instance()
+        systray_client, systray_thread = SystrayWidget.get_monitor_instance(self.config.use_hook)
+
         systray_client.icon_modified.connect(self.on_icon_modified)
         systray_client.icon_deleted.connect(self.on_icon_deleted)
+
+        if SystrayWidget._systray_refresh_signal is None:
+            SystrayWidget._systray_refresh_signal = systray_client.update_icons.connect(
+                self.refresh_systray_timer.start
+            )
 
         app_inst = QApplication.instance()
         if app_inst is not None:
             app_inst.aboutToQuit.connect(self.save_state)
-            app_inst.aboutToQuit.connect(self._cleanup_threads)
+
+            if SystrayWidget._systray_about_to_quit_signal is None:
+                SystrayWidget._systray_about_to_quit_signal = app_inst.aboutToQuit.connect(self._cleanup_threads)
 
         if systray_thread is not None and not systray_thread.isRunning():
             systray_thread.start()
-            systray_thread.started.connect(self.on_thread_started)
 
     @classmethod
     def _cleanup_threads(cls):
         """Cleanup destroy Win32 message loop threads before app quit"""
         try:
-            if cls._systray_instance is not None:
-                cls._systray_instance.destroy()
+            if cls._systray_client_instance is not None:
+                cls._systray_client_instance.destroy()
+                cls._systray_client_instance = None
 
-            if cls._systray_thread is not None and cls._systray_thread.isRunning():
-                cls._systray_thread.wait(3000)
+            if cls._systray_client_thread is not None and cls._systray_client_thread.isRunning():
+                cls._systray_client_thread.wait(3000)
+                cls._systray_client_thread = None
 
         except Exception as e:
             logger.debug(f"Error during thread cleanup: {e}")
@@ -264,10 +323,6 @@ class SystrayWidget(BaseWidget):
                 self.config.label_expanded if self.config.show_unpinned else self.config.label_collapsed
             )
             self.unpinned_widget.setVisible(self.config.show_unpinned or not self.config.show_unpinned_button)
-
-    def on_thread_started(self):
-        logger.debug("Systray thread started")
-        QTimer.singleShot(200, SystrayMonitor.send_taskbar_created)
 
     @pyqtSlot(int)
     def on_pinned_drag_started(self, icon_width: int = 0):

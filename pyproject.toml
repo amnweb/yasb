@@ -62,6 +62,7 @@ dev = [
     "ruff>=0.15.0",
     "pyqt6-stubs",
     "types-pillow",
+    "types-pywin32",
 ]
 packaging = [
     "cx-freeze==8.6.1"

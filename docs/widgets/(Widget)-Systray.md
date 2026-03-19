@@ -1,39 +1,40 @@
 # Systray Widget
-| Option                    | Type    | Default     | Description                                                                             |
-|---------------------------|---------|-------------|-----------------------------------------------------------------------------------------|
-| `class_name`              | string  | `'systray'` | The class name for the base widget.                                                     |
-| `label_collapsed`         | string  | `'▼'`       | Label used for the collapse button when unpinned container is hidden.                   |
-| `label_expanded`          | string  | `'▶'`       | Label used for the collapse button when unpinned container is shown.                    |
-| `label_position`          | string  | `'left'`    | The position of the button that collapses unpinned container. Can be "left" or "right". |
-| `icon_size`               | integer | `16`        | The size of the icons in the systray. Can be any integer between 8 and 64.              |
-| `pin_click_modifier`      | string  | `'alt'`     | The modifier key used to pin/unpin icons. Can be "ctrl", "alt" or "shift".              |
-| `show_unpinned`           | boolean | `true`      | Whether to show unpinned container on startup.                                          |
-| `show_unpinned_button`    | boolean | `true`      | Whether to show the collapse unpinned icons button.                                     |
-| `show_in_popup`           | boolean | `false`     | Show unpinned icons in a popup grid instead of inline in the bar.                       |
-| `icons_per_row`           | integer | `4`         | Number of icon columns in the popup grid (only used when `show_in_popup` is true).      |
-| `popup`                   | dict    | see below   | Popup appearance settings (only used when `show_in_popup` is true).                     |
-| `show_battery`            | boolean | `false`     | Whether to show battery icon (from the original systray).                               |
-| `show_volume`             | boolean | `false`     | Whether to show volume icon (from the original systray).                                |
-| `show_network`            | boolean | `false`     | Whether to show network icon (from the original systray).                               |
-| `hide_icons`              | list    | `[]`        | List of process names to hide from the systray (exact match, case-insensitive).         |
-| `tooltip`                 | boolean | `true`      | Whether to show tooltips when hovering over systray icons.                              |
-| `container_shadow`        | dict    | `None`      | Container shadow options.                                                               |
-| `unpinned_shadow`         | dict    | `None`      | Unpinned container shadow options.                                                      |
-| `pinned_shadow`           | dict    | `None`      | Pinned container shadow options.                                                        |
-| `unpinned_vis_btn_shadow` | dict    | `None`      | Unpinned visibility button shadow options.                                              |
-| `btn_shadow`              | dict    | `None`      | Systray button (icons) shadow options.                                                  |
+| Option                      | Type      | Default       | Description                                                                                                                   |
+| --------------------------- | --------- | ------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `class_name`                | string    | `'systray'`   | The class name for the base widget.                                                                                           |
+| `label_collapsed`           | string    | `'▼'`         | Label used for the collapse button when unpinned container is hidden.                                                         |
+| `label_expanded`            | string    | `'▶'`         | Label used for the collapse button when unpinned container is shown.                                                          |
+| `label_position`            | string    | `'left'`      | The position of the button that collapses unpinned container. Can be "left" or "right".                                       |
+| `icon_size`                 | integer   | `16`          | The size of the icons in the systray. Can be any integer between 8 and 64.                                                    |
+| `pin_click_modifier`        | string    | `'alt'`       | The modifier key used to pin/unpin icons. Can be "ctrl", "alt" or "shift".                                                    |
+| `show_unpinned`             | boolean   | `true`        | Whether to show unpinned container on startup.                                                                                |
+| `show_unpinned_button`      | boolean   | `true`        | Whether to show the collapse unpinned icons button.                                                                           |
+| `show_in_popup`             | boolean   | `false`       | Show unpinned icons in a popup grid instead of inline in the bar.                                                             |
+| `icons_per_row`             | integer   | `4`           | Number of icon columns in the popup grid (only used when `show_in_popup` is true).                                            |
+| `popup`                     | dict      | see below     | Popup appearance settings (only used when `show_in_popup` is true).                                                           |
+| `show_battery`              | boolean   | `false`       | Whether to show battery icon (from the original systray).                                                                     |
+| `show_volume`               | boolean   | `false`       | Whether to show volume icon (from the original systray).                                                                      |
+| `show_network`              | boolean   | `false`       | Whether to show network icon (from the original systray).                                                                     |
+| `hide_icons`                | list      | `[]`          | List of process names to hide from the systray (exact match, case-insensitive).                                               |
+| `tooltip`                   | boolean   | `true`        | Whether to show tooltips when hovering over systray icons.                                                                    |
+| `use_hook`                  | boolean   | `false`       | Whether to use the systray hook. Default is false. False will use legacy systray monitor, true will use the new systray hook. |
+| `container_shadow`          | dict      | `None`        | Container shadow options.                                                                                                     |
+| `unpinned_shadow`           | dict      | `None`        | Unpinned container shadow options.                                                                                            |
+| `pinned_shadow`             | dict      | `None`        | Pinned container shadow options.                                                                                              |
+| `unpinned_vis_btn_shadow`   | dict      | `None`        | Unpinned visibility button shadow options.                                                                                    |
+| `btn_shadow`                | dict      | `None`        | Systray button (icons) shadow options.                                                                                        |
 
 ### Popup Options
-| Option               | Type    | Default    | Description                                                          |
-|----------------------|---------|------------|----------------------------------------------------------------------|
-| `blur`               | boolean | `true`     | Apply blur/acrylic effect to the popup background.                   |
-| `round_corners`      | boolean | `true`     | Round the corners of the popup window.                               |
-| `round_corners_type` | string  | `'normal'` | Round corner type. Can be "normal" or "small".                       |
-| `border_color`       | string  | `'System'` | Border color for the popup window. Use "System" for the system color.|
-| `alignment`          | string  | `'right'`  | Popup alignment relative to the button. Can be "left", "right", or "center". |
-| `direction`          | string  | `'down'`   | Popup direction. Can be "up" or "down".                              |
-| `offset_top`         | integer | `6`        | Vertical offset in pixels.                                           |
-| `offset_left`        | integer | `0`        | Horizontal offset in pixels.                                         |
+| Option                 | Type      | Default      | Description                                                                  |
+| ---------------------- | --------- | ------------ | ---------------------------------------------------------------------------- |
+| `blur`                 | boolean   | `true`       | Apply blur/acrylic effect to the popup background.                           |
+| `round_corners`        | boolean   | `true`       | Round the corners of the popup window.                                       |
+| `round_corners_type`   | string    | `'normal'`   | Round corner type. Can be "normal" or "small".                               |
+| `border_color`         | string    | `'System'`   | Border color for the popup window. Use "System" for the system color.        |
+| `alignment`            | string    | `'right'`    | Popup alignment relative to the button. Can be "left", "right", or "center". |
+| `direction`            | string    | `'down'`     | Popup direction. Can be "up" or "down".                                      |
+| `offset_top`           | integer   | `6`          | Vertical offset in pixels.                                                   |
+| `offset_left`          | integer   | `0`          | Horizontal offset in pixels.                                                 |
 
 
 ## Example Configuration
@@ -52,6 +53,7 @@ systray:
     show_battery: false
     show_volume: false
     show_network: false
+    use_hook: false # Whether to use the new systray hook instead of the legacy systray monitor
     hide_icons: [] # Optional, list of process names to hide (e.g. ["discord"])
     btn_shadow:
       enabled: true
@@ -96,6 +98,9 @@ There are some limitations with the systray widget:
 - Systray widget will not show icons for apps if they ignore "TaskbarCreated" message. Meaning that if the original developers decided to ignore this message - their systray icons will not be shown. It's rare, but there are such cases (NVIDIA App for example). This is NOT a YASB bug.
 - In rare cases systray icon might ignore click events if the original application was already running before YASB was started. Example: Epic Games Launcher. No solution for this so far.
 
+## Systray Hook vs Monitor
+The systray hook is a more reliable and performant way to monitor systray icons. However, since it's an `explorer.exe` process hook (dll injection) it can potentially have some issues with Defender or other AV programs. Setting `use_hook: false` will completely bypass this method and revert back to the original systray monitor window method that is much less intrusive, but has plenty of compatibility issues with other apps. If your AV blocks the dll (or deletes it) systray widget will automatically use legacy mode.
+
 ## Description of Options
 - **class_name:** The class name for the base widget. Can be changed if multiple systray widgets need to have different styling.
 - **label_collapsed:** Label used for the collapse button when unpinned container is hidden.
@@ -113,6 +118,7 @@ There are some limitations with the systray widget:
 - **show_network:** Whether to show network icon (from the original systray).
 - **hide_icons:** A list of process names to hide from the systray. Each entry is matched exactly (case-insensitive) against the executable name without extension. For example, to hide Discord set `hide_icons: ["discord"]` which matches `Discord.exe`.
 - **tooltip:** Whether to show tooltips when hovering over systray icons.
+- **use_hook:** Whether to use the systray hook. Default is false. False will use legacy systray monitor, true will use the new systray hook.
 - **container_shadow:** Container shadow options.
 - **unpinned_shadow:** Unpinned container shadow options.
 - **pinned_shadow:** Pinned container shadow options.
