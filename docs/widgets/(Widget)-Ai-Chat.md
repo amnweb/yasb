@@ -56,8 +56,8 @@ ai_chat:
         api_endpoint: "http://localhost:11434/v1"
         credential: "ollama"
         models: 
-        - name: "gemma3:1b"
-          label: "Gemma3"
+          - name: "gemma3:1b"
+            label: "Gemma3"
       - provider: "GitHub Copilot"
         provider_type: "copilot"
       - provider: "Copilot"
@@ -76,17 +76,17 @@ ai_chat:
         api_endpoint: "https://api.openai.com/v1"
         credential: "dsfsfsfs65sd6f56sd5f6"
         models:
-        - name: "gpt-3.5-turbo"
-          label: "GPT3.5 Turbo"
-        - name: "gpt-4"
-          label: "GPT4"
-          default: true
-          temperature: 0.3
-          top_p: 0.95
-          max_tokens: 4096
-          max_image_size: 1024
-          max_attachment_size: 256
-          instructions: "C:/Users/amnweb/Desktop/custom_gpt_chatmode.md"
+          - name: "gpt-3.5-turbo"
+            label: "GPT3.5 Turbo"
+          - name: "gpt-4"
+            label: "GPT4"
+            default: true
+            temperature: 0.3
+            top_p: 0.95
+            max_tokens: 4096
+            max_image_size: 1024
+            max_attachment_size: 256
+            instructions: "C:/Users/amnweb/Desktop/custom_gpt_chatmode.md"
 
 ```
 > [!IMPORTANT]  
