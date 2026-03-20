@@ -1,9 +1,16 @@
 from core.validation.widgets.base_model import (
+    CallbacksConfig,
     CustomBaseModel,
     KeybindingConfig,
     PaddingConfig,
     ShadowConfig,
 )
+
+
+class WindowsDesktopsCallbacksConfig(CallbacksConfig):
+    on_left: str = "activate_workspace"
+    on_middle: str = "do_nothing"
+    on_right: str = "toggle_context_menu"
 
 
 class WindowsDesktopsConfig(CustomBaseModel):
@@ -14,4 +21,5 @@ class WindowsDesktopsConfig(CustomBaseModel):
     btn_shadow: ShadowConfig = ShadowConfig()
     container_shadow: ShadowConfig = ShadowConfig()
     container_padding: PaddingConfig = PaddingConfig()
+    callbacks: WindowsDesktopsCallbacksConfig = WindowsDesktopsCallbacksConfig()
     keybindings: list[KeybindingConfig] = []

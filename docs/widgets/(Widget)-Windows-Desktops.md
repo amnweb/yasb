@@ -7,6 +7,7 @@
 | `animation`                | bool   | `false`                   | Buttons animation.   |
 | `container_shadow`      | dict    | `None`                  | Container shadow options.                                |
 | `btn_shadow`            | dict    | `None`                  | Workspace button shadow options.                         |
+| `callbacks`             | dict    | `{'on_left': 'activate_workspace', 'on_middle': 'do_nothing', 'on_right': 'toggle_context_menu'}` | Callbacks for mouse events on workspace buttons. |
 
 ## Example Configuration
 
@@ -21,6 +22,10 @@ windows_workspaces:
       color: "black"
       radius: 3
       offset: [ 1, 1 ]
+    callbacks:
+      on_left: "activate_workspace"
+      on_middle: "do_nothing"
+      on_right: "toggle_context_menu"
 ```
 
 ## Description of Options
@@ -30,6 +35,18 @@ windows_workspaces:
 - **animation:** Buttons animation.
 - **container_shadow:** Container shadow options.
 - **btn_shadow:** Workspace button shadow options.
+- **callbacks:** A dictionary specifying the callbacks for mouse events on workspace buttons. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions.
+
+### Available Callbacks
+| Callback               | Description                                                              |
+|------------------------|--------------------------------------------------------------------------|
+| `activate_workspace`   | Switch to the desktop associated with the clicked button.                |
+| `toggle_context_menu`  | Show the right-click context menu options.                               |
+| `move_window_here`     | Move the currently focused window to the desktop of the clicked button.  |
+| `delete_workspace`     | Delete the desktop associated with the clicked button.                   |
+| `create_desktop`       | Create a new virtual desktop.                                            |
+| `rename_desktop`       | Open a dialog to rename the desktop of the clicked button.               |
+| `do_nothing`           | No action.                                                               |
 
 ## Style
 ```css

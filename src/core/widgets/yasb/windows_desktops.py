@@ -38,11 +38,21 @@ class WorkspaceButton(QPushButton):
         self.default_label = label if label else str(workspace_index)
         self.active_label = active_label if active_label else self.default_label
         self.setText(self.default_label)
-        self.clicked.connect(self.activate_workspace)
         self.parent_widget = parent
         self.workspace_animation = parent.config.switch_workspace_animation if parent else False
         self.animation = parent.config.animation if parent else False
         self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.clicked.connect(self._on_clicked)
+
+    def _on_clicked(self):
+        if self.parent_widget:
+            self.parent_widget._clicked_button = self
+            self.parent_widget._run_callback(self.parent_widget.callback_left)
+
+    def contextMenuEvent(self, event):
+        if self.parent_widget:
+            self.parent_widget._clicked_button = self
+            self.parent_widget._run_callback(self.parent_widget.callback_right)
 
     def update_text(self, text: str):
         """Update button text and capture width before change for animation"""
@@ -84,7 +94,7 @@ class WorkspaceButton(QPushButton):
             self, duration=duration, easing=QEasingCurve.Type.OutCubic, start_width=start_width
         )
 
-    def contextMenuEvent(self, event):
+    def _show_context_menu(self):
         menu = QMenu(self)
         # Assign a class for global styling; apply rounded corners via helper
         menu.setProperty("class", "context-menu")
@@ -112,6 +122,12 @@ class WorkspaceButton(QPushButton):
         if app_view:
             active_hwnd = app_view.hwnd
             menu.addSeparator()
+
+            act_move_here = QAction("Move Window Here", self)
+            act_move_here.triggered.connect(
+                lambda checked=False, n=self.workspace_index, h=active_hwnd: self.move_active_window_to(n, h)
+            )
+            menu.addAction(act_move_here)
 
             move_menu = QMenu("Move Window To", self)
             move_menu.setProperty("class", "context-menu")
@@ -156,7 +172,7 @@ class WorkspaceButton(QPushButton):
             act_set_wall_all.triggered.connect(self.set_wallpaper_all)
             menu.addAction(act_set_wall_all)
 
-        menu.popup(self.mapToGlobal(event.pos()))
+        menu.popup(QCursor.pos())
         try:
             menu.activateWindow()
         except Exception:
@@ -255,8 +271,23 @@ class WorkspaceWidget(BaseWidget):
         self._curr_workspace_index = self._svc.get_current_desktop().number
         self._workspace_buttons: list[WorkspaceButton] = []
 
+        self._clicked_button: WorkspaceButton | None = None
+
         # Disable default mouse event handling inherited from BaseWidget
         self.mousePressEvent = None
+
+        # Register callbacks
+        self.register_callback("activate_workspace", self._cb_activate_workspace)
+        self.register_callback("toggle_context_menu", self._cb_toggle_context_menu)
+        self.register_callback("move_window_here", self._cb_move_window_here)
+        self.register_callback("delete_workspace", self._cb_delete_workspace)
+        self.register_callback("create_desktop", self._cb_create_desktop)
+        self.register_callback("rename_desktop", self._cb_rename_desktop)
+
+        # Wire config callbacks to mouse buttons
+        self.callback_left = config.callbacks.on_left
+        self.callback_right = config.callbacks.on_right
+        self.callback_middle = config.callbacks.on_middle
 
         # Construct container which holds workspace buttons
         self._workspace_container_layout = QHBoxLayout()
@@ -286,6 +317,36 @@ class WorkspaceWidget(BaseWidget):
 
     def _force_update(self):
         self._svc.notify_desktops_updated(update_buttons=False)
+
+    def _cb_activate_workspace(self):
+        if self._clicked_button:
+            self._clicked_button.activate_workspace()
+
+    def _cb_toggle_context_menu(self):
+        if self._clicked_button:
+            self._clicked_button._show_context_menu()
+
+    def _cb_move_window_here(self):
+        if self._clicked_button:
+            try:
+                svc = WindowsDesktopService()
+                app_view = svc.get_foreground_app_view()
+                if app_view:
+                    WindowsDesktopService.move_window(app_view.hwnd, self._clicked_button.workspace_index)
+            except Exception as e:
+                logging.exception(f"Failed to move window to desktop {self._clicked_button.workspace_index}: {e}")
+
+    def _cb_delete_workspace(self):
+        if self._clicked_button:
+            self._clicked_button.delete_desktop()
+
+    def _cb_create_desktop(self):
+        if self._clicked_button:
+            self._clicked_button.create_new_desktop()
+
+    def _cb_rename_desktop(self):
+        if self._clicked_button:
+            self._clicked_button.rename_desktop()
 
     def _on_desktop_changed(self, event_data: dict):
         # Keep track of previous index for animation coordination
