@@ -22,12 +22,16 @@ jobs:
             artifact_suffix: x64
             unsigned_exe_name: unsigned-exes-x64
             unsigned_msi_name: unsigned-msi-x64
+            unsigned_dll_name: unsigned-dll-x64
+            dll_file: YASBTrayHook.dll
           - arch: arm64
             runner: windows-11-arm
             python_arch: arm64
             artifact_suffix: aarch64
             unsigned_exe_name: unsigned-exes-arm64
             unsigned_msi_name: unsigned-msi-arm64
+            unsigned_dll_name: unsigned-dll-arm64
+            dll_file: YASBTrayHook_arm64.dll
     runs-on: ${{ matrix.runner }}
     name: Build (${{ matrix.arch }})
     
@@ -46,6 +50,68 @@ jobs:
     - name: Create virtual environment
       run: |
         python -m venv venv
+      shell: pwsh
+
+    - name: Upload unsigned DLL artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ matrix.unsigned_dll_name }}
+        path: src/core/utils/widgets/systray/hook/${{ matrix.dll_file }}
+
+    - name: Get unsigned-dll artifact id
+      id: get_dll_artifact
+      uses: actions/github-script@v7
+      env:
+        ARTIFACT_NAME: ${{ matrix.unsigned_dll_name }}
+      with:
+        github-token: ${{ secrets.PAT }}
+        script: |
+          const { owner, repo } = context.repo;
+          const run_id = context.runId;
+          const expectedName = process.env.ARTIFACT_NAME;
+          const res = await github.rest.actions.listWorkflowRunArtifacts({ owner, repo, run_id });
+          const artifact = res.data.artifacts.find(a => a.name === expectedName);
+          if (!artifact) throw new Error(`${expectedName} artifact not found`);
+          return artifact.id;
+
+    - name: Submit DLL signing request
+      id: sign_dll
+      uses: signpath/github-action-submit-signing-request@v1
+      with:
+        api-token: '${{ secrets.SIGN_TOKEN }}'
+        organization-id: '9efb6764-d1fc-46c5-b050-5ef07bb67a8c'
+        project-slug: 'yasb'
+        signing-policy-slug: '${{ secrets.SIGN_POLICY_SLUG }}'
+        artifact-configuration-slug: 'signing_dll'
+        github-artifact-id: '${{ steps.get_dll_artifact.outputs.result }}'
+        wait-for-completion: 'true'
+        output-artifact-directory: 'src/signed'
+
+    - name: Replace unsigned DLL with signed
+      if: steps.sign_dll.outcome == 'success'
+      run: |
+        $signedDir = 'src/signed'
+        if (-not (Test-Path $signedDir)) {
+          Write-Host "Signed artifacts directory $signedDir not found. Ensure SignPath places signed files there.";
+          exit 1
+        }
+        # Copy signed DLL back to source location fail if none found
+        $signedDlls = Get-ChildItem -Path $signedDir -File -Filter '*.dll' -Recurse -ErrorAction SilentlyContinue
+        if ($null -eq $signedDlls -or $signedDlls.Count -eq 0) {
+          Write-Error "No signed .dll files found in $signedDir after extraction. Failing the job."
+          exit 1
+        }
+        Write-Host "Copying signed DLL from $signedDir to src/core/utils/widgets/systray/hook"
+        foreach ($f in $signedDlls) {
+          Copy-Item -Path $f.FullName -Destination (Join-Path 'src/core/utils/widgets/systray/hook' $f.Name) -Force
+        }
+        # Clean up signed directory after successful copy
+        try {
+          Get-ChildItem -Path $signedDir -Recurse -Force | Remove-Item -Force -Recurse
+          Write-Host "Cleaned up $signedDir"
+        } catch {
+          Write-Warning "Failed to clean up ${signedDir}: $($_.Exception.Message)"
+        }
       shell: pwsh
 
     - name: Activate virtual environment and install dependencies
