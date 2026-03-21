@@ -4,6 +4,8 @@ from ctypes import (
     POINTER,
     Array,
     byref,
+    c_char,
+    c_size_t,
     c_wchar,
     create_string_buffer,
     windll,
@@ -12,12 +14,14 @@ from ctypes.wintypes import (
     BOOL,
     DWORD,
     HANDLE,
+    LPCSTR,
     LPCVOID,
     LPCWSTR,
     LPDWORD,
     LPVOID,
     LPWSTR,
     ULONG,
+    USHORT,
 )
 
 from core.utils.win32.structs import SYSTEM_POWER_STATUS
@@ -54,6 +58,16 @@ kernel32.DisconnectNamedPipe.restype = BOOL
 
 kernel32.WaitNamedPipeW.argtypes = [LPCWSTR, DWORD]
 kernel32.WaitNamedPipeW.restype = BOOL
+
+kernel32.PeekNamedPipe.argtypes = [
+    HANDLE,
+    LPVOID,
+    DWORD,
+    LPDWORD,
+    LPDWORD,
+    LPDWORD,
+]
+kernel32.PeekNamedPipe.restype = BOOL
 
 kernel32.CreateEventW.argtypes = [
     LPVOID,
@@ -113,10 +127,40 @@ kernel32.DeviceIoControl.argtypes = [
 ]
 kernel32.DeviceIoControl.restype = BOOL
 
-kernel32.CloseHandle.argtypes = [
-    HANDLE,
-]
+kernel32.CloseHandle.argtypes = [HANDLE]
 kernel32.CloseHandle.restype = BOOL
+
+kernel32.CreateMutexW.argtypes = [LPVOID, BOOL, LPCWSTR]
+kernel32.CreateMutexW.restype = HANDLE
+
+kernel32.OpenMutexW.argtypes = [DWORD, BOOL, LPCWSTR]
+kernel32.OpenMutexW.restype = HANDLE
+
+kernel32.VirtualAllocEx.restype = LPVOID
+kernel32.VirtualAllocEx.argtypes = [HANDLE, LPVOID, c_size_t, DWORD, DWORD]
+
+kernel32.WriteProcessMemory.restype = BOOL
+kernel32.WriteProcessMemory.argtypes = [
+    HANDLE,
+    LPVOID,
+    LPCSTR,
+    c_size_t,
+    POINTER(c_size_t),
+]
+
+kernel32.GetProcAddress.restype = LPVOID
+kernel32.GetProcAddress.argtypes = [HANDLE, LPCSTR]
+
+kernel32.CreateRemoteThread.restype = HANDLE
+kernel32.CreateRemoteThread.argtypes = [
+    HANDLE,
+    LPVOID,
+    c_size_t,
+    LPVOID,
+    LPVOID,
+    DWORD,
+    POINTER(DWORD),
+]
 
 
 kernel32.FormatMessageW.argtypes = [
@@ -147,6 +191,12 @@ kernel32.GetSystemPowerStatus.restype = BOOL
 # GetSystemInfo - System information
 kernel32.GetSystemInfo.argtypes = [LPVOID]
 kernel32.GetSystemInfo.restype = None
+
+kernel32.IsWow64Process2.argtypes = [HANDLE, POINTER(USHORT), POINTER(USHORT)]
+kernel32.IsWow64Process2.restype = BOOL
+
+kernel32.GetCurrentProcess.argtypes = []
+kernel32.GetCurrentProcess.restype = HANDLE
 
 # Process enumeration and termination
 kernel32.CreateToolhelp32Snapshot.argtypes = [DWORD, DWORD]
@@ -220,6 +270,22 @@ def WaitNamedPipe(hNamedPipe: str, nTimeOut: int) -> bool:
     return bool(kernel32.WaitNamedPipeW(hNamedPipe, nTimeOut))
 
 
+def PeekNamedPipe(hNamedPipe: int) -> tuple[bool, int, int]:
+    """Peeks at a named pipe. Returns (success, bytes_read, total_bytes_avail)."""
+    bytes_read = DWORD()
+    total_bytes_avail = DWORD()
+    bytes_left_this_message = DWORD()
+    success = kernel32.PeekNamedPipe(
+        hNamedPipe,
+        None,
+        0,
+        byref(bytes_read),
+        byref(total_bytes_avail),
+        byref(bytes_left_this_message),
+    )
+    return bool(success), bytes_read.value, total_bytes_avail.value
+
+
 def CreateEvent(
     lpEventAttributes: int | None,
     bManualReset: bool,
@@ -279,6 +345,64 @@ def CreateFile(
     )
 
 
+def CreateMutex(lpMutexAttributes: int | None, bInitialOwner: bool, lpName: str) -> int:
+    return kernel32.CreateMutexW(lpMutexAttributes, bInitialOwner, lpName)
+
+
+def OpenMutex(dwDesiredAccess: int, bInheritHandle: bool, lpName: str) -> int:
+    return kernel32.OpenMutexW(dwDesiredAccess, bInheritHandle, lpName)
+
+
+def VirtualAllocEx(hProcess: int, lpAddress: int | None, dwSize: int, flAllocationType: int, flProtect: int) -> int:
+    return kernel32.VirtualAllocEx(hProcess, lpAddress, dwSize, flAllocationType, flProtect)
+
+
+def WriteProcessMemory(
+    hProcess: int,
+    lpBaseAddress: int,
+    lpBuffer: Array[c_char],
+    nSize: int,
+    lpNumberOfBytesWritten: CArgObject,
+) -> bool:
+    return bool(kernel32.WriteProcessMemory(hProcess, lpBaseAddress, lpBuffer, nSize, lpNumberOfBytesWritten))
+
+
+def GetProcAddress(hModule: int, lpProcName: bytes) -> int:
+    return kernel32.GetProcAddress(hModule, lpProcName)
+
+
+def CreateRemoteThread(
+    hProcess: int,
+    lpThreadAttributes: int | None,
+    dwStackSize: int,
+    lpStartAddress: int,
+    lpParameter: int,
+    dwCreationFlags: int,
+    lpThreadId: CArgObject | None,
+) -> int:
+    return kernel32.CreateRemoteThread(
+        hProcess,
+        lpThreadAttributes,
+        dwStackSize,
+        lpStartAddress,
+        lpParameter,
+        dwCreationFlags,
+        lpThreadId,
+    )
+
+
+def CreateToolhelp32Snapshot(dwFlags: int, th32ProcessID: int) -> int:
+    return kernel32.CreateToolhelp32Snapshot(dwFlags, th32ProcessID)
+
+
+def Process32FirstW(hSnapshot: int, lppe: CArgObject) -> bool:
+    return bool(kernel32.Process32FirstW(hSnapshot, lppe))
+
+
+def Process32NextW(hSnapshot: int, lppe: CArgObject) -> bool:
+    return bool(kernel32.Process32NextW(hSnapshot, lppe))
+
+
 def FormatMessage(
     dwFlags: int,
     lpSource: int | None,
@@ -309,3 +433,11 @@ def GetModuleHandle(lpModuleName: str | None) -> int:
 
 def GetLastError() -> int:
     return int(kernel32.GetLastError())
+
+
+def IsWow64Process2(hProcess: int, lpProcessMachine: CArgObject, lpNativeMachine: CArgObject | None) -> bool:
+    return bool(kernel32.IsWow64Process2(hProcess, lpProcessMachine, lpNativeMachine))
+
+
+def GetCurrentProcess() -> int:
+    return int(kernel32.GetCurrentProcess())

@@ -2,23 +2,14 @@
 
 import atexit
 import logging
-import os
 from ctypes import (
     POINTER,
     cast,
     windll,
 )
-from dataclasses import dataclass
-from pathlib import Path
-from uuid import UUID
 
-from PIL import Image
-from PIL.ImageFilter import SHARPEN
-from PIL.ImageQt import ImageQt
-from PyQt6.QtCore import QObject, QTimer, pyqtSignal
-from PyQt6.QtGui import QPixmap
+from PyQt6.QtCore import QObject, pyqtSignal
 from win32con import (
-    HWND_BROADCAST,
     HWND_TOPMOST,
     SWP_NOACTIVATE,
     SWP_NOMOVE,
@@ -33,34 +24,26 @@ from win32con import (
 )
 
 import core.utils.widgets.systray.utils as utils
-from core.bar_helper import AppBarManager
 from core.utils.widgets.systray.utils import (
+    IconData,
     NativeWindowEx,
-    array_to_str,
-    get_exe_path_from_hwnd,
+    find_real_tray_hwnd,
     pack_i32,
+    validate_icon_data,
 )
-from core.utils.win32.app_icons import hicon_to_image
 from core.utils.win32.bindings import (
     DefWindowProc,
     DestroyWindow,
-    FindWindowEx,
     IsWindow,
     PostMessage,
     RegisterWindowMessage,
     SendMessage,
-    SendNotifyMessage,
     SetTimer,
     SetWindowPos,
 )
 from core.utils.win32.bindings.user32 import SetProp
 from core.utils.win32.constants import (
     NIF_GUID,
-    NIF_ICON,
-    NIF_INFO,
-    NIF_MESSAGE,
-    NIF_STATE,
-    NIF_TIP,
     NIM_ADD,
     NIM_DELETE,
     NIM_MODIFY,
@@ -82,33 +65,10 @@ kernel32 = windll.kernel32
 WM_TASKBARCREATED = RegisterWindowMessage("TaskbarCreated")
 
 
-@dataclass
-class IconData:
-    """Data class for validated systray icon data"""
-
-    message_type: int = 0
-    hWnd: int = 0
-    uID: int = 0
-    guid: UUID | None = None
-    uFlags: int = 0
-    dwState: int = 0
-    dwStateMask: int = 0
-    hIcon: int = 0
-    szTip: str = ""
-    szInfo: str = ""
-    szInfoTitle: str = ""
-    dwInfoFlags: int = 0
-    uTimeout: int = 0
-    uCallbackMessage: int = 0
-    uVersion: int = 0
-    icon_image: QPixmap | None = None
-    exe: str = ""
-    exe_path: str = ""
-
-
 class SystrayMonitor(QObject):
     """Main class to handle systray message interception and forwarding"""
 
+    update_icons = pyqtSignal()
     icon_modified = pyqtSignal(IconData)
     icon_deleted = pyqtSignal(IconData)
 
@@ -135,6 +95,7 @@ class SystrayMonitor(QObject):
         # Set a timer to keep the window as a foreground window to keep receiving messages
         SetTimer(self.hwnd, 1, 100, None)
 
+        self.update_icons.emit()
         self.tray_monitor_window.start_message_loop()
 
     def __del__(self):
@@ -149,16 +110,6 @@ class SystrayMonitor(QObject):
                 self.tray_monitor_window.destroy()
             except Exception:
                 pass
-
-    @staticmethod
-    def send_taskbar_created():
-        """Send the taskbar created message to Windows"""
-        mgr = AppBarManager()
-        mgr.suppress()
-        taskbar_created_msg = RegisterWindowMessage("TaskbarCreated")
-        SendNotifyMessage(HWND_BROADCAST, taskbar_created_msg, 0, 0)
-        logger.debug(f"Sending TaskbarCreated message: {taskbar_created_msg}")
-        QTimer.singleShot(0, mgr.unsuppress)
 
     def set_taskbar_list_hwnd(self):
         """Set the TaskbandHWND prop to the Yasb systray window on TaskbarCreated message"""
@@ -204,7 +155,7 @@ class SystrayMonitor(QObject):
             tray_message = cast(copy_data.lpData, POINTER(SHELLTRAYDATA)).contents
             icon_data: NOTIFYICONDATA = tray_message.icon_data
             if tray_message.message_type in {NIM_ADD, NIM_MODIFY, NIM_SETVERSION}:
-                validated_data = self.validate_icon_data(icon_data)
+                validated_data = validate_icon_data(icon_data)
                 validated_data.message_type = tray_message.message_type
                 if not self._is_destroyed:
                     try:
@@ -244,67 +195,10 @@ class SystrayMonitor(QObject):
         """Forward messages to the real tray window"""
         if not self.real_tray_hwnd or not IsWindow(self.real_tray_hwnd):
             logger.debug("Finding real tray hwnd")
-            self.real_tray_hwnd = self.find_real_tray_hwnd(hwnd)
+            self.real_tray_hwnd = find_real_tray_hwnd(hwnd)
         if self.real_tray_hwnd:
             if msg in {WM_USER + 372}:  # Specific async tray messages
                 PostMessage(self.real_tray_hwnd, msg, wParam, lParam)
                 return DefWindowProc(hwnd, msg, wParam, lParam)
             return SendMessage(self.real_tray_hwnd, msg, wParam, lParam)
         return DefWindowProc(hwnd, msg, wParam, lParam)
-
-    def find_real_tray_hwnd(self, hwnd_ignore: int | None = None):
-        hwnd = 0
-        while True:
-            hwnd = FindWindowEx(0, hwnd, "Shell_TrayWnd", None)
-            if hwnd == 0:
-                break
-            if hwnd == hwnd_ignore:
-                continue
-            exe = get_exe_path_from_hwnd(hwnd)
-            if exe and os.path.basename(exe) == "explorer.exe":
-                return hwnd
-        return 0
-
-    def validate_icon_data(self, data: NOTIFYICONDATA) -> IconData:
-        """Validates and processes raw icon data"""
-        icon_data = IconData()
-        icon_data.hWnd = data.hWnd
-        icon_data.uID = data.uID
-        icon_data.uFlags = data.uFlags
-
-        exe_path = get_exe_path_from_hwnd(icon_data.hWnd)
-        if exe_path is not None:
-            icon_data.exe_path = exe_path
-            icon_data.exe = Path(exe_path).name.split(".")[0] if exe_path else ""
-
-        if 0 < data.anonymous.uVersion <= 4:
-            icon_data.uVersion = data.anonymous.uVersion
-
-        if data.uFlags & NIF_MESSAGE:
-            icon_data.uCallbackMessage = data.uCallbackMessage
-
-        if data.uFlags & NIF_ICON:
-            icon_data.hIcon = data.hIcon
-            icon_image = hicon_to_image(icon_data.hIcon)
-            if icon_image is not None:
-                if icon_image.size != (32, 32):  # Ensure we have consistent icon sizes
-                    icon_image = icon_image.resize((32, 32), Image.Resampling.LANCZOS).filter(SHARPEN)  # pyright: ignore [reportUnknownMemberType]
-                icon_image = QPixmap.fromImage(ImageQt(icon_image))
-            icon_data.icon_image = icon_image
-
-        if data.uFlags & NIF_TIP:
-            icon_data.szTip = array_to_str(data.szTip)
-
-        if data.uFlags & NIF_STATE:
-            icon_data.dwState = data.dwState
-            icon_data.dwStateMask = data.dwStateMask
-
-        if data.uFlags & NIF_GUID:
-            icon_data.guid = data.guidItem.to_uuid()
-
-        if data.uFlags & NIF_INFO:
-            icon_data.dwInfoFlags = data.dwInfoFlags
-            icon_data.szInfoTitle = array_to_str(data.szInfoTitle)
-            icon_data.szInfo = array_to_str(data.szInfo)
-
-        return icon_data
