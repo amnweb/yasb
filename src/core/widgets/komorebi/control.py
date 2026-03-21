@@ -131,6 +131,7 @@ class KomorebiControlWidget(BaseWidget):
             self.config.komorebi_menu.round_corners,
             self.config.komorebi_menu.round_corners_type,
             self.config.komorebi_menu.border_color,
+            animation_duration=self.config.komorebi_menu.animation_duration,
         )
         self.dialog.setProperty("class", "komorebi-control-menu")
 
