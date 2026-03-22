@@ -33,7 +33,6 @@ The Quick Launch widget provides a Spotlight style search launcher accessible fr
 | `round_corners_type` | string | `"normal"` | Corner rounding type (`"normal"` or `"small"`).                           |
 | `border_color`       | string | `"System"` | Border color of the popup (`"System"`, HEX value, or `"None"`).           |
 | `dark_mode`          | bool   | `true`     | Force dark mode colors for the popup (Windows 11).                        |
-| `screen`             | string | `"focus"`  | Which screen to show the popup on: `"focus"`, `"cursor"`, or `"primary"`. |
 
 #### Screen Modes
 

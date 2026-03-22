@@ -26,8 +26,7 @@ memory:
     update_interval: 5000
     callbacks:
       on_left: "toggle_label"
-      on_middle: "do_nothing"
-      on_right: "do_nothing"
+      on_right: "toggle_menu"
     memory_thresholds:
       low: 25
       medium: 50

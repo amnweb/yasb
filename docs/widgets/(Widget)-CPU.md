@@ -42,7 +42,8 @@ cpu:
       - "\u2588" # 80%+
     histogram_num_columns: 8
     callbacks:
-      on_right: "exec cmd /c Taskmgr"
+      on_left: "toggle_label"
+      on_right: "toggle_menu"
     label_shadow:
       enabled: true
       color: "black"
