@@ -19,6 +19,7 @@ The YASB CLI is a command line interface that allows you to interact with the YA
 - `set-channel` - Set the update channel (stable, dev).
 - `log` - Show the status bar logs in the terminal.
 - `reset` - Restore default config files and clear cache
+- `service` - Manage the YASB launcher service (install, start, stop, remove).
 - `help` - Show the help message.
 
 ## Options
@@ -75,6 +76,29 @@ yasbc toggle-bar
 To toggle the visibility of the status bar on a specific screen, use the following command:
 ```bash
 yasbc toggle-bar --screen <screen_name>
+```
+
+## Service
+The YASB launcher service runs as a Windows service and can automatically start YASB on boot without requiring a logged-in user session or Task Scheduler.
+
+> **Note:**
+> All `service` sub-commands require administrator privileges. Run your terminal as administrator.
+
+To install and start the service:
+```bash
+yasbc service install
+```
+To start the service manually (after it has been installed):
+```bash
+yasbc service start
+```
+To stop the service:
+```bash
+yasbc service stop
+```
+To remove (uninstall) the service:
+```bash
+yasbc service remove
 ```
 
 ## Switch Update Channel
