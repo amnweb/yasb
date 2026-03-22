@@ -1,9 +1,16 @@
+// clang-format off
 #include <windows.h>
+#include <commctrl.h>
+// clang-format on
+
+#pragma comment(lib, "comctl32.lib")
 
 #define WM_YASB_UNHOOK (WM_APP + 1)
+#define TRAY_SUBCLASS_ID 1337
 
 // Global state
-WNDPROC g_OldWndProc = NULL;
+HWND g_hTray = NULL;
+HHOOK g_hHook = NULL;
 HANDLE g_hPipe = INVALID_HANDLE_VALUE;
 HMODULE g_hModule = NULL;
 CRITICAL_SECTION g_PipeCS;
@@ -283,33 +290,19 @@ HWND FindRealSystray() {
     return 0;
 }
 
-LRESULT CALLBACK ManualSubclassProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
-    // Cache the old window proc locally in case we unhook below
-    WNDPROC oldProc = g_OldWndProc;
-
-    // Watchdog posts this message. Because it's posted (not sent), it is only
-    // dequeued by the top-level GetMessage loop AFTER all nested SendMessage
-    // dispatches have unwound — so no ManualSubclassProc frames remain on the
-    // stack when we process it.
+LRESULT CALLBACK TraySubclassProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass,
+                                  DWORD_PTR dwRefData) {
     if (uMsg == WM_YASB_UNHOOK) {
-        if (oldProc) {
-            SetWindowLongPtrW(hWnd, GWLP_WNDPROC, (LONG_PTR)oldProc);
-            g_OldWndProc = NULL;
-        }
-        // Signal the watchdog that unhook is complete and it's safe to unload
+        RemoveWindowSubclass(hWnd, TraySubclassProc, uIdSubclass);
         if (g_hUnhookDoneEvent) {
             SetEvent(g_hUnhookDoneEvent);
         }
         return 0;
     }
 
-    // Explorer is tearing down the tray window — restore the original wndproc
+    // Explorer is tearing down the tray window — remove our subclass
     if (uMsg == WM_NCDESTROY) {
-        if (oldProc) {
-            SetWindowLongPtrW(hWnd, GWLP_WNDPROC, (LONG_PTR)oldProc);
-            g_OldWndProc = NULL;
-        }
-        // Close the pipe so the Python side gets a broken-pipe signal
+        RemoveWindowSubclass(hWnd, TraySubclassProc, uIdSubclass);
         EnterCriticalSection(&g_PipeCS);
         if (g_hPipe != INVALID_HANDLE_VALUE) {
             CloseHandle(g_hPipe);
@@ -326,7 +319,23 @@ LRESULT CALLBACK ManualSubclassProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
         }
     }
 
-    return CallWindowProc(oldProc, hWnd, uMsg, wParam, lParam);
+    return DefSubclassProc(hWnd, uMsg, wParam, lParam);
+}
+
+LRESULT CALLBACK GetMsgProc(int nCode, WPARAM wParam, LPARAM lParam) {
+    if (nCode == HC_ACTION) {
+        MSG *pMsg = (MSG *)lParam;
+        if (pMsg->hwnd == g_hTray && pMsg->message == WM_NULL) {
+            if (SetWindowSubclass(g_hTray, TraySubclassProc, TRAY_SUBCLASS_ID, 0)) {
+                DebugOutput("[DLL] Successfully subclassed Shell_TrayWnd using SetWindowSubclass\n");
+            } else {
+                DebugOutput("[DLL] Failed to subclass Shell_TrayWnd\n");
+            }
+            UnhookWindowsHookEx(g_hHook);
+            g_hHook = NULL;
+        }
+    }
+    return CallNextHookEx(NULL, nCode, wParam, lParam);
 }
 
 // Monitors a named mutex held by the Python host process.
@@ -361,11 +370,10 @@ DWORD WINAPI WatchdogThread(LPVOID lpParam) {
     //    It is only dequeued when the UI thread returns to its top-level
     //    GetMessage loop — AFTER all nested SendMessage dispatches (autohide
     //    animations, etc.) have fully unwound. This guarantees no
-    //    ManualSubclassProc frames are on the stack when we process it.
-    HWND hTray = FindRealSystray();
-    if (hTray && g_OldWndProc) {
+    //    TraySubclassProc frames are on the stack when we process it.
+    if (g_hTray) {
         OutputDebugStringA("[DLL] Detach: PostMessage WM_YASB_UNHOOK...\n");
-        PostMessageW(hTray, WM_YASB_UNHOOK, 0, 0);
+        PostMessageW(g_hTray, WM_YASB_UNHOOK, 0, 0);
         // Wait for the UI thread to process the posted message and signal completion
         DWORD waitResult = WaitForSingleObject(g_hUnhookDoneEvent, 5000);
         if (waitResult == WAIT_OBJECT_0) {
@@ -374,7 +382,7 @@ DWORD WINAPI WatchdogThread(LPVOID lpParam) {
             OutputDebugStringA("[DLL] Detach: Unhook wait timed out!\n");
         }
     } else {
-        OutputDebugStringA("[DLL] Detach: No tray or wndproc to unhook.\n");
+        OutputDebugStringA("[DLL] Detach: No tray to unhook.\n");
     }
 
     // 2. Close the pipe
@@ -407,14 +415,15 @@ DWORD WINAPI InitThread(LPVOID lpParam) {
                           FILE_FLAG_OVERLAPPED, NULL);
     if (g_hPipe != INVALID_HANDLE_VALUE) {
         DebugOutput("[DLL] Pipeline connected.\n");
-        HWND hTray = FindRealSystray();
-        if (hTray) {
-            DWORD windowPid;
-            GetWindowThreadProcessId(hTray, &windowPid);
-            if (windowPid == GetCurrentProcessId()) {
-                g_OldWndProc = (WNDPROC)SetWindowLongPtrW(hTray, GWLP_WNDPROC, (LONG_PTR)ManualSubclassProc);
-                if (g_OldWndProc) {
-                    DebugOutput("[DLL] Successfully subclassed Shell_TrayWnd\n");
+        g_hTray = FindRealSystray();
+        if (g_hTray) {
+            DWORD threadId = GetWindowThreadProcessId(g_hTray, NULL);
+            if (threadId) {
+                // Set a hook to trigger subclassing on the tray's UI thread
+                g_hHook = SetWindowsHookEx(WH_GETMESSAGE, GetMsgProc, g_hModule, threadId);
+                if (g_hHook) {
+                    // Wake up the UI thread with a benign message to trigger the hook
+                    PostMessageW(g_hTray, WM_NULL, 0, 0);
                 }
             }
         }
