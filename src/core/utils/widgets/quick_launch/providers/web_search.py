@@ -92,6 +92,10 @@ class WebSearchProvider(BaseProvider):
         """Return engines with the preferred one first."""
         preferred = self.config.get("engine", "google")
         ordered: list[tuple[str, dict]] = []
+        custom_engines = self.config.get("custom_engines")
+        if custom_engines is not None:
+            for engine in custom_engines:
+                _ENGINES[engine["key"]] = engine
         for key, info in _ENGINES.items():
             if key == preferred:
                 ordered.insert(0, (key, info))
