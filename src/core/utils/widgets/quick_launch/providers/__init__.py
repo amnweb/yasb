@@ -3,6 +3,7 @@ from .bookmarks import *
 from .calculator import *
 from .clipboard_history import *
 from .color import *
+from .crypto import *
 from .currency import *
 from .dev_tools import *
 from .emoji import *
