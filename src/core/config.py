@@ -1,7 +1,6 @@
 import logging
 import os
 import re
-import shutil
 import sys
 from os import makedirs, path
 from pathlib import Path
@@ -13,19 +12,19 @@ from pydantic import ValidationError
 from yaml import safe_load
 from yaml.parser import ParserError
 
-import settings
+from core.defaults.config import get_default_config
+from core.defaults.styles import get_default_styles
 from core.utils.alert_dialog import raise_info_alert
 from core.utils.css_processor import CSSProcessor
 from core.utils.utilities import format_pydantic_errors_to_yaml
 from core.validation.config import YasbConfig
+from settings import DEFAULT_CONFIG_DIRECTORY, DEFAULT_CONFIG_FILENAME, DEFAULT_STYLES_FILENAME, GITHUB_URL, IS_FROZEN
 
-SRC_CONFIGURATION_DIR = os.path.dirname(sys.executable) if getattr(sys, "frozen", False) else os.path.dirname(argv[0])
-HOME_CONFIGURATION_DIR = path.join(Path.home(), settings.DEFAULT_CONFIG_DIRECTORY)
-HOME_STYLES_PATH = path.normpath(path.join(HOME_CONFIGURATION_DIR, settings.DEFAULT_STYLES_FILENAME))
-HOME_CONFIG_PATH = path.normpath(path.join(HOME_CONFIGURATION_DIR, settings.DEFAULT_CONFIG_FILENAME))
-DEFAULT_STYLES_PATH = path.normpath(path.join(SRC_CONFIGURATION_DIR, settings.DEFAULT_STYLES_FILENAME))
-DEFAULT_CONFIG_PATH = path.normpath(path.join(SRC_CONFIGURATION_DIR, settings.DEFAULT_CONFIG_FILENAME))
-GITHUB_ISSUES_URL = f"{settings.GITHUB_URL}/issues"
+SRC_CONFIGURATION_DIR = os.path.dirname(sys.executable) if IS_FROZEN else os.path.dirname(argv[0])
+HOME_CONFIGURATION_DIR = path.join(Path.home(), DEFAULT_CONFIG_DIRECTORY)
+HOME_STYLES_PATH = path.normpath(path.join(HOME_CONFIGURATION_DIR, DEFAULT_STYLES_FILENAME))
+HOME_CONFIG_PATH = path.normpath(path.join(HOME_CONFIGURATION_DIR, DEFAULT_CONFIG_FILENAME))
+GITHUB_ISSUES_URL = f"{GITHUB_URL}/issues"
 
 
 class ConfigValidationError(TypeError):
@@ -55,11 +54,12 @@ def get_config_path() -> str:
         # Create default config file if it doesn't exist
         if not path.isdir(HOME_CONFIGURATION_DIR):
             makedirs(HOME_CONFIGURATION_DIR)
-        shutil.copy2(DEFAULT_CONFIG_PATH, HOME_CONFIG_PATH)
+        with open(HOME_CONFIG_PATH, "w", encoding="utf-8") as f:
+            f.write(get_default_config())
         logging.info(f"Created default config file at {HOME_CONFIG_PATH}")
         return HOME_CONFIG_PATH
     else:
-        return DEFAULT_CONFIG_PATH
+        return HOME_CONFIG_PATH
 
 
 def get_stylesheet_path() -> str:
@@ -69,11 +69,12 @@ def get_stylesheet_path() -> str:
         # Create default stylesheet if it doesn't exist
         if not path.isdir(HOME_CONFIGURATION_DIR):
             makedirs(HOME_CONFIGURATION_DIR)
-        shutil.copy2(DEFAULT_STYLES_PATH, HOME_STYLES_PATH)
+        with open(HOME_STYLES_PATH, "w", encoding="utf-8") as f:
+            f.write(get_default_styles())
         logging.info(f"Created default stylesheet at {HOME_STYLES_PATH}")
         return HOME_STYLES_PATH
     else:
-        return DEFAULT_STYLES_PATH
+        return HOME_STYLES_PATH
 
 
 def parse_env(obj):
