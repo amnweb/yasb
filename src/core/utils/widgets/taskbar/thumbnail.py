@@ -23,7 +23,7 @@ from core.utils.win32.constants import (
 from core.utils.win32.structs import DWM_THUMBNAIL_PROPERTIES, RECT, SIZE
 from core.utils.win32.window_actions import close_application
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("taskbar_thumbnail")
 
 
 class ThumbnailHost(QWidget):

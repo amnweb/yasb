@@ -11,7 +11,6 @@ from core.utils.widgets.traffic.connection_monitor import InternetChecker
 from core.utils.widgets.traffic.traffic_manager import TrafficDataManager
 from core.validation.widgets.yasb.traffic import TrafficWidgetConfig
 from core.widgets.base import BaseWidget
-from settings import DEBUG
 
 
 class TrafficWidget(BaseWidget):
@@ -70,8 +69,7 @@ class TrafficWidget(BaseWidget):
             self.internet_checker.connection_changed.connect(self._on_connection_changed)
 
             self._is_internet_connected = True
-            if DEBUG:
-                logging.info(f"Internet checker initialized for interface {self.config.interface}")
+            logging.debug("Internet checker initialized for interface %s", self.config.interface)
 
         except Exception as e:
             logging.error(f"Failed to initialize InternetChecker for interface {self.config.interface}: {e}")

@@ -14,14 +14,8 @@ from core.utils.win32.app_icons import get_window_icon
 from core.utils.win32.utilities import get_monitor_hwnd, get_process_info
 from core.validation.widgets.glazewm.workspaces import GlazewmWorkspacesConfig
 from core.widgets.base import BaseWidget
-from settings import DEBUG
 
 logger = logging.getLogger("glazewm_workspaces")
-
-if DEBUG:
-    logger.setLevel(logging.DEBUG)
-else:
-    logger.setLevel(logging.CRITICAL)
 
 
 class WorkspaceStatus(StrEnum):
@@ -304,8 +298,7 @@ class GlazewmWorkspaceButtonWithIcons(QFrame):
                     return None
 
         except Exception:
-            if DEBUG:
-                logging.exception(f"Failed to get icons for window with HWND {hwnd}")
+            logging.debug("Failed to get icons for window with HWND %s", hwnd, exc_info=True)
             return None
 
     def _update_icons(self):

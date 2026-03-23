@@ -19,7 +19,7 @@ except Exception:
     get_virtual_desktops = None
     set_wallpaper_for_all_desktops = None
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("windows_desktop_service")
 
 SKIP_WINDOW_CLASSES = frozenset(
     {

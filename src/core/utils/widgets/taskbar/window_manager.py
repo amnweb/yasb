@@ -20,7 +20,7 @@ from core.utils.win32.bindings import user32 as _user32_raw
 from core.utils.win32.bindings.ole32 import ole32
 from core.utils.win32.structs import MSG
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("taskbar_window_manager")
 logger.setLevel(logging.INFO)
 # Global shared instance
 _shared_task_manager = None

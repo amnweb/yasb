@@ -146,6 +146,7 @@ class LogPipeServer:
 
             root_logger = logging.getLogger()
             handler = PipeLogHandler(handle)
+            handler.setLevel(root_logger.handlers[0].level if root_logger.handlers else logging.INFO)
             formatter = ColoredFormatter(CLI_LOG_FORMAT, datefmt=CLI_LOG_DATETIME)
             handler.setFormatter(formatter)
             root_logger.addHandler(handler)

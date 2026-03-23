@@ -91,9 +91,17 @@ def init_logger():
     file_handler = RotatingFileHandler(
         join(get_config_dir(), DEFAULT_LOG_FILENAME), maxBytes=1024 * 1024, backupCount=5, encoding="utf-8"
     )
+    file_handler.setLevel(logging.INFO)
     file_handler.setFormatter(logging.Formatter(LOG_FORMAT, datefmt=LOG_DATETIME))
     # Configure logging with colors
     console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
     console_handler.setFormatter(ColoredFormatter(CONSOLE_FORMAT, datefmt=CONSOLE_DATETIME))
     logging.basicConfig(level=logging.DEBUG, handlers=[file_handler, console_handler], encoding="utf-8")
     logging.info(f"{APP_NAME} v{BUILD_VERSION}")
+
+
+def enable_debug_logging():
+    """Lower all root-logger handlers to DEBUG level."""
+    for handler in logging.root.handlers:
+        handler.setLevel(logging.DEBUG)

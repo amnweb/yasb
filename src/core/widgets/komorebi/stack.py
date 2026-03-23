@@ -18,7 +18,6 @@ from core.utils.win32.utilities import get_monitor_hwnd
 from core.utils.win32.window_actions import close_application
 from core.validation.widgets.komorebi.stack import StackConfig
 from core.widgets.base import BaseWidget
-from settings import DEBUG
 
 try:
     from core.utils.widgets.komorebi.event_listener import KomorebiEventListener
@@ -561,6 +560,7 @@ class StackWidget(BaseWidget):
                     return pixmap
 
         except Exception:
-            if DEBUG:
-                logging.exception(f"Failed to get icons for window with HWND {hwnd if hwnd is not None else 'unknown'}")
+            logging.debug(
+                "Failed to get icons for window with HWND %s", hwnd if hwnd is not None else "unknown", exc_info=True
+            )
             return None

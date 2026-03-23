@@ -16,7 +16,6 @@ from core.utils.win32.app_icons import get_window_icon
 from core.utils.win32.utilities import get_monitor_hwnd, get_process_info
 from core.validation.widgets.komorebi.workspaces import KomorebiWorkspacesConfig
 from core.widgets.base import BaseWidget
-from settings import DEBUG
 
 try:
     from core.utils.widgets.komorebi.event_listener import KomorebiEventListener
@@ -680,6 +679,5 @@ class WorkspaceWidget(BaseWidget):
             else:
                 return None
         except Exception:
-            if DEBUG:
-                logging.exception(f"Failed to get icons for window with HWND {hwnd}")
+            logging.debug("Failed to get icons for window with HWND %s", hwnd, exc_info=True)
             return None

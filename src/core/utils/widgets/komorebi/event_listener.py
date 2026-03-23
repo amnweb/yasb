@@ -11,7 +11,6 @@ from PyQt6.QtCore import QThread
 from core.event_enums import KomorebiEvent
 from core.event_service import EventService
 from core.utils.widgets.komorebi.client import KomorebiClient
-from settings import DEBUG
 
 KOMOREBI_PIPE_BUFF_SIZE = 64 * 1024
 KOMOREBI_PIPE_NAME = "yasb"
@@ -124,11 +123,10 @@ class KomorebiEventListener(QThread):
             self.event_service.emit_event(KomorebiEvent[event["type"]], event, state)
 
     def _wait_until_komorebi_online(self):
-        if DEBUG:
-            logging.info(f"Waiting for Komorebi to subscribe to named pipe {self.pipe_name}")
+        logging.debug("Waiting for Komorebi to subscribe to named pipe %s", self.pipe_name)
         stderr, proc = self._komorebic.wait_until_subscribed_to_pipe(self.pipe_name)
 
-        if stderr and DEBUG:
+        if stderr:
             stderr_str = " ".join(stderr.decode("utf-8").replace("\n", " ").replace("\r", " ").split())
 
             if "(os error 10061)" in stderr_str:

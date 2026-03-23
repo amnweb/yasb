@@ -11,7 +11,6 @@ from PyQt6.QtCore import QObject, QTimer, pyqtSignal
 
 from core.event_service import EventService
 from core.utils.win32.bindings.shell32 import IDesktopWallpaper
-from settings import DEBUG
 
 
 class WallpaperManager(QObject):
@@ -143,8 +142,7 @@ class WallpaperManager(QObject):
         if self._run_after:
             for command in self._run_after:
                 formatted_command = command.replace("{image}", f'"{new_wallpaper}"')
-                if DEBUG:
-                    logging.debug(f"Running command: {formatted_command}")
+                logging.debug("Running command: %s", formatted_command)
                 result = subprocess.run(
                     formatted_command, shell=True, capture_output=True, text=True, encoding="utf-8", errors="replace"
                 )
