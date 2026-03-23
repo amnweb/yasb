@@ -43,8 +43,6 @@ build_options = {
         ("core/utils/widgets/quick_launch/providers/resources/Everything64.dll", "lib/Everything64.dll"),
         (f"core/utils/widgets/systray/hook/{hook_dll_name}", f"lib/{hook_dll_name}"),
         ("core/utils/widgets/quick_launch/providers/resources/emoji.json", "lib/emoji.json"),
-        ("config.yaml", "config.yaml"),
-        ("styles.css", "styles.css"),
     ],
 }
 
