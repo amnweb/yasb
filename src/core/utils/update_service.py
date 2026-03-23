@@ -11,7 +11,6 @@ import logging
 import platform
 import re
 import ssl
-import sys
 import threading
 import time
 import urllib.error
@@ -22,7 +21,7 @@ from typing import Optional
 import certifi
 
 from core.utils.utilities import ToastNotifier, app_data_path, get_app_identifier, get_architecture
-from settings import APP_ID, BUILD_VERSION, RELEASE_CHANNEL, SCRIPT_PATH
+from settings import APP_ID, BUILD_VERSION, IS_FROZEN, RELEASE_CHANNEL, SCRIPT_PATH
 
 # GitHub API configuration
 GITHUB_API_URL = "https://api.github.com/repos/amnweb/yasb/releases/latest"
@@ -355,12 +354,11 @@ class UpdateService:
             True if updates are supported, False otherwise
         """
 
-        is_forzen = getattr(sys, "frozen", False)
         is_installed = get_app_identifier() == APP_ID
         is_arch_supported = ARCHITECTURE is not None
         is_pr_build = RELEASE_CHANNEL.startswith("pr-")
 
-        return is_installed and is_arch_supported and is_forzen and (not is_pr_build)
+        return is_installed and is_arch_supported and IS_FROZEN and (not is_pr_build)
 
 
 def get_update_service() -> UpdateService:

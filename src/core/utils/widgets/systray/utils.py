@@ -61,6 +61,7 @@ from core.utils.win32.constants import (
 )
 from core.utils.win32.structs import NOTIFYICONDATA, PROCESSENTRY32, WNDCLASS, WNDPROC
 from core.utils.win32.utilities import get_windows_host_arch
+from settings import IS_FROZEN
 
 logger = logging.getLogger("systray_widget")
 
@@ -303,7 +304,7 @@ def get_dll_path() -> str:
         raise Exception("Unsupported architecture")
 
     # Check if we're running in a frozen environment
-    if getattr(sys, "frozen", False):
+    if IS_FROZEN:
         dll_path = os.path.join(os.path.dirname(sys.executable), "lib", dll_name)
     else:
         dll_path = os.path.join(os.path.dirname(__file__), "hook", dll_name)

@@ -73,10 +73,9 @@ from winmica import BackdropType, EnableMica, is_mica_supported
 from core.ui.color_tokens import BUTTON_COLOR_TOKENS
 from core.ui.style import apply_button_style, is_dark_palette
 from core.utils.utilities import is_windows_10
+from settings import IS_FROZEN
 
-SCRIPT_PATH = (
-    os.path.dirname(sys.executable) if getattr(sys, "frozen", False) else os.path.dirname(os.path.abspath(__file__))
-)
+SCRIPT_PATH = os.path.dirname(sys.executable) if IS_FROZEN else os.path.dirname(os.path.abspath(__file__))
 UI_FONT_FAMILIES = ["Segoe UI Variable Text", "Segoe UI"]
 UI_FONT_CSS = "'Segoe UI Variable Text', 'Segoe UI'"
 
