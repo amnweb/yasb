@@ -30,7 +30,6 @@ from core.utils.win32.window_actions import (
 )
 from core.validation.widgets.yasb.taskbar import TaskbarConfig
 from core.widgets.base import BaseWidget
-from settings import DEBUG
 
 try:
     from core.utils.widgets.taskbar.window_manager import connect_taskbar
@@ -1862,8 +1861,7 @@ class TaskbarWidget(BaseWidget):
             return pixmap
 
         except Exception:
-            if DEBUG:
-                logging.exception(f"Failed to get icons for window with HWND {hwnd} ")
+            logging.debug("Failed to get icons for window with HWND %s", hwnd, exc_info=True)
             return None
 
     def _perform_action(self, action: str) -> None:
@@ -1950,11 +1948,9 @@ class TaskbarWidget(BaseWidget):
             except Exception:
                 try:
                     win32gui.ShowWindow(hwnd, win32con.SW_RESTORE if win32gui.IsIconic(hwnd) else win32con.SW_SHOW)
-                    if DEBUG:
-                        logging.warning(f"Could not bring window {hwnd} to foreground: {e}")
+                    logging.debug("Could not bring window %s to foreground: %s", hwnd, e)
                 except Exception as final_e:
-                    if DEBUG:
-                        logging.error(f"Failed to show window {hwnd}: {final_e}")
+                    logging.debug("Failed to show window %s: %s", hwnd, final_e)
 
     def _launch_pinned_app(self, unique_id_or_hwnd: int | str, extra_arguments: str = "") -> None:
         """Launch a pinned application using PinManager with optional extra arguments."""

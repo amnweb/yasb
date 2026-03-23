@@ -16,7 +16,6 @@ from core.utils.utilities import add_shadow, build_widget_label
 from core.utils.widgets.animation_manager import AnimationManager
 from core.validation.widgets.yasb.bluetooth import BluetoothConfig
 from core.widgets.base import BaseWidget
-from settings import DEBUG
 
 
 def get_bluetooth_api():
@@ -218,8 +217,7 @@ class BluetoothWidget(BaseWidget):
         try:
             self.bt_api = get_bluetooth_api()
         except RuntimeError as e:
-            if DEBUG:
-                logging.error(f"Bluetooth support unavailable: {e}")
+            logging.debug("Bluetooth support unavailable: %s", e)
             self.bt_api = None
         self.current_status = None
         self.bluetooth_icon = None
@@ -329,8 +327,8 @@ class BluetoothWidget(BaseWidget):
 
     def _update_state(self, status):
         self.current_status = status
-        if DEBUG and self.current_status != "Bluetooth is disabled.":
-            logging.info(f"Bluetooth: {self.current_status}")
+        if self.current_status != "Bluetooth is disabled.":
+            logging.debug("Bluetooth: %s", self.current_status)
 
         if not self.current_status:  # Handle None case
             return self.config.icons.bluetooth_off

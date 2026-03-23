@@ -38,7 +38,6 @@ from core.utils.widgets.taskbar.shortcut_resolver import (
     normalized_targets,
 )
 from core.utils.win32.utilities import get_app_name_from_aumid
-from settings import DEBUG
 
 
 class TaskbarSignalBus(QObject):
@@ -421,8 +420,7 @@ class PinManager:
                         if len(parts) > 1:
                             cmdline_args = parts[1]
             except Exception as exc:
-                if DEBUG:
-                    logging.debug(f"Could not get command line args: {exc}")
+                logging.debug("Could not get command line args: %s", exc)
 
         app_name: str | None = None
 

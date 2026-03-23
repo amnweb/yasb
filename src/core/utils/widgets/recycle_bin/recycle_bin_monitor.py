@@ -29,7 +29,6 @@ from core.utils.win32.constants import (
     KnownCLSID,
 )
 from core.utils.win32.structs import SHQUERYRBINFO
-from settings import DEBUG
 
 
 class BinInfoWorker(QThread):
@@ -75,13 +74,12 @@ class BinInfoWorker(QThread):
         if result == S_OK:
             return {"size_bytes": info.i64Size, "num_items": info.i64NumItems}
 
-        if DEBUG:
-            error_code = result & 0xFFFF  # Equivalent to HRESULT_CODE macro
-            try:
-                error_message = str(ctypes.WinError(error_code))
-            except Exception:
-                error_message = f"HRESULT 0x{result & 0xFFFFFFFF:08X}"
-            logging.error("SHQueryRecycleBinW failed: %s", error_message)
+        error_code = result & 0xFFFF  # Equivalent to HRESULT_CODE macro
+        try:
+            error_message = str(ctypes.WinError(error_code))
+        except Exception:
+            error_message = f"HRESULT 0x{result & 0xFFFFFFFF:08X}"
+        logging.debug("SHQueryRecycleBinW failed: %s", error_message)
 
         return {"size_bytes": 0, "num_items": 0}
 
@@ -145,12 +143,10 @@ class RecycleBinMonitor(QObject):
 
         # Start monitoring if this is the first subscriber
         if subscriber_count == 1 and not self._is_monitoring:
-            if DEBUG:
-                logging.debug(f"RecycleBinMonitor first subscriber {subscriber_id}, starting monitoring")
+            logging.debug("RecycleBinMonitor first subscriber %s, starting monitoring", subscriber_id)
             self.start_monitoring()
         else:
-            if DEBUG:
-                logging.debug(f"RecycleBinMonitor subscriber {subscriber_id} added (total: {subscriber_count})")
+            logging.debug("RecycleBinMonitor subscriber %s added (total: %d)", subscriber_id, subscriber_count)
 
         return True
 
@@ -166,12 +162,10 @@ class RecycleBinMonitor(QObject):
 
         # Stop monitoring if no more subscribers
         if subscriber_count == 0 and self._is_monitoring:
-            if DEBUG:
-                logging.debug(f"RecycleBinMonitor last subscriber {subscriber_id} removed (stopping monitoring)")
+            logging.debug("RecycleBinMonitor last subscriber %s removed (stopping monitoring)", subscriber_id)
             self.stop_monitoring()
         else:
-            if DEBUG:
-                logging.debug(f"RecycleBinMonitor subscriber {subscriber_id} removed (remaining: {subscriber_count})")
+            logging.debug("RecycleBinMonitor subscriber %s removed (remaining: %d)", subscriber_id, subscriber_count)
 
     def start_monitoring(self):
         """Start monitoring the recycle bin for changes"""

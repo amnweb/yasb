@@ -6,7 +6,6 @@ from typing import Any
 from PyQt6.QtCore import QObject, pyqtSignal
 
 from core.event_enums import Event
-from settings import DEBUG
 
 
 @functools.lru_cache()
@@ -52,8 +51,7 @@ class EventService(QObject):
                 try:
                     event_signal.emit(*args)
                 except Exception:
-                    if DEBUG:
-                        logging.debug(f"Failed to emit signal {event_signal.__str__()}. Removing link to {event_type}.")
+                    logging.debug("Failed to emit signal %s. Removing link to %s.", event_signal, event_type)
                     with self._mutex:
                         if event_signal in event_signals:
                             event_signals.remove(event_signal)

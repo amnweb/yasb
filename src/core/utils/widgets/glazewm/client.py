@@ -8,14 +8,7 @@ from PyQt6.QtCore import QObject, QTimer, QUrl, pyqtSignal
 from PyQt6.QtNetwork import QAbstractSocket
 from PyQt6.QtWebSockets import QWebSocket
 
-from settings import DEBUG
-
 logger = logging.getLogger("glazewm_client")
-
-if DEBUG:
-    logger.setLevel(logging.DEBUG)
-else:
-    logger.setLevel(logging.CRITICAL)
 
 
 @dataclass
