@@ -76,6 +76,15 @@ class FileSearchProviderConfig(CustomBaseModel):
     show_preview: bool = False
 
 
+class CryptoProviderConfig(CustomBaseModel):
+    enabled: bool = False
+    prefix: str = "crypto"
+    priority: int = 0
+    pairs: list[str] = ["BTCUSDT"]
+    round: int = 2
+    open_url: bool = False
+
+
 class CurrencyProviderConfig(CustomBaseModel):
     enabled: bool = False
     prefix: str = "$"
@@ -202,6 +211,7 @@ class QuickLaunchProvidersConfig(CustomBaseModel):
     calculator: CalculatorProviderConfig = CalculatorProviderConfig()
     clipboard_history: ClipboardHistoryProviderConfig = ClipboardHistoryProviderConfig()
     color: ColorProviderConfig = ColorProviderConfig()
+    crypto: CryptoProviderConfig = CryptoProviderConfig()
     currency: CurrencyProviderConfig = CurrencyProviderConfig()
     dev_tools: DevToolsProviderConfig = DevToolsProviderConfig()
     emoji: EmojiProviderConfig = EmojiProviderConfig()
