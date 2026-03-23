@@ -508,14 +508,14 @@ def get_app_identifier():
     import winreg
     from pathlib import Path
 
-    from settings import APP_ID
+    from settings import APP_ID, IS_FROZEN
 
     try:
         key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, f"SOFTWARE\\Classes\\AppUserModelId\\{APP_ID}")
         winreg.CloseKey(key)
         return APP_ID
     except:
-        if getattr(sys, "frozen", False):
+        if IS_FROZEN:
             # Check if YASB is installed via Scoop and if so, return the path to the executable
             # This is a workaround for the issue where the registry key doesn't exist to return the correct App name and icon
             scoop_shortcut = os.path.join(

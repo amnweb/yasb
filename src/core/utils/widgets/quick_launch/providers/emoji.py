@@ -15,7 +15,9 @@ from core.utils.widgets.quick_launch.base_provider import (
 from core.utils.widgets.quick_launch.providers.resources.icons import ICON_EMOJI
 
 _EMOJI_DATA: list[dict] | None = None
-if getattr(sys, "frozen", False):
+from settings import IS_FROZEN
+
+if IS_FROZEN:
     _DATA_FILE = os.path.join(os.path.dirname(sys.executable), "lib", "emoji.json")
 else:
     _DATA_FILE = os.path.join(os.path.dirname(__file__), "resources", "emoji.json")

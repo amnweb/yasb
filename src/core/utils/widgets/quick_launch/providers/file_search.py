@@ -113,7 +113,9 @@ EVERYTHING_OK = 0
 EVERYTHING_ERROR_IPC = 2
 
 
-if getattr(sys, "frozen", False):
+from settings import IS_FROZEN
+
+if IS_FROZEN:
     _BUNDLED_DLL = os.path.join(os.path.dirname(sys.executable), "lib", "Everything64.dll")
 else:
     _BUNDLED_DLL = os.path.join(os.path.dirname(__file__), "resources", "Everything64.dll")
