@@ -3,8 +3,6 @@ import os
 import re
 import sys
 from os import makedirs, path
-from pathlib import Path
-from sys import argv
 from typing import Any, cast
 from xml.dom import SyntaxErr
 
@@ -18,10 +16,9 @@ from core.utils.alert_dialog import raise_info_alert
 from core.utils.css_processor import CSSProcessor
 from core.utils.utilities import format_pydantic_errors_to_yaml
 from core.validation.config import YasbConfig
-from settings import DEFAULT_CONFIG_DIRECTORY, DEFAULT_CONFIG_FILENAME, DEFAULT_STYLES_FILENAME, GITHUB_URL, IS_FROZEN
+from settings import DEFAULT_CONFIG_DIRECTORY, DEFAULT_CONFIG_FILENAME, DEFAULT_STYLES_FILENAME, GITHUB_URL
 
-SRC_CONFIGURATION_DIR = os.path.dirname(sys.executable) if IS_FROZEN else os.path.dirname(argv[0])
-HOME_CONFIGURATION_DIR = path.join(Path.home(), DEFAULT_CONFIG_DIRECTORY)
+HOME_CONFIGURATION_DIR = DEFAULT_CONFIG_DIRECTORY
 HOME_STYLES_PATH = path.normpath(path.join(HOME_CONFIGURATION_DIR, DEFAULT_STYLES_FILENAME))
 HOME_CONFIG_PATH = path.normpath(path.join(HOME_CONFIGURATION_DIR, DEFAULT_CONFIG_FILENAME))
 GITHUB_ISSUES_URL = f"{GITHUB_URL}/issues"
@@ -38,13 +35,12 @@ class ConfigValidationError(TypeError):
 def get_config_dir() -> str:
     if path.isdir(HOME_CONFIGURATION_DIR):
         return HOME_CONFIGURATION_DIR
-    else:
-        try:
-            makedirs(HOME_CONFIGURATION_DIR)
-            return HOME_CONFIGURATION_DIR
-        except OSError:
-            logging.error(f"Failed to create configuration directory at {HOME_CONFIGURATION_DIR}.")
-            return SRC_CONFIGURATION_DIR
+    try:
+        makedirs(HOME_CONFIGURATION_DIR)
+        return HOME_CONFIGURATION_DIR
+    except OSError:
+        logging.error(f"Failed to create configuration directory at {HOME_CONFIGURATION_DIR}.")
+        return HOME_CONFIGURATION_DIR
 
 
 def get_config_path() -> str:

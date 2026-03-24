@@ -62,8 +62,8 @@ choco install yasb
   - `pip install .` (for regular installation)
   - `pip install -e .[dev]` (for development installation)
 - Start the application:
-  - run `python src/main.py` in your terminal (or click [yasb.vbs](src/yasb.vbs))
-  - Configure [styles.css](src/styles.css) and [config.yaml](src/config.yaml) to your liking.
+  - run `python src/main.py`
+  - Configure styles.css and config.yaml to your liking.
 
 
 ## Demo YASB
@@ -77,10 +77,6 @@ for more themes visit [yasb-themes](https://github.com/amnweb/yasb-themes)
 
 https://github.com/user-attachments/assets/aab8d8e8-248f-46a1-919c-9b0601236ac1
 
-
-
-> [!NOTE]  
-> This repository is updated on a regular basis, when you update files, always check [styles.css](src/styles.css) and [config.yaml](src/config.yaml) for new features and changes; otherwise, your config can be broken.
 
 
 ## List of currently available widgets in YASB.

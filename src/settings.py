@@ -14,7 +14,7 @@ BUILD_VERSION = "1.9.1"
 CLI_VERSION = "1.1.6"
 RELEASE_CHANNEL = "stable"
 # Configuration Settings
-DEFAULT_CONFIG_DIRECTORY = os.getenv("YASB_CONFIG_HOME", ".config\\yasb")
+DEFAULT_CONFIG_DIRECTORY = os.getenv("YASB_CONFIG_HOME") or os.path.join(os.path.expanduser("~"), ".config", "yasb")
 DEFAULT_STYLES_FILENAME = "styles.css"
 DEFAULT_CONFIG_FILENAME = "config.yaml"
 DEFAULT_LOG_FILENAME = "yasb.log"

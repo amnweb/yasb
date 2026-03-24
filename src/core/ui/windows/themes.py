@@ -73,7 +73,7 @@ from winmica import BackdropType, EnableMica, is_mica_supported
 from core.ui.color_tokens import BUTTON_COLOR_TOKENS
 from core.ui.style import apply_button_style, is_dark_palette
 from core.utils.utilities import is_windows_10
-from settings import IS_FROZEN
+from settings import DEFAULT_CONFIG_DIRECTORY, IS_FROZEN
 
 SCRIPT_PATH = os.path.dirname(sys.executable) if IS_FROZEN else os.path.dirname(os.path.abspath(__file__))
 UI_FONT_FAMILIES = ["Segoe UI Variable Text", "Segoe UI"]
@@ -208,10 +208,6 @@ def _run_yasbc(cmd: str):
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )
-
-
-def _config_home() -> str:
-    return os.getenv("YASB_CONFIG_HOME") or os.path.join(os.path.expanduser("~"), ".config", "yasb")
 
 
 def _make_btn(text: str, variant: str, width: int = 0, slot=None) -> QPushButton:
@@ -1449,7 +1445,7 @@ class ThemeDetailPanel(QWidget):
             _run_yasbc("stop")
             tid = self.theme_data["id"]
             base_urls = [url.format(theme_id=tid) for url in DEFAULT_THEME_INSTALL_URLS]
-            home = _config_home()
+            home = DEFAULT_CONFIG_DIRECTORY
             config_path, styles_path = os.path.join(home, "config.yaml"), os.path.join(home, "styles.css")
             os.makedirs(home, exist_ok=True)
             ctx = ssl.create_default_context(cafile=certifi.where())
@@ -1755,7 +1751,7 @@ class ThemeViewer(QMainWindow):
 
     @staticmethod
     def _config_paths() -> tuple[str, str, str, str]:
-        home = _config_home()
+        home = DEFAULT_CONFIG_DIRECTORY
         return (
             os.path.join(home, "config.yaml"),
             os.path.join(home, "styles.css"),
