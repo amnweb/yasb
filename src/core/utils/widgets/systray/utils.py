@@ -5,6 +5,7 @@ import ctypes as ct
 import logging
 import os
 import sys
+from collections.abc import Callable
 from ctypes import GetLastError, byref, sizeof, windll
 from ctypes.wintypes import (
     DWORD,
@@ -14,7 +15,6 @@ from ctypes.wintypes import (
 )
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable
 from uuid import UUID
 
 from PIL import Image
@@ -152,7 +152,7 @@ class NativeWindowEx:
 
     def destroy(self):
         if self.hwnd != 0:
-            logger.debug(f"Destroying window {self.hwnd}")
+            logger.debug("Destroying window %s", self.hwnd)
             PostMessage(self.hwnd, WM_CLOSE, 0, 0)
             self.hwnd = 0
 
@@ -180,7 +180,7 @@ def get_exe_path_from_hwnd(hwnd: int) -> str | None:
     # Open process to get module handle
     h_process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, process_id.value)
     if not h_process:
-        logger.debug(f"Could not open process ID {process_id.value}. Err: {GetLastError()}")
+        logger.debug("Could not open process ID %s. Err: %s", process_id.value, GetLastError())
         return None
 
     try:

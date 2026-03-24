@@ -89,9 +89,9 @@ class ApplicationsWidget(BaseWidget):
                         cmd_args = data.split()
                     subprocess.Popen(cmd_args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, shell=True)
                 except Exception as e:
-                    logging.error(f"Error starting app: {str(e)}")
+                    logging.error("Error starting app: %s", e)
         except Exception as e:
-            logging.error(f'Exception occurred: {str(e)} "{data}"')
+            logging.error('Exception occurred: %s "%s"', e, data)
 
 
 class ClickableLabel(QLabel):

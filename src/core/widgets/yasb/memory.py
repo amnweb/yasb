@@ -21,7 +21,7 @@ from core.widgets.base import BaseWidget
 class MemoryWidget(BaseWidget):
     validation_schema = MemoryConfig
 
-    _instances: list["MemoryWidget"] = []
+    _instances: list[MemoryWidget] = []
     _worker: MemoryWorker | None = None
 
     def __init__(self, config: MemoryConfig):

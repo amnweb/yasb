@@ -62,7 +62,7 @@ class ImageProcessWorker(QObject):
 
             self.success_signal.emit(self.placeholder_path, attachment)
         except Exception as e:
-            logging.exception(f"Failed to process image: {e}")
+            logging.exception("Failed to process image: %s", e)
             self.error_signal.emit(self.placeholder_path, str(e))
         finally:
             self.finished_signal.emit()
@@ -286,7 +286,7 @@ class AttachmentManager:
         try:
             raw = path.read_bytes()
         except Exception as e:
-            logging.error(f"Failed to read attachment {path}: {e}")
+            logging.error("Failed to read attachment %s: %s", path, e)
             return None
 
         size = len(raw)

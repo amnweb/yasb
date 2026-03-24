@@ -75,10 +75,10 @@ class QuickLaunchService(QObject):
     icon_ready = pyqtSignal(str, str)
     query_finished = pyqtSignal(str, list)
 
-    _instance: "QuickLaunchService | None" = None
+    _instance: QuickLaunchService | None = None
 
     @classmethod
-    def instance(cls) -> "QuickLaunchService":
+    def instance(cls) -> QuickLaunchService:
         if cls._instance is None:
             cls._instance = cls()
         return cls._instance

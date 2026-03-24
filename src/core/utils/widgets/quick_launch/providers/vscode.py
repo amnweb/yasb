@@ -120,7 +120,7 @@ class VSCodeProvider(BaseProvider):
                 if "entries" in data:
                     return data["entries"]
         except Exception as e:
-            logging.error(f"Failed to read VSCode recents: {e}")
+            logging.error("Failed to read VSCode recents: %s", e)
 
         return []
 
@@ -243,5 +243,5 @@ class VSCodeProvider(BaseProvider):
             shell_open("code", parameters=f"{flag} {uri}", show_cmd=SW_HIDE)
             return True
         except Exception as e:
-            logging.error(f"Failed to open VSCode: {e}")
+            logging.error("Failed to open VSCode: %s", e)
             return False

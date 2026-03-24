@@ -87,7 +87,7 @@ def _load_profiles(settings_path: str) -> tuple[list[dict], str]:
         default_guid = data.get("defaultProfile", "")
         return profile_list, default_guid
     except Exception as e:
-        logging.error(f"Windows Terminal provider: failed to load settings: {e}")
+        logging.error("Windows Terminal provider: failed to load settings: %s", e)
         return [], ""
 
 

@@ -34,7 +34,7 @@ class TrafficDataManager:
             cls._register_cleanup_handlers()
 
         except Exception as e:
-            logging.debug(f"Error setting up global net data storage: {e}")
+            logging.debug("Error setting up global net data storage: %s", e)
 
     @classmethod
     def _register_cleanup_handlers(cls):
@@ -49,7 +49,7 @@ class TrafficDataManager:
                 cls._quit_handler_registered = True
 
         except Exception as e:
-            logging.error(f"Error registering global quit handler: {e}")
+            logging.error("Error registering global quit handler: %s", e)
 
     @classmethod
     def destroy(cls):
@@ -62,7 +62,7 @@ class TrafficDataManager:
                     saved_interfaces.append(interface)
 
         except Exception as e:
-            logging.error(f"Error saving interfaces on quit: {e}")
+            logging.error("Error saving interfaces on quit: %s", e)
 
     @classmethod
     def get_interface_data_file(cls, interface: str):
@@ -150,7 +150,7 @@ class TrafficDataManager:
         data_file = cls.get_interface_data_file(interface)
         if data_file and data_file.exists():
             try:
-                with open(data_file, "r") as f:
+                with open(data_file) as f:
                     data = json.load(f)
 
                 cls._interface_data[interface]["total_bytes_sent"] = data.get("total_sent", 0)
@@ -160,7 +160,7 @@ class TrafficDataManager:
                 cls._interface_data[interface]["today_date"] = data.get("today_date", None)
 
             except Exception as e:
-                logging.error(f"Error loading traffic data for interface {interface}: {e}")
+                logging.error("Error loading traffic data for interface %s: %s", interface, e)
 
     @classmethod
     def _apply_alignment(cls, text: str, max_length: int, alignment: str) -> str:
@@ -272,7 +272,7 @@ class TrafficDataManager:
             }
 
         except Exception as e:
-            logging.error(f"Error calculating network data for {interface}: {e}")
+            logging.error("Error calculating network data for %s: %s", interface, e)
             return None
 
     @classmethod
@@ -300,7 +300,7 @@ class TrafficDataManager:
                 json.dump(data, f, indent=2)
 
         except Exception as e:
-            logging.error(f"Error saving traffic data for {interface}: {e}")
+            logging.error("Error saving traffic data for %s: %s", interface, e)
 
     @classmethod
     def initialize_today_tracking(cls, interface: str):
@@ -342,7 +342,7 @@ class TrafficDataManager:
                 )
 
         except Exception as e:
-            logging.error(f"Error initializing today tracking for {interface}: {e}")
+            logging.error("Error initializing today tracking for %s: %s", interface, e)
             if interface in cls._interface_data:
                 cls._interface_data[interface]["today_start_sent"] = 0
                 cls._interface_data[interface]["today_start_recv"] = 0
@@ -363,11 +363,13 @@ class TrafficDataManager:
                     return io_counters[interface]
                 else:
                     logging.warning(
-                        f"Interface '{interface}' not found. Available interfaces: {list(io_counters.keys())}"
+                        "Interface '%s' not found. Available interfaces: %s",
+                        interface,
+                        list(io_counters.keys()),
                     )
                     return None
         except Exception as e:
-            logging.error(f"Error getting IO counters for {interface}: {e}")
+            logging.error("Error getting IO counters for %s: %s", interface, e)
             return None
 
     @classmethod
@@ -419,7 +421,7 @@ class TrafficDataManager:
                 cls._interface_data[interface]["total_bytes_recv"] += today_diff_recv
 
         except Exception as e:
-            logging.error(f"Error updating today and total tracking for {interface}: {e}")
+            logging.error("Error updating today and total tracking for %s: %s", interface, e)
 
     @classmethod
     def get_today_totals(cls, interface: str):
@@ -430,7 +432,7 @@ class TrafficDataManager:
 
             return cls._interface_data[interface]["today_sent"], cls._interface_data[interface]["today_recv"]
         except Exception as e:
-            logging.debug(f"Error getting today totals for {interface}: {e}")
+            logging.debug("Error getting today totals for %s: %s", interface, e)
         return 0, 0
 
     @classmethod
@@ -475,7 +477,7 @@ class TrafficDataManager:
             cls.save_interface_data(interface)
 
         except Exception as e:
-            logging.error(f"Error resetting interface data for {interface}: {e}")
+            logging.error("Error resetting interface data for %s: %s", interface, e)
 
     @classmethod
     def should_save_data(cls, interface: str):

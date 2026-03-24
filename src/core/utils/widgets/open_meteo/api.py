@@ -105,16 +105,16 @@ class OpenMeteoDataFetcher(QObject):
                 self.finished.emit({})
             elif status in {400, 401, 403}:
                 data = json.loads(reply.readAll().data().decode())
-                logger.error(f"Open-Meteo API error {status}: {data.get('reason', 'Unknown')}")
+                logger.error("Open-Meteo API error %s: %s", status, data.get('reason', 'Unknown'))
                 self.finished.emit({})
             else:
-                logger.error(f"Open-Meteo response error {status}: {error.name} {error.value}")
+                logger.error("Open-Meteo response error %s: %s %s", status, error.name, error.value)
                 self.finished.emit({})
         except json.JSONDecodeError as e:
-            logger.error(f"Open-Meteo invalid JSON response: {e}")
+            logger.error("Open-Meteo invalid JSON response: %s", e)
             self.finished.emit({})
         except Exception as e:
-            logger.error(f"Open-Meteo fetch error: {e}\n{traceback.format_exc()}")
+            logger.error("Open-Meteo fetch error: %s\n%s", e, traceback.format_exc())
             self.finished.emit({})
         finally:
             reply.deleteLater()
@@ -172,11 +172,11 @@ class GeocodingFetcher(QObject):
                 else:
                     results = raw_results
             else:
-                logger.warning(f"Geocoding search failed: {error.name}")
+                logger.warning("Geocoding search failed: %s", error.name)
         except json.JSONDecodeError as e:
-            logger.error(f"Geocoding invalid JSON response: {e}")
+            logger.error("Geocoding invalid JSON response: %s", e)
         except Exception as e:
-            logger.error(f"Geocoding fetch error: {e}")
+            logger.error("Geocoding fetch error: %s", e)
         finally:
             self._current_country_filter = None
             self.results_ready.emit(results)

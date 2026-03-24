@@ -75,7 +75,7 @@ class HomeWidget(BaseWidget):
             return lambda: (
                 os.startfile(path)
                 if os.path.exists(path)
-                else logging.error(f"The system cannot find the file specified: '{path}'")
+                else logging.error("The system cannot find the file specified: '%s'", path)
             )
 
     def _create_menu(self):

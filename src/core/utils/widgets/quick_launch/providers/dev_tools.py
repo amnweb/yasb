@@ -7,7 +7,7 @@ import string
 import time
 import urllib.parse
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from PyQt6.QtWidgets import QApplication
 
@@ -257,7 +257,7 @@ class DevToolsProvider(BaseProvider):
                 display_val = str(value)
                 if key in ("exp", "iat", "nbf") and isinstance(value, (int, float)):
                     try:
-                        dt = datetime.fromtimestamp(value, tz=timezone.utc)
+                        dt = datetime.fromtimestamp(value, tz=UTC)
                         display_val = f"{value} ({dt.strftime('%Y-%m-%d %H:%M:%S UTC')})"
                     except Exception:
                         pass
@@ -298,7 +298,7 @@ class DevToolsProvider(BaseProvider):
         results: list[ProviderResult] = []
         now = time.time()
         now_int = int(now)
-        now_dt = datetime.fromtimestamp(now, tz=timezone.utc)
+        now_dt = datetime.fromtimestamp(now, tz=UTC)
 
         results.append(
             self._make_result(
@@ -328,7 +328,7 @@ class DevToolsProvider(BaseProvider):
                 ts_val = float(arg_stripped)
                 if ts_val > 1e12:
                     ts_val = ts_val / 1000
-                dt = datetime.fromtimestamp(ts_val, tz=timezone.utc)
+                dt = datetime.fromtimestamp(ts_val, tz=UTC)
                 local_dt = datetime.fromtimestamp(ts_val)
                 results.append(
                     self._make_result(
@@ -354,7 +354,7 @@ class DevToolsProvider(BaseProvider):
             except ValueError, OverflowError, OSError:
                 for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d", "%Y/%m/%d %H:%M:%S", "%Y/%m/%d"):
                     try:
-                        dt = datetime.strptime(arg_stripped, fmt).replace(tzinfo=timezone.utc)
+                        dt = datetime.strptime(arg_stripped, fmt).replace(tzinfo=UTC)
                         ts_int = int(dt.timestamp())
                         results.append(
                             self._make_result(

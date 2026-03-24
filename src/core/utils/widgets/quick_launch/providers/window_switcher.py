@@ -64,7 +64,7 @@ class WindowSwitcherProvider(BaseProvider):
 
             win32gui.EnumWindows(enum_cb, 0)
         except Exception as e:
-            logging.debug(f"EnumWindows failed in Window Switcher: {e}")
+            logging.debug("EnumWindows failed in Window Switcher: %s", e)
 
         z_order_map = {hwnd: i for i, hwnd in enumerate(z_order)}
 
@@ -135,7 +135,7 @@ class WindowSwitcherProvider(BaseProvider):
                     img.save(temp_png, format="PNG")
                     return temp_png
             except Exception as e:
-                logging.debug(f"Failed to extract shared window icon for {win.process_path}: {e}")
+                logging.debug("Failed to extract shared window icon for %s: %s", win.process_path, e)
 
         icon_name = f"window_icon_{win.hwnd}.png"
         icon_path = os.path.join(self._icons_dir, icon_name)
@@ -149,7 +149,7 @@ class WindowSwitcherProvider(BaseProvider):
                 img.save(icon_path, format="PNG")
                 return icon_path
         except Exception as e:
-            logging.debug(f"Failed to extract window icon for hwnd {win.hwnd}: {e}")
+            logging.debug("Failed to extract window icon for hwnd %s: %s", win.hwnd, e)
 
         return ""
 
@@ -180,11 +180,11 @@ class WindowSwitcherProvider(BaseProvider):
                                     hwnd, win32con.SW_RESTORE if win32gui.IsIconic(hwnd) else win32con.SW_SHOW
                                 )
                             except Exception as final_e:
-                                logging.error(f"Failed to show window {hwnd}: {final_e}")
+                                logging.error("Failed to show window %s: %s", hwnd, final_e)
 
                 # Defer the actual focus call so the Quick Launch widget has time to hide
                 QTimer.singleShot(0, _do_focus)
                 return True
             except Exception as e:
-                logging.error(f"Failed to set up delayed window focus {hwnd}: {e}")
+                logging.error("Failed to set up delayed window focus %s: %s", hwnd, e)
         return False

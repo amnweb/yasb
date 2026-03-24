@@ -226,7 +226,7 @@ def _read_netstat() -> list[_NetstatEntry]:
                 creationflags=subprocess.CREATE_NO_WINDOW,
             )
         except Exception as e:
-            logging.debug(f"Port Viewer: netstat failed: {e}")
+            logging.debug("Port Viewer: netstat failed: %s", e)
             return []
 
     entries: list[_NetstatEntry] = []
@@ -348,7 +348,7 @@ class PortViewerProvider(BaseProvider):
         try:
             pid_to_name = _enumerate_processes()
         except Exception as e:
-            logging.debug(f"Port Viewer: process enumeration failed: {e}")
+            logging.debug("Port Viewer: process enumeration failed: %s", e)
             pid_to_name = {}
 
         pid_to_icon: dict[int, str] = {}
@@ -492,7 +492,7 @@ class PortViewerProvider(BaseProvider):
                 if clipboard and text:
                     clipboard.setText(text)
             except Exception as e:
-                logging.debug(f"Port Viewer: clipboard copy failed: {e}")
+                logging.debug("Port Viewer: clipboard copy failed: %s", e)
             return False
 
         if mode == "kill":
@@ -502,11 +502,11 @@ class PortViewerProvider(BaseProvider):
             try:
                 ok = _terminate_process(int(pid))
                 if ok:
-                    logging.info(f"Port Viewer: terminated PID {pid}")
+                    logging.info("Port Viewer: terminated PID %s", pid)
                 else:
-                    logging.debug(f"Port Viewer: failed to terminate PID {pid}")
+                    logging.debug("Port Viewer: failed to terminate PID %s", pid)
             except Exception as e:
-                logging.debug(f"Port Viewer: terminate failed: {e}")
+                logging.debug("Port Viewer: terminate failed: %s", e)
             return False
 
         return False

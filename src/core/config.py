@@ -39,7 +39,7 @@ def get_config_dir() -> str:
         makedirs(HOME_CONFIGURATION_DIR)
         return HOME_CONFIGURATION_DIR
     except OSError:
-        logging.error(f"Failed to create configuration directory at {HOME_CONFIGURATION_DIR}.")
+        logging.error("Failed to create configuration directory at %s.", HOME_CONFIGURATION_DIR)
         return HOME_CONFIGURATION_DIR
 
 
@@ -52,7 +52,7 @@ def get_config_path() -> str:
             makedirs(HOME_CONFIGURATION_DIR)
         with open(HOME_CONFIG_PATH, "w", encoding="utf-8") as f:
             f.write(get_default_config())
-        logging.info(f"Created default config file at {HOME_CONFIG_PATH}")
+        logging.info("Created default config file at %s", HOME_CONFIG_PATH)
         return HOME_CONFIG_PATH
     else:
         return HOME_CONFIG_PATH
@@ -67,7 +67,7 @@ def get_stylesheet_path() -> str:
             makedirs(HOME_CONFIGURATION_DIR)
         with open(HOME_STYLES_PATH, "w", encoding="utf-8") as f:
             f.write(get_default_styles())
-        logging.info(f"Created default stylesheet at {HOME_STYLES_PATH}")
+        logging.info("Created default stylesheet at %s", HOME_STYLES_PATH)
         return HOME_STYLES_PATH
     else:
         return HOME_STYLES_PATH
@@ -116,7 +116,9 @@ def get_config(show_error_dialog: bool = False) -> YasbConfig | None:
         except ValidationError as e:
             validation_errors = format_pydantic_errors_to_yaml(e)
             logging.error(
-                f"The config file '{config_path}' contains validation errors. Please fix:\n{validation_errors}"
+                "The config file '%s' contains validation errors. Please fix:\n%s",
+                config_path,
+                validation_errors,
             )
             if show_error_dialog:
                 raise_info_alert(
@@ -127,11 +129,11 @@ def get_config(show_error_dialog: bool = False) -> YasbConfig | None:
                 )
             return None
     except ParserError as e:
-        logging.error(f"The file '{config_path}' contains Parser Error(s). Please fix:\n{str(e)}")
+        logging.error("The file '%s' contains Parser Error(s). Please fix:\n%s", config_path, e)
     except FileNotFoundError:
-        logging.error(f"The file '{config_path}' could not be found. Does it exist?")
+        logging.error("The file '%s' could not be found. Does it exist?", config_path)
     except OSError:
-        logging.error(f"The file '{config_path}' could not be read. Do you have read/write permissions?")
+        logging.error("The file '%s' could not be read. Do you have read/write permissions?", config_path)
 
 
 def get_stylesheet(show_error_dialog: bool = False) -> str | None:
@@ -142,7 +144,7 @@ def get_stylesheet(show_error_dialog: bool = False) -> str | None:
         return css_content
 
     except SyntaxErr as e:
-        logging.error(f"The file '{styles_path}' contains Syntax Error(s). Please fix:\n{str(e)}")
+        logging.error("The file '%s' contains Syntax Error(s). Please fix:\n%s", styles_path, e)
         if show_error_dialog:
             raise_info_alert(
                 title="Failed to load recently updated stylesheet file.",
@@ -151,9 +153,9 @@ def get_stylesheet(show_error_dialog: bool = False) -> str | None:
                 additional_details=str(e),
             )
     except FileNotFoundError:
-        logging.error(f"The file '{styles_path}' could not be found. Does it exist?")
+        logging.error("The file '%s' could not be found. Does it exist?", styles_path)
     except OSError:
-        logging.error(f"The file '{styles_path}' could not be read. Do you have read/write permissions?")
+        logging.error("The file '%s' could not be read. Do you have read/write permissions?", styles_path)
     return None
 
 

@@ -1,5 +1,5 @@
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable
 
 from PyQt6.QtWidgets import QTextBrowser, QWidget
 

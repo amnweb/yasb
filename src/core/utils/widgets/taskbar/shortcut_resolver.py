@@ -3,9 +3,9 @@
 import logging
 import os
 import re
+from collections.abc import Iterable
 from functools import lru_cache
 from pathlib import Path
-from typing import Iterable
 
 import win32com.client
 

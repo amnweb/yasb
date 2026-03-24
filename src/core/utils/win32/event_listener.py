@@ -31,7 +31,7 @@ class SystemEventListener(QThread):
             try:
                 self._event_service.emit_event(event_type, hwnd, event_type)
             except Exception:
-                logging.exception(f"Failed to emit event {event_type} for {hwnd}")
+                logging.exception("Failed to emit event %s for %s", event_type, hwnd)
 
     def _build_event_hook(self) -> int:
         return user32.SetWinEventHook(

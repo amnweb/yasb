@@ -29,7 +29,7 @@ def get_bluetooth_api():
     for path in possible_paths:
         try:
             return ctypes.WinDLL(path)
-        except (WindowsError, OSError) as e:
+        except OSError as e:
             last_error = e
             continue
 

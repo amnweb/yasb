@@ -250,7 +250,7 @@ class RecycleBinMonitor(QObject):
             logging.error("Failed to empty recycle bin: %s", error_message)
             return False
         except Exception as e:
-            logging.error(f"Error emptying recycle bin: {e}")
+            logging.error("Error emptying recycle bin: %s", e)
             return False
 
     def empty_recycle_bin_async(self, show_confirmation=False, show_progress=False, play_sound=False):
@@ -275,7 +275,7 @@ class RecycleBinMonitor(QObject):
         try:
             os.startfile(f"shell:::{{{KnownCLSID.RECYCLE_BIN}}}")
         except Exception as e:
-            logging.error(f"Error opening recycle bin: {e}")
+            logging.error("Error opening recycle bin: %s", e)
             return False
 
     def _query_bin_info_async(self, mark_poll_time=True):
@@ -418,7 +418,7 @@ class Win32DirectoryWatcher:
         # Create stop event
         self._stop_event = kernel32.CreateEventW(None, True, False, None)
         if not self._stop_event:
-            logging.error(f"Watcher: failed to create stop event for {self.path}: {ctypes.WinError()}")
+            logging.error("Watcher: failed to create stop event for %s: %s", self.path, ctypes.WinError())
             self._stop_event = None
             return False
 
@@ -434,7 +434,7 @@ class Win32DirectoryWatcher:
         )
 
         if self._dir_handle == INVALID_HANDLE_VALUE:
-            logging.error(f"Watcher: failed to open dir handle for {self.path}: {ctypes.WinError()}")
+            logging.error("Watcher: failed to open dir handle for %s: %s", self.path, ctypes.WinError())
             if self._stop_event is not None:
                 kernel32.CloseHandle(self._stop_event)
                 self._stop_event = None
@@ -443,7 +443,7 @@ class Win32DirectoryWatcher:
         # Register change notification
         self._change_handle = kernel32.FindFirstChangeNotificationW(self.path, self.watch_subtree, self.flag)
         if self._change_handle == INVALID_HANDLE_VALUE:
-            logging.error(f"Watcher: failed to register change notification for {self.path}: {ctypes.WinError()}")
+            logging.error("Watcher: failed to register change notification for %s: %s", self.path, ctypes.WinError())
             if self._dir_handle != INVALID_HANDLE_VALUE:
                 kernel32.CloseHandle(self._dir_handle)
                 self._dir_handle = INVALID_HANDLE_VALUE
@@ -466,7 +466,7 @@ class Win32DirectoryWatcher:
                 break
 
             if result == WAIT_FAILED:
-                logging.error(f"Watcher: wait failed for {self.path}: {ctypes.WinError()}")
+                logging.error("Watcher: wait failed for %s: %s", self.path, ctypes.WinError())
                 break
 
             if result == WAIT_OBJECT_0:
@@ -477,13 +477,13 @@ class Win32DirectoryWatcher:
 
                 # Reset change notification
                 if not kernel32.FindNextChangeNotification(self._change_handle):
-                    logging.error(f"Watcher: failed to reset notification for {self.path}: {ctypes.WinError()}")
+                    logging.error("Watcher: failed to reset notification for %s: %s", self.path, ctypes.WinError())
                     break
             elif result == WAIT_OBJECT_0 + 1:
                 # Stop event signaled
                 break
             else:
-                logging.error(f"Watcher: unexpected wait result: {result}")
+                logging.error("Watcher: unexpected wait result: %s", result)
                 break
 
         # Cleanup

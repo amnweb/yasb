@@ -53,7 +53,7 @@ class AudioOutputService(QObject):
         try:
             self._enumerator = AudioUtilities.GetDeviceEnumerator()
         except Exception as e:
-            logging.error(f"AudioOutputService failed to initialize: {e}")
+            logging.error("AudioOutputService failed to initialize: %s", e)
 
     def _initialize_audio(self):
         """Fetch speakers, devices and sessions in background thread."""
@@ -242,7 +242,7 @@ class AudioOutputService(QObject):
             AudioUtilities.SetDefaultDevice(device_id, roles=[ERole.eConsole])
             return True
         except Exception as e:
-            logging.error(f"Failed to set default audio device: {e}")
+            logging.error("Failed to set default audio device: %s", e)
             return False
 
     def get_active_audio_sessions(self, get_app_name_callback=None, format_name_callback=None):

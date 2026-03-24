@@ -206,7 +206,7 @@ class IconExtractorUtil:
             img.save(temp_png, format="PNG")
             return temp_png
         except Exception as e:
-            logging.debug(f"Icon extraction failed for {file_path}: {e}")
+            logging.debug("Icon extraction failed for %s: %s", file_path, e)
             return None
         finally:
             for h in cleanup_handles:
@@ -229,7 +229,7 @@ class IconExtractorUtil:
             if icon_file and os.path.isfile(icon_file):
                 return IconExtractorUtil.extract_icon_with_index(icon_file, icon_index, icons_dir, size=size)
         except Exception as e:
-            logging.debug(f"CPL icon resolve failed for {clsid}: {e}")
+            logging.debug("CPL icon resolve failed for %s: %s", clsid, e)
         return None
 
     @staticmethod
@@ -292,7 +292,7 @@ class IconExtractorUtil:
                 img.save(temp_png, format="PNG")
             return temp_png
         except Exception as e:
-            logging.debug(f"ICO to PNG conversion failed for {ico_path}: {e}")
+            logging.debug("ICO to PNG conversion failed for %s: %s", ico_path, e)
             return None
 
     @staticmethod
@@ -315,7 +315,7 @@ class IconExtractorUtil:
                     return IconExtractorUtil.extract_ico_to_png(icon_file, icons_dir, size=size)
                 return IconExtractorUtil.extract_icon_with_index(icon_file, icon_index, icons_dir, size=size)
         except Exception as e:
-            logging.debug(f"URL icon resolve failed for {url_path}: {e}")
+            logging.debug("URL icon resolve failed for %s: %s", url_path, e)
         return None
 
     @staticmethod
@@ -335,7 +335,7 @@ class IconExtractorUtil:
             img.save(cached_png, format="PNG")
             return cached_png
         except Exception as e:
-            logging.debug(f"Shell AppID icon resolve failed for {appid}: {e}")
+            logging.debug("Shell AppID icon resolve failed for %s: %s", appid, e)
         return None
 
 
@@ -443,5 +443,5 @@ class UrlExtractorUtil:
                 f.write(icon_data)
             return temp_png, page_title
         except Exception as e:
-            logging.error(f"Failed to extract icon from url {url}: {e}")
+            logging.error("Failed to extract icon from url %s: %s", url, e)
             return None, None

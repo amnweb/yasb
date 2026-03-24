@@ -10,8 +10,9 @@ import queue
 import shutil
 import tempfile
 import threading
+from collections.abc import Iterable
 from dataclasses import asdict, is_dataclass
-from typing import Any, Iterable
+from typing import Any
 
 from core.utils.widgets.ai_chat.constants import (
     BYTES_PER_KB,
@@ -178,7 +179,7 @@ def list_copilot_models(provider_config: dict | None = None) -> list[dict[str, A
         )
         return _sort_models_free_first(models)
     except Exception as exc:
-        logging.exception(f"Failed to list Copilot models: {exc}")
+        logging.exception("Failed to list Copilot models: %s", exc)
         return []
 
 
@@ -361,8 +362,8 @@ class CopilotAiChatClient:
             # Wait with timeout to prevent hanging forever
             try:
                 await asyncio.wait_for(self._active_idle.wait(), timeout=DEFAULT_TIMEOUT_SECONDS)
-            except asyncio.TimeoutError:
-                logging.warning(f"Copilot request timed out after {DEFAULT_TIMEOUT_SECONDS} seconds")
+            except TimeoutError:
+                logging.warning("Copilot request timed out after %s seconds", DEFAULT_TIMEOUT_SECONDS)
                 await self._abort_session()
                 raise TimeoutError("Request timed out")
             if not self._had_output:
@@ -463,10 +464,10 @@ class CopilotAiChatClient:
                 logging.error("Copilot CLI not found. Please install GitHub Copilot CLI.")
                 raise RuntimeError("Copilot CLI not found")
             except ConnectionError as e:
-                logging.error(f"Could not connect to Copilot CLI server: {e}")
+                logging.error("Could not connect to Copilot CLI server: %s", e)
                 raise RuntimeError("Could not connect to Copilot CLI server")
             except Exception as e:
-                logging.error(f"Failed to start Copilot client: {e}")
+                logging.error("Failed to start Copilot client: %s", e)
                 raise RuntimeError("Failed to start Copilot client")
             self._client = client
 
@@ -482,7 +483,7 @@ class CopilotAiChatClient:
         try:
             self._session = await self._client.create_session(session_args)
         except Exception as e:
-            logging.error(f"Failed to create Copilot session: {e}")
+            logging.error("Failed to create Copilot session: %s", e)
             self._session = None
             raise
 

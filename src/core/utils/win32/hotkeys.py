@@ -4,7 +4,6 @@ import logging
 from ctypes import byref
 from ctypes.wintypes import MSG
 from dataclasses import dataclass
-from typing import Optional
 
 from PyQt6.QtCore import Q_ARG, QMetaObject, QObject, Qt, QThread, pyqtSlot
 
@@ -101,7 +100,7 @@ class HotkeyBinding:
     screen: str = "active"
 
 
-def parse_hotkey(hotkey: str) -> Optional[tuple[int, int]]:
+def parse_hotkey(hotkey: str) -> tuple[int, int] | None:
     """Parse a hotkey string into (modifiers, vk) for RegisterHotKey.
 
     Args:
@@ -131,12 +130,12 @@ def parse_hotkey(hotkey: str) -> Optional[tuple[int, int]]:
             modifiers |= MOD_SHIFT
         else:
             if key_name is not None:
-                logging.warning(f"Invalid hotkey '{hotkey}': multiple non-modifier keys")
+                logging.warning("Invalid hotkey '%s': multiple non-modifier keys", hotkey)
                 return None
             key_name = part
 
     if key_name is None:
-        logging.warning(f"Invalid hotkey '{hotkey}': no key specified")
+        logging.warning("Invalid hotkey '%s': no key specified", hotkey)
         return None
 
     # Resolve virtual key code
@@ -155,7 +154,7 @@ def parse_hotkey(hotkey: str) -> Optional[tuple[int, int]]:
                 vk = 0x70 + (fn - 1)  # VK_F1 = 0x70
 
     if vk is None:
-        logging.warning(f"Invalid hotkey '{hotkey}': unknown key '{key_name}'")
+        logging.warning("Invalid hotkey '%s': unknown key '%s'", hotkey, key_name)
         return None
 
     return modifiers, vk
@@ -197,10 +196,11 @@ class HotkeyListener(QThread):
             mods = binding.modifiers | MOD_NOREPEAT
             if user32.RegisterHotKey(None, hotkey_id, mods, binding.vk):
                 self._id_to_binding[hotkey_id] = binding
-                logging.debug(f"Registered hotkey {binding.hotkey}")
+                logging.debug("Registered hotkey %s", binding.hotkey)
             else:
                 logging.warning(
-                    f"Failed to register hotkey {binding.hotkey} - it may be in use by another application."
+                    "Failed to register hotkey %s - it may be in use by another application.",
+                    binding.hotkey,
                 )
 
     def _unregister_hotkeys(self) -> None:
@@ -282,7 +282,7 @@ def collect_widget_keybindings(widget_name: str, keybindings: list[dict]) -> lis
         action = kb.get("action", "")
 
         if not keys or not action:
-            logging.warning(f"Invalid keybinding for {widget_name}: missing 'keys' or 'action'")
+            logging.warning("Invalid keybinding for %s: missing 'keys' or 'action'", widget_name)
             continue
 
         parsed = parse_hotkey(keys)

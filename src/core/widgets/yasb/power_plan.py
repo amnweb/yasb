@@ -67,7 +67,7 @@ class PowerPlanWidget(BaseWidget):
         try:
             plans, active_guid = cls._instances[0].get_power_plans()
         except Exception as e:
-            logging.error(f"Error fetching power plans: {e}")
+            logging.error("Error fetching power plans: %s", e)
             return
 
         # update each widget using the shared data
@@ -102,7 +102,7 @@ class PowerPlanWidget(BaseWidget):
                     break
 
         except Exception as e:
-            logging.error(f"Error loading power plans: {e}")
+            logging.error("Error loading power plans: %s", e)
             self._active_plan_name = "Unknown"
             self._plan_class_name = "unknown"
 
@@ -207,11 +207,11 @@ class PowerPlanWidget(BaseWidget):
                 try:
                     PowerPlanWidget._notify_instances()
                 except Exception as e:
-                    logging.warning(f"Failed to notify instances after changing power plan: {e}")
+                    logging.warning("Failed to notify instances after changing power plan: %s", e)
             else:
-                logging.error(f"Failed to change power plan. Error code: {result}")
+                logging.error("Failed to change power plan. Error code: %s", result)
         except Exception as e:
-            logging.error(f"Error changing power plan: {e}")
+            logging.error("Error changing power plan: %s", e)
 
     def _guids_equal(self, guid1: GUID, guid2: GUID):
         """Compare two GUIDs for equality."""

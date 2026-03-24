@@ -75,7 +75,7 @@ def export_schema():
             )
             widget_entry_models.append(entry_model)
 
-        WidgetEntryUnion = Union[tuple(widget_entry_models)]
+        WidgetEntryUnion = Union[tuple(widget_entry_models)]  # noqa: UP007
 
     # Create a new model for export that overrides the widgets field
     class ExportYasbConfig(YasbConfig):

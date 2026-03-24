@@ -483,11 +483,11 @@ class GpuApi:
 
 
 class GpuWorker(QThread):
-    _instance: "GpuWorker | None" = None
+    _instance: GpuWorker | None = None
     data_ready = pyqtSignal(list)
 
     @classmethod
-    def get_instance(cls, update_interval: int) -> "GpuWorker":
+    def get_instance(cls, update_interval: int) -> GpuWorker:
         if cls._instance is None:
             cls._instance = cls(update_interval)
         return cls._instance

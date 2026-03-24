@@ -1,11 +1,9 @@
 """Shared color token definitions for UI components."""
 
-from typing import Dict
-
 # Theme -> Variant -> Property -> Value
-ButtonColorTokens = Dict[str, Dict[str, Dict[str, str]]]
+ButtonColorTokens = dict[str, dict[str, dict[str, str]]]
 # Theme -> Property -> Value
-LinkColorTokens = Dict[str, Dict[str, str]]
+LinkColorTokens = dict[str, dict[str, str]]
 
 BUTTON_COLOR_TOKENS: ButtonColorTokens = {
     "dark": {

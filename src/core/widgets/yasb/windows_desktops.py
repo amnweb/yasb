@@ -85,7 +85,7 @@ class WorkspaceButton(QPushButton):
             WindowsDesktopService.switch_desktop(self.workspace_index)
             WindowsDesktopService().notify_desktop_changed(self.workspace_index)
         except Exception:
-            logging.exception(f"Failed to focus desktop at index {self.workspace_index}")
+            logging.exception("Failed to focus desktop at index %s", self.workspace_index)
 
     def animate_buttons(self, duration: int = 120):
         # Use the centralized animation from Komorebi
@@ -186,7 +186,7 @@ class WorkspaceButton(QPushButton):
             try:
                 WindowsDesktopService.set_wallpaper(self.workspace_index, image_path)
             except Exception as e:
-                logging.exception(f"Failed to set wallpaper: {e}")
+                logging.exception("Failed to set wallpaper: %s", e)
 
     def set_wallpaper_all(self):
         image_path, _ = QFileDialog.getOpenFileName(
@@ -196,7 +196,7 @@ class WorkspaceButton(QPushButton):
             try:
                 WindowsDesktopService.set_wallpaper_all(image_path)
             except Exception as e:
-                logging.exception(f"Failed to set wallpaper for all desktops: {e}")
+                logging.exception("Failed to set wallpaper for all desktops: %s", e)
 
     def rename_desktop(self):
         dialog = QInputDialog(self)
@@ -217,7 +217,7 @@ class WorkspaceButton(QPushButton):
                 WindowsDesktopService.rename_desktop(self.workspace_index, new_name)
                 WindowsDesktopService().notify_desktops_updated(update_buttons=True)
             except Exception as e:
-                logging.exception(f"Failed to rename desktop: {e}")
+                logging.exception("Failed to rename desktop: %s", e)
         else:
             logging.info("No name entered. Rename cancelled.")
 
@@ -225,26 +225,26 @@ class WorkspaceButton(QPushButton):
         try:
             WindowsDesktopService.move_window(hwnd, desktop_number)
         except Exception as e:
-            logging.exception(f"Failed to move active window to desktop {desktop_number}: {e}")
+            logging.exception("Failed to move active window to desktop %s: %s", desktop_number, e)
 
     def toggle_pin_window(self, hwnd: int):
         try:
             WindowsDesktopService.toggle_pin_window(hwnd)
         except Exception as e:
-            logging.exception(f"Failed to toggle pin window: {e}")
+            logging.exception("Failed to toggle pin window: %s", e)
 
     def toggle_pin_app(self, hwnd: int):
         try:
             WindowsDesktopService.toggle_pin_app(hwnd)
         except Exception as e:
-            logging.exception(f"Failed to toggle pin app: {e}")
+            logging.exception("Failed to toggle pin app: %s", e)
 
     def delete_desktop(self):
         try:
             WindowsDesktopService.remove_desktop(self.workspace_index)
             WindowsDesktopService().notify_desktops_updated(update_buttons=False)
         except Exception as e:
-            logging.exception(f"Failed to delete desktop: {e}")
+            logging.exception("Failed to delete desktop: %s", e)
 
     def create_new_desktop(self):
         try:
@@ -334,7 +334,7 @@ class WorkspaceWidget(BaseWidget):
                 if app_view:
                     WindowsDesktopService.move_window(app_view.hwnd, self._clicked_button.workspace_index)
             except Exception as e:
-                logging.exception(f"Failed to move window to desktop {self._clicked_button.workspace_index}: {e}")
+                logging.exception("Failed to move window to desktop %s: %s", self._clicked_button.workspace_index, e)
 
     def _cb_delete_workspace(self):
         if self._clicked_button:

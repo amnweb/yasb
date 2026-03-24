@@ -258,7 +258,7 @@ class SystrayWidget(BaseWidget):
         mgr.suppress()
         taskbar_created_msg = RegisterWindowMessage("TaskbarCreated")
         SendNotifyMessage(HWND_BROADCAST, taskbar_created_msg, 0, 0)
-        logger.debug(f"Sending TaskbarCreated message: {taskbar_created_msg}")
+        logger.debug("Sending TaskbarCreated message: %s", taskbar_created_msg)
         QTimer.singleShot(0, mgr.unsuppress)
         logger.debug("Systray icons refreshed")
 
@@ -310,7 +310,7 @@ class SystrayWidget(BaseWidget):
                 cls._systray_client_thread = None
 
         except Exception as e:
-            logger.debug(f"Error during thread cleanup: {e}")
+            logger.debug("Error during thread cleanup: %s", e)
 
     def set_containers_visibility(self):
         """Update the containers visibility based on the show_unpinned_button setting"""
@@ -593,10 +593,10 @@ class SystrayWidget(BaseWidget):
         self.update_current_state()
         self.get_screen_id()
         file_path = app_data_path(f"systray_state_{self.screen_id}.json")
-        logger.debug(f"Saving state to {file_path}")
+        logger.debug("Saving state to %s", file_path)
         saved_state: dict[str, Any] = {}
         try:
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(file_path, encoding="utf-8") as f:
                 saved_state = json.load(f)
         except json.JSONDecodeError:
             logger.debug("State file decode error. Ignoring.")
@@ -611,10 +611,10 @@ class SystrayWidget(BaseWidget):
         """Load the saved icon position and pinned state from disk."""
         self.get_screen_id()
         file_path = app_data_path(f"systray_state_{self.screen_id}.json")
-        logger.debug(f"Loading state from {file_path}")
+        logger.debug("Loading state from %s", file_path)
         self.current_state = {}
         try:
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(file_path, encoding="utf-8") as f:
                 state = json.load(f)
                 for k, v in state.items():
                     self.current_state[k] = IconState.from_dict(v)

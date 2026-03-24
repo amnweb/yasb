@@ -84,10 +84,10 @@ class BatteryAPI:
     Singleton class to access battery information
     """
 
-    _instance: "BatteryAPI | None" = None
+    _instance: BatteryAPI | None = None
     _initialized: bool = False
 
-    def __new__(cls) -> "BatteryAPI":
+    def __new__(cls) -> BatteryAPI:
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
@@ -108,7 +108,7 @@ class BatteryAPI:
         self._last_error_logged: bool = False
 
     @classmethod
-    def instance(cls) -> "BatteryAPI":
+    def instance(cls) -> BatteryAPI:
         """Get the singleton instance."""
         if cls._instance is None:
             cls._instance = cls()
@@ -299,7 +299,7 @@ class BatteryAPI:
 
         except Exception as e:
             if not self._last_error_logged:
-                logging.debug(f"Error getting extended battery info: {e}")
+                logging.debug("Error getting extended battery info: %s", e)
                 self._last_error_logged = True
         finally:
             kernel32.CloseHandle(h_battery)

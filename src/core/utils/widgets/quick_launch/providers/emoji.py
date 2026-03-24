@@ -31,10 +31,10 @@ def _load_emoji_data() -> list[dict]:
     if _EMOJI_DATA is not None:
         return _EMOJI_DATA
     try:
-        with open(_DATA_FILE, "r", encoding="utf-8") as f:
+        with open(_DATA_FILE, encoding="utf-8") as f:
             _EMOJI_DATA = json.load(f)
     except Exception as e:
-        logging.error(f"Failed to load emoji data: {e}")
+        logging.error("Failed to load emoji data: %s", e)
         _EMOJI_DATA = []
     return _EMOJI_DATA
 
@@ -54,7 +54,7 @@ class EmojiProvider(BaseProvider):
     def _load_pinned(self) -> dict[str, str]:
         try:
             if os.path.isfile(_PINNED_FILE):
-                with open(_PINNED_FILE, "r", encoding="utf-8") as f:
+                with open(_PINNED_FILE, encoding="utf-8") as f:
                     data = json.load(f)
                 if isinstance(data, dict):
                     return {
@@ -63,7 +63,7 @@ class EmojiProvider(BaseProvider):
                         if isinstance(emoji, str) and emoji.strip() and isinstance(name, str)
                     }
         except Exception as e:
-            logging.debug(f"Failed to load pinned emojis: {e}")
+            logging.debug("Failed to load pinned emojis: %s", e)
         return {}
 
     def _save_pinned(self):
@@ -72,7 +72,7 @@ class EmojiProvider(BaseProvider):
             with open(_PINNED_FILE, "w", encoding="utf-8") as f:
                 json.dump(self._pinned, f, ensure_ascii=False, indent=2)
         except Exception as e:
-            logging.debug(f"Failed to save pinned emojis: {e}")
+            logging.debug("Failed to save pinned emojis: %s", e)
 
     def pin_emoji(self, emoji: str, name: str):
         if not emoji:
