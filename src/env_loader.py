@@ -3,12 +3,11 @@ import os
 
 from dotenv import load_dotenv
 
+from settings import DEFAULT_CONFIG_DIRECTORY
+
 
 def get_env_path():
-    config_home = os.environ.get("YASB_CONFIG_HOME")
-    if config_home:
-        return os.path.join(config_home, ".env")
-    return os.path.join(os.path.expanduser("~"), ".config", "yasb", ".env")
+    return os.path.join(DEFAULT_CONFIG_DIRECTORY, ".env")
 
 
 def load_env():

@@ -3,7 +3,6 @@ import os
 import shutil
 import subprocess
 import threading
-from pathlib import Path
 
 from PyQt6.QtCore import QEvent, QSize, Qt
 from PyQt6.QtGui import QCursor, QIcon
@@ -22,11 +21,9 @@ from settings import (
     SCRIPT_PATH,
 )
 
-VBS_PATH = os.path.join(SCRIPT_PATH, "yasb.vbs")
 EXE_PATH = os.path.join(SCRIPT_PATH, "yasb.exe")
 THEME_EXE_PATH = os.path.join(SCRIPT_PATH, "yasb_themes.exe")
-SHORTCUT_FILENAME = "yasb.lnk"
-AUTOSTART_FILE = EXE_PATH if os.path.exists(EXE_PATH) else VBS_PATH
+AUTOSTART_FILE = EXE_PATH if os.path.exists(EXE_PATH) else None
 
 
 class SystemTrayManager(QSystemTrayIcon):
@@ -168,12 +165,13 @@ class SystemTrayManager(QSystemTrayIcon):
 
             self.menu.addSeparator()
 
-        if self._chek_startup():
-            disable_startup_action = self.menu.addAction("Disable Autostart")
-            disable_startup_action.triggered.connect(self._disable_startup)
-        else:
-            enable_startup_action = self.menu.addAction("Enable Autostart")
-            enable_startup_action.triggered.connect(self._enable_startup)
+        if AUTOSTART_FILE:
+            if self._chek_startup():
+                disable_startup_action = self.menu.addAction("Disable Autostart")
+                disable_startup_action.triggered.connect(self._disable_startup)
+            else:
+                enable_startup_action = self.menu.addAction("Enable Autostart")
+                enable_startup_action.triggered.connect(self._enable_startup)
 
         help_action = self.menu.addAction("Help")
         help_action.triggered.connect(lambda: self._open_in_browser(f"{GITHUB_URL}/wiki"))
@@ -207,7 +205,7 @@ class SystemTrayManager(QSystemTrayIcon):
 
     def _open_config(self):
         try:
-            subprocess.run(["explorer", str(os.path.join(Path.home(), DEFAULT_CONFIG_DIRECTORY))])
+            subprocess.run(["explorer", DEFAULT_CONFIG_DIRECTORY])
         except Exception as e:
             logging.error(f"Failed to open config directory: {e}")
 
