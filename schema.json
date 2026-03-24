@@ -10277,20 +10277,6 @@
               "prefix": "wsl",
               "priority": 0,
               "show_online": true
-            },
-            "crypto": {
-              "enabled": false,
-              "prefix": "crypto",
-              "priority": 0,
-              "open_url": false,
-              "pairs": [
-                "BTCUSDT",
-                "ETHUSDT",
-                "BNBUSDT",
-                "SOLUSDT",
-                "XRPUSDT"
-              ],
-              "round": 2
             }
           }
         },
@@ -10638,22 +10624,6 @@
             "prefix": "wsl",
             "priority": 0,
             "show_online": true
-          }
-        },
-        "crypto": {
-          "$ref": "#/$defs/CryptoProviderConfig",
-          "default": {
-            "enabled": false,
-            "prefix": "crypto",
-            "priority": 0,
-            "pairs": [
-              "BTCUSDT",
-              "ETHUSDT",
-              "BNBUSDT",
-              "SOLUSDT",
-              "XRPUSDT"
-            ],
-            "round": 2
           }
         }
       },

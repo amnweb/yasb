@@ -76,13 +76,14 @@ class FileSearchProviderConfig(CustomBaseModel):
     show_preview: bool = False
 
 
-class CryptoProviderConfig(CustomBaseModel):
+class BinanceProviderConfig(CustomBaseModel):
     enabled: bool = False
     prefix: str = "crypto"
     priority: int = 0
-    pairs: list[str] = ["BTCUSDT"]
+    pairs: list[str] = ["BTC/USDT"]
     round: int = 2
     open_url: bool = False
+    domain: str = "api-gcp.binance.com"
 
 
 class CurrencyProviderConfig(CustomBaseModel):
@@ -211,7 +212,7 @@ class QuickLaunchProvidersConfig(CustomBaseModel):
     calculator: CalculatorProviderConfig = CalculatorProviderConfig()
     clipboard_history: ClipboardHistoryProviderConfig = ClipboardHistoryProviderConfig()
     color: ColorProviderConfig = ColorProviderConfig()
-    crypto: CryptoProviderConfig = CryptoProviderConfig()
+    binance: BinanceProviderConfig = BinanceProviderConfig()
     currency: CurrencyProviderConfig = CurrencyProviderConfig()
     dev_tools: DevToolsProviderConfig = DevToolsProviderConfig()
     emoji: EmojiProviderConfig = EmojiProviderConfig()
