@@ -661,7 +661,9 @@ class WiFiManager(QObject):
             else:
                 buff = create_unicode_buffer(256)
                 WlanReasonCodeToString(reason_code.value, sizeof(buff), buff, None)
-                logger.debug("Failed to create profile: %s. Code: %s. Reason: %s", result, reason_code.value, buff.value)
+                logger.debug(
+                    "Failed to create profile: %s. Code: %s. Reason: %s", result, reason_code.value, buff.value
+                )
                 return False
 
         except Exception as e:

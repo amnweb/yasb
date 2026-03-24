@@ -105,7 +105,7 @@ class OpenMeteoDataFetcher(QObject):
                 self.finished.emit({})
             elif status in {400, 401, 403}:
                 data = json.loads(reply.readAll().data().decode())
-                logger.error("Open-Meteo API error %s: %s", status, data.get('reason', 'Unknown'))
+                logger.error("Open-Meteo API error %s: %s", status, data.get("reason", "Unknown"))
                 self.finished.emit({})
             else:
                 logger.error("Open-Meteo response error %s: %s %s", status, error.name, error.value)

@@ -461,7 +461,7 @@ class AppsProvider(BaseProvider):
                     shell_open(path, verb=launch_verb)
                 self._history.record(name, path)
             except Exception as e:
-                logging.debug("Failed to run as %s: %s", 'user' if as_user else 'admin', e)
+                logging.debug("Failed to run as %s: %s", "user" if as_user else "admin", e)
             return ProviderMenuActionResult(close_popup=True)
 
         if action_id == "open_file_location":

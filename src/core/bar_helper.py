@@ -567,7 +567,7 @@ class AppBarManager(QAbstractNativeEventFilter):
                         bw.app_bar_manager.remove_appbar()
                     bw.update_app_bar()
                     reason = "space reservation + fullscreen" if app_bar else "fullscreen detection"
-                    logging.info("Re-registered AppBar for %s (%s)", getattr(bw, 'bar_id', '?'), reason)
+                    logging.info("Re-registered AppBar for %s (%s)", getattr(bw, "bar_id", "?"), reason)
                 except Exception as e:
                     logging.error("Failed to re-register bar: %s", e)
 

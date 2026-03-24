@@ -126,7 +126,9 @@ class CpuAPI:
                 cls._query = None
                 cls._init_failed = True
                 if not cls._error_logged:
-                    logging.warning("Failed to open PDH query (status=%s). CPU widget will show default values.", status)
+                    logging.warning(
+                        "Failed to open PDH query (status=%s). CPU widget will show default values.", status
+                    )
                     cls._error_logged = True
                 return False
 
