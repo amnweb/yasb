@@ -65,7 +65,7 @@ dev = [
     "types-pywin32",
 ]
 packaging = [
-    "cx-freeze==8.6.2"
+    "cx-freeze==8.6.3"
 ]
 [tool.hatch.metadata]
 allow-direct-references = true
