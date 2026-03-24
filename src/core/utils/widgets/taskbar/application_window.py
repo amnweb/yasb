@@ -8,7 +8,7 @@ import win32gui
 from core.utils.win32.bindings import DwmGetWindowAttribute, IsWindowEnabled
 from core.utils.win32.utilities import get_process_info
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("application_window")
 logger.setLevel(logging.WARNING)
 
 

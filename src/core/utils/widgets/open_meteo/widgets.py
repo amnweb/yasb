@@ -221,7 +221,7 @@ def get_weather_icon_pixmap(icon_key: str, size: int, dpr: float = 1.0) -> QPixm
 
     if icon_path_svg.exists():
         try:
-            with open(icon_path_svg, "r", encoding="utf-8") as f:
+            with open(icon_path_svg, encoding="utf-8") as f:
                 svg_data = f.read()
             return render_svg_to_pixmap(svg_data, size, dpr)
         except OSError:

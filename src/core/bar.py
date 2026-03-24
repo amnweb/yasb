@@ -93,7 +93,7 @@ class Bar(QWidget):
             self._os_theme_manager = OsThemeManager(self._bar_frame, self)
             self._os_theme_manager.update_theme_class()
         except Exception as e:
-            logging.error(f"Failed to initialize theme manager: {e}")
+            logging.error("Failed to initialize theme manager: %s", e)
             self._os_theme_manager = None
 
         self._hide_on_fullscreen = self._window_flags["hide_on_fullscreen"] and self._window_flags["always_on_top"]
@@ -147,7 +147,9 @@ class Bar(QWidget):
 
     def on_geometry_changed(self, geo: QRect) -> None:
         logging.info(
-            f"Screen geometry changed. Updating position for bar {self._bar_name} on screen {self._target_screen.name()}"
+            "Screen geometry changed. Updating position for bar %s on screen %s",
+            self._bar_name,
+            self._target_screen.name(),
         )
         self.position_bar()
         # Re-register AppBar when screen config changes (resolution/monitor added/removed)

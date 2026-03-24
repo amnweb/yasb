@@ -1,6 +1,5 @@
 import logging
 from importlib import import_module
-from typing import Optional
 
 from pydantic import BaseModel, ValidationError
 from PyQt6.QtCore import QObject
@@ -30,14 +29,14 @@ class WidgetBuilder(QObject):
 
         return bar_widgets, self._widget_event_listeners
 
-    def _build_widget(self, widget_name: str) -> Optional[QWidget]:
+    def _build_widget(self, widget_name: str) -> QWidget | None:
         widget_config = self._widget_configurations.get(widget_name, None)
 
         if (widget_name in self._invalid_widget_names) or (widget_name in self._invalid_widget_options):
-            logging.warning(f"Ignoring construction of invalid widget '{widget_name}'")
+            logging.warning("Ignoring construction of invalid widget '%s'", widget_name)
         elif not widget_config:
             self._invalid_widget_names.add(widget_name)
-            logging.warning(f"No widget config could be found for widget '{widget_name}")
+            logging.warning("No widget config could be found for widget '%s", widget_name)
         else:
             try:
                 widget_module_str, widget_class_str = widget_config["type"].rsplit(".", 1)
@@ -81,20 +80,20 @@ class WidgetBuilder(QObject):
                 widget.widget_name = widget_name
                 return widget
             except AttributeError, ValueError, ModuleNotFoundError:
-                logging.exception(f"Failed to import widget with type {widget_config['type']}")
+                logging.exception("Failed to import widget with type %s", widget_config["type"])
                 self._invalid_widget_types[widget_name] = widget_config["type"]
             except KeyError:
-                logging.exception(f"No type specified for widget '{widget_name}'")
+                logging.exception("No type specified for widget '%s'", widget_name)
                 self._missing_widget_types.add(widget_name)
             except Exception:
-                logging.exception(f"Failed to import widget '{widget_name}'")
+                logging.exception("Failed to import widget '%s'", widget_name)
 
     def raise_alerts_if_errors_present(self):
         if self._invalid_widget_names:
             undefined_widgets = "\n".join(
                 [f' - The widget "{widget_name}" is undefined.' for widget_name in self._invalid_widget_names]
             )
-            logging.error(f"Failed to add undefined widget(s) {undefined_widgets}")
+            logging.error("Failed to add undefined widget(s) %s", undefined_widgets)
             raise_info_alert(
                 title=f"Failed to add undefined widget(s) in {DEFAULT_CONFIG_FILENAME}",
                 msg="Failed to add undefined widget(s) to bar.",
@@ -108,7 +107,7 @@ class WidgetBuilder(QObject):
                     for widget_name, validation_errors in self._invalid_widget_options.items()
                 ]
             )
-            logging.error(f"Failed to validate widget(s) due to invalid options {additional_details}")
+            logging.error("Failed to validate widget(s) due to invalid options %s", additional_details)
             raise_info_alert(
                 title=f"Failed to validate widget(s) in {DEFAULT_CONFIG_FILENAME}",
                 msg="Failed to validate widget(s) due to invalid options",
@@ -123,7 +122,7 @@ class WidgetBuilder(QObject):
                     for widget_name, widget_type in self._invalid_widget_types.items()
                 ]
             )
-            logging.error(f"Failed to build widget(s) due to unknown widget type(s) {widget_names_and_types}")
+            logging.error("Failed to build widget(s) due to unknown widget type(s) %s", widget_names_and_types)
             raise_info_alert(
                 title=f"Failed to build widget(s) in {DEFAULT_CONFIG_FILENAME}",
                 msg="Failed to build widget(s) of unknown widget type(s)",
@@ -132,7 +131,7 @@ class WidgetBuilder(QObject):
             )
         if self._missing_widget_types:
             widget_names = "\n".join([f" - {widget_name}" for widget_name in self._missing_widget_types])
-            logging.error(f"Failed to import widget(s) due to missing widget type(s) {widget_names}")
+            logging.error("Failed to import widget(s) due to missing widget type(s) %s", widget_names)
             raise_info_alert(
                 title=f"Failed to import widget(s) in {DEFAULT_CONFIG_FILENAME}",
                 msg="Failed to import widget(s) with missing widget type(s)",
@@ -160,4 +159,4 @@ class WidgetBuilder(QObject):
                     if child_names:
                         self._collect_nested_listeners(child_names)
             except Exception:
-                logging.debug(f"WidgetBuilder skipped collecting listener for nested widget '{name}'")
+                logging.debug("WidgetBuilder skipped collecting listener for nested widget '%s'", name)

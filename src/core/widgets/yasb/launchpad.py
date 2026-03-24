@@ -5,7 +5,7 @@ import shutil
 import tempfile
 import time
 from functools import lru_cache
-from typing import Any, Dict, List
+from typing import Any
 
 from PyQt6.QtCore import (
     QAbstractAnimation,
@@ -81,7 +81,7 @@ def load_and_scale_icon(icon_path: str, size: int, dpr=1.0) -> QPixmap:
             scaled_pixmap.setDevicePixelRatio(dpr)
             return scaled_pixmap
     except Exception as e:
-        logging.error(f"Failed to load icon {icon_path}: {e}")
+        logging.error("Failed to load icon %s: %s", icon_path, e)
         return QPixmap()
 
 
@@ -108,7 +108,7 @@ class IconLoadWorker(QThread):
                     if not pixmap.isNull() and not self._should_stop:
                         self.icon_loaded.emit(icon_path, pixmap)
                 except Exception as e:
-                    logging.error(f"Failed to load icon in worker: {e}")
+                    logging.error("Failed to load icon in worker: %s", e)
 
 
 class UrlFetchWorker(QThread):
@@ -454,7 +454,7 @@ class AppDialog(QDialog):
                 shutil.copy2(icon_path, new_icon_path)
                 icon_path = new_icon_path
             except Exception as e:
-                logging.error(f"Failed to copy icon: {e}")
+                logging.error("Failed to copy icon: %s", e)
 
         path = self.path_edit.text().strip()
 
@@ -666,7 +666,7 @@ class LaunchpadWidget(BaseWidget):
         if self._launchpad_popup and not self._is_closing:
             self._fade_out_popup()
 
-    def _create_app_icon_widget(self, app_data: Dict[str, Any]) -> QFrame:
+    def _create_app_icon_widget(self, app_data: dict[str, Any]) -> QFrame:
         """Create an app icon widget"""
         app_icon = QFrame()
         if app_data.get("type") == "url":
@@ -827,7 +827,7 @@ class LaunchpadWidget(BaseWidget):
                 app_icon.icon_label.setText("")
                 app_icon._icon_loaded = True
         except Exception as e:
-            logging.error(f"Failed to load icon {icon_path}: {e}")
+            logging.error("Failed to load icon %s: %s", icon_path, e)
             app_icon.icon_label.setText("")
             app_icon._icon_loaded = True
 
@@ -856,11 +856,11 @@ class LaunchpadWidget(BaseWidget):
                         self._populate_grid(current_search)
 
         except Exception as e:
-            logging.error(f"Failed to reorder apps: {e}")
+            logging.error("Failed to reorder apps: %s", e)
 
     _SHELL_APPS_FOLDER = "explorer.exe shell:AppsFolder\\"
 
-    def _launch_app(self, app_data: Dict[str, Any]):
+    def _launch_app(self, app_data: dict[str, Any]):
         path = app_data.get("path", "")
         if path:
             try:
@@ -875,9 +875,9 @@ class LaunchpadWidget(BaseWidget):
                     shell_open(parts[0], parameters=parts[1] if len(parts) > 1 else None)
                 self._hide_launchpad()
             except Exception as e:
-                logging.error(f"Failed to launch app {app_data.get('title', 'Unknown')}: {e}")
+                logging.error("Failed to launch app %s: %s", app_data.get("title", "Unknown"), e)
 
-    def _launch_app_elevated(self, app_data: Dict[str, Any]):
+    def _launch_app_elevated(self, app_data: dict[str, Any]):
         """Launch an app with administrator privileges (UAC prompt)."""
         path = app_data.get("path", "")
         if path:
@@ -893,7 +893,7 @@ class LaunchpadWidget(BaseWidget):
                     shell_open(parts[0], verb="runas", parameters=parts[1] if len(parts) > 1 else None)
                 self._hide_launchpad()
             except Exception as e:
-                logging.error(f"Failed to launch app elevated {app_data.get('title', 'Unknown')}: {e}")
+                logging.error("Failed to launch app elevated %s: %s", app_data.get("title", "Unknown"), e)
 
     def _show_context_menu(self, pos, app_data=None, parent_widget=None, event=None):
         """
@@ -1194,7 +1194,7 @@ class LaunchpadWidget(BaseWidget):
 
         try:
             language, codepage = win32api.GetFileVersionInfo(path, "\\VarFileInfo\\Translation")[0]
-            stringFileInfo = "\\StringFileInfo\\%04X%04X\\%s" % (language, codepage, "FileDescription")
+            stringFileInfo = f"\\StringFileInfo\\{language:04X}{codepage:04X}\\FileDescription"
             description = win32api.GetFileVersionInfo(path, stringFileInfo)
         except:
             description = "unknown"
@@ -1388,7 +1388,7 @@ class LaunchpadWidget(BaseWidget):
             try:
                 self._apply_blur()
             except Exception as e:
-                logging.warning(f"Failed to apply blur effect: {e}")
+                logging.warning("Failed to apply blur effect: %s", e)
         self._fade_in_popup()
         QTimer.singleShot(0, self._focus_first_icon)
 
@@ -1444,7 +1444,7 @@ class LaunchpadWidget(BaseWidget):
         else:
             self._populate_flat_grid(filtered_apps)
 
-    def _populate_flat_grid(self, filtered_apps: List[Dict[str, Any]]):
+    def _populate_flat_grid(self, filtered_apps: list[dict[str, Any]]):
         """Populate grid without grouping (original behavior)"""
         grid_layout = self._launchpad_popup.grid_layout
 
@@ -1488,7 +1488,7 @@ class LaunchpadWidget(BaseWidget):
         if icon_requests:
             self._start_background_loading(icon_requests)
 
-    def _populate_grouped_grid(self, filtered_apps: List[Dict[str, Any]]):
+    def _populate_grouped_grid(self, filtered_apps: list[dict[str, Any]]):
         """Populate grid with icons for group"""
         grid_layout = self._launchpad_popup.grid_layout
 
@@ -1557,7 +1557,7 @@ class LaunchpadWidget(BaseWidget):
         if icon_requests:
             self._start_background_loading(icon_requests)
 
-    def _create_group_widget(self, group_name: str, apps: List[Dict[str, Any]]):
+    def _create_group_widget(self, group_name: str, apps: list[dict[str, Any]]):
         group_widget = QFrame()
         group_widget.setProperty("class", "group-icon")
         group_widget.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
@@ -1639,7 +1639,7 @@ class LaunchpadWidget(BaseWidget):
 
         return group_widget
 
-    def _open_group(self, group_name: str, apps: List[Dict[str, Any]]):
+    def _open_group(self, group_name: str, apps: list[dict[str, Any]]):
         self._current_group = group_name
 
         # Hide search input and show back button
@@ -1735,7 +1735,7 @@ class LaunchpadWidget(BaseWidget):
                 else:
                     self._populate_grid()
 
-    def _set_app_group(self, app_data: Dict[str, Any], group: str):
+    def _set_app_group(self, app_data: dict[str, Any], group: str):
         """Set group for an app"""
         apps = self._load_apps()
         for app in apps:
@@ -1787,7 +1787,7 @@ class LaunchpadWidget(BaseWidget):
                     BorderColor=self._window_style["border_color"] if not self._window["fullscreen"] else None,
                 )
             except Exception as e:
-                logging.warning(f"Failed to apply blur effect: {e}")
+                logging.warning("Failed to apply blur effect: %s", e)
 
     def _cleanup_popup(self):
         if self._launchpad_popup:
@@ -1906,7 +1906,7 @@ class LaunchpadWidget(BaseWidget):
                 else:
                     self._populate_grid()
 
-    def _edit_app(self, app_data: Dict[str, Any]):
+    def _edit_app(self, app_data: dict[str, Any]):
         all_groups = self._get_all_groups()
         dialog = AppDialog(
             self._launchpad_popup if self._launchpad_popup else None, app_data, self._icons_dir, all_groups
@@ -1973,7 +1973,7 @@ class LaunchpadWidget(BaseWidget):
 
         dialog.exec()
 
-    def _delete_app(self, app_data: Dict[str, Any]):
+    def _delete_app(self, app_data: dict[str, Any]):
         """Delete an app with modern styled confirmation dialog"""
         dialog = QDialog(self._launchpad_popup if self._launchpad_popup else None)
         dialog.setWindowTitle("Delete App")
@@ -2073,26 +2073,26 @@ class LaunchpadWidget(BaseWidget):
                     try:
                         os.remove(unused_icon_path)
                     except Exception as e:
-                        logging.warning(f"Failed to remove unused icon {filename}: {e}")
+                        logging.warning("Failed to remove unused icon %s: %s", filename, e)
 
                     for cache_key in list(_ICON_CACHE.keys()):
                         if filename in cache_key:
                             del _ICON_CACHE[cache_key]
 
         except Exception as e:
-            logging.error(f"Failed to cleanup unused icons: {e}")
+            logging.error("Failed to cleanup unused icons: %s", e)
 
-    def _load_apps(self) -> List[Dict[str, Any]]:
+    def _load_apps(self) -> list[dict[str, Any]]:
         try:
             if os.path.exists(self._data_file):
-                with open(self._data_file, "r", encoding="utf-8") as f:
+                with open(self._data_file, encoding="utf-8") as f:
                     apps = json.load(f)
                 return apps
         except Exception as e:
-            logging.error(f"Failed to load apps from {self._data_file}: {e}")
+            logging.error("Failed to load apps from %s: %s", self._data_file, e)
         return []
 
-    def _get_all_groups(self) -> List[str]:
+    def _get_all_groups(self) -> list[str]:
         """Get all unique groups from apps"""
         apps = self._load_apps()
         groups = set()
@@ -2125,11 +2125,11 @@ class LaunchpadWidget(BaseWidget):
                 self._populate_grid(current_search)
 
         except Exception as e:
-            logging.error(f"Failed to order apps by {order_type}: {e}")
+            logging.error("Failed to order apps by %s: %s", order_type, e)
 
-    def _save_apps(self, apps: List[Dict[str, Any]]):
+    def _save_apps(self, apps: list[dict[str, Any]]):
         try:
             with open(self._data_file, "w", encoding="utf-8") as f:
                 json.dump(apps, f, indent=2, ensure_ascii=False)
         except Exception as e:
-            logging.error(f"Failed to save apps to {self._data_file}: {e}")
+            logging.error("Failed to save apps to %s: %s", self._data_file, e)

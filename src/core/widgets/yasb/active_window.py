@@ -159,7 +159,7 @@ class ActiveWindowWidget(BaseWidget):
                     if callable(transform):
                         result = transform()
             except re.error as e:
-                logging.warning(f"Invalid regex pattern '{pattern}': {e}")
+                logging.warning("Invalid regex pattern '%s': %s", pattern, e)
                 continue
 
         return result
@@ -221,7 +221,7 @@ class ActiveWindowWidget(BaseWidget):
 
             self._set_no_window_or_hide()
         except Exception:
-            logging.exception(f"Failed handling destroy event for HWND {hwnd}")
+            logging.exception("Failed handling destroy event for HWND %s", hwnd)
 
     def _toggle_title_text(self) -> None:
         if self.config.animation.enabled:
@@ -412,7 +412,9 @@ class ActiveWindowWidget(BaseWidget):
                     self.show()
         except Exception:
             logging.exception(
-                f"Failed to update active window title for window with HWND {hwnd} emitted by event {event}"
+                "Failed to update active window title for window with HWND %s emitted by event %s",
+                hwnd,
+                event,
             )
 
     def _update_text(self):

@@ -3,12 +3,11 @@ import os
 
 from dotenv import load_dotenv
 
+from settings import DEFAULT_CONFIG_DIRECTORY
+
 
 def get_env_path():
-    config_home = os.environ.get("YASB_CONFIG_HOME")
-    if config_home:
-        return os.path.join(config_home, ".env")
-    return os.path.join(os.path.expanduser("~"), ".config", "yasb", ".env")
+    return os.path.join(DEFAULT_CONFIG_DIRECTORY, ".env")
 
 
 def load_env():
@@ -18,9 +17,9 @@ def load_env():
     env_path = get_env_path()
     if os.path.isfile(env_path):
         if not load_dotenv(env_path):
-            logging.warning(f"Failed to load environment variables from {env_path}")
+            logging.warning("Failed to load environment variables from %s", env_path)
         else:
-            logging.info(f"Loaded environment variables from {env_path}")
+            logging.info("Loaded environment variables from %s", env_path)
 
 
 def set_font_engine():

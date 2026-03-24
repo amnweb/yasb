@@ -5,7 +5,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from xml.etree import ElementTree
 
 from PyQt6.QtWidgets import QApplication
@@ -361,7 +361,7 @@ def _format_date(pub_date: str) -> str:
     try:
         # hnrss dates: "Thu, 01 Jan 2026 12:00:00 +0000"
         dt = datetime.strptime(pub_date, "%a, %d %b %Y %H:%M:%S %z")
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         delta = now - dt
         if delta.days == 0:
             hours = delta.seconds // 3600

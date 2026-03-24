@@ -9,12 +9,11 @@ from types import TracebackType
 
 import qasync
 
-import settings
 from core.application import YASBApplication
 from core.bar_manager import BarManager
 from core.config import get_config_and_stylesheet
 from core.event_service import EventService
-from core.log import init_logger
+from core.log import enable_debug_logging, init_logger
 from core.tray import SystemTrayManager
 from core.utils.controller import start_cli_server
 from core.utils.update_service import get_update_service, start_update_checker
@@ -119,7 +118,7 @@ async def main_async(app: YASBApplication):
     config, stylesheet = get_config_and_stylesheet()
 
     if config.debug:
-        settings.DEBUG = True
+        enable_debug_logging()
         logging.info("Debug mode enabled.")
 
     # Initialise bars and background event listeners
@@ -151,7 +150,7 @@ async def main_async(app: YASBApplication):
                 if update_service.is_update_supported():
                     start_update_checker()
             except Exception as e:
-                logging.error(f"Failed to start auto update service: {e}")
+                logging.error("Failed to start auto update service: %s", e)
 
         await app_close_event.wait()
     finally:

@@ -29,7 +29,6 @@ from core.utils.win32.constants import (
     KnownCLSID,
 )
 from core.utils.win32.structs import SHQUERYRBINFO
-from settings import DEBUG
 
 
 class BinInfoWorker(QThread):
@@ -75,13 +74,12 @@ class BinInfoWorker(QThread):
         if result == S_OK:
             return {"size_bytes": info.i64Size, "num_items": info.i64NumItems}
 
-        if DEBUG:
-            error_code = result & 0xFFFF  # Equivalent to HRESULT_CODE macro
-            try:
-                error_message = str(ctypes.WinError(error_code))
-            except Exception:
-                error_message = f"HRESULT 0x{result & 0xFFFFFFFF:08X}"
-            logging.error("SHQueryRecycleBinW failed: %s", error_message)
+        error_code = result & 0xFFFF  # Equivalent to HRESULT_CODE macro
+        try:
+            error_message = str(ctypes.WinError(error_code))
+        except Exception:
+            error_message = f"HRESULT 0x{result & 0xFFFFFFFF:08X}"
+        logging.debug("SHQueryRecycleBinW failed: %s", error_message)
 
         return {"size_bytes": 0, "num_items": 0}
 
@@ -145,12 +143,10 @@ class RecycleBinMonitor(QObject):
 
         # Start monitoring if this is the first subscriber
         if subscriber_count == 1 and not self._is_monitoring:
-            if DEBUG:
-                logging.debug(f"RecycleBinMonitor first subscriber {subscriber_id}, starting monitoring")
+            logging.debug("RecycleBinMonitor first subscriber %s, starting monitoring", subscriber_id)
             self.start_monitoring()
         else:
-            if DEBUG:
-                logging.debug(f"RecycleBinMonitor subscriber {subscriber_id} added (total: {subscriber_count})")
+            logging.debug("RecycleBinMonitor subscriber %s added (total: %d)", subscriber_id, subscriber_count)
 
         return True
 
@@ -166,12 +162,10 @@ class RecycleBinMonitor(QObject):
 
         # Stop monitoring if no more subscribers
         if subscriber_count == 0 and self._is_monitoring:
-            if DEBUG:
-                logging.debug(f"RecycleBinMonitor last subscriber {subscriber_id} removed (stopping monitoring)")
+            logging.debug("RecycleBinMonitor last subscriber %s removed (stopping monitoring)", subscriber_id)
             self.stop_monitoring()
         else:
-            if DEBUG:
-                logging.debug(f"RecycleBinMonitor subscriber {subscriber_id} removed (remaining: {subscriber_count})")
+            logging.debug("RecycleBinMonitor subscriber %s removed (remaining: %d)", subscriber_id, subscriber_count)
 
     def start_monitoring(self):
         """Start monitoring the recycle bin for changes"""
@@ -256,7 +250,7 @@ class RecycleBinMonitor(QObject):
             logging.error("Failed to empty recycle bin: %s", error_message)
             return False
         except Exception as e:
-            logging.error(f"Error emptying recycle bin: {e}")
+            logging.error("Error emptying recycle bin: %s", e)
             return False
 
     def empty_recycle_bin_async(self, show_confirmation=False, show_progress=False, play_sound=False):
@@ -281,7 +275,7 @@ class RecycleBinMonitor(QObject):
         try:
             os.startfile(f"shell:::{{{KnownCLSID.RECYCLE_BIN}}}")
         except Exception as e:
-            logging.error(f"Error opening recycle bin: {e}")
+            logging.error("Error opening recycle bin: %s", e)
             return False
 
     def _query_bin_info_async(self, mark_poll_time=True):
@@ -424,7 +418,7 @@ class Win32DirectoryWatcher:
         # Create stop event
         self._stop_event = kernel32.CreateEventW(None, True, False, None)
         if not self._stop_event:
-            logging.error(f"Watcher: failed to create stop event for {self.path}: {ctypes.WinError()}")
+            logging.error("Watcher: failed to create stop event for %s: %s", self.path, ctypes.WinError())
             self._stop_event = None
             return False
 
@@ -440,7 +434,7 @@ class Win32DirectoryWatcher:
         )
 
         if self._dir_handle == INVALID_HANDLE_VALUE:
-            logging.error(f"Watcher: failed to open dir handle for {self.path}: {ctypes.WinError()}")
+            logging.error("Watcher: failed to open dir handle for %s: %s", self.path, ctypes.WinError())
             if self._stop_event is not None:
                 kernel32.CloseHandle(self._stop_event)
                 self._stop_event = None
@@ -449,7 +443,7 @@ class Win32DirectoryWatcher:
         # Register change notification
         self._change_handle = kernel32.FindFirstChangeNotificationW(self.path, self.watch_subtree, self.flag)
         if self._change_handle == INVALID_HANDLE_VALUE:
-            logging.error(f"Watcher: failed to register change notification for {self.path}: {ctypes.WinError()}")
+            logging.error("Watcher: failed to register change notification for %s: %s", self.path, ctypes.WinError())
             if self._dir_handle != INVALID_HANDLE_VALUE:
                 kernel32.CloseHandle(self._dir_handle)
                 self._dir_handle = INVALID_HANDLE_VALUE
@@ -472,7 +466,7 @@ class Win32DirectoryWatcher:
                 break
 
             if result == WAIT_FAILED:
-                logging.error(f"Watcher: wait failed for {self.path}: {ctypes.WinError()}")
+                logging.error("Watcher: wait failed for %s: %s", self.path, ctypes.WinError())
                 break
 
             if result == WAIT_OBJECT_0:
@@ -483,13 +477,13 @@ class Win32DirectoryWatcher:
 
                 # Reset change notification
                 if not kernel32.FindNextChangeNotification(self._change_handle):
-                    logging.error(f"Watcher: failed to reset notification for {self.path}: {ctypes.WinError()}")
+                    logging.error("Watcher: failed to reset notification for %s: %s", self.path, ctypes.WinError())
                     break
             elif result == WAIT_OBJECT_0 + 1:
                 # Stop event signaled
                 break
             else:
-                logging.error(f"Watcher: unexpected wait result: {result}")
+                logging.error("Watcher: unexpected wait result: %s", result)
                 break
 
         # Cleanup

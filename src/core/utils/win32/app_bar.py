@@ -5,8 +5,6 @@ from ctypes import POINTER, Structure, c_ulong, sizeof, windll, wintypes
 import win32con
 from PyQt6.QtGui import QScreen
 
-import settings
-
 shell32 = windll.shell32
 user32 = windll.user32
 
@@ -135,11 +133,14 @@ class Win32AppBar:
         else:
             self.app_bar_data.rc.top = screen.geometry().y() + screen_height - bar_height
             self.app_bar_data.rc.bottom = screen.geometry().y() + screen_height
-        if settings.DEBUG:
-            bar_info = f"Bar {bar_name}" if bar_name else "Bar"
-            logging.info(
-                f"{bar_info} Created on Screen: {screen.name()} [Bar Height: {app_bar_height}px, DPI Scale: {screen.devicePixelRatio()}]"
-            )
+        bar_info = f"Bar {bar_name}" if bar_name else "Bar"
+        logging.debug(
+            "%s Created on Screen: %s [Bar Height: %spx, DPI Scale: %s]",
+            bar_info,
+            screen.name(),
+            app_bar_height,
+            screen.devicePixelRatio(),
+        )
 
     def register_new(self):
         self.app_bar_data.uCallbackMessage = self.callback_message

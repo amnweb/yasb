@@ -100,6 +100,6 @@ class QueryWorker(QThread):
             if not self._cancel.is_set():
                 self.finished.emit(query_id, all_results[:max_results])
         except Exception as e:
-            logging.debug(f"Query worker error: {e}")
+            logging.debug("Query worker error: %s", e)
             if not self._cancel.is_set():
                 self.finished.emit(query_id, [])

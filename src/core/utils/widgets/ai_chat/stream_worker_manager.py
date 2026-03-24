@@ -89,14 +89,14 @@ class StreamWorkerManager:
                 file_path = instructions.strip()
                 if os.path.isfile(file_path):
                     try:
-                        with open(file_path, "r", encoding="utf-8") as f:
+                        with open(file_path, encoding="utf-8") as f:
                             instructions = f.read()
                     except Exception:
                         instructions = None
-                        logging.error(f"Failed to read instructions from {file_path}")
+                        logging.error("Failed to read instructions from %s", file_path)
                 else:
                     instructions = None
-                    logging.error(f"Instructions file {file_path} does not exist")
+                    logging.error("Instructions file %s does not exist", file_path)
 
         chat_history = [
             msg

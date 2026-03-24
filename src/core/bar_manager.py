@@ -69,7 +69,7 @@ class BarManager(QObject):
         try:
             config = get_config(show_error_dialog=True)
         except Exception as e:
-            logging.error(f"Error loading config: {e}")
+            logging.error("Error loading config: %s", e)
             return
         if config and (config != self.config):
             # Fields that don't trigger a full application reload
@@ -92,7 +92,7 @@ class BarManager(QObject):
 
     def run_listeners_in_threads(self):
         for listener in self.widget_event_listeners:
-            logging.info(f"Starting {listener.__name__}...")
+            logging.info("Starting %s...", listener.__name__)
             thread = listener()
             thread.start()
             self._threads[listener] = thread
@@ -108,14 +108,14 @@ class BarManager(QObject):
             self._hotkey_dispatcher = None
 
         for listener in self.widget_event_listeners:
-            logging.info(f"Stopping {listener.__name__}...")
+            logging.info("Stopping %s...", listener.__name__)
             with suppress(KeyError):
                 thread = self._threads[listener]
                 if hasattr(thread, "stop"):
                     try:
                         thread.stop()
                     except Exception as e:
-                        logging.debug(f"Thread stop() raised for {listener.__name__}: {e}")
+                        logging.debug("Thread stop() raised for %s: %s", listener.__name__, e)
                 if hasattr(thread, "quit"):
                     try:
                         thread.quit()
@@ -140,7 +140,7 @@ class BarManager(QObject):
                 for screen in bar_config.screens:
                     resolved_name = primary_screen_name if screen == "primary" else screen
                     if resolved_name not in available_screen_names:
-                        logging.warning(f"Screen '{resolved_name}' from config not found among connected screens.")
+                        logging.warning("Screen '%s' from config not found among connected screens.", resolved_name)
                         continue
                     assigned_screens.add(resolved_name)
 
@@ -161,7 +161,7 @@ class BarManager(QObject):
                 for screen_name in bar_config.screens:
                     resolved_name = primary_screen_name if screen_name == "primary" else screen_name
                     if resolved_name not in available_screen_names:
-                        logging.warning(f"Screen '{resolved_name}' from config not found among connected screens.")
+                        logging.warning("Screen '%s' from config not found among connected screens.", resolved_name)
                         continue
                     screen = get_screen_by_name(resolved_name)
                     if screen:
@@ -194,8 +194,10 @@ class BarManager(QObject):
                 if hotkey_lower in seen_hotkeys:
                     existing_widget = seen_hotkeys[hotkey_lower]
                     logging.warning(
-                        f"Hotkey conflict: '{binding.hotkey}' is already assigned to '{existing_widget}', "
-                        f"overriding with '{widget_name}'"
+                        "Hotkey conflict: '%s' is already assigned to '%s', overriding with '%s'",
+                        binding.hotkey,
+                        existing_widget,
+                        widget_name,
                     )
                     # Remove the old binding so the new one actually takes effect
                     self._collected_keybindings = [
@@ -235,8 +237,9 @@ class BarManager(QObject):
                     if key in self._registered_hotkey_widgets:
                         widget._hotkey_enabled = False
                         logging.info(
-                            f"{widget.widget_name} on screen {screen.name()} already has hotkey handler "
-                            f"registered from another bar."
+                            "%s on screen %s already has hotkey handler registered from another bar.",
+                            widget.widget_name,
+                            screen.name(),
                         )
                     else:
                         self._registered_hotkey_widgets.add(key)

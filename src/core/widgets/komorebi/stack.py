@@ -18,7 +18,6 @@ from core.utils.win32.utilities import get_monitor_hwnd
 from core.utils.win32.window_actions import close_application
 from core.validation.widgets.komorebi.stack import StackConfig
 from core.widgets.base import BaseWidget
-from settings import DEBUG
 
 try:
     from core.utils.widgets.komorebi.event_listener import KomorebiEventListener
@@ -33,7 +32,7 @@ WINDOW_STATUS_ACTIVE: WindowStatus = "ACTIVE"
 
 class WindowButton(QFrame):
     def __init__(
-        self, window_index: int, parent_widget: "StackWidget", label: str | None = None, active_label: str | None = None
+        self, window_index: int, parent_widget: StackWidget, label: str | None = None, active_label: str | None = None
     ):
         super().__init__()
         self._animation_initialized = False
@@ -112,7 +111,7 @@ class WindowButton(QFrame):
                 pass
                 # self.animate_buttons()
         except Exception:
-            logging.exception(f"Failed to focus stack window at index {self.window_index}")
+            logging.exception("Failed to focus stack window at index %s", self.window_index)
 
     def close_stack_window(self):
         hwnd = self.parent_widget._komorebi_windows[self.window_index]["hwnd"]
@@ -261,7 +260,7 @@ class StackWidget(BaseWidget):
                     if callable(transform):
                         result = transform()
             except re.error as e:
-                logging.warning(f"Invalid regex pattern '{pattern}': {e}")
+                logging.warning("Invalid regex pattern '%s': %s", pattern, e)
                 continue
 
         return result
@@ -531,7 +530,7 @@ class StackWidget(BaseWidget):
         try:
             self._komorebic.focus_stack_window(next_idx)
         except Exception:
-            logging.exception(f"Failed to switch to stack window at index {next_idx}")
+            logging.exception("Failed to switch to stack window at index %s", next_idx)
 
     def get_app_icon(self, window_index: int, ignore_cache: bool) -> QPixmap | None:
         try:
@@ -561,6 +560,7 @@ class StackWidget(BaseWidget):
                     return pixmap
 
         except Exception:
-            if DEBUG:
-                logging.exception(f"Failed to get icons for window with HWND {hwnd if hwnd is not None else 'unknown'}")
+            logging.debug(
+                "Failed to get icons for window with HWND %s", hwnd if hwnd is not None else "unknown", exc_info=True
+            )
             return None

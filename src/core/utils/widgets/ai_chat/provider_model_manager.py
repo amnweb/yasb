@@ -72,7 +72,9 @@ class ProviderModelManager:
         # Logs warning if more than one model has default flag set
         if len(default_models) > 1:
             logging.warning(
-                f"Multiple models have default flag set: {default_models}. Using first model: {default_models[0]}"
+                "Multiple models have default flag set: %s. Using first model: %s",
+                default_models,
+                default_models[0],
             )
 
         # Set the default provider and model if found
@@ -251,7 +253,7 @@ class ProviderModelManager:
             self._owner._set_header_loader(False)
         except Exception:
             pass
-        logging.error(f"Failed to list Copilot models: {error_message}")
+        logging.error("Failed to list Copilot models: %s", error_message)
         try:
             self._owner.model_btn.setEnabled(False)
             self._owner.model_btn.setText("No models (offline)")

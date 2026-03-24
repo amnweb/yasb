@@ -8,11 +8,11 @@ import logging
 import os
 import queue
 import shutil
-import sys
 import tempfile
 import threading
+from collections.abc import Iterable
 from dataclasses import asdict, is_dataclass
-from typing import Any, Iterable
+from typing import Any
 
 from core.utils.widgets.ai_chat.constants import (
     BYTES_PER_KB,
@@ -23,7 +23,7 @@ from core.utils.widgets.ai_chat.constants import (
     FORMAT_TO_MIME,
     MESSAGE_QUEUE_TIMEOUT_SECONDS,
 )
-from settings import DEBUG
+from settings import IS_FROZEN
 
 try:
     from copilot import CopilotClient
@@ -44,7 +44,7 @@ def _build_copilot_client_options(provider_config: dict | None) -> dict[str, Any
     if isinstance(cli_url, str) and cli_url.strip():
         return {"cli_url": cli_url.strip()}
     # In a frozen exe the SDK cannot locate its bundled binary resolve from system PATH.
-    if getattr(sys, "frozen", False):
+    if IS_FROZEN:
         cli_path = _resolve_copilot_cli_path()
         if cli_path:
             return {"cli_path": cli_path}
@@ -173,14 +173,13 @@ def list_copilot_models(provider_config: dict | None = None) -> list[dict[str, A
         models = _run_async(_list)
         if not models:
             return []
-        if DEBUG:
-            logging.debug(
-                "Available Copilot models: %s",
-                [item.get("name") for item in models],
-            )
+        logging.debug(
+            "Available Copilot models: %s",
+            [item.get("name") for item in models],
+        )
         return _sort_models_free_first(models)
     except Exception as exc:
-        logging.exception(f"Failed to list Copilot models: {exc}")
+        logging.exception("Failed to list Copilot models: %s", exc)
         return []
 
 
@@ -228,23 +227,20 @@ class CopilotAiChatClient:
         try:
             self._run_coroutine(self._abort_session())
         except Exception as e:
-            if DEBUG:
-                logging.debug(f"Error aborting Copilot session: {e}")
+            logging.debug("Error aborting Copilot session: %s", e)
 
     def close(self):
         """Stop the client and release all resources (kills copilot.exe)."""
         try:
             self._run_coroutine(self._stop_client())
         except Exception as e:
-            if DEBUG:
-                logging.debug(f"Error destroying Copilot session: {e}")
+            logging.debug("Error destroying Copilot session: %s", e)
         if self._loop and self._loop_thread:
             try:
                 self._loop.call_soon_threadsafe(self._loop.stop)
                 self._loop_thread.join(timeout=2)
             except Exception as e:
-                if DEBUG:
-                    logging.debug(f"Error stopping Copilot event loop: {e}")
+                logging.debug("Error stopping Copilot event loop: %s", e)
 
     def chat(
         self,
@@ -366,8 +362,8 @@ class CopilotAiChatClient:
             # Wait with timeout to prevent hanging forever
             try:
                 await asyncio.wait_for(self._active_idle.wait(), timeout=DEFAULT_TIMEOUT_SECONDS)
-            except asyncio.TimeoutError:
-                logging.warning(f"Copilot request timed out after {DEFAULT_TIMEOUT_SECONDS} seconds")
+            except TimeoutError:
+                logging.warning("Copilot request timed out after %s seconds", DEFAULT_TIMEOUT_SECONDS)
                 await self._abort_session()
                 raise TimeoutError("Request timed out")
             if not self._had_output:
@@ -403,8 +399,7 @@ class CopilotAiChatClient:
                 attachments.append({"type": "file", "path": temp_path})
                 continue
 
-            if DEBUG:
-                logging.debug(f"Copilot skipped image attachment (no file): {att.get('name')}")
+            logging.debug("Copilot skipped image attachment (no file): %s", att.get("name"))
 
         return attachments
 
@@ -469,10 +464,10 @@ class CopilotAiChatClient:
                 logging.error("Copilot CLI not found. Please install GitHub Copilot CLI.")
                 raise RuntimeError("Copilot CLI not found")
             except ConnectionError as e:
-                logging.error(f"Could not connect to Copilot CLI server: {e}")
+                logging.error("Could not connect to Copilot CLI server: %s", e)
                 raise RuntimeError("Could not connect to Copilot CLI server")
             except Exception as e:
-                logging.error(f"Failed to start Copilot client: {e}")
+                logging.error("Failed to start Copilot client: %s", e)
                 raise RuntimeError("Failed to start Copilot client")
             self._client = client
 
@@ -488,7 +483,7 @@ class CopilotAiChatClient:
         try:
             self._session = await self._client.create_session(session_args)
         except Exception as e:
-            logging.error(f"Failed to create Copilot session: {e}")
+            logging.error("Failed to create Copilot session: %s", e)
             self._session = None
             raise
 

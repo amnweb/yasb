@@ -19,7 +19,7 @@ except Exception:
     get_virtual_desktops = None
     set_wallpaper_for_all_desktops = None
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("windows_desktop_service")
 
 SKIP_WINDOW_CLASSES = frozenset(
     {
@@ -34,7 +34,7 @@ SKIP_WINDOW_CLASSES = frozenset(
 class _NotificationHandler:
     """Receives pyvda desktop notification callbacks and forwards them to the service."""
 
-    def __init__(self, service: "WindowsDesktopService"):
+    def __init__(self, service: WindowsDesktopService):
         self._service = service
 
     def desktop_changed(self, *args):

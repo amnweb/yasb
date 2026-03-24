@@ -55,7 +55,7 @@ class IconResolverWorker(QThread):
                 if icon_path and os.path.isfile(icon_path):
                     self.icon_ready.emit(app_key, icon_path)
             except Exception as e:
-                logging.debug(f"Icon resolve failed for {name}: {e}")
+                logging.debug("Icon resolve failed for %s: %s", name, e)
                 if self._default_icon:
                     self.icon_ready.emit(app_key, self._default_icon)
 

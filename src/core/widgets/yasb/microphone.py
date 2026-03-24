@@ -72,7 +72,7 @@ class MicrophoneWidget(BaseWidget):
                     if microphone:
                         self.show_menu()
                 except Exception as e:
-                    logging.debug(f"Cannot show microphone menu after device change: {e}")
+                    logging.debug("Cannot show microphone menu after device change: %s", e)
 
         self._update_label()
 
@@ -105,7 +105,7 @@ class MicrophoneWidget(BaseWidget):
                 min_icon = self._get_mic_icon()
                 min_level = self.config.mute_text if mute_status == 1 else f"{mic_level}%"
             except Exception as e:
-                logging.error(f"Failed to get microphone info: {e}")
+                logging.error("Failed to get microphone info: %s", e)
                 return
 
         label_options = {"{icon}": min_icon, "{level}": min_level}
@@ -233,7 +233,7 @@ class MicrophoneWidget(BaseWidget):
             current_mute_status = self.audio_endpoint.GetMute()
             self.audio_endpoint.SetMute(not current_mute_status, None)
         except Exception as e:
-            logging.error(f"Failed to toggle microphone mute: {e}")
+            logging.error("Failed to toggle microphone mute: %s", e)
 
     def _increase_volume(self):
         if self.audio_endpoint is None:
@@ -247,7 +247,7 @@ class MicrophoneWidget(BaseWidget):
             self._update_slider_value()
             self._update_label()
         except Exception as e:
-            logging.error(f"Failed to increase microphone volume: {e}")
+            logging.error("Failed to increase microphone volume: %s", e)
 
     def _decrease_volume(self):
         if self.audio_endpoint is None:
@@ -261,7 +261,7 @@ class MicrophoneWidget(BaseWidget):
             self._update_slider_value()
             self._update_label()
         except Exception as e:
-            logging.error(f"Failed to decrease microphone volume: {e}")
+            logging.error("Failed to decrease microphone volume: %s", e)
 
     def wheelEvent(self, event: QWheelEvent):
         if self.audio_endpoint is None:
@@ -383,4 +383,4 @@ class MicrophoneWidget(BaseWidget):
                 if hasattr(self, "volume_slider"):
                     self._show_slider_tooltip(self.volume_slider, value)
             except Exception as e:
-                logging.error(f"Failed to set microphone volume: {e}")
+                logging.error("Failed to set microphone volume: %s", e)

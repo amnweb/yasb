@@ -86,7 +86,7 @@ class LaunchHistory:
     def _load(self) -> dict[str, dict]:
         try:
             if os.path.isfile(self._recent_file):
-                with open(self._recent_file, "r", encoding="utf-8") as f:
+                with open(self._recent_file, encoding="utf-8") as f:
                     data = json.load(f)
                 # Migrate legacy list format
                 if isinstance(data, list):
@@ -461,7 +461,7 @@ class AppsProvider(BaseProvider):
                     shell_open(path, verb=launch_verb)
                 self._history.record(name, path)
             except Exception as e:
-                logging.debug(f"Failed to run as {'user' if as_user else 'admin'}: {e}")
+                logging.debug("Failed to run as %s: %s", "user" if as_user else "admin", e)
             return ProviderMenuActionResult(close_popup=True)
 
         if action_id == "open_file_location":
@@ -469,7 +469,7 @@ class AppsProvider(BaseProvider):
                 target = self._resolve_app_target(path)
                 shell_open("explorer.exe", parameters=f'/select, "{target}"')
             except Exception as e:
-                logging.debug(f"Failed to open file location: {e}")
+                logging.debug("Failed to open file location: %s", e)
             return ProviderMenuActionResult(close_popup=True)
 
         if action_id == "copy_path":

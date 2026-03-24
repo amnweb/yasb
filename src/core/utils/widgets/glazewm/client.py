@@ -8,14 +8,7 @@ from PyQt6.QtCore import QObject, QTimer, QUrl, pyqtSignal
 from PyQt6.QtNetwork import QAbstractSocket
 from PyQt6.QtWebSockets import QWebSocket
 
-from settings import DEBUG
-
 logger = logging.getLogger("glazewm_client")
-
-if DEBUG:
-    logger.setLevel(logging.DEBUG)
-else:
-    logger.setLevel(logging.CRITICAL)
 
 
 @dataclass
@@ -121,24 +114,24 @@ class GlazewmClient(QObject):
     def connect(self):
         if self._websocket.state() == QAbstractSocket.SocketState.ConnectedState:
             return
-        logger.debug(f"Connecting to {self._uri.toString()}")
+        logger.debug("Connecting to %s", self._uri.toString())
         self._websocket.open(self._uri)
 
     def _on_connected(self) -> None:
-        logger.debug(f"Connected to {self._uri.toString()}")
+        logger.debug("Connected to %s", self._uri.toString())
         for message in self.initial_messages:
-            logger.debug(f"Sent initial message: {message}")
+            logger.debug("Sent initial message: %s", message)
             self._websocket.sendTextMessage(message)
 
         # Stop reconnect timer
         self._reconnect_timer.stop()
 
     def _on_state_changed(self, state: QAbstractSocket.SocketState):
-        logger.debug(f"WebSocket state changed: {state}")
+        logger.debug("WebSocket state changed: %s", state)
         self.glazewm_connection_status.emit(state == QAbstractSocket.SocketState.ConnectedState)
 
     def _on_error(self, error: QAbstractSocket.SocketError) -> None:
-        logger.warning(f"WebSocket error: {error}. Reconnecting...")
+        logger.warning("WebSocket error: %s. Reconnecting...", error)
         self._reconnect_timer.start()
 
     def _handle_message(self, message: str):
@@ -155,7 +148,7 @@ class GlazewmClient(QObject):
         elif response.get("messageType") == MessageType.CLIENT_RESPONSE:
             raw_data: Any = response.get("data")
             if not isinstance(raw_data, dict):
-                logger.warning(f"Expected 'data' to be a dict, got {type(raw_data).__name__}")
+                logger.warning("Expected 'data' to be a dict, got %s", type(raw_data).__name__)
                 return
             data = cast(dict[str, Any], raw_data)
             if response.get("clientMessage") == QueryType.MONITORS:
@@ -170,7 +163,7 @@ class GlazewmClient(QObject):
             elif response.get("clientMessage") == QueryType.BINDING_MODES:
                 binding_modes = data.get("bindingModes", [])
                 if binding_modes is None:
-                    logger.warning(f"Expected 'bindingModes' to be a list, got {type(binding_modes).__name__}")
+                    logger.warning("Expected 'bindingModes' to be a list, got %s", type(binding_modes).__name__)
                     return
                 self.binding_mode_changed.emit(self._process_binding_modes(binding_modes))
 

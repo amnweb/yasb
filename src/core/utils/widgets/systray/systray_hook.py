@@ -67,12 +67,12 @@ class SystrayHook(QObject):
         try:
             self._h_mutex = CreateMutex(None, True, WATCHDOG_MUTEX_NAME)
         except pywintypes.error as e:
-            logger.error(f"Failed to create watchdog mutex: {e}")
+            logger.error("Failed to create watchdog mutex: %s", e)
             return
 
         # A message pipe that the DLL will connect to.
         # Using FILE_FLAG_OVERLAPPED for efficient waiting in a separate thread
-        logger.debug(f"Creating pipe {MESSAGE_PIPE_NAME}...")
+        logger.debug("Creating pipe %s...", MESSAGE_PIPE_NAME)
         try:
             self._message_pipe = win32pipe.CreateNamedPipe(
                 MESSAGE_PIPE_NAME,
@@ -85,7 +85,7 @@ class SystrayHook(QObject):
                 None,
             )
         except pywintypes.error as e:
-            logger.error(f"Failed to create pipe: {e}")
+            logger.error("Failed to create pipe: %s", e)
             if self._h_mutex:
                 CloseHandle(self._h_mutex)
                 self._h_mutex = None
@@ -125,7 +125,7 @@ class SystrayHook(QObject):
             dll_path = get_dll_path()  # will hard crash if unsupported architecture
             dll_name = os.path.basename(dll_path)
             if not is_dll_loaded(pid, dll_name):
-                logger.info(f"Injecting into Explorer (PID: {pid})")
+                logger.info("Injecting into Explorer (PID: %s)", pid)
                 if not inject_dll(pid, dll_path):
                     logger.error("Injection failed, retrying in 5s")
                     time.sleep(5)
@@ -169,7 +169,7 @@ class SystrayHook(QObject):
                             elif e.winerror == winerror.ERROR_OPERATION_ABORTED:
                                 logger.debug("Pipe operation aborted (closing)")
                             else:
-                                logger.error(f"ReadFile failed immediately: {e}")
+                                logger.error("ReadFile failed immediately: %s", e)
                             read_error = True
                             break
 
@@ -192,7 +192,7 @@ class SystrayHook(QObject):
                             elif e.winerror == winerror.ERROR_BROKEN_PIPE:
                                 logger.debug("DLL Disconnected")
                             else:
-                                logger.error(f"GetOverlappedResult failed: {e}")
+                                logger.error("GetOverlappedResult failed: %s", e)
                             read_error = True
                             break
                     if read_error or not self._running:
@@ -202,7 +202,7 @@ class SystrayHook(QObject):
             except Exception as e:
                 # Avoid logging error if shutting down
                 if self._running:
-                    logger.error(f"Worker error: {e}")
+                    logger.error("Worker error: %s", e)
             finally:
                 try:
                     win32pipe.DisconnectNamedPipe(self._message_pipe)
@@ -224,7 +224,7 @@ class SystrayHook(QObject):
             logger.debug(msg.strip())
         elif msg_type == 2:
             if len(data_bytes) < 28:
-                logger.error(f"Invalid COPYDATA message size: {len(data_bytes)}")
+                logger.error("Invalid COPYDATA message size: %s", len(data_bytes))
                 return
 
             header_fmt = "=IQIIII"  # type, dwData, cbData, iconWidth, iconHeight, iconDataSize
@@ -267,7 +267,7 @@ def inject_dll(pid: int, dll_path: str) -> bool:
 
     h_process = OpenProcess(PROCESS_ALL_ACCESS, False, pid)
     if not h_process:
-        logger.error(f"Failed to open explorer.exe (PID: {pid})")
+        logger.error("Failed to open explorer.exe (PID: %s)", pid)
         return False
 
     try:
@@ -297,10 +297,10 @@ def inject_dll(pid: int, dll_path: str) -> bool:
             CloseHandle(h_thread)
             return True
         else:
-            logger.error(f"Failed to create remote thread: {GetLastError()}")
+            logger.error("Failed to create remote thread: %s", GetLastError())
             return False
     except Exception as e:
-        logger.error(f"Failed to inject DLL: {e}")
+        logger.error("Failed to inject DLL: %s", e)
         return False
     finally:
         CloseHandle(h_process)

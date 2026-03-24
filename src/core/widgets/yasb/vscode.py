@@ -6,7 +6,6 @@ import re
 import sqlite3
 import subprocess
 import urllib.parse
-from typing import List
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QCursor
@@ -61,7 +60,7 @@ class VSCodeWidget(BaseWidget):
             path = f"{drive_part}:{rest}"
         return path
 
-    def _load_recent_workspaces(self) -> List[dict]:
+    def _load_recent_workspaces(self) -> list[dict]:
         try:
             conn = sqlite3.connect(self._state_file_path)
             cursor = conn.cursor()
@@ -81,13 +80,13 @@ class VSCodeWidget(BaseWidget):
                             if os.path.exists(file_path):
                                 result_list.append({"file": file_path})
                     else:
-                        logging.error(f"Unexpected entry type: {type(path)}")
+                        logging.error("Unexpected entry type: %s", type(path))
             else:
-                logging.error(f"No data found in {file_path}")
+                logging.error("No data found in %s", file_path)
             conn.close()
             return result_list
         except Exception as e:
-            logging.error(f"Error: {e}")
+            logging.error("Error: %s", e)
             return []
 
     def _toggle_menu(self):
@@ -126,7 +125,7 @@ class VSCodeWidget(BaseWidget):
         try:
             subprocess.Popen([self.config.cli_command, folder], shell=True, creationflags=subprocess.CREATE_NO_WINDOW)
         except subprocess.CalledProcessError as e:
-            logging.error(f"Failed to open VS Code with folder {folder}: {e}")
+            logging.error("Failed to open VS Code with folder %s: %s", folder, e)
         except FileNotFoundError:
             logging.error("VS Code not found in PATH")
         self._menu.hide()

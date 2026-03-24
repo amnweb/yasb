@@ -9,14 +9,8 @@ from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.widgets.glazewm.client import BindingMode, GlazewmClient
 from core.validation.widgets.glazewm.binding_mode import GlazewmBindingModeConfig
 from core.widgets.base import BaseWidget
-from settings import DEBUG
 
 logger = logging.getLogger("glazewm_binding_mode")
-
-if DEBUG:
-    logger.setLevel(logging.DEBUG)
-else:
-    logger.setLevel(logging.CRITICAL)
 
 
 class GlazewmBindingModeWidget(BaseWidget):

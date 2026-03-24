@@ -1,3 +1,5 @@
+def get_default_styles() -> str:
+    return """\
 /* 
 This is default and very simple styles file for Yasb. 
 For more information about configuration options, please visit the Wiki https://github.com/amnweb/yasb/wiki
@@ -626,4 +628,4 @@ For more information about configuration options, please visit the Wiki https://
     font-weight: 900;
     color: rgb(255, 255, 255);
     margin-top: -20px;
-}
+}"""

@@ -22,7 +22,6 @@ from core.utils.win32.constants import (
     IOCTL_VIDEO_SET_DISPLAY_BRIGHTNESS,
 )
 from core.utils.win32.structs import DISPLAY_BRIGHTNESS
-from settings import DEBUG
 
 
 class _MonitorInfo:
@@ -119,8 +118,7 @@ class BrightnessService(QObject):
     def _run(self) -> None:
         """Background thread main loop."""
         self._enumerate_monitors()
-        if DEBUG:
-            logging.info(f"BrightnessService started with {len(self._monitors)} monitors")
+        logging.debug("BrightnessService started with %d monitors", len(self._monitors))
 
         # Initial poll
         self._poll_all_monitors()
@@ -193,8 +191,7 @@ class BrightnessService(QObject):
             hmon = int(hmonitor)
             with self._lock:
                 self._monitors[hmon] = _MonitorInfo(hmon)
-            if DEBUG:
-                logging.info(f"BrightnessService found monitor: {hmon}")
+            logging.debug("BrightnessService found monitor: %s", hmon)
             return True
 
         user32.EnumDisplayMonitors(None, None, MONITORENUMPROC(enum_callback), 0)
@@ -212,8 +209,7 @@ class BrightnessService(QObject):
             monitor.supports_ddc = self._test_ddc(hmonitor)
             monitor.supports_lcd = self._test_lcd()
             monitor.tested = True
-            if DEBUG:
-                logging.info(f"Monitor {hmonitor}: DDC={monitor.supports_ddc}, LCD={monitor.supports_lcd}")
+            logging.debug("Monitor %s: DDC=%s, LCD=%s", hmonitor, monitor.supports_ddc, monitor.supports_lcd)
 
         # Try DDC first (external monitors), then LCD (laptops)
         if monitor.supports_ddc:

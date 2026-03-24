@@ -41,7 +41,7 @@ def _empty_recycle_bin() -> None:
         # Clear reference when done
         signal.connect(lambda: _clear_thread_ref())
     except Exception as e:
-        logging.error(f"Failed to empty Recycle Bin: {e}")
+        logging.error("Failed to empty Recycle Bin: %s", e)
 
 
 def _clear_thread_ref():
@@ -101,17 +101,17 @@ def get_explorer_pinned_folders() -> list[tuple[str, str]]:
                         pinned_folders.append((folder_name, fs_path))
 
                 except Exception as e:
-                    logging.debug(f"Error processing Quick Access item: {e}")
+                    logging.debug("Error processing Quick Access item: %s", e)
                     continue
 
         except Exception as e:
-            logging.debug(f"Error accessing Quick Access folder: {e}")
+            logging.debug("Error accessing Quick Access folder: %s", e)
 
         pythoncom.CoUninitialize()
         return pinned_folders[:10]  # Limit to 10 items
 
     except Exception as e:
-        logging.debug(f"Error reading Quick Access pinned folders: {e}")
+        logging.debug("Error reading Quick Access pinned folders: %s", e)
         return []
 
 
@@ -157,11 +157,11 @@ def get_windows_terminal_profiles(identifier: str = None) -> list[tuple[str, str
             )
 
         if not settings_path or not settings_path.exists():
-            logging.debug(f"Windows Terminal settings.json not found at {settings_path}")
+            logging.debug("Windows Terminal settings.json not found at %s", settings_path)
             return []
 
         # Read and parse the settings
-        with open(settings_path, "r", encoding="utf-8") as f:
+        with open(settings_path, encoding="utf-8") as f:
             settings = json.load(f)
 
         profiles = []
@@ -182,7 +182,7 @@ def get_windows_terminal_profiles(identifier: str = None) -> list[tuple[str, str
         return profiles[:20]  # Limit to 20 profiles
 
     except Exception as e:
-        logging.debug(f"Error reading Windows Terminal profiles: {e}")
+        logging.debug("Error reading Windows Terminal profiles: %s", e)
         return []
 
 
@@ -348,7 +348,7 @@ def show_context_menu(taskbar_widget, hwnd: int, pos) -> QMenu | None:
         return menu
 
     except Exception as e:
-        logging.error(f"Error showing context menu: {e}")
+        logging.error("Error showing context menu: %s", e)
         return None
 
 

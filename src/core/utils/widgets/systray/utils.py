@@ -5,6 +5,7 @@ import ctypes as ct
 import logging
 import os
 import sys
+from collections.abc import Callable
 from ctypes import GetLastError, byref, sizeof, windll
 from ctypes.wintypes import (
     DWORD,
@@ -14,7 +15,6 @@ from ctypes.wintypes import (
 )
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable
 from uuid import UUID
 
 from PIL import Image
@@ -61,6 +61,7 @@ from core.utils.win32.constants import (
 )
 from core.utils.win32.structs import NOTIFYICONDATA, PROCESSENTRY32, WNDCLASS, WNDPROC
 from core.utils.win32.utilities import get_windows_host_arch
+from settings import IS_FROZEN
 
 logger = logging.getLogger("systray_widget")
 
@@ -151,7 +152,7 @@ class NativeWindowEx:
 
     def destroy(self):
         if self.hwnd != 0:
-            logger.debug(f"Destroying window {self.hwnd}")
+            logger.debug("Destroying window %s", self.hwnd)
             PostMessage(self.hwnd, WM_CLOSE, 0, 0)
             self.hwnd = 0
 
@@ -179,7 +180,7 @@ def get_exe_path_from_hwnd(hwnd: int) -> str | None:
     # Open process to get module handle
     h_process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, process_id.value)
     if not h_process:
-        logger.debug(f"Could not open process ID {process_id.value}. Err: {GetLastError()}")
+        logger.debug("Could not open process ID %s. Err: %s", process_id.value, GetLastError())
         return None
 
     try:
@@ -303,7 +304,7 @@ def get_dll_path() -> str:
         raise Exception("Unsupported architecture")
 
     # Check if we're running in a frozen environment
-    if getattr(sys, "frozen", False):
+    if IS_FROZEN:
         dll_path = os.path.join(os.path.dirname(sys.executable), "lib", dll_name)
     else:
         dll_path = os.path.join(os.path.dirname(__file__), "hook", dll_name)

@@ -11,18 +11,16 @@ import logging
 import platform
 import re
 import ssl
-import sys
 import threading
 import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
-from typing import Optional
 
 import certifi
 
 from core.utils.utilities import ToastNotifier, app_data_path, get_app_identifier, get_architecture
-from settings import APP_ID, BUILD_VERSION, RELEASE_CHANNEL, SCRIPT_PATH
+from settings import APP_ID, BUILD_VERSION, IS_FROZEN, RELEASE_CHANNEL, SCRIPT_PATH
 
 # GitHub API configuration
 GITHUB_API_URL = "https://api.github.com/repos/amnweb/yasb/releases/latest"
@@ -34,7 +32,7 @@ LAST_CHECK_FILE = app_data_path("last_update_check")
 ARCHITECTURE = get_architecture()
 
 # Module-level singletons
-_update_service_instance: Optional["UpdateService"] = None
+_update_service_instance: UpdateService | None = None
 _update_checker_started = False
 
 
@@ -55,7 +53,7 @@ class ReleaseInfo:
     changelog: str
     download_url: str
     asset_name: str
-    asset_size: Optional[int]
+    asset_size: int | None
     architecture: str
 
 
@@ -137,7 +135,7 @@ class UpdateService:
         segments = [int(part) for part in re.findall(r"\d+", version)]
         return segments if segments else [0]
 
-    def is_newer_version(self, latest: str, current: Optional[str] = None) -> bool:
+    def is_newer_version(self, latest: str, current: str | None = None) -> bool:
         """Compare version strings to determine if an update is available.
 
         Args:
@@ -160,7 +158,7 @@ class UpdateService:
 
         return latest_segments > current_segments
 
-    def _select_asset_for_architecture(self, assets: list[dict], channel: str = "stable") -> Optional[dict]:
+    def _select_asset_for_architecture(self, assets: list[dict], channel: str = "stable") -> dict | None:
         """Select the appropriate MSI asset for the current architecture.
 
         Args:
@@ -194,7 +192,7 @@ class UpdateService:
                 if name.endswith(pattern) and not name.startswith("yasb-dev-"):
                     return asset
 
-        logging.error(f"No suitable MSI asset found for {channel} channel, architecture: {ARCHITECTURE}")
+        logging.error("No suitable MSI asset found for %s channel, architecture: %s", channel, ARCHITECTURE)
         return None
 
     def _fetch_release_data(self, check_channel: str, timeout: int) -> dict:
@@ -224,9 +222,9 @@ class UpdateService:
     def check_for_updates(
         self,
         timeout: int = 15,
-        channel: Optional[str] = None,
+        channel: str | None = None,
         skip_version_check: bool = False,
-    ) -> Optional[ReleaseInfo]:
+    ) -> ReleaseInfo | None:
         """Check GitHub for available updates.
 
         Supports both stable and dev channels:
@@ -267,7 +265,7 @@ class UpdateService:
                 if not skip_version_check:
                     current_commit = self._get_current_commit_hash()
                     if commit_hash and commit_hash == current_commit:
-                        logging.debug(f"Already on latest dev build: {current_commit}")
+                        logging.debug("Already on latest dev build: %s", current_commit)
                         return None
             else:
                 version = release_data.get("tag_name", "").lstrip("vV")
@@ -290,16 +288,16 @@ class UpdateService:
             return release_info
 
         except urllib.error.HTTPError as e:
-            logging.error(f"GitHub API HTTP error: {e.code} {e.reason}")
+            logging.error("GitHub API HTTP error: %s %s", e.code, e.reason)
             raise
         except urllib.error.URLError as e:
-            logging.warning(f"Network error checking for updates: {e.reason}")
+            logging.warning("Network error checking for updates: %s", e.reason)
             raise
         except json.JSONDecodeError as e:
-            logging.error(f"Failed to parse GitHub API response: {e}")
+            logging.error("Failed to parse GitHub API response: %s", e)
             raise ValueError("Invalid JSON response from GitHub API")
         except Exception as e:
-            logging.error(f"Unexpected error checking for updates: {e}")
+            logging.error("Unexpected error checking for updates: %s", e)
             raise
 
     def should_check_for_updates(self) -> bool:
@@ -316,7 +314,7 @@ class UpdateService:
                 if elapsed < CHECK_INTERVAL:
                     return False
         except Exception as e:
-            logging.debug(f"Could not read last check time: {e}")
+            logging.debug("Could not read last check time: %s", e)
 
         return True
 
@@ -325,7 +323,7 @@ class UpdateService:
         try:
             LAST_CHECK_FILE.write_text(str(time.time()))
         except Exception as e:
-            logging.warning(f"Failed to update last check time: {e}")
+            logging.warning("Failed to update last check time: %s", e)
 
     def get_version_info(self) -> dict:
         """Get comprehensive version and architecture information.
@@ -355,12 +353,11 @@ class UpdateService:
             True if updates are supported, False otherwise
         """
 
-        is_forzen = getattr(sys, "frozen", False)
         is_installed = get_app_identifier() == APP_ID
         is_arch_supported = ARCHITECTURE is not None
         is_pr_build = RELEASE_CHANNEL.startswith("pr-")
 
-        return is_installed and is_arch_supported and is_forzen and (not is_pr_build)
+        return is_installed and is_arch_supported and IS_FROZEN and (not is_pr_build)
 
 
 def get_update_service() -> UpdateService:
@@ -422,7 +419,7 @@ def start_update_checker() -> None:
             update_service.update_last_check_time()
 
         except Exception as e:
-            logging.warning(f"Background update check failed: {e}")
+            logging.warning("Background update check failed: %s", e)
 
     # Start background thread
     threading.Thread(target=_check_for_update, daemon=True, name="UpdateChecker").start()

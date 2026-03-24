@@ -398,7 +398,7 @@ class ResultListView(QListView):
 
 class QuickLaunchWidget(BaseWidget):
     validation_schema = QuickLaunchConfig
-    _active_instance: "QuickLaunchWidget | None" = None
+    _active_instance: QuickLaunchWidget | None = None
     _SETTINGS_FILE = "quick_launch_settings.json"
 
     def __init__(self, config: QuickLaunchConfig):
@@ -1478,7 +1478,7 @@ class QuickLaunchWidget(BaseWidget):
             path = app_data_path(self._SETTINGS_FILE)
             path.write_text(json.dumps(settings, indent=2), encoding="utf-8")
         except Exception as e:
-            logging.debug(f"Failed to save quick launch settings: {e}")
+            logging.debug("Failed to save quick launch settings: %s", e)
 
     def _load_saved_position(self):
         """Load the saved popup position from the settings file."""

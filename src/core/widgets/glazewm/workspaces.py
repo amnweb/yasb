@@ -14,14 +14,8 @@ from core.utils.win32.app_icons import get_window_icon
 from core.utils.win32.utilities import get_monitor_hwnd, get_process_info
 from core.validation.widgets.glazewm.workspaces import GlazewmWorkspacesConfig
 from core.widgets.base import BaseWidget
-from settings import DEBUG
 
 logger = logging.getLogger("glazewm_workspaces")
-
-if DEBUG:
-    logger.setLevel(logging.DEBUG)
-else:
-    logger.setLevel(logging.CRITICAL)
 
 
 class WorkspaceStatus(StrEnum):
@@ -130,7 +124,7 @@ class GlazewmWorkspaceButton(QPushButton):
         elif self.status == WorkspaceStatus.EMPTY:
             self.setText(empty_label)
         else:
-            logger.warning(f"Unknown workspace status: {self.status}")
+            logger.warning("Unknown workspace status: %s", self.status)
 
 
 class GlazewmWorkspaceButtonWithIcons(QFrame):
@@ -138,7 +132,7 @@ class GlazewmWorkspaceButtonWithIcons(QFrame):
         self,
         workspace_name: str,
         client: GlazewmClient,
-        parent_widget: "GlazewmWorkspacesWidget",
+        parent_widget: GlazewmWorkspacesWidget,
         config: GlazewmWorkspacesConfig,
         display_name: str | None = None,
         windows: list[Window] | None = None,
@@ -232,7 +226,7 @@ class GlazewmWorkspaceButtonWithIcons(QFrame):
         elif self.status == WorkspaceStatus.EMPTY:
             self.text_label.setText(empty_label)
         else:
-            logger.warning(f"Unknown workspace status: {self.status}")
+            logger.warning("Unknown workspace status: %s", self.status)
 
     def mousePressEvent(self, event: QMouseEvent):
         if event.button() == Qt.MouseButton.LeftButton:
@@ -304,8 +298,7 @@ class GlazewmWorkspaceButtonWithIcons(QFrame):
                     return None
 
         except Exception:
-            if DEBUG:
-                logging.exception(f"Failed to get icons for window with HWND {hwnd}")
+            logging.debug("Failed to get icons for window with HWND %s", hwnd, exc_info=True)
             return None
 
     def _update_icons(self):

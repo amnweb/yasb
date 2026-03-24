@@ -11,13 +11,12 @@ from core.utils.widgets.traffic.connection_monitor import InternetChecker
 from core.utils.widgets.traffic.traffic_manager import TrafficDataManager
 from core.validation.widgets.yasb.traffic import TrafficWidgetConfig
 from core.widgets.base import BaseWidget
-from settings import DEBUG
 
 
 class TrafficWidget(BaseWidget):
     validation_schema = TrafficWidgetConfig
 
-    _instances_by_interface: dict[str, list["TrafficWidget"]] = {}
+    _instances_by_interface: dict[str, list[TrafficWidget]] = {}
     _shared_timers: dict[str, QTimer] = {}
     _shared_data: dict[str, dict] = {}
 
@@ -70,11 +69,10 @@ class TrafficWidget(BaseWidget):
             self.internet_checker.connection_changed.connect(self._on_connection_changed)
 
             self._is_internet_connected = True
-            if DEBUG:
-                logging.info(f"Internet checker initialized for interface {self.config.interface}")
+            logging.debug("Internet checker initialized for interface %s", self.config.interface)
 
         except Exception as e:
-            logging.error(f"Failed to initialize InternetChecker for interface {self.config.interface}: {e}")
+            logging.error("Failed to initialize InternetChecker for interface %s: %s", self.config.interface, e)
             self._is_internet_connected = False  # Default to disconnected if checker fails
 
         self.register_callback("toggle_label", self._toggle_label)
@@ -111,9 +109,9 @@ class TrafficWidget(BaseWidget):
                     self.bytes_sent = initial_io.bytes_sent
                     self.bytes_recv = initial_io.bytes_recv
                 else:
-                    logging.warning(f"Could not get initial IO counters for interface {self.config.interface}")
+                    logging.warning("Could not get initial IO counters for interface %s", self.config.interface)
             except Exception as e:
-                logging.error(f"Error initializing instance counters: {e}")
+                logging.error("Error initializing instance counters: %s", e)
 
         QTimer.singleShot(100, get_initial_counters)
 
@@ -143,10 +141,10 @@ class TrafficWidget(BaseWidget):
                     cls._instances_by_interface[interface].remove(instance)
 
         except Exception as e:
-            logging.error(f"Error updating interface data for {interface}: {e}")
+            logging.error("Error updating interface data for %s: %s", interface, e)
 
     @classmethod
-    def _get_shared_net_data(cls, interface: str, reference_instance: "TrafficWidget"):
+    def _get_shared_net_data(cls, interface: str, reference_instance: TrafficWidget):
         """Get network data for a specific interface using a reference instance"""
         try:
             # Use the data manager to calculate everything
@@ -177,7 +175,7 @@ class TrafficWidget(BaseWidget):
             return net_data
 
         except Exception as e:
-            logging.error(f"Error getting network data for interface {interface}: {e}")
+            logging.error("Error getting network data for interface %s: %s", interface, e)
             # Return default values if an error occurs
             return {
                 "upload_speed": "0 Kbps",
@@ -570,7 +568,7 @@ class TrafficWidget(BaseWidget):
             except RuntimeError:
                 pass
             except Exception as e:
-                logging.error(f"Error updating menu content: {e}")
+                logging.error("Error updating menu content: %s", e)
 
     def _reset_traffic_data(self):
         """Reset all traffic data to zero"""
@@ -592,7 +590,7 @@ class TrafficWidget(BaseWidget):
                 self._update_menu_content()
 
         except Exception as e:
-            logging.error(f"Error resetting traffic data: {e}")
+            logging.error("Error resetting traffic data: %s", e)
 
     def _is_menu_visible(self):
         """Check if the popup menu is visible"""

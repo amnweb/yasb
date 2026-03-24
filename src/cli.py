@@ -36,7 +36,7 @@ from core.utils.win32.bindings import (
     WriteFile,
 )
 from core.utils.win32.constants import INVALID_HANDLE_VALUE
-from settings import APP_NAME, BUILD_VERSION, CLI_VERSION, RELEASE_CHANNEL
+from settings import APP_NAME, BUILD_VERSION, CLI_VERSION, DEFAULT_CONFIG_DIRECTORY, RELEASE_CHANNEL
 
 BUFSIZE = 65536
 YASB_VERSION = BUILD_VERSION
@@ -536,11 +536,8 @@ class CLIHandler:
             from pathlib import Path
 
             # Determine config path
-            config_home = os.environ.get("YASB_CONFIG_HOME")
-            if config_home:
-                config_path = Path(config_home)
-            else:
-                config_path = Path.home() / ".config" / "yasb"
+
+            config_path = Path(DEFAULT_CONFIG_DIRECTORY)
 
             # Stop YASB if it is running
             for proc in ["yasb.exe", "yasb_themes.exe"]:

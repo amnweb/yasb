@@ -145,7 +145,7 @@ class WiFiWorker(QThread):
                 exact_quality = self._get_exact_quality()
                 self.result.emit(WiFiInfo(bars, name, exact_quality))
             except Exception as e:
-                logger.error(f"WiFiWorker error: {e}")
+                logger.error("WiFiWorker error: %s", e)
                 self.result.emit(WiFiInfo(0, "Error", -1))
             self.msleep(self._poll_interval)
 
@@ -178,7 +178,7 @@ class WiFiWorker(QThread):
             if network_info:
                 return network_info.quality
         except Exception as e:
-            logger.debug(f"Could not get exact WiFi quality: {e}")
+            logger.debug("Could not get exact WiFi quality: %s", e)
         return -1
 
 
@@ -339,7 +339,7 @@ class WiFiManager(QObject):
             result = WlanScan(self._client_handle, byref(interface.InterfaceGuid), None, None, None)
             if result != ERROR_SUCCESS:
                 self._is_scanning = False
-                logger.error(f"Error scanning for WiFi networks: {format_error_message(result)}")
+                logger.error("Error scanning for WiFi networks: %s", format_error_message(result))
                 if result == ACCESS_DENIED:
                     self.wifi_scan_completed.emit(ScanResultStatus.ACCESS_DENIED, [])
                 elif result == ERROR_NDIS_DOT11_POWER_STATE_INVALID:
@@ -410,7 +410,7 @@ class WiFiManager(QObject):
                 byref(network_list_ptr),
             )
             if result != ERROR_SUCCESS:
-                logger.error(f"Error getting available networks: {result}")
+                logger.error("Error getting available networks: %s", result)
                 continue
             network_list = network_list_ptr.contents
             networks = (WLAN_AVAILABLE_NETWORK * int(network_list.dwNumberOfItems)).from_address(
@@ -473,11 +473,11 @@ class WiFiManager(QObject):
                     if result == ERROR_NOT_FOUND:
                         logger.debug("WiFi network profile not found")
                     else:
-                        logger.debug(f"Failed to forget WiFi network: {result}")
+                        logger.debug("Failed to forget WiFi network: %s", result)
                 else:
                     logger.debug("Forgetting network profile")
         except Exception as e:
-            logger.debug(f"Error forgetting WiFi network: {e}")
+            logger.debug("Error forgetting WiFi network: %s", e)
         finally:
             if interfaces_ptr:
                 WlanFreeMemory(interfaces_ptr)
@@ -510,7 +510,7 @@ class WiFiManager(QObject):
                 WlanFreeMemory(interfaces_ptr)
             return False
         except Exception as e:
-            logger.debug(f"Error changing auto-connect setting: {e}")
+            logger.debug("Error changing auto-connect setting: %s", e)
             return False
 
     def _on_wlan_notification(
@@ -639,7 +639,7 @@ class WiFiManager(QObject):
             return profile_str_ptr.value
         if result == ERROR_NOT_FOUND:  # No need to log this, expected behavior
             return ""
-        logger.debug(f"Error getting profile: {result}")
+        logger.debug("Error getting profile: %s", result)
         return ""
 
     def _set_wlan_profile(self, client_handle: HANDLE, interface_guid: GUID, profile_xml: str):
@@ -661,9 +661,11 @@ class WiFiManager(QObject):
             else:
                 buff = create_unicode_buffer(256)
                 WlanReasonCodeToString(reason_code.value, sizeof(buff), buff, None)
-                logger.debug(f"Failed to create profile: {result}. Code: {reason_code.value}. Reason: {buff.value}")
+                logger.debug(
+                    "Failed to create profile: %s. Code: %s. Reason: %s", result, reason_code.value, buff.value
+                )
                 return False
 
         except Exception as e:
-            logger.debug(f"Error creating profile: {e}")
+            logger.debug("Error creating profile: %s", e)
             return False

@@ -1,7 +1,6 @@
 import logging
 import os
 import re
-from typing import Dict, Set
 
 
 class CSSProcessor:
@@ -14,7 +13,7 @@ class CSSProcessor:
     def __init__(self, css_path: str):
         self.css_path = css_path
         self.base_path = os.path.dirname(css_path)
-        self.imported_files: Set[str] = set()
+        self.imported_files: set[str] = set()
         self.css_content = self._read_css_file(css_path)
 
     def process(self) -> str:
@@ -36,10 +35,10 @@ class CSSProcessor:
 
     def _read_css_file(self, file_path: str) -> str:
         try:
-            with open(file_path, "r", encoding="utf-8") as file:
+            with open(file_path, encoding="utf-8") as file:
                 return file.read()
         except (FileNotFoundError, OSError) as e:
-            logging.error(f"CSSProcessor Error '{file_path}': {e}")
+            logging.error("CSSProcessor Error '%s': %s", file_path, e)
         return ""
 
     def _remove_comments(self, css: str) -> str:
@@ -57,7 +56,7 @@ class CSSProcessor:
             import_path = path.strip("'\"")
             full_import_path = os.path.normpath(os.path.join(self.base_path, import_path))
             if full_import_path in self.imported_files:
-                logging.warning(f"Circular import detected: {full_import_path}")
+                logging.warning("Circular import detected: %s", full_import_path)
                 return ""
             self.imported_files.add(full_import_path)
             imported_css = self._read_css_file(full_import_path)
@@ -69,7 +68,7 @@ class CSSProcessor:
 
     def _extract_and_replace_variables(self, css: str) -> str:
         # Extract variables from :root
-        root_vars: Dict[str, str] = {}
+        root_vars: dict[str, str] = {}
 
         def root_replacer(match):
             content = match.group(1)

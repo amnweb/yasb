@@ -30,7 +30,6 @@ from core.utils.win32.window_actions import (
 )
 from core.validation.widgets.yasb.taskbar import TaskbarConfig
 from core.widgets.base import BaseWidget
-from settings import DEBUG
 
 try:
     from core.utils.widgets.taskbar.window_manager import connect_taskbar
@@ -46,7 +45,7 @@ class DraggableAppButton(QFrame):
     """A QFrame subclass that supports left/right reordering within a QHBoxLayout and
     raises its window on external file/text drag hover."""
 
-    def __init__(self, taskbar_widget: "TaskbarWidget", hwnd: int):
+    def __init__(self, taskbar_widget: TaskbarWidget, hwnd: int):
         super().__init__()
         self._taskbar = taskbar_widget
         self._hwnd = hwnd
@@ -213,7 +212,7 @@ class TaskbarDropWidget(QFrame):
     drag_started = pyqtSignal()
     drag_ended = pyqtSignal()
 
-    def __init__(self, owner: "TaskbarWidget", parent: QWidget | None = None):
+    def __init__(self, owner: TaskbarWidget, parent: QWidget | None = None):
         super().__init__(parent)
         self._owner = owner
         self.setAcceptDrops(True)
@@ -558,7 +557,7 @@ class TaskbarWidget(BaseWidget):
         try:
             # Get app info from ApplicationWindow (includes process_pid and process_path)
             if not (hasattr(self, "_task_manager") and self._task_manager and hwnd in self._task_manager._windows):
-                logging.warning(f"Cannot pin app: window {hwnd} not found in task manager")
+                logging.warning("Cannot pin app: window %s not found in task manager", hwnd)
                 return
 
             app_window = self._task_manager._windows[hwnd]
@@ -588,7 +587,7 @@ class TaskbarWidget(BaseWidget):
                     self._widget_container_layout.insertWidget(insert_pos, widget)
 
         except Exception as e:
-            logging.error(f"Error pinning app: {e}")
+            logging.error("Error pinning app: %s", e)
 
     def _unpin_app(self, hwnd: int) -> None:
         """Unpin an application from the taskbar."""
@@ -600,7 +599,7 @@ class TaskbarWidget(BaseWidget):
                     app_window = self._task_manager._windows[hwnd]
                     window_data = app_window.as_dict()
                 else:
-                    logging.warning(f"Cannot unpin app: window {hwnd} not found in task manager")
+                    logging.warning("Cannot unpin app: window %s not found in task manager", hwnd)
                     return
 
             # Unpin using PinManager
@@ -608,7 +607,7 @@ class TaskbarWidget(BaseWidget):
             self._update_pinned_status(hwnd, is_pinned=False)
 
         except Exception as e:
-            logging.error(f"Error unpinning app: {e}")
+            logging.error("Error unpinning app: %s", e)
 
     def _is_app_pinned(self, hwnd: int) -> bool:
         """Check if an app is pinned."""
@@ -671,7 +670,7 @@ class TaskbarWidget(BaseWidget):
             # Update pinned order using PinManager
             self._pin_manager.update_pinned_order(new_order)
         except Exception as e:
-            logging.error(f"Error updating pinned order from layout: {e}")
+            logging.error("Error updating pinned order from layout: %s", e)
 
     def _update_pinned_status(self, hwnd: int, is_pinned: bool) -> None:
         """Update the visual state of a pinned/unpinned app."""
@@ -851,7 +850,7 @@ class TaskbarWidget(BaseWidget):
                         icon_label.setPixmap(icon)
 
         except Exception as e:
-            logging.error(f"Error in _on_recycle_bin_update: {e}")
+            logging.error("Error in _on_recycle_bin_update: %s", e)
 
     def _get_recycle_bin_icon(self, is_empty: bool) -> QPixmap | None:
         """Get Recycle Bin icon from Windows stock icons with caching."""
@@ -885,7 +884,7 @@ class TaskbarWidget(BaseWidget):
             return pixmap
 
         except Exception as e:
-            logging.error(f"Error getting recycle bin icon: {e}")
+            logging.error("Error getting recycle bin icon: %s", e)
             return None
 
     def _rbin_monitor_start(self):
@@ -897,7 +896,7 @@ class TaskbarWidget(BaseWidget):
                 self.rbin_monitor.subscribe(id(self))  # Register this widget as a subscriber
                 self.rbin_monitor.bin_updated.connect(self._on_recycle_bin_update, Qt.ConnectionType.UniqueConnection)
         except Exception as e:
-            logging.error(f"Error subscribing to recycle bin: {e}")
+            logging.error("Error subscribing to recycle bin: %s", e)
 
     def _rbin_monitor_stop(self):
         """Stop monitoring recycle bin changes."""
@@ -907,7 +906,7 @@ class TaskbarWidget(BaseWidget):
                 self.rbin_monitor.unsubscribe(id(self))  # Unregister this widget
                 self.rbin_monitor = None
         except Exception as e:
-            logging.error(f"Error unsubscribing from recycle bin monitor: {e}")
+            logging.error("Error unsubscribing from recycle bin monitor: %s", e)
 
     def show_preview_for_hwnd(self, hwnd: int, anchor_widget: QWidget) -> None:
         try:
@@ -945,7 +944,7 @@ class TaskbarWidget(BaseWidget):
                 self._display_pinned_apps()
                 self._pinned_apps_displayed = True
         except Exception as e:
-            logging.error(f"Error displaying pinned apps: {e}")
+            logging.error("Error displaying pinned apps: %s", e)
 
         # Connect to task manager AFTER pinned apps are displayed
         # This ensures running windows are inserted in the correct position
@@ -955,7 +954,7 @@ class TaskbarWidget(BaseWidget):
                     self._task_manager = connect_taskbar(self)
                     self._task_manager_connected = True
                 except Exception as e:
-                    logging.error(f"Failed to connect taskbar manager from showEvent: {e}")
+                    logging.error("Failed to connect taskbar manager from showEvent: %s", e)
         except Exception:
             pass
 
@@ -1150,7 +1149,7 @@ class TaskbarWidget(BaseWidget):
                             self._widget_container_layout.addWidget(widget)
 
         except Exception as e:
-            logging.error(f"Error handling pinned apps signal: {e}")
+            logging.error("Error handling pinned apps signal: %s", e)
 
     def _on_window_added(self, hwnd, window_data):
         """Handle window added signal from task manager"""
@@ -1572,7 +1571,7 @@ class TaskbarWidget(BaseWidget):
             try:
                 self._task_manager.stop()
             except Exception as e:
-                logging.error(f"Error stopping task manager: {e}")
+                logging.error("Error stopping task manager: %s", e)
 
     def _on_close_app(self) -> None:
         self.hide_preview()
@@ -1594,7 +1593,7 @@ class TaskbarWidget(BaseWidget):
         if win32gui.IsWindow(hwnd):
             close_application(hwnd)
         else:
-            logging.warning(f"Invalid window handle: {hwnd}, removing stale UI.")
+            logging.warning("Invalid window handle: %s, removing stale UI.", hwnd)
             # Proactively remove any stale UI for this invalid handle
             try:
                 self._remove_window_ui(hwnd, {}, immediate=True)
@@ -1667,7 +1666,7 @@ class TaskbarWidget(BaseWidget):
                     self._hide_taskbar_widget()
 
         except Exception as e:
-            logging.error(f"Error unpinning pinned-only app: {e}")
+            logging.error("Error unpinning pinned-only app: %s", e)
 
     def _get_title_visibility(self, hwnd: int) -> bool:
         """Should title be visible when show=="focused"? Normalize to base owner."""
@@ -1862,8 +1861,7 @@ class TaskbarWidget(BaseWidget):
             return pixmap
 
         except Exception:
-            if DEBUG:
-                logging.exception(f"Failed to get icons for window with HWND {hwnd} ")
+            logging.debug("Failed to get icons for window with HWND %s", hwnd, exc_info=True)
             return None
 
     def _perform_action(self, action: str) -> None:
@@ -1880,7 +1878,7 @@ class TaskbarWidget(BaseWidget):
                 AnimationManager.animate(widget, self._animation["type"], self._animation["duration"])
             self.bring_to_foreground(hwnd)
         else:
-            logging.warning(f"Unknown action '{action}'.")
+            logging.warning("Unknown action '%s'.", action)
 
     def _on_toggle_window(self) -> None:
         self._perform_action("toggle")
@@ -1950,11 +1948,9 @@ class TaskbarWidget(BaseWidget):
             except Exception:
                 try:
                     win32gui.ShowWindow(hwnd, win32con.SW_RESTORE if win32gui.IsIconic(hwnd) else win32con.SW_SHOW)
-                    if DEBUG:
-                        logging.warning(f"Could not bring window {hwnd} to foreground: {e}")
+                    logging.debug("Could not bring window %s to foreground: %s", hwnd, e)
                 except Exception as final_e:
-                    if DEBUG:
-                        logging.error(f"Failed to show window {hwnd}: {final_e}")
+                    logging.debug("Failed to show window %s: %s", hwnd, final_e)
 
     def _launch_pinned_app(self, unique_id_or_hwnd: int | str, extra_arguments: str = "") -> None:
         """Launch a pinned application using PinManager with optional extra arguments."""
@@ -1974,7 +1970,7 @@ class TaskbarWidget(BaseWidget):
             # Launch using PinManager with optional arguments
             self._pin_manager.launch_pinned_app(unique_id, extra_arguments=extra_arguments)
         except Exception as e:
-            logging.error(f"Error launching pinned app: {e}")
+            logging.error("Error launching pinned app: %s", e)
 
     def ensure_foreground(self, hwnd):
         """When we use dragging file ensure the window is in foreground."""

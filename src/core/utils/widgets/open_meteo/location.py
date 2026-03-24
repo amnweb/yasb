@@ -32,10 +32,10 @@ def _read_file() -> dict[str, Any]:
     if not path.exists():
         return {}
     try:
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             return json.load(f)
     except (json.JSONDecodeError, OSError) as e:
-        logger.warning(f"Failed to read {path}: {e}")
+        logger.warning("Failed to read %s: %s", path, e)
         return {}
 
 
@@ -45,7 +45,7 @@ def _write_file(data: dict[str, Any]) -> None:
         with open(path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
     except OSError as e:
-        logger.error(f"Failed to write {path}: {e}")
+        logger.error("Failed to write %s: %s", path, e)
 
 
 def load_location(widget_id: str) -> dict[str, Any] | None:
@@ -118,7 +118,7 @@ def delete_location(widget_id: str) -> None:
     if widget_id in data:
         del data[widget_id]
         _write_file(data)
-        logger.info(f"Deleted location for {widget_id}")
+        logger.info("Deleted location for %s", widget_id)
 
 
 def cleanup_stale_entries(active_widget_ids: set[str]) -> None:
@@ -129,5 +129,5 @@ def cleanup_stale_entries(active_widget_ids: set[str]) -> None:
         return
     for key in stale_keys:
         del data[key]
-        logger.info(f"Removed stale weather entry: {key}")
+        logger.info("Removed stale weather entry: %s", key)
     _write_file(data)

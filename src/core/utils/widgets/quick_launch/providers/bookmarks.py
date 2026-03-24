@@ -122,7 +122,7 @@ class BookmarksProvider(BaseProvider):
     def _parse_chromium(self, filepath: str) -> list[dict]:
         results: list[dict] = []
         try:
-            with open(filepath, "r", encoding="utf-8") as fh:
+            with open(filepath, encoding="utf-8") as fh:
                 data = json.load(fh)
             for root_name in ("bookmark_bar", "other", "synced"):
                 node = data.get("roots", {}).get(root_name)

@@ -95,7 +95,7 @@ ignore = [
     "F403",
     "E741",
 ]
-select = ["I", "F"]
+select = ["I", "F", "UP", "G004"]
 fixable = ["ALL"]
 
 [tool.ruff.format]

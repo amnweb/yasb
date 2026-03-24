@@ -35,7 +35,7 @@ def reload_application(msg: str = "Reloading Application..."):
 
         QProcess.startDetached(sys.executable, args)
     except Exception as e:
-        logging.error(f"Error during reload: {e}")
+        logging.error("Error during reload: %s", e)
         os._exit(0)
 
 

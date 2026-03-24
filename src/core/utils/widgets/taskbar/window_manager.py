@@ -1,6 +1,5 @@
 import ctypes
 import logging
-from typing import Dict, Optional
 
 from PyQt6.QtCore import QAbstractNativeEventFilter, QCoreApplication, QObject, QTimer, pyqtSignal
 
@@ -20,7 +19,7 @@ from core.utils.win32.bindings import user32 as _user32_raw
 from core.utils.win32.bindings.ole32 import ole32
 from core.utils.win32.structs import MSG
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("taskbar_window_manager")
 logger.setLevel(logging.INFO)
 # Global shared instance
 _shared_task_manager = None
@@ -69,7 +68,7 @@ def connect_taskbar(widget):
             _shellhook_event_filter = _ShellHookEventFilter(lambda: _shared_task_manager)
             QCoreApplication.instance().installNativeEventFilter(_shellhook_event_filter)
     except Exception as e:
-        logger.warning(f"Failed to install native event filter: {e}")
+        logger.warning("Failed to install native event filter: %s", e)
 
     # Try to obtain the top-level Qt window handle
     hwnd = None
@@ -78,7 +77,7 @@ def connect_taskbar(widget):
         if top is not None and hasattr(top, "winId"):
             hwnd = int(top.winId())
     except Exception as e:
-        logger.warning(f"Unable to obtain Qt window handle for shell hook: {e}")
+        logger.warning("Unable to obtain Qt window handle for shell hook: %s", e)
 
     # Propagate preference: keep cloaked tasks only when show_only_visible is False
     try:
@@ -96,7 +95,7 @@ def connect_taskbar(widget):
             window_data = app_window.as_dict()
             widget._on_window_added(hwnd, window_data)
         except Exception as e:
-            logger.error(f"Error sending existing window {hwnd} to widget: {e}")
+            logger.error("Error sending existing window %s to widget: %s", hwnd, e)
 
     return task_manager
 
@@ -172,9 +171,9 @@ class TaskbarWindowManager(QObject):
             self._ole32.CoInitialize(0)
             self._com_initialized = True
         except Exception as e:
-            logger.warning(f"CoInitialize failed or already initialized: {e}")
+            logger.warning("CoInitialize failed or already initialized: %s", e)
 
-    def start(self, hwnd: Optional[int] = None):
+    def start(self, hwnd: int | None = None):
         """Register shell hooks on provided Qt hwnd; set WinEvent hooks and enumerate existing windows."""
         if self._initialized:
             return
@@ -192,7 +191,7 @@ class TaskbarWindowManager(QObject):
             logger.info("TaskbarWindowManager is starting...")
 
         except Exception as e:
-            logger.error(f"Failed to start TaskbarWindowManager: {e}")
+            logger.error("Failed to start TaskbarWindowManager: %s", e)
             self.stop()
             raise
 
@@ -219,7 +218,7 @@ class TaskbarWindowManager(QObject):
             logger.info("TaskbarWindowManager stopped")
 
         except Exception as e:
-            logger.error(f"Error stopping TaskbarWindowManager: {e}")
+            logger.error("Error stopping TaskbarWindowManager: %s", e)
 
         # COM uninitialization (balance CoInitialize)
         try:
@@ -227,7 +226,7 @@ class TaskbarWindowManager(QObject):
                 self._ole32.CoUninitialize()
                 self._com_initialized = False
         except Exception as e:
-            logger.warning(f"CoUninitialize failed: {e}")
+            logger.warning("CoUninitialize failed: %s", e)
 
     def _register_shell_hooks(self, hwnd: int):
         """Register shell hook messages on an existing Qt top-level window handle."""
@@ -246,7 +245,7 @@ class TaskbarWindowManager(QObject):
             self._shell_hook_hwnd = int(hwnd)
 
         except Exception as e:
-            logger.error(f"Failed to register shell hooks on hwnd {hwnd}: {e}")
+            logger.error("Failed to register shell hooks on hwnd %s: %s", hwnd, e)
             raise
 
     def _set_win_event_hooks(self):
@@ -310,7 +309,7 @@ class TaskbarWindowManager(QObject):
                     logger.warning("Failed to set show/hide event hooks")
 
         except Exception as e:
-            logger.error(f"Failed to set WinEvent hooks: {e}")
+            logger.error("Failed to set WinEvent hooks: %s", e)
 
     def _handle_shell_hook_message(self, wparam, lparam):
         """Handle shell hook messages and schedule appropriate updates."""
@@ -342,7 +341,7 @@ class TaskbarWindowManager(QObject):
             return 0
 
         except Exception as e:
-            logger.error(f"Error handling shell hook message: {e}")
+            logger.error("Error handling shell hook message: %s", e)
             return 0
 
     def _on_window_created(self, hwnd):
@@ -353,7 +352,7 @@ class TaskbarWindowManager(QObject):
             else:
                 self._add_window(hwnd)
         except Exception as e:
-            logger.error(f"Error handling window created for {hwnd}: {e}")
+            logger.error("Error handling window created for %s: %s", hwnd, e)
 
     def _on_window_destroyed(self, hwnd):
         """Remove a window when it's destroyed."""
@@ -361,7 +360,7 @@ class TaskbarWindowManager(QObject):
             if hwnd in self._windows:
                 self._remove_window(hwnd)
         except Exception as e:
-            logger.error(f"Error handling window destroyed for {hwnd}: {e}")
+            logger.error("Error handling window destroyed for %s: %s", hwnd, e)
 
     def _on_window_activated(self, hwnd):
         """Mark activated window active and clear flashing; emit updates for state changes."""
@@ -415,7 +414,7 @@ class TaskbarWindowManager(QObject):
             #    self._debounce_update(hwnd, delay=60)
 
         except Exception as e:
-            logger.error(f"Error handling window activated for {hwnd}: {e}")
+            logger.error("Error handling window activated for %s: %s", hwnd, e)
 
     def _on_window_redraw(self, hwnd):
         """Update or add window on redraw notification."""
@@ -426,7 +425,7 @@ class TaskbarWindowManager(QObject):
             else:
                 self._add_window(hwnd)
         except Exception as e:
-            logger.error(f"Error handling window redraw for {hwnd}: {e}")
+            logger.error("Error handling window redraw for %s: %s", hwnd, e)
 
     def _on_window_flash(self, hwnd):
         """Mark window as flashing and emit an update when the state changes."""
@@ -446,7 +445,7 @@ class TaskbarWindowManager(QObject):
             else:
                 self._add_window(hwnd, is_flashing=True)
         except Exception as e:
-            logger.error(f"Error handling window flash for {hwnd}: {e}")
+            logger.error("Error handling window flash for %s: %s", hwnd, e)
 
     def _on_window_replacing(self, hwnd):
         """Handle replacement by updating if present."""
@@ -476,7 +475,7 @@ class TaskbarWindowManager(QObject):
             else:
                 self._try_add_window_delayed(hwnd, delay=50)
         except Exception as e:
-            logger.error(f"Error handling monitor change for {hwnd}: {e}")
+            logger.error("Error handling monitor change for %s: %s", hwnd, e)
 
     def _on_window_cloaked(self, hwnd):
         """Cloaked: keep or remove based on preference (_keep_cloaked_tasks)."""
@@ -508,7 +507,7 @@ class TaskbarWindowManager(QObject):
                         # Remove when not keeping cloaked tasks
                         self._remove_window(hwnd)
         except Exception as e:
-            logger.error(f"Error handling window cloaked for {hwnd}: {e}")
+            logger.error("Error handling window cloaked for %s: %s", hwnd, e)
 
     def _on_window_uncloaked(self, hwnd):
         """Uncloaked: ensure tracking and refresh UI."""
@@ -520,7 +519,7 @@ class TaskbarWindowManager(QObject):
                 # Was removed while cloaked; add it back now that it's visible
                 self._add_window(hwnd)
         except Exception as e:
-            logger.error(f"Error handling window uncloaked for {hwnd}: {e}")
+            logger.error("Error handling window uncloaked for %s: %s", hwnd, e)
 
     def _on_window_show(self, hwnd):
         """SHOW event add or refresh the window."""
@@ -530,7 +529,7 @@ class TaskbarWindowManager(QObject):
             else:
                 self._add_window(hwnd)
         except Exception as e:
-            logger.error(f"Error handling window show for {hwnd}: {e}")
+            logger.error("Error handling window show for %s: %s", hwnd, e)
 
     def _on_window_hide(self, hwnd):
         """HIDE event remove from taskbar tracking."""
@@ -538,7 +537,7 @@ class TaskbarWindowManager(QObject):
             if hwnd in self._windows:
                 self._remove_window(hwnd)
         except Exception as e:
-            logger.error(f"Error handling window hide for {hwnd}: {e}")
+            logger.error("Error handling window hide for %s: %s", hwnd, e)
 
     def _add_window(self, hwnd, is_active=False, is_flashing=False):
         """Create and track a window if it should be on the taskbar."""
@@ -577,7 +576,7 @@ class TaskbarWindowManager(QObject):
             self.window_added.emit(hwnd, window_data)
 
         except Exception as e:
-            logger.error(f"Error adding window {hwnd}: {e}")
+            logger.error("Error adding window %s: %s", hwnd, e)
 
     def _delayed_uwp_check(self, hwnd):
         """Retry adding UWP windows after a short delay."""
@@ -596,7 +595,7 @@ class TaskbarWindowManager(QObject):
                 window_data = app_window.as_dict()
                 self.window_added.emit(hwnd, window_data)
         except Exception as e:
-            logger.error(f"Delayed UWP check failed for {hwnd}: {e}")
+            logger.error("Delayed UWP check failed for %s: %s", hwnd, e)
 
     def _try_add_window_delayed(self, hwnd, delay=50):
         """Try to add a window after a delay (for monitor changes)."""
@@ -617,7 +616,7 @@ class TaskbarWindowManager(QObject):
                     window_data = app_window.as_dict()
                     self.window_added.emit(hwnd, window_data)
             except Exception as e:
-                logger.error(f"Delayed window add failed for {hwnd}: {e}")
+                logger.error("Delayed window add failed for %s: %s", hwnd, e)
 
         QTimer.singleShot(delay, delayed_check)
 
@@ -631,7 +630,7 @@ class TaskbarWindowManager(QObject):
                 self.window_removed.emit(hwnd, window_data)
 
         except Exception as e:
-            logger.error(f"Error removing window {hwnd}: {e}")
+            logger.error("Error removing window %s: %s", hwnd, e)
 
     def _update_window(self, hwnd):
         """Update cached data for a window and emit if something changed."""
@@ -680,7 +679,7 @@ class TaskbarWindowManager(QObject):
                     self.window_updated.emit(hwnd, new_data)
 
         except Exception as e:
-            logger.error(f"Error updating window {hwnd}: {e}")
+            logger.error("Error updating window %s: %s", hwnd, e)
 
     def _schedule_window_update(self, hwnd):
         """Schedule a window update on the Qt event loop."""
@@ -710,7 +709,7 @@ class TaskbarWindowManager(QObject):
             self._pending_updates[hwnd] = timer
             timer.start(max(0, int(delay)))
         except Exception as e:
-            logger.debug(f"debounce failed for {hwnd}: {e}")
+            logger.debug("debounce failed for %s: %s", hwnd, e)
 
     def _enumerate_existing_windows(self):
         """Enumerate and track existing windows at startup."""
@@ -735,7 +734,7 @@ class TaskbarWindowManager(QObject):
                     window.is_active = True
 
         except Exception as e:
-            logger.error(f"Error enumerating existing windows: {e}")
+            logger.error("Error enumerating existing windows: %s", e)
 
     # Removed helper: simplified to call _on_window_monitor_changed after creation
 
@@ -756,15 +755,15 @@ class TaskbarWindowManager(QObject):
                 self._shell_hook_registered = False
                 self._shell_hook_hwnd = None
             except Exception as e:
-                logger.error(f"Error unregistering shell hooks: {e}")
+                logger.error("Error unregistering shell hooks: %s", e)
 
     # Hidden window creation/destruction removed
 
-    def get_windows(self) -> Dict[int, ApplicationWindow]:
+    def get_windows(self) -> dict[int, ApplicationWindow]:
         """Return a copy of all tracked windows keyed by hwnd."""
         return self._windows.copy()
 
-    def get_window(self, hwnd: int) -> Optional[ApplicationWindow]:
+    def get_window(self, hwnd: int) -> ApplicationWindow | None:
         """Return a tracked window by handle or None."""
         return self._windows.get(hwnd)
 

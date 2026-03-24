@@ -174,12 +174,12 @@ class SnippetsProvider(BaseProvider):
     def _load_snippets(self) -> list[dict]:
         try:
             if os.path.isfile(_SNIPPETS_FILE):
-                with open(_SNIPPETS_FILE, "r", encoding="utf-8") as f:
+                with open(_SNIPPETS_FILE, encoding="utf-8") as f:
                     data = json.load(f)
                 if isinstance(data, list):
                     return [s for s in data if isinstance(s, dict) and s.get("content")]
         except Exception as e:
-            logging.debug(f"Failed to load snippets: {e}")
+            logging.debug("Failed to load snippets: %s", e)
         return []
 
     def _save_snippets(self):
@@ -188,7 +188,7 @@ class SnippetsProvider(BaseProvider):
             with open(_SNIPPETS_FILE, "w", encoding="utf-8") as f:
                 json.dump(self._snippets, f, ensure_ascii=False, indent=2)
         except Exception as e:
-            logging.debug(f"Failed to save snippets: {e}")
+            logging.debug("Failed to save snippets: %s", e)
 
     def _find_snippet(self, snippet_id: str) -> dict | None:
         for s in self._snippets:

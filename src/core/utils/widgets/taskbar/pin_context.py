@@ -16,7 +16,6 @@ from core.utils.win32.bindings.kernel32 import kernel32
 from core.utils.win32.bindings.ntdll import ProcessCommandLineInformation, ntdll
 from core.utils.win32.constants import PROCESS_QUERY_LIMITED_INFORMATION
 from core.utils.win32.structs import UNICODE_STRING
-from settings import DEBUG
 
 
 @dataclass
@@ -79,12 +78,10 @@ def collect_window_context(hwnd: int, window_data: dict[str, Any]) -> WindowCont
                                 explorer_path = location
                             break
                 except Exception as exc:
-                    if DEBUG:
-                        logging.debug(f"Error getting LocationURL for explorer window {hwnd}: {exc}")
+                    logging.debug("Error getting LocationURL for explorer window %s: %s", hwnd, exc)
                     continue
         except Exception as exc:
-            if DEBUG:
-                logging.debug(f"Error accessing Shell.Application for explorer window {hwnd}: {exc}")
+            logging.debug("Error accessing Shell.Application for explorer window %s: %s", hwnd, exc)
             explorer_path = None
 
         # Fallback: If we couldn't get LocationURL but this is an explorer window,
@@ -106,8 +103,7 @@ def collect_window_context(hwnd: int, window_data: dict[str, Any]) -> WindowCont
                         # Window doesn't have Document/Folder/Self, or COM error - skip it
                         continue
             except Exception as exc:
-                if DEBUG:
-                    logging.debug(f"Error detecting special folder for hwnd {hwnd}: {exc}")
+                logging.debug("Error detecting special folder for hwnd %s: %s", hwnd, exc)
 
     return WindowContext(
         hwnd=hwnd,
@@ -157,8 +153,7 @@ def _get_process_command_line(pid: int) -> str | None:
             finally:
                 kernel32.CloseHandle(hProcess)
     except Exception as exc:
-        if DEBUG:
-            logging.debug("NtQueryInformationProcess failed for PID %s: %s", pid, exc)
+        logging.debug("NtQueryInformationProcess failed for PID %s: %s", pid, exc)
 
     # Fallback to WMI if NtQueryInformationProcess fails
     try:
@@ -168,7 +163,6 @@ def _get_process_command_line(pid: int) -> str | None:
             if process.CommandLine:
                 return process.CommandLine
     except Exception as exc:
-        if DEBUG:
-            logging.debug("WMI fallback failed for PID %s: %s", pid, exc)
+        logging.debug("WMI fallback failed for PID %s: %s", pid, exc)
 
     return None

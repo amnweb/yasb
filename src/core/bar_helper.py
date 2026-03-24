@@ -262,7 +262,7 @@ class AutoHideManager(QObject):
                     lambda: self.bar_widget.app_bar_manager.remove_appbar()
                 )
             except Exception as e:
-                logging.error(f"Failed to remove AppBar reservation: {e}")
+                logging.error("Failed to remove AppBar reservation: %s", e)
 
         # Set up detection zone after a short delay
         QTimer.singleShot(self._autohide_delay, self.setup_detection_zone)
@@ -391,7 +391,7 @@ class AutoHideManager(QObject):
             try:
                 SystrayAppBarHelper.execute_without_systray_interference(lambda: self.bar_widget.update_app_bar())
             except Exception as e:
-                logging.error(f"Failed to restore AppBar reservation: {e}")
+                logging.error("Failed to restore AppBar reservation: %s", e)
 
 
 class SystrayAppBarHelper:
@@ -567,9 +567,9 @@ class AppBarManager(QAbstractNativeEventFilter):
                         bw.app_bar_manager.remove_appbar()
                     bw.update_app_bar()
                     reason = "space reservation + fullscreen" if app_bar else "fullscreen detection"
-                    logging.info(f"Re-registered AppBar for {getattr(bw, 'bar_id', '?')} ({reason})")
+                    logging.info("Re-registered AppBar for %s (%s)", getattr(bw, "bar_id", "?"), reason)
                 except Exception as e:
-                    logging.error(f"Failed to re-register bar: {e}")
+                    logging.error("Failed to re-register bar: %s", e)
 
         if needs_systray_workaround:
             SystrayAppBarHelper.execute_without_systray_interference(reregister)
@@ -737,7 +737,7 @@ class OsThemeManager(QObject):
                     value, _ = winreg.QueryValueEx(key, "AppsUseLightTheme")
                     return value == 0
         except Exception as e:
-            logging.error(f"Failed to determine Windows theme: {e}")
+            logging.error("Failed to determine Windows theme: %s", e)
             return False
 
     def update_theme_class(self):
@@ -838,7 +838,7 @@ class BarContextMenu:
                     self.parent._autohide_manager._hide_timer.start(self.parent._autohide_manager._autohide_delay)
 
         except Exception as e:
-            logging.error(f"Failed to restart autohide timer: {e}")
+            logging.error("Failed to restart autohide timer: %s", e)
 
     def _populate_widgets_menu(self, widgets_menu):
         if not any(self._widgets.get(layout) for layout in ["left", "center", "right"]):
@@ -913,7 +913,7 @@ class BarContextMenu:
             widget.hide = controlled_hide
 
         except Exception as e:
-            logging.error(f"Failed to toggle widget {self._get_widget_display_name(widget)}: {e}")
+            logging.error("Failed to toggle widget %s: %s", self._get_widget_display_name(widget), e)
 
     def _get_widget_display_name(self, widget):
         for layout_type, widget_list in self._widgets.items():
@@ -933,7 +933,7 @@ class BarContextMenu:
         try:
             subprocess.Popen("taskmgr", shell=True, creationflags=subprocess.CREATE_NO_WINDOW)
         except Exception as e:
-            logging.error(f"Failed to open Task Manager: {e}")
+            logging.error("Failed to open Task Manager: %s", e)
 
     def _take_screenshot(self):
         """Take a screenshot of the bar with proper padding"""
@@ -989,7 +989,7 @@ class BarContextMenu:
             self._screenshot_flash()
 
         except Exception as e:
-            logging.error(f"Failed to take screenshot: {e}")
+            logging.error("Failed to take screenshot: %s", e)
 
     def _screenshot_flash(self):
         """Create a flashing effect on the bar when taking screenshot"""
@@ -1008,7 +1008,7 @@ class BarContextMenu:
             self.flash_animation.start()
 
         except Exception as e:
-            logging.error(f"Failed to create flash effect: {e}")
+            logging.error("Failed to create flash effect: %s", e)
 
     def _enable_autohide(self):
         """Enable autohide functionality for the bar"""
@@ -1022,7 +1022,7 @@ class BarContextMenu:
                 self.parent._autohide_manager.setup_autohide()
 
         except Exception as e:
-            logging.error(f"Failed to enable autohide: {e}")
+            logging.error("Failed to enable autohide: %s", e)
 
     def _disable_autohide(self):
         """Disable autohide functionality"""
@@ -1036,4 +1036,4 @@ class BarContextMenu:
                 self.parent.show()
 
         except Exception as e:
-            logging.error(f"Failed to disable autohide: {e}")
+            logging.error("Failed to disable autohide: %s", e)

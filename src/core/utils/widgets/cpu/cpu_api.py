@@ -126,7 +126,9 @@ class CpuAPI:
                 cls._query = None
                 cls._init_failed = True
                 if not cls._error_logged:
-                    logging.warning(f"Failed to open PDH query (status={status}). CPU widget will show default values.")
+                    logging.warning(
+                        "Failed to open PDH query (status=%s). CPU widget will show default values.", status
+                    )
                     cls._error_logged = True
                 return False
 
@@ -145,8 +147,8 @@ class CpuAPI:
                     cls._init_failed = True
                     if not cls._error_logged:
                         logging.warning(
-                            f"Failed to add CPU percent counter (status={status}). "
-                            "PDH counters may be corrupted. Try running 'lodctr /r' as Administrator."
+                            "Failed to add CPU percent counter (status=%s). PDH counters may be corrupted. Try running 'lodctr /r' as Administrator.",
+                            status,
                         )
                         cls._error_logged = True
                     return False
@@ -192,7 +194,7 @@ class CpuAPI:
             cls._cleanup_query()
             cls._init_failed = True
             if not cls._error_logged:
-                logging.error(f"PDH initialization error: {e}")
+                logging.error("PDH initialization error: %s", e)
                 cls._error_logged = True
             return False
 
@@ -271,7 +273,7 @@ class CpuAPI:
             )
 
         except Exception as e:
-            logging.debug(f"CPU data collection error: {e}")
+            logging.debug("CPU data collection error: %s", e)
             return CpuData(
                 freq=CpuFreq(cls._base_freq, 0.0, cls._base_freq),
                 percent=0.0,
@@ -284,11 +286,11 @@ class CpuAPI:
 class CpuWorker(QThread):
     """Background thread for non-blocking CPU data collection."""
 
-    _instance: "CpuWorker | None" = None
+    _instance: CpuWorker | None = None
     data_ready = pyqtSignal(object)
 
     @classmethod
-    def get_instance(cls, update_interval: int) -> "CpuWorker":
+    def get_instance(cls, update_interval: int) -> CpuWorker:
         """Get or create the singleton worker instance."""
         if cls._instance is None:
             cls._instance = cls(update_interval)
@@ -315,5 +317,5 @@ class CpuWorker(QThread):
                 if self._running:
                     self.data_ready.emit(data)
             except Exception as e:
-                logging.error(f"CPU worker error: {e}")
+                logging.error("CPU worker error: %s", e)
             self.msleep(self._update_interval)

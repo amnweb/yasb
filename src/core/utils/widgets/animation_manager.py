@@ -21,7 +21,9 @@ class AnimationManager:
             duration: Duration of the animation in milliseconds
         """
         if animation_type not in cls.ALLOWED_ANIMATIONS:
-            logging.error(f"Animation type '{animation_type}' not supported. Allowed types: {cls.ALLOWED_ANIMATIONS}")
+            logging.error(
+                "Animation type '%s' not supported. Allowed types: %s", animation_type, cls.ALLOWED_ANIMATIONS
+            )
             return
         key = f"{animation_type}_{duration}"
         if key not in cls._instances:
@@ -47,7 +49,9 @@ class AnimationManager:
             timeout: Auto-stop after this many ms (default 5000ms = 5s), 0 = no timeout
         """
         if animation_type not in cls.ALLOWED_ANIMATIONS:
-            logging.error(f"Animation type '{animation_type}' not supported. Allowed types: {cls.ALLOWED_ANIMATIONS}")
+            logging.error(
+                "Animation type '%s' not supported. Allowed types: %s", animation_type, cls.ALLOWED_ANIMATIONS
+            )
             return
 
         # Stop any existing animation for this widget

@@ -13,7 +13,6 @@ from core.utils.widgets.ai_chat.constants import (
     IMAGE_READER_ALLOCATION_LIMIT,
     MAX_IMAGE_DIMENSION,
 )
-from settings import DEBUG
 
 
 def process_image(
@@ -45,37 +44,34 @@ def process_image(
         original_format = detected if detected in FORMAT_TO_MIME else "PNG"
         if original_format == "JPG":
             original_format = "JPEG"
-        if DEBUG:
-            logging.debug(
-                "Image detected: format=%s, input_size=%d bytes",
-                original_format,
-                len(image_bytes),
-            )
+        logging.debug(
+            "Image detected: format=%s, input_size=%d bytes",
+            original_format,
+            len(image_bytes),
+        )
 
         # Scale down anything larger than MAX_IMAGE_DIMENSION to avoid memory issues
         size = reader.size()
         scaled = False
         if size.isValid():
-            if DEBUG:
-                logging.debug(
-                    "Image dimensions: %dx%d",
-                    size.width(),
-                    size.height(),
-                )
+            logging.debug(
+                "Image dimensions: %dx%d",
+                size.width(),
+                size.height(),
+            )
             if size.width() > MAX_IMAGE_DIMENSION or size.height() > MAX_IMAGE_DIMENSION:
                 ratio = MAX_IMAGE_DIMENSION / max(size.width(), size.height())
                 new_width = max(1, int(size.width() * ratio))
                 new_height = max(1, int(size.height() * ratio))
                 reader.setScaledSize(QSize(new_width, new_height))
                 scaled = True
-                if DEBUG:
-                    logging.debug(
-                        "Scaling image to %dx%d from %dx%d",
-                        new_width,
-                        new_height,
-                        size.width(),
-                        size.height(),
-                    )
+                logging.debug(
+                    "Scaling image to %dx%d from %dx%d",
+                    new_width,
+                    new_height,
+                    size.width(),
+                    size.height(),
+                )
 
         img = reader.read()
         buffer.close()
@@ -83,13 +79,12 @@ def process_image(
         if img.isNull():
             logging.warning("Failed to read image")
             return None
-        if DEBUG:
-            logging.debug(
-                "Image loaded: depth=%d bits, size=%dx%d",
-                img.depth(),
-                img.width(),
-                img.height(),
-            )
+        logging.debug(
+            "Image loaded: depth=%d bits, size=%dx%d",
+            img.depth(),
+            img.width(),
+            img.height(),
+        )
 
         def try_save(fmt: str, quality: int = -1) -> bytes:
             """Save image to bytes in given format."""
@@ -101,19 +96,16 @@ def process_image(
             return data
 
         # Try original format first
-        if DEBUG:
-            logging.debug("Trying to save in original format: %s", original_format)
+        logging.debug("Trying to save in original format: %s", original_format)
         out_bytes = try_save(original_format)
-        if DEBUG:
-            logging.debug(
-                "Encoded original format: format=%s, size=%d bytes (limit=%d)",
-                original_format,
-                len(out_bytes),
-                max_bytes,
-            )
+        logging.debug(
+            "Encoded original format: format=%s, size=%d bytes (limit=%d)",
+            original_format,
+            len(out_bytes),
+            max_bytes,
+        )
         if len(out_bytes) <= max_bytes:
-            if DEBUG:
-                logging.debug("Original format fits within limit")
+            logging.debug("Original format fits within limit")
             return {
                 "bytes": out_bytes,
                 "format": original_format,
@@ -125,18 +117,16 @@ def process_image(
 
         # Try original format with quality reduction if supported (JPEG, WEBP)
         if original_format in ("JPEG", "WEBP"):
-            if DEBUG:
-                logging.debug("Trying quality reduction for %s", original_format)
+            logging.debug("Trying quality reduction for %s", original_format)
             for quality in range(80, 0, -10):
                 out_bytes = try_save(original_format, quality)
                 if len(out_bytes) <= max_bytes:
-                    if DEBUG:
-                        logging.debug(
-                            "Compressed to fit: format=%s, quality=%d, size=%d bytes",
-                            original_format,
-                            quality,
-                            len(out_bytes),
-                        )
+                    logging.debug(
+                        "Compressed to fit: format=%s, quality=%d, size=%d bytes",
+                        original_format,
+                        quality,
+                        len(out_bytes),
+                    )
                     return {
                         "bytes": out_bytes,
                         "format": original_format,
@@ -147,17 +137,15 @@ def process_image(
                     }
 
         # Fall back to JPEG compression
-        if DEBUG:
-            logging.debug("Falling back to JPEG compression")
+        logging.debug("Falling back to JPEG compression")
         for quality in range(85, 0, -5):
             out_bytes = try_save("JPEG", quality)
             if len(out_bytes) <= max_bytes:
-                if DEBUG:
-                    logging.debug(
-                        "JPEG fallback successful: quality=%d, size=%d bytes",
-                        quality,
-                        len(out_bytes),
-                    )
+                logging.debug(
+                    "JPEG fallback successful: quality=%d, size=%d bytes",
+                    quality,
+                    len(out_bytes),
+                )
                 return {
                     "bytes": out_bytes,
                     "format": "JPEG",

@@ -30,7 +30,6 @@ from core.utils.win32.utilities import find_focused_screen, get_foreground_hwnd,
 from core.utils.win32.window_actions import force_foreground_focus
 from core.validation.widgets.yasb.notes import NotesConfig
 from core.widgets.base import BaseWidget
-from settings import DEBUG
 
 
 class NotesWidget(BaseWidget):
@@ -646,21 +645,19 @@ class NotesWidget(BaseWidget):
         """Load notes from JSON file"""
         try:
             if os.path.exists(self.notes_file):
-                if DEBUG:
-                    logging.debug(f"Loading notes from {self.notes_file}")
-                with open(self.notes_file, "r", encoding="utf-8") as f:
+                logging.debug("Loading notes from %s", self.notes_file)
+                with open(self.notes_file, encoding="utf-8") as f:
                     return list(json.load(f))
         except Exception as e:
-            logging.error(f"Error loading notes: {e}")
+            logging.error("Error loading notes: %s", e)
 
         return []
 
     def _save_notes(self) -> None:
         """Save notes to JSON file"""
         try:
-            if DEBUG:
-                logging.debug(f"Saving notes to {self.notes_file}")
+            logging.debug("Saving notes to %s", self.notes_file)
             with open(self.notes_file, "w", encoding="utf-8") as f:
                 json.dump(self.notes, f, indent=2, ensure_ascii=False)
         except Exception as e:
-            logging.error(f"Error saving notes: {e}")
+            logging.error("Error saving notes: %s", e)

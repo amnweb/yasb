@@ -67,7 +67,7 @@ class ConnectionTestWorker(QThread):
         try:
             return NetworkAPI.get_interface_ip(self.interface)
         except Exception as e:
-            logging.debug(f"Error getting interface IP: {e}")
+            logging.debug("Error getting interface IP: %s", e)
             return None
 
 

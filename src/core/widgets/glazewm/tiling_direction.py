@@ -11,14 +11,8 @@ from core.utils.utilities import add_shadow
 from core.utils.widgets.glazewm.client import GlazewmClient, TilingDirection
 from core.validation.widgets.glazewm.tiling_direction import GlazewmTilingDirectionConfig
 from core.widgets.base import BaseWidget
-from settings import DEBUG
 
 logger = logging.getLogger("glazewm_tiling_direction")
-
-if DEBUG:
-    logger.setLevel(logging.DEBUG)
-else:
-    logger.setLevel(logging.CRITICAL)
 
 
 class GlazewmTilingDirectionWidget(BaseWidget):

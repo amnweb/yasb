@@ -1,6 +1,6 @@
 import os
 import threading
-from typing import Callable
+from collections.abc import Callable
 
 from PyQt6.QtCore import QEvent, Qt, QTimer, QUrl, pyqtSignal
 from PyQt6.QtGui import QColor, QDesktopServices, QFont, QIcon, QPalette
