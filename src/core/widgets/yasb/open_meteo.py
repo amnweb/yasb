@@ -47,8 +47,8 @@ class OpenMeteoWidget(BaseWidget):
     validation_schema = OpenMeteoWidgetConfig
 
     # Shared state: one fetcher and instance list per widget_id (widget name)
-    _shared_fetchers: dict[str, "OpenMeteoDataFetcher"] = {}
-    _shared_instances: dict[str, list["OpenMeteoWidget"]] = {}
+    _shared_fetchers: dict[str, OpenMeteoDataFetcher] = {}
+    _shared_instances: dict[str, list[OpenMeteoWidget]] = {}
     _pending_init_count: int = 0
 
     def __init__(self, config: OpenMeteoWidgetConfig):
@@ -127,7 +127,7 @@ class OpenMeteoWidget(BaseWidget):
                     self.process_weather_data(cached_data)
                     self._update_label(True)
                 except Exception as e:
-                    logging.warning(f"Failed to load cached weather data: {e}")
+                    logging.warning("Failed to load cached weather data: %s", e)
                     is_cache_valid = False
 
             # Only start a fetcher if one isn't already running for this widget_id
@@ -135,7 +135,7 @@ class OpenMeteoWidget(BaseWidget):
                 self._start_weather_fetcher(delayed=is_cache_valid)
         else:
             self._set_label_text("Setup location")
-            logging.info(f"No saved location for {self._widget_id}. Awaiting user setup.")
+            logging.info("No saved location for %s. Awaiting user setup.", self._widget_id)
 
         # Clean up stale entries once all widgets have initialized
         OpenMeteoWidget._pending_init_count -= 1
@@ -171,14 +171,14 @@ class OpenMeteoWidget(BaseWidget):
             if data and self._widget_id:
                 save_weather_cache(self._widget_id, data)
         except Exception as e:
-            logging.error(f"Failed to save weather cache: {e}")
+            logging.error("Failed to save weather cache: %s", e)
 
         for instance in OpenMeteoWidget._shared_instances.get(self._widget_id, []):
             try:
                 instance.process_weather_data(data)
                 instance._update_label(True)
             except Exception as e:
-                logging.error(f"Failed to update weather instance: {e}")
+                logging.error("Failed to update weather instance: %s", e)
 
         # Retry on empty (failed) responses
         if not data and not self._retry_timer.isActive():
@@ -724,7 +724,7 @@ class OpenMeteoWidget(BaseWidget):
                     active_widgets[widget_index].show()
                 widget_index += 1
         except Exception as e:
-            logging.exception(f"Failed to update label: {e}")
+            logging.exception("Failed to update label: %s", e)
 
     @pyqtSlot(dict)
     def process_weather_data(self, weather_data: dict[str, Any]):

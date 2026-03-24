@@ -14,7 +14,7 @@ class ServerCheckService(QObject):
     status_updated = pyqtSignal(int, list)
     refresh_started = pyqtSignal()
 
-    _instances: ClassVar[dict[tuple, "ServerCheckService"]] = {}
+    _instances: ClassVar[dict[tuple, ServerCheckService]] = {}
 
     @classmethod
     def get_instance(
@@ -24,7 +24,7 @@ class ServerCheckService(QObject):
         ssl_check: bool,
         timeout: int,
         update_interval_s: int,
-    ) -> "ServerCheckService":
+    ) -> ServerCheckService:
         key = (tuple(servers), ssl_verify, ssl_check, timeout, int(update_interval_s))
         inst = cls._instances.get(key)
         if inst is None:

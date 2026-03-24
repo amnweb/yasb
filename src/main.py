@@ -150,7 +150,7 @@ async def main_async(app: YASBApplication):
                 if update_service.is_update_supported():
                     start_update_checker()
             except Exception as e:
-                logging.error(f"Failed to start auto update service: {e}")
+                logging.error("Failed to start auto update service: %s", e)
 
         await app_close_event.wait()
     finally:

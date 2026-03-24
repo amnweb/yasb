@@ -646,10 +646,10 @@ class NotesWidget(BaseWidget):
         try:
             if os.path.exists(self.notes_file):
                 logging.debug("Loading notes from %s", self.notes_file)
-                with open(self.notes_file, "r", encoding="utf-8") as f:
+                with open(self.notes_file, encoding="utf-8") as f:
                     return list(json.load(f))
         except Exception as e:
-            logging.error(f"Error loading notes: {e}")
+            logging.error("Error loading notes: %s", e)
 
         return []
 
@@ -660,4 +660,4 @@ class NotesWidget(BaseWidget):
             with open(self.notes_file, "w", encoding="utf-8") as f:
                 json.dump(self.notes, f, indent=2, ensure_ascii=False)
         except Exception as e:
-            logging.error(f"Error saving notes: {e}")
+            logging.error("Error saving notes: %s", e)

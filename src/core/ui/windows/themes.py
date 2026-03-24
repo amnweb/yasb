@@ -205,8 +205,7 @@ def _run_yasbc(cmd: str):
     subprocess.run(
         ["yasbc", cmd],
         creationflags=subprocess.CREATE_NO_WINDOW,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        capture_output=True,
     )
 
 

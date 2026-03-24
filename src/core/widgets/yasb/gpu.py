@@ -22,7 +22,7 @@ class GpuWidget(BaseWidget):
     validation_schema = GpuConfig
 
     # Class-level shared data and worker
-    _instances: list["GpuWidget"] = []
+    _instances: list[GpuWidget] = []
     _worker: GpuWorker | None = None
 
     def __init__(self, config: GpuConfig):

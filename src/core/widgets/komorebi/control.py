@@ -1,7 +1,6 @@
 import logging
 import re
 import subprocess
-from typing import Optional
 
 from PyQt6.QtCore import QEvent, Qt, QThread, pyqtSignal
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QSizePolicy, QVBoxLayout, QWidget
@@ -272,7 +271,7 @@ class KomorebiControlWidget(BaseWidget):
             )
         except Exception as e:
             self._locked_ui = False
-            logging.error(f"Error running '{command}': {e}")
+            logging.error("Error running '%s': %s", command, e)
 
     def _build_komorebi_flags(self, include_config: bool = True) -> str:
         """Build command line flags based on configuration."""
@@ -324,7 +323,7 @@ class KomorebiControlWidget(BaseWidget):
             except Exception as e:
                 self._is_reloading = False
                 self._locked_ui = False
-                logging.error(f"Error reloading Komorebi: {e}")
+                logging.error("Error reloading Komorebi: %s", e)
 
 
 class VersionCheckThread(QThread):
@@ -338,7 +337,7 @@ class VersionCheckThread(QThread):
         version = self.get_version()
         self.version_result.emit(version if version else None)
 
-    def get_version(self) -> Optional[str]:
+    def get_version(self) -> str | None:
         """Returns the Komorebi version or None if unavailable."""
         try:
             output = subprocess.check_output(

@@ -62,7 +62,7 @@ class FileModifiedEventHandler(PatternMatchingEventHandler):
             if path and path not in self._watched_dirs and os.path.isdir(path):
                 self._observer.schedule(self, path=path, recursive=False)
                 self._watched_dirs.add(path)
-                logging.info(f"Watching directory: {path}")
+                logging.info("Watching directory: %s", path)
 
     def _file_hash(self, path):
         try:
@@ -81,20 +81,20 @@ class FileModifiedEventHandler(PatternMatchingEventHandler):
                 self._last_styles_hash = new_hash
                 self._refresh_imported_stylesheets()
                 self.bar_manager.styles_modified.emit()
-                logging.debug(f"Stylesheet modified: {event.src_path}")
+                logging.debug("Stylesheet modified: %s", event.src_path)
         elif modified_file == self.config_file and self.bar_manager.config.watch_config:
             new_hash = self._file_hash(event.src_path)
             if new_hash and new_hash != self._last_config_hash:
                 self._last_config_hash = new_hash
                 self.bar_manager.config_modified.emit()
-                logging.debug(f"Config file modified: {event.src_path}")
+                logging.debug("Config file modified: %s", event.src_path)
         elif normalized_path in self._imported_stylesheets and self.bar_manager.config.watch_stylesheet:
             new_hash = self._file_hash(event.src_path)
             if new_hash and self._imported_hashes.get(normalized_path) != new_hash:
                 self._imported_hashes[normalized_path] = new_hash
                 self._refresh_imported_stylesheets()
                 self.bar_manager.styles_modified.emit()
-                logging.debug(f"Imported stylesheet modified: {event.src_path}")
+                logging.debug("Imported stylesheet modified: %s", event.src_path)
 
 
 def create_observer(bar_manager: BarManager):

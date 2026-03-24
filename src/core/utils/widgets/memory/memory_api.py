@@ -209,11 +209,11 @@ class MemoryAPI:
 class MemoryWorker(QThread):
     """Background thread for non-blocking memory data collection."""
 
-    _instance: "MemoryWorker | None" = None
+    _instance: MemoryWorker | None = None
     data_ready = pyqtSignal(object)
 
     @classmethod
-    def get_instance(cls, update_interval: int) -> "MemoryWorker":
+    def get_instance(cls, update_interval: int) -> MemoryWorker:
         """Get or create the singleton worker instance."""
         if cls._instance is None:
             cls._instance = cls(update_interval)
@@ -240,5 +240,5 @@ class MemoryWorker(QThread):
                 if self._running:
                     self.data_ready.emit(data)
             except Exception as e:
-                logging.error(f"Memory worker error: {e}")
+                logging.error("Memory worker error: %s", e)
             self.msleep(self._update_interval)

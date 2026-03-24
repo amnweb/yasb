@@ -1,7 +1,8 @@
 import ctypes
 import logging
+from collections.abc import Callable
 from enum import StrEnum
-from typing import Any, Callable, Literal, cast
+from typing import Any, Literal, cast
 
 from PIL import Image, ImageChops
 from PIL.ImageDraw import ImageDraw
@@ -382,10 +383,10 @@ class MediaWidget(BaseWidget):
                         self._updateapp_volume_slider()
                         self._update_app_mute_button()
                     except Exception as e:
-                        logger.error(f"Error creating app volume slider: {e}")
+                        logger.error("Error creating app volume slider: %s", e)
 
             except Exception as e:
-                logger.error(f"Error setting thumbnail in menu: {e}")
+                logger.error("Error setting thumbnail in menu: %s", e)
         else:
             # No media playing message
             no_media_label = QLabel("No media playing")
@@ -497,7 +498,7 @@ class MediaWidget(BaseWidget):
             source_name = get_source_app_display_name(source_app)
             if source_name:
                 return source_name, get_source_app_class_name(source_name)
-            logger.debug(f"Unknown source app in session: '{source_app}' - consider adding to source_apps.py")
+            logger.debug("Unknown source app in session: '%s' - consider adding to source_apps.py", source_app)
         except Exception:
             logger.exception("Error getting media source")
         return None, None
@@ -540,7 +541,7 @@ class MediaWidget(BaseWidget):
                 )
                 refresh_widget_style(self._popup_next_label)
         except Exception as e:
-            logger.error(f"Error initializing popup buttons: {e}")
+            logger.error("Error initializing popup buttons: %s", e)
 
     def _format_time(self, seconds: float) -> str:
         """Format seconds as HH:MM:SS or MM:SS depending on duration."""
@@ -605,7 +606,7 @@ class MediaWidget(BaseWidget):
                 self._popup_total_time_label = None
 
         except Exception as e:
-            logger.error(f"Error updating timeline: {e}")
+            logger.error("Error updating timeline: %s", e)
 
     def _update_interpolated_position(self):
         if self.current_session is None:
@@ -654,7 +655,7 @@ class MediaWidget(BaseWidget):
             if hasattr(self, "_progress_slider"):
                 self._progress_slider = None
         except Exception as e:
-            logger.error(f"Error updating interpolated position: {e}")
+            logger.error("Error updating interpolated position: %s", e)
 
     @QtCore.pyqtSlot()
     def _on_session_status_changed(self):
@@ -765,7 +766,7 @@ class MediaWidget(BaseWidget):
             self._popup_prev_label = None
             self._popup_next_label = None
         except Exception as e:
-            logger.error(f"Error updating popup button: {e}")
+            logger.error("Error updating popup button: %s", e)
             self._popup_play_button = None
             self._popup_prev_label = None
             self._popup_next_label = None
@@ -802,11 +803,11 @@ class MediaWidget(BaseWidget):
                             refresh_widget_style(self._popup_source_label)
 
                 except Exception as e:
-                    logger.error(f"Error updating popup content: {e}")
+                    logger.error("Error updating popup content: %s", e)
         except RuntimeError:
             pass
         except Exception as e:
-            logger.error(f"Error updating popup content: {e}")
+            logger.error("Error updating popup content: %s", e)
 
         active_label = self._label_alt if self._show_alt_label else self._label
         active_label_content = self.config.label_alt if self._show_alt_label else self.config.label
@@ -836,7 +837,7 @@ class MediaWidget(BaseWidget):
                 if self.config.max_field_size.truncate_whole_label:
                     formatted_label = self._format_max_field_size(formatted_label)
             except Exception as e:
-                logger.error(f"Error formatting label: {e}", exc_info=True)
+                logger.error("Error formatting label: %s", e, exc_info=True)
                 if self.current_session and self.current_session.title:
                     formatted_label = self._format_max_field_size(self.current_session.title)
                 else:
@@ -859,7 +860,7 @@ class MediaWidget(BaseWidget):
                 self._thumbnail_label.setPixmap(pixmap)
 
         except Exception as e:
-            logger.error(f"Error setting thumbnail: {e}")
+            logger.error("Error setting thumbnail: %s", e)
             self._thumbnail_label.hide()
         else:
             self._thumbnail_label.show()
@@ -938,7 +939,7 @@ class MediaWidget(BaseWidget):
             return QPixmap.fromImage(ImageQt(img))
 
         except Exception as e:
-            logger.error(f"Error creating default thumbnail: {e}")
+            logger.error("Error creating default thumbnail: %s", e)
             return None
 
     def _create_thumbnail_for_popup(self, img: Image.Image):
@@ -995,7 +996,7 @@ class MediaWidget(BaseWidget):
             # Convert to QPixmap
             return QPixmap.fromImage(ImageQt(square_img))
         except Exception as e:
-            logger.error(f"Error creating square thumbnail: {e}")
+            logger.error("Error creating square thumbnail: %s", e)
             return None
 
     def _crop_thumbnail(self, thumbnail: Image.Image, active_label_width: int) -> Image.Image:
@@ -1064,7 +1065,7 @@ class MediaWidget(BaseWidget):
                 corners=corners,
             )
         except Exception as e:
-            logger.error(f"Error creating corner mask, return default thumb: {e}")
+            logger.error("Error creating corner mask, return default thumb: %s", e)
             return base_mask
 
         # Scale back down with antialiasing
@@ -1134,7 +1135,7 @@ class MediaWidget(BaseWidget):
         try:
             func()
         except Exception as e:
-            logger.error(f"Error executing code: {e}")
+            logger.error("Error executing code: %s", e)
 
     def wheelEvent(self, a0: QWheelEvent | None):
         if a0 is None:
@@ -1161,7 +1162,7 @@ class MediaWidget(BaseWidget):
                 # Seek to the position
                 await self.media.seek_to_position(position)
             except Exception as e:
-                logger.error(f"Error seeking to position: {e}")
+                logger.error("Error seeking to position: %s", e)
         # Resume automatic updates
         self._seeking = False
 
@@ -1288,7 +1289,7 @@ class MediaWidget(BaseWidget):
             self._app_volume_session = candidate
 
         except Exception as e:
-            logger.error(f"Failed to bind app volume session: {e}")
+            logger.error("Failed to bind app volume session: %s", e)
             self._app_volume_session = None
 
     def _get_volume_interface(self):
@@ -1318,7 +1319,7 @@ class MediaWidget(BaseWidget):
             self.app_volume_slider.setEnabled(True)
 
         except Exception as e:
-            logger.error(f"Failed to read app volume: {e}")
+            logger.error("Failed to read app volume: %s", e)
             self.app_volume_slider.setEnabled(False)
 
     def _on_app_volume_slider_changed(self, value: int):
@@ -1336,7 +1337,7 @@ class MediaWidget(BaseWidget):
                 self._update_app_mute_button()
 
         except Exception as e:
-            logger.error(f"Failed to set app volume: {e}")
+            logger.error("Failed to set app volume: %s", e)
 
     def _toggle_app_mute(self):
         """Toggle mute state for the current app."""
@@ -1360,7 +1361,7 @@ class MediaWidget(BaseWidget):
             self._update_app_mute_button()
 
         except Exception as e:
-            logger.error(f"Failed to toggle app mute: {e}")
+            logger.error("Failed to toggle app mute: %s", e)
 
     def _update_app_mute_button(self):
         """Update the mute button icon based on current mute state."""
@@ -1383,7 +1384,7 @@ class MediaWidget(BaseWidget):
             refresh_widget_style(self._app_mute_button)
 
         except Exception as e:
-            logger.error(f"Failed to update mute button: {e}")
+            logger.error("Failed to update mute button: %s", e)
             self._app_mute_button.setEnabled(False)
 
 

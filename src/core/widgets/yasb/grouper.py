@@ -118,9 +118,9 @@ class GrouperWidget(BaseWidget):
 
                         self._widget_container_layout.addWidget(child_widget)
                     else:
-                        logging.warning(f"GrouperWidget failed to create child widget '{widget_name}'")
+                        logging.warning("GrouperWidget failed to create child widget '%s'", widget_name)
                 except Exception as e:
-                    logging.error(f"GrouperWidget error creating child widget '{widget_name}': {e}")
+                    logging.error("GrouperWidget error creating child widget '%s': %s", widget_name, e)
                 if self._hide_empty and child_widget:
                     try:
                         child_widget.installEventFilter(self)
@@ -132,7 +132,7 @@ class GrouperWidget(BaseWidget):
                         )
             widget_builder.raise_alerts_if_errors_present()
         except Exception as e:
-            logging.error(f"GrouperWidget error initializing child widgets: {e}")
+            logging.error("GrouperWidget error initializing child widgets: %s", e)
 
     def _propagate_bar_context(self) -> None:
         """Propagate bar context to existing child widgets."""

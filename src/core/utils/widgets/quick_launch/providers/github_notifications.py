@@ -121,7 +121,7 @@ class GithubNotificationsProvider(BaseProvider):
             except urllib.error.HTTPError as e:
                 self._cached_data = []
                 self._fetch_error = f"HTTP {e.code}: {e.reason}"
-                logging.error(f"GitHub notifications provider: HTTP error: {e.code} - {e.reason}")
+                logging.error("GitHub notifications provider: HTTP error: %s - %s", e.code, e.reason)
             except urllib.error.URLError:
                 self._cached_data = []
                 self._fetch_error = "No internet connection"
@@ -129,7 +129,7 @@ class GithubNotificationsProvider(BaseProvider):
             except Exception as e:
                 self._cached_data = []
                 self._fetch_error = str(e)
-                logging.error(f"GitHub notifications provider: {e}")
+                logging.error("GitHub notifications provider: %s", e)
             finally:
                 self._fetching = False
                 if self.request_refresh:

@@ -20,7 +20,7 @@ class WallpaperManager(QObject):
 
     def __new__(cls):
         if cls._instance is None:
-            cls._instance = super(WallpaperManager, cls).__new__(cls)
+            cls._instance = super().__new__(cls)
             cls._instance._initialized = False
         return cls._instance
 
@@ -105,7 +105,7 @@ class WallpaperManager(QObject):
         wallpapers = []
         for path in self._image_paths:
             if not os.path.exists(path):
-                logging.warning(f"Invalid image path: {path}")
+                logging.warning("Invalid image path: %s", path)
                 continue
 
             for root, _, files in os.walk(path):
@@ -114,7 +114,7 @@ class WallpaperManager(QObject):
                         wallpapers.append(os.path.join(root, f))
 
         if not wallpapers:
-            logging.warning(f"No wallpapers found in {self._image_paths}")
+            logging.warning("No wallpapers found in %s", self._image_paths)
             self._is_running = False
             return
 
@@ -130,7 +130,7 @@ class WallpaperManager(QObject):
             self.set_wallpaper(new_wallpaper)
             self._last_image = new_wallpaper
         except Exception as e:
-            logging.error(f"Error setting wallpaper {new_wallpaper}: {e}")
+            logging.error("Error setting wallpaper %s: %s", new_wallpaper, e)
 
         if self._run_after:
             threading.Thread(target=self._run_after_command, args=(new_wallpaper,)).start()
@@ -147,6 +147,6 @@ class WallpaperManager(QObject):
                     formatted_command, shell=True, capture_output=True, text=True, encoding="utf-8", errors="replace"
                 )
                 if result.stderr:
-                    logging.error(f"error: {result.stderr}")
+                    logging.error("error: %s", result.stderr)
 
         self._is_running = False

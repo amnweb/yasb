@@ -121,4 +121,4 @@ def Blur(hwnd, Acrylic=False, DarkMode=False, RoundCorners=False, RoundCornersTy
                 hwnd, DWMWCP_ROUND if RoundCornersType == "normal" else DWMWCP_ROUNDSMALL, BorderColor
             )
     except Exception as e:
-        logging.debug(f"Failed to apply settings: {e}")
+        logging.debug("Failed to apply settings: %s", e)

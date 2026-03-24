@@ -172,10 +172,10 @@ class ClockWidgetSharedState:
         """Load alarms from disk into shared state, if the file exists."""
         try:
             if os.path.exists(self._alarms_file):
-                with open(self._alarms_file, "r", encoding="utf-8") as f:
+                with open(self._alarms_file, encoding="utf-8") as f:
                     self._alarms = json.load(f)
         except Exception as e:
-            logging.error(f"Error loading alarms: {e}")
+            logging.error("Error loading alarms: %s", e)
             self._alarms = []
 
     def save_alarms(self):
@@ -190,7 +190,7 @@ class ClockWidgetSharedState:
             with open(self._alarms_file, "w", encoding="utf-8") as f:
                 f.write(json_str)
         except Exception as e:
-            logging.error(f"Error saving alarms: {e}")
+            logging.error("Error saving alarms: %s", e)
 
 
 class FormattedSpinBox(QSpinBox):
@@ -416,7 +416,8 @@ class ClockWidget(BaseWidget):
                 valid_timezones.append(tz)
             else:
                 logging.warning(
-                    f"Invalid timezone '{tz}' ignored. Use format like 'America/New_York' or 'Europe/London'"
+                    "Invalid timezone '%s' ignored. Use format like 'America/New_York' or 'Europe/London'",
+                    tz,
                 )
 
         if not valid_timezones:
@@ -609,7 +610,7 @@ class ClockWidget(BaseWidget):
 
                 set_tooltip(self, tooltip_text)
             except Exception as e:
-                logging.error(f"Error updating tooltip for timezone '{self._active_tz}': {e}")
+                logging.error("Error updating tooltip for timezone '%s': %s", self._active_tz, e)
 
     def _next_timezone(self):
         """Rotate to the next timezone in the configured list."""
@@ -622,7 +623,7 @@ class ClockWidget(BaseWidget):
             if self._tooltip and hasattr(self, "_tooltip_filter"):
                 self._tooltip_filter.show_tooltip()
         except Exception as e:
-            logging.error(f"Error switching to timezone '{self._active_tz}': {e}")
+            logging.error("Error switching to timezone '%s': %s", self._active_tz, e)
             self._active_tz = None
             self._update_tooltip()
             self._update_label()
@@ -1312,7 +1313,7 @@ class ClockWidget(BaseWidget):
     def _play_sound(self, loop_duration_ms=0):
         """Play the configured notification sound; loop if loop_duration_ms>0."""
         if not os.path.exists(NOTIFICATION_SOUND):
-            logging.warning(f"Notification sound file not found: {NOTIFICATION_SOUND}")
+            logging.warning("Notification sound file not found: %s", NOTIFICATION_SOUND)
             return
 
         try:
@@ -1322,7 +1323,7 @@ class ClockWidget(BaseWidget):
             else:
                 winsound.PlaySound(NOTIFICATION_SOUND, winsound.SND_FILENAME | winsound.SND_ASYNC)
         except Exception as e:
-            logging.error(f"Failed to play notification sound: {e}")
+            logging.error("Failed to play notification sound: %s", e)
 
     def _stop_alarm_sound(self):
         """Stop any playing notification sound (winsound)."""

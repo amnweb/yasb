@@ -208,7 +208,7 @@ def get_app_name_from_pid(pid: int) -> str | None:
                             if display_name and display_name.strip():
                                 return display_name.strip()
                     except Exception as e:
-                        logging.debug(f"Direct UWP lookup failed for {package_full_name}: {e}")
+                        logging.debug("Direct UWP lookup failed for %s: %s", package_full_name, e)
 
                     # Fallback: iterate all packages if direct lookup failed
                     try:
@@ -230,7 +230,7 @@ def get_app_name_from_pid(pid: int) -> str | None:
                                     return display_name.strip()
                                 break
                     except Exception as e:
-                        logging.debug(f"Fallback UWP lookup failed for {package_full_name}: {e}")
+                        logging.debug("Fallback UWP lookup failed for %s: %s", package_full_name, e)
 
                     # If WinRT fails, we already closed the handle, so return None
                     return None
@@ -259,11 +259,11 @@ def get_app_name_from_pid(pid: int) -> str | None:
                     except:
                         pass
                 except Exception as e:
-                    logging.debug(f"Failed to get version info for {exe_path}: {e}")
+                    logging.debug("Failed to get version info for %s: %s", exe_path, e)
         finally:
             CloseHandle(h_process)
     except Exception as e:
-        logging.debug(f"Failed to get app name for PID {pid}: {e}")
+        logging.debug("Failed to get app name for PID %s: %s", pid, e)
 
     return None
 
@@ -305,7 +305,7 @@ def get_app_name_from_aumid(aumid: str) -> str | None:
     except ImportError:
         logging.debug("winrt module not available, cannot resolve UWP app names")
     except Exception as e:
-        logging.debug(f"Failed to get UWP app name from PackageManager: {e}")
+        logging.debug("Failed to get UWP app name from PackageManager: %s", e)
 
     return None
 
@@ -426,7 +426,7 @@ def find_focused_screen(follow_mouse, follow_window, follow_primary=False, scree
                 if screen.geometry().contains(pos) and is_valid(screen.name()):
                     return screen.name()
         except Exception as e:
-            logging.error(f"Exception in follow_mouse: {e}")
+            logging.error("Exception in follow_mouse: %s", e)
 
     if follow_window:
         hwnd = win32gui.GetForegroundWindow()
@@ -459,10 +459,10 @@ def enable_autostart(app_name: str, executable_path: str) -> bool:
     try:
         with _open_startup_registry(winreg.KEY_SET_VALUE) as key:
             winreg.SetValueEx(key, app_name, 0, winreg.REG_SZ, executable_path)
-        logging.info(f"{app_name} added to startup")
+        logging.info("%s added to startup", app_name)
         return True
     except Exception as e:
-        logging.error(f"Failed to add {app_name} to startup: {e}")
+        logging.error("Failed to add %s to startup: %s", app_name, e)
         return False
 
 
@@ -473,12 +473,12 @@ def disable_autostart(app_name: str) -> bool:
         if is_autostart_enabled(app_name):
             with _open_startup_registry(winreg.KEY_ALL_ACCESS) as key:
                 winreg.DeleteValue(key, app_name)
-            logging.info(f"{app_name} removed from startup")
+            logging.info("%s removed from startup", app_name)
         else:
-            logging.info(f"Startup entry for {app_name} not found")
+            logging.info("Startup entry for %s not found", app_name)
         return True
     except Exception as e:
-        logging.error(f"Failed to remove {app_name} from startup: {e}")
+        logging.error("Failed to remove %s from startup: %s", app_name, e)
         return False
 
 
@@ -488,8 +488,8 @@ def is_autostart_enabled(app_name: str) -> bool:
         with _open_startup_registry(winreg.KEY_READ) as key:
             winreg.QueryValueEx(key, app_name)
         return True
-    except WindowsError:
+    except OSError:
         return False
     except Exception as e:
-        logging.error(f"Failed to check startup status for {app_name}: {e}")
+        logging.error("Failed to check startup status for %s: %s", app_name, e)
         return False

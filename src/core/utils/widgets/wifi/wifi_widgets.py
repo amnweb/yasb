@@ -559,7 +559,7 @@ class WifiMenu(QObject):
             elif result == WiFiConnectionStatus.NETWORK_NOT_AVAILABLE:
                 self.show_errror_message_briefly("Network not available")
             else:
-                logger.error(f"Connection failed to wifi network. Reason: {result.name}")
+                logger.error("Connection failed to wifi network. Reason: %s", result.name)
             return
 
         logger.debug("Connection completed to wifi network")

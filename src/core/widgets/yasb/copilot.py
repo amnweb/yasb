@@ -5,7 +5,7 @@ Displays premium request usage data with a popup showing detailed statistics.
 
 import os
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from PyQt6.QtCore import QPointF, Qt, QTimer
 from PyQt6.QtGui import QBrush, QColor, QGuiApplication, QLinearGradient, QPainter, QPainterPath, QPen
@@ -281,7 +281,7 @@ class CopilotWidget(BaseWidget):
     """GitHub Copilot Usage Widget with shared instance support."""
 
     validation_schema = CopilotConfig
-    _instances: list["CopilotWidget"] = []
+    _instances: list[CopilotWidget] = []
     _shared_timer: QTimer | None = None
     _initialized = False
 
@@ -517,7 +517,7 @@ class CopilotWidget(BaseWidget):
         title_row.addWidget(title)
         title_row.addStretch()
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         next_reset = datetime(now.year + 1, 1, 1) if now.month == 12 else datetime(now.year, now.month + 1, 1)
         reset_lbl = QLabel(f"Resets on {next_reset.strftime('%b %d')}")
         reset_lbl.setProperty("class", "reset-date")

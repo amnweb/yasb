@@ -4,7 +4,7 @@ import json
 import os
 import re
 import urllib.request
-from typing import Callable
+from collections.abc import Callable
 
 from PyQt6.QtCore import QThread, QTimer, pyqtSignal
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel
@@ -200,7 +200,7 @@ class GlucoseMonitor(BaseWidget):
         date_string: str,
         direction: str,
     ) -> None:
-        now = datetime.datetime.now(tz=datetime.timezone.utc)
+        now = datetime.datetime.now(tz=datetime.UTC)
         last_update_time = datetime.datetime.strptime(date_string, self.datetime_format)
         delta_time_in_minutes = int((now - last_update_time).total_seconds() // 60)
         direction = self._direction_icons[direction]

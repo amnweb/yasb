@@ -174,7 +174,7 @@ def get_window_icon(hwnd: int):
 
         return None
     except Exception as e:
-        logging.error(f"Error fetching icon: {e}")
+        logging.error("Error fetching icon: %s", e)
         return None
 
 
@@ -211,7 +211,7 @@ def get_process_icon(pid: int) -> Image.Image | None:
                     finally:
                         CloseHandle(h_process)
         except Exception as e:
-            logging.debug(f"Failed to get AUMID icon for PID {pid}: {e}")
+            logging.debug("Failed to get AUMID icon for PID %s: %s", pid, e)
 
         # Get executable path and extract icon from it
         h_process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
@@ -229,7 +229,7 @@ def get_process_icon(pid: int) -> Image.Image | None:
                         icon_img = Image.open(icon_data)
                         return icon_img
                     except Exception as e:
-                        logging.debug(f"Failed to extract icon from {exe_path}: {e}")
+                        logging.debug("Failed to extract icon from %s: %s", exe_path, e)
             finally:
                 CloseHandle(h_process)
 
@@ -266,10 +266,10 @@ def get_process_icon(pid: int) -> Image.Image | None:
             if default_hicon:
                 return hicon_to_image(default_hicon)
         except Exception as e:
-            logging.debug(f"Failed to get default icon: {e}")
+            logging.debug("Failed to get default icon: %s", e)
 
     except Exception as e:
-        logging.debug(f"Failed to get icon for PID {pid}: {e}")
+        logging.debug("Failed to get icon for PID %s: %s", pid, e)
 
     return None
 
@@ -410,5 +410,5 @@ def get_stock_icon(icon_id: int) -> Image.Image | None:
                 pass
 
     except Exception as e:
-        logging.error(f"Error getting stock icon {icon_id}: {e}")
+        logging.error("Error getting stock icon %s: %s", icon_id, e)
         return None

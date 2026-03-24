@@ -264,7 +264,7 @@ class ObsWebSocketClient:
                     self._ws_send_pong(payload)
                 elif opcode == 0x8:  # Close
                     break
-            except socket.timeout:
+            except TimeoutError:
                 continue
             except Exception:
                 break
@@ -348,7 +348,7 @@ class ObsWorker(QThread):
     studio_mode_signal = pyqtSignal(bool)
     scene_signal = pyqtSignal(str)
 
-    _instance: "ObsWorker | None" = None
+    _instance: ObsWorker | None = None
     _users = 0
     _lock = threading.Lock()
 
@@ -360,7 +360,7 @@ class ObsWorker(QThread):
         self._connected = False
 
     @classmethod
-    def get_instance(cls, connection: dict = None) -> "ObsWorker":
+    def get_instance(cls, connection: dict = None) -> ObsWorker:
         with cls._lock:
             if cls._instance is None:
                 cls._instance = cls(connection)

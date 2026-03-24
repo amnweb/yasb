@@ -116,17 +116,17 @@ class SystrayMonitor(QObject):
         if self.hwnd == 0:
             logger.error("YASB systray hwnd is invalid")
             return
-        logger.debug(f"Adding TaskbandHWND prop to hwnd {self.hwnd}")
+        logger.debug("Adding TaskbandHWND prop to hwnd %s", self.hwnd)
         SetProp(self.hwnd, "TaskbandHWND", self.hwnd)
 
     def _window_proc(self, hwnd: int, uMsg: int, wParam: int, lParam: int) -> int:
         """Main window procedure for handling window messages"""
         if uMsg == WM_CLOSE:
-            logger.debug(f"WM_CLOSE received, destroying window {hwnd}")
+            logger.debug("WM_CLOSE received, destroying window %s", hwnd)
             DestroyWindow(hwnd)
             return 0
         elif uMsg == WM_DESTROY:
-            logger.debug(f"WM_DESTROY received for window {hwnd}")
+            logger.debug("WM_DESTROY received for window %s", hwnd)
             user32.PostQuitMessage(0)
             return 0
         if self._is_destroyed:

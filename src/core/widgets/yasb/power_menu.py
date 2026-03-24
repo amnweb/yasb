@@ -580,7 +580,7 @@ class MainWindow(AnimatedWidget):
                 self._apply_hover(source, True)
             elif event.type() == QtCore.QEvent.Type.Leave:
                 self._apply_hover(source, False)
-        return super(MainWindow, self).eventFilter(source, event)
+        return super().eventFilter(source, event)
 
     def keyPressEvent(self, event):
         key = event.key()

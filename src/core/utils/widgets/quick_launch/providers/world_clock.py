@@ -1,7 +1,7 @@
 import json
 import logging
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from PyQt6.QtWidgets import QApplication
@@ -281,12 +281,12 @@ class WorldClockProvider(BaseProvider):
     def _load_pinned(self) -> list[str]:
         try:
             if os.path.isfile(_PINNED_FILE):
-                with open(_PINNED_FILE, "r", encoding="utf-8") as f:
+                with open(_PINNED_FILE, encoding="utf-8") as f:
                     data = json.load(f)
                 if isinstance(data, list):
                     return [c for c in data if isinstance(c, str) and c in _CITIES]
         except Exception as e:
-            logging.debug(f"Failed to load pinned cities: {e}")
+            logging.debug("Failed to load pinned cities: %s", e)
         return []
 
     def _save_pinned(self):
@@ -295,7 +295,7 @@ class WorldClockProvider(BaseProvider):
             with open(_PINNED_FILE, "w", encoding="utf-8") as f:
                 json.dump(self._pinned, f, ensure_ascii=False, indent=2)
         except Exception as e:
-            logging.debug(f"Failed to save pinned cities: {e}")
+            logging.debug("Failed to save pinned cities: %s", e)
 
     def is_pinned(self, city: str) -> bool:
         return city in self._pinned
@@ -307,7 +307,7 @@ class WorldClockProvider(BaseProvider):
 
     def get_results(self, text: str, **kwargs) -> list[ProviderResult]:
         query = self.get_query_text(text).strip().lower()
-        now_utc = datetime.now(timezone.utc)
+        now_utc = datetime.now(UTC)
         try:
             local_dt = now_utc.astimezone(ZoneInfo("localtime"))
         except Exception:

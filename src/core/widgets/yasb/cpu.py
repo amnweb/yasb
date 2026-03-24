@@ -20,7 +20,7 @@ from core.widgets.base import BaseWidget
 class CpuWidget(BaseWidget):
     validation_schema = CpuConfig
 
-    _instances: list["CpuWidget"] = []
+    _instances: list[CpuWidget] = []
     _worker: CpuWorker | None = None
 
     def __init__(self, config: CpuConfig):

@@ -1,7 +1,6 @@
 import json
 import logging
 import subprocess
-from typing import Optional
 
 
 def add_index(dictionary: dict, dictionary_index: int) -> dict:
@@ -14,7 +13,7 @@ class KomorebiClient:
 
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
-            cls._instance = super(KomorebiClient, cls).__new__(cls)
+            cls._instance = super().__new__(cls)
         return cls._instance
 
     def __init__(self, komorebic_path: str = "komorebic.exe", timeout_secs: float = 0.5):
@@ -28,7 +27,7 @@ class KomorebiClient:
         self._previous_poll_offline = False
         self._previous_mouse_follows_focus = False
 
-    def query_state(self) -> Optional[dict]:
+    def query_state(self) -> dict | None:
         try:
             # Capture stderr to avoid raw komorebic panics leaking to console
             output = subprocess.check_output(
@@ -39,14 +38,14 @@ class KomorebiClient:
             )
             return json.loads(output)
         except subprocess.TimeoutExpired:
-            logging.error(f"Komorebi state query timed out in {self._timeout_secs} seconds")
+            logging.error("Komorebi state query timed out in %s seconds", self._timeout_secs)
         except json.JSONDecodeError, subprocess.CalledProcessError, FileNotFoundError:
             return None
 
     def get_screens(self, state: dict) -> list:
         return state["monitors"]["elements"]
 
-    def get_screen_by_hwnd(self, state: dict, screen_hwnd: int) -> Optional[dict]:
+    def get_screen_by_hwnd(self, state: dict, screen_hwnd: int) -> dict | None:
         for i, screen in enumerate(self.get_screens(state)):
             if screen.get("id", None) == screen_hwnd:
                 return add_index(screen, i)
@@ -54,13 +53,13 @@ class KomorebiClient:
     def get_workspaces(self, screen: dict) -> list:
         return [add_index(workspace, i) for i, workspace in enumerate(screen["workspaces"]["elements"])]
 
-    def get_workspace_by_index(self, screen: dict, workspace_index: int) -> Optional[dict]:
+    def get_workspace_by_index(self, screen: dict, workspace_index: int) -> dict | None:
         try:
             return self.get_workspaces(screen)[workspace_index]
         except IndexError:
             return None
 
-    def get_focused_workspace(self, screen: dict) -> Optional[dict]:
+    def get_focused_workspace(self, screen: dict) -> dict | None:
         try:
             focused_workspace_index = screen["workspaces"]["focused"]
             focused_workspace = self.get_workspace_by_index(screen, focused_workspace_index)
@@ -88,7 +87,7 @@ class KomorebiClient:
             return True
         return False
 
-    def get_workspace_by_window_hwnd(self, workspaces: list[Optional[dict]], window_hwnd: int) -> Optional[dict]:
+    def get_workspace_by_window_hwnd(self, workspaces: list[dict | None], window_hwnd: int) -> dict | None:
         for i, workspace in enumerate(workspaces):
             for floating_window in self.get_floating_windows(workspace):
                 if floating_window["hwnd"] == window_hwnd:
@@ -160,7 +159,7 @@ class KomorebiClient:
                 shell=True,
             )
         except subprocess.SubprocessError, FileNotFoundError:
-            logging.exception(f"Failed to change layout of currently active workspace to {layout}")
+            logging.exception("Failed to change layout of currently active workspace to %s", layout)
 
     def flip_layout(self, direction: str) -> None:
         try:
@@ -192,7 +191,7 @@ class KomorebiClient:
             else:
                 subprocess.Popen(command, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         except subprocess.SubprocessError, FileNotFoundError:
-            logging.exception(f"Failed to toggle {toggle_type} for currently active workspace")
+            logging.exception("Failed to toggle %s for currently active workspace", toggle_type)
 
     def wait_until_subscribed_to_pipe(self, pipe_name: str):
         proc = subprocess.Popen(
@@ -209,20 +208,20 @@ class KomorebiClient:
             containers.append(monocle_container)
         return containers
 
-    def get_monocle_container(self, workspace: dict) -> Optional[dict]:
+    def get_monocle_container(self, workspace: dict) -> dict | None:
         try:
             monocle_container = workspace["monocle_container"]
             return monocle_container if isinstance(monocle_container, dict) else None
         except KeyError, TypeError:
             return None
 
-    def get_container_by_index(self, workspace: dict, container_index: int) -> Optional[dict]:
+    def get_container_by_index(self, workspace: dict, container_index: int) -> dict | None:
         try:
             return self.get_containers(workspace)[container_index]
         except IndexError:
             return None
 
-    def get_focused_container(self, workspace: dict, get_monocle: bool = True) -> Optional[dict]:
+    def get_focused_container(self, workspace: dict, get_monocle: bool = True) -> dict | None:
         if get_monocle:
             monocle_container = self.get_monocle_container(workspace)
             if monocle_container:
@@ -235,7 +234,7 @@ class KomorebiClient:
         except KeyError, TypeError:
             return None
 
-    def get_windows(self, container: Optional[dict]) -> list:
+    def get_windows(self, container: dict | None) -> list:
         if not isinstance(container, dict):
             return []
         windows = container.get("windows")
@@ -246,13 +245,13 @@ class KomorebiClient:
             return []
         return [add_index(window, i) for i, window in enumerate(elements)]
 
-    def get_window_by_index(self, container: dict, window_index: int) -> Optional[dict]:
+    def get_window_by_index(self, container: dict, window_index: int) -> dict | None:
         try:
             return self.get_windows(container)[window_index]
         except IndexError:
             return None
 
-    def get_focused_window(self, container: dict) -> Optional[dict]:
+    def get_focused_window(self, container: dict) -> dict | None:
         try:
             focused_window_index = container["windows"]["focused"]
             focused_window = self.get_window_by_index(container, focused_window_index)
@@ -270,7 +269,7 @@ class KomorebiClient:
             return []
         return [add_index(window, i) for i, window in enumerate(elements)]
 
-    def get_focused_floating_window(self, workspace: dict) -> Optional[dict]:
+    def get_focused_floating_window(self, workspace: dict) -> dict | None:
         try:
             focused_window_index = workspace["floating_windows"]["focused"]
             return self.get_floating_windows(workspace)[focused_window_index]

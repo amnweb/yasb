@@ -8,8 +8,8 @@ import subprocess
 import tempfile
 import urllib.error
 import urllib.request
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable, Optional
 
 import certifi
 from PyQt6.QtCore import QEvent, Qt, QThread, QTimer, pyqtSignal
@@ -113,7 +113,7 @@ class DownloadWorker(QThread):
     finished = pyqtSignal(Path)
     error = pyqtSignal(str)
 
-    def __init__(self, download_url: str, output_path: Path, expected_size: Optional[int] = None, parent=None):
+    def __init__(self, download_url: str, output_path: Path, expected_size: int | None = None, parent=None):
         super().__init__(parent)
         self._download_url = download_url
         self._output_path = output_path
@@ -147,9 +147,9 @@ class DownloadWorker(QThread):
                             percent = int(bytes_read * 100 / total_size)
                             self.progress.emit(min(percent, 100))
             if bytes_read == 0:
-                raise IOError("No data received from server.")
+                raise OSError("No data received from server.")
             if total_size and bytes_read < total_size:
-                raise IOError("Download incomplete, connection lost.")
+                raise OSError("Download incomplete, connection lost.")
             self.progress.emit(100)
             self.finished.emit(self._output_path)
         except InterruptedError:
@@ -184,8 +184,8 @@ class UpdateDialog(QDialog):
     def __init__(
         self,
         parent=None,
-        on_install_started: Optional[Callable[[], None]] = None,
-        release_info: Optional[ReleaseInfo] = None,
+        on_install_started: Callable[[], None] | None = None,
+        release_info: ReleaseInfo | None = None,
     ):
         super().__init__(parent)
         self.setWindowTitle("Check for Updates")
@@ -202,8 +202,8 @@ class UpdateDialog(QDialog):
             self.setWindowIcon(QIcon(icon_path))
 
         self._on_install_started = on_install_started
-        self._download_worker: Optional[DownloadWorker] = None
-        self._available_release: Optional[ReleaseInfo] = None
+        self._download_worker: DownloadWorker | None = None
+        self._available_release: ReleaseInfo | None = None
         self._cancel_requested = False
 
         self._build_ui()
@@ -468,7 +468,7 @@ class UpdateDialog(QDialog):
         except RuntimeError:
             pass
 
-    def _active_download_worker(self) -> Optional[DownloadWorker]:
+    def _active_download_worker(self) -> DownloadWorker | None:
         worker = self._download_worker
         if not is_valid_qobject(worker):
             return None

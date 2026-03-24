@@ -51,7 +51,7 @@ class KomorebiEventListener(QThread):
             default_timeout_ms,
             security_attributes,
         )
-        logging.info(f"Created named pipe {self.pipe_name}")
+        logging.info("Created named pipe %s", self.pipe_name)
 
     def _close_pipe(self):
         if self.pipe:
@@ -89,15 +89,15 @@ class KomorebiEventListener(QThread):
                             if event and state:
                                 self._emit_event(event, state)
                         except KeyError, ValueError:
-                            logging.exception(f"Failed to parse komorebi state. Received data: {data}")
+                            logging.exception("Failed to parse komorebi state. Received data: %s", data)
                     except pywintypes.error as e:
                         if e.winerror == 109:  # ERROR_BROKEN_PIPE
-                            logging.warning(f"Pipe has been ended: {e}")
+                            logging.warning("Pipe has been ended: %s", e)
                             break
                         else:
-                            logging.exception(f"Unexpected error occurred: {e}")
+                            logging.exception("Unexpected error occurred: %s", e)
             except BaseException, Exception:
-                logging.exception(f"Komorebi has disconnected from the named pipe {self.pipe_name}")
+                logging.exception("Komorebi has disconnected from the named pipe %s", self.pipe_name)
             finally:
                 self._close_pipe()
                 self.event_service.emit_event(KomorebiEvent.KomorebiDisconnect)
@@ -131,9 +131,9 @@ class KomorebiEventListener(QThread):
 
             if "(os error 10061)" in stderr_str:
                 error_message = "Komorebi is not running, please start Komorebi."
-                logging.warning(f"Komorebi failed to subscribe named pipe. {error_message}")
+                logging.warning("Komorebi failed to subscribe named pipe. %s", error_message)
             else:
-                logging.warning(f"Komorebi failed to subscribe named pipe. {stderr_str}")
+                logging.warning("Komorebi failed to subscribe named pipe. %s", stderr_str)
 
         while self._app_running and proc.returncode != 0:
             if self._stop_event.wait(5):
@@ -144,7 +144,7 @@ class KomorebiEventListener(QThread):
             return
 
         win32pipe.ConnectNamedPipe(self.pipe, None)
-        logging.info(f"Komorebi connected to named pipe: {self.pipe_name}")
+        logging.info("Komorebi connected to named pipe: %s", self.pipe_name)
         state = self._komorebic.query_state()
 
         while self._app_running and state is None:

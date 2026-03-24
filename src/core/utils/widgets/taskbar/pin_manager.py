@@ -154,7 +154,7 @@ class PinManager:
                 should_reload = True
 
             if should_reload:
-                with open(file_path, "r", encoding="utf-8") as f:
+                with open(file_path, encoding="utf-8") as f:
                     data = json.load(f)
                     PinManager._apps_global_cache["data"] = data
                     PinManager._apps_global_cache["file_path"] = str(file_path)
@@ -288,7 +288,7 @@ class PinManager:
             aumid_shortcut = find_shortcut_by_aumid(aumid)
             if aumid_shortcut:
                 shortcut_path, shortcut_name = aumid_shortcut
-                logging.debug(f"Found shortcut by AUMID: {shortcut_path}")
+                logging.debug("Found shortcut by AUMID: %s", shortcut_path)
             else:
                 # If no shortcut found by AUMID, determine if this is Win32 app that needs shortcut
                 # Key insight: All UWP/PWA apps end with !App, Win32 apps with AUMID do NOT
@@ -456,7 +456,7 @@ class PinManager:
                         app_name = real_name
 
             except Exception as e:
-                logging.warning(f"Error resolving app name: {e}")
+                logging.warning("Error resolving app name: %s", e)
 
         if not app_name:
             app_name = context.window_title or context.process_name
@@ -542,7 +542,7 @@ class PinManager:
             return unique_id
 
         except Exception as e:
-            logging.error(f"Error pinning app: {e}")
+            logging.error("Error pinning app: %s", e)
             return None
 
     def unpin_app(self, hwnd: int, window_data: dict = None) -> None:
@@ -563,7 +563,7 @@ class PinManager:
                 # Notify other taskbar instances
                 _taskbar_signal_bus.pinned_apps_changed.emit("unpin", unique_id)
         except Exception as e:
-            logging.error(f"Error unpinning app: {e}")
+            logging.error("Error unpinning app: %s", e)
 
     def is_app_pinned(self, hwnd: int) -> bool:
         """Check if an app is pinned."""
@@ -616,7 +616,7 @@ class PinManager:
                     PinManager._icon_cache[cache_key] = scaled
                     return scaled
         except Exception as e:
-            logging.error(f"Error loading cached icon for {unique_id}: {e}")
+            logging.error("Error loading cached icon for %s: %s", unique_id, e)
         return None
 
     def delete_cached_icon(self, unique_id: str) -> None:
@@ -633,7 +633,7 @@ class PinManager:
                 icon_path.unlink()
 
         except Exception as e:
-            logging.error(f"Error deleting cached icon: {e}")
+            logging.error("Error deleting cached icon: %s", e)
 
     @staticmethod
     def _launch_exe(exe_path: str, arguments: str = "", working_dir: str = None) -> None:
@@ -675,7 +675,7 @@ class PinManager:
                 try:
                     win32api.ShellExecute(0, "runas", exe_path, arguments, working_dir, win32con.SW_SHOWNORMAL)
                 except Exception as shell_error:
-                    logging.error(f"Failed to launch with elevation: {shell_error}")
+                    logging.error("Failed to launch with elevation: %s", shell_error)
                     raise
             else:
                 raise
@@ -754,7 +754,7 @@ class PinManager:
                 all_args = f"{arguments} {extra_arguments}".strip()
                 PinManager._launch_exe(target, all_args, working_dir)
             else:
-                logging.warning(f"Cannot launch app {unique_id} - no valid target")
+                logging.warning("Cannot launch app %s - no valid target", unique_id)
 
         except Exception as e:
-            logging.error(f"Error launching pinned app: {e}")
+            logging.error("Error launching pinned app: %s", e)

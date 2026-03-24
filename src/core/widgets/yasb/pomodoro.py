@@ -24,7 +24,7 @@ class PomodoroWidget(BaseWidget):
     validation_schema = PomodoroConfig
 
     # Shared state for all PomodoroWidget instances
-    _instances: list["PomodoroWidget"] = []
+    _instances: list[PomodoroWidget] = []
     _shared_timer: QTimer | None = None
     _shared_state = {
         "is_running": False,
@@ -363,7 +363,7 @@ class PomodoroWidget(BaseWidget):
             sound = os.path.join(SCRIPT_PATH, "assets", "sound", "notification01.wav")
             winsound.PlaySound(sound, winsound.SND_FILENAME | winsound.SND_ASYNC)
         except Exception as e:
-            logging.error(f"Failed to play notification sound: {e}")
+            logging.error("Failed to play notification sound: %s", e)
 
     def _show_desktop_notification(self):
         try:
@@ -373,7 +373,7 @@ class PomodoroWidget(BaseWidget):
             toaster = ToastNotifier()
             toaster.show(self._icon_path, title, message)
         except Exception as e:
-            logging.warning(f"Failed to show desktop notification: {e}")
+            logging.warning("Failed to show desktop notification: %s", e)
 
     def _toggle_menu(self):
         self.show_menu()

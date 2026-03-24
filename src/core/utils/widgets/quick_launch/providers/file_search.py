@@ -138,7 +138,7 @@ class _EverythingBackend:
         if self._available is not None:
             return self._available
         if not os.path.isfile(_BUNDLED_DLL):
-            logging.debug(f"Everything DLL not found: {_BUNDLED_DLL}")
+            logging.debug("Everything DLL not found: %s", _BUNDLED_DLL)
             self._available = False
             return False
         dll_path = _BUNDLED_DLL
@@ -169,9 +169,9 @@ class _EverythingBackend:
             dll.Everything_Reset.restype = None
             self._dll = dll
             self._available = True
-            logging.info(f"Everything SDK loaded: {dll_path}")
+            logging.info("Everything SDK loaded: %s", dll_path)
         except Exception as e:
-            logging.debug(f"Failed to load Everything DLL: {e}")
+            logging.debug("Failed to load Everything DLL: %s", e)
             self._available = False
         return self._available
 
@@ -225,7 +225,7 @@ class _EverythingBackend:
             self._ipc_error = False
             return results
         except Exception as e:
-            logging.debug(f"Everything search error: {e}")
+            logging.debug("Everything search error: %s", e)
             return []
 
     def _find_exe(self) -> str | None:
@@ -291,7 +291,7 @@ class _EverythingBackend:
             self._available = None  # Reset so next query retries
             return True
         except Exception as e:
-            logging.debug(f"Failed to launch Everything: {e}")
+            logging.debug("Failed to launch Everything: %s", e)
             return False
 
 
@@ -523,7 +523,7 @@ class _DiskSearchBackend:
                     if len(results) >= max_results:
                         break
         except Exception as e:
-            logging.debug(f"Disk search error: {e}")
+            logging.debug("Disk search error: %s", e)
         return results
 
 
@@ -592,7 +592,7 @@ class _WindowsSearchBackend:
             conn.Close()
             return results
         except Exception as e:
-            logging.debug(f"Windows Search error: {e}")
+            logging.debug("Windows Search error: %s", e)
             return []
 
 
@@ -775,7 +775,7 @@ class FileSearchProvider(BaseProvider):
             shell_open(path)
             return True
         except Exception as e:
-            logging.error(f"Failed to open: {e}")
+            logging.error("Failed to open: %s", e)
             return False
 
     def get_context_menu_actions(self, result: ProviderResult) -> list[ProviderMenuAction]:
@@ -803,7 +803,7 @@ class FileSearchProvider(BaseProvider):
             try:
                 shell_open("explorer.exe", parameters=f'/select, "{path}"')
             except Exception as e:
-                logging.debug(f"Failed to reveal in Explorer: {e}")
+                logging.debug("Failed to reveal in Explorer: %s", e)
             return ProviderMenuActionResult(close_popup=True)
 
         if action_id == "copy_path":
@@ -816,7 +816,7 @@ class FileSearchProvider(BaseProvider):
             try:
                 self._copy_file_to_clipboard(path)
             except Exception as e:
-                logging.debug(f"Failed to copy file to clipboard: {e}")
+                logging.debug("Failed to copy file to clipboard: %s", e)
             return ProviderMenuActionResult()
 
         return ProviderMenuActionResult()

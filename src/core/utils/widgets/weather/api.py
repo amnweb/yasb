@@ -26,7 +26,7 @@ class WeatherDataFetcher(QObject):
     finished = pyqtSignal(dict)
 
     _cached_url = None
-    _instance: "WeatherDataFetcher|None" = None
+    _instance: WeatherDataFetcher|None = None
 
     @classmethod
     def get_instance(cls, parent: QObject, url: QUrl, timeout: int):
@@ -66,7 +66,7 @@ class WeatherDataFetcher(QObject):
             error = reply.error()
             status = reply.attribute(QNetworkRequest.Attribute.HttpStatusCodeAttribute)
             if error == QNetworkReply.NetworkError.NoError:
-                logging.info(f"Fetching new weather data at {datetime.now()}")
+                logging.info("Fetching new weather data at %s", datetime.now())
                 data = json.loads(reply.readAll().data().decode())
                 self.finished.emit(data)
                 reply.deleteLater()
@@ -77,13 +77,13 @@ class WeatherDataFetcher(QObject):
                 data = json.loads(reply.readAll().data().decode())
                 raise BadRequestError(f"Weather response error {status}: {data['error']['message']}")
             else:
-                logging.warning(f"Weather API returned error {status}. Will retry on next interval.")
+                logging.warning("Weather API returned error %s. Will retry on next interval.", status)
         except json.JSONDecodeError as e:
-            logging.error(f"Weather API invalid JSON response: {e}")
+            logging.error("Weather API invalid JSON response: %s", e)
         except (BadRequestError, HostNotFoundError) as e:
             logging.error(e)
         except Exception as e:
-            logging.error(f"{e}\n{traceback.format_exc()}")
+            logging.error("%s\n%s", e, traceback.format_exc())
         self.finished.emit({})
         reply.deleteLater()
 
@@ -93,7 +93,7 @@ class IconFetcher(QObject):
 
     finished = pyqtSignal()
 
-    _instance: "IconFetcher|None" = None
+    _instance: IconFetcher|None = None
 
     @classmethod
     def get_instance(cls, parent: QObject):

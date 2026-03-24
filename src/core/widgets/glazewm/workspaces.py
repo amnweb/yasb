@@ -124,7 +124,7 @@ class GlazewmWorkspaceButton(QPushButton):
         elif self.status == WorkspaceStatus.EMPTY:
             self.setText(empty_label)
         else:
-            logger.warning(f"Unknown workspace status: {self.status}")
+            logger.warning("Unknown workspace status: %s", self.status)
 
 
 class GlazewmWorkspaceButtonWithIcons(QFrame):
@@ -132,7 +132,7 @@ class GlazewmWorkspaceButtonWithIcons(QFrame):
         self,
         workspace_name: str,
         client: GlazewmClient,
-        parent_widget: "GlazewmWorkspacesWidget",
+        parent_widget: GlazewmWorkspacesWidget,
         config: GlazewmWorkspacesConfig,
         display_name: str | None = None,
         windows: list[Window] | None = None,
@@ -226,7 +226,7 @@ class GlazewmWorkspaceButtonWithIcons(QFrame):
         elif self.status == WorkspaceStatus.EMPTY:
             self.text_label.setText(empty_label)
         else:
-            logger.warning(f"Unknown workspace status: {self.status}")
+            logger.warning("Unknown workspace status: %s", self.status)
 
     def mousePressEvent(self, event: QMouseEvent):
         if event.button() == Qt.MouseButton.LeftButton:

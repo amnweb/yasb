@@ -42,7 +42,7 @@ class AudioInputService(QObject):
         try:
             self._enumerator = AudioUtilities.GetDeviceEnumerator()
         except Exception as e:
-            logging.error(f"AudioInputService failed to initialize: {e}")
+            logging.error("AudioInputService failed to initialize: %s", e)
 
     def _initialize_audio(self):
         """Fetch microphone and devices in background thread."""
@@ -227,7 +227,7 @@ class AudioInputService(QObject):
             AudioUtilities.SetDefaultDevice(device_id, roles=[ERole.eConsole])
             return True
         except Exception as e:
-            logging.error(f"Failed to set default microphone: {e}")
+            logging.error("Failed to set default microphone: %s", e)
             return False
 
 

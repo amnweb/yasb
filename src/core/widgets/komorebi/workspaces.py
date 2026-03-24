@@ -1,6 +1,6 @@
 import logging
 from contextlib import suppress
-from typing import Dict, List, Literal
+from typing import Literal
 
 from PIL import Image
 from PyQt6.QtCore import Qt, pyqtSignal
@@ -83,7 +83,7 @@ class WorkspaceButton(QPushButton):
         try:
             self.komorebic.activate_workspace(self.parent_widget._komorebi_screen["index"], self.workspace_index)
         except Exception:
-            logging.exception(f"Failed to focus workspace at index {self.workspace_index}")
+            logging.exception("Failed to focus workspace at index %s", self.workspace_index)
 
 
 class WorkspaceButtonWithIcons(QFrame):
@@ -151,7 +151,7 @@ class WorkspaceButtonWithIcons(QFrame):
         if lock_width and prev_width is not None:
             self.setFixedWidth(prev_width)
 
-    def update_icons(self, icons: Dict[int, QPixmap] = None, update_width: bool = True):
+    def update_icons(self, icons: dict[int, QPixmap] = None, update_width: bool = True):
         if icons:
             self.icons.update(icons)
         else:
@@ -213,7 +213,7 @@ class WorkspaceButtonWithIcons(QFrame):
         try:
             self.komorebic.activate_workspace(self.parent_widget._komorebi_screen["index"], self.workspace_index)
         except Exception:
-            logging.exception(f"Failed to focus workspace at index {self.workspace_index}")
+            logging.exception("Failed to focus workspace at index %s", self.workspace_index)
 
 
 class WorkspaceWidget(BaseWidget):
@@ -615,9 +615,9 @@ class WorkspaceWidget(BaseWidget):
         try:
             self._komorebic.activate_workspace(self._komorebi_screen["index"], next_idx)
         except Exception:
-            logging.exception(f"Failed to switch to workspace at index {next_idx}")
+            logging.exception("Failed to switch to workspace at index %s", next_idx)
 
-    def _get_all_windows_in_workspace(self, workspace_index: int) -> List[dict] | None:
+    def _get_all_windows_in_workspace(self, workspace_index: int) -> list[dict] | None:
         workspace = self._komorebi_workspaces[workspace_index]
         containers = self._komorebic.get_containers(workspace, get_monocle=True)
         windows_in_workspace = []
@@ -629,7 +629,7 @@ class WorkspaceWidget(BaseWidget):
             windows_in_workspace.extend(floating_windows)
         return windows_in_workspace
 
-    def _get_all_icons_in_workspace(self, workspace_index: int) -> List[QPixmap] | None:
+    def _get_all_icons_in_workspace(self, workspace_index: int) -> list[QPixmap] | None:
         windows_in_workspace = self._get_all_windows_in_workspace(workspace_index)
         self._unique_pids = set()
         pixmaps = {

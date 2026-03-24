@@ -169,7 +169,7 @@ def force_foreground_focus(hwnd: int) -> None:
             u32.SetForegroundWindow(hwnd)
             u32.SetFocus(hwnd)
     except Exception as e:
-        logging.debug(f"Failed to force foreground focus: {e}")
+        logging.debug("Failed to force foreground focus: %s", e)
 
 
 # --- Close application helper ---
@@ -195,7 +195,7 @@ def close_application(hwnd: int, force: bool = False):
     """
     try:
         if not hwnd or hwnd == 0:
-            logging.warning(f"Invalid HWND: {hwnd}")
+            logging.warning("Invalid HWND: %s", hwnd)
             return
 
         # Resolve a better target: prefer GA_ROOTOWNER, then GA_ROOT
@@ -217,11 +217,11 @@ def close_application(hwnd: int, force: bool = False):
             try:
                 _, process_id = win32process.GetWindowThreadProcessId(hwnd)
             except Exception as e:
-                logging.error(f"Failed to get process ID for HWND {hwnd}: {e}")
+                logging.error("Failed to get process ID for HWND %s: %s", hwnd, e)
                 return
 
             if not process_id:
-                logging.warning(f"No process ID found for HWND: {hwnd}")
+                logging.warning("No process ID found for HWND: %s", hwnd)
                 return
 
             # Try forced EndTask first (Windows shell approach)
@@ -230,10 +230,10 @@ def close_application(hwnd: int, force: bool = False):
                 # fForce=True makes it more aggressive
                 endtask_ok = u32.EndTask(int(target_hwnd), False, True)
                 if endtask_ok:
-                    logging.info(f"Successfully ended task via forced EndTask for HWND: {hwnd}")
+                    logging.info("Successfully ended task via forced EndTask for HWND: %s", hwnd)
                     return
             except Exception as et_ex:
-                logging.warning(f"Forced EndTask failed for HWND {target_hwnd}: {et_ex}")
+                logging.warning("Forced EndTask failed for HWND %s: %s", target_hwnd, et_ex)
 
             # Fallback: Direct process termination
             PROCESS_TERMINATE = 0x0001
@@ -241,21 +241,21 @@ def close_application(hwnd: int, force: bool = False):
                 # Open process handle with terminate rights
                 process_handle = k32.OpenProcess(PROCESS_TERMINATE, False, process_id)
                 if not process_handle:
-                    logging.error(f"Failed to open process {process_id} for termination")
+                    logging.error("Failed to open process %s for termination", process_id)
                     return
 
                 # Terminate the process with exit code 1
                 terminated = k32.TerminateProcess(process_handle, 1)
                 if terminated:
-                    logging.info(f"Successfully terminated process {process_id} for HWND: {hwnd}")
+                    logging.info("Successfully terminated process %s for HWND: %s", process_id, hwnd)
                 else:
-                    logging.warning(f"TerminateProcess returned False for process {process_id}")
+                    logging.warning("TerminateProcess returned False for process %s", process_id)
 
                 # Close the process handle
                 k32.CloseHandle(process_handle)
 
             except Exception as term_ex:
-                logging.error(f"Failed to terminate process {process_id}: {term_ex}")
+                logging.error("Failed to terminate process %s: %s", process_id, term_ex)
 
         else:
             # Graceful close path
@@ -271,7 +271,7 @@ def close_application(hwnd: int, force: bool = False):
                 int(SC_CLOSE),
                 0,
                 int(SMTO_ABORTIFHUNG),
-                int(2000),
+                2000,
                 ctypes.byref(lpdw_result),
             )
 
@@ -289,9 +289,9 @@ def close_application(hwnd: int, force: bool = False):
             try:
                 endtask_ok = u32.EndTask(int(target_hwnd), False, False)
                 if not endtask_ok:
-                    logging.warning(f"EndTask failed for HWND: {target_hwnd}")
+                    logging.warning("EndTask failed for HWND: %s", target_hwnd)
             except Exception as et_ex:
-                logging.warning(f"EndTask unavailable/failed for HWND {target_hwnd}: {et_ex}")
+                logging.warning("EndTask unavailable/failed for HWND %s: %s", target_hwnd, et_ex)
 
     except Exception as e:
-        logging.error(f"Failed to close window {hwnd}: {e}")
+        logging.error("Failed to close window %s: %s", hwnd, e)

@@ -4,7 +4,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from typing import Callable
+from collections.abc import Callable
 
 from core.utils.utilities import app_data_path
 
@@ -26,7 +26,7 @@ def get_saved_token(name: str = "notifications") -> str:
         if path.exists():
             return path.read_text(encoding="utf-8").strip()
     except Exception as e:
-        logging.error(f"GitHubAuth: Failed to read saved token: {e}")
+        logging.error("GitHubAuth: Failed to read saved token: %s", e)
     return ""
 
 
@@ -36,7 +36,7 @@ def save_token(token: str, name: str = "notifications") -> None:
         _TOKEN_FILES[name].write_text(token, encoding="utf-8")
         logging.info("GitHubAuth token saved successfully.")
     except Exception as e:
-        logging.error(f"GitHubAuth failed to save token: {e}")
+        logging.error("GitHubAuth failed to save token: %s", e)
 
 
 def request_device_code(name: str = "notifications") -> dict:
@@ -62,10 +62,10 @@ def request_device_code(name: str = "notifications") -> dict:
             return json.loads(raw)
     except urllib.error.HTTPError as e:
         body = e.read().decode("utf-8", errors="replace")
-        logging.error(f"GitHubAuth HTTP {e.code}: {body}")
+        logging.error("GitHubAuth HTTP %s: %s", e.code, body)
         raise RuntimeError(f"GitHub returned HTTP {e.code}.\nDetails: {body}") from e
     except urllib.error.URLError as e:
-        logging.error(f"GitHubAuth network error: {e}")
+        logging.error("GitHubAuth network error: %s", e)
         raise RuntimeError("Network error.\nCheck your internet connection.") from e
 
 
@@ -136,6 +136,6 @@ def poll_for_token(
             on_error("Network error.\nCheck your internet connection.")
             return
         except Exception as e:
-            logging.error(f"GitHubAuth polling error: {e}")
+            logging.error("GitHubAuth polling error: %s", e)
             on_error(f"Unexpected error: {e}")
             return

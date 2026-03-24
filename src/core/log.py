@@ -59,6 +59,7 @@ def _suppress_third_party_warnings():
     logging.getLogger("asyncio").setLevel(logging.WARNING)
     logging.getLogger("comtypes").setLevel(logging.ERROR)
     logging.getLogger("icoextract").setLevel(logging.ERROR)
+    logging.getLogger("pyvda").setLevel(logging.WARNING)
     warnings.filterwarnings("ignore", category=UserWarning, module="pycaw")
 
 
@@ -98,7 +99,7 @@ def init_logger():
     console_handler.setLevel(logging.INFO)
     console_handler.setFormatter(ColoredFormatter(CONSOLE_FORMAT, datefmt=CONSOLE_DATETIME))
     logging.basicConfig(level=logging.DEBUG, handlers=[file_handler, console_handler], encoding="utf-8")
-    logging.info(f"{APP_NAME} v{BUILD_VERSION}")
+    logging.info("%s v%s", APP_NAME, BUILD_VERSION)
 
 
 def enable_debug_logging():

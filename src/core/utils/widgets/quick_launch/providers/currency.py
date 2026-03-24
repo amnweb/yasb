@@ -304,7 +304,7 @@ class CurrencyProvider(BaseProvider):
 
             return rates if rates else None
         except Exception as e:
-            logging.debug(f"Failed to fetch ECB rates: {e}")
+            logging.debug("Failed to fetch ECB rates: %s", e)
             return None
 
     def _load_cache(self) -> tuple[dict[str, float] | None, float]:
@@ -322,4 +322,4 @@ class CurrencyProvider(BaseProvider):
             with open(_CACHE_FILE, "w", encoding="utf-8") as f:
                 json.dump({"rates": rates, "timestamp": time.time()}, f)
         except Exception as e:
-            logging.debug(f"Failed to save currency cache: {e}")
+            logging.debug("Failed to save currency cache: %s", e)

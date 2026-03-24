@@ -3,7 +3,9 @@ import logging
 import threading
 import urllib.error
 import urllib.request
-from typing import Any, Callable
+from collections.abc import Callable
+from datetime import UTC
+from typing import Any
 
 from PyQt6.QtCore import QTimer
 
@@ -143,10 +145,10 @@ class GitHubDataManager:
                     try:
                         callback(notifications)
                     except Exception as e:
-                        logging.error(f"GitHubDataManager error calling callback: {e}")
+                        logging.error("GitHubDataManager error calling callback: %s", e)
 
             except Exception as e:
-                logging.error(f"GitHubDataManager error fetching notifications: {e}")
+                logging.error("GitHubDataManager error fetching notifications: %s", e)
 
         threading.Thread(target=_fetch, daemon=True).start()
 
@@ -174,7 +176,7 @@ class GitHubDataManager:
                 try:
                     callback(data_copy)
                 except Exception as e:
-                    logging.error(f"GitHubDataManager error calling callback: {e}")
+                    logging.error("GitHubDataManager error calling callback: %s", e)
 
         # Sync to GitHub API in background
         if effective_token:
@@ -192,11 +194,11 @@ class GitHubDataManager:
             with urllib.request.urlopen(req):
                 pass
         except urllib.error.HTTPError as e:
-            logging.error(f"GitHubDataManager HTTP error marking notification as read: {e.code} - {e.reason}")
+            logging.error("GitHubDataManager HTTP error marking notification as read: %s - %s", e.code, e.reason)
         except urllib.error.URLError:
             logging.error("GitHubDataManager no internet connection. Unable to mark notification as read.")
         except Exception as e:
-            logging.error(f"GitHubDataManager error marking notification as read: {e}")
+            logging.error("GitHubDataManager error marking notification as read: %s", e)
 
     @classmethod
     def mark_all_as_read(cls, token: str) -> None:
@@ -218,30 +220,30 @@ class GitHubDataManager:
                 try:
                     callback(data_copy)
                 except Exception as e:
-                    logging.error(f"GitHubDataManager error calling callback: {e}")
+                    logging.error("GitHubDataManager error calling callback: %s", e)
 
         # Sync to GitHub API in background
         def _sync():
             try:
-                from datetime import datetime, timezone
+                from datetime import datetime
 
                 headers = {
                     "Authorization": f"token {token}",
                     "Accept": "application/vnd.github.v3+json",
                     "Content-Type": "application/json",
                 }
-                last_read_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+                last_read_at = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
                 data = json.dumps({"last_read_at": last_read_at}).encode("utf-8")
                 url = "https://api.github.com/notifications"
                 req = urllib.request.Request(url, headers=headers, data=data, method="PUT")
                 with urllib.request.urlopen(req):
                     logging.info("GitHubDataManager marked all notifications as read on GitHub")
             except urllib.error.HTTPError as e:
-                logging.error(f"GitHubDataManager HTTP error marking all as read: {e.code} - {e.reason}")
+                logging.error("GitHubDataManager HTTP error marking all as read: %s - %s", e.code, e.reason)
             except urllib.error.URLError:
                 logging.error("GitHubDataManager no internet connection. Unable to mark all as read.")
             except Exception as e:
-                logging.error(f"GitHubDataManager error marking all as read: {e}")
+                logging.error("GitHubDataManager error marking all as read: %s", e)
 
         threading.Thread(target=_sync, daemon=True).start()
 
@@ -261,10 +263,10 @@ class GitHubDataManager:
             logging.error("GitHubDataManager no internet connection. Unable to fetch notifications.")
             return []
         except urllib.error.HTTPError as e:
-            logging.error(f"GitHubDataManager HTTP error occurred: {e.code} - {e.reason}")
+            logging.error("GitHubDataManager HTTP error occurred: %s - %s", e.code, e.reason)
             return []
         except Exception as e:
-            logging.error(f"GitHubDataManager an unexpected error occurred: {str(e)}")
+            logging.error("GitHubDataManager an unexpected error occurred: %s", e)
             return []
 
     @classmethod

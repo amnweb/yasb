@@ -31,7 +31,7 @@ class WindowsNotificationEventListener(QThread):
             notifications = await listener.get_notifications_async(NotificationKinds.TOAST)
             return len(notifications)
         except Exception as e:
-            logging.error(f"Error getting notification count: {e}")
+            logging.error("Error getting notification count: %s", e)
             return None
 
     async def _do_clear_all_notifications(self):
@@ -42,11 +42,11 @@ class WindowsNotificationEventListener(QThread):
                 try:
                     listener.remove_notification(n.id)
                 except Exception as e:
-                    logging.debug(f"Failed to remove notification {n.id}: {e}")
+                    logging.debug("Failed to remove notification %s: %s", n.id, e)
             self.total_notifications = 0
             self.event_service.emit_event("WindowsNotificationUpdate", self.total_notifications)
         except Exception as e:
-            logging.error(f"Error clearing notifications: {e}")
+            logging.error("Error clearing notifications: %s", e)
 
     async def _wait_for_stop(self, timeout: float) -> bool:
         """Non-blocking wait that keeps the event loop responsive.
@@ -63,7 +63,7 @@ class WindowsNotificationEventListener(QThread):
                 access_status = listener.get_access_status()
 
                 if access_status != management.UserNotificationListenerAccessStatus.ALLOWED:
-                    logging.warning(f"Access denied to notifications, access status: {access_status}")
+                    logging.warning("Access denied to notifications, access status: %s", access_status)
                     if await self._wait_for_stop(30):
                         break
                     continue
@@ -79,7 +79,7 @@ class WindowsNotificationEventListener(QThread):
                         break
 
             except Exception as e:
-                logging.error(f"Error in notification listener: {e}")
+                logging.error("Error in notification listener: %s", e)
                 if await self._wait_for_stop(retry_delay):
                     break
                 retry_delay = min(retry_delay * 2, 60)
@@ -92,7 +92,7 @@ class WindowsNotificationEventListener(QThread):
         try:
             self._loop.run_until_complete(listener.request_access_async())
         except Exception as e:
-            logging.error(f"Failed to request notification access: {e}")
+            logging.error("Failed to request notification access: %s", e)
             self._loop.close()
             self._loop = None
             return
@@ -100,7 +100,7 @@ class WindowsNotificationEventListener(QThread):
         try:
             self._loop.run_until_complete(self._watch_notifications(listener))
         except Exception as e:
-            logging.error(f"Error in notification listener thread: {e}")
+            logging.error("Error in notification listener thread: %s", e)
         finally:
             self._loop.run_until_complete(self._cancel_pending_tasks())
             self._loop.close()

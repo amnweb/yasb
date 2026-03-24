@@ -288,7 +288,7 @@ class WhkdWidget(BaseWidget):
             else os.path.join(os.path.expanduser("~"), ".config", "whkdrc")
         )
         if not os.path.exists(file_path):
-            logging.error(f"File not found: {file_path}")
+            logging.error("File not found: %s", file_path)
             raise_info_alert(
                 title="Error",
                 msg=f"The specified file does not exist\n{file_path}",
@@ -299,10 +299,10 @@ class WhkdWidget(BaseWidget):
 
         # Read and process the configuration file
         try:
-            with open(file_path, "r") as f:
+            with open(file_path) as f:
                 raw_lines = f.readlines()
         except Exception as e:
-            logging.error(f"Error reading file: {e}")
+            logging.error("Error reading file: %s", e)
             return
 
         content = self._process_file(raw_lines)

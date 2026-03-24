@@ -156,7 +156,7 @@ class WifiWidget(BaseWidget):
                 wifi_strength = "N/A"
 
         except Exception as e:
-            logger.error(f"Error in wifi widget update: {e}")
+            logger.error("Error in wifi widget update: %s", e)
             ip_addr = "N/A"
             wifi_icon = wifi_name = wifi_strength = "N/A"
 

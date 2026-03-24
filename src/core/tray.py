@@ -58,7 +58,7 @@ class SystemTrayManager(QSystemTrayIcon):
         try:
             config = get_config(show_error_dialog=True)
         except Exception as e:
-            logging.error(f"Error loading config: {e}")
+            logging.error("Error loading config: %s", e)
             return
         if config and config.komorebi:
             self.komorebi_start = config.komorebi.start_command
@@ -188,7 +188,7 @@ class SystemTrayManager(QSystemTrayIcon):
             wm_path = shutil.which(wm)
             return wm_path is not None
         except Exception as e:
-            logging.error(f"Error checking {wm} installation: {e}")
+            logging.error("Error checking %s installation: %s", wm, e)
             return False
 
     def _enable_startup(self):
@@ -207,7 +207,7 @@ class SystemTrayManager(QSystemTrayIcon):
         try:
             subprocess.run(["explorer", DEFAULT_CONFIG_DIRECTORY])
         except Exception as e:
-            logging.error(f"Failed to open config directory: {e}")
+            logging.error("Failed to open config directory: %s", e)
 
     def _run_wm_command(self, wm, command):
         def wm_command():
@@ -220,7 +220,7 @@ class SystemTrayManager(QSystemTrayIcon):
                     creationflags=subprocess.CREATE_NO_WINDOW,
                 )
             except Exception as e:
-                logging.error(f"Failed to start {wm}: {e}")
+                logging.error("Failed to start %s: %s", wm, e)
 
         threading.Thread(target=wm_command).start()
 
@@ -234,7 +234,7 @@ class SystemTrayManager(QSystemTrayIcon):
         try:
             shell_open(url)
         except Exception as e:
-            logging.error(f"Failed to open browser: {e}")
+            logging.error("Failed to open browser: %s", e)
 
     def _show_about_dialog(self):
         dialog = AboutDialog(self)

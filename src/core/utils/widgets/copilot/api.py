@@ -8,11 +8,12 @@ import logging
 import os
 import urllib.error
 import urllib.request
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from threading import Lock, Thread
-from typing import Any, Callable
+from typing import Any
 
 API_BASE_URL = "https://api.github.com"
 # I have set version of GitHub API to a fixed date to avoid unexpected changes
@@ -48,7 +49,7 @@ class CopilotDataManager:
     Handles API requests and caching.
     """
 
-    _instance: "CopilotDataManager | None" = None
+    _instance: CopilotDataManager | None = None
     _lock = Lock()
     _initialized = False
     _token: str = ""
@@ -63,7 +64,7 @@ class CopilotDataManager:
     _daily_cache: dict[str, int] = {}  # Cache for daily data (date_str -> requests)
 
     @classmethod
-    def get_instance(cls) -> "CopilotDataManager":
+    def get_instance(cls) -> CopilotDataManager:
         """Get or create the singleton instance."""
         if cls._instance is None:
             with cls._lock:
@@ -140,7 +141,7 @@ class CopilotDataManager:
                 cls._username = username
 
             # Fetch monthly usage
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             url = (
                 f"{API_BASE_URL}/users/{cls._username}/settings/billing/premium_request/usage"
                 f"?year={now.year}&month={now.month}"

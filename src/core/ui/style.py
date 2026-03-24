@@ -3,14 +3,12 @@ UI Style Utilities.
 Provides functions to build and apply styles to UI components based on the current application theme (light or dark).
 """
 
-from typing import Dict
-
 from PyQt6.QtGui import QPalette
 from PyQt6.QtWidgets import QApplication, QPushButton
 
 from core.ui.color_tokens import BUTTON_COLOR_TOKENS, LINK_COLOR_TOKENS
 
-StyleSheetMap = Dict[str, str]
+StyleSheetMap = dict[str, str]
 
 
 def _resolve_palette() -> QPalette | None:
@@ -42,7 +40,7 @@ def build_button_styles() -> StyleSheetMap:
     theme_key = "dark" if dark else "light"
     tokens = BUTTON_COLOR_TOKENS[theme_key]
 
-    def _build_style(variant_colors: Dict[str, str]) -> str:
+    def _build_style(variant_colors: dict[str, str]) -> str:
         return f"""
             QPushButton {{
                 background-color: {variant_colors["bg"]};

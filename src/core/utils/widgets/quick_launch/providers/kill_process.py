@@ -124,7 +124,7 @@ class KillProcessProvider(BaseProvider):
                 proc_map[name_lower]["pids"].append(pid)
                 proc_map[name_lower]["total_mem"] += _get_process_memory(pid)
         except Exception as e:
-            logging.debug(f"Process enumeration error: {e}")
+            logging.debug("Process enumeration error: %s", e)
             return []
 
         results = []
@@ -153,9 +153,9 @@ class KillProcessProvider(BaseProvider):
                 if _terminate_process(pid):
                     killed += 1
                 else:
-                    logging.debug(f"Failed to terminate PID {pid} ({name})")
+                    logging.debug("Failed to terminate PID %s (%s)", pid, name)
             except Exception as e:
-                logging.debug(f"Failed to kill PID {pid} ({name}): {e}")
+                logging.debug("Failed to kill PID %s (%s): %s", pid, name, e)
         if killed:
-            logging.info(f"Killed {killed} instance(s) of {name}")
+            logging.info("Killed %s instance(s) of %s", killed, name)
         return killed > 0

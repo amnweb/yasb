@@ -168,5 +168,5 @@ class SystemCommandsProvider(BaseProvider):
             if fn:
                 fn()
         except Exception as e:
-            logging.error(f"System command '{action}' failed: {e}")
+            logging.error("System command '%s' failed: %s", action, e)
         return True

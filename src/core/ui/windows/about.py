@@ -1,7 +1,7 @@
 """About dialog for the application, providing information and update controls."""
 
 import os
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import QEvent, Qt, QTimer
 from PyQt6.QtGui import QIcon
@@ -52,15 +52,15 @@ class AboutDialog(QDialog):
         },
     }
 
-    def __init__(self, tray_manager: "SystemTrayManager"):
-        parent_widget: Optional[QWidget] = tray_manager if isinstance(tray_manager, QWidget) else None
+    def __init__(self, tray_manager: SystemTrayManager):
+        parent_widget: QWidget | None = tray_manager if isinstance(tray_manager, QWidget) else None
         super().__init__(parent_widget)
         self._tray = tray_manager
         self._reset_timer = QTimer(self)
         self._reset_timer.setSingleShot(True)
 
-        self._release_fetcher: Optional[ReleaseFetcher] = None
-        self._update_dialog: Optional[UpdateDialog] = None
+        self._release_fetcher: ReleaseFetcher | None = None
+        self._update_dialog: UpdateDialog | None = None
 
         update_service = get_update_service()
         self._updates_supported = update_service.is_update_supported()
@@ -236,9 +236,9 @@ class AboutDialog(QDialog):
         self,
         state: str,
         *,
-        release_info: Optional[ReleaseInfo] = None,
-        text_override: Optional[str] = None,
-        revert_after: Optional[int] = None,
+        release_info: ReleaseInfo | None = None,
+        text_override: str | None = None,
+        revert_after: int | None = None,
     ) -> None:
         if not is_valid_qobject(self._update_button):
             return
@@ -260,19 +260,19 @@ class AboutDialog(QDialog):
         if revert_after:
             self._reset_timer.start(revert_after)
 
-    def _handle_update_available(self, release_info: ReleaseInfo, fetcher_ref: Optional[ReleaseFetcher] = None) -> None:
+    def _handle_update_available(self, release_info: ReleaseInfo, fetcher_ref: ReleaseFetcher | None = None) -> None:
         self._clear_fetcher(fetcher_ref)
         self._apply_state("available", release_info=release_info)
 
-    def _handle_up_to_date(self, _message: str, fetcher_ref: Optional[ReleaseFetcher] = None) -> None:
+    def _handle_up_to_date(self, _message: str, fetcher_ref: ReleaseFetcher | None = None) -> None:
         self._clear_fetcher(fetcher_ref)
         self._apply_state("idle", text_override="You're on the latest version", revert_after=2400)
 
-    def _handle_check_failed(self, _message: str, fetcher_ref: Optional[ReleaseFetcher] = None) -> None:
+    def _handle_check_failed(self, _message: str, fetcher_ref: ReleaseFetcher | None = None) -> None:
         self._clear_fetcher(fetcher_ref)
         self._apply_state("idle", text_override="Update Check Failed", revert_after=3200)
 
-    def _clear_fetcher(self, fetcher_ref: Optional[ReleaseFetcher] = None) -> None:
+    def _clear_fetcher(self, fetcher_ref: ReleaseFetcher | None = None) -> None:
         if fetcher_ref is None or self._release_fetcher is fetcher_ref:
             self._release_fetcher = None
 
@@ -313,7 +313,7 @@ class AboutDialog(QDialog):
         self._apply_state("idle")
         self._start_update_check()
 
-    def _ensure_update_dialog(self, release_info: Optional[ReleaseInfo] = None) -> Optional[UpdateDialog]:
+    def _ensure_update_dialog(self, release_info: ReleaseInfo | None = None) -> UpdateDialog | None:
         dialog = self._update_dialog
         if is_valid_qobject(dialog):
             if release_info:
@@ -336,7 +336,7 @@ class AboutDialog(QDialog):
         dialog.present()
         return dialog
 
-    def _clear_update_dialog(self, dialog: Optional[UpdateDialog] = None) -> None:
+    def _clear_update_dialog(self, dialog: UpdateDialog | None = None) -> None:
         if dialog is None or dialog is self._update_dialog:
             self._update_dialog = None
 

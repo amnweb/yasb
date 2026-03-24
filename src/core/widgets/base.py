@@ -1,7 +1,8 @@
 import logging
 import re
 import subprocess
-from typing import Any, Callable, Union
+from collections.abc import Callable
+from typing import Any
 
 from pydantic import BaseModel
 from PyQt6.QtCore import Qt, QThread, QTimer, pyqtSignal
@@ -60,11 +61,11 @@ class BaseWidget(QWidget):
         self.register_callback("do_nothing", self._cb_do_nothing)
         self.register_callback("exec", self._cb_execute_subprocess)
 
-        self.callback_default: Union[str, list[str]] = "default"
-        self.callback_timer: Union[str, list[str]] = "default"
-        self.callback_left: Union[str, list[str]] = self.callback_default
-        self.callback_middle: Union[str, list[str]] = self.callback_default
-        self.callback_right: Union[str, list[str]] = self.callback_default
+        self.callback_default: str | list[str] = "default"
+        self.callback_timer: str | list[str] = "default"
+        self.callback_left: str | list[str] = self.callback_default
+        self.callback_middle: str | list[str] = self.callback_default
+        self.callback_right: str | list[str] = self.callback_default
 
         self._event_service = EventService()
         self._hotkey_signal.connect(self._handle_hotkey_event)
@@ -106,7 +107,7 @@ class BaseWidget(QWidget):
         elif event.button() == Qt.MouseButton.RightButton:
             self._run_callback(self.callback_right)
 
-    def _run_callback(self, callback_str: Union[str, list]):
+    def _run_callback(self, callback_str: str | list):
         if " " in callback_str:
             callback_args = list(map(lambda x: x.strip('"'), re.findall(r'".+?"|[^ ]+', callback_str)))
             callback_type = callback_args[0]
@@ -121,7 +122,7 @@ class BaseWidget(QWidget):
         try:
             self.callbacks[callback_type](*callback_args)
         except Exception:
-            logging.exception(f"Failed to execute callback of type '{callback_type}' with args: {callback_args}")
+            logging.exception("Failed to execute callback of type '%s' with args: %s", callback_type, callback_args)
 
     def _timer_callback(self):
         self._run_callback(self.callback_timer)

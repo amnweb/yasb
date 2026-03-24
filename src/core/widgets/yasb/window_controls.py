@@ -272,7 +272,7 @@ class WindowControlsWidget(BaseWidget):
                         set_foreground(hwnd)
                         restore_window(hwnd)
                 except Exception:
-                    logging.exception(f"Failed to execute {btn_name} on HWND {hwnd}")
+                    logging.exception("Failed to execute %s on HWND %s", btn_name, hwnd)
 
         return handler
 
