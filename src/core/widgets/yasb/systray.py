@@ -401,7 +401,10 @@ class SystrayWidget(BaseWidget):
             self.sort_timer.start(1000)
         self.update_icon_data(icon.data, data)
         icon.update_icon()
+        was_hidden = icon.isHidden()
         icon.setHidden(data.uFlags & NIF_STATE != 0 and data.dwState == 1)
+        if self.config.show_in_popup and was_hidden != icon.isHidden():
+            self._relayout_popup_grid()
         self.pinned_vis_check_timer.start(300)
 
     @pyqtSlot(IconData)
