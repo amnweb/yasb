@@ -26,7 +26,7 @@ class WeatherDataFetcher(QObject):
     finished = pyqtSignal(dict)
 
     _cached_url = None
-    _instance: WeatherDataFetcher|None = None
+    _instance: WeatherDataFetcher | None = None
 
     @classmethod
     def get_instance(cls, parent: QObject, url: QUrl, timeout: int):
@@ -93,7 +93,7 @@ class IconFetcher(QObject):
 
     finished = pyqtSignal()
 
-    _instance: IconFetcher|None = None
+    _instance: IconFetcher | None = None
 
     @classmethod
     def get_instance(cls, parent: QObject):

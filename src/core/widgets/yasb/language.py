@@ -227,7 +227,7 @@ class LanguageWidget(BaseWidget):
             if a0 and a0.button() == Qt.MouseButton.LeftButton:
                 success = self._switch_to_language(lang_info["id"])
                 if not success:
-                    logging.error("Failed to switch to %s", lang_info['name'])
+                    logging.error("Failed to switch to %s", lang_info["name"])
                 self._menu.hide()
 
         container.mousePressEvent = mouse_press_handler
