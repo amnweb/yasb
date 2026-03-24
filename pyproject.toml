@@ -24,7 +24,7 @@ dependencies = [
     "pillow==12.1.1",
     "icoextract==0.2.0",
     "qasync==0.28.0",
-    "github-copilot-sdk==0.1.32",
+    "github-copilot-sdk==0.2.0",
     "openai==2.29.0",
     "pyvda @ git+https://github.com/amnweb/pyvda@master",
     "python-dotenv==1.2.2",
