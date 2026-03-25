@@ -11,34 +11,6 @@ from core.utils.widgets.quick_launch.providers.resources.icons import ICON_CURRE
 
 _CACHE_MAX_AGE = 30  # seconds
 
-_CMC_SLUGS: dict[str, str] = {
-    "BTC": "bitcoin",
-    "ETH": "ethereum",
-    "BNB": "bnb",
-    "SOL": "solana",
-    "XRP": "xrp",
-    "ADA": "cardano",
-    "DOGE": "dogecoin",
-    "DOT": "polkadot-new",
-    "AVAX": "avalanche",
-    "MATIC": "polygon",
-    "LINK": "chainlink",
-    "SHIB": "shiba-inu",
-    "LTC": "litecoin",
-    "UNI": "uniswap",
-    "ATOM": "cosmos",
-    "TRX": "tron",
-    "NEAR": "near-protocol",
-    "APT": "aptos",
-    "ARB": "arbitrum",
-    "OP": "optimism-ethereum",
-    "SUI": "sui",
-    "FIL": "filecoin",
-    "PEPE": "pepe",
-    "USDT": "tether",
-    "USDC": "usd-coin",
-}
-
 
 class CryptoProvider(BaseProvider):
     """Show live crypto prices from Binance."""
@@ -123,14 +95,27 @@ class CryptoProvider(BaseProvider):
                 continue
 
             total = quantity * price
-            display = f"{total:,.{self._round}f}"
+
+            if total > 0 and total < 0.01:
+                display = f"{total:,.6f}"
+            elif total > 0 and total < 1.0:
+                display = f"{total:,.4f}"
+            else:
+                display = f"{total:,.{self._round}f}"
+
+            title = f"{quantity} {base} = {display} {quote}"
             results.append(
                 ProviderResult(
-                    title=f"{quantity} {base} = {display} {quote}",
-                    description=f"{'Open CoinMarketCap' if self._open_url else 'Copy'}",
+                    title=title,
+                    description=f"{'Open Binance' if self._open_url else 'Copy'}",
                     icon_char=ICON_CURRENCY,
                     provider=self.name,
-                    action_data={"pair": pair, "base": base, "value": display},
+                    action_data={
+                        "pair": pair,
+                        "base": base,
+                        "value": display,
+                        "title": title,
+                    },
                 )
             )
 
@@ -146,21 +131,24 @@ class CryptoProvider(BaseProvider):
         return results
 
     def execute(self, result: ProviderResult) -> bool:
+        pair = result.action_data.get("pair", "")
         base = result.action_data.get("base", "")
-        value = result.action_data.get("value", "")
+        title = result.action_data.get("title", "")
         if not base:
             return False
-        slug = _CMC_SLUGS.get(base, base.lower())
-        url = f"https://coinmarketcap.com/currencies/{slug}/"
+
         if self._open_url:
+            trade_pair = pair.replace("/", "_") if "/" in pair else f"{base}_USDT"
+            url = f"https://www.binance.com/en/trade/{trade_pair}"
             webbrowser.open(url)
+
         clipboard = QApplication.clipboard()
         if clipboard:
-            clipboard.setText(f"{base} {value}")
+            clipboard.setText(title)
         return True
 
     def _parse_query(self, query: str):
-        query = query.lower().strip()
+        query = query.lower().strip().replace(",", "")
         quantity = 1.0
         match = re.match(r"^(\d+(?:\.\d+)?)([kmbt]?)", query)
 
