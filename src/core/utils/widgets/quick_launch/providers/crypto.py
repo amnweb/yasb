@@ -94,15 +94,34 @@ class CryptoProvider(BaseProvider):
                 ]
 
         quantity, symbol = self._parse_query(query)
+
+        dyn_pair = None
+        pair_match = re.match(r"^([A-Z0-9]+)(?:\s+TO\s+|\s*/\s*|\s+)([A-Z0-9]+)$", symbol.strip())
+        if pair_match:
+            dyn_pair = f"{pair_match.group(1)}/{pair_match.group(2)}"
+
+        pairs_to_check = list(self._pairs)
+        if dyn_pair and dyn_pair not in pairs_to_check:
+            pairs_to_check.insert(0, dyn_pair)
+
         results: list[ProviderResult] = []
-        for pair in self._pairs:
+        for pair in pairs_to_check:
+            if "/" not in pair:
+                continue
             base = pair.split("/")[0]
             quote = pair.split("/")[1]
 
-            if symbol and symbol not in base:
+            if dyn_pair:
+                if pair != dyn_pair:
+                    continue
+            elif symbol and symbol not in base:
                 continue
 
             price = prices.get(pair.replace("/", ""), 0)
+
+            if price == 0 and pair == dyn_pair and pair not in self._pairs:
+                continue
+
             total = quantity * price
             display = f"{total:,.{self._round}f}"
             results.append(
@@ -158,7 +177,7 @@ class CryptoProvider(BaseProvider):
             elif suffix == "t":
                 num *= 1_000_000_000_000
             else:
-                num = int(num)
+                num = int(num) if num == int(num) else num
 
             quantity = num
             query = query[match.end() :].strip()
@@ -201,9 +220,8 @@ class CryptoProvider(BaseProvider):
         try:
             import urllib.request
 
-            symbols_json = json.dumps(self._pairs).replace("/", "").replace(" ", "")
-            url = f"https://{self._domain}/api/v3/ticker/price?symbols={symbols_json}"
-            logging.debug(f"Fetching Binance prices from {url}")
+            url = f"https://{self._domain}/api/v3/ticker/price"
+            logging.debug(f"Fetching all prices from {url}")
             req = urllib.request.Request(url, headers={"User-Agent": "yasb/1.0"})
             with urllib.request.urlopen(req, timeout=5) as resp:  # noqa: S310
                 data = json.loads(resp.read())
