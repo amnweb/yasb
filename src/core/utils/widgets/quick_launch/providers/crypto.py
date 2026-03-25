@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 import time
 import webbrowser
 
@@ -92,18 +93,21 @@ class CryptoProvider(BaseProvider):
                     )
                 ]
 
+        quantity, symbol = self._parse_query(query)
         results: list[ProviderResult] = []
         for pair in self._pairs:
             base = pair.split("/")[0]
             quote = pair.split("/")[1]
-            if query and query not in pair and query not in base and query not in quote:
+
+            if symbol and symbol not in base:
                 continue
 
             price = prices.get(pair.replace("/", ""), 0)
-            display = f"{price:,.{self._round}f}"
+            total = quantity * price
+            display = f"{total:,.{self._round}f}"
             results.append(
                 ProviderResult(
-                    title=f"1 {base} = {display} {quote}",
+                    title=f"{quantity} {base} = {display} {quote}",
                     description=f"{'Open CoinMarketCap' if self._open_url else 'Copy'}",
                     icon_char=ICON_CURRENCY,
                     provider=self.name,
@@ -115,7 +119,7 @@ class CryptoProvider(BaseProvider):
             return [
                 ProviderResult(
                     title="No matching pairs",
-                    description=f"No results for '{query}' in configured pairs",
+                    description=f"No results for '{symbol}' in configured pairs",
                     icon_char=ICON_CURRENCY,
                     provider=self.name,
                 )
@@ -135,6 +139,32 @@ class CryptoProvider(BaseProvider):
         if clipboard:
             clipboard.setText(f"{base} {value}")
         return True
+
+    def _parse_query(self, query: str):
+        query = query.lower().strip()
+        quantity = 1.0
+        match = re.match(r"^(\d+(?:\.\d+)?)([kmbt]?)", query)
+
+        if match:
+            num = float(match.group(1))
+            suffix = match.group(2)
+
+            if suffix == "k":
+                num *= 1_000
+            elif suffix == "m":
+                num *= 1_000_000
+            elif suffix == "b":
+                num *= 1_000_000_000
+            elif suffix == "t":
+                num *= 1_000_000_000_000
+            else:
+                num = int(num)
+
+            quantity = num
+            query = query[match.end() :].strip()
+
+        symbol = query
+        return quantity, symbol.upper()
 
     def _get_prices(self) -> dict[str, float] | None:
         if self._prices and (time.time() - self._cache_timestamp) < _CACHE_MAX_AGE:
