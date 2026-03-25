@@ -10284,13 +10284,14 @@
               "priority": 0,
               "open_url": false,
               "pairs": [
-                "BTCUSDT",
-                "ETHUSDT",
-                "BNBUSDT",
-                "SOLUSDT",
-                "XRPUSDT"
+                "BTC/USDT",
+                "ETH/USDT",
+                "BNB/USDT",
+                "SOL/USDT",
+                "XRP/USDT"
               ],
-              "round": 2
+              "round": 2,
+              "domain": "api-gcp.binance.com"
             }
           }
         },

@@ -80,9 +80,10 @@ class CryptoProviderConfig(CustomBaseModel):
     enabled: bool = False
     prefix: str = "crypto"
     priority: int = 0
-    pairs: list[str] = ["BTCUSDT"]
+    pairs: list[str] = ["BTC/USDT"]
     round: int = 2
     open_url: bool = False
+    domain: str = "api-gcp.binance.com"
 
 
 class CurrencyProviderConfig(CustomBaseModel):
