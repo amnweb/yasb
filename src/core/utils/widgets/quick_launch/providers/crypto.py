@@ -196,7 +196,7 @@ class CryptoProvider(BaseProvider):
                     try:
                         self.request_refresh()
                     except Exception as e:
-                        logging.debug(f"Failed to request refresh: {e}")
+                        logging.debug("Failed to request refresh: %s", e)
 
             import threading
 
@@ -209,7 +209,7 @@ class CryptoProvider(BaseProvider):
             import urllib.request
 
             url = f"https://{self._domain}/api/v3/ticker/price"
-            logging.debug(f"Fetching all prices from {url}")
+            logging.debug("Fetching all prices from %s", url)
             req = urllib.request.Request(url, headers={"User-Agent": "yasb/1.0"})
             with urllib.request.urlopen(req, timeout=5) as resp:  # noqa: S310
                 data = json.loads(resp.read())
@@ -231,5 +231,5 @@ class CryptoProvider(BaseProvider):
                         self._error_msg = error_data["msg"]
                 except Exception:
                     pass
-            logging.debug(f"Failed to fetch Binance prices: {e}")
+            logging.debug("Failed to fetch Binance prices: %s", e)
             return None
