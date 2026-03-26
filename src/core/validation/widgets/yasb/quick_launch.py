@@ -2,7 +2,6 @@ from typing import Literal
 
 from pydantic import Field
 
-from core.utils.widgets.quick_launch.providers.resources.icons import ICON_WEB_SEARCH
 from core.validation.widgets.base_model import (
     AnimationConfig,
     CallbacksConfig,
@@ -44,10 +43,10 @@ class CalculatorProviderConfig(CustomBaseModel):
 
 
 class WebSearchEngineConfig(CustomBaseModel):
-    key: str
+    engine: str
     name: str
     url: str
-    icon: str = ICON_WEB_SEARCH
+    icon: str = ""
     description: str = "Search the web"
 
 
@@ -57,6 +56,7 @@ class WebSearchProviderConfig(CustomBaseModel):
     priority: int = 0
     engine: str = "google"
     custom_engines: list[WebSearchEngineConfig] = []
+    remove_engines: list[str] = []
 
 
 class SystemCommandsProviderConfig(CustomBaseModel):
