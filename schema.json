@@ -10277,21 +10277,6 @@
               "prefix": "wsl",
               "priority": 0,
               "show_online": true
-            },
-            "crypto": {
-              "enabled": false,
-              "prefix": "crypto",
-              "priority": 0,
-              "open_url": false,
-              "pairs": [
-                "BTC/USDT",
-                "ETH/USDT",
-                "BNB/USDT",
-                "SOL/USDT",
-                "XRP/USDT"
-              ],
-              "round": 2,
-              "domain": "api-gcp.binance.com"
             }
           }
         },
@@ -10639,24 +10624,6 @@
             "prefix": "wsl",
             "priority": 0,
             "show_online": true
-          }
-        },
-        "crypto": {
-          "$ref": "#/$defs/CryptoProviderConfig",
-          "default": {
-            "enabled": false,
-            "prefix": "crypto",
-            "priority": 0,
-            "pairs": [
-              "BTC/USDT",
-              "ETH/USDT",
-              "BNB/USDT",
-              "SOL/USDT",
-              "XRP/USDT"
-            ],
-            "round": 2,
-            "open_url": false,
-            "domain": "api-gcp.binance.com"
           }
         }
       },
