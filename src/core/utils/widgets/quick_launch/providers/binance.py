@@ -12,11 +12,11 @@ from core.utils.widgets.quick_launch.providers.resources.icons import ICON_CURRE
 _CACHE_MAX_AGE = 30  # seconds
 
 
-class CryptoProvider(BaseProvider):
-    """Show live crypto prices from Binance."""
+class BinanceProvider(BaseProvider):
+    """Show live binance prices from Binance."""
 
-    name = "crypto"
-    display_name = "Crypto"
+    name = "binance"
+    display_name = "Binance"
     input_placeholder = "Search crypto prices..."
     icon = ICON_CURRENCY
 

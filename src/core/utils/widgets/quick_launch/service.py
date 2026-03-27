@@ -9,11 +9,11 @@ from core.utils.widgets.quick_launch.base_provider import BaseProvider
 from core.utils.widgets.quick_launch.icon_resolver import IconResolverWorker, compute_extraction_size
 from core.utils.widgets.quick_launch.providers import (
     AppsProvider,
+    BinanceProvider,
     BookmarksProvider,
     CalculatorProvider,
     ClipboardHistoryProvider,
     ColorProvider,
-    CryptoProvider,
     CurrencyProvider,
     DevToolsProvider,
     EmojiProvider,
@@ -44,7 +44,7 @@ PROVIDER_REGISTRY: dict[str, type[BaseProvider]] = {
     "calculator": CalculatorProvider,
     "clipboard_history": ClipboardHistoryProvider,
     "color": ColorProvider,
-    "crypto": CryptoProvider,
+    "binance": BinanceProvider,
     "currency": CurrencyProvider,
     "dev_tools": DevToolsProvider,
     "emoji": EmojiProvider,
