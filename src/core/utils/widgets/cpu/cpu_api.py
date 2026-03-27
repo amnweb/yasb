@@ -8,6 +8,7 @@ by running: lodctr /r (as Administrator) or rebuilding performance counters.
 
 import ctypes
 import logging
+import time
 from ctypes import POINTER, byref, wintypes
 from typing import NamedTuple
 
@@ -135,23 +136,18 @@ class CpuAPI:
             # Total CPU percent
             cls._counter_total = wintypes.HANDLE()
             status = pdh.PdhAddEnglishCounterW(
-                cls._query, r"\Processor Information(_Total)\% Processor Utility", None, byref(cls._counter_total)
+                cls._query, r"\Processor Information(_Total)\% Processor Time", None, byref(cls._counter_total)
             )
             if status != 0:
-                # Fallback to % Processor Time
-                status = pdh.PdhAddEnglishCounterW(
-                    cls._query, r"\Processor Information(_Total)\% Processor Time", None, byref(cls._counter_total)
-                )
-                if status != 0:
-                    cls._cleanup_query()
-                    cls._init_failed = True
-                    if not cls._error_logged:
-                        logging.warning(
-                            "Failed to add CPU percent counter (status=%s). PDH counters may be corrupted. Try running 'lodctr /r' as Administrator.",
-                            status,
-                        )
-                        cls._error_logged = True
-                    return False
+                cls._cleanup_query()
+                cls._init_failed = True
+                if not cls._error_logged:
+                    logging.warning(
+                        "Failed to add CPU percent counter (status=%s). PDH counters may be corrupted. Try running 'lodctr /r' as Administrator.",
+                        status,
+                    )
+                    cls._error_logged = True
+                return False
 
             # Processor performance (for frequency calculation)
             cls._counter_perf = wintypes.HANDLE()
@@ -164,12 +160,8 @@ class CpuAPI:
             for i in range(logical):
                 counter = wintypes.HANDLE()
                 status = pdh.PdhAddEnglishCounterW(
-                    cls._query, f"\\Processor Information(0,{i})\\% Processor Utility", None, byref(counter)
+                    cls._query, f"\\Processor Information(0,{i})\\% Processor Time", None, byref(counter)
                 )
-                if status != 0:
-                    pdh.PdhAddEnglishCounterW(
-                        cls._query, f"\\Processor Information(0,{i})\\% Processor Time", None, byref(counter)
-                    )
                 cls._counters_per_core.append(counter)
 
             # Initial data collection
@@ -312,10 +304,15 @@ class CpuWorker(QThread):
     def run(self):
         """Collect CPU data in a loop until stopped."""
         while self._running:
+            started = time.perf_counter()
             try:
                 data = CpuAPI.get_data()
                 if self._running:
                     self.data_ready.emit(data)
             except Exception as e:
                 logging.error("CPU worker error: %s", e)
-            self.msleep(self._update_interval)
+
+            elapsed_ms = int((time.perf_counter() - started) * 1000)
+            sleep_ms = self._update_interval - elapsed_ms
+            if sleep_ms > 0:
+                self.msleep(sleep_ms)
