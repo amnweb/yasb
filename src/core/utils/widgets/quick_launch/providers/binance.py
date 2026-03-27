@@ -222,14 +222,45 @@ class BinanceProvider(BaseProvider):
                     prices[symbol] = float(price)
             self._error_msg = None
             return prices if prices else None
-        except Exception as e:
-            self._error_msg = str(e)
-            if hasattr(e, "read"):
+
+        except urllib.error.HTTPError as e:
+            if e.code == 429:
+                self._error_msg = "Rate limit reached. Please wait a moment."
+            elif e.code == 403:
+                self._error_msg = "Access denied. Your IP might be blocked."
+            elif e.code == 418:
+                self._error_msg = "IP banned due to rate limit violations."
+            elif e.code == 404:
+                self._error_msg = "Not found. Please verify the domain in the configuration file."
+            elif e.code >= 500:
+                self._error_msg = f"Binance server error ({e.code})."
+            else:
                 try:
-                    error_data = json.loads(e.read())
-                    if isinstance(error_data, dict) and "msg" in error_data:
-                        self._error_msg = error_data["msg"]
+                    data = json.loads(e.read().decode())
+                    msg = data.get("msg")
+                    self._error_msg = msg if msg else f"Request failed (Status {e.code})"
                 except Exception:
-                    pass
-            logging.debug("Failed to fetch Binance prices: %s", e)
+                    self._error_msg = f"HTTP Error {e.code}"
+            return None
+
+        except urllib.error.URLError as e:
+            reason_str = str(e.reason).lower()
+            if "getaddrinfo" in reason_str or "not known" in reason_str:
+                self._error_msg = (
+                    "DNS lookup failed. Check your connection and verify the domain in the configuration file."
+                )
+            elif "timed out" in reason_str or "timeout" in reason_str:
+                self._error_msg = "Connection timed out. Try again later."
+            elif "ssl" in reason_str or "handshake" in reason_str:
+                self._error_msg = "SSL error. Check your system clock or network."
+            elif "refused" in reason_str:
+                self._error_msg = "Connection refused. Server might be down."
+            else:
+                clean_reason = str(e.reason)
+                if clean_reason.startswith("[Errno"):
+                    try:
+                        clean_reason = clean_reason.split("]", 1)[1].strip().capitalize()
+                    except IndexError, AttributeError:
+                        pass
+                self._error_msg = f"Network Error: {clean_reason}"
             return None
