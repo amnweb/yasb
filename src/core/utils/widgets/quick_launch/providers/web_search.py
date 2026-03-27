@@ -83,6 +83,17 @@ class WebSearchProvider(BaseProvider):
     input_placeholder = "Search the web..."
     icon = ICON_WEB_SEARCH
 
+    def __init__(self, config=None):
+        super().__init__(config)
+        custom_engines = self.config.get("custom_engines")
+        engines_to_remove = self.config.get("remove_engines")
+        if custom_engines.count is not None:
+            for engine in custom_engines:
+                _ENGINES[engine["engine"]] = engine
+        if engines_to_remove is not None:
+            for engine in engines_to_remove:
+                _ENGINES.pop(engine, None)
+
     def match(self, text: str) -> bool:
         if self.prefix:
             return text.strip().startswith(self.prefix)
@@ -116,11 +127,12 @@ class WebSearchProvider(BaseProvider):
 
         results: list[ProviderResult] = []
         for key, info in engines:
+            icon = info["icon"]
             results.append(
                 ProviderResult(
                     title=f'Search {info["name"]} for "{query}"',
                     description=info["description"],
-                    icon_char=info["icon"],
+                    icon_char=ICON_WEB_SEARCH if not icon else icon,
                     provider=self.name,
                     action_data={"query": query, "engine": key},
                 )

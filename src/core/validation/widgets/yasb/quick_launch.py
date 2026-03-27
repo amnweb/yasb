@@ -42,11 +42,21 @@ class CalculatorProviderConfig(CustomBaseModel):
     priority: int = 0
 
 
+class WebSearchEngineConfig(CustomBaseModel):
+    engine: str
+    name: str
+    url: str
+    icon: str = ""
+    description: str = "Search the web"
+
+
 class WebSearchProviderConfig(CustomBaseModel):
     enabled: bool = False
     prefix: str = "?"
     priority: int = 0
     engine: str = "google"
+    custom_engines: list[WebSearchEngineConfig] = []
+    remove_engines: list[str] = []
 
 
 class SystemCommandsProviderConfig(CustomBaseModel):
