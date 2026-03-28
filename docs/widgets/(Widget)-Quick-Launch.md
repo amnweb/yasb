@@ -52,6 +52,7 @@ Quick Launch uses a plugin-based provider system. Each provider handles a specif
 **Provider Index**
 
 - [Apps](#apps-provider)
+- [Binance](#binance-provider)
 - [Bookmarks](#bookmarks-provider)
 - [Calculator](#calculator-provider)
 - [Clipboard History](#clipboard-history-provider)
@@ -89,6 +90,30 @@ Searches installed applications (Start Menu shortcuts). This is the default prov
 | `show_recent`      | bool   | `true`  | Show recently launched apps at the top.                                              |
 | `max_recent`       | int    | `10`    | Maximum number of recent apps to display.                                            |
 | `show_description` | bool   | `false` | Show a short description of the application.                                         |
+
+### Binance Provider
+
+Fetches live cryptocurrency prices from Binance and supports quick conversions between trading pairs.
+
+| Option     | Type   | Default               | Description                                                               |
+| ---------- | ------ | --------------------- | ------------------------------------------------------------------------- |
+| `enabled`  | bool   | `true`                | Enable/disable the Binance provider.                                      |
+| `prefix`   | string | `crypto`              | Trigger prefix. Use `"*"` to include in default results.                  |
+| `priority` | int    | `0`                   | Sort order when multiple providers share the same prefix. Lower values appear first. |
+| `pairs`    | list   | `["BTC/USDT"]`        | Default trading pairs to query when no specific pair is provided.(e.g. `["BTC/USDT", "ETH/USDT"]`)         |
+| `round`    | int    | `2`                   | Decimal precision for formatted output.                                   |
+| `open_url` | bool   | `false`               | Open the Binance trading page instead of only copying the result.         |
+| `domain`   | string | `api-gcp.binance.com` | Binance API domain.             |
+
+### Supported Queries
+
+- `btc` - Uses configured pairs
+- `eth usdt` or `eth/usdt` - Direct pair lookup
+- `5 btc usdt` or `5 btc to usdt` - Quantity conversion
+- `52.4k sol/eth` - Supports suffixes (`k`, `m`, `b`, `t`)
+
+> [!NOTE]
+> Endpoints using `*.binance.com` are not accessible from the United States. If you're operating within the U.S., use the corresponding `*.binance.us` endpoints instead.
 
 ### Bookmarks Provider
 

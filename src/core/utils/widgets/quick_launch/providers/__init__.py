@@ -1,4 +1,5 @@
 from .apps import *
+from .binance import *
 from .bookmarks import *
 from .calculator import *
 from .clipboard_history import *
