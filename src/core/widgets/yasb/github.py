@@ -99,16 +99,7 @@ class GithubWidget(BaseWidget):
 
         self._shared_cursor = QCursor(Qt.CursorShape.PointingHandCursor)
 
-        self._widget_container_layout = QHBoxLayout()
-        self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
-
-        self._widget_container = QFrame()
-        self._widget_container.setLayout(self._widget_container_layout)
-        self._widget_container.setProperty("class", "widget-container")
-        add_shadow(self._widget_container, self.config.container_shadow.model_dump())
-
-        self.widget_layout.addWidget(self._widget_container)
+        self._init_container(self.config.container_shadow.model_dump())
         self._create_dynamically_label(self.config.label, self.config.label_alt)
 
         self.register_callback("toggle_label", self._toggle_label)

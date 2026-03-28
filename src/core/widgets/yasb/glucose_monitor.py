@@ -7,11 +7,11 @@ import urllib.request
 from collections.abc import Callable
 
 from PyQt6.QtCore import QThread, QTimer, pyqtSignal
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel
+from PyQt6.QtWidgets import QLabel
 
 from core.utils.shell_utils import shell_open
 from core.utils.tooltip import set_tooltip
-from core.utils.utilities import ToastNotifier, add_shadow, build_widget_label, refresh_widget_style
+from core.utils.utilities import ToastNotifier, refresh_widget_style
 from core.validation.widgets.yasb.glucose_monitor import GlucoseMonitorConfig
 from core.widgets.base import BaseWidget
 from settings import SCRIPT_PATH
@@ -101,17 +101,8 @@ class GlucoseMonitor(BaseWidget):
         self._icon_path = os.path.join(SCRIPT_PATH, "assets", "images", "app_transparent.png")
         self._status_data = {}
 
-        self._widget_container_layout = QHBoxLayout()
-        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
-        self._widget_container_layout.setSpacing(0)
-
-        self._widget_container = QFrame()
-        self._widget_container.setLayout(self._widget_container_layout)
-        self._widget_container.setProperty("class", "widget-container")
-        add_shadow(self._widget_container, self.config.container_shadow.model_dump())
-        self.widget_layout.addWidget(self._widget_container)
-
-        build_widget_label(self, self.config.label, self.config.error_label, self.config.label_shadow.model_dump())
+        self._init_container(self.config.container_shadow.model_dump())
+        self.build_widget_label(self.config.label, self.config.error_label, self.config.label_shadow.model_dump())
 
         self.register_callback("open_cgm", self._open_cgm)
 

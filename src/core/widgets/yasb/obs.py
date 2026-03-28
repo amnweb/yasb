@@ -2,7 +2,7 @@ import time
 
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QCursor
-from PyQt6.QtWidgets import QFrame, QGraphicsOpacityEffect, QHBoxLayout, QLabel
+from PyQt6.QtWidgets import QGraphicsOpacityEffect, QLabel
 
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import refresh_widget_style
@@ -59,14 +59,8 @@ class ObsWidget(BaseWidget):
         self._init_worker()
 
     def _init_ui(self):
-        self._widget_container_layout = QHBoxLayout()
-        self._widget_container_layout.setSpacing(0)
+        self._init_container()
         self._widget_container_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
-        self._widget_container = QFrame()
-        self._widget_container.setLayout(self._widget_container_layout)
-        self._widget_container.setProperty("class", "widget-container")
-        self.widget_layout.addWidget(self._widget_container)
 
         # Record button
         self._record_btn = QLabel(self._icons["stopped"])

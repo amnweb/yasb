@@ -18,26 +18,27 @@ class MyWidget(BaseWidget):
 
 ## 3. Set up the widget container and layout:
 
+Use the `_init_container()` method inherited from `BaseWidget` to create the standard container:
+
 ```py
-self._widget_container_layout = QHBoxLayout()
-self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
-self._widget_container = QFrame()
-self._widget_container.setLayout(self._widget_container_layout)
-self.widget_layout.addWidget(self._widget_container)
+# With shadow:
+self._init_container(self.config.container_shadow.model_dump())
+# Without shadow:
+self._init_container()
 ```
 
-## 4. Use **build_widget_label(self, label, label_alt, shadow)** for dynamic labels:
+This creates `self._widget_container_layout` (QHBoxLayout), `self._widget_container` (QFrame with class `"widget-container"`), adds it to `self.widget_layout`, and initializes `self._widgets` and `self._widgets_alt` as empty lists.
 
--   This method allows you to create labels with icons and text dynamically.
+## 4. Use **self.build_widget_label(label, label_alt, shadow)** for dynamic labels:
+
+-   This method (inherited from `BaseWidget`) allows you to create labels with icons and text dynamically.
 
 ```py
-from core.utils.utilities import build_widget_label
-build_widget_label(self, self._label_content, self._label_alt_content, self._label_shadow)
+self.build_widget_label(self.config.label, self.config.label_alt, self.config.label_shadow.model_dump())
 ```
 or without shadow and alt label:
 ```py
-from core.utils.utilities import build_widget_label
-build_widget_label(self, self._label_content, None, None)
+self.build_widget_label(self.config.label, None, None)
 ```
 
 -   Or use a custom function if needed - the **build_widget_label()** method:
@@ -149,7 +150,7 @@ For more information on Pydantic models refer to the [Pydantic documentation](ht
 -   [`CustomWidget`](https://github.com/amnweb/yasb/blob/main/src/core/widgets/yasb/custom.py)
 -   [`ApplicationsWidget`](https://github.com/amnweb/yasb/blob/main/src/core/widgets/yasb/applications.py)
 -   [`HomeWidget`](https://github.com/amnweb/yasb/blob/main/src/core/widgets/yasb/home.py)
--   [`CPU`](https://github.com/amnweb/yasb/blob/main/src/core/widgets/yasb/cpu.py)
+-   [`CpuWidget`](https://github.com/amnweb/yasb/blob/main/src/core/widgets/yasb/cpu.py)
 
 ## 7. Register callbacks and methods:
 

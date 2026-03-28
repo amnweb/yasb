@@ -3,9 +3,9 @@ from datetime import timedelta
 
 import humanize
 from PyQt6.QtCore import QTimer
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel
+from PyQt6.QtWidgets import QLabel
 
-from core.utils.utilities import add_shadow, build_widget_label, refresh_widget_style
+from core.utils.utilities import refresh_widget_style
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.widgets.battery.battery_api import BatteryAPI, BatteryData
 from core.utils.win32.constants import POWER_TIME_UNKNOWN, POWER_TIME_UNLIMITED
@@ -20,26 +20,12 @@ class BatteryWidget(BaseWidget):
         super().__init__(config.update_interval, class_name=f"battery-widget {config.class_name}")
         self.config = config
 
-        self._widgets: list[QLabel] = []
-        self._widgets_alt: list[QLabel] = []
-
         self._battery_api = BatteryAPI.instance()
         self._battery_state: BatteryData | None = None
         self._show_alt_label = False
 
-        # Construct container
-        self._widget_container_layout = QHBoxLayout()
-        self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
-        # Initialize container
-        self._widget_container = QFrame()
-        self._widget_container.setLayout(self._widget_container_layout)
-        self._widget_container.setProperty("class", "widget-container")
-        add_shadow(self._widget_container, self.config.container_shadow.model_dump())
-        # Add the container to the main widget layout
-        self.widget_layout.addWidget(self._widget_container)
-
-        build_widget_label(self, self.config.label, self.config.label_alt, self.config.label_shadow.model_dump())
+        self._init_container(self.config.container_shadow.model_dump())
+        self.build_widget_label(self.config.label, self.config.label_alt, self.config.label_shadow.model_dump())
 
         self.register_callback("update_label", self._update_label)
         self.register_callback("toggle_label", self._toggle_label)

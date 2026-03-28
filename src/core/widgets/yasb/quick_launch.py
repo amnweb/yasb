@@ -35,7 +35,7 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
 )
 
-from core.utils.utilities import LoaderLine, PopupWidget, add_shadow, app_data_path, build_widget_label
+from core.utils.utilities import LoaderLine, PopupWidget, app_data_path
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.widgets.quick_launch.base_provider import ProviderResult
 from core.utils.widgets.quick_launch.context_menu import QuickLaunchContextMenuService
@@ -433,15 +433,8 @@ class QuickLaunchWidget(BaseWidget):
             self.config.providers.model_dump(), self.config.max_results, self.config.show_icons, self.config.icon_size
         )
 
-        self._widget_container_layout = QHBoxLayout()
-        self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
-        self._widget_container = QFrame()
-        self._widget_container.setLayout(self._widget_container_layout)
-        self._widget_container.setProperty("class", "widget-container")
-        add_shadow(self._widget_container, self.config.container_shadow.model_dump())
-        self.widget_layout.addWidget(self._widget_container)
-        build_widget_label(self, self.config.label, None, self.config.label_shadow.model_dump())
+        self._init_container(self.config.container_shadow.model_dump())
+        self.build_widget_label(self.config.label, None, self.config.label_shadow.model_dump())
 
         self.register_callback("toggle_quick_launch", self._toggle_quick_launch)
         self.callback_left = self.config.callbacks.on_left

@@ -5,7 +5,7 @@ import win32api
 import win32gui
 import win32process
 from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, Qt, QTimer
-from PyQt6.QtWidgets import QFrame, QGraphicsOpacityEffect, QHBoxLayout, QLabel, QPushButton
+from PyQt6.QtWidgets import QGraphicsOpacityEffect, QLabel, QPushButton
 
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import refresh_widget_style
@@ -187,15 +187,7 @@ class WindowControlsWidget(BaseWidget):
         self._hide_anim = None
         self._opacity_anim = None
 
-        self._widget_container_layout = QHBoxLayout()
-        self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
-
-        self._widget_container = QFrame()
-        self._widget_container.setLayout(self._widget_container_layout)
-        self._widget_container.setProperty("class", "widget-container")
-
-        self.widget_layout.addWidget(self._widget_container)
+        self._init_container()
 
         self._opacity_effect = QGraphicsOpacityEffect(self._widget_container)
         self._opacity_effect.setOpacity(0.0)

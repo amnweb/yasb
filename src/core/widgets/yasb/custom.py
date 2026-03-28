@@ -4,7 +4,7 @@ import subprocess
 import threading
 
 from PyQt6.QtCore import QObject, Qt, pyqtSignal
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel
+from PyQt6.QtWidgets import QLabel
 
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import add_shadow
@@ -77,16 +77,7 @@ class CustomWidget(BaseWidget):
         self._worker = None  # Keep reference to worker for cleanup
 
         # Construct container
-        self._widget_container_layout = QHBoxLayout()
-        self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
-        # Initialize container
-        self._widget_container = QFrame()
-        self._widget_container.setLayout(self._widget_container_layout)
-        self._widget_container.setProperty("class", "widget-container")
-        add_shadow(self._widget_container, self.config.container_shadow.model_dump())
-        # Add the container to the main widget layout
-        self.widget_layout.addWidget(self._widget_container)
+        self._init_container(self.config.container_shadow.model_dump())
 
         self.register_callback("toggle_label", self._toggle_label)
         self.register_callback("exec_custom", self._exec_callback)

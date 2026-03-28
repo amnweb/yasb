@@ -4,7 +4,7 @@ import subprocess
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QCursor, QPixmap
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QWidget
+from PyQt6.QtWidgets import QHBoxLayout, QLabel, QWidget
 
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import add_shadow
@@ -22,17 +22,7 @@ class ApplicationsWidget(BaseWidget):
         self.config = config
 
         # Construct container
-        self._widget_container_layout = QHBoxLayout()
-        self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
-        # Initialize container
-        self._widget_container = QFrame()
-        self._widget_container.setLayout(self._widget_container_layout)
-        self._widget_container.setProperty("class", "widget-container")
-        add_shadow(self._widget_container, self.config.container_shadow.model_dump())
-
-        # Add the container to the main widget layout
-        self.widget_layout.addWidget(self._widget_container)
+        self._init_container(self.config.container_shadow.model_dump())
         self._update_label()
 
     def _update_label(self):
