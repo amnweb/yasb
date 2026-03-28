@@ -417,6 +417,9 @@ class QuickLaunchWidget(BaseWidget):
         self._loader: LoaderLine | None = None
 
         self._active_prefix: str | None = None
+        self._last_active_prefix: str | None = None
+        self._last_search_text: str = ""
+        self._remember_last_query: bool = self.config.remember_last_query
         self._prediction_text: str = ""
         self._preview_visible: bool = False
 
@@ -462,18 +465,32 @@ class QuickLaunchWidget(BaseWidget):
         self._dpr = self.screen().devicePixelRatio()
         if not self._popup:
             self._popup = self._create_popup()
-        self._clear_prefix_chip()
-        self._popup.search_input.blockSignals(True)
-        self._popup.search_input.clear()
-        self._popup.search_input.blockSignals(False)
+
+        active_prefix = self._last_active_prefix if self.config.remember_last_query else None
+        search_text = self._last_search_text if self.config.remember_last_query else ""
+
+        if active_prefix:
+            self._set_prefix_chip(active_prefix, search_text)
+        else:
+            self._clear_prefix_chip()
+            self._popup.search_input.blockSignals(True)
+            self._popup.search_input.setText(search_text)
+            self._popup.search_input.blockSignals(False)
+
         if self.config.compact_mode:
-            self._set_compact_visible(False)
+            self._set_compact_visible(bool(search_text.strip()) or bool(active_prefix))
+
         self._position_popup()
         self._popup.show()
         force_foreground_focus(int(self._popup.winId()))
-        if not self.config.compact_mode:
-            self._loader.start()
-            self._update_results("")
+
+        if not active_prefix:
+            if not self.config.compact_mode:
+                self._loader.start()
+                self._update_results(search_text)
+            elif search_text.strip():
+                self._update_results(search_text)
+
         self._popup.search_input.setFocus()
         QTimer.singleShot(0, self._reset_scroll_position)
 
@@ -777,6 +794,10 @@ class QuickLaunchWidget(BaseWidget):
         """Handle text changes in the search input, detecting prefix activation."""
         if not self._popup:
             return
+
+        if self._remember_last_query:
+            self._last_search_text = search_text
+
         # Hide prediction immediately; it will reappear when new results arrive
         self._popup.prediction_label.setVisible(False)
         self._prediction_text = ""
@@ -1278,6 +1299,9 @@ class QuickLaunchWidget(BaseWidget):
     def _set_prefix_chip(self, prefix: str, initial_text: str = ""):
         """Activate a prefix chip in the search bar."""
         self._active_prefix = prefix
+        self._last_active_prefix = prefix
+        if initial_text and self._remember_last_query:
+            self._last_search_text = initial_text
         if self._popup:
             self._popup.prefix_chip.setText(prefix)
             self._popup.prefix_chip.setVisible(True)
@@ -1296,6 +1320,7 @@ class QuickLaunchWidget(BaseWidget):
     def _clear_prefix_chip(self):
         """Remove the active prefix chip."""
         self._active_prefix = None
+        self._last_active_prefix = None
         if self._popup:
             self._popup.prefix_chip.setVisible(False)
             self._popup.prefix_chip.setText("")
