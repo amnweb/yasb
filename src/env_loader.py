@@ -1,5 +1,6 @@
 import logging
 import os
+import sys
 
 from dotenv import load_dotenv
 
@@ -25,7 +26,20 @@ def load_env():
 def set_font_engine():
     """
     Set the font engine for the application based on the YASB_FONT_ENGINE environment variable.
+    When launched with --service, proactively register user-installed fonts  before configuring the Qt font engine.
     """
+    if "--service" in sys.argv:
+        font_dir = os.path.join(os.environ.get("LOCALAPPDATA", ""), "Microsoft", "Windows", "Fonts")
+        if os.path.isdir(font_dir):
+            from core.utils.win32.bindings.gdi32 import AddFontResource
+            from core.utils.win32.bindings.user32 import SendNotifyMessage
+
+            fonts = [f for f in os.listdir(font_dir) if f.lower().endswith((".ttf", ".otf", ".ttc"))]
+            for f in fonts:
+                AddFontResource(os.path.join(font_dir, f))
+            if fonts:
+                SendNotifyMessage(0xFFFF, 0x001D, 0, 0)
+
     font_engine = os.getenv("YASB_FONT_ENGINE")
     if font_engine == "native":
         os.environ["QT_QPA_PLATFORM"] = "windows:fontengine=native"
