@@ -7,7 +7,7 @@ import webbrowser
 from PyQt6.QtWidgets import QApplication
 
 from core.utils.widgets.quick_launch.base_provider import BaseProvider, ProviderResult
-from core.utils.widgets.quick_launch.providers.resources.icons import ICON_CURRENCY
+from core.utils.widgets.quick_launch.providers.resources.icons import ICON_BINANCE
 
 _CACHE_MAX_AGE = 30  # seconds
 
@@ -18,7 +18,7 @@ class BinanceProvider(BaseProvider):
     name = "binance"
     display_name = "Binance"
     input_placeholder = "Search crypto prices..."
-    icon = ICON_CURRENCY
+    icon = ICON_BINANCE
 
     def __init__(self, config: dict | None = None):
         super().__init__(config)
@@ -47,7 +47,7 @@ class BinanceProvider(BaseProvider):
                     ProviderResult(
                         title="Loading crypto prices...",
                         description="Fetching latest data from Binance",
-                        icon_char=ICON_CURRENCY,
+                        icon_char=ICON_BINANCE,
                         provider=self.name,
                         is_loading=True,
                     )
@@ -60,7 +60,7 @@ class BinanceProvider(BaseProvider):
                     ProviderResult(
                         title="Crypto prices unavailable",
                         description=desc,
-                        icon_char=ICON_CURRENCY,
+                        icon_char=ICON_BINANCE,
                         provider=self.name,
                     )
                 ]
@@ -108,7 +108,7 @@ class BinanceProvider(BaseProvider):
                 ProviderResult(
                     title=title,
                     description=f"{'Open Binance' if self._open_url else 'Copy'}",
-                    icon_char=ICON_CURRENCY,
+                    icon_char=ICON_BINANCE,
                     provider=self.name,
                     action_data={
                         "pair": pair,
@@ -124,7 +124,7 @@ class BinanceProvider(BaseProvider):
                 ProviderResult(
                     title="No matching pairs",
                     description=f"No results for '{symbol}' in configured pairs",
-                    icon_char=ICON_CURRENCY,
+                    icon_char=ICON_BINANCE,
                     provider=self.name,
                 )
             ]
