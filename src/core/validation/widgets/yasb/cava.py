@@ -14,6 +14,7 @@ class CavaCallbacksConfig(CallbacksConfig):
 
 class CavaConfig(CustomBaseModel):
     class_name: str = ""
+    source: str = "auto"
     bar_height: int = 20
     min_bar_height: int = 1
     bars_number: int = 10
