@@ -264,7 +264,6 @@ class GithubNotificationsProvider(BaseProvider):
                 self._auth_dialog.activateWindow()
                 return True
 
-            from core.utils.widgets.github.api import GitHubDataManager
             from core.utils.widgets.github.auth_dialog import GitHubAuthDialog
 
             def _on_auth_completed(token: str):
