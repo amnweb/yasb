@@ -441,46 +441,6 @@ def format_pydantic_errors_to_yaml(exc: ValidationError) -> str:
     return yaml.dump(tree, default_flow_style=False, sort_keys=False)
 
 
-def build_widget_label(
-    self: QWidget,
-    content: str,
-    content_alt: str | None = None,
-    content_shadow: dict[str, Any] | None = None,
-):
-    def process_content(content: str, is_alt: bool = False) -> list[QLabel]:
-        label_parts = re.split("(<span.*?>.*?</span>)", content)
-        label_parts = [part for part in label_parts if part]
-        widgets = []
-        for part in label_parts:
-            part = part.strip()
-            if not part:
-                continue
-            if "<span" in part and "</span>" in part:
-                class_name = re.search(r'class=(["\'])([^"\']+?)\1', part)
-                class_result = class_name.group(2) if class_name else "icon"
-                icon = re.sub(r"<span.*?>|</span>", "", part).strip()
-                label = QLabel(icon)
-                label.setProperty("class", class_result)
-            else:
-                label = QLabel(part)
-                label.setProperty("class", "label alt" if is_alt else "label")
-            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            label.setCursor(Qt.CursorShape.PointingHandCursor)
-            if content_shadow:
-                add_shadow(label, content_shadow)
-            self._widget_container_layout.addWidget(label)
-            widgets.append(label)
-            if is_alt:
-                label.hide()
-            else:
-                label.show()
-        return widgets
-
-    self._widgets = process_content(content)
-    if content_alt:
-        self._widgets_alt = process_content(content_alt, is_alt=True)
-
-
 def build_progress_widget(self, options: dict[str, Any]) -> None:
     """Builds a circular progress widget based on the provided options."""
     if not options["enabled"]:

@@ -185,17 +185,7 @@ class PowerMenuWidget(BaseWidget):
         add_shadow(self._button, self.config.label_shadow.model_dump())
 
         # Construct container
-        self._widget_container_layout = QHBoxLayout()
-        self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
-
-        self._widget_container = QFrame()
-        self._widget_container.setLayout(self._widget_container_layout)
-        self._widget_container.setProperty("class", "widget-container")
-        add_shadow(self._widget_container, self.config.container_shadow.model_dump())
-
-        # Add the container to the main widget layout
-        self.widget_layout.addWidget(self._widget_container)
+        self._init_container(self.config.container_shadow.model_dump())
         self._widget_container_layout.addWidget(self._button)
 
         self.register_callback("toggle_power_menu", self._show_main_window)
