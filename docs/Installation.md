@@ -1,20 +1,20 @@
 ### Requirements
-- Nerd Fonts. Install [Nerd Fonts](https://www.nerdfonts.com/font-downloads) ([JetBrainsMono](https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.zip) recommended)
 - Windows 10 & 11
+- Default YASB theme uses Segoe Fluent Icons font, which is included in Windows 11 and Windows 10 (starting with version 1809). For older versions of Windows 10, you can download and install the font from the [Microsoft Typography website](https://docs.microsoft.com/en-us/typography/font-list/segoe-fluent-icons).
+- For custom themes, It's recommended to install Nerd Fonts, which provides a large collection of patched fonts with additional glyphs/icons. You can download and install Nerd Fonts from their [official website](https://www.nerdfonts.com/). Recommended [JetBrainsMono Propo](https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.zip) 
 
-### Manual Installation (stable release)
+### Installation (stable release)
 1. Go to the [releases page](htpps://github.com/amnweb/yasb/releases).
 2. Choice the architecture that matches your system (x64 or ARM64).
 3. Download the `yasb-{version}-{architecture}.msi` installer.
 4. Run the installer and follow the on-screen instructions.
 
 
-### Manual Installation (latest development build)
+### Installation (latest development build)
 1. Go to the [pre release](https://github.com/amnweb/yasb/releases/tag/dev)
 2. Choice the architecture that matches your system (x64 or ARM64).
 3. Download the `yasb-dev-{architecture}.msi` installer.
 4. Run the installer and follow the on-screen instructions.
-
 
 
 ### Using Package Managers (only stable releases)
