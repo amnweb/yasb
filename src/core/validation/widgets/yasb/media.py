@@ -81,6 +81,7 @@ class MediaWidgetConfig(CustomBaseModel):
     container_padding: PaddingConfig = PaddingConfig()
     scrolling_label: ScrollingLabelConfig = ScrollingLabelConfig()
     progress_bar: ProgressBarConfig = ProgressBarConfig()
+    size_mode: Literal["auto", "max"] = "auto"
     max_field_size: MaxFieldSizeConfig = MaxFieldSizeConfig()
     show_thumbnail: bool = True
     controls_only: bool = False

@@ -7,6 +7,7 @@
 | `separator`                           | string    | `" - "`                                                   | The dynamic separator. Automatically stripped. More below.          |
 | `class_name`                          | string    | `""`                                                      | The custom CSS class name for the widget.                           |
 | `label_shadow`                        | boolean   | false                                                     | Whether to show a shadow effect on the label.                       |
+| `size_mode`                           | string    | `"auto"`                                                  | The size mode for the widget. Can be `auto` or `max`.                |
 | `max_field_size`                      | dict      |                                                           | Maximum field sizes for labels.                                     |
 | `max_field_size.label`                | integer   | 20                                                        | Maximum size for the main label.                                    |
 | `max_field_size.label_alt`            | integer   | 30                                                        | Maximum size for the alternative label.                             |
@@ -49,6 +50,7 @@ media:
       on_left: "toggle_label"
       on_middle: "do_nothing"
       on_right: "do_nothing"
+    size_mode: "auto"
     max_field_size:
       label: 20
       label_alt: 30
@@ -179,6 +181,7 @@ media:
 - **class_name:** The CSS class name for the widget. This allows you to apply custom styles to the widget. (optional)
 - **hide_empty:** Whether to hide the widget when there is no media information available.
 - **callbacks:** A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, `on_right`.
+- **size_mode:** The size mode for the widget. Can be `auto` or `max`. If set to `auto`, the widget will resize itself to fit the label. If set to `max`, the widget will resize itself to the maximum size set by `max_field_size`.
 - **max_field_size:** Maximum field sizes for the labels.
   - **label:** Maximum size for the main label. If the label exceeds this size, it will be truncated.
   - **label_alt:** Maximum size for the alternative label. If the label exceeds this size, it will be truncated.
