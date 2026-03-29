@@ -20,7 +20,7 @@ Each widget group can be styled individually with the following:
 
 A style with the `.widget` selector would affect all the widgets. In practice, you may prefer to use more specific `.*-widget` selectors.
 Example: how to target the clock widget
-```
+```css
 .clock-widget {
 	border-top-left-radius: 18px;
 	border-bottom-left-radius: 18px;
@@ -31,7 +31,7 @@ Example: how to target the clock widget
 
 The main YASB windows carry a class tag with the name of the output this window is shown on.
 
-```
+```css
 * { font-size: 13px;color: #cdd6f4; }
 ```
 
@@ -47,7 +47,7 @@ Icons can be styled with the following:
 `label: "<span>\uf4bc</span> {virtual_mem_free}"`
 You can specify different icon class in the configuration file as shown below.
 
-```
+```yaml
 label: "<span class=\"icon-1"\">\uf4bc</span> {virtual_mem_free}"
 ```
 
@@ -67,7 +67,7 @@ Each icon and text is wrapped in a container. This container can be styled with 
 
 Example how to target widget container
 
-``` 
+```css
 .clock-widget .widget-container {
     background-color: #1e1e1e;
     border-radius: 10px;
@@ -240,5 +240,3 @@ container_shadow:
 There is a nice app at [Character Map UWP](https://github.com/character-map-uwp/Character-Map-UWP) where you can select a font, click on icons, and copy the UTF-16 value. Alternatively, you can visit the Nerd Fonts site and do the same under the icons section.
 
 ![Character Map UWP](assets/361286571-e6e1654b-34c7-484f-961c-ace25cb50286.png)
-
-
