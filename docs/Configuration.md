@@ -1,12 +1,8 @@
 # Config file
 
 The configuration uses the YAML file format and is named `config` or `config.yaml`.
-
 Valid directories for this file are `C:/Users/{username}/.config/yasb/` or ENV variable `YASB_CONFIG_HOME` if set.
-A good starting point is the [default config](https://github.com/amnweb/yasb/blob/main/src/config.yaml).
-
 All valid options for the widgets are listed on the widgets page.
-
 
 # Environment Variables Support
 
@@ -106,6 +102,8 @@ Valid options are:
 | `round_corners_type` | string | `'normal'` | The type of rounded corners, can be `normal` or `small`. Note: This is only effective on Windows 11. |
 | `border_color`    | string  | `'system'`   | The border color for the bar, can be `None`, `"system"`, or a hex color (e.g., `"#ff0000"`). Note: This is only effective on Windows 11. |
 
+> **Note:**
+> Rounded corners, border color and rounded corners type are only effective on Windows 11.
 
 ### Window Flags Configuration
 | Option            | Type    | Default       | Description |

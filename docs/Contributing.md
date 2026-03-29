@@ -74,24 +74,6 @@ ruff check .
 ruff check --fix .
 ```
 
-### Project Structure
-
-```
-yasb/
-├── src/
-│   ├── core/
-│   │   ├── widgets/         # Widget implementations
-│   │   └── validation/      # Widget validation schemas
-│   ├── config.yaml          # Default configuration
-│   ├── styles.css           # Default styles
-│   └── main.py              # Application entry point
-├── docs/                    # Documentation
-├── demo/                    # Demo images
-├── .github/                 # GitHub workflows and templates
-├── pyproject.toml           # Project configuration
-└── README.md
-```
-
 ## Contributing Guidelines
 
 ### Types of Contributions
