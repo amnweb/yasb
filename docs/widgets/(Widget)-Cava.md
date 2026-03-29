@@ -5,6 +5,7 @@
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `class_name` | string | "" | Additional CSS class names for the widget container |
+| `source` | string | "auto" | Audio input source device. Use `"auto"` for the default device, or specify a device name to capture from a specific audio device. Requires cava >= 0.10.4 with device selection support |
 | `bar_height` | integer | 20 | The height of bars in pixels |
 | `min_bar_height` | integer | 0 | The minimum height of bars in pixels |
 | `bars_number` | integer | 10 | The number of bars (0-512). 0 sets it to auto |
@@ -57,6 +58,7 @@
 ## Description of Options
 
 - **class_name**: Additional CSS class names for the widget container. (optional)
+- **source**: Audio input source device. Set to `"auto"` (default) to use the system default audio device, or specify a device name to capture audio from a specific device. This is useful when you have multiple audio outputs and want to visualize a particular one. Requires cava >= 0.10.4 with device selection support.
 - **bar_height**: The height of bars in pixels.
 - **min_bar_height**: The minimum height of bars in pixels.
 - **bars_number**: The number of bars to display. Can be between 0 and 512. 0 sets it to auto.
