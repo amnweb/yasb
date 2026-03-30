@@ -7,6 +7,7 @@ from PyQt6.QtGui import QScreen
 from PyQt6.QtWidgets import QApplication
 
 from core.bar import Bar
+from core.bar_helper import ThemeState
 from core.config import get_config, get_stylesheet
 from core.event_service import EventService
 from core.utils.controller import reload_application
@@ -30,6 +31,7 @@ class BarManager(QObject):
         super().__init__()
         self.config = config
         self.stylesheet = stylesheet
+        ThemeState.set_stylesheet(stylesheet)
         self.event_service = EventService()
         self.widget_event_listeners = set()
         self.bars: list[Bar] = []
@@ -61,6 +63,7 @@ class BarManager(QObject):
         stylesheet = get_stylesheet(show_error_dialog=True)
         if stylesheet and (stylesheet != self.stylesheet):
             self.stylesheet = stylesheet
+            ThemeState.set_stylesheet(stylesheet)
             for bar in self.bars:
                 bar.setStyleSheet(self.stylesheet)
 
