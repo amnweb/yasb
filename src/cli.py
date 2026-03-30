@@ -347,6 +347,12 @@ class CLIHandler:
         )
 
         subparsers.add_parser(
+            "config-dir",
+            help="Show config directory in file viewer",
+            add_help=False,
+        )
+
+        subparsers.add_parser(
             "help",
             help="Show help message",
             add_help=False,
@@ -361,6 +367,12 @@ class CLIHandler:
             "--version",
             action="store_true",
             help="Show program's version number and exit.",
+        )
+        parser.add_argument(
+            "-c",
+            "--config",
+            action="store_true",
+            help="Print config file path",
         )
         parser.add_argument(
             "-h",
@@ -583,6 +595,17 @@ class CLIHandler:
             print("Reset complete.")
             sys.exit(0)
 
+        elif args.command == "config-dir":
+            try:
+                subprocess.run(["explorer", DEFAULT_CONFIG_DIRECTORY])
+            except Exception as e:
+                print(f"Failed to open config directory: {e}")
+            sys.exit(0)
+
+        elif args.config:
+            print(DEFAULT_CONFIG_DIRECTORY)
+            sys.exit(0)
+
         elif args.command == "help" or args.help:
             print(
                 textwrap.dedent(f"""\
@@ -604,10 +627,12 @@ class CLIHandler:
                   update                    Update the application
                   log                       Tail yasb process logs (cancel with Ctrl-C)
                   reset                     Restore default config files and clear cache
+                  config-dir                Show the config directory
                   help                      Print this message
 
                 {Format.underline}Options{Format.reset}:
                 -v, --version  Print version
+                -c, --config   Print config file path
                 -h, --help     Print this message
             """)
             )
