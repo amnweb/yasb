@@ -463,7 +463,7 @@ class QuickLaunchWidget(BaseWidget):
         search_text = self._last_search_text if self.config.remember_last_query else ""
 
         if active_prefix:
-            self._set_prefix_chip(active_prefix, search_text)
+            self._set_prefix_chip(active_prefix, search_text.removeprefix(active_prefix).lstrip())
         else:
             self._clear_prefix_chip()
             self._popup.search_input.blockSignals(True)
