@@ -44,6 +44,29 @@ from core.utils.win32.utilities import apply_qmenu_style
 WM_TASKBARCREATED = RegisterWindowMessage("TaskbarCreated")
 
 
+class ThemeState:
+    """Centralized dark/light theme state and stylesheet cache for detached widgets."""
+
+    _is_dark = False
+    _stylesheet = None
+
+    @classmethod
+    def is_dark(cls) -> bool:
+        return cls._is_dark
+
+    @classmethod
+    def set_dark(cls, value: bool):
+        cls._is_dark = value
+
+    @classmethod
+    def stylesheet(cls) -> str:
+        return cls._stylesheet or ""
+
+    @classmethod
+    def set_stylesheet(cls, value: str):
+        cls._stylesheet = value
+
+
 class BarAnimationManager(QObject):
     """Handles bar show/hide animations."""
 
@@ -755,6 +778,7 @@ class OsThemeManager(QObject):
             self.target_widget.setProperty("class", class_property)
             self._update_styles(self.target_widget)
             self._is_dark_theme = is_dark_theme
+            ThemeState.set_dark(is_dark_theme)
 
     def _update_styles(self, widget):
         """Update styles for widget and its children by unpolishing and re-polishing"""
@@ -775,7 +799,7 @@ class BarContextMenu:
 
     def show(self, position):
         self._menu = QMenu(self.parent)
-        self._menu.setProperty("class", "context-menu")
+        self._menu.setProperty("class", "context-menu dark" if ThemeState.is_dark() else "context-menu")
         self._menu.aboutToHide.connect(self._on_menu_about_to_hide)
         apply_qmenu_style(self._menu)
 
@@ -785,7 +809,9 @@ class BarContextMenu:
 
         # Widgets menu
         widgets_menu = self._menu.addMenu("Active Widgets")
-        widgets_menu.setProperty("class", "context-menu submenu")
+        widgets_menu.setProperty(
+            "class", "context-menu submenu dark" if ThemeState.is_dark() else "context-menu submenu"
+        )
         apply_qmenu_style(widgets_menu)
         self._populate_widgets_menu(widgets_menu)
 
