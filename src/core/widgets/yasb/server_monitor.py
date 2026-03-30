@@ -5,10 +5,10 @@ from datetime import datetime
 
 from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, Qt, QUrl
 from PyQt6.QtGui import QDesktopServices
-from PyQt6.QtWidgets import QFrame, QGraphicsOpacityEffect, QHBoxLayout, QLabel, QScrollArea, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import QGraphicsOpacityEffect, QHBoxLayout, QLabel, QScrollArea, QVBoxLayout, QWidget
 
 from core.utils.tooltip import set_tooltip
-from core.utils.utilities import LoaderLine, PopupWidget, ToastNotifier, add_shadow, build_widget_label
+from core.utils.utilities import LoaderLine, PopupWidget, ToastNotifier
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.widgets.server_monitor.service import ServerCheckService
 from core.validation.widgets.yasb.server_monitor import ServerMonitorConfig
@@ -32,18 +32,8 @@ class ServerMonitor(BaseWidget):
         self._icon_path = os.path.join(SCRIPT_PATH, "assets", "images", "app_transparent.png")
 
         # Construct container
-        self._widget_container_layout = QHBoxLayout()
-        self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
-        # Initialize container
-        self._widget_container = QFrame()
-        self._widget_container.setLayout(self._widget_container_layout)
-        self._widget_container.setProperty("class", "widget-container")
-        add_shadow(self._widget_container, self.config.container_shadow.model_dump())
-        # Add the container to the main widget layout
-        self.widget_layout.addWidget(self._widget_container)
-
-        build_widget_label(self, self.config.label, self.config.label_alt, self.config.label_shadow.model_dump())
+        self._init_container(self.config.container_shadow.model_dump())
+        self.build_widget_label(self.config.label, self.config.label_alt, self.config.label_shadow.model_dump())
 
         self.register_callback("toggle_label", self._toggle_label)
         self.register_callback("toggle_menu", self._toggle_menu)

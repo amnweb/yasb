@@ -17,7 +17,7 @@ from PyQt6.QtWidgets import (
 )
 
 from core.utils.tooltip import set_tooltip
-from core.utils.utilities import LoaderLine, add_shadow
+from core.utils.utilities import LoaderLine
 from core.utils.widgets.ai_chat.attachment_manager import AttachmentManager
 from core.utils.widgets.ai_chat.chat_render import ChatRender
 from core.utils.widgets.ai_chat.chat_session import ChatSession
@@ -80,14 +80,7 @@ class AiChatWidget(BaseWidget):
         self._previous_hwnd = 0
         self._is_floating = False
         self._original_position = None
-        self._widget_container_layout = QHBoxLayout()
-        self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
-        self._widget_container = QFrame()
-        self._widget_container.setLayout(self._widget_container_layout)
-        self._widget_container.setProperty("class", "widget-container")
-        add_shadow(self._widget_container, self._container_shadow)
-        self.widget_layout.addWidget(self._widget_container)
+        self._init_container(self._container_shadow)
 
         self._label_builder.create_dynamically_label(self._label_content)
 

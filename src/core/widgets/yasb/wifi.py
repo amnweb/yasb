@@ -4,8 +4,6 @@ import socket
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
-    QFrame,
-    QHBoxLayout,
     QLabel,
 )
 from winrt.windows.networking.connectivity import NetworkInformation
@@ -39,17 +37,7 @@ class WifiWidget(BaseWidget):
         self._wifi_worker.start()
 
         # Construct container
-        self._widget_container_layout = QHBoxLayout()
-        self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
-        # Initialize container
-        self._widget_container = QFrame()
-        self._widget_container.setLayout(self._widget_container_layout)
-        self._widget_container.setProperty("class", "widget-container")
-        add_shadow(self._widget_container, self.config.container_shadow.model_dump())
-
-        # Add the container to the main widget layout
-        self.widget_layout.addWidget(self._widget_container)
+        self._init_container(self.config.container_shadow.model_dump())
 
         self._create_dynamically_label(self.config.label, self.config.label_alt)
         self._create_dynamically_label(

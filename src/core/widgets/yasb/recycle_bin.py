@@ -1,10 +1,10 @@
 import re
 
 from humanize import naturalsize
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel
+from PyQt6.QtWidgets import QLabel
 
 from core.utils.tooltip import set_tooltip
-from core.utils.utilities import add_shadow, build_widget_label, refresh_widget_style
+from core.utils.utilities import refresh_widget_style
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.widgets.recycle_bin.recycle_bin_monitor import RecycleBinMonitor
 from core.validation.widgets.yasb.recycle_bin import RecycleBinConfig
@@ -27,16 +27,8 @@ class RecycleBinWidget(BaseWidget):
         self.monitor.bin_updated.connect(self._on_bin_update)
 
         # Construct container
-        self._widget_container_layout = QHBoxLayout()
-        self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
-        self._widget_container = QFrame()
-        self._widget_container.setLayout(self._widget_container_layout)
-        self._widget_container.setProperty("class", "widget-container")
-        add_shadow(self._widget_container, self.config.container_shadow.model_dump())
-        self.widget_layout.addWidget(self._widget_container)
-
-        build_widget_label(self, self.config.label, self.config.label_alt, self.config.label_shadow.model_dump())
+        self._init_container(self.config.container_shadow.model_dump())
+        self.build_widget_label(self.config.label, self.config.label_alt, self.config.label_shadow.model_dump())
 
         self.register_callback("toggle_label", self._toggle_label)
         self.register_callback("empty_bin", self._empty_bin)

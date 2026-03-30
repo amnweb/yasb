@@ -2,9 +2,9 @@ import logging
 import re
 
 from PyQt6.QtCore import pyqtSlot
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel
+from PyQt6.QtWidgets import QLabel
 
-from core.utils.utilities import add_shadow, build_widget_label, refresh_widget_style
+from core.utils.utilities import refresh_widget_style
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.widgets.glazewm.client import BindingMode, GlazewmClient
 from core.validation.widgets.glazewm.binding_mode import GlazewmBindingModeConfig
@@ -32,18 +32,8 @@ class GlazewmBindingModeWidget(BaseWidget):
         self._container_shadow = config.container_shadow
         self._label_shadow = config.label_shadow
 
-        self._widget_container_layout = QHBoxLayout()
-        self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
-
-        self._widget_container = QFrame()
-        self._widget_container.setLayout(self._widget_container_layout)
-        self._widget_container.setProperty("class", "widget-container")
-        add_shadow(self._widget_container, self._container_shadow.model_dump())
-
-        self.widget_layout.addWidget(self._widget_container)
-
-        build_widget_label(self, self._label_content, self._label_alt_content, self._label_shadow.model_dump())
+        self._init_container(self._container_shadow.model_dump())
+        self.build_widget_label(self._label_content, self._label_alt_content, self._label_shadow.model_dump())
 
         self.glazewm_client = GlazewmClient(
             config.glazewm_server_uri,

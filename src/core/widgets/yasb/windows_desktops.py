@@ -8,8 +8,6 @@ from PyQt6.QtCore import (
 from PyQt6.QtGui import QAction, QCursor
 from PyQt6.QtWidgets import (
     QFileDialog,
-    QFrame,
-    QHBoxLayout,
     QInputDialog,
     QMenu,
     QPushButton,
@@ -290,14 +288,7 @@ class WorkspaceWidget(BaseWidget):
         self.callback_middle = config.callbacks.on_middle
 
         # Construct container which holds workspace buttons
-        self._workspace_container_layout = QHBoxLayout()
-        self._workspace_container_layout.setSpacing(0)
-        self._workspace_container_layout.setContentsMargins(0, 0, 0, 0)
-        self._workspace_container = QFrame()
-        self._workspace_container.setLayout(self._workspace_container_layout)
-        self._workspace_container.setProperty("class", "widget-container")
-        add_shadow(self._workspace_container, self.config.container_shadow.model_dump())
-        self.widget_layout.addWidget(self._workspace_container)
+        self._init_container(self.config.container_shadow.model_dump())
 
         self.register_callback("update_desktops", self._force_update)
 
@@ -398,9 +389,9 @@ class WorkspaceWidget(BaseWidget):
                     pass
 
     def _clear_container_layout(self):
-        for i in reversed(range(self._workspace_container_layout.count())):
-            old_workspace_widget = self._workspace_container_layout.itemAt(i).widget()
-            self._workspace_container_layout.removeWidget(old_workspace_widget)
+        for i in reversed(range(self._widget_container_layout.count())):
+            old_workspace_widget = self._widget_container_layout.itemAt(i).widget()
+            self._widget_container_layout.removeWidget(old_workspace_widget)
             old_workspace_widget.setParent(None)
 
     def _update_button(self, workspace_btn: WorkspaceButton, schedule_update: bool = True) -> None:
@@ -446,7 +437,7 @@ class WorkspaceWidget(BaseWidget):
             self._workspace_buttons.sort(key=lambda btn: btn.workspace_index)
             self._clear_container_layout()
             for workspace_btn in self._workspace_buttons:
-                self._workspace_container_layout.addWidget(workspace_btn)
+                self._widget_container_layout.addWidget(workspace_btn)
                 add_shadow(workspace_btn, self.config.btn_shadow.model_dump())
             try:
                 QTimer.singleShot(0, lambda: [btn.update_visible_buttons() for btn in self._workspace_buttons])

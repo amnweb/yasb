@@ -1009,6 +1009,7 @@ class ThemeDetailPanel(QWidget):
         self._loading_widget.hide()
 
         self._build_readme(self._stack_layout, palette)
+        self._build_not_found(self._stack_layout, palette)
         root.addWidget(self._stack, stretch=1)
 
         self._build_footer(root, palette)
@@ -1163,6 +1164,19 @@ class ThemeDetailPanel(QWidget):
         ):
             widget.installEventFilter(self._readme_smooth_scroll)
 
+    def _build_not_found(self, stack: QStackedLayout, palette: ThemePalette) -> None:
+        self._not_found_widget = QWidget()
+        self._not_found_widget.setStyleSheet("background: transparent;")
+        layout = QVBoxLayout(self._not_found_widget)
+        layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        label = QLabel("Theme not found")
+        label.setFont(_ui_font(14))
+        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        label.setStyleSheet(f"color: {palette.muted_text}; background: transparent;")
+        layout.addWidget(label)
+        stack.addWidget(self._not_found_widget)
+        self._not_found_widget.hide()
+
     def _build_footer(self, root: QVBoxLayout, palette: ThemePalette) -> None:
         self.footer = QFrame()
         self.footer.setObjectName("detailFooter")
@@ -1179,7 +1193,17 @@ class ThemeDetailPanel(QWidget):
         root.addWidget(self.footer)
         self.footer.hide()
 
+    def show_not_found(self) -> None:
+        """Show a 'Theme not found' message in the detail panel."""
+        self._cancel_requests()
+        self.header_section.hide()
+        self._loading_widget.hide()
+        self.readme_scroll.hide()
+        self.footer.hide()
+        self._not_found_widget.show()
+
     def load_theme(self, data: dict) -> None:
+        self._not_found_widget.hide()
         self.theme_data = data
         self._cancel_requests()
         self._image_data = b""
@@ -1465,7 +1489,7 @@ class ThemeDetailPanel(QWidget):
 
 
 class ThemeViewer(QMainWindow):
-    def __init__(self):
+    def __init__(self, deep_link_theme_id: str | None = None):
         super().__init__()
         self.setWindowTitle("YASB Themes")
         self.setWindowIcon(_app_icon())
@@ -1483,6 +1507,7 @@ class ThemeViewer(QMainWindow):
         self._themes_loaded = False
         self._minimum_splash_elapsed = False
         self._theme_urls = list(DEFAULT_THEME_INDEX_URLS)
+        self._deep_link_theme_id = deep_link_theme_id
         self._init_ui()
 
     def _init_ui(self) -> None:
@@ -1668,9 +1693,22 @@ class ThemeViewer(QMainWindow):
         self.header.show()
         self.theme_items = [{**theme, "id": theme_id} for theme_id, theme in self.themes.items()]
         self._rebuild_list(self.theme_items)
-        if self.theme_list.count():
-            self.theme_list.setCurrentRow(0)
+        target_row = self._find_theme_row(self._deep_link_theme_id) if self._deep_link_theme_id else -1
+        if self._deep_link_theme_id and target_row < 0:
+            self.detail_panel.show_not_found()
+            self.body_widget.show()
+            return
+        self.theme_list.setCurrentRow(target_row if target_row >= 0 else 0)
         self.body_widget.show()
+
+    def _find_theme_row(self, theme_id: str) -> int:
+        """Return the list row index matching *theme_id*, or -1."""
+        for row in range(self.theme_list.count()):
+            item = self.theme_list.item(row)
+            data = item.data(Qt.ItemDataRole.UserRole) if item else None
+            if data and data.get("id") == theme_id:
+                return row
+        return -1
 
     def _rebuild_list(self, items: list[dict]) -> None:
         self._pill.hide()
@@ -1805,8 +1843,19 @@ class ThemeViewer(QMainWindow):
         super().closeEvent(event)
 
 
+def _parse_deep_link(args: list[str]) -> str | None:
+    """Extract a theme ID from a yasb-themes://<theme-id> URI passed on the command line."""
+    for arg in args[1:]:
+        if arg.startswith("yasb-themes://"):
+            theme_id = arg[len("yasb-themes://") :].strip("/")
+            if theme_id and len(theme_id) <= 64 and re.fullmatch(r"[a-zA-Z0-9_-]+", theme_id):
+                return theme_id
+    return None
+
+
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    viewer = ThemeViewer()
+    theme_id = _parse_deep_link(sys.argv)
+    viewer = ThemeViewer(deep_link_theme_id=theme_id)
     viewer.show()
     sys.exit(app.exec())

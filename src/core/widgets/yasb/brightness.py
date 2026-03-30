@@ -3,10 +3,10 @@ from datetime import datetime
 
 from PyQt6.QtCore import QRect, Qt, QTimer
 from PyQt6.QtGui import QShowEvent, QWheelEvent
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QSlider, QVBoxLayout
+from PyQt6.QtWidgets import QLabel, QSlider, QVBoxLayout
 
 from core.utils.tooltip import CustomToolTip, set_tooltip
-from core.utils.utilities import PopupWidget, add_shadow, build_progress_widget, build_widget_label
+from core.utils.utilities import PopupWidget, build_progress_widget
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.widgets.brightness.service import BrightnessService
 from core.utils.win32.bindings.user32 import MONITOR_DEFAULTTONEAREST, user32
@@ -40,16 +40,8 @@ class BrightnessWidget(BaseWidget):
         # Build UI
         self.progress_widget = build_progress_widget(self, self.config.progress_bar.model_dump())
 
-        self._widget_container_layout = QHBoxLayout()
-        self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
-        self._widget_container = QFrame()
-        self._widget_container.setLayout(self._widget_container_layout)
-        self._widget_container.setProperty("class", "widget-container")
-        add_shadow(self._widget_container, self.config.container_shadow.model_dump())
-        self.widget_layout.addWidget(self._widget_container)
-
-        build_widget_label(self, self.config.label, self.config.label_alt, self.config.label_shadow.model_dump())
+        self._init_container(self.config.container_shadow.model_dump())
+        self.build_widget_label(self.config.label, self.config.label_alt, self.config.label_shadow.model_dump())
 
         # Register callbacks
         self.register_callback("toggle_label", self._toggle_label)

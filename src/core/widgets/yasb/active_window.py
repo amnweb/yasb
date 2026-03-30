@@ -8,7 +8,7 @@ import win32process
 from PIL import Image
 from PyQt6.QtCore import QElapsedTimer, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QImage, QPixmap
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel
+from PyQt6.QtWidgets import QLabel
 
 from core.event_service import EventService
 from core.utils.utilities import add_shadow
@@ -59,17 +59,7 @@ class ActiveWindowWidget(BaseWidget):
         self._active_label = config.label
         self._event_service = EventService()
         self._update_retry_count = 0
-        # Construct container
-        self._widget_container_layout = QHBoxLayout()
-        self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
-        # Initialize container
-        self._widget_container = QFrame()
-        self._widget_container.setLayout(self._widget_container_layout)
-        self._widget_container.setProperty("class", "widget-container")
-        add_shadow(self._widget_container, self.config.container_shadow.model_dump())
-        # Add the container to the main widget layout
-        self.widget_layout.addWidget(self._widget_container)
+        self._init_container(self.config.container_shadow.model_dump())
 
         self._window_title_text = QLabel()
         self._window_title_text.setProperty("class", "label")

@@ -41,7 +41,7 @@ from PyQt6.QtWidgets import (
 
 from core.config import HOME_CONFIGURATION_DIR
 from core.utils.shell_utils import shell_open
-from core.utils.utilities import add_shadow, build_widget_label, refresh_widget_style
+from core.utils.utilities import add_shadow, refresh_widget_style
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.win32.app_loader import AppListLoader, ShortcutResolver
 from core.utils.win32.icon_extractor import IconExtractorUtil, UrlExtractorUtil
@@ -617,16 +617,8 @@ class LaunchpadWidget(BaseWidget):
         self._num_drag_items = 0
         self._previous_hwnd = 0
 
-        # Create a container widget for layout
-        self._widget_container_layout = QHBoxLayout()
-        self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
-        self._widget_container = QFrame()
-        self._widget_container.setLayout(self._widget_container_layout)
-        self._widget_container.setProperty("class", "widget-container")
-        add_shadow(self._widget_container, self._container_shadow)
-        self.widget_layout.addWidget(self._widget_container)
-        build_widget_label(self, self._label, None, self._label_shadow)
+        self._init_container(self._container_shadow)
+        self.build_widget_label(self._label, None, self._label_shadow)
 
         # Register callbacks
         self.register_callback("toggle_launchpad", self._toggle_launchpad)

@@ -8,7 +8,7 @@ import threading
 
 from PyQt6.QtCore import QPointF, QRectF, QTimer, pyqtSignal
 from PyQt6.QtGui import QColor, QLinearGradient, QPainter, QPainterPath
-from PyQt6.QtWidgets import QApplication, QFrame, QHBoxLayout, QLabel
+from PyQt6.QtWidgets import QApplication, QFrame, QLabel
 
 from core.utils.utilities import app_data_path
 from core.validation.widgets.yasb.cava import CavaConfig
@@ -408,13 +408,7 @@ class CavaWidget(BaseWidget):
         self.colors = []
 
         # Construct container layout
-        self._widget_container_layout = QHBoxLayout()
-        self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
-        self._widget_container = QFrame()
-        self._widget_container.setLayout(self._widget_container_layout)
-        self._widget_container.setProperty("class", "widget-container")
-        self.widget_layout.addWidget(self._widget_container)
+        self._init_container()
 
         # Check if cava is available
         if shutil.which("cava") is None:

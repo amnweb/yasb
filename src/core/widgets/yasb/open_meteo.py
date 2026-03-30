@@ -79,16 +79,7 @@ class OpenMeteoWidget(BaseWidget):
         self._retry_timer.timeout.connect(self._retry_fetch)
 
         # Construct container
-        self._widget_container_layout = QHBoxLayout()
-        self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
-
-        self._widget_container = QFrame()
-        self._widget_container.setLayout(self._widget_container_layout)
-        self._widget_container.setProperty("class", "widget-container")
-        add_shadow(self._widget_container, config.container_shadow.model_dump())
-
-        self.widget_layout.addWidget(self._widget_container)
+        self._init_container(config.container_shadow.model_dump())
         self._create_dynamically_label(self._label_content, self._label_alt_content)
 
         self.register_callback("toggle_label", self._toggle_label)

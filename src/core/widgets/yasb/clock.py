@@ -30,7 +30,7 @@ from PyQt6.QtWidgets import (
 
 from core.config import HOME_CONFIGURATION_DIR
 from core.utils.tooltip import set_tooltip
-from core.utils.utilities import PopupWidget, add_shadow, build_widget_label, refresh_widget_style
+from core.utils.utilities import PopupWidget, add_shadow, refresh_widget_style
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.win32.utilities import apply_qmenu_style
 from core.utils.win32.win32_accent import Blur
@@ -358,16 +358,8 @@ class ClockWidget(BaseWidget):
         self._timer_visible = False
         self._country_code = self.config.calendar.country_code or self.get_country_code()
         self._subdivision = self.config.calendar.subdivision
-        self._widget_container_layout = QHBoxLayout()
-        self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
-        self._widget_container = QFrame()
-        self._widget_container.setLayout(self._widget_container_layout)
-        self._widget_container.setProperty("class", "widget-container")
-        add_shadow(self._widget_container, self.config.container_shadow.model_dump())
-        self.widget_layout.addWidget(self._widget_container)
-
-        build_widget_label(self, self._label_content, self._label_alt_content, self.config.label_shadow.model_dump())
+        self._init_container(self.config.container_shadow.model_dump())
+        self.build_widget_label(self._label_content, self._label_alt_content, self.config.label_shadow.model_dump())
 
         self._timer_label = QLabel()
         self._timer_label.setProperty("class", "label timer")

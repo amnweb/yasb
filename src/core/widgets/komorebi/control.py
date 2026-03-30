@@ -3,11 +3,11 @@ import re
 import subprocess
 
 from PyQt6.QtCore import QEvent, Qt, QThread, pyqtSignal
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QSizePolicy, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import QHBoxLayout, QLabel, QSizePolicy, QVBoxLayout, QWidget
 
 from core.event_enums import KomorebiEvent
 from core.event_service import EventService
-from core.utils.utilities import PopupWidget, add_shadow, build_widget_label, refresh_widget_style
+from core.utils.utilities import PopupWidget, refresh_widget_style
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.widgets.komorebi.client import KomorebiClient
 from core.validation.widgets.komorebi.control import KomorebiControlWidgetConfig
@@ -51,18 +51,8 @@ class KomorebiControlWidget(BaseWidget):
         self._komorebic = KomorebiClient()
 
         # Construct container
-        self._widget_container_layout = QHBoxLayout()
-        self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
-        # Initialize container
-        self._widget_container = QFrame()
-        self._widget_container.setLayout(self._widget_container_layout)
-        self._widget_container.setProperty("class", "widget-container")
-        add_shadow(self._widget_container, self.config.container_shadow.model_dump())
-        # Add the container to the main widget layout
-        self.widget_layout.addWidget(self._widget_container)
-
-        build_widget_label(self, self.config.label, None, self.config.label_shadow.model_dump())
+        self._init_container(self.config.container_shadow.model_dump())
+        self.build_widget_label(self.config.label, None, self.config.label_shadow.model_dump())
 
         self.register_callback("toggle_menu", self._toggle_menu)
 

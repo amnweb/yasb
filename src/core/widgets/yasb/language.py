@@ -9,7 +9,7 @@ from PyQt6.QtGui import QCursor, QMouseEvent
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout
 from win32con import WM_INPUTLANGCHANGEREQUEST
 
-from core.utils.utilities import PopupWidget, add_shadow, build_widget_label, refresh_widget_style
+from core.utils.utilities import PopupWidget, refresh_widget_style
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.win32.bindings import (
     kernel32,
@@ -40,20 +40,8 @@ class LanguageWidget(BaseWidget):
         )
         self.config = config
         self._show_alt_label = False
-        # Construct container
-        self._widget_container_layout = QHBoxLayout()
-        self._widget_container_layout.setSpacing(0)
-        self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
-        # Initialize container
-        self._widget_container = QFrame()
-        self._widget_container.setLayout(self._widget_container_layout)
-        self._widget_container.setProperty("class", "widget-container")
-        add_shadow(self._widget_container, self.config.container_shadow.model_dump())
-        # Add the container to the main widget layout
-        self.widget_layout.addWidget(self._widget_container)
-
-        build_widget_label(
-            self,
+        self._init_container(self.config.container_shadow.model_dump())
+        self.build_widget_label(
             self.config.label,
             self.config.label_alt,
             self.config.label_shadow.model_dump(),

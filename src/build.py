@@ -69,6 +69,16 @@ msi_data = {
             "[TARGETDIR]assets\\images\\app_icon.png",
             "TARGETDIR",
         ),
+        ("UriScheme", -1, "Software\\Classes\\yasb-themes", "", "URL:YASB Themes", "TARGETDIR"),
+        ("UriSchemeFlag", -1, "Software\\Classes\\yasb-themes", "URL Protocol", "", "TARGETDIR"),
+        (
+            "UriSchemeCommand",
+            -1,
+            "Software\\Classes\\yasb-themes\\shell\\open\\command",
+            "",
+            '"[TARGETDIR]yasb_themes.exe" "%1"',
+            "TARGETDIR",
+        ),
     ],
 }
 
