@@ -597,7 +597,7 @@ class CLIHandler:
 
         elif args.command == "config-dir":
             try:
-                subprocess.run(["explorer", DEFAULT_CONFIG_DIRECTORY])
+                subprocess.Popen(["explorer", DEFAULT_CONFIG_DIRECTORY])
             except Exception as e:
                 print(f"Failed to open config directory: {e}")
             sys.exit(0)
