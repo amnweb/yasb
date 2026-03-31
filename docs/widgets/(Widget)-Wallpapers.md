@@ -125,6 +125,10 @@ wallpapers:
     border: 0;
     margin: 16px
 }
+/* Dark style (optional) */
+.dark.wallpapers-gallery-window {
+    background-color: rgba(85, 42, 240, 0.05);
+}
 .wallpapers-gallery-buttons {
     background-color:rgba(255, 255, 255, 0);
     color: white;

@@ -90,7 +90,7 @@ YASB can follow the OS theme, if you have OS dark style YASB will add class `.da
     /* background color for light style */
     background-color: #1e1e1e;
 }
-.yasb-bar.dark {
+.dark.yasb-bar {
     /* background color for dark style */
     background-color: #1e1e1e;
 }
@@ -98,7 +98,7 @@ YASB can follow the OS theme, if you have OS dark style YASB will add class `.da
     /* text color for light style */
     color: #000000;
 }
-.yasb-bar.dark .label {
+.dark.yasb-bar .label {
     /* text color for dark style */
     color: #ffffff;
 }
@@ -112,6 +112,7 @@ YASB can follow the OS theme, if you have OS dark style YASB will add class `.da
 Context menus can be styled using the `.context-menu` class. This allows you to customize the appearance of menus within YASB. 
 > **Note**:
 > If you want to have different menu styles for each widget please refer to the Widget documentation for more information on how to achieve this.
+> You can add dark class to context menu if you want to have a different style for dark mode as shown in the example below.
 
 Example of context menu styling:
 ```css
@@ -123,6 +124,12 @@ Example of context menu styling:
     padding: 4px 0px;
     font-family: 'Segoe UI';
     font-size: 12px;
+    color: #FFFFFF;
+}
+/* Dark style (optional) */
+.dark.context-menu,
+.dark.context-menu .menu-checkbox {
+    background-color: #202020;
     color: #FFFFFF;
 }
 .context-menu::right-arrow {
@@ -205,6 +212,12 @@ Example of tooltip styling:
     font-family: 'Segoe UI';
     font-weight: 600;
     margin-top: 4px;
+}
+/* Dark style (optional) */
+.dark.tooltip {
+    background-color: #18191a;
+    border: 1px solid #36383a;
+    color: #a6adc8;
 }
 ```
 ## Shadow Options
