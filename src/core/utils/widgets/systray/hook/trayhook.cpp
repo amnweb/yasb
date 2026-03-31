@@ -263,13 +263,22 @@ void DebugOutput(const char *msg) {
 
 // Filters out non-explorer.exe systray windows just in case
 HWND FindRealSystray() {
-    HWND hRealTray = 0;
+    HWND hRealTray = NULL;
+    WORD tries = 0;
 
     while (true) {
         hRealTray = FindWindowExW(0, hRealTray, L"Shell_TrayWnd", NULL);
-        if (hRealTray == 0 || hRealTray == INVALID_HANDLE_VALUE) {
-            DebugOutput("[DLL] Failed to find real systray window.\n");
-            break;
+        if (hRealTray == NULL || hRealTray == INVALID_HANDLE_VALUE) {
+            if (tries > 20) {
+                DebugOutput("[DLL] Failed to find real systray window. Giving up.\n");
+                break;
+            }
+            tries++;
+            char buf[256];
+            wsprintf(buf, "[DLL] Failed to find real systray window. Retrying... %d\n", tries);
+            DebugOutput(buf);
+            Sleep(50);
+            continue;
         }
 
         DWORD pid;

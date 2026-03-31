@@ -262,7 +262,11 @@ class SystrayHook(QObject):
 
 def inject_dll(pid: int, dll_path: str) -> bool:
     """Injects a DLL into a target process"""
-    dll_path_bytes = dll_path.encode("utf-8")
+    abs_path = os.path.abspath(dll_path)
+    # Check if the path has an extended length prefix
+    if not abs_path.startswith("\\\\?\\"):
+        abs_path = "\\\\?\\" + abs_path
+    dll_path_bytes = abs_path.encode("utf-16-le")
     dll_len = len(dll_path_bytes) + 1
 
     h_process = OpenProcess(PROCESS_ALL_ACCESS, False, pid)
@@ -287,9 +291,9 @@ def inject_dll(pid: int, dll_path: str) -> bool:
             logger.error("Failed to get handle for kernel32.dll")
             return False
 
-        h_loadlib = GetProcAddress(h_kernel32, b"LoadLibraryA")
+        h_loadlib = GetProcAddress(h_kernel32, b"LoadLibraryW")
         if not h_loadlib:
-            logger.error("Failed to get address for LoadLibraryA")
+            logger.error("Failed to get address for LoadLibraryW")
             return False
 
         h_thread = CreateRemoteThread(h_process, None, 0, h_loadlib, arg_address, 0, None)
