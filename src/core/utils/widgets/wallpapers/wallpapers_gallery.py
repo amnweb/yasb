@@ -1,5 +1,4 @@
 import os
-import re
 from functools import partial
 
 from PyQt6.QtCore import (
@@ -34,7 +33,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from core.config import get_stylesheet
+from core.bar_helper import ThemeState
 from core.event_service import EventService
 from core.utils.utilities import is_windows_10, refresh_widget_style
 from core.utils.win32.win32_accent import Blur
@@ -42,46 +41,13 @@ from core.utils.win32.window_actions import force_foreground_focus
 
 
 class BaseStyledWidget(QWidget):
-    """BaseStyledWidget applies filtered styles to the widget from a given stylesheet."""
+    """BaseStyledWidget applies the shared stylesheet to detached widgets."""
 
     def apply_stylesheet(self):
-        stylesheet = get_stylesheet()
-        classes_to_include = [
-            "wallpapers-gallery-window",
-            "wallpapers-gallery-buttons",
-            "wallpapers-gallery-buttons:hover",
-            "wallpapers-gallery-image",
-            "wallpapers-gallery-image.focused",
-            "wallpapers-gallery-image:hover",
-        ]
-        filtered_stylesheet = self.extract_class_styles(stylesheet, classes_to_include)
-
-        # Add default background if .wallpapers-gallery-window doesn't have one
-        if ".wallpapers-gallery-window" in filtered_stylesheet:
-            # Check if background property exists in the wallpapers-gallery-window class
-            # We need to check that to prevent clicking issues on transparent areas where click goes through
-            window_style_match = re.search(r"\.wallpapers-gallery-window\s*\{([^}]*)\}", filtered_stylesheet, re.DOTALL)
-            if window_style_match:
-                style_content = window_style_match.group(1)
-                if not re.search(r"background(-color)?\s*:", style_content, re.IGNORECASE):
-                    filtered_stylesheet = re.sub(
-                        r"(\.wallpapers-gallery-window\s*\{)", r"\1 background: rgba(0,0,0,0.01);", filtered_stylesheet
-                    )
-        else:
-            # Class doesn't exist, add it with default background
-            filtered_stylesheet += "\n.wallpapers-gallery-window { background: rgba(0,0,0,0.01); }"
-
-        self.setStyleSheet(filtered_stylesheet)
-
-    def extract_class_styles(self, stylesheet, classes):
-        pattern = re.compile(
-            r"(\.({})\s*\{{[^}}]*\}})".format("|".join(re.escape(cls) for cls in classes)), re.MULTILINE
-        )
-        matches = pattern.findall(stylesheet)
-        return "\n".join(match[0] for match in matches)
+        self.setStyleSheet(ThemeState.stylesheet())
 
 
-class HoverLabel(QFrame, BaseStyledWidget):
+class HoverLabel(QFrame):
     """HoverLabel: QFrame with hover, focus, and opacity effects for a wallpapers gallery."""
 
     def __init__(self, parent, *args, **kwargs):
@@ -91,7 +57,6 @@ class HoverLabel(QFrame, BaseStyledWidget):
         self._pixmap = None
         self.parent_gallery = parent
         self.setProperty("class", "wallpapers-gallery-image")
-        self.apply_stylesheet()
         self.opacity_effect = QGraphicsOpacityEffect(self)
         self.setGraphicsEffect(self.opacity_effect)
         self.opacity_effect.setOpacity(self._opacity)
@@ -359,7 +324,10 @@ class ImageGallery(QMainWindow, BaseStyledWidget):
         # Set up the layout
         central_widget = QFrame()
         self.setCentralWidget(central_widget)
-        central_widget.setProperty("class", "wallpapers-gallery-window")
+        central_widget.setProperty(
+            "class", "wallpapers-gallery-window dark" if ThemeState.is_dark() else "wallpapers-gallery-window"
+        )
+
         self.setContentsMargins(0, 0, 0, 0)
         layout = QVBoxLayout()
         central_widget.setLayout(layout)
