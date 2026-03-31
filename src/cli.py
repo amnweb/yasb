@@ -632,7 +632,7 @@ class CLIHandler:
 
                 {Format.underline}Options{Format.reset}:
                 -v, --version  Print version
-                -c, --config   Print config file path
+                -c, --config   Print config directory path
                 -h, --help     Print this message
             """)
             )
