@@ -348,7 +348,7 @@ class CLIHandler:
 
         subparsers.add_parser(
             "config-dir",
-            help="Show config directory in file viewer",
+            help="Open config directory in file explorer",
             add_help=False,
         )
 
