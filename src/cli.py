@@ -627,7 +627,7 @@ class CLIHandler:
                   update                    Update the application
                   log                       Tail yasb process logs (cancel with Ctrl-C)
                   reset                     Restore default config files and clear cache
-                  config-dir                Show the config directory
+                  config-dir                Open config directory in file explorer
                   help                      Print this message
 
                 {Format.underline}Options{Format.reset}:
