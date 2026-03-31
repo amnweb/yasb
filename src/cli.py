@@ -372,7 +372,7 @@ class CLIHandler:
             "-c",
             "--config",
             action="store_true",
-            help="Print config file path",
+            help="Print config directory path",
         )
         parser.add_argument(
             "-h",
