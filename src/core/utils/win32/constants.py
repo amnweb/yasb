@@ -118,6 +118,14 @@ AF_INET = 2  # IPv4
 # Network interface constants
 IF_TYPE_SOFTWARE_LOOPBACK = 24
 IF_OPER_STATUS_UP = 1
+
+# LoadLibraryEx flags
+LOAD_LIBRARY_AS_DATAFILE = 0x00000002
+LOAD_LIBRARY_AS_IMAGE_RESOURCE = 0x00000020
+
+# PE resource type constants
+RT_ICON = 3
+RT_GROUP_ICON = 14
 MAX_ADAPTER_ADDRESS_LENGTH = 8
 
 # GetAdaptersAddresses flags

@@ -215,6 +215,25 @@ kernel32.TerminateProcess.restype = BOOL
 kernel32.GetLogicalProcessorInformationEx.argtypes = [ULONG, LPVOID, POINTER(DWORD)]
 kernel32.GetLogicalProcessorInformationEx.restype = BOOL
 
+# PE resource loading
+kernel32.LoadLibraryExW.argtypes = [LPCWSTR, HANDLE, DWORD]
+kernel32.LoadLibraryExW.restype = HANDLE
+
+kernel32.FindResourceW.argtypes = [HANDLE, LPCWSTR, LPCWSTR]
+kernel32.FindResourceW.restype = HANDLE
+
+kernel32.SizeofResource.argtypes = [HANDLE, HANDLE]
+kernel32.SizeofResource.restype = DWORD
+
+kernel32.LoadResource.argtypes = [HANDLE, HANDLE]
+kernel32.LoadResource.restype = HANDLE
+
+kernel32.LockResource.argtypes = [HANDLE]
+kernel32.LockResource.restype = LPVOID
+
+kernel32.FreeLibrary.argtypes = [HANDLE]
+kernel32.FreeLibrary.restype = BOOL
+
 
 # --- Python-friendly typed wrapper functions ---
 

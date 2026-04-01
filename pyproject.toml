@@ -22,7 +22,6 @@ dependencies = [
     "watchdog==6.0.0",
     "pycaw==20251023",
     "pillow==12.1.1",
-    "icoextract==0.2.0",
     "qasync==0.28.0",
     "github-copilot-sdk==0.2.0",
     "openai==2.30.0",
