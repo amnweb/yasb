@@ -1,6 +1,6 @@
 <p align="center">
     <picture>
-      <img src="https://raw.githubusercontent.com/amnweb/yasb/main/src/docs/assets/readme/hero-dark.png" />
+      <img src="https://raw.githubusercontent.com/amnweb/yasb/main/docs/assets/readme/hero-dark.png" />
   </picture>
 </p>
 <h1 align="center">
@@ -74,8 +74,8 @@ choco install yasb
 </details>
  
 ## 💻 Demo
-![Dark Themea](https://raw.githubusercontent.com/amnweb/yasb/main/src/docs/assets/readme/demo-dark.png)
-![Light Theme](https://raw.githubusercontent.com/amnweb/yasb/main/src/docs/assets/readme/demo-light.png)
+![Dark Themea](https://raw.githubusercontent.com/amnweb/yasb/main/docs/assets/readme/demo-dark.jpg)
+![Light Theme](https://raw.githubusercontent.com/amnweb/yasb/main/docs/assets/readme/demo-light.jpg)
 
 
 ## 🛠️ List of currently available widgets in YASB.
