@@ -1272,6 +1272,8 @@ class QuickLaunchWidget(BaseWidget):
         if result.action_data.get("_home"):
             prefix = result.action_data.get("prefix", "")
             initial_text = result.action_data.get("initial_text", "")
+            if initial_text and not initial_text.endswith(" "):
+                initial_text += " "
             if prefix and self._popup:
                 self._set_prefix_chip(prefix, initial_text)
             return
