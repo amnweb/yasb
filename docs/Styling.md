@@ -20,7 +20,7 @@ Each widget group can be styled individually with the following:
 
 A style with the `.widget` selector would affect all the widgets. In practice, you may prefer to use more specific `.*-widget` selectors.
 Example: how to target the clock widget
-```
+```css
 .clock-widget {
 	border-top-left-radius: 18px;
 	border-bottom-left-radius: 18px;
@@ -31,7 +31,7 @@ Example: how to target the clock widget
 
 The main YASB windows carry a class tag with the name of the output this window is shown on.
 
-```
+```css
 * { font-size: 13px;color: #cdd6f4; }
 ```
 
@@ -47,7 +47,7 @@ Icons can be styled with the following:
 `label: "<span>\uf4bc</span> {virtual_mem_free}"`
 You can specify different icon class in the configuration file as shown below.
 
-```
+```yaml
 label: "<span class=\"icon-1"\">\uf4bc</span> {virtual_mem_free}"
 ```
 
@@ -67,7 +67,7 @@ Each icon and text is wrapped in a container. This container can be styled with 
 
 Example how to target widget container
 
-``` 
+```css
 .clock-widget .widget-container {
     background-color: #1e1e1e;
     border-radius: 10px;
@@ -90,7 +90,7 @@ YASB can follow the OS theme, if you have OS dark style YASB will add class `.da
     /* background color for light style */
     background-color: #1e1e1e;
 }
-.yasb-bar.dark {
+.dark.yasb-bar {
     /* background color for dark style */
     background-color: #1e1e1e;
 }
@@ -98,7 +98,7 @@ YASB can follow the OS theme, if you have OS dark style YASB will add class `.da
     /* text color for light style */
     color: #000000;
 }
-.yasb-bar.dark .label {
+.dark.yasb-bar .label {
     /* text color for dark style */
     color: #ffffff;
 }
@@ -112,6 +112,7 @@ YASB can follow the OS theme, if you have OS dark style YASB will add class `.da
 Context menus can be styled using the `.context-menu` class. This allows you to customize the appearance of menus within YASB. 
 > **Note**:
 > If you want to have different menu styles for each widget please refer to the Widget documentation for more information on how to achieve this.
+> You can add dark class to context menu if you want to have a different style for dark mode as shown in the example below.
 
 Example of context menu styling:
 ```css
@@ -123,6 +124,12 @@ Example of context menu styling:
     padding: 4px 0px;
     font-family: 'Segoe UI';
     font-size: 12px;
+    color: #FFFFFF;
+}
+/* Dark style (optional) */
+.dark.context-menu,
+.dark.context-menu .menu-checkbox {
+    background-color: #202020;
     color: #FFFFFF;
 }
 .context-menu::right-arrow {
@@ -206,6 +213,12 @@ Example of tooltip styling:
     font-weight: 600;
     margin-top: 4px;
 }
+/* Dark style (optional) */
+.dark.tooltip {
+    background-color: #18191a;
+    border: 1px solid #36383a;
+    color: #a6adc8;
+}
 ```
 ## Shadow Options
 
@@ -240,5 +253,3 @@ container_shadow:
 There is a nice app at [Character Map UWP](https://github.com/character-map-uwp/Character-Map-UWP) where you can select a font, click on icons, and copy the UTF-16 value. Alternatively, you can visit the Nerd Fonts site and do the same under the icons section.
 
 ![Character Map UWP](assets/361286571-e6e1654b-34c7-484f-961c-ace25cb50286.png)
-
-
