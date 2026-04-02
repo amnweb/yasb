@@ -248,6 +248,7 @@ class QuickLaunchProvidersConfig(CustomBaseModel):
 class QuickLaunchConfig(CustomBaseModel):
     label: str = "\uf002"
     search_placeholder: str = "Search applications..."
+    remember_last_query: bool = False
     max_results: int = Field(default=50, ge=1, le=500)
     show_icons: bool = True
     icon_size: int = 32
