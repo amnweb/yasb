@@ -8,7 +8,6 @@ import win32con
 import win32gui
 import win32process
 import win32ui
-from icoextract import IconExtractor
 from PIL import Image
 from win32con import DIB_RGB_COLORS
 
@@ -27,6 +26,7 @@ from core.utils.win32.bindings import (
     shell32,
 )
 from core.utils.win32.constants import PROCESS_QUERY_LIMITED_INFORMATION, SHGSI_ICON, SHGSI_LARGEICON
+from core.utils.win32.pe_icons import IconExtractor
 from core.utils.win32.structs import BITMAP, BITMAPINFO, BITMAPINFOHEADER, ICONINFO, SHSTOCKICONINFO
 
 pil_logger = logging.getLogger("PIL")

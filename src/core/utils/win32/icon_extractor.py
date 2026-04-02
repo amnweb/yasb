@@ -14,13 +14,11 @@ from urllib.parse import urljoin, urlparse
 
 import win32com.client
 import win32gui
-from icoextract import IconExtractor
 from PIL import Image
 
 from core.utils.win32.app_icons import hicon_to_image
 from core.utils.win32.aumid_icons import get_icon_for_aumid
-
-logging.getLogger("icoextract").setLevel(logging.ERROR)
+from core.utils.win32.pe_icons import IconExtractor
 
 
 def parse_icon_location(value: str) -> tuple[str, int]:
