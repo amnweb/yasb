@@ -1,6 +1,7 @@
 <p align="center">
     <picture>
-      <img src="https://raw.githubusercontent.com/amnweb/yasb/main/docs/assets/readme/hero-dark.png" />
+      <source media="(prefers-color-scheme: light)" srcset="./docs/assets/readme/hero-light.png" />
+      <img src="./docs/assets/readme/hero-dark.png" />
   </picture>
 </p>
 <h1 align="center">
