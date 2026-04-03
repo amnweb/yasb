@@ -9,7 +9,7 @@ from enum import StrEnum
 from functools import lru_cache
 from pathlib import Path
 from threading import Lock
-from typing import Any, TypeGuard, cast, override
+from typing import Any, Literal, TypeGuard, cast, override
 
 import yaml
 from pydantic import ValidationError
@@ -871,6 +871,7 @@ class ScrollingLabel(QLabel):
         self,
         parent: QWidget | None = None,
         text: str = "",
+        size_mode: Literal["auto", "max"] = "auto",
         max_width: int | None = None,
         options: dict[str, Any] | None = None,
     ):
@@ -897,6 +898,7 @@ class ScrollingLabel(QLabel):
         self._bounce_direction = -1
         self._offset = 0
         self._scrolling_needed = False
+        self._size_mode = size_mode
 
         # Store the original, un-padded/un-separated text
         self._raw_text = text
@@ -973,7 +975,10 @@ class ScrollingLabel(QLabel):
         self._text_bb_width = self._font_metrics.boundingRect(self._text).width()
         self._text_y = (self.height() + self._font_metrics.ascent() - self._font_metrics.descent() + 1) // 2
 
-        if self._max_width:
+        if self._size_mode == "max":
+            self.setMaximumWidth(self._font_metrics.averageCharWidth() * self._max_width)
+            self.setMinimumWidth(self._font_metrics.averageCharWidth() * self._max_width)
+        elif self._size_mode == "auto" and self._max_width:
             self.setMaximumWidth(self._font_metrics.averageCharWidth() * self._max_width)
 
     @pyqtSlot()
