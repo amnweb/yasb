@@ -260,13 +260,17 @@ class NotesWidget(BaseWidget):
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
         active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
 
+        notes_count = len(self.notes)
+        active_label_content = active_label_content.format(count=notes_count)
         label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
         label_parts = [part for part in label_parts if part]
+        widget_index = 0
 
-        notes_count = len(self.notes)
-
-        for widget_index, part in enumerate(label_parts):
+        for part in label_parts:
             if widget_index >= len(active_widgets):
+                break
+
+            if not part:
                 continue
 
             current_widget = active_widgets[widget_index]
@@ -277,8 +281,7 @@ class NotesWidget(BaseWidget):
                 icon = re.sub(r"<span.*?>|</span>", "", part).strip()
                 current_widget.setText(icon)
             else:
-                formatted_text = part.format(count=notes_count)
-                current_widget.setText(formatted_text)
+                current_widget.setText(part)
             widget_index += 1
 
     def _build_menu_button(

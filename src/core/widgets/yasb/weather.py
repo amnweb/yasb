@@ -196,20 +196,20 @@ class WeatherWidget(BaseWidget):
         frame_today.setProperty("class", "weather-card-today")
         layout_today = QVBoxLayout(frame_today)
 
-        today_label0 = QLabel(f"{self._weather_data['{location}']} {self._weather_data['{temp}']}")
+        today_label0 = QLabel(f"{self._weather_data['location']} {self._weather_data['temp']}")
         today_label0.setProperty("class", "label location")
         today_label0.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         today_label1 = QLabel(
-            f"Feels like {self._weather_data['{feelslike}']} - {self._weather_data['{condition_text}']} - Humidity {self._weather_data['{humidity}']}\nPressure {self._weather_data['{pressure}']} - Visibility {self._weather_data['{vis}']} - Cloud {self._weather_data['{cloud}']}%\nRain chance {self._weather_data['{daily_chance_of_rain}']} - Snow chance {self._weather_data['{daily_chance_of_snow}']}"
+            f"Feels like {self._weather_data['feelslike']} - {self._weather_data['condition_text']} - Humidity {self._weather_data['humidity']}\nPressure {self._weather_data['pressure']} - Visibility {self._weather_data['vis']} - Cloud {self._weather_data['cloud']}%\nRain chance {self._weather_data['daily_chance_of_rain']} - Snow chance {self._weather_data['daily_chance_of_snow']}"
         )
         today_label1.setProperty("class", "label")
         today_label1.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         today_label2 = QLabel(
-            f"{self._weather_data['{alert_title}']}"
-            f"{'<br>Alert expires ' + self._weather_data['{alert_end_date}'] if self._weather_data['{alert_end_date}'] else ''}"
-            f"<br>{self._weather_data['{alert_desc}']}"
+            f"{self._weather_data['alert_title']}"
+            f"{'<br>Alert expires ' + self._weather_data['alert_end_date'] if self._weather_data['alert_end_date'] else ''}"
+            f"<br>{self._weather_data['alert_desc']}"
         )
         today_label2.setProperty("class", "label alert")
         today_label2.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -217,7 +217,7 @@ class WeatherWidget(BaseWidget):
 
         layout_today.addWidget(today_label0)
         layout_today.addWidget(today_label1)
-        if self.config.show_alerts and self._weather_data["{alert_title}"] and self._weather_data["{alert_desc}"]:
+        if self.config.show_alerts and self._weather_data["alert_title"] and self._weather_data["alert_desc"]:
             layout_today.addWidget(today_label2)
 
         @pyqtSlot(int)
@@ -270,18 +270,18 @@ class WeatherWidget(BaseWidget):
             frame_day.setProperty("class", "weather-card-day")
             if i == 0:
                 name = "Today"
-                min_temp = self._weather_data["{min_temp}"]
-                max_temp = self._weather_data["{max_temp}"]
+                min_temp = self._weather_data["min_temp"]
+                max_temp = self._weather_data["max_temp"]
             else:
-                name = self._weather_data[f"{{day{i}_name}}"]
-                min_temp = self._weather_data[f"{{day{i}_min_temp}}"]
-                max_temp = self._weather_data[f"{{day{i}_max_temp}}"]
+                name = self._weather_data[f"day{i}_name"]
+                min_temp = self._weather_data[f"day{i}_min_temp"]
+                max_temp = self._weather_data[f"day{i}_max_temp"]
             row_day_label = QLabel(f"{name}\nMin: {min_temp}\nMax: {max_temp}", frame_day)
             row_day_label.setProperty("class", "label")
 
             # Create the icon label and pixmap
             row_day_icon_label = QLabel(frame_day)
-            icon_url = self._weather_data[f"{{day{i}_icon}}"]
+            icon_url = self._weather_data[f"day{i}_icon"]
             icon_data_day = self._icon_fetcher.get_icon(icon_url)
             if bool(icon_data_day):
                 self._set_pixmap(row_day_icon_label, icon_data_day)
@@ -408,18 +408,18 @@ class WeatherWidget(BaseWidget):
 
         active_widgets = self._show_alt_label and self._widgets_alt or self._widgets
         active_label_content = self._show_alt_label and self._label_alt_content or self._label_content
+        active_label_content = active_label_content.format_map(self._weather_data)
         label_parts = re.split(r"(<span.*?>.*?</span>)", active_label_content)
-        label_parts = [part for part in label_parts if part]
 
         if self.config.tooltip:
             tooltip = (
-                f"<strong>{self._weather_data['{location}']}</strong><br><br>Temperature<br>"
-                f"Min {self._weather_data['{min_temp}']} / Max {self._weather_data['{max_temp}']}"
+                f"<strong>{self._weather_data['location']}</strong><br><br>Temperature<br>"
+                f"Min {self._weather_data['min_temp']} / Max {self._weather_data['max_temp']}"
             )
 
             try:
-                rain = self._weather_data["{hourly_chance_of_rain}"]
-                snow = self._weather_data["{hourly_chance_of_snow}"]
+                rain = self._weather_data["hourly_chance_of_rain"]
+                snow = self._weather_data["hourly_chance_of_snow"]
 
                 if rain != "N/A" and snow != "N/A" and (float(rain.rstrip("%")) > 0 or float(snow.rstrip("%")) > 0):
                     precip: list[str] = []
@@ -438,8 +438,6 @@ class WeatherWidget(BaseWidget):
         try:
             for part in label_parts:
                 part = part.strip()
-                for option, value in self._weather_data.items():
-                    part = part.replace(option, str(value))
                 if not part or widget_index >= len(active_widgets):
                     continue
                 if "<span" in part and "</span>" in part:
@@ -449,7 +447,7 @@ class WeatherWidget(BaseWidget):
                     if update_class:
                         # Retrieve current class and append new class based on weather conditions
                         current_class = active_widgets[widget_index].property("class") or ""
-                        append_class_icon = self._weather_data.get("{icon_class}", "")
+                        append_class_icon = self._weather_data.get("icon_class", "")
                         # Create the new class string
                         new_class = f"{current_class} {append_class_icon}"
                         active_widgets[widget_index].setProperty("class", new_class)
@@ -539,54 +537,54 @@ class WeatherWidget(BaseWidget):
 
             self._weather_data = {
                 # Current conditions
-                "{temp}": self._format_temp(current.temp_f, current.temp_c),
-                "{feelslike}": self._format_temp(current.feelslike_f, current.feelslike_c),
-                "{humidity}": f"{current.humidity}%",
-                "{cloud}": current.cloud,
+                "temp": self._format_temp(current.temp_f, current.temp_c),
+                "feelslike": self._format_temp(current.feelslike_f, current.feelslike_c),
+                "humidity": f"{current.humidity}%",
+                "cloud": current.cloud,
                 # Forecast today
-                "{min_temp}": self._format_temp(forecast.mintemp_f, forecast.mintemp_c),
-                "{max_temp}": self._format_temp(forecast.maxtemp_f, forecast.maxtemp_c),
+                "min_temp": self._format_temp(forecast.mintemp_f, forecast.mintemp_c),
+                "max_temp": self._format_temp(forecast.maxtemp_f, forecast.maxtemp_c),
                 # Rain/Snow chances (daily)
-                "{daily_chance_of_rain}": f"{forecast.daily_chance_of_rain}%",
-                "{daily_chance_of_snow}": f"{forecast.daily_chance_of_snow}%",
+                "daily_chance_of_rain": f"{forecast.daily_chance_of_rain}%",
+                "daily_chance_of_snow": f"{forecast.daily_chance_of_snow}%",
                 # Rain/Snow chances (hourly)
-                "{hourly_chance_of_rain}": f"{hourly_rain}%",
-                "{hourly_chance_of_snow}": f"{hourly_snow}%",
+                "hourly_chance_of_rain": f"{hourly_rain}%",
+                "hourly_chance_of_snow": f"{hourly_snow}%",
                 # Location and conditions
-                "{location}": location.name,
-                "{location_region}": location.region,
-                "{location_country}": location.country,
-                "{time_zone}": location.tz_id,
-                "{localtime}": location.localtime,
-                "{conditions}": conditions_data,
-                "{condition_text}": weather_text,
-                "{is_day}": "Day" if current.is_day else "Night",
+                "location": location.name,
+                "location_region": location.region,
+                "location_country": location.country,
+                "time_zone": location.tz_id,
+                "localtime": location.localtime,
+                "conditions": conditions_data,
+                "condition_text": weather_text,
+                "is_day": "Day" if current.is_day else "Night",
                 # Icons
-                "{icon}": weather_icon_string,
-                "{icon_class}": weather_icon_string,
-                "{day0_icon}": f"http:{forecast.condition.icon}",
+                "icon": weather_icon_string,
+                "icon_class": weather_icon_string,
+                "day0_icon": f"http:{forecast.condition.icon}",
                 # Wind data
-                "{wind}": self._format_measurement(current.wind_mph, "mph", current.wind_kph, "km/h"),
-                "{wind_dir}": current.wind_dir,
-                "{wind_degree}": current.wind_degree,
+                "wind": self._format_measurement(current.wind_mph, "mph", current.wind_kph, "km/h"),
+                "wind_dir": current.wind_dir,
+                "wind_degree": current.wind_degree,
                 # Other measurements
-                "{pressure}": self._format_measurement(current.pressure_in, "in", current.pressure_mb, "mb"),
-                "{precip}": self._format_measurement(current.precip_in, "in", current.precip_mm, "mm"),
-                "{vis}": self._format_measurement(current.vis_miles, "mi", current.vis_km, "km"),
-                "{uv}": current.uv,
+                "pressure": self._format_measurement(current.pressure_in, "in", current.pressure_mb, "mb"),
+                "precip": self._format_measurement(current.precip_in, "in", current.precip_mm, "mm"),
+                "vis": self._format_measurement(current.vis_miles, "mi", current.vis_km, "km"),
+                "uv": current.uv,
                 # Future forecasts
-                "{day1_name}": self._format_date_string(fc_day1.date),
-                "{day1_min_temp}": self._format_temp(fc_day1.day.mintemp_f, fc_day1.day.mintemp_c),
-                "{day1_max_temp}": self._format_temp(fc_day1.day.maxtemp_f, fc_day1.day.maxtemp_c),
-                "{day1_icon}": f"http:{fc_day1.day.condition.icon}",
-                "{day2_name}": self._format_date_string(fc_day2.date),
-                "{day2_min_temp}": self._format_temp(fc_day2.day.mintemp_f, fc_day2.day.mintemp_c),
-                "{day2_max_temp}": self._format_temp(fc_day2.day.maxtemp_f, fc_day2.day.maxtemp_c),
-                "{day2_icon}": f"http:{fc_day2.day.condition.icon}",
+                "day1_name": self._format_date_string(fc_day1.date),
+                "day1_min_temp": self._format_temp(fc_day1.day.mintemp_f, fc_day1.day.mintemp_c),
+                "day1_max_temp": self._format_temp(fc_day1.day.maxtemp_f, fc_day1.day.maxtemp_c),
+                "day1_icon": f"http:{fc_day1.day.condition.icon}",
+                "day2_name": self._format_date_string(fc_day2.date),
+                "day2_min_temp": self._format_temp(fc_day2.day.mintemp_f, fc_day2.day.mintemp_c),
+                "day2_max_temp": self._format_temp(fc_day2.day.maxtemp_f, fc_day2.day.maxtemp_c),
+                "day2_icon": f"http:{fc_day2.day.condition.icon}",
                 # Alerts
-                "{alert_title}": first_alert.headline if first_alert and first_alert.headline else None,
-                "{alert_desc}": first_alert.desc if first_alert and first_alert.desc else None,
-                "{alert_end_date}": self._format_alert_datetime(first_alert.expires)
+                "alert_title": first_alert.headline if first_alert and first_alert.headline else None,
+                "alert_desc": first_alert.desc if first_alert and first_alert.desc else None,
+                "alert_end_date": self._format_alert_datetime(first_alert.expires)
                 if first_alert and first_alert.expires
                 else None,
             }
@@ -601,45 +599,45 @@ class WeatherWidget(BaseWidget):
             self._has_valid_weather_data = False
             if self._weather_data is None:
                 self._weather_data = {
-                    "{temp}": "N/A",
-                    "{min_temp}": "N/A",
-                    "{max_temp}": "N/A",
-                    "{daily_chance_of_rain}": "N/A",
-                    "{daily_chance_of_snow}": "N/A",
-                    "{hourly_chance_of_rain}": "N/A",
-                    "{hourly_chance_of_snow}": "N/A",
-                    "{location}": "N/A",
-                    "{location_region}": "N/A",
-                    "{location_country}": "N/A",
-                    "{time_zone}": "N/A",
-                    "{localtime}": "N/A",
-                    "{humidity}": "N/A",
-                    "{is_day}": "N/A",
-                    "{day0_icon}": "N/A",
-                    "{icon}": "N/A",
-                    "{icon_class}": "N/A",
-                    "{conditions}": "N/A",
-                    "{condition_text}": "N/A",
-                    "{wind}": "N/A",
-                    "{wind_dir}": "N/A",
-                    "{wind_degree}": "N/A",
-                    "{pressure}": "N/A",
-                    "{precip}": "N/A",
-                    "{uv}": "N/A",
-                    "{vis}": "N/A",
-                    "{cloud}": "N/A",
-                    "{feelslike}": "N/A",
-                    "{day1_name}": "N/A",
-                    "{day1_min_temp}": "N/A",
-                    "{day1_max_temp}": "N/A",
-                    "{day1_icon}": "N/A",
-                    "{day2_name}": "N/A",
-                    "{day2_min_temp}": "N/A",
-                    "{day2_max_temp}": "N/A",
-                    "{day2_icon}": "N/A",
-                    "{alert_title}": None,
-                    "{alert_desc}": None,
-                    "{alert_end_date}": None,
+                    "temp": "N/A",
+                    "min_temp": "N/A",
+                    "max_temp": "N/A",
+                    "daily_chance_of_rain": "N/A",
+                    "daily_chance_of_snow": "N/A",
+                    "hourly_chance_of_rain": "N/A",
+                    "hourly_chance_of_snow": "N/A",
+                    "location": "N/A",
+                    "location_region": "N/A",
+                    "location_country": "N/A",
+                    "time_zone": "N/A",
+                    "localtime": "N/A",
+                    "humidity": "N/A",
+                    "is_day": "N/A",
+                    "day0_icon": "N/A",
+                    "icon": "N/A",
+                    "icon_class": "N/A",
+                    "conditions": "N/A",
+                    "condition_text": "N/A",
+                    "wind": "N/A",
+                    "wind_dir": "N/A",
+                    "wind_degree": "N/A",
+                    "pressure": "N/A",
+                    "precip": "N/A",
+                    "uv": "N/A",
+                    "vis": "N/A",
+                    "cloud": "N/A",
+                    "feelslike": "N/A",
+                    "day1_name": "N/A",
+                    "day1_min_temp": "N/A",
+                    "day1_max_temp": "N/A",
+                    "day1_icon": "N/A",
+                    "day2_name": "N/A",
+                    "day2_min_temp": "N/A",
+                    "day2_max_temp": "N/A",
+                    "day2_icon": "N/A",
+                    "alert_title": None,
+                    "alert_desc": None,
+                    "alert_end_date": None,
                 }
 
 

@@ -11,10 +11,7 @@ from win32con import WM_INPUTLANGCHANGEREQUEST
 
 from core.utils.utilities import PopupWidget, refresh_widget_style
 from core.utils.widgets.animation_manager import AnimationManager
-from core.utils.win32.bindings import (
-    kernel32,
-    user32,
-)
+from core.utils.win32.bindings import kernel32, user32
 from core.utils.win32.constants import (
     LOCALE_NAME_MAX_LENGTH,
     LOCALE_SCOUNTRY,
@@ -85,14 +82,14 @@ class LanguageWidget(BaseWidget):
     def _update_label(self):
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
         active_label_content = self.config.label_alt if self._show_alt_label else self.config.label
-        label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
-        label_parts = [part for part in label_parts if part]
         widget_index = 0
         prev_caps_lock = self._caps_lock_active
         try:
-            lang = self._get_current_keyboard_language()
+            active_label_content = active_label_content.format(lang=self._get_current_keyboard_language())
         except:
-            lang = None
+            pass
+
+        label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
 
         if self._caps_lock_active != prev_caps_lock:
             if self._caps_lock_active:
@@ -110,8 +107,7 @@ class LanguageWidget(BaseWidget):
                     active_widgets[widget_index].setText(icon)
                 else:
                     # Update label with formatted content
-                    formatted_text = part.format(lang=lang) if lang else part
-                    active_widgets[widget_index].setText(formatted_text)
+                    active_widgets[widget_index].setText(part)
                 widget_index += 1
 
     def _on_settings_click(self, ev: QMouseEvent | None):
