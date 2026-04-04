@@ -201,11 +201,12 @@ class GithubWidget(BaseWidget):
 
     def _update_label(self):
         github_data = GitHubDataManager.get_data()
-        notification_count = len([notification for notification in github_data if notification["unread"]])
+        notification_count = sum(notification["unread"] for notification in github_data)
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
         active_label_content = self.config.label_alt if self._show_alt_label else self.config.label
+        active_label_content = active_label_content.format(data=notification_count)
         # Split label content and filter out empty parts
-        label_parts = [part.strip() for part in re.split(r"(<span.*?>.*?</span>)", active_label_content) if part]
+        label_parts = re.split(r"(<span.*?>.*?</span>)", active_label_content)
 
         # Setting the notification dot if enabled and the label exists
         if self.config.notification_dot.enabled:
@@ -214,8 +215,14 @@ class GithubWidget(BaseWidget):
             if self._show_alt_label and self._notification_label_alt is not None:
                 self._notification_label_alt.show_dot(notification_count > 0)
 
-        for widget_index, part in enumerate(label_parts):
+        widget_index = 0
+
+        for part in label_parts:
             if widget_index >= len(active_widgets):
+                break
+
+            part = part.strip()
+            if not part:
                 continue
 
             current_widget = active_widgets[widget_index]
@@ -236,8 +243,9 @@ class GithubWidget(BaseWidget):
                 current_widget.setProperty("class", " ".join(current_classes))
 
             else:
-                formatted_text = part.format(data=notification_count)
-                current_widget.setText(formatted_text)
+                current_widget.setText(part)
+
+            widget_index += 1
             refresh_widget_style(current_widget)
 
     def mark_as_read(self, notification_id: str, container_label: QFrame) -> None:

@@ -153,24 +153,23 @@ class MemoryWidget(BaseWidget):
 
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
         active_label_content = self.config.label_alt if self._show_alt_label else self.config.label
-        label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
-        label_parts = [part for part in label_parts if part]
         widget_index = 0
 
         _round = lambda value: round(value) if self.config.hide_decimal else value
         _naturalsize = lambda value: naturalsize(value, True, True, "%.0f" if self.config.hide_decimal else "%.1f")
-        label_options = {
-            "{virtual_mem_free}": _naturalsize(virtual_mem.free),
-            "{virtual_mem_percent}": _round(virtual_mem.percent),
-            "{virtual_mem_total}": _naturalsize(virtual_mem.total),
-            "{virtual_mem_avail}": _naturalsize(virtual_mem.available),
-            "{virtual_mem_used}": _naturalsize(virtual_mem.used),
-            "{virtual_mem_outof}": f"{_naturalsize(virtual_mem.used)} / {_naturalsize(virtual_mem.total)}",
-            "{swap_mem_free}": _naturalsize(swap_mem.free),
-            "{swap_mem_percent}": _round(swap_mem.percent),
-            "{swap_mem_total}": _naturalsize(swap_mem.total),
-            "{histogram}": "".join([self._get_histogram_bar(virtual_mem.percent, 0, 100)]),
-        }
+
+        active_label_content = active_label_content.format(
+            virtual_mem_free=_naturalsize(virtual_mem.free),
+            virtual_mem_percent=_round(virtual_mem.percent),
+            virtual_mem_total=_naturalsize(virtual_mem.total),
+            virtual_mem_avail=_naturalsize(virtual_mem.available),
+            virtual_mem_used=_naturalsize(virtual_mem.used),
+            virtual_mem_outof=f"{_naturalsize(virtual_mem.used)} / {_naturalsize(virtual_mem.total)}",
+            swap_mem_free=_naturalsize(swap_mem.free),
+            swap_mem_percent=_round(swap_mem.percent),
+            swap_mem_total=_naturalsize(swap_mem.total),
+            histogram="".join([self._get_histogram_bar(virtual_mem.percent, 0, 100)]),
+        )
 
         if self.config.progress_bar.enabled and self.progress_widget:
             if self._widget_container_layout.indexOf(self.progress_widget) == -1:
@@ -180,10 +179,12 @@ class MemoryWidget(BaseWidget):
                 )
             self.progress_widget.set_value(virtual_mem.percent)
 
+        virtual_memory_threshold_class = self._get_virtual_memory_threshold(virtual_mem.percent)
+
+        label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
+
         for part in label_parts:
             part = part.strip()
-            for fmt_str, value in label_options.items():
-                part = part.replace(fmt_str, str(value))
 
             if part and widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
                 if "<span" in part and "</span>" in part:
@@ -194,7 +195,7 @@ class MemoryWidget(BaseWidget):
                     # Set memory threshold as property
                     label_class = "label alt" if self._show_alt_label else "label"
                     active_widgets[widget_index].setProperty(
-                        "class", f"{label_class} status-{self._get_virtual_memory_threshold(virtual_mem.percent)}"
+                        "class", f"{label_class} status-{virtual_memory_threshold_class}"
                     )
                     refresh_widget_style(active_widgets[widget_index])
                 widget_index += 1

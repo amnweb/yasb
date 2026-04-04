@@ -164,8 +164,8 @@ class CpuWidget(BaseWidget):
 
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
         active_label_content = self.config.label_alt if self._show_alt_label else self.config.label
+        active_label_content = active_label_content.format(info=cpu_info)
         label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
-        label_parts = [part for part in label_parts if part]
         widget_index = 0
 
         if self.config.progress_bar.enabled and self.progress_widget:
@@ -176,6 +176,8 @@ class CpuWidget(BaseWidget):
                 )
             self.progress_widget.set_value(data.percent)
 
+        cpu_threshold_class = self._get_cpu_threshold(data.percent)
+
         for part in label_parts:
             part = part.strip()
             if part and widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
@@ -184,12 +186,8 @@ class CpuWidget(BaseWidget):
                     active_widgets[widget_index].setText(icon)
                 else:
                     label_class = "label alt" if self._show_alt_label else "label"
-                    formatted_text = part.format(info=cpu_info)
-                    active_widgets[widget_index].setText(formatted_text)
-                    active_widgets[widget_index].setProperty("class", label_class)
-                    active_widgets[widget_index].setProperty(
-                        "class", f"{label_class} status-{self._get_cpu_threshold(data.percent)}"
-                    )
+                    active_widgets[widget_index].setText(part)
+                    active_widgets[widget_index].setProperty("class", f"{label_class} status-{cpu_threshold_class}")
                     refresh_widget_style(active_widgets[widget_index])
                 widget_index += 1
 

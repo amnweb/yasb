@@ -134,6 +134,8 @@ class BatteryWidget(BaseWidget):
                 self.timer.stop()
                 return
 
+            label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
+
             for part in label_parts:
                 part = part.strip()
                 if widget_index < len(active_widgets):
@@ -161,28 +163,30 @@ class BatteryWidget(BaseWidget):
         health_str = f"{state.health_percent:.1f}" if state.health_percent is not None else "N/A"
         chemistry_str = state.chemistry if state.chemistry else "N/A"
 
+        active_label_content = active_label_content.format(
+            percent=str(self._battery_state.percent),
+            time_remaining=time_remaining,
+            is_charging=is_charging_str,
+            icon=charging_icon,
+            power=rate_str,
+            voltage=voltage_str,
+            capacity=capacity_str,
+            full_capacity=full_capacity_str,
+            designed_capacity=designed_capacity_str,
+            temperature=temperature_str,
+            cycle_count=cycle_count_str,
+            health=health_str,
+            chemistry=chemistry_str,
+        )
+        label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
+
         for part in label_parts:
             part = part.strip()
-            if part and widget_index < len(active_widgets):
-                battery_status = (
-                    part.replace("{percent}", str(self._battery_state.percent))
-                    .replace("{time_remaining}", time_remaining)
-                    .replace("{is_charging}", is_charging_str)
-                    .replace("{icon}", charging_icon)
-                    .replace("{power}", rate_str)
-                    .replace("{voltage}", voltage_str)
-                    .replace("{capacity}", capacity_str)
-                    .replace("{full_capacity}", full_capacity_str)
-                    .replace("{designed_capacity}", designed_capacity_str)
-                    .replace("{temperature}", temperature_str)
-                    .replace("{cycle_count}", cycle_count_str)
-                    .replace("{health}", health_str)
-                    .replace("{chemistry}", chemistry_str)
-                )
-                if "<span" in battery_status and "</span>" in battery_status:
+            if part and widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
+                if "<span" in part and "</span>" in part:
                     # icon-only QLabel
                     widget_label = active_widgets[widget_index]
-                    icon = re.sub(r"<span.*?>|</span>", "", battery_status).strip()
+                    icon = re.sub(r"<span.*?>|</span>", "", part).strip()
                     widget_label.setText(icon)
                     # apply status‐class
                     existing_classes = widget_label.property("class")
@@ -207,8 +211,7 @@ class BatteryWidget(BaseWidget):
                             refresh_widget_style(widget_label)
                 else:
                     alt_class = "alt" if self._show_alt_label else ""
-                    formatted_text = battery_status.format(battery_status)
-                    active_widgets[widget_index].setText(formatted_text)
+                    active_widgets[widget_index].setText(part)
                     active_widgets[widget_index].setProperty("class", f"label {alt_class} status-{threshold}")
                     refresh_widget_style(active_widgets[widget_index])
                 widget_index += 1

@@ -485,10 +485,27 @@ class ClockWidget(BaseWidget):
         # Choose which label set to update (primary or alternate)
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
         active_label_content = self._label_alt_content if self._show_alt_label else self._label_content
-        label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
-        label_parts = [part for part in label_parts if part]
         widget_index = 0
         now = datetime.now(ZoneInfo(self._active_tz)) if self._active_tz else datetime.now().astimezone()
+
+        # Finding the datetime format string in the label using keyerror exception.
+        # This code assumes that there's only 1 time format placeholder in the label.
+        try:
+            active_label_content.format(icon="", alarm="", timedata=now)
+        except KeyError as ke:
+            # Remove the quotes around the exception message to get the datetime format.
+            datetime_format = str(ke)[1:-1]
+
+            datetime_format_idx = active_label_content.find(datetime_format)
+            closing_braces_idx = active_label_content.find("}", datetime_format_idx + len(datetime_format))
+            datetime_format = active_label_content[datetime_format_idx:closing_braces_idx]
+
+            active_label_content = (
+                active_label_content[: datetime_format_idx - 1]
+                + now.strftime(datetime_format)
+                + active_label_content[closing_braces_idx + 1 :]
+            )
+
         current_hour = f"{now.hour:02d}"
         current_minute = f"{now.minute:02d}"
         hour_changed = self._current_hour != current_hour
@@ -497,6 +514,9 @@ class ClockWidget(BaseWidget):
             self._current_hour = current_hour
         if minute_changed:
             self._current_minute = current_minute
+
+        has_alarm = self._shared_state._snoozed_alarms or self._has_enabled_alarms()
+        alarm_state_changed = has_alarm != self._previous_alarm_state
 
         # Temporarily switch locale so strftime outputs are localized
         org_locale_time, org_locale_ctype = self._set_locale_context()
@@ -513,75 +533,77 @@ class ClockWidget(BaseWidget):
                 self._timer_label.hide()
                 self._timer_visible = False
 
+        clock_icon = self._get_icon_for_hour(now.hour)
+        hour_class = f"clock_{current_hour}"
+        alarm_icon = alarm_class = ""
+
+        if self._shared_state._snoozed_alarms:
+            alarm_class = "icon alarm snooze"
+            alarm_icon = self.config.alarm_icons.snooze
+
+        elif self._has_enabled_alarms():
+            alarm_icon = self.config.alarm_icons.enabled
+            alarm_class = "icon alarm"
+
+        # The icon place holders are replaced with a span tag of the icon string, with all of its appropriate classes
+        # assigned to it.
+        label_content_values = {
+            "icon": f'<span class="{hour_class}">{clock_icon}</span>',
+            "alarm": f'<span class="{alarm_class}">{alarm_icon}</span>',
+            "timedata": now,
+        }
+
+        active_label_content = active_label_content.format_map(label_content_values)
+
+        # If any of the icon placeholders are already in a span tag, then flatten the 2 layers of nested span tags, and
+        # merge their classes into one span tag, before sending them for parsing.
+        active_label_content = re.sub(
+            r'<span(?: class=([\'"])(?P<class_name>[\w -]*)\1)?><span class=([\'"])(?P<class_name2>[\w -]*)\3>(?P<label_name>.*?)</span></span>',
+            r'<span class="\g<class_name> \g<class_name2>">\g<label_name></span>',
+            active_label_content,
+        )
+
+        label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
+
         for part in label_parts:
-            part = part.strip()
-            if part and widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
+            if not part:
+                continue
+
+            if widget_index < len(active_widgets):
+                active_widget = active_widgets[widget_index]
+            else:
+                active_widget = label = QLabel(part)
+                label.setProperty("class", "label alt" if self._show_alt_label else "label")
+                label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                label.setCursor(Qt.CursorShape.PointingHandCursor)
+                content_shadow = self.config.label_shadow.model_dump()
+                if content_shadow:
+                    add_shadow(label, content_shadow)
+                self._widget_container_layout.addWidget(label)
+                active_widgets.append(label)
+
+            if isinstance(active_widget, QLabel):
                 if "<span" in part and "</span>" in part:
+                    match = re.search(r'<span class=([\'"])(?P<class_name>[\w -]*)\1>[^>]*</span>', part)
+                    classes = match.group("class_name").strip() or ""
+
                     icon_placeholder = re.sub(r"<span.*?>|</span>", "", part).strip()
-                    if icon_placeholder == "{icon}":
-                        if hour_changed:
-                            icon = self._get_icon_for_hour(now.hour)
-                            active_widgets[widget_index].setText(icon)
-                            hour_class = f"clock_{current_hour}"
-                            active_widgets[widget_index].setProperty("class", f"icon {hour_class}")
-                            refresh_widget_style(active_widgets[widget_index])
-                    elif icon_placeholder == "{alarm}":
-                        if self._shared_state._snoozed_alarms:
-                            active_widgets[widget_index].setText(self.config.alarm_icons.snooze)
-                            active_widgets[widget_index].setProperty("class", "icon alarm snooze")
-                            active_widgets[widget_index].setVisible(True)
-                            refresh_widget_style(active_widgets[widget_index])
-                        elif self._has_enabled_alarms():
-                            active_widgets[widget_index].setText(self.config.alarm_icons.enabled)
-                            active_widgets[widget_index].setProperty("class", "icon alarm")
-                            active_widgets[widget_index].setVisible(True)
-                            refresh_widget_style(active_widgets[widget_index])
-                        else:
-                            active_widgets[widget_index].setText("")
-                            active_widgets[widget_index].setVisible(False)
+                    active_widget.setText(icon_placeholder)
+                    active_widget.setProperty("class", classes)
+                    refresh_widget_style(active_widget)
 
-                    else:
-                        active_widgets[widget_index].setText(icon_placeholder)
                 else:
-                    has_alarm = "{alarm}" in part and (self._shared_state._snoozed_alarms or self._has_enabled_alarms())
-
-                    if "{icon}" in part:
-                        icon = self._get_icon_for_hour(now.hour)
-                        part = part.replace("{icon}", icon)
-
-                    if "{alarm}" in part:
-                        if self._shared_state._snoozed_alarms:
-                            part = part.replace("{alarm}", self.config.alarm_icons.snooze)
-                        elif self._has_enabled_alarms():
-                            part = part.replace("{alarm}", self.config.alarm_icons.enabled)
-                        else:
-                            part = part.replace("{alarm}", "")
-                    try:
-                        datetime_format_search = re.search(r"\{(.*)}", part)
-                        datetime_format_str = datetime_format_search.group()
-                        datetime_format = datetime_format_search.group(1)
-                        format_label_content = part.replace(datetime_format_str, now.strftime(datetime_format))
-                    except Exception:
-                        format_label_content = part
-
-                    active_widgets[widget_index].setText(format_label_content)
-
-                    alarm_state_changed = has_alarm != self._previous_alarm_state
-                    if has_alarm:
-                        if self._shared_state._snoozed_alarms:
-                            active_widgets[widget_index].setProperty("class", "label alarm snooze")
-                        else:
-                            active_widgets[widget_index].setProperty("class", "label alarm")
-                        refresh_widget_style(active_widgets[widget_index])
-                    else:
-                        hour_class = f"clock_{current_hour}"
-                        active_widgets[widget_index].setProperty("class", f"label {hour_class}")
-                        if hour_changed or alarm_state_changed:
-                            refresh_widget_style(active_widgets[widget_index])
-
-                    self._previous_alarm_state = has_alarm
+                    active_widget.setText(part)
+                    if hour_changed or alarm_state_changed:
+                        refresh_widget_style(active_widget)
+                active_widget.setVisible(True)
                 widget_index += 1
 
+        while widget_index < len(active_widgets):
+            active_widgets[widget_index].setVisible(False)
+            widget_index += 1
+
+        self._previous_alarm_state = has_alarm
         self._restore_locale_context(org_locale_time, org_locale_ctype)
 
     def _update_tooltip(self):

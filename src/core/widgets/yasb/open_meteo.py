@@ -410,7 +410,7 @@ class OpenMeteoWidget(BaseWidget):
         frame_today.setProperty("class", "open-meteo-card-today")
         layout_today = QVBoxLayout(frame_today)
 
-        today_label0 = QLabel(f"{self._weather_data['{location}']} {self._weather_data['{temp}']}")
+        today_label0 = QLabel(f"{self._weather_data['location']} {self._weather_data['temp']}")
         today_label0.setProperty("class", "label location")
         today_label0.setAlignment(Qt.AlignmentFlag.AlignCenter)
         today_label0.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -427,12 +427,12 @@ class OpenMeteoWidget(BaseWidget):
 
         sunrise_icon_label = QLabel(self.config.icons.sunnyDay)
         sunrise_icon_label.setProperty("class", "label sunrisesunset-icon")
-        sunrise_text_label = QLabel(f"{self._weather_data.get('{sunrise}', 'N/A')}")
+        sunrise_text_label = QLabel(f"{self._weather_data.get('sunrise', 'N/A')}")
         sunrise_text_label.setProperty("class", "label sunrisesunset")
 
         sunset_icon_label = QLabel(self.config.icons.clearNight)
         sunset_icon_label.setProperty("class", "label sunrisesunset-icon")
-        sunset_text_label = QLabel(f"{self._weather_data.get('{sunset}', 'N/A')}")
+        sunset_text_label = QLabel(f"{self._weather_data.get('sunset', 'N/A')}")
         sunset_text_label.setProperty("class", "label sunrisesunset")
 
         today_sunrise_sunset_container_layout.addWidget(sunrise_icon_label)
@@ -441,8 +441,8 @@ class OpenMeteoWidget(BaseWidget):
         today_sunrise_sunset_container_layout.addWidget(sunset_icon_label)
         today_sunrise_sunset_container_layout.addWidget(sunset_text_label)
 
-        rain_c = self._weather_data.get("{rain_chance}", 0)
-        snow_c = self._weather_data.get("{snow_chance}", 0)
+        rain_c = self._weather_data.get("rain_chance", 0)
+        snow_c = self._weather_data.get("snow_chance", 0)
         precip_parts = []
         if rain_c != "N/A" and isinstance(rain_c, (int, float)) and rain_c > 0:
             precip_parts.append(f"Rain chance {rain_c}%")
@@ -455,13 +455,13 @@ class OpenMeteoWidget(BaseWidget):
             precip_str = " \u2022 ".join(precip_parts) + " \u2022 "
 
         today_label1 = QLabel(
-            f"Feels like {self._weather_data['{feelslike}']} \u2022 "
-            f"{self._weather_data['{condition_text}']} \u2022 "
-            f"Humidity {self._weather_data['{humidity}']} \u2022 "
-            f"Pressure {self._weather_data['{pressure}']}\n"
-            f"Cloud {self._weather_data['{cloud}']}% \u2022 "
+            f"Feels like {self._weather_data['feelslike']} \u2022 "
+            f"{self._weather_data['condition_text']} \u2022 "
+            f"Humidity {self._weather_data['humidity']} \u2022 "
+            f"Pressure {self._weather_data['pressure']}\n"
+            f"Cloud {self._weather_data['cloud']}% \u2022 "
             f"{precip_str}"
-            f"UV Index {self._weather_data['{uv}']}"
+            f"UV Index {self._weather_data['uv']}"
         )
         today_label1.setProperty("class", "label")
         today_label1.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -519,9 +519,9 @@ class OpenMeteoWidget(BaseWidget):
             elif i == 1:
                 day_text = "Tomorrow"
             else:
-                day_text = self._weather_data.get(f"{{day{i}_full_name}}", "")
-            min_temp = self._weather_data[f"{{day{i}_min_temp}}"]
-            max_temp = self._weather_data[f"{{day{i}_max_temp}}"]
+                day_text = self._weather_data.get(f"day{i}_full_name", "")
+            min_temp = self._weather_data[f"day{i}_min_temp"]
+            max_temp = self._weather_data[f"day{i}_max_temp"]
 
             # Main vertical layout
             layout_day = QVBoxLayout()
@@ -532,7 +532,7 @@ class OpenMeteoWidget(BaseWidget):
 
             # 1. Weather icon
             row_day_icon_label = QLabel()
-            day_code = self._weather_data.get(f"{{day{i}_weather_code}}", 0)
+            day_code = self._weather_data.get(f"day{i}_weather_code", 0)
             _, icon_key, _ = get_weather_icon(int(day_code), True)
             dpr = row_day_icon_label.devicePixelRatioF()
             pixmap = get_weather_icon_pixmap(icon_key, self.config.weather_card.icon_size, dpr)
@@ -681,30 +681,30 @@ class OpenMeteoWidget(BaseWidget):
 
         active_widgets = self._show_alt_label and self._widgets_alt or self._widgets
         active_label_content = self._show_alt_label and self._label_alt_content or self._label_content
+        active_label_content = active_label_content.format_map(self._weather_data)
         label_parts = re.split(r"(<span.*?>.*?</span>)", active_label_content)
-        label_parts = [part for part in label_parts if part]
 
         if self.config.tooltip:
             tooltip = (
-                f"<strong>{self._weather_data['{location}']}</strong><br><br>Temperature<br>"
-                f"Min {self._weather_data['{min_temp}']} / Max {self._weather_data['{max_temp}']}"
+                f"<strong>{self._weather_data['location']}</strong><br><br>Temperature<br>"
+                f"Min {self._weather_data['min_temp']} / Max {self._weather_data['max_temp']}"
             )
             set_tooltip(self, tooltip)
 
         widget_index = 0
         try:
             for part in label_parts:
+                if widget_index >= len(active_widgets):
+                    break
                 part = part.strip()
-                for option, value in self._weather_data.items():
-                    part = part.replace(option, str(value))
-                if not part or widget_index >= len(active_widgets):
+                if not part:
                     continue
                 if "<span" in part and "</span>" in part:
                     icon_name = re.sub(r"<span.*?>|</span>", "", part).strip()
                     active_widgets[widget_index].setText(self.config.icons.model_dump().get(icon_name, icon_name))
                     if update_class:
                         current_class = active_widgets[widget_index].property("class") or ""
-                        append_class_icon = self._weather_data.get("{icon_class}", "")
+                        append_class_icon = self._weather_data.get("icon_class", "")
                         new_class = f"{current_class} {append_class_icon}"
                         active_widgets[widget_index].setProperty("class", new_class)
                         self._reload_css(active_widgets[widget_index])
@@ -841,30 +841,30 @@ class OpenMeteoWidget(BaseWidget):
 
             self._weather_data = {
                 # Current conditions
-                "{temp}": fmt_temp(current.get("temperature_2m", 0)),
-                "{feelslike}": fmt_temp(current.get("apparent_temperature", 0)),
-                "{humidity}": f"{current.get('relative_humidity_2m', 0)}%",
-                "{cloud}": current.get("cloud_cover", 0),
-                "{pressure}": f"{current.get('pressure_msl', 0)} hPa",
-                "{precipitation}": f"{current.get('precipitation', 0)} mm",
-                "{wind}": fmt_wind(current.get("wind_speed_10m", 0)),
-                "{wind_dir}": f"{current.get('wind_direction_10m', 0)}°",
-                "{is_day}": "Day" if is_day else "Night",
-                "{condition_text}": condition_text,
-                "{icon}": icon_class,
-                "{icon_class}": icon_class,
+                "temp": fmt_temp(current.get("temperature_2m", 0)),
+                "feelslike": fmt_temp(current.get("apparent_temperature", 0)),
+                "humidity": f"{current.get('relative_humidity_2m', 0)}%",
+                "cloud": current.get("cloud_cover", 0),
+                "pressure": f"{current.get('pressure_msl', 0)} hPa",
+                "precipitation": f"{current.get('precipitation', 0)} mm",
+                "wind": fmt_wind(current.get("wind_speed_10m", 0)),
+                "wind_dir": f"{current.get('wind_direction_10m', 0)}°",
+                "is_day": "Day" if is_day else "Night",
+                "condition_text": condition_text,
+                "icon": icon_class,
+                "icon_class": icon_class,
                 # Location
-                "{location}": location_name,
+                "location": location_name,
                 # Sunrise / Sunset
-                "{sunrise}": self._format_time(daily.get("sunrise", [""])[0]) if daily.get("sunrise") else "N/A",
-                "{sunset}": self._format_time(daily.get("sunset", [""])[0]) if daily.get("sunset") else "N/A",
+                "sunrise": self._format_time(daily.get("sunrise", [""])[0]) if daily.get("sunrise") else "N/A",
+                "sunset": self._format_time(daily.get("sunset", [""])[0]) if daily.get("sunset") else "N/A",
                 # Today forecast
-                "{min_temp}": fmt_temp(daily_min[0]) if daily_min else "N/A",
-                "{max_temp}": fmt_temp(daily_max[0]) if daily_max else "N/A",
-                "{precipitation_probability}": f"{daily_precip_max[0]}%" if daily_precip_max else "N/A",
-                "{rain_chance}": max_rain_chance,
-                "{snow_chance}": max_snow_chance,
-                "{uv}": f"{daily_uv[0]}" if daily_uv else "N/A",
+                "min_temp": fmt_temp(daily_min[0]) if daily_min else "N/A",
+                "max_temp": fmt_temp(daily_max[0]) if daily_max else "N/A",
+                "precipitation_probability": f"{daily_precip_max[0]}%" if daily_precip_max else "N/A",
+                "rain_chance": max_rain_chance,
+                "snow_chance": max_snow_chance,
+                "uv": f"{daily_uv[0]}" if daily_uv else "N/A",
             }
 
             # Per-day forecast data
@@ -880,13 +880,13 @@ class OpenMeteoWidget(BaseWidget):
                     day_short = "N/A"
                     day_full = "N/A"
                     day_number = ""
-                self._weather_data[f"{{day{i}_name}}"] = day_name
-                self._weather_data[f"{{day{i}_short_name}}"] = day_short
-                self._weather_data[f"{{day{i}_full_name}}"] = day_full
-                self._weather_data[f"{{day{i}_number}}"] = day_number
-                self._weather_data[f"{{day{i}_min_temp}}"] = fmt_temp(daily_min[i]) if i < len(daily_min) else "N/A"
-                self._weather_data[f"{{day{i}_max_temp}}"] = fmt_temp(daily_max[i]) if i < len(daily_max) else "N/A"
-                self._weather_data[f"{{day{i}_weather_code}}"] = daily_codes[i] if i < len(daily_codes) else 0
+                self._weather_data[f"day{i}_name"] = day_name
+                self._weather_data[f"day{i}_short_name"] = day_short
+                self._weather_data[f"day{i}_full_name"] = day_full
+                self._weather_data[f"day{i}_number"] = day_number
+                self._weather_data[f"day{i}_min_temp"] = fmt_temp(daily_min[i]) if i < len(daily_min) else "N/A"
+                self._weather_data[f"day{i}_max_temp"] = fmt_temp(daily_max[i]) if i < len(daily_max) else "N/A"
+                self._weather_data[f"day{i}_weather_code"] = daily_codes[i] if i < len(daily_codes) else 0
 
             self._has_valid_weather_data = True
 
@@ -898,26 +898,26 @@ class OpenMeteoWidget(BaseWidget):
             self._has_valid_weather_data = False
             if self._weather_data is None:
                 self._weather_data = {
-                    "{temp}": "N/A",
-                    "{min_temp}": "N/A",
-                    "{max_temp}": "N/A",
-                    "{precipitation_probability}": "N/A",
-                    "{location}": "N/A",
-                    "{humidity}": "N/A",
-                    "{is_day}": "N/A",
-                    "{icon}": "default",
-                    "{icon_class}": "default",
-                    "{condition_text}": "N/A",
-                    "{wind}": "N/A",
-                    "{wind_dir}": "N/A",
-                    "{pressure}": "N/A",
-                    "{precipitation}": "N/A",
-                    "{uv}": "N/A",
-                    "{cloud}": "N/A",
-                    "{feelslike}": "N/A",
+                    "temp": "N/A",
+                    "min_temp": "N/A",
+                    "max_temp": "N/A",
+                    "precipitation_probability": "N/A",
+                    "location": "N/A",
+                    "humidity": "N/A",
+                    "is_day": "N/A",
+                    "icon": "default",
+                    "icon_class": "default",
+                    "condition_text": "N/A",
+                    "wind": "N/A",
+                    "wind_dir": "N/A",
+                    "pressure": "N/A",
+                    "precipitation": "N/A",
+                    "uv": "N/A",
+                    "cloud": "N/A",
+                    "feelslike": "N/A",
                 }
                 for i in range(7):
-                    self._weather_data[f"{{day{i}_name}}"] = "N/A"
-                    self._weather_data[f"{{day{i}_min_temp}}"] = "N/A"
-                    self._weather_data[f"{{day{i}_max_temp}}"] = "N/A"
-                    self._weather_data[f"{{day{i}_weather_code}}"] = 0
+                    self._weather_data[f"day{i}_name"] = "N/A"
+                    self._weather_data[f"day{i}_min_temp"] = "N/A"
+                    self._weather_data[f"day{i}_max_temp"] = "N/A"
+                    self._weather_data[f"day{i}_weather_code"] = 0

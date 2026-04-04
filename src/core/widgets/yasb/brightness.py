@@ -148,9 +148,6 @@ class BrightnessWidget(BaseWidget):
         """Update the widget label with current brightness."""
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
         active_label_content = self.config.label_alt if self._show_alt_label else self.config.label
-        label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
-        label_parts = [part for part in label_parts if part]
-        widget_index = 0
 
         percent = self.current_brightness
         if percent is None:
@@ -165,7 +162,9 @@ class BrightnessWidget(BaseWidget):
         if self.config.tooltip:
             set_tooltip(self, f"Brightness {percent}%")
 
-        label_options = {"{icon}": icon, "{percent}": percent}
+        active_label_content = active_label_content.format(icon=icon, percent=percent)
+        label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
+        widget_index = 0
 
         # Update progress bar
         if self.config.progress_bar.enabled and self.progress_widget:
@@ -178,10 +177,7 @@ class BrightnessWidget(BaseWidget):
         for part in label_parts:
             part = part.strip()
             if part and widget_index < len(active_widgets):
-                formatted_text = part
-                for option, value in label_options.items():
-                    formatted_text = formatted_text.replace(option, str(value))
-                active_widgets[widget_index].setText(formatted_text)
+                active_widgets[widget_index].setText(part)
                 widget_index += 1
 
     def _get_brightness_icon(self, brightness: int) -> str:
