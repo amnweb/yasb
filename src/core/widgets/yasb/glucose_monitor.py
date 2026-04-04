@@ -131,16 +131,12 @@ class GlucoseMonitor(BaseWidget):
         shell_open(self.config.host)
 
     def _update_label(self) -> None:
-        for widget in self._widgets:
-            widget.setVisible(not self._error_message)
-        for widget in self._widgets_alt:
-            widget.setVisible(bool(self._error_message))
+        has_error_message = bool(self._error_message)
 
-        active_widgets = self._error_message and self._widgets_alt or self._widgets
-        active_label_content = self._error_message and self.config.error_label or self.config.label
-        label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
-        label_parts = list(filter(None, label_parts))
-        widget_index = 0
+        for widget in self._widgets:
+            widget.setVisible(not has_error_message)
+        for widget in self._widgets_alt:
+            widget.setVisible(has_error_message)
 
         format_data = (
             self._error_message
@@ -150,24 +146,33 @@ class GlucoseMonitor(BaseWidget):
             or self._status_data
         )
 
+        active_widgets = self._error_message and self._widgets_alt or self._widgets
+        active_label_content = self._error_message and self.config.error_label or self.config.label
+        active_label_content = active_label_content.format_map(format_data)
+        label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
+        widget_index = 0
+
         for part in label_parts:
+            if widget_index >= len(active_widgets):
+                break
+
             part = part.strip()
-            if not part or widget_index >= len(active_widgets) or not isinstance(active_widgets[widget_index], QLabel):
+            if not part:
                 continue
 
-            if "<span" in part and "</span>" in part:
-                icon = re.sub(r"<span.*?>|</span>", "", part).strip()
-                active_widgets[widget_index].setText(icon.format_map(format_data))
+            if isinstance(active_widgets[widget_index], QLabel):
+                if "<span" in part and "</span>" in part:
+                    icon = re.sub(r"<span.*?>|</span>", "", part).strip()
+                    active_widgets[widget_index].setText(icon)
 
-                current_class = active_widgets[widget_index].property("class") or ""
-                if "sgv" in current_class.split():
-                    new_class = self._is_sgv_in_range and "sgv in-range" or "sgv out-range"
-                    active_widgets[widget_index].setProperty("class", new_class)
-                    refresh_widget_style(active_widgets[widget_index])
-            else:
-                formatted_text = part.format_map(format_data)
-                active_widgets[widget_index].setText(formatted_text)
-            widget_index += 1
+                    current_class = active_widgets[widget_index].property("class") or ""
+                    if "sgv" in current_class.split():
+                        new_class = self._is_sgv_in_range and "sgv in-range" or "sgv out-range"
+                        active_widgets[widget_index].setProperty("class", new_class)
+                        refresh_widget_style(active_widgets[widget_index])
+                else:
+                    active_widgets[widget_index].setText(part)
+                widget_index += 1
 
         if self.config.tooltip:
             set_tooltip(
