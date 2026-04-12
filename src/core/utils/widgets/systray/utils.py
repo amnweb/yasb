@@ -5,8 +5,9 @@ import ctypes as ct
 import logging
 import os
 import sys
+import time
 from collections.abc import Callable
-from ctypes import GetLastError, byref, sizeof, windll
+from ctypes import byref, windll
 from ctypes.wintypes import (
     DWORD,
     HMODULE,
@@ -41,13 +42,9 @@ from core.utils.win32.bindings import (
     PostMessage,
     QueryFullProcessImageNameW,
 )
-from core.utils.win32.bindings.kernel32 import (
-    CreateToolhelp32Snapshot,
-    Process32FirstW,
-    Process32NextW,
-)
+from core.utils.win32.bindings.kernel32 import GetLastError, GetSystemWindowsDirectoryW
 from core.utils.win32.bindings.psapi import EnumProcessModulesEx, GetModuleBaseNameW
-from core.utils.win32.bindings.user32 import FindWindowEx
+from core.utils.win32.bindings.user32 import FindWindowEx, GetShellWindow
 from core.utils.win32.constants import (
     LIST_MODULES_ALL,
     NIF_GUID,
@@ -57,9 +54,8 @@ from core.utils.win32.constants import (
     NIF_STATE,
     NIF_TIP,
     PROCESS_QUERY_LIMITED_INFORMATION,
-    TH32CS_SNAPPROCESS,
 )
-from core.utils.win32.structs import NOTIFYICONDATA, PROCESSENTRY32, WNDCLASS, WNDPROC
+from core.utils.win32.structs import NOTIFYICONDATA, WNDCLASS, WNDPROC
 from core.utils.win32.utils import get_windows_host_arch
 from settings import IS_FROZEN
 
@@ -267,26 +263,42 @@ def find_real_tray_hwnd(hwnd_ignore: int | None = None):
 
 def get_explorer_pid() -> int | None:
     """Finds the PID of the running explorer.exe"""
-    h_snap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0)
-    if not h_snap or h_snap == -1 or getattr(h_snap, "value", h_snap) == ct.c_void_p(-1).value:
-        return None
-
-    try:
-        pe32 = PROCESSENTRY32()
-        pe32.dwSize = sizeof(PROCESSENTRY32)
-
-        if not Process32FirstW(h_snap, byref(pe32)):
-            return None
-
-        while True:
-            if pe32.szExeFile.lower() == "explorer.exe":
-                return int(pe32.th32ProcessID)
-
-            if not Process32NextW(h_snap, byref(pe32)):
-                break
-    finally:
-        CloseHandle(h_snap)
-
+    retry_count = 10
+    last_error = None
+    while retry_count > 0:
+        retry_count -= 1
+        h_process = None
+        try:
+            hwnd_shell = GetShellWindow()
+            if hwnd_shell == 0:
+                raise Exception("Failed to get shell window")
+            explorer_pid = ct.c_ulong(0)
+            thread_id = GetWindowThreadProcessId(hwnd_shell, byref(explorer_pid))
+            if not thread_id:
+                raise Exception("Wrong thread process ID. Err: {GetLastError()}")
+            h_process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, explorer_pid.value)
+            if not h_process:
+                raise Exception(f"Failed to open process. Err: {GetLastError()}")
+            exe_path_buf = ctypes.create_unicode_buffer(1024)
+            size = DWORD(1024)
+            if not QueryFullProcessImageNameW(h_process, 0, exe_path_buf, byref(size)):
+                raise Exception(f"Failed to get process image name. Err: {GetLastError()}")
+            expected_path_buf = ctypes.create_unicode_buffer(1024)
+            if not GetSystemWindowsDirectoryW(expected_path_buf, 1024):
+                raise Exception(f"Failed to get system windows directory. Err: {GetLastError()}")
+            exe_path = exe_path_buf.value.lower()
+            expected_path = os.path.join(expected_path_buf.value, "explorer.exe").lower()
+            if exe_path != expected_path:
+                raise Exception(f"Unexpected process image name {exe_path}. Expected {expected_path}")
+            return explorer_pid.value
+        except Exception as e:
+            last_error = e
+            time.sleep(0.05)
+            continue
+        finally:
+            if h_process:
+                CloseHandle(h_process)
+    logger.error("Get explorer PID failed after 10 retries. Err: %s", last_error)
     return None
 
 

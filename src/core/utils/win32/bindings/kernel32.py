@@ -20,6 +20,7 @@ from ctypes.wintypes import (
     LPDWORD,
     LPVOID,
     LPWSTR,
+    UINT,
     ULONG,
     USHORT,
 )
@@ -197,6 +198,9 @@ kernel32.IsWow64Process2.restype = BOOL
 
 kernel32.GetCurrentProcess.argtypes = []
 kernel32.GetCurrentProcess.restype = HANDLE
+
+kernel32.GetSystemWindowsDirectoryW.argtypes = [LPWSTR, UINT]
+kernel32.GetSystemWindowsDirectoryW.restype = UINT
 
 # Process enumeration and termination
 kernel32.CreateToolhelp32Snapshot.argtypes = [DWORD, DWORD]
@@ -460,3 +464,7 @@ def IsWow64Process2(hProcess: int, lpProcessMachine: CArgObject, lpNativeMachine
 
 def GetCurrentProcess() -> int:
     return int(kernel32.GetCurrentProcess())
+
+
+def GetSystemWindowsDirectoryW(lpBuffer: Array[c_wchar], uSize: int) -> int:
+    return kernel32.GetSystemWindowsDirectoryW(lpBuffer, uSize)
