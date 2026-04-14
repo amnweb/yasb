@@ -17,7 +17,6 @@ This allows you to securely store sensitive information (such as API keys or tok
 
 **Example `.env` file:**
 ```
-YASB_FONT_ENGINE=native
 YASB_WEATHER_API_KEY=your_api_key_here
 YASB_GITHUB_TOKEN=your_github_token_here
 YASB_WEATHER_LOCATION=your_location_here
@@ -33,6 +32,9 @@ Valid options are:
 - `native`: Uses the DirectWrite font rendering engine.
 - `gdi`: Uses the GDI font rendering engine.
 - `freetype`: Uses the FreeType font rendering engine.
+
+> **Note:**
+> The default font engine is GDI, changing the font engine may cause different font rendering quality. You can experiment with different engines to see which one works best for you. Font names can be different between engines, example: gdi `"font-family: 'JetBrainsMono NFP';"` may need to be changed to `"font-family: 'JetBrainsMono Nerd Font Propo'"` for DirectWrite.
 
 
 ## Status Bar Root Configuration

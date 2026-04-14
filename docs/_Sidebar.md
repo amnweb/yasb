@@ -7,6 +7,7 @@
 - [FAQ](./FAQ)
 - [Contributing](./Contributing)
 - [Writing Widget](./Writing-Widget)
+- [UI Components](./UI-Components)
 - Widgets:
     - [Active Windows Title](./(Widget)-Active-Windows-Title)
     - [Ai Chat](./(Widget)-Ai-Chat)
