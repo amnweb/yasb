@@ -41,6 +41,28 @@ WNDPROC = WINFUNCTYPE(LPARAM, HWND, UINT, WPARAM, LPARAM)
 WINEVENTPROC = WINFUNCTYPE(None, HANDLE, DWORD, HWND, LONG, LONG, DWORD, DWORD)
 
 
+class ACCENTPOLICY(ct.Structure):
+    _fields_ = [
+        ("AccentState", ct.c_uint),
+        ("AccentFlags", ct.c_uint),
+        ("GradientColor", ct.c_uint),
+        ("AnimationId", ct.c_uint),
+    ]
+
+
+class MARGINS(ct.Structure):
+    _fields_ = [
+        ("cxLeftWidth", ct.c_int),
+        ("cxRightWidth", ct.c_int),
+        ("cyTopHeight", ct.c_int),
+        ("cyBottomHeight", ct.c_int),
+    ]
+
+
+class WINDOWCOMPOSITIONATTRIBDATA(ct.Structure):
+    _fields_ = [("Attribute", ct.c_int), ("Data", ct.POINTER(ct.c_int)), ("SizeOfData", ct.c_size_t)]
+
+
 class SYSTEM_INFO(ct.Structure):
     """Windows SYSTEM_INFO structure for processor information."""
 
