@@ -16,8 +16,8 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from core.ui.components.loader import LoaderLine
 from core.utils.tooltip import set_tooltip
-from core.utils.utilities import LoaderLine
 from core.utils.widgets.ai_chat.attachment_manager import AttachmentManager
 from core.utils.widgets.ai_chat.chat_render import ChatRender
 from core.utils.widgets.ai_chat.chat_session import ChatSession
@@ -30,7 +30,7 @@ from core.utils.widgets.ai_chat.stream_worker_manager import StreamWorkerManager
 from core.utils.widgets.ai_chat.ui_components import AiChatPopup, ChatInputEdit, ChatMessageBrowser, NotificationLabel
 from core.utils.widgets.ai_chat.ui_helpers import FloatingWindowController, FocusManager, LabelBuilder
 from core.utils.widgets.animation_manager import AnimationManager
-from core.utils.win32.utilities import apply_qmenu_style, find_focused_screen
+from core.utils.win32.utils import apply_qmenu_style, find_focused_screen
 from core.utils.win32.window_actions import force_foreground_focus
 from core.validation.widgets.yasb.ai_chat import AiChatConfig
 from core.widgets.base import BaseWidget

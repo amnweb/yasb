@@ -6,7 +6,7 @@ import urllib.parse
 import urllib.request
 from collections.abc import Callable
 
-from core.utils.utilities import app_data_path
+from core.utils.system import app_data_path
 
 _OAUTH_APPS = {
     "notifications": {"client_id": "Ov23li0KAXuxNzbEl9Jy", "scope": "notifications"},

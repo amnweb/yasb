@@ -19,7 +19,7 @@ from PyQt6.QtWidgets import QMenu
 from win32comext.shell import shell, shellcon
 
 from core.utils.win32.constants import KnownCLSID
-from core.utils.win32.utilities import apply_qmenu_style
+from core.utils.win32.utils import apply_qmenu_style
 from core.utils.win32.window_actions import close_application
 
 # Global reference to keep thread alive

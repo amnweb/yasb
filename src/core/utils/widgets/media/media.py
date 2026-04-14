@@ -17,7 +17,7 @@ from winrt.windows.media.control import (
 from winrt.windows.media.control import GlobalSystemMediaTransportControlsSessionManager as SessionManager
 from winrt.windows.storage.streams import Buffer, InputStreamOptions, IRandomAccessStreamReference
 
-from core.utils.utilities import QSingleton
+from core.utils.singleton import QSingleton
 
 pil_logger = logging.getLogger("PIL")
 pil_logger.setLevel(logging.INFO)
@@ -67,6 +67,7 @@ class WindowsMedia(QObject, metaclass=QSingleton):
 
         self._trackers: dict[str, SessionState] = {}
         self._current_session_id: str = ""
+        self._manager: SessionManager | None = None
 
         self._loop.create_task(self.run())
 
@@ -84,6 +85,7 @@ class WindowsMedia(QObject, metaclass=QSingleton):
         self._running = True
         try:
             manager = await SessionManager.request_async()
+            self._manager = manager
             await self._refresh_sessions(manager)
 
             manager.add_sessions_changed(self._create_callback_bridge(self._refresh_sessions))

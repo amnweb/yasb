@@ -4,6 +4,8 @@ from pydantic import Field
 
 from core.validation.utilities import PreserveOrderMixin
 from core.validation.widgets.base_model import (
+    AnimationConfig,
+    CallbacksConfig,
     CustomBaseModel,
     KeybindingConfig,
     PaddingConfig,
@@ -34,6 +36,10 @@ class PowerMenuPopupConfig(CustomBaseModel):
     offset_left: int = 0
 
 
+class PowerMenuCallbacksConfig(CallbacksConfig):
+    on_left: str = "toggle_power_menu"
+
+
 class PowerMenuConfig(CustomBaseModel):
     label: str = "power"
     uptime: bool = True
@@ -48,5 +54,7 @@ class PowerMenuConfig(CustomBaseModel):
     container_padding: PaddingConfig = PaddingConfig()
     label_shadow: ShadowConfig = ShadowConfig()
     container_shadow: ShadowConfig = ShadowConfig()
+    animation: AnimationConfig = AnimationConfig()
+    callbacks: PowerMenuCallbacksConfig = PowerMenuCallbacksConfig()
     keybindings: list[KeybindingConfig] = []
     buttons: PowerMenuButtonsConfig

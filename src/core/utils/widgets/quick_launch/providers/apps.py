@@ -11,7 +11,7 @@ from PyQt6.QtWidgets import QApplication
 from win32comext.shell import shell
 
 from core.utils.shell_utils import shell_open
-from core.utils.utilities import app_data_path
+from core.utils.system import app_data_path
 from core.utils.widgets.quick_launch.base_provider import (
     BaseProvider,
     ProviderMenuAction,

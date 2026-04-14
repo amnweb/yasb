@@ -60,7 +60,7 @@ from core.utils.win32.constants import (
     TH32CS_SNAPPROCESS,
 )
 from core.utils.win32.structs import NOTIFYICONDATA, PROCESSENTRY32, WNDCLASS, WNDPROC
-from core.utils.win32.utilities import get_windows_host_arch
+from core.utils.win32.utils import get_windows_host_arch
 from settings import IS_FROZEN
 
 logger = logging.getLogger("systray_widget")

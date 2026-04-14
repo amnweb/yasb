@@ -10,7 +10,7 @@ from core.event_service import EventService
 from core.utils.utilities import PopupWidget, add_shadow
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.widgets.komorebi.client import KomorebiClient
-from core.utils.win32.utilities import get_monitor_hwnd
+from core.utils.win32.utils import get_monitor_hwnd
 from core.validation.widgets.komorebi.active_layout import ActiveLayoutConfig
 from core.widgets.base import BaseWidget
 

@@ -22,11 +22,11 @@ from PyQt6.QtWidgets import (
 )
 
 from core.config import HOME_CONFIGURATION_DIR
+from core.utils.qobject import is_valid_qobject
 from core.utils.tooltip import set_tooltip
-from core.utils.utilities import sip
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.widgets.notes.utils import ElidedLabel, FloatingWindowController, NotesPopup, NoteTextEdit
-from core.utils.win32.utilities import find_focused_screen, get_foreground_hwnd, set_foreground_hwnd  # type: ignore
+from core.utils.win32.utils import find_focused_screen, get_foreground_hwnd, set_foreground_hwnd  # type: ignore
 from core.utils.win32.window_actions import force_foreground_focus
 from core.validation.widgets.yasb.notes import NotesConfig
 from core.widgets.base import BaseWidget
@@ -127,7 +127,7 @@ class NotesWidget(BaseWidget):
 
     def is_menu_active(self) -> bool:
         """Check if menu exists and is visible without crashing on deleted objects."""
-        if self.menu is None or sip.isdeleted(self.menu):
+        if not is_valid_qobject(self.menu):
             return False
         try:
             return self.menu.isVisible()
@@ -186,10 +186,10 @@ class NotesWidget(BaseWidget):
 
     def _refresh_notes_list(self) -> None:
         """Refresh the notes list in the scroll area without closing the menu."""
-        if self.menu is None or sip.isdeleted(self.menu):
+        if not is_valid_qobject(self.menu):
             return
 
-        if self.scroll_layout is None or sip.isdeleted(self.scroll_layout):
+        if not is_valid_qobject(self.scroll_layout):
             return
 
         # Clear layout
@@ -218,7 +218,7 @@ class NotesWidget(BaseWidget):
 
     def adjust_menu_geometry(self):
         """Adjust menu size and position based on current content."""
-        if self.menu is None or sip.isdeleted(self.menu):
+        if not is_valid_qobject(self.menu):
             return
 
         # Force scroll widget to update its size hint based on new content
@@ -472,7 +472,7 @@ class NotesWidget(BaseWidget):
 
     def _save_pending_note(self) -> None:
         """Save the current input content to memory"""
-        if not sip.isdeleted(self.note_input):
+        if is_valid_qobject(self.note_input):
             if self.note_input.toPlainText().strip():
                 self._pending_note_html = self.note_input.toHtml()
             else:

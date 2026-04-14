@@ -6,7 +6,7 @@ from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QMessageBox, QPushButton, QSizePolicy, QTextEdit
 
-from core.ui.style import apply_button_style
+from core.ui.theme import get_tokens
 from settings import SCRIPT_PATH
 
 
@@ -83,8 +83,19 @@ class AlertDialog(QMessageBox):
         return result
 
     def _style_dialog_buttons(self):
+        t = get_tokens()
+        style = (
+            f"QPushButton {{ background-color: {t['control_fill_default']}; color: {t['text_primary']};"
+            f" border: 1px solid {t['control_stroke_default']}; border-radius: 4px;"
+            f" font-weight: 600; font-size: 12px; font-family: 'Segoe UI'; padding: 4px 16px; }}"
+            f"QPushButton:hover {{ background-color: {t['control_fill_secondary']};"
+            f" border: 1px solid {t['control_stroke_secondary']}; }}"
+            f"QPushButton:pressed {{ background-color: {t['control_fill_tertiary']}; }}"
+            f"QPushButton:disabled {{ background-color: {t['control_fill_disabled']};"
+            f" color: {t['text_disabled']}; }}"
+        )
         for button in self.findChildren(QPushButton):
-            apply_button_style(button, "secondary")
+            button.setStyleSheet(style)
 
 
 _persistent_dialogs = []

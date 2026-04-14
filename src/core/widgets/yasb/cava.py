@@ -10,7 +10,7 @@ from PyQt6.QtCore import QPointF, QRectF, QTimer, pyqtSignal
 from PyQt6.QtGui import QColor, QLinearGradient, QPainter, QPainterPath
 from PyQt6.QtWidgets import QApplication, QFrame, QLabel
 
-from core.utils.utilities import app_data_path
+from core.utils.system import app_data_path
 from core.validation.widgets.yasb.cava import CavaConfig
 from core.widgets.base import BaseWidget
 

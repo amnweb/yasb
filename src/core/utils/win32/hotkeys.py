@@ -211,7 +211,7 @@ class HotkeyListener(QThread):
 
     def _emit_binding(self, binding: HotkeyBinding) -> None:
         """Emit a hotkey event to the dispatcher on the main thread."""
-        from core.utils.win32.utilities import find_focused_screen
+        from core.utils.win32.utils import find_focused_screen
 
         follow_primary = binding.screen == "primary"
         follow_mouse = binding.screen == "cursor"

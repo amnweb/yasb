@@ -9,7 +9,7 @@ from PyQt6.QtWidgets import QGraphicsOpacityEffect, QLabel, QPushButton
 
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import refresh_widget_style
-from core.utils.win32.utilities import get_app_name_from_pid, is_window_maximized
+from core.utils.win32.utils import get_app_name_from_pid, is_window_maximized
 from core.utils.win32.window_actions import (
     close_application,
     maximize_window,

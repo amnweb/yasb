@@ -22,7 +22,7 @@ from PIL import Image
 from PyQt6.QtCore import QObject, Qt, pyqtSignal
 from PyQt6.QtGui import QPixmap
 
-from core.utils.utilities import app_data_path
+from core.utils.system import app_data_path
 from core.utils.widgets.taskbar.pin_context import (
     WindowContext,
     collect_window_context,
@@ -37,7 +37,7 @@ from core.utils.widgets.taskbar.shortcut_resolver import (
     get_wscript_shell,
     normalized_targets,
 )
-from core.utils.win32.utilities import get_app_name_from_aumid
+from core.utils.win32.utils import get_app_name_from_aumid
 
 
 class TaskbarSignalBus(QObject):
@@ -396,7 +396,7 @@ class PinManager:
         multiple pinned folders and special folders (e.g., Recycle Bin, This PC).
         Returns (unique_id, metadata_dict) or (None, {}) if unable to identify the app.
         """
-        from core.utils.win32.utilities import get_app_name_from_pid
+        from core.utils.win32.utils import get_app_name_from_pid
 
         context = collect_window_context(hwnd, window_data)
         if not context:
