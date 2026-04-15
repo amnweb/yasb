@@ -4,10 +4,14 @@ import ctypes
 from ctypes import POINTER, windll
 from ctypes.wintypes import DWORD, HANDLE, HWND, LPVOID
 
-from core.utils.win32.structs import DWM_THUMBNAIL_PROPERTIES, SIZE
+from core.utils.win32.structs import DWM_THUMBNAIL_PROPERTIES, MARGINS, SIZE
 
 # Load dwmapi
 _dwmapi = windll.dwmapi
+
+# DwmExtendFrameIntoClientArea
+_dwmapi.DwmExtendFrameIntoClientArea.argtypes = [HWND, POINTER(MARGINS)]
+_dwmapi.DwmExtendFrameIntoClientArea.restype = DWORD
 
 # Window attribute signatures
 _dwmapi.DwmGetWindowAttribute.argtypes = [HWND, DWORD, LPVOID, DWORD]
@@ -38,6 +42,11 @@ def DwmGetWindowAttribute(hwnd: int, attribute: int, out_ptr: LPVOID, size: int)
 def DwmSetWindowAttribute(hwnd: int, attribute: int, in_ptr: LPVOID, size: int) -> int:
     """Set the value of a specified attribute for a given window."""
     return _dwmapi.DwmSetWindowAttribute(hwnd, attribute, in_ptr, size)
+
+
+def DwmExtendFrameIntoClientArea(hwnd: int, margins: MARGINS) -> int:
+    """Extend the window frame into the client area."""
+    return _dwmapi.DwmExtendFrameIntoClientArea(hwnd, ctypes.byref(margins))
 
 
 def DwmRegisterThumbnail(hwnd_destination: int, hwnd_source: int, thumbnail_handle_ptr) -> int:

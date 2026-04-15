@@ -8,15 +8,20 @@ from PyQt6.QtCore import (
 from PyQt6.QtGui import QAction, QCursor
 from PyQt6.QtWidgets import (
     QFileDialog,
-    QInputDialog,
+    QFrame,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
     QMenu,
     QPushButton,
+    QVBoxLayout,
 )
 
-from core.utils.utilities import add_shadow, is_windows_10, refresh_widget_style
+from core.utils.system import is_windows_10
+from core.utils.utilities import PopupWidget, add_shadow, refresh_widget_style
 from core.utils.widgets.komorebi.animation import KomorebiAnimation
 from core.utils.widgets.windows_desktops.service import WindowsDesktopService
-from core.utils.win32.utilities import apply_qmenu_style
+from core.utils.win32.utils import apply_qmenu_style
 from core.validation.widgets.yasb.windows_desktops import WindowsDesktopsConfig
 from core.widgets.base import BaseWidget
 
@@ -93,7 +98,7 @@ class WorkspaceButton(QPushButton):
         )
 
     def _show_context_menu(self):
-        menu = QMenu(self)
+        menu = QMenu(self.window())
         # Assign a class for global styling; apply rounded corners via helper
         menu.setProperty("class", "context-menu")
         # Apply Windows rounded corners to the QMenu when it is shown
@@ -103,9 +108,10 @@ class WorkspaceButton(QPushButton):
         act_rename.triggered.connect(self.rename_desktop)
         menu.addAction(act_rename)
 
-        act_delete = QAction("Delete", self)
-        act_delete.triggered.connect(self.delete_desktop)
-        menu.addAction(act_delete)
+        if len(WindowsDesktopService.get_desktops()) > 1:
+            act_delete = QAction("Delete", self)
+            act_delete.triggered.connect(self.delete_desktop)
+            menu.addAction(act_delete)
 
         menu.addSeparator()
 
@@ -127,7 +133,7 @@ class WorkspaceButton(QPushButton):
             )
             menu.addAction(act_move_here)
 
-            move_menu = QMenu("Move Window To", self)
+            move_menu = QMenu("Move Window To", self.window())
             move_menu.setProperty("class", "context-menu")
             apply_qmenu_style(move_menu)
             try:
@@ -171,10 +177,7 @@ class WorkspaceButton(QPushButton):
             menu.addAction(act_set_wall_all)
 
         menu.popup(QCursor.pos())
-        try:
-            menu.activateWindow()
-        except Exception:
-            pass
+        menu.activateWindow()
 
     def set_wallpaper(self):
         image_path, _ = QFileDialog.getOpenFileName(
@@ -197,27 +200,94 @@ class WorkspaceButton(QPushButton):
                 logging.exception("Failed to set wallpaper for all desktops: %s", e)
 
     def rename_desktop(self):
-        dialog = QInputDialog(self)
-        dialog.setWindowFlags(Qt.WindowType.Dialog | Qt.WindowType.CustomizeWindowHint | Qt.WindowType.WindowTitleHint)
-        dialog.setWindowTitle("Rename This Desktop")
-        dialog.setProperty("class", "rename-dialog")
-        dialog.setLabelText("Enter name for this desktop")
-
         current_name = WindowsDesktopService.get_desktop_name(self.workspace_index)
         if not current_name:
             current_name = str(self.workspace_index)
-        dialog.setTextValue(current_name)
-        dialog.move(QCursor.pos())
-        ok = dialog.exec()
-        new_name = dialog.textValue().strip()
-        if ok and new_name:
-            try:
-                WindowsDesktopService.rename_desktop(self.workspace_index, new_name)
-                WindowsDesktopService().notify_desktops_updated(update_buttons=True)
-            except Exception as e:
-                logging.exception("Failed to rename desktop: %s", e)
-        else:
-            logging.info("No name entered. Rename cancelled.")
+
+        workspace_index = self.workspace_index
+
+        popup = PopupWidget(
+            self.parent_widget,
+            blur=True,
+            round_corners=True,
+            round_corners_type="normal",
+            border_color="System",
+            dark_mode=True,
+        )
+        popup.setProperty("class", "windows-desktops-popup rename")
+
+        layout = QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        popup.setLayout(layout)
+
+        container_frame = QFrame()
+        container_frame.setProperty("class", "windows-desktops-popup-container")
+        container_layout = QVBoxLayout(container_frame)
+        container_layout.setContentsMargins(0, 0, 0, 0)
+
+        title_label = QLabel("Rename Desktop")
+        title_label.setProperty("class", "popup-title")
+        container_layout.addWidget(title_label)
+
+        desc_label = QLabel("Enter a new name for this desktop.")
+        desc_label.setProperty("class", "popup-description")
+        container_layout.addWidget(desc_label)
+
+        name_edit = QLineEdit()
+        name_edit.setProperty("class", "rename-input")
+        name_edit.setText(current_name)
+        name_edit.setPlaceholderText("Desktop name")
+        name_edit.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
+        name_edit.selectAll()
+        name_edit.setFocus()
+        container_layout.addWidget(name_edit)
+
+        rename_btn = QPushButton("Rename")
+        rename_btn.setProperty("class", "button save")
+        rename_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        cancel_btn = QPushButton("Cancel")
+        cancel_btn.setProperty("class", "button cancel")
+        cancel_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+
+        def do_rename():
+            new_name = name_edit.text().strip()
+            if new_name:
+                try:
+                    WindowsDesktopService.rename_desktop(workspace_index, new_name)
+                    WindowsDesktopService().notify_desktops_updated(update_buttons=True)
+                except Exception as e:
+                    logging.exception("Failed to rename desktop: %s", e)
+            popup.close()
+
+        def update_rename_enabled():
+            rename_btn.setEnabled(bool(name_edit.text().strip()))
+
+        update_rename_enabled()
+        name_edit.textChanged.connect(lambda _text: update_rename_enabled())
+        name_edit.returnPressed.connect(do_rename)
+        rename_btn.clicked.connect(do_rename)
+        cancel_btn.clicked.connect(lambda: popup.close())
+
+        footer_frame = QFrame()
+        footer_frame.setProperty("class", "windows-desktops-popup-footer")
+        button_layout = QHBoxLayout(footer_frame)
+        button_layout.setContentsMargins(0, 0, 0, 0)
+        button_layout.setSpacing(0)
+        button_layout.addWidget(rename_btn)
+        button_layout.addWidget(cancel_btn)
+
+        layout.addWidget(container_frame)
+        layout.addWidget(footer_frame)
+
+        popup.adjustSize()
+        popup.setPosition(
+            alignment="center",
+            direction="down",
+            offset_left=0,
+            offset_top=6,
+        )
+        popup.show()
 
     def move_active_window_to(self, desktop_number: int, hwnd: int):
         try:

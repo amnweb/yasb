@@ -5,7 +5,7 @@ import time
 import urllib.error
 
 from core.utils.shell_utils import shell_open
-from core.utils.utilities import get_relative_time
+from core.utils.time_utils import get_relative_time
 from core.utils.widgets.github.api import GitHubDataManager
 from core.utils.widgets.github.auth import get_saved_token
 from core.utils.widgets.quick_launch.base_provider import (

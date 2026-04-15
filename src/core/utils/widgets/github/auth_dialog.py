@@ -1,27 +1,24 @@
-import os
 import threading
 from collections.abc import Callable
 
-from PyQt6.QtCore import QEvent, Qt, QTimer, QUrl, pyqtSignal
-from PyQt6.QtGui import QColor, QDesktopServices, QFont, QIcon, QPalette
+from PyQt6.QtCore import Qt, QTimer, QUrl, pyqtSignal
+from PyQt6.QtGui import QColor, QDesktopServices, QFont, QPalette
 from PyQt6.QtWidgets import (
     QApplication,
     QDialog,
     QFrame,
-    QGraphicsOpacityEffect,
     QHBoxLayout,
     QLabel,
-    QPushButton,
     QVBoxLayout,
 )
-from winmica import BackdropType, EnableMica, is_mica_supported
 
-from core.ui.style import apply_button_style
+from core.ui.components.button import Button
+from core.ui.components.text_block import TextBlock
+from core.ui.views.view_base import ViewBase
 from core.utils.widgets.github import auth as github_auth
-from settings import SCRIPT_PATH
 
 
-class GitHubAuthDialog(QDialog):
+class GitHubAuthDialog(ViewBase, QDialog):
     auth_completed = pyqtSignal(str)
     _device_code_received = pyqtSignal(dict)
     _device_error = pyqtSignal(str)
@@ -40,12 +37,8 @@ class GitHubAuthDialog(QDialog):
         self._stop = False
         self._user_code: str = ""
 
-        self._primary_buttons: list[QPushButton] = []
-        self._secondary_buttons: list[QPushButton] = []
-
         self._build_window()
         self._build_ui()
-        self._apply_palette()
 
         self._device_code_received.connect(self._on_device_code_received)
         self._device_error.connect(self._on_device_error)
@@ -62,15 +55,8 @@ class GitHubAuthDialog(QDialog):
         self.setWindowFlag(Qt.WindowType.CustomizeWindowHint, True)
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         self.setFixedSize(420, 260)
-
-        if is_mica_supported():
-            self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
-            hwnd = int(self.winId())
-            EnableMica(hwnd, BackdropType.MICA)
-
-        icon_path = os.path.join(SCRIPT_PATH, "assets", "images", "app_icon.png")
-        if os.path.exists(icon_path):
-            self.setWindowIcon(QIcon(icon_path))
+        self.build_view()
+        self.build_app_icon()
 
     def _build_ui(self) -> None:
         layout = QVBoxLayout(self)
@@ -78,19 +64,12 @@ class GitHubAuthDialog(QDialog):
         layout.setSpacing(6)
 
         # Title
-        self._title_label = QLabel("Sign in to GitHub")
-        title_font = self._title_label.font()
-        title_font.setPointSize(title_font.pointSize() + 3)
-        title_font.setBold(True)
-        self._title_label.setFont(title_font)
+        self._title_label = TextBlock("Sign in to GitHub", variant="subtitle", parent=self)
         layout.addWidget(self._title_label)
 
         # Instructions
-        self._instructions = QLabel("Requesting authorization code...")
+        self._instructions = TextBlock("Requesting authorization code...", variant="caption", parent=self)
         self._instructions.setWordWrap(True)
-        self._instructions_effect = QGraphicsOpacityEffect()
-        self._instructions_effect.setOpacity(0.7)
-        self._instructions.setGraphicsEffect(self._instructions_effect)
         layout.addWidget(self._instructions)
 
         # Code display frame
@@ -110,25 +89,17 @@ class GitHubAuthDialog(QDialog):
         self._code_label.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
         code_layout.addWidget(self._code_label, 1)
 
-        self._copy_btn = QPushButton("Copy")
+        self._copy_btn = Button("Copy", font_size=12, font_weight="demibold", parent=self)
         self._copy_btn.setFixedSize(80, 30)
         self._copy_btn.setEnabled(False)
-        self._copy_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self._copy_btn.clicked.connect(self._copy_code)
-        self._secondary_buttons.append(self._copy_btn)
         code_layout.addWidget(self._copy_btn)
 
         layout.addSpacing(4)
         layout.addWidget(self._code_frame)
 
         # Status
-        self._status_label = QLabel("Connecting to GitHub...")
-        self._status_effect = QGraphicsOpacityEffect()
-        self._status_effect.setOpacity(0.5)
-        self._status_label.setGraphicsEffect(self._status_effect)
-        status_font = self._status_label.font()
-        status_font.setPointSize(status_font.pointSize() - 1)
-        self._status_label.setFont(status_font)
+        self._status_label = TextBlock("Connecting to GitHub...", variant="caption", parent=self)
         layout.addWidget(self._status_label)
 
         layout.addStretch()
@@ -144,29 +115,19 @@ class GitHubAuthDialog(QDialog):
         btn_row.setSpacing(8)
         btn_row.addStretch()
 
-        self._open_btn = QPushButton("Open Browser")
-        self._open_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._open_btn = Button("Open Browser", variant="accent", font_size=12, font_weight="demibold", parent=self)
         self._open_btn.clicked.connect(self._open_browser)
-        self._primary_buttons.append(self._open_btn)
         btn_row.addWidget(self._open_btn)
 
-        cancel_btn = QPushButton("Cancel")
-        cancel_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        cancel_btn.clicked.connect(self.reject)
-        self._secondary_buttons.append(cancel_btn)
-        self._cancel_btn = cancel_btn
-        btn_row.addWidget(cancel_btn)
+        self._cancel_btn = Button("Cancel", font_size=12, font_weight="demibold", parent=self)
+        self._cancel_btn.clicked.connect(self.reject)
+        btn_row.addWidget(self._cancel_btn)
 
         layout.addLayout(btn_row)
 
-    def _apply_palette(self) -> None:
+    def _apply_frame_styles(self) -> None:
         palette = self.palette()
         text_color = palette.color(QPalette.ColorRole.WindowText)
-
-        for btn in self._primary_buttons:
-            apply_button_style(btn, "primary")
-        for btn in self._secondary_buttons:
-            apply_button_style(btn, "secondary")
 
         # Code frame
         border = QColor(text_color)
@@ -204,7 +165,7 @@ class GitHubAuthDialog(QDialog):
 
         self._code_label.setText(self._user_code)
         self._copy_btn.setEnabled(True)
-        self._apply_palette()
+        self._apply_frame_styles()
         self._status_label.setText("Waiting for authorization...")
         self._instructions.setText("Your browser has been opened. Enter the code below at github.com/login/device:")
 
@@ -228,11 +189,9 @@ class GitHubAuthDialog(QDialog):
         self._separator.hide()
         self._open_btn.hide()
 
-        self._result_label = QLabel(message)
+        self._result_label = TextBlock(message, variant="subtitle", parent=self)
+        print(message)
         self._result_label.setWordWrap(True)
-        font = self._result_label.font()
-        font.setPointSize(font.pointSize() + 4)
-        self._result_label.setFont(font)
         self._result_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.layout().insertWidget(0, self._result_label, 1)
         self._cancel_btn.setText("Close")
@@ -255,13 +214,8 @@ class GitHubAuthDialog(QDialog):
         QDesktopServices.openUrl(QUrl("https://github.com/login/device"))
 
     def showEvent(self, event) -> None:
-        self._apply_palette()
+        self._apply_frame_styles()
         super().showEvent(event)
-
-    def event(self, event) -> bool:
-        if event.type() == QEvent.Type.PaletteChange:
-            self._apply_palette()
-        return super().event(event)
 
     def closeEvent(self, event):
         self._stop = True

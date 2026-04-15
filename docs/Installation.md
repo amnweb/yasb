@@ -1,6 +1,6 @@
 ### Requirements
 - Windows 10 & 11
-- Default YASB theme uses Segoe Fluent Icons font, which is included in Windows 11 and Windows 10 (starting with version 1809). For older versions of Windows 10, you can download and install the font from the [Microsoft Typography website](https://docs.microsoft.com/en-us/typography/font-list/segoe-fluent-icons).
+- Default YASB theme uses Segoe Fluent Icons font, which is included in Windows 11 by default. **Windows 10 users** need to download and install the font manually from [Microsoft](https://aka.ms/SegoeFluentIcons).
 - For custom themes, It's recommended to install Nerd Fonts, which provides a large collection of patched fonts with additional glyphs/icons. You can download and install Nerd Fonts from their [official website](https://www.nerdfonts.com/). Recommended [JetBrainsMono Propo](https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.zip) 
 
 ### Installation (stable release)

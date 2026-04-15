@@ -6,7 +6,7 @@ from datetime import datetime
 
 from PyQt6.QtWidgets import QApplication
 
-from core.utils.utilities import app_data_path
+from core.utils.system import app_data_path
 from core.utils.widgets.traffic.network_api import NetworkAPI
 
 

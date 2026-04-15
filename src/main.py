@@ -11,14 +11,15 @@ import qasync
 
 from core.application import YASBApplication
 from core.bar_manager import BarManager
-from core.config import get_config_and_stylesheet
+from core.config import get_config_and_stylesheet, is_first_run
 from core.event_service import EventService
 from core.log import enable_debug_logging, init_logger
 from core.tray import SystemTrayManager
+from core.ui.views.welcome import run_setup_wizard
 from core.utils.controller import start_cli_server
 from core.utils.update_service import get_update_service, start_update_checker
 from core.watcher import create_observer
-from env_loader import load_env, set_font_engine
+from env import load_env, set_font_engine
 
 
 @contextlib.contextmanager
@@ -88,6 +89,10 @@ def single_instance_lock(name: str = "yasb_reborn"):
 def main():
     """Main entry point"""
     app = YASBApplication(argv)
+
+    if is_first_run() and not run_setup_wizard():
+        return
+
     loop = qasync.QEventLoop(app)
     try:
         loop.run_until_complete(main_async(app))

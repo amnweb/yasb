@@ -2,7 +2,6 @@
 
 import logging
 import os
-import re
 import ssl
 import subprocess
 import tempfile
@@ -12,61 +11,32 @@ from collections.abc import Callable
 from pathlib import Path
 
 import certifi
-from PyQt6.QtCore import QEvent, Qt, QThread, QTimer, pyqtSignal
-from PyQt6.QtGui import QIcon, QTextCursor
+from PyQt6.QtCore import Qt, QThread, QTimer, QUrl, pyqtSignal
+from PyQt6.QtGui import QImage
 from PyQt6.QtWidgets import (
     QDialog,
     QHBoxLayout,
-    QLabel,
     QProgressBar,
-    QPushButton,
     QSizePolicy,
     QTextBrowser,
     QVBoxLayout,
 )
-from winmica import BackdropType, EnableMica, is_mica_supported
 
-from core.ui.style import apply_button_style
+from core.ui.components.button import Button
+from core.ui.components.loader import Spinner
+from core.ui.components.text_block import TextBlock
+from core.ui.theme import get_tokens
+from core.ui.views.view_base import ViewBase
 from core.utils.controller import exit_application
+from core.utils.markdown import convert_img_tags, extract_img_srcs, md_to_html, strip_commit_links
+from core.utils.process import is_process_running
+from core.utils.qobject import is_valid_qobject
+from core.utils.system import get_architecture
 from core.utils.update_service import ReleaseInfo, get_update_service
-from core.utils.utilities import get_architecture, is_process_running, is_valid_qobject, refresh_widget_style
-from settings import APP_NAME, SCRIPT_PATH
+from settings import APP_NAME
 
 USER_AGENT_HEADER = {"User-Agent": f"{APP_NAME} Updater"}
 ARCHITECTURE = get_architecture()
-
-_COMMIT_URL_PATTERN = re.compile(r"https://github\.com/[^/\s]+/[^/\s]+/commit/([0-9a-fA-F]{7,40})(?=[^0-9a-fA-F]|$)")
-_COMPARE_URL_PATTERN = re.compile(r"(?<![<\[(])(https://github\.com/[^/\s]+/[^/\s]+/compare/[^\s<>()]+)")
-_PULL_URL_PATTERN = re.compile(r"(?<![\[(])https://github\.com/[^/\s]+/[^/\s]+/pull/(\d+)")
-
-_DOWNLOAD_READY_TEXT = "Download and Install"
-_DOWNLOADING_TEXT = "Downloading..."
-
-_CLOSE_BUTTON_TEXT = "Close"
-_CANCEL_BUTTON_TEXT = "Cancel"
-
-
-def _strip_commit_links(changelog: str) -> str:
-    """Strip commit links from changelog markdown."""
-    if not changelog:
-        return changelog
-    # Convert full commit URLs to [[link]]
-    transformed = _COMMIT_URL_PATTERN.sub(lambda match: f"[[link]]({match.group(0)})", changelog)
-    # Convert PR URLs to [#123]
-    transformed = _PULL_URL_PATTERN.sub(
-        lambda match: f"[#{match.group(1)}]({match.group(0)})",
-        transformed,
-    )
-    # Convert compare URLs
-    transformed = _COMPARE_URL_PATTERN.sub(lambda match: f"<{match.group(1)}>", transformed)
-    # Convert plain commit hashes (7+ hex chars at end of line or before whitespace) to links
-    transformed = re.sub(
-        r"\b([0-9a-fA-F]{7,40})(?=\s*$)",
-        lambda m: f"[[link]](https://github.com/amnweb/yasb/commit/{m.group(1)})",
-        transformed,
-        flags=re.MULTILINE,
-    )
-    return transformed
 
 
 class ReleaseFetcher(QThread):
@@ -180,7 +150,88 @@ class DownloadWorker(QThread):
             self.error.emit(str(exc))
 
 
-class UpdateDialog(QDialog):
+class _ImageLoaderWorker(QThread):
+    """Background thread that fetches remote images without blocking the UI."""
+
+    finished = pyqtSignal(dict)  # {url_str: QImage}
+
+    def __init__(self, urls: list[str], max_width: int, parent=None):
+        super().__init__(parent)
+        self._urls = urls
+        self._max_width = max_width
+
+    def run(self):
+        images: dict[str, QImage] = {}
+        context = ssl.create_default_context(cafile=certifi.where())
+        for url_str in self._urls:
+            try:
+                req = urllib.request.Request(url_str, headers=USER_AGENT_HEADER)
+                with urllib.request.urlopen(req, context=context, timeout=10) as resp:
+                    data = resp.read()
+                img = QImage()
+                img.loadFromData(data)
+                if not img.isNull():
+                    if img.width() > self._max_width:
+                        img = img.scaledToWidth(self._max_width, Qt.TransformationMode.SmoothTransformation)
+                    images[url_str] = img
+            except Exception:
+                logging.debug("Failed to load remote image: %s", url_str)
+        self.finished.emit(images)
+
+
+class _RemoteImageTextBrowser(QTextBrowser):
+    """QTextBrowser subclass that loads remote images asynchronously."""
+
+    images_loaded = pyqtSignal()
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._image_cache: dict[str, QImage] = {}
+        self._image_worker: _ImageLoaderWorker | None = None
+        self._pending_html: str | None = None
+
+    def setHtmlAndLoadImages(self, html: str) -> None:  # noqa: N802
+        """Start background loading of remote images, then set HTML when ready."""
+        self._pending_html = html
+        urls = [
+            src
+            for src in extract_img_srcs(html)
+            if src.startswith(("http://", "https://")) and src not in self._image_cache
+        ]
+        if not urls:
+            self._apply_html()
+            QTimer.singleShot(0, self.images_loaded.emit)
+            return
+        max_width = max(self.viewport().width() - 20, 200)
+        self._image_worker = _ImageLoaderWorker(urls, max_width, parent=self)
+        self._image_worker.finished.connect(self._on_images_loaded)
+        self._image_worker.start()
+
+    def _on_images_loaded(self, images: dict[str, QImage]) -> None:
+        self._image_cache.update(images)
+        doc = self.document()
+        for url_str, img in images.items():
+            doc.addResource(2, QUrl(url_str), img)  # 2 = ImageResource
+        self._apply_html()
+        self._image_worker = None
+        self.images_loaded.emit()
+
+    def _apply_html(self) -> None:
+        """Set the pending HTML content into the document."""
+        if self._pending_html is not None:
+            self.document().setHtml(self._pending_html)
+            self._pending_html = None
+
+    def loadResource(self, type_: int, url: QUrl) -> object:  # noqa: N802
+        if type_ == 2 and url.scheme() in ("http", "https"):
+            cached = self._image_cache.get(url.toString())
+            if cached is not None:
+                return cached
+            return QImage()
+        return super().loadResource(type_, url)
+
+
+class UpdateDialog(ViewBase, QDialog):
     def __init__(
         self,
         parent=None,
@@ -192,14 +243,9 @@ class UpdateDialog(QDialog):
         self.setModal(True)
         self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, True)
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
-        self.setMinimumSize(800, 600)
-        if is_mica_supported():
-            self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
-            hwnd = int(self.winId())
-            EnableMica(hwnd, BackdropType.MICA)
-        icon_path = os.path.join(SCRIPT_PATH, "assets", "images", "app_icon.png")
-        if os.path.exists(icon_path):
-            self.setWindowIcon(QIcon(icon_path))
+        self.setMinimumSize(900, 640)
+        self.build_view()
+        self.build_app_icon()
 
         self._on_install_started = on_install_started
         self._download_worker: DownloadWorker | None = None
@@ -207,7 +253,6 @@ class UpdateDialog(QDialog):
         self._cancel_requested = False
 
         self._build_ui()
-        self._apply_button_styles()
         if release_info is not None:
             QTimer.singleShot(0, lambda: self.set_release_info(release_info))
         self.open()
@@ -217,35 +262,82 @@ class UpdateDialog(QDialog):
         layout.setContentsMargins(18, 18, 18, 18)
         layout.setSpacing(12)
 
-        self.title_label = QLabel("", self)
-        self.title_label.setStyleSheet("font-size: 14pt; font-weight: bold;")
+        self.title_label = TextBlock("", variant="subtitle", parent=self)
         self.title_label.setVisible(False)
         layout.addWidget(self.title_label)
 
-        self.changelog_view = QTextBrowser(self)
+        self.changelog_view = _RemoteImageTextBrowser(self)
         self.changelog_view.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
         self.changelog_view.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         changelog_font = self.changelog_view.font()
         changelog_font.setPointSize(max(changelog_font.pointSize(), 10))
         self.changelog_view.setFont(changelog_font)
-        self.changelog_view.setStyleSheet("QTextBrowser { background-color: rgba(0,0,0,0); border: none; }")
+
+        t = get_tokens()
+
+        text_color = t["text_primary"]
+        link_color = t["accent_text_primary"]
+        selection_bg = t["accent_fill_default"]
+
+        self.changelog_view.setStyleSheet(
+            f"QTextBrowser {{ background: transparent; border: none; color: {text_color};"
+            f" selection-background-color: {selection_bg}; }}"
+        )
         self.changelog_view.document().setDefaultStyleSheet(
-            """
-            body, p, li {
+            f"""
+            body, p, li {{
                 font-size: 10pt;
-            }
-            ul, ol {
+                font-family: 'Segoe UI';
+                font-weight: 600;
+                color: {text_color};
+            }}
+            h2 {{
+                margin-top: 32px;
+                margin-bottom: 8px;
+                color: {text_color};
+            }}
+            h3 {{
+                margin-top: 32px;
+                margin-bottom: 8px;
+                color: {text_color};
+            }}
+            a {{
+                color: {link_color};
+                text-decoration: none;
+            }}
+            ul, ol {{
                 margin-left: 0px;
                 padding-left: 0px;
-            }
-            li {
+            }}
+            li {{
                 margin-left: 0px;
                 padding-left: 0px;
-            }
-            li > p {
+                margin-bottom: 6px;
+                margin-top: 6px;
+            }}
+            li > p {{
                 margin-left: 0px;
                 padding-left: 0px;
-            }
+            }}
+            code {{
+                background-color: #000000;
+                color: #ffffff;
+                padding: 2px 4px;
+                font-family: 'Consolas', monospace;
+                font-weight: 600;
+            }}
+            pre {{
+                background-color: #000000;
+                color: #ffffff;
+                padding: 8px;
+                font-family: 'Consolas', monospace;
+                font-weight: 600;
+                white-space: pre-wrap;
+            }}
+            img {{
+                max-width: 100%;
+                height: auto;
+            }}
             """
         )
         self.changelog_view.document().setIndentWidth(20)
@@ -253,7 +345,11 @@ class UpdateDialog(QDialog):
         self.changelog_view.setMinimumHeight(260)
         self.changelog_view.setContentsMargins(6, 6, 6, 6)
         self.changelog_view.clear()
+        self.changelog_view.images_loaded.connect(self._on_images_loaded)
         layout.addWidget(self.changelog_view)
+
+        self._spinner = Spinner(size=32, color=text_color, pen_width=2, parent=self)
+        self._spinner.setVisible(False)
 
         self.progress_bar = QProgressBar(self)
         self.progress_bar.setVisible(False)
@@ -266,45 +362,48 @@ class UpdateDialog(QDialog):
         button_row.setSpacing(12)
         button_row.setContentsMargins(0, 0, 0, 0)
 
-        self.status_label = QLabel("", self)
+        self.status_label = TextBlock("", variant="caption", parent=self)
         self.status_label.setVisible(False)
-        self.status_label.setStyleSheet("color: #a0d8ff; font-size: 11px;")
         self.status_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         button_row.addWidget(self.status_label)
         button_row.addStretch(1)
 
-        self.download_button = QPushButton(_DOWNLOAD_READY_TEXT, self)
+        self.download_button = Button("Download and Install", variant="accent", parent=self)
         self.download_button.setVisible(True)
         self.download_button.setEnabled(False)
-        self.download_button.setCursor(Qt.CursorShape.PointingHandCursor)
         self.download_button.clicked.connect(self._start_download)
         button_row.addWidget(self.download_button)
 
-        self.close_button = QPushButton(_CLOSE_BUTTON_TEXT, self)
-        self.close_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.close_button = Button("Close", parent=self)
         self.close_button.clicked.connect(self._on_close_button_clicked)
         button_row.addWidget(self.close_button)
 
         layout.addLayout(button_row)
 
-    def _apply_button_styles(self) -> None:
-        if not hasattr(self, "download_button") or not hasattr(self, "close_button"):
-            return
-        apply_button_style(self.download_button, "primary")
-        apply_button_style(self.close_button, "secondary")
+    def _show_spinner(self, visible: bool) -> None:
+        self._spinner.setVisible(visible)
+        if visible:
+            cv = self.changelog_view
+            self._spinner.move(
+                cv.x() + (cv.width() - self._spinner.width()) // 2,
+                cv.y() + (cv.height() - self._spinner.height()) // 2,
+            )
+            self._spinner.raise_()
+
+    def _on_images_loaded(self) -> None:
+        self._show_spinner(False)
 
     def _set_status(self, text: str = "", *, error: bool = False) -> None:
         if text:
-            self.status_label.setStyleSheet("font-size: 11px;")
             self.status_label.setText(text)
             self.status_label.setVisible(True)
         else:
-            self.status_label.clear()
+            self.status_label.setText("")
             self.status_label.setVisible(False)
 
     def _set_idle_state(self, *, enabled: bool, status: str = "", error: bool = False) -> None:
         self.download_button.setEnabled(enabled)
-        self.download_button.setText(_DOWNLOAD_READY_TEXT)
+        self.download_button.setText("Download and Install")
         self.download_button.setDefault(enabled)
         self.download_button.setVisible(True)
         self.progress_bar.setVisible(False)
@@ -336,8 +435,10 @@ class UpdateDialog(QDialog):
 
         # Display changelog
         changelog = release_info.changelog.strip() or "_No changelog provided._"
-        self.changelog_view.setMarkdown(_strip_commit_links(changelog))
-        self._apply_heading_spacing()
+        changelog = convert_img_tags(changelog)
+        html = md_to_html(strip_commit_links(changelog, repo_url="https://github.com/amnweb/yasb"))
+        self._show_spinner(True)
+        self.changelog_view.setHtmlAndLoadImages(html)
 
         self._set_idle_state(enabled=True)
 
@@ -359,7 +460,7 @@ class UpdateDialog(QDialog):
 
         self._cancel_requested = False
         self.download_button.setEnabled(False)
-        self.download_button.setText(_DOWNLOADING_TEXT)
+        self.download_button.setText("Downloading...")
         self.download_button.setDefault(False)
         self.progress_bar.setVisible(True)
         self.progress_bar.setRange(0, 100)
@@ -479,33 +580,10 @@ class UpdateDialog(QDialog):
         super().closeEvent(event)
 
     def _set_close_button_state(self, *, is_cancel: bool) -> None:
-        self.close_button.setText(_CANCEL_BUTTON_TEXT if is_cancel else _CLOSE_BUTTON_TEXT)
-
-    def showEvent(self, event) -> None:
-        self._apply_button_styles()
-        super().showEvent(event)
-
-    def event(self, event) -> bool:
-        if event.type() == QEvent.Type.PaletteChange:
-            self._apply_button_styles()
-            refresh_widget_style(self.changelog_view)
-        return super().event(event)
+        self.close_button.setText("Cancel" if is_cancel else "Close")
 
     def present(self) -> None:
         if not self.isVisible():
             self.open()
         self.raise_()
         self.activateWindow()
-
-    def _apply_heading_spacing(self) -> None:
-        document = self.changelog_view.document()
-        cursor = QTextCursor(document)
-        block = document.begin()
-        while block.isValid():
-            fmt = block.blockFormat()
-            if fmt.headingLevel() > 0:
-                fmt.setTopMargin(18)
-                fmt.setBottomMargin(12)
-                cursor.setPosition(block.position())
-                cursor.setBlockFormat(fmt)
-            block = block.next()

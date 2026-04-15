@@ -35,7 +35,9 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
 )
 
-from core.utils.utilities import LoaderLine, PopupWidget, app_data_path
+from core.ui.components.loader import LoaderLine
+from core.utils.system import app_data_path
+from core.utils.utilities import PopupWidget
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.widgets.quick_launch.base_provider import ProviderResult
 from core.utils.widgets.quick_launch.context_menu import QuickLaunchContextMenuService
@@ -47,7 +49,7 @@ from core.utils.widgets.quick_launch.providers.resources.icons import (
     ICON_SUBMIT,
 )
 from core.utils.widgets.quick_launch.service import QuickLaunchService
-from core.utils.win32.utilities import apply_qmenu_style, find_focused_screen
+from core.utils.win32.utils import apply_qmenu_style, find_focused_screen
 from core.utils.win32.window_actions import force_foreground_focus
 from core.validation.widgets.yasb.quick_launch import QuickLaunchConfig
 from core.widgets.base import BaseWidget

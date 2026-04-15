@@ -6,7 +6,7 @@ from core.utils.widgets.quick_launch.base_provider import (
     ProviderMenuActionResult,
     ProviderResult,
 )
-from core.utils.win32.utilities import apply_qmenu_style
+from core.utils.win32.utils import apply_qmenu_style
 
 
 class QuickLaunchContextMenuService:

@@ -14,7 +14,7 @@ from win32api import GetMonitorInfo, MonitorFromWindow
 from win32gui import GetClassName, GetWindowPlacement, GetWindowRect, GetWindowText
 from winrt.windows.management.deployment import PackageManager
 
-from core.utils.utilities import is_windows_10
+from core.utils.system import is_windows_10
 from core.utils.win32.bindings import (
     CloseHandle,
     DwmGetWindowAttribute,
@@ -364,7 +364,7 @@ def apply_qmenu_style(qwidget: QWidget):
     try:
         from PyQt6.QtWidgets import QStyleFactory
 
-        from core.utils.win32.win32_accent import Blur
+        from core.utils.win32.backdrop import enable_blur
 
         # First we need to set Fusion style to remove shadow artifacts
         qwidget.setStyle(QStyleFactory.create("Fusion"))
@@ -372,9 +372,7 @@ def apply_qmenu_style(qwidget: QWidget):
         def apply_blur():
             try:
                 hwnd = int(qwidget.winId())
-                Blur(
-                    hwnd, Acrylic=False, DarkMode=True, RoundCorners=True, RoundCornersType="normal", BorderColor="None"
-                )
+                enable_blur(hwnd, DarkMode=True, RoundCorners=True, RoundCornersType="normal", BorderColor="None")
             except Exception:
                 pass
 

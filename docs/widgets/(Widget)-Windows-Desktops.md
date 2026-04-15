@@ -111,32 +111,61 @@ windows_workspaces:
     background-color: rgba(255,255,255,0.1);
 }
 
-.windows-desktops .rename-dialog {
-    background-color: rgba(17, 17, 27, 0.75);   
+
+.windows-desktops-popup.rename {
+    min-width: 320px;
+    background-color: rgb(43, 43, 43);
 }
-.windows-desktops .rename-dialog QPushButton{
-    background-color:rgba(255,255,255,0.1);
-    color: #ffffff;
-    border: none;
-    padding: 4px 12px;
+.windows-desktops-popup.rename .windows-desktops-popup-container {
+    padding: 16px;
+}
+.windows-desktops-popup.rename .windows-desktops-popup-footer {
+    padding: 16px;
+    background-color:rgb(32, 32, 32)
+}
+.windows-desktops-popup .popup-title {
+    font-size: 16px;
+    font-family: "Segoe UI Variable", "Segoe UI";
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.9);
+    margin-bottom: 4px;
+}
+.windows-desktops-popup .popup-description {
+    font-size: 13px;
+    font-family: "Segoe UI Variable", "Segoe UI";
+    font-weight: 400;
+    color: rgba(255, 255, 255, 0.9);
+    margin-bottom: 12px;
+}
+.windows-desktops-popup .rename-input {
+    font-size: 14px;
+    font-family: "Segoe UI Variable", "Segoe UI";
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.9);
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid transparent;
     border-radius: 4px;
+    padding: 4px 8px;
+    outline: none;
+    min-width: 280px;
 }
-.windows-desktops .rename-dialog QPushButton:hover{
-    background-color: #585858;
-    color: #ffffff;
-    border: none;
-    padding: 4px 12px;
+.windows-desktops-popup .rename-input:focus {
+    border: 1px solid #4cc2ff;
+}
+.windows-desktops-popup .button {
     border-radius: 4px;
+    font-family: "Segoe UI Variable", "Segoe UI";
+    font-size: 13px;
+    min-height: 28px;
+    min-width: 120px;
+    margin: 4px 0;
+    background-color: rgb(43, 43, 43);
 }
- 
-.windows-desktops .rename-dialog QLabel {
-    color: #ffffff;
+.windows-desktops-popup .button.save {
+    margin-right: 8px;
 }
-.windows-desktops .rename-dialog QLineEdit {
-    background-color: transparent;
-    border: 1px solid #89b4fa;
-    padding: 4px;
-    color: #ffffff;
+.windows-desktops-popup .button:hover {
+    background-color: rgba(255, 255, 255, 0.15);
 }
 ```
 

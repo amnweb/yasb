@@ -3,7 +3,7 @@ import logging
 from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, QTimer
 from PyQt6.QtWidgets import QGraphicsOpacityEffect, QWidget
 
-from core.utils.utilities import is_valid_qobject
+from core.utils.qobject import is_valid_qobject
 
 
 class AnimationManager:

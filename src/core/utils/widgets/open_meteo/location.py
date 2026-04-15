@@ -11,7 +11,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-from core.utils.utilities import app_data_path
+from core.utils.system import app_data_path
 
 logger = logging.getLogger("open_meteo")
 _LOCATION_FILE = "weather.json"

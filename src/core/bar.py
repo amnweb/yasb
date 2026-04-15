@@ -14,8 +14,8 @@ from core.bar_helper import (
 )
 from core.event_service import EventService
 from core.utils.utilities import is_valid_percentage_str, percent_to_float
-from core.utils.win32.utilities import get_monitor_hwnd
-from core.utils.win32.win32_accent import Blur
+from core.utils.win32.backdrop import enable_blur
+from core.utils.win32.utils import get_monitor_hwnd
 from core.validation.bar import BarConfig
 from settings import APP_BAR_TITLE
 
@@ -130,9 +130,8 @@ class Bar(QWidget):
             self._maximized_watcher = MaximizedWindowWatcher(self, self)
 
         if self.config.blur_effect.enabled:
-            Blur(
+            enable_blur(
                 self.winId(),
-                Acrylic=self.config.blur_effect.acrylic,
                 DarkMode=self.config.blur_effect.dark_mode,
                 RoundCorners=self.config.blur_effect.round_corners,
                 RoundCornersType=self.config.blur_effect.round_corners_type,

@@ -23,7 +23,8 @@ from PyQt6.QtWidgets import (
 from win32con import HWND_BROADCAST
 
 from core.bar_helper import AppBarManager
-from core.utils.utilities import add_shadow, app_data_path, refresh_widget_style
+from core.utils.system import app_data_path
+from core.utils.utilities import add_shadow, refresh_widget_style
 from core.utils.widgets.systray.systray_hook import SystrayHook
 from core.utils.widgets.systray.systray_monitor import IconData, SystrayMonitor
 from core.utils.widgets.systray.systray_popup import SystrayPopup
@@ -39,7 +40,7 @@ from core.utils.win32.constants import (
     NIF_STATE,
     NIF_TIP,
 )
-from core.utils.win32.utilities import apply_qmenu_style, get_windows_host_arch, is_running_under_emulation
+from core.utils.win32.utils import apply_qmenu_style, get_windows_host_arch, is_running_under_emulation
 from core.validation.widgets.yasb.systray import SystrayWidgetConfig
 from core.widgets.base import BaseWidget
 

@@ -5,11 +5,11 @@ from PyQt6.QtCore import QRect, Qt
 from PyQt6.QtGui import QWheelEvent
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QSlider, QVBoxLayout, QWidget
 
+from core.utils.qobject import is_valid_qobject
 from core.utils.tooltip import CustomToolTip, set_tooltip
 from core.utils.utilities import (
     PopupWidget,
     build_progress_widget,
-    is_valid_qobject,
     refresh_widget_style,
 )
 from core.utils.widgets.animation_manager import AnimationManager

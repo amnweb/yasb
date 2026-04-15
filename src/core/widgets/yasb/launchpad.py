@@ -44,9 +44,9 @@ from core.utils.shell_utils import shell_open
 from core.utils.utilities import add_shadow, refresh_widget_style
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.win32.app_loader import AppListLoader, ShortcutResolver
+from core.utils.win32.backdrop import enable_blur
 from core.utils.win32.icon_extractor import IconExtractorUtil, UrlExtractorUtil
-from core.utils.win32.utilities import apply_qmenu_style, get_foreground_hwnd, set_foreground_hwnd
-from core.utils.win32.win32_accent import Blur
+from core.utils.win32.utils import apply_qmenu_style, get_foreground_hwnd, set_foreground_hwnd
 from core.utils.win32.window_actions import force_foreground_focus
 from core.validation.widgets.yasb.launchpad import LaunchpadConfig
 from core.widgets.base import BaseWidget
@@ -1770,9 +1770,8 @@ class LaunchpadWidget(BaseWidget):
     def _apply_blur(self):
         if self._launchpad_popup:
             try:
-                Blur(
+                enable_blur(
                     self._launchpad_popup.winId(),
-                    Acrylic=False,
                     DarkMode=True if not self._window["fullscreen"] else False,
                     RoundCorners=self._window_style["round_corners"] if not self._window["fullscreen"] else False,
                     RoundCornersType=self._window_style["round_corners_type"],

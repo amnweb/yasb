@@ -6,7 +6,7 @@ import win32con
 import win32gui
 
 from core.utils.win32.bindings import DwmGetWindowAttribute, IsWindowEnabled
-from core.utils.win32.utilities import get_process_info
+from core.utils.win32.utils import get_process_info
 
 logger = logging.getLogger("application_window")
 logger.setLevel(logging.WARNING)

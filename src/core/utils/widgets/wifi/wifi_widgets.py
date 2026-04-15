@@ -30,7 +30,9 @@ from PyQt6.QtWidgets import (
 )
 from winrt.windows.devices.wifi import WiFiConnectionStatus
 
-from core.utils.utilities import LoaderLine, PopupWidget, is_valid_qobject, refresh_widget_style
+from core.ui.components.loader import LoaderLine
+from core.utils.qobject import is_valid_qobject
+from core.utils.utilities import PopupWidget, refresh_widget_style
 from core.utils.widgets.wifi.wifi_managers import (
     NetworkInfo,
     ScanResultStatus,
@@ -39,7 +41,7 @@ from core.utils.widgets.wifi.wifi_managers import (
     WiFiManager,
     WifiState,
 )
-from core.utils.win32.utilities import apply_qmenu_style
+from core.utils.win32.utils import apply_qmenu_style
 from core.validation.widgets.yasb.wifi import WifiMenuConfig  # type: ignore
 
 logger = logging.getLogger("wifi_widget")

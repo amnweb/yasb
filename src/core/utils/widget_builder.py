@@ -6,7 +6,7 @@ from PyQt6.QtCore import QObject
 from PyQt6.QtWidgets import QWidget
 
 from core.utils.alert_dialog import raise_info_alert
-from core.utils.utilities import format_pydantic_errors_to_yaml
+from core.utils.validation_errors import format_pydantic_errors_to_yaml
 from settings import DEFAULT_CONFIG_FILENAME
 
 

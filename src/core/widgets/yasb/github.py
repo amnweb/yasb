@@ -7,8 +7,9 @@ from PyQt6.QtCore import QPoint, Qt, QTimer, QUrl
 from PyQt6.QtGui import QColor, QCursor, QDesktopServices, QMouseEvent, QPainter, QPaintEvent
 from PyQt6.QtWidgets import QFrame, QGraphicsOpacityEffect, QHBoxLayout, QLabel, QScrollArea, QVBoxLayout, QWidget
 
+from core.utils.time_utils import get_relative_time
 from core.utils.tooltip import set_tooltip
-from core.utils.utilities import PopupWidget, add_shadow, get_relative_time, refresh_widget_style
+from core.utils.utilities import PopupWidget, add_shadow, refresh_widget_style
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.widgets.github.api import GitHubDataManager
 from core.utils.widgets.github.auth import get_saved_token

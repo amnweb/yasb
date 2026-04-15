@@ -11,7 +11,7 @@ from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QWidget
 from core.utils.utilities import add_shadow, refresh_widget_style
 from core.utils.widgets.glazewm.client import GlazewmClient, Monitor, Window, Workspace
 from core.utils.win32.app_icons import get_window_icon
-from core.utils.win32.utilities import get_monitor_hwnd, get_process_info
+from core.utils.win32.utils import get_monitor_hwnd, get_process_info
 from core.validation.widgets.glazewm.workspaces import GlazewmWorkspacesConfig
 from core.widgets.base import BaseWidget
 

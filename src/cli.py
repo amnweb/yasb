@@ -28,7 +28,7 @@ from win32con import (
     OPEN_EXISTING,
 )
 
-from core.utils.utilities import is_process_running
+from core.utils.process import is_process_running
 from core.utils.win32.bindings import (
     CloseHandle,
     CreateFile,
@@ -36,15 +36,14 @@ from core.utils.win32.bindings import (
     WriteFile,
 )
 from core.utils.win32.constants import INVALID_HANDLE_VALUE
-from settings import APP_NAME, BUILD_VERSION, CLI_VERSION, DEFAULT_CONFIG_DIRECTORY, RELEASE_CHANNEL
+from settings import APP_NAME, BUILD_VERSION, CLI_VERSION, DEFAULT_CONFIG_DIRECTORY, RELEASE_CHANNEL, SCRIPT_PATH
 
 BUFSIZE = 65536
 YASB_VERSION = BUILD_VERSION
 YASB_CLI_VERSION = CLI_VERSION
 YASB_RELEASE_CHANNEL = RELEASE_CHANNEL
 
-INSTALLATION_PATH = os.path.abspath(os.path.join(__file__, "../../.."))
-EXE_PATH = os.path.join(INSTALLATION_PATH, "yasb.exe")
+EXE_PATH = os.path.join(SCRIPT_PATH, "yasb.exe")
 AUTOSTART_FILE = EXE_PATH if os.path.exists(EXE_PATH) else None
 
 CLI_SERVER_PIPE_NAME = r"\\.\pipe\yasb_pipe_cli"
@@ -569,7 +568,7 @@ class CLIHandler:
             # Clear all files in app_data_folder if it exists
             import tempfile
 
-            from core.utils.utilities import app_data_path
+            from core.utils.system import app_data_path
 
             app_data_folder = app_data_path()
             if app_data_folder.exists() and app_data_folder.is_dir():
@@ -639,7 +638,7 @@ class CLIHandler:
             sys.exit(0)
 
         elif args.version:
-            from core.utils.utilities import get_architecture
+            from core.utils.system import get_architecture
 
             architecture = get_architecture()
             arch_suffix = f" {architecture}" if architecture else ""
@@ -705,7 +704,7 @@ class CLITaskHandler:
         idle_settings.RestartOnIdle = False
         action = task_def.Actions.Create(0)
         action.Path = EXE_PATH
-        action.WorkingDirectory = INSTALLATION_PATH
+        action.WorkingDirectory = SCRIPT_PATH
         try:
             root_folder.RegisterTaskDefinition("YASB Reborn", task_def, 6, None, None, 3, None)
             print("Task YASB Reborn created successfully.")
@@ -736,8 +735,8 @@ class CLIChannelHandler:
         """
         import tempfile
 
+        from core.utils.system import get_architecture
         from core.utils.update_service import get_update_service
-        from core.utils.utilities import get_architecture
 
         update_service = get_update_service()
         current_channel = update_service._current_channel
@@ -842,8 +841,8 @@ class CLIUpdateHandler:
         """Check for updates and install if available using centralized update service."""
         import tempfile
 
+        from core.utils.system import get_architecture
         from core.utils.update_service import get_update_service
-        from core.utils.utilities import get_architecture
 
         architecture = get_architecture()
         update_service = get_update_service()

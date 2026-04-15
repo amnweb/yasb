@@ -6,7 +6,7 @@ from PyQt6.QtGui import QMouseEvent
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import add_shadow
 from core.utils.widgets.ai_chat.ui_components import NotificationLabel
-from core.utils.win32.utilities import get_foreground_hwnd, set_foreground_hwnd
+from core.utils.win32.utils import get_foreground_hwnd, set_foreground_hwnd
 
 
 class FocusManager:

@@ -10,11 +10,9 @@ from pydantic import ValidationError
 from yaml import safe_load
 from yaml.parser import ParserError
 
-from core.defaults.config import get_default_config
-from core.defaults.styles import get_default_styles
 from core.utils.alert_dialog import raise_info_alert
 from core.utils.css_processor import CSSProcessor
-from core.utils.utilities import format_pydantic_errors_to_yaml
+from core.utils.validation_errors import format_pydantic_errors_to_yaml
 from core.validation.config import YasbConfig
 from settings import DEFAULT_CONFIG_DIRECTORY, DEFAULT_CONFIG_FILENAME, DEFAULT_STYLES_FILENAME, GITHUB_URL
 
@@ -32,6 +30,11 @@ class ConfigValidationError(TypeError):
         self.filepath = filepath
 
 
+def is_first_run() -> bool:
+    """Return True when neither config file nor stylesheet exist yet."""
+    return not path.isfile(HOME_CONFIG_PATH) and not path.isfile(HOME_STYLES_PATH)
+
+
 def get_config_dir() -> str:
     if path.isdir(HOME_CONFIGURATION_DIR):
         return HOME_CONFIGURATION_DIR
@@ -44,33 +47,11 @@ def get_config_dir() -> str:
 
 
 def get_config_path() -> str:
-    if path.isdir(HOME_CONFIGURATION_DIR) and path.isfile(HOME_CONFIG_PATH):
-        return HOME_CONFIG_PATH
-    elif not path.isfile(HOME_CONFIG_PATH):
-        # Create default config file if it doesn't exist
-        if not path.isdir(HOME_CONFIGURATION_DIR):
-            makedirs(HOME_CONFIGURATION_DIR)
-        with open(HOME_CONFIG_PATH, "w", encoding="utf-8") as f:
-            f.write(get_default_config())
-        logging.info("Created default config file at %s", HOME_CONFIG_PATH)
-        return HOME_CONFIG_PATH
-    else:
-        return HOME_CONFIG_PATH
+    return HOME_CONFIG_PATH
 
 
 def get_stylesheet_path() -> str:
-    if path.isdir(HOME_CONFIGURATION_DIR) and path.isfile(HOME_STYLES_PATH):
-        return HOME_STYLES_PATH
-    elif not path.isfile(HOME_STYLES_PATH):
-        # Create default stylesheet if it doesn't exist
-        if not path.isdir(HOME_CONFIGURATION_DIR):
-            makedirs(HOME_CONFIGURATION_DIR)
-        with open(HOME_STYLES_PATH, "w", encoding="utf-8") as f:
-            f.write(get_default_styles())
-        logging.info("Created default stylesheet at %s", HOME_STYLES_PATH)
-        return HOME_STYLES_PATH
-    else:
-        return HOME_STYLES_PATH
+    return HOME_STYLES_PATH
 
 
 def parse_env(obj):

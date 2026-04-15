@@ -2,7 +2,7 @@ import datetime
 
 from cx_Freeze import Executable, setup
 
-from core.utils.utilities import detect_architecture
+from core.utils.system import detect_architecture
 from settings import APP_ID, BUILD_VERSION, RELEASE_CHANNEL
 
 arch_info = detect_architecture()
@@ -112,7 +112,7 @@ executables = [
         target_name="yasb",
     ),
     Executable(
-        "core/ui/windows/themes.py",
+        "core/ui/views/themes.py",
         base="gui",
         icon="assets/images/app_icon.ico",
         copyright=f"Copyright (C) {datetime.datetime.now().year} AmN",

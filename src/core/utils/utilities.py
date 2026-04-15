@@ -1,21 +1,9 @@
-import ctypes
-import ctypes.wintypes as wintypes
 import math
-import os
-import platform
-import re
-from datetime import UTC, datetime
 from enum import StrEnum
 from functools import lru_cache
-from pathlib import Path
-from threading import Lock
-from typing import Any, TypeGuard, cast, override
+from typing import Any, cast, override
 
-import yaml
-from pydantic import ValidationError
-from PyQt6 import sip
 from PyQt6.QtCore import (
-    QEasingCurve,
     QEvent,
     QObject,
     QPoint,
@@ -24,7 +12,6 @@ from PyQt6.QtCore import (
     QSize,
     Qt,
     QTimer,
-    pyqtProperty,
     pyqtSlot,
 )
 from PyQt6.QtGui import (
@@ -32,7 +19,6 @@ from PyQt6.QtGui import (
     QFontMetrics,
     QPainter,
     QPaintEvent,
-    QPalette,
     QResizeEvent,
     QScreen,
     QStaticText,
@@ -42,161 +28,9 @@ from PyQt6.QtWidgets import QApplication, QDialog, QFrame, QGraphicsDropShadowEf
 from winrt.windows.data.xml.dom import XmlDocument
 from winrt.windows.ui.notifications import ToastNotification, ToastNotificationManager
 
-from core.utils.win32.bindings.kernel32 import kernel32
-from core.utils.win32.constants import TH32CS_SNAPPROCESS
-from core.utils.win32.structs import PROCESSENTRY32
-from core.utils.win32.win32_accent import Blur
-
-
-def is_valid_qobject[T](obj: T | None) -> TypeGuard[T]:
-    """Check if the object is a valid QObject with specific type"""
-    return obj is not None and isinstance(obj, QObject) and not sip.isdeleted(obj)
-
-
-def app_data_path(filename: str = None) -> Path:
-    """
-    Get the YASB local data folder (creating it if it doesn't exist),
-    or a file path inside it if filename is provided.
-    """
-    folder = Path(os.environ["LOCALAPPDATA"]) / "YASB"
-    folder.mkdir(parents=True, exist_ok=True)
-    if filename is not None:
-        return folder / filename
-    return folder
-
-
-def is_windows_10() -> bool:
-    version = platform.version()
-    return bool(re.match(r"^10\.0\.1\d{4}$", version))
-
-
-def detect_architecture() -> tuple[str, str] | None:
-    """Detect the system architecture for build purposes.
-
-    Returns:
-        Tuple of (display_name, msi_suffix): ("ARM64", "aarch64") or ("x64", "x64"), or None if unknown
-    """
-    try:
-        machine = platform.machine().lower()
-
-        # Check for ARM64
-        if machine in ["arm64", "aarch64"]:
-            return ("ARM64", "aarch64")
-
-        # Check for x64
-        if machine in ["amd64", "x86_64", "x64"]:
-            return ("x64", "x64")
-
-        # Fallback: check if running on 64-bit Windows
-        if platform.architecture()[0] == "64bit":
-            return ("x64", "x64")
-
-        return None
-    except Exception:
-        return None
-
-
-def get_architecture() -> str | None:
-    """Get the build architecture from BUILD_CONSTANTS.
-
-    Returns:
-        Architecture string from frozen build, or None if not frozen/built
-    """
-    try:
-        from BUILD_CONSTANTS import ARCHITECTURE  # type: ignore[import-not-found]
-
-        return ARCHITECTURE
-    except ImportError:
-        return None
-
-
-def get_relative_time(iso_timestamp: str, short: bool = False) -> str:
-    """
-    Convert an ISO 8601 timestamp to a human-readable relative time string.
-
-    Args:
-        iso_timestamp: ISO 8601 formatted timestamp (e.g., "2024-11-01T12:00:00Z")
-        short: If True, return a compact format (e.g., "3m", "5h", "1d", "20 Apr").
-
-    Returns:
-        A relative time string (e.g., "3 days ago", "2 weeks ago", "just now")
-        or a compact form when *short=True* (e.g., "3d", "5h", "33m").
-        Returns empty string if timestamp is invalid or empty.
-
-    Examples:
-        >>> get_relative_time("2024-11-07T12:00:00Z")
-        "just now"
-        >>> get_relative_time("2024-11-04T12:00:00Z")
-        "3 days ago"
-        >>> get_relative_time("2024-11-04T12:00:00Z", short=True)
-        "3d"
-    """
-    if not iso_timestamp:
-        return ""
-
-    try:
-        # Parse ISO 8601 timestamp
-        updated = datetime.fromisoformat(iso_timestamp.replace("Z", "+00:00"))
-        now = datetime.now(UTC)
-        diff = now - updated
-
-        seconds = diff.total_seconds()
-        minutes = seconds / 60
-        hours = minutes / 60
-        days = hours / 24
-        weeks = days / 7
-        months = days / 30
-        years = days / 365
-
-        if seconds < 60:
-            return "now" if short else "just now"
-        elif minutes < 60:
-            m = int(minutes)
-            return f"{m}m" if short else f"{m} minute{'s' if m != 1 else ''} ago"
-        elif hours < 24:
-            h = int(hours)
-            return f"{h}h" if short else f"{h} hour{'s' if h != 1 else ''} ago"
-        elif days < 7:
-            d = int(days)
-            return f"{d}d" if short else f"{d} day{'s' if d != 1 else ''} ago"
-        elif short:
-            if days < 365:
-                return updated.strftime("%-d %b") if os.name != "nt" else updated.strftime("%#d %b")
-            return updated.strftime("%b %Y")
-        elif weeks < 4:
-            w = int(weeks)
-            return f"{w} week{'s' if w != 1 else ''} ago"
-        elif months < 12:
-            mo = int(months)
-            return f"{mo} month{'s' if mo != 1 else ''} ago"
-        else:
-            y = int(years)
-            return f"{y} year{'s' if y != 1 else ''} ago"
-    except Exception:
-        return ""
-
-
-def is_process_running(process_name: str) -> bool:
-    snapshot = kernel32.CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0)
-    if snapshot == wintypes.HANDLE(-1).value:
-        return False
-
-    try:
-        entry = PROCESSENTRY32()
-        entry.dwSize = ctypes.sizeof(PROCESSENTRY32)
-
-        if not kernel32.Process32FirstW(snapshot, ctypes.byref(entry)):
-            return False
-
-        target = process_name.lower()
-        while True:
-            if entry.szExeFile.lower() == target:
-                return True
-            if not kernel32.Process32NextW(snapshot, ctypes.byref(entry)):
-                break
-        return False
-    finally:
-        kernel32.CloseHandle(snapshot)
+from core.utils.qobject import is_valid_qobject
+from core.utils.system import is_windows_10
+from core.utils.win32.backdrop import enable_blur
 
 
 def percent_to_float(percent: str) -> float:
@@ -253,192 +87,6 @@ def refresh_widget_style(*widgets: QWidget) -> None:
             style.polish(widget)
         except Exception:
             pass
-
-
-class LoaderLine(QWidget):
-    """An animated horizontal loading indicator that displays a sliding segment.
-
-    The loader can be attached to any widget and will automatically position
-    itself at the bottom edge, resizing when the parent widget changes size.
-
-    Example:
-        loader = LoaderLine(parent)
-        loader.configure(
-            class_name="my-loader",
-            height=2,
-            duration_ms=1800,
-            segment_ratio=0.25,
-            easing=QEasingCurve.Type.Linear
-        )
-        loader.attach_to_widget(target_widget)
-        loader.start()
-
-    Attributes:
-        offset (pyqtProperty[float]): Animation progress from 0.0 to 1.0.
-
-    """
-
-    def __init__(self, parent: QWidget | None = None):
-        """Initialize the loader line widget.
-
-        Args:
-            parent: Optional parent widget.
-        """
-        super().__init__(parent)
-        self._offset = 0.0
-        self._segment_ratio = 0.18
-        self._animation = QPropertyAnimation(self, b"offset", self)
-        self._animation.setDuration(2400)
-        self._animation.setStartValue(0.0)
-        self._animation.setEndValue(1.0)
-        self._animation.setLoopCount(-1)
-        self._animation.setEasingCurve(QEasingCurve.Type.InOutSine)
-        self.setFixedHeight(1)
-        self.setVisible(False)
-        self._target_widget: QWidget | None = None
-        self._auto_position_enabled = False
-        self.setProperty("class", "loader-line")
-        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
-        self.raise_()
-
-    def configure(
-        self,
-        class_name: str | None = None,
-        duration_ms: int | None = None,
-        easing: QEasingCurve.Type | None = None,
-        segment_ratio: float | None = None,
-        height: int | None = None,
-    ) -> None:
-        """Configure style and animation settings.
-
-        All parameters are optional. When omitted, current defaults remain unchanged.
-
-        Args:
-            class_name: CSS class name for styling (default: "loader-line").
-            duration_ms: Animation cycle duration in milliseconds (default: 2400).
-            easing: Animation easing curve type (default: QEasingCurve.Type.InOutSine).
-            segment_ratio: Width of the sliding segment as a ratio of total width (default: 0.18).
-            height: Fixed height of the loader in pixels (default: 1).
-        """
-        if class_name:
-            self.setProperty("class", class_name)
-        if duration_ms is not None:
-            self._animation.setDuration(duration_ms)
-        if easing is not None:
-            self._animation.setEasingCurve(easing)
-        if segment_ratio is not None:
-            self._segment_ratio = segment_ratio
-        if height is not None:
-            self.setFixedHeight(height)
-            self._position_in_widget()
-
-    def attach_to_widget(self, target_widget: QWidget) -> None:
-        """Attach to a widget and auto-position at the bottom edge.
-
-        Args:
-            target_widget: The widget to attach to. The loader will be reparented
-                to this widget and positioned at its bottom edge.
-        """
-        if not target_widget:
-            return
-        self._target_widget = target_widget
-        if self.parent() is not target_widget:
-            self.setParent(target_widget)
-        self._auto_position_enabled = True
-        target_widget.installEventFilter(self)
-        target_widget.destroyed.connect(lambda: self.detach_from_widget())
-        QTimer.singleShot(0, self._position_in_widget)
-
-    def detach_from_widget(self) -> None:
-        """Detach from the current target widget and stop auto-positioning."""
-        if self._target_widget and is_valid_qobject(self._target_widget):
-            try:
-                self._target_widget.removeEventFilter(self)
-            except Exception:
-                pass
-        self._target_widget = None
-        self._auto_position_enabled = False
-
-    def _position_in_widget(self) -> None:
-        target_widget = self._target_widget
-        if not target_widget or not is_valid_qobject(target_widget):
-            return
-        try:
-            h = self.maximumHeight()
-            if h <= 0 or h >= 10000:
-                h = self.height() or self.sizeHint().height() or 2
-            self.setGeometry(0, target_widget.height() - h, target_widget.width(), h)
-        except RuntimeError:
-            pass
-
-    def eventFilter(self, obj: QObject, event: QEvent):
-        if self._auto_position_enabled and obj is self._target_widget and event.type() == QEvent.Type.Resize:
-            self._position_in_widget()
-        return super().eventFilter(obj, event)
-
-    def start(self) -> None:
-        """Start the loading animation and make the widget visible."""
-        if self._animation.state() == QPropertyAnimation.State.Running:
-            return
-        self._offset = 0.0
-        self.setVisible(True)
-        self._animation.start()
-
-    def stop(self) -> None:
-        """Stop the loading animation and hide the widget."""
-        if self._animation.state() == QPropertyAnimation.State.Running:
-            self._animation.stop()
-        self.setVisible(False)
-        self.update()
-
-    def getOffset(self) -> float:
-        return self._offset
-
-    def setOffset(self, value: float) -> None:
-        self._offset = value
-        self.update()
-
-    offset = pyqtProperty(float, fget=getOffset, fset=setOffset)
-
-    def paintEvent(self, event: QPaintEvent):
-        if not self.isVisible():
-            return
-        w = self.width()
-        h = self.height()
-        if w <= 0 or h <= 0:
-            return
-        phase = min(max(self._offset, 0.0), 1.0)
-        size_scale = 0.2 + 1.2 * (1 - (2 * phase - 1) ** 2)
-        segment_w = max(6, int(w * self._segment_ratio * size_scale))
-        x = int((w + segment_w) * self._offset) - segment_w
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        line_color = self.palette().color(QPalette.ColorRole.WindowText)
-        painter.fillRect(x, 0, segment_w, h, QColor(line_color))
-
-
-def format_pydantic_errors_to_yaml(exc: ValidationError) -> str:
-    """Format a Pydantic ValidationError to a YAML string."""
-    tree = {}
-    for error in exc.errors():
-        current = tree
-        loc = error["loc"]
-
-        # Walk through the path (e.g., ('nested', 0, 'field'))
-        for i, part in enumerate(loc):
-            # If we are at the last part, it's the actual error location
-            if i == len(loc) - 1:
-                if part not in current:
-                    current[part] = []
-                # Handle cases where Pydantic returns multiple errors for one field
-                current[part].append(error["msg"])
-            else:
-                # If the path doesn't exist, create a dict for the next level
-                if part not in current or not isinstance(current[part], dict):
-                    current[part] = {}
-                current = current[part]
-
-    return yaml.dump(tree, default_flow_style=False, sort_keys=False)
 
 
 def build_progress_widget(self, options: dict[str, Any]) -> None:
@@ -703,9 +351,8 @@ class PopupWidget(QWidget):
         PopupWidget._open_popups[parent_id] = self
 
         if self._blur:
-            Blur(
+            enable_blur(
                 self.winId(),
-                Acrylic=True if is_windows_10() else False,
                 DarkMode=self._dark_mode,
                 RoundCorners=False if is_windows_10() else self._round_corners,
                 RoundCornersType=self._round_corners_type,
@@ -1078,29 +725,3 @@ class ScrollingLabel(QLabel):
         self._build_text_and_metrics()
         # Update offset immediately based on new state
         self._scroll_text()
-
-
-class Singleton(type):
-    """Singleton metaclass for regular python classes"""
-
-    _instances: dict[Any, Any] = {}
-    _lock = Lock()
-
-    def __call__(cls, *args: Any, **kwargs: Any):
-        with cls._lock:
-            if cls not in cls._instances:
-                cls._instances[cls] = super().__call__(*args, **kwargs)
-            return cls._instances[cls]
-
-
-class QSingleton(type(QObject)):
-    """Singleton metaclass for Qt classes"""
-
-    _instances: dict[Any, Any] = {}
-    _lock = Lock()
-
-    def __call__(cls, *args: Any, **kwargs: Any):
-        with cls._lock:
-            if cls not in cls._instances or sip.isdeleted(cls._instances[cls]):
-                cls._instances[cls] = super().__call__(*args, **kwargs)
-            return cls._instances[cls]

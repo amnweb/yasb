@@ -5,8 +5,8 @@ from PyQt6.QtGui import QCursor
 from PyQt6.QtWidgets import QApplication, QFrame, QVBoxLayout, QWidget
 
 from core.utils.widgets.systray.systray_widget import DropWidget, IconWidget
+from core.utils.win32.backdrop import enable_blur
 from core.utils.win32.bindings import user32
-from core.utils.win32.win32_accent import Blur
 
 # Win32 detect physical mouse button state
 _GetAsyncKeyState = user32.GetAsyncKeyState
@@ -158,9 +158,8 @@ class SystrayPopup(QWidget):
 
     def showEvent(self, event):
         if self._blur:
-            Blur(
+            enable_blur(
                 self.winId(),
-                Acrylic=False,
                 DarkMode=False,
                 RoundCorners=self._round_corners,
                 RoundCornersType=self._round_corners_type,

@@ -7,17 +7,17 @@ from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, QRect, Qt
 from PyQt6.QtGui import QImage, QPixmap, QWheelEvent
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QSlider, QVBoxLayout, QWidget
 
+from core.utils.qobject import is_valid_qobject
 from core.utils.tooltip import CustomToolTip, set_tooltip
 from core.utils.utilities import (
     PopupWidget,
     build_progress_widget,
-    is_valid_qobject,
     refresh_widget_style,
 )
 from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.widgets.volume.service import AudioOutputService
 from core.utils.win32.app_icons import get_process_icon
-from core.utils.win32.utilities import get_app_name_from_pid
+from core.utils.win32.utils import get_app_name_from_pid
 from core.validation.widgets.yasb.volume import VolumeConfig
 from core.widgets.base import BaseWidget
 

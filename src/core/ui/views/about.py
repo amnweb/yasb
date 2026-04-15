@@ -1,34 +1,31 @@
 """About dialog for the application, providing information and update controls."""
 
-import os
 from typing import TYPE_CHECKING
 
-from PyQt6.QtCore import QEvent, Qt, QTimer
-from PyQt6.QtGui import QIcon
+from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtWidgets import (
     QDialog,
-    QGraphicsOpacityEffect,
     QHBoxLayout,
     QLabel,
-    QPushButton,
-    QSizePolicy,
     QVBoxLayout,
     QWidget,
 )
-from winmica import BackdropType, EnableMica, is_mica_supported
 
-from core.ui.style import apply_button_style, apply_link_button_style
-from core.ui.windows.update_dialog import ReleaseFetcher, ReleaseInfo, UpdateDialog
+from core.ui.components.button import Button
+from core.ui.components.link import Link
+from core.ui.components.text_block import TextBlock
+from core.ui.views.updater import ReleaseFetcher, ReleaseInfo, UpdateDialog
+from core.ui.views.view_base import ViewBase
+from core.utils.qobject import is_valid_qobject
+from core.utils.system import get_architecture
 from core.utils.tooltip import set_tooltip
 from core.utils.update_service import get_update_service
-from core.utils.utilities import get_architecture, is_valid_qobject, refresh_widget_style
 from settings import (
     APP_NAME,
     BUILD_VERSION,
     GITHUB_THEME_URL,
     GITHUB_URL,
     RELEASE_CHANNEL,
-    SCRIPT_PATH,
 )
 
 ARCHITECTURE = get_architecture()
@@ -37,7 +34,7 @@ if TYPE_CHECKING:
     from core.tray import SystemTrayManager
 
 
-class AboutDialog(QDialog):
+class AboutDialog(ViewBase, QDialog):
     _STATE_CONFIG = {
         "idle": {"text": "Check for Updates", "enabled": True, "attr": "idle"},
         "checking": {"text": "Checking for Updates", "enabled": False, "attr": "checking"},
@@ -65,14 +62,13 @@ class AboutDialog(QDialog):
         update_service = get_update_service()
         self._updates_supported = update_service.is_update_supported()
 
-        self._link_buttons: list[QPushButton] = []
-        self._secondary_buttons: list[QPushButton] = []
+        self._link_buttons: list[Link] = []
+        self._secondary_buttons: list[Button] = []
 
         self._build_window()
         self._build_ui()
 
         self._reset_timer.timeout.connect(lambda: self._apply_state("idle"))
-        self._apply_palette()
         self._apply_state("idle")
 
     def _build_window(self) -> None:
@@ -82,18 +78,11 @@ class AboutDialog(QDialog):
         self.setWindowFlag(Qt.WindowType.Window, True)
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         self.setMinimumSize(360, 480)
-        if is_mica_supported():
-            self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
-            hwnd = int(self.winId())
-            EnableMica(hwnd, BackdropType.MICA)
-
-        icon_path = os.path.join(SCRIPT_PATH, "assets", "images", "app_icon.png")
-        icon = QIcon(icon_path) if os.path.exists(icon_path) else QIcon()
-        if not icon.isNull():
-            self.setWindowIcon(icon)
-        self._window_icon = icon
+        self.build_view()
+        self._window_icon = self.build_app_icon()
 
     def _build_ui(self) -> None:
+
         layout = QVBoxLayout(self)
         layout.setContentsMargins(32, 32, 32, 32)
         layout.setSpacing(0)
@@ -105,25 +94,15 @@ class AboutDialog(QDialog):
             icon_label.setPixmap(self._window_icon.pixmap(90, 90))
         layout.addWidget(icon_label)
 
-        title_label = QLabel("YASB Reborn")
+        title_label = TextBlock("YASB Reborn", variant="title")
         title_label.setContentsMargins(0, 8, 0, 0)
-        title_font = title_label.font()
-        title_font.setPointSize(title_font.pointSize() + 10)
-        title_font.setBold(True)
-        title_label.setFont(title_font)
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(title_label)
 
         arch_suffix = f" {ARCHITECTURE}" if ARCHITECTURE else ""
-        version_label = QLabel(f"Version {BUILD_VERSION}{arch_suffix} ({RELEASE_CHANNEL})")
-        version_label.setContentsMargins(0, 4, 0, 0)
+        version_label = TextBlock(f"Version {BUILD_VERSION}{arch_suffix} ({RELEASE_CHANNEL})", variant="caption")
+        version_label.setContentsMargins(0, 4, 0, 6)
         version_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        version_font = version_label.font()
-        version_font.setPointSize(version_font.pointSize() + 1)
-        version_label.setFont(version_font)
-        version_effect = QGraphicsOpacityEffect()
-        version_effect.setOpacity(0.7)
-        version_label.setGraphicsEffect(version_effect)
         layout.addWidget(version_label)
 
         release_url = self._get_release_notes_url()
@@ -150,7 +129,7 @@ class AboutDialog(QDialog):
 
         button_layout = QVBoxLayout()
         button_layout.setContentsMargins(0, 12, 0, 0)
-        button_layout.setSpacing(12)
+        button_layout.setSpacing(8)
         button_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
         self._support_project_button = self._create_action_button(
@@ -191,46 +170,21 @@ class AboutDialog(QDialog):
 
         return f"{GITHUB_URL}/releases/tag/v{BUILD_VERSION}"
 
-    def _create_link_button(self, text: str, callback) -> QPushButton:
-        button = QPushButton(text)
-        button.setObjectName("yasbLinkButton")
-        button.setCursor(Qt.CursorShape.PointingHandCursor)
-        button.setFlat(True)
-        size_policy = button.sizePolicy()
-        size_policy.setHorizontalPolicy(QSizePolicy.Policy.Fixed)
-        size_policy.setVerticalPolicy(QSizePolicy.Policy.Fixed)
-        button.setSizePolicy(size_policy)
+    def _create_link_button(self, text: str, callback) -> Link:
+        button = Link(text, font_size=13, font_weight="demibold")
         button.clicked.connect(callback)
         self._link_buttons.append(button)
         return button
 
-    def _create_action_button(self, text: str, callback) -> QPushButton:
-        button = QPushButton(text)
-        button.setCursor(Qt.CursorShape.PointingHandCursor)
+    def _create_action_button(self, text: str, callback) -> Button:
+        button = Button(text, font_size=12, font_weight="demibold")
         button.clicked.connect(callback)
         self._secondary_buttons.append(button)
         return button
 
-    def _apply_palette(self) -> None:
-        for button in self._link_buttons:
-            apply_link_button_style(button)
-
-        for button in (
-            self._support_project_button,
-            self._contributors_button,
-            self._open_config_button,
-        ):
-            apply_button_style(button, "secondary")
-
-        self._refresh_update_button_style()
-
     def _refresh_update_button_style(self) -> None:
-        if not is_valid_qobject(self._update_button):
-            return
         state = self._update_button.property("updateState") or "idle"
-        variant = "primary" if state == "available" else "secondary"
-        apply_button_style(self._update_button, variant)
-        refresh_widget_style(self._update_button)
+        self._update_button.set_variant("accent" if state == "available" else "default")
 
     def _apply_state(
         self,
@@ -350,15 +304,3 @@ class AboutDialog(QDialog):
         self._update_button.setProperty("state", config.get("attr", "unsupported"))
         self._update_button.setText(config.get("text", config["text"]))
         set_tooltip(self._update_button, config["tooltip"], 0, position="top")
-
-        apply_button_style(self._update_button, "secondary")
-        refresh_widget_style(self._update_button)
-
-    def showEvent(self, event) -> None:
-        self._apply_palette()
-        super().showEvent(event)
-
-    def event(self, event) -> bool:
-        if event.type() == QEvent.Type.PaletteChange:
-            self._apply_palette()
-        return super().event(event)

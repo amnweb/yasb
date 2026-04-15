@@ -38,7 +38,7 @@ from core.utils.win32.app_bar import APPBAR_CALLBACK_MESSAGE, AppBarNotify
 from core.utils.win32.bindings import SetWindowPos
 from core.utils.win32.bindings.user32 import KillTimer, RegisterWindowMessage, SetTimer, user32
 from core.utils.win32.structs import MSG
-from core.utils.win32.utilities import apply_qmenu_style
+from core.utils.win32.utils import apply_qmenu_style
 
 # Register TaskbarCreated message to detect Explorer restarts
 WM_TASKBARCREATED = RegisterWindowMessage("TaskbarCreated")
@@ -663,7 +663,7 @@ class MaximizedWindowWatcher(QObject):
     def _check_maximized_windows(self):
         """Check if any top-level window is maximized on the bar's monitor."""
         try:
-            from core.utils.win32.utilities import get_monitor_hwnd, is_window_maximized
+            from core.utils.win32.utils import get_monitor_hwnd, is_window_maximized
 
             bar_monitor = getattr(self.bar_widget, "monitor_hwnd", None)
             if not bar_monitor:

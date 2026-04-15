@@ -9,7 +9,6 @@ import subprocess
 import sys
 import traceback
 import urllib.request
-from dataclasses import dataclass
 from html import escape as html_escape
 from urllib.parse import urlencode
 
@@ -34,7 +33,6 @@ from PyQt6.QtGui import (
     QDesktopServices,
     QFont,
     QFontMetricsF,
-    QIcon,
     QPainter,
     QPainterPath,
     QPen,
@@ -60,7 +58,6 @@ from PyQt6.QtWidgets import (
     QListWidgetItem,
     QMainWindow,
     QMessageBox,
-    QPushButton,
     QScrollArea,
     QSizePolicy,
     QStackedLayout,
@@ -68,16 +65,15 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from winmica import BackdropType, EnableMica, is_mica_supported
 
-from core.ui.color_tokens import BUTTON_COLOR_TOKENS
-from core.ui.style import apply_button_style, is_dark_palette
-from core.utils.utilities import is_windows_10
-from settings import DEFAULT_CONFIG_DIRECTORY, IS_FROZEN
-
-SCRIPT_PATH = os.path.dirname(sys.executable) if IS_FROZEN else os.path.dirname(os.path.abspath(__file__))
-UI_FONT_FAMILIES = ["Segoe UI Variable Text", "Segoe UI"]
-UI_FONT_CSS = "'Segoe UI Variable Text', 'Segoe UI'"
+from core.ui.components.button import Button
+from core.ui.components.link import Link
+from core.ui.components.loader import Spinner
+from core.ui.theme import FONT_FAMILIES, get_tokens, is_dark
+from core.ui.views.view_base import ViewBase
+from core.utils.markdown import md_to_html, preprocess_readme
+from core.utils.system import is_windows_10
+from settings import DEFAULT_CONFIG_DIRECTORY
 
 QNetworkProxyFactory.setUseSystemConfiguration(True)
 
@@ -91,11 +87,6 @@ DEFAULT_THEME_INSTALL_URLS = [
     "https://api.yasb.dev/yasb-themes/themes/{theme_id}",
 ]
 
-README_LINK_COLOR = "#58a6ff"
-REPORT_TEXT_COLOR = "#ff6b6b"
-REPORT_BG_COLOR = "rgba(255,107,107,0.18)"
-REPORT_HOVER_BG_COLOR = "rgba(255,107,107,0.28)"
-
 SIDEBAR_WIDTH = 240
 HEADER_HEIGHT = 52
 PILL_WIDTH = 3
@@ -104,86 +95,19 @@ PILL_MARGIN = 8
 LIST_ITEM_HEIGHT = 42
 
 SPINNER_CYCLE_MS = 1600
-SPINNER_ROTATION_MS = 2600
+SPLASH_DELAY_MS = 1600
+SPLASH_ANIM_MS = 400
+SPLASH_HOLD_MS = 1000
 DETAIL_FADE_MS = 350
 PILL_ANIMATION_MS = 200
 SMOOTH_SCROLL_DURATION_MS = 180
 SMOOTH_SCROLL_STEP = 84
 SCROLLBAR_WIDTH = 8
 
-CODE_BLOCK_PLACEHOLDER = "\x00CB{index}\x00"
-INLINE_CODE_PLACEHOLDER = "\x01IC{index}\x01"
-CODE_BLOCK_PREFIX = "\x00CB"
-
-
-@dataclass(frozen=True)
-class ThemePalette:
-    dark: bool
-    text: str
-    header_background: str
-    sidebar_background: str
-    footer_background: str
-    search_background: str
-    search_focus_background: str
-    scrollbar_handle: str
-    count_text: str
-    selection_background: str
-    code_background: str
-    content_background: str
-    muted_text: str
-    disabled_text: str
-    disabled_badge_text: str
-    disabled_badge_background: str
-    disabled_selected_background: str
-
-
-class _MarkdownPatterns:
-    """Compiled regular expressions used by the README preprocessor and Markdown renderer."""
-
-    IMG_GH_BLOB = re.compile(r"!\[(.*?)\]\(https?://github\.com/([^/]+)/([^/]+)/blob/([^)]+)\)")
-    IMG_TAG_GH = re.compile(
-        r'<img([^>]*?)src=["\']https?://github\.com/([^/]+)/([^/]+)/blob/([^"\']+)(["\'])', re.IGNORECASE
-    )
-    HTML_WRAPPERS = re.compile(r"</?(?:div|span|center|section|article|figure|figcaption|p)[^>]*>", re.IGNORECASE)
-    INDENT_INLINE = re.compile(r"^[ \t]+(<(?:img|br|a|hr).*)$", re.IGNORECASE | re.MULTILINE)
-    IMG_SIZE_ATTR = re.compile(r'\s*(?:width|height)=["\'][^"\']*["\']', re.IGNORECASE)
-
-    MD_IMG = re.compile(r"!\[([^\]]*)\]\(([^)]+)\)")
-    MD_LINK = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")
-    MD_BOLD_EM = re.compile(r"\*{3}(.+?)\*{3}")
-    MD_BOLD = re.compile(r"\*{2}(.+?)\*{2}")
-    MD_BOLD_U = re.compile(r"__(.+?)__")
-    MD_EM_STAR = re.compile(r"(?<!\w)\*(.+?)\*(?!\w)")
-    MD_EM_UNDER = re.compile(r"(?<!\w)_(.+?)_(?!\w)")
-    MD_STRIKE = re.compile(r"~~(.+?)~~")
-
-    CODE_FENCE = re.compile(r"```\w*\n(.*?)```", re.DOTALL)
-    CODE_INLINE = re.compile(r"`([^`\n]+)`")
-    HEADING = re.compile(r"^(#{1,6})\s+(.+?)(?:\s+#+)?$")
-    HEADING_FENCE = re.compile(r"^#{1,6}\s")
-    HR = re.compile(r"^[-*_](?:\s*[-*_]){2,}\s*$")
-    TABLE_SEP = re.compile(r"^\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?\s*$")
-    UL_ITEM = re.compile(r"^[-*+]\s")
-    UL_ITEM_ALL = re.compile(r"^\s*[-*+]\s")
-    UL_STRIP = re.compile(r"^\s*[-*+]\s+")
-    OL_ITEM = re.compile(r"^\d+[.)]\s")
-    OL_ITEM_ALL = re.compile(r"^\s*\d+[.)]\s")
-    OL_STRIP = re.compile(r"^\s*\d+[.)]\s+")
-    BQ_START = re.compile(r"^>")
-    BQ_PREFIX = re.compile(r"^>\s?")
-
-
-def _text_color() -> str:
-    return "#f0f0f0" if is_dark_palette() else "#1a1a1a"
-
-
-def _theme_key() -> str:
-    return "dark" if is_dark_palette() else "light"
-
 
 def _ui_font(size: int, weight: QFont.Weight = QFont.Weight.Normal) -> QFont:
     f = QFont()
-    f.setFamilies(UI_FONT_FAMILIES)
+    f.setFamilies(list(FONT_FAMILIES))
     f.setPointSize(size)
     f.setWeight(weight)
     return f
@@ -197,10 +121,6 @@ def _network_request(url: str, referer: str = "") -> QNetworkRequest:
     return req
 
 
-def _app_icon() -> QIcon:
-    return QIcon(os.path.join(SCRIPT_PATH, "assets", "images", "app_icon.png"))
-
-
 def _run_yasbc(cmd: str):
     subprocess.run(
         ["yasbc", cmd],
@@ -209,94 +129,73 @@ def _run_yasbc(cmd: str):
     )
 
 
-def _make_btn(text: str, variant: str, width: int = 0, slot=None) -> QPushButton:
-    btn = QPushButton(text)
-    apply_button_style(btn, variant)
-    if width:
-        btn.setFixedWidth(width)
+def _make_btn(text: str, variant: str, slot=None) -> Button:
+    btn = Button(text, variant=variant)
     if slot:
         btn.clicked.connect(slot)
     return btn
 
 
-def _build_palette() -> ThemePalette:
-    dark = is_dark_palette()
-    return ThemePalette(
-        dark=dark,
-        text=_text_color(),
-        header_background="transparent",
-        sidebar_background="transparent",
-        footer_background="transparent",
-        search_background="rgba(255,255,255,0.04)" if dark else "rgba(0,0,0,0.04)",
-        search_focus_background="rgba(255,255,255,0.09)" if dark else "rgba(0,0,0,0.07)",
-        scrollbar_handle="rgba(255,255,255,0.12)" if dark else "rgba(0,0,0,0.15)",
-        count_text="rgba(255,255,255,0.35)" if dark else "rgba(0,0,0,0.35)",
-        selection_background="rgba(255,255,255,0.15)" if dark else "rgba(0,0,0,0.10)",
-        code_background="rgba(0,0,0,0.08)" if dark else "rgba(0,0,0,0.06)",
-        content_background="rgba(255,255,255,0.04)" if dark else "rgba(0,0,0,0.06)",
-        muted_text="rgba(255,255,255,0.8)" if dark else "rgba(0,0,0,0.6)",
-        disabled_text="rgba(255,255,255,0.3)" if dark else "rgba(0,0,0,0.3)",
-        disabled_badge_text="rgba(255,255,255,0.4)" if dark else "rgba(0,0,0,0.4)",
-        disabled_badge_background="rgba(255,255,255,0.08)" if dark else "rgba(0,0,0,0.07)",
-        disabled_selected_background="rgba(255,255,255,0.04)" if dark else "rgba(0,0,0,0.04)",
-    )
+def _theme_tokens() -> dict[str, str]:
+    """Design tokens merged with theme-viewer-specific custom colors."""
+    t = get_tokens()
+    dark = is_dark()
+    return t | {
+        "search_bg": "rgba(255,255,255,0.04)" if dark else "rgba(0,0,0,0.04)",
+        "search_focus_bg": "rgba(255,255,255,0.09)" if dark else "rgba(0,0,0,0.07)",
+        "scrollbar_handle": "rgba(255,255,255,0.12)" if dark else "rgba(0,0,0,0.15)",
+        "content_bg": "rgba(255,255,255,0.04)" if dark else "rgba(0,0,0,0.06)",
+        "code_bg": "rgba(0,0,0,0.08)" if dark else "rgba(0,0,0,0.06)",
+        "selection_bg": "rgba(255,255,255,0.15)" if dark else "rgba(0,0,0,0.10)",
+        "disabled_badge_text": "rgba(255,255,255,0.4)" if dark else "rgba(0,0,0,0.4)",
+        "disabled_badge_bg": "rgba(255,255,255,0.08)" if dark else "rgba(0,0,0,0.07)",
+        "disabled_selected_bg": "rgba(255,255,255,0.04)" if dark else "rgba(0,0,0,0.04)",
+    }
 
 
-def _button_tokens(variant: str) -> dict[str, str]:
-    return BUTTON_COLOR_TOKENS[_theme_key()][variant]
-
-
-def _sidebar_list_style(text_color: str, scrollbar_handle: str) -> str:
+def _sidebar_list_style(t: dict[str, str]) -> str:
     return (
         f"QListWidget {{ background: transparent; border: none; outline: none;"
-        f" padding: 6px 0; color: {text_color}; }}"
+        f" padding: 6px 0; color: {t['text_primary']}; }}"
         f"QListWidget::item {{ padding: 0; border: none; background: transparent;"
-        f" color: {text_color}; margin: 0; }}"
+        f" color: {t['text_primary']}; margin: 0; }}"
         f"QListWidget::item:selected {{ background: transparent; border: none; }}"
         f"QListWidget::item:hover:!selected {{ background: transparent; }}"
         f"QScrollBar:vertical {{ border: none; background: transparent; width: {SCROLLBAR_WIDTH}px; margin: 6px 1px 6px 0; }}"
-        f"QScrollBar::handle:vertical {{ background: {scrollbar_handle}; border-radius: 4px; min-height: 28px; }}"
+        f"QScrollBar::handle:vertical {{ background: {t['scrollbar_handle']}; border-radius: 4px; min-height: 28px; }}"
         f"QScrollBar::handle:vertical:hover {{ background: rgba(255,255,255,0.24); }}"
         f"QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{ height: 0; }}"
         f"QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{ background: none; }}"
     )
 
 
-def _search_box_style(text_color: str, background: str, focus_background: str) -> str:
+def _search_box_style(t: dict[str, str]) -> str:
     return (
-        f"QLineEdit {{ border: none; border-radius: 4px; background: {background}; color: {text_color};"
+        f"QLineEdit {{ border: none; border-radius: 4px; background: {t['search_bg']}; color: {t['text_primary']};"
         f"min-height: 32px; max-height: 32px; outline: none;"
-        f"padding: 0px 14px; font-family: {UI_FONT_CSS}; font-size: 10pt; }}"
-        f"QLineEdit:focus {{ background: {focus_background}; }}"
+        f"padding: 0px 14px; }}"
+        f"QLineEdit:focus {{ background: {t['search_focus_bg']}; }}"
     )
 
 
-def _readme_browser_styles(text_color: str, selection_background: str, code_background: str) -> tuple[str, str]:
+def _readme_browser_styles(t: dict[str, str]) -> tuple[str, str]:
     widget_style = (
-        f"QTextBrowser {{ background: transparent; border: none; color: {text_color};"
-        f" padding: 0; selection-background-color: {selection_background}; }}"
+        f"QTextBrowser {{ background: transparent; border: none; color: {t['text_primary']};"
+        f" padding: 0; selection-background-color: {t['selection_bg']}; }}"
     )
     document_style = (
-        f"body {{ color: {text_color}; margin: 0; padding: 0; }}"
-        f"h1, h2, h3, h4 {{ margin-top: 14px; margin-bottom: 4px; color: {text_color}; }}"
+        f"body {{ color: {t['text_primary']}; margin: 0; padding: 0; }}"
+        f"h1, h2, h3, h4 {{ margin-top: 14px; margin-bottom: 4px; color: {t['text_primary']}; }}"
         f"p {{ margin: 4px 0; }}"
-        f"a {{ color: {README_LINK_COLOR}; text-decoration: none; }}"
+        f"a {{ color: {t['accent_text_primary']}; text-decoration: none; }}"
         f"img {{ max-width: 100%; height: auto; display: block; margin: 6px 0; }}"
-        f"code {{ background: {code_background}; padding: 10px 4px; border-radius: 3px;"
+        f"code {{ background: {t['code_bg']}; padding: 10px 4px; border-radius: 3px;"
         f" font-family: 'Consolas', monospace; }}"
-        f"pre {{ background: {code_background}; padding: 8px; border-radius: 6px; white-space: pre-wrap; }}"
+        f"pre {{ background: {t['code_bg']}; padding: 8px; border-radius: 6px; white-space: pre-wrap; }}"
         f"ul, ol {{ margin: 4px 0; padding-left: 20px; }}"
         f"li {{ margin: 2px 0; }}"
     )
     return widget_style, document_style
-
-
-def _report_button_style() -> str:
-    return (
-        f"QPushButton {{ color: {REPORT_TEXT_COLOR}; background: {REPORT_BG_COLOR}; border-radius: 8px;"
-        " border: none; padding: 0px 8px; margin-top: 4px; min-height: 16px; max-height: 16px; }"
-        f"QPushButton:hover {{ background: {REPORT_HOVER_BG_COLOR}; }}"
-    )
 
 
 def _readme_scroll_style() -> str:
@@ -358,210 +257,12 @@ class SmoothScrollFilter(QObject):
         return True
 
 
-def _replace_placeholders(html: str, placeholders: list[str], template: str) -> str:
-    for index, value in enumerate(placeholders):
-        html = html.replace(template.format(index=index), value)
-    return html
-
-
-def _preprocess_readme(text: str) -> str:
-    """Strip block-level HTML wrappers and rewrite GitHub blob URLs to raw URLs."""
-    text = _MarkdownPatterns.IMG_GH_BLOB.sub(r"![\1](https://raw.githubusercontent.com/\2/\3/\4)", text)
-    text = _MarkdownPatterns.IMG_TAG_GH.sub(r"<img\1src=\5https://raw.githubusercontent.com/\2/\3/\4\5", text)
-    text = _MarkdownPatterns.HTML_WRAPPERS.sub("", text)
-    text = _MarkdownPatterns.INDENT_INLINE.sub(r"\1", text)
-    # Strip width/height attributes from <img> tags so CSS max-width:100% controls sizing
-    text = re.sub(
-        r"(<img\b)([^>]*?)>",
-        lambda m: m.group(1) + _MarkdownPatterns.IMG_SIZE_ATTR.sub("", m.group(2)) + ">",
-        text,
-        flags=re.IGNORECASE,
-    )
-    return text
-
-
-def _md_inline(text: str) -> str:
-    """Convert inline Markdown (bold, italic, links, images) to HTML."""
-    text = _MarkdownPatterns.MD_IMG.sub(r'<img src="\2" alt="\1">', text)
-    text = _MarkdownPatterns.MD_LINK.sub(r'<a href="\2">\1</a>', text)
-    text = _MarkdownPatterns.MD_BOLD_EM.sub(r"<strong><em>\1</em></strong>", text)
-    text = _MarkdownPatterns.MD_BOLD.sub(r"<strong>\1</strong>", text)
-    text = _MarkdownPatterns.MD_BOLD_U.sub(r"<strong>\1</strong>", text)
-    text = _MarkdownPatterns.MD_EM_STAR.sub(r"<em>\1</em>", text)
-    text = _MarkdownPatterns.MD_EM_UNDER.sub(r"<em>\1</em>", text)
-    text = _MarkdownPatterns.MD_STRIKE.sub(r"<del>\1</del>", text)
-    return text
-
-
-def _md_table(lines: list[str]) -> str:
-    """Convert Markdown table lines into an HTML <table>."""
-
-    def _cells(row: str) -> list[str]:
-        return [c.strip() for c in row.strip().strip("|").split("|")]
-
-    headers = _cells(lines[0])
-    rows = [_cells(ln) for ln in lines[2:] if ln.strip()]
-    html = "<table><thead><tr>" + "".join(f"<th>{_md_inline(h)}</th>" for h in headers) + "</tr></thead>"
-    if rows:
-        html += (
-            "<tbody>"
-            + "".join("<tr>" + "".join(f"<td>{_md_inline(c)}</td>" for c in r) + "</tr>" for r in rows)
-            + "</tbody>"
-        )
-    return html + "</table>"
-
-
-def _md_to_html(src: str) -> str:
-    """Minimal Markdown-to-HTML converter for QTextBrowser rendering."""
-    src = src.replace("\r\n", "\n")
-    code_blocks: list[str] = []
-
-    def _stash_code(m: re.Match) -> str:
-        code = html_escape(m.group(1).rstrip("\n"))
-        code_blocks.append(f"<pre><code>{code}</code></pre>")
-        return CODE_BLOCK_PLACEHOLDER.format(index=len(code_blocks) - 1)
-
-    src = _MarkdownPatterns.CODE_FENCE.sub(_stash_code, src)
-    inline_codes: list[str] = []
-
-    def _stash_ic(m: re.Match) -> str:
-        inline_codes.append(f"<code>{html_escape(m.group(1))}</code>")
-        return INLINE_CODE_PLACEHOLDER.format(index=len(inline_codes) - 1)
-
-    src = _MarkdownPatterns.CODE_INLINE.sub(_stash_ic, src)
-
-    lines = src.split("\n")
-    out: list[str] = []
-    i, n = 0, len(lines)
-    while i < n:
-        line = lines[i]
-        stripped = line.strip()
-        if not stripped:
-            i += 1
-            continue
-        # Code block placeholder
-        if stripped.startswith(CODE_BLOCK_PREFIX):
-            out.append(stripped)
-            i += 1
-            continue
-        # Heading
-        hm = _MarkdownPatterns.HEADING.match(stripped)
-        if hm:
-            lvl = len(hm.group(1))
-            out.append(f"<h{lvl}>{_md_inline(hm.group(2))}</h{lvl}>")
-            i += 1
-            continue
-        # Horizontal rule
-        if _MarkdownPatterns.HR.match(stripped):
-            out.append("<hr>")
-            i += 1
-            continue
-        # Table
-        if "|" in stripped and i + 1 < n and _MarkdownPatterns.TABLE_SEP.match(lines[i + 1].strip()):
-            tlines: list[str] = []
-            while i < n and "|" in lines[i]:
-                tlines.append(lines[i])
-                i += 1
-            out.append(_md_table(tlines))
-            continue
-        # Blockquote
-        if _MarkdownPatterns.BQ_START.match(stripped):
-            bq: list[str] = []
-            while i < n and _MarkdownPatterns.BQ_START.match(lines[i].strip()):
-                bq.append(_MarkdownPatterns.BQ_PREFIX.sub("", lines[i], count=1))
-                i += 1
-            out.append(f"<blockquote>{_md_to_html(chr(10).join(bq))}</blockquote>")
-            continue
-        # Unordered list
-        if _MarkdownPatterns.UL_ITEM.match(stripped):
-            items: list[str] = []
-            while i < n and _MarkdownPatterns.UL_ITEM_ALL.match(lines[i]):
-                items.append(_MarkdownPatterns.UL_STRIP.sub("", lines[i], count=1))
-                i += 1
-            out.append("<ul>" + "".join(f"<li>{_md_inline(it)}</li>" for it in items) + "</ul>")
-            continue
-        # Ordered list
-        if _MarkdownPatterns.OL_ITEM.match(stripped):
-            items = []
-            while i < n and _MarkdownPatterns.OL_ITEM_ALL.match(lines[i]):
-                items.append(_MarkdownPatterns.OL_STRIP.sub("", lines[i], count=1))
-                i += 1
-            out.append("<ol>" + "".join(f"<li>{_md_inline(it)}</li>" for it in items) + "</ol>")
-            continue
-        # Paragraph collect consecutive non-blank, non-block lines
-        para: list[str] = []
-        while (
-            i < n
-            and lines[i].strip()
-            and not _MarkdownPatterns.HEADING_FENCE.match(lines[i].strip())
-            and not _MarkdownPatterns.BQ_START.match(lines[i].strip())
-            and not _MarkdownPatterns.HR.match(lines[i].strip())
-            and not (_MarkdownPatterns.UL_ITEM.match(lines[i].strip()) and not para)
-            and not (_MarkdownPatterns.OL_ITEM.match(lines[i].strip()) and not para)
-            and not lines[i].strip().startswith(CODE_BLOCK_PREFIX)
-        ):
-            para.append(lines[i].strip())
-            i += 1
-        if para:
-            out.append("<p>" + "<br>".join(_md_inline(p) for p in para) + "</p>")
-
-    html = "\n".join(out)
-    html = _replace_placeholders(html, code_blocks, CODE_BLOCK_PLACEHOLDER)
-    return _replace_placeholders(html, inline_codes, INLINE_CODE_PLACEHOLDER)
-
-
-class Spinner(QWidget):
-    def __init__(self, size=24, color="#FFFFFF", pen_width=None, parent=None):
-        super().__init__(parent)
-        self.setFixedSize(size, size)
-        self._color = QColor(color)
-        self._pen_width = pen_width if pen_width is not None else max(2, size // 10)
-        self._timer = QTimer(self)
-        self._timer.timeout.connect(self.update)
-        self._timer.start(16)
-        self._elapsed = QElapsedTimer()
-        self._elapsed.start()
-
-    @staticmethod
-    def _ease(t):
-        if t < 0.5:
-            return 4 * t * t * t
-        p = 2 * t - 2
-        return 0.5 * p * p * p + 1
-
-    def paintEvent(self, event):
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        m = self._pen_width / 2.0 + 1.0
-        rect = self.rect().toRectF().adjusted(m, m, -m, -m)
-        pen = QPen(self._color)
-        pen.setWidthF(self._pen_width)
-        pen.setCapStyle(Qt.PenCapStyle.FlatCap if self._pen_width <= 10 else Qt.PenCapStyle.RoundCap)
-        painter.setPen(pen)
-
-        ms = self._elapsed.elapsed()
-        cycle = ms / SPINNER_CYCLE_MS
-        phase = cycle % 1.0
-        accum = (int(cycle) * 260.0) % 360.0
-        base_rot = (ms / SPINNER_ROTATION_MS) * 360.0 % 360.0
-
-        if phase < 0.5:
-            e = self._ease(phase * 2.0)
-            span, start = 10 + 260 * e, accum
-        else:
-            e = self._ease((phase - 0.5) * 2.0)
-            span, start = 270 - 260 * e, accum + 260 * e
-
-        painter.drawArc(rect, int(-(start + base_rot) * 16), int(-span * 16))
-        painter.end()
-
-
 class AnimatedSplashTitle(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self._yasb_font = _ui_font(64, QFont.Weight.Bold)
         self._reborn_font = _ui_font(64, QFont.Weight.Light)
-        self._color = QColor(_text_color())
+        self._color = QColor(get_tokens()["text_primary"])
         self._gap = 6
 
         ym = QFontMetricsF(self._yasb_font)
@@ -621,11 +322,10 @@ class AnimatedSplashTitle(QWidget):
 class ThemeSplashScreen(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self._start_delay, self._duration, self._end_hold = SPINNER_CYCLE_MS, 400, 1000
         self._anim_active = False
 
         self.title_widget = AnimatedSplashTitle(self)
-        self.spinner = Spinner(size=32, color=_text_color(), pen_width=2, parent=self)
+        self.spinner = Spinner(size=32, color=get_tokens()["text_primary"], pen_width=2, parent=self)
 
         # Error state widget
         self._error_widget = QWidget(self)
@@ -641,7 +341,7 @@ class ThemeSplashScreen(QWidget):
         self._error_label = QLabel()
         self._error_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._error_label.setFont(_ui_font(13))
-        self._error_label.setStyleSheet(f"color: {_text_color()}; background: transparent;")
+        self._error_label.setStyleSheet(f"color: {get_tokens()['text_primary']}; background: transparent;")
         _ev_layout.addWidget(self._error_label)
         self._error_widget.hide()
 
@@ -652,10 +352,10 @@ class ThemeSplashScreen(QWidget):
         self._frame.start(8)
         self._elapsed = QElapsedTimer()
         self._do_layout()
-        self._delay.start(self._start_delay)
+        self._delay.start(SPLASH_DELAY_MS)
 
     def minimum_display_ms(self) -> int:
-        return self._start_delay + self._duration + self._end_hold
+        return SPLASH_DELAY_MS + SPLASH_ANIM_MS + SPLASH_HOLD_MS
 
     def _start_animation(self):
         self._anim_active = True
@@ -675,7 +375,7 @@ class ThemeSplashScreen(QWidget):
     def _tick(self):
         if not self._anim_active:
             return
-        p = min(1.0, self._elapsed.elapsed() / self._duration)
+        p = min(1.0, self._elapsed.elapsed() / SPLASH_ANIM_MS)
         self.title_widget.set_progress(p)
         if p >= 1.0:
             self._anim_active = False
@@ -769,7 +469,7 @@ class RemoteImageTextBrowser(QTextBrowser):
         self._ready_emitted = False
 
     def setMarkdown(self, text: str):
-        html = _md_to_html(_preprocess_readme(text))
+        html = md_to_html(preprocess_readme(text))
         self._rev += 1
         self._ready_emitted = False
         self._loading.clear()
@@ -924,17 +624,17 @@ class ThemeSidebarItemWidget(QWidget):
     def __init__(
         self,
         name: str,
-        palette: ThemePalette,
+        t: dict[str, str],
         selected_background: str,
         disabled: bool = False,
         parent=None,
     ):
         super().__init__(parent)
         self._disabled = disabled
-        self._default_text_color = palette.disabled_text if disabled else palette.text
-        self._selected_text_color = _button_tokens("secondary")["text"]
+        self._default_text_color = t["text_disabled"] if disabled else t["text_primary"]
+        self._selected_text_color = t["text_primary"]
         self._selected_background = selected_background
-        self._disabled_selected_background = palette.disabled_selected_background
+        self._disabled_selected_background = t["disabled_selected_bg"]
 
         outer = QVBoxLayout(self)
         outer.setContentsMargins(8, 4, 8, 4)
@@ -955,7 +655,7 @@ class ThemeSidebarItemWidget(QWidget):
             badge = QLabel("disabled")
             badge.setFont(_ui_font(8))
             badge.setStyleSheet(
-                f"color: {palette.disabled_badge_text}; background: {palette.disabled_badge_background};"
+                f"color: {t['disabled_badge_text']}; background: {t['disabled_badge_bg']};"
                 " border-radius: 4px; padding: 1px 5px;"
             )
             row.addWidget(badge, 0)
@@ -978,7 +678,7 @@ class ThemeDetailPanel(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.theme_data: dict | None = None
-        self._palette = _build_palette()
+        self._tokens = _theme_tokens()
         self._net = QNetworkAccessManager(self)
         self._image_reply: QNetworkReply | None = None
         self._readme_reply: QNetworkReply | None = None
@@ -988,15 +688,15 @@ class ThemeDetailPanel(QWidget):
         self._build_ui()
 
     def _build_ui(self) -> None:
-        palette = self._palette
+        t = self._tokens
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(2)
 
-        self._build_header(root, palette)
+        self._build_header(root, t)
 
         self._stack = QWidget()
-        self._stack.setStyleSheet(f"background: {palette.content_background}; border-bottom-left-radius: 12px;")
+        self._stack.setStyleSheet(f"background: {t['content_bg']}; border-bottom-left-radius: 12px;")
         self._stack_layout = QStackedLayout(self._stack)
         self._stack_layout.setStackingMode(QStackedLayout.StackingMode.StackAll)
 
@@ -1004,21 +704,21 @@ class ThemeDetailPanel(QWidget):
         self._loading_widget.setStyleSheet("background: transparent;")
         loading_layout = QVBoxLayout(self._loading_widget)
         loading_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        loading_layout.addWidget(Spinner(size=32, color=palette.text, pen_width=2, parent=self._loading_widget))
+        loading_layout.addWidget(Spinner(size=32, color=t["text_primary"], pen_width=2, parent=self._loading_widget))
         self._stack_layout.addWidget(self._loading_widget)
         self._loading_widget.hide()
 
-        self._build_readme(self._stack_layout, palette)
-        self._build_not_found(self._stack_layout, palette)
+        self._build_readme(self._stack_layout, t)
+        self._build_not_found(self._stack_layout, t)
         root.addWidget(self._stack, stretch=1)
 
-        self._build_footer(root, palette)
+        self._build_footer(root, t)
 
-    def _build_header(self, root: QVBoxLayout, palette: ThemePalette) -> None:
+    def _build_header(self, root: QVBoxLayout, t: dict[str, str]) -> None:
         self.header_section = QFrame()
         self.header_section.setObjectName("detailHeader")
         self.header_section.setStyleSheet(
-            f"QFrame#detailHeader {{ background: {palette.content_background}; border-top-left-radius: 12px; }}"
+            f"QFrame#detailHeader {{ background: {t['content_bg']}; border-top-left-radius: 12px; }}"
         )
         header_layout = QVBoxLayout(self.header_section)
         header_layout.setContentsMargins(20, 16, 20, 14)
@@ -1027,35 +727,34 @@ class ThemeDetailPanel(QWidget):
         title_row = QHBoxLayout()
         title_row.setContentsMargins(0, 0, 0, 0)
         title_row.setSpacing(10)
-        title_row.setAlignment(Qt.AlignmentFlag.AlignVCenter)
 
         self.name_label = QLabel()
         self.name_label.setFont(_ui_font(18, QFont.Weight.Bold))
         self.name_label.setWordWrap(False)
-        self.name_label.setStyleSheet(f"color: {palette.text}; background: transparent;")
+        self.name_label.setStyleSheet(f"color: {t['text_primary']}; background: transparent;")
         self.name_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         self.name_label.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Preferred)
         title_row.addWidget(self.name_label, 0)
 
-        self.author_label = QLabel()
-        self.author_label.setFont(_ui_font(8, QFont.Weight.DemiBold))
-        self.author_label.setOpenExternalLinks(True)
-        self.author_label.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.author_label.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Preferred)
-        self.author_label.setStyleSheet(
-            f"color: {README_LINK_COLOR}; background: rgba(88,166,255,0.18); border-radius: 8px;"
-            " padding: 0px 4px; margin-top: 4px; min-height: 16px; max-height: 16px;"
-        )
-        title_row.addWidget(self.author_label, 0, Qt.AlignmentFlag.AlignVCenter)
+        links_group = QHBoxLayout()
+        links_group.setContentsMargins(0, 0, 0, 0)
+        links_group.setSpacing(0)
 
-        self.report_btn = QPushButton("Report")
-        self.report_btn.setFont(_ui_font(8, QFont.Weight.DemiBold))
-        self.report_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.report_btn.setFlat(True)
+        self.author_label = Link(font_size=12)
+        self.author_label.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Preferred)
+        self.author_label.clicked.connect(self._on_author)
+        links_group.addWidget(self.author_label, 0, Qt.AlignmentFlag.AlignVCenter)
+
+        self.report_btn = Link(
+            "Report",
+            font_size=12,
+        )
         self.report_btn.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Preferred)
-        self.report_btn.setStyleSheet(_report_button_style())
         self.report_btn.clicked.connect(self._on_report)
-        title_row.addWidget(self.report_btn, 0, Qt.AlignmentFlag.AlignVCenter)
+        links_group.addWidget(self.report_btn, 0, Qt.AlignmentFlag.AlignVCenter)
+
+        title_row.addLayout(links_group)
+        title_row.setAlignment(links_group, Qt.AlignmentFlag.AlignVCenter)
 
         title_row.addStretch()
         header_layout.addLayout(title_row)
@@ -1063,10 +762,10 @@ class ThemeDetailPanel(QWidget):
         self.desc_label = QLabel()
         self.desc_label.setFont(_ui_font(10, QFont.Weight.DemiBold))
         self.desc_label.setWordWrap(True)
-        self.desc_label.setStyleSheet(f"color: {palette.muted_text}; background: transparent;")
+        self.desc_label.setStyleSheet(f"color: {t['text_secondary']}; background: transparent;")
         self.desc_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
         header_layout.addWidget(self.desc_label)
-        self._build_info_bar(header_layout, palette)
+        self._build_info_bar(header_layout, t)
 
         root.addWidget(self.header_section)
 
@@ -1086,19 +785,16 @@ class ThemeDetailPanel(QWidget):
         p.end()
         return pix
 
-    def _build_info_bar(self, root: QVBoxLayout, palette: ThemePalette) -> None:
+    def _build_info_bar(self, root: QVBoxLayout, t: dict[str, str]) -> None:
         self._info_bar = QFrame()
         self._info_bar.setObjectName("detailInfoBar")
-        self._info_bar.setStyleSheet(
-            f"QFrame#detailInfoBar {{ background: {palette.content_background}; border-radius: 6px; }}"
-        )
+        self._info_bar.setStyleSheet(f"QFrame#detailInfoBar {{ background: {t['content_bg']}; border-radius: 6px; }}")
         bar_layout = QHBoxLayout(self._info_bar)
         bar_layout.setContentsMargins(12, 9, 12, 9)
         bar_layout.setSpacing(10)
 
         icon_label = QLabel()
-        primary_tokens = _button_tokens("primary")
-        icon_label.setPixmap(self._info_icon(16, primary_tokens["bg"], primary_tokens["text"]))
+        icon_label.setPixmap(self._info_icon(16, t["accent_fill_default"], t["text_on_accent_primary"]))
         icon_label.setFixedSize(16, 16)
         icon_label.setStyleSheet("background: transparent;")
         bar_layout.addWidget(icon_label, 0)
@@ -1118,7 +814,7 @@ class ThemeDetailPanel(QWidget):
         root.addWidget(self._info_bar_container)
         self._info_bar_container.hide()
 
-    def _build_readme(self, stack: QStackedLayout, palette: ThemePalette) -> None:
+    def _build_readme(self, stack: QStackedLayout, t: dict[str, str]) -> None:
         self.readme_scroll = QScrollArea()
         self.readme_scroll.setWidgetResizable(True)
         self.readme_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
@@ -1134,11 +830,7 @@ class ThemeDetailPanel(QWidget):
         self.image_label = MagnifierLabel()
         content_layout.addWidget(self.image_label, stretch=0)
 
-        widget_style, document_style = _readme_browser_styles(
-            palette.text,
-            palette.selection_background,
-            palette.code_background,
-        )
+        widget_style, document_style = _readme_browser_styles(t)
         self.readme_browser = RemoteImageTextBrowser()
         self.readme_browser.setOpenLinks(True)
         self.readme_browser.setOpenExternalLinks(True)
@@ -1164,7 +856,7 @@ class ThemeDetailPanel(QWidget):
         ):
             widget.installEventFilter(self._readme_smooth_scroll)
 
-    def _build_not_found(self, stack: QStackedLayout, palette: ThemePalette) -> None:
+    def _build_not_found(self, stack: QStackedLayout, t: dict[str, str]) -> None:
         self._not_found_widget = QWidget()
         self._not_found_widget.setStyleSheet("background: transparent;")
         layout = QVBoxLayout(self._not_found_widget)
@@ -1172,22 +864,22 @@ class ThemeDetailPanel(QWidget):
         label = QLabel("Theme not found")
         label.setFont(_ui_font(14))
         label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        label.setStyleSheet(f"color: {palette.muted_text}; background: transparent;")
+        label.setStyleSheet(f"color: {t['text_secondary']}; background: transparent;")
         layout.addWidget(label)
         stack.addWidget(self._not_found_widget)
         self._not_found_widget.hide()
 
-    def _build_footer(self, root: QVBoxLayout, palette: ThemePalette) -> None:
+    def _build_footer(self, root: QVBoxLayout, t: dict[str, str]) -> None:
         self.footer = QFrame()
         self.footer.setObjectName("detailFooter")
-        self.footer.setStyleSheet(f"QFrame#detailFooter {{ background-color: {palette.footer_background}; }}")
+        self.footer.setStyleSheet("QFrame#detailFooter { background-color: transparent; }")
         footer_layout = QHBoxLayout(self.footer)
         footer_layout.setContentsMargins(24, 10, 24, 10)
         footer_layout.setSpacing(10)
 
         footer_layout.addStretch()
-        self.download_btn = _make_btn("Download", "secondary", 120, self._on_download)
-        self.install_btn = _make_btn("Install", "primary", 120, self._on_install)
+        self.download_btn = _make_btn("View on GitHub", "default", self._on_download)
+        self.install_btn = _make_btn("Install Theme", "accent", self._on_install)
         footer_layout.addWidget(self.download_btn)
         footer_layout.addWidget(self.install_btn)
         root.addWidget(self.footer)
@@ -1241,11 +933,14 @@ class ThemeDetailPanel(QWidget):
     def _apply_theme_metadata(self, data: dict) -> None:
         self.name_label.setText(data.get("name", ""))
         author = html_escape(data.get("author", ""))
-        homepage = data.get("homepage") or f"https://github.com/{author}"
-        self.author_label.setText(
-            f'by <a style="color:{README_LINK_COLOR};text-decoration:none" href="{html_escape(homepage)}">{author}</a>'
-        )
+        self._author_url = data.get("homepage") or f"https://github.com/{author}"
+        self.author_label.setText(f"by {author}")
         self.desc_label.setText(data.get("description", ""))
+
+    def _on_author(self) -> None:
+        url = getattr(self, "_author_url", None)
+        if url:
+            QDesktopServices.openUrl(QUrl(url))
 
     def _reset_content_view(self) -> None:
         self.image_label.set_pixmap(QPixmap())
@@ -1378,11 +1073,11 @@ class ThemeDetailPanel(QWidget):
     def _on_install(self) -> None:
         if not self.theme_data:
             return
-        dialog = self._build_install_dialog(self._palette)
+        dialog = self._build_install_dialog(self._tokens)
         if dialog.exec() == QDialog.DialogCode.Accepted:
             self._do_install()
 
-    def _build_install_dialog(self, palette: ThemePalette) -> QDialog:
+    def _build_install_dialog(self, t: dict[str, str]) -> QDialog:
         dialog = QDialog(self)
         dialog.setWindowTitle(" ")
         if not is_windows_10():
@@ -1398,8 +1093,9 @@ class ThemeDetailPanel(QWidget):
                 Qt.WindowType.Dialog | Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.MSWindowsFixedSizeDialogHint
             )
         dialog.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
-        dialog_background = "#2B2B2B" if palette.dark else "#F5F5F5"
-        footer_background = "#202020" if palette.dark else "#E5E5E5"
+        dark = is_dark()
+        dialog_background = "#2B2B2B" if dark else "#F5F5F5"
+        footer_background = "#202020" if dark else "#E5E5E5"
         dialog.setStyleSheet(f"QDialog {{ background: {dialog_background}; }}")
         dialog.setModal(True)
 
@@ -1416,7 +1112,7 @@ class ThemeDetailPanel(QWidget):
 
         title = QLabel("Install Theme")
         title.setFont(_ui_font(14, QFont.Weight.Bold))
-        title.setStyleSheet(f"color: {palette.text}; background: transparent;")
+        title.setStyleSheet(f"color: {t['text_primary']}; background: transparent;")
         body.addWidget(title)
         body.addSpacing(8)
 
@@ -1427,7 +1123,7 @@ class ThemeDetailPanel(QWidget):
         )
         desc.setFont(_ui_font(10))
         desc.setWordWrap(True)
-        desc.setStyleSheet(f"color: {palette.muted_text}; background: transparent;")
+        desc.setStyleSheet(f"color: {t['text_secondary']}; background: transparent;")
         body.addWidget(desc)
         root.addWidget(content)
 
@@ -1439,9 +1135,9 @@ class ThemeDetailPanel(QWidget):
         fl.setContentsMargins(0, 0, 0, 0)
         fl.setSpacing(8)
         fl.addStretch()
-        cancel_btn = _make_btn("Cancel", "secondary", slot=dialog.reject)
+        cancel_btn = _make_btn("Cancel", "default", slot=dialog.reject)
         cancel_btn.setFixedSize(120, 28)
-        install_btn = _make_btn("Install", "primary", slot=dialog.accept)
+        install_btn = _make_btn("Install", "accent", slot=dialog.accept)
         install_btn.setFixedSize(120, 28)
         fl.addWidget(cancel_btn)
         fl.addWidget(install_btn)
@@ -1456,7 +1152,7 @@ class ThemeDetailPanel(QWidget):
                 ctypes.windll.dwmapi.DwmSetWindowAttribute(
                     hwnd, 38, ctypes.byref(no_backdrop), ctypes.sizeof(no_backdrop)
                 )
-                r, g, b_ch = (0x2B, 0x2B, 0x2B) if palette.dark else (0xF5, 0xF5, 0xF5)
+                r, g, b_ch = (0x2B, 0x2B, 0x2B) if dark else (0xF5, 0xF5, 0xF5)
                 colorref = ctypes.c_int((b_ch << 16) | (g << 8) | r)
                 ctypes.windll.dwmapi.DwmSetWindowAttribute(hwnd, 35, ctypes.byref(colorref), ctypes.sizeof(colorref))
         except Exception:
@@ -1488,17 +1184,17 @@ class ThemeDetailPanel(QWidget):
             QMessageBox.critical(self, "Error", f"Failed to install theme: {exc}")
 
 
-class ThemeViewer(QMainWindow):
+class ThemeViewer(ViewBase, QMainWindow):
     def __init__(self, deep_link_theme_id: str | None = None):
         super().__init__()
         self.setWindowTitle("YASB Themes")
-        self.setWindowIcon(_app_icon())
+        self.build_app_icon()
         screen = QApplication.primaryScreen().availableGeometry()
         h = max(600, min(int(screen.height() * 0.78), 1000))
         w = max(900, min(int(screen.width() * 0.78), int(h * 1.6), 1600))
         self.setGeometry((screen.width() - w) // 2 + screen.x(), (screen.height() - h) // 2 + screen.y(), w, h)
         self.setMinimumSize(900, 600)
-        self._palette = _build_palette()
+        self._tokens = _theme_tokens()
         self.theme_items: list[dict] = []
         self.themes: dict = {}
         self._net = QNetworkAccessManager(self)
@@ -1511,10 +1207,8 @@ class ThemeViewer(QMainWindow):
         self._init_ui()
 
     def _init_ui(self) -> None:
-        palette = self._palette
-        if is_mica_supported():
-            self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
-            EnableMica(int(self.winId()), BackdropType.MICA)
+        t = self._tokens
+        self.build_view()
 
         central = QWidget()
         self.setCentralWidget(central)
@@ -1522,59 +1216,59 @@ class ThemeViewer(QMainWindow):
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
 
-        self._build_header(root, palette)
+        self._build_header(root, t)
         self.splash_screen = ThemeSplashScreen()
         root.addWidget(self.splash_screen, stretch=1)
-        self._build_body(root, palette)
+        self._build_body(root, t)
         self._start_loading()
 
-    def _build_header(self, root: QVBoxLayout, palette: ThemePalette) -> None:
+    def _build_header(self, root: QVBoxLayout, t: dict[str, str]) -> None:
         self.header = QFrame()
         self.header.setObjectName("headerBar")
         self.header.setFixedHeight(HEADER_HEIGHT)
-        self.header.setStyleSheet(f"QFrame#headerBar {{ background-color: {palette.header_background}; }}")
+        self.header.setStyleSheet("QFrame#headerBar { background-color: transparent; }")
         header_layout = QHBoxLayout(self.header)
         header_layout.setContentsMargins(12, 0, 24, 0)
         header_layout.setSpacing(10)
 
-        title = QLabel("<span style='font-weight:bold'>YASB</span> Themes")
-        title.setFont(_ui_font(14))
-        title.setStyleSheet(f"color: {palette.text};")
+        title = QLabel("<span style='letter-spacing:-1px'><span style='font-weight:bold'>YASB</span> Themes</span>")
+        title.setFont(_ui_font(16))
+        title.setStyleSheet(f"color: {t['text_primary']};")
         header_layout.addWidget(title)
         header_layout.addStretch()
 
         info = QLabel("Backup your config before installing a theme.")
         info.setFont(_ui_font(9))
-        info.setStyleSheet(f"color: {palette.text};")
+        info.setStyleSheet(f"color: {t['text_primary']};")
         info_opacity = QGraphicsOpacityEffect()
         info_opacity.setOpacity(0.75)
         info.setGraphicsEffect(info_opacity)
         header_layout.addWidget(info)
 
-        self.backup_button = _make_btn("Backup", "secondary", slot=self._backup_config)
+        self.backup_button = _make_btn("Backup", "default", slot=self._backup_config)
         header_layout.addWidget(self.backup_button)
-        self.restore_button = _make_btn("Restore", "secondary", slot=self._restore_config)
+        self.restore_button = _make_btn("Restore", "default", slot=self._restore_config)
         header_layout.addWidget(self.restore_button)
 
         root.addWidget(self.header)
         self.header.hide()
 
-    def _build_body(self, root: QVBoxLayout, palette: ThemePalette) -> None:
+    def _build_body(self, root: QVBoxLayout, t: dict[str, str]) -> None:
         self.body_widget = QWidget()
         body_layout = QHBoxLayout(self.body_widget)
         body_layout.setContentsMargins(0, 0, 0, 0)
         body_layout.setSpacing(0)
         root.addWidget(self.body_widget)
         self.body_widget.hide()
-        body_layout.addWidget(self._build_sidebar(palette))
+        body_layout.addWidget(self._build_sidebar(t))
         self.detail_panel = ThemeDetailPanel()
         body_layout.addWidget(self.detail_panel, stretch=1)
 
-    def _build_sidebar(self, palette: ThemePalette) -> QWidget:
+    def _build_sidebar(self, t: dict[str, str]) -> QWidget:
         sidebar = QWidget()
         sidebar.setObjectName("sidebar")
         sidebar.setFixedWidth(SIDEBAR_WIDTH)
-        sidebar.setStyleSheet(f"QWidget#sidebar {{ background-color: {palette.sidebar_background}; }}")
+        sidebar.setStyleSheet("QWidget#sidebar { background-color: transparent; }")
         sidebar_layout = QVBoxLayout(sidebar)
         sidebar_layout.setContentsMargins(0, 0, 0, 0)
         sidebar_layout.setSpacing(0)
@@ -1587,15 +1281,13 @@ class ThemeViewer(QMainWindow):
         self.search_box.setPlaceholderText("Search themes...")
         self.search_box.setFont(_ui_font(10))
         self.search_box.setClearButtonEnabled(True)
-        self.search_box.setStyleSheet(
-            _search_box_style(palette.text, palette.search_background, palette.search_focus_background)
-        )
+        self.search_box.setStyleSheet(_search_box_style(t))
         self.search_box.textChanged.connect(self._filter_sidebar)
         search_layout.addWidget(self.search_box)
         sidebar_layout.addWidget(search_container)
 
         self.theme_list = QListWidget()
-        self.theme_list.setStyleSheet(_sidebar_list_style(palette.text, palette.scrollbar_handle))
+        self.theme_list.setStyleSheet(_sidebar_list_style(t))
         self.theme_list.setFrameShape(QFrame.Shape.NoFrame)
         self.theme_list.setVerticalScrollMode(QListView.ScrollMode.ScrollPerPixel)
         self.theme_list.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
@@ -1603,7 +1295,7 @@ class ThemeViewer(QMainWindow):
         self.theme_list.currentItemChanged.connect(self._on_theme_selected)
         sidebar_layout.addWidget(self.theme_list, stretch=1)
 
-        accent = _button_tokens("primary")["bg"]
+        accent = t["accent_fill_default"]
         self._pill = QFrame(self.theme_list.viewport())
         self._pill.setFixedSize(PILL_WIDTH, PILL_HEIGHT)
         self._pill.setStyleSheet(f"background: {accent}; border-radius: 1px;")
@@ -1621,7 +1313,7 @@ class ThemeViewer(QMainWindow):
         self.count_label = QLabel()
         self.count_label.setFont(_ui_font(9))
         self.count_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
-        self.count_label.setStyleSheet(f"padding: 6px 6px 6px 14px; color: {palette.count_text};")
+        self.count_label.setStyleSheet(f"padding: 6px 6px 6px 14px; color: {t['text_tertiary']};")
         sidebar_layout.addWidget(self.count_label)
         return sidebar
 
@@ -1722,8 +1414,8 @@ class ThemeViewer(QMainWindow):
                 item,
                 ThemeSidebarItemWidget(
                     theme.get("name", ""),
-                    self._palette,
-                    self._palette.content_background,
+                    self._tokens,
+                    self._tokens["content_bg"],
                     disabled=bool(theme.get("disabled", False)),
                 ),
             )
@@ -1804,12 +1496,12 @@ class ThemeViewer(QMainWindow):
             if os.path.exists(sty):
                 shutil.copy2(sty, bsty)
             self.backup_button.setText("Backup complete!")
-            apply_button_style(self.backup_button, "primary")
+            self.backup_button.set_variant("accent")
             QTimer.singleShot(
                 2000,
                 lambda: (
                     self.backup_button.setText("Backup"),
-                    apply_button_style(self.backup_button, "secondary"),
+                    self.backup_button.set_variant("default"),
                 ),
             )
         except Exception as e:

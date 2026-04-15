@@ -35,8 +35,8 @@ from PyQt6.QtWidgets import (
 
 from core.bar_helper import ThemeState
 from core.event_service import EventService
-from core.utils.utilities import is_windows_10, refresh_widget_style
-from core.utils.win32.win32_accent import Blur
+from core.utils.utilities import refresh_widget_style
+from core.utils.win32.backdrop import enable_blur
 from core.utils.win32.window_actions import force_foreground_focus
 
 
@@ -313,9 +313,8 @@ class ImageGallery(QMainWindow, BaseStyledWidget):
             self.dpr = 1.0
 
         if self.blur:
-            Blur(
+            enable_blur(
                 self.winId(),
-                Acrylic=True if is_windows_10() else False,
                 DarkMode=True,
                 RoundCorners=True,
                 BorderColor="System",

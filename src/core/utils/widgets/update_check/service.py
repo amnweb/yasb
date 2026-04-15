@@ -5,7 +5,7 @@ import threading
 
 from PyQt6.QtCore import QObject, Qt, QThread, QTimer, pyqtSignal
 
-from core.utils.utilities import is_valid_qobject
+from core.utils.qobject import is_valid_qobject
 from core.utils.widgets.update_check import scoop as scoop_mgr
 from core.utils.widgets.update_check import windows_update as wu_mgr
 from core.utils.widgets.update_check import winget as winget_mgr

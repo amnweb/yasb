@@ -9,11 +9,10 @@ from PyQt6.QtGui import QCursor, QIcon
 from PyQt6.QtWidgets import QMenu, QSystemTrayIcon
 
 from core.bar_manager import BarManager
-from core.config import get_config
-from core.ui.windows.about import AboutDialog
+from core.ui.views.about import AboutDialog
 from core.utils.controller import exit_application, reload_application
 from core.utils.shell_utils import shell_open
-from core.utils.win32.utilities import apply_qmenu_style, disable_autostart, enable_autostart, is_autostart_enabled
+from core.utils.win32.utils import apply_qmenu_style, disable_autostart, enable_autostart, is_autostart_enabled
 from settings import (
     APP_NAME,
     DEFAULT_CONFIG_DIRECTORY,
@@ -55,11 +54,7 @@ class SystemTrayManager(QSystemTrayIcon):
             self.menu.activateWindow()
 
     def _load_config(self):
-        try:
-            config = get_config(show_error_dialog=True)
-        except Exception as e:
-            logging.error("Error loading config: %s", e)
-            return
+        config = self._bar_manager.config
         if config and config.komorebi:
             self.komorebi_start = config.komorebi.start_command
             self.komorebi_stop = config.komorebi.stop_command

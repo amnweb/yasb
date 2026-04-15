@@ -9,7 +9,7 @@ from itertools import cycle
 from zoneinfo import ZoneInfo, available_timezones
 
 from PyQt6.QtCore import QDate, QEasingCurve, QLocale, QPoint, QPropertyAnimation, Qt, QTimer
-from PyQt6.QtGui import QColor
+from PyQt6.QtGui import QColor, QPalette
 from PyQt6.QtWidgets import (
     QAbstractSpinBox,
     QApplication,
@@ -32,8 +32,8 @@ from core.config import HOME_CONFIGURATION_DIR
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import PopupWidget, add_shadow, refresh_widget_style
 from core.utils.widgets.animation_manager import AnimationManager
-from core.utils.win32.utilities import apply_qmenu_style
-from core.utils.win32.win32_accent import Blur
+from core.utils.win32.backdrop import enable_blur
+from core.utils.win32.utils import apply_qmenu_style
 from core.validation.widgets.yasb.clock import ClockConfig
 from core.widgets.base import BaseWidget
 from settings import SCRIPT_PATH
@@ -270,6 +270,10 @@ class CustomCalendar(QCalendarWidget):
         table_view = self.findChild(QTableView)
         if table_view:
             table_view.setProperty("class", "calendar-table")
+            palette = table_view.palette()
+            palette.setColor(QPalette.ColorRole.Highlight, QColor(0, 0, 0, 0))
+            palette.setColor(QPalette.ColorRole.HighlightedText, palette.color(QPalette.ColorRole.Text))
+            table_view.setPalette(palette)
 
         if parent and parent._locale:
             qt_locale = QLocale(parent._locale)
@@ -1334,7 +1338,7 @@ class ClockWidget(BaseWidget):
         win.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.Tool)
         try:
             hwnd = int(win.winId())
-            Blur(hwnd, Acrylic=False, DarkMode=True, RoundCorners=True, RoundCornersType="normal", BorderColor="None")
+            enable_blur(hwnd, DarkMode=True, RoundCorners=True, RoundCornersType="normal", BorderColor="None")
         except Exception:
             pass
         win.setProperty("class", "active-alarm-window")
