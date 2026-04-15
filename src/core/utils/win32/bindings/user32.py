@@ -204,6 +204,9 @@ user32.GetKeyState.restype = INT
 user32.GetWindowLongW.argtypes = [HWND, INT]
 user32.GetWindowLongW.restype = c_long
 
+user32.GetShellWindow.argtypes = []
+user32.GetShellWindow.restype = HWND
+
 user32.ShowWindowAsync.argtypes = [HWND, INT]
 user32.ShowWindowAsync.restype = BOOL
 
@@ -420,6 +423,10 @@ def IsWindowVisible(hwnd: int) -> bool:
 
 def GetWindowLong(hwnd: int, index: int) -> int:
     return int(user32.GetWindowLongW(hwnd, index))
+
+
+def GetShellWindow() -> int:
+    return user32.GetShellWindow()
 
 
 def ShowWindowAsync(hwnd: int, cmd_show: int) -> bool:
