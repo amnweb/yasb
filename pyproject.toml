@@ -23,7 +23,7 @@ dependencies = [
     "pycaw==20251023",
     "pillow==12.2.0",
     "qasync==0.28.0",
-    "github-copilot-sdk==0.2.0",
+    "github-copilot-sdk==0.2.2",
     "openai==2.31.0",
     "pyvda @ git+https://github.com/amnweb/pyvda@master",
     "python-dotenv==1.2.2",
