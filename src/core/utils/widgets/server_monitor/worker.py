@@ -16,13 +16,13 @@ class ServerCheckWorker(QThread):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.servers: list[str] = []
+        self.servers: list[dict] = []
         self.ssl_check: bool = True
         self.ssl_verify: bool = True
         self.timeout: int = 5
         self.running = True
 
-    def set_servers(self, servers: list[str], ssl_verify: bool, ssl_check: bool, timeout: int) -> None:
+    def set_servers(self, servers: list[dict], ssl_verify: bool, ssl_check: bool, timeout: int) -> None:
         self.servers = servers
         self.ssl_check = ssl_check
         self.ssl_verify = ssl_verify
@@ -42,7 +42,8 @@ class ServerCheckWorker(QThread):
             if not self.running:
                 break
 
-            status = self.check_single_server(server, self.ssl_verify, self.ssl_check, self.timeout)
+            status = self.check_single_server(server["url"], self.ssl_verify, self.ssl_check, self.timeout)
+            status["name"] = server["name"]
             server_statuses.append(status)
 
         self.status_updated.emit(server_statuses)
@@ -51,7 +52,7 @@ class ServerCheckWorker(QThread):
         ping_result = self.ping_server(server, ssl_verify, ssl_check, timeout)
 
         return {
-            "name": server,
+            "url": server,
             "ssl": ping_result["ssl"],
             "response_time": f"{ping_result['response_time']}ms" if ping_result["response_time"] else None,
             "response_code": ping_result["response_code"],

@@ -19,13 +19,13 @@ class ServerCheckService(QObject):
     @classmethod
     def get_instance(
         cls,
-        servers: list[str],
+        servers: list[dict],
         ssl_verify: bool,
         ssl_check: bool,
         timeout: int,
         update_interval_s: int,
     ) -> ServerCheckService:
-        key = (tuple(servers), ssl_verify, ssl_check, timeout, int(update_interval_s))
+        key = (tuple(s["url"] for s in servers), ssl_verify, ssl_check, timeout, int(update_interval_s))
         inst = cls._instances.get(key)
         if inst is None:
             inst = cls(
@@ -42,7 +42,7 @@ class ServerCheckService(QObject):
 
     def __init__(
         self,
-        servers: list[str],
+        servers: list[dict],
         ssl_verify: bool,
         ssl_check: bool,
         timeout: int,

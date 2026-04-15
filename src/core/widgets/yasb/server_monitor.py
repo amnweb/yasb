@@ -46,7 +46,7 @@ class ServerMonitor(BaseWidget):
         self._update_label()
 
         self._service = ServerCheckService.get_instance(
-            servers=self.config.servers,
+            servers=[s.model_dump() for s in self.config.servers],
             ssl_verify=self.config.ssl_verify,
             ssl_check=self.config.ssl_check,
             timeout=self.config.timeout,
@@ -351,7 +351,7 @@ class ServerMonitor(BaseWidget):
 
         else:
             for server_data in server_data_list:
-                if not server_data or server_data.get("name") is None:
+                if not server_data or server_data.get("url") is None:
                     continue
                 row_widget = QWidget()
                 server_status = QLabel()
@@ -386,7 +386,7 @@ class ServerMonitor(BaseWidget):
                 row_widget.setProperty("class", f"row {class_name}")
                 row_widget.setCursor(Qt.CursorShape.PointingHandCursor)
                 _server_url = (
-                    f"https://{server_data['name']}" if self.config.ssl_check else f"http://{server_data['name']}"
+                    f"https://{server_data['url']}" if self.config.ssl_check else f"http://{server_data['url']}"
                 )
                 row_widget.mousePressEvent = lambda _, url=_server_url: (QDesktopServices.openUrl(QUrl(url)), None)[1]
                 row_widget_layout = QVBoxLayout(row_widget)
