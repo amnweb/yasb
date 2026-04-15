@@ -9,6 +9,7 @@
 | `token`             | string  | `""` | GitHub personal access token. Leave empty to use OAuth sign-in, or set to `"env"` to read from `YASB_GITHUB_TOKEN`.   |
 | `max_notification`  | integer | `30` | The maximum number of notifications to display in the menu.                                                     |
 | `notification_dot`  | dict    | `{'enabled': true, 'corner': 'bottom_left', 'color': 'red', 'margin': [1, 1]}` | A dictionary specifying the notification dot settings for the widget. |
+| `hide_empty`        | boolean | `false` | Whether to hide the widget when there are no unread notifications.                                              |
 | `only_unread`       | boolean | `false` | Whether to show only unread notifications.                                                                      |
 | `show_comment_count`| boolean | `false` | Whether to request and display aggregated comment counts for supported notifications.                           |
 | `reason_filters`    | list    | `[]` | Optional list of notification reasons to include (e.g. `['mention', 'assign']`). Empty list returns all reasons. |
@@ -79,6 +80,7 @@ github:
   - **corner:** Set the corner where the dot should appear.
   - **color:** Set the color of the notification dot. Can be hex or string color.
   - **margin:** Set the x, y margin for the notification dot.
+- **hide_empty:** Whether to hide the widget when there are no unread notifications.
 - **only_unread:** Whether to show only unread notifications.
 - **show_comment_count:** When enabled, the widget performs a single batched GraphQL request to fetch comment totals for issues, pull requests, and discussions. Pull request counts include review threads. The comment count is displayed alongside each notification item.
 - **reason_filters:** Optional list of notification reasons to include. Leave empty to show all reasons. Supported values include `assign`, `author`, `comment`, `ci_activity`, `invitation`, `manual`, `mention`, `review_requested`, `security_alert`, `state_change`, `subscribed`, and `team_mention`.

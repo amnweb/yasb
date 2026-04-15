@@ -110,6 +110,9 @@ class GithubWidget(BaseWidget):
         self.callback_left = callbacks["on_left"]
         self.callback_right = callbacks["on_right"]
 
+        if self.config.hide_empty:
+            self.setVisible(False)
+
         GitHubDataManager.register_callback(self._on_data_update)
 
         GitHubDataManager.initialize(
@@ -203,6 +206,12 @@ class GithubWidget(BaseWidget):
     def _update_label(self):
         github_data = GitHubDataManager.get_data()
         notification_count = len([notification for notification in github_data if notification["unread"]])
+
+        if self.config.hide_empty:
+            self.setVisible(notification_count > 0)
+            if notification_count == 0:
+                return
+
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
         active_label_content = self.config.label_alt if self._show_alt_label else self.config.label
         # Split label content and filter out empty parts

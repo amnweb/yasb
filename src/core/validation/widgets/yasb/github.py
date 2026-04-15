@@ -69,6 +69,7 @@ class GithubConfig(CustomBaseModel):
     token: str = ""
     tooltip: bool = True
     max_notification: int = 30
+    hide_empty: bool = False
     only_unread: bool = False
     show_comment_count: bool = False
     max_field_size: int = 100
