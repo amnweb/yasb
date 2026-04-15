@@ -361,6 +361,11 @@ class CLIHandler:
             help="Tail yasb process logs (cancel with Ctrl-C)",
             add_help=False,
         )
+        subparsers.add_parser(
+            "migrate-config",
+            help="Find and fix deprecated options in config",
+            add_help=False,
+        )
         parser.add_argument(
             "-v",
             "--version",
@@ -601,6 +606,60 @@ class CLIHandler:
                 print(f"Failed to open config directory: {e}")
             sys.exit(0)
 
+        elif args.command == "migrate-config":
+            from pathlib import Path
+
+            from core.validation.deprecation import migrate_config
+
+            config_path = Path(DEFAULT_CONFIG_DIRECTORY) / "config.yaml"
+            if not config_path.exists():
+                print(f"Config file not found: {config_path}")
+                sys.exit(1)
+
+            try:
+                raw = config_path.read_text(encoding="utf-8")
+            except Exception as e:
+                print(f"Failed to read config: {e}")
+                sys.exit(1)
+
+            new_text, changes = migrate_config(raw)
+            if not changes:
+                print("No deprecated options found. Your config is up to date.")
+                sys.exit(0)
+
+            print(f"\nFound {len(changes)} deprecated option(s) in your config:\n")
+            for change in changes:
+                if change["action"] == "remove":
+                    print(f"  {Format.yellow}{change['path']}{Format.reset}")
+                    print(f"    Will be removed. {change['message']}")
+                elif change["action"] == "rename":
+                    print(
+                        f"  {Format.yellow}{change['path']}{Format.reset} -> {Format.green}{change['new_name']}{Format.reset}"
+                    )
+                    print(f"    Will be renamed. {change['message']}")
+                print()
+
+            confirm = input("Apply changes? (Y/n): ").strip().lower()
+            if confirm not in ["y", "yes", ""]:
+                print("Migration cancelled.")
+                sys.exit(0)
+
+            backup_path = config_path.with_suffix(".yaml.bak")
+            try:
+                backup_path.write_text(raw, encoding="utf-8")
+                print(f"Backup saved to {backup_path}")
+            except Exception as e:
+                print(f"Failed to create backup: {e}")
+                sys.exit(1)
+
+            try:
+                config_path.write_text(new_text, encoding="utf-8")
+                print(f"Config migrated successfully. {len(changes)} option(s) updated.")
+            except Exception as e:
+                print(f"Failed to write config: {e}")
+                sys.exit(1)
+            sys.exit(0)
+
         elif args.config:
             print(DEFAULT_CONFIG_DIRECTORY)
             sys.exit(0)
@@ -627,6 +686,7 @@ class CLIHandler:
                   log                       Tail yasb process logs (cancel with Ctrl-C)
                   reset                     Restore default config files and clear cache
                   config-dir                Open config directory in file explorer
+                  migrate-config            Find and fix deprecated options in config
                   help                      Print this message
 
                 {Format.underline}Options{Format.reset}:

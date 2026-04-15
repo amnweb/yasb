@@ -14,7 +14,6 @@ class BarAlignment(CustomBaseModel):
 class BarBlurEffect(CustomBaseModel):
     enabled: bool = False
     dark_mode: bool = False
-    acrylic: bool = False
     round_corners: bool = False
     round_corners_type: Literal["normal", "small"] = "normal"
     border_color: str = "System"
