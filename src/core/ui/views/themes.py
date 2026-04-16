@@ -108,7 +108,7 @@ SCROLLBAR_WIDTH = 8
 def _ui_font(size: int, weight: QFont.Weight = QFont.Weight.Normal) -> QFont:
     f = QFont()
     f.setFamilies(list(FONT_FAMILIES))
-    f.setPointSize(size)
+    f.setPixelSize(size)
     f.setWeight(weight)
     return f
 
@@ -192,8 +192,14 @@ def _readme_browser_styles(t: dict[str, str]) -> tuple[str, str]:
         f"code {{ background: {t['code_bg']}; padding: 10px 4px; border-radius: 3px;"
         f" font-family: 'Consolas', monospace; }}"
         f"pre {{ background: {t['code_bg']}; padding: 8px; border-radius: 6px; white-space: pre-wrap; }}"
-        f"ul, ol {{ margin: 4px 0; padding-left: 20px; }}"
+        f"ul, ol {{ margin: 4px 0; }}"
         f"li {{ margin: 2px 0; }}"
+        f"blockquote {{ margin: 8px 0; padding: 6px 12px; }}"
+        f"table {{ border-collapse: collapse; margin: 6px 0; }}"
+        f"th, td {{ border: 1px solid {t['divider_stroke_default']}; padding: 6px 10px; }}"
+        f"th {{ background: {t['code_bg']}; font-weight: bold; }}"
+        f"kbd {{ background: {t['code_bg']}; border-radius: 3px; padding: 1px 5px;"
+        f" font-family: 'Consolas', monospace; font-size: 0.9em; }}"
     )
     return widget_style, document_style
 
@@ -260,8 +266,8 @@ class SmoothScrollFilter(QObject):
 class AnimatedSplashTitle(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self._yasb_font = _ui_font(64, QFont.Weight.Bold)
-        self._reborn_font = _ui_font(64, QFont.Weight.Light)
+        self._yasb_font = _ui_font(85, QFont.Weight.Bold)
+        self._reborn_font = _ui_font(85, QFont.Weight.Light)
         self._color = QColor(get_tokens()["text_primary"])
         self._gap = 6
 
@@ -340,7 +346,7 @@ class ThemeSplashScreen(QWidget):
         _ev_layout.addWidget(_err_icon)
         self._error_label = QLabel()
         self._error_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._error_label.setFont(_ui_font(13))
+        self._error_label.setFont(_ui_font(17))
         self._error_label.setStyleSheet(f"color: {get_tokens()['text_primary']}; background: transparent;")
         _ev_layout.addWidget(self._error_label)
         self._error_widget.hide()
@@ -469,7 +475,8 @@ class RemoteImageTextBrowser(QTextBrowser):
         self._ready_emitted = False
 
     def setMarkdown(self, text: str):
-        html = md_to_html(preprocess_readme(text))
+        alert_styles = getattr(self, "alert_styles", None)
+        html = md_to_html(preprocess_readme(text), alert_styles=alert_styles)
         self._rev += 1
         self._ready_emitted = False
         self._loading.clear()
@@ -648,12 +655,12 @@ class ThemeSidebarItemWidget(QWidget):
         outer.addWidget(self.card)
 
         self.name_lbl = QLabel(name)
-        self.name_lbl.setFont(_ui_font(10, QFont.Weight.DemiBold))
+        self.name_lbl.setFont(_ui_font(13, QFont.Weight.DemiBold))
         row.addWidget(self.name_lbl, 1)
 
         if disabled:
             badge = QLabel("disabled")
-            badge.setFont(_ui_font(8))
+            badge.setFont(_ui_font(11))
             badge.setStyleSheet(
                 f"color: {t['disabled_badge_text']}; background: {t['disabled_badge_bg']};"
                 " border-radius: 4px; padding: 1px 5px;"
@@ -729,7 +736,7 @@ class ThemeDetailPanel(QWidget):
         title_row.setSpacing(10)
 
         self.name_label = QLabel()
-        self.name_label.setFont(_ui_font(18, QFont.Weight.Bold))
+        self.name_label.setFont(_ui_font(24, QFont.Weight.Bold))
         self.name_label.setWordWrap(False)
         self.name_label.setStyleSheet(f"color: {t['text_primary']}; background: transparent;")
         self.name_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
@@ -760,7 +767,7 @@ class ThemeDetailPanel(QWidget):
         header_layout.addLayout(title_row)
 
         self.desc_label = QLabel()
-        self.desc_label.setFont(_ui_font(10, QFont.Weight.DemiBold))
+        self.desc_label.setFont(_ui_font(13, QFont.Weight.DemiBold))
         self.desc_label.setWordWrap(True)
         self.desc_label.setStyleSheet(f"color: {t['text_secondary']}; background: transparent;")
         self.desc_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
@@ -800,7 +807,7 @@ class ThemeDetailPanel(QWidget):
         bar_layout.addWidget(icon_label, 0)
 
         message_label = QLabel("This theme is temporarily disabled until the author fixes the problem.")
-        message_label.setFont(_ui_font(9, QFont.Weight.DemiBold))
+        message_label.setFont(_ui_font(12, QFont.Weight.DemiBold))
         message_label.setWordWrap(True)
         message_label.setStyleSheet("background: transparent;")
         bar_layout.addWidget(message_label, 1)
@@ -834,8 +841,9 @@ class ThemeDetailPanel(QWidget):
         self.readme_browser = RemoteImageTextBrowser()
         self.readme_browser.setOpenLinks(True)
         self.readme_browser.setOpenExternalLinks(True)
-        self.readme_browser.setFont(_ui_font(10))
+        self.readme_browser.setFont(_ui_font(14, QFont.Weight.Normal))
         self.readme_browser.document().setDocumentMargin(32)
+        self.readme_browser.document().setIndentWidth(16)
         self.readme_browser.content_ready.connect(self._on_readme_ready)
         self.readme_browser.setStyleSheet(widget_style)
         self.readme_browser.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.MinimumExpanding)
@@ -862,7 +870,7 @@ class ThemeDetailPanel(QWidget):
         layout = QVBoxLayout(self._not_found_widget)
         layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         label = QLabel("Theme not found")
-        label.setFont(_ui_font(14))
+        label.setFont(_ui_font(19))
         label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         label.setStyleSheet(f"color: {t['text_secondary']}; background: transparent;")
         layout.addWidget(label)
@@ -1111,7 +1119,7 @@ class ThemeDetailPanel(QWidget):
         body.setSpacing(0)
 
         title = QLabel("Install Theme")
-        title.setFont(_ui_font(14, QFont.Weight.Bold))
+        title.setFont(_ui_font(19, QFont.Weight.Bold))
         title.setStyleSheet(f"color: {t['text_primary']}; background: transparent;")
         body.addWidget(title)
         body.addSpacing(8)
@@ -1121,7 +1129,7 @@ class ThemeDetailPanel(QWidget):
             "This will overwrite your current config and styles files.<br>"
             "Note: Some themes require additional fonts."
         )
-        desc.setFont(_ui_font(10))
+        desc.setFont(_ui_font(13))
         desc.setWordWrap(True)
         desc.setStyleSheet(f"color: {t['text_secondary']}; background: transparent;")
         body.addWidget(desc)
@@ -1232,13 +1240,13 @@ class ThemeViewer(ViewBase, QMainWindow):
         header_layout.setSpacing(10)
 
         title = QLabel("<span style='letter-spacing:-1px'><span style='font-weight:bold'>YASB</span> Themes</span>")
-        title.setFont(_ui_font(16))
+        title.setFont(_ui_font(21))
         title.setStyleSheet(f"color: {t['text_primary']};")
         header_layout.addWidget(title)
         header_layout.addStretch()
 
         info = QLabel("Backup your config before installing a theme.")
-        info.setFont(_ui_font(9))
+        info.setFont(_ui_font(12))
         info.setStyleSheet(f"color: {t['text_primary']};")
         info_opacity = QGraphicsOpacityEffect()
         info_opacity.setOpacity(0.75)
@@ -1279,7 +1287,7 @@ class ThemeViewer(ViewBase, QMainWindow):
         search_layout.setSpacing(0)
         self.search_box = QLineEdit()
         self.search_box.setPlaceholderText("Search themes...")
-        self.search_box.setFont(_ui_font(10))
+        self.search_box.setFont(_ui_font(13))
         self.search_box.setClearButtonEnabled(True)
         self.search_box.setStyleSheet(_search_box_style(t))
         self.search_box.textChanged.connect(self._filter_sidebar)
@@ -1311,7 +1319,7 @@ class ThemeViewer(ViewBase, QMainWindow):
         self.theme_list.viewport().installEventFilter(self._sidebar_smooth_scroll)
 
         self.count_label = QLabel()
-        self.count_label.setFont(_ui_font(9))
+        self.count_label.setFont(_ui_font(12))
         self.count_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
         self.count_label.setStyleSheet(f"padding: 6px 6px 6px 14px; color: {t['text_tertiary']};")
         sidebar_layout.addWidget(self.count_label)

@@ -52,6 +52,20 @@ _OL_STRIP = re.compile(r"^\s*\d+[.)]\s+")
 _BQ_START = re.compile(r"^>")
 _BQ_PREFIX = re.compile(r"^>\s?")
 
+# GFM alert blocks: > [!NOTE], > [!TIP], > [!IMPORTANT], > [!WARNING], > [!CAUTION]
+_GFM_ALERT = re.compile(r"^\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*$", re.IGNORECASE)
+
+_ALERT_STYLES_DEFAULT: dict[str, tuple[str, str]] = {
+    "note": ("#4cc2ff", "rgba(76,194,255,0.75)"),
+    "tip": ("#6ccb5f", "rgba(108,203,95,0.75)"),
+    "important": ("#a371f7", "rgba(163,113,247,0.75)"),
+    "warning": ("#fce100", "rgba(252,225,0,0.75)"),
+    "caution": ("#ff99a4", "rgba(255,153,164,0.75)"),
+}
+
+# Raw HTML block elements that should be passed through as-is
+_HTML_BLOCK_OPEN = re.compile(r"^<(table|details|figure|fieldset|dl|form)\b", re.IGNORECASE)
+
 # GitHub changelog preprocessing
 _IMG_TAG = re.compile(r"<img\s[^>]*/?>", re.IGNORECASE)
 _IMG_SRC = re.compile(r'<img\s[^>]*src="([^"]+)"', re.IGNORECASE)
@@ -89,13 +103,19 @@ def _md_table(lines: list[str]) -> str:
     def _cells(row: str) -> list[str]:
         return [c.strip() for c in row.strip().strip("|").split("|")]
 
+    def _cell_html(c: str) -> str:
+        h = _md_inline(c)
+        # Cap image widths so they don't inflate columns and squeeze text cells
+        h = h.replace("<img ", '<img width="540" ')
+        return h
+
     headers = _cells(lines[0])
     rows = [_cells(ln) for ln in lines[2:] if ln.strip()]
     html = "<table><thead><tr>" + "".join(f"<th>{_md_inline(h)}</th>" for h in headers) + "</tr></thead>"
     if rows:
         html += (
             "<tbody>"
-            + "".join("<tr>" + "".join(f"<td>{_md_inline(c)}</td>" for c in r) + "</tr>" for r in rows)
+            + "".join("<tr>" + "".join(f"<td>{_cell_html(c)}</td>" for c in r) + "</tr>" for r in rows)
             + "</tbody>"
         )
     return html + "</table>"
@@ -152,7 +172,7 @@ def strip_commit_links(changelog: str, repo_url: str = "") -> str:
     return text
 
 
-def md_to_html(src: str) -> str:
+def md_to_html(src: str, *, alert_styles: dict[str, tuple[str, str]] | None = None) -> str:
     """Minimal Markdown-to-HTML converter for QTextBrowser rendering."""
     src = src.replace("\r\n", "\n")
     code_blocks: list[str] = []
@@ -194,7 +214,10 @@ def md_to_html(src: str) -> str:
             continue
         # Horizontal rule
         if _HR.match(stripped):
-            out.append("<hr>")
+            out.append(
+                '<table width="100%" cellpadding="0" cellspacing="0" style="margin:6px 0;">'
+                '<tr><td style="padding:0; height:1px; font-size:1px; background-color:rgba(128,128,128,0.25);"> </td></tr></table>'
+            )
             i += 1
             continue
         # Table
@@ -205,13 +228,52 @@ def md_to_html(src: str) -> str:
                 i += 1
             out.append(_md_table(tlines))
             continue
+        # Raw HTML block passthrough (e.g. <table>, <details>)
+        if stripped.startswith("<"):
+            m = _HTML_BLOCK_OPEN.match(stripped)
+            if m:
+                tag = m.group(1).lower()
+                html_lines = [line]
+                i += 1
+                depth = 1
+                while i < n and depth > 0:
+                    cur = lines[i]
+                    cur_lower = cur.lower()
+                    depth += cur_lower.count(f"<{tag}") - cur_lower.count(f"</{tag}")
+                    html_lines.append(cur)
+                    i += 1
+                out.append("\n".join(html_lines))
+                continue
         # Blockquote
         if _BQ_START.match(stripped):
             bq: list[str] = []
             while i < n and _BQ_START.match(lines[i].strip()):
                 bq.append(_BQ_PREFIX.sub("", lines[i], count=1))
                 i += 1
-            out.append(f"<blockquote>{md_to_html(chr(10).join(bq))}</blockquote>")
+            # GFM alert blocks [!NOTE], [!TIP], [!IMPORTANT], [!WARNING], [!CAUTION]
+            if bq:
+                am = _GFM_ALERT.match(bq[0].strip())
+                if am:
+                    kind = am.group(1).lower()
+                    astyles = alert_styles or _ALERT_STYLES_DEFAULT
+                    entry = astyles.get(kind, ("#ffffff", "rgba(255,255,255,0.20)"))
+                    title_color, border_color = entry
+                    body_lines = [_md_inline(ln.strip()) for ln in bq[1:] if ln.strip()]
+                    body_html = ("<br>" + "<br>".join(body_lines)) if body_lines else ""
+                    out.append(
+                        f'<table width="100%" cellpadding="0" cellspacing="0" style="margin:8px 0;">'
+                        f'<tr><td style="padding:10px 14px;border-left:4px solid {border_color};">'
+                        f'<b style="color:{title_color}; font-size:14px;">{kind.title()}</b>'
+                        f"{body_html}"
+                        f"</td></tr></table>"
+                    )
+                    continue
+            body_lines = [_md_inline(ln.strip()) for ln in bq if ln.strip()]
+            body_html = "<br>".join(body_lines)
+            out.append(
+                f'<table width="100%" cellpadding="0" cellspacing="0" style="margin:4px 0;">'
+                f'<tr><td style="padding:6px 12px;">{body_html}</td></tr></table>'
+            )
             continue
         # Unordered list
         if _UL_ITEM.match(stripped):
