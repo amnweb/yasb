@@ -1063,3 +1063,87 @@ class BarContextMenu:
 
         except Exception as e:
             logging.error("Failed to disable autohide: %s", e)
+
+
+class AutoWidthManager(QObject):
+    """Manages auto-width calculation and resize/reposition for bars with width='auto'."""
+
+    def __init__(self, bar_widget: QWidget, parent=None):
+        super().__init__(parent)
+        self.bar_widget = bar_widget
+        self._current_auto_width = 0
+
+    def update(self) -> int:
+        """Calculate current auto width from the layout size hint. Returns the new width."""
+        layout = self.bar_widget._bar_frame.layout()
+        if layout:
+            layout.activate()
+
+        requested = max(self.bar_widget._bar_frame.sizeHint().width(), 0)
+        available = (
+            self.bar_widget._target_screen.geometry().width()
+            - self.bar_widget._padding["left"]
+            - self.bar_widget._padding["right"]
+        )
+        new_width = min(requested, available)
+        self._current_auto_width = new_width
+        return new_width
+
+    def apply(self, new_width: int) -> None:
+        """Resize and reposition the bar using the supplied auto width."""
+        if new_width < 0:
+            return
+
+        bar_height = self.bar_widget._dimensions["height"]
+        screen_geometry = self.bar_widget._target_screen.geometry()
+        bar_x, bar_y = self.bar_widget.bar_pos(
+            new_width,
+            bar_height,
+            screen_geometry.width(),
+            screen_geometry.height(),
+        )
+
+        self.bar_widget.setGeometry(bar_x, bar_y, new_width, bar_height)
+        self.bar_widget._bar_frame.setGeometry(0, 0, new_width, bar_height)
+
+    def sync(self) -> None:
+        """Ensure auto width matches the layout after a DPI/geometry change."""
+        previous_width = self._current_auto_width
+        new_width = self.update()
+
+        if new_width != previous_width or self.bar_widget.width() != new_width:
+            self.apply(new_width)
+
+
+class BarCliManager(QObject):
+    """Handles CLI show/hide/toggle commands for a bar, including app bar reservation management."""
+
+    def __init__(self, bar_widget: QWidget, parent=None):
+        super().__init__(parent)
+        self.bar_widget = bar_widget
+
+    def handle(self, action: str, screen_name: str) -> None:
+        current_screen_matches = not screen_name or self.bar_widget._target_screen.name() == screen_name
+        if not current_screen_matches:
+            return
+
+        autohide_active = self.bar_widget._autohide_manager and self.bar_widget._autohide_manager.is_enabled()
+        manages_app_bar = self.bar_widget._window_flags["windows_app_bar"] and not autohide_active
+
+        if action == "show":
+            self.bar_widget.show()
+            if manages_app_bar:
+                SystrayAppBarHelper.execute_without_systray_interference(self.bar_widget.update_app_bar)
+        elif action == "hide":
+            if manages_app_bar:
+                SystrayAppBarHelper.execute_without_systray_interference(self.bar_widget.try_remove_app_bar)
+            self.bar_widget.hide()
+        elif action == "toggle":
+            if self.bar_widget.isVisible():
+                if manages_app_bar:
+                    SystrayAppBarHelper.execute_without_systray_interference(self.bar_widget.try_remove_app_bar)
+                self.bar_widget.hide()
+            else:
+                self.bar_widget.show()
+                if manages_app_bar:
+                    SystrayAppBarHelper.execute_without_systray_interference(self.bar_widget.update_app_bar)
