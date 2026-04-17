@@ -275,7 +275,7 @@ def get_explorer_pid() -> int | None:
             explorer_pid = ct.c_ulong(0)
             thread_id = GetWindowThreadProcessId(hwnd_shell, byref(explorer_pid))
             if not thread_id:
-                raise Exception("Wrong thread process ID. Err: {GetLastError()}")
+                raise Exception(f"Wrong thread process ID. Err: {GetLastError()}")
             h_process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, explorer_pid.value)
             if not h_process:
                 raise Exception(f"Failed to open process. Err: {GetLastError()}")
