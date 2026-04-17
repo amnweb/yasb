@@ -109,16 +109,19 @@ class DraggableAppButton(QFrame):
     def _check_hide_preview(self):
         """Check if mouse moved to preview window before hiding."""
         try:
+            cursor_pos = QCursor.pos()
+            # If cursor moved to another button, that button's enterEvent manages the preview
+            w = QApplication.widgetAt(cursor_pos)
+            while w is not None:
+                if isinstance(w, DraggableAppButton):
+                    return
+                w = w.parent()
             if self._taskbar._thumbnail_mgr and self._taskbar._thumbnail_mgr._preview_popup:
                 preview = self._taskbar._thumbnail_mgr._preview_popup
                 if preview.isVisible():
-                    # Check full geometric bounds, not just masked area
-                    cursor_pos = QCursor.pos()
                     preview_rect = QRect(preview.mapToGlobal(QPoint(0, 0)), preview.size())
                     if preview_rect.contains(cursor_pos):
-                        # Mouse is within preview bounds (including thumbnail area), don't hide
                         return
-            # Mouse is not over preview, safe to hide
             self._taskbar.hide_preview()
         except Exception:
             pass
@@ -1218,6 +1221,9 @@ class TaskbarWidget(BaseWidget):
 
         proc = window_data.get("process_name")
         if proc is None:
+            return False
+
+        if self._show_only_visible and window_data.get("is_cloaked", False):
             return False
 
         if self.config.monitor_exclusive:
