@@ -79,17 +79,12 @@ def connect_taskbar(widget):
     except Exception as e:
         logger.warning("Unable to obtain Qt window handle for shell hook: %s", e)
 
-    # Keep cloaked tasks if any connected widget has show_only_visible=False.
-    # Once set to True, never downgrade - each widget filters independently via _should_show_window.
+    # Propagate preference: keep cloaked tasks only when show_only_visible is False
     try:
         keep_cloaked = bool(getattr(widget, "_show_only_visible", True) is False)
-        if keep_cloaked:
-            setattr(task_manager, "_keep_cloaked_tasks", True)
-        elif not hasattr(task_manager, "_keep_cloaked_tasks"):
-            setattr(task_manager, "_keep_cloaked_tasks", False)
+        setattr(task_manager, "_keep_cloaked_tasks", keep_cloaked)
     except Exception:
-        if not hasattr(task_manager, "_keep_cloaked_tasks"):
-            setattr(task_manager, "_keep_cloaked_tasks", False)
+        setattr(task_manager, "_keep_cloaked_tasks", False)
 
     # Start the task manager using the Qt hwnd
     task_manager.start(hwnd)
@@ -518,10 +513,8 @@ class TaskbarWindowManager(QObject):
         """Uncloaked: ensure tracking and refresh UI."""
         try:
             if hwnd in self._windows:
-                # Already tracked force-emit so widgets that removed it while cloaked can re-add it
-                app_window = self._windows[hwnd]
-                app_window.update()
-                self.window_updated.emit(hwnd, app_window.as_dict())
+                # Already tracked; just refresh
+                self._schedule_window_update(hwnd)
             else:
                 # Was removed while cloaked; add it back now that it's visible
                 self._add_window(hwnd)

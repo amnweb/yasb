@@ -18,6 +18,7 @@ build_options = {
         "core.widgets.yasb",
         "core.widgets.komorebi",
         "core.widgets.glazewm",
+        "core.widgets.shellwright",
     ],
     "constants": [f"ARCHITECTURE='{display_arch}'"],
     "silent_level": 1,
@@ -33,6 +34,9 @@ build_options = {
     "includes": [
         "holidays.countries",
         "winrt.windows.applicationmodel",
+        "core.widgets.shellwright.workspaces",
+        "core.utils.widgets.shellwright.event_listener",
+        "core.validation.widgets.shellwright.workspaces",
     ],
     "optimize": 1,
     "include_files": [

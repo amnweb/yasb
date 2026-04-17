@@ -85,7 +85,6 @@ class ApplicationWindow:
             "class_name": self.class_name,
             "is_active": self.is_active,
             "is_flashing": self.is_flashing,
-            "is_cloaked": self._is_cloaked(),
             "monitor_handle": monitor_handle,
             "process_name": self.process_name,
             "process_pid": self.process_pid,
