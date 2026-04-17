@@ -7,9 +7,7 @@ from PyQt6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QWidget
 from core.bar_helper import (
     AppBarManager,
     AutoHideManager,
-    AutoWidthManager,
     BarAnimationManager,
-    BarCliManager,
     BarContextMenu,
     MaximizedWindowWatcher,
     OsThemeManager,
@@ -61,12 +59,11 @@ class Bar(QWidget):
         self._widgets = widgets  # Store widgets reference for context menu
         self._widget_config_map = self.config.widgets.model_dump() or {}
         self._is_auto_width = str(self.config.dimensions.width).lower() == "auto"
+        self._current_auto_width = 0
         self._os_theme_manager = None
         self._autohide_manager = None
         self._maximized_watcher = None
         self._animation_manager = None
-        self._auto_width_manager = None
-        self._cli_manager = None
         self._target_screen = bar_screen
 
         self.screen_name = self._target_screen.name()
@@ -107,14 +104,12 @@ class Bar(QWidget):
         self._add_widgets(widgets)
 
         if self._is_auto_width:
-            self._auto_width_manager = AutoWidthManager(self, self)
             self._bar_frame.installEventFilter(self)
-            QTimer.singleShot(0, self._auto_width_manager.sync)
+            QTimer.singleShot(0, self._sync_auto_width)
 
         self._target_screen.geometryChanged.connect(self.on_geometry_changed, Qt.ConnectionType.QueuedConnection)
 
-        self._cli_manager = BarCliManager(self, self)
-        self.handle_bar_management.connect(self._cli_manager.handle)
+        self.handle_bar_management.connect(self._handle_bar_management)
         self._event_service.register_event("handle_bar_cli", self.handle_bar_management)
 
         # Initialize animation manager
@@ -162,8 +157,8 @@ class Bar(QWidget):
         if self._autohide_manager and self._autohide_manager.is_enabled():
             self._autohide_manager.setup_detection_zone()
 
-        if self._is_auto_width and self._auto_width_manager:
-            QTimer.singleShot(0, self._auto_width_manager.sync)
+        if self._is_auto_width:
+            QTimer.singleShot(0, self._sync_auto_width)
 
     def update_app_bar(self) -> None:
         if self.app_bar_manager:
@@ -223,7 +218,7 @@ class Bar(QWidget):
 
         if self._is_auto_width:
             if self._bar_frame.layout() is not None:
-                bar_width = self._auto_width_manager.update() if self._auto_width_manager else 0
+                bar_width = self._update_auto_width()
             else:
                 bar_width = 0
 
@@ -240,6 +235,43 @@ class Bar(QWidget):
 
         self.setGeometry(bar_x, bar_y, bar_width, bar_height)
         self._bar_frame.setGeometry(0, 0, bar_width, bar_height)
+
+    def _update_auto_width(self) -> int:
+        """Calculate the current auto width based on the layout's size hint."""
+        layout = self._bar_frame.layout()
+        if layout:
+            layout.activate()
+
+        requested = max(self._bar_frame.sizeHint().width(), 0)
+        available = self._target_screen.geometry().width() - self._padding["left"] - self._padding["right"]
+        new_width = min(requested, available)
+        self._current_auto_width = new_width
+        return new_width
+
+    def _apply_auto_width(self, new_width: int) -> None:
+        """Resize and reposition the bar using the supplied auto width."""
+        if new_width < 0:
+            return
+
+        bar_height = self._dimensions["height"]
+        screen_geometry = self._target_screen.geometry()
+        bar_x, bar_y = self.bar_pos(
+            new_width,
+            bar_height,
+            screen_geometry.width(),
+            screen_geometry.height(),
+        )
+
+        self.setGeometry(bar_x, bar_y, new_width, bar_height)
+        self._bar_frame.setGeometry(0, 0, new_width, bar_height)
+
+    def _sync_auto_width(self) -> None:
+        """Ensure auto width matches the layout after a DPI/geometry."""
+        previous_width = self._current_auto_width
+        new_width = self._update_auto_width()
+
+        if new_width != previous_width or self.width() != new_width:
+            self._apply_auto_width(new_width)
 
     def _add_widgets(self, widgets: dict[str, list] = None):
         bar_layout = QGridLayout()
@@ -314,16 +346,11 @@ class Bar(QWidget):
         super().changeEvent(event)
 
     def eventFilter(self, obj, event):
-        if (
-            self._is_auto_width
-            and self._auto_width_manager
-            and obj == self._bar_frame
-            and event.type() == QEvent.Type.LayoutRequest
-        ):
-            previous_width = self._auto_width_manager._current_auto_width
-            new_width = self._auto_width_manager.update()
+        if self._is_auto_width and obj == self._bar_frame and event.type() == QEvent.Type.LayoutRequest:
+            previous_width = self._current_auto_width
+            new_width = self._update_auto_width()
             if new_width != previous_width:
-                self._auto_width_manager.apply(new_width)
+                self._apply_auto_width(new_width)
 
         return super().eventFilter(obj, event)
 
@@ -334,6 +361,19 @@ class Bar(QWidget):
             self._animation_manager.hide_bar()
         else:
             super().hide()
+
+    def _handle_bar_management(self, action, screen_name):
+        current_screen_matches = not screen_name or self._target_screen.name() == screen_name
+        if current_screen_matches:
+            if action == "show":
+                self.show()
+            elif action == "hide":
+                self.hide()
+            elif action == "toggle":
+                if self.isVisible():
+                    self.hide()
+                else:
+                    self.show()
 
     def contextMenuEvent(self, event):
         """Handle right-click context menu"""

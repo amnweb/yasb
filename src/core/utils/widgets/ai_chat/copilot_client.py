@@ -29,11 +29,9 @@ try:
     from copilot import (
         CopilotClient,
         ExternalServerConfig,
-        SubprocessConfig,
-    )
-    from copilot.session import (
         FileAttachment,
         PermissionRequestResult,
+        SubprocessConfig,
         SystemMessageAppendConfig,
     )
 except ImportError:
