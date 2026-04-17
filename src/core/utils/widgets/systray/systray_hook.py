@@ -42,12 +42,11 @@ from core.utils.win32.constants import (
     NIM_DELETE,
     NIM_MODIFY,
     NIM_SETVERSION,
+    WH_GETMESSAGE,
 )
 from core.utils.win32.structs import NOTIFYICONDATA, SHELLTRAYDATA
 
 logger = logging.getLogger("systray_hook")
-
-_WH_GETMESSAGE = 3
 
 
 def _find_shell_tray_hwnd(explorer_pid: int) -> int:
@@ -85,7 +84,12 @@ def _inject_via_hook(dll_path: str, explorer_pid: int) -> int:
         if not hook_proc:
             logger.error("GetMsgProc not found in DLL")
             return 0
-        hwnd = _find_shell_tray_hwnd(explorer_pid)
+        hwnd = 0
+        for _ in range(60):
+            hwnd = _find_shell_tray_hwnd(explorer_pid)
+            if hwnd:
+                break
+            time.sleep(0.05)
         if not hwnd:
             logger.error("Shell_TrayWnd not found")
             return 0
@@ -93,7 +97,7 @@ def _inject_via_hook(dll_path: str, explorer_pid: int) -> int:
         if not tid:
             logger.error("GetWindowThreadProcessId failed")
             return 0
-        h_hook = SetWindowsHookEx(_WH_GETMESSAGE, hook_proc, h_dll, tid)
+        h_hook = SetWindowsHookEx(WH_GETMESSAGE, hook_proc, h_dll, tid)
         if not h_hook:
             logger.error("SetWindowsHookExW failed (err=%d)", GetLastError())
             return 0
