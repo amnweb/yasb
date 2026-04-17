@@ -15,7 +15,7 @@ BEGIN
         BEGIN
             VALUE "CompanyName",      "YASB Reborn"
             VALUE "FileDescription",  "YASB System Tray Monitor Hook"
-            VALUE "FileVersion",      "1.0.1.0"
+            VALUE "FileVersion",      "1.0.2.0"
             VALUE "InternalName",     "YASBTrayHook"
             VALUE "LegalCopyright",   "MIT License"
 #if defined(BUILD_ARM64)
@@ -24,7 +24,7 @@ BEGIN
             VALUE "OriginalFilename", "YASBTrayHook.dll"
 #endif
             VALUE "ProductName",      "YASB - Yet Another Status Bar"
-            VALUE "ProductVersion",   "1.0.1.0"
+            VALUE "ProductVersion",   "1.0.2.0"
         END
     END
     BLOCK "VarFileInfo"
