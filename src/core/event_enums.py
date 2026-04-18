@@ -49,3 +49,9 @@ class KomorebiEvent(Event):
     CycleStack = "CycleStack"
     FocusStackWindow = "FocusStackWindow"
     TitleUpdate = "TitleUpdate"
+
+
+class ShellwrightEvent(Event):
+    ShellwrightConnect = "ShellwrightConnect"
+    ShellwrightUpdate = "ShellwrightUpdate"
+    ShellwrightDisconnect = "ShellwrightDisconnect"
