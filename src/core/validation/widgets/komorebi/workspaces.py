@@ -1,4 +1,4 @@
-from core.validation.widgets.base_model import CustomBaseModel, PaddingConfig, ShadowConfig
+from core.validation.widgets.base_model import CustomBaseModel, ShadowConfig
 
 
 class ToggleWorkspaceLayerConfig(CustomBaseModel):
@@ -32,7 +32,6 @@ class KomorebiWorkspacesConfig(CustomBaseModel):
     animation: bool = False
     enable_scroll_switching: bool = False
     reverse_scroll_direction: bool = False
-    container_padding: PaddingConfig = PaddingConfig()
     btn_shadow: ShadowConfig = ShadowConfig()
     label_shadow: ShadowConfig = ShadowConfig()
     container_shadow: ShadowConfig = ShadowConfig()

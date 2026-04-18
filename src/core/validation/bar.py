@@ -7,7 +7,6 @@ from core.validation.widgets.base_model import CustomBaseModel
 
 class BarAlignment(CustomBaseModel):
     position: Literal["top", "bottom"] = "top"
-    center: bool = False  # deprecated
     align: Literal["left", "center", "right"] = "center"
 
 

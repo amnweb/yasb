@@ -5,7 +5,6 @@ from core.validation.widgets.base_model import (
     CallbacksConfig,
     CustomBaseModel,
     KeybindingConfig,
-    PaddingConfig,
     ShadowConfig,
 )
 
@@ -22,7 +21,6 @@ class MenuConfig(CustomBaseModel):
     border_color: str = "System"
     alignment: str = "right"
     direction: str = "down"
-    distance: int = 6  # deprecated
     offset_top: int = 6
     offset_left: int = 0
 
@@ -52,7 +50,6 @@ class ServerMonitorConfig(CustomBaseModel):
     menu: MenuConfig = MenuConfig()
     icons: IconsConfig = IconsConfig()
     animation: AnimationConfig = AnimationConfig()
-    container_padding: PaddingConfig = PaddingConfig()
     label_shadow: ShadowConfig = ShadowConfig()
     container_shadow: ShadowConfig = ShadowConfig()
     keybindings: list[KeybindingConfig] = []

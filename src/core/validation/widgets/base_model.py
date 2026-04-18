@@ -38,10 +38,3 @@ class KeybindingConfig(CustomBaseModel):
     keys: str
     action: str
     screen: Literal["active", "cursor", "primary"] = "active"
-
-
-class PaddingConfig(CustomBaseModel):
-    top: int = 0
-    left: int = 0
-    bottom: int = 0
-    right: int = 0

@@ -5,7 +5,6 @@ from core.validation.widgets.base_model import (
     CallbacksConfig,
     CustomBaseModel,
     KeybindingConfig,
-    PaddingConfig,
     ShadowConfig,
 )
 
@@ -25,7 +24,6 @@ class MenuConfig(CustomBaseModel):
 
 class IconsConfig(CustomBaseModel):
     model_config = ConfigDict(populate_by_name=True)
-
     note: str = "\udb82\udd0c"
     delete: str = "\ueab8"
     copy_icon: str = Field(default="\uebcc", alias="copy")
@@ -48,7 +46,6 @@ class NotesConfig(CustomBaseModel):
     start_floating: bool = False
     paste_plain_text: bool = False
     enter_to_add_note: bool = True
-    container_padding: PaddingConfig = PaddingConfig()
     animation: AnimationConfig = AnimationConfig()
     menu: MenuConfig = MenuConfig()
     icons: IconsConfig = IconsConfig()

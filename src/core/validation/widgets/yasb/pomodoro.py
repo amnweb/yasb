@@ -7,7 +7,6 @@ from core.validation.widgets.base_model import (
     CallbacksConfig,
     CustomBaseModel,
     KeybindingConfig,
-    PaddingConfig,
     ShadowConfig,
 )
 
@@ -66,7 +65,6 @@ class PomodoroConfig(CustomBaseModel):
     hide_on_break: bool = False
     icons: IconsConfig = IconsConfig()
     animation: AnimationConfig = AnimationConfig()
-    container_padding: PaddingConfig = PaddingConfig()
     label_shadow: ShadowConfig = ShadowConfig()
     container_shadow: ShadowConfig = ShadowConfig()
     progress_bar: ProgressBarConfig = ProgressBarConfig()

@@ -8,7 +8,6 @@ from core.validation.widgets.base_model import (
     CallbacksConfig,
     CustomBaseModel,
     KeybindingConfig,
-    PaddingConfig,
     ShadowConfig,
 )
 
@@ -51,7 +50,6 @@ class PowerMenuConfig(CustomBaseModel):
     menu_style: Literal["fullscreen", "popup"] = "fullscreen"
     popup: PowerMenuPopupConfig = PowerMenuPopupConfig()
     profile_image_size: int = Field(default=64, ge=16, le=256)
-    container_padding: PaddingConfig = PaddingConfig()
     label_shadow: ShadowConfig = ShadowConfig()
     container_shadow: ShadowConfig = ShadowConfig()
     animation: AnimationConfig = AnimationConfig()

@@ -1,4 +1,4 @@
-from core.validation.widgets.base_model import CustomBaseModel, KeybindingConfig, PaddingConfig
+from core.validation.widgets.base_model import CustomBaseModel, KeybindingConfig
 
 
 class ObsIconsConfig(CustomBaseModel):
@@ -32,5 +32,4 @@ class ObsConfig(CustomBaseModel):
     show_scene_name: bool = False
     show_stream_stats: bool = False
     tooltip: bool = True
-    container_padding: PaddingConfig = PaddingConfig()
     keybindings: list[KeybindingConfig] = []

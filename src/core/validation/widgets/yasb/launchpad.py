@@ -4,7 +4,6 @@ from core.validation.widgets.base_model import (
     CallbacksConfig,
     CustomBaseModel,
     KeybindingConfig,
-    PaddingConfig,
     ShadowConfig,
 )
 
@@ -57,7 +56,6 @@ class LaunchpadConfig(CustomBaseModel):
     window_style: WindowStyleConfig = WindowStyleConfig()
     animation: AnimationConfig = AnimationConfig()
     shortcuts: ShortcutsConfig = ShortcutsConfig()
-    container_padding: PaddingConfig = PaddingConfig()
     label_shadow: ShadowConfig = ShadowConfig()
     container_shadow: ShadowConfig = ShadowConfig()
     app_title_shadow: ShadowConfig = ShadowConfig()

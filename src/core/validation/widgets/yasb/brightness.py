@@ -8,7 +8,6 @@ from core.validation.widgets.base_model import (
     CallbacksConfig,
     CustomBaseModel,
     KeybindingConfig,
-    PaddingConfig,
     ShadowConfig,
 )
 
@@ -20,7 +19,6 @@ class BrightnessMenuConfig(CustomBaseModel):
     border_color: str = "System"
     alignment: str = "right"
     direction: str = "down"
-    distance: int = 6  # deprecated
     offset_top: int = 6
     offset_left: int = 0
 
@@ -59,7 +57,6 @@ class BrightnessConfig(CustomBaseModel):
     auto_light_night_start_time: Annotated[time, WithJsonSchema({"type": "string"})] = time(20, 0)
     auto_light_night_end_time: Annotated[time, WithJsonSchema({"type": "string"})] = time(6, 30)
     auto_light_day_level: int = 100
-    container_padding: PaddingConfig = PaddingConfig()
     animation: AnimationConfig = AnimationConfig()
     label_shadow: ShadowConfig = ShadowConfig()
     container_shadow: ShadowConfig = ShadowConfig()

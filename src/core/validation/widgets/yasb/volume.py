@@ -5,7 +5,6 @@ from core.validation.widgets.base_model import (
     CallbacksConfig,
     CustomBaseModel,
     KeybindingConfig,
-    PaddingConfig,
     ShadowConfig,
 )
 
@@ -22,7 +21,6 @@ class AudioMenuConfig(CustomBaseModel):
     border_color: str = "System"
     alignment: str = "right"
     direction: str = "down"
-    distance: int = 6  # deprecated
     offset_top: int = 6
     offset_left: int = 0
     show_apps: bool = False
@@ -64,7 +62,6 @@ class VolumeConfig(CustomBaseModel):
     ]
     audio_menu: AudioMenuConfig = AudioMenuConfig()
     animation: AnimationConfig = AnimationConfig()
-    container_padding: PaddingConfig = PaddingConfig()
     label_shadow: ShadowConfig = ShadowConfig()
     container_shadow: ShadowConfig = ShadowConfig()
     progress_bar: ProgressBarConfig = ProgressBarConfig()

@@ -7,7 +7,6 @@ from core.validation.widgets.base_model import (
     CallbacksConfig,
     CustomBaseModel,
     KeybindingConfig,
-    PaddingConfig,
     ShadowConfig,
 )
 
@@ -54,7 +53,6 @@ class MicrophoneConfig(CustomBaseModel):
     icons: IconsConfig = IconsConfig()
     mic_menu: MicMenuConfig = MicMenuConfig()
     animation: AnimationConfig = AnimationConfig()
-    container_padding: PaddingConfig = PaddingConfig()
     label_shadow: ShadowConfig = ShadowConfig()
     container_shadow: ShadowConfig = ShadowConfig()
     progress_bar: ProgressBarConfig = ProgressBarConfig()

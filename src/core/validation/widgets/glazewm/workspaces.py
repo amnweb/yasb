@@ -1,4 +1,4 @@
-from core.validation.widgets.base_model import CustomBaseModel, PaddingConfig, ShadowConfig
+from core.validation.widgets.base_model import CustomBaseModel, ShadowConfig
 
 
 class AppIconsConfig(CustomBaseModel):
@@ -29,6 +29,5 @@ class GlazewmWorkspacesConfig(CustomBaseModel):
     container_shadow: ShadowConfig = ShadowConfig()
     btn_shadow: ShadowConfig = ShadowConfig()
     label_shadow: ShadowConfig = ShadowConfig()
-    container_padding: PaddingConfig = PaddingConfig()
     app_icons: AppIconsConfig = AppIconsConfig()
     animation: bool = False

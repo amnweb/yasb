@@ -1,4 +1,4 @@
-from core.validation.widgets.base_model import AnimationConfig, CustomBaseModel, PaddingConfig, ShadowConfig
+from core.validation.widgets.base_model import AnimationConfig, CustomBaseModel, ShadowConfig
 
 
 class AppConfig(CustomBaseModel):
@@ -16,4 +16,3 @@ class ApplicationsWidgetConfig(CustomBaseModel):
     tooltip: bool = True
     label_shadow: ShadowConfig = ShadowConfig()
     container_shadow: ShadowConfig = ShadowConfig()
-    container_padding: PaddingConfig = PaddingConfig()

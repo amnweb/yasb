@@ -5,7 +5,6 @@ from core.validation.widgets.base_model import (
     CallbacksConfig,
     CustomBaseModel,
     KeybindingConfig,
-    PaddingConfig,
     ShadowConfig,
 )
 
@@ -48,7 +47,6 @@ class TrafficWidgetConfig(CustomBaseModel):
     speed_threshold: SpeedThresholdConfig = SpeedThresholdConfig()
     menu: MenuConfig = MenuConfig()
     animation: AnimationConfig = AnimationConfig()
-    container_padding: PaddingConfig = PaddingConfig()
     label_shadow: ShadowConfig = ShadowConfig()
     container_shadow: ShadowConfig = ShadowConfig()
     keybindings: list[KeybindingConfig] = []

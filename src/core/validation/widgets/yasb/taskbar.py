@@ -7,7 +7,6 @@ from core.validation.widgets.base_model import (
     CallbacksConfig,
     CustomBaseModel,
     KeybindingConfig,
-    PaddingConfig,
     ShadowConfig,
 )
 
@@ -48,7 +47,6 @@ class TaskbarConfig(CustomBaseModel):
     animation: AnimationConfig | bool = AnimationConfig()
     title_label: TitleLabelConfig = TitleLabelConfig()
     hide_empty: bool = False
-    container_padding: PaddingConfig = PaddingConfig()
     label_shadow: ShadowConfig = ShadowConfig()
     container_shadow: ShadowConfig = ShadowConfig()
     preview: PreviewConfig = PreviewConfig()

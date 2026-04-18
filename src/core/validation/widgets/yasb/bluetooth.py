@@ -3,7 +3,6 @@ from core.validation.widgets.base_model import (
     CallbacksConfig,
     CustomBaseModel,
     KeybindingConfig,
-    PaddingConfig,
     ShadowConfig,
 )
 
@@ -35,7 +34,6 @@ class BluetoothConfig(CustomBaseModel):
     icons: BluetoothIconsConfig = BluetoothIconsConfig()
     device_aliases: list[BluetoothDeviceAliasConfig] = []
     animation: AnimationConfig = AnimationConfig()
-    container_padding: PaddingConfig = PaddingConfig()
     label_shadow: ShadowConfig = ShadowConfig()
     container_shadow: ShadowConfig = ShadowConfig()
     keybindings: list[KeybindingConfig] = []

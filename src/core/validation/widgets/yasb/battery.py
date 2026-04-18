@@ -5,7 +5,6 @@ from core.validation.widgets.base_model import (
     CallbacksConfig,
     CustomBaseModel,
     KeybindingConfig,
-    PaddingConfig,
     ShadowConfig,
 )
 
@@ -49,7 +48,6 @@ class BatteryConfig(CustomBaseModel):
     status_thresholds: StatusThresholdsConfig = StatusThresholdsConfig()
     status_icons: StatusIconsConfig = StatusIconsConfig()
     animation: AnimationConfig = AnimationConfig()
-    container_padding: PaddingConfig = PaddingConfig()
     label_shadow: ShadowConfig = ShadowConfig()
     container_shadow: ShadowConfig = ShadowConfig()
     keybindings: list[KeybindingConfig] = []

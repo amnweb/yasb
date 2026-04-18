@@ -2,7 +2,6 @@ from core.validation.widgets.base_model import (
     AnimationConfig,
     CustomBaseModel,
     KeybindingConfig,
-    PaddingConfig,
     ShadowConfig,
 )
 
@@ -64,7 +63,6 @@ class ActiveLayoutConfig(CustomBaseModel):
     ]
     layout_icons: ActiveLayoutIconsConfig = ActiveLayoutIconsConfig()
     layout_menu: ActiveLayoutMenuConfig = ActiveLayoutMenuConfig()
-    container_padding: PaddingConfig = PaddingConfig()
     animation: AnimationConfig = AnimationConfig()
     label_shadow: ShadowConfig = ShadowConfig()
     container_shadow: ShadowConfig = ShadowConfig()

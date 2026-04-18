@@ -2,7 +2,6 @@ from core.validation.widgets.base_model import (
     CallbacksConfig,
     CustomBaseModel,
     KeybindingConfig,
-    PaddingConfig,
     ShadowConfig,
 )
 
@@ -20,6 +19,5 @@ class WindowsDesktopsConfig(CustomBaseModel):
     animation: bool = False
     btn_shadow: ShadowConfig = ShadowConfig()
     container_shadow: ShadowConfig = ShadowConfig()
-    container_padding: PaddingConfig = PaddingConfig()
     callbacks: WindowsDesktopsCallbacksConfig = WindowsDesktopsCallbacksConfig()
     keybindings: list[KeybindingConfig] = []
