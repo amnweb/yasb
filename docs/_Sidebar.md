@@ -62,3 +62,4 @@
     - [Komorebi Layout](./(Widget)-Komorebi-Layout)
     - [Komorebi Stack](./(Widget)-Komorebi-Stack)
     - [Komorebi Workspaces](./(Widget)-Komorebi-Workspaces)
+    - [Shellwright Workspaces](./(Widget)-Shellwright-Workspaces)
