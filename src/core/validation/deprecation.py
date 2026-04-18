@@ -47,7 +47,9 @@ from yaml import safe_load
 logger = logging.getLogger("deprecation")
 
 # Global - removed from any model that doesn't recognize it
-DEPRECATED_FIELDS: dict[str, str] = {}
+DEPRECATED_FIELDS: dict[str, str] = {
+    "container_padding": "Use CSS padding instead.",
+}
 
 RENAMED_FIELDS: dict[str, tuple[str, str]] = {}
 
@@ -55,6 +57,33 @@ RENAMED_FIELDS: dict[str, tuple[str, str]] = {}
 SCOPED_DEPRECATED_FIELDS: dict[str, dict[str, str]] = {
     "BarBlurEffect": {
         "acrylic": "No longer supported and can be removed from the config.",
+    },
+    "BarAlignment": {
+        "center": "Use 'align' instead.",
+    },
+    "VSCodeMenuConfig": {
+        "distance": "Use 'offset_top' instead.",
+    },
+    "BrightnessMenuConfig": {
+        "distance": "Use 'offset_top' instead.",
+    },
+    "ClockCalendarConfig": {
+        "distance": "Use 'offset_top' instead.",
+    },
+    "GroupLabelConfig": {
+        "distance": "Use 'offset_top' instead.",
+    },
+    "MenuConfig": {
+        "distance": "Use 'offset_top' instead.",
+    },
+    "AudioMenuConfig": {
+        "distance": "Use 'offset_top' instead.",
+    },
+    "WeatherCardConfig": {
+        "distance": "Use 'offset_top' instead.",
+    },
+    "HomeConfig": {
+        "distance": "Use 'offset_top' instead.",
     },
 }
 
@@ -72,11 +101,11 @@ def handle_deprecated_fields(cls: type, data: Any) -> Any:
         if key in cls.model_fields:
             continue
         if key in deprecated:
-            logger.warning("%s: '%s' is deprecated. %s", cls_name, key, deprecated[key])
+            logger.warning("[DEPRECATED] %s: '%s' - %s", cls_name, key, deprecated[key])
             del data[key]
         elif key in renamed:
             new_name, message = renamed[key]
-            logger.warning("%s: '%s' has been renamed to '%s'. %s", cls_name, key, new_name, message)
+            logger.warning("[DEPRECATED] %s: '%s' renamed to '%s' - %s", cls_name, key, new_name, message)
             if new_name not in data:
                 data[new_name] = data[key]
             del data[key]
@@ -98,13 +127,21 @@ def _check(data: dict, path: str, class_name: str, issues: list[dict]):
 
 def _check_model(data: dict, path: str, model: type, issues: list[dict]):
     """Check data against a Pydantic model and recurse into its sub-models."""
+    import typing
+
     _check(data, path, model.__name__, issues)
     for name, field in model.model_fields.items():
         ann = field.annotation
+        val = data.get(name)
         if isinstance(ann, type) and hasattr(ann, "model_fields"):
-            val = data.get(name)
             if isinstance(val, dict):
-                _check(val, f"{path}.{name}", ann.__name__, issues)
+                _check_model(val, f"{path}.{name}", ann, issues)
+        elif args := typing.get_args(ann):
+            inner = args[0]
+            if isinstance(inner, type) and hasattr(inner, "model_fields") and isinstance(val, list):
+                for i, item in enumerate(val):
+                    if isinstance(item, dict):
+                        _check_model(item, f"{path}.{name}[{i}]", inner, issues)
 
 
 def _scan(config: dict) -> list[dict]:
@@ -145,7 +182,7 @@ def _patch(raw: str, issues: list[dict]) -> str:
         indent = len(line) - len(stripped)
 
         if skip_indent >= 0:
-            if not stripped.strip() or indent > skip_indent:
+            if not stripped or indent > skip_indent:
                 continue
             skip_indent = -1
 
