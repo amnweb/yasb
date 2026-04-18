@@ -6,7 +6,6 @@ from core.validation.widgets.base_model import (
     AnimationConfig,
     CustomBaseModel,
     KeybindingConfig,
-    PaddingConfig,
     ShadowConfig,
 )
 
@@ -80,5 +79,4 @@ class GithubConfig(CustomBaseModel):
     animation: AnimationConfig = AnimationConfig()
     label_shadow: ShadowConfig = ShadowConfig()
     container_shadow: ShadowConfig = ShadowConfig()
-    container_padding: PaddingConfig = PaddingConfig()
     keybindings: list[KeybindingConfig] = []

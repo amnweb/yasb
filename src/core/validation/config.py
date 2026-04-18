@@ -20,9 +20,6 @@ class YasbConfig(CustomBaseModel):
     watch_config: bool = True
     watch_stylesheet: bool = True
     debug: bool = False
-    # env_file is deprecated and will be removed in the future
-    # Use load .env file from the config folder instead
-    env_file: str | None = None
     update_check: bool = True
     show_systray: bool = True
     komorebi: KomorebiConfig = KomorebiConfig()

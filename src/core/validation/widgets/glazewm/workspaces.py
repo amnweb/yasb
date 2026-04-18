@@ -1,4 +1,4 @@
-from core.validation.widgets.base_model import CustomBaseModel, PaddingConfig, ShadowConfig
+from core.validation.widgets.base_model import CustomBaseModel, ShadowConfig
 
 
 class AppIconsConfig(CustomBaseModel):
@@ -20,7 +20,6 @@ class GlazewmWorkspacesConfig(CustomBaseModel):
     active_empty_label: str | None = None
     focused_populated_label: str | None = None
     focused_empty_label: str | None = None
-    hide_empty_workspaces: bool = True  # deprecated
     hide_if_offline: bool = False
     monitor_exclusive: bool = True
     glazewm_server_uri: str = "ws://localhost:6123"
@@ -29,6 +28,5 @@ class GlazewmWorkspacesConfig(CustomBaseModel):
     container_shadow: ShadowConfig = ShadowConfig()
     btn_shadow: ShadowConfig = ShadowConfig()
     label_shadow: ShadowConfig = ShadowConfig()
-    container_padding: PaddingConfig = PaddingConfig()
     app_icons: AppIconsConfig = AppIconsConfig()
     animation: bool = False

@@ -6,7 +6,6 @@ from core.validation.widgets.base_model import (
     AnimationConfig,
     CustomBaseModel,
     KeybindingConfig,
-    PaddingConfig,
     ShadowConfig,
 )
 
@@ -76,7 +75,6 @@ class AiChatConfig(CustomBaseModel):
     notification_dot: NotificationDotConfig = NotificationDotConfig()
     start_floating: bool = True
     animation: AnimationConfig = AnimationConfig()
-    container_padding: PaddingConfig = PaddingConfig()
     callbacks: AiChatCallbacksConfig = AiChatCallbacksConfig()
     label_shadow: ShadowConfig = ShadowConfig()
     container_shadow: ShadowConfig = ShadowConfig()

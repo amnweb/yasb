@@ -2,7 +2,6 @@ from core.validation.widgets.base_model import (
     AnimationConfig,
     CustomBaseModel,
     KeybindingConfig,
-    PaddingConfig,
     ShadowConfig,
 )
 
@@ -18,5 +17,4 @@ class WhkdConfig(CustomBaseModel):
     special_keys: list[WhkdSpecialKeyConfig] = []
     label_shadow: ShadowConfig = ShadowConfig()
     container_shadow: ShadowConfig = ShadowConfig()
-    container_padding: PaddingConfig = PaddingConfig()
     keybindings: list[KeybindingConfig] = []

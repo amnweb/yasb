@@ -5,7 +5,6 @@ from core.validation.widgets.base_model import (
     CallbacksConfig,
     CustomBaseModel,
     KeybindingConfig,
-    PaddingConfig,
     ShadowConfig,
 )
 
@@ -55,7 +54,6 @@ class WifiConfig(CustomBaseModel):
     get_exact_wifi_strength: bool = False
     hide_if_ethernet: bool = False
     animation: AnimationConfig = AnimationConfig()
-    container_padding: PaddingConfig = PaddingConfig()
     label_shadow: ShadowConfig = ShadowConfig()
     container_shadow: ShadowConfig = ShadowConfig()
     keybindings: list[KeybindingConfig] = []

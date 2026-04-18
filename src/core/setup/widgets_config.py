@@ -164,7 +164,6 @@ GLAZEWM_WIDGET: dict = {
             "glazewm_workspaces": {
                 "type": "glazewm.workspaces.GlazewmWorkspacesWidget",
                 "options": {
-                    "hide_empty_workspaces": False,
                     "hide_if_offline": True,
                     "monitor_exclusive": False,
                 },

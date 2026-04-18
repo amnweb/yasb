@@ -14,7 +14,6 @@
 | `calendar` | dict | `{'blur': True, 'round_corners': True, 'round_corners_type': 'normal', 'border_color': 'System', 'alignment': 'right', 'direction': 'down', 'offset_top': 6, 'offset_left': 0, 'country_code': None, 'subdivision': None, 'show_holidays': False, 'holiday_color': "#FF6464", 'show_week_numbers': False, 'show_years': True, 'extended': False}` | Calendar settings for the widget. |
 | `callbacks`         | dict    | `{'on_left': 'toggle_calendar', 'on_middle': 'next_timezone', 'on_right': 'toggle_label'}` | Callbacks for mouse events on the clock widget.                                                                     |
 | `animation`         | dict    | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}`                             | Animation settings for the widget.                                                                                  |
-| `container_padding` | dict    | `{'top': 0, 'left': 0, 'bottom': 0, 'right': 0}`                                      | Padding for the widget container.                                                                                    |
 | `container_shadow`   | dict   | `{'enabled': False, 'color': 'black', 'offset': [1, 1], 'radius': 3}`                  | Container shadow options.                       |
 | `label_shadow`         | dict   | `{'enabled': False, 'color': 'black', 'offset': [1, 1], 'radius': 3}`                  | Label shadow options.                 |
 
@@ -69,11 +68,6 @@ clock:
       on_left: "toggle_calendar"
       on_middle: "next_timezone"
       on_right: "toggle_label"
-    container_padding:
-      top: 0
-      left: 0
-      bottom: 0
-      right: 0
     label_shadow:
       enabled: true
       color: "black"
@@ -113,7 +107,6 @@ clock:
   - **extended:** Show extended calendar with alarm/timer controls and upcoming holidays.
 - **callbacks:** A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions. Available callbacks: `toggle_calendar`, `next_timezone`, `toggle_label`, `context_menu`.
 - **animation:** A dictionary specifying the animation settings for the widget. It contains three keys: `enabled`, `type`, and `duration`. The `type` can be `fadeInOut` and the `duration` is the animation duration in milliseconds.
-- **container_padding:** A dictionary specifying the padding for the widget container with keys: `top`, `left`, `bottom`, `right`.
 - **container_shadow:** Container shadow options with keys: `enabled`, `color`, `offset`, `radius`.
 - **label_shadow:** Label shadow options with keys: `enabled`, `color`, `offset`, `radius`.
 

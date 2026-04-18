@@ -7,7 +7,6 @@ from core.validation.widgets.base_model import (
     CallbacksConfig,
     CustomBaseModel,
     KeybindingConfig,
-    PaddingConfig,
     ShadowConfig,
 )
 
@@ -41,7 +40,6 @@ class ActiveWindowConfig(CustomBaseModel):
     rewrite: list[RewriteConfig] = []
     animation: AnimationConfig = AnimationConfig()
     ignore_window: IgnoreWindowConfig = IgnoreWindowConfig()
-    container_padding: PaddingConfig = PaddingConfig()
     label_shadow: ShadowConfig = ShadowConfig()
     container_shadow: ShadowConfig = ShadowConfig()
     keybindings: list[KeybindingConfig] = []

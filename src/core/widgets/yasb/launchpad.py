@@ -590,7 +590,6 @@ class LaunchpadWidget(BaseWidget):
         self._window_animation = config.window_animation.model_dump()
         self._animation = config.animation.model_dump()
         self._shortcuts = config.shortcuts.model_dump()
-        self._padding = config.container_padding.model_dump()
         self._group_apps = config.group_apps
         self._label_shadow = config.label_shadow.model_dump()
         self._container_shadow = config.container_shadow.model_dump()

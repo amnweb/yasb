@@ -7,7 +7,6 @@ from core.validation.widgets.base_model import (
     CallbacksConfig,
     CustomBaseModel,
     KeybindingConfig,
-    PaddingConfig,
     ShadowConfig,
 )
 
@@ -49,7 +48,6 @@ class TodoConfig(CustomBaseModel):
     label: str = "\uf4a0 {count}/{completed}"
     label_alt: str = "\uf4a0 Tasks: {count}"
     data_path: str = ""
-    container_padding: PaddingConfig = PaddingConfig()
     animation: AnimationConfig = AnimationConfig()
     menu: MenuConfig = MenuConfig()
     icons: IconsConfig = IconsConfig()

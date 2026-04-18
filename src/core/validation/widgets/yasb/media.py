@@ -7,7 +7,6 @@ from core.validation.widgets.base_model import (
     CallbacksConfig,
     CustomBaseModel,
     KeybindingConfig,
-    PaddingConfig,
     ShadowConfig,
 )
 
@@ -78,7 +77,6 @@ class MediaWidgetConfig(CustomBaseModel):
     icons: IconsConfig = IconsConfig()
     media_menu: MediaMenuConfig = MediaMenuConfig()
     media_menu_icons: MediaMenuIconsConfig = MediaMenuIconsConfig()
-    container_padding: PaddingConfig = PaddingConfig()
     scrolling_label: ScrollingLabelConfig = ScrollingLabelConfig()
     progress_bar: ProgressBarConfig = ProgressBarConfig()
     max_field_size: MaxFieldSizeConfig = MaxFieldSizeConfig()

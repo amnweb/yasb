@@ -16,7 +16,6 @@ ObsWidget is a custom widget that integrates with OBS (Open Broadcaster Software
 | `show_scene_name` | boolean | `false` | Show current OBS program scene name |
 | `show_stream_stats` | boolean | `false` | Show stream bitrate (kbps) and dropped frames while streaming |
 | `tooltip` | boolean | `true` | Enable or disable tooltips for buttons |
-| `container_padding` | dict | `{top: 0, left: 0, bottom: 0, right: 0}` | Padding around the widget container |
 
 
 ## Example Configuration

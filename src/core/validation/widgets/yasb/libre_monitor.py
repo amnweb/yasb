@@ -5,7 +5,6 @@ from core.validation.widgets.base_model import (
     CallbacksConfig,
     CustomBaseModel,
     KeybindingConfig,
-    PaddingConfig,
     ShadowConfig,
 )
 
@@ -71,6 +70,5 @@ class LibreMonitorConfig(CustomBaseModel):
     libre_menu: LibreMenuConfig = LibreMenuConfig()
     label_shadow: ShadowConfig = ShadowConfig()
     container_shadow: ShadowConfig = ShadowConfig()
-    container_padding: PaddingConfig = PaddingConfig()
     animation: AnimationConfig = AnimationConfig()
     keybindings: list[KeybindingConfig] = []

@@ -3,7 +3,6 @@ from core.validation.widgets.base_model import (
     CallbacksConfig,
     CustomBaseModel,
     KeybindingConfig,
-    PaddingConfig,
     ShadowConfig,
 )
 
@@ -34,6 +33,5 @@ class GlazewmBindingModeConfig(CustomBaseModel):
     container_shadow: ShadowConfig = ShadowConfig()
     label_shadow: ShadowConfig = ShadowConfig()
     animation: AnimationConfig = AnimationConfig()
-    container_padding: PaddingConfig = PaddingConfig()
     keybindings: list[KeybindingConfig] = []
     callbacks: GlazewmBindingModeCallbacksConfig = GlazewmBindingModeCallbacksConfig()

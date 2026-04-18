@@ -7,14 +7,12 @@ from core.validation.widgets.base_model import CustomBaseModel
 
 class BarAlignment(CustomBaseModel):
     position: Literal["top", "bottom"] = "top"
-    center: bool = False  # deprecated
     align: Literal["left", "center", "right"] = "center"
 
 
 class BarBlurEffect(CustomBaseModel):
     enabled: bool = False
     dark_mode: bool = False
-    acrylic: bool = False
     round_corners: bool = False
     round_corners_type: Literal["normal", "small"] = "normal"
     border_color: str = "System"

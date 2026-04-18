@@ -1,11 +1,18 @@
-from typing import Literal
+from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, model_validator
+
+from core.validation.deprecation import handle_deprecated_fields
 
 
 class CustomBaseModel(BaseModel):
     # This is required to prohibit extra fields in the config
     model_config = ConfigDict(extra="forbid", validate_default=True)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _check_deprecations(cls, data: Any) -> Any:
+        return handle_deprecated_fields(cls, data)
 
 
 class ShadowConfig(CustomBaseModel):
@@ -31,10 +38,3 @@ class KeybindingConfig(CustomBaseModel):
     keys: str
     action: str
     screen: Literal["active", "cursor", "primary"] = "active"
-
-
-class PaddingConfig(CustomBaseModel):
-    top: int = 0
-    left: int = 0
-    bottom: int = 0
-    right: int = 0

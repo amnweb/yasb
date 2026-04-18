@@ -1,7 +1,6 @@
 from core.validation.widgets.base_model import (
     CustomBaseModel,
     KeybindingConfig,
-    PaddingConfig,
     ShadowConfig,
 )
 
@@ -18,7 +17,6 @@ class GrouperWidgetConfig(CustomBaseModel):
     class_name: str = "grouper"
     widgets: list[str] = []
     hide_empty: bool = False
-    container_padding: PaddingConfig = PaddingConfig()
     container_shadow: ShadowConfig = ShadowConfig()
     collapse_options: GrouperCollapseOptions = GrouperCollapseOptions()
     keybindings: list[KeybindingConfig] = []
