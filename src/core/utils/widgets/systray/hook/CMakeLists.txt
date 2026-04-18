@@ -26,6 +26,10 @@ add_library(YASBTrayHook SHARED trayhook.cpp version.rc)
 set_target_properties(YASBTrayHook PROPERTIES OUTPUT_NAME "YASBTrayHook${ARCH_SUFFIX}")
 
 if(MSVC)
+    # Static CRT
+    set_property(TARGET YASBTrayHook PROPERTY
+        MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+
     target_compile_options(YASBTrayHook PRIVATE
         /guard:cf       # Control Flow Guard
         /GS             # Buffer security checks
@@ -67,6 +71,3 @@ set_target_properties(YASBTrayHook PROPERTIES
     PDB_OUTPUT_DIRECTORY_RELWITHDEBINFO "${CMAKE_BINARY_DIR}"
     PDB_OUTPUT_DIRECTORY_MINSIZEREL "${CMAKE_BINARY_DIR}"
 )
-
-# Link the required Windows libraries
-target_link_libraries(YASBTrayHook PRIVATE comctl32 user32)
