@@ -18,7 +18,6 @@ class ActiveLayoutIconsConfig(CustomBaseModel):
     right_main_vertical_stack: str = "=||"
     monocle: str = "[M]"
     maximized: str = "[X]"
-    maximised: str = "[X]"  # deprecated, use "maximized" instead
     floating: str = "><>"
     paused: str = "[P]"
     tiling: str = "[T]"

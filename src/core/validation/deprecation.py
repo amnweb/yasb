@@ -85,9 +85,26 @@ SCOPED_DEPRECATED_FIELDS: dict[str, dict[str, str]] = {
     "HomeConfig": {
         "distance": "Use 'offset_top' instead.",
     },
+    "GlazewmWorkspacesConfig": {
+        "hide_empty_workspaces": "No longer supported and can be removed from the config.",
+    },
+    "BrightnessConfig": {
+        "hide_unsupported": "No longer supported and can be removed from the config.",
+    },
+    "YasbConfig": {
+        "env_file": "No longer supported. Place a .env file in the config folder instead.",
+    },
+    "GalleryConfig": {
+        "lazy_load_delay": "No longer supported and can be removed from the config.",
+        "enable_cache": "No longer supported and can be removed from the config.",
+    },
 }
 
-SCOPED_RENAMED_FIELDS: dict[str, dict[str, tuple[str, str]]] = {}
+SCOPED_RENAMED_FIELDS: dict[str, dict[str, tuple[str, str]]] = {
+    "ActiveLayoutIconsConfig": {
+        "maximised": ("maximized", "Use 'maximized' instead."),
+    },
+}
 
 
 def handle_deprecated_fields(cls: type, data: Any) -> Any:

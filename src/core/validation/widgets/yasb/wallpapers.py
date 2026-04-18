@@ -42,8 +42,6 @@ class GalleryConfig(CustomBaseModel):
     image_spacing: int = Field(default=5, ge=0, le=100)
     lazy_load: bool = True
     lazy_load_fadein: int = Field(default=200, ge=0, le=1000)
-    lazy_load_delay: int = Field(default=0, ge=0, le=1000)  # Deprecated
-    enable_cache: bool = False  # Deprecated
 
 
 class CallbacksWallpapersConfig(CallbacksConfig):

@@ -50,7 +50,6 @@ class BrightnessConfig(CustomBaseModel):
     ]
     brightness_toggle_level: list[int] = []
     brightness_menu: BrightnessMenuConfig = BrightnessMenuConfig()
-    hide_unsupported: bool = True  # deprecated
     auto_light: bool = False
     auto_light_icon: str = "\udb80\udce1"
     auto_light_night_level: int = 50
