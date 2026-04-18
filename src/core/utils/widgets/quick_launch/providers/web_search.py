@@ -2,6 +2,7 @@ from core.utils.shell_utils import shell_open
 from core.utils.widgets.quick_launch.base_provider import BaseProvider, ProviderResult
 from core.utils.widgets.quick_launch.providers.resources.icons import (
     ICON_WEB_BING,
+    ICON_WEB_BRAVE,
     ICON_WEB_DUCKDUCKGO,
     ICON_WEB_GITHUB,
     ICON_WEB_GOOGLE,
@@ -25,6 +26,12 @@ _ENGINES = {
         "url": "https://www.bing.com/search?q={}",
         "icon": ICON_WEB_BING,
         "description": "Search the web with Bing",
+    },
+    "brave": {
+        "name": "Brave",
+        "url": "https://search.brave.com/search?q={}",
+        "icon": ICON_WEB_BRAVE,
+        "description": "Private web search with Brave",
     },
     "duckduckgo": {
         "name": "DuckDuckGo",

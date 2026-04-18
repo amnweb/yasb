@@ -561,6 +561,7 @@ Default engines:
 | ----------------- | ----------------------------------- |
 | `"google"`        | Google web search (default)         |
 | `"bing"`          | Bing web search                     |
+| `"brave"`         | Private web search with Brave       |
 | `"duckduckgo"`    | DuckDuckGo private search           |
 | `"wikipedia"`     | Wikipedia article search            |
 | `"github"`        | GitHub repositories and code search |
