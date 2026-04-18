@@ -135,10 +135,11 @@ class WorkspaceWidget(BaseWidget):
         self._config = config
         self._workspace_buttons: list[WorkspaceButton] = []
 
-        # Offline label.
+        # Offline label — starts hidden; shown only when disconnected and hide_if_offline=False.
         self._offline_label = QLabel(config.label_offline)
         self._offline_label.setProperty("class", "sw-offline")
         add_shadow(self._offline_label, config.label_shadow.model_dump())
+        self._offline_label.setVisible(False)
 
         # Layout label (optional, hidden until connected).
         self._layout_label = QLabel("")
@@ -158,7 +159,7 @@ class WorkspaceWidget(BaseWidget):
         if config.hide_if_offline:
             self.hide()
         else:
-            self._offline_label.show()
+            self._offline_label.setVisible(True)
 
         # Wire Qt signals → slots.
         self._connect_signal.connect(self._on_connect)

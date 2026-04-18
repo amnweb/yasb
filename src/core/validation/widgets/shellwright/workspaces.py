@@ -15,7 +15,7 @@ class ShellwrightWorkspacesConfig(CustomBaseModel):
     # Example: [2, 0, 1] means Qt screen 0 → shellwright mon 2, etc.
     # Empty list (default) = use Qt screen index directly.
     monitor_index_remap: list[int] = []
-    hide_if_offline: bool = False
+    hide_if_offline: bool = True
     hide_empty_workspaces: bool = False
     show_layout: bool = False
     label_layout: str = "[{layout}]"
