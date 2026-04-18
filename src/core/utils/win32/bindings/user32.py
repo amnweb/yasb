@@ -148,6 +148,12 @@ user32.KillTimer.restype = BOOL
 user32.FindWindowW.argtypes = [LPCWSTR, LPCWSTR]
 user32.FindWindowW.restype = HWND
 
+user32.SetWindowsHookExW.argtypes = [c_int, LPVOID, HINSTANCE, DWORD]
+user32.SetWindowsHookExW.restype = HANDLE
+
+user32.UnhookWindowsHookEx.argtypes = [HANDLE]
+user32.UnhookWindowsHookEx.restype = BOOL
+
 user32.FindWindowExW.argtypes = [HWND, HWND, LPCWSTR, LPCWSTR]
 user32.FindWindowExW.restype = HWND
 
@@ -339,6 +345,18 @@ def FindWindow(lpClassName: str | None, lpWindowName: str | None):
     return user32.FindWindowW(lpClassName, lpWindowName)
 
 
+def SetWindowsHookEx(idHook: int, lpfn: int, hmod: int, dwThreadId: int) -> int:
+    return int(user32.SetWindowsHookExW(idHook, lpfn, hmod, dwThreadId))
+
+
+def UnhookWindowsHookEx(hhk: int) -> bool:
+    return bool(user32.UnhookWindowsHookEx(hhk))
+
+
+def PostThreadMessage(idThread: int, Msg: int, wParam: int, lParam: int) -> bool:
+    return bool(user32.PostThreadMessageW(idThread, Msg, wParam, lParam))
+
+
 def FindWindowEx(
     hwndParent: int,
     hwndChildAfter: int,
@@ -365,7 +383,7 @@ def IsWindowEnabled(hwnd: int) -> bool:
     return user32.IsWindowEnabled(hwnd)
 
 
-def GetWindowThreadProcessId(hwnd: int, lpdwProcessId: CArgObject) -> int:
+def GetWindowThreadProcessId(hwnd: int, lpdwProcessId: CArgObject | None) -> int:
     return user32.GetWindowThreadProcessId(hwnd, lpdwProcessId)
 
 

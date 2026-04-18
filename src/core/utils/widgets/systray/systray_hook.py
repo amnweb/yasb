@@ -12,10 +12,6 @@ import win32pipe
 import winerror
 from PIL import Image
 from PyQt6.QtCore import QObject, pyqtSignal
-from win32con import (
-    PAGE_READWRITE,
-    PROCESS_ALL_ACCESS,
-)
 
 from core.utils.widgets.systray.utils import (
     IconData,
@@ -27,13 +23,18 @@ from core.utils.widgets.systray.utils import (
 from core.utils.win32.bindings.kernel32 import (
     CloseHandle,
     CreateMutex,
-    CreateRemoteThread,
+    FreeLibrary,
     GetLastError,
-    GetModuleHandle,
     GetProcAddress,
-    OpenProcess,
-    VirtualAllocEx,
-    WriteProcessMemory,
+    LoadLibraryW,
+)
+from core.utils.win32.bindings.user32 import (
+    EnumWindows,
+    GetClassName,
+    GetWindowThreadProcessId,
+    PostThreadMessage,
+    SetWindowsHookEx,
+    UnhookWindowsHookEx,
 )
 from core.utils.win32.constants import (
     NIF_GUID,
@@ -41,11 +42,71 @@ from core.utils.win32.constants import (
     NIM_DELETE,
     NIM_MODIFY,
     NIM_SETVERSION,
-    VIRTUAL_MEM,
+    WH_GETMESSAGE,
 )
 from core.utils.win32.structs import NOTIFYICONDATA, SHELLTRAYDATA
 
 logger = logging.getLogger("systray_hook")
+
+
+def _find_shell_tray_hwnd(explorer_pid: int) -> int:
+    """Find the Shell_TrayWnd belonging to a specific Explorer PID. Returns 0 if not found."""
+    _WNDENUMPROC = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.c_size_t, ctypes.c_size_t)
+    result = 0
+
+    @_WNDENUMPROC
+    def _cb(hwnd, _):
+        nonlocal result
+        if GetClassName(hwnd) != "Shell_TrayWnd":
+            return True
+        pid = ctypes.c_ulong(0)
+        GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
+        if pid.value == explorer_pid:
+            result = hwnd
+            return False  # stop enumeration
+        return True
+
+    EnumWindows(_cb, 0)
+    return result
+
+
+def _inject_via_hook(dll_path: str, explorer_pid: int) -> int:
+    """Inject dll_path into Explorer via SetWindowsHookEx (WH_GETMESSAGE).
+
+    Returns the hook handle on success (caller must UnhookWindowsHookEx after pipe connects), 0 on failure.
+    """
+    h_dll = LoadLibraryW(dll_path)
+    if not h_dll:
+        logger.error("Failed to load DLL locally (err=%d)", GetLastError())
+        return 0
+    try:
+        hook_proc = GetProcAddress(h_dll, b"GetMsgProc")
+        if not hook_proc:
+            logger.error("GetMsgProc not found in DLL")
+            return 0
+        hwnd = 0
+        for _ in range(60):
+            hwnd = _find_shell_tray_hwnd(explorer_pid)
+            if hwnd:
+                break
+            time.sleep(0.05)
+        if not hwnd:
+            logger.error("Shell_TrayWnd not found")
+            return 0
+        tid = GetWindowThreadProcessId(hwnd, None)
+        if not tid:
+            logger.error("GetWindowThreadProcessId failed")
+            return 0
+        h_hook = SetWindowsHookEx(WH_GETMESSAGE, hook_proc, h_dll, tid)
+        if not h_hook:
+            logger.error("SetWindowsHookExW failed (err=%d)", GetLastError())
+            return 0
+        # Post WM_NULL so Explorer's thread dequeues a message and loads the DLL immediately.
+        PostThreadMessage(tid, 0, 0, 0)
+        return h_hook
+    finally:
+        FreeLibrary(h_dll)
+
 
 WATCHDOG_MUTEX_NAME = "Global\\YASBTrayHookAlive"
 MESSAGE_PIPE_NAME = r"\\.\pipe\yasb_systray_monitor"
@@ -62,6 +123,7 @@ class SystrayHook(QObject):
         self._running = False
         self._h_mutex = None
         self._message_pipe = None
+        self._h_hook: int = 0
 
         # Create the watchdog mutex — held for entire lifetime.
         try:
@@ -94,6 +156,9 @@ class SystrayHook(QObject):
     def destroy(self):
         """Clean up the hook"""
         self._running = False
+        if self._h_hook:
+            UnhookWindowsHookEx(self._h_hook)
+            self._h_hook = 0
         if self._message_pipe is not None:
             # Closing the handle will also cancel any pending overlapped I/O in the worker thread
             win32api.CloseHandle(self._message_pipe)
@@ -126,7 +191,8 @@ class SystrayHook(QObject):
             dll_name = os.path.basename(dll_path)
             if not is_dll_loaded(pid, dll_name):
                 logger.info("Injecting into Explorer (PID: %s)", pid)
-                if not inject_dll(pid, dll_path):
+                self._h_hook = _inject_via_hook(dll_path, pid)
+                if not self._h_hook:
                     logger.error("Injection failed, retrying in 5s")
                     time.sleep(5)
                     continue
@@ -151,6 +217,9 @@ class SystrayHook(QObject):
                     break
 
                 logger.debug("DLL Connected")
+                if self._h_hook:
+                    UnhookWindowsHookEx(self._h_hook)
+                    self._h_hook = 0
                 self.update_icons.emit()
 
                 buffer = win32file.AllocateReadBuffer(PIPE_BUFFER_SIZE)
@@ -258,53 +327,3 @@ class SystrayHook(QObject):
                         guid=icon_data.guidItem.to_uuid() if icon_data.uFlags & NIF_GUID else None,
                     )
                 )
-
-
-def inject_dll(pid: int, dll_path: str) -> bool:
-    """Injects a DLL into a target process"""
-    abs_path = os.path.abspath(dll_path)
-    # Check if the path has an extended length prefix
-    if not abs_path.startswith("\\\\?\\"):
-        abs_path = "\\\\?\\" + abs_path
-    dll_path_bytes = abs_path.encode("utf-16-le")
-    dll_len = len(dll_path_bytes) + 1
-
-    h_process = OpenProcess(PROCESS_ALL_ACCESS, False, pid)
-    if not h_process:
-        logger.error("Failed to open explorer.exe (PID: %s)", pid)
-        return False
-
-    try:
-        arg_address = VirtualAllocEx(h_process, None, dll_len, VIRTUAL_MEM, PAGE_READWRITE)
-        if not arg_address:
-            logger.error("Failed to allocate memory in explorer.exe")
-            return False
-
-        written = ctypes.c_size_t(0)
-        buf = ctypes.create_string_buffer(dll_path_bytes)
-        if not WriteProcessMemory(h_process, arg_address, buf, dll_len, ctypes.byref(written)):
-            logger.error("Failed to write memory in explorer.exe")
-            return False
-
-        h_kernel32 = GetModuleHandle("kernel32.dll")
-        if not h_kernel32:
-            logger.error("Failed to get handle for kernel32.dll")
-            return False
-
-        h_loadlib = GetProcAddress(h_kernel32, b"LoadLibraryW")
-        if not h_loadlib:
-            logger.error("Failed to get address for LoadLibraryW")
-            return False
-
-        h_thread = CreateRemoteThread(h_process, None, 0, h_loadlib, arg_address, 0, None)
-        if h_thread:
-            CloseHandle(h_thread)
-            return True
-        else:
-            logger.error("Failed to create remote thread: %s", GetLastError())
-            return False
-    except Exception as e:
-        logger.error("Failed to inject DLL: %s", e)
-        return False
-    finally:
-        CloseHandle(h_process)

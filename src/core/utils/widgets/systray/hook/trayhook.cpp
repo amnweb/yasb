@@ -409,6 +409,13 @@ DWORD WINAPI WatchdogThread(LPVOID lpParam) {
 }
 
 DWORD WINAPI InitThread(LPVOID lpParam) {
+    // Increment our own refcount so UnhookWindowsHookEx (called by the Python side
+    // once the pipe connects) does not unload us from Explorer.
+    WCHAR dllPath[MAX_PATH];
+    if (GetModuleFileNameW(g_hModule, dllPath, MAX_PATH)) {
+        LoadLibraryW(dllPath);
+    }
+
     // Create the event before connecting — watchdog will need it
     g_hUnhookDoneEvent = CreateEventW(NULL, TRUE, FALSE, NULL);
 
@@ -433,14 +440,32 @@ DWORD WINAPI InitThread(LPVOID lpParam) {
     return 0;
 }
 
+// Required export so SetWindowsHookEx can inject this DLL into Explorer's thread.
+// The callback itself does nothing - injection side-effects happen in DllMain.
+extern "C" __declspec(dllexport)
+LRESULT CALLBACK GetMsgProc(int nCode, WPARAM wParam, LPARAM lParam) {
+    return CallNextHookEx(NULL, nCode, wParam, lParam);
+}
+
+static bool IsExplorer() {
+    WCHAR path[MAX_PATH];
+    if (!GetModuleFileNameW(NULL, path, MAX_PATH)) return false;
+    WCHAR *base = wcsrchr(path, L'\\');
+    return base && _wcsicmp(base + 1, L"explorer.exe") == 0;
+}
+
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserved) {
     if (ul_reason_for_call == DLL_PROCESS_ATTACH) {
+        // Only initialise when injected into explorer.exe.
+        // When loaded locally by the injector to get GetMsgProc's address, do nothing.
+        if (!IsExplorer()) return TRUE;
         InitializeCriticalSection(&g_PipeCS);
         DisableThreadLibraryCalls(hModule); // Removes the overhead of `DLL_THREAD_ATTACH` and `DLL_THREAD_DETACH` calls
         g_hModule = hModule;                // Save before any threads start
         CreateThread(NULL, 0, InitThread, NULL, 0, NULL);
     } else if (ul_reason_for_call == DLL_PROCESS_DETACH) {
-        DeleteCriticalSection(&g_PipeCS);
+        if (g_hModule) // Only clean up if we actually initialised
+            DeleteCriticalSection(&g_PipeCS);
     }
     return TRUE;
 }

@@ -238,6 +238,9 @@ kernel32.LockResource.restype = LPVOID
 kernel32.FreeLibrary.argtypes = [HANDLE]
 kernel32.FreeLibrary.restype = BOOL
 
+kernel32.LoadLibraryW.argtypes = [LPCWSTR]
+kernel32.LoadLibraryW.restype = HANDLE
+
 
 # --- Python-friendly typed wrapper functions ---
 
@@ -456,6 +459,14 @@ def GetModuleHandle(lpModuleName: str | None) -> int:
 
 def GetLastError() -> int:
     return int(kernel32.GetLastError())
+
+
+def LoadLibraryW(lpLibFileName: str) -> int:
+    return int(kernel32.LoadLibraryW(lpLibFileName))
+
+
+def FreeLibrary(hLibModule: int) -> bool:
+    return bool(kernel32.FreeLibrary(hLibModule))
 
 
 def IsWow64Process2(hProcess: int, lpProcessMachine: CArgObject, lpNativeMachine: CArgObject | None) -> bool:
