@@ -228,6 +228,22 @@ user32.SendMessageTimeoutW.restype = c_int
 user32.EndTask.argtypes = [HWND, BOOL, BOOL]
 user32.EndTask.restype = BOOL
 
+# Keyboard layout functions - HKL is a HANDLE (c_void_p)
+user32.GetKeyboardLayout.argtypes = [DWORD]
+user32.GetKeyboardLayout.restype = HANDLE
+
+user32.GetKeyboardLayoutList.argtypes = [c_int, HANDLE]
+user32.GetKeyboardLayoutList.restype = c_int
+
+user32.ActivateKeyboardLayout.argtypes = [HANDLE, UINT]
+user32.ActivateKeyboardLayout.restype = HANDLE
+
+user32.LoadKeyboardLayoutW.argtypes = [LPCWSTR, UINT]
+user32.LoadKeyboardLayoutW.restype = HANDLE
+
+user32.GetKeyboardLayoutNameW.argtypes = [LPCWSTR]
+user32.GetKeyboardLayoutNameW.restype = BOOL
+
 
 def DefWindowProc(hwnd: int, uMsg: int, wParam: int, lParam: int) -> int:
     return user32.DefWindowProcW(hwnd, uMsg, wParam, lParam)

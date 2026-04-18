@@ -149,11 +149,11 @@ class LanguageWidget(BaseWidget):
 
         # Get available languages
         available_languages = self._get_available_languages()
-        current_lang_id = self._get_current_language_id()
+        current_layout_handle = self._get_current_layout_handle()
 
         # Create language items
         for lang_info in available_languages:
-            self._create_language_item(main_layout, lang_info, lang_info["id"] == current_lang_id)
+            self._create_language_item(main_layout, lang_info, lang_info["id"] == current_layout_handle)
 
         footer_label = QLabel("More keyboard settings")
         footer_label.setProperty("class", "footer")
@@ -298,7 +298,7 @@ class LanguageWidget(BaseWidget):
                 if lang_name and lang_code:
                     languages.append(
                         {
-                            "id": lang_id,
+                            "id": layout_handle,
                             "handle": layout_handle,
                             "name": lang_name,
                             "code": lang_code,
