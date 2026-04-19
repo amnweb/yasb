@@ -29,15 +29,15 @@ from core.utils.utilities import (
     add_shadow,
     refresh_widget_style,
 )
-from core.utils.widgets.animation_manager import AnimationManager
-from core.utils.widgets.media.aumid_process import get_process_name_for_aumid
-from core.utils.widgets.media.media import MediaSession, SessionState, WindowsMedia
-from core.utils.widgets.media.source_apps import (
+from core.utils.animation_manager import AnimationManager
+from core.widgets.services.media.aumid_process import get_process_name_for_aumid
+from core.widgets.services.media.media import MediaSession, SessionState, WindowsMedia
+from core.widgets.services.media.source_apps import (
     get_source_app_class_name,
     get_source_app_display_name,
     get_source_app_mapping,
 )
-from core.utils.widgets.media.tokenizer import clean_string
+from core.widgets.services.media.tokenizer import clean_string
 from core.utils.win32.aumid import (
     ERROR_INSUFFICIENT_BUFFER,
     PROCESS_QUERY_LIMITED_INFORMATION,

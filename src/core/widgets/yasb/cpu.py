@@ -8,9 +8,9 @@ from core.utils.utilities import (
     build_progress_widget,
     refresh_widget_style,
 )
-from core.utils.widgets.animation_manager import AnimationManager
-from core.utils.widgets.cpu.cpu_api import CpuData, CpuFreq, CpuWorker
-from core.utils.widgets.stat_popup import build_stat_popup
+from core.utils.animation_manager import AnimationManager
+from core.widgets.services.cpu.cpu_api import CpuData, CpuFreq, CpuWorker
+from core.utils.stat_popup import build_stat_popup
 from core.validation.widgets.yasb.cpu import CpuConfig
 from core.widgets.base import BaseWidget
 

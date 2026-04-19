@@ -9,9 +9,9 @@ from core.utils.utilities import (
     build_progress_widget,
     refresh_widget_style,
 )
-from core.utils.widgets.animation_manager import AnimationManager
-from core.utils.widgets.gpu.gpu_api import GpuData, GpuWorker
-from core.utils.widgets.stat_popup import GraphWidget, build_stat_popup
+from core.utils.animation_manager import AnimationManager
+from core.widgets.services.gpu.gpu_api import GpuData, GpuWorker
+from core.utils.stat_popup import GraphWidget, build_stat_popup
 from core.validation.widgets.yasb.gpu import GpuConfig
 from core.widgets.base import BaseWidget
 

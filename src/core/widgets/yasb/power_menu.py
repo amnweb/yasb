@@ -17,9 +17,9 @@ from PyQt6.QtWidgets import (
 )
 
 from core.utils.utilities import PopupWidget, refresh_widget_style
-from core.utils.widgets.animation_manager import AnimationManager
-from core.utils.widgets.power_menu.power_commands import PowerOperations
-from core.utils.widgets.power_menu.user_info import (
+from core.utils.animation_manager import AnimationManager
+from core.widgets.services.power_menu.power_commands import PowerOperations
+from core.widgets.services.power_menu.user_info import (
     get_account_type,
     get_user_avatar_path,
     get_user_email,

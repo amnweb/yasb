@@ -3,16 +3,16 @@ name: Build YASBTrayHook
 on:
   pull_request:
     paths:
-      - 'src/core/utils/widgets/systray/hook/trayhook.cpp'
-      - 'src/core/utils/widgets/systray/hook/version.rc'
-      - 'src/core/utils/widgets/systray/hook/CMakeLists.txt'
+      - 'src/core/widgets/services/systray/hook/trayhook.cpp'
+      - 'src/core/widgets/services/systray/hook/version.rc'
+      - 'src/core/widgets/services/systray/hook/CMakeLists.txt'
   push:
     branches:
       - main
     paths:
-      - 'src/core/utils/widgets/systray/hook/trayhook.cpp'
-      - 'src/core/utils/widgets/systray/hook/version.rc'
-      - 'src/core/utils/widgets/systray/hook/CMakeLists.txt'
+      - 'src/core/widgets/services/systray/hook/trayhook.cpp'
+      - 'src/core/widgets/services/systray/hook/version.rc'
+      - 'src/core/widgets/services/systray/hook/CMakeLists.txt'
 
 permissions:
   contents: write
@@ -29,7 +29,7 @@ jobs:
           persist-credentials: true
 
       - name: Build x64
-        working-directory: src/core/utils/widgets/systray/hook
+        working-directory: src/core/widgets/services/systray/hook
         run: |
           cmake -S . -B build_x64 -A x64 -DCMAKE_BUILD_TYPE=Release -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
           cmake --build build_x64 --config Release --target YASBTrayHook -- /m
@@ -38,7 +38,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: YASBTrayHook-x64
-          path: src/core/utils/widgets/systray/hook/YASBTrayHook.dll
+          path: src/core/widgets/services/systray/hook/YASBTrayHook.dll
 
   build-arm64:
     name: Build ARM64 DLL
@@ -51,7 +51,7 @@ jobs:
           persist-credentials: true
 
       - name: Build ARM64
-        working-directory: src/core/utils/widgets/systray/hook
+        working-directory: src/core/widgets/services/systray/hook
         run: |
           cmake -S . -B build_arm64 -A ARM64 -DCMAKE_BUILD_TYPE=Release -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
           cmake --build build_arm64 --config Release --target YASBTrayHook -- /m
@@ -60,7 +60,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: YASBTrayHook-arm64
-          path: src/core/utils/widgets/systray/hook/YASBTrayHook_arm64.dll
+          path: src/core/widgets/services/systray/hook/YASBTrayHook_arm64.dll
 
   commit:
     name: Commit built DLLs
@@ -78,13 +78,13 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           name: YASBTrayHook-x64
-          path: src/core/utils/widgets/systray/hook
+          path: src/core/widgets/services/systray/hook
 
       - name: Download arm64 artifact
         uses: actions/download-artifact@v8
         with:
           name: YASBTrayHook-arm64
-          path: src/core/utils/widgets/systray/hook
+          path: src/core/widgets/services/systray/hook
 
       - name: Show built files
         run: dir src\\core\\utils\\widgets\\systray\\hook\\YASBTrayHook*.dll
@@ -96,7 +96,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/core/utils/widgets/systray/hook/YASBTrayHook*.dll || true
+          git add src/core/widgets/services/systray/hook/YASBTrayHook*.dll || true
           if git diff --cached --quiet; then
             echo "No changes to commit"
           else

@@ -42,7 +42,7 @@ from PyQt6.QtWidgets import (
 from core.config import HOME_CONFIGURATION_DIR
 from core.utils.shell_utils import shell_open
 from core.utils.utilities import add_shadow, refresh_widget_style
-from core.utils.widgets.animation_manager import AnimationManager
+from core.utils.animation_manager import AnimationManager
 from core.utils.win32.app_loader import AppListLoader, ShortcutResolver
 from core.utils.win32.backdrop import enable_blur
 from core.utils.win32.icon_extractor import IconExtractorUtil, UrlExtractorUtil

@@ -12,7 +12,7 @@ from PyQt6.QtCore import QThread, QTimer, pyqtSignal
 from PyQt6.QtWidgets import QLabel
 
 from core.utils.tooltip import set_tooltip
-from core.utils.widgets.animation_manager import AnimationManager
+from core.utils.animation_manager import AnimationManager
 from core.validation.widgets.yasb.bluetooth import BluetoothConfig
 from core.widgets.base import BaseWidget
 

@@ -14,7 +14,7 @@ from core.bar_helper import (
     MaximizedWindowWatcher,
     OsThemeManager,
 )
-from core.event_service import EventService
+from core.events.service import EventService
 from core.utils.utilities import is_valid_percentage_str, percent_to_float
 from core.utils.win32.backdrop import enable_blur
 from core.utils.win32.utils import get_monitor_hwnd

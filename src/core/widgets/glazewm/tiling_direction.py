@@ -8,7 +8,7 @@ from PyQt6.QtGui import QCursor
 from PyQt6.QtWidgets import QHBoxLayout, QPushButton
 
 from core.utils.utilities import add_shadow
-from core.utils.widgets.glazewm.client import GlazewmClient, TilingDirection
+from core.widgets.services.glazewm.client import GlazewmClient, TilingDirection
 from core.validation.widgets.glazewm.tiling_direction import GlazewmTilingDirectionConfig
 from core.widgets.base import BaseWidget
 

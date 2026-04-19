@@ -12,7 +12,7 @@ from PyQt6.QtGui import QCursor
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QScrollArea, QVBoxLayout, QWidget
 
 from core.utils.utilities import PopupWidget
-from core.utils.widgets.animation_manager import AnimationManager
+from core.utils.animation_manager import AnimationManager
 from core.validation.widgets.yasb.vscode import VSCodeConfig
 from core.widgets.base import BaseWidget
 

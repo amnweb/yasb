@@ -18,18 +18,18 @@ from PyQt6.QtWidgets import (
 
 from core.ui.components.loader import LoaderLine
 from core.utils.tooltip import set_tooltip
-from core.utils.widgets.ai_chat.attachment_manager import AttachmentManager
-from core.utils.widgets.ai_chat.chat_render import ChatRender
-from core.utils.widgets.ai_chat.chat_session import ChatSession
-from core.utils.widgets.ai_chat.constants import THINKING_PLACEHOLDER
-from core.utils.widgets.ai_chat.context_menu_service import ContextMenuService
-from core.utils.widgets.ai_chat.input_controller import InputController
-from core.utils.widgets.ai_chat.provider_model_manager import ProviderModelManager
-from core.utils.widgets.ai_chat.stream_ui_controller import StreamUiController
-from core.utils.widgets.ai_chat.stream_worker_manager import StreamWorkerManager
-from core.utils.widgets.ai_chat.ui_components import AiChatPopup, ChatInputEdit, ChatMessageBrowser, NotificationLabel
-from core.utils.widgets.ai_chat.ui_helpers import FloatingWindowController, FocusManager, LabelBuilder
-from core.utils.widgets.animation_manager import AnimationManager
+from core.widgets.services.ai_chat.attachment_manager import AttachmentManager
+from core.widgets.services.ai_chat.chat_render import ChatRender
+from core.widgets.services.ai_chat.chat_session import ChatSession
+from core.widgets.services.ai_chat.constants import THINKING_PLACEHOLDER
+from core.widgets.services.ai_chat.context_menu_service import ContextMenuService
+from core.widgets.services.ai_chat.input_controller import InputController
+from core.widgets.services.ai_chat.provider_model_manager import ProviderModelManager
+from core.widgets.services.ai_chat.stream_ui_controller import StreamUiController
+from core.widgets.services.ai_chat.stream_worker_manager import StreamWorkerManager
+from core.widgets.services.ai_chat.ui_components import AiChatPopup, ChatInputEdit, ChatMessageBrowser, NotificationLabel
+from core.widgets.services.ai_chat.ui_helpers import FloatingWindowController, FocusManager, LabelBuilder
+from core.utils.animation_manager import AnimationManager
 from core.utils.win32.utils import apply_qmenu_style, find_focused_screen
 from core.utils.win32.window_actions import force_foreground_focus
 from core.validation.widgets.yasb.ai_chat import AiChatConfig

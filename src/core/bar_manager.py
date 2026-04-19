@@ -9,7 +9,7 @@ from PyQt6.QtWidgets import QApplication
 from core.bar import Bar
 from core.bar_helper import ThemeState
 from core.config import get_config, get_stylesheet
-from core.event_service import EventService
+from core.events.service import EventService
 from core.utils.controller import reload_application
 from core.utils.utilities import get_screen_by_name
 from core.utils.widget_builder import WidgetBuilder

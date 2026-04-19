@@ -12,7 +12,7 @@ from core.utils.utilities import (
     build_progress_widget,
     refresh_widget_style,
 )
-from core.utils.widgets.animation_manager import AnimationManager
+from core.utils.animation_manager import AnimationManager
 from core.validation.widgets.yasb.pomodoro import PomodoroConfig
 from core.widgets.base import BaseWidget
 from settings import SCRIPT_PATH

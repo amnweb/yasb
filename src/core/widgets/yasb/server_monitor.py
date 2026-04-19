@@ -10,8 +10,8 @@ from PyQt6.QtWidgets import QGraphicsOpacityEffect, QHBoxLayout, QLabel, QScroll
 from core.ui.components.loader import LoaderLine
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import PopupWidget, ToastNotifier
-from core.utils.widgets.animation_manager import AnimationManager
-from core.utils.widgets.server_monitor.service import ServerCheckService
+from core.utils.animation_manager import AnimationManager
+from core.widgets.services.server_monitor.service import ServerCheckService
 from core.validation.widgets.yasb.server_monitor import ServerMonitorConfig
 from core.widgets.base import BaseWidget
 from settings import SCRIPT_PATH

@@ -10,12 +10,12 @@ from PyQt6.QtCore import QElapsedTimer, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QImage, QPixmap
 from PyQt6.QtWidgets import QLabel
 
-from core.event_service import EventService
+from core.events.service import EventService
 from core.utils.utilities import add_shadow
-from core.utils.widgets.animation_manager import AnimationManager
+from core.utils.animation_manager import AnimationManager
 from core.utils.win32.app_icons import get_window_icon
 from core.utils.win32.utils import get_app_name_from_aumid, get_app_name_from_pid, get_hwnd_info
-from core.utils.win32.windows import WinEvent
+from core.events.win32 import WinEvent
 from core.validation.widgets.yasb.active_window import ActiveWindowConfig
 from core.widgets.base import BaseWidget
 from settings import APP_BAR_TITLE

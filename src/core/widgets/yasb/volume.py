@@ -14,8 +14,8 @@ from core.utils.utilities import (
     build_progress_widget,
     refresh_widget_style,
 )
-from core.utils.widgets.animation_manager import AnimationManager
-from core.utils.widgets.volume.service import AudioOutputService
+from core.utils.animation_manager import AnimationManager
+from core.widgets.services.volume.service import AudioOutputService
 from core.utils.win32.app_icons import get_process_icon
 from core.utils.win32.utils import get_app_name_from_pid
 from core.validation.widgets.yasb.volume import VolumeConfig

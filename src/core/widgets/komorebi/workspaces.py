@@ -7,18 +7,18 @@ from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QCursor, QImage, QMouseEvent, QPixmap
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QWidget
 
-from core.event_enums import KomorebiEvent
-from core.event_service import EventService
+from core.events.komorebi import KomorebiEvent
+from core.events.service import EventService
 from core.utils.utilities import add_shadow, refresh_widget_style
-from core.utils.widgets.komorebi.animation import KomorebiAnimation
-from core.utils.widgets.komorebi.client import KomorebiClient
+from core.widgets.services.komorebi.animation import KomorebiAnimation
+from core.widgets.services.komorebi.client import KomorebiClient
 from core.utils.win32.app_icons import get_window_icon
 from core.utils.win32.utils import get_monitor_hwnd, get_process_info
 from core.validation.widgets.komorebi.workspaces import KomorebiWorkspacesConfig
 from core.widgets.base import BaseWidget
 
 try:
-    from core.utils.widgets.komorebi.event_listener import KomorebiEventListener
+    from core.widgets.services.komorebi.event_listener import KomorebiEventListener
 except ImportError:
     KomorebiEventListener = None
     logging.warning("Failed to load Komorebi Event Listener")

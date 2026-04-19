@@ -13,10 +13,10 @@ from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import PopupWidget, add_shadow, refresh_widget_style
-from core.utils.widgets.animation_manager import AnimationManager
-from core.utils.widgets.weather.api import IconFetcher, WeatherDataFetcher
-from core.utils.widgets.weather.models import WeatherApiResponse
-from core.utils.widgets.weather.widgets import (
+from core.utils.animation_manager import AnimationManager
+from core.widgets.services.weather.api import IconFetcher, WeatherDataFetcher
+from core.widgets.services.weather.models import WeatherApiResponse
+from core.widgets.services.weather.widgets import (
     ClickableWidget,
     HourlyData,
     HourlyDataLineWidget,

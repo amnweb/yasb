@@ -25,11 +25,11 @@ from win32con import HWND_BROADCAST
 from core.bar_helper import AppBarManager
 from core.utils.system import app_data_path
 from core.utils.utilities import add_shadow, refresh_widget_style
-from core.utils.widgets.systray.systray_hook import SystrayHook
-from core.utils.widgets.systray.systray_monitor import IconData, SystrayMonitor
-from core.utils.widgets.systray.systray_popup import SystrayPopup
-from core.utils.widgets.systray.systray_widget import DropWidget, IconState, IconWidget
-from core.utils.widgets.systray.utils import hook_dll_exists
+from core.widgets.services.systray.systray_hook import SystrayHook
+from core.widgets.services.systray.systray_monitor import IconData, SystrayMonitor
+from core.widgets.services.systray.systray_popup import SystrayPopup
+from core.widgets.services.systray.systray_widget import DropWidget, IconState, IconWidget
+from core.widgets.services.systray.utils import hook_dll_exists
 from core.utils.win32.bindings import IsWindow
 from core.utils.win32.bindings.user32 import RegisterWindowMessage, SendNotifyMessage
 from core.utils.win32.constants import (

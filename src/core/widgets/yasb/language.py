@@ -10,7 +10,7 @@ from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout
 from win32con import WM_INPUTLANGCHANGEREQUEST
 
 from core.utils.utilities import PopupWidget, refresh_widget_style
-from core.utils.widgets.animation_manager import AnimationManager
+from core.utils.animation_manager import AnimationManager
 from core.utils.win32.bindings import (
     kernel32,
     user32,
