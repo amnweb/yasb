@@ -5,12 +5,12 @@ import win32api
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QProgressBar, QVBoxLayout, QWidget
 
+from core.utils.animation_manager import AnimationManager
 from core.utils.utilities import (
     PopupWidget,
     build_progress_widget,
     refresh_widget_style,
 )
-from core.utils.animation_manager import AnimationManager
 from core.validation.widgets.yasb.disk import DiskConfig
 from core.widgets.base import BaseWidget
 

@@ -24,13 +24,6 @@ from win32con import (
 )
 
 import core.widgets.services.systray.utils as utils
-from core.widgets.services.systray.utils import (
-    IconData,
-    NativeWindowEx,
-    find_real_tray_hwnd,
-    pack_i32,
-    validate_icon_data,
-)
 from core.utils.win32.bindings import (
     DefWindowProc,
     DestroyWindow,
@@ -54,6 +47,13 @@ from core.utils.win32.structs import (
     NOTIFYICONDATA,
     SHELLTRAYDATA,
     WINNOTIFYICONIDENTIFIER,
+)
+from core.widgets.services.systray.utils import (
+    IconData,
+    NativeWindowEx,
+    find_real_tray_hwnd,
+    pack_i32,
+    validate_icon_data,
 )
 
 logger = logging.getLogger("systray_widget")

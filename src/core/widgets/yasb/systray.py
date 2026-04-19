@@ -25,11 +25,6 @@ from win32con import HWND_BROADCAST
 from core.bar_helper import AppBarManager
 from core.utils.system import app_data_path
 from core.utils.utilities import add_shadow, refresh_widget_style
-from core.widgets.services.systray.systray_hook import SystrayHook
-from core.widgets.services.systray.systray_monitor import IconData, SystrayMonitor
-from core.widgets.services.systray.systray_popup import SystrayPopup
-from core.widgets.services.systray.systray_widget import DropWidget, IconState, IconWidget
-from core.widgets.services.systray.utils import hook_dll_exists
 from core.utils.win32.bindings import IsWindow
 from core.utils.win32.bindings.user32 import RegisterWindowMessage, SendNotifyMessage
 from core.utils.win32.constants import (
@@ -43,6 +38,11 @@ from core.utils.win32.constants import (
 from core.utils.win32.utils import apply_qmenu_style, get_windows_host_arch, is_running_under_emulation
 from core.validation.widgets.yasb.systray import SystrayWidgetConfig
 from core.widgets.base import BaseWidget
+from core.widgets.services.systray.systray_hook import SystrayHook
+from core.widgets.services.systray.systray_monitor import IconData, SystrayMonitor
+from core.widgets.services.systray.systray_popup import SystrayPopup
+from core.widgets.services.systray.systray_widget import DropWidget, IconState, IconWidget
+from core.widgets.services.systray.utils import hook_dll_exists
 
 logger = logging.getLogger("systray_widget")
 

@@ -13,13 +13,6 @@ import winerror
 from PIL import Image
 from PyQt6.QtCore import QObject, pyqtSignal
 
-from core.widgets.services.systray.utils import (
-    IconData,
-    get_dll_path,
-    get_explorer_pid,
-    is_dll_loaded,
-    validate_icon_data,
-)
 from core.utils.win32.bindings.kernel32 import (
     CloseHandle,
     CreateMutex,
@@ -45,6 +38,13 @@ from core.utils.win32.constants import (
     WH_GETMESSAGE,
 )
 from core.utils.win32.structs import NOTIFYICONDATA, SHELLTRAYDATA
+from core.widgets.services.systray.utils import (
+    IconData,
+    get_dll_path,
+    get_explorer_pid,
+    is_dll_loaded,
+    validate_icon_data,
+)
 
 logger = logging.getLogger("systray_hook")
 

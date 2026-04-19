@@ -6,9 +6,9 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QCursor, QPixmap
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QWidget
 
+from core.utils.animation_manager import AnimationManager
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import add_shadow
-from core.utils.animation_manager import AnimationManager
 from core.utils.win32.system_function import function_map
 from core.validation.widgets.yasb.applications import ApplicationsWidgetConfig
 from core.widgets.base import BaseWidget

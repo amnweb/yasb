@@ -7,11 +7,11 @@ from PyQt6.QtWidgets import QHBoxLayout, QLabel, QSizePolicy, QVBoxLayout, QWidg
 
 from core.events.komorebi import KomorebiEvent
 from core.events.service import EventService
-from core.utils.utilities import PopupWidget, refresh_widget_style
 from core.utils.animation_manager import AnimationManager
-from core.widgets.services.komorebi.client import KomorebiClient
+from core.utils.utilities import PopupWidget, refresh_widget_style
 from core.validation.widgets.komorebi.control import KomorebiControlWidgetConfig
 from core.widgets.base import BaseWidget
+from core.widgets.services.komorebi.client import KomorebiClient
 
 try:
     from core.widgets.services.komorebi.event_listener import KomorebiEventListener

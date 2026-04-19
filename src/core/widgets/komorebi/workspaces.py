@@ -10,12 +10,12 @@ from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QWidget
 from core.events.komorebi import KomorebiEvent
 from core.events.service import EventService
 from core.utils.utilities import add_shadow, refresh_widget_style
-from core.widgets.services.komorebi.animation import KomorebiAnimation
-from core.widgets.services.komorebi.client import KomorebiClient
 from core.utils.win32.app_icons import get_window_icon
 from core.utils.win32.utils import get_monitor_hwnd, get_process_info
 from core.validation.widgets.komorebi.workspaces import KomorebiWorkspacesConfig
 from core.widgets.base import BaseWidget
+from core.widgets.services.komorebi.animation import KomorebiAnimation
+from core.widgets.services.komorebi.client import KomorebiClient
 
 try:
     from core.widgets.services.komorebi.event_listener import KomorebiEventListener

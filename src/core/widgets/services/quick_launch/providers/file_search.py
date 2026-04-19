@@ -14,6 +14,7 @@ from PyQt6.QtCore import QTimer
 from PyQt6.QtWidgets import QApplication
 
 from core.utils.shell_utils import shell_open
+from core.utils.win32.constants import SW_HIDE
 from core.widgets.services.quick_launch.base_provider import (
     BaseProvider,
     ProviderMenuAction,
@@ -39,7 +40,6 @@ from core.widgets.services.quick_launch.providers.resources.icons import (
     ICON_VIDEO,
     ICON_WARNING,
 )
-from core.utils.win32.constants import SW_HIDE
 
 _EXT_ICON_MAP: dict[str, str] = {}
 for _icon, _exts in (

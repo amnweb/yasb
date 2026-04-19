@@ -1,12 +1,12 @@
 from PyQt6.QtCore import QPoint
 from PyQt6.QtWidgets import QMenu, QWidget
 
+from core.utils.win32.utils import apply_qmenu_style
 from core.widgets.services.quick_launch.base_provider import (
     BaseProvider,
     ProviderMenuActionResult,
     ProviderResult,
 )
-from core.utils.win32.utils import apply_qmenu_style
 
 
 class QuickLaunchContextMenuService:

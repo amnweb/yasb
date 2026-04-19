@@ -6,9 +6,9 @@ from PyQt6.QtWidgets import QGraphicsOpacityEffect, QLabel
 
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import refresh_widget_style
-from core.widgets.services.obs.obs_client import ObsWebSocketClient, ObsWorker
 from core.validation.widgets.yasb.obs import ObsConfig
 from core.widgets.base import BaseWidget
+from core.widgets.services.obs.obs_client import ObsWebSocketClient, ObsWorker
 
 
 class ObsWidget(BaseWidget):

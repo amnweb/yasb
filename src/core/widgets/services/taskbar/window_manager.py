@@ -3,7 +3,6 @@ import logging
 
 from PyQt6.QtCore import QAbstractNativeEventFilter, QCoreApplication, QObject, QTimer, pyqtSignal
 
-from core.widgets.services.taskbar.application_window import ApplicationWindow
 from core.utils.win32 import constants as WCONST
 from core.utils.win32.bindings import (
     DeregisterShellHookWindow,
@@ -18,6 +17,7 @@ from core.utils.win32.bindings import (
 from core.utils.win32.bindings import user32 as _user32_raw
 from core.utils.win32.bindings.ole32 import ole32
 from core.utils.win32.structs import MSG
+from core.widgets.services.taskbar.application_window import ApplicationWindow
 
 logger = logging.getLogger("taskbar_window_manager")
 logger.setLevel(logging.INFO)

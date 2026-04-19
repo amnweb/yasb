@@ -11,9 +11,11 @@ from PyQt6.QtCore import Qt, QTimer, QUrl, pyqtSlot
 from PyQt6.QtGui import QMouseEvent, QPixmap
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
+from core.utils.animation_manager import AnimationManager
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import PopupWidget, add_shadow, refresh_widget_style
-from core.utils.animation_manager import AnimationManager
+from core.validation.widgets.yasb.weather import WeatherWidgetConfig
+from core.widgets.base import BaseWidget
 from core.widgets.services.weather.api import IconFetcher, WeatherDataFetcher
 from core.widgets.services.weather.models import WeatherApiResponse
 from core.widgets.services.weather.widgets import (
@@ -22,8 +24,6 @@ from core.widgets.services.weather.widgets import (
     HourlyDataLineWidget,
     HourlyTemperatureScrollArea,
 )
-from core.validation.widgets.yasb.weather import WeatherWidgetConfig
-from core.widgets.base import BaseWidget
 
 
 class WeatherWidget(BaseWidget):

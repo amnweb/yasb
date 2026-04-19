@@ -5,11 +5,11 @@ import subprocess
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
-from core.utils.utilities import PopupWidget
 from core.utils.animation_manager import AnimationManager
-from core.widgets.services.power_menu.power_commands import PowerOperations
+from core.utils.utilities import PopupWidget
 from core.validation.widgets.yasb.home import HomeConfig, MenuItemConfig
 from core.widgets.base import BaseWidget
+from core.widgets.services.power_menu.power_commands import PowerOperations
 
 
 class HomeWidget(BaseWidget):

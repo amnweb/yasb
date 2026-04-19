@@ -3,16 +3,16 @@ from collections import deque
 
 from PyQt6.QtWidgets import QLabel
 
+from core.utils.animation_manager import AnimationManager
+from core.utils.stat_popup import build_stat_popup
 from core.utils.utilities import (
     PopupWidget,
     build_progress_widget,
     refresh_widget_style,
 )
-from core.utils.animation_manager import AnimationManager
-from core.widgets.services.cpu.cpu_api import CpuData, CpuFreq, CpuWorker
-from core.utils.stat_popup import build_stat_popup
 from core.validation.widgets.yasb.cpu import CpuConfig
 from core.widgets.base import BaseWidget
+from core.widgets.services.cpu.cpu_api import CpuData, CpuFreq, CpuWorker
 
 
 class CpuWidget(BaseWidget):

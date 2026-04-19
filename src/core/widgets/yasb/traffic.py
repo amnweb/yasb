@@ -4,13 +4,13 @@ import re
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
 
+from core.utils.animation_manager import AnimationManager
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import PopupWidget, refresh_widget_style
-from core.utils.animation_manager import AnimationManager
-from core.widgets.services.traffic.connection_monitor import InternetChecker
-from core.widgets.services.traffic.traffic_manager import TrafficDataManager
 from core.validation.widgets.yasb.traffic import TrafficWidgetConfig
 from core.widgets.base import BaseWidget
+from core.widgets.services.traffic.connection_monitor import InternetChecker
+from core.widgets.services.traffic.traffic_manager import TrafficDataManager
 
 
 class TrafficWidget(BaseWidget):

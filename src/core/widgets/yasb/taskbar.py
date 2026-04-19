@@ -8,14 +8,10 @@ from PyQt6.QtCore import QEasingCurve, QMimeData, QPoint, QPropertyAnimation, QR
 from PyQt6.QtGui import QCursor, QDrag, QImage, QMouseEvent, QPixmap
 from PyQt6.QtWidgets import QApplication, QFrame, QHBoxLayout, QLabel, QSizePolicy, QWidget
 
+from core.utils.animation_manager import AnimationManager
 from core.utils.qobject import is_valid_qobject
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import add_shadow, refresh_widget_style
-from core.utils.animation_manager import AnimationManager
-from core.widgets.services.recycle_bin.recycle_bin_monitor import RecycleBinMonitor
-from core.widgets.services.taskbar.app_menu import show_context_menu
-from core.widgets.services.taskbar.pin_manager import PinManager
-from core.widgets.services.taskbar.thumbnail import TaskbarThumbnailManager
 from core.utils.win32.app_icons import get_stock_icon, get_window_icon
 from core.utils.win32.constants import KnownCLSID
 from core.utils.win32.utils import get_monitor_hwnd, get_monitor_info
@@ -31,6 +27,10 @@ from core.utils.win32.window_actions import (
 )
 from core.validation.widgets.yasb.taskbar import TaskbarConfig
 from core.widgets.base import BaseWidget
+from core.widgets.services.recycle_bin.recycle_bin_monitor import RecycleBinMonitor
+from core.widgets.services.taskbar.app_menu import show_context_menu
+from core.widgets.services.taskbar.pin_manager import PinManager
+from core.widgets.services.taskbar.thumbnail import TaskbarThumbnailManager
 
 try:
     from core.widgets.services.taskbar.window_manager import connect_taskbar

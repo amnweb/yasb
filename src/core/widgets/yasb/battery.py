@@ -5,12 +5,12 @@ import humanize
 from PyQt6.QtCore import QTimer
 from PyQt6.QtWidgets import QLabel
 
-from core.utils.utilities import refresh_widget_style
 from core.utils.animation_manager import AnimationManager
-from core.widgets.services.battery.battery_api import BatteryAPI, BatteryData
+from core.utils.utilities import refresh_widget_style
 from core.utils.win32.constants import POWER_TIME_UNKNOWN, POWER_TIME_UNLIMITED
 from core.validation.widgets.yasb.battery import BatteryConfig
 from core.widgets.base import BaseWidget
+from core.widgets.services.battery.battery_api import BatteryAPI, BatteryData
 
 
 class BatteryWidget(BaseWidget):

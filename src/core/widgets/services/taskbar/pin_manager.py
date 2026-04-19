@@ -23,6 +23,7 @@ from PyQt6.QtCore import QObject, Qt, pyqtSignal
 from PyQt6.QtGui import QPixmap
 
 from core.utils.system import app_data_path
+from core.utils.win32.utils import get_app_name_from_aumid
 from core.widgets.services.taskbar.pin_context import (
     WindowContext,
     collect_window_context,
@@ -37,7 +38,6 @@ from core.widgets.services.taskbar.shortcut_resolver import (
     get_wscript_shell,
     normalized_targets,
 )
-from core.utils.win32.utils import get_app_name_from_aumid
 
 
 class TaskbarSignalBus(QObject):

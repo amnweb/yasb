@@ -4,16 +4,16 @@ import re
 from humanize import naturalsize
 from PyQt6.QtWidgets import QLabel
 
+from core.utils.animation_manager import AnimationManager
+from core.utils.stat_popup import build_stat_popup
 from core.utils.utilities import (
     PopupWidget,
     build_progress_widget,
     refresh_widget_style,
 )
-from core.utils.animation_manager import AnimationManager
-from core.widgets.services.memory.memory_api import MemoryData, MemoryWorker, SwapMemory, VirtualMemory
-from core.utils.stat_popup import build_stat_popup
 from core.validation.widgets.yasb.memory import MemoryConfig
 from core.widgets.base import BaseWidget
+from core.widgets.services.memory.memory_api import MemoryData, MemoryWorker, SwapMemory, VirtualMemory
 
 
 class MemoryWidget(BaseWidget):

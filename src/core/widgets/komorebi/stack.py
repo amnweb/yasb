@@ -12,12 +12,12 @@ from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QWidget
 from core.events.komorebi import KomorebiEvent
 from core.events.service import EventService
 from core.utils.utilities import add_shadow, refresh_widget_style
-from core.widgets.services.komorebi.client import KomorebiClient
 from core.utils.win32.app_icons import get_window_icon
 from core.utils.win32.utils import get_monitor_hwnd
 from core.utils.win32.window_actions import close_application
 from core.validation.widgets.komorebi.stack import StackConfig
 from core.widgets.base import BaseWidget
+from core.widgets.services.komorebi.client import KomorebiClient
 
 try:
     from core.widgets.services.komorebi.event_listener import KomorebiEventListener

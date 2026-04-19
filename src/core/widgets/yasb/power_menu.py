@@ -16,8 +16,12 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
 )
 
-from core.utils.utilities import PopupWidget, refresh_widget_style
 from core.utils.animation_manager import AnimationManager
+from core.utils.utilities import PopupWidget, refresh_widget_style
+from core.utils.win32.backdrop import enable_blur
+from core.utils.win32.window_actions import force_foreground_focus
+from core.validation.widgets.yasb.power_menu import PowerMenuConfig
+from core.widgets.base import BaseWidget
 from core.widgets.services.power_menu.power_commands import PowerOperations
 from core.widgets.services.power_menu.user_info import (
     get_account_type,
@@ -25,10 +29,6 @@ from core.widgets.services.power_menu.user_info import (
     get_user_email,
     get_windows_username,
 )
-from core.utils.win32.backdrop import enable_blur
-from core.utils.win32.window_actions import force_foreground_focus
-from core.validation.widgets.yasb.power_menu import PowerMenuConfig
-from core.widgets.base import BaseWidget
 
 
 class AnimatedWidget(QFrame):

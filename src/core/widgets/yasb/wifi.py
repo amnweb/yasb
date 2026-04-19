@@ -8,12 +8,12 @@ from PyQt6.QtWidgets import (
 )
 from winrt.windows.networking.connectivity import NetworkInformation
 
-from core.utils.utilities import add_shadow
 from core.utils.animation_manager import AnimationManager
-from core.widgets.services.wifi.wifi_managers import NetworkInfo, WiFiInfo, WiFiWorker
-from core.widgets.services.wifi.wifi_widgets import WifiMenu
+from core.utils.utilities import add_shadow
 from core.validation.widgets.yasb.wifi import WifiConfig
 from core.widgets.base import BaseWidget
+from core.widgets.services.wifi.wifi_managers import NetworkInfo, WiFiInfo, WiFiWorker
+from core.widgets.services.wifi.wifi_widgets import WifiMenu
 
 logger = logging.getLogger("wifi_widget")
 

@@ -5,9 +5,9 @@ from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel
 
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import add_shadow, refresh_widget_style
-from core.widgets.services.update_check.service import UpdateCheckService
 from core.validation.widgets.yasb.update_check import UpdateCheckWidgetConfig
 from core.widgets.base import BaseWidget
+from core.widgets.services.update_check.service import UpdateCheckService
 
 # Sources and their config attribute names
 _SOURCES = ("winget", "scoop", "windows")

@@ -4,9 +4,9 @@ from PyQt6.QtCore import QEvent, QPoint, QPropertyAnimation, QRect, Qt, QTimer, 
 from PyQt6.QtGui import QCursor
 from PyQt6.QtWidgets import QApplication, QFrame, QVBoxLayout, QWidget
 
-from core.widgets.services.systray.systray_widget import DropWidget, IconWidget
 from core.utils.win32.backdrop import enable_blur
 from core.utils.win32.bindings import user32
+from core.widgets.services.systray.systray_widget import DropWidget, IconWidget
 
 # Win32 detect physical mouse button state
 _GetAsyncKeyState = user32.GetAsyncKeyState

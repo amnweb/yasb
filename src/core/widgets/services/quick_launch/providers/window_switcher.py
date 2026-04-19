@@ -8,16 +8,16 @@ import win32con
 import win32gui
 from PyQt6.QtCore import QTimer
 
-from core.widgets.services.quick_launch.base_provider import BaseProvider, ProviderResult
-from core.widgets.services.quick_launch.fuzzy import fuzzy_score
-from core.widgets.services.quick_launch.providers.resources.icons import ICON_WINDOWS_SWITCHER
-from core.widgets.services.taskbar.window_manager import get_shared_task_manager
 from core.utils.win32.window_actions import (
     force_foreground_focus,
     resolve_base_and_focus,
     restore_window,
     show_window,
 )
+from core.widgets.services.quick_launch.base_provider import BaseProvider, ProviderResult
+from core.widgets.services.quick_launch.fuzzy import fuzzy_score
+from core.widgets.services.quick_launch.providers.resources.icons import ICON_WINDOWS_SWITCHER
+from core.widgets.services.taskbar.window_manager import get_shared_task_manager
 
 
 class WindowSwitcherProvider(BaseProvider):

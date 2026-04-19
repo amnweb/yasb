@@ -7,12 +7,12 @@ from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QSizePolicy, QVBoxLayou
 
 from core.events.komorebi import KomorebiEvent
 from core.events.service import EventService
-from core.utils.utilities import PopupWidget, add_shadow
 from core.utils.animation_manager import AnimationManager
-from core.widgets.services.komorebi.client import KomorebiClient
+from core.utils.utilities import PopupWidget, add_shadow
 from core.utils.win32.utils import get_monitor_hwnd
 from core.validation.widgets.komorebi.active_layout import ActiveLayoutConfig
 from core.widgets.base import BaseWidget
+from core.widgets.services.komorebi.client import KomorebiClient
 
 try:
     from core.widgets.services.komorebi.event_listener import KomorebiEventListener

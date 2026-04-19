@@ -7,11 +7,11 @@ from dataclasses import dataclass
 
 from PyQt6.QtWidgets import QApplication
 
-from core.widgets.services.quick_launch.base_provider import BaseProvider, ProviderResult
-from core.widgets.services.quick_launch.providers.resources.icons import ICON_PORT
 from core.utils.win32.bindings.kernel32 import kernel32
 from core.utils.win32.constants import PROCESS_QUERY_LIMITED_INFORMATION, PROCESS_TERMINATE, TH32CS_SNAPPROCESS
 from core.utils.win32.structs import PROCESSENTRY32
+from core.widgets.services.quick_launch.base_provider import BaseProvider, ProviderResult
+from core.widgets.services.quick_launch.providers.resources.icons import ICON_PORT
 
 _DEFAULT_APP_ICON_PNG: str | None = None
 

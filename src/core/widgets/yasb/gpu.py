@@ -4,16 +4,16 @@ from collections import deque
 from humanize import naturalsize
 from PyQt6.QtWidgets import QFrame, QLabel, QVBoxLayout
 
+from core.utils.animation_manager import AnimationManager
+from core.utils.stat_popup import GraphWidget, build_stat_popup
 from core.utils.utilities import (
     PopupWidget,
     build_progress_widget,
     refresh_widget_style,
 )
-from core.utils.animation_manager import AnimationManager
-from core.widgets.services.gpu.gpu_api import GpuData, GpuWorker
-from core.utils.stat_popup import GraphWidget, build_stat_popup
 from core.validation.widgets.yasb.gpu import GpuConfig
 from core.widgets.base import BaseWidget
+from core.widgets.services.gpu.gpu_api import GpuData, GpuWorker
 
 
 class GpuWidget(BaseWidget):

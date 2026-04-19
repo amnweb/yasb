@@ -19,11 +19,11 @@ from PyQt6.QtWidgets import (
 
 from core.utils.system import is_windows_10
 from core.utils.utilities import PopupWidget, add_shadow, refresh_widget_style
-from core.widgets.services.komorebi.animation import KomorebiAnimation
-from core.widgets.services.windows_desktops.service import WindowsDesktopService
 from core.utils.win32.utils import apply_qmenu_style
 from core.validation.widgets.yasb.windows_desktops import WindowsDesktopsConfig
 from core.widgets.base import BaseWidget
+from core.widgets.services.komorebi.animation import KomorebiAnimation
+from core.widgets.services.windows_desktops.service import WindowsDesktopService
 
 
 class WorkspaceButton(QPushButton):

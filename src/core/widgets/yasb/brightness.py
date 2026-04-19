@@ -5,13 +5,13 @@ from PyQt6.QtCore import QRect, Qt, QTimer
 from PyQt6.QtGui import QShowEvent, QWheelEvent
 from PyQt6.QtWidgets import QLabel, QSlider, QVBoxLayout
 
+from core.utils.animation_manager import AnimationManager
 from core.utils.tooltip import CustomToolTip, set_tooltip
 from core.utils.utilities import PopupWidget, build_progress_widget
-from core.utils.animation_manager import AnimationManager
-from core.widgets.services.brightness.service import BrightnessService
 from core.utils.win32.bindings.user32 import MONITOR_DEFAULTTONEAREST, user32
 from core.validation.widgets.yasb.brightness import BrightnessConfig
 from core.widgets.base import BaseWidget
+from core.widgets.services.brightness.service import BrightnessService
 
 
 class BrightnessWidget(BaseWidget):

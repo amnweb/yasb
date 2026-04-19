@@ -6,13 +6,13 @@ from PyQt6.QtCore import QPropertyAnimation, QRectF, Qt, QTimer, pyqtProperty
 from PyQt6.QtGui import QColor, QCursor, QPainter, QPen
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
 
+from core.utils.animation_manager import AnimationManager
 from core.utils.utilities import (
     PopupWidget,
     ToastNotifier,
     build_progress_widget,
     refresh_widget_style,
 )
-from core.utils.animation_manager import AnimationManager
 from core.validation.widgets.yasb.pomodoro import PomodoroConfig
 from core.widgets.base import BaseWidget
 from settings import SCRIPT_PATH

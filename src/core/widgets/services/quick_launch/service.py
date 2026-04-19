@@ -5,6 +5,7 @@ import tempfile
 from PyQt6.QtCore import QFileSystemWatcher, QObject, QTimer, pyqtSignal
 from PyQt6.QtWidgets import QApplication
 
+from core.utils.win32.app_loader import AppListLoader
 from core.widgets.services.quick_launch.base_provider import BaseProvider
 from core.widgets.services.quick_launch.icon_resolver import IconResolverWorker, compute_extraction_size
 from core.widgets.services.quick_launch.providers import (
@@ -36,7 +37,6 @@ from core.widgets.services.quick_launch.providers import (
     WslProvider,
 )
 from core.widgets.services.quick_launch.workers import QueryWorker, StartMenuWatcherThread
-from core.utils.win32.app_loader import AppListLoader
 
 PROVIDER_REGISTRY: dict[str, type[BaseProvider]] = {
     "apps": AppsProvider,

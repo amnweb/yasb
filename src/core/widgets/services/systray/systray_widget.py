@@ -43,8 +43,6 @@ from win32con import (
 import core.widgets.services.systray.utils as utils
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import refresh_widget_style
-from core.widgets.services.systray.systray_monitor import IconData
-from core.widgets.services.systray.utils import pack_i32
 from core.utils.win32.bindings import (
     AllowSetForegroundWindow,
     GetWindowThreadProcessId,
@@ -55,6 +53,8 @@ from core.utils.win32.constants import (
     NIN_CONTEXTMENU,
     NIN_SELECT,
 )
+from core.widgets.services.systray.systray_monitor import IconData
+from core.widgets.services.systray.utils import pack_i32
 
 
 @dataclass

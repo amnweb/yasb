@@ -6,9 +6,9 @@ import threading
 from PyQt6.QtCore import QObject, Qt, pyqtSignal
 from PyQt6.QtWidgets import QLabel
 
+from core.utils.animation_manager import AnimationManager
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import add_shadow
-from core.utils.animation_manager import AnimationManager
 from core.utils.win32.system_function import function_map
 from core.validation.widgets.yasb.custom import CustomConfig
 from core.widgets.base import BaseWidget

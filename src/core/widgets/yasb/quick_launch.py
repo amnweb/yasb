@@ -36,9 +36,13 @@ from PyQt6.QtWidgets import (
 )
 
 from core.ui.components.loader import LoaderLine
+from core.utils.animation_manager import AnimationManager
 from core.utils.system import app_data_path
 from core.utils.utilities import PopupWidget
-from core.utils.animation_manager import AnimationManager
+from core.utils.win32.utils import apply_qmenu_style, find_focused_screen
+from core.utils.win32.window_actions import force_foreground_focus
+from core.validation.widgets.yasb.quick_launch import QuickLaunchConfig
+from core.widgets.base import BaseWidget
 from core.widgets.services.quick_launch.base_provider import ProviderResult
 from core.widgets.services.quick_launch.context_menu import QuickLaunchContextMenuService
 from core.widgets.services.quick_launch.icon_utils import load_and_scale_icon, svg_to_pixmap
@@ -49,10 +53,6 @@ from core.widgets.services.quick_launch.providers.resources.icons import (
     ICON_SUBMIT,
 )
 from core.widgets.services.quick_launch.service import QuickLaunchService
-from core.utils.win32.utils import apply_qmenu_style, find_focused_screen
-from core.utils.win32.window_actions import force_foreground_focus
-from core.validation.widgets.yasb.quick_launch import QuickLaunchConfig
-from core.widgets.base import BaseWidget
 
 
 class ResultListModel(QAbstractListModel):

@@ -1,9 +1,9 @@
-from core.utils.tooltip import set_tooltip
 from core.utils.animation_manager import AnimationManager
-from core.widgets.services.wallpapers.wallpaper_manager import WallpaperManager
-from core.widgets.services.wallpapers.wallpapers_gallery import ImageGallery
+from core.utils.tooltip import set_tooltip
 from core.validation.widgets.yasb.wallpapers import WallpapersConfig
 from core.widgets.base import BaseWidget
+from core.widgets.services.wallpapers.wallpaper_manager import WallpaperManager
+from core.widgets.services.wallpapers.wallpapers_gallery import ImageGallery
 
 
 class WallpapersWidget(BaseWidget):
