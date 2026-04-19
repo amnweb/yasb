@@ -7,8 +7,8 @@ from PyQt6.QtCore import QEventLoop, Qt, QUrl
 from PyQt6.QtNetwork import QAuthenticator, QNetworkAccessManager, QNetworkReply, QNetworkRequest
 from PyQt6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
+from core.utils.animation_manager import AnimationManager
 from core.utils.utilities import PopupWidget
-from core.utils.widgets.animation_manager import AnimationManager
 from core.validation.widgets.yasb.libre_monitor import LibreMonitorConfig
 from core.widgets.base import BaseWidget
 

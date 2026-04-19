@@ -22,14 +22,14 @@ from PyQt6.QtWidgets import (
 )
 
 from core.config import HOME_CONFIGURATION_DIR
+from core.utils.animation_manager import AnimationManager
 from core.utils.qobject import is_valid_qobject
 from core.utils.tooltip import set_tooltip
-from core.utils.widgets.animation_manager import AnimationManager
-from core.utils.widgets.notes.utils import ElidedLabel, FloatingWindowController, NotesPopup, NoteTextEdit
 from core.utils.win32.utils import find_focused_screen, get_foreground_hwnd, set_foreground_hwnd  # type: ignore
 from core.utils.win32.window_actions import force_foreground_focus
 from core.validation.widgets.yasb.notes import NotesConfig
 from core.widgets.base import BaseWidget
+from core.widgets.services.notes.utils import ElidedLabel, FloatingWindowController, NotesPopup, NoteTextEdit
 
 
 class NotesWidget(BaseWidget):

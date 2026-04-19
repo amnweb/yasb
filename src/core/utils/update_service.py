@@ -35,6 +35,12 @@ ARCHITECTURE = get_architecture()
 # Module-level singletons
 _update_service_instance: UpdateService | None = None
 _update_checker_started = False
+_update_callbacks: list = []
+
+
+def register_update_callback(fn) -> None:
+    """Register a callable to be invoked when an update is found."""
+    _update_callbacks.append(fn)
 
 
 def _get_msi_arch_suffix() -> str:
@@ -398,6 +404,8 @@ def start_update_checker() -> None:
             release_info = update_service.check_for_updates(timeout=10)
 
             if release_info:
+                for cb in _update_callbacks:
+                    cb(release_info)
                 icon_path = f"{SCRIPT_PATH}/assets/images/app_transparent.png"
                 toaster = ToastNotifier()
 
