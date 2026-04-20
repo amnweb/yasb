@@ -9,7 +9,7 @@ from PyQt6.QtCore import Qt, QThread, QTimer, pyqtSignal
 from PyQt6.QtGui import QMouseEvent
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QWidget
 
-from core.event_service import EventService
+from core.events.service import EventService
 from core.utils.utilities import add_shadow
 from core.utils.win32.system_function import function_map
 from core.widgets.registry import register_widget_class

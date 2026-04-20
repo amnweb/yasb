@@ -17,8 +17,8 @@ from PyQt6.QtWidgets import (
 )
 
 from core.utils.alert_dialog import raise_info_alert
+from core.utils.animation_manager import AnimationManager
 from core.utils.utilities import refresh_widget_style
-from core.utils.widgets.animation_manager import AnimationManager
 from core.validation.widgets.yasb.whkd import WhkdConfig
 from core.widgets.base import BaseWidget
 from settings import SCRIPT_PATH

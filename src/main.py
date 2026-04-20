@@ -12,7 +12,7 @@ import qasync
 from core.application import YASBApplication
 from core.bar_manager import BarManager
 from core.config import get_config_and_stylesheet, is_first_run
-from core.event_service import EventService
+from core.events.service import EventService
 from core.log import enable_debug_logging, init_logger
 from core.tray import SystemTrayManager
 from core.ui.views.welcome import run_setup_wizard

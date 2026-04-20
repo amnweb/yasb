@@ -94,7 +94,7 @@ def build_progress_widget(self, options: dict[str, Any]) -> None:
     if not options["enabled"]:
         return
 
-    from core.utils.widgets.circular_progress_bar import CircularProgressBar, CircularProgressWidget
+    from core.utils.circular_progress_bar import CircularProgressBar, CircularProgressWidget
 
     self.progress_data = CircularProgressBar(
         parent=self,

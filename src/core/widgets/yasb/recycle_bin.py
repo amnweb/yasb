@@ -3,12 +3,12 @@ import re
 from humanize import naturalsize
 from PyQt6.QtWidgets import QLabel
 
+from core.utils.animation_manager import AnimationManager
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import refresh_widget_style
-from core.utils.widgets.animation_manager import AnimationManager
-from core.utils.widgets.recycle_bin.recycle_bin_monitor import RecycleBinMonitor
 from core.validation.widgets.yasb.recycle_bin import RecycleBinConfig
 from core.widgets.base import BaseWidget
+from core.widgets.services.recycle_bin.recycle_bin_monitor import RecycleBinMonitor
 
 
 class RecycleBinWidget(BaseWidget):
