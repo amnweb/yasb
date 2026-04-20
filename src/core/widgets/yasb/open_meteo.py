@@ -19,12 +19,14 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from core.utils.animation_manager import AnimationManager
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import PopupWidget, add_shadow, refresh_widget_style
-from core.utils.widgets.animation_manager import AnimationManager
-from core.utils.widgets.open_meteo.api import GeocodingFetcher, OpenMeteoDataFetcher
-from core.utils.widgets.open_meteo.icons import get_weather_icon
-from core.utils.widgets.open_meteo.location import (
+from core.validation.widgets.yasb.open_meteo import OpenMeteoWidgetConfig
+from core.widgets.base import BaseWidget
+from core.widgets.services.open_meteo.api import GeocodingFetcher, OpenMeteoDataFetcher
+from core.widgets.services.open_meteo.icons import get_weather_icon
+from core.widgets.services.open_meteo.location import (
     cleanup_stale_entries,
     get_widget_id,
     load_location,
@@ -32,15 +34,13 @@ from core.utils.widgets.open_meteo.location import (
     save_location,
     save_weather_cache,
 )
-from core.utils.widgets.open_meteo.widgets import (
+from core.widgets.services.open_meteo.widgets import (
     ClickableWidget,
     HourlyData,
     HourlyDataLineWidget,
     HourlyTemperatureScrollArea,
     get_weather_icon_pixmap,
 )
-from core.validation.widgets.yasb.open_meteo import OpenMeteoWidgetConfig
-from core.widgets.base import BaseWidget
 
 
 class OpenMeteoWidget(BaseWidget):

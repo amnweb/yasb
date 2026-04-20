@@ -7,7 +7,7 @@ from dataclasses import dataclass
 
 from PyQt6.QtCore import Q_ARG, QMetaObject, QObject, Qt, QThread, pyqtSlot
 
-from core.event_service import EventService
+from core.events.service import EventService
 from core.utils.win32.bindings import user32
 from core.utils.win32.bindings.kernel32 import GetCurrentThreadId
 

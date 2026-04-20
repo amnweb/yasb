@@ -56,7 +56,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.unsigned_dll_name }}
-        path: src/core/utils/widgets/systray/hook/${{ matrix.dll_file }}
+        path: src/core/widgets/services/systray/hook/${{ matrix.dll_file }}
 
     - name: Get unsigned-dll artifact id
       id: get_dll_artifact
@@ -101,9 +101,9 @@ jobs:
           Write-Error "No signed .dll files found in $signedDir after extraction. Failing the job."
           exit 1
         }
-        Write-Host "Copying signed DLL from $signedDir to src/core/utils/widgets/systray/hook"
+        Write-Host "Copying signed DLL from $signedDir to src/core/widgets/services/systray/hook"
         foreach ($f in $signedDlls) {
-          Copy-Item -Path $f.FullName -Destination (Join-Path 'src/core/utils/widgets/systray/hook' $f.Name) -Force
+          Copy-Item -Path $f.FullName -Destination (Join-Path 'src/core/widgets/services/systray/hook' $f.Name) -Force
         }
         # Clean up signed directory after successful copy
         try {

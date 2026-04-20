@@ -5,6 +5,7 @@ from PyQt6.QtCore import QRect, Qt
 from PyQt6.QtGui import QWheelEvent
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QSlider, QVBoxLayout, QWidget
 
+from core.utils.animation_manager import AnimationManager
 from core.utils.qobject import is_valid_qobject
 from core.utils.tooltip import CustomToolTip, set_tooltip
 from core.utils.utilities import (
@@ -12,10 +13,9 @@ from core.utils.utilities import (
     build_progress_widget,
     refresh_widget_style,
 )
-from core.utils.widgets.animation_manager import AnimationManager
-from core.utils.widgets.microphone.service import AudioInputService
 from core.validation.widgets.yasb.microphone import MicrophoneConfig
 from core.widgets.base import BaseWidget
+from core.widgets.services.microphone.service import AudioInputService
 
 
 class MicrophoneWidget(BaseWidget):

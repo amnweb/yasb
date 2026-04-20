@@ -5,12 +5,12 @@ import time
 from PyQt6.QtCore import QThread
 from win32gui import GetForegroundWindow
 
-from core.event_service import EventService
+from core.events.service import EventService
+from core.events.win32 import WinEvent
 from core.utils.win32.bindings.kernel32 import GetCurrentThreadId
 from core.utils.win32.bindings.ole32 import ole32
 from core.utils.win32.bindings.user32 import user32
 from core.utils.win32.structs import WINEVENTPROC
-from core.utils.win32.windows import WinEvent
 
 msg = ctypes.wintypes.MSG()
 

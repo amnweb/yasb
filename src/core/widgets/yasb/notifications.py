@@ -4,16 +4,16 @@ import re
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import QLabel
 
-from core.event_service import EventService
+from core.events.service import EventService
+from core.utils.animation_manager import AnimationManager
 from core.utils.system import is_windows_10
 from core.utils.utilities import refresh_widget_style
-from core.utils.widgets.animation_manager import AnimationManager
 from core.utils.win32.system_function import notification_center, quick_settings
 from core.validation.widgets.yasb.notifications import NotificationsConfig
 from core.widgets.base import BaseWidget
 
 try:
-    from core.utils.widgets.notifications.windows_notification import WindowsNotificationEventListener
+    from core.widgets.services.notifications.windows_notification import WindowsNotificationEventListener
 except ImportError:
     WindowsNotificationEventListener = None
     logging.warning("Failed to load Windows Notification Event Listener")

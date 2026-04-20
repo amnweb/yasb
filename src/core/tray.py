@@ -4,19 +4,20 @@ import shutil
 import subprocess
 import threading
 
-from PyQt6.QtCore import QEvent, QSize, Qt
-from PyQt6.QtGui import QCursor, QIcon
+from PyQt6.QtCore import QEvent, QSize, Qt, pyqtSignal
+from PyQt6.QtGui import QColor, QCursor, QIcon, QPainter, QPixmap
 from PyQt6.QtWidgets import QMenu, QSystemTrayIcon
 
 from core.bar_manager import BarManager
 from core.ui.views.about import AboutDialog
 from core.utils.controller import exit_application, reload_application
 from core.utils.shell_utils import shell_open
+from core.utils.update_service import register_update_callback
 from core.utils.win32.utils import apply_qmenu_style, disable_autostart, enable_autostart, is_autostart_enabled
 from settings import (
     APP_NAME,
     DEFAULT_CONFIG_DIRECTORY,
-    GITHUB_URL,
+    GITHUB_WIKI_URL,
     SCRIPT_PATH,
 )
 
@@ -26,14 +27,20 @@ AUTOSTART_FILE = EXE_PATH if os.path.exists(EXE_PATH) else None
 
 
 class SystemTrayManager(QSystemTrayIcon):
+    _update_signal = pyqtSignal(object)
+
     def __init__(self, bar_manager: BarManager):
         super().__init__()
         self._bar_manager = bar_manager
         self._icon = QIcon()
+        self._update_available = False
+        self._pending_release_info = None
         self._load_favicon()
         self.setToolTip(APP_NAME)
         self._load_config()
         self.activated.connect(self._on_tray_activated)
+        self._update_signal.connect(self._set_update_badge)
+        register_update_callback(self._update_signal.emit)
 
     def eventFilter(self, obj, event):
         if event.type() == QEvent.Type.MouseButtonPress:
@@ -69,6 +76,20 @@ class SystemTrayManager(QSystemTrayIcon):
         # Get the current directory of the script
         self._icon.addFile(os.path.join(SCRIPT_PATH, "assets", "images", "app_icon.png"), QSize(48, 48))
         self.setIcon(self._icon)
+
+    def _set_update_badge(self, release_info=None):
+        self._update_available = True
+        self._pending_release_info = release_info
+        base = QPixmap(os.path.join(SCRIPT_PATH, "assets", "images", "app_icon.png")).scaled(48, 48)
+        painter = QPainter(base)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setBrush(QColor("#ef4747"))
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.drawEllipse(30, 0, 18, 18)
+        painter.end()
+        self.setIcon(QIcon(base))
+        self.setToolTip("Update available")
+        self._update_available = True
 
     def _load_context_menu(self):
         self.menu = QMenu()
@@ -106,6 +127,11 @@ class SystemTrayManager(QSystemTrayIcon):
         }
         """
         self.menu.setStyleSheet(style_sheet)
+
+        if self._update_available:
+            update_action = self.menu.addAction("Update Available")
+            update_action.triggered.connect(self._open_update_dialog)
+            self.menu.addSeparator()
 
         open_config_action = self.menu.addAction("Open Config")
         open_config_action.triggered.connect(self._open_config)
@@ -169,7 +195,7 @@ class SystemTrayManager(QSystemTrayIcon):
                 enable_startup_action.triggered.connect(self._enable_startup)
 
         help_action = self.menu.addAction("Help")
-        help_action.triggered.connect(lambda: self._open_in_browser(f"{GITHUB_URL}/wiki"))
+        help_action.triggered.connect(lambda: self._open_in_browser(GITHUB_WIKI_URL))
 
         about_action = self.menu.addAction("About")
         about_action.triggered.connect(self._show_about_dialog)
@@ -233,4 +259,10 @@ class SystemTrayManager(QSystemTrayIcon):
 
     def _show_about_dialog(self):
         dialog = AboutDialog(self)
+        dialog.exec()
+
+    def _open_update_dialog(self):
+        from core.ui.views.updater import UpdateDialog
+
+        dialog = UpdateDialog(release_info=self._pending_release_info)
         dialog.exec()

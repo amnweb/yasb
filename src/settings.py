@@ -14,6 +14,7 @@ IS_FROZEN = getattr(sys, "frozen", False)
 SCRIPT_PATH = os.path.dirname(sys.executable) if IS_FROZEN else os.path.dirname(os.path.abspath(__file__))
 # URLs
 GITHUB_URL = "https://github.com/amnweb/yasb"
+GITHUB_WIKI_URL = "https://github.com/amnweb/yasb/wiki"
 GITHUB_THEME_URL = "https://github.com/amnweb/yasb-themes"
 WEBSITE_URL = "https://yasb.dev"
 WEBSITE_DOCS_URL = "https://docs.yasb.dev/latest"

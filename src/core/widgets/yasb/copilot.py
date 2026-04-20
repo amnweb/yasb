@@ -11,14 +11,14 @@ from PyQt6.QtCore import QPointF, Qt, QTimer
 from PyQt6.QtGui import QBrush, QColor, QGuiApplication, QLinearGradient, QPainter, QPainterPath, QPen
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
+from core.utils.animation_manager import AnimationManager
 from core.utils.tooltip import CustomToolTip, set_tooltip
 from core.utils.utilities import PopupWidget, refresh_widget_style
-from core.utils.widgets.animation_manager import AnimationManager
-from core.utils.widgets.copilot.api import CopilotDataManager, CopilotUsageData
-from core.utils.widgets.github.auth import get_saved_token, save_token
-from core.utils.widgets.github.auth_dialog import GitHubAuthDialog
 from core.validation.widgets.yasb.copilot import CopilotConfig
 from core.widgets.base import BaseWidget
+from core.widgets.services.copilot.api import CopilotDataManager, CopilotUsageData
+from core.widgets.services.github.auth import get_saved_token, save_token
+from core.widgets.services.github.auth_dialog import GitHubAuthDialog
 
 
 class ProgressBar(QFrame):

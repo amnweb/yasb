@@ -40,9 +40,9 @@ build_options = {
         ("assets/images/app_transparent.png", "assets/images/app_transparent.png"),
         ("assets/sound/notification01.wav", "assets/sound/notification01.wav"),
         ("assets/sound/notification02.wav", "assets/sound/notification02.wav"),
-        ("core/utils/widgets/quick_launch/providers/resources/Everything64.dll", "lib/Everything64.dll"),
-        (f"core/utils/widgets/systray/hook/{hook_dll_name}", f"lib/{hook_dll_name}"),
-        ("core/utils/widgets/quick_launch/providers/resources/emoji.json", "lib/emoji.json"),
+        ("core/widgets/services/quick_launch/providers/resources/Everything64.dll", "lib/Everything64.dll"),
+        (f"core/widgets/services/systray/hook/{hook_dll_name}", f"lib/{hook_dll_name}"),
+        ("core/widgets/services/quick_launch/providers/resources/emoji.json", "lib/emoji.json"),
     ],
 }
 
