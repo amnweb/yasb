@@ -54,7 +54,7 @@ from settings import (
     DEFAULT_CONFIG_DIRECTORY,
     DEFAULT_CONFIG_FILENAME,
     DEFAULT_STYLES_FILENAME,
-    GITHUB_URL,
+    GITHUB_WIKI_URL,
     WEBSITE_DOCS_URL,
 )
 
@@ -687,7 +687,7 @@ class WelcomeWizard(ViewBase, QDialog):
         links_layout = QHBoxLayout()
         links_layout.setSpacing(8)
         links_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        links_layout.addWidget(self._link("GitHub Wiki", lambda: QDesktopServices.openUrl(QUrl(f"{GITHUB_URL}/wiki"))))
+        links_layout.addWidget(self._link("GitHub Wiki", lambda: QDesktopServices.openUrl(QUrl(GITHUB_WIKI_URL))))
         links_layout.addWidget(self._link("Documentation", lambda: QDesktopServices.openUrl(QUrl(WEBSITE_DOCS_URL))))
         page_layout.addLayout(links_layout)
         page_layout.addStretch(3)

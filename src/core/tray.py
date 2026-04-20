@@ -17,7 +17,7 @@ from core.utils.win32.utils import apply_qmenu_style, disable_autostart, enable_
 from settings import (
     APP_NAME,
     DEFAULT_CONFIG_DIRECTORY,
-    GITHUB_URL,
+    GITHUB_WIKI_URL,
     SCRIPT_PATH,
 )
 
@@ -195,7 +195,7 @@ class SystemTrayManager(QSystemTrayIcon):
                 enable_startup_action.triggered.connect(self._enable_startup)
 
         help_action = self.menu.addAction("Help")
-        help_action.triggered.connect(lambda: self._open_in_browser(f"{GITHUB_URL}/wiki"))
+        help_action.triggered.connect(lambda: self._open_in_browser(GITHUB_WIKI_URL))
 
         about_action = self.menu.addAction("About")
         about_action.triggered.connect(self._show_about_dialog)
