@@ -45,6 +45,7 @@ dependencies = [
     "winrt.windows.ui.notifications.management==3.2.1",
     "winrt.windows.devices.wifi==3.2.1",
     "winrt.windows.security.credentials==3.2.1",
+    "qt-css-engine @ git+https://github.com/Video-Nomad/qt-css-engine",
 ]
 
 [project.urls]
