@@ -87,7 +87,7 @@ jobs:
           path: src/core/widgets/services/systray/hook
 
       - name: Show built files
-        run: dir src\\core\\utils\\widgets\\systray\\hook\\YASBTrayHook*.dll
+        run: dir src\\core\\widgets\\services\\systray\\hook\\YASBTrayHook*.dll
 
       - name: Commit built DLLs (if changed)
         shell: bash
