@@ -10,9 +10,6 @@
 | `histogram_num_columns` | integer | `10`                                                                    | The number of columns in the histogram.                                     |
 | `callbacks`           | dict    | `{'on_left': 'toggle_label', 'on_middle': 'do_nothing', 'on_right': 'do_nothing'}` | Callback functions for different mouse button actions.                      |
 | `cpu_thresholds` | dict  | `{'low': 25, 'medium': 50, 'high': 90}`                                 | Thresholds for CPU usage levels. |
-| `animation`         | dict    | `{'enabled': true, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
-| `container_shadow`   | dict   | `None`                  | Container shadow options.                       |
-| `label_shadow`         | dict   | `None`                  | Label shadow options.                 |
 | `progress_bar`       | dict    | `{'enabled': false, 'position': 'left', 'size': 14, 'thickness': 2, 'color': '#57948a', 'animation': false}` | Progress bar settings.                                                      |
 | `hide_decimal`       | bool    | `false`                                                                 | Whether to hide decimal places in the CPU widget.                          |
 | `menu`               | dict    | See below                                                               | Configuration for the popup menu with graph and stats. |
@@ -44,11 +41,6 @@ cpu:
     callbacks:
       on_left: "toggle_label"
       on_right: "toggle_menu"
-    label_shadow:
-      enabled: true
-      color: "black"
-      radius: 3
-      offset: [ 1, 1 ]
     menu:
       enabled: true
       show_graph: true
@@ -67,9 +59,6 @@ cpu:
 - **histogram_icons**: A list of icons representing different levels of CPU usage in the histogram. 8 icons are typically used, representing usage from 0% to 80%+.
 - **histogram_num_columns**: The number of columns to display in the CPU usage histogram.
 - **callbacks**: A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions.
-- **animation:** A dictionary specifying the animation settings for the widget. It contains three keys: `enabled`, `type`, and `duration`. The `type` can be `fadeInOut` and the `duration` is the animation duration in milliseconds.
-- **container_shadow:** Container shadow options.
-- **label_shadow:** Label shadow options.
 - **progress_bar**: A dictionary containing settings for the progress bar. It includes:
   - **enabled**: Whether the progress bar is enabled.
   - **position**: The position of the progress bar, either "left" or "right".

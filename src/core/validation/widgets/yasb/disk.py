@@ -3,11 +3,9 @@ from typing import Literal
 from pydantic import Field
 
 from core.validation.widgets.base_model import (
-    AnimationConfig,
     CallbacksConfig,
     CustomBaseModel,
     KeybindingConfig,
-    ShadowConfig,
 )
 
 
@@ -53,9 +51,6 @@ class DiskConfig(CustomBaseModel):
     decimal_display: int = Field(default=1, ge=0, le=3)
     disk_thresholds: DiskThresholdsConfig = DiskThresholdsConfig()
     group_label: GroupLabelConfig = GroupLabelConfig()
-    animation: AnimationConfig = AnimationConfig()
-    label_shadow: ShadowConfig = ShadowConfig()
-    container_shadow: ShadowConfig = ShadowConfig()
     progress_bar: ProgressBarConfig = ProgressBarConfig()
     keybindings: list[KeybindingConfig] = []
     callbacks: CallbacksDiskConfig = CallbacksDiskConfig()

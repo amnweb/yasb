@@ -10,7 +10,6 @@ from PyQt6.QtGui import QMouseEvent
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QWidget
 
 from core.events.service import EventService
-from core.utils.utilities import add_shadow
 from core.utils.win32.system_function import function_map
 from core.widgets.registry import register_widget_class
 
@@ -137,15 +136,13 @@ class BaseWidget(QWidget):
     def _cb_do_nothing(self):
         pass
 
-    def _init_container(self, container_shadow: dict[str, Any] | None = None):
+    def _init_container(self):
         self._widget_container_layout = QHBoxLayout()
         self._widget_container_layout.setSpacing(0)
         self._widget_container_layout.setContentsMargins(0, 0, 0, 0)
         self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
-        if container_shadow:
-            add_shadow(self._widget_container, container_shadow)
         self.widget_layout.addWidget(self._widget_container)
         self._widgets: list[QLabel] = []
         self._widgets_alt: list[QLabel] = []
@@ -154,7 +151,6 @@ class BaseWidget(QWidget):
         self,
         content: str,
         content_alt: str | None = None,
-        content_shadow: dict[str, Any] | None = None,
     ):
         def process_content(content: str, is_alt: bool = False) -> list[QLabel]:
             label_parts = re.split("(<span.*?>.*?</span>)", content)
@@ -174,9 +170,6 @@ class BaseWidget(QWidget):
                     label = QLabel(part)
                     label.setProperty("class", "label alt" if is_alt else "label")
                 label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                label.setCursor(Qt.CursorShape.PointingHandCursor)
-                if content_shadow:
-                    add_shadow(label, content_shadow)
                 self._widget_container_layout.addWidget(label)
                 widgets.append(label)
                 if is_alt:

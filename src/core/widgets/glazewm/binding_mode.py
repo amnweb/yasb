@@ -4,7 +4,6 @@ import re
 from PyQt6.QtCore import pyqtSlot
 from PyQt6.QtWidgets import QLabel
 
-from core.utils.animation_manager import AnimationManager
 from core.utils.utilities import refresh_widget_style
 from core.validation.widgets.glazewm.binding_mode import GlazewmBindingModeConfig
 from core.widgets.base import BaseWidget
@@ -28,12 +27,8 @@ class GlazewmBindingModeWidget(BaseWidget):
         self._binding_modes_to_cycle_through = config.binding_modes_to_cycle_through
         self._current_binding_mode_index = 0
 
-        self._animation = config.animation
-        self._container_shadow = config.container_shadow
-        self._label_shadow = config.label_shadow
-
-        self._init_container(self._container_shadow.model_dump())
-        self.build_widget_label(self._label_content, self._label_alt_content, self._label_shadow.model_dump())
+        self._init_container()
+        self.build_widget_label(self._label_content, self._label_alt_content)
 
         self.glazewm_client = GlazewmClient(
             config.glazewm_server_uri,
@@ -57,8 +52,6 @@ class GlazewmBindingModeWidget(BaseWidget):
         self.hide()
 
     def _toggle_label(self):
-        if self._animation.enabled:
-            AnimationManager.animate(self, self._animation.type, self._animation.duration)
         self._show_alt_label = not self._show_alt_label
         for widget in self._widgets:
             widget.setVisible(not self._show_alt_label)

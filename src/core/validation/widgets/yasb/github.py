@@ -3,10 +3,8 @@ from enum import StrEnum
 from pydantic import Field
 
 from core.validation.widgets.base_model import (
-    AnimationConfig,
     CustomBaseModel,
     KeybindingConfig,
-    ShadowConfig,
 )
 
 
@@ -76,7 +74,4 @@ class GithubConfig(CustomBaseModel):
     notification_dot: NotificationDotConfig = NotificationDotConfig()
     menu: GithubMenuConfig = GithubMenuConfig()
     icons: GithubIconsConfig = GithubIconsConfig()
-    animation: AnimationConfig = AnimationConfig()
-    label_shadow: ShadowConfig = ShadowConfig()
-    container_shadow: ShadowConfig = ShadowConfig()
     keybindings: list[KeybindingConfig] = []

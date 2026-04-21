@@ -36,7 +36,6 @@ from PyQt6.QtWidgets import (
 )
 
 from core.ui.components.loader import LoaderLine
-from core.utils.animation_manager import AnimationManager
 from core.utils.system import app_data_path
 from core.utils.utilities import PopupWidget
 from core.utils.win32.utils import apply_qmenu_style, find_focused_screen
@@ -438,8 +437,8 @@ class QuickLaunchWidget(BaseWidget):
             self.config.providers.model_dump(), self.config.max_results, self.config.show_icons, self.config.icon_size
         )
 
-        self._init_container(self.config.container_shadow.model_dump())
-        self.build_widget_label(self.config.label, None, self.config.label_shadow.model_dump())
+        self._init_container()
+        self.build_widget_label(self.config.label, None)
 
         self.register_callback("toggle_quick_launch", self._toggle_quick_launch)
         self.callback_left = self.config.callbacks.on_left
@@ -447,8 +446,6 @@ class QuickLaunchWidget(BaseWidget):
         self.callback_middle = self.config.callbacks.on_middle
 
     def _toggle_quick_launch(self):
-        if self.config.animation.enabled:
-            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
         active = QuickLaunchWidget._active_instance
         if active is not None and active._popup and active._popup.isVisible() and not active._popup._is_closing:
             active._hide_popup()

@@ -15,7 +15,6 @@ from PyQt6.QtCore import (
     pyqtSlot,
 )
 from PyQt6.QtGui import (
-    QColor,
     QFontMetrics,
     QPainter,
     QPaintEvent,
@@ -24,7 +23,7 @@ from PyQt6.QtGui import (
     QStaticText,
     QTransform,
 )
-from PyQt6.QtWidgets import QApplication, QDialog, QFrame, QGraphicsDropShadowEffect, QLabel, QMenu, QWidget
+from PyQt6.QtWidgets import QApplication, QDialog, QFrame, QLabel, QMenu, QWidget
 from winrt.windows.data.xml.dom import XmlDocument
 from winrt.windows.ui.notifications import ToastNotification, ToastNotificationManager
 
@@ -43,35 +42,6 @@ def is_valid_percentage_str(s: str) -> bool:
 
 def get_screen_by_name(screen_name: str) -> QScreen:
     return next(filter(lambda scr: screen_name in scr.name(), QApplication.screens()), None)
-
-
-def add_shadow(el: QWidget, options: dict[str, Any]) -> None:
-    """ "Add a shadow effect to a given element."""
-    if not options["enabled"]:
-        return
-
-    shadow_effect = QGraphicsDropShadowEffect(el)
-    shadow_effect.setOffset(options["offset"][0], options["offset"][1])
-    shadow_effect.setBlurRadius(options["radius"])
-
-    color = options["color"]
-    if color.startswith("#"):
-        color = color.lstrip("#")
-        # Handle hex with alpha (#RRGGBBAA format)
-        if len(color) == 8:
-            r = int(color[0:2], 16)
-            g = int(color[2:4], 16)
-            b = int(color[4:6], 16)
-            a = int(color[6:8], 16)
-            shadow_effect.setColor(QColor(r, g, b, a))
-        else:
-            # Regular hex color without alpha
-            shadow_effect.setColor(QColor("#" + color))
-    else:
-        # Named colors like "black", "red", etc.
-        shadow_effect.setColor(QColor(color))
-
-    el.setGraphicsEffect(shadow_effect)
 
 
 def refresh_widget_style(*widgets: QWidget) -> None:

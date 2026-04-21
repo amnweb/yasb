@@ -1,7 +1,6 @@
 import time
 
 from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtGui import QCursor
 from PyQt6.QtWidgets import QGraphicsOpacityEffect, QLabel
 
 from core.utils.tooltip import set_tooltip
@@ -66,7 +65,6 @@ class ObsWidget(BaseWidget):
         self._record_btn = QLabel(self._icons["stopped"])
         self._record_btn.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._record_btn.setProperty("class", "icon record stopped")
-        self._record_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self._record_btn.mousePressEvent = lambda e: (
             self.toggle_record() if e.button() == Qt.MouseButton.LeftButton else None
         )
@@ -81,7 +79,6 @@ class ObsWidget(BaseWidget):
         self._virtual_cam_btn = QLabel(self._icons["virtual_cam_off"])
         self._virtual_cam_btn.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._virtual_cam_btn.setProperty("class", "icon virtual-cam off")
-        self._virtual_cam_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self._virtual_cam_btn.mousePressEvent = lambda e: (
             self.toggle_virtual_cam() if e.button() == Qt.MouseButton.LeftButton else None
         )
@@ -95,7 +92,6 @@ class ObsWidget(BaseWidget):
         self._studio_mode_btn = QLabel(self._icons["studio_mode_off"])
         self._studio_mode_btn.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._studio_mode_btn.setProperty("class", "icon studio-mode off")
-        self._studio_mode_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self._studio_mode_btn.mousePressEvent = lambda e: (
             self.toggle_studio_mode() if e.button() == Qt.MouseButton.LeftButton else None
         )
@@ -109,7 +105,6 @@ class ObsWidget(BaseWidget):
         self._stream_btn = QLabel(self._icons["streaming_stopped"])
         self._stream_btn.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._stream_btn.setProperty("class", "icon stream off")
-        self._stream_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self._stream_btn.mousePressEvent = lambda e: (
             self.toggle_stream() if e.button() == Qt.MouseButton.LeftButton else None
         )

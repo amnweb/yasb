@@ -14,9 +14,6 @@
 | `hide_empty_workspaces`  | boolean | `false`      | Whether to hide empty workspaces.                                           |
 | `enable_scroll_switching` | boolean | `false`      | Enable scroll switching between workspaces.                                 |
 | `reverse_scroll_direction` | boolean | `false`      | Reverse scroll direction.                                                  |
-| `animation`  | boolean | `false`      | Button animation.                                           |
-| `container_shadow`      | dict    | `None`                  | Container shadow options.                                |
-| `btn_shadow`            | dict    | `None`                  | Workspace button shadow options.                         |
 
 ## Example Configuration
 
@@ -32,7 +29,6 @@ komorebi_workspaces:
     label_zero_index: false
     hide_empty_workspaces: false
     hide_if_offline: false
-    animation: true
     toggle_workspace_layer:
       enabled: false
       tiling_label: "Tiling"
@@ -45,11 +41,6 @@ komorebi_workspaces:
       hide_label: false
       hide_duplicates: false
       hide_floating: false
-    btn_shadow:
-      enabled: true
-      color: "black"
-      radius: 3
-      offset: [ 1, 1 ]
 ```
 
 ## Description of Options
@@ -76,10 +67,6 @@ komorebi_workspaces:
 - **hide_empty_workspaces:** Whether to hide empty workspaces.
 - **enable_scroll_switching:** Enable scroll switching between workspaces.
 - **reverse_scroll_direction:** Reverse scroll direction.
-- **animation:** Buttons animation.
-- **container_shadow:** Container shadow options.
-- **btn_shadow:** Workspace button shadow options.
-- **label_shadow:** Label shadow options for labels.
 
 ## Style
 ```css

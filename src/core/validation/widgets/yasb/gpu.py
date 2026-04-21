@@ -3,11 +3,9 @@ from typing import Literal
 from pydantic import Field
 
 from core.validation.widgets.base_model import (
-    AnimationConfig,
     CallbacksConfig,
     CustomBaseModel,
     KeybindingConfig,
-    ShadowConfig,
 )
 
 
@@ -74,9 +72,6 @@ class GpuConfig(CustomBaseModel):
     hide_decimal: bool = False
     units: Literal["metric", "imperial"] = "metric"
     gpu_thresholds: GpuThresholdsConfig = GpuThresholdsConfig()
-    animation: AnimationConfig = AnimationConfig()
-    label_shadow: ShadowConfig = ShadowConfig()
-    container_shadow: ShadowConfig = ShadowConfig()
     progress_bar: ProgressBarConfig = ProgressBarConfig()
     menu: GpuMenuConfig = GpuMenuConfig()
     keybindings: list[KeybindingConfig] = []

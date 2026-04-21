@@ -13,9 +13,6 @@
 | `monitor_exclusive` | boolean | `true`                                                                  | Whether the widget should be exclusive to the monitor.                      |
 | `ignore_window`    | dict    | `{'classes': [], 'processes': [], 'titles': []}`                        | Windows to ignore based on class names, process names, and titles.          |
 | `callbacks`         | dict    | `{'on_left': 'toggle_label', 'on_middle': 'do_nothing', 'on_right': 'do_nothing'}` | Callbacks for mouse events on the widget.                        |
-| `animation`         | dict    | `{'enabled': true, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
-| `container_shadow`   | dict   | `None`                  | Container shadow options.                       |
-| `label_shadow`         | dict   | `None`                  | Label shadow options.                 |
 | `rewrite`           | dict | [See below](#rewrite-options)                                                                  | Rewrite options for the widget. |
 
 ## Example Configuration
@@ -32,11 +29,6 @@ active_window:
     max_length: 56
     max_length_ellipsis: "..."
     monitor_exclusive: true
-    label_shadow:
-      enabled: true
-      color: "black"
-      radius: 3
-      offset: [ 1, 1 ]
 
 ```
 
@@ -52,9 +44,6 @@ active_window:
 - **monitor_exclusive:** A boolean indicating whether the widget should be exclusive to a single monitor.
 - **ignore_window:** A dictionary specifying which windows to ignore. It contains three lists: classes, processes, and titles.
 - **callbacks:** A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions.
-- **animation:** A dictionary specifying the animation settings for the widget. It contains three keys: `enabled`, `type`, and `duration`. The `type` can be `fadeInOut` and the `duration` is the animation duration in milliseconds.
-- **container_shadow:** Container shadow options.
-- **label_shadow:** Label shadow options.
 - **rewrite:** A dictionary containing rewrite options for the widget. Rewrite rules are applied to `title`, `process.name`, and `app_name`. See [Rewrite Options](#rewrite-options) below.
 
 ## Label Format Placeholders

@@ -6,9 +6,7 @@ import threading
 from PyQt6.QtCore import QObject, Qt, pyqtSignal
 from PyQt6.QtWidgets import QLabel
 
-from core.utils.animation_manager import AnimationManager
 from core.utils.tooltip import set_tooltip
-from core.utils.utilities import add_shadow
 from core.utils.win32.system_function import function_map
 from core.validation.widgets.yasb.custom import CustomConfig
 from core.widgets.base import BaseWidget
@@ -77,7 +75,7 @@ class CustomWidget(BaseWidget):
         self._worker = None  # Keep reference to worker for cleanup
 
         # Construct container
-        self._init_container(self.config.container_shadow.model_dump())
+        self._init_container()
 
         self.register_callback("toggle_label", self._toggle_label)
         self.register_callback("exec_custom", self._exec_callback)
@@ -94,13 +92,7 @@ class CustomWidget(BaseWidget):
         else:
             self.start_timer()
 
-    def _set_cursor(self, label):
-        if any(cb != "do_nothing" for cb in [self.callback_left, self.callback_right, self.callback_middle]):
-            label.setCursor(Qt.CursorShape.PointingHandCursor)
-
     def _toggle_label(self):
-        if self.config.animation.enabled:
-            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
         self._show_alt_label = not self._show_alt_label
         for widget in self._widgets:
             widget.setVisible(not self._show_alt_label)
@@ -127,8 +119,7 @@ class CustomWidget(BaseWidget):
                     label.setProperty("class", "label alt" if is_alt else "label")
                     label.setText(self.config.label_placeholder)
                 label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                self._set_cursor(label)
-                add_shadow(label, self.config.label_shadow.model_dump())
+
                 self._widget_container_layout.addWidget(label)
                 widgets.append(label)
                 if is_alt:

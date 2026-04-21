@@ -1,11 +1,9 @@
 from pydantic import Field
 
 from core.validation.widgets.base_model import (
-    AnimationConfig,
     CallbacksConfig,
     CustomBaseModel,
     KeybindingConfig,
-    ShadowConfig,
 )
 
 
@@ -47,8 +45,5 @@ class BatteryConfig(CustomBaseModel):
     charging_options: ChargingOptionsConfig = ChargingOptionsConfig()
     status_thresholds: StatusThresholdsConfig = StatusThresholdsConfig()
     status_icons: StatusIconsConfig = StatusIconsConfig()
-    animation: AnimationConfig = AnimationConfig()
-    label_shadow: ShadowConfig = ShadowConfig()
-    container_shadow: ShadowConfig = ShadowConfig()
     keybindings: list[KeybindingConfig] = []
     callbacks: CallbacksBatteryConfig = CallbacksBatteryConfig()

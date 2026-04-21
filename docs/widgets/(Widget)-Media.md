@@ -6,7 +6,6 @@
 | `label_alt`                           | string    | `"{title}"`                                               | The alternative label format for the media widget.                  |
 | `separator`                           | string    | `" - "`                                                   | The dynamic separator. Automatically stripped. More below.          |
 | `class_name`                          | string    | `""`                                                      | The custom CSS class name for the widget.                           |
-| `label_shadow`                        | boolean   | false                                                     | Whether to show a shadow effect on the label.                       |
 | `max_field_size`                      | dict      |                                                           | Maximum field sizes for labels.                                     |
 | `max_field_size.label`                | integer   | 20                                                        | Maximum size for the main label.                                    |
 | `max_field_size.label_alt`            | integer   | 30                                                        | Maximum size for the alternative label.                             |
@@ -26,9 +25,6 @@
 | `icons.next_track`                    | string    | `\uf051`                                                  | Icon for the next track button.                                     |
 | `icons.play`                          | string    | `\uf04b`                                                  | Icon for the play button.                                           |
 | `icons.pause`                         | string    | `\uf04c`                                                  | Icon for the pause button.                                          |
-| `animation`                           | dict      | `{'enabled': true, 'type': 'fadeInOut', 'duration': 200}` | Animation settings for the widget.                                  |
-| `container_shadow`                    | dict      | [See below](#label-and-container-shadow)                  | Container shadow options.                                           |
-| `label_shadow`                        | dict      | [See below](#label-and-container-shadow)                  | Label shadow options.                                               |
 | `media_menu`                          | dict      | [See below](#media-menu-options)                          | Media menu popup.                                                   |
 | `media_menu_icons`                    | dict      | [See below](#media-menu-icons)                            | Media menu icons for popup.                                         |
 | `scrolling_label`                     | dict      | [See below](#scrolling-label)                             | Widget label scrolling options                                      |
@@ -94,11 +90,6 @@ media:
       ease_slope: 20
       ease_pos: 0.8
       ease_min: 0.5
-    label_shadow:
-      enabled: true
-      color: "black"
-      radius: 3
-      offset: [ 1, 1 ]
 ```
 ## Media Menu Options
 ```yaml
@@ -150,21 +141,6 @@ media:
       alignment: "bottom"  # The alignment of the progress bar inside the widget container. Can be "top", "bottom", or "center".
 ```
 
-## Label and Container Shadow
-```yaml
-    container_shadow:
-      enabled: false  # Whether to enable the container shadow.
-      color: "black"  # The color of the shadow. Can be a HEX value or color name.
-      radius: 3       # The blur radius of the shadow.
-      offset: [1, 1]  # The offset of the shadow in the format [x, y].
-
-    label_shadow:
-      enabled: false  # Whether to enable the label shadow.
-      color: "black"  # The color of the shadow. Can be a HEX value or color name.
-      radius: 3       # The blur radius of the shadow.
-      offset: [1, 1]  # The offset of the shadow in the format [x, y].
-```
-
 ## Available Callbacks
 - `toggle_label`: Toggles the visibility of the label.
 - `toggle_play_pause`: Toggles between play and pause states.
@@ -197,17 +173,6 @@ media:
   - **next_track:** Icon for the next track button.
   - **play:** Icon for the play button.
   - **pause:** Icon for the pause button.
-- **animation:** A dictionary specifying the animation settings for the widget. It contains three keys: `enabled`, `type`, and `duration`. The `type` can be `fadeInOut` and the `duration` is the animation duration in milliseconds.
-- **container_shadow:** Container shadow options.
-  - **enabled:** Whether to enable the container shadow.
-  - **color:** The color of the shadow. Can be a HEX value or color name
-  - **radius:** The blur radius of the shadow.
-  - **offset:** The offset of the shadow in the format [x, y].
-- **label_shadow:** Label shadow options.
-  - **enabled:** Whether to enable the label shadow.
-  - **color:** The color of the shadow. Can be a HEX value or color name
-  - **radius:** The blur radius of the shadow.
-  - **offset:** The offset of the shadow in the format [x, y].
 - **media_menu:** A dictionary specifying the media menu popup options.
   - **blur:** Whether to apply a blur effect to the popup background.
   - **round_corners:** Whether to round the corners of the popup.

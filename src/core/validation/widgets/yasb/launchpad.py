@@ -4,7 +4,6 @@ from core.validation.widgets.base_model import (
     CallbacksConfig,
     CustomBaseModel,
     KeybindingConfig,
-    ShadowConfig,
 )
 
 
@@ -25,12 +24,6 @@ class WindowStyleConfig(CustomBaseModel):
     round_corners: bool = True
     round_corners_type: Literal["normal", "sharp"] = "normal"
     border_color: str = "system"
-
-
-class AnimationConfig(CustomBaseModel):
-    enabled: bool = True
-    type: str = "fadeInOut"
-    duration: int = 200
 
 
 class ShortcutsConfig(CustomBaseModel):
@@ -54,11 +47,6 @@ class LaunchpadConfig(CustomBaseModel):
     window: WindowConfig = WindowConfig()
     window_animation: WindowAnimationConfig = WindowAnimationConfig()
     window_style: WindowStyleConfig = WindowStyleConfig()
-    animation: AnimationConfig = AnimationConfig()
     shortcuts: ShortcutsConfig = ShortcutsConfig()
-    label_shadow: ShadowConfig = ShadowConfig()
-    container_shadow: ShadowConfig = ShadowConfig()
-    app_title_shadow: ShadowConfig = ShadowConfig()
-    app_icon_shadow: ShadowConfig = ShadowConfig()
     keybindings: list[KeybindingConfig] = []
     callbacks: LaunchpadCallbacksConfig = LaunchpadCallbacksConfig()

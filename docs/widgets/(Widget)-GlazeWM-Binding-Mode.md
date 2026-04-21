@@ -11,9 +11,6 @@
 | `icons` | dict | `{'none': '', 'resize': '\uf071', 'pause': '\uf28c'}` | Specified icons for each Binding Mode; if a binding mode is not specified then the `default_icon` will be used. |
 | `binding_modes_to_cycle_through` | list | `['none', 'resize', 'pause']` | Binding Mode names to cycle through with callbacks `next_binding_mode` and `prev_binding_mode` |
 | `callbacks` | dict | `{'on_left': 'next_binding_mode', 'on_middle': 'toggle_label', 'on_right': 'disable_binding_mode'}` | Callbacks for mouse events on the widget. |
-| `animation` | dict | `{'enabled': true, 'type': 'fadeInOut', 'duration': 200}` | Animation settings for the widget. |
-| `container_shadow` | dict   | `None` | Container shadow options. |
-| `label_shadow` | dict | `None` | Label shadow options. |
 
 ## Example Configuration
 
@@ -57,9 +54,6 @@ glazewm_binding_mode:
     - `disable_binding_mode`: Disables the binding mode when clicked.
     - `next_binding_mode`: Switches to the next binding mode.
     - `prev_binding_mode`: Switches to the previous binding mode.
-- **animation:** A dictionary specifying the animation settings for the widget. It contains three keys: `enabled`, `type`, and `duration`. The `type` can be `fadeInOut` and the `duration` is the animation duration in milliseconds.
-- **container_shadow:** Container shadow options.
-- **label_shadow:** Label shadow options.
 
 ## Note on Binding Mode Names
 If you need a custom name for each binding mode - use "display_name".

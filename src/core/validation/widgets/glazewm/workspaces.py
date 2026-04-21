@@ -1,4 +1,4 @@
-from core.validation.widgets.base_model import CustomBaseModel, ShadowConfig
+from core.validation.widgets.base_model import CustomBaseModel
 
 
 class AppIconsConfig(CustomBaseModel):
@@ -25,8 +25,4 @@ class GlazewmWorkspacesConfig(CustomBaseModel):
     glazewm_server_uri: str = "ws://localhost:6123"
     enable_scroll_switching: bool = True
     reverse_scroll_direction: bool = False
-    container_shadow: ShadowConfig = ShadowConfig()
-    btn_shadow: ShadowConfig = ShadowConfig()
-    label_shadow: ShadowConfig = ShadowConfig()
     app_icons: AppIconsConfig = AppIconsConfig()
-    animation: bool = False

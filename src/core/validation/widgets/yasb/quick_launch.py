@@ -3,11 +3,9 @@ from typing import Literal
 from pydantic import Field
 
 from core.validation.widgets.base_model import (
-    AnimationConfig,
     CallbacksConfig,
     CustomBaseModel,
     KeybindingConfig,
-    ShadowConfig,
 )
 
 
@@ -257,8 +255,5 @@ class QuickLaunchConfig(CustomBaseModel):
     compact_text: bool = False
     providers: QuickLaunchProvidersConfig = QuickLaunchProvidersConfig()
     popup: QuickLaunchPopupConfig = QuickLaunchPopupConfig()
-    animation: AnimationConfig = AnimationConfig()
-    label_shadow: ShadowConfig = ShadowConfig()
-    container_shadow: ShadowConfig = ShadowConfig()
     keybindings: list[KeybindingConfig] = []
     callbacks: QuickLaunchCallbacksConfig = QuickLaunchCallbacksConfig()

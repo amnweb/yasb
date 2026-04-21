@@ -3,11 +3,9 @@ from typing import Literal
 from pydantic import Field
 
 from core.validation.widgets.base_model import (
-    AnimationConfig,
     CallbacksConfig,
     CustomBaseModel,
     KeybindingConfig,
-    ShadowConfig,
 )
 
 
@@ -64,9 +62,6 @@ class PomodoroConfig(CustomBaseModel):
     session_target: int = Field(default=0, ge=0)
     hide_on_break: bool = False
     icons: IconsConfig = IconsConfig()
-    animation: AnimationConfig = AnimationConfig()
-    label_shadow: ShadowConfig = ShadowConfig()
-    container_shadow: ShadowConfig = ShadowConfig()
     progress_bar: ProgressBarConfig = ProgressBarConfig()
     keybindings: list[KeybindingConfig] = []
     callbacks: CallbacksPomodoroConfig = CallbacksPomodoroConfig()

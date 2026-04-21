@@ -16,9 +16,6 @@
 | `max_field_size`    | integer | `100` | The maximum number of characters in the title before truncation.                                                |
 | `menu`              | dict    | `{'blur': true, 'round_corners': true, 'round_corners_type': 'normal', 'border_color': 'System', 'alignment': 'right', 'direction': 'down', 'offset_top': 6, 'offset_left': 0, 'show_categories': true, 'categories_order': []}` | Menu settings for the widget.                                                                                   |
 | `icons`             | dict    | `{'issue': '\uf41b', 'issue_closed': '\uf41d', 'pull_request': '\uea64', 'pull_request_closed': '\uebda', 'pull_request_merged': '\uf17f', 'pull_request_draft': '\uebdb', 'release': '\uea84', 'discussion': '\uf442', 'discussion_answered': '\uf4c0', 'checksuite': '\uf418', 'default': '\uea84', 'github_logo': '\uea84', 'comment': '\uf41f'}` | Icons for different types of notifications in the menu.                                                         |
-| `animation`         | dict    | `{'enabled': true, 'type': 'fadeInOut', 'duration': 200}` | Animation settings for the widget. |
-| `container_shadow`  | dict    | `None` | Container shadow options.                                                                                       |
-| `label_shadow`      | dict    | `None` | Label shadow options.                                                                                           |
 
 ```yaml
 github:
@@ -47,11 +44,6 @@ github:
       direction: "down"
       show_categories: false
       categories_order: ["PullRequest", "Issue", "CheckSuite", "Release", "Discussion"]
-    label_shadow:
-      enabled: True
-      color: "black"
-      radius: 3
-      offset: [ 1, 1 ]
 ```
 ## Description of Options
 
@@ -98,10 +90,6 @@ github:
   - **categories_order:** Optional list that defines the preferred order of categories when `show_categories` is enabled. Values are case-insensitive and must match GitHub notification types (for example `PullRequest`, `Issue`). Any categories not listed appear after the configured ones. Available categories include `PullRequest`, `Issue`, `CheckSuite`, `Release`, and `Discussion`.
   
   When `show_categories` is enabled, the first and last notification card within each section gains the `.first` and `.last` classes. If categories are hidden, those classes are applied to the first and last items in the flat list instead. Use them to fine-tune spacing or borders.
-
-- **animation:** A dictionary specifying the animation settings for the widget. It contains three keys: `enabled`, `type`, and `duration`. The `type` can be `fadeInOut` and the `duration` is the animation duration in milliseconds.
-- **container_shadow:** Container shadow options.
-- **label_shadow:** Label shadow options.
 
 ## Authentication
 

@@ -5,7 +5,6 @@ from PyQt6.QtCore import QRect, Qt
 from PyQt6.QtGui import QWheelEvent
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QSlider, QVBoxLayout, QWidget
 
-from core.utils.animation_manager import AnimationManager
 from core.utils.qobject import is_valid_qobject
 from core.utils.tooltip import CustomToolTip, set_tooltip
 from core.utils.utilities import (
@@ -30,8 +29,8 @@ class MicrophoneWidget(BaseWidget):
 
         self.progress_widget = build_progress_widget(self, self.config.progress_bar.model_dump())
 
-        self._init_container(self.config.container_shadow.model_dump())
-        self.build_widget_label(self.config.label, self.config.label_alt, self.config.label_shadow.model_dump())
+        self._init_container()
+        self.build_widget_label(self.config.label, self.config.label_alt)
 
         self.register_callback("toggle_label", self._toggle_label)
         self.register_callback("toggle_mute", self.toggle_mute)
@@ -67,8 +66,6 @@ class MicrophoneWidget(BaseWidget):
         self._update_label()
 
     def _toggle_label(self):
-        if self.config.animation.enabled:
-            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
         self._show_alt_label = not self._show_alt_label
         for widget in self._widgets:
             widget.setVisible(not self._show_alt_label)
@@ -215,8 +212,6 @@ class MicrophoneWidget(BaseWidget):
         return mic_icon
 
     def toggle_mute(self):
-        if self.config.animation.enabled:
-            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
         if self.audio_endpoint is None:
             return
         try:

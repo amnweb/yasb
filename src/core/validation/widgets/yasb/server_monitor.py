@@ -3,11 +3,9 @@ import logging
 from pydantic import Field, field_validator
 
 from core.validation.widgets.base_model import (
-    AnimationConfig,
     CallbacksConfig,
     CustomBaseModel,
     KeybindingConfig,
-    ShadowConfig,
 )
 
 logger = logging.getLogger("deprecation")
@@ -73,8 +71,5 @@ class ServerMonitorConfig(CustomBaseModel):
     timeout: int = Field(default=5, ge=1, le=30)
     menu: MenuConfig = MenuConfig()
     icons: IconsConfig = IconsConfig()
-    animation: AnimationConfig = AnimationConfig()
-    label_shadow: ShadowConfig = ShadowConfig()
-    container_shadow: ShadowConfig = ShadowConfig()
     keybindings: list[KeybindingConfig] = []
     callbacks: ServerMonitorCallbacksConfig = ServerMonitorCallbacksConfig()

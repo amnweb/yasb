@@ -19,9 +19,8 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from core.utils.animation_manager import AnimationManager
 from core.utils.tooltip import set_tooltip
-from core.utils.utilities import PopupWidget, add_shadow, refresh_widget_style
+from core.utils.utilities import PopupWidget, refresh_widget_style
 from core.validation.widgets.yasb.open_meteo import OpenMeteoWidgetConfig
 from core.widgets.base import BaseWidget
 from core.widgets.services.open_meteo.api import GeocodingFetcher, OpenMeteoDataFetcher
@@ -79,7 +78,7 @@ class OpenMeteoWidget(BaseWidget):
         self._retry_timer.timeout.connect(self._retry_fetch)
 
         # Construct container
-        self._init_container(config.container_shadow.model_dump())
+        self._init_container()
         self._create_dynamically_label(self._label_content, self._label_alt_content)
 
         self.register_callback("toggle_label", self._toggle_label)
@@ -181,8 +180,6 @@ class OpenMeteoWidget(BaseWidget):
             fetcher.make_request()
 
     def _toggle_label(self):
-        if self.config.animation.enabled:
-            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
         self._show_alt_label = not self._show_alt_label
         for widget in self._widgets:
             widget.setVisible(not self._show_alt_label)
@@ -191,8 +188,6 @@ class OpenMeteoWidget(BaseWidget):
         self._update_label(update_class=False)
 
     def _toggle_card(self):
-        if self.config.animation.enabled:
-            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
         self._popup_card()
 
     def _popup_card(self):
@@ -387,7 +382,6 @@ class OpenMeteoWidget(BaseWidget):
                 btn = QLabel(icon)
                 btn.setProperty("class", f"hourly-data-button{' active' if data_type == default_data_type else ''}")
                 btn.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                btn.setCursor(Qt.CursorShape.PointingHandCursor)
                 set_tooltip(btn, data_type.capitalize(), delay=400, position="top")
                 buttons_layout.addWidget(btn)
                 buttons.append(btn)
@@ -413,7 +407,6 @@ class OpenMeteoWidget(BaseWidget):
         today_label0 = QLabel(f"{self._weather_data['{location}']} {self._weather_data['{temp}']}")
         today_label0.setProperty("class", "label location")
         today_label0.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        today_label0.setCursor(Qt.CursorShape.PointingHandCursor)
         set_tooltip(today_label0, "Click to change location", delay=400, position="bottom")
 
         today_label0.mousePressEvent = self.reset_location
@@ -639,8 +632,6 @@ class OpenMeteoWidget(BaseWidget):
                     label.setProperty("class", "label alt" if is_alt else "label")
                     label.setText("weather update...")
                 label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                label.setCursor(Qt.CursorShape.PointingHandCursor)
-                add_shadow(label, self.config.label_shadow.model_dump())
                 self._widget_container_layout.addWidget(label)
                 widgets.append(label)
                 if is_alt:

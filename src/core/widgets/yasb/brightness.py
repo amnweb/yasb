@@ -5,7 +5,6 @@ from PyQt6.QtCore import QRect, Qt, QTimer
 from PyQt6.QtGui import QShowEvent, QWheelEvent
 from PyQt6.QtWidgets import QLabel, QSlider, QVBoxLayout
 
-from core.utils.animation_manager import AnimationManager
 from core.utils.tooltip import CustomToolTip, set_tooltip
 from core.utils.utilities import PopupWidget, build_progress_widget
 from core.utils.win32.bindings.user32 import MONITOR_DEFAULTTONEAREST, user32
@@ -40,8 +39,8 @@ class BrightnessWidget(BaseWidget):
         # Build UI
         self.progress_widget = build_progress_widget(self, self.config.progress_bar.model_dump())
 
-        self._init_container(self.config.container_shadow.model_dump())
-        self.build_widget_label(self.config.label, self.config.label_alt, self.config.label_shadow.model_dump())
+        self._init_container()
+        self.build_widget_label(self.config.label, self.config.label_alt)
 
         # Register callbacks
         self.register_callback("toggle_label", self._toggle_label)
@@ -114,8 +113,6 @@ class BrightnessWidget(BaseWidget):
             self._update_label()
 
     def _toggle_label(self):
-        if self.config.animation.enabled:
-            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
         self._show_alt_label = not self._show_alt_label
         for widget in self._widgets:
             widget.setVisible(not self._show_alt_label)
@@ -140,8 +137,6 @@ class BrightnessWidget(BaseWidget):
         self.set_brightness(prev_levels[-1] if prev_levels else levels[-1])
 
     def _toggle_brightness_menu(self):
-        if self.config.animation.enabled:
-            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
         self._show_brightness_menu()
 
     def _update_label(self):

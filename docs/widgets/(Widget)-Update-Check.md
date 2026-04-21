@@ -39,13 +39,6 @@ This widget checks for available updates using Windows Update, Winget, and Scoop
 | `interval`      | integer | `240`      | Check interval in minutes (10 to 10080).                     |
 | `exclude`       | list    | `[]`       | List of packages to exclude (matched against name).          |
 
-## Widget Shadow Options
-| Option          | Type    | Default    | Description                                                  |
-|-----------------|---------|------------|--------------------------------------------------------------|
-| `container_shadow`   | dict   | `None`                  | Container shadow options.                       |
-| `label_shadow`         | dict   | `None`                  | Label shadow options.                 |
-
-
 ## Click Handlers
 - **Left-click** on Winget container: opens a terminal to upgrade all detected Winget packages.
 - **Left-click** on Scoop container: opens a terminal to upgrade all detected Scoop packages.
@@ -73,11 +66,6 @@ update_check:
       label: "<span>\uf0ab</span> {count}"
       interval: 240
       exclude: []
-    label_shadow:
-      enabled: true
-      color: "black"
-      radius: 3
-      offset: [ 1, 1 ]
 ```
 
 ## Available Styles

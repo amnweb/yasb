@@ -3,11 +3,9 @@ from typing import Literal
 from pydantic import Field
 
 from core.validation.widgets.base_model import (
-    AnimationConfig,
     CallbacksConfig,
     CustomBaseModel,
     KeybindingConfig,
-    ShadowConfig,
 )
 
 
@@ -38,9 +36,6 @@ class ActiveWindowConfig(CustomBaseModel):
     max_length_ellipsis: str = "..."
     monitor_exclusive: bool = True
     rewrite: list[RewriteConfig] = []
-    animation: AnimationConfig = AnimationConfig()
     ignore_window: IgnoreWindowConfig = IgnoreWindowConfig()
-    label_shadow: ShadowConfig = ShadowConfig()
-    container_shadow: ShadowConfig = ShadowConfig()
     keybindings: list[KeybindingConfig] = []
     callbacks: ActiveWindowCallbacksConfig = ActiveWindowCallbacksConfig()

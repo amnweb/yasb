@@ -4,11 +4,9 @@ from pydantic import Field
 
 from core.validation.utilities import PreserveOrderMixin
 from core.validation.widgets.base_model import (
-    AnimationConfig,
     CallbacksConfig,
     CustomBaseModel,
     KeybindingConfig,
-    ShadowConfig,
 )
 
 
@@ -50,9 +48,6 @@ class PowerMenuConfig(CustomBaseModel):
     menu_style: Literal["fullscreen", "popup"] = "fullscreen"
     popup: PowerMenuPopupConfig = PowerMenuPopupConfig()
     profile_image_size: int = Field(default=64, ge=16, le=256)
-    label_shadow: ShadowConfig = ShadowConfig()
-    container_shadow: ShadowConfig = ShadowConfig()
-    animation: AnimationConfig = AnimationConfig()
     callbacks: PowerMenuCallbacksConfig = PowerMenuCallbacksConfig()
     keybindings: list[KeybindingConfig] = []
     buttons: PowerMenuButtonsConfig

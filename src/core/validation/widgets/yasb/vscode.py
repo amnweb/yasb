@@ -1,11 +1,9 @@
 from pydantic import Field
 
 from core.validation.widgets.base_model import (
-    AnimationConfig,
     CallbacksConfig,
     CustomBaseModel,
     KeybindingConfig,
-    ShadowConfig,
 )
 
 
@@ -42,8 +40,5 @@ class VSCodeConfig(CustomBaseModel):
     modified_date_format: str = "Date modified: %Y-%m-%d %H:%M"
     cli_command: str = "code"
     menu: VSCodeMenuConfig = VSCodeMenuConfig()
-    animation: AnimationConfig = AnimationConfig()
-    label_shadow: ShadowConfig = ShadowConfig()
-    container_shadow: ShadowConfig = ShadowConfig()
     keybindings: list[KeybindingConfig] = []
     callbacks: CallbacksVSCodeConfig = CallbacksVSCodeConfig()

@@ -101,8 +101,8 @@ class GlucoseMonitor(BaseWidget):
         self._icon_path = os.path.join(SCRIPT_PATH, "assets", "images", "app_transparent.png")
         self._status_data = {}
 
-        self._init_container(self.config.container_shadow.model_dump())
-        self.build_widget_label(self.config.label, self.config.error_label, self.config.label_shadow.model_dump())
+        self._init_container()
+        self.build_widget_label(self.config.label, self.config.error_label)
 
         self.register_callback("open_cgm", self._open_cgm)
 

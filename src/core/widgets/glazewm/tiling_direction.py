@@ -1,13 +1,10 @@
 import logging
 
 from PyQt6.QtCore import (
-    Qt,
     pyqtSlot,  # type: ignore
 )
-from PyQt6.QtGui import QCursor
 from PyQt6.QtWidgets import QHBoxLayout, QPushButton
 
-from core.utils.utilities import add_shadow
 from core.validation.widgets.glazewm.tiling_direction import GlazewmTilingDirectionConfig
 from core.widgets.base import BaseWidget
 from core.widgets.services.glazewm.client import GlazewmClient, TilingDirection
@@ -22,8 +19,6 @@ class GlazewmTilingDirectionWidget(BaseWidget):
         super().__init__(class_name="glazewm-tiling-direction")
         self.horizontal_label = config.horizontal_label
         self.vertical_label = config.vertical_label
-        self.container_shadow = config.container_shadow.model_dump()
-        self.btn_shadow = config.btn_shadow.model_dump()
         self.current_tiling_direction = TilingDirection.HORIZONTAL
 
         self.workspace_container_layout = QHBoxLayout()
@@ -36,12 +31,7 @@ class GlazewmTilingDirectionWidget(BaseWidget):
         self.tiling_direction_button.setLayout(self.workspace_container_layout)
         self.tiling_direction_button.clicked.connect(self.toggle_tiling_direction)  # type: ignore
 
-        add_shadow(self._widget_frame, self.container_shadow)
-        add_shadow(self.tiling_direction_button, self.btn_shadow)
-
         self.widget_layout.addWidget(self.tiling_direction_button)
-
-        self.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
 
         self.glazewm_client = GlazewmClient(
             config.glazewm_server_uri,

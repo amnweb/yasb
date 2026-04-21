@@ -18,11 +18,7 @@
 | `hide_icons`                | list      | `[]`          | List of process names to hide from the systray (exact match, case-insensitive).                                               |
 | `tooltip`                   | boolean   | `true`        | Whether to show tooltips when hovering over systray icons.                                                                    |
 | `use_hook`                  | boolean   | `false`       | Whether to use the systray hook. Default is false. False will use legacy systray monitor, true will use the new systray hook. |
-| `container_shadow`          | dict      | `None`        | Container shadow options.                                                                                                     |
-| `unpinned_shadow`           | dict      | `None`        | Unpinned container shadow options.                                                                                            |
-| `pinned_shadow`             | dict      | `None`        | Pinned container shadow options.                                                                                              |
-| `unpinned_vis_btn_shadow`   | dict      | `None`        | Unpinned visibility button shadow options.                                                                                    |
-| `btn_shadow`                | dict      | `None`        | Systray button (icons) shadow options.                                                                                        |
+
 
 ### Popup Options
 | Option                 | Type      | Default      | Description                                                                  |
@@ -55,11 +51,6 @@ systray:
     show_network: false
     use_hook: false # Whether to use the new systray hook instead of the legacy systray monitor
     hide_icons: [] # Optional, list of process names to hide (e.g. ["discord"])
-    btn_shadow:
-      enabled: true
-      color: "black"
-      radius: 3
-      offset: [ 1, 1 ]
 ```
 
 ## Example Popup Mode Configuration
@@ -87,12 +78,6 @@ systray:
       offset_left: 0
 ```
 
-## Note on Shadows
-`container_shadow` is applied to the container if it's not transparent.
-If it is transparent, container shadows will be applied to the child container and buttons instead.
-This can cause double shadows if you already have shadows applied to the child container and buttons.
-Apply the shadows only to the container that is actually visible.
-
 ## Systray Widget Limitations:
 There are some limitations with the systray widget:
 - Systray widget will not show icons for apps if they ignore "TaskbarCreated" message. Meaning that if the original developers decided to ignore this message - their systray icons will not be shown. It's rare, but there are such cases (NVIDIA App for example). This is NOT a YASB bug.
@@ -119,11 +104,6 @@ The systray hook is a more reliable and performant way to monitor systray icons.
 - **hide_icons:** A list of process names to hide from the systray. Each entry is matched exactly (case-insensitive) against the executable name without extension. For example, to hide Discord set `hide_icons: ["discord"]` which matches `Discord.exe`.
 - **tooltip:** Whether to show tooltips when hovering over systray icons.
 - **use_hook:** Whether to use the systray hook. Default is false. False will use legacy systray monitor, true will use the new systray hook.
-- **container_shadow:** Container shadow options.
-- **unpinned_shadow:** Unpinned container shadow options.
-- **pinned_shadow:** Pinned container shadow options.
-- **unpinned_vis_btn_shadow:** Unpinned visibility button shadow options.
-- **btn_shadow:** Systray button (icons) shadow options.
 
 ## Debug Options
 Show unpinned button has a right click menu that allows you to refresh the systray icons.

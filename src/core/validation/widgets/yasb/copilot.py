@@ -1,9 +1,7 @@
 from core.validation.widgets.base_model import (
-    AnimationConfig,
     CallbacksConfig,
     CustomBaseModel,
     KeybindingConfig,
-    ShadowConfig,
 )
 
 
@@ -45,8 +43,5 @@ class CopilotConfig(CustomBaseModel):
     icons: CopilotIconsConfig = CopilotIconsConfig()
     thresholds: CopilotThresholdsConfig = CopilotThresholdsConfig()
     menu: CopilotMenuConfig = CopilotMenuConfig()
-    animation: AnimationConfig = AnimationConfig()
-    label_shadow: ShadowConfig = ShadowConfig()
-    container_shadow: ShadowConfig = ShadowConfig()
     keybindings: list[KeybindingConfig] = []
     callbacks: CopilotCallbacksConfig = CopilotCallbacksConfig()

@@ -12,9 +12,6 @@
 | `show_version`    | boolean | `false`                                                                  | Whether to show the komorebi version.                                          |
 | `komorebi_menu`   | dict | `{'blur': true, 'round_corners': true, 'round_corners_type': 'normal','border_color': 'System', 'alignment': 'right', 'direction': 'down', 'offset_top': 6, 'offset_left': 0}` | Settings for the Komorebi menu. |
 | `callbacks`       | dict    | `{'on_left': 'toggle_menu', 'on_middle': 'do_nothing', 'on_right': 'do_nothing'}` | Callbacks for mouse events. |
-| `animation`         | dict    | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
-| `container_shadow`   | dict   | `None`                  | Container shadow options.                       |
-| `label_shadow`         | dict   | `None`                  | Label shadow options.                 |
 
 ## Example Configuration
 
@@ -40,11 +37,6 @@
           direction: 'down'
           offset_top: 6
           offset_left: 0
-        label_shadow:
-          enabled: true
-          color: "black"
-          radius: 3
-          offset: [ 1, 1 ]
 ```
 
 ## Description of Options
@@ -69,12 +61,6 @@
   - **offset_top:** Top offset for the menu.
   - **offset_left:** Left offset for the menu.
 - **callbacks:** Callbacks for mouse events.
-- **animation:** Animation settings for the widget.
-  - **enabled:** Whether to enable animation.
-  - **type:** Type of animation (fadeInOut, slideIn, etc.).
-  - **duration:** Duration of the animation in milliseconds.
-- **container_shadow:** Container shadow options.
-- **label_shadow:** Label shadow options.
 
 ## Widget Style
 ```css

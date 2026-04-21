@@ -7,7 +7,6 @@ from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, QRect, Qt
 from PyQt6.QtGui import QImage, QPixmap, QWheelEvent
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QSlider, QVBoxLayout, QWidget
 
-from core.utils.animation_manager import AnimationManager
 from core.utils.qobject import is_valid_qobject
 from core.utils.tooltip import CustomToolTip, set_tooltip
 from core.utils.utilities import (
@@ -35,8 +34,8 @@ class VolumeWidget(BaseWidget):
 
         self.progress_widget = build_progress_widget(self, self.config.progress_bar.model_dump())
 
-        self._init_container(self.config.container_shadow.model_dump())
-        self.build_widget_label(self.config.label, self.config.label_alt, self.config.label_shadow.model_dump())
+        self._init_container()
+        self.build_widget_label(self.config.label, self.config.label_alt)
 
         self.register_callback("toggle_label", self._toggle_label)
         self.register_callback("update_label", self._update_label)
@@ -73,8 +72,6 @@ class VolumeWidget(BaseWidget):
         self._update_label()
 
     def _toggle_volume_menu(self):
-        if self.config.animation.enabled:
-            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
         self.show_volume_menu()
 
     def _on_slider_released(self):
@@ -386,7 +383,6 @@ class VolumeWidget(BaseWidget):
             if audio_sessions:
                 self.app_toggle_btn = QPushButton(self.config.audio_menu.app_icons.toggle_down)
                 self.app_toggle_btn.setProperty("class", "toggle-apps")
-                self.app_toggle_btn.setCursor(Qt.CursorShape.PointingHandCursor)
                 self.app_toggle_btn.clicked.connect(lambda: self._toggle_app_volumes())
                 if self.config.tooltip:
                     set_tooltip(self.app_toggle_btn, "Expand application volumes")
@@ -433,7 +429,6 @@ class VolumeWidget(BaseWidget):
                     icon_frame = QFrame()
                     icon_frame.setContentsMargins(0, 0, 0, 0)
                     icon_frame.setProperty("class", "app-icon-container")
-                    icon_frame.setCursor(Qt.CursorShape.PointingHandCursor)
                     if self.config.tooltip:
                         set_tooltip(icon_frame, display_name, delay=800, position="top")
 
@@ -518,8 +513,6 @@ class VolumeWidget(BaseWidget):
             self._toggle_app_volumes()
 
     def _toggle_label(self):
-        if self.config.animation.enabled:
-            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
         self._show_alt_label = not self._show_alt_label
         for widget in self._widgets:
             widget.setVisible(not self._show_alt_label)
@@ -652,8 +645,6 @@ class VolumeWidget(BaseWidget):
             self._decrease_volume()
 
     def toggle_mute(self):
-        if self.config.animation.enabled:
-            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
         if self.volume is None:
             return
         try:

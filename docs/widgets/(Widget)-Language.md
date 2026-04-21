@@ -6,9 +6,6 @@
 | `update_interval`| integer  | `5`                            | The interval in seconds to update the language information. Must be between 1 and 3600. |
 | `class_name`      | string   | `""`                           | Additional CSS class name for the widget.                                    |
 | `callbacks`      | dict     | `{ 'on_left': 'toggle_label', 'on_middle': 'do_nothing', 'on_right': 'do_nothing' }` | The dictionary of callback functions for different mouse actions. |
-| `animation`         | dict    | `{'enabled': true, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
-| `container_shadow`   | dict   | `None`                  | Container shadow options.                       |
-| `label_shadow`         | dict   | `None`                  | Label shadow options.                 |
 | `language_menu` | dict     | [See below](#language-menu-configuration) | Options for the language menu. |
 
 ## Callbacks
@@ -60,11 +57,6 @@ language:
       offset_left: 0
       show_layout_icon: true
       layout_icon: "\uf11c"
-    label_shadow:
-      enabled: true
-      color: "black"
-      radius: 3
-      offset: [ 1, 1 ]
 ```
 
 ## Description of Options
@@ -73,9 +65,6 @@ language:
 - **update_interval:** The interval in seconds to update the language information. Must be between 1 and 3600.
 - **class_name:** Additional CSS class name for the widget. This allows for custom styling.
 - **callbacks:** A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions.
-- **animation:** A dictionary specifying the animation settings for the widget. It contains three keys: `enabled`, `type`, and `duration`. The `type` can be `fadeInOut` and the `duration` is the animation duration in milliseconds.
-- **container_shadow:** Container shadow options.
-- **label_shadow:** Label shadow options.
 - **language_menu:** A dictionary containing options for the language selection menu. It includes options like `blur`, `round_corners`, `round_corners_type`, `border_color`, `alignment`, `direction`, `offset_top`, `offset_left`, `layout_icon`, and `show_layout_icon`.
 
 ## Example Style

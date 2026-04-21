@@ -11,7 +11,6 @@ from ctypes import wintypes
 from PyQt6.QtCore import QThread, QTimer, pyqtSignal
 from PyQt6.QtWidgets import QLabel
 
-from core.utils.animation_manager import AnimationManager
 from core.utils.tooltip import set_tooltip
 from core.validation.widgets.yasb.bluetooth import BluetoothConfig
 from core.widgets.base import BaseWidget
@@ -222,8 +221,8 @@ class BluetoothWidget(BaseWidget):
         self.bluetooth_icon = None
         self.connected_devices = None
 
-        self._init_container(self.config.container_shadow.model_dump())
-        self.build_widget_label(self.config.label, self.config.label_alt, self.config.label_shadow.model_dump())
+        self._init_container()
+        self.build_widget_label(self.config.label, self.config.label_alt)
 
         self.register_callback("toggle_label", self._toggle_label)
 
@@ -256,8 +255,6 @@ class BluetoothWidget(BaseWidget):
             self.bluetooth_thread.wait()
 
     def _toggle_label(self):
-        if self.config.animation.enabled:
-            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
         self._show_alt_label = not self._show_alt_label
         for widget in self._widgets:
             widget.setVisible(not self._show_alt_label)

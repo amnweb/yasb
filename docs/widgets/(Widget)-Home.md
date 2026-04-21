@@ -15,9 +15,6 @@
 | `offset_top`      | int     | `6`                                                                     | Distance from the top or bottom edge of the bar. |
 | `offset_left`     | int     | `0`                                                                     | Distance from the left or right edge of the bar. |
 | `menu_labels`   | dict | `{'shutdown': 'Shutdown', 'restart': 'Restart', 'logout': 'Logout', 'lock': 'Lock', 'sleep': 'Sleep', 'system': 'System Settings', 'about': 'About This PC', 'task_manager': 'Task Manager'}` | Custom label names for system and power items. | 
-| `animation`         | dict    | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
-| `container_shadow`   | dict   | `None`                  | Container shadow options.                       |
-| `label_shadow`         | dict   | `None`                  | Label shadow options.                 |
 
 ## Example Configuration
 
@@ -56,11 +53,6 @@ home:
       system: "System Settings"
       about: "About This PC"
       task_manager: "Task Manager"
-    label_shadow:
-      enabled: true
-      color: "black"
-      radius: 3
-      offset: [ 1, 1 ]
 ```
  
 
@@ -83,9 +75,6 @@ home:
 - **offset_top**: Distance from the top or bottom edge of the bar.
 - **offset_left**: Distance from the left or right edge of the bar.
 - **menu_labels**: Custom label names for system and power items. Use this option to change the default labels for system and power menu items.
-- **animation:** A dictionary specifying the animation settings for the widget. It contains three keys: `enabled`, `type`, and `duration`. The `type` can be `fadeInOut` and the `duration` is the animation duration in milliseconds.
-- **container_shadow:** Container shadow options.
-- **label_shadow:** Label shadow options.
 
 ## Example Style
 ```css

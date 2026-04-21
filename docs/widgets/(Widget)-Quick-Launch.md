@@ -17,9 +17,6 @@ The Quick Launch widget provides a Spotlight style search launcher accessible fr
 | `compact_text`       | bool   | `false`                                                                             | When enabled, each result row is single-line: the description is shown inline on the right side instead of on a second line below the title. |
 | `providers`          | dict   | See below                                                                           | Configuration for each search provider.                                                                                 |
 | `popup`              | dict   | See below                                                                           | Popup window appearance settings.                                                                                       |
-| `animation`          | dict   | `{enabled: true, type: "fadeInOut", duration: 200}`                                 | Widget animation settings.                                                                                              |
-| `label_shadow`       | dict   | `None`                                                                              | Label shadow options.                                                                                                   |
-| `container_shadow`   | dict   | `None`                                                                              | Container shadow options.                                                                                               |
 | `keybindings`        | list   | `[]`                                                                                | Global keybindings for toggling the popup.                                                                              |
 | `callbacks`          | dict   | `{on_left: "toggle_quick_launch", on_right: "do_nothing", on_middle: "do_nothing"}` | Mouse event callbacks.                                                                                                  |
 
@@ -903,14 +900,8 @@ quick_launch:
     - **_round_corners:_** Enable rounded corners on the popup.
     - **_round_corners_type:_** Type of corner rounding (`"normal"` or `"small"`).
     - **_border_color:_** Border color of the popup window (`"System"` for system accent color, HEX value, or `"None"`).
-- **animation:** Widget animation settings.
-    - **_enabled:_** Whether animations are enabled.
-    - **_type:_** Type of animation (`"fadeInOut"`).
-    - **_duration:_** Duration of the animation in milliseconds.
 - **keybindings:** A list of global keybindings. Each entry must specify `keys` (a list of key combinations) and `action` (the callback to invoke, e.g., `"toggle_quick_launch"`).
 - **callbacks:** Mouse event callbacks (`on_left`, `on_middle`, `on_right`). Valid actions: `"toggle_quick_launch"`, `"do_nothing"`.
-- **label_shadow:** Shadow options for the bar label.
-- **container_shadow:** Shadow options for the widget container.
 
 ## Example Style
 

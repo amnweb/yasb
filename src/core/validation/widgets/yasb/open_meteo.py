@@ -3,11 +3,9 @@ from typing import Literal
 from pydantic import Field
 
 from core.validation.widgets.base_model import (
-    AnimationConfig,
     CallbacksConfig,
     CustomBaseModel,
     KeybindingConfig,
-    ShadowConfig,
 )
 
 
@@ -86,8 +84,5 @@ class OpenMeteoWidgetConfig(CustomBaseModel):
     tooltip: bool = True
     icons: OpenMeteoIconsConfig = OpenMeteoIconsConfig()
     weather_card: OpenMeteoCardConfig = OpenMeteoCardConfig()
-    animation: AnimationConfig = AnimationConfig()
-    label_shadow: ShadowConfig = ShadowConfig()
-    container_shadow: ShadowConfig = ShadowConfig()
     keybindings: list[KeybindingConfig] = []
     callbacks: CallbacksConfig = CallbacksConfig()

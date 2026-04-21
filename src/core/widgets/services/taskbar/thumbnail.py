@@ -495,13 +495,13 @@ class PreviewPopup(QFrame):
 class TaskbarThumbnailManager:
     """Encapsulates preview popup & DWM thumbnail host logic for TaskbarWidget."""
 
-    def __init__(self, taskbar_widget, width: int, delay: int, padding: int, margin: int, animation: bool):
+    def __init__(self, taskbar_widget, width: int, delay: int, padding: int, margin: int):
         self._taskbar = taskbar_widget
         self.width = width
         self.delay = delay
         self.padding = padding
         self.margin = margin
-        self.animation_duration = 200 if animation else 0
+        self.animation_duration = 200
         self._preview_popup = None
         self._thumb_host = None
         self._thumb_handle = wintypes.HANDLE(0)

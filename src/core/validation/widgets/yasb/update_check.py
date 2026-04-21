@@ -1,6 +1,6 @@
 from pydantic import Field
 
-from core.validation.widgets.base_model import CustomBaseModel, ShadowConfig
+from core.validation.widgets.base_model import CustomBaseModel
 
 
 class UpdateConfig(CustomBaseModel):
@@ -26,5 +26,3 @@ class UpdateCheckWidgetConfig(CustomBaseModel):
     windows_update: WindowsUpdateConfig = WindowsUpdateConfig()
     winget_update: WingetUpdateConfig = WingetUpdateConfig()
     scoop_update: ScoopUpdateConfig = ScoopUpdateConfig()
-    label_shadow: ShadowConfig = ShadowConfig()
-    container_shadow: ShadowConfig = ShadowConfig()

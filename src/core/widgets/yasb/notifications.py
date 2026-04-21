@@ -5,7 +5,6 @@ from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import QLabel
 
 from core.events.service import EventService
-from core.utils.animation_manager import AnimationManager
 from core.utils.system import is_windows_10
 from core.utils.utilities import refresh_widget_style
 from core.utils.win32.system_function import notification_center, quick_settings
@@ -30,8 +29,8 @@ class NotificationsWidget(BaseWidget):
         self._show_alt_label = False
         self._notification_count = 0
 
-        self._init_container(self.config.container_shadow.model_dump())
-        self.build_widget_label(self.config.label, self.config.label_alt, self.config.label_shadow.model_dump())
+        self._init_container()
+        self.build_widget_label(self.config.label, self.config.label_alt)
 
         self.callback_left = self.config.callbacks.on_left
         self.callback_right = self.config.callbacks.on_right
@@ -57,16 +56,12 @@ class NotificationsWidget(BaseWidget):
         self._update_label()
 
     def _toggle_notification(self):
-        if self.config.animation.enabled:
-            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
         if is_windows_10():
             quick_settings()
         else:
             notification_center()
 
     def _toggle_label(self):
-        if self.config.animation.enabled:
-            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
         self._show_alt_label = not self._show_alt_label
         for widget in self._widgets:
             widget.setVisible(not self._show_alt_label)
@@ -75,8 +70,6 @@ class NotificationsWidget(BaseWidget):
         self._update_label()
 
     def _clear_notifications(self):
-        if self.config.animation.enabled:
-            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
         if WindowsNotificationEventListener:
             self.event_service.emit_event("WindowsNotificationClear", "clear_all_notifications")
 

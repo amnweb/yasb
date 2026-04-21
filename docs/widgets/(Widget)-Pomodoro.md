@@ -17,11 +17,8 @@ This widget implements a Pomodoro timer, which is a time management method that 
 | `session_target` | integer | `0` | Target number of sessions (0 means unlimited). |
 | `hide_on_break` | boolean | `false` | Hide the widget during break sessions. |
 | `icons` | dict | See below | Icons used for different timer states. |
-| `animation` | dict | `{'enabled': true, 'type': 'fadeInOut', 'duration': 200}` | Animation settings for the widget. |
 | `callbacks` | dict | See below | Configure widget interaction callbacks. |
 | `menu` | dict | See below | Configure the appearance and behavior of the timer menu. |
-| `container_shadow`   | dict   | `None`                  | Container shadow options.                       |
-| `label_shadow`         | dict   | `None`                  | Label shadow options.                 |
 | `progress_bar`       | dict    | `{'enabled': false, 'position': 'left', 'size': 14, 'thickness': 2, 'color': '#57948a', 'animation': true}` | Progress bar settings.    |
 
 ## Example Configuration
@@ -64,11 +61,6 @@ pomodoro:
       on_left: "toggle_menu"
       on_middle: "reset_timer"
       on_right: "toggle_label"
-    label_shadow:
-      enabled: true
-      color: "black"
-      radius: 3
-      offset: [ 1, 1 ]
 ```
 
 ## Description of Options
@@ -96,7 +88,6 @@ pomodoro:
     - **work**: Icon for work sessions.
     - **break**: Icon for break sessions.
     - **paused**: Icon for paused timer.
-- **animation**: Animation settings including type and duration.
 - **callbacks**: Configure what happens when clicking the widget.
 - **menu**: Configure the appearance and behavior of the timer menu including the circular progress indicator.
     - **blur:** Whether to enable blur effect.
@@ -111,8 +102,6 @@ pomodoro:
     - **circle_work_progress_color:** Color of the work progress in the circular indicator.
     - **circle_break_progress_color:** Color of the break progress in the circular indicator.
     - **circle_thickness:** Thickness of the circular progress indicator.
-- **container_shadow:** Container shadow options.
-- **label_shadow:** Label shadow options.
 - **progress_bar**: A dictionary containing settings for the progress bar. It includes:
   - **enabled**: Whether the progress bar is enabled.
   - **position**: The position of the progress bar, either "left" or "right".

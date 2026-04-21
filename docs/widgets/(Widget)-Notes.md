@@ -9,12 +9,9 @@
 | `start_floating`      | Boolean  | `false`                                                                         | Whether the menu should start in floating mode.                                                                                                 |
 | `paste_plain_text`    | Boolean  | `false`                                                                         | If true, the widget will paste plain text from the clipboard by default, while Shift+Ctrl+V will paste rich text.                               |
 | `enter_to_add_note`   | Boolean  | `true`                                                                          | If true, pressing Enter in the input field will add a new note and Shift+Enter will add a new line.                                             |
-| `animation`           | Dict     | `{ enabled: true, type: "fadeInOut", duration: 200 }`                           | Controls animation settings; `enabled` turns animations on/off, `type` defines style, and `duration` is in ms.                                  |
 | `menu`                | Dict     | See below                                                                       | Popup menu settings. See details below.                                                                                                         |
 | `icons`               | Dict     | See below                                                                       | Icons used within the widget. See details below.                                                                                                |
 | `callbacks`           | Dict     | `{ on_left: "toggle_menu", on_middle: "do_nothing", on_right: "toggle_label" }` | Maps mouse actions to widget functions (e.g., toggling the menu or label).                                                                      |
-| `container_shadow`    | dict     | `None`                                                                          | Container shadow options.                                                                                                                       |
-| `label_shadow`        | dict     | `None`                                                                          | Label shadow options.                                                                                                                           |
 
 ### Menu Options
 
@@ -73,11 +70,6 @@ notes:
       on_left: "toggle_menu"
       on_middle: "do_nothing"
       on_right: "toggle_label"
-    label_shadow:
-      enabled: true
-      color: "black"
-      radius: 3
-      offset: [ 1, 1 ]
 ```
 
 ## Description of Options
@@ -88,10 +80,6 @@ notes:
 - **enter_to_add_note** If true, pressing Enter in the input field will add a new note and Shift+Enter will add a new line. If false it's reversed.
 - **paste_plain_text** If true, the widget will paste plain text from the clipboard by default, while Shift+Ctrl+V will paste rich text. If false it's reversed
 - **start_floating** If true, the menu will start in floating mode.
-- **animation** A dictionary to control widget animation:
-  - **enabled**: Boolean flag to turn animations on or off.
-  - **type**: The animation style (e.g., "fadeInOut").
-  - **duration**: Animation duration in milliseconds.
 - **menu** Settings for the popup menu displayed when interacting with notes:
   - **blur**: Enables a blur effect in the menu.
   - **round_corners**: If true, the menu is displayed with rounded corners.
@@ -110,8 +98,6 @@ notes:
   - **on_left**: Triggered when the left mouse button is clicked (default: "toggle_menu").
   - **on_middle**: Triggered on a middle mouse click (default: "do_nothing").
   - **on_right**: Triggered on a right mouse click (default: "toggle_label").
-- **container_shadow:** Container shadow options.
-- **label_shadow:** Label shadow options.
 
 ## Available Styles
 

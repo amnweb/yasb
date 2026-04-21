@@ -3,12 +3,10 @@ import os
 import subprocess
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QCursor, QPixmap
+from PyQt6.QtGui import QPixmap
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QWidget
 
-from core.utils.animation_manager import AnimationManager
 from core.utils.tooltip import set_tooltip
-from core.utils.utilities import add_shadow
 from core.utils.win32.system_function import function_map
 from core.validation.widgets.yasb.applications import ApplicationsWidgetConfig
 from core.widgets.base import BaseWidget
@@ -22,7 +20,7 @@ class ApplicationsWidget(BaseWidget):
         self.config = config
 
         # Construct container
-        self._init_container(self.config.container_shadow.model_dump())
+        self._init_container()
         self._update_label()
 
     def _update_label(self):
@@ -36,7 +34,6 @@ class ApplicationsWidget(BaseWidget):
 
                 # Create the label
                 label = ClickableLabel(self)
-                label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
                 label.setProperty("class", "label")
 
                 app_name = app_data.name
@@ -58,9 +55,6 @@ class ApplicationsWidget(BaseWidget):
 
                 label.data = app_data.launch
                 label.container = label_container  # Store reference to container
-
-                # Add shadow to the label
-                add_shadow(label, self.config.label_shadow.model_dump())
 
                 # Add label to its container
                 label_layout.addWidget(label)
@@ -92,10 +86,4 @@ class ClickableLabel(QLabel):
 
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton and self.data and self.parent_widget:
-            if self.parent_widget.config.animation.enabled:
-                AnimationManager.animate(
-                    self.container,
-                    self.parent_widget.config.animation.type,
-                    self.parent_widget.config.animation.duration,
-                )
             self.parent_widget.execute_code(self.data)

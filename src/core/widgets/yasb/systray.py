@@ -24,7 +24,7 @@ from win32con import HWND_BROADCAST
 
 from core.bar_helper import AppBarManager
 from core.utils.system import app_data_path
-from core.utils.utilities import add_shadow, refresh_widget_style
+from core.utils.utilities import refresh_widget_style
 from core.utils.win32.bindings import IsWindow
 from core.utils.win32.bindings.user32 import RegisterWindowMessage, SendNotifyMessage
 from core.utils.win32.constants import (
@@ -179,11 +179,6 @@ class SystrayWidget(BaseWidget):
         self.unpinned_widget.drag_ended.connect(self.on_drag_ended)
         self.pinned_widget.drag_started.connect(self.on_pinned_drag_started)
         self.pinned_widget.drag_ended.connect(self.on_drag_ended)
-
-        add_shadow(self.widget_container, self.config.container_shadow.model_dump())
-        add_shadow(self.unpinned_widget, self.config.unpinned_shadow.model_dump())
-        add_shadow(self.pinned_widget, self.config.pinned_shadow.model_dump())
-        add_shadow(self.unpinned_vis_btn, self.config.unpinned_vis_btn_shadow.model_dump())
 
         if self.config.show_in_popup:
             # Popup mode: unpinned icons shown in a popup grid
@@ -389,7 +384,6 @@ class SystrayWidget(BaseWidget):
                     IconState(index=-1, is_pinned=False),
                 ),
             )
-            add_shadow(icon, self.config.btn_shadow.model_dump())
 
             # Place the new icon in the correct layout and index
             icon.is_pinned = saved_data.is_pinned

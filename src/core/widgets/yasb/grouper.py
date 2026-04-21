@@ -1,11 +1,10 @@
 import logging
 from typing import Any
 
-from PyQt6.QtCore import QEvent, Qt
+from PyQt6.QtCore import QEvent
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QPushButton
 
 from core.config import get_config
-from core.utils.utilities import add_shadow
 from core.utils.widget_builder import WidgetBuilder
 from core.validation.widgets.yasb.grouper import GrouperWidgetConfig
 from core.widgets.base import BaseWidget
@@ -21,7 +20,6 @@ class GrouperWidget(BaseWidget):
     def __init__(self, config: GrouperWidgetConfig):
         super().__init__(class_name=config.class_name)
         self.config = config
-        self._container_shadow = self.config.container_shadow
         self._hide_empty = self.config.hide_empty
         # Use collapse_options structure
         self._collapse_options = self.config.collapse_options
@@ -39,7 +37,6 @@ class GrouperWidget(BaseWidget):
         self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "container")
-        add_shadow(self._widget_container, self._container_shadow.model_dump())
 
         self._collapse_button = None
         if self._collapsed:
@@ -49,7 +46,6 @@ class GrouperWidget(BaseWidget):
             self._collapsed_icon = self._collapse_options.collapsed_label
             self._collapse_button.setText(self._collapsed_icon)
             self._collapse_button.setFlat(True)
-            self._collapse_button.setCursor(Qt.CursorShape.PointingHandCursor)
 
             if self._collapse_options.label_position.lower() == "left":
                 self._widget_container_layout.addWidget(self._collapse_button)

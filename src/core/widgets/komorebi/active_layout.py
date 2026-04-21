@@ -2,13 +2,11 @@ import logging
 from collections import deque
 
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QCursor
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QSizePolicy, QVBoxLayout, QWidget
 
 from core.events.komorebi import KomorebiEvent
 from core.events.service import EventService
-from core.utils.animation_manager import AnimationManager
-from core.utils.utilities import PopupWidget, add_shadow
+from core.utils.utilities import PopupWidget
 from core.utils.win32.utils import get_monitor_hwnd
 from core.validation.widgets.komorebi.active_layout import ActiveLayoutConfig
 from core.widgets.base import BaseWidget
@@ -63,14 +61,12 @@ class ActiveLayoutWidget(BaseWidget):
         self._komorebi_workspaces = []
         self._focused_workspace = {}
         # Set the cursor to be a pointer when hovering over the button
-        self.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self._active_layout_text = QLabel()
         self._active_layout_text.setProperty("class", "label")
         self._active_layout_text.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        add_shadow(self._active_layout_text, self.config.label_shadow.model_dump())
 
         # Construct container
-        self._init_container(self.config.container_shadow.model_dump())
+        self._init_container()
         self._widget_container_layout.addWidget(self._active_layout_text)
 
         self.callback_left = self.config.callbacks.on_left
@@ -97,8 +93,6 @@ class ActiveLayoutWidget(BaseWidget):
         self.hide()
 
     def _toggle_layout_menu(self):
-        if self.config.animation.enabled:
-            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
         self._show_layout_menu()
 
     def _show_layout_menu(self):
@@ -134,7 +128,6 @@ class ActiveLayoutWidget(BaseWidget):
             text_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
             item_layout.addWidget(text_label)
 
-            item.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
             item.mousePressEvent = click_handler
             return item
 
@@ -182,8 +175,6 @@ class ActiveLayoutWidget(BaseWidget):
         layout_cmd = layout.replace("_", "-")
         self.change_layout(layout_cmd)
         self._menu.hide()
-        if self.config.animation.enabled:
-            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
 
     def _reset_layouts(self):
         self._layouts = deque([x.replace("_", "-") for x in self.config.layouts])
@@ -200,8 +191,6 @@ class ActiveLayoutWidget(BaseWidget):
         if self._is_shift_layout_allowed():
             self._layouts.rotate(1)
             self.change_layout(self._layouts[0])
-            if self.config.animation.enabled:
-                AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
         else:
             self._toggle_blocking_state()
 
@@ -209,8 +198,6 @@ class ActiveLayoutWidget(BaseWidget):
         if self._is_shift_layout_allowed():
             self._layouts.rotate(-1)
             self.change_layout(self._layouts[0])
-            if self.config.animation.enabled:
-                AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
         else:
             self._toggle_blocking_state()
 

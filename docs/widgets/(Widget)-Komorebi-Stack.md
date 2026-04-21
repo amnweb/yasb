@@ -19,10 +19,6 @@
 | `rewrite`               | list    | `[]`            | Rewrite options for window titles and process names.                      |
 | `enable_scroll_switching` | boolean | `false`      | Enable scroll switching between windows.                                 |
 | `reverse_scroll_direction` | boolean | `false`      | Reverse scroll direction.                                                  |
-| `animation`  | boolean | `false`      | Buttons animation.                                           |
-| `container_shadow`      | dict    | `None`                  | Container shadow options.                                |
-| `label_shadow`            | dict    | `None`                  | Label shadow options.                       |
-| `btn_shadow`            | dict    | `None`                  | Window button shadow options.                         |
 
 ## Example Configuration
 
@@ -46,23 +42,7 @@ komorebi_stack:
       - pattern: "^(.+?)\\.exe$"
         replacement: "\\1"
         case: "lower"
-    animation: true
     enable_scroll_switching : true
-    container_shadow:
-      enabled: true
-      color: "#000000"
-      offset: [0, 1]
-      radius: 2
-    btn_shadow:
-      enabled: true
-      color: "#000000"
-      offset: [0, 1]
-      radius: 2
-    label_shadow:
-      enabled: true
-      color: "#000000"
-      offset: [0, 1]
-      radius: 2
 ```
 
 ## Description of Options
@@ -80,10 +60,6 @@ komorebi_stack:
 - **rewrite:** A list of search-and-replace rules to be applied to window titles and process names. See [Rewrite Options](#rewrite-options) below.
 - **enable_scroll_switching:** Enable scroll switching between workspaces.
 - **reverse_scroll_direction:** Reverse scroll direction.
-- **animation:** Buttons animation.
-- **container_shadow:** Container shadow options.
-- **label_shadow:** Label shadow options for labels, including icons and labels within each window button.
-- **btn_shadow:** Window button shadow options.
 
 > Note:
 > Left click on window title switches to the window, and Middle click closes the window.

@@ -12,13 +12,8 @@ The Launchpad widget provides a customizable application launcher grid for quick
 | `window`              | dict     | `{fullscreen: false, width: 800, height: 600, overlay_block: true}`                | Popup window size and fullscreen options.                                   |
 | `window_style`        | dict     | `{enable_blur: true, round_corners: true, round_corners_type: "normal", border_color: "system"}`                | Popup window styling (blur, corners, border, etc).                          |
 | `window_animation`    | dict     | `{fade_in_duration: 400, fade_out_duration: 400}`                | Animation settings for showing/hiding the popup.                            |
-| `animation`           | dict     | `{enabled: true, type: "fadeInOut", duration: 200}`                | Widget animation settings.                                                  |
 | `group_apps`          | bool     | `false`                | Enable grouping to organize apps by category.                               |
 | `callbacks`           | dict     | `{on_left: "toggle_launchpad", on_right: "do_nothing", on_middle: "do_nothing"}` | Mouse event callbacks.      |
-| `label_shadow`        | dict     | `None`                 | Label shadow options.                                                       |
-| `container_shadow`    | dict     | `None`                 | Container shadow options.                                                   |
-| `app_title_shadow`    | dict     | `None`                 | Shadow options for app titles.                                              |
-| `app_icon_shadow`     | dict     | `None`                 | Shadow options for app icons.                                               |
 | `shortcuts`           | dict     | `{add_app: "Ctrl+N", edit_app: "F2", show_context_menu: "Shift+F10", delete_app: "Delete"}` | Keyboard shortcuts for popup actions. |
 
 ## Example Configuration
@@ -46,16 +41,6 @@ launchpad:
     group_apps: false
     callbacks:
       on_left: "toggle_launchpad"
-    app_title_shadow:
-      enabled: true
-      color: "#00000090"
-      offset: [1, 1]
-      radius: 2
-    app_icon_shadow:
-      enabled: true
-      color: "#00000090"
-      offset: [0, 2]
-      radius: 8
 ```
 
 ## Shortcuts
@@ -88,8 +73,6 @@ launchpad:
 - **label:** The label/icon for the widget on the bar.
 - **search_placeholder:** Placeholder text for the search field in the popup.
 - **app_icon_size:** Size of application icons in pixels.
-- **label_shadow:** Shadow options for the label.
-- **container_shadow:** Shadow options for the widget container.
 - **window:** Popup window size and fullscreen options.
   - ***fullscreen:*** Whether the popup should be fullscreen.
   - ***width:*** Width of the popup window.
@@ -103,31 +86,7 @@ launchpad:
 - **window_animation:** Animation settings for showing/hiding the popup.
   - ***fade_in_duration:*** Duration of the fade-in animation in milliseconds.
   - ***fade_out_duration:*** Duration of the fade-out animation in milliseconds.
-- **animation:** Widget label animation settings.
-  - ***enabled:*** Whether animations are enabled.
-  - ***type:*** Type of animation ("fadeInOut").
-  - ***duration:*** Duration of the animation in milliseconds.
 - **callbacks:** Mouse event callbacks (`on_left`, `on_middle`, `on_right`).
-- **app_title_shadow:** Shadow options for app titles.
-  - ***enabled:*** Whether to enable shadow for app titles.
-  - ***color:*** Color of the shadow (HEX, HEX with alpha or name).
-  - ***offset:*** Offset of the shadow in pixels (x, y).
-  - ***radius:*** Radius of the shadow blur.
-- **app_icon_shadow:** Shadow options for app icons.
-  - ***enabled:*** Whether to enable shadow for app icons.
-  - ***color:*** Color of the shadow (HEX, HEX with alpha or name).
-  - ***offset:*** Offset of the shadow in pixels (x, y).
-  - ***radius:*** Radius of the shadow blur.
-- **label_shadow**: Shadow options for the widget label.
-  - ***enabled:*** Whether to enable shadow for the label.
-  - ***color:*** Color of the shadow (HEX, HEX with alpha or name).
-  - ***offset:*** Offset of the shadow in pixels (x, y).
-  - ***radius:*** Radius of the shadow blur.
-- **container_shadow**: Shadow options for the widget container.
-  - ***enabled:*** Whether to enable shadow for the container.
-  - ***color:*** Color of the shadow (HEX, HEX with alpha or name).
-  - ***offset:*** Offset of the shadow in pixels (x, y).
-  - ***radius:*** Radius of the shadow blur.
 - **shortcuts**: Keyboard shortcuts for common actions in the Launchpad popup.
   - **Ctrl+N**: Open the "Add New App" dialog.
   - **F2**: Edit the currently focused/selected app.

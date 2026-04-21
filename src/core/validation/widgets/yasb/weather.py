@@ -3,11 +3,9 @@ from typing import Literal
 from pydantic import Field
 
 from core.validation.widgets.base_model import (
-    AnimationConfig,
     CallbacksConfig,
     CustomBaseModel,
     KeybindingConfig,
-    ShadowConfig,
 )
 
 
@@ -90,9 +88,5 @@ class WeatherWidgetConfig(CustomBaseModel):
     tooltip: bool = True
     icons: WeatherIconsConfig = WeatherIconsConfig()
     weather_card: WeatherCardConfig = WeatherCardConfig()
-    # Note: reusing AnimationConfig from base_model which matches the structure
-    animation: AnimationConfig = AnimationConfig()
-    label_shadow: ShadowConfig = ShadowConfig()
-    container_shadow: ShadowConfig = ShadowConfig()
     keybindings: list[KeybindingConfig] = []
     callbacks: CallbacksConfig = CallbacksConfig()

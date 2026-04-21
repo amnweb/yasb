@@ -1,11 +1,9 @@
 from pydantic import Field
 
 from core.validation.widgets.base_model import (
-    AnimationConfig,
     CallbacksConfig,
     CustomBaseModel,
     KeybindingConfig,
-    ShadowConfig,
 )
 
 
@@ -53,9 +51,6 @@ class WifiConfig(CustomBaseModel):
     ethernet_icon: str = "\ueba9"
     get_exact_wifi_strength: bool = False
     hide_if_ethernet: bool = False
-    animation: AnimationConfig = AnimationConfig()
-    label_shadow: ShadowConfig = ShadowConfig()
-    container_shadow: ShadowConfig = ShadowConfig()
     keybindings: list[KeybindingConfig] = []
     callbacks: WifiCallbacksConfig = WifiCallbacksConfig()
     menu_config: WifiMenuConfig = WifiMenuConfig()

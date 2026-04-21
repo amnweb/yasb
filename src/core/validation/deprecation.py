@@ -49,6 +49,14 @@ logger = logging.getLogger("deprecation")
 # Global - removed from any model that doesn't recognize it
 DEPRECATED_FIELDS: dict[str, str] = {
     "container_padding": "Use CSS padding instead.",
+    "label_shadow": "Use CSS text-shadow instead.",
+    "container_shadow": "Use CSS box-shadow instead.",
+    "btn_shadow": "Use CSS box-shadow instead.",
+    "app_title_shadow": "Use CSS text-shadow instead.",
+    "app_icon_shadow": "Use CSS box-shadow instead.",
+    "unpinned_shadow": "Use CSS box-shadow instead.",
+    "pinned_shadow": "Use CSS box-shadow instead.",
+    "unpinned_vis_btn_shadow": "Use CSS box-shadow instead.",
 }
 
 RENAMED_FIELDS: dict[str, tuple[str, str]] = {}
@@ -97,6 +105,15 @@ SCOPED_DEPRECATED_FIELDS: dict[str, dict[str, str]] = {
     "GalleryConfig": {
         "lazy_load_delay": "No longer supported and can be removed from the config.",
         "enable_cache": "No longer supported and can be removed from the config.",
+    },
+    "StackConfig": {
+        "animation": "Use CSS animations instead.",
+    },
+    "KomorebiWorkspacesConfig": {
+        "animation": "Use CSS animations instead.",
+    },
+    "TaskbarConfig": {
+        "animation": "Use CSS animations instead.",
     },
 }
 

@@ -4,11 +4,9 @@ from typing import Annotated
 from pydantic import Field, WithJsonSchema
 
 from core.validation.widgets.base_model import (
-    AnimationConfig,
     CallbacksConfig,
     CustomBaseModel,
     KeybindingConfig,
-    ShadowConfig,
 )
 
 
@@ -56,9 +54,6 @@ class BrightnessConfig(CustomBaseModel):
     auto_light_night_start_time: Annotated[time, WithJsonSchema({"type": "string"})] = time(20, 0)
     auto_light_night_end_time: Annotated[time, WithJsonSchema({"type": "string"})] = time(6, 30)
     auto_light_day_level: int = 100
-    animation: AnimationConfig = AnimationConfig()
-    label_shadow: ShadowConfig = ShadowConfig()
-    container_shadow: ShadowConfig = ShadowConfig()
     progress_bar: ProgressBarConfig = ProgressBarConfig()
     keybindings: list[KeybindingConfig] = []
     callbacks: BrightnessCallbacksConfig = BrightnessCallbacksConfig()
