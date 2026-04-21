@@ -115,6 +115,9 @@ SCOPED_DEPRECATED_FIELDS: dict[str, dict[str, str]] = {
     "TaskbarConfig": {
         "animation": "Use CSS animations instead.",
     },
+    "WindowsDesktopsConfig": {
+        "animation": "Use CSS animations instead.",
+    },
 }
 
 SCOPED_RENAMED_FIELDS: dict[str, dict[str, tuple[str, str]]] = {
