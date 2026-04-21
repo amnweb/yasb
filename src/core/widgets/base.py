@@ -44,7 +44,7 @@ class BaseWidget(QWidget):
             self._widget_frame.setProperty("class", "widget")
 
         self.timer = QTimer(self)
-        self.mousePressEvent = self._handle_mouse_events
+        self.mouseReleaseEvent = self._handle_mouse_events
 
         self.widget_layout.setSpacing(0)
         self.widget_layout.setContentsMargins(0, 0, 0, 0)
