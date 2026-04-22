@@ -8,9 +8,9 @@ from PyQt6.QtCore import QEasingCurve, Qt, QTimer, QVariantAnimation
 from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
+from core.utils.animation_manager import AnimationManager
 from core.utils.tooltip import set_tooltip
-from core.utils.utilities import PopupWidget, add_shadow, build_widget_label, refresh_widget_style
-from core.utils.widgets.animation_manager import AnimationManager
+from core.utils.utilities import PopupWidget, add_shadow, refresh_widget_style
 from core.utils.widgets.prayer_times.api import PrayerTimesDataFetcher
 from core.validation.widgets.yasb.prayer_times import PrayerTimesConfig
 from core.widgets.base import BaseWidget
@@ -62,7 +62,7 @@ class PrayerTimesWidget(BaseWidget):
         add_shadow(self._widget_container, config.container_shadow.model_dump())
         self.widget_layout.addWidget(self._widget_container)
 
-        build_widget_label(self, config.label, config.label_alt, config.label_shadow.model_dump())
+        self.build_widget_label(config.label, config.label_alt, config.label_shadow.model_dump())
 
         # --- Callbacks ---
         self.register_callback("toggle_label", self._toggle_label)
