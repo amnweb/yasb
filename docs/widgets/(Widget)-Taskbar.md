@@ -11,6 +11,7 @@
 | `hide_empty`        | boolean | `False` | Whether to hide the taskbar widget when there are no applications to display. |
 | `callbacks`         | dict    | `{'on_left': 'toggle_window', 'on_middle': 'do_nothing', 'on_right': 'context_menu'}` | Callbacks for mouse events on the widget.                                   |
 | `preview`           | dict    | `{'enabled': False, 'width': 240, 'delay': 400, 'padding': 8, 'margin': 8}` | Configuration for window preview thumbnails.                                |
+| `animation`         | dict    | `{'enabled': True, 'duration': 200}` | Configuration for animations when switching between applications. |
 
 ## Example Configuration
 
@@ -23,6 +24,9 @@ taskbar:
     show_only_visible: false
     strict_filtering: true
     monitor_exclusive: false
+    animation:
+      enabled: true
+      duration: 200
     preview:
       enabled: false
       width: 240

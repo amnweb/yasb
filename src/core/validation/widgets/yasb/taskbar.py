@@ -15,6 +15,11 @@ class IgnoreAppsConfig(CustomBaseModel):
     titles: list[str] = []
 
 
+class AnimationConfig(CustomBaseModel):
+    enabled: bool = True
+    duration: int = 200
+
+
 class TitleLabelConfig(CustomBaseModel):
     enabled: bool = False
     show: Literal["focused", "always"] = "focused"
@@ -42,6 +47,7 @@ class TaskbarConfig(CustomBaseModel):
     show_only_visible: bool = False
     strict_filtering: bool = True
     ignore_apps: IgnoreAppsConfig = IgnoreAppsConfig()
+    animation: AnimationConfig = AnimationConfig()
     title_label: TitleLabelConfig = TitleLabelConfig()
     hide_empty: bool = False
     preview: PreviewConfig = PreviewConfig()

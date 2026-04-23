@@ -38,9 +38,6 @@ except ImportError:
     logging.error("Failed to connect_taskbar")
 
 
-ANIMATION_DURATION_MS = 200
-
-
 class DraggableAppButton(QFrame):
     """A QFrame subclass that supports left/right reordering within a QHBoxLayout and
     raises its window on external file/text drag hover."""
@@ -473,6 +470,9 @@ class TaskbarWidget(BaseWidget):
         self._widget_monitor_handle = None
         self._context_menu_open = False
 
+        self._animation_enabled = self.config.animation.enabled
+        self._animation_duration = self.config.animation.duration
+
         self._preview_enabled = self.config.preview.enabled
         self._preview_width = self.config.preview.width
         self._preview_delay = self.config.preview.delay
@@ -491,6 +491,7 @@ class TaskbarWidget(BaseWidget):
         self._window_buttons = {}
         self._suspend_updates = False
         self._animating_widgets = {}
+        self._flash_timers = {}
         self._recycle_bin_state = {"is_empty": True}
         self._pending_pinned_recreations = set()  # Track pending placeholder recreations
 
@@ -717,7 +718,6 @@ class TaskbarWidget(BaseWidget):
             container,
             start_width=0,
             end_width=container.sizeHint().width(),
-            duration=ANIMATION_DURATION_MS,
             hwnd=pseudo_hwnd,
         )
 
@@ -751,7 +751,6 @@ class TaskbarWidget(BaseWidget):
             container,
             start_width=0,
             end_width=container.sizeHint().width(),
-            duration=ANIMATION_DURATION_MS,
             hwnd=pseudo_hwnd,
         )
 
@@ -1037,7 +1036,6 @@ class TaskbarWidget(BaseWidget):
                                 container,
                                 start_width=0,
                                 end_width=container.sizeHint().width(),
-                                duration=ANIMATION_DURATION_MS,
                                 hwnd=pseudo_hwnd,
                             )
 
@@ -1243,9 +1241,7 @@ class TaskbarWidget(BaseWidget):
                     if pseudo_hwnd in self._animating_widgets:
                         self._animating_widgets.pop(pseudo_hwnd).stop()
                     # Animate shrinking
-                    self._animate_container(
-                        widget, start_width=widget.width(), end_width=0, duration=ANIMATION_DURATION_MS
-                    )
+                    self._animate_container(widget, start_width=widget.width(), end_width=0)
 
                     del self._hwnd_to_widget[pseudo_hwnd]
                     found_pinned_button = True
@@ -1310,7 +1306,6 @@ class TaskbarWidget(BaseWidget):
             container,
             start_width=0,
             end_width=container.sizeHint().width(),
-            duration=ANIMATION_DURATION_MS,
             hwnd=hwnd,
         )
 
@@ -1365,7 +1360,7 @@ class TaskbarWidget(BaseWidget):
                 if position >= 0:
                     # Mark as pending to prevent duplicate scheduling
                     self._pending_pinned_recreations.add(unique_id)
-                    delay = ANIMATION_DURATION_MS
+                    delay = self._animation_duration if self._animation_enabled else 0
                     QTimer.singleShot(
                         delay,
                         lambda uid=unique_id, pos=position: self._recreate_pinned_button(uid, pos),
@@ -1445,8 +1440,13 @@ class TaskbarWidget(BaseWidget):
 
         # Repolish the widget to apply any style changes
         try:
-            widget.setProperty("class", self._get_container_class(hwnd))
+            new_cls = self._get_container_class(hwnd)
+            widget.setProperty("class", new_cls)
             refresh_widget_style(widget, title_wrapper, title_label)
+            if "flashing" in new_cls:
+                self._start_flash_timer(hwnd, widget)
+            else:
+                self._stop_flash_timer(hwnd)
         except Exception:
             pass
 
@@ -1518,6 +1518,10 @@ class TaskbarWidget(BaseWidget):
             except Exception:
                 pass
         self._animating_widgets.clear()
+
+        # Clean up flash timers
+        for hwnd in list(self._flash_timers):
+            self._stop_flash_timer(hwnd)
 
         # Clean up preview via manager
         try:
@@ -2017,34 +2021,54 @@ class TaskbarWidget(BaseWidget):
             pass
         return None
 
-    def _animate_container(self, container, start_width=0, end_width=0, duration=300, hwnd=None) -> None:
-        """Animate the width of a container widget."""
-        animation = QPropertyAnimation(container, b"maximumWidth", container)
-        animation.setStartValue(start_width)
-        animation.setEndValue(end_width)
-        animation.setDuration(duration)
+    def _start_flash_timer(self, hwnd: int, widget: QWidget) -> None:
+        """Toggle the flashing class every 1s, stop after 10s and keep flashing class."""
+        if hwnd in self._flash_timers:
+            return
+        timer = QTimer(self)
+        timer.count = 0
+        timer.setInterval(1000)
 
-        animation.setEasingCurve(QEasingCurve.Type.InOutQuad)
-        # Track animation for add operations
-        if hwnd is not None and end_width > start_width:
-            self._animating_widgets[hwnd] = animation
+        def _tick():
+            w = self._hwnd_to_widget.get(hwnd)
+            if not w:
+                self._stop_flash_timer(hwnd)
+                return
+            timer.count += 1
+            if timer.count >= 10:
+                w.setProperty("class", "app-container flashing")
+                self._stop_flash_timer(hwnd)
+                return
+            cls = w.property("class") or ""
+            w.setProperty("class", "app-container running" if "flashing" in cls else "app-container flashing")
+
+        timer.timeout.connect(_tick)
+        self._flash_timers[hwnd] = timer
+        timer.start()
+
+    def _stop_flash_timer(self, hwnd: int) -> None:
+        """Stop the flash timer for a widget."""
+        timer = self._flash_timers.pop(hwnd, None)
+        if timer:
+            try:
+                timer.stop()
+                timer.deleteLater()
+            except Exception:
+                pass
+
+    def _animate_container(self, container, start_width=0, end_width=0, duration=None, hwnd=None) -> None:
+        """Animate the width of a container widget."""
 
         def on_finished():
-            # Remove from tracking if this was an add animation
             if hwnd is not None:
                 self._animating_widgets.pop(hwnd, None)
-
             if end_width == 0:
                 container.setParent(None)
                 self._widget_container_layout.removeWidget(container)
                 container.deleteLater()
-
-                # Check if we should hide taskbar after animation completes
-                # Don't hide if there are pending pinned recreations scheduled
                 if self.config.hide_empty and len(self._hwnd_to_widget) < 1 and not self._pending_pinned_recreations:
                     self._hide_taskbar_widget()
             else:
-                # Clear width constraint so future content changes (e.g., focused title)
                 try:
                     container.setMaximumWidth(16777215)
                     container.adjustSize()
@@ -2052,10 +2076,25 @@ class TaskbarWidget(BaseWidget):
                 except Exception:
                     pass
 
+        if not self._animation_enabled:
+            on_finished()
+            return
+
+        if duration is None:
+            duration = self._animation_duration
+        animation = QPropertyAnimation(container, b"maximumWidth", container)
+        animation.setStartValue(start_width)
+        animation.setEndValue(end_width)
+        animation.setDuration(duration)
+        animation.setEasingCurve(QEasingCurve.Type.InOutQuad)
+
+        if hwnd is not None and end_width > start_width:
+            self._animating_widgets[hwnd] = animation
+
         animation.finished.connect(on_finished)
         animation.start()
 
-    def _animate_or_set_title_visible(self, label: QWidget, visible: bool, duration: int = 200) -> None:
+    def _animate_or_set_title_visible(self, label: QWidget, visible: bool, duration: int = None) -> None:
         """Animate the title label's width when toggling visibility."""
         try:
             # Cancel any running animation on this label
@@ -2066,6 +2105,19 @@ class TaskbarWidget(BaseWidget):
                     running.deleteLater()
             except Exception:
                 pass
+
+            if duration is None:
+                duration = self._animation_duration
+            if not self._animation_enabled:
+                label.setVisible(visible)
+                if not visible:
+                    label.setMaximumWidth(0)
+                else:
+                    label.setMaximumWidth(16777215)
+                parent = label.parentWidget()
+                if parent and parent.layout():
+                    parent.layout().activate()
+                return
 
             start_width = label.maximumWidth() if label.maximumWidth() != 16777215 else label.width()
             end_width = label.sizeHint().width() if visible else 0
