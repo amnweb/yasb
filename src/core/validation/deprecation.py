@@ -141,11 +141,14 @@ def handle_deprecated_fields(cls: type, data: Any) -> Any:
     return data
 
 
-def _check(data: dict, path: str, class_name: str, issues: list[dict]):
+def _check(data: dict, path: str, class_name: str, issues: list[dict], model: type | None = None):
     """Check dict keys against global + scoped deprecated/renamed for *class_name*."""
     deprecated = {**DEPRECATED_FIELDS, **SCOPED_DEPRECATED_FIELDS.get(class_name, {})}
     renamed = {**RENAMED_FIELDS, **SCOPED_RENAMED_FIELDS.get(class_name, {})}
+    model_fields = set(model.model_fields) if model is not None and hasattr(model, "model_fields") else set()
     for key in data:
+        if key in model_fields:
+            continue
         kp = f"{path}.{key}"
         if key in deprecated:
             issues.append({"path": kp, "key": key, "action": "remove", "message": deprecated[key]})
@@ -158,7 +161,7 @@ def _check_model(data: dict, path: str, model: type, issues: list[dict]):
     """Check data against a Pydantic model and recurse into its sub-models."""
     import typing
 
-    _check(data, path, model.__name__, issues)
+    _check(data, path, model.__name__, issues, model)
     for name, field in model.model_fields.items():
         ann = field.annotation
         val = data.get(name)
