@@ -57,6 +57,7 @@ DEPRECATED_FIELDS: dict[str, str] = {
     "unpinned_shadow": "Use CSS box-shadow instead.",
     "pinned_shadow": "Use CSS box-shadow instead.",
     "unpinned_vis_btn_shadow": "Use CSS box-shadow instead.",
+    "animation": "Use CSS animations instead.",
 }
 
 RENAMED_FIELDS: dict[str, tuple[str, str]] = {}
@@ -106,17 +107,8 @@ SCOPED_DEPRECATED_FIELDS: dict[str, dict[str, str]] = {
         "lazy_load_delay": "No longer supported and can be removed from the config.",
         "enable_cache": "No longer supported and can be removed from the config.",
     },
-    "StackConfig": {
-        "animation": "Use CSS animations instead.",
-    },
-    "KomorebiWorkspacesConfig": {
-        "animation": "Use CSS animations instead.",
-    },
-    "TaskbarConfig": {
-        "animation": "Use CSS animations instead.",
-    },
-    "WindowsDesktopsConfig": {
-        "animation": "Use CSS animations instead.",
+    "AnimationConfig": {
+        "type": "Animation type is no longer supported in TaskbarWidget, remove it from your config.",
     },
 }
 
