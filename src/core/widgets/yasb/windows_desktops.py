@@ -47,10 +47,10 @@ class WorkspaceButton(QPushButton):
             self.parent_widget._clicked_button = self
             self.parent_widget._run_callback(self.parent_widget.callback_left)
 
-    def contextMenuEvent(self, event):
+    def mousePressEvent(self, event):
         if self.parent_widget:
             self.parent_widget._clicked_button = self
-            self.parent_widget._run_callback(self.parent_widget.callback_right)
+        super().mousePressEvent(event)
 
     def update_text(self, text: str):
         self.setText(text)

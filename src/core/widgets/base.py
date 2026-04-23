@@ -45,6 +45,7 @@ class BaseWidget(QWidget):
 
         self.timer = QTimer(self)
         self.mouseReleaseEvent = self._handle_mouse_events
+        self.contextMenuEvent = lambda event: event.accept()
 
         self.widget_layout.setSpacing(0)
         self.widget_layout.setContentsMargins(0, 0, 0, 0)
