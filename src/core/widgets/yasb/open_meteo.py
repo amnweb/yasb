@@ -20,7 +20,7 @@ from PyQt6.QtWidgets import (
 )
 
 from core.utils.tooltip import set_tooltip
-from core.utils.utilities import PopupWidget, refresh_widget_style
+from core.utils.utilities import PopupWidget, is_valid_qobject, refresh_widget_style
 from core.validation.widgets.yasb.open_meteo import OpenMeteoWidgetConfig
 from core.widgets.base import BaseWidget
 from core.widgets.services.open_meteo.api import GeocodingFetcher, OpenMeteoDataFetcher
@@ -67,6 +67,7 @@ class OpenMeteoWidget(BaseWidget):
 
         # Network
         self._geocoding_fetcher: GeocodingFetcher | None = None
+        self._cached_card: PopupWidget | None = None
 
         # Location
         self._widget_id: str | None = None
@@ -116,6 +117,7 @@ class OpenMeteoWidget(BaseWidget):
                 try:
                     self.process_weather_data(cached_data)
                     self._update_label(True)
+                    QTimer.singleShot(0, self._pre_build_card)
                 except Exception as e:
                     logging.warning("Failed to load cached weather data: %s", e)
                     is_cache_valid = False
@@ -167,6 +169,7 @@ class OpenMeteoWidget(BaseWidget):
             try:
                 instance.process_weather_data(data)
                 instance._update_label(True)
+                QTimer.singleShot(0, instance._pre_build_card)
             except Exception as e:
                 logging.error("Failed to update weather instance: %s", e)
 
@@ -188,9 +191,31 @@ class OpenMeteoWidget(BaseWidget):
         self._update_label(update_class=False)
 
     def _toggle_card(self):
-        self._popup_card()
+        if is_valid_qobject(self._cached_card):
+            self._cached_card.setPosition(
+                alignment=self.config.weather_card.alignment,
+                direction=self.config.weather_card.direction,
+                offset_left=self.config.weather_card.offset_left,
+                offset_top=self.config.weather_card.offset_top,
+            )
+            self._cached_card.show()
+        else:
+            self._cached_card = None
+            self._popup_card()
 
-    def _popup_card(self):
+    def _pre_build_card(self) -> None:
+        """Build and cache the weather popup after a data update. Skipped if popup is currently open."""
+        if not self._has_valid_weather_data or not self._location_data:
+            return
+        if is_valid_qobject(self._cached_card) and self._cached_card.isVisible():
+            return
+        self._cached_card = None
+        card = self._popup_card(return_only=True)
+        if card is not None:
+            card.destroyed.connect(lambda: QTimer.singleShot(0, self._pre_build_card))
+            self._cached_card = card
+
+    def _popup_card(self, return_only: bool = False):
         self.dialog = PopupWidget(
             self,
             self.config.weather_card.blur,
@@ -211,7 +236,9 @@ class OpenMeteoWidget(BaseWidget):
             return
 
         # Full weather card
-        self._build_weather_card()
+        self._build_weather_card(return_only=return_only)
+        if return_only:
+            return self.dialog
 
     def _show_location_setup(self):
         layout = QVBoxLayout()
@@ -341,7 +368,7 @@ class OpenMeteoWidget(BaseWidget):
         )
         self.dialog.show()
 
-    def _build_weather_card(self):
+    def _build_weather_card(self, return_only: bool = False):
         main_layout = QVBoxLayout()
 
         # Buttons container for temperature/rain/snow
@@ -567,13 +594,14 @@ class OpenMeteoWidget(BaseWidget):
 
         self.dialog.setLayout(main_layout)
         self.dialog.adjustSize()
-        self.dialog.setPosition(
-            alignment=self.config.weather_card.alignment,
-            direction=self.config.weather_card.direction,
-            offset_left=self.config.weather_card.offset_left,
-            offset_top=self.config.weather_card.offset_top,
-        )
-        self.dialog.show()
+        if not return_only:
+            self.dialog.setPosition(
+                alignment=self.config.weather_card.alignment,
+                direction=self.config.weather_card.direction,
+                offset_left=self.config.weather_card.offset_left,
+                offset_top=self.config.weather_card.offset_top,
+            )
+            self.dialog.show()
 
         # Position buttons absolutely
         if buttons_config.enabled and self.config.weather_card.show_hourly_forecast:

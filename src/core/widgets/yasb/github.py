@@ -4,9 +4,10 @@ from collections.abc import Callable
 from typing import Any
 
 from PyQt6.QtCore import QPoint, Qt, QTimer, QUrl
-from PyQt6.QtGui import QColor, QCursor, QDesktopServices, QMouseEvent, QPainter, QPaintEvent
+from PyQt6.QtGui import QColor, QDesktopServices, QMouseEvent, QPainter, QPaintEvent
 from PyQt6.QtWidgets import QFrame, QGraphicsOpacityEffect, QHBoxLayout, QLabel, QScrollArea, QVBoxLayout, QWidget
 
+from core.utils.qobject import is_valid_qobject
 from core.utils.time_utils import get_relative_time
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import PopupWidget, refresh_widget_style
@@ -96,8 +97,7 @@ class GithubWidget(BaseWidget):
 
         self._notification_label: NotificationLabel | None = None
         self._notification_label_alt: NotificationLabel | None = None
-
-        self._shared_cursor = QCursor(Qt.CursorShape.PointingHandCursor)
+        self._cached_menu: PopupWidget | None = None
 
         self._init_container()
         self._create_dynamically_label(self.config.label, self.config.label_alt)
@@ -142,7 +142,17 @@ class GithubWidget(BaseWidget):
         if not self.github_token:
             self._start_oauth_flow()
             return
-        self.show_menu()
+        if is_valid_qobject(self._cached_menu):
+            self._cached_menu.setPosition(
+                alignment=self.config.menu.alignment,
+                direction=self.config.menu.direction,
+                offset_left=self.config.menu.offset_left,
+                offset_top=self.config.menu.offset_top,
+            )
+            self._cached_menu.show()
+        else:
+            self._cached_menu = None
+            self.show_menu()
 
     def _toggle_label(self):
         self._show_alt_label = not self._show_alt_label
@@ -195,6 +205,16 @@ class GithubWidget(BaseWidget):
 
     def _on_data_update(self, _notifications: list[Any]) -> None:
         QTimer.singleShot(0, self._update_label)
+        QTimer.singleShot(0, self._pre_build_menu)
+
+    def _pre_build_menu(self) -> None:
+        """Build and cache the popup after a data update. Skipped if popup is currently open."""
+        if is_valid_qobject(self._cached_menu) and self._cached_menu.isVisible():
+            return
+        self._cached_menu = None
+        menu = self.show_menu(return_only=True)
+        menu.destroyed.connect(lambda: QTimer.singleShot(0, self._pre_build_menu))
+        self._cached_menu = menu
 
     def _update_label(self):
         github_data = GitHubDataManager.get_data()
@@ -438,7 +458,7 @@ class GithubWidget(BaseWidget):
 
         return container
 
-    def show_menu(self):
+    def show_menu(self, return_only: bool = False):
         github_data = GitHubDataManager.get_data()
         notifications_count = len(github_data)
         notifications_unread_count = len([notification for notification in github_data if notification["unread"]])
@@ -606,11 +626,14 @@ class GithubWidget(BaseWidget):
             main_layout.addWidget(footer_container)
 
         self._menu.adjustSize()
-        self._menu.setPosition(
-            alignment=self.config.menu.alignment,
-            direction=self.config.menu.direction,
-            offset_left=self.config.menu.offset_left,
-            offset_top=self.config.menu.offset_top,
-        )
+        if not return_only:
+            self._menu.setPosition(
+                alignment=self.config.menu.alignment,
+                direction=self.config.menu.direction,
+                offset_left=self.config.menu.offset_left,
+                offset_top=self.config.menu.offset_top,
+            )
 
+        if return_only:
+            return self._menu
         self._menu.show()
