@@ -364,14 +364,12 @@ class ImageGallery(QMainWindow, BaseStyledWidget):
 
             self.prev_button = QPushButton("Prev")
             self.prev_button.setProperty("class", "wallpapers-gallery-buttons")
-            self.prev_button.setCursor(Qt.CursorShape.PointingHandCursor)
             self.prev_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
             self.prev_button.clicked.connect(self.load_prev_images)
             button_layout.addWidget(self.prev_button)
 
             self.next_button = QPushButton("Next")
             self.next_button.setProperty("class", "wallpapers-gallery-buttons")
-            self.next_button.setCursor(Qt.CursorShape.PointingHandCursor)
             self.next_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
             self.next_button.clicked.connect(self.load_next_images)
             button_layout.addWidget(self.next_button)
