@@ -85,5 +85,12 @@ class ClickableLabel(QLabel):
         self.data = None
 
     def mousePressEvent(self, event):
+        if event is not None:
+            event.accept()
+
+    def mouseReleaseEvent(self, event):
+        if event is None:
+            return
         if event.button() == Qt.MouseButton.LeftButton and self.data and self.parent_widget:
             self.parent_widget.execute_code(self.data)
+        event.accept()

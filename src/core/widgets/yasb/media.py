@@ -1341,12 +1341,15 @@ class ClickableLabel(QLabel):
         self.data: Callable[..., Any] | None = None
 
     def mousePressEvent(self, ev: QMouseEvent | None):
+        if ev is not None:
+            ev.accept()
+
+    def mouseReleaseEvent(self, ev: QMouseEvent | None):
         if ev is None:
             return
-        if ev.button() == Qt.MouseButton.LeftButton and self.data:
-            if self.parent_widget is None:
-                return
+        if ev.button() == Qt.MouseButton.LeftButton and self.data and self.parent_widget:
             self.parent_widget.execute_code(self.data)
+        ev.accept()
 
 
 class WheelEventFilter(QObject):
