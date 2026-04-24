@@ -32,8 +32,40 @@ class ServerCheckWorker(QThread):
         self.running = False
         self.wait()
 
+    def _has_internet(self) -> bool:
+        """Check if internet is available."""
+        test_servers = [
+            ("8.8.8.8", 53),  # Google DNS
+            ("1.1.1.1", 53),  # Cloudflare DNS
+        ]
+        for host, port in test_servers:
+            try:
+                sock = socket.create_connection((host, port), timeout=3)
+                sock.close()
+                return True
+            except OSError:
+                continue
+        return False
+
     def run(self) -> None:
         if not self.running:
+            return
+
+        if not self._has_internet():
+            logger.warning("No internet connection detected, skipping server checks")
+            server_statuses = [
+                {
+                    "url": s["url"],
+                    "name": s["name"],
+                    "status": "Offline",
+                    "response_time": None,
+                    "response_code": None,
+                    "ssl": None,
+                    "no_internet": True,
+                }
+                for s in self.servers
+            ]
+            self.status_updated.emit(server_statuses)
             return
 
         server_statuses: list[dict] = []
@@ -91,7 +123,7 @@ class ServerCheckWorker(QThread):
         except OSError as e:
             reason = str(e).lower()
             if "getaddrinfo" in reason or "name or service not known" in reason:
-                logger.debug("Server '%s' is unreachable: no internet connection", server)
+                logger.debug("Server '%s' is unreachable", server)
                 return {
                     "status": "Offline",
                     "response_time": None,
@@ -128,7 +160,7 @@ class ServerCheckWorker(QThread):
         except OSError as e:
             reason = str(e).lower()
             if "getaddrinfo" in reason or "name or service not known" in reason:
-                logger.debug("SSL check skipped for '%s': no internet connection", hostname)
+                logger.debug("SSL check skipped for '%s'", hostname)
             else:
                 logger.debug("SSL check failed for '%s': connection error", hostname)
             return None

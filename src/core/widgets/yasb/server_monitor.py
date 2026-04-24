@@ -79,9 +79,7 @@ class ServerMonitor(BaseWidget):
 
         online_count = sum(1 for s in status_list if s.get("status") == "Online")
         offline_count = sum(1 for s in status_list if s.get("status") == "Offline")
-        no_internet = offline_count > 0 and all(
-            s.get("no_internet") for s in status_list if s.get("status") == "Offline"
-        )
+        no_internet = online_count == 0 and all(s.get("no_internet") for s in status_list)
         ssl_values = [s["ssl"] for s in status_list if isinstance(s.get("ssl"), int)]
         min_ssl = min(ssl_values) if ssl_values else None
         ssl_warning = bool(min_ssl is not None and min_ssl < self.config.ssl_warning)
@@ -403,11 +401,13 @@ class ServerMonitor(BaseWidget):
 
                 ssl_status = ""
                 if self.config.ssl_check and isinstance(server_data.get("ssl"), int):
-                    ssl_status = f", SSL certificate expires in {server_data['ssl']} days"
+                    ssl_status = f", SSL expires in {server_data['ssl']} days"
                 if server_data["status"] == "Online":
                     details_text = (
                         f"{server_data_response_time}{ssl_status}, response code: {server_data['response_code']}"
                     )
+                elif server_data.get("no_internet"):
+                    details_text = "Server is unreachable (no internet)"
                 else:
                     details_text = "Server is offline"
 
