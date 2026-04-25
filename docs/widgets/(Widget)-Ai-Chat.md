@@ -10,10 +10,7 @@ The AI Chat widget provides a flexible, interactive chat interface that works wi
 | `icons`             | dict    | See example     | Icons for send, stop, clear, assistant, and floating toggle. |
 | `notification_dot`  | dict    | `{'enabled': false, 'corner': 'bottom_left', 'color': 'red', 'margin': [1, 1]}` | A dictionary specifying the notification dot settings for the widget. |
 | `start_floating`    | bool    | `true`          | Open the chat popup in floating mode by default. |
-| `animation`    | dict    | `{enabled: true, type: "fadeInOut", duration: 200}` | Animation settings for the widget.                                          |
 | `callbacks`    | dict    | `{on_left: "toggle_chat", on_middle: "do_nothing", on_right: "do_nothing"}` | Mouse event callbacks.                  |
-| `label_shadow` | dict    | `{enabled: False, color: "black", offset: [1,1], radius: 3}` | Shadow for the label.                   |
-| `container_shadow` | dict | `{enabled: False, color: "black", offset: [1,1], radius: 3}` | Shadow for the container.              |
 | `providers`         | list    | []              | List of AI providers and their models. |
 
 ## Example Configuration
@@ -164,16 +161,10 @@ This widget is ideal for integrating any LLM service that follows the OpenAI API
   - **corner:** Set the corner where the dot should appear.
   - **color:** Set the color of the notification dot. Can be hex or string color.
   - **margin:** Set the x, y margin for the notification dot.
-- **animation:** Animation settings for popup and chat area.
-  - **enabled**: Enable/disable animation
-  - **type**: Animation type (e.g., "fadeInOut")
-  - **duration**: Duration in ms
 - **callbacks:** Mouse event callbacks. Keys:
   - **on_left**: Action for left click (e.g., "toggle_menu")
   - **on_middle**: Middle click action
   - **on_right**: Right click action
-- **label_shadow:** Shadow options for the label.
-- **container_shadow:** Shadow options for the container.
 - **start_floating:** Open the chat popup in floating mode by default.
 - **providers:** List of provider configs. Each provider has:
   - **provider**: Name (e.g., "OpenAI")

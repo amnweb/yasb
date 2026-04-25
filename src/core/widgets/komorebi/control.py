@@ -7,7 +7,6 @@ from PyQt6.QtWidgets import QHBoxLayout, QLabel, QSizePolicy, QVBoxLayout, QWidg
 
 from core.events.komorebi import KomorebiEvent
 from core.events.service import EventService
-from core.utils.animation_manager import AnimationManager
 from core.utils.utilities import PopupWidget, refresh_widget_style
 from core.validation.widgets.komorebi.control import KomorebiControlWidgetConfig
 from core.widgets.base import BaseWidget
@@ -51,8 +50,8 @@ class KomorebiControlWidget(BaseWidget):
         self._komorebic = KomorebiClient()
 
         # Construct container
-        self._init_container(self.config.container_shadow.model_dump())
-        self.build_widget_label(self.config.label, None, self.config.label_shadow.model_dump())
+        self._init_container()
+        self.build_widget_label(self.config.label, None)
 
         self.register_callback("toggle_menu", self._toggle_menu)
 
@@ -104,8 +103,6 @@ class KomorebiControlWidget(BaseWidget):
             self._version_label.setText(self._version_text if self._version_text else "")
 
     def _toggle_menu(self):
-        if self.config.animation.enabled:
-            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
         self.show_menu()
 
     def show_menu(self):
@@ -134,13 +131,10 @@ class KomorebiControlWidget(BaseWidget):
 
         # Store buttons as class attributes so we can update them
         self.start_btn = QLabel(self.config.icons.start)
-        self.start_btn.setCursor(Qt.CursorShape.PointingHandCursor)
 
         self.stop_btn = QLabel(self.config.icons.stop)
-        self.stop_btn.setCursor(Qt.CursorShape.PointingHandCursor)
 
         self.reload_btn = QLabel(self.config.icons.reload)
-        self.reload_btn.setCursor(Qt.CursorShape.PointingHandCursor)
 
         # Connect button click events
         self.start_btn.mousePressEvent = lambda e: self._start_komorebi()

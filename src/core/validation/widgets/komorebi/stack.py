@@ -1,6 +1,6 @@
 from typing import Literal
 
-from core.validation.widgets.base_model import CustomBaseModel, ShadowConfig
+from core.validation.widgets.base_model import CustomBaseModel
 
 
 class RewriteConfig(CustomBaseModel):
@@ -23,10 +23,6 @@ class StackConfig(CustomBaseModel):
     max_length_active: int | None = None
     max_length_overall: int | None = None
     max_length_ellipsis: str = "..."
-    animation: bool = False
     rewrite: list[RewriteConfig] = []
     enable_scroll_switching: bool = False
     reverse_scroll_direction: bool = False
-    btn_shadow: ShadowConfig = ShadowConfig()
-    label_shadow: ShadowConfig = ShadowConfig()
-    container_shadow: ShadowConfig = ShadowConfig()

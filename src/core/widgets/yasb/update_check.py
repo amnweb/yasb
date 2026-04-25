@@ -4,7 +4,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel
 
 from core.utils.tooltip import set_tooltip
-from core.utils.utilities import add_shadow, refresh_widget_style
+from core.utils.utilities import refresh_widget_style
 from core.validation.widgets.yasb.update_check import UpdateCheckWidgetConfig
 from core.widgets.base import BaseWidget
 from core.widgets.services.update_check.service import UpdateCheckService
@@ -58,7 +58,6 @@ class UpdateCheckWidget(BaseWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         container.setLayout(layout)
         container.setProperty("class", f"widget-container {source}")
-        add_shadow(container, self.config.container_shadow.model_dump())
         self.widget_layout.addWidget(container)
         container.hide()
 
@@ -80,7 +79,6 @@ class UpdateCheckWidget(BaseWidget):
                 label = QLabel(part)
                 label.setProperty("class", "label")
 
-            add_shadow(label, self.config.label_shadow.model_dump())
             label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             layout.addWidget(label)
             widgets.append(label)
@@ -122,7 +120,6 @@ class UpdateCheckWidget(BaseWidget):
                 w.setText(icon)
             else:
                 w.setText(part.format(count=count))
-            w.setCursor(Qt.CursorShape.PointingHandCursor)
             idx += 1
 
         if cfg.tooltip:

@@ -3,11 +3,9 @@ from typing import Literal
 from pydantic import Field
 
 from core.validation.widgets.base_model import (
-    AnimationConfig,
     CallbacksConfig,
     CustomBaseModel,
     KeybindingConfig,
-    ShadowConfig,
 )
 
 
@@ -52,9 +50,6 @@ class MicrophoneConfig(CustomBaseModel):
     scroll_step: int = Field(default=2, ge=1, le=100)
     icons: IconsConfig = IconsConfig()
     mic_menu: MicMenuConfig = MicMenuConfig()
-    animation: AnimationConfig = AnimationConfig()
-    label_shadow: ShadowConfig = ShadowConfig()
-    container_shadow: ShadowConfig = ShadowConfig()
     progress_bar: ProgressBarConfig = ProgressBarConfig()
     keybindings: list[KeybindingConfig] = []
     callbacks: CallbacksMicrophoneConfig = CallbacksMicrophoneConfig()

@@ -23,11 +23,9 @@ from PyQt6.QtWidgets import (
 )
 from qasync import asyncSlot  # type: ignore
 
-from core.utils.animation_manager import AnimationManager
 from core.utils.utilities import (
     PopupWidget,
     ScrollingLabel,
-    add_shadow,
     refresh_widget_style,
 )
 from core.utils.win32.aumid import (
@@ -81,7 +79,7 @@ class MediaWidget(BaseWidget):
         super().__init__(class_name=f"media-widget {config.class_name}")
         self.config = config
 
-        self._init_container(self.config.container_shadow.model_dump())
+        self._init_container()
         if self.config.hide_empty:
             self.hide()
 
@@ -112,8 +110,6 @@ class MediaWidget(BaseWidget):
         else:
             self._label = QLabel(self)
         self._label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._label.setCursor(Qt.CursorShape.PointingHandCursor)
-        add_shadow(self._label, self.config.label_shadow.model_dump())
 
         # Label Alt
         if self.config.scrolling_label.enabled:
@@ -125,8 +121,6 @@ class MediaWidget(BaseWidget):
         else:
             self._label_alt = QLabel(self)
         self._label_alt.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._label.setCursor(Qt.CursorShape.PointingHandCursor)
-        add_shadow(self._label_alt, self.config.label_shadow.model_dump())
 
         self._thumbnail_label = QLabel(self)
         self._thumbnail_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -216,8 +210,6 @@ class MediaWidget(BaseWidget):
             self._on_playback_info_changed()
 
     def _toggle_media_menu(self):
-        if self.config.animation.enabled:
-            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
         self.show_menu()
 
     def show_menu(self):
@@ -353,7 +345,6 @@ class MediaWidget(BaseWidget):
                         self.app_volume_slider.setProperty("class", "volume-slider")
                         self.app_volume_slider.setMinimum(0)
                         self.app_volume_slider.setMaximum(100)
-                        self.app_volume_slider.setCursor(Qt.CursorShape.PointingHandCursor)
                         self.app_volume_slider.valueChanged.connect(self._on_app_volume_slider_changed)
 
                         vol_layout.addWidget(self.app_volume_slider, 0, Qt.AlignmentFlag.AlignCenter)
@@ -362,7 +353,6 @@ class MediaWidget(BaseWidget):
                         self._app_mute_button = ClickableLabel(self)
                         self._app_mute_button.setAlignment(Qt.AlignmentFlag.AlignCenter)
                         self._app_mute_button.setProperty("class", "mute-button")
-                        self._app_mute_button.setCursor(Qt.CursorShape.PointingHandCursor)
                         self._app_mute_button.data = self._toggle_app_mute
 
                         vol_layout.addWidget(self._app_mute_button, 0, Qt.AlignmentFlag.AlignCenter)
@@ -400,7 +390,6 @@ class MediaWidget(BaseWidget):
         # Create and configure the slider
         self._progress_slider = QSlider(Qt.Orientation.Horizontal)
         self._progress_slider.setProperty("class", "progress-slider")
-        self._progress_slider.setCursor(Qt.CursorShape.PointingHandCursor)
         self._progress_slider.setMinimum(0)
         self._progress_slider.setMaximum(1000)  # We use 1000 for better precision
 
@@ -512,23 +501,14 @@ class MediaWidget(BaseWidget):
             if self._popup_play_button:
                 self._popup_play_button.setText(play_icon)
                 self._popup_play_button.setProperty("class", f"btn play {'disabled' if not is_play_enabled else ''}")
-                self._popup_play_button.setCursor(
-                    Qt.CursorShape.PointingHandCursor if is_play_enabled else Qt.CursorShape.ArrowCursor
-                )
                 refresh_widget_style(self._popup_play_button)
 
             if self._popup_prev_label:
                 self._popup_prev_label.setProperty("class", f"btn prev {'disabled' if not is_prev_enabled else ''}")
-                self._popup_prev_label.setCursor(
-                    Qt.CursorShape.PointingHandCursor if is_prev_enabled else Qt.CursorShape.ArrowCursor
-                )
                 refresh_widget_style(self._popup_prev_label)
 
             if self._popup_next_label:
                 self._popup_next_label.setProperty("class", f"btn next {'disabled' if not is_next_enabled else ''}")
-                self._popup_next_label.setCursor(
-                    Qt.CursorShape.PointingHandCursor if is_next_enabled else Qt.CursorShape.ArrowCursor
-                )
                 refresh_widget_style(self._popup_next_label)
         except Exception as e:
             logger.error("Error initializing popup buttons: %s", e)
@@ -545,8 +525,6 @@ class MediaWidget(BaseWidget):
             return f"{minutes:01d}:{seconds:02d}"
 
     def _toggle_label(self):
-        if self.config.animation.enabled:
-            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
         self._show_alt_label = not self._show_alt_label
 
         if self._show_alt_label:
@@ -559,13 +537,9 @@ class MediaWidget(BaseWidget):
         self.media.force_update()
 
     def _toggle_play_pause(self):
-        if self.config.animation.enabled:
-            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
         _ = self.media.play_pause()
 
     def _open_media_source(self):
-        if self.config.animation.enabled:
-            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
         if self.current_session and self.current_session.app_id:
             # Try to get process name from mapping for fallback
             fallback_process = None
@@ -700,25 +674,16 @@ class MediaWidget(BaseWidget):
             if self._play_label is not None:
                 self._play_label.setText(play_icon)
                 self._play_label.setProperty("class", f"btn play {'disabled' if not is_play_enabled else ''}")
-                self._play_label.setCursor(
-                    Qt.CursorShape.PointingHandCursor if is_play_enabled else Qt.CursorShape.ArrowCursor
-                )
                 refresh_widget_style(self._play_label)
                 self._play_label.setStyleSheet("")
 
             if self._prev_label is not None:
                 self._prev_label.setProperty("class", f"btn prev {'disabled' if not is_prev_enabled else ''}")
-                self._prev_label.setCursor(
-                    Qt.CursorShape.PointingHandCursor if is_prev_enabled else Qt.CursorShape.ArrowCursor
-                )
                 refresh_widget_style(self._prev_label)
                 self._prev_label.setStyleSheet("")
 
             if self._next_label is not None:
                 self._next_label.setProperty("class", f"btn next {'disabled' if not is_next_enabled else ''}")
-                self._next_label.setCursor(
-                    Qt.CursorShape.PointingHandCursor if is_next_enabled else Qt.CursorShape.ArrowCursor
-                )
                 refresh_widget_style(self._next_label)
                 self._next_label.setStyleSheet("")
 
@@ -733,23 +698,14 @@ class MediaWidget(BaseWidget):
                     self._popup_play_button.setProperty(
                         "class", f"btn play {'disabled' if not is_play_enabled else ''}"
                     )
-                    self._popup_play_button.setCursor(
-                        Qt.CursorShape.PointingHandCursor if is_play_enabled else Qt.CursorShape.ArrowCursor
-                    )
                     refresh_widget_style(self._popup_play_button)
 
                 if self._popup_prev_label is not None:
                     self._popup_prev_label.setProperty("class", f"btn prev {'disabled' if not is_prev_enabled else ''}")
-                    self._popup_prev_label.setCursor(
-                        Qt.CursorShape.PointingHandCursor if is_prev_enabled else Qt.CursorShape.ArrowCursor
-                    )
                     refresh_widget_style(self._popup_prev_label)
 
                 if self._popup_next_label is not None:
                     self._popup_next_label.setProperty("class", f"btn next {'disabled' if not is_next_enabled else ''}")
-                    self._popup_next_label.setCursor(
-                        Qt.CursorShape.PointingHandCursor if is_next_enabled else Qt.CursorShape.ArrowCursor
-                    )
                     refresh_widget_style(self._popup_next_label)
         except RuntimeError:
             self._popup_play_button = None
@@ -1385,18 +1341,15 @@ class ClickableLabel(QLabel):
         self.data: Callable[..., Any] | None = None
 
     def mousePressEvent(self, ev: QMouseEvent | None):
+        if ev is not None:
+            ev.accept()
+
+    def mouseReleaseEvent(self, ev: QMouseEvent | None):
         if ev is None:
             return
-        if ev.button() == Qt.MouseButton.LeftButton and self.data:
-            if self.parent_widget is None:
-                return
-            if self.parent_widget.config.animation.enabled:
-                AnimationManager.animate(
-                    self,
-                    self.parent_widget.config.animation.type,
-                    self.parent_widget.config.animation.duration,
-                )
+        if ev.button() == Qt.MouseButton.LeftButton and self.data and self.parent_widget:
             self.parent_widget.execute_code(self.data)
+        ev.accept()
 
 
 class WheelEventFilter(QObject):

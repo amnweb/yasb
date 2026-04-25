@@ -17,7 +17,6 @@ from PyQt6.QtWidgets import (
 )
 
 from core.utils.alert_dialog import raise_info_alert
-from core.utils.animation_manager import AnimationManager
 from core.utils.utilities import refresh_widget_style
 from core.validation.widgets.yasb.whkd import WhkdConfig
 from core.widgets.base import BaseWidget
@@ -258,15 +257,13 @@ class WhkdWidget(BaseWidget):
         self.config = config
 
         # Construct container
-        self._init_container(self.config.container_shadow.model_dump())
-        self.build_widget_label(self.config.label, None, self.config.label_shadow.model_dump())
+        self._init_container()
+        self.build_widget_label(self.config.label, None)
 
         self.register_callback("open_popup", self._open_popup)
         self.callback_left = "open_popup"
 
     def _open_popup(self):
-        if self.config.animation.enabled:
-            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
 
         # Determine config file location
         whkd_config_home = os.getenv("WHKD_CONFIG_HOME")

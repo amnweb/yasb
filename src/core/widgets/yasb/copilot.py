@@ -11,7 +11,6 @@ from PyQt6.QtCore import QPointF, Qt, QTimer
 from PyQt6.QtGui import QBrush, QColor, QGuiApplication, QLinearGradient, QPainter, QPainterPath, QPen
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
-from core.utils.animation_manager import AnimationManager
 from core.utils.tooltip import CustomToolTip, set_tooltip
 from core.utils.utilities import PopupWidget, refresh_widget_style
 from core.validation.widgets.yasb.copilot import CopilotConfig
@@ -293,8 +292,8 @@ class CopilotWidget(BaseWidget):
         self._show_alt_label = False
         self._menu: PopupWidget | None = None
 
-        self._init_container(self.config.container_shadow.model_dump())
-        self.build_widget_label(self.config.label, self.config.label_alt, self.config.label_shadow.model_dump())
+        self._init_container()
+        self.build_widget_label(self.config.label, self.config.label_alt)
 
         self.register_callback("toggle_label", self._toggle_label)
         self.register_callback("toggle_popup", self._toggle_popup)
@@ -352,8 +351,6 @@ class CopilotWidget(BaseWidget):
                 cls._instances.remove(inst)
 
     def _toggle_popup(self):
-        if self.config.animation.enabled:
-            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
         if not CopilotDataManager._token:
             self._start_oauth_flow()
             return
@@ -376,8 +373,6 @@ class CopilotWidget(BaseWidget):
         CopilotDataManager.set_token(token)
 
     def _toggle_label(self):
-        if self.config.animation.enabled:
-            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
         self._show_alt_label = not self._show_alt_label
         for w in self._widgets:
             w.setVisible(not self._show_alt_label)

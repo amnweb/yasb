@@ -3,11 +3,9 @@ from typing import Literal
 from pydantic import Field
 
 from core.validation.widgets.base_model import (
-    AnimationConfig,
     CallbacksConfig,
     CustomBaseModel,
     KeybindingConfig,
-    ShadowConfig,
 )
 
 
@@ -72,9 +70,6 @@ class CpuConfig(CustomBaseModel):
     histogram_num_columns: int = Field(default=10, ge=0, le=128)
     hide_decimal: bool = False
     cpu_thresholds: CpuThresholdsConfig = CpuThresholdsConfig()
-    animation: AnimationConfig = AnimationConfig()
-    label_shadow: ShadowConfig = ShadowConfig()
-    container_shadow: ShadowConfig = ShadowConfig()
     progress_bar: ProgressBarConfig = ProgressBarConfig()
     keybindings: list[KeybindingConfig] = []
     callbacks: CallbacksCpuConfig = CallbacksCpuConfig()

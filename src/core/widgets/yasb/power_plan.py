@@ -3,8 +3,7 @@ import logging
 import re
 from ctypes import wintypes
 
-from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtGui import QCursor
+from PyQt6.QtCore import QTimer
 from PyQt6.QtWidgets import QFrame, QLabel, QPushButton, QVBoxLayout
 
 from core.utils.utilities import PopupWidget, refresh_widget_style
@@ -29,8 +28,8 @@ class PowerPlanWidget(BaseWidget):
         self._plans = []
         self._active_guid = None
 
-        self._init_container(self.config.container_shadow.model_dump())
-        self.build_widget_label(self.config.label, self.config.label_alt, self.config.label_shadow.model_dump())
+        self._init_container()
+        self.build_widget_label(self.config.label, self.config.label_alt)
 
         self.register_callback("toggle_menu", self._show_menu)
         self.register_callback("toggle_label", self._toggle_label)
@@ -159,7 +158,6 @@ class PowerPlanWidget(BaseWidget):
         # Add power plan buttons to frame layout
         for plan in self._plans:
             btn = QPushButton(plan["name"])
-            btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
 
             if self._active_guid and self._guids_equal(plan["guid"], self._active_guid):
                 btn.setProperty("class", "button active")

@@ -1,9 +1,7 @@
 from core.validation.widgets.base_model import (
-    AnimationConfig,
     CallbacksConfig,
     CustomBaseModel,
     KeybindingConfig,
-    ShadowConfig,
 )
 
 
@@ -23,8 +21,5 @@ class NotificationsConfig(CustomBaseModel):
     hide_empty: bool = False
     tooltip: bool = True
     icons: NotificationsIconsConfig = NotificationsIconsConfig()
-    animation: AnimationConfig = AnimationConfig()
-    label_shadow: ShadowConfig = ShadowConfig()
-    container_shadow: ShadowConfig = ShadowConfig()
     keybindings: list[KeybindingConfig] = []
     callbacks: NotificationsCallbacksConfig = NotificationsCallbacksConfig()

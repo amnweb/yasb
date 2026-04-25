@@ -7,7 +7,7 @@ from typing import Any
 
 from pydantic import BaseModel
 from PyQt6.QtCore import QPoint, Qt, QTimer
-from PyQt6.QtGui import QCursor, QTextCursor
+from PyQt6.QtGui import QTextCursor
 from PyQt6.QtWidgets import (
     QApplication,
     QFrame,
@@ -22,7 +22,6 @@ from PyQt6.QtWidgets import (
 )
 
 from core.config import HOME_CONFIGURATION_DIR
-from core.utils.animation_manager import AnimationManager
 from core.utils.qobject import is_valid_qobject
 from core.utils.tooltip import set_tooltip
 from core.utils.win32.utils import find_focused_screen, get_foreground_hwnd, set_foreground_hwnd  # type: ignore
@@ -75,8 +74,8 @@ class NotesWidget(BaseWidget):
             self.notes_file = os.path.join(HOME_CONFIGURATION_DIR, "notes.json")
         self.notes = self._load_notes()
 
-        self._init_container(config.container_shadow.model_dump())
-        self.build_widget_label(self._label_content, self._label_alt_content, config.label_shadow.model_dump())
+        self._init_container()
+        self.build_widget_label(self._label_content, self._label_alt_content)
 
         self.register_callback("toggle_label", self._toggle_label)
         self.register_callback("toggle_menu", self._toggle_menu)
@@ -144,8 +143,6 @@ class NotesWidget(BaseWidget):
         return True
 
     def _toggle_label(self) -> None:
-        if self.config.animation.enabled:
-            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
 
         self._show_alt_label = not self._show_alt_label
 
@@ -160,8 +157,6 @@ class NotesWidget(BaseWidget):
     def _toggle_menu(self) -> None:
         # If popup is not visible or doesn't exist, open it
         if not self.is_menu_active():
-            if self.config.animation.enabled:
-                AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
             self._show_menu()
         else:
             self._close_menu()
@@ -290,7 +285,6 @@ class NotesWidget(BaseWidget):
         visible: bool = True,
     ) -> QPushButton:
         btn = QPushButton(label, parent)
-        btn.setCursor(Qt.CursorShape.PointingHandCursor)
         btn.setProperty("class", class_name)
         if on_click:
             btn.clicked.connect(on_click)
@@ -396,14 +390,12 @@ class NotesWidget(BaseWidget):
         # Add Note button
         self.add_button = QPushButton("Add Note")
         self.add_button.setProperty("class", "add-button")
-        self.add_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.add_button.clicked.connect(self.add_note_from_input)
         button_layout.addWidget(self.add_button)
 
         # Cancel button (hidden by default)
         self.cancel_button = QPushButton("Cancel")
         self.cancel_button.setProperty("class", "cancel-button")
-        self.cancel_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.cancel_button.clicked.connect(self._cancel_editing)
         self.cancel_button.hide()
         button_layout.addWidget(self.cancel_button)
@@ -511,7 +503,6 @@ class NotesWidget(BaseWidget):
         container = QWidget()
         container.setProperty("class", "note-item")
         container.setContentsMargins(0, 0, 0, 0)
-        container.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
 
         # Main row
         container_layout = QHBoxLayout(container)

@@ -481,14 +481,12 @@ class WifiMenu(QObject):
 
         more_settings_button = QPushButton("More Wi-Fi settings")
         more_settings_button.setProperty("class", "settings-button")
-        more_settings_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
 
         more_settings_button.clicked.connect(partial(self._run_and_hide, "ms-settings:network-wifi"))  # pyright: ignore[reportUnknownMemberType]
 
         refresh_icon = QPushButton(self.popup_window)
         refresh_icon.setText("\ue72c")
         refresh_icon.setProperty("class", "refresh-icon")
-        refresh_icon.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         refresh_icon.clicked.connect(self._scan_wifi)  # pyright: ignore[reportUnknownMemberType]
 
         footer_layout.addWidget(more_settings_button)

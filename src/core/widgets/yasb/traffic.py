@@ -4,7 +4,6 @@ import re
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
 
-from core.utils.animation_manager import AnimationManager
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import PopupWidget, refresh_widget_style
 from core.validation.widgets.yasb.traffic import TrafficWidgetConfig
@@ -36,11 +35,10 @@ class TrafficWidget(BaseWidget):
             self.config.interface
         )
 
-        self._init_container(self.config.container_shadow.model_dump())
+        self._init_container()
         self.build_widget_label(
             self.config.label,
             self.config.label_alt,
-            self.config.label_shadow.model_dump(),
         )
 
         self._initialize_instance_counters()
@@ -286,8 +284,6 @@ class TrafficWidget(BaseWidget):
                 pass
 
     def _toggle_label(self):
-        if self.config.animation.enabled:
-            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)  # type: ignore
         self._show_alt_label = not self._show_alt_label
         for widget in self._widgets:  # type: ignore
             widget.setVisible(not self._show_alt_label)
@@ -374,7 +370,6 @@ class TrafficWidget(BaseWidget):
         reset_button = QPushButton("Reset All")
         reset_button.setProperty("class", "reset-button")
         set_tooltip(reset_button, "Reset all traffic data")
-        reset_button.setCursor(Qt.CursorShape.PointingHandCursor)
         reset_button.clicked.connect(self._reset_traffic_data)
         header_layout.addWidget(reset_button)
 

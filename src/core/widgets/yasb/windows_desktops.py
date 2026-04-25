@@ -1,7 +1,6 @@
 import logging
 
 from PyQt6.QtCore import (
-    QEasingCurve,
     Qt,
     QTimer,
 )
@@ -14,15 +13,15 @@ from PyQt6.QtWidgets import (
     QLineEdit,
     QMenu,
     QPushButton,
+    QSizePolicy,
     QVBoxLayout,
 )
 
 from core.utils.system import is_windows_10
-from core.utils.utilities import PopupWidget, add_shadow, refresh_widget_style
+from core.utils.utilities import PopupWidget, refresh_widget_style
 from core.utils.win32.utils import apply_qmenu_style
 from core.validation.widgets.yasb.windows_desktops import WindowsDesktopsConfig
 from core.widgets.base import BaseWidget
-from core.widgets.services.komorebi.animation import KomorebiAnimation
 from core.widgets.services.windows_desktops.service import WindowsDesktopService
 
 
@@ -42,25 +41,20 @@ class WorkspaceButton(QPushButton):
         self.active_label = active_label if active_label else self.default_label
         self.setText(self.default_label)
         self.parent_widget = parent
-        self.workspace_animation = parent.config.switch_workspace_animation if parent else False
-        self.animation = parent.config.animation if parent else False
-        self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.clicked.connect(self._on_clicked)
+        self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
 
     def _on_clicked(self):
         if self.parent_widget:
             self.parent_widget._clicked_button = self
             self.parent_widget._run_callback(self.parent_widget.callback_left)
 
-    def contextMenuEvent(self, event):
+    def mousePressEvent(self, event):
         if self.parent_widget:
             self.parent_widget._clicked_button = self
-            self.parent_widget._run_callback(self.parent_widget.callback_right)
+        super().mousePressEvent(event)
 
     def update_text(self, text: str):
-        """Update button text and capture width before change for animation"""
-        if self.animation:
-            self._pre_change_width = self.sizeHint().width()
         self.setText(text)
 
     def update_visible_buttons(self):
@@ -74,14 +68,6 @@ class WorkspaceButton(QPushButton):
             new_class = f"{new_class} button-{index + 1}"
             button.setProperty("class", new_class)
             refresh_widget_style(button)
-        if self.animation:
-            try:
-                prev_idx = getattr(self.parent_widget, "_prev_workspace_index", None)
-                curr_idx = getattr(self.parent_widget, "_curr_workspace_index", None)
-                if self.workspace_index in (prev_idx, curr_idx):
-                    self.animate_buttons()
-            except Exception:
-                self.animate_buttons()
 
     def activate_workspace(self):
         try:
@@ -89,13 +75,6 @@ class WorkspaceButton(QPushButton):
             WindowsDesktopService().notify_desktop_changed(self.workspace_index)
         except Exception:
             logging.exception("Failed to focus desktop at index %s", self.workspace_index)
-
-    def animate_buttons(self, duration: int = 120):
-        # Use the centralized animation from Komorebi
-        start_width = self._pre_change_width
-        KomorebiAnimation.animate_width(
-            self, duration=duration, easing=QEasingCurve.Type.OutCubic, start_width=start_width
-        )
 
     def _show_context_menu(self):
         menu = QMenu(self.window())
@@ -245,10 +224,8 @@ class WorkspaceButton(QPushButton):
 
         rename_btn = QPushButton("Rename")
         rename_btn.setProperty("class", "button save")
-        rename_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         cancel_btn = QPushButton("Cancel")
         cancel_btn.setProperty("class", "button cancel")
-        cancel_btn.setCursor(Qt.CursorShape.PointingHandCursor)
 
         def do_rename():
             new_name = name_edit.text().strip()
@@ -358,7 +335,7 @@ class WorkspaceWidget(BaseWidget):
         self.callback_middle = config.callbacks.on_middle
 
         # Construct container which holds workspace buttons
-        self._init_container(self.config.container_shadow.model_dump())
+        self._init_container()
 
         self.register_callback("update_desktops", self._force_update)
 
@@ -425,12 +402,6 @@ class WorkspaceWidget(BaseWidget):
         if curr_btn is not None:
             self._update_button(curr_btn, schedule_update=False)
 
-        # Start both animations so they run in parallel
-        if prev_btn is not None and getattr(prev_btn, "animation", False):
-            prev_btn.animate_buttons()
-        if curr_btn is not None and getattr(curr_btn, "animation", False):
-            curr_btn.animate_buttons()
-
     def _on_update_desktops(self, event_data=None, options=None):
         self._virtual_desktops_check = list(range(1, len(self._svc.get_desktops()) + 1))
         self._curr_workspace_index_check = self._svc.get_current_desktop().number
@@ -443,20 +414,15 @@ class WorkspaceWidget(BaseWidget):
             self._virtual_desktops = self._virtual_desktops_check
             self._curr_workspace_index = self._curr_workspace_index_check
             self._add_or_remove_buttons()
-            self.refresh_workspace_button_labels(animate=update_buttons)
+            self.refresh_workspace_button_labels()
 
-    def refresh_workspace_button_labels(self, animate: bool = False):
+    def refresh_workspace_button_labels(self):
         for button in self._workspace_buttons:
             ws_label, ws_active_label = self._get_workspace_label(button.workspace_index)
             button.default_label = ws_label
             button.active_label = ws_active_label
             button.workspace_name = self._svc.get_desktop_name(button.workspace_index)
             self._update_button(button)
-            if animate and getattr(button, "animation", False):
-                try:
-                    button.animate_buttons()
-                except Exception:
-                    pass
 
     def _clear_container_layout(self):
         for i in reversed(range(self._widget_container_layout.count())):
@@ -508,15 +474,8 @@ class WorkspaceWidget(BaseWidget):
             self._clear_container_layout()
             for workspace_btn in self._workspace_buttons:
                 self._widget_container_layout.addWidget(workspace_btn)
-                add_shadow(workspace_btn, self.config.btn_shadow.model_dump())
             try:
                 QTimer.singleShot(0, lambda: [btn.update_visible_buttons() for btn in self._workspace_buttons])
-                for btn in self._workspace_buttons:
-                    if getattr(btn, "animation", False):
-                        try:
-                            QTimer.singleShot(0, btn.animate_buttons)
-                        except Exception:
-                            pass
             except Exception:
                 pass
 

@@ -17,7 +17,6 @@ from PyQt6.QtWidgets import (
 )
 
 from core.ui.components.loader import LoaderLine
-from core.utils.animation_manager import AnimationManager
 from core.utils.tooltip import set_tooltip
 from core.utils.win32.utils import apply_qmenu_style, find_focused_screen
 from core.utils.win32.window_actions import force_foreground_focus
@@ -58,10 +57,7 @@ class AiChatWidget(BaseWidget):
         self._model = None
         self._model_index = None
         self._popup_chat = None
-        self._animation = config.animation.model_dump()
         self._chat = config.chat.model_dump()
-        self._label_shadow = config.label_shadow.model_dump()
-        self._container_shadow = config.container_shadow.model_dump()
         self._notification_label: NotificationLabel | None = None
         self._input_draft = ""
         self._attachments: list[dict[str, Any]] = []
@@ -85,7 +81,7 @@ class AiChatWidget(BaseWidget):
         self._previous_hwnd = 0
         self._is_floating = False
         self._original_position = None
-        self._init_container(self._container_shadow)
+        self._init_container()
 
         self._label_builder.create_dynamically_label(self._label_content)
 
@@ -126,8 +122,6 @@ class AiChatWidget(BaseWidget):
     def _toggle_chat(self):
         # If popup is not visible or doesn't exist, open it
         if self._popup_chat is None or not (self._popup_chat and self._popup_chat.isVisible()):
-            if self._animation["enabled"]:
-                AnimationManager.animate(self, self._animation["type"], self._animation["duration"])
             self._show_chat()
 
             # Focus and move cursor to end of text
@@ -152,7 +146,6 @@ class AiChatWidget(BaseWidget):
         visible: bool = True,
     ) -> QPushButton:
         btn = QPushButton(label, parent)
-        btn.setCursor(Qt.CursorShape.PointingHandCursor)
         btn.setProperty("class", class_name)
         if on_click:
             btn.clicked.connect(on_click)
@@ -484,7 +477,6 @@ class AiChatWidget(BaseWidget):
 
             copy_btn = QPushButton(self._icons["copy"])
             copy_btn.setProperty("class", "copy-button")
-            copy_btn.setCursor(Qt.CursorShape.PointingHandCursor)
             copy_btn.clicked.connect(lambda checked, ml=msg_label, btn=copy_btn: self._copy_message_content(ml, btn))
             copy_row_layout.addWidget(copy_btn)
 

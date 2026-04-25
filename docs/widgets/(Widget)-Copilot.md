@@ -62,10 +62,6 @@ copilot:
       offset_top: 6
       offset_left: 0
       chart: true
-    animation:
-      enabled: true
-      type: "fadeInOut"
-      duration: 200
 ```
 
 ### Options

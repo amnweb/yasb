@@ -1,11 +1,9 @@
 from pydantic import ConfigDict, Field
 
 from core.validation.widgets.base_model import (
-    AnimationConfig,
     CallbacksConfig,
     CustomBaseModel,
     KeybindingConfig,
-    ShadowConfig,
 )
 
 
@@ -46,10 +44,7 @@ class NotesConfig(CustomBaseModel):
     start_floating: bool = False
     paste_plain_text: bool = False
     enter_to_add_note: bool = True
-    animation: AnimationConfig = AnimationConfig()
     menu: MenuConfig = MenuConfig()
     icons: IconsConfig = IconsConfig()
-    label_shadow: ShadowConfig = ShadowConfig()
-    container_shadow: ShadowConfig = ShadowConfig()
     keybindings: list[KeybindingConfig] = []
     callbacks: NotesCallbacksConfig = NotesCallbacksConfig()

@@ -27,8 +27,6 @@ through [Nightscout CGM remote monitor](https://github.com/nightscout/cgm-remote
 | `sgv_measurement_units` | string  | `mmol/l`                                                                                                                                                                                                                                       | SGV measurement units can be `mg/dl` or `mmol/l`.                                                                                                    |
 | `callbacks`             | dict    | `{"on_left": "open_cgm", "on_middle": "do_nothing", "on_right": "do_nothing"}`                                                                                                                                                                 | Callbacks for mouse events on the glucose monitor widget.                                                                                            |
 | `notify_on_error`       | boolean | `True`                                                                                                                                                                                                                                         | Send a notification on error.                                                                                                                        |
-| `label_shadow`          | dict    | `None`                                                                                                                                                                                                                                         | Label shadow options.                                                                                                                                |
-| `container_shadow`      | dict    | `None`                                                                                                                                                                                                                                         | Container shadow options.                                                                                                                            |
 | `sgv_range`             | dict    | `{"min": 4, "max": 9}`                                                                                                                                                                                                                         | Normal SGV range to append `in-range` or `out-range` CSS class for span with `.sgv` CSS class.                                                      |
 
 ## Example Configuration
@@ -61,8 +59,6 @@ through [Nightscout CGM remote monitor](https://github.com/nightscout/cgm-remote
 - **sgv_measurement_units:** SGV measurement units can be `mg/dl` or `mmol/l`.
 - **callbacks:** Callbacks for mouse events on the glucose monitor widget.
 - **notify_on_error:** Send a notification on error.
-- **label_shadow:** Label shadow options.
-- **container_shadow:** Container shadow options.
 - **sgv_range:** Normal SGV range to append `in-range` or `out-range` CSS class for span with `.sgv` CSS class.
 
 ## Example Style

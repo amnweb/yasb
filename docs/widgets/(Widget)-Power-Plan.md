@@ -12,8 +12,6 @@ Displays the name of the current Windows power plan and lets you switch between 
 | `update_interval`   | int    | `5000`                                                          | Refresh interval in milliseconds. Set to `0` to disable periodic updates.              |
 | `menu`              | dict   | `{}`                                                         | Popup menu options (see **Menu Options** below).                                      |
 | `callbacks`         | dict   |  `{'on_left': 'toggle_menu', 'on_middle': 'do_nothing', 'on_right': 'toggle_label'}` | Click handlers: `on_left`, `on_middle`, `on_right`.                                    |
-| `label_shadow`      | dict   | `None`                                                       | Label shadow options.                        |
-| `container_shadow`  | dict   | `None`                                                       | Container shadow options.                    |
 
 ## Menu Options
 
@@ -50,16 +48,6 @@ power_plan:
       on_left: "toggle_menu"
       on_middle: "do_nothing"
       on_right: "toggle_label"
-    label_shadow:
-      enabled: true
-      color: "black"
-      offset: [1, 1]
-      radius: 3
-    container_shadow:
-      enabled: true
-      color: "#000000"
-      offset: [0, 1]
-      radius: 2
 ```
 
 ## Description of Options
@@ -69,8 +57,6 @@ power_plan:
 - **update_interval**: Refresh interval in milliseconds. Set to `0` to disable periodic updates.
 - **menu**: Popup menu options.
 - **callbacks**: Click handlers for left, middle, and right mouse buttons.
-- **label_shadow**: Label shadow options.
-- **container_shadow**: Container shadow options.
 
 
 ## Available Callbacks

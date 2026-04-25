@@ -4,7 +4,7 @@ import os
 
 from PyQt6 import QtCore
 from PyQt6.QtCore import QPropertyAnimation, Qt
-from PyQt6.QtGui import QCursor, QPainter, QPainterPath, QPixmap
+from PyQt6.QtGui import QPainter, QPainterPath, QPixmap
 from PyQt6.QtWidgets import (
     QApplication,
     QFrame,
@@ -16,7 +16,6 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
 )
 
-from core.utils.animation_manager import AnimationManager
 from core.utils.utilities import PopupWidget, refresh_widget_style
 from core.utils.win32.backdrop import enable_blur
 from core.utils.win32.window_actions import force_foreground_focus
@@ -111,8 +110,8 @@ class PowerMenuWidget(BaseWidget):
         self.config = config
 
         # Construct container and label
-        self._init_container(self.config.container_shadow.model_dump())
-        self.build_widget_label(self.config.label, None, self.config.label_shadow.model_dump())
+        self._init_container()
+        self.build_widget_label(self.config.label, None)
 
         self.register_callback("toggle_power_menu", self._show_main_window)
 
@@ -130,8 +129,6 @@ class PowerMenuWidget(BaseWidget):
             self.main_window = None
 
     def _show_main_window(self):
-        if self.config.animation.enabled:
-            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
         if self.config.menu_style == "popup":
             self._show_popup_menu()
             return
@@ -227,7 +224,6 @@ class PowerMenuWidget(BaseWidget):
 
             manage_btn = QPushButton("Manage accounts")
             manage_btn.setProperty("class", "manage-accounts")
-            manage_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
             manage_btn.clicked.connect(lambda: (self._popup.hide(), os.startfile("ms-settings:accounts")))
             profile_layout.addWidget(manage_btn, alignment=Qt.AlignmentFlag.AlignCenter)
 
@@ -251,7 +247,6 @@ class PowerMenuWidget(BaseWidget):
 
             btn_frame = QFrame()
             btn_frame.setProperty("class", f"button {button_name.replace('_', '-')}")
-            btn_frame.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
             btn_layout = QHBoxLayout(btn_frame)
             btn_layout.setSpacing(0)
             btn_layout.setContentsMargins(0, 0, 0, 0)
@@ -414,7 +409,6 @@ class MainWindow(AnimatedWidget):
                 buttons_layout.addLayout(row)
 
             button = QPushButton(self)
-            button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
             button.setProperty("class", f"button {button_name.replace('_', '-')}")
             btn_layout = QVBoxLayout(button)
             btn_layout.setSpacing(0)

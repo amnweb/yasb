@@ -6,7 +6,6 @@ from core.validation.widgets.base_model import (
     CallbacksConfig,
     CustomBaseModel,
     KeybindingConfig,
-    ShadowConfig,
 )
 
 
@@ -33,6 +32,4 @@ class PowerPlanConfig(CustomBaseModel):
     update_interval: int = Field(default=5000, ge=0)
     menu: PowerPlanMenuConfig = PowerPlanMenuConfig()
     callbacks: PowerPlanCallbacksConfig = PowerPlanCallbacksConfig()
-    label_shadow: ShadowConfig = ShadowConfig()
-    container_shadow: ShadowConfig = ShadowConfig()
     keybindings: list[KeybindingConfig] = []

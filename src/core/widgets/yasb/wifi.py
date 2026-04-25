@@ -8,8 +8,6 @@ from PyQt6.QtWidgets import (
 )
 from winrt.windows.networking.connectivity import NetworkInformation
 
-from core.utils.animation_manager import AnimationManager
-from core.utils.utilities import add_shadow
 from core.validation.widgets.yasb.wifi import WifiConfig
 from core.widgets.base import BaseWidget
 from core.widgets.services.wifi.wifi_managers import NetworkInfo, WiFiInfo, WiFiWorker
@@ -37,7 +35,7 @@ class WifiWidget(BaseWidget):
         self._wifi_worker.start()
 
         # Construct container
-        self._init_container(self.config.container_shadow.model_dump())
+        self._init_container()
 
         self._create_dynamically_label(self.config.label, self.config.label_alt)
         self._create_dynamically_label(
@@ -72,8 +70,6 @@ class WifiWidget(BaseWidget):
                     widget.setVisible(False)
 
     def _toggle_label(self):
-        if self.config.animation.enabled:
-            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
         self._show_alt_label = not self._show_alt_label
         self._update_label()
 
@@ -96,8 +92,6 @@ class WifiWidget(BaseWidget):
                     label = QLabel(part)
                     label.setProperty("class", "label alt" if is_alt else "label")
                 label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                label.setCursor(Qt.CursorShape.PointingHandCursor)
-                add_shadow(label, self.config.label_shadow.model_dump())
                 self._widget_container_layout.addWidget(label)
                 widgets.append(label)
                 if is_alt or is_ethernet:

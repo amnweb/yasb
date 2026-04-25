@@ -1,9 +1,7 @@
 from core.validation.widgets.base_model import (
-    AnimationConfig,
     CallbacksConfig,
     CustomBaseModel,
     KeybindingConfig,
-    ShadowConfig,
 )
 
 
@@ -24,8 +22,5 @@ class RecycleBinConfig(CustomBaseModel):
     icons: RecycleBinIconsConfig = RecycleBinIconsConfig()
     tooltip: bool = True
     show_confirmation: bool = False
-    animation: AnimationConfig = AnimationConfig()
-    label_shadow: ShadowConfig = ShadowConfig()
-    container_shadow: ShadowConfig = ShadowConfig()
     keybindings: list[KeybindingConfig] = []
     callbacks: RecycleBinCallbacksConfig = RecycleBinCallbacksConfig()

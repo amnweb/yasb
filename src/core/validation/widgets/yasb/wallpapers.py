@@ -3,11 +3,9 @@ from typing import Literal
 from pydantic import Field, field_validator
 
 from core.validation.widgets.base_model import (
-    AnimationConfig,
     CallbacksConfig,
     CustomBaseModel,
     KeybindingConfig,
-    ShadowConfig,
 )
 
 
@@ -58,8 +56,5 @@ class WallpapersConfig(CustomBaseModel):
     tooltip: bool = True
     run_after: list[str] = []
     gallery: GalleryConfig = GalleryConfig()
-    animation: AnimationConfig = AnimationConfig()
-    label_shadow: ShadowConfig = ShadowConfig()
-    container_shadow: ShadowConfig = ShadowConfig()
     keybindings: list[KeybindingConfig] = []
     callbacks: CallbacksWallpapersConfig = CallbacksWallpapersConfig()

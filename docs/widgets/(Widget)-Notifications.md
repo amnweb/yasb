@@ -9,9 +9,6 @@
 | `icons`          | dict    | `{'new': '\udb80\udc9e', 'default': '\udb80\udc9a'}`               | Icons for different notification states.                                    |
 | `hide_empty`       | boolean  | `false`  | Whether to hide the widget when there are no notifications. |
 | `callbacks`       | dict    | `{'on_left': 'toggle_label', 'on_middle': 'do_nothing', 'on_right': 'do_nothing'}` | Callbacks for mouse events on the notifications widget. |
-| `animation`         | dict    | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
-| `container_shadow`   | dict   | `None`                  | Container shadow options.                       |
-| `label_shadow`         | dict   | `None`                  | Label shadow options.                 |
 
 ## Example Configuration
 
@@ -27,11 +24,6 @@
         on_left: "toggle_notification"
         on_right: "do_nothing"
         on_middle: "toggle_label"
-      label_shadow:
-        enabled: true
-        color: "black"
-        radius: 3
-        offset: [ 1, 1 ]
 ```
 
 ## Description of Options
@@ -46,9 +38,6 @@
   - `on_left`: Callback for left-click event.
   - `on_middle`: Callback for middle-click event.
   - `on_right`: Callback for right-click event.
-- **animation:** A dictionary specifying the animation settings for the widget. It contains three keys: `enabled`, `type`, and `duration`. The `type` can be `fadeInOut` and the `duration` is the animation duration in milliseconds.
-- **container_shadow:** Container shadow options.
-- **label_shadow:** Label shadow options.
 
 ## Available Callbacks
 

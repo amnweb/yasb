@@ -1,9 +1,7 @@
 from core.validation.widgets.base_model import (
-    AnimationConfig,
     CallbacksConfig,
     CustomBaseModel,
     KeybindingConfig,
-    ShadowConfig,
 )
 
 
@@ -48,8 +46,5 @@ class HomeConfig(CustomBaseModel):
     offset_top: int = 6
     offset_left: int = 0
     menu_labels: MenuLabelsConfig = MenuLabelsConfig()
-    animation: AnimationConfig = AnimationConfig()
-    label_shadow: ShadowConfig = ShadowConfig()
-    container_shadow: ShadowConfig = ShadowConfig()
     keybindings: list[KeybindingConfig] = []
     callbacks: CallbacksHomeConfig = CallbacksHomeConfig()

@@ -3,10 +3,9 @@ import os
 import re
 
 from PyQt6.QtCore import QPropertyAnimation, QRectF, Qt, QTimer, pyqtProperty
-from PyQt6.QtGui import QColor, QCursor, QPainter, QPen
+from PyQt6.QtGui import QColor, QPainter, QPen
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
 
-from core.utils.animation_manager import AnimationManager
 from core.utils.utilities import (
     PopupWidget,
     ToastNotifier,
@@ -48,8 +47,8 @@ class PomodoroWidget(BaseWidget):
         if PomodoroWidget._shared_state["remaining_time"] is None:
             PomodoroWidget._shared_state["remaining_time"] = self.config.work_duration * 60
 
-        self._init_container(self.config.container_shadow.model_dump())
-        self.build_widget_label(self.config.label, self.config.label_alt, self.config.label_shadow.model_dump())
+        self._init_container()
+        self.build_widget_label(self.config.label, self.config.label_alt)
 
         self.register_callback("toggle_timer", self._toggle_timer)
         self.register_callback("reset_timer", self._reset_timer)
@@ -130,8 +129,6 @@ class PomodoroWidget(BaseWidget):
             pass
 
     def _toggle_label(self):
-        if self.config.animation.enabled:
-            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
         self._show_alt_label = not self._show_alt_label
         for widget in self._widgets:
             widget.setVisible(not self._show_alt_label)
@@ -442,21 +439,18 @@ class PomodoroWidget(BaseWidget):
 
         # Start/Pause button
         self._toggle_button = QPushButton("Pause" if self._is_running else "Start")
-        self._toggle_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self._toggle_button.setProperty("class", "button " + ("pause" if self._is_running else "start"))
         self._toggle_button.clicked.connect(self._toggle_timer)
         button_layout.addWidget(self._toggle_button)
 
         # Reset button
         reset_button = QPushButton("Reset")
-        reset_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         reset_button.setProperty("class", "button reset")
         reset_button.clicked.connect(self._reset_timer)
         button_layout.addWidget(reset_button)
 
         # Skip button (to next phase)
         skip_button = QPushButton("Skip")
-        skip_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         skip_button.setProperty("class", "button skip")
         skip_button.clicked.connect(self._skip_to_next_phase)
         button_layout.addWidget(skip_button)

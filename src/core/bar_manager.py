@@ -5,6 +5,7 @@ from contextlib import suppress
 from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot
 from PyQt6.QtGui import QScreen
 from PyQt6.QtWidgets import QApplication
+from qt_css_engine import TransitionEngine, extract_rules
 
 from core.bar import Bar
 from core.bar_helper import ThemeState
@@ -30,8 +31,9 @@ class BarManager(QObject):
     def __init__(self, config: YasbConfig, stylesheet: str):
         super().__init__()
         self.config = config
-        self.stylesheet = stylesheet
-        ThemeState.set_stylesheet(stylesheet)
+        self.stylesheet, self.rules = extract_rules(stylesheet)
+        self.animation_engine = TransitionEngine(self.rules)
+        ThemeState.set_stylesheet(self.stylesheet)
         self.event_service = EventService()
         self.widget_event_listeners = set()
         self.bars: list[Bar] = []
@@ -48,6 +50,7 @@ class BarManager(QObject):
         self.styles_modified.connect(self.on_styles_modified)
         self.config_modified.connect(self.on_config_modified)
         self._app = QApplication.instance()
+        self._app.installEventFilter(self.animation_engine)
         self._app.aboutToQuit.connect(self.stop_listener_threads)
         self._app.screenAdded.connect(self.on_screens_update)
         self._app.screenRemoved.connect(self.on_screens_update)
@@ -62,8 +65,9 @@ class BarManager(QObject):
     def on_styles_modified(self):
         stylesheet = get_stylesheet(show_error_dialog=True)
         if stylesheet and (stylesheet != self.stylesheet):
-            self.stylesheet = stylesheet
-            ThemeState.set_stylesheet(stylesheet)
+            self.stylesheet, new_rules = extract_rules(stylesheet)
+            ThemeState.set_stylesheet(self.stylesheet)
+            self.animation_engine.reload_rules(new_rules)
             for bar in self.bars:
                 bar.setStyleSheet(self.stylesheet)
 

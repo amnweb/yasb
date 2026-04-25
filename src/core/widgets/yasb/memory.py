@@ -4,7 +4,6 @@ import re
 from humanize import naturalsize
 from PyQt6.QtWidgets import QLabel
 
-from core.utils.animation_manager import AnimationManager
 from core.utils.stat_popup import build_stat_popup
 from core.utils.utilities import (
     PopupWidget,
@@ -31,8 +30,8 @@ class MemoryWidget(BaseWidget):
 
         self.progress_widget = None
         self.progress_widget = build_progress_widget(self, self.config.progress_bar.model_dump())
-        self._init_container(self.config.container_shadow.model_dump())
-        self.build_widget_label(self.config.label, self.config.label_alt, self.config.label_shadow.model_dump())
+        self._init_container()
+        self.build_widget_label(self.config.label, self.config.label_alt)
 
         self.register_callback("toggle_label", self._toggle_label)
         self.register_callback("toggle_menu", self._show_popup)
@@ -200,8 +199,6 @@ class MemoryWidget(BaseWidget):
                 widget_index += 1
 
     def _toggle_label(self):
-        if self.config.animation.enabled:
-            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
         self._show_alt_label = not self._show_alt_label
         for widget in self._widgets:
             widget.setVisible(not self._show_alt_label)

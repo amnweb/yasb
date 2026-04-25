@@ -13,9 +13,6 @@
 | `get_exact_wifi_strength` | boolean   | `false`                                                                                  | Whether to get the exact WiFi signal strength.                  |
 | `hide_if_ethernet`        | boolean   | `false`                                                                                  | Whether to hide the widget if an Ethernet connection is active. |
 | `callbacks`               | dict      | `{ 'on_left': 'toggle_label', 'on_middle': 'do_nothing', 'on_right': 'do_nothing' }` | Callbacks for mouse events on the widget.                       |
-| `animation`               | dict      | `{ 'enabled': True, 'type': 'fadeInOut', 'duration': 200 }`                              | Animation settings for the widget.                              |
-| `container_shadow`        | dict      | `None`                                                                                   | Container shadow options.                                       |
-| `label_shadow`            | dict      | `None`                                                                                   | Label shadow options.                                           |
 | `menu_config`             | dict      | `None`                                                                                   | Popup menu configuration.                                       |
 
 > **Note:** Available label replacements: "{wifi_icon}", "{wifi_name}", "{wifi_strength}", "{ip_addr}"
@@ -44,11 +41,6 @@ wifi:
       "\udb82\udd25",  # Icon for 50-74% strength
       "\udb82\udd28"   # Icon for 75-100% strength
     ]
-    label_shadow:
-      enabled: true
-      color: "black"
-      radius: 3
-      offset: [ 1, 1 ]
     menu_config:
       blur: true
       round_corners: true
@@ -84,9 +76,6 @@ wifi:
 - **hide_if_ethernet:** A boolean value that determines whether to hide the widget if an Ethernet connection is active. Default is `False`.
 - **wifi_icons:** A list of icons to use for different WiFi signal strengths. Default is `["\udb82\udd2e","\udb82\udd1f","\udb82\udd22","\udb82\udd25","\udb82\udd28",]`.
 - **callbacks:** A dictionary of callbacks for mouse events on the widget. Default is `{'on_left': 'toggle_label', 'on_middle': 'do_nothing', 'on_right': 'do_nothing'}`.
-- **animation:** A dictionary specifying the animation settings for the widget. It contains three keys: `enabled`, `type`, and `duration`. The `type` can be `fadeInOut` and the `duration` is the animation duration in milliseconds.
-- **container_shadow:** Container shadow options.
-- **label_shadow:** Label shadow options.
 - **menu_config:** A dictionary of options for the popup menu. It contains the following keys: `blur`, `round_corners`, `round_corners_type`, `border_color`, `alignment`, `direction`, `offset_top`, `offset_left`, `wifi_icons_secured`, and `wifi_icons_unsecured`.
 
 ## Notes on WiFi "Location Access" permissions

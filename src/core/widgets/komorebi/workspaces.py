@@ -4,17 +4,16 @@ from typing import Literal
 
 from PIL import Image
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QCursor, QImage, QMouseEvent, QPixmap
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QWidget
+from PyQt6.QtGui import QImage, QMouseEvent, QPixmap
+from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QSizePolicy, QWidget
 
 from core.events.komorebi import KomorebiEvent
 from core.events.service import EventService
-from core.utils.utilities import add_shadow, refresh_widget_style
+from core.utils.utilities import refresh_widget_style
 from core.utils.win32.app_icons import get_window_icon
 from core.utils.win32.utils import get_monitor_hwnd, get_process_info
 from core.validation.widgets.komorebi.workspaces import KomorebiWorkspacesConfig
 from core.widgets.base import BaseWidget
-from core.widgets.services.komorebi.animation import KomorebiAnimation
 from core.widgets.services.komorebi.client import KomorebiClient
 
 try:
@@ -40,7 +39,6 @@ class WorkspaceButton(QPushButton):
         populated_label: str = None,
     ):
         super().__init__()
-        self._animation_initialized = False
         self.komorebic = KomorebiClient()
         self.workspace_index = workspace_index
         self.parent_widget = parent_widget
@@ -52,7 +50,7 @@ class WorkspaceButton(QPushButton):
         self.populated_label = populated_label if populated_label else self.default_label
         self.setText(self.default_label)
         self.clicked.connect(self.activate_workspace)
-        self.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         self.hide()
 
     def update_visible_buttons(self):
@@ -62,11 +60,8 @@ class WorkspaceButton(QPushButton):
             new_class = " ".join([cls for cls in current_class.split() if not cls.startswith("button-")])
             new_class = f"{new_class} button-{index + 1}"
             button.setProperty("class", new_class)
-            button.setStyleSheet("")
 
-    def update_and_redraw(self, status: WorkspaceStatus, lock_width: bool = False):
-        # Lock current visual width so style/class changes don't cause a jump
-        prev_width = self.width() if lock_width else None
+    def update_and_redraw(self, status: WorkspaceStatus):
         self.status = status
         self.setProperty("class", f"ws-btn {status.lower()}")
         if status == WORKSPACE_STATUS_ACTIVE:
@@ -76,8 +71,6 @@ class WorkspaceButton(QPushButton):
         else:
             self.setText(self.default_label)
         refresh_widget_style(self)
-        if lock_width and prev_width is not None:
-            self.setFixedWidth(prev_width)
 
     def activate_workspace(self):
         try:
@@ -97,7 +90,6 @@ class WorkspaceButtonWithIcons(QFrame):
         populated_label: str = None,
     ):
         super().__init__()
-        self._animation_initialized = False
         self.komorebic = KomorebiClient()
         self.workspace_index = workspace_index
         self.parent_widget = parent_widget
@@ -107,7 +99,8 @@ class WorkspaceButtonWithIcons(QFrame):
         self.default_label = label if label else str(workspace_index + 1)
         self.active_label = active_label if active_label else self.default_label
         self.populated_label = populated_label if populated_label else self.default_label
-        self.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+
+        self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
 
         self.button_layout = QHBoxLayout(self)
         self.button_layout.setContentsMargins(0, 0, 0, 0)
@@ -117,7 +110,6 @@ class WorkspaceButtonWithIcons(QFrame):
         self.text_label.setProperty("class", "label")
         self.text_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.button_layout.addWidget(self.text_label)
-        add_shadow(self.text_label, self.config.label_shadow.model_dump())
 
         self.icons = {}
         self.icon_labels = []
@@ -135,10 +127,8 @@ class WorkspaceButtonWithIcons(QFrame):
             new_class = " ".join([cls for cls in current_class.split() if not cls.startswith("button-")])
             new_class = f"{new_class} button-{index + 1}"
             button.setProperty("class", new_class)
-            button.setStyleSheet("")
 
-    def update_and_redraw(self, status: WorkspaceStatus, lock_width: bool = False):
-        prev_width = self.width() if lock_width else None
+    def update_and_redraw(self, status: WorkspaceStatus):
         self.status = status
         self.setProperty("class", f"ws-btn {status.lower()}")
         if status == WORKSPACE_STATUS_ACTIVE:
@@ -148,10 +138,8 @@ class WorkspaceButtonWithIcons(QFrame):
         else:
             self.text_label.setText(self.default_label)
         refresh_widget_style(self)
-        if lock_width and prev_width is not None:
-            self.setFixedWidth(prev_width)
 
-    def update_icons(self, icons: dict[int, QPixmap] = None, update_width: bool = True):
+    def update_icons(self, icons: dict[int, QPixmap] = None):
         if icons:
             self.icons.update(icons)
         else:
@@ -172,7 +160,6 @@ class WorkspaceButtonWithIcons(QFrame):
             if self.config.app_icons.max_icons > 0:
                 icons_list = icons_list[: self.config.app_icons.max_icons]
 
-        prev_icon_count = len(self.icon_labels)
         # Remove extra QLabel widgets if there are more than needed
         for extra_label in self.icon_labels[len(icons_list) :]:
             self.button_layout.removeWidget(extra_label)
@@ -188,20 +175,12 @@ class WorkspaceButtonWithIcons(QFrame):
                 icon_label.setProperty("class", f"icon icon-{index + 1}")
                 icon_label.setPixmap(icon)
                 self.button_layout.addWidget(icon_label)
-                add_shadow(icon_label, self.config.label_shadow.model_dump())
                 self.icon_labels.append(icon_label)
-
-        curr_icon_count = len(icons_list)
 
         if self.config.app_icons.hide_label and len(self.icon_labels) > 0:
             self.text_label.hide()
         else:
             self.text_label.show()
-
-        if curr_icon_count < prev_icon_count and update_width:
-            if self.config.animation and self._animation_initialized:
-                # Delegate width animation to central animator (use defaults)
-                KomorebiAnimation.animate_width(self)
 
     def update_icon_by_hwnd(self, hwnd: int):
         if hwnd in self.icons.keys():
@@ -267,7 +246,6 @@ class WorkspaceWidget(BaseWidget):
         # Status text shown when komorebi state can't be retrieved
         self._offline_text = QLabel()
         self._offline_text.setText(self.config.label_offline)
-        add_shadow(self._offline_text, self.config.label_shadow.model_dump())
         self._offline_text.setProperty("class", "offline-status")
         # Construct container which holds workspace buttons
         self._workspace_container_layout = QHBoxLayout()
@@ -277,7 +255,6 @@ class WorkspaceWidget(BaseWidget):
         self._workspace_container = QFrame()
         self._workspace_container.setLayout(self._workspace_container_layout)
         self._workspace_container.setProperty("class", "widget-container")
-        add_shadow(self._workspace_container, self.config.container_shadow.model_dump())
         self._workspace_container.hide()
         self.widget_layout.addWidget(self._offline_text)
         self.widget_layout.addWidget(self._workspace_container)
@@ -285,14 +262,12 @@ class WorkspaceWidget(BaseWidget):
         self.float_override_label = QLabel()
         self.float_override_label.setText(self.config.label_float_override)
         self.float_override_label.setProperty("class", "float-override")
-        add_shadow(self.float_override_label, self.config.label_shadow.model_dump())
         self.float_override_label.hide()
         self.widget_layout.addWidget(self.float_override_label)
 
         if self.config.toggle_workspace_layer.enabled:
             self.workspace_layer_label = QLabel()
             self.workspace_layer_label.setProperty("class", "workspace-layer")
-            add_shadow(self.workspace_layer_label, self.config.label_shadow.model_dump())
             self.widget_layout.addWidget(self.workspace_layer_label)
 
         self._icon_cache = dict()
@@ -344,14 +319,13 @@ class WorkspaceWidget(BaseWidget):
 
     def _on_komorebi_update_event(self, event: dict, state: dict) -> None:
         if self._update_komorebi_state(state):
-            # Update icons in workspace buttons (must be done before animation)
             if self._workspace_app_icons_enabled:
                 try:
                     if event["type"] in ["ToggleFloat"]:
                         self._workspace_buttons[self._curr_workspace_index].update_icons()
                     if self._has_active_workspace_index_changed():
-                        self._workspace_buttons[self._prev_workspace_index].update_icons(update_width=False)
-                        self._workspace_buttons[self._curr_workspace_index].update_icons(update_width=False)
+                        self._workspace_buttons[self._prev_workspace_index].update_icons()
+                        self._workspace_buttons[self._curr_workspace_index].update_icons()
                     for i in range(len(self._komorebi_workspaces)):
                         if self._prev_num_windows_in_workspaces[i] != self._curr_num_windows_in_workspaces[i]:
                             self._workspace_buttons[i].update_icons()
@@ -493,14 +467,9 @@ class WorkspaceWidget(BaseWidget):
         else:
             workspace_btn.show()
             if workspace_btn.status != workspace_status:
-                # First-time setup apply state without animation to avoid initial jump
-                if not workspace_btn._animation_initialized or not self.config.animation:
-                    workspace_btn.update_and_redraw(workspace_status)
-                else:
-                    KomorebiAnimation.animate_state_transition(workspace_btn, workspace_status)
+                workspace_btn.update_and_redraw(workspace_status)
             workspace_btn.update_visible_buttons()
         self._get_workspace_layer(workspace_index)
-        workspace_btn._animation_initialized = True
 
     def _refresh_button_labels(self, workspace_btn: WorkspaceButton) -> None:
         # Workspace names can change dynamically (e.g. via `komorebic workspace-name`).
@@ -539,7 +508,6 @@ class WorkspaceWidget(BaseWidget):
             for workspace_btn in self._workspace_buttons:
                 self._workspace_container_layout.addWidget(workspace_btn)
                 self._update_button(workspace_btn)
-                add_shadow(workspace_btn, self.config.btn_shadow.model_dump())
 
     def _get_workspace_label(self, workspace_index):
         workspace = self._komorebic.get_workspace_by_index(self._komorebi_screen, workspace_index)

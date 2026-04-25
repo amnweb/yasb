@@ -5,7 +5,6 @@ import subprocess
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
-from core.utils.animation_manager import AnimationManager
 from core.utils.utilities import PopupWidget
 from core.validation.widgets.yasb.home import HomeConfig, MenuItemConfig
 from core.widgets.base import BaseWidget
@@ -19,8 +18,8 @@ class HomeWidget(BaseWidget):
         super().__init__(class_name="home-widget")
         self.config = config
         self.power_operations = PowerOperations()
-        self._init_container(self.config.container_shadow.model_dump())
-        self.build_widget_label(self.config.label, None, self.config.label_shadow.model_dump())
+        self._init_container()
+        self.build_widget_label(self.config.label, None)
 
         self.register_callback("toggle_menu", self._toggle_menu)
         self.callback_left = self.config.callbacks.on_left
@@ -149,7 +148,6 @@ class HomeWidget(BaseWidget):
         label = QLabel(text)
         label.setProperty("class", "menu-item")
         label.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
-        label.setCursor(Qt.CursorShape.PointingHandCursor)
 
         # Add label to layout
         item_layout.addWidget(label)
@@ -166,6 +164,4 @@ class HomeWidget(BaseWidget):
         return item
 
     def _toggle_menu(self):
-        if self.config.animation.enabled:
-            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
         self._create_menu()

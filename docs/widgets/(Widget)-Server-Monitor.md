@@ -15,9 +15,6 @@
 | `menu` | dict | `{'blur': true, 'round_corners': true, 'round_corners_type': 'normal', 'border_color': 'System', 'alignment': 'right', 'direction': 'down', 'offset_top': 6, 'offset_left': 0}` | Menu settings for the widget. |
 | `icons`          | dict     | `{'online': '\uf444', 'offline': '\uf4c3', 'warning': '\uf4c3', 'reload': '\udb81\udc50'}` | Icons for different server states and actions. |
 | `callbacks`       | dict    | `{'on_left': 'toggle_label', 'on_middle': 'do_nothing', 'on_right': 'do_nothing'}` | Callbacks for mouse events on the server monitor widget. |
-| `animation`         | dict    | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
-| `container_shadow`   | dict   | `None`                  | Container shadow options.                       |
-| `label_shadow`         | dict   | `None`                  | Label shadow options.                 |
 
 ## Example Configuration
 
@@ -79,10 +76,6 @@
   - **offset_left:** Set the offset from the left of the widget.
 - **icons:** Icons for different server states and actions.
 - **callbacks:** Callbacks for mouse events on the memory widget.
-- **animation:** Animation settings for the widget.
-- **container_shadow:** Container shadow options.
-- **label_shadow:** Label shadow options.
-
 
 ## Example Style
 ```css

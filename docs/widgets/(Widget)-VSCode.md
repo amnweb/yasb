@@ -18,9 +18,6 @@
 | `cli_command` | string | `'code'` | The CLI command to execute when a workspace is clicked, doesn't need to contain folder name. For example, `code`, `windsurf`. |
 | `menu`              | dict    | `{'blur': True, 'round_corners': True, 'round_corners_type': 'normal', 'border_color': 'System', 'alignment': 'right', 'direction': 'down', 'offset_top': 6, 'offset_left': 0}` | Menu settings for the widget. |
 | `callbacks` | dict | `{'on_left': 'toggle_menu', 'on_middle': 'do_nothing', 'on_right': 'toggle_label'}` | Callbacks for mouse events on the widget. |
-| `animation` | dict | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}` | Animation settings for the widget. |
-| `container_shadow` | dict   | `None` | Container shadow options. |
-| `label_shadow` | dict | `None` | Label shadow options. |
 
 ## Example Configuration
 
@@ -67,9 +64,6 @@ vscode:
   - **callback functions**:
     - `toggle_menu`: Toggles the menu of the widget.
     - `toggle_label`: Toggles the label of the widget.
-- **animation:** A dictionary specifying the animation settings for the widget. It contains three keys: `enabled`, `type`, and `duration`. The `type` can be `fadeInOut` and the `duration` is the animation duration in milliseconds.
-- **container_shadow:** Container shadow options.
-- **label_shadow:** Label shadow options.
 
 ## Widget Style
 ```css

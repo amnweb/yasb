@@ -241,7 +241,6 @@ def build_stat_popup(
     pin_btn = QPushButton(pin_icon)
     pin_btn.setCheckable(True)
     pin_btn.setProperty("class", "pin-btn")
-    pin_btn.setCursor(Qt.CursorShape.PointingHandCursor)
     set_tooltip(pin_btn, "Pin this window")
 
     def on_pin_toggled(checked: bool):

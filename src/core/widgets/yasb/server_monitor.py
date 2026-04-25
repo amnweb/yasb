@@ -8,7 +8,6 @@ from PyQt6.QtGui import QDesktopServices
 from PyQt6.QtWidgets import QGraphicsOpacityEffect, QHBoxLayout, QLabel, QScrollArea, QVBoxLayout, QWidget
 
 from core.ui.components.loader import LoaderLine
-from core.utils.animation_manager import AnimationManager
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import PopupWidget, ToastNotifier
 from core.validation.widgets.yasb.server_monitor import ServerMonitorConfig
@@ -33,8 +32,8 @@ class ServerMonitor(BaseWidget):
         self._icon_path = os.path.join(SCRIPT_PATH, "assets", "images", "app_transparent.png")
 
         # Construct container
-        self._init_container(self.config.container_shadow.model_dump())
-        self.build_widget_label(self.config.label, self.config.label_alt, self.config.label_shadow.model_dump())
+        self._init_container()
+        self.build_widget_label(self.config.label, self.config.label_alt)
 
         self.register_callback("toggle_label", self._toggle_label)
         self.register_callback("toggle_menu", self._toggle_menu)
@@ -80,9 +79,7 @@ class ServerMonitor(BaseWidget):
 
         online_count = sum(1 for s in status_list if s.get("status") == "Online")
         offline_count = sum(1 for s in status_list if s.get("status") == "Offline")
-        no_internet = offline_count > 0 and all(
-            s.get("no_internet") for s in status_list if s.get("status") == "Offline"
-        )
+        no_internet = online_count == 0 and all(s.get("no_internet") for s in status_list)
         ssl_values = [s["ssl"] for s in status_list if isinstance(s.get("ssl"), int)]
         min_ssl = min(ssl_values) if ssl_values else None
         ssl_warning = bool(min_ssl is not None and min_ssl < self.config.ssl_warning)
@@ -148,8 +145,6 @@ class ServerMonitor(BaseWidget):
         self._update_label()
 
     def _toggle_menu(self):
-        if self.config.animation.enabled:
-            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
         self.show_menu()
 
     def _update_label(self):
@@ -243,7 +238,6 @@ class ServerMonitor(BaseWidget):
         # Add reload button
         reload_button = QLabel(self.config.icons.reload)
         reload_button.setProperty("class", "reload-button")
-        reload_button.setCursor(Qt.CursorShape.PointingHandCursor)
         reload_button.mousePressEvent = lambda _: self._trigger_reload()
         header_layout.addWidget(reload_button)
         layout.addWidget(header_widget)
@@ -384,7 +378,6 @@ class ServerMonitor(BaseWidget):
                     self._animations.append(animation)  # Store animation reference
 
                 row_widget.setProperty("class", f"row {class_name}")
-                row_widget.setCursor(Qt.CursorShape.PointingHandCursor)
                 _server_url = (
                     f"https://{server_data['url']}" if self.config.ssl_check else f"http://{server_data['url']}"
                 )
@@ -408,11 +401,13 @@ class ServerMonitor(BaseWidget):
 
                 ssl_status = ""
                 if self.config.ssl_check and isinstance(server_data.get("ssl"), int):
-                    ssl_status = f", SSL certificate expires in {server_data['ssl']} days"
+                    ssl_status = f", SSL expires in {server_data['ssl']} days"
                 if server_data["status"] == "Online":
                     details_text = (
                         f"{server_data_response_time}{ssl_status}, response code: {server_data['response_code']}"
                     )
+                elif server_data.get("no_internet"):
+                    details_text = "Server is unreachable (no internet)"
                 else:
                     details_text = "Server is offline"
 

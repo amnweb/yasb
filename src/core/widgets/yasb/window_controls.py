@@ -4,7 +4,7 @@ import os
 import win32api
 import win32gui
 import win32process
-from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, Qt, QTimer
+from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, QTimer
 from PyQt6.QtWidgets import QGraphicsOpacityEffect, QLabel, QPushButton
 
 from core.utils.tooltip import set_tooltip
@@ -209,7 +209,6 @@ class WindowControlsWidget(BaseWidget):
             label_text = getattr(self.config.button_labels, btn_name, btn_name)
             btn = QPushButton(label_text)
             btn.setProperty("class", f"btn {btn_name}")
-            btn.setCursor(Qt.CursorShape.PointingHandCursor)
             set_tooltip(btn, btn_name.capitalize())
             btn.clicked.connect(self._make_button_handler(btn_name))
             self._widget_container_layout.addWidget(btn)

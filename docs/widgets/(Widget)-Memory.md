@@ -8,9 +8,6 @@
 | `callbacks`       | dict    | `{'on_left': 'toggle_label', 'on_middle': 'do_nothing', 'on_right': 'do_nothing'}` | Callbacks for mouse events on the memory widget. |
 | `histogram_icons`     | list    | `["\u2581", "\u2581", "\u2582", "\u2583", "\u2584", "\u2585", "\u2586", "\u2587", "\u2588"]` | Icons representing RAM usage histograms.                                    |
 | `memory_thresholds` | dict  | `{'low': 25, 'medium': 50, 'high': 90}`                                 | Thresholds for memory usage levels. |
-| `animation`         | dict    | `{'enabled': true, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
-| `container_shadow`   | dict   | `None`                  | Container shadow options.                       |
-| `label_shadow`         | dict   | `None`                  | Label shadow options.                 |
 | `progress_bar`       | dict    | `{'enabled': False, 'position': 'left', 'size': 14, 'thickness': 2, 'color': '#57948a', 'animation': True}` | Progress bar settings.    |
 | `hide_decimal`       | boolean    | `false`                                                                 | Whether to hide decimal places in the memory widget. |
 | `menu`               | dict    | See below                                                               | Configuration for the popup menu with graph and stats. |
@@ -41,11 +38,6 @@ memory:
       - "\u2586" # 60%
       - "\u2587" # 70%
       - "\u2588" # 80%+
-    label_shadow:
-      enabled: true
-      color: "black"
-      radius: 3
-      offset: [ 1, 1 ]
     menu:
       enabled: true
       show_graph: true
@@ -78,9 +70,6 @@ memory:
   - **graph_history_size**: Number of data points to keep in the graph history. Must be between 10 and 180. Default: `60`.
   - **pin_icon**: Icon displayed on the pin button when the popup is unpinned. Default: `"\ue718"`.
   - **unpin_icon**: Icon displayed on the pin button when the popup is pinned. Default: `"\ue77a"`.
-- **animation:** A dictionary specifying the animation settings for the widget. It contains three keys: `enabled`, `type`, and `duration`. The `type` can be `fadeInOut` and the `duration` is the animation duration in milliseconds.
-- **container_shadow:** Container shadow options.
-- **label_shadow:** Label shadow options.
 - **progress_bar**: A dictionary containing settings for the progress bar. It includes:
   - **enabled**: Whether the progress bar is enabled.
   - **position**: The position of the progress bar, either "left" or "right".

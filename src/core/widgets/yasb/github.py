@@ -4,13 +4,12 @@ from collections.abc import Callable
 from typing import Any
 
 from PyQt6.QtCore import QPoint, Qt, QTimer, QUrl
-from PyQt6.QtGui import QColor, QCursor, QDesktopServices, QMouseEvent, QPainter, QPaintEvent
+from PyQt6.QtGui import QColor, QDesktopServices, QMouseEvent, QPainter, QPaintEvent
 from PyQt6.QtWidgets import QFrame, QGraphicsOpacityEffect, QHBoxLayout, QLabel, QScrollArea, QVBoxLayout, QWidget
 
-from core.utils.animation_manager import AnimationManager
 from core.utils.time_utils import get_relative_time
 from core.utils.tooltip import set_tooltip
-from core.utils.utilities import PopupWidget, add_shadow, refresh_widget_style
+from core.utils.utilities import PopupWidget, refresh_widget_style
 from core.validation.widgets.yasb.github import Corner, GithubConfig
 from core.widgets.base import BaseWidget
 from core.widgets.services.github.api import GitHubDataManager
@@ -98,9 +97,7 @@ class GithubWidget(BaseWidget):
         self._notification_label: NotificationLabel | None = None
         self._notification_label_alt: NotificationLabel | None = None
 
-        self._shared_cursor = QCursor(Qt.CursorShape.PointingHandCursor)
-
-        self._init_container(self.config.container_shadow.model_dump())
+        self._init_container()
         self._create_dynamically_label(self.config.label, self.config.label_alt)
 
         self.register_callback("toggle_label", self._toggle_label)
@@ -143,13 +140,9 @@ class GithubWidget(BaseWidget):
         if not self.github_token:
             self._start_oauth_flow()
             return
-        if self.config.animation.enabled:
-            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
         self.show_menu()
 
     def _toggle_label(self):
-        if self.config.animation.enabled:
-            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
         self._show_alt_label = not self._show_alt_label
         for widget in self._widgets:
             widget.setVisible(not self._show_alt_label)
@@ -183,9 +176,7 @@ class GithubWidget(BaseWidget):
                 else:
                     label = QLabel(part)
                     label.setProperty("class", "label")
-                label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
                 label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                add_shadow(label, self.config.label_shadow.model_dump())
                 if not self.github_token and self.config.tooltip:
                     set_tooltip(label, "Error: Token not configured")
                 self._widget_container_layout.addWidget(label)
@@ -390,7 +381,6 @@ class GithubWidget(BaseWidget):
         container = QFrame(parent)
         container.setProperty("class", " ".join(dict.fromkeys(classes)))
         container.setContentsMargins(0, 0, 0, 0)
-        container.setCursor(self._shared_cursor)
 
         icon_label = QLabel(icon_type)
         icon_classes = ["icon", base_class] if base_class else ["icon"]
@@ -608,7 +598,6 @@ class GithubWidget(BaseWidget):
             # Right side - mark all as read button
             mark_all_label = QLabel("Mark all as read")
             mark_all_label.setProperty("class", "label")
-            mark_all_label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
             mark_all_label.mousePressEvent = lambda ev: self._mark_all_as_read()
             footer_layout.addWidget(mark_all_label)
 

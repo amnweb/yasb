@@ -7,7 +7,7 @@ import urllib.parse
 from functools import partial
 
 from PyQt6.QtCore import QMimeData, QPoint, Qt, QTimer
-from PyQt6.QtGui import QAction, QCursor, QDrag, QIcon
+from PyQt6.QtGui import QAction, QDrag, QIcon
 from PyQt6.QtWidgets import (
     QDialog,
     QFrame,
@@ -24,7 +24,6 @@ from PyQt6.QtWidgets import (
 )
 
 from core.config import HOME_CONFIGURATION_DIR
-from core.utils.animation_manager import AnimationManager
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import PopupWidget, refresh_widget_style
 from core.utils.win32.utils import apply_qmenu_style
@@ -50,8 +49,8 @@ class TodoWidget(BaseWidget):
         self._show_completed = False
         self._category_filter = None
 
-        self._init_container(self.config.container_shadow.model_dump())
-        self.build_widget_label(self.config.label, self.config.label_alt, self.config.label_shadow.model_dump())
+        self._init_container()
+        self.build_widget_label(self.config.label, self.config.label_alt)
 
         self.register_callback("toggle_label", self._toggle_label)
         self.register_callback("toggle_menu", self._toggle_menu)
@@ -185,7 +184,6 @@ class TodoWidget(BaseWidget):
             category_btn = QPushButton(category_config.label)
             category_btn.setProperty("class", f"category-button {category_name}")
             category_btn.setCheckable(True)
-            category_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
             category_btn.clicked.connect(partial(self._select_category, category_name))
             category_layout.addWidget(category_btn)
             self._category_buttons.append((category_name, category_btn))
@@ -203,13 +201,11 @@ class TodoWidget(BaseWidget):
 
         cancel_button = QPushButton("Cancel")
         cancel_button.setProperty("class", "button cancel")
-        cancel_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         cancel_button.clicked.connect(dialog.reject)
         button_layout.addWidget(cancel_button)
 
         save_button = QPushButton(save_button_text)
         save_button.setProperty("class", "button add")
-        save_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         save_button.clicked.connect(lambda: on_save(dialog, task) if task else on_save(dialog))
         button_layout.addWidget(save_button)
 
@@ -219,8 +215,6 @@ class TodoWidget(BaseWidget):
         dialog.exec()
 
     def _toggle_label(self):
-        if self.config.animation.enabled:
-            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
 
         self._show_alt_label = not self._show_alt_label
 
@@ -286,8 +280,6 @@ class TodoWidget(BaseWidget):
         set_tooltip(self._widget_container, tooltip_text)
 
     def _toggle_menu(self):
-        if self.config.animation.enabled:
-            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
         self._show_completed = False
         self._expanded_task_id = None
         self._show_menu()
@@ -314,7 +306,6 @@ class TodoWidget(BaseWidget):
 
         add_task_button = QPushButton(self.config.icons.add)
         add_task_button.setProperty("class", "add-task-button")
-        add_task_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         add_task_button.clicked.connect(self._show_add_task_dialog)
 
         header_layout.addWidget(add_task_button, alignment=Qt.AlignmentFlag.AlignLeft)
@@ -323,20 +314,17 @@ class TodoWidget(BaseWidget):
         self._in_progress_btn = QPushButton("In Progress")
         self._in_progress_btn.setCheckable(True)
         self._in_progress_btn.setChecked(not self._show_completed)
-        self._in_progress_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self._in_progress_btn.setProperty("class", "tab-buttons in-progress")
         self._in_progress_btn.clicked.connect(lambda: self._set_show_completed(False))
 
         self._completed_btn = QPushButton("Completed")
         self._completed_btn.setCheckable(True)
         self._completed_btn.setChecked(self._show_completed)
-        self._completed_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self._completed_btn.setProperty("class", "tab-buttons completed")
         self._completed_btn.clicked.connect(lambda: self._set_show_completed(True))
 
         self._order_btn = QPushButton(self.config.icons.sort)
         self._order_btn.setProperty("class", "tab-buttons sort")
-        self._order_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self._order_btn.clicked.connect(self._show_sort_menu)
 
         header_layout.addWidget(self._in_progress_btn)
@@ -582,7 +570,6 @@ class TodoWidget(BaseWidget):
             "expanded" if expanded else "",
         ]
         container.setProperty("class", " ".join(filter(None, class_list)))
-        container.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         container.setContentsMargins(0, 0, 0, 0)
         container_layout = QHBoxLayout(container)
         container_layout.setContentsMargins(0, 0, 0, 0)
@@ -591,7 +578,6 @@ class TodoWidget(BaseWidget):
         checkbox = QPushButton(self.config.icons.checked if completed else self.config.icons.unchecked)
         checkbox.setChecked(completed)
         checkbox.setProperty("class", "task-checkbox")
-        checkbox.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         if completed:
             checkbox.setCheckable(True)
             checkbox.setChecked(True)
@@ -695,12 +681,10 @@ class TodoWidget(BaseWidget):
 
                 edit_btn = QPushButton(self.config.icons.edit)
                 edit_btn.setProperty("class", "edit-task-button")
-                edit_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
                 edit_btn.clicked.connect(lambda _, t=task: self._show_edit_task_dialog(t))
 
                 delete_btn = QPushButton(self.config.icons.delete)
                 delete_btn.setProperty("class", "delete-task-button")
-                delete_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
                 delete_btn.clicked.connect(lambda _, t=task: self._delete_task(t))
 
                 info_row = QFrame()

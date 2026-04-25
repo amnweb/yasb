@@ -181,7 +181,6 @@ class NoteTextEdit(QTextEdit):
 
         self.copy_btn = QPushButton(self._notes_widget.config.icons.copy_icon, self)
         self.copy_btn.setProperty("class", "input-copy-button")
-        self.copy_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.copy_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.copy_btn.clicked.connect(self._copy_to_clipboard)
         set_tooltip(self.copy_btn, "Copy to clipboard")

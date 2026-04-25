@@ -4,11 +4,9 @@ from typing import Any
 from pydantic import Field, RootModel
 
 from core.validation.widgets.base_model import (
-    AnimationConfig,
     CallbacksConfig,
     CustomBaseModel,
     KeybindingConfig,
-    ShadowConfig,
 )
 
 
@@ -62,8 +60,5 @@ class ClockConfig(CustomBaseModel):
     icons: dict[str, str] = {}
     alarm_icons: ClockAlarmIconsConfig = ClockAlarmIconsConfig()
     calendar: ClockCalendarConfig = ClockCalendarConfig()
-    animation: AnimationConfig = AnimationConfig()
-    label_shadow: ShadowConfig = ShadowConfig()
-    container_shadow: ShadowConfig = ShadowConfig()
     keybindings: list[KeybindingConfig] = []
     callbacks: ClockCallbacksConfig = ClockCallbacksConfig()

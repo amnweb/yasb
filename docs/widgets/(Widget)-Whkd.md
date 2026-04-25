@@ -6,9 +6,6 @@ Whkd is a simple hotkey daemon for Windows that reacts to input events by execut
 |------------------|----------|--------------------------------|-----------------------------------------------------------------------------|
 | `label`          | string   | `"\uf11c"`                       | The string for the label button.  |
 | `special_keys`   | list     | `None`                           | A list of special keys to be used as hotkeys.  |
-| `animation`         | dict    | `{'enabled': true, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
-| `container_shadow`   | dict   | `None`                  | Container shadow options.                       |
-| `label_shadow`         | dict   | `None`                  | Label shadow options.                 |
 
 ## Callbacks
 
@@ -40,11 +37,6 @@ Whkd is a simple hotkey daemon for Windows that reacts to input events by execut
           key_replace: "\u2191"
         - key: "down"
           key_replace: "\u2193"
-      label_shadow:
-        enabled: true
-        color: "black"
-        radius: 3
-        offset: [ 1, 1 ]
 ```
 ## Description of Options
 
@@ -52,9 +44,6 @@ Whkd is a simple hotkey daemon for Windows that reacts to input events by execut
 - **special_keys:** A list of special keys to be used as hotkeys. The list contains dictionaries with two keys: `key` and `key_replace`. The `key` is the special key to be used as a hotkey and the `key_replace` is the string to replace the special key with.
   - **key:** The special key to be used as a hotkey.
   - **key_replace:** The string to replace the special key with.
-- **animation:** A dictionary specifying the animation settings for the widget. It contains three keys: `enabled`, `type`, and `duration`. The `type` can be `fadeInOut` and the `duration` is the animation duration in milliseconds.
-- **container_shadow:** Container shadow options.
-- **label_shadow:** Label shadow options.
 
 > [!NOTE]  
 > The special keys are keys which you can style and replace with custom icons. Special keys settings are optional. If you don't want to use special keys, you can leave the `special_keys` option empty.

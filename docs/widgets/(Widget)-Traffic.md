@@ -14,9 +14,6 @@
 | `hide_decimal` | boolean | `False`                                                                 | Hide decimal in the label. If set to `True`, the label will not show decimal places in the speed values. |
 | `speed_threshold` | dict   | `{'min_upload': 1000, 'min_download': 1000}` | Minimum speed threshold for upload and download in bits. If the speed is below this threshold, the widget will not display the speed values. |
 | `callbacks`     | dict    | `{'on_left': 'toggle_label', 'on_middle': 'do_nothing', 'on_right': 'do_nothing'}` | Callbacks for mouse events on the traffic widget. |
-| `animation`         | dict    | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}`               | Animation settings for the widget.                                          |
-| `container_shadow`   | dict   | `None`                  | Container shadow options.                       |
-| `label_shadow`         | dict   | `None`                  | Label shadow options.                 |
 | `menu`          | dict    | See below                  | Menu options for the widget. |
 
 
@@ -69,11 +66,6 @@ traffic:
     callbacks:
       on_left: "toggle_menu"
       on_right: "toggle_label"
-    label_shadow:
-      enabled: true
-      color: "black"
-      radius: 3
-      offset: [ 1, 1 ]
 ```
 
 ## Description of Options
@@ -89,9 +81,6 @@ traffic:
 - **hide_decimal:** Hide decimal in the label. If set to `True`, the label will not show decimal places in the speed values.
 - **speed_threshold:** A dictionary specifying the minimum speed threshold for upload and download in bits. If the speed is below this threshold, the widget will not display the speed values.
 - **callbacks:** A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions.
-- **animation:** A dictionary specifying the animation settings for the widget. It contains three keys: `enabled`, `type`, and `duration`. The `type` can be `fadeInOut` and the `duration` is the animation duration in milliseconds.
-- **container_shadow:** Container shadow options.
-- **label_shadow:** Label shadow options.
 - **menu:** A dictionary specifying the menu options for the widget. See **Menu Options** above for details.
 
 > [!NOTE]  

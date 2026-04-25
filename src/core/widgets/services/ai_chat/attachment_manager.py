@@ -369,7 +369,6 @@ class AttachmentManager:
             if not attachment.get("processing"):
                 remove_btn = QPushButton("x")
                 remove_btn.setProperty("class", "attachment-remove-button")
-                remove_btn.setCursor(Qt.CursorShape.PointingHandCursor)
                 remove_btn.setFixedWidth(REMOVE_BUTTON_SIZE_PX)
                 remove_btn.setFixedHeight(REMOVE_BUTTON_SIZE_PX)
                 remove_btn.clicked.connect(lambda _=False, p=attachment["path"]: self.remove_attachment(p))

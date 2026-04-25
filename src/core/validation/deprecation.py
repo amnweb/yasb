@@ -49,6 +49,15 @@ logger = logging.getLogger("deprecation")
 # Global - removed from any model that doesn't recognize it
 DEPRECATED_FIELDS: dict[str, str] = {
     "container_padding": "Use CSS padding instead.",
+    "label_shadow": "Use CSS text-shadow instead.",
+    "container_shadow": "Use CSS box-shadow instead.",
+    "btn_shadow": "Use CSS box-shadow instead.",
+    "app_title_shadow": "Use CSS text-shadow instead.",
+    "app_icon_shadow": "Use CSS box-shadow instead.",
+    "unpinned_shadow": "Use CSS box-shadow instead.",
+    "pinned_shadow": "Use CSS box-shadow instead.",
+    "unpinned_vis_btn_shadow": "Use CSS box-shadow instead.",
+    "animation": "Use CSS animations instead.",
 }
 
 RENAMED_FIELDS: dict[str, tuple[str, str]] = {}
@@ -98,6 +107,9 @@ SCOPED_DEPRECATED_FIELDS: dict[str, dict[str, str]] = {
         "lazy_load_delay": "No longer supported and can be removed from the config.",
         "enable_cache": "No longer supported and can be removed from the config.",
     },
+    "AnimationConfig": {
+        "type": "Animation type is no longer supported in TaskbarWidget, remove it from your config.",
+    },
 }
 
 SCOPED_RENAMED_FIELDS: dict[str, dict[str, tuple[str, str]]] = {
@@ -129,11 +141,14 @@ def handle_deprecated_fields(cls: type, data: Any) -> Any:
     return data
 
 
-def _check(data: dict, path: str, class_name: str, issues: list[dict]):
+def _check(data: dict, path: str, class_name: str, issues: list[dict], model: type | None = None):
     """Check dict keys against global + scoped deprecated/renamed for *class_name*."""
     deprecated = {**DEPRECATED_FIELDS, **SCOPED_DEPRECATED_FIELDS.get(class_name, {})}
     renamed = {**RENAMED_FIELDS, **SCOPED_RENAMED_FIELDS.get(class_name, {})}
+    model_fields = set(model.model_fields) if model is not None and hasattr(model, "model_fields") else set()
     for key in data:
+        if key in model_fields:
+            continue
         kp = f"{path}.{key}"
         if key in deprecated:
             issues.append({"path": kp, "key": key, "action": "remove", "message": deprecated[key]})
@@ -146,7 +161,7 @@ def _check_model(data: dict, path: str, model: type, issues: list[dict]):
     """Check data against a Pydantic model and recurse into its sub-models."""
     import typing
 
-    _check(data, path, model.__name__, issues)
+    _check(data, path, model.__name__, issues, model)
     for name, field in model.model_fields.items():
         ann = field.annotation
         val = data.get(name)

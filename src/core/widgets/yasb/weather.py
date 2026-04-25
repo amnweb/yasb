@@ -11,9 +11,8 @@ from PyQt6.QtCore import Qt, QTimer, QUrl, pyqtSlot
 from PyQt6.QtGui import QMouseEvent, QPixmap
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
-from core.utils.animation_manager import AnimationManager
 from core.utils.tooltip import set_tooltip
-from core.utils.utilities import PopupWidget, add_shadow, refresh_widget_style
+from core.utils.utilities import PopupWidget, refresh_widget_style
 from core.validation.widgets.yasb.weather import WeatherWidgetConfig
 from core.widgets.base import BaseWidget
 from core.widgets.services.weather.api import IconFetcher, WeatherDataFetcher
@@ -68,7 +67,7 @@ class WeatherWidget(BaseWidget):
         self._weather_card_daily_widgets: list[ClickableWidget] = []
 
         # Construct container
-        self._init_container(config.container_shadow.model_dump())
+        self._init_container()
         self._create_dynamically_label(self._label_content, self._label_alt_content)
 
         self.register_callback("toggle_label", self._toggle_label)
@@ -83,8 +82,6 @@ class WeatherWidget(BaseWidget):
             self._weather_fetcher.start()
 
     def _toggle_label(self):
-        if self.config.animation.enabled:
-            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)  # type: ignore
         self._show_alt_label = not self._show_alt_label
         for widget in self._widgets:
             widget.setVisible(not self._show_alt_label)
@@ -93,8 +90,6 @@ class WeatherWidget(BaseWidget):
         self._update_label(update_class=False)
 
     def _toggle_card(self):
-        if self.config.animation.enabled:
-            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)  # type: ignore
         self._popup_card()
 
     def _popup_card(self):
@@ -174,7 +169,6 @@ class WeatherWidget(BaseWidget):
                 btn = QLabel(icon)
                 btn.setProperty("class", f"hourly-data-button{' active' if data_type == default_data_type else ''}")
                 btn.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                btn.setCursor(Qt.CursorShape.PointingHandCursor)
                 set_tooltip(btn, data_type.capitalize(), delay=400, position="top")
                 buttons_layout.addWidget(btn)
                 buttons.append(btn)
@@ -385,8 +379,6 @@ class WeatherWidget(BaseWidget):
                     label.setProperty("class", "label alt" if is_alt else "label")
                     label.setText("weather update...")
                 label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                label.setCursor(Qt.CursorShape.PointingHandCursor)
-                add_shadow(label, self.config.label_shadow.model_dump())
                 self._widget_container_layout.addWidget(label)
                 widgets.append(label)
                 if is_alt:

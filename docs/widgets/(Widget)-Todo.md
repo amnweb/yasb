@@ -7,13 +7,11 @@ The Todo widget provides a simple task management interface directly in your YAS
 | `label`        | string  | `\uf4a0 {count}`                 | Main label format.  Use `{count}` for total tasks, `{completed}` for completed tasks, {total} for total tasks. |
 | `label_alt`    | string  | `\uf4a0 Tasks: {count}`                      | Alternative label format.                                                    |
 | `data_path`    | string  | `""`                                        | Custom path to JSON file for storing tasks. Leave empty to use default location (`~/.config/yasb/todo.json`). Supports `~` for home directory. |
-| `animation`    | dict    | `{enabled: true, type: "fadeInOut", duration: 200}` | Animation settings for the widget.                                          |
 | `menu`         | dict    | See example below                                    | Popup menu settings.                                                         |
 | `icons`        | dict    | See example below                                    | Icons for add, delete, check, etc.                                           |
 | `categories`   | dict    | See example below                                    | Task categories and their labels.                                            |
 | `callbacks`    | dict    | `{on_left: "toggle_menu", on_middle: "do_nothing", on_right: "toggle_label"}` | Mouse event callbacks.                  |
-| `label_shadow` | dict    | `{enabled: False, color: "black", offset: [1,1], radius: 3}` | Shadow for the label.                   |
-| `container_shadow` | dict | `{enabled: False, color: "black", offset: [1,1], radius: 3}` | Shadow for the container.              |
+
 
 
 ## Example Configuration
@@ -66,7 +64,6 @@ todo:
 - **label**:  Main label format, supports `{count}` for total tasks, `{completed}` for completed tasks, and `{total}` for total tasks.
 - **label_alt**: Alternative label format.
 - **data_path**: Optional custom path to the JSON file where tasks are stored. If empty or not specified, uses the default location (`~/.config/yasb/todo.json`). Supports `~` for home directory expansion (e.g., `~/Documents/my-todos.json` or `C:/Users/YourName/my-todos.json`).
-- **animation**: Controls widget animation (enable, type, duration).
 - **menu**: Popup menu appearance and behavior:
   - **blur**: Enable blur effect.
   - **round_corners**: Enable rounded corners.
@@ -88,8 +85,6 @@ todo:
   - **no_tasks** Icon displayed when no tasks are available.
 - **categories**: Define task categories and their labels.
 - **callbacks**: Map mouse actions to widget functions.
-- **label_shadow**: Shadow for the label (enabled, color, offset, radius).
-- **container_shadow**: Shadow for the container.
 
 
 > [!IMPORTANT]  

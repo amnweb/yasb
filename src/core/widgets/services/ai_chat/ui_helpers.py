@@ -4,7 +4,6 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QMouseEvent
 
 from core.utils.tooltip import set_tooltip
-from core.utils.utilities import add_shadow
 from core.utils.win32.utils import get_foreground_hwnd, set_foreground_hwnd
 from core.widgets.services.ai_chat.ui_components import NotificationLabel
 
@@ -119,6 +118,5 @@ class LabelBuilder:
                 self._owner._notification_label = label
             label.setCursor(Qt.CursorShape.PointingHandCursor)
             label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            add_shadow(label, self._owner._label_shadow)
             self._owner._widget_container_layout.addWidget(label)
             label.show()

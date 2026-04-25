@@ -13,8 +13,6 @@
 | `popup`             | dict    | see below   | Popup appearance/position options. Only used when `menu_style` is `"popup"`. |
 | `profile_image_size`| integer | `64`        | Profile avatar size in pixels. Must be between 16 and 256.                    |
 | `buttons`           | dict    | `{}`        | A dictionary defining the buttons and their properties.                     |
-| `container_shadow`  | dict    | `None`      | Container shadow options.                                                   |
-| `label_shadow`      | dict    | `None`      | Label shadow options.                                                       |
 
 ### Popup Options (when `menu_style: "popup"`)
 
@@ -66,11 +64,6 @@ power_menu:
       hibernate: ["\uf28e", "Hibernate"]
       lock: ["\uea75", "Lock"]
       cancel: ["\udb81\udf3a", "Cancel"]
-    label_shadow:
-      enabled: false
-      color: "black"
-      radius: 3
-      offset: [ 1, 1 ]
 ```
 
 ## Example Configuration (Compact Popup)
@@ -115,8 +108,6 @@ power_menu:
 - **popup:** Popup configuration (blur, round_corners, alignment, direction, offsets). Only used when `menu_style` is `"popup"`.
 - **profile_image_size:** Profile avatar size in pixels. Must be between 16 and 256.
 - **buttons:** A dictionary defining the buttons and their properties. Possible properties are: `lock`, `signout`, `sleep`, `shutdown`, `restart`, `hibernate`, `cancel`, `force_shutdown`, `force_restart`. Note: `cancel` button is not shown in popup mode since the popup auto-closes on outside click.
-- **container_shadow:** Container shadow options.
-- **label_shadow:** Label shadow options.
 
 ## Callbacks (Hotkey Only)
 This widget does not expose mouse callback configuration, but it does register a hotkey callback:

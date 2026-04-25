@@ -12,8 +12,6 @@ from PyQt6.QtWidgets import QLabel
 
 from core.events.service import EventService
 from core.events.win32 import WinEvent
-from core.utils.animation_manager import AnimationManager
-from core.utils.utilities import add_shadow
 from core.utils.win32.app_icons import get_window_icon
 from core.utils.win32.utils import get_app_name_from_aumid, get_app_name_from_pid, get_hwnd_info
 from core.validation.widgets.yasb.active_window import ActiveWindowConfig
@@ -59,19 +57,17 @@ class ActiveWindowWidget(BaseWidget):
         self._active_label = config.label
         self._event_service = EventService()
         self._update_retry_count = 0
-        self._init_container(self.config.container_shadow.model_dump())
+        self._init_container()
 
         self._window_title_text = QLabel()
         self._window_title_text.setProperty("class", "label")
         self._window_title_text.setTextFormat(Qt.TextFormat.PlainText)
         self._window_title_text.setText(self.config.label_no_window or "")
-        add_shadow(self._window_title_text, self.config.label_shadow.model_dump())
 
         if self.config.label_icon:
             self._window_icon_label = QLabel()
             self._window_icon_label.setProperty("class", "label icon")
             self._window_icon_label.setText(self.config.label_no_window or "")
-            add_shadow(self._window_icon_label, self.config.label_shadow.model_dump())
 
         self._ignore_window = self.config.ignore_window
         self._ignore_window.classes += IGNORED_CLASSES
@@ -214,8 +210,6 @@ class ActiveWindowWidget(BaseWidget):
             logging.exception("Failed handling destroy event for HWND %s", hwnd)
 
     def _toggle_title_text(self) -> None:
-        if self.config.animation.enabled:
-            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
         self._show_alt = not self._show_alt
         self._active_label = self.config.label_alt if self._show_alt else self.config.label
         self._update_text()

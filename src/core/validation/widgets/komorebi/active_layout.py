@@ -1,8 +1,6 @@
 from core.validation.widgets.base_model import (
-    AnimationConfig,
     CustomBaseModel,
     KeybindingConfig,
-    ShadowConfig,
 )
 
 
@@ -62,8 +60,5 @@ class ActiveLayoutConfig(CustomBaseModel):
     ]
     layout_icons: ActiveLayoutIconsConfig = ActiveLayoutIconsConfig()
     layout_menu: ActiveLayoutMenuConfig = ActiveLayoutMenuConfig()
-    animation: AnimationConfig = AnimationConfig()
-    label_shadow: ShadowConfig = ShadowConfig()
-    container_shadow: ShadowConfig = ShadowConfig()
     keybindings: list[KeybindingConfig] = []
     callbacks: ActiveLayoutCallbacksConfig = ActiveLayoutCallbacksConfig()

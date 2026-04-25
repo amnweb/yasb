@@ -3,11 +3,9 @@ from typing import Literal
 from pydantic import Field
 
 from core.validation.widgets.base_model import (
-    AnimationConfig,
     CallbacksConfig,
     CustomBaseModel,
     KeybindingConfig,
-    ShadowConfig,
 )
 
 
@@ -15,6 +13,11 @@ class IgnoreAppsConfig(CustomBaseModel):
     classes: list[str] = []
     processes: list[str] = []
     titles: list[str] = []
+
+
+class AnimationConfig(CustomBaseModel):
+    enabled: bool = True
+    duration: int = 200
 
 
 class TitleLabelConfig(CustomBaseModel):
@@ -44,11 +47,9 @@ class TaskbarConfig(CustomBaseModel):
     show_only_visible: bool = False
     strict_filtering: bool = True
     ignore_apps: IgnoreAppsConfig = IgnoreAppsConfig()
-    animation: AnimationConfig | bool = AnimationConfig()
+    animation: AnimationConfig = AnimationConfig()
     title_label: TitleLabelConfig = TitleLabelConfig()
     hide_empty: bool = False
-    label_shadow: ShadowConfig = ShadowConfig()
-    container_shadow: ShadowConfig = ShadowConfig()
     preview: PreviewConfig = PreviewConfig()
     keybindings: list[KeybindingConfig] = []
     callbacks: TaskbarCallbacksConfig = TaskbarCallbacksConfig()

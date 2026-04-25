@@ -109,7 +109,6 @@ class CircularProgressWidget(QFrame):
         super().__init__()
         self._progress_bar = progress_bar
         self.setProperty("class", "progress-circle")
-        self.setCursor(Qt.CursorShape.PointingHandCursor)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(progress_bar)

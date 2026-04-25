@@ -5,7 +5,6 @@ import humanize
 from PyQt6.QtCore import QTimer
 from PyQt6.QtWidgets import QLabel
 
-from core.utils.animation_manager import AnimationManager
 from core.utils.utilities import refresh_widget_style
 from core.utils.win32.constants import POWER_TIME_UNKNOWN, POWER_TIME_UNLIMITED
 from core.validation.widgets.yasb.battery import BatteryConfig
@@ -24,8 +23,8 @@ class BatteryWidget(BaseWidget):
         self._battery_state: BatteryData | None = None
         self._show_alt_label = False
 
-        self._init_container(self.config.container_shadow.model_dump())
-        self.build_widget_label(self.config.label, self.config.label_alt, self.config.label_shadow.model_dump())
+        self._init_container()
+        self.build_widget_label(self.config.label, self.config.label_alt)
 
         self.register_callback("update_label", self._update_label)
         self.register_callback("toggle_label", self._toggle_label)
@@ -43,8 +42,6 @@ class BatteryWidget(BaseWidget):
         self.start_timer()
 
     def _toggle_label(self):
-        if self.config.animation.enabled:
-            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
         self._show_alt_label = not self._show_alt_label
         for widget in self._widgets:
             widget.setVisible(not self._show_alt_label)

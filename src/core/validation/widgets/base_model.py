@@ -15,19 +15,6 @@ class CustomBaseModel(BaseModel):
         return handle_deprecated_fields(cls, data)
 
 
-class ShadowConfig(CustomBaseModel):
-    enabled: bool = False
-    color: str = "black"
-    offset: list[int] = [1, 1]
-    radius: int = 3
-
-
-class AnimationConfig(CustomBaseModel):
-    enabled: bool = True
-    type: str = "fadeInOut"
-    duration: int = 200
-
-
 class CallbacksConfig(CustomBaseModel):
     on_left: str = "do_nothing"
     on_middle: str = "do_nothing"

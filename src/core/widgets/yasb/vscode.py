@@ -8,10 +8,8 @@ import subprocess
 import urllib.parse
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QCursor
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QScrollArea, QVBoxLayout, QWidget
 
-from core.utils.animation_manager import AnimationManager
 from core.utils.utilities import PopupWidget
 from core.validation.widgets.yasb.vscode import VSCodeConfig
 from core.widgets.base import BaseWidget
@@ -29,8 +27,8 @@ class VSCodeWidget(BaseWidget):
             state_storage_path = os.path.expandvars(r"%APPDATA%\Code\User\globalStorage\state.vscdb")
         self._state_file_path = state_storage_path
 
-        self._init_container(self.config.container_shadow.model_dump())
-        self.build_widget_label(self.config.label, self.config.label_alt, self.config.label_shadow.model_dump())
+        self._init_container()
+        self.build_widget_label(self.config.label, self.config.label_alt)
 
         self.register_callback("toggle_label", self._toggle_label)
         self.register_callback("toggle_menu", self._toggle_menu)
@@ -80,13 +78,9 @@ class VSCodeWidget(BaseWidget):
             return []
 
     def _toggle_menu(self):
-        if self.config.animation.enabled:
-            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
         self.show_menu()
 
     def _toggle_label(self):
-        if self.config.animation.enabled:
-            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)
         self._show_alt_label = not self._show_alt_label
         for widget in self._widgets:
             widget.setVisible(not self._show_alt_label)
@@ -174,7 +168,6 @@ class VSCodeWidget(BaseWidget):
         container = QWidget()
         container.setProperty("class", "item")
         container.setContentsMargins(0, 0, 8, 0)
-        container.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
 
         container_layout = QHBoxLayout(container)
         container_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)

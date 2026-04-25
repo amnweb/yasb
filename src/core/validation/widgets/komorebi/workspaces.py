@@ -1,4 +1,4 @@
-from core.validation.widgets.base_model import CustomBaseModel, ShadowConfig
+from core.validation.widgets.base_model import CustomBaseModel
 
 
 class ToggleWorkspaceLayerConfig(CustomBaseModel):
@@ -29,9 +29,5 @@ class KomorebiWorkspacesConfig(CustomBaseModel):
     label_zero_index: bool = False
     hide_empty_workspaces: bool = False
     app_icons: AppIconsConfig = AppIconsConfig()
-    animation: bool = False
     enable_scroll_switching: bool = False
     reverse_scroll_direction: bool = False
-    btn_shadow: ShadowConfig = ShadowConfig()
-    label_shadow: ShadowConfig = ShadowConfig()
-    container_shadow: ShadowConfig = ShadowConfig()

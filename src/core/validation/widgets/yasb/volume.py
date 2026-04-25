@@ -1,11 +1,9 @@
 from pydantic import Field
 
 from core.validation.widgets.base_model import (
-    AnimationConfig,
     CallbacksConfig,
     CustomBaseModel,
     KeybindingConfig,
-    ShadowConfig,
 )
 
 
@@ -61,9 +59,6 @@ class VolumeConfig(CustomBaseModel):
         "\uf028",  # Icon for 61-100% volume
     ]
     audio_menu: AudioMenuConfig = AudioMenuConfig()
-    animation: AnimationConfig = AnimationConfig()
-    label_shadow: ShadowConfig = ShadowConfig()
-    container_shadow: ShadowConfig = ShadowConfig()
     progress_bar: ProgressBarConfig = ProgressBarConfig()
     keybindings: list[KeybindingConfig] = []
     callbacks: VolumeCallbacksConfig = VolumeCallbacksConfig()

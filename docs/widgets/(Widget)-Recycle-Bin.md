@@ -9,10 +9,7 @@ Recycle Bin widget is simple widget that shows the status of the recycle bin. It
 | `icons` | dict | `{"bin_empty": "\udb82\ude7a","bin_filled": "\udb82\ude79"}` | Customize icons used for different recycle bin states. |
 | `tooltip`  | boolean  | `True`        | Whether to show the tooltip on hover. |
 | `show_confirmation` | boolean | `False` | Show Windows confirmation dialog before emptying. |
-| `animation` | dict | `{'enabled': True, 'type': 'fadeInOut', 'duration': 200}` | Animation settings for the widget. |
 | `callbacks` | dict | See below | Configure widget interaction callbacks. |
-| `container_shadow`   | dict   | `None`                  | Container shadow options.                       |
-| `label_shadow`         | dict   | `None`                  | Label shadow options.                 |
 
 ## Example Configuration
 
@@ -30,11 +27,6 @@ Recycle Bin widget is simple widget that shows the status of the recycle bin. It
         on_right: "toggle_label"
         on_middle: "empty_bin"
       show_confirmation: true
-      label_shadow:
-        enabled: true
-        color: "black"
-        radius: 3
-        offset: [ 1, 1 ]
 ```
 
 ## Description of Options
@@ -47,10 +39,7 @@ Recycle Bin widget is simple widget that shows the status of the recycle bin. It
   - **bin_filled**: Icon when the recycle bin has items.
 - **tooltip**: Whether to show the tooltip on hover.
 - **show_confirmation**: Show Windows confirmation dialog before emptying.
-- **animation**: Animation settings including type and duration.
 - **callbacks**: Configure what happens when clicking the widget.
-- **container_shadow:** Container shadow options.
-- **label_shadow:** Label shadow options.
 
 ## Available Callbacks
 

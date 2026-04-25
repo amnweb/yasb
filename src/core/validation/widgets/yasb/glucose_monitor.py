@@ -2,7 +2,6 @@ from core.validation.widgets.base_model import (
     CallbacksConfig,
     CustomBaseModel,
     KeybindingConfig,
-    ShadowConfig,
 )
 
 
@@ -38,7 +37,5 @@ class GlucoseMonitorConfig(CustomBaseModel):
     sgv_measurement_units: str = "mmol/l"
     callbacks: CallbacksGlucoseMonitorConfig = CallbacksGlucoseMonitorConfig()
     notify_on_error: bool = True
-    label_shadow: ShadowConfig = ShadowConfig()
-    container_shadow: ShadowConfig = ShadowConfig()
     sgv_range: SgvRangeConfig = SgvRangeConfig()
     keybindings: list[KeybindingConfig] = []
