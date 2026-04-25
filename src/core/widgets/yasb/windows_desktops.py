@@ -13,6 +13,7 @@ from PyQt6.QtWidgets import (
     QLineEdit,
     QMenu,
     QPushButton,
+    QSizePolicy,
     QVBoxLayout,
 )
 
@@ -41,6 +42,7 @@ class WorkspaceButton(QPushButton):
         self.setText(self.default_label)
         self.parent_widget = parent
         self.clicked.connect(self._on_clicked)
+        self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
 
     def _on_clicked(self):
         if self.parent_widget:

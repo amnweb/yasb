@@ -6,7 +6,7 @@ from typing import override
 from PIL import Image
 from PyQt6.QtCore import Qt, pyqtSlot
 from PyQt6.QtGui import QImage, QMouseEvent, QPixmap, QShowEvent, QWheelEvent
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QWidget
+from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QSizePolicy, QWidget
 
 from core.utils.utilities import refresh_widget_style
 from core.utils.win32.app_icons import get_window_icon
@@ -52,6 +52,7 @@ class GlazewmWorkspaceButton(QPushButton):
         self.workspace_window_count = 0
         self.status = WorkspaceStatus.EMPTY
         self.clicked.connect(self._activate_workspace)  # type: ignore
+        self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         self._update_status()
 
     def update_button(self):
@@ -149,6 +150,8 @@ class GlazewmWorkspaceButtonWithIcons(QFrame):
         self.status = WorkspaceStatus.EMPTY
         self.workspace_window_count = 0
         self.windows = windows
+
+        self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
 
         self.button_layout = QHBoxLayout(self)
         self.button_layout.setContentsMargins(0, 0, 0, 0)
