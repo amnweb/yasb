@@ -27,7 +27,7 @@ dependencies = [
     "openai==2.32.0",
     "pyvda @ git+https://github.com/amnweb/pyvda@master",
     "python-dotenv==1.2.2",
-    "tzdata==2026.1",
+    "tzdata==2026.2",
     "winrt.windows.foundation==3.2.1",
     "winrt.windows.foundation.collections==3.2.1",
     "winrt.windows.data.xml.dom==3.2.1",
