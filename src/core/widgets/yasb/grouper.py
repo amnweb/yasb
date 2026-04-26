@@ -4,7 +4,6 @@ from typing import Any
 from PyQt6.QtCore import QEvent
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QPushButton
 
-from core.config import get_config
 from core.utils.widget_builder import WidgetBuilder
 from core.validation.widgets.yasb.grouper import GrouperWidgetConfig
 from core.widgets.base import BaseWidget
@@ -17,9 +16,10 @@ class GrouperWidget(BaseWidget):
     _listener_threads: dict[type, Any] = {}
     _listener_refcounts: dict[type, int] = {}
 
-    def __init__(self, config: GrouperWidgetConfig):
+    def __init__(self, config: GrouperWidgetConfig, widget_configs: dict | None = None):
         super().__init__(class_name=config.class_name)
         self.config = config
+        self._widget_configs = widget_configs or {}
         self._hide_empty = self.config.hide_empty
         # Use collapse_options structure
         self._collapse_options = self.config.collapse_options
@@ -63,10 +63,7 @@ class GrouperWidget(BaseWidget):
 
     def _create_child_widgets(self):
         try:
-            config = get_config()
-            widets_config = config.widgets if config else {}
-
-            widget_builder = WidgetBuilder(widets_config)
+            widget_builder = WidgetBuilder(self._widget_configs)
 
             for widget_name in self._widgets_list:
                 child_widget = None

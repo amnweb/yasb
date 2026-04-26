@@ -76,7 +76,11 @@ class WidgetBuilder(QObject):
                 except Exception:
                     logging.debug("WidgetBuilder failed to collect nested listeners for Grouper")
 
-                widget = widget_cls(config=pydantic_config)
+                # Pass widget_configs to GrouperWidget
+                if widget_cls.__name__ == "GrouperWidget" and widget_module.__name__.endswith("yasb.grouper"):
+                    widget = widget_cls(config=pydantic_config, widget_configs=self._widget_configurations)
+                else:
+                    widget = widget_cls(config=pydantic_config)
                 widget.widget_name = widget_name
                 return widget
             except AttributeError, ValueError, ModuleNotFoundError:
