@@ -7,7 +7,6 @@ from PyQt6.QtWidgets import QLabel, QSlider, QVBoxLayout
 
 from core.utils.tooltip import CustomToolTip, set_tooltip
 from core.utils.utilities import PopupWidget, build_progress_widget
-from core.utils.win32.bindings.user32 import MONITOR_DEFAULTTONEAREST, user32
 from core.validation.widgets.yasb.brightness import BrightnessConfig
 from core.widgets.base import BaseWidget
 from core.widgets.services.brightness.service import BrightnessService
@@ -24,7 +23,6 @@ class BrightnessWidget(BaseWidget):
         self._widgets_alt: list[QLabel] = []
 
         # Current state
-        self._hmonitor = None
         self.current_brightness = None
         self._auto_light_timer: QTimer | None = None
         self._initialized = False
@@ -52,34 +50,24 @@ class BrightnessWidget(BaseWidget):
         self.callback_right = config.callbacks.on_right
         self.callback_middle = config.callbacks.on_middle
 
-        self._hmonitor = None
-        self._initialized = False
-        self._auto_light_started = False
-        self._slider_tooltip = None
-
-    def _get_hmonitor(self) -> int | None:
-        """Get the monitor handle for this widget."""
-        try:
-            hwnd = int(self.winId())
-            return user32.MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST)
-        except Exception:
-            return None
+    @property
+    def _hmonitor(self) -> int | None:
+        """Bar-resolved monitor handle (set by Bar after position)."""
+        return self.monitor_hwnd
 
     def showEvent(self, a0: QShowEvent | None):
         """Handle widget show event detect monitor and check support."""
         super().showEvent(a0)
         if not self._initialized:
             self._initialized = True
-            self._hmonitor = self._get_hmonitor()
-            # Check if monitor supports brightness
             if self._hmonitor:
                 brightness = self._service.get_brightness(self._hmonitor)
-                if brightness is None:
-                    # Monitor doesn't support brightness control hide widget
-                    self.hide()
+                if brightness is not None:
+                    self.current_brightness = brightness
+                    self._update_label()
                     return
-                self.current_brightness = brightness
-                self._update_label()
+            # No value yet
+            self.hide()
 
     def _on_brightness_changed(self, hmonitor: int, brightness: int | None):
         """Handle brightness change from service (thread-safe via signal)."""
@@ -97,16 +85,12 @@ class BrightnessWidget(BaseWidget):
 
     def get_brightness(self) -> int | None:
         """Get current brightness (cached)."""
-        if self._hmonitor is None:
-            self._hmonitor = self._get_hmonitor()
         if self._hmonitor:
             return self._service.get_brightness(self._hmonitor)
         return None
 
     def set_brightness(self, value: int):
         """Set brightness."""
-        if self._hmonitor is None:
-            self._hmonitor = self._get_hmonitor()
         if self._hmonitor:
             self._service.set_brightness(self._hmonitor, value)
             self.current_brightness = value

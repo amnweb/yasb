@@ -56,6 +56,7 @@ class BrightnessService(QObject):
         self._lcd_handle: HANDLE | None = None
         self._lcd_tested = False
         self._lcd_available = False
+        self._lcd_owner: int | None = None
         self._running = False
         self._thread: threading.Thread | None = None
         self._lock = threading.Lock()
@@ -173,6 +174,10 @@ class BrightnessService(QObject):
                 monitor = self._monitors.get(hmonitor)
                 if not monitor:
                     continue
+                # Skip cache update if a user-initiated "set" event is pending or just applied;
+                # physical reads can lag and would overwrite the newer in‑memory value.
+                if hmonitor in self._pending_set:
+                    continue
                 old_brightness = monitor.brightness
                 was_reported = monitor.reported
                 monitor.brightness = brightness
@@ -204,10 +209,13 @@ class BrightnessService(QObject):
                 self._monitors[hmonitor] = _MonitorInfo(hmonitor)
             monitor = self._monitors[hmonitor]
 
-        # Test capabilities on first access
+        # Test capabilities on first access. LCD is global on the laptop panel
+        # so only assign it to one monitor (and only if DDC failed) to avoid
+        # external-monitor widgets writing to the laptop panel.
         if not monitor.tested:
             monitor.supports_ddc = self._test_ddc(hmonitor)
-            monitor.supports_lcd = self._test_lcd()
+            if not monitor.supports_ddc:
+                monitor.supports_lcd = self._test_lcd(hmonitor)
             monitor.tested = True
             logging.debug("Monitor %s: DDC=%s, LCD=%s", hmonitor, monitor.supports_ddc, monitor.supports_lcd)
 
@@ -346,20 +354,28 @@ class BrightnessService(QObject):
             return False
 
     # LCD operations
-    def _test_lcd(self) -> bool:
-        """Test if LCD brightness control is available."""
-        if self._lcd_tested:
-            return self._lcd_available
+    def _test_lcd(self, hmonitor: int) -> bool:
+        """Test if LCD brightness control is available and claim ownership.
 
-        self._lcd_tested = True
-        try:
-            handle = kernel32.CreateFileW("\\\\.\\LCD", 0xC0000000, 0x03, None, 3, 0, None)
-            if handle and handle != INVALID_HANDLE_VALUE:
-                self._lcd_handle = handle
-                self._lcd_available = True
-                return True
-        except Exception:
-            pass
+        The LCD device is global (laptop panel) so only one monitor may own it.
+        First non-DDC monitor to ask wins; subsequent calls return False.
+        """
+        if self._lcd_owner is not None:
+            return self._lcd_owner == hmonitor
+
+        if not self._lcd_tested:
+            self._lcd_tested = True
+            try:
+                handle = kernel32.CreateFileW("\\\\.\\LCD", 0xC0000000, 0x03, None, 3, 0, None)
+                if handle and handle != INVALID_HANDLE_VALUE:
+                    self._lcd_handle = handle
+                    self._lcd_available = True
+            except Exception:
+                pass
+
+        if self._lcd_available:
+            self._lcd_owner = hmonitor
+            return True
         return False
 
     def _read_lcd(self) -> int | None:
