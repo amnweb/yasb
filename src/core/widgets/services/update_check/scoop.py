@@ -141,7 +141,8 @@ def check_updates() -> list[dict[str, str]]:
         for row in raw:
             row["id"] = row["name"]
             row["source"] = "scoop"
-        return raw
+        # Filter out packages that are held
+        return [row for row in raw if "held" not in row.get("info", "").lower()]
     except subprocess.TimeoutExpired:
         logging.warning("scoop status timed out")
         return []
