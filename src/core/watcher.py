@@ -7,7 +7,7 @@ from watchdog.events import FileModifiedEvent, PatternMatchingEventHandler
 from watchdog.observers import Observer
 
 from core.bar_manager import BarManager
-from core.config import get_config_dir, get_stylesheet_path
+from core.config import get_config_dir, get_config_path, get_stylesheet_path
 from core.utils.css_processor import CSSProcessor
 from settings import DEFAULT_CONFIG_FILENAME, DEFAULT_STYLES_FILENAME
 
@@ -24,7 +24,7 @@ class FileModifiedEventHandler(PatternMatchingEventHandler):
         self._ignore_directories = True
         self._case_sensitive = False
         self._last_styles_hash = None
-        self._last_config_hash = None
+        self._last_config_hash = self._file_hash(get_config_path())
         self._stylesheet_path = self._normalize_path(get_stylesheet_path())
         self._imported_stylesheets = set()
         self._imported_hashes = {}
