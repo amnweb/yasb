@@ -272,7 +272,6 @@ class UpdateService:
                 if not skip_version_check:
                     current_commit = self._get_current_commit_hash()
                     if commit_hash and commit_hash == current_commit:
-                        logging.debug("Already on latest dev build: %s", current_commit)
                         return None
             else:
                 version = release_data.get("tag_name", "").lstrip("vV")
