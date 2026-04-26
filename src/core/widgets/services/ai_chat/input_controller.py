@@ -127,13 +127,19 @@ class InputController:
         self._owner._chat_session.stream.in_progress = False
 
     def on_popup_destroyed(self, *args):
-        if hasattr(self._owner, "input_edit"):
-            self._owner._input_draft = self._owner.input_edit.toPlainText()
-        else:
-            self._owner._input_draft = ""
-        if hasattr(self._owner, "_loading_label"):
-            del self._owner._loading_label
-        self._owner._popup_chat = None
-        self._owner._stream_ui.stop_thinking_animation()
-        self._owner._focus_manager.restore_previous_focus()
-        self._owner._chat_render.clear_batch_state()
+        try:
+            if hasattr(self._owner, "input_edit"):
+                try:
+                    self._owner._input_draft = self._owner.input_edit.toPlainText()
+                except RuntimeError:
+                    self._owner._input_draft = ""
+            else:
+                self._owner._input_draft = ""
+            if hasattr(self._owner, "_loading_label"):
+                del self._owner._loading_label
+            self._owner._popup_chat = None
+            self._owner._stream_ui.stop_thinking_animation()
+            self._owner._focus_manager.restore_previous_focus()
+            self._owner._chat_render.clear_batch_state()
+        except RuntimeError:
+            pass
