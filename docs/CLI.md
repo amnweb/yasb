@@ -17,6 +17,7 @@ The YASB CLI is a command line interface that allows you to interact with the YA
 - `toggle-bar` - Toggle the visibility of the status bar.
 - `update` - Update aplicattion to the latest version.
 - `set-channel` - Set the update channel (stable, dev).
+- `migrate-config` - Fix config files and migrate old config to new config.
 - `log` - Show the status bar logs in the terminal.
 - `reset` - Restore default config files and clear cache
 - `help` - Show the help message.
