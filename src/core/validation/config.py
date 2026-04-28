@@ -5,15 +5,15 @@ from core.validation.widgets.base_model import CustomBaseModel
 
 
 class KomorebiConfig(CustomBaseModel):
-    start_command: str | None = "komorebic start --whkd"
-    stop_command: str | None = "komorebic stop --whkd"
-    reload_command: str | None = "komorebic reload-configuration"
+    start_command: str | None = None
+    stop_command: str | None = None
+    reload_command: str | None = None
 
 
 class GlazeWMConfig(CustomBaseModel):
-    start_command: str | None = "glazewm.exe start"
-    stop_command: str | None = "glazewm.exe command wm-exit"
-    reload_command: str | None = "glazewm.exe command wm-exit && glazewm.exe start"
+    start_command: str | None = None
+    stop_command: str | None = None
+    reload_command: str | None = None
 
 
 class YasbConfig(CustomBaseModel):
