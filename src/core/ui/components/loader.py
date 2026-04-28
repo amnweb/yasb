@@ -64,6 +64,10 @@ class Spinner(QWidget):
         painter.drawArc(rect, int(-(start + base_rot) * 16), int(-span * 16))
         painter.end()
 
+    def set_color(self, color: str) -> None:
+        self._color = QColor(color)
+        self.update()
+
 
 class LoaderLine(QWidget):
     """An animated horizontal loading indicator that displays a sliding segment.
@@ -129,6 +133,10 @@ class LoaderLine(QWidget):
             self._position_in_widget()
         if color is not None:
             self._color = QColor(color)
+
+    def set_color(self, color: str) -> None:
+        self._color = QColor(color)
+        self.update()
 
     def attach_to_widget(self, target_widget: QWidget) -> None:
         if not target_widget:
