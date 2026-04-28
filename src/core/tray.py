@@ -1,19 +1,22 @@
+import ctypes
 import logging
 import os
 import shutil
 import subprocess
 import threading
 
-from PyQt6.QtCore import QEvent, QSize, Qt, pyqtSignal
-from PyQt6.QtGui import QColor, QCursor, QIcon, QPainter, QPixmap
-from PyQt6.QtWidgets import QMenu, QSystemTrayIcon
+import win32con
+import win32gui
+from PyQt6.QtCore import QSize, Qt, pyqtSignal
+from PyQt6.QtGui import QColor, QIcon, QPainter, QPixmap
+from PyQt6.QtWidgets import QSystemTrayIcon
 
 from core.bar_manager import BarManager
 from core.ui.views.about import AboutDialog
 from core.utils.controller import exit_application, reload_application
 from core.utils.shell_utils import shell_open
 from core.utils.update_service import register_update_callback
-from core.utils.win32.utils import apply_qmenu_style, disable_autostart, enable_autostart, is_autostart_enabled
+from core.utils.win32.utils import disable_autostart, enable_autostart, is_autostart_enabled
 from settings import (
     APP_NAME,
     DEFAULT_CONFIG_DIRECTORY,
@@ -42,35 +45,26 @@ class SystemTrayManager(QSystemTrayIcon):
         self._update_signal.connect(self._set_update_badge)
         register_update_callback(self._update_signal.emit)
 
-    def eventFilter(self, obj, event):
-        if event.type() == QEvent.Type.MouseButtonPress:
-            if self.menu and self.menu.isVisible():
-                global_pos = event.globalPosition().toPoint()
-                all_menus = [self.menu]
-                all_menus += [act.menu() for act in self.menu.actions() if act.menu() and act.menu().isVisible()]
-                if not any(m.geometry().contains(global_pos) for m in all_menus):
-                    self.menu.hide()
-                    self.menu.deleteLater()
-                    return True
-        return super().eventFilter(obj, event)
-
     def _on_tray_activated(self, reason):
         if reason == QSystemTrayIcon.ActivationReason.Context:
-            self._load_context_menu()
-            self.menu.popup(QCursor.pos())
-            self.menu.activateWindow()
+            self._show_context_menu()
 
     def _load_config(self):
         config = self._bar_manager.config
+        self.komorebi_enabled = False
+        self.glazewm_enabled = False
+
         if config and config.komorebi:
             self.komorebi_start = config.komorebi.start_command
             self.komorebi_stop = config.komorebi.stop_command
             self.komorebi_reload = config.komorebi.reload_command
+            self.komorebi_enabled = any([self.komorebi_start, self.komorebi_stop, self.komorebi_reload])
 
         if config and config.glazewm:
             self.glazewm_start = config.glazewm.start_command
             self.glazewm_stop = config.glazewm.stop_command
             self.glazewm_reload = config.glazewm.reload_command
+            self.glazewm_enabled = any([self.glazewm_start, self.glazewm_stop, self.glazewm_reload])
 
     def _load_favicon(self):
         # Get the current directory of the script
@@ -89,120 +83,109 @@ class SystemTrayManager(QSystemTrayIcon):
         painter.end()
         self.setIcon(QIcon(base))
         self.setToolTip("Update available")
-        self._update_available = True
 
-    def _load_context_menu(self):
-        self.menu = QMenu()
-        self.menu.setWindowModality(Qt.WindowModality.WindowModal)
-        apply_qmenu_style(self.menu)
-        style_sheet = """
-        QMenu {
-            background-color: #202020;
-            color: #ffffff;
-            border:1px solid #303030;
-            padding:5px 0;
-            margin:0;
-            border-radius:8px
-        }
-        QMenu::item {
-            margin:0 4px;
-            padding: 4px 24px 5px 24px;
-            border-radius: 4px;
-            font-size: 11px;
-            font-weight: 600;
-            font-family: 'Segoe UI';
-        }
-        QMenu::item:selected {
-            background-color: #333333;
-        }
-        QMenu::separator {
-            height: 1px;
-            background: #404040;
-            margin: 4px 8px;
-        }
-        QMenu::right-arrow {
-            width: 8px;
-            height: 8px;
-            padding-right:24px;
-        }
-        """
-        self.menu.setStyleSheet(style_sheet)
+    def _try_enable_dark_menu(self, hwnd):
+        try:
+            uxtheme = ctypes.WinDLL("uxtheme.dll")
+            uxtheme[135](1)  # undocumented SetPreferredAppMode(AllowDark)
+            uxtheme[133](hwnd, True)  # undocumented AllowDarkModeForWindow
+            uxtheme[136]()  # undocumented FlushMenuThemes
+        except Exception:
+            logging.debug("Native dark tray menu unavailable", exc_info=True)
 
-        if self._update_available:
-            update_action = self.menu.addAction("Update Available")
-            update_action.triggered.connect(self._open_update_dialog)
-            self.menu.addSeparator()
+    def _show_context_menu(self):
+        """Builds and shows the system tray context menu with dynamic options based on configuration and state."""
+        hmenu = None
+        selected_action = None
+        try:
+            hmenu = win32gui.CreatePopupMenu()
+            actions = {}
+            cmd_id = [1]
 
-        open_config_action = self.menu.addAction("Open Config")
-        open_config_action.triggered.connect(self._open_config)
-        if os.path.exists(THEME_EXE_PATH):
-            yasb_themes_action = self.menu.addAction("Get Themes")
-            yasb_themes_action.triggered.connect(lambda: os.startfile(THEME_EXE_PATH))
+            def add_item(menu, label, action):
+                win32gui.AppendMenu(menu, win32con.MF_STRING, cmd_id[0], label)
+                actions[cmd_id[0]] = action
+                cmd_id[0] += 1
 
-        reload_action = self.menu.addAction("Reload YASB")
-        reload_action.triggered.connect(self._reload_application)
-        self.reload_action = reload_action
+            def add_sep(menu):
+                win32gui.AppendMenu(menu, win32con.MF_SEPARATOR, 0, "")
 
-        self.menu.addSeparator()
-        if self.is_wm_installed("komorebi"):
-            komorebi_menu = self.menu.addMenu("Komorebi")
-            start_komorebi = komorebi_menu.addAction("Start Komorebi")
-            start_komorebi.triggered.connect(
-                lambda checked=False, wm="Komorebi", cmd=self.komorebi_start: self._run_wm_command(wm, cmd)
+            if self._update_available:
+                add_item(hmenu, "Update Available", self._open_update_dialog)
+                add_sep(hmenu)
+
+            add_item(hmenu, "Open Config", self._open_config)
+            if os.path.exists(THEME_EXE_PATH):
+                add_item(hmenu, "Get Themes", lambda: os.startfile(THEME_EXE_PATH))
+            add_item(hmenu, "Reload YASB", self._reload_application)
+            add_sep(hmenu)
+
+            if self.komorebi_enabled and self.is_wm_installed("komorebi"):
+                km_sub = win32gui.CreatePopupMenu()
+                if self.komorebi_start:
+                    add_item(km_sub, "Start Komorebi", lambda: self._run_wm_command("Komorebi", self.komorebi_start))
+                if self.komorebi_stop:
+                    add_item(km_sub, "Stop Komorebi", lambda: self._run_wm_command("Komorebi", self.komorebi_stop))
+                if self.komorebi_reload:
+                    add_item(km_sub, "Reload Komorebi", lambda: self._run_wm_command("Komorebi", self.komorebi_reload))
+                win32gui.AppendMenu(hmenu, win32con.MF_POPUP, km_sub, "Komorebi")
+                add_sep(hmenu)
+
+            if self.glazewm_enabled and self.is_wm_installed("glazewm"):
+                gw_sub = win32gui.CreatePopupMenu()
+                if self.glazewm_start:
+                    add_item(gw_sub, "Start GlazeWM", lambda: self._run_wm_command("Glazewm", self.glazewm_start))
+                if self.glazewm_stop:
+                    add_item(gw_sub, "Stop GlazeWM", lambda: self._run_wm_command("Glazewm", self.glazewm_stop))
+                if self.glazewm_reload:
+                    add_item(gw_sub, "Reload GlazeWM", lambda: self._run_wm_command("Glazewm", self.glazewm_reload))
+                win32gui.AppendMenu(hmenu, win32con.MF_POPUP, gw_sub, "GlazeWM")
+                add_sep(hmenu)
+
+            if AUTOSTART_FILE:
+                if self._check_startup():
+                    add_item(hmenu, "Disable Autostart", self._disable_startup)
+                else:
+                    add_item(hmenu, "Enable Autostart", self._enable_startup)
+
+            add_item(hmenu, "Help", lambda: self._open_in_browser(GITHUB_WIKI_URL))
+            add_item(hmenu, "About", self._show_about_dialog)
+            add_sep(hmenu)
+            add_item(hmenu, "Exit", self._exit_application)
+
+            bars = self._bar_manager.bars
+            hwnd = int(bars[0].winId()) if bars else win32gui.GetDesktopWindow()
+            x, y = win32gui.GetCursorPos()
+            self._try_enable_dark_menu(hwnd)
+            try:
+                win32gui.SetForegroundWindow(hwnd)
+            except Exception:
+                logging.debug("Failed to set tray menu owner as foreground window", exc_info=True)
+            cmd = win32gui.TrackPopupMenu(
+                hmenu,
+                win32con.TPM_LEFTALIGN | win32con.TPM_RETURNCMD | win32con.TPM_NONOTIFY,
+                x,
+                y,
+                0,
+                hwnd,
+                None,
             )
+            selected_action = actions.get(cmd)
+            try:
+                win32gui.PostMessage(hwnd, win32con.WM_NULL, 0, 0)
+            except Exception:
+                logging.debug("Failed to post tray menu cleanup message", exc_info=True)
+        except Exception:
+            logging.exception("Failed to show context menu")
+        finally:
+            if hmenu:
+                win32gui.DestroyMenu(hmenu)
 
-            stop_komorebi = komorebi_menu.addAction("Stop Komorebi")
-            stop_komorebi.triggered.connect(
-                lambda checked=False, wm="Komorebi", cmd=self.komorebi_stop: self._run_wm_command(wm, cmd)
-            )
-
-            reload_komorebi = komorebi_menu.addAction("Reload Komorebi")
-            reload_komorebi.triggered.connect(
-                lambda checked=False, wm="Komorebi", cmd=self.komorebi_reload: self._run_wm_command(wm, cmd)
-            )
-
-            apply_qmenu_style(komorebi_menu)
-
-            self.menu.addSeparator()
-
-        if self.is_wm_installed("glazewm"):
-            glazewm_menu = self.menu.addMenu("Glazewm")
-            start_glazewm = glazewm_menu.addAction("Start Glazewm")
-            start_glazewm.triggered.connect(
-                lambda checked=False, wm="Glazewm", cmd=self.glazewm_start: self._run_wm_command(wm, cmd)
-            )
-
-            stop_glazewm = glazewm_menu.addAction("Stop Glazewm")
-            stop_glazewm.triggered.connect(
-                lambda checked=False, wm="Glazewm", cmd=self.glazewm_stop: self._run_wm_command(wm, cmd)
-            )
-
-            reload_glazewm = glazewm_menu.addAction("Reload Glazewm")
-            reload_glazewm.triggered.connect(
-                lambda checked=False, wm="Glazewm", cmd=self.glazewm_reload: self._run_wm_command(wm, cmd)
-            )
-
-            apply_qmenu_style(glazewm_menu)
-
-            self.menu.addSeparator()
-
-        if AUTOSTART_FILE:
-            if self._chek_startup():
-                disable_startup_action = self.menu.addAction("Disable Autostart")
-                disable_startup_action.triggered.connect(self._disable_startup)
-            else:
-                enable_startup_action = self.menu.addAction("Enable Autostart")
-                enable_startup_action.triggered.connect(self._enable_startup)
-
-        help_action = self.menu.addAction("Help")
-        help_action.triggered.connect(lambda: self._open_in_browser(GITHUB_WIKI_URL))
-
-        about_action = self.menu.addAction("About")
-        about_action.triggered.connect(self._show_about_dialog)
-
-        self.menu.addSeparator()
-        exit_action = self.menu.addAction("Exit")
-        exit_action.triggered.connect(self._exit_application)
+        if selected_action:
+            try:
+                selected_action()
+            except Exception:
+                logging.exception("Tray menu action failed")
 
     def is_wm_installed(self, wm) -> bool:
         try:
@@ -218,11 +201,8 @@ class SystemTrayManager(QSystemTrayIcon):
     def _disable_startup(self):
         disable_autostart(APP_NAME)
 
-    def _chek_startup(self):
-        if is_autostart_enabled(APP_NAME):
-            return True
-        else:
-            return False
+    def _check_startup(self) -> bool:
+        return bool(is_autostart_enabled(APP_NAME))
 
     def _open_config(self):
         try:
