@@ -692,6 +692,7 @@ class ThemeDetailPanel(QWidget):
         self._image_data = b""
         self._readme_text = ""
         self._pending_requests = 0
+        self._install_dialog: QDialog | None = None
         self._build_ui()
 
     def _build_ui(self) -> None:
@@ -711,7 +712,8 @@ class ThemeDetailPanel(QWidget):
         self._loading_widget.setStyleSheet("background: transparent;")
         loading_layout = QVBoxLayout(self._loading_widget)
         loading_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        loading_layout.addWidget(Spinner(size=32, color=t["text_primary"], pen_width=2, parent=self._loading_widget))
+        self._spinner = Spinner(size=32, color=t["text_primary"], pen_width=2, parent=self._loading_widget)
+        loading_layout.addWidget(self._spinner)
         self._stack_layout.addWidget(self._loading_widget)
         self._loading_widget.hide()
 
@@ -869,11 +871,11 @@ class ThemeDetailPanel(QWidget):
         self._not_found_widget.setStyleSheet("background: transparent;")
         layout = QVBoxLayout(self._not_found_widget)
         layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        label = QLabel("Theme not found")
-        label.setFont(_ui_font(19))
-        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        label.setStyleSheet(f"color: {t['text_secondary']}; background: transparent;")
-        layout.addWidget(label)
+        self._not_found_label = QLabel("Theme not found")
+        self._not_found_label.setFont(_ui_font(19))
+        self._not_found_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._not_found_label.setStyleSheet(f"color: {t['text_secondary']}; background: transparent;")
+        layout.addWidget(self._not_found_label)
         stack.addWidget(self._not_found_widget)
         self._not_found_widget.hide()
 
@@ -892,6 +894,22 @@ class ThemeDetailPanel(QWidget):
         footer_layout.addWidget(self.install_btn)
         root.addWidget(self.footer)
         self.footer.hide()
+
+    def refresh_theme(self) -> None:
+        """Re-apply all token-dependent styles after an OS theme change."""
+        t = _theme_tokens()
+        self._tokens = t
+        self.header_section.setStyleSheet(
+            f"QFrame#detailHeader {{ background: {t['content_bg']}; border-top-left-radius: 12px; }}"
+        )
+        self._stack.setStyleSheet(f"background: {t['content_bg']}; border-bottom-left-radius: 12px;")
+        self.name_label.setStyleSheet(f"color: {t['text_primary']}; background: transparent;")
+        self.desc_label.setStyleSheet(f"color: {t['text_secondary']}; background: transparent;")
+        self._not_found_label.setStyleSheet(f"color: {t['text_secondary']}; background: transparent;")
+        self._spinner.set_color(t["text_primary"])
+        widget_style, document_style = _readme_browser_styles(t)
+        self.readme_browser.setStyleSheet(widget_style)
+        self.readme_browser.document().setDefaultStyleSheet(document_style)
 
     def show_not_found(self) -> None:
         """Show a 'Theme not found' message in the detail panel."""
@@ -1081,8 +1099,10 @@ class ThemeDetailPanel(QWidget):
     def _on_install(self) -> None:
         if not self.theme_data:
             return
-        dialog = self._build_install_dialog(self._tokens)
-        if dialog.exec() == QDialog.DialogCode.Accepted:
+        self._install_dialog = self._build_install_dialog(self._tokens)
+        accepted = self._install_dialog.exec() == QDialog.DialogCode.Accepted
+        self._install_dialog = None
+        if accepted:
             self._do_install()
 
     def _build_install_dialog(self, t: dict[str, str]) -> QDialog:
@@ -1213,6 +1233,20 @@ class ThemeViewer(ViewBase, QMainWindow):
         self._theme_urls = list(DEFAULT_THEME_INDEX_URLS)
         self._deep_link_theme_id = deep_link_theme_id
         self._init_ui()
+        QApplication.instance().paletteChanged.connect(lambda _: self._on_palette_changed())
+
+    def _on_palette_changed(self) -> None:
+        self._tokens = _theme_tokens()
+        t = self._tokens
+        self.search_box.setStyleSheet(_search_box_style(t))
+        self.theme_list.setStyleSheet(_sidebar_list_style(t))
+        self.count_label.setStyleSheet(f"padding: 6px 6px 6px 14px; color: {t['text_tertiary']};")
+        self._header_title.setStyleSheet(f"color: {t['text_primary']};")
+        self._header_info.setStyleSheet(f"color: {t['text_primary']};")
+        if self.detail_panel._install_dialog is not None:
+            self.detail_panel._install_dialog.reject()
+        self._filter_sidebar(self.search_box.text())
+        self.detail_panel.refresh_theme()
 
     def _init_ui(self) -> None:
         t = self._tokens
@@ -1239,19 +1273,21 @@ class ThemeViewer(ViewBase, QMainWindow):
         header_layout.setContentsMargins(12, 0, 24, 0)
         header_layout.setSpacing(10)
 
-        title = QLabel("<span style='letter-spacing:-1px'><span style='font-weight:bold'>YASB</span> Themes</span>")
-        title.setFont(_ui_font(21))
-        title.setStyleSheet(f"color: {t['text_primary']};")
-        header_layout.addWidget(title)
+        self._header_title = QLabel(
+            "<span style='letter-spacing:-1px'><span style='font-weight:bold'>YASB</span> Themes</span>"
+        )
+        self._header_title.setFont(_ui_font(21))
+        self._header_title.setStyleSheet(f"color: {t['text_primary']};")
+        header_layout.addWidget(self._header_title)
         header_layout.addStretch()
 
-        info = QLabel("Backup your config before installing a theme.")
-        info.setFont(_ui_font(12))
-        info.setStyleSheet(f"color: {t['text_primary']};")
+        self._header_info = QLabel("Backup your config before installing a theme.")
+        self._header_info.setFont(_ui_font(12))
+        self._header_info.setStyleSheet(f"color: {t['text_primary']};")
         info_opacity = QGraphicsOpacityEffect()
         info_opacity.setOpacity(0.75)
-        info.setGraphicsEffect(info_opacity)
-        header_layout.addWidget(info)
+        self._header_info.setGraphicsEffect(info_opacity)
+        header_layout.addWidget(self._header_info)
 
         self.backup_button = _make_btn("Backup", "default", slot=self._backup_config)
         header_layout.addWidget(self.backup_button)
