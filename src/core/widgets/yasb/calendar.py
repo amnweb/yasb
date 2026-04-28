@@ -144,7 +144,13 @@ class _FetchTask(QRunnable):
                 token_path.parent.mkdir(parents=True, exist_ok=True)
                 token_path.write_text(creds.to_json(), encoding="utf-8")
 
-            service = build("calendar", "v3", credentials=creds, cache_discovery=False)
+            service = build(
+                "calendar",
+                "v3",
+                credentials=creds,
+                cache_discovery=False,
+                static_discovery=False,
+            )
             now = datetime.now(UTC)
             grace = timedelta(minutes=self._config.grace_period_minutes)
             time_min = (now - grace).isoformat()
