@@ -72,7 +72,6 @@
             "right_main_vertical_stack": "=||",
             "monocle": "[M]",
             "maximized": "[X]",
-            "maximised": "[X]",
             "floating": "><>",
             "paused": "[P]",
             "tiling": "[T]"
@@ -90,47 +89,6 @@
             "offset_top": 6,
             "offset_left": 0,
             "show_layout_icons": true
-          }
-        },
-        "container_padding": {
-          "$ref": "#/$defs/PaddingConfig",
-          "default": {
-            "top": 0,
-            "left": 0,
-            "bottom": 0,
-            "right": 0
-          }
-        },
-        "animation": {
-          "$ref": "#/$defs/AnimationConfig",
-          "default": {
-            "enabled": true,
-            "type": "fadeInOut",
-            "duration": 200
-          }
-        },
-        "label_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
-        "container_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
           }
         },
         "keybindings": {
@@ -227,11 +185,6 @@
         "maximized": {
           "default": "[X]",
           "title": "Maximized",
-          "type": "string"
-        },
-        "maximised": {
-          "default": "[X]",
-          "title": "Maximised",
           "type": "string"
         },
         "floating": {
@@ -398,53 +351,12 @@
           "title": "Rewrite",
           "type": "array"
         },
-        "animation": {
-          "$ref": "#/$defs/AnimationConfig",
-          "default": {
-            "enabled": true,
-            "type": "fadeInOut",
-            "duration": 200
-          }
-        },
         "ignore_window": {
           "$ref": "#/$defs/IgnoreWindowConfig",
           "default": {
             "classes": [],
             "processes": [],
             "titles": []
-          }
-        },
-        "container_padding": {
-          "$ref": "#/$defs/PaddingConfig",
-          "default": {
-            "top": 0,
-            "left": 0,
-            "bottom": 0,
-            "right": 0
-          }
-        },
-        "label_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
-        "container_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
           }
         },
         "keybindings": {
@@ -572,53 +484,12 @@
           "title": "Start Floating",
           "type": "boolean"
         },
-        "animation": {
-          "$ref": "#/$defs/AnimationConfig",
-          "default": {
-            "enabled": true,
-            "type": "fadeInOut",
-            "duration": 200
-          }
-        },
-        "container_padding": {
-          "$ref": "#/$defs/PaddingConfig",
-          "default": {
-            "top": 0,
-            "left": 0,
-            "bottom": 0,
-            "right": 0
-          }
-        },
         "callbacks": {
           "$ref": "#/$defs/AiChatCallbacksConfig",
           "default": {
             "on_left": "toggle_chat",
             "on_middle": "do_nothing",
             "on_right": "do_nothing"
-          }
-        },
-        "label_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
-        "container_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
           }
         },
         "keybindings": {
@@ -668,11 +539,6 @@
           "default": true,
           "title": "Enabled",
           "type": "boolean"
-        },
-        "type": {
-          "default": "fadeInOut",
-          "title": "Type",
-          "type": "string"
         },
         "duration": {
           "default": 200,
@@ -738,51 +604,10 @@
           "title": "App List",
           "type": "array"
         },
-        "animation": {
-          "$ref": "#/$defs/AnimationConfig",
-          "default": {
-            "enabled": true,
-            "type": "fadeInOut",
-            "duration": 200
-          }
-        },
         "tooltip": {
           "default": true,
           "title": "Tooltip",
           "type": "boolean"
-        },
-        "label_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
-        "container_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
-        "container_padding": {
-          "$ref": "#/$defs/PaddingConfig",
-          "default": {
-            "top": 0,
-            "left": 0,
-            "bottom": 0,
-            "right": 0
-          }
         }
       },
       "required": [
@@ -880,11 +705,6 @@
           "title": "Direction",
           "type": "string"
         },
-        "distance": {
-          "default": 6,
-          "title": "Distance",
-          "type": "integer"
-        },
         "offset_top": {
           "default": 6,
           "title": "Offset Top",
@@ -938,11 +758,6 @@
           "title": "Position",
           "type": "string"
         },
-        "center": {
-          "default": false,
-          "title": "Center",
-          "type": "boolean"
-        },
         "align": {
           "default": "center",
           "enum": [
@@ -995,11 +810,6 @@
         "dark_mode": {
           "default": false,
           "title": "Dark Mode",
-          "type": "boolean"
-        },
-        "acrylic": {
-          "default": false,
-          "title": "Acrylic",
           "type": "boolean"
         },
         "round_corners": {
@@ -1057,7 +867,6 @@
           "$ref": "#/$defs/BarAlignment",
           "default": {
             "position": "top",
-            "center": false,
             "align": "center"
           }
         },
@@ -1066,7 +875,6 @@
           "default": {
             "enabled": false,
             "dark_mode": false,
-            "acrylic": false,
             "round_corners": false,
             "round_corners_type": "normal",
             "border_color": "System"
@@ -1369,47 +1177,6 @@
             "icon_full": "\uf240"
           }
         },
-        "animation": {
-          "$ref": "#/$defs/AnimationConfig",
-          "default": {
-            "enabled": true,
-            "type": "fadeInOut",
-            "duration": 200
-          }
-        },
-        "container_padding": {
-          "$ref": "#/$defs/PaddingConfig",
-          "default": {
-            "top": 0,
-            "left": 0,
-            "bottom": 0,
-            "right": 0
-          }
-        },
-        "label_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
-        "container_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
         "keybindings": {
           "default": [],
           "items": {
@@ -1446,6 +1213,53 @@
         "options"
       ],
       "title": "BatteryEntry",
+      "type": "object"
+    },
+    "BinanceProviderConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "default": false,
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "prefix": {
+          "default": "crypto",
+          "title": "Prefix",
+          "type": "string"
+        },
+        "priority": {
+          "default": 0,
+          "title": "Priority",
+          "type": "integer"
+        },
+        "pairs": {
+          "default": [
+            "BTC/USDT"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "title": "Pairs",
+          "type": "array"
+        },
+        "round": {
+          "default": 2,
+          "title": "Round",
+          "type": "integer"
+        },
+        "open_url": {
+          "default": false,
+          "title": "Open Url",
+          "type": "boolean"
+        },
+        "domain": {
+          "default": "api-gcp.binance.com",
+          "title": "Domain",
+          "type": "string"
+        }
+      },
+      "title": "BinanceProviderConfig",
       "type": "object"
     },
     "BluetoothCallbacksConfig": {
@@ -1535,47 +1349,6 @@
           },
           "title": "Device Aliases",
           "type": "array"
-        },
-        "animation": {
-          "$ref": "#/$defs/AnimationConfig",
-          "default": {
-            "enabled": true,
-            "type": "fadeInOut",
-            "duration": 200
-          }
-        },
-        "container_padding": {
-          "$ref": "#/$defs/PaddingConfig",
-          "default": {
-            "top": 0,
-            "left": 0,
-            "bottom": 0,
-            "right": 0
-          }
-        },
-        "label_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
-        "container_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
         },
         "keybindings": {
           "default": [],
@@ -1765,15 +1538,9 @@
             "border_color": "System",
             "alignment": "right",
             "direction": "down",
-            "distance": 6,
             "offset_top": 6,
             "offset_left": 0
           }
-        },
-        "hide_unsupported": {
-          "default": true,
-          "title": "Hide Unsupported",
-          "type": "boolean"
         },
         "auto_light": {
           "default": false,
@@ -1804,47 +1571,6 @@
           "default": 100,
           "title": "Auto Light Day Level",
           "type": "integer"
-        },
-        "container_padding": {
-          "$ref": "#/$defs/PaddingConfig",
-          "default": {
-            "top": 0,
-            "left": 0,
-            "bottom": 0,
-            "right": 0
-          }
-        },
-        "animation": {
-          "$ref": "#/$defs/AnimationConfig",
-          "default": {
-            "enabled": true,
-            "type": "fadeInOut",
-            "duration": 200
-          }
-        },
-        "label_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
-        "container_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
         },
         "progress_bar": {
           "$ref": "#/$defs/core__validation__widgets__yasb__brightness__ProgressBarConfig",
@@ -1928,11 +1654,6 @@
           "default": "down",
           "title": "Direction",
           "type": "string"
-        },
-        "distance": {
-          "default": 6,
-          "title": "Distance",
-          "type": "integer"
         },
         "offset_top": {
           "default": 6,
@@ -2327,6 +2048,11 @@
           "title": "Class Name",
           "type": "string"
         },
+        "source": {
+          "default": "auto",
+          "title": "Source",
+          "type": "string"
+        },
         "bar_height": {
           "default": 20,
           "title": "Bar Height",
@@ -2502,15 +2228,6 @@
           ],
           "default": 0,
           "title": "Edge Fade"
-        },
-        "container_padding": {
-          "$ref": "#/$defs/PaddingConfig",
-          "default": {
-            "top": 0,
-            "left": 0,
-            "bottom": 0,
-            "right": 0
-          }
         },
         "keybindings": {
           "default": [],
@@ -2721,11 +2438,6 @@
           "title": "Direction",
           "type": "string"
         },
-        "distance": {
-          "default": 6,
-          "title": "Distance",
-          "type": "integer"
-        },
         "offset_top": {
           "default": 6,
           "title": "Offset Top",
@@ -2879,7 +2591,6 @@
             "border_color": "System",
             "alignment": "right",
             "direction": "down",
-            "distance": 6,
             "offset_top": 6,
             "offset_left": 0,
             "country_code": null,
@@ -2889,47 +2600,6 @@
             "show_week_numbers": false,
             "show_years": false,
             "extended": false
-          }
-        },
-        "animation": {
-          "$ref": "#/$defs/AnimationConfig",
-          "default": {
-            "enabled": true,
-            "type": "fadeInOut",
-            "duration": 200
-          }
-        },
-        "container_padding": {
-          "$ref": "#/$defs/PaddingConfig",
-          "default": {
-            "top": 0,
-            "left": 0,
-            "bottom": 0,
-            "right": 0
-          }
-        },
-        "label_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
-        "container_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
           }
         },
         "keybindings": {
@@ -3073,38 +2743,6 @@
             "offset_top": 6,
             "offset_left": 0,
             "chart": true
-          }
-        },
-        "animation": {
-          "$ref": "#/$defs/AnimationConfig",
-          "default": {
-            "enabled": true,
-            "type": "fadeInOut",
-            "duration": 200
-          }
-        },
-        "label_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
-        "container_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
           }
         },
         "keybindings": {
@@ -3305,47 +2943,6 @@
             "low": 25,
             "medium": 50,
             "high": 90
-          }
-        },
-        "animation": {
-          "$ref": "#/$defs/AnimationConfig",
-          "default": {
-            "enabled": true,
-            "type": "fadeInOut",
-            "duration": 200
-          }
-        },
-        "container_padding": {
-          "$ref": "#/$defs/PaddingConfig",
-          "default": {
-            "top": 0,
-            "left": 0,
-            "bottom": 0,
-            "right": 0
-          }
-        },
-        "label_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
-        "container_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
           }
         },
         "progress_bar": {
@@ -3640,47 +3237,6 @@
             "encoding": null
           }
         },
-        "animation": {
-          "$ref": "#/$defs/AnimationConfig",
-          "default": {
-            "enabled": true,
-            "type": "fadeInOut",
-            "duration": 200
-          }
-        },
-        "container_padding": {
-          "$ref": "#/$defs/PaddingConfig",
-          "default": {
-            "top": 0,
-            "left": 0,
-            "bottom": 0,
-            "right": 0
-          }
-        },
-        "label_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
-        "container_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
         "keybindings": {
           "default": [],
           "items": {
@@ -3862,50 +3418,8 @@
             "border_color": "System",
             "alignment": "right",
             "direction": "down",
-            "distance": 6,
             "offset_top": 6,
             "offset_left": 0
-          }
-        },
-        "animation": {
-          "$ref": "#/$defs/AnimationConfig",
-          "default": {
-            "enabled": true,
-            "type": "fadeInOut",
-            "duration": 200
-          }
-        },
-        "container_padding": {
-          "$ref": "#/$defs/PaddingConfig",
-          "default": {
-            "top": 0,
-            "left": 0,
-            "bottom": 0,
-            "right": 0
-          }
-        },
-        "label_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
-        "container_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
           }
         },
         "progress_bar": {
@@ -4225,18 +3739,6 @@
           "minimum": 0,
           "title": "Lazy Load Fadein",
           "type": "integer"
-        },
-        "lazy_load_delay": {
-          "default": 0,
-          "maximum": 1000,
-          "minimum": 0,
-          "title": "Lazy Load Delay",
-          "type": "integer"
-        },
-        "enable_cache": {
-          "default": false,
-          "title": "Enable Cache",
-          "type": "boolean"
         }
       },
       "title": "GalleryConfig",
@@ -4276,6 +3778,11 @@
           "default": 30,
           "title": "Max Notification",
           "type": "integer"
+        },
+        "hide_empty": {
+          "default": false,
+          "title": "Hide Empty",
+          "type": "boolean"
         },
         "only_unread": {
           "default": false,
@@ -4349,47 +3856,6 @@
             "default": "\uea84",
             "github_logo": "\uea84",
             "comment": "\uf41f"
-          }
-        },
-        "animation": {
-          "$ref": "#/$defs/AnimationConfig",
-          "default": {
-            "enabled": true,
-            "type": "fadeInOut",
-            "duration": 200
-          }
-        },
-        "label_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
-        "container_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
-        "container_padding": {
-          "$ref": "#/$defs/PaddingConfig",
-          "default": {
-            "top": 0,
-            "left": 0,
-            "bottom": 0,
-            "right": 0
           }
         },
         "keybindings": {
@@ -4599,7 +4065,7 @@
               "type": "null"
             }
           ],
-          "default": "glazewm.exe start",
+          "default": null,
           "title": "Start Command"
         },
         "stop_command": {
@@ -4611,7 +4077,7 @@
               "type": "null"
             }
           ],
-          "default": "glazewm.exe command wm-exit",
+          "default": null,
           "title": "Stop Command"
         },
         "reload_command": {
@@ -4623,7 +4089,7 @@
               "type": "null"
             }
           ],
-          "default": "glazewm.exe command wm-exit && glazewm.exe start",
+          "default": null,
           "title": "Reload Command"
         }
       },
@@ -4709,47 +4175,6 @@
           "title": "Binding Modes To Cycle Through",
           "type": "array"
         },
-        "container_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
-        "label_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
-        "animation": {
-          "$ref": "#/$defs/AnimationConfig",
-          "default": {
-            "enabled": true,
-            "type": "fadeInOut",
-            "duration": 200
-          }
-        },
-        "container_padding": {
-          "$ref": "#/$defs/PaddingConfig",
-          "default": {
-            "top": 0,
-            "left": 0,
-            "bottom": 0,
-            "right": 0
-          }
-        },
         "keybindings": {
           "default": [],
           "items": {
@@ -4805,30 +4230,6 @@
           "default": "\udb81\udce2",
           "title": "Vertical Label",
           "type": "string"
-        },
-        "container_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
-        "btn_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
         }
       },
       "title": "GlazewmTilingDirectionConfig",
@@ -4932,11 +4333,6 @@
           "default": null,
           "title": "Focused Empty Label"
         },
-        "hide_empty_workspaces": {
-          "default": true,
-          "title": "Hide Empty Workspaces",
-          "type": "boolean"
-        },
         "hide_if_offline": {
           "default": false,
           "title": "Hide If Offline",
@@ -4962,51 +4358,6 @@
           "title": "Reverse Scroll Direction",
           "type": "boolean"
         },
-        "container_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
-        "btn_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
-        "label_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
-        "container_padding": {
-          "$ref": "#/$defs/PaddingConfig",
-          "default": {
-            "top": 0,
-            "left": 0,
-            "bottom": 0,
-            "right": 0
-          }
-        },
         "app_icons": {
           "$ref": "#/$defs/core__validation__widgets__glazewm__workspaces__AppIconsConfig",
           "default": {
@@ -5019,11 +4370,6 @@
             "hide_duplicates": false,
             "hide_floating": false
           }
-        },
-        "animation": {
-          "default": false,
-          "title": "Animation",
-          "type": "boolean"
         }
       },
       "title": "GlazewmWorkspacesConfig",
@@ -5109,30 +4455,6 @@
           "default": true,
           "title": "Notify On Error",
           "type": "boolean"
-        },
-        "label_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
-        "container_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
         },
         "sgv_range": {
           "$ref": "#/$defs/SgvRangeConfig",
@@ -5249,47 +4571,6 @@
             "low": 30,
             "medium": 60,
             "high": 90
-          }
-        },
-        "animation": {
-          "$ref": "#/$defs/AnimationConfig",
-          "default": {
-            "enabled": true,
-            "type": "fadeInOut",
-            "duration": 200
-          }
-        },
-        "container_padding": {
-          "$ref": "#/$defs/PaddingConfig",
-          "default": {
-            "top": 0,
-            "left": 0,
-            "bottom": 0,
-            "right": 0
-          }
-        },
-        "label_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
-        "container_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
           }
         },
         "progress_bar": {
@@ -5529,11 +4810,6 @@
           "title": "Direction",
           "type": "string"
         },
-        "distance": {
-          "default": 6,
-          "title": "Distance",
-          "type": "integer"
-        },
         "offset_top": {
           "default": 6,
           "title": "Offset Top",
@@ -5603,27 +4879,6 @@
           "default": false,
           "title": "Hide Empty",
           "type": "boolean"
-        },
-        "container_padding": {
-          "$ref": "#/$defs/PaddingConfig",
-          "default": {
-            "top": 0,
-            "left": 0,
-            "bottom": 0,
-            "right": 0
-          }
-        },
-        "container_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
         },
         "collapse_options": {
           "$ref": "#/$defs/GrouperCollapseOptions",
@@ -5720,15 +4975,6 @@
           "default": null,
           "title": "Menu List"
         },
-        "container_padding": {
-          "$ref": "#/$defs/PaddingConfig",
-          "default": {
-            "top": 0,
-            "left": 0,
-            "bottom": 0,
-            "right": 0
-          }
-        },
         "power_menu": {
           "default": true,
           "title": "Power Menu",
@@ -5769,11 +5015,6 @@
           "title": "Direction",
           "type": "string"
         },
-        "distance": {
-          "default": 6,
-          "title": "Distance",
-          "type": "integer"
-        },
         "offset_top": {
           "default": 6,
           "title": "Offset Top",
@@ -5796,38 +5037,6 @@
             "system": "System Settings",
             "about": "About This PC",
             "task_manager": "Task Manager"
-          }
-        },
-        "animation": {
-          "$ref": "#/$defs/AnimationConfig",
-          "default": {
-            "enabled": true,
-            "type": "fadeInOut",
-            "duration": 200
-          }
-        },
-        "label_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
-        "container_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
           }
         },
         "keybindings": {
@@ -6015,7 +5224,7 @@
               "type": "null"
             }
           ],
-          "default": "komorebic start --whkd",
+          "default": null,
           "title": "Start Command"
         },
         "stop_command": {
@@ -6027,7 +5236,7 @@
               "type": "null"
             }
           ],
-          "default": "komorebic stop --whkd",
+          "default": null,
           "title": "Stop Command"
         },
         "reload_command": {
@@ -6039,7 +5248,7 @@
               "type": "null"
             }
           ],
-          "default": "komorebic reload-configuration",
+          "default": null,
           "title": "Reload Command"
         }
       },
@@ -6127,47 +5336,6 @@
             "direction": "down",
             "offset_top": 6,
             "offset_left": 0
-          }
-        },
-        "animation": {
-          "$ref": "#/$defs/AnimationConfig",
-          "default": {
-            "enabled": true,
-            "type": "fadeInOut",
-            "duration": 200
-          }
-        },
-        "container_padding": {
-          "$ref": "#/$defs/PaddingConfig",
-          "default": {
-            "top": 0,
-            "left": 0,
-            "bottom": 0,
-            "right": 0
-          }
-        },
-        "label_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
-        "container_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
           }
         },
         "keybindings": {
@@ -6327,11 +5495,6 @@
             "hide_floating": false
           }
         },
-        "animation": {
-          "default": false,
-          "title": "Animation",
-          "type": "boolean"
-        },
         "enable_scroll_switching": {
           "default": false,
           "title": "Enable Scroll Switching",
@@ -6341,51 +5504,6 @@
           "default": false,
           "title": "Reverse Scroll Direction",
           "type": "boolean"
-        },
-        "container_padding": {
-          "$ref": "#/$defs/PaddingConfig",
-          "default": {
-            "top": 0,
-            "left": 0,
-            "bottom": 0,
-            "right": 0
-          }
-        },
-        "btn_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
-        "label_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
-        "container_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
         }
       },
       "title": "KomorebiWorkspacesConfig",
@@ -6455,47 +5573,6 @@
           "default": "",
           "title": "Class Name",
           "type": "string"
-        },
-        "animation": {
-          "$ref": "#/$defs/AnimationConfig",
-          "default": {
-            "enabled": true,
-            "type": "fadeInOut",
-            "duration": 200
-          }
-        },
-        "container_padding": {
-          "$ref": "#/$defs/PaddingConfig",
-          "default": {
-            "top": 0,
-            "left": 0,
-            "bottom": 0,
-            "right": 0
-          }
-        },
-        "label_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
-        "container_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
         },
         "language_menu": {
           "$ref": "#/$defs/LanguageMenuConfig",
@@ -6677,14 +5754,6 @@
             "border_color": "system"
           }
         },
-        "animation": {
-          "$ref": "#/$defs/AnimationConfig",
-          "default": {
-            "enabled": true,
-            "type": "fadeInOut",
-            "duration": 200
-          }
-        },
         "shortcuts": {
           "$ref": "#/$defs/ShortcutsConfig",
           "default": {
@@ -6692,63 +5761,6 @@
             "edit_app": "F2",
             "show_context_menu": "Shift+F10",
             "delete_app": "Delete"
-          }
-        },
-        "container_padding": {
-          "$ref": "#/$defs/PaddingConfig",
-          "default": {
-            "top": 0,
-            "left": 0,
-            "bottom": 0,
-            "right": 0
-          }
-        },
-        "label_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
-        "container_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
-        "app_title_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
-        "app_icon_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
           }
         },
         "keybindings": {
@@ -7057,47 +6069,6 @@
             "sensors": []
           }
         },
-        "label_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
-        "container_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
-        "container_padding": {
-          "$ref": "#/$defs/PaddingConfig",
-          "default": {
-            "top": 0,
-            "left": 0,
-            "bottom": 0,
-            "right": 0
-          }
-        },
-        "animation": {
-          "$ref": "#/$defs/AnimationConfig",
-          "default": {
-            "enabled": true,
-            "type": "fadeInOut",
-            "duration": 200
-          }
-        },
         "keybindings": {
           "default": [],
           "items": {
@@ -7305,14 +6276,6 @@
           "title": "Hide Empty",
           "type": "boolean"
         },
-        "animation": {
-          "$ref": "#/$defs/AnimationConfig",
-          "default": {
-            "enabled": true,
-            "type": "fadeInOut",
-            "duration": 200
-          }
-        },
         "icons": {
           "$ref": "#/$defs/core__validation__widgets__yasb__media__IconsConfig",
           "default": {
@@ -7350,15 +6313,6 @@
             "next_track": "\ue893",
             "mute": "\ue994",
             "unmute": "\ue74f"
-          }
-        },
-        "container_padding": {
-          "$ref": "#/$defs/PaddingConfig",
-          "default": {
-            "top": 0,
-            "left": 0,
-            "bottom": 0,
-            "right": 0
           }
         },
         "scrolling_label": {
@@ -7440,30 +6394,6 @@
           "default": false,
           "title": "Thumbnail Edge Fade",
           "type": "boolean"
-        },
-        "label_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
-        "container_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
         },
         "keybindings": {
           "default": [],
@@ -7559,47 +6489,6 @@
             "low": 25,
             "medium": 50,
             "high": 90
-          }
-        },
-        "animation": {
-          "$ref": "#/$defs/AnimationConfig",
-          "default": {
-            "enabled": true,
-            "type": "fadeInOut",
-            "duration": 200
-          }
-        },
-        "container_padding": {
-          "$ref": "#/$defs/PaddingConfig",
-          "default": {
-            "top": 0,
-            "left": 0,
-            "bottom": 0,
-            "right": 0
-          }
-        },
-        "label_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
-        "container_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
           }
         },
         "progress_bar": {
@@ -8047,47 +6936,6 @@
             "offset_left": 0
           }
         },
-        "animation": {
-          "$ref": "#/$defs/AnimationConfig",
-          "default": {
-            "enabled": true,
-            "type": "fadeInOut",
-            "duration": 200
-          }
-        },
-        "container_padding": {
-          "$ref": "#/$defs/PaddingConfig",
-          "default": {
-            "top": 0,
-            "left": 0,
-            "bottom": 0,
-            "right": 0
-          }
-        },
-        "label_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
-        "container_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
         "progress_bar": {
           "$ref": "#/$defs/core__validation__widgets__yasb__microphone__ProgressBarConfig",
           "default": {
@@ -8261,23 +7109,6 @@
           "title": "Enter To Add Note",
           "type": "boolean"
         },
-        "container_padding": {
-          "$ref": "#/$defs/PaddingConfig",
-          "default": {
-            "top": 0,
-            "left": 0,
-            "bottom": 0,
-            "right": 0
-          }
-        },
-        "animation": {
-          "$ref": "#/$defs/AnimationConfig",
-          "default": {
-            "enabled": true,
-            "type": "fadeInOut",
-            "duration": 200
-          }
-        },
         "menu": {
           "$ref": "#/$defs/core__validation__widgets__yasb__notes__MenuConfig",
           "default": {
@@ -8302,30 +7133,6 @@
             "float_on": "\udb84\udcac",
             "float_off": "\udb84\udca9",
             "close": "\uf00d"
-          }
-        },
-        "label_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
-        "container_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
           }
         },
         "keybindings": {
@@ -8421,47 +7228,6 @@
           "default": {
             "new": "\udb80\udc9e",
             "default": "\udb80\udc9a"
-          }
-        },
-        "animation": {
-          "$ref": "#/$defs/AnimationConfig",
-          "default": {
-            "enabled": true,
-            "type": "fadeInOut",
-            "duration": 200
-          }
-        },
-        "container_padding": {
-          "$ref": "#/$defs/PaddingConfig",
-          "default": {
-            "top": 0,
-            "left": 0,
-            "bottom": 0,
-            "right": 0
-          }
-        },
-        "label_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
-        "container_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
           }
         },
         "keybindings": {
@@ -8593,15 +7359,6 @@
           "default": true,
           "title": "Tooltip",
           "type": "boolean"
-        },
-        "container_padding": {
-          "$ref": "#/$defs/PaddingConfig",
-          "default": {
-            "top": 0,
-            "left": 0,
-            "bottom": 0,
-            "right": 0
-          }
         },
         "keybindings": {
           "default": [],
@@ -9149,38 +7906,6 @@
             }
           }
         },
-        "animation": {
-          "$ref": "#/$defs/AnimationConfig",
-          "default": {
-            "enabled": true,
-            "type": "fadeInOut",
-            "duration": 200
-          }
-        },
-        "label_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
-        "container_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
         "keybindings": {
           "default": [],
           "items": {
@@ -9217,33 +7942,6 @@
         "options"
       ],
       "title": "OpenMeteoWidgetEntry",
-      "type": "object"
-    },
-    "PaddingConfig": {
-      "additionalProperties": false,
-      "properties": {
-        "top": {
-          "default": 0,
-          "title": "Top",
-          "type": "integer"
-        },
-        "left": {
-          "default": 0,
-          "title": "Left",
-          "type": "integer"
-        },
-        "bottom": {
-          "default": 0,
-          "title": "Bottom",
-          "type": "integer"
-        },
-        "right": {
-          "default": 0,
-          "title": "Right",
-          "type": "integer"
-        }
-      },
-      "title": "PaddingConfig",
       "type": "object"
     },
     "PomodoroConfig": {
@@ -9325,47 +8023,6 @@
             "work": "\uf252",
             "break": "\uf253",
             "paused": "\uf254"
-          }
-        },
-        "animation": {
-          "$ref": "#/$defs/AnimationConfig",
-          "default": {
-            "enabled": true,
-            "type": "fadeInOut",
-            "duration": 200
-          }
-        },
-        "container_padding": {
-          "$ref": "#/$defs/PaddingConfig",
-          "default": {
-            "top": 0,
-            "left": 0,
-            "bottom": 0,
-            "right": 0
-          }
-        },
-        "label_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
-        "container_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
           }
         },
         "progress_bar": {
@@ -9591,6 +8248,28 @@
       "title": "PowerMenuButtonsConfig",
       "type": "object"
     },
+    "PowerMenuCallbacksConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "on_left": {
+          "default": "toggle_power_menu",
+          "title": "On Left",
+          "type": "string"
+        },
+        "on_middle": {
+          "default": "do_nothing",
+          "title": "On Middle",
+          "type": "string"
+        },
+        "on_right": {
+          "default": "do_nothing",
+          "title": "On Right",
+          "type": "string"
+        }
+      },
+      "title": "PowerMenuCallbacksConfig",
+      "type": "object"
+    },
     "PowerMenuConfig": {
       "additionalProperties": false,
       "properties": {
@@ -9662,37 +8341,12 @@
           "title": "Profile Image Size",
           "type": "integer"
         },
-        "container_padding": {
-          "$ref": "#/$defs/PaddingConfig",
+        "callbacks": {
+          "$ref": "#/$defs/PowerMenuCallbacksConfig",
           "default": {
-            "top": 0,
-            "left": 0,
-            "bottom": 0,
-            "right": 0
-          }
-        },
-        "label_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
-        "container_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
+            "on_left": "toggle_power_menu",
+            "on_middle": "do_nothing",
+            "on_right": "do_nothing"
           }
         },
         "keybindings": {
@@ -9837,45 +8491,12 @@
             "offset_left": 0
           }
         },
-        "container_padding": {
-          "$ref": "#/$defs/PaddingConfig",
-          "default": {
-            "top": 0,
-            "left": 0,
-            "bottom": 0,
-            "right": 0
-          }
-        },
         "callbacks": {
           "$ref": "#/$defs/PowerPlanCallbacksConfig",
           "default": {
             "on_left": "toggle_menu",
             "on_middle": "toggle_label",
             "on_right": "do_nothing"
-          }
-        },
-        "label_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
-        "container_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
           }
         },
         "keybindings": {
@@ -10099,6 +8720,11 @@
           "title": "Search Placeholder",
           "type": "string"
         },
+        "remember_last_query": {
+          "default": false,
+          "title": "Remember Last Query",
+          "type": "boolean"
+        },
         "max_results": {
           "default": 50,
           "maximum": 500,
@@ -10165,6 +8791,17 @@
               "enabled": true,
               "prefix": "c:",
               "priority": 0
+            },
+            "binance": {
+              "domain": "api-gcp.binance.com",
+              "enabled": false,
+              "open_url": false,
+              "pairs": [
+                "BTC/USDT"
+              ],
+              "prefix": "crypto",
+              "priority": 0,
+              "round": 2
             },
             "currency": {
               "enabled": false,
@@ -10252,10 +8889,12 @@
               "priority": 0
             },
             "web_search": {
+              "custom_engines": [],
               "enabled": false,
               "engine": "google",
               "prefix": "?",
-              "priority": 0
+              "priority": 0,
+              "remove_engines": []
             },
             "window_switcher": {
               "enabled": false,
@@ -10290,38 +8929,6 @@
             "round_corners_type": "normal",
             "border_color": "System",
             "dark_mode": true
-          }
-        },
-        "animation": {
-          "$ref": "#/$defs/AnimationConfig",
-          "default": {
-            "enabled": true,
-            "type": "fadeInOut",
-            "duration": 200
-          }
-        },
-        "label_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
-        "container_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
           }
         },
         "keybindings": {
@@ -10452,6 +9059,20 @@
             "enabled": true,
             "prefix": "c:",
             "priority": 0
+          }
+        },
+        "binance": {
+          "$ref": "#/$defs/BinanceProviderConfig",
+          "default": {
+            "enabled": false,
+            "prefix": "crypto",
+            "priority": 0,
+            "pairs": [
+              "BTC/USDT"
+            ],
+            "round": 2,
+            "open_url": false,
+            "domain": "api-gcp.binance.com"
           }
         },
         "currency": {
@@ -10590,7 +9211,9 @@
             "enabled": false,
             "prefix": "?",
             "priority": 0,
-            "engine": "google"
+            "engine": "google",
+            "custom_engines": [],
+            "remove_engines": []
           }
         },
         "window_switcher": {
@@ -10686,47 +9309,6 @@
           "default": false,
           "title": "Show Confirmation",
           "type": "boolean"
-        },
-        "animation": {
-          "$ref": "#/$defs/AnimationConfig",
-          "default": {
-            "enabled": true,
-            "type": "fadeInOut",
-            "duration": 200
-          }
-        },
-        "container_padding": {
-          "$ref": "#/$defs/PaddingConfig",
-          "default": {
-            "top": 0,
-            "left": 0,
-            "bottom": 0,
-            "right": 0
-          }
-        },
-        "label_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
-        "container_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
         },
         "keybindings": {
           "default": [],
@@ -10915,6 +9497,25 @@
       "title": "ScrollingLabelConfig",
       "type": "object"
     },
+    "ServerEntryConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "url": {
+          "title": "Url",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "url"
+      ],
+      "title": "ServerEntryConfig",
+      "type": "object"
+    },
     "ServerMonitorCallbacksConfig": {
       "additionalProperties": false,
       "properties": {
@@ -10963,11 +9564,9 @@
           "type": "boolean"
         },
         "servers": {
-          "default": [
-            ""
-          ],
+          "default": [],
           "items": {
-            "type": "string"
+            "$ref": "#/$defs/ServerEntryConfig"
           },
           "title": "Servers",
           "type": "array"
@@ -11012,7 +9611,6 @@
             "border_color": "System",
             "alignment": "right",
             "direction": "down",
-            "distance": 6,
             "offset_top": 6,
             "offset_left": 0
           }
@@ -11024,47 +9622,6 @@
             "offline": "\uf4c3",
             "warning": "\uf4c3",
             "reload": "\udb81\udc50"
-          }
-        },
-        "animation": {
-          "$ref": "#/$defs/AnimationConfig",
-          "default": {
-            "enabled": true,
-            "type": "fadeInOut",
-            "duration": 200
-          }
-        },
-        "container_padding": {
-          "$ref": "#/$defs/PaddingConfig",
-          "default": {
-            "top": 0,
-            "left": 0,
-            "bottom": 0,
-            "right": 0
-          }
-        },
-        "label_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
-        "container_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
           }
         },
         "keybindings": {
@@ -11142,39 +9699,6 @@
         }
       },
       "title": "SgvRangeConfig",
-      "type": "object"
-    },
-    "ShadowConfig": {
-      "additionalProperties": false,
-      "properties": {
-        "enabled": {
-          "default": false,
-          "title": "Enabled",
-          "type": "boolean"
-        },
-        "color": {
-          "default": "black",
-          "title": "Color",
-          "type": "string"
-        },
-        "offset": {
-          "default": [
-            1,
-            1
-          ],
-          "items": {
-            "type": "integer"
-          },
-          "title": "Offset",
-          "type": "array"
-        },
-        "radius": {
-          "default": 3,
-          "title": "Radius",
-          "type": "integer"
-        }
-      },
-      "title": "ShadowConfig",
       "type": "object"
     },
     "ShortcutsConfig": {
@@ -11369,11 +9893,6 @@
           "title": "Max Length Ellipsis",
           "type": "string"
         },
-        "animation": {
-          "default": false,
-          "title": "Animation",
-          "type": "boolean"
-        },
         "rewrite": {
           "default": [],
           "items": {
@@ -11391,51 +9910,6 @@
           "default": false,
           "title": "Reverse Scroll Direction",
           "type": "boolean"
-        },
-        "container_padding": {
-          "$ref": "#/$defs/PaddingConfig",
-          "default": {
-            "top": 0,
-            "left": 0,
-            "bottom": 0,
-            "right": 0
-          }
-        },
-        "btn_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
-        "label_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
-        "container_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
         }
       },
       "title": "StackConfig",
@@ -11709,75 +10183,6 @@
           "default": false,
           "title": "Use Hook",
           "type": "boolean"
-        },
-        "container_padding": {
-          "$ref": "#/$defs/PaddingConfig",
-          "default": {
-            "top": 0,
-            "left": 0,
-            "bottom": 0,
-            "right": 0
-          }
-        },
-        "container_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
-        "unpinned_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
-        "pinned_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
-        "unpinned_vis_btn_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
-        "btn_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
         }
       },
       "title": "SystrayWidgetConfig",
@@ -11860,20 +10265,11 @@
           }
         },
         "animation": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/AnimationConfig"
-            },
-            {
-              "type": "boolean"
-            }
-          ],
+          "$ref": "#/$defs/AnimationConfig",
           "default": {
             "enabled": true,
-            "type": "fadeInOut",
             "duration": 200
-          },
-          "title": "Animation"
+          }
         },
         "title_label": {
           "$ref": "#/$defs/TitleLabelConfig",
@@ -11888,39 +10284,6 @@
           "default": false,
           "title": "Hide Empty",
           "type": "boolean"
-        },
-        "container_padding": {
-          "$ref": "#/$defs/PaddingConfig",
-          "default": {
-            "top": 0,
-            "left": 0,
-            "bottom": 0,
-            "right": 0
-          }
-        },
-        "label_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
-        "container_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
         },
         "preview": {
           "$ref": "#/$defs/PreviewConfig",
@@ -12019,23 +10382,6 @@
           "title": "Data Path",
           "type": "string"
         },
-        "container_padding": {
-          "$ref": "#/$defs/PaddingConfig",
-          "default": {
-            "top": 0,
-            "left": 0,
-            "bottom": 0,
-            "right": 0
-          }
-        },
-        "animation": {
-          "$ref": "#/$defs/AnimationConfig",
-          "default": {
-            "enabled": true,
-            "type": "fadeInOut",
-            "duration": 200
-          }
-        },
         "menu": {
           "$ref": "#/$defs/core__validation__widgets__yasb__todo__MenuConfig",
           "default": {
@@ -12101,30 +10447,6 @@
             "on_left": "toggle_menu",
             "on_middle": "do_nothing",
             "on_right": "toggle_label"
-          }
-        },
-        "label_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
-        "container_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
           }
         }
       },
@@ -12277,47 +10599,6 @@
             "show_internet_info": true
           }
         },
-        "animation": {
-          "$ref": "#/$defs/AnimationConfig",
-          "default": {
-            "enabled": true,
-            "type": "fadeInOut",
-            "duration": 200
-          }
-        },
-        "container_padding": {
-          "$ref": "#/$defs/PaddingConfig",
-          "default": {
-            "top": 0,
-            "left": 0,
-            "bottom": 0,
-            "right": 0
-          }
-        },
-        "label_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
-        "container_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
         "keybindings": {
           "default": [],
           "items": {
@@ -12409,30 +10690,6 @@
             "tooltip": true,
             "exclude": [],
             "interval": 240
-          }
-        },
-        "label_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
-        "container_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
           }
         }
       },
@@ -12542,50 +10799,8 @@
             "border_color": "System",
             "alignment": "right",
             "direction": "down",
-            "distance": 6,
             "offset_top": 6,
             "offset_left": 0
-          }
-        },
-        "animation": {
-          "$ref": "#/$defs/AnimationConfig",
-          "default": {
-            "enabled": true,
-            "type": "fadeInOut",
-            "duration": 200
-          }
-        },
-        "container_padding": {
-          "$ref": "#/$defs/PaddingConfig",
-          "default": {
-            "top": 0,
-            "left": 0,
-            "bottom": 0,
-            "right": 0
-          }
-        },
-        "label_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
-        "container_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
           }
         },
         "keybindings": {
@@ -12658,11 +10873,6 @@
           "default": "down",
           "title": "Direction",
           "type": "string"
-        },
-        "distance": {
-          "default": 6,
-          "title": "Distance",
-          "type": "integer"
         },
         "offset_top": {
           "default": 6,
@@ -12785,7 +10995,6 @@
             "border_color": "System",
             "alignment": "right",
             "direction": "down",
-            "distance": 6,
             "offset_top": 6,
             "offset_left": 0,
             "show_apps": false,
@@ -12796,47 +11005,6 @@
               "toggle_down": "\uf078",
               "toggle_up": "\uf077"
             }
-          }
-        },
-        "animation": {
-          "$ref": "#/$defs/AnimationConfig",
-          "default": {
-            "enabled": true,
-            "type": "fadeInOut",
-            "duration": 200
-          }
-        },
-        "container_padding": {
-          "$ref": "#/$defs/PaddingConfig",
-          "default": {
-            "top": 0,
-            "left": 0,
-            "bottom": 0,
-            "right": 0
-          }
-        },
-        "label_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
-        "container_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
           }
         },
         "progress_bar": {
@@ -12953,50 +11121,7 @@
             "orientation": "landscape",
             "image_spacing": 5,
             "lazy_load": true,
-            "lazy_load_fadein": 200,
-            "lazy_load_delay": 0,
-            "enable_cache": false
-          }
-        },
-        "animation": {
-          "$ref": "#/$defs/AnimationConfig",
-          "default": {
-            "enabled": true,
-            "type": "fadeInOut",
-            "duration": 200
-          }
-        },
-        "container_padding": {
-          "$ref": "#/$defs/PaddingConfig",
-          "default": {
-            "top": 0,
-            "left": 0,
-            "bottom": 0,
-            "right": 0
-          }
-        },
-        "label_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
-        "container_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
+            "lazy_load_fadein": 200
           }
         },
         "keybindings": {
@@ -13165,11 +11290,6 @@
           "default": "down",
           "title": "Direction",
           "type": "string"
-        },
-        "distance": {
-          "default": 6,
-          "title": "Distance",
-          "type": "integer"
         },
         "offset_top": {
           "default": 6,
@@ -13474,7 +11594,6 @@
             "border_color": "System",
             "alignment": "right",
             "direction": "down",
-            "distance": 6,
             "offset_top": 6,
             "offset_left": 0,
             "icon_size": 64,
@@ -13508,47 +11627,6 @@
               "snow_overrides_rain": true,
               "temp_line_animation_style": "both"
             }
-          }
-        },
-        "animation": {
-          "$ref": "#/$defs/AnimationConfig",
-          "default": {
-            "enabled": true,
-            "type": "fadeInOut",
-            "duration": 200
-          }
-        },
-        "container_padding": {
-          "$ref": "#/$defs/PaddingConfig",
-          "default": {
-            "top": 0,
-            "left": 0,
-            "bottom": 0,
-            "right": 0
-          }
-        },
-        "label_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
-        "container_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
           }
         },
         "keybindings": {
@@ -13589,6 +11667,40 @@
       "title": "WeatherWidgetEntry",
       "type": "object"
     },
+    "WebSearchEngineConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "engine": {
+          "title": "Engine",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "url": {
+          "title": "Url",
+          "type": "string"
+        },
+        "icon": {
+          "default": "",
+          "title": "Icon",
+          "type": "string"
+        },
+        "description": {
+          "default": "Search the web",
+          "title": "Description",
+          "type": "string"
+        }
+      },
+      "required": [
+        "engine",
+        "name",
+        "url"
+      ],
+      "title": "WebSearchEngineConfig",
+      "type": "object"
+    },
     "WebSearchProviderConfig": {
       "additionalProperties": false,
       "properties": {
@@ -13611,6 +11723,22 @@
           "default": "google",
           "title": "Engine",
           "type": "string"
+        },
+        "custom_engines": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/WebSearchEngineConfig"
+          },
+          "title": "Custom Engines",
+          "type": "array"
+        },
+        "remove_engines": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Remove Engines",
+          "type": "array"
         }
       },
       "title": "WebSearchProviderConfig",
@@ -13624,14 +11752,6 @@
           "title": "Label",
           "type": "string"
         },
-        "animation": {
-          "$ref": "#/$defs/AnimationConfig",
-          "default": {
-            "enabled": true,
-            "type": "fadeInOut",
-            "duration": 200
-          }
-        },
         "special_keys": {
           "default": [],
           "items": {
@@ -13639,39 +11759,6 @@
           },
           "title": "Special Keys",
           "type": "array"
-        },
-        "label_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
-        "container_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
-        "container_padding": {
-          "$ref": "#/$defs/PaddingConfig",
-          "default": {
-            "top": 0,
-            "left": 0,
-            "bottom": 0,
-            "right": 0
-          }
         },
         "keybindings": {
           "default": [],
@@ -13807,47 +11894,6 @@
           "default": false,
           "title": "Hide If Ethernet",
           "type": "boolean"
-        },
-        "animation": {
-          "$ref": "#/$defs/AnimationConfig",
-          "default": {
-            "enabled": true,
-            "type": "fadeInOut",
-            "duration": 200
-          }
-        },
-        "container_padding": {
-          "$ref": "#/$defs/PaddingConfig",
-          "default": {
-            "top": 0,
-            "left": 0,
-            "bottom": 0,
-            "right": 0
-          }
-        },
-        "label_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
-        "container_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
         },
         "keybindings": {
           "default": [],
@@ -14203,49 +12249,6 @@
           "default": "{index}",
           "title": "Label Workspace Active Btn",
           "type": "string"
-        },
-        "switch_workspace_animation": {
-          "default": true,
-          "title": "Switch Workspace Animation",
-          "type": "boolean"
-        },
-        "animation": {
-          "default": false,
-          "title": "Animation",
-          "type": "boolean"
-        },
-        "btn_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
-        "container_shadow": {
-          "$ref": "#/$defs/ShadowConfig",
-          "default": {
-            "enabled": false,
-            "color": "black",
-            "offset": [
-              1,
-              1
-            ],
-            "radius": 3
-          }
-        },
-        "container_padding": {
-          "$ref": "#/$defs/PaddingConfig",
-          "default": {
-            "top": 0,
-            "left": 0,
-            "bottom": 0,
-            "right": 0
-          }
         },
         "callbacks": {
           "$ref": "#/$defs/WindowsDesktopsCallbacksConfig",
@@ -15410,11 +13413,6 @@
           "title": "Direction",
           "type": "string"
         },
-        "distance": {
-          "default": 6,
-          "title": "Distance",
-          "type": "integer"
-        },
         "offset_top": {
           "default": 6,
           "title": "Offset Top",
@@ -15680,18 +13678,6 @@
       "title": "Debug",
       "type": "boolean"
     },
-    "env_file": {
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "title": "Env File"
-    },
     "update_check": {
       "default": true,
       "title": "Update Check",
@@ -15705,17 +13691,17 @@
     "komorebi": {
       "$ref": "#/$defs/KomorebiConfig",
       "default": {
-        "start_command": "komorebic start --whkd",
-        "stop_command": "komorebic stop --whkd",
-        "reload_command": "komorebic reload-configuration"
+        "start_command": null,
+        "stop_command": null,
+        "reload_command": null
       }
     },
     "glazewm": {
       "$ref": "#/$defs/GlazeWMConfig",
       "default": {
-        "start_command": "glazewm.exe start",
-        "stop_command": "glazewm.exe command wm-exit",
-        "reload_command": "glazewm.exe command wm-exit && glazewm.exe start"
+        "start_command": null,
+        "stop_command": null,
+        "reload_command": null
       }
     },
     "bars": {
@@ -15726,7 +13712,6 @@
         "yasb-bar": {
           "alignment": {
             "align": "center",
-            "center": false,
             "position": "top"
           },
           "animation": {
@@ -15735,7 +13720,6 @@
             "type": "slide"
           },
           "blur_effect": {
-            "acrylic": false,
             "border_color": "System",
             "dark_mode": false,
             "enabled": false,
