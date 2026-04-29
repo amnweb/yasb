@@ -1390,6 +1390,9 @@ class TaskbarWidget(BaseWidget):
 
         # Direct lookup for the widget
         widget = self._hwnd_to_widget.get(hwnd)
+        if widget is not None and not is_valid_qobject(widget):
+            self._hwnd_to_widget.pop(hwnd, None)
+            widget = None
         if widget is None:
             # Fallback scan once and store mapping
             count = self._widget_container_layout.count()
@@ -1400,6 +1403,9 @@ class TaskbarWidget(BaseWidget):
                     self._hwnd_to_widget[hwnd] = w
                     break
         if widget is None:
+            return
+        if not is_valid_qobject(widget):
+            self._hwnd_to_widget.pop(hwnd, None)
             return
 
         layout = widget.layout()
@@ -2062,7 +2068,8 @@ class TaskbarWidget(BaseWidget):
         def on_finished():
             if hwnd is not None:
                 self._animating_widgets.pop(hwnd, None)
-            if end_width == 0:
+            # Only remove when shrinking a visible widget to zero (not when growing from zero)
+            if start_width > 0 and end_width == 0:
                 container.setParent(None)
                 self._widget_container_layout.removeWidget(container)
                 container.deleteLater()
