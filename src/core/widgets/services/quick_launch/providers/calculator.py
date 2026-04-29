@@ -99,7 +99,7 @@ class CalculatorProvider(BaseProvider):
         return has_digit and has_operator
 
     def get_results(self, text: str, **kwargs) -> list[ProviderResult]:
-        query = self.get_query_text(text).replace(",", "") if text.startswith(self.prefix) else text.strip()
+        query = self.get_query_text(text).replace(",", "")
         if not query:
             return [
                 ProviderResult(
