@@ -83,14 +83,14 @@ def enable_blur(hwnd, DarkMode=False, RoundCorners=False, RoundCornersType="norm
     try:
         if sys.getwindowsversion().build >= 22000:
             set_accent_policy(hwnd, ACCENT_ENABLE_BLURBEHIND, gradient_color=0x01202020)
+            if DarkMode:
+                _set_dark_mode(hwnd)
+            if RoundCorners:
+                set_window_corner_preference(
+                    hwnd, DWMWCP_ROUND if RoundCornersType == "normal" else DWMWCP_ROUNDSMALL, BorderColor
+                )
         else:
             set_accent_policy(hwnd, ACCENT_ENABLE_ACRYLICBLURBEHIND, gradient_color=0x01202020)
-        if DarkMode:
-            _set_dark_mode(hwnd)
-        if RoundCorners:
-            set_window_corner_preference(
-                hwnd, DWMWCP_ROUND if RoundCornersType == "normal" else DWMWCP_ROUNDSMALL, BorderColor
-            )
     except Exception as e:
         logging.debug("Failed to apply settings: %s", e)
 
