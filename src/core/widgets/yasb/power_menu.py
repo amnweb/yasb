@@ -4,7 +4,7 @@ import os
 
 from PyQt6 import QtCore
 from PyQt6.QtCore import QPropertyAnimation, Qt
-from PyQt6.QtGui import QPainter, QPainterPath, QPixmap
+from PyQt6.QtGui import QColor, QPainter, QPainterPath, QPixmap
 from PyQt6.QtWidgets import (
     QApplication,
     QFrame,
@@ -61,11 +61,12 @@ class AnimatedWidget(QFrame):
 
 
 class OverlayWidget(AnimatedWidget):
-    def __init__(self, parent, animation_duration, uptime):
+    def __init__(self, parent, animation_duration, uptime, blur_background):
         super().__init__(animation_duration, parent)
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.Tool)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setProperty("class", "power-menu-overlay")
+        self._blur_background_enabled = blur_background
 
         if uptime:
             self.boot_time()
@@ -77,7 +78,18 @@ class OverlayWidget(AnimatedWidget):
         opt = QStyleOption()
         opt.initFrom(self)
         painter = QPainter(self)
+        painter.fillRect(self.rect(), QColor(0, 0, 0, 1))
         self.style().drawPrimitive(QStyle.PrimitiveElement.PE_Widget, opt, painter, self)
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        if self._blur_background_enabled:
+            enable_blur(
+                self.winId(),
+                DarkMode=False,
+                RoundCorners=False,
+                BorderColor="None",
+            )
 
     def boot_time(self):
         uptime_seconds = int(ctypes.windll.kernel32.GetTickCount64() / 1000)
@@ -318,7 +330,7 @@ class MainWindow(AnimatedWidget):
     ):
         super().__init__(animation_duration, parent)
 
-        self.overlay = OverlayWidget(parent, animation_duration, uptime)
+        self.overlay = OverlayWidget(parent, animation_duration, uptime, blur_background)
         self.button_row = button_row
         self.buttons_list = []
         self.current_focus_index = -1
@@ -442,13 +454,6 @@ class MainWindow(AnimatedWidget):
                 self.winId(),
                 DarkMode=False,
                 RoundCorners=True,
-                BorderColor="None",
-            )
-        if blur_background:
-            enable_blur(
-                self.overlay.winId(),
-                DarkMode=False,
-                RoundCorners=False,
                 BorderColor="None",
             )
 
