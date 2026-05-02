@@ -408,17 +408,14 @@ class MainWindow(AnimatedWidget):
         buttons_layout.setSpacing(0)
         buttons_layout.setContentsMargins(0, 0, 0, 0)
 
-        row_layouts = []
-        for i, (button_name, button_info) in enumerate(buttons.items()):
+        action_buttons = [(name, info) for name, info in buttons.items() if name != "cancel"]
+        cancel_button = buttons.get("cancel")
+        self.primary_button_count = len(action_buttons)
+        self.cancel_button_index = -1
+
+        def build_button(button_name, button_info):
             icon, label = button_info
             action = getattr(self.power_operations, button_name, self.power_operations.cancel)
-
-            if i % button_row == 0:
-                row = QHBoxLayout()
-                row.setSpacing(0)
-                row.setContentsMargins(0, 0, 0, 0)
-                row_layouts.append(row)
-                buttons_layout.addLayout(row)
 
             button = QPushButton(self)
             button.setProperty("class", f"button {button_name.replace('_', '-')}")
@@ -440,9 +437,30 @@ class MainWindow(AnimatedWidget):
             text_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             btn_layout.addWidget(text_label)
 
-            row_layouts[-1].addWidget(button)
             button.clicked.connect(action)
             button.installEventFilter(self)
+            return button
+
+        row_layouts = []
+        for i, (button_name, button_info) in enumerate(action_buttons):
+            if i % button_row == 0:
+                row = QHBoxLayout()
+                row.setSpacing(0)
+                row.setContentsMargins(0, 0, 0, 0)
+                row_layouts.append(row)
+                buttons_layout.addLayout(row)
+
+            row_layouts[-1].addWidget(build_button(button_name, button_info))
+
+        if cancel_button:
+            cancel_row = QHBoxLayout()
+            cancel_row.setSpacing(0)
+            cancel_row.setContentsMargins(0, 22, 0, 0)
+            cancel_row.addStretch(1)
+            cancel_row.addWidget(build_button("cancel", cancel_button))
+            cancel_row.addStretch(1)
+            buttons_layout.addLayout(cancel_row)
+            self.cancel_button_index = len(self.buttons_list) - 1
 
         main_layout.addWidget(buttons_frame)
         self.setLayout(main_layout)
@@ -543,6 +561,14 @@ class MainWindow(AnimatedWidget):
                 new_index = (current + 1) % total_buttons
             elif step == -1:  # Left
                 new_index = (current - 1) % total_buttons
+            elif self.cancel_button_index != -1 and step in (self.button_row, -self.button_row):
+                if current == self.cancel_button_index:
+                    if step == -self.button_row and self.primary_button_count > 0:
+                        new_index = min(self.primary_button_count // 2, self.primary_button_count - 1)
+                    else:
+                        new_index = 0
+                else:
+                    new_index = self.cancel_button_index
             elif step == self.button_row or step == -self.button_row:  # Up/Down - vertical movement
                 # Calculate the current row and column
                 current_row = current // self.button_row

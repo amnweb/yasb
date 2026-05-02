@@ -6,6 +6,7 @@ import winreg
 from datetime import datetime
 from functools import partial
 
+import win32con
 import win32gui
 import win32process
 from PyQt6.QtCore import (
@@ -38,7 +39,14 @@ from core.utils.win32.app_bar import APPBAR_CALLBACK_MESSAGE, AppBarNotify
 from core.utils.win32.bindings import SetWindowPos
 from core.utils.win32.bindings.user32 import KillTimer, RegisterWindowMessage, SetTimer, user32
 from core.utils.win32.structs import MSG
-from core.utils.win32.utils import apply_qmenu_style
+from core.utils.win32.utils import (
+    apply_qmenu_style,
+    get_monitor_hwnd,
+    get_monitor_info,
+    get_window_extended_frame_bounds,
+    get_window_rect,
+    is_window_maximized,
+)
 
 # Register TaskbarCreated message to detect Explorer restarts
 WM_TASKBARCREATED = RegisterWindowMessage("TaskbarCreated")
@@ -133,18 +141,31 @@ class BarAnimationManager(QObject):
         geo = bar.geometry()
         self._target_geo = (geo.x(), geo.y(), geo.width(), geo.height())
         self._full_height = geo.height()
+        self._full_width = geo.width()
+        self._is_vertical = bar._alignment["position"] in ("left", "right")
 
         screen_geo = bar.screen().geometry()
-        is_top = bar._alignment["position"] == "top"
-        if is_top:
-            self._edge_y = screen_geo.y()
-            padding = geo.y() - self._edge_y
+        if self._is_vertical:
+            is_left = bar._alignment["position"] == "left"
+            if is_left:
+                self._edge_x = screen_geo.x()
+                padding = geo.x() - self._edge_x
+            else:
+                self._edge_x = screen_geo.x() + screen_geo.width()
+                padding = self._edge_x - geo.x() - self._full_width
+            total_slide = self._full_width + padding
         else:
-            self._edge_y = screen_geo.y() + screen_geo.height()
-            padding = self._edge_y - geo.y() - self._full_height
+            is_top = bar._alignment["position"] == "top"
+            if is_top:
+                self._edge_y = screen_geo.y()
+                padding = geo.y() - self._edge_y
+            else:
+                self._edge_y = screen_geo.y() + screen_geo.height()
+                padding = self._edge_y - geo.y() - self._full_height
+            total_slide = self._full_height + padding
 
-        total_slide = self._full_height + padding
-        self._phase_point = self._full_height / total_slide if total_slide > 0 else 1.0
+        visible_span = self._full_width if self._is_vertical else self._full_height
+        self._phase_point = visible_span / total_slide if total_slide > 0 else 1.0
         self._padding = padding
 
         if show:
@@ -166,24 +187,43 @@ class BarAnimationManager(QObject):
     def _update_slide(self, value: float):
         x, y, w, full_h = self._target_geo
         pp = self._phase_point
-        is_top = self.bar_widget._alignment["position"] == "top"
-
-        if value <= pp and pp > 0:
-            t = value / pp
-            h = max(1, round(full_h * t))
-            if is_top:
-                self.bar_widget.setGeometry(x, self._edge_y, w, h)
-                self.bar_widget._bar_frame.move(0, h - full_h)
+        if self._is_vertical:
+            is_left = self.bar_widget._alignment["position"] == "left"
+            if value <= pp and pp > 0:
+                t = value / pp
+                width = max(1, round(w * t))
+                if is_left:
+                    self.bar_widget.setGeometry(self._edge_x, y, width, full_h)
+                    self.bar_widget._bar_frame.move(width - w, 0)
+                else:
+                    self.bar_widget.setGeometry(self._edge_x - width, y, width, full_h)
+                    self.bar_widget._bar_frame.move(0, 0)
             else:
-                self.bar_widget.setGeometry(x, self._edge_y - h, w, h)
+                t = (value - pp) / (1.0 - pp) if pp < 1.0 else 1.0
+                if is_left:
+                    self.bar_widget.setGeometry(round(self._edge_x + self._padding * t), y, w, full_h)
+                else:
+                    self.bar_widget.setGeometry(round(self._edge_x - w - self._padding * t), y, w, full_h)
                 self.bar_widget._bar_frame.move(0, 0)
         else:
-            t = (value - pp) / (1.0 - pp) if pp < 1.0 else 1.0
-            if is_top:
-                self.bar_widget.setGeometry(x, round(self._edge_y + self._padding * t), w, full_h)
+            is_top = self.bar_widget._alignment["position"] == "top"
+
+            if value <= pp and pp > 0:
+                t = value / pp
+                h = max(1, round(full_h * t))
+                if is_top:
+                    self.bar_widget.setGeometry(x, self._edge_y, w, h)
+                    self.bar_widget._bar_frame.move(0, h - full_h)
+                else:
+                    self.bar_widget.setGeometry(x, self._edge_y - h, w, h)
+                    self.bar_widget._bar_frame.move(0, 0)
             else:
-                self.bar_widget.setGeometry(x, round(self._edge_y - full_h - self._padding * t), w, full_h)
-            self.bar_widget._bar_frame.move(0, 0)
+                t = (value - pp) / (1.0 - pp) if pp < 1.0 else 1.0
+                if is_top:
+                    self.bar_widget.setGeometry(x, round(self._edge_y + self._padding * t), w, full_h)
+                else:
+                    self.bar_widget.setGeometry(x, round(self._edge_y - full_h - self._padding * t), w, full_h)
+                self.bar_widget._bar_frame.move(0, 0)
 
     def _on_show_finished(self):
         if self._target_geo:
@@ -302,12 +342,26 @@ class AutoHideManager(QObject):
             self._detection_zone.setGeometry(
                 screen_geometry.x(), screen_geometry.y(), screen_geometry.width(), self._detection_zone_height
             )
-        else:
+        elif alignment["position"] == "bottom":
             self._detection_zone.setGeometry(
                 screen_geometry.x(),
                 screen_geometry.y() + screen_geometry.height() - self._detection_zone_height,
                 screen_geometry.width(),
                 self._detection_zone_height,
+            )
+        elif alignment["position"] == "left":
+            self._detection_zone.setGeometry(
+                screen_geometry.x(),
+                screen_geometry.y(),
+                self._detection_zone_height,
+                screen_geometry.height(),
+            )
+        else:
+            self._detection_zone.setGeometry(
+                screen_geometry.x() + screen_geometry.width() - self._detection_zone_height,
+                screen_geometry.y(),
+                self._detection_zone_height,
+                screen_geometry.height(),
             )
 
         self._hide_timer.start(self._autohide_delay)
@@ -392,9 +446,14 @@ class AutoHideManager(QObject):
         if alignment["position"] == "top":
             bar_top = bar_geometry.y() - screen_geometry.y()
             return 0 <= screen_y <= bar_top
-        else:
+        if alignment["position"] == "bottom":
             bar_bottom = (bar_geometry.y() + bar_geometry.height()) - screen_geometry.y()
             return bar_bottom <= screen_y <= screen_geometry.height()
+        if alignment["position"] == "left":
+            bar_left = bar_geometry.x() - screen_geometry.x()
+            return 0 <= screen_x <= bar_left
+        bar_right = (bar_geometry.x() + bar_geometry.width()) - screen_geometry.x()
+        return bar_right <= screen_x <= screen_geometry.width()
 
     def is_enabled(self):
         """Check if autohide is enabled"""
@@ -618,6 +677,39 @@ class AppBarManager(QAbstractNativeEventFilter):
             pass
         return False
 
+    def _is_actual_fullscreen_foreground(self) -> bool:
+        """Reject standard maximized windows so hide_on_fullscreen only reacts to real fullscreen apps."""
+        try:
+            hwnd = win32gui.GetForegroundWindow()
+            if not hwnd:
+                return False
+
+            monitor_hwnd = get_monitor_hwnd(hwnd)
+            if not monitor_hwnd:
+                return False
+
+            monitor_rect = get_monitor_info(monitor_hwnd)["rect"]
+            try:
+                window_rect = get_window_extended_frame_bounds(hwnd)
+            except Exception:
+                window_rect = get_window_rect(hwnd)
+
+            style = win32gui.GetWindowLong(hwnd, win32con.GWL_STYLE)
+            has_standard_frame = bool(style & (win32con.WS_CAPTION | win32con.WS_THICKFRAME))
+
+            if is_window_maximized(hwnd) and has_standard_frame:
+                return False
+
+            tolerance = 2
+            return (
+                abs(window_rect["x"] - monitor_rect["x"]) <= tolerance
+                and abs(window_rect["y"] - monitor_rect["y"]) <= tolerance
+                and abs(window_rect["width"] - monitor_rect["width"]) <= tolerance
+                and abs(window_rect["height"] - monitor_rect["height"]) <= tolerance
+            )
+        except Exception:
+            return False
+
     def _handle_fullscreen(self, hwnd: int, is_fullscreen_opening: bool):
         """Handle ABN_FULLSCREENAPP notification for a bar."""
         bar_widget = self._bars.get(hwnd)
@@ -628,19 +720,44 @@ class AppBarManager(QAbstractNativeEventFilter):
         if is_fullscreen_opening:
             if self._is_foreground_excluded():
                 return
+            if not self._is_actual_fullscreen_foreground():
+                return
 
         intended_visible = self._bar_intended_state.get(hwnd, True)
         should_hide_bar = getattr(bar_widget, "_hide_on_fullscreen", False)
+        should_reserve_space = getattr(bar_widget, "_window_flags", {}).get("windows_app_bar", False)
 
         # We only need to process if hide_on_fullscreen is enabled
         if not should_hide_bar:
             return
 
         if is_fullscreen_opening:
+            if should_reserve_space and not getattr(bar_widget, "_fullscreen_app_bar_suspended", False):
+                try:
+                    SystrayAppBarHelper.execute_without_systray_interference(
+                        lambda: (
+                            bar_widget.app_bar_manager.remove_appbar(),
+                            bar_widget.update_app_bar(False),
+                        )
+                    )
+                    bar_widget._fullscreen_app_bar_suspended = True
+                except Exception:
+                    logging.exception("Failed to suspend AppBar reservation during fullscreen")
             if intended_visible:
                 SetWindowPos(hwnd, HWND_BOTTOM, 0, 0, 0, 0, self._swp_flags)
                 self._bar_intended_state[hwnd] = False
         else:
+            if should_reserve_space and getattr(bar_widget, "_fullscreen_app_bar_suspended", False):
+                try:
+                    SystrayAppBarHelper.execute_without_systray_interference(
+                        lambda: (
+                            bar_widget.app_bar_manager.remove_appbar(),
+                            bar_widget.update_app_bar(True),
+                        )
+                    )
+                    bar_widget._fullscreen_app_bar_suspended = False
+                except Exception:
+                    logging.exception("Failed to restore AppBar reservation after fullscreen")
             if not intended_visible:
                 SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, self._swp_flags)
                 self._bar_intended_state[hwnd] = True
@@ -1094,7 +1211,9 @@ class AutoWidthManager(QObject):
         if new_width < 0:
             return
 
-        bar_height = self.bar_widget._dimensions["height"]
+        bar_height = self.bar_widget._resolve_dimension(
+            self.bar_widget._dimensions["height"], self.bar_widget._target_screen.geometry().height()
+        )
         screen_geometry = self.bar_widget._target_screen.geometry()
         bar_x, bar_y = self.bar_widget.bar_pos(
             new_width,
