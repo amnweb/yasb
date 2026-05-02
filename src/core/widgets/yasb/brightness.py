@@ -1,9 +1,9 @@
 import re
 from datetime import datetime
 
-from PyQt6.QtCore import QRect, Qt, QTimer
+from PyQt6.QtCore import QEvent, QRect, Qt, QTimer
 from PyQt6.QtGui import QShowEvent, QWheelEvent
-from PyQt6.QtWidgets import QLabel, QSlider, QVBoxLayout
+from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QSlider, QStyle, QStyleOptionSlider, QVBoxLayout
 
 from core.utils.tooltip import CustomToolTip, set_tooltip
 from core.utils.utilities import PopupWidget, build_progress_widget
@@ -176,7 +176,7 @@ class BrightnessWidget(BaseWidget):
         return self.config.brightness_icons[3]
 
     def _show_brightness_menu(self):
-        """Show brightness slider popup."""
+        """Show brightness/contrast slider popup with all monitors."""
         self.dialog = PopupWidget(
             self,
             self.config.brightness_menu.blur,
@@ -186,23 +186,17 @@ class BrightnessWidget(BaseWidget):
         )
         self.dialog.setProperty("class", "brightness-menu")
 
-        layout = QVBoxLayout()
+        layout = QVBoxLayout(self.dialog)
         layout.setSpacing(0)
-        layout.setContentsMargins(10, 10, 10, 10)
+        layout.setContentsMargins(0, 0, 0, 0)
 
-        self.brightness_slider = QSlider(Qt.Orientation.Horizontal)
-        self.brightness_slider.setProperty("class", "brightness-slider")
-        self.brightness_slider.setMinimum(0)
-        self.brightness_slider.setMaximum(100)
+        monitors = self._service.get_monitors()
+        self._sliders: dict[str, QSlider] = {}
+        self._slider_types: dict[str, str] = {}
 
-        current = self.get_brightness()
-        if current is not None:
-            self.brightness_slider.setValue(current)
+        for idx, (hmonitor, name) in enumerate(monitors):
+            self._add_monitor_section(layout, hmonitor, name, idx)
 
-        self.brightness_slider.valueChanged.connect(self._on_slider_changed)
-        self.brightness_slider.sliderReleased.connect(self._on_slider_released)
-
-        layout.addWidget(self.brightness_slider)
         self.dialog.setLayout(layout)
         self.dialog.adjustSize()
         self.dialog.setPosition(
@@ -213,27 +207,139 @@ class BrightnessWidget(BaseWidget):
         )
         self.dialog.show()
 
-    def _on_slider_changed(self, value: int):
-        """Handle slider value change."""
-        self._show_slider_tooltip(value)
-        if not self.brightness_slider.isSliderDown():
-            self.set_brightness(value)
+    def _add_monitor_section(self, layout: QVBoxLayout, hmonitor: int, name: str, index: int = 0):
+        """Add a monitor section with brightness and optional contrast sliders."""
+        monitor_row = QFrame()
+        monitor_row.setProperty("class", f"monitor-row monitor-{index}")
+        monitor_layout = QVBoxLayout(monitor_row)
+        monitor_layout.setContentsMargins(0, 0, 0, 0)
+        monitor_layout.setSpacing(0)
 
-    def _on_slider_released(self):
-        """Handle slider release hide tooltip and apply value."""
-        if self._slider_tooltip:
-            self._slider_tooltip.hide()
-            self._slider_tooltip = None
-        self.set_brightness(self.brightness_slider.value())
+        title = QLabel(name)
+        title.setProperty("class", "monitor-title")
+        monitor_layout.addWidget(title)
 
-    def _show_slider_tooltip(self, value: int):
-        """Show tooltip above slider handle during drag."""
-        if not self.config.tooltip or not self.brightness_slider.isSliderDown():
+        subtitle = self._service.get_monitor_subtitle(hmonitor, index)
+        if subtitle:
+            sub = QLabel(subtitle)
+            sub.setProperty("class", "monitor-subtitle")
+            monitor_layout.addWidget(sub)
+
+        sliders_group = QFrame()
+        sliders_group.setProperty("class", "slider-rows")
+        sliders_layout = QVBoxLayout(sliders_group)
+        sliders_layout.setContentsMargins(0, 0, 0, 0)
+        sliders_layout.setSpacing(0)
+
+        bright_row_widget = QFrame()
+        bright_row_widget.setProperty("class", "slider-row")
+        bright_row = QHBoxLayout(bright_row_widget)
+        bright_row.setContentsMargins(0, 0, 0, 0)
+        bright_row.setSpacing(6)
+
+        bright_icon = QLabel(self.config.brightness_menu.brightness_icon)
+        bright_icon.setProperty("class", "slider-icon")
+        bright_row.addWidget(bright_icon)
+
+        bright_slider = QSlider(Qt.Orientation.Horizontal)
+        bright_slider.setProperty("class", "brightness-slider")
+        bright_slider.setMinimum(0)
+        bright_slider.setMaximum(100)
+        bright_slider.setMouseTracking(True)
+        bright_slider.installEventFilter(self)
+        brightness = self._service.get_brightness(hmonitor)
+        if brightness is not None:
+            bright_slider.setValue(brightness)
+
+        key = f"brightness_{hmonitor}"
+        self._sliders[key] = bright_slider
+        self._slider_types[key] = "brightness"
+        bright_slider.valueChanged.connect(lambda v, k=key: self._on_monitor_slider_changed(k, v))
+        bright_slider.sliderReleased.connect(lambda k=key: self._on_monitor_slider_released(k))
+        bright_row.addWidget(bright_slider, 1)
+
+        sliders_layout.addWidget(bright_row_widget)
+
+        if self._service.supports_contrast(hmonitor):
+            contrast_row_widget = QFrame()
+            contrast_row_widget.setProperty("class", "slider-row")
+            contrast_row = QHBoxLayout(contrast_row_widget)
+            contrast_row.setContentsMargins(0, 0, 0, 0)
+            contrast_row.setSpacing(6)
+
+            contrast_icon = QLabel(self.config.brightness_menu.contrast_icon)
+            contrast_icon.setProperty("class", "slider-icon")
+            contrast_row.addWidget(contrast_icon)
+
+            contrast_slider = QSlider(Qt.Orientation.Horizontal)
+            contrast_slider.setProperty("class", "contrast-slider")
+            contrast_slider.setMinimum(0)
+            contrast_slider.setMaximum(100)
+            contrast_slider.setMouseTracking(True)
+            contrast_slider.installEventFilter(self)
+            current_contrast = self._service.get_contrast(hmonitor)
+            if current_contrast is not None:
+                contrast_slider.setValue(current_contrast)
+
+            key = f"contrast_{hmonitor}"
+            self._sliders[key] = contrast_slider
+            self._slider_types[key] = "contrast"
+            contrast_slider.valueChanged.connect(lambda v, k=key: self._on_monitor_slider_changed(k, v))
+            contrast_slider.sliderReleased.connect(lambda k=key: self._on_monitor_slider_released(k))
+            contrast_row.addWidget(contrast_slider, 1)
+
+            sliders_layout.addWidget(contrast_row_widget)
+
+        monitor_layout.addWidget(sliders_group)
+        layout.addWidget(monitor_row)
+
+    def _on_monitor_slider_changed(self, key: str, value: int):
+        """Handle slider value change for brightness or contrast."""
+        slider = self._sliders.get(key)
+        if slider is None:
             return
 
-        # Calculate handle position
-        slider = self.brightness_slider
-        ratio = value / 100.0
+        if slider.isSliderDown():
+            self._show_slider_tooltip(value, slider)
+
+        slider_type = self._slider_types.get(key)
+        hmonitor = int(key.split("_", 1)[1])
+        if slider_type == "brightness":
+            self._service.set_brightness(hmonitor, value)
+            if hmonitor == self._hmonitor:
+                self.current_brightness = value
+                self._update_label()
+        elif slider_type == "contrast":
+            self._service.set_contrast(hmonitor, value)
+
+    def _on_monitor_slider_released(self, key: str):
+        """Handle slider release — hide tooltip and apply value."""
+        self._hide_slider_tooltip()
+
+        slider = self._sliders.get(key)
+        if not slider:
+            return
+        value = slider.value()
+        slider_type = self._slider_types.get(key)
+        hmonitor = int(key.split("_", 1)[1])
+
+        if slider_type == "brightness":
+            self._service.set_brightness(hmonitor, value)
+            if hmonitor == self._hmonitor:
+                self.current_brightness = value
+                self._update_label()
+        elif slider_type == "contrast":
+            self._service.set_contrast(hmonitor, value)
+
+    def _show_slider_tooltip(self, value: int, slider: QSlider = None):
+        """Show tooltip above slider handle during drag or hover."""
+        if not self.config.tooltip:
+            return
+
+        if slider is None:
+            return
+
+        ratio = slider.value() / 100.0
         x_offset = int(slider.width() * ratio)
         global_pos = slider.mapToGlobal(slider.rect().topLeft())
         handle_rect = QRect(global_pos.x() + x_offset, global_pos.y(), 1, slider.height())
@@ -242,12 +348,42 @@ class BrightnessWidget(BaseWidget):
             self._slider_tooltip = CustomToolTip()
             self._slider_tooltip._position = "top"
 
-        self._slider_tooltip.label.setText(f"{value}%")
+        self._slider_tooltip.label.setText(str(value))
         self._slider_tooltip.adjustSize()
         pos = self._slider_tooltip._calculate_position(handle_rect)
         self._slider_tooltip.move(pos.x(), pos.y())
         self._slider_tooltip.setWindowOpacity(1.0)
         self._slider_tooltip.show()
+
+    def _hide_slider_tooltip(self):
+        if self._slider_tooltip:
+            self._slider_tooltip.hide()
+            self._slider_tooltip = None
+
+    @staticmethod
+    def _is_over_slider_handle(slider: QSlider, pos) -> bool:
+        option = QStyleOptionSlider()
+        slider.initStyleOption(option)
+        handle_rect = slider.style().subControlRect(
+            QStyle.ComplexControl.CC_Slider,
+            option,
+            QStyle.SubControl.SC_SliderHandle,
+            slider,
+        )
+        return handle_rect.contains(pos)
+
+    def eventFilter(self, obj, event):
+        if isinstance(obj, QSlider) and self.config.tooltip:
+            event_type = event.type()
+            if event_type == QEvent.Type.MouseMove:
+                pos = event.position().toPoint()
+                if self._is_over_slider_handle(obj, pos):
+                    self._show_slider_tooltip(obj.value(), obj)
+                elif not obj.isSliderDown():
+                    self._hide_slider_tooltip()
+            elif event_type == QEvent.Type.Leave and not obj.isSliderDown():
+                self._hide_slider_tooltip()
+        return super().eventFilter(obj, event)
 
     def _check_auto_light(self):
         """Check and apply auto light settings."""

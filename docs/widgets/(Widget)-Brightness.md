@@ -15,7 +15,7 @@
 | `auto_light_day_level` | int | `100` | The brightness level at which the widget switches to the day. |
 | `auto_light_night_start_time` | string | `"20:00"` | The time at which the night starts. |
 | `auto_light_night_end_time` | string | `"06:30"` | The time at which the night ends. |
-| `brightness_menu` | dict | `{'blur': True, 'round_corners': True, 'round_corners_type': 'normal', 'border_color': 'System', 'alignment': 'right', 'direction': 'down', 'offset_top': 6, 'offset_left': 0}` | Menu settings for the widget. |
+| `brightness_menu` | dict | `{'blur': True, 'round_corners': True, 'round_corners_type': 'normal', 'border_color': 'System', 'alignment': 'right', 'direction': 'down', 'offset_top': 6, 'offset_left': 0, 'brightness_icon': '\ue706', 'contrast_icon': '\ue7a1'}` | Menu settings for the widget. |
 | `callbacks`     | dict    | `{'on_left': 'toggle_label', 'on_middle': 'do_nothing', 'on_right': 'do_nothing'}` | Callbacks for mouse events on the brightness widget. |
 | `progress_bar`       | dict    | `{'enabled': False, 'position': 'left', 'size': 14, 'thickness': 2, 'color': '#57948a', animation: True}` | Progress bar settings.    |
 ## Example Configuration
@@ -48,8 +48,11 @@
         border_color: "System"
         alignment: "right"
         direction: "down"
+        brightness_icon: "\ue706"
+        contrast_icon: "\ue7a1"
       callbacks:
-          on_left: "toggle_label"
+        on_left: "toggle_brightness_menu"
+        on_left: "toggle_label"
 ```
 
 ## Description of Options
@@ -69,6 +72,8 @@
   - **direction**: Set the direction of the menu (up, down).
   - **offset_top**: Set the top offset of the menu.
   - **offset_left**: Set the left offset of the menu.
+  - **brightness_icon**: The icon to use for the brightness slider in the menu.
+  - **contrast_icon**: The icon to use for the contrast slider in the menu.
 - **auto_light:** Whether to automatically adjust the brightness icon based on the current brightness level.
 - **auto_light_icon:** The icon to use when the auto_light option is enabled.
 - **auto_light_night_level:** The brightness level at which the widget switches to the night.
@@ -93,17 +98,57 @@
 .brightness-widget .widget-container .icon {}
 ```
 
-## Style for the brightness menu
+## Style for the brightness popup menu
 ```css
 .brightness-menu {
-    background-color:rgba(17, 17, 27, 0.4); 
+    background-color: rgba(36, 36, 36, 0.75);
+    min-width: 300px;
 }
-.brightness-slider {
-    border: none;
+/* Grouping for monitor rows including title and sliders */
+.brightness-menu .monitor-row {
+    background-color: rgba(139, 69, 19, 0);
+    margin: 12px 12px 0 12px;
 }
+/* 
+Specific margin for the first monitor row to create space between the title and the sliders 
+.monitor-0 is indexed as the first monitor row, adjust if you have multiple monitors and want to style them differently.
+*/
+.brightness-menu .monitor-row.monitor-0 {
+    margin-bottom: 0;
+}
+.brightness-menu .monitor-title  {
+    font-size: 13px;
+    font-weight: 600;
+    color: #ffffff;
+    margin-top: 4px;
+}
+.brightness-menu .monitor-subtitle {
+    font-size: 11px;
+    color: #a6adc8;
+    margin-top: 2px;
+    margin-bottom: 8px;
+}
+/* Container for the sliders to create a grouped appearance including icons and sliders */
+.brightness-menu .slider-rows {
+    background-color: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    padding: 16px; 
+}
+.brightness-menu .slider-icon {
+    font-family: "Segoe Fluent Icons";
+}
+.brightness-menu .slider-row {
+    margin: 4px 0;
+    padding: 8px 0px;
+}
+/* optional styles for the brightness and contrast sliders */
 .brightness-slider::groove {}
+.contrast-slider::groove {}
 .brightness-slider::handle{} 
+.contrast-slider::handle{}
 
 /* Brightness progress bar styles if enabled */
 .brightness-widget .progress-circle {} 
 ```
+## Preview of the Widget
+![Brightness YASB Widget](assets/97267927-44d7-4cf5-8c93-b2cff8c40817.png)

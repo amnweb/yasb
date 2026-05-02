@@ -531,6 +531,75 @@ class DISPLAY_BRIGHTNESS(ct.Structure):
     _fields_ = [("ucDisplayPolicy", BYTE), ("ucACBrightness", BYTE), ("ucDCBrightness", BYTE)]
 
 
+class LUID(ct.Structure):
+    _fields_ = [("LowPart", wintypes.DWORD), ("HighPart", wintypes.LONG)]
+
+
+class DISPLAYCONFIG_RATIONAL(ct.Structure):
+    _fields_ = [("Numerator", wintypes.UINT), ("Denominator", wintypes.UINT)]
+
+
+class DISPLAYCONFIG_PATH_SOURCE_INFO(ct.Structure):
+    _fields_ = [
+        ("adapterId", LUID),
+        ("id", wintypes.UINT),
+        ("modeInfoIdx", wintypes.UINT),
+        ("statusFlags", wintypes.UINT),
+    ]
+
+
+class DISPLAYCONFIG_PATH_TARGET_INFO(ct.Structure):
+    _fields_ = [
+        ("adapterId", LUID),
+        ("id", wintypes.UINT),
+        ("modeInfoIdx", wintypes.UINT),
+        ("outputTechnology", wintypes.UINT),
+        ("rotation", wintypes.UINT),
+        ("scaling", wintypes.UINT),
+        ("refreshRate", DISPLAYCONFIG_RATIONAL),
+        ("scanLineOrdering", wintypes.UINT),
+        ("targetAvailable", wintypes.BOOL),
+        ("statusFlags", wintypes.UINT),
+    ]
+
+
+class DISPLAYCONFIG_PATH_INFO(ct.Structure):
+    _fields_ = [
+        ("sourceInfo", DISPLAYCONFIG_PATH_SOURCE_INFO),
+        ("targetInfo", DISPLAYCONFIG_PATH_TARGET_INFO),
+        ("flags", wintypes.UINT),
+    ]
+
+
+class DISPLAYCONFIG_DEVICE_INFO_HEADER(ct.Structure):
+    _fields_ = [
+        ("type", wintypes.UINT),
+        ("size", wintypes.UINT),
+        ("adapterId", LUID),
+        ("id", wintypes.UINT),
+    ]
+
+
+class DISPLAYCONFIG_SOURCE_DEVICE_NAME(ct.Structure):
+    _fields_ = [
+        ("header", DISPLAYCONFIG_DEVICE_INFO_HEADER),
+        ("viewGdiDeviceName", wintypes.WCHAR * 32),
+    ]
+
+
+class DISPLAYCONFIG_TARGET_DEVICE_NAME(ct.Structure):
+    _fields_ = [
+        ("header", DISPLAYCONFIG_DEVICE_INFO_HEADER),
+        ("flags", wintypes.UINT),
+        ("outputTechnology", wintypes.UINT),
+        ("edidManufactureId", wintypes.USHORT),
+        ("edidProductCodeId", wintypes.USHORT),
+        ("connectorInstance", wintypes.UINT),
+        ("monitorFriendlyDeviceName", wintypes.WCHAR * 64),
+        ("monitorDevicePath", wintypes.WCHAR * 128),
+    ]
+
+
 class MIB_IF_ROW2(ct.Structure):
     """Structure for network interface statistics"""
 

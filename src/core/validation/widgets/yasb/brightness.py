@@ -19,6 +19,8 @@ class BrightnessMenuConfig(CustomBaseModel):
     direction: str = "down"
     offset_top: int = 6
     offset_left: int = 0
+    contrast_icon: str = "\ue7a1"
+    brightness_icon: str = "\ue706"
 
 
 class ProgressBarConfig(CustomBaseModel):
