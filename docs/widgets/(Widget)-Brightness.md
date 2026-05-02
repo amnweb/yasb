@@ -107,11 +107,11 @@
 /* Grouping for monitor rows including title and sliders */
 .brightness-menu .monitor-row {
     background-color: rgba(139, 69, 19, 0);
-    margin: 12px 12px 0 12px;
+    margin: 12px;
 }
 /* 
-Specific margin for the first monitor row to create space between the title and the sliders 
-.monitor-0 is indexed as the first monitor row, adjust if you have multiple monitors and want to style them differently.
+.monitor-0 is indexed as the first monitor row, 
+adjust if you have multiple monitors and want to style them differently correctly.
 */
 .brightness-menu .monitor-row.monitor-0 {
     margin-bottom: 0;

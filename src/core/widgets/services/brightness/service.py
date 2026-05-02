@@ -115,11 +115,18 @@ class BrightnessService(QObject):
     def set_brightness(self, hmonitor: int, value: int) -> None:
         """Queue a brightness change."""
         value = max(0, min(100, value))
+        should_emit = False
         with self._lock:
             self._pending_set[hmonitor] = (value, time.monotonic())
             # Update cache immediately for responsive UI
             if hmonitor in self._monitors:
-                self._monitors[hmonitor].brightness = value
+                monitor = self._monitors[hmonitor]
+                should_emit = monitor.brightness != value or not monitor.reported
+                monitor.brightness = value
+                monitor.reported = True
+
+        if should_emit:
+            self.brightness_changed.emit(hmonitor, value)
 
     def get_contrast(self, hmonitor: int) -> int | None:
         """Get cached contrast for a monitor."""

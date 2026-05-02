@@ -4,7 +4,7 @@ This module exposes the `shell32` handle and sets argtypes/restype for the Shell
 functions we call from Python so ctypes marshaling is explicit and safe.
 """
 
-from ctypes import HRESULT, POINTER, c_int, c_uint, c_void_p, c_wchar_p, windll
+from ctypes import HRESULT, c_int, c_void_p, c_wchar_p, windll
 
 import comtypes
 from comtypes import COMMETHOD, GUID
@@ -53,15 +53,6 @@ class IDesktopWallpaper(comtypes.IUnknown):
     _iid_ = GUID("{B92B56A9-8B55-4E14-9A89-0199BBB6F93B}")
     _methods_ = [
         COMMETHOD([], HRESULT, "SetWallpaper", (["in"], c_wchar_p, "monitorID"), (["in"], c_wchar_p, "wallpaper")),
-        COMMETHOD(
-            [], HRESULT, "GetWallpaper", (["in"], c_wchar_p, "monitorID"), (["out"], POINTER(c_wchar_p), "wallpaper")
-        ),
-        COMMETHOD(
-            [],
-            HRESULT,
-            "GetMonitorDevicePathAt",
-            (["in"], c_uint, "monitorIndex"),
-            (["out"], POINTER(c_wchar_p), "monitorID"),
-        ),
-        COMMETHOD([], HRESULT, "GetMonitorDevicePathCount", (["out"], POINTER(c_uint), "count")),
+        # Additional methods can be added here if needed:
+        # GetWallpaper, GetMonitorDevicePathAt, GetMonitorDevicePathCount, etc.
     ]
