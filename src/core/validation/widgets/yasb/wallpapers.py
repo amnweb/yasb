@@ -9,6 +9,11 @@ from core.validation.widgets.base_model import (
 )
 
 
+class EngineConfig(CustomBaseModel):
+    enabled: bool = True
+    animation: Literal["circle", "slide_top", "diamond", "split"] = "circle"
+
+
 class GalleryConfig(CustomBaseModel):
     enabled: bool = False
     blur: bool = True
@@ -55,6 +60,7 @@ class WallpapersConfig(CustomBaseModel):
     image_path: str | list[str]
     tooltip: bool = True
     run_after: list[str] = []
+    engine: EngineConfig = EngineConfig()
     gallery: GalleryConfig = GalleryConfig()
     keybindings: list[KeybindingConfig] = []
     callbacks: CallbacksWallpapersConfig = CallbacksWallpapersConfig()

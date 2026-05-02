@@ -68,28 +68,34 @@ class WallpaperManager(QObject):
     def _timer_callback(self):
         self.change_background()
 
-    def set_wallpaper(self, image_path: str):
+    def set_wallpaper(self, image_path: str, monitor_id: str | None = None):
         """
         Set the desktop wallpaper using the IDesktopWallpaper COM interface.
         Args:
             image_path: Absolute path to the wallpaper image file
+            monitor_id: Monitor device path from GetMonitorDevicePathAt, or None for all monitors
         """
         pythoncom.CoInitialize()
         try:
-            # Create IDesktopWallpaper COM object
-            # CLSID: {C2CF3110-460E-4fc1-B9D0-8A1C0C9CC4BD}
             desktop_wallpaper_clsid = GUID("{C2CF3110-460E-4fc1-B9D0-8A1C0C9CC4BD}")
             desktop_wallpaper = comtypes.client.CreateObject(desktop_wallpaper_clsid, interface=IDesktopWallpaper)
-
-            # Convert to absolute path
             abs_path = os.path.abspath(image_path)
-
-            # Set wallpaper for all monitors (None = all monitors)
-            desktop_wallpaper.SetWallpaper(None, abs_path)
-
+            desktop_wallpaper.SetWallpaper(monitor_id, abs_path)
         except Exception as e:
             logging.error("Failed to set wallpaper using IDesktopWallpaper: %s", e)
             raise
+
+    def get_monitor_ids(self) -> list[str]:
+        """Return COM monitor device paths for all connected monitors."""
+        pythoncom.CoInitialize()
+        try:
+            clsid = GUID("{C2CF3110-460E-4fc1-B9D0-8A1C0C9CC4BD}")
+            dwp = comtypes.client.CreateObject(clsid, interface=IDesktopWallpaper)
+            count = dwp.GetMonitorDevicePathCount()
+            return [dwp.GetMonitorDevicePathAt(i) for i in range(count)]
+        except Exception as e:
+            logging.error("Failed to enumerate monitors: %s", e)
+            return []
 
     def change_background(self, image_path: str = None):
         """Change the desktop wallpaper to a new image."""
