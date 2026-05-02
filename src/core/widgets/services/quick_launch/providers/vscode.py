@@ -6,6 +6,7 @@ import urllib.parse
 from pathlib import Path
 
 from core.utils.shell_utils import shell_open
+from core.utils.widgets.vscode.get_vscode_state_db_path import get_state_db_path
 from core.utils.win32.constants import SW_HIDE
 from core.widgets.services.quick_launch.base_provider import (
     BaseProvider,
@@ -101,7 +102,7 @@ class VSCodeProvider(BaseProvider):
 
     def __init__(self, config: dict | None = None):
         super().__init__(config)
-        self._db_path = os.path.expandvars(r"%APPDATA%\Code\User\globalStorage\state.vscdb")
+        self._db_path = get_state_db_path()
 
     def _get_recents(self) -> list[dict]:
         if not os.path.exists(self._db_path):
