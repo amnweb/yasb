@@ -8,10 +8,10 @@ import os
 import winreg
 from ctypes import wintypes
 
-from PyQt6.QtCore import QEasingCurve, QPointF, QRectF, Qt, QThread, QTimeLine, pyqtSignal
+from PyQt6.QtCore import QEasingCurve, QPointF, QRectF, Qt, QThread, QTimeLine, QTimer, pyqtSignal
 from PyQt6.QtGui import QColor, QImage, QPainter, QPainterPath, QPixmap, QPolygonF
 from PyQt6.QtWidgets import QApplication, QWidget
-from win32con import GWL_STYLE, SWP_FRAMECHANGED, SWP_NOACTIVATE, SWP_SHOWWINDOW, WM_DESTROY, WS_CHILD, WS_POPUP
+from win32con import GWL_STYLE, SWP_FRAMECHANGED, SWP_NOACTIVATE, WM_DESTROY, WS_CHILD, WS_POPUP
 
 from core.widgets.services.wallpapers.wallpaper_manager import WallpaperManager
 
@@ -65,9 +65,6 @@ user32.SendMessageTimeoutW.argtypes = [
     wintypes.UINT,
     ctypes.POINTER(ULONG_PTR),
 ]
-
-user32.ShowWindow.restype = wintypes.BOOL
-user32.ShowWindow.argtypes = [HWND, ctypes.c_int]
 
 user32.GetWindowRect.restype = wintypes.BOOL
 user32.GetWindowRect.argtypes = [HWND, ctypes.POINTER(wintypes.RECT)]
@@ -179,7 +176,6 @@ def _locate_workerw() -> int:
 
     if not worker:
         raise RuntimeError("Could not locate WorkerW")
-    user32.ShowWindow(worker, 5)
     return worker
 
 
@@ -201,7 +197,7 @@ def _attach_to_workerw(widget: QWidget) -> None:
         areas.append((ml - wr.left, mt - wr.top, mr - ml, mb - mt, 1.0))
     widget.set_screen_areas(areas)
 
-    user32.SetWindowPos(hwnd, HWND_TOP, 0, 0, ww, wh, SWP_NOACTIVATE | SWP_SHOWWINDOW | SWP_FRAMECHANGED)
+    user32.SetWindowPos(hwnd, HWND_TOP, 0, 0, ww, wh, SWP_NOACTIVATE | SWP_FRAMECHANGED)
 
 
 class _ImageLoader(QThread):
@@ -245,6 +241,11 @@ class WallpaperEngine(QWidget):
         self._per_screen_scaled_new: list[tuple[QPixmap, int, int]] = []
         self._progress = 0.0
         self._committed = False
+        self._revealed = False
+
+        # Keep the window fully transparent until the first frame is painted.
+        self.setWindowOpacity(0.0)
+        self.winId()
 
         self._timeline = QTimeLine(self._ANIMATION_MS, self)
         self._timeline.setUpdateInterval(self._FRAME_MS)
@@ -273,6 +274,11 @@ class WallpaperEngine(QWidget):
 
         _attach_to_workerw(self)
         self.show()
+        QTimer.singleShot(0, self._start_animation)
+
+    def _start_animation(self) -> None:
+        if not self._revealed:
+            self.update()
         self._timeline.start()
 
     def set_screen_areas(self, areas: list[tuple[int, int, int, int, float]]) -> None:
@@ -573,6 +579,10 @@ class WallpaperEngine(QWidget):
             p.fillRect(QRectF(float(dx), float(dy), float(dw), float(dh)), self._bg_color)
             p.drawPixmap(dx + ox_n, dy + oy_n, scaled_n)
             p.restore()
+
+        if not self._revealed:
+            self._revealed = True
+            self.setWindowOpacity(1.0)
 
     def nativeEvent(self, _, message):
         msg = ctypes.cast(int(message), ctypes.POINTER(wintypes.MSG)).contents
