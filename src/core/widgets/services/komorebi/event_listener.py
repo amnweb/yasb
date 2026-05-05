@@ -12,7 +12,7 @@ from core.events.komorebi import KomorebiEvent
 from core.events.service import EventService
 from core.widgets.services.komorebi.client import KomorebiClient
 
-KOMOREBI_PIPE_BUFF_SIZE = 64 * 1024
+KOMOREBI_PIPE_BUFF_SIZE = 64 * 1024 * 8
 KOMOREBI_PIPE_NAME = "yasb"
 
 
