@@ -13,53 +13,42 @@ from PyQt6.QtCore import (
     Qt,
     QThreadPool,
     QTimer,
-    pyqtProperty,
     pyqtSignal,
 )
 from PyQt6.QtGui import QCursor, QImageReader, QPainter, QPainterPath, QPixmap, QWheelEvent
 from PyQt6.QtWidgets import (
     QApplication,
     QFrame,
-    QGraphicsOpacityEffect,
     QGridLayout,
     QHBoxLayout,
     QMainWindow,
+    QMenu,
     QPushButton,
     QScrollArea,
     QSizePolicy,
-    QStyle,
-    QStyleOption,
     QVBoxLayout,
-    QWidget,
 )
 
 from core.bar_helper import ThemeState
-from core.events.service import EventService
+from core.utils.system import is_windows_10
 from core.utils.utilities import refresh_widget_style
 from core.utils.win32.backdrop import enable_blur
+from core.utils.win32.utils import apply_qmenu_style
 from core.utils.win32.window_actions import force_foreground_focus
-
-
-class BaseStyledWidget(QWidget):
-    """BaseStyledWidget applies the shared stylesheet to detached widgets."""
-
-    def apply_stylesheet(self):
-        self.setStyleSheet(ThemeState.stylesheet())
+from core.widgets.services.wallpapers.wallpaper_engine import WallpaperEngine
+from core.widgets.services.wallpapers.wallpaper_manager import WallpaperManager
 
 
 class HoverLabel(QFrame):
-    """HoverLabel: QFrame with hover, focus, and opacity effects for a wallpapers gallery."""
+    """HoverLabel: QFrame that displays a wallpaper thumbnail in the gallery."""
 
     def __init__(self, parent, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._opacity = 0.0
         self._pixmap = None
         self.parent_gallery = parent
+        self.image_index = -1
         self.setProperty("class", "wallpapers-gallery-image")
-        self.opacity_effect = QGraphicsOpacityEffect(self)
-        self.setGraphicsEffect(self.opacity_effect)
-        self.opacity_effect.setOpacity(self._opacity)
 
     def setPixmap(self, pixmap):
         self._pixmap = pixmap
@@ -69,54 +58,27 @@ class HoverLabel(QFrame):
         return self._pixmap
 
     def paintEvent(self, event):
-        opt = QStyleOption()
-        opt.initFrom(self)
-        painter = QPainter(self)
-        self.style().drawPrimitive(QStyle.PrimitiveElement.PE_Widget, opt, painter, self)
-
+        super().paintEvent(event)
         if self._pixmap and not self._pixmap.isNull():
+            painter = QPainter(self)
             painter.setRenderHint(QPainter.RenderHint.Antialiasing)
             painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
-
             path = QPainterPath()
             rect = QRectF(self.contentsRect())
             radius = self.parent_gallery.corner_radius
             path.addRoundedRect(rect, radius, radius)
             painter.setClipPath(path)
-
             painter.drawPixmap(self.contentsRect(), self._pixmap)
-
-    @pyqtProperty(float)
-    def opacity(self):
-        return self._opacity
-
-    @opacity.setter
-    def opacity(self, value):
-        self._opacity = value
-        self.opacity_effect.setOpacity(self._opacity)
-
-    def fade_in(self, duration):
-        self.animation = QPropertyAnimation(self, b"opacity")
-        self.animation.setDuration(duration)
-        self.animation.setStartValue(0.0)
-        self.animation.setEndValue(1.0)
-        self.animation.start()
-
-    def blink(self):
-        self.animation = QPropertyAnimation(self, b"opacity")
-        self.animation.setDuration(300)
-        self.animation.setKeyValueAt(0, 1.0)
-        self.animation.setKeyValueAt(0.25, 0.5)
-        self.animation.setKeyValueAt(0.5, 1.0)
-        self.animation.setKeyValueAt(0.75, 0.5)
-        self.animation.setKeyValueAt(1, 1.0)
-        self.animation.start()
+            painter.end()
 
     def mouseDoubleClickEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
-            self.blink()
             if isinstance(self.parent_gallery, ImageGallery):
                 self.parent_gallery.set_wallpaper()
+
+    def contextMenuEvent(self, event):
+        if self.image_index >= 0 and isinstance(self.parent_gallery, ImageGallery):
+            self.parent_gallery.show_context_menu_for_image(self.image_index, event.globalPos())
 
 
 class ImageSignals(QObject):
@@ -195,13 +157,13 @@ class ImageLoader(QRunnable):
         self.signals.loaded.emit(self.image_path, pixmap, self.index)
 
 
-class ImageGallery(QMainWindow, BaseStyledWidget):
+class ImageGallery(QMainWindow):
     """ImageGallery displays a gallery of images with navigation and lazy loading features."""
 
-    def __init__(self, image_paths, gallery):
+    def __init__(self, image_paths, gallery, engine=None):
         super().__init__()
         self.gallery = gallery
-        self._event_service = EventService()
+        self.engine = engine  # EngineConfig | None
 
         if isinstance(image_paths, str):
             self.image_paths = [image_paths]
@@ -211,7 +173,7 @@ class ImageGallery(QMainWindow, BaseStyledWidget):
         all_files = []
         for path in self.image_paths:
             if os.path.exists(path):
-                for root, dirs, files in os.walk(path):
+                for root, _, files in os.walk(path):
                     for f in files:
                         if f.lower().endswith(("png", "jpg", "jpeg", "gif", "bmp")):
                             all_files.append(os.path.join(root, f))
@@ -270,7 +232,6 @@ class ImageGallery(QMainWindow, BaseStyledWidget):
         self.is_loading = False
         self.threadpool = QThreadPool()
         self.threadpool.setMaxThreadCount(self.images_per_page)
-        self.apply_stylesheet()
         self.is_closing = False
 
         # Calculate gallery dimensions
@@ -288,8 +249,6 @@ class ImageGallery(QMainWindow, BaseStyledWidget):
         """Initialize the UI components and layout for the wallpapers gallery window."""
         screen = None
         if parent:
-            # First try to get the screen from the parent's window
-            # This is robust for widgets inside bars that are assigned to specific screens
             if parent.window() and parent.window().screen():
                 screen = parent.window().screen()
 
@@ -326,6 +285,7 @@ class ImageGallery(QMainWindow, BaseStyledWidget):
         central_widget.setProperty(
             "class", "wallpapers-gallery-window dark" if ThemeState.is_dark() else "wallpapers-gallery-window"
         )
+        self.setStyleSheet(ThemeState.stylesheet())
 
         self.setContentsMargins(0, 0, 0, 0)
         layout = QVBoxLayout()
@@ -335,11 +295,13 @@ class ImageGallery(QMainWindow, BaseStyledWidget):
 
         # Set up scroll area to handle overflow when respecting work area
         self.scroll_area = QScrollArea()
-        self.scroll_area.setStyleSheet("background-color:transparent;border:0")
+        self.setObjectName("gallery_scroll_area")
+        self.scroll_area.setStyleSheet("QScrollArea#gallery_scroll_area { background: transparent; border: none; }")
         self.scroll_area.setWidgetResizable(False)
         self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.scroll_area.setFrameShape(QFrame.Shape.NoFrame)
+        self.scroll_area.viewport().setAutoFillBackground(False)
         # Disable wheel and keyboard events on scroll area to prevent scrolling
         self.scroll_area.wheelEvent = lambda event: event.ignore()
         self.scroll_area.keyPressEvent = lambda event: event.ignore()
@@ -348,7 +310,9 @@ class ImageGallery(QMainWindow, BaseStyledWidget):
 
         # Set up the image container frame inside scroll area
         self.image_container = QFrame()
-        self.image_container.setStyleSheet("background-color:transparent;border:0")
+        self.image_container.setObjectName("image_container")
+        self.image_container.setStyleSheet("QFrame#image_container { background: transparent;}")
+        self.image_container.setFrameShape(QFrame.Shape.NoFrame)
         self.scroll_area.setWidget(self.image_container)
         self.image_layout = QGridLayout()
         self.image_container.setLayout(self.image_layout)
@@ -384,32 +348,35 @@ class ImageGallery(QMainWindow, BaseStyledWidget):
         self._apply_window_bounds(screen)
 
     def _apply_window_bounds(self, screen):
-        """Size and center the gallery window within the active screen."""
+        """Size and center the gallery window, auto-detecting QSS padding."""
         clamp_geometry = screen.geometry()
         work_geometry = screen.availableGeometry() if self.respect_work_area else clamp_geometry
 
-        screen_width = work_geometry.width()
-        screen_height = work_geometry.height()
+        # 1. Force the widget to acknowledge the QSS rules
+        central = self.centralWidget()
+        central.ensurePolished()
 
-        # Use individual offsets for each edge
-        left_margin = abs(self.offset_left) if self.offset_left >= 0 else 0
-        right_margin = abs(self.offset_right) if self.offset_right >= 0 else 0
-        top_margin = abs(self.offset_top) if self.offset_top >= 0 else 0
-        bottom_margin = abs(self.offset_bottom) if self.offset_bottom >= 0 else 0
+        # 2. Get the padding/margins from the layout or style
+        # If the QSS 'padding' is applied, these margins will reflect it.
+        margins = central.contentsMargins()
+        total_padding_w = margins.left() + margins.right()
+        total_padding_h = margins.top() + margins.bottom()
 
-        usable_width = max(1, screen_width - left_margin - right_margin)
-        usable_height = max(1, screen_height - top_margin - bottom_margin)
+        # 3. Calculate Content + Margins
+        grid_margin = max(0, self.image_spacing)
+        desired_width = self.gallery_width + (grid_margin * 2) + total_padding_w
+        desired_height = self.gallery_height + (grid_margin * 2) + self.button_row_height + total_padding_h
 
-        outer_margin = max(0, self.image_spacing)
-        desired_width = self.gallery_width + (outer_margin * 2)
-        desired_height = self.gallery_height + (outer_margin * 2) + self.button_row_height
+        # 4. Fit to Screen
+        self.window_width = min(desired_width, work_geometry.width())
+        self.window_height = min(desired_height, work_geometry.height())
 
-        self.window_width = min(desired_width, screen_width, usable_width)
-        self.window_height = min(desired_height, screen_height, usable_height)
+        # 5. Lock the container to the inner area
+        # This prevents the images from 'shrinking' to fit the padding
+        inner_w = self.window_width - total_padding_w
+        inner_h = self.window_height - total_padding_h - self.button_row_height
 
-        container_height = max(1, self.window_height - self.button_row_height)
-        self.image_container.setFixedWidth(self.window_width)
-        self.image_container.setFixedHeight(container_height)
+        self.image_container.setFixedSize(int(inner_w), int(inner_h))
 
         self._position_window(work_geometry, clamp_geometry, self.window_width, self.window_height)
 
@@ -504,6 +471,7 @@ class ImageGallery(QMainWindow, BaseStyledWidget):
             col = i % self.columns
 
             label = HoverLabel(self)
+            label.image_index = index
             label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
             label.mousePressEvent = self.create_mouse_press_event(index)
             self.image_layout.addWidget(label, row, col)
@@ -548,10 +516,6 @@ class ImageGallery(QMainWindow, BaseStyledWidget):
         if index < self.image_layout.count():
             label = self.image_layout.itemAt(index).widget()
             label.setPixmap(pixmap)
-            if self.lazy_load:
-                label.fade_in(self.lazy_load_fadein)
-            else:
-                label.opacity = 1.0
 
     def create_mouse_press_event(self, index):
         """Create a mouse press event handler for a specific image index."""
@@ -672,8 +636,6 @@ class ImageGallery(QMainWindow, BaseStyledWidget):
         if event.key() == Qt.Key.Key_Escape:
             self.fade_out_and_close_gallery()
         elif event.key() == Qt.Key.Key_Return and self.focused_index is not None:
-            label = self.image_layout.itemAt(self.focused_index - self.current_index).widget()
-            label.blink()
             self.set_wallpaper()
         elif event.key() == Qt.Key.Key_Left:
             self.handle_left_arrow()
@@ -689,10 +651,56 @@ class ImageGallery(QMainWindow, BaseStyledWidget):
             self.handle_next_page()
 
     def set_wallpaper(self):
-        """Set the focused image as wallpaper."""
+        """Apply the selected wallpaper (with or without YASB engine)."""
         if self.focused_index is not None:
-            image_path = self.image_files[self.focused_index]
-            self._event_service.emit_event("set_wallpaper_signal", image_path)
+            self._apply_wallpaper(self.image_files[self.focused_index], None)
+
+    def show_context_menu_for_image(self, index: int, pos):
+        """Show a context menu with per-monitor options for the image at *index*."""
+        if index < 0 or index >= len(self.image_files):
+            return
+
+        image_path = self.image_files[index]
+        self.focused_index = index
+        self.update_focus()
+
+        menu = QMenu(self)
+        menu.setProperty("class", "context-menu")
+        apply_qmenu_style(menu)
+
+        action_all = menu.addAction("Set on all screens")
+        action_all.triggered.connect(lambda: self._apply_wallpaper(image_path, None))
+
+        monitor_ids = WallpaperManager().get_monitor_ids()
+        if len(monitor_ids) > 1:
+            menu.addSeparator()
+            for i, monitor_id in enumerate(monitor_ids):
+                action = menu.addAction(f"Set on screen {i + 1}")
+                action.triggered.connect(partial(self._apply_wallpaper_on_monitor, image_path, monitor_id))
+
+        self._menu_open = True
+        menu.exec(pos)
+        self._menu_open = False
+
+    def _apply_wallpaper_on_monitor(self, image_path: str, monitor_id: str) -> None:
+        """Set wallpaper on a specific monitor (no animation)."""
+        self.fade_out_and_close_gallery()
+        WallpaperManager().set_wallpaper(image_path, monitor_id=monitor_id)
+
+    def _apply_wallpaper(self, image_path: str, monitor_id: str | None) -> None:
+        """Apply wallpaper with engine animation (all screens) or direct per-monitor."""
+        if monitor_id is None:
+            animation = self.engine.animation if self.engine else "circle"
+            if self.engine and self.engine.enabled and not is_windows_10():
+                self.fade_out_and_close_gallery()
+                self._engine = WallpaperEngine(image_path, animation)
+                self._engine.destroyed.connect(lambda: setattr(self, "_engine", None))
+                self._engine.start()
+            else:
+                self.fade_out_and_close_gallery()
+                WallpaperManager().set_wallpaper(image_path)
+        else:
+            self._apply_wallpaper_on_monitor(image_path, monitor_id)
 
     def showEvent(self, event):
         """Handle show event."""
@@ -719,7 +727,7 @@ class ImageGallery(QMainWindow, BaseStyledWidget):
 
         self.initUI(parent)
         self.fade_in_animation = QPropertyAnimation(self, b"windowOpacity")
-        self.fade_in_animation.setDuration(150)
+        self.fade_in_animation.setDuration(80)
         self.fade_in_animation.setStartValue(0)
         self.fade_in_animation.setEndValue(1)
         self.fade_in_animation.start()
@@ -732,7 +740,7 @@ class ImageGallery(QMainWindow, BaseStyledWidget):
         self.is_closing = True
 
         self.fade_out_animation = QPropertyAnimation(self, b"windowOpacity")
-        self.fade_out_animation.setDuration(150)
+        self.fade_out_animation.setDuration(120)
         self.fade_out_animation.setStartValue(1)
         self.fade_out_animation.setEndValue(0)
         self.fade_out_animation.finished.connect(self._on_fade_out_finished)
@@ -759,7 +767,7 @@ class ImageGallery(QMainWindow, BaseStyledWidget):
     def changeEvent(self, event):
         """Handle window state changes - close when window becomes inactive."""
         if event.type() == QEvent.Type.ActivationChange:
-            if not self.isActiveWindow() and not self.is_closing:
+            if not self.isActiveWindow() and not self.is_closing and not getattr(self, "_menu_open", False):
                 cursor_pos = QCursor.pos()
                 if not self.geometry().contains(cursor_pos):
                     self.fade_out_and_close_gallery()

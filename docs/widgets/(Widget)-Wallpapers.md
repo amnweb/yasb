@@ -6,6 +6,7 @@
 | `update_interval`  | integer  | 60        | The interval in seconds to update the wallpaper. Must be between 60 and 86400. |
 | `change_automatically` | boolean | `false`       | Whether to automatically change the wallpaper. |
 | `image_path`      | string/list   | `""`        | The path(s) to the folder(s) containing images for the wallpaper. Can be a single string or a list of strings. This field is required. |
+| `engine`          | object   | `{}`        | The wallpaper transition engine options. |
 | `gallery`         | object   | `{}`        | The gallery options for the wallpaper widget. |
 | `run_after`       | list     | `[]`        | A list of functions to run after the wallpaper is updated. |
 | `callbacks`         | dict   | `{'on_left': 'toggle_gallery', 'on_middle': 'do_nothing', 'on_right': 'change_wallpaper'}`                  | Dictionary of callbacks to run when the widget is clicked.                 |
@@ -44,6 +45,9 @@ wallpapers:
       - "D:\\Wallpapers\\Nature"
     change_automatically: false # Automatically change wallpaper
     update_interval: 60 # If change_automatically is true, update interval in seconds
+    engine:
+        enabled: true
+        animation: "circle" # circle/slide_top/diamond/split
     gallery:
         enabled: true
         blur: true
@@ -75,6 +79,9 @@ wallpapers:
 - **tooltip:** Whether to show the tooltip on hover.
 - **change_automatically:** Whether to automatically change the wallpaper.
 - **image_path:** The path(s) to the folder(s) containing images for the wallpaper. Can be a single string or a list of strings. This field is required.
+- **engine:** YASB wallpaper transition engine options. Experimental and subject to change. Supported only onWindows 11.
+  - **enabled:** Whether to enable the transition engine animations when changing wallpapers.
+  - **animation:** The animation style used when transitioning between wallpapers. Supported values: `circle`, `slide_top`, `diamond`, `split`. Default is `circle`.
 - **gallery:** The gallery options for the wallpaper widget.
   - **enabled:** Whether to enable the gallery.
   - **blur:** Whether to blur the background when the gallery is open.
