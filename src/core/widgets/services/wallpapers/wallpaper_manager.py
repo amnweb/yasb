@@ -81,9 +81,11 @@ class WallpaperManager(QObject):
             desktop_wallpaper = comtypes.client.CreateObject(desktop_wallpaper_clsid, interface=IDesktopWallpaper)
             abs_path = os.path.abspath(image_path)
             desktop_wallpaper.SetWallpaper(monitor_id, abs_path)
+
         except Exception as e:
             logging.error("Failed to set wallpaper using IDesktopWallpaper: %s", e)
             raise
+        self._run_after_thread(image_path)
 
     def get_monitor_ids(self) -> list[str]:
         """Return COM monitor device paths for all connected monitors."""
@@ -137,9 +139,11 @@ class WallpaperManager(QObject):
             self._last_image = new_wallpaper
         except Exception as e:
             logging.error("Error setting wallpaper %s: %s", new_wallpaper, e)
+        self._run_after_thread(new_wallpaper)
 
+    def _run_after_thread(self, image_path: str):
         if self._run_after:
-            threading.Thread(target=self._run_after_command, args=(new_wallpaper,)).start()
+            threading.Thread(target=self._run_after_command, args=(image_path,)).start()
         else:
             self._is_running = False
 
