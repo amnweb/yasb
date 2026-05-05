@@ -114,6 +114,34 @@ ERROR_PIPE_CONNECTED = 535
 ERROR_BROKEN_PIPE = 109
 ERROR_MORE_DATA = 234
 
+# DisplayConfig constants
+QDC_ONLY_ACTIVE_PATHS = 0x00000002
+DISPLAYCONFIG_DEVICE_INFO_GET_SOURCE_NAME = 1
+DISPLAYCONFIG_DEVICE_INFO_GET_TARGET_NAME = 2
+DISPLAYCONFIG_MODE_INFO_SIZE = 64
+
+DISPLAYCONFIG_OUTPUT_TECHNOLOGY_MAP = {
+    0xFFFFFFFF: "Other",
+    0: "VGA",
+    1: "S-Video",
+    2: "Composite",
+    3: "Component",
+    4: "DVI",
+    5: "HDMI",
+    6: "LVDS",
+    8: "D-JPN",
+    9: "SDI",
+    10: "DisplayPort External",
+    11: "DisplayPort Embedded",
+    12: "UDI External",
+    13: "UDI Embedded",
+    14: "SDTV Dongle",
+    15: "Miracast",
+    16: "Indirect Wired",
+    17: "Indirect Virtual",
+    0x80000000: "Internal",
+}
+
 # Address family constants (from Winsock)
 AF_UNSPEC = 0  # Unspecified
 AF_INET = 2  # IPv4
