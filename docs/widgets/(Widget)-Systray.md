@@ -2,8 +2,8 @@
 | Option                      | Type      | Default       | Description                                                                                                                   |
 | --------------------------- | --------- | ------------- | ----------------------------------------------------------------------------------------------------------------------------- |
 | `class_name`                | string    | `'systray'`   | The class name for the base widget.                                                                                           |
-| `label_collapsed`           | string    | `'▼'`         | Label used for the collapse button when unpinned container is hidden.                                                         |
-| `label_expanded`            | string    | `'▶'`         | Label used for the collapse button when unpinned container is shown.                                                          |
+| `label_collapsed`           | string    | `'\udb81\udfc3'`         | Label used for the collapse button when unpinned container is hidden.                                                         |
+| `label_expanded`            | string    | `'\udb81\udf98'`         | Label used for the collapse button when unpinned container is shown.                                                          |
 | `label_position`            | string    | `'left'`      | The position of the button that collapses unpinned container. Can be "left" or "right".                                       |
 | `icon_size`                 | integer   | `16`          | The size of the icons in the systray. Can be any integer between 8 and 64.                                                    |
 | `pin_click_modifier`        | string    | `'alt'`       | The modifier key used to pin/unpin icons. Can be "ctrl", "alt" or "shift".                                                    |
@@ -39,8 +39,8 @@ systray:
   type: "yasb.systray.SystrayWidget"
   options:
     class_name: "systray"
-    label_collapsed: "▼"
-    label_expanded: "▶"
+    label_collapsed: "\udb81\udfc3"
+    label_expanded: "\udb81\udf98"
     label_position: "left" # Can be "left" or "right"
     icon_size: 16 # Can be any integer between 8 and 64
     pin_click_modifier: "alt" # Can be "ctrl", "alt" or "shift"
@@ -60,8 +60,8 @@ systray:
   type: "yasb.systray.SystrayWidget"
   options:
     class_name: "systray"
-    label_collapsed: "▼"
-    label_expanded: "▶"
+    label_collapsed: "\udb81\udfc3"
+    label_expanded: "\udb81\udf98"
     label_position: "right"
     icon_size: 16
     pin_click_modifier: "alt"
