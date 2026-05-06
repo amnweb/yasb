@@ -2,7 +2,7 @@ import logging
 
 from PyQt6.QtCore import QEvent, QRect, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QScreen
-from PyQt6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QWidget
+from PyQt6.QtWidgets import QBoxLayout, QFrame, QGridLayout, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
 from core.bar_helper import (
     AppBarManager,
@@ -68,11 +68,16 @@ class Bar(QWidget):
         self._auto_width_manager = None
         self._cli_manager = None
         self._target_screen = bar_screen
+        self._fullscreen_app_bar_suspended = False
+        self._is_vertical = self._alignment["position"] in ("left", "right")
 
         self.screen_name = self._target_screen.name()
-        self.app_bar_edge = (
-            app_bar.AppBarEdge.Top if self._alignment["position"] == "top" else app_bar.AppBarEdge.Bottom
-        )
+        self.app_bar_edge = {
+            "top": app_bar.AppBarEdge.Top,
+            "bottom": app_bar.AppBarEdge.Bottom,
+            "left": app_bar.AppBarEdge.Left,
+            "right": app_bar.AppBarEdge.Right,
+        }[self._alignment["position"]]
 
         self.setWindowTitle(APP_BAR_TITLE)
         self.setStyleSheet(stylesheet)
@@ -82,7 +87,19 @@ class Bar(QWidget):
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
 
         self._bar_frame = QFrame(self)
-        self._bar_frame.setProperty("class", f"bar {self.config.class_name}")
+        self._bar_frame.setProperty(
+            "class",
+            " ".join(
+                [
+                    "bar",
+                    self.config.class_name,
+                    "bar-vertical" if self._is_vertical else "bar-horizontal",
+                    f"bar-{self._alignment['position']}",
+                ]
+            ),
+        )
+        self._bar_frame.setProperty("orientation", "vertical" if self._is_vertical else "horizontal")
+        self._bar_frame.setProperty("edge", self._alignment["position"])
 
         if IMPORT_APP_BAR_MANAGER_SUCCESSFUL:
             self.app_bar_manager = app_bar.Win32AppBar()
@@ -165,15 +182,27 @@ class Bar(QWidget):
         if self._is_auto_width and self._auto_width_manager:
             QTimer.singleShot(0, self._auto_width_manager.sync)
 
-    def update_app_bar(self) -> None:
+    def update_app_bar(self, reserve_space_override: bool | None = None) -> None:
         if self.app_bar_manager:
             # Always register AppBar for notifications, but only reserve space when windows_app_bar is true
-            reserve_space = self._window_flags["windows_app_bar"]
+            reserve_space = (
+                self._window_flags["windows_app_bar"] if reserve_space_override is None else reserve_space_override
+            )
             scale_screen_height = self._target_screen.devicePixelRatio() > 1.0
             self.app_bar_manager.create_appbar(
                 self.winId().__int__(),
                 self.app_bar_edge,
-                self._dimensions["height"] + self._padding["top"] + self._padding["bottom"],
+                (
+                    self._resolve_dimension(self._dimensions["width"], self._target_screen.geometry().width())
+                    + self._padding["left"]
+                    + self._padding["right"]
+                )
+                if self._is_vertical
+                else (
+                    self._resolve_dimension(self._dimensions["height"], self._target_screen.geometry().height())
+                    + self._padding["top"]
+                    + self._padding["bottom"]
+                ),
                 self._target_screen,
                 scale_screen_height,
                 self._bar_name,
@@ -189,35 +218,56 @@ class Bar(QWidget):
         screen_x = self._target_screen.geometry().x()
         screen_y = self._target_screen.geometry().y()
 
-        if self._align == "center" or self._alignment.get("center", False):
-            available_x = screen_x + self._padding["left"]
-            available_width = screen_w - self._padding["left"] - self._padding["right"]
-            if bar_w >= available_width:
-                x = available_x
+        if self._is_vertical:
+            if self._alignment["position"] == "right":
+                x = int(screen_x + screen_w - bar_w - self._padding["right"])
             else:
-                x = int(available_x + (available_width - bar_w) / 2)
-        elif self._align == "right":
-            x = int(screen_x + screen_w - bar_w - self._padding["right"])
-            min_x = screen_x + self._padding["left"]
-            if x < min_x:
-                x = min_x
-        else:
-            x = int(screen_x + self._padding["left"])
-            max_x = screen_x + screen_w - bar_w - self._padding["right"]
-            if x > max_x:
-                x = max_x
+                x = int(screen_x + self._padding["left"])
 
-        if self._alignment["position"] == "bottom":
-            y = int(screen_y + screen_h - bar_h - self._padding["bottom"])
+            if self._align == "center" or self._alignment.get("center", False):
+                available_y = screen_y + self._padding["top"]
+                available_height = screen_h - self._padding["top"] - self._padding["bottom"]
+                if bar_h >= available_height:
+                    y = available_y
+                else:
+                    y = int(available_y + (available_height - bar_h) / 2)
+            elif self._align == "right":
+                y = int(screen_y + screen_h - bar_h - self._padding["bottom"])
+                min_y = screen_y + self._padding["top"]
+                if y < min_y:
+                    y = min_y
+            else:
+                y = int(screen_y + self._padding["top"])
+                max_y = screen_y + screen_h - bar_h - self._padding["bottom"]
+                if y > max_y:
+                    y = max_y
         else:
-            y = int(screen_y + self._padding["top"])
+            if self._align == "center" or self._alignment.get("center", False):
+                available_x = screen_x + self._padding["left"]
+                available_width = screen_w - self._padding["left"] - self._padding["right"]
+                if bar_w >= available_width:
+                    x = available_x
+                else:
+                    x = int(available_x + (available_width - bar_w) / 2)
+            elif self._align == "right":
+                x = int(screen_x + screen_w - bar_w - self._padding["right"])
+                min_x = screen_x + self._padding["left"]
+                if x < min_x:
+                    x = min_x
+            else:
+                x = int(screen_x + self._padding["left"])
+                max_x = screen_x + screen_w - bar_w - self._padding["right"]
+                if x > max_x:
+                    x = max_x
+
+            if self._alignment["position"] == "bottom":
+                y = int(screen_y + screen_h - bar_h - self._padding["bottom"])
+            else:
+                y = int(screen_y + self._padding["top"])
 
         return x, y
 
     def position_bar(self, init=False) -> None:
-        bar_width = self._dimensions["width"]
-        bar_height = self._dimensions["height"]
-
         screen_width = self._target_screen.geometry().width()
         screen_height = self._target_screen.geometry().height()
 
@@ -226,29 +276,106 @@ class Bar(QWidget):
                 bar_width = self._auto_width_manager.update() if self._auto_width_manager else 0
             else:
                 bar_width = 0
+        else:
+            bar_width = self._resolve_dimension(self._dimensions["width"], screen_width)
 
-        elif is_valid_percentage_str(str(self._dimensions["width"])):
-            percent = percent_to_float(self._dimensions["width"])
-            bar_width = int(screen_width * percent)
+        bar_height = self._resolve_dimension(self._dimensions["height"], screen_height)
 
-        # Ensure bar width does not exceed screen width
         available_width = screen_width - self._padding["left"] - self._padding["right"]
-        if bar_width > available_width:
-            bar_width = available_width
+        available_height = screen_height - self._padding["top"] - self._padding["bottom"]
+        bar_width = min(bar_width, available_width)
+        bar_height = min(bar_height, available_height)
 
         bar_x, bar_y = self.bar_pos(bar_width, bar_height, screen_width, screen_height)
 
         self.setGeometry(bar_x, bar_y, bar_width, bar_height)
         self._bar_frame.setGeometry(0, 0, bar_width, bar_height)
 
+    def _resolve_dimension(self, value: str | int, available: int) -> int:
+        if isinstance(value, int):
+            return value
+        if value == "auto":
+            return 0
+        if is_valid_percentage_str(str(value)):
+            return int(available * percent_to_float(value))
+        return 0
+
+    def _format_label_text_for_orientation(self, text: str, label: QLabel) -> str:
+        if not self._is_vertical:
+            return text.replace("\n", "")
+
+        class_name = str(label.property("class") or "")
+        if "icon" in class_name:
+            return text
+
+        parts = [part.strip() for part in text.splitlines()]
+        parts = [part for part in parts if part]
+        if not parts:
+            return text
+
+        vertical_parts = []
+        for part in parts:
+            vertical_parts.append("\n".join(ch for ch in part if ch != " "))
+        return "\n\n".join(vertical_parts)
+
+    def _set_box_layout_direction(self, layout: QBoxLayout | None) -> None:
+        if layout is None:
+            return
+
+        direction = QBoxLayout.Direction.TopToBottom if self._is_vertical else QBoxLayout.Direction.LeftToRight
+        if layout.direction() != direction:
+            layout.setDirection(direction)
+
+    def _configure_widget_orientation(self, widget: QWidget) -> None:
+        max_label_width = max(
+            12,
+            self._resolve_dimension(self._dimensions["width"], self._target_screen.geometry().width())
+            - self._padding["left"]
+            - self._padding["right"]
+            - 10,
+        )
+        self._set_box_layout_direction(getattr(widget, "_widget_container_layout", None))
+        self._set_box_layout_direction(getattr(widget, "workspace_container_layout", None))
+
+        for child in widget.findChildren(QWidget):
+            self._set_box_layout_direction(getattr(child, "_widget_container_layout", None))
+            self._set_box_layout_direction(getattr(child, "button_layout", None))
+
+        for label in widget.findChildren(QLabel):
+            class_name = str(label.property("class") or "")
+            if "label" not in class_name or "icon" in class_name:
+                continue
+
+            if not hasattr(label, "_yasb_original_set_text"):
+                label._yasb_original_set_text = label.setText
+
+                def orientation_set_text(text: str, _label=label, _bar=self):
+                    _label._yasb_original_set_text(_bar._format_label_text_for_orientation(text, _label))
+
+                label.setText = orientation_set_text
+
+            label.setWordWrap(self._is_vertical)
+            if self._is_vertical:
+                label.setMaximumWidth(max_label_width)
+                label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            else:
+                label.setMaximumWidth(16777215)
+
+            current_text = label.text()
+            label._yasb_original_set_text(self._format_label_text_for_orientation(current_text, label))
+
     def _add_widgets(self, widgets: dict[str, list] = None):
         bar_layout = QGridLayout()
         bar_layout.setContentsMargins(0, 0, 0, 0)
         bar_layout.setSpacing(0)
+        if self._is_vertical:
+            bar_layout.setRowStretch(1, 1)
+        else:
+            bar_layout.setColumnStretch(1, 1)
 
-        for column_num, layout_type in enumerate(["left", "center", "right"]):
+        for index, layout_type in enumerate(["left", "center", "right"]):
             config = self.config.layouts.model_dump()[layout_type]
-            layout = QHBoxLayout()
+            layout = QVBoxLayout() if self._is_vertical else QHBoxLayout()
             layout.setContentsMargins(0, 0, 0, 0)
             layout.setSpacing(0)
             layout_container = QFrame()
@@ -260,6 +387,7 @@ class Bar(QWidget):
                     widget.parent_layout_type = layout_type
                     widget.bar_id = self.bar_id
                     widget.monitor_hwnd = self.monitor_hwnd
+                    self._configure_widget_orientation(widget)
                     layout.addWidget(widget, 0)
 
             if config["alignment"] == "left" and config["stretch"]:
@@ -273,7 +401,10 @@ class Bar(QWidget):
                 layout.addStretch(1)
 
             layout_container.setLayout(layout)
-            bar_layout.addWidget(layout_container, 0, column_num)
+            if self._is_vertical:
+                bar_layout.addWidget(layout_container, index, 0)
+            else:
+                bar_layout.addWidget(layout_container, 0, index)
 
         self._bar_frame.setLayout(bar_layout)
 

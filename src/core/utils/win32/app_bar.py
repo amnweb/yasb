@@ -93,7 +93,7 @@ class Win32AppBar:
         self,
         hwnd: int,
         edge: AppBarEdge,
-        app_bar_height: int,
+        app_bar_size: int,
         screen: QScreen,
         scale_screen: bool = False,
         bar_name: str = None,
@@ -112,33 +112,48 @@ class Win32AppBar:
             updated_ex_style |= win32con.WS_EX_TOPMOST
         windll.user32.SetWindowLongPtrW(hwnd, win32con.GWL_EXSTYLE, updated_ex_style)
 
-        self.position_bar(app_bar_height, screen, scale_screen, bar_name)
+        self.position_bar(app_bar_size, screen, scale_screen, bar_name)
         # Only reserve screen space if requested windows_app_bar: true
         if reserve_space:
             self.set_position()
 
     def position_bar(
-        self, app_bar_height: int, screen: QScreen, scale_screen: bool = False, bar_name: str = None
+        self, app_bar_size: int, screen: QScreen, scale_screen: bool = False, bar_name: str = None
     ) -> None:
         geometry = screen.geometry()
-        bar_height = int(app_bar_height * screen.devicePixelRatio())
-        screen_height = int(geometry.height() * screen.devicePixelRatio() if scale_screen else geometry.height())
-
-        self.app_bar_data.rc.left = geometry.x()
-        self.app_bar_data.rc.right = geometry.x() + geometry.width()
+        # Keep AppBar reservation in the same logical coordinate space as the Qt bar geometry.
+        # Multiplying the reserved size by devicePixelRatio again on high-DPI displays makes
+        # the workspace gap larger than the visible bar.
+        bar_size = int(app_bar_size)
+        screen_width = geometry.width()
+        screen_height = geometry.height()
 
         if self.app_bar_data.uEdge == AppBarEdge.Top:
-            self.app_bar_data.rc.top = screen.geometry().y()
-            self.app_bar_data.rc.bottom = screen.geometry().y() + bar_height
+            self.app_bar_data.rc.left = geometry.x()
+            self.app_bar_data.rc.right = geometry.x() + geometry.width()
+            self.app_bar_data.rc.top = geometry.y()
+            self.app_bar_data.rc.bottom = geometry.y() + bar_size
+        elif self.app_bar_data.uEdge == AppBarEdge.Bottom:
+            self.app_bar_data.rc.left = geometry.x()
+            self.app_bar_data.rc.right = geometry.x() + geometry.width()
+            self.app_bar_data.rc.top = geometry.y() + screen_height - bar_size
+            self.app_bar_data.rc.bottom = geometry.y() + screen_height
+        elif self.app_bar_data.uEdge == AppBarEdge.Left:
+            self.app_bar_data.rc.left = geometry.x()
+            self.app_bar_data.rc.right = geometry.x() + bar_size
+            self.app_bar_data.rc.top = geometry.y()
+            self.app_bar_data.rc.bottom = geometry.y() + geometry.height()
         else:
-            self.app_bar_data.rc.top = screen.geometry().y() + screen_height - bar_height
-            self.app_bar_data.rc.bottom = screen.geometry().y() + screen_height
+            self.app_bar_data.rc.left = geometry.x() + screen_width - bar_size
+            self.app_bar_data.rc.right = geometry.x() + screen_width
+            self.app_bar_data.rc.top = geometry.y()
+            self.app_bar_data.rc.bottom = geometry.y() + geometry.height()
         bar_info = f"Bar {bar_name}" if bar_name else "Bar"
         logging.debug(
-            "%s Created on Screen: %s [Bar Height: %spx, DPI Scale: %s]",
+            "%s Created on Screen: %s [Bar Size: %spx, DPI Scale: %s]",
             bar_info,
             screen.name(),
-            app_bar_height,
+            app_bar_size,
             screen.devicePixelRatio(),
         )
 
