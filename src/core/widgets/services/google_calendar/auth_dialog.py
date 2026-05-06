@@ -10,11 +10,14 @@ import os
 import subprocess
 import threading
 
-from PyQt6.QtCore import Qt, QTimer, pyqtSignal
+from PyQt6.QtCore import Qt, QTimer, QUrl, pyqtSignal
+from PyQt6.QtGui import QDesktopServices
 from PyQt6.QtWidgets import (
+    QApplication,
     QDialog,
     QFrame,
     QHBoxLayout,
+    QLineEdit,
     QVBoxLayout,
 )
 
@@ -30,6 +33,7 @@ class GoogleCalendarAuthDialog(ViewBase, QDialog):
     auth_completed = pyqtSignal()
     _auth_success = pyqtSignal()
     _auth_error = pyqtSignal(str)
+    _auth_url = pyqtSignal(str)
 
     # state ∈ {"missing", "ready", "running", "done"}
     def __init__(self, parent=None):
@@ -37,12 +41,14 @@ class GoogleCalendarAuthDialog(ViewBase, QDialog):
         self._stop = False
         self._state = "missing"
         self._flow_thread: threading.Thread | None = None
+        self._auth_url_value = ""
 
         self._build_window()
         self._build_ui()
 
         self._auth_success.connect(self._finish_success)
         self._auth_error.connect(self._finish_error)
+        self._auth_url.connect(self._show_url)
 
         QTimer.singleShot(0, self._render_initial_state)
 
@@ -53,7 +59,7 @@ class GoogleCalendarAuthDialog(ViewBase, QDialog):
         self.setWindowFlag(Qt.WindowType.Window, True)
         self.setWindowFlag(Qt.WindowType.CustomizeWindowHint, True)
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
-        self.setFixedSize(440, 240)
+        self.setFixedSize(480, 280)
         self.build_view()
         self.build_app_icon()
 
@@ -68,6 +74,24 @@ class GoogleCalendarAuthDialog(ViewBase, QDialog):
         self._instructions = TextBlock("", variant="caption", parent=self)
         self._instructions.setWordWrap(True)
         layout.addWidget(self._instructions)
+
+        url_row = QHBoxLayout()
+        url_row.setContentsMargins(0, 6, 0, 0)
+        url_row.setSpacing(6)
+        self._url_field = QLineEdit(self)
+        self._url_field.setReadOnly(True)
+        self._url_field.setPlaceholderText("Authorization URL will appear here…")
+        self._url_field.hide()
+        url_row.addWidget(self._url_field, 1)
+        self._copy_btn = Button("Copy", font_size=12, font_weight="demibold", parent=self)
+        self._copy_btn.clicked.connect(self._copy_url)
+        self._copy_btn.hide()
+        url_row.addWidget(self._copy_btn)
+        self._open_url_btn = Button("Open", font_size=12, font_weight="demibold", parent=self)
+        self._open_url_btn.clicked.connect(self._open_url)
+        self._open_url_btn.hide()
+        url_row.addWidget(self._open_url_btn)
+        layout.addLayout(url_row)
 
         spinner_row = QHBoxLayout()
         spinner_row.setContentsMargins(0, 4, 0, 0)
@@ -123,18 +147,24 @@ class GoogleCalendarAuthDialog(ViewBase, QDialog):
     def _render_ready(self) -> None:
         self._state = "ready"
         self._instructions.setText(
-            "Your browser will open. Sign in to your Google account and authorise YASB. "
-            "This window will close automatically when complete."
+            "Click Sign In to generate an authorisation URL. You can copy it into "
+            "an incognito window if your default browser session is blocking sign-in."
         )
         self._spinner.hide()
+        self._url_field.hide()
+        self._copy_btn.hide()
+        self._open_url_btn.hide()
         self._primary_btn.setText("Sign In")
         self._primary_btn.setEnabled(True)
         self._secondary_btn.hide()
 
     def _render_running(self) -> None:
         self._state = "running"
-        self._instructions.setText("Waiting for sign-in in your browser…")
+        self._instructions.setText("Generating authorisation URL…")
         self._spinner.show()
+        self._url_field.hide()
+        self._copy_btn.hide()
+        self._open_url_btn.hide()
         self._primary_btn.setEnabled(False)
         self._secondary_btn.hide()
 
@@ -156,7 +186,7 @@ class GoogleCalendarAuthDialog(ViewBase, QDialog):
 
         def _run() -> None:
             try:
-                gcal_auth.run_install_flow()
+                gcal_auth.run_install_flow(on_url=self._auth_url.emit)
                 if not self._stop:
                     self._auth_success.emit()
             except Exception as exc:
@@ -165,6 +195,31 @@ class GoogleCalendarAuthDialog(ViewBase, QDialog):
 
         self._flow_thread = threading.Thread(target=_run, daemon=True)
         self._flow_thread.start()
+
+    def _show_url(self, url: str) -> None:
+        self._auth_url_value = url
+        self._instructions.setText(
+            "Open this URL to sign in. Use an incognito window if your default "
+            "browser session is causing problems. This dialog will close once "
+            "sign-in completes."
+        )
+        self._url_field.setText(url)
+        self._url_field.setCursorPosition(0)
+        self._url_field.show()
+        self._copy_btn.show()
+        self._open_url_btn.show()
+
+    def _copy_url(self) -> None:
+        if not self._auth_url_value:
+            return
+        QApplication.clipboard().setText(self._auth_url_value)
+        self._copy_btn.setText("Copied")
+        QTimer.singleShot(1500, lambda: self._copy_btn.setText("Copy"))
+
+    def _open_url(self) -> None:
+        if not self._auth_url_value:
+            return
+        QDesktopServices.openUrl(QUrl(self._auth_url_value))
 
     def _finish_success(self) -> None:
         self._state = "done"
@@ -180,6 +235,9 @@ class GoogleCalendarAuthDialog(ViewBase, QDialog):
         self._title_label.hide()
         self._instructions.setText(message)
         self._spinner.hide()
+        self._url_field.hide()
+        self._copy_btn.hide()
+        self._open_url_btn.hide()
         self._primary_btn.hide()
         self._secondary_btn.hide()
         self._cancel_btn.setText("Close")

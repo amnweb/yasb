@@ -14,6 +14,8 @@ from typing import TYPE_CHECKING
 from core.utils.system import app_data_path
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from google.oauth2.credentials import Credentials
 
 SCOPES = ["https://www.googleapis.com/auth/calendar.readonly"]
@@ -73,13 +75,17 @@ def save_creds(creds: Credentials) -> None:
         logging.error("GoogleCalendarAuth: failed to save token: %s", e)
 
 
-def run_install_flow() -> Credentials:
+def run_install_flow(on_url: Callable[[str], None] | None = None) -> Credentials:
     """Run Google's installed-app OAuth flow.
 
-    Opens the user's browser to Google's consent page and listens on a random
-    localhost port for the redirect. Blocks the calling thread until the user
-    completes (or cancels) sign-in. Saves the resulting token.
+    Listens on a random localhost port for the redirect and blocks until the
+    user completes (or cancels) sign-in. When ``on_url`` is provided, the auth
+    URL is forwarded to it and the default browser is NOT opened automatically
+    — the caller is responsible for surfacing the URL to the user. Otherwise
+    the default browser is opened to Google's consent page as before.
     """
+    import webbrowser
+
     from google_auth_oauthlib.flow import InstalledAppFlow
 
     creds_file = credentials_path()
@@ -87,6 +93,25 @@ def run_install_flow() -> Credentials:
         raise FileNotFoundError(f"OAuth client secrets missing at {creds_file}")
 
     flow = InstalledAppFlow.from_client_secrets_file(str(creds_file), SCOPES)
-    creds = flow.run_local_server(port=0, open_browser=True)
+
+    if on_url is None:
+        creds = flow.run_local_server(port=0, open_browser=True)
+    else:
+        # google_auth_oauthlib computes the auth URL inside run_local_server
+        # (it depends on the random port) and reaches a browser via
+        # webbrowser.get(name).open(url). Intercept webbrowser.get so we can
+        # capture the URL and skip the auto-open.
+        class _CaptureBrowser:
+            def open(self, url: str, *_args, **_kwargs) -> bool:
+                on_url(url)
+                return True
+
+        original_get = webbrowser.get
+        webbrowser.get = lambda *_a, **_kw: _CaptureBrowser()
+        try:
+            creds = flow.run_local_server(port=0, open_browser=True, authorization_prompt_message="")
+        finally:
+            webbrowser.get = original_get
+
     save_creds(creds)
     return creds
