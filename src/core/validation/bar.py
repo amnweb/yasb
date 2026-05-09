@@ -6,7 +6,7 @@ from core.validation.widgets.base_model import CustomBaseModel
 
 
 class BarAlignment(CustomBaseModel):
-    position: Literal["top", "bottom"] = "top"
+    position: Literal["top", "bottom", "left", "right"] = "top"
     align: Literal["left", "center", "right"] = "center"
 
 
@@ -34,20 +34,29 @@ class BarWindowFlags(CustomBaseModel):
 
 class BarDimensions(CustomBaseModel):
     width: str | int = "100%"
-    height: int = Field(default=30, ge=0)
+    height: str | int = Field(default=30)
 
     @field_validator("width")
     @classmethod
     def validate_width(cls, v: str | int) -> str | int:
+        return cls._validate_dimension(v, "Width")
+
+    @field_validator("height")
+    @classmethod
+    def validate_height(cls, v: str | int) -> str | int:
+        return cls._validate_dimension(v, "Height")
+
+    @staticmethod
+    def _validate_dimension(v: str | int, label: str) -> str | int:
         if isinstance(v, int):
             if v < 0:
-                raise ValueError("Width must be non-negative")
+                raise ValueError(f"{label} must be non-negative")
             return v
         if v == "auto":
             return v
         if v.endswith("%") and v[:-1].isdigit():
             return v
-        raise ValueError("Width must be an integer, 'auto', or a percentage string (e.g. '100%')")
+        raise ValueError(f"{label} must be an integer, 'auto', or a percentage string (e.g. '100%')")
 
 
 class BarPadding(CustomBaseModel):

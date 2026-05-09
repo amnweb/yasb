@@ -20,6 +20,7 @@ class Window:
     process_name: str
     display_state: str
     is_floating: bool
+    has_focus: bool = False
 
 
 @dataclass
@@ -30,6 +31,7 @@ class Workspace:
     is_displayed: bool = False
     num_windows: int = 0
     windows: list[Window] = field(default_factory=list)
+    child_focus_order: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -89,6 +91,11 @@ class GlazewmClient(QObject):
 
     def activate_workspace(self, workspace_name: str):
         self._websocket.sendTextMessage(f"command focus --workspace {workspace_name}")
+
+    def update_workspace_name(self, workspace_name: str, new_name: str):
+        self._websocket.sendTextMessage(
+            f"command update-workspace-config --workspace {workspace_name} --name {new_name}"
+        )
 
     def toggle_tiling_direction(self):
         self._websocket.sendTextMessage("command toggle-tiling-direction")
@@ -185,6 +192,7 @@ class GlazewmClient(QObject):
                     focus=child.get("hasFocus", False),
                     num_windows=len(child.get("children", [])),
                     windows=self._read_windows(child),
+                    child_focus_order=child.get("childFocusOrder", []) or [],
                 )
                 for child in mon.get("children", [])
                 if child.get("type") == "workspace"
@@ -220,6 +228,7 @@ class GlazewmClient(QObject):
                         process_name=child.get("processName"),
                         display_state=child.get("displayState"),
                         is_floating=child.get("state").get("type") == "floating",
+                        has_focus=child.get("hasFocus", False),
                     )
                 )
             elif child.get("type") == "split":

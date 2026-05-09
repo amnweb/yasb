@@ -17,6 +17,102 @@ from core.widgets.services.glazewm.client import GlazewmClient, Monitor, Window,
 
 logger = logging.getLogger("glazewm_workspaces")
 
+WORKSPACE_CATEGORY_DEFAULTS = {
+    "1": "WEB",
+    "2": "CHAT",
+    "3": "CODE",
+    "4": "DOCS",
+    "5": "NOTE",
+    "6": "TERM",
+    "7": "EMU",
+    "8": "MISC",
+    "9": "MISC",
+}
+
+
+def _default_workspace_label(workspace_name: str) -> str:
+    return WORKSPACE_CATEGORY_DEFAULTS.get(workspace_name, "MISC")
+
+
+def _pick_relevant_workspace_window(workspace: Workspace) -> Window | None:
+    windows = list(workspace.windows or [])
+    if not windows:
+        return None
+
+    focused_window = next((window for window in windows if window.has_focus), None)
+    if focused_window is not None:
+        return focused_window
+
+    for window_id in workspace.child_focus_order:
+        match = next((window for window in windows if window.id == window_id), None)
+        if match is not None:
+            return match
+
+    return windows[0]
+
+
+def _score_workspace_window(window: Window) -> dict[str, int]:
+    proc = (window.process_name or "").lower()
+    cls = (window.class_name or "").lower()
+    title = window.title or ""
+    text = f"{proc} {cls} {title}".lower()
+    scores = {
+        "WEB": 0,
+        "CHAT": 0,
+        "CODE": 0,
+        "DOCS": 0,
+        "NOTE": 0,
+        "TERM": 0,
+        "FILE": 0,
+        "EMU": 0,
+        "MISC": 1,
+    }
+
+    if proc in {"weixin", "wechatappex", "telegram", "discord"} or "微信" in text:
+        scores["CHAT"] += 100
+
+    if proc in {"typedown", "notepad", "notepad++", "obsidian"}:
+        scores["NOTE"] += 95
+
+    if proc in {"windowsterminal", "openconsole", "cmd", "pwsh"} or cls == "cascadia_hosting_window_class":
+        scores["TERM"] += 70
+
+    if proc in {"code", "codium", "devenv", "idea64", "pycharm64", "rider64", "figma", "blender"}:
+        scores["CODE"] += 100
+
+    if proc in {"python", "node", "codex", "codex-command-runner", "figma_agent", "blender-mcp"}:
+        scores["CODE"] += 75
+
+    if proc in {"explorer", "dopus", "dopusrt", "everything", "photos"} or cls in {"cabinetwclass", "dopus.lister"}:
+        scores["FILE"] += 100
+
+    if proc in {"brave", "chrome", "msedge", "firefox"}:
+        scores["WEB"] += 70
+
+    if re.search(r"mumu|emulator|vmware|virtualbox|wegame|leagueclient", proc) or re.search(
+        r"emulator|模拟器|league of legends",
+        text,
+    ):
+        scores["EMU"] += 100
+
+    if re.search(r"知网|paper|论文|pdf|arxiv|scholar|docs|document|文档|阅读|read", text):
+        scores["DOCS"] += 95
+
+    if re.search(r"github|gitlab|stack overflow|stackoverflow|terminal|powershell|codex|repo|代码|code", text):
+        scores["CODE"] += 80
+
+    if re.search(r"youtube music|spotify|music", text):
+        scores["WEB"] += 15
+
+    if proc in {"windowsterminal", "openconsole"} and re.search(r"nvim|vim|cursor|claude|project|yasb", text):
+        scores["CODE"] += 65
+
+    return scores
+
+
+def _resolve_workspace_label(workspace: Workspace) -> str:
+    return workspace.display_name or workspace.name
+
 
 class WorkspaceStatus(StrEnum):
     EMPTY = auto()
@@ -150,6 +246,7 @@ class GlazewmWorkspaceButtonWithIcons(QFrame):
         self.status = WorkspaceStatus.EMPTY
         self.workspace_window_count = 0
         self.windows = windows
+        self.child_focus_order: list[str] = []
 
         self.setSizePolicy(QSizePolicy.Policy.Fixed, self.sizePolicy().verticalPolicy())
 
@@ -244,10 +341,18 @@ class GlazewmWorkspaceButtonWithIcons(QFrame):
             self.status = WorkspaceStatus.POPULATED if is_populated else WorkspaceStatus.EMPTY
 
     def _get_all_windows_in_workspace(self) -> list[Window]:
-        windows = self.windows or []
+        windows = list(self.windows or [])
 
         if self.config.app_icons.hide_floating:
-            return [window for window in windows if not window.is_floating]
+            windows = [window for window in windows if not window.is_floating]
+
+        focus_order = {window_id: index for index, window_id in enumerate(self.child_focus_order)}
+        windows.sort(
+            key=lambda window: (
+                0 if window.has_focus else 1,
+                focus_order.get(window.id, len(focus_order)),
+            )
+        )
         return windows
 
     def _get_all_icons_in_workspace(self) -> dict[int, QPixmap | None]:
@@ -379,6 +484,7 @@ class GlazewmWorkspacesWidget(BaseWidget):
             or self.config.app_icons.enabled_active
             or self.config.app_icons.enabled_focused
         )
+        self._is_normalizing_workspaces = False
 
     @override
     def showEvent(self, a0: QShowEvent | None):
@@ -406,12 +512,16 @@ class GlazewmWorkspacesWidget(BaseWidget):
                 if workspace.focus:
                     global_focused_ws = workspace.name
 
+        if self._normalize_workspace_names(list(all_workspaces.values())):
+            return
+
         if self.config.monitor_exclusive:
             workspace_source = {workspace.name: workspace for workspace in current_mon.workspaces}
         else:
             workspace_source = {workspace.name: workspace for workspace in all_workspaces.values()}
 
         for workspace in workspace_source.values():
+            resolved_display_name = _resolve_workspace_label(workspace)
             if (btn := self.workspaces.get(workspace.name)) is None:
                 if self.workspace_app_icons_enabled:
                     btn = self.workspaces[workspace.name] = GlazewmWorkspaceButtonWithIcons(
@@ -419,7 +529,7 @@ class GlazewmWorkspacesWidget(BaseWidget):
                         self.glazewm_client,
                         parent_widget=self,
                         config=self.config,
-                        display_name=workspace.display_name,
+                        display_name=resolved_display_name,
                         windows=workspace.windows,
                     )
                 else:
@@ -427,17 +537,18 @@ class GlazewmWorkspacesWidget(BaseWidget):
                         workspace.name,
                         self.glazewm_client,
                         config=self.config,
-                        display_name=workspace.display_name,
+                        display_name=resolved_display_name,
                     )
 
             btn.monitor_exclusive = self.config.monitor_exclusive
             btn.workspace_name = workspace.name
-            btn.display_name = workspace.display_name
+            btn.display_name = resolved_display_name
             btn.workspace_window_count = workspace.num_windows
             btn.is_displayed = workspace.is_displayed
             btn.is_focused = btn.workspace_name == global_focused_ws if global_focused_ws else workspace.focus
             if self.workspace_app_icons_enabled:
                 btn.windows = workspace.windows
+                btn.child_focus_order = workspace.child_focus_order
 
         for i, ws_name in enumerate(sorted(self.workspaces.keys(), key=natural_sort_key)):
             if self.workspace_container_layout.indexOf(self.workspaces[ws_name]) != i:
@@ -451,34 +562,43 @@ class GlazewmWorkspacesWidget(BaseWidget):
 
             if is_current_ipc_workspace:
                 workspace = workspace_source[btn.workspace_name]
-                btn.display_name = workspace.display_name
+                btn.display_name = _resolve_workspace_label(workspace)
                 btn.workspace_window_count = workspace.num_windows
                 btn.is_displayed = workspace.is_displayed
                 btn.is_focused = btn.workspace_name == global_focused_ws if global_focused_ws else workspace.focus
                 if self.workspace_app_icons_enabled:
                     btn.windows = workspace.windows
+                    btn.child_focus_order = workspace.child_focus_order
             else:
                 workspace = all_workspaces.get(btn.workspace_name)
+                if workspace is not None:
+                    btn.display_name = _resolve_workspace_label(workspace)
                 btn.is_displayed = False
                 btn.workspace_window_count = 0
                 btn.is_focused = False
                 if self.workspace_app_icons_enabled:
                     btn.windows = []
+                    btn.child_focus_order = []
 
             is_focused = btn.is_focused
+            btn.update_button()
+            hide_empty = self.config.hide_empty_workspaces and btn.status == WorkspaceStatus.EMPTY
 
             if not self.config.monitor_exclusive:
-                if is_current_ipc_workspace or is_focused:
+                if (is_current_ipc_workspace or is_focused) and not hide_empty:
                     btn.setHidden(False)
                 else:
                     btn.setHidden(True)
             else:
-                if is_current_ipc_workspace:
+                if is_current_ipc_workspace and not hide_empty:
                     btn.setHidden(False)
                 else:
                     btn.setHidden(True)
 
-            btn.update_button()
+    def _normalize_workspace_names(self, workspaces: list[Workspace]) -> bool:
+        # Keep naming authoritative in GlazeWM config / external labeler.
+        # A second rename loop inside YASB can fight with pause/resume and game window transitions.
+        return False
 
     def _get_active_workspace(
         self,
