@@ -1539,7 +1539,9 @@
             "alignment": "right",
             "direction": "down",
             "offset_top": 6,
-            "offset_left": 0
+            "offset_left": 0,
+            "contrast_icon": "\ue7a1",
+            "brightness_icon": "\ue706"
           }
         },
         "auto_light": {
@@ -1664,6 +1666,16 @@
           "default": 0,
           "title": "Offset Left",
           "type": "integer"
+        },
+        "contrast_icon": {
+          "default": "\ue7a1",
+          "title": "Contrast Icon",
+          "type": "string"
+        },
+        "brightness_icon": {
+          "default": "\ue706",
+          "title": "Brightness Icon",
+          "type": "string"
         }
       },
       "title": "BrightnessMenuConfig",
@@ -3520,6 +3532,29 @@
         }
       },
       "title": "EmojiProviderConfig",
+      "type": "object"
+    },
+    "EngineConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "default": true,
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "animation": {
+          "default": "circle",
+          "enum": [
+            "circle",
+            "slide_top",
+            "diamond",
+            "split"
+          ],
+          "title": "Animation",
+          "type": "string"
+        }
+      },
+      "title": "EngineConfig",
       "type": "object"
     },
     "ExecOptionsConfig": {
@@ -11103,6 +11138,13 @@
           },
           "title": "Run After",
           "type": "array"
+        },
+        "engine": {
+          "$ref": "#/$defs/EngineConfig",
+          "default": {
+            "enabled": true,
+            "animation": "circle"
+          }
         },
         "gallery": {
           "$ref": "#/$defs/GalleryConfig",
