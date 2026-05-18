@@ -2,7 +2,7 @@ import os
 import sys
 
 # Application Metadata
-BUILD_VERSION = "2.0.0"
+BUILD_VERSION = "2.0.1"
 CLI_VERSION = "1.1.7"
 RELEASE_CHANNEL = "stable"
 # Application Settings
