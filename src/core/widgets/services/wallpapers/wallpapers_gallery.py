@@ -30,7 +30,6 @@ from PyQt6.QtWidgets import (
 )
 
 from core.bar_helper import ThemeState
-from core.utils.system import is_windows_10
 from core.utils.utilities import refresh_widget_style
 from core.utils.win32.backdrop import enable_blur
 from core.utils.win32.utils import apply_qmenu_style
@@ -691,7 +690,7 @@ class ImageGallery(QMainWindow):
         """Apply wallpaper with engine animation (all screens) or direct per-monitor."""
         if monitor_id is None:
             animation = self.engine.animation if self.engine else "circle"
-            if self.engine and self.engine.enabled and not is_windows_10():
+            if self.engine and self.engine.enabled:
                 self.fade_out_and_close_gallery()
                 self._engine = WallpaperEngine(image_path, animation)
                 self._engine.destroyed.connect(lambda: setattr(self, "_engine", None))

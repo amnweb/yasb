@@ -11,7 +11,16 @@ from ctypes import wintypes
 from PyQt6.QtCore import QEasingCurve, QPointF, QRectF, Qt, QThread, QTimeLine, QTimer, pyqtSignal
 from PyQt6.QtGui import QColor, QImage, QPainter, QPainterPath, QPixmap, QPolygonF
 from PyQt6.QtWidgets import QApplication, QWidget
-from win32con import GWL_STYLE, SWP_FRAMECHANGED, SWP_NOACTIVATE, WM_DESTROY, WS_CHILD, WS_POPUP
+from win32con import (
+    GWL_EXSTYLE,
+    GWL_STYLE,
+    SWP_FRAMECHANGED,
+    SWP_NOACTIVATE,
+    WM_DESTROY,
+    WS_CHILD,
+    WS_EX_LAYERED,
+    WS_POPUP,
+)
 
 from core.widgets.services.wallpapers.wallpaper_manager import WallpaperManager
 
@@ -187,7 +196,12 @@ def _attach_to_workerw(widget: QWidget) -> None:
     """Parent *widget* to WorkerW and compute per-monitor screen areas."""
     worker = _locate_workerw()
     hwnd = HWND(int(widget.winId()))
+
+    exstyle = GetWindowLongPtr(hwnd, GWL_EXSTYLE)
+
+    SetWindowLongPtr(hwnd, GWL_EXSTYLE, LONG_PTR(exstyle & ~WS_EX_LAYERED))
     user32.SetParent(hwnd, worker)
+    SetWindowLongPtr(hwnd, GWL_EXSTYLE, LONG_PTR(exstyle))
 
     style = GetWindowLongPtr(hwnd, GWL_STYLE)
     SetWindowLongPtr(hwnd, GWL_STYLE, LONG_PTR((style | WS_CHILD) & ~WS_POPUP))
