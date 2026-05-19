@@ -215,10 +215,19 @@ def _attach_to_workerw(widget: QWidget) -> bool:
     wr = wintypes.RECT()
     user32.GetWindowRect(worker, ctypes.byref(wr))
     ww, wh = wr.right - wr.left, wr.bottom - wr.top
+    dpr = widget.devicePixelRatioF() or 1.0
 
     areas = []
     for ml, mt, mr, mb in _enum_physical_monitors():
-        areas.append((ml - wr.left, mt - wr.top, mr - ml, mb - mt, 1.0))
+        areas.append(
+            (
+                int(round((ml - wr.left) / dpr)),
+                int(round((mt - wr.top) / dpr)),
+                int(round((mr - ml) / dpr)),
+                int(round((mb - mt) / dpr)),
+                dpr,
+            )
+        )
     widget.set_screen_areas(areas)
 
     user32.SetWindowPos(hwnd, HWND_TOP, 0, 0, ww, wh, SWP_NOACTIVATE | SWP_FRAMECHANGED)
@@ -354,7 +363,7 @@ class WallpaperEngine(QWidget):
             vw,
             vh,
             Qt.AspectRatioMode.KeepAspectRatioByExpanding,
-            Qt.TransformationMode.FastTransformation,
+            Qt.TransformationMode.SmoothTransformation,
         )
         ox = int((vw - scaled.width()) / 2)
         oy = int((vh - scaled.height()) / 2)
@@ -385,7 +394,7 @@ class WallpaperEngine(QWidget):
                 vw,
                 max_mon_dim,
                 Qt.AspectRatioMode.KeepAspectRatioByExpanding,
-                Qt.TransformationMode.FastTransformation,
+                Qt.TransformationMode.SmoothTransformation,
             )
         else:
             tile_src = px
@@ -414,7 +423,7 @@ class WallpaperEngine(QWidget):
                 max(1, int(iw * scale)),
                 max(1, int(ih * scale)),
                 Qt.AspectRatioMode.IgnoreAspectRatio,
-                Qt.TransformationMode.FastTransformation,
+                Qt.TransformationMode.SmoothTransformation,
             )
         result = []
         for _, _, dw, dh, _ in areas:
@@ -440,7 +449,7 @@ class WallpaperEngine(QWidget):
                     vw,
                     vh,
                     Qt.AspectRatioMode.KeepAspectRatioByExpanding,
-                    Qt.TransformationMode.FastTransformation,
+                    Qt.TransformationMode.SmoothTransformation,
                 )
                 ox = int((vw - scaled.width()) / 2)
                 oy = int((vh - scaled.height()) / 2)
@@ -462,7 +471,7 @@ class WallpaperEngine(QWidget):
                     vw,
                     vh,
                     Qt.AspectRatioMode.KeepAspectRatio,
-                    Qt.TransformationMode.FastTransformation,
+                    Qt.TransformationMode.SmoothTransformation,
                 )
                 ox = int((vw - scaled.width()) / 2)
                 oy = int((vh - scaled.height()) / 2)
@@ -474,12 +483,12 @@ class WallpaperEngine(QWidget):
         mode = self.fit_mode
         if mode == "fill":
             scaled = px.scaled(
-                sw, sh, Qt.AspectRatioMode.KeepAspectRatioByExpanding, Qt.TransformationMode.FastTransformation
+                sw, sh, Qt.AspectRatioMode.KeepAspectRatioByExpanding, Qt.TransformationMode.SmoothTransformation
             )
         elif mode == "fit":
-            scaled = px.scaled(sw, sh, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.FastTransformation)
+            scaled = px.scaled(sw, sh, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
         elif mode == "stretch":
-            scaled = px.scaled(sw, sh, Qt.AspectRatioMode.IgnoreAspectRatio, Qt.TransformationMode.FastTransformation)
+            scaled = px.scaled(sw, sh, Qt.AspectRatioMode.IgnoreAspectRatio, Qt.TransformationMode.SmoothTransformation)
         else:
             scaled = px
         ox = int((sw - scaled.width()) / 2)
