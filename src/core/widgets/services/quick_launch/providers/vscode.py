@@ -102,14 +102,17 @@ class VSCodeProvider(BaseProvider):
 
     def __init__(self, config: dict | None = None):
         super().__init__(config)
-        self._db_path = get_state_db_path()
+        state_storage_path = self.config.get("state_storage_path", "")
+        if not state_storage_path:
+            state_storage_path = get_state_db_path()
+        self._state_file_path = state_storage_path
 
     def _get_recents(self) -> list[dict]:
-        if not os.path.exists(self._db_path):
+        if not os.path.exists(self._state_file_path):
             return []
 
         try:
-            uri = f"file:{self._db_path}?mode=ro"
+            uri = f"file:{self._state_file_path}?mode=ro"
             conn = sqlite3.connect(uri, uri=True)
             cursor = conn.cursor()
             cursor.execute("SELECT value FROM ItemTable WHERE key = 'history.recentlyOpenedPathsList'")

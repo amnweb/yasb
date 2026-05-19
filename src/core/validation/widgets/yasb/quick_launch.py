@@ -179,6 +179,7 @@ class VSCodeProviderConfig(CustomBaseModel):
     enabled: bool = False
     prefix: str = "vsc"
     priority: int = 0
+    state_storage_path: str = ""
 
 
 class WindowSwitcherProviderConfig(CustomBaseModel):

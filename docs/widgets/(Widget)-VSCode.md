@@ -57,7 +57,7 @@ vscode:
 - **max_number_of_folders:** The maximum number of folders to display in the menu.
 - **max_number_of_files:** The maximum number of files to display in the menu (set to 0 if you only want folders).
 - **max_field_size:** The maximum number of characters in the title before truncation.
-- **state_storage_path:** Absolute path to the folder containing editor data. For example, `C:\Users\user\AppData\Roaming\Code\User\globalStorage\state.vscdb` for Visual Studio Code, `C:\Users\user\AppData\Roaming\Windsurf\User\globalStorage\state.vscdb` for Windsurf, etc. If left empty, it will use the default VSCode path.
+- **state_storage_path:** Absolute path to the folder containing editor data. For example, `C:\Users\user\.vscode-shared\sharedStorage\state.vscdb` for Visual Studio Code, `C:\Users\user\AppData\Roaming\Windsurf\User\globalStorage\state.vscdb` for Windsurf, etc. If left empty, it will use the default VSCode path.
 - **modified_date_format:** The date format for the modified date of the files and folders. It uses Python's `strftime` format. For example, '%Y-%m-%d %H:%M' for `2025-06-01 12:00`.
 - **cli_command:** The cli command to execute when a workspace is clicked, doesn't need to contain folder name. For example, `code`, `windsurf`.
 - **callbacks:** A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions.
