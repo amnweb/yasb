@@ -3,6 +3,7 @@ YASB Wallpaper engine.
 """
 
 import ctypes
+import logging
 import math
 import os
 import winreg
@@ -22,8 +23,7 @@ from win32con import (
     WS_POPUP,
 )
 
-from core.widgets.services.wallpapers.wallpaper_manager import WallpaperManager
-
+logger = logging.getLogger("wallpaper_engine")
 user32 = ctypes.WinDLL("user32", use_last_error=True)
 
 HWND = wintypes.HWND
@@ -153,6 +153,9 @@ def _read_background_color() -> QColor:
 def _locate_workerw() -> int:
     """Find the WorkerW window that sits behind desktop icons."""
     progman = user32.FindWindowW("Progman", None)
+    if not progman:
+        logger.warning("Could not locate Progman. Wallpaper animation skipped.")
+        return 0
     user32.SendMessageTimeoutW(progman, WM_SPAWN_WORKER, 0, 0, 0, 1000, ctypes.byref(ULONG_PTR()))
     worker = HWND()
 
@@ -187,14 +190,17 @@ def _locate_workerw() -> int:
         user32.EnumWindows(_enum_proc, 0)
 
     if not worker:
-        raise RuntimeError("Could not locate WorkerW")
+        logger.warning("Could not locate WorkerW. Wallpaper animation skipped.")
+        return 0
     user32.ShowWindow(worker, 5)
     return worker
 
 
-def _attach_to_workerw(widget: QWidget) -> None:
+def _attach_to_workerw(widget: QWidget) -> bool:
     """Parent *widget* to WorkerW and compute per-monitor screen areas."""
     worker = _locate_workerw()
+    if not worker:
+        return False
     hwnd = HWND(int(widget.winId()))
 
     exstyle = GetWindowLongPtr(hwnd, GWL_EXSTYLE)
@@ -216,6 +222,7 @@ def _attach_to_workerw(widget: QWidget) -> None:
     widget.set_screen_areas(areas)
 
     user32.SetWindowPos(hwnd, HWND_TOP, 0, 0, ww, wh, SWP_NOACTIVATE | SWP_FRAMECHANGED)
+    return True
 
 
 class _ImageLoader(QThread):
@@ -237,6 +244,8 @@ class _ImageLoader(QThread):
 class WallpaperEngine(QWidget):
     _ANIMATION_MS = 1200
     _FRAME_MS = 16
+
+    finished = pyqtSignal()
 
     def __init__(self, image_path: str, animation: str = "circle") -> None:
         super().__init__()
@@ -277,17 +286,18 @@ class WallpaperEngine(QWidget):
         self._pixmap_new = QPixmap.fromImage(new_img)
         self._pixmap_old = QPixmap.fromImage(old_img)
 
-        # If either image fails to load, skip animation and set wallpaper immediately
+        # If either image fails to load, skip animation and let caller commit immediately
         if self._pixmap_new.isNull() or self._pixmap_old.isNull():
-            try:
-                WallpaperManager().set_wallpaper(self._image_path)
-            except Exception:
-                pass
+            self.finished.emit()
             self.deleteLater()
             return
 
         self.setWindowOpacity(0.0)
-        _attach_to_workerw(self)
+        if not _attach_to_workerw(self):
+            self.finished.emit()
+            self.deleteLater()
+            return
+
         self.show()
         QTimer.singleShot(0, self._start_fade_in)
 
@@ -487,10 +497,7 @@ class WallpaperEngine(QWidget):
         self.update()
         if not self._committed:
             self._committed = True
-            try:
-                WallpaperManager().set_wallpaper(self._image_path)
-            except Exception:
-                pass
+            self.finished.emit()
 
     def _clip_path_for_monitor(self, dx: int, dy: int, dw: int, dh: int, t: float) -> QPainterPath:
         """Reveal shape for the new wallpaper."""
