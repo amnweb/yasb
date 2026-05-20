@@ -529,6 +529,7 @@ Search and open recently used projects, folders, and files directly in Visual St
 | `enabled`  | bool   | `false` | Enable/disable the VSCode provider.      |
 | `prefix`   | string | `"vsc"` | Prefix to activate the provider.         |
 | `priority` | int    | `0`     | Display priority (higher = shown first). |
+| `state_storage_path` | string | `''` | Absolute path to the folder containing editor data, examples are shown below. |
 
 **Usage examples:**
 
@@ -538,6 +539,7 @@ Search and open recently used projects, folders, and files directly in Visual St
 
 > [!NOTE]
 > The VSCode provider reads directly from VSCode's internal SQLite state database (`state.vscdb`) in read-only mode to prevent lock issues and does not require VSCode to be running.
+> **state_storage_path** is absolute path to the `state.vscdb` file. For example: `C:\Users\user\.vscode-shared\sharedStorage\state.vscdb` for Visual Studio Code, or `C:\Users\user\AppData\Roaming\Windsurf\User\globalStorage\state.vscdb` for Windsurf. If left empty, the default Visual Studio Code path will be used.
 
 ### Web Search Provider
 
