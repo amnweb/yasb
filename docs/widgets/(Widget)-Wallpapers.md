@@ -20,16 +20,16 @@ wallpapers:
     # Example path to folder with images. Can be a single string or a list of strings.
     image_path: "C:\\Users\\{Username}\\Images" 
     gallery:
-        enabled: true
-        blur: true
-        image_width: 220
-        image_per_page: 6
-        orientation: "portrait"
-        show_buttons: false
-        image_spacing: 8
-        lazy_load: true
-        lazy_load_fadein: 400
-        image_corner_radius: 12
+      enabled: true
+      blur: true
+      image_width: 220
+      image_per_page: 6
+      orientation: "portrait"
+      show_buttons: false
+      image_spacing: 8
+      lazy_load: true
+      lazy_load_fadein: 400
+      image_corner_radius: 12
 ```
 
 ## Advanced Configuration
@@ -46,24 +46,25 @@ wallpapers:
     change_automatically: false # Automatically change wallpaper
     update_interval: 60 # If change_automatically is true, update interval in seconds
     engine:
-        enabled: true
-        animation: "circle" # circle/slide_top/diamond/split
+      enabled: true
+      animation: "circle" # circle/slide_top/diamond/split
     gallery:
-        enabled: true
-        blur: true
-        image_width: 220
-        image_per_page: 6
-        gallery_columns: 0 # 0 = auto, matches image_per_page for a single row
-        horizontal_position: "center" # left/center/right placement on screen
-        vertical_position: "center" # top/center/bottom placement
-        position_offset: 0 # minimum gap (px) from screen edges - see below for advanced options
-        respect_work_area: true # clamp to OS work area (avoids Windows taskbar)
-        show_buttons: false
-        orientation: "portrait"
-        image_spacing: 8
-        lazy_load: true
-        lazy_load_fadein: 400
-        image_corner_radius: 12
+      enabled: true
+      blur: true
+      image_width: 220
+      image_per_page: 6
+      gallery_columns: 0 # 0 = auto, matches image_per_page for a single row
+      horizontal_position: "center" # left/center/right placement on screen
+      vertical_position: "center" # top/center/bottom placement
+      position_offset: 0 # minimum gap (px) from screen edges - see below for advanced options
+      respect_work_area: true # clamp to OS work area (avoids Windows taskbar)
+      show_buttons: false
+      orientation: "portrait"
+      image_spacing: 8
+      lazy_load: true
+      lazy_load_fadein: 400
+      image_corner_radius: 12
+    # Note: do not use run_after: command if you don't know what it does
     run_after: # List of functions to run after wallpaper is updated
       - "wal -s -t -e -q -n -i {image}" # Example command to run after wallpaper is updated
       - "cmd.exe /c start /min pwsh ./yasb.ps1" # Example command to run after wallpaper is updated
@@ -79,7 +80,7 @@ wallpapers:
 - **tooltip:** Whether to show the tooltip on hover.
 - **change_automatically:** Whether to automatically change the wallpaper.
 - **image_path:** The path(s) to the folder(s) containing images for the wallpaper. Can be a single string or a list of strings. This field is required.
-- **engine:** YASB wallpaper transition engine options. Experimental and subject to change. Supported only onWindows 11.
+- **engine:** YASB wallpaper transition engine options. Experimental and subject to change.
   - **enabled:** Whether to enable the transition engine animations when changing wallpapers.
   - **animation:** The animation style used when transitioning between wallpapers. Supported values: `circle`, `slide_top`, `diamond`, `split`. Default is `circle`.
 - **gallery:** The gallery options for the wallpaper widget.

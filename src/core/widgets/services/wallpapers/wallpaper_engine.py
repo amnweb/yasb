@@ -3,6 +3,7 @@ YASB Wallpaper engine.
 """
 
 import ctypes
+import logging
 import math
 import os
 import winreg
@@ -11,10 +12,18 @@ from ctypes import wintypes
 from PyQt6.QtCore import QEasingCurve, QPointF, QRectF, Qt, QThread, QTimeLine, QTimer, pyqtSignal
 from PyQt6.QtGui import QColor, QImage, QPainter, QPainterPath, QPixmap, QPolygonF
 from PyQt6.QtWidgets import QApplication, QWidget
-from win32con import GWL_STYLE, SWP_FRAMECHANGED, SWP_NOACTIVATE, WM_DESTROY, WS_CHILD, WS_POPUP
+from win32con import (
+    GWL_EXSTYLE,
+    GWL_STYLE,
+    SWP_FRAMECHANGED,
+    SWP_NOACTIVATE,
+    WM_DESTROY,
+    WS_CHILD,
+    WS_EX_LAYERED,
+    WS_POPUP,
+)
 
-from core.widgets.services.wallpapers.wallpaper_manager import WallpaperManager
-
+logger = logging.getLogger("wallpaper_engine")
 user32 = ctypes.WinDLL("user32", use_last_error=True)
 
 HWND = wintypes.HWND
@@ -144,6 +153,9 @@ def _read_background_color() -> QColor:
 def _locate_workerw() -> int:
     """Find the WorkerW window that sits behind desktop icons."""
     progman = user32.FindWindowW("Progman", None)
+    if not progman:
+        logger.warning("Could not locate Progman. Wallpaper animation skipped.")
+        return 0
     user32.SendMessageTimeoutW(progman, WM_SPAWN_WORKER, 0, 0, 0, 1000, ctypes.byref(ULONG_PTR()))
     worker = HWND()
 
@@ -178,16 +190,24 @@ def _locate_workerw() -> int:
         user32.EnumWindows(_enum_proc, 0)
 
     if not worker:
-        raise RuntimeError("Could not locate WorkerW")
+        logger.warning("Could not locate WorkerW. Wallpaper animation skipped.")
+        return 0
     user32.ShowWindow(worker, 5)
     return worker
 
 
-def _attach_to_workerw(widget: QWidget) -> None:
+def _attach_to_workerw(widget: QWidget) -> bool:
     """Parent *widget* to WorkerW and compute per-monitor screen areas."""
     worker = _locate_workerw()
+    if not worker:
+        return False
     hwnd = HWND(int(widget.winId()))
+
+    exstyle = GetWindowLongPtr(hwnd, GWL_EXSTYLE)
+
+    SetWindowLongPtr(hwnd, GWL_EXSTYLE, LONG_PTR(exstyle & ~WS_EX_LAYERED))
     user32.SetParent(hwnd, worker)
+    SetWindowLongPtr(hwnd, GWL_EXSTYLE, LONG_PTR(exstyle))
 
     style = GetWindowLongPtr(hwnd, GWL_STYLE)
     SetWindowLongPtr(hwnd, GWL_STYLE, LONG_PTR((style | WS_CHILD) & ~WS_POPUP))
@@ -195,13 +215,23 @@ def _attach_to_workerw(widget: QWidget) -> None:
     wr = wintypes.RECT()
     user32.GetWindowRect(worker, ctypes.byref(wr))
     ww, wh = wr.right - wr.left, wr.bottom - wr.top
+    dpr = widget.devicePixelRatioF() or 1.0
 
     areas = []
     for ml, mt, mr, mb in _enum_physical_monitors():
-        areas.append((ml - wr.left, mt - wr.top, mr - ml, mb - mt, 1.0))
+        areas.append(
+            (
+                int(round((ml - wr.left) / dpr)),
+                int(round((mt - wr.top) / dpr)),
+                int(round((mr - ml) / dpr)),
+                int(round((mb - mt) / dpr)),
+                dpr,
+            )
+        )
     widget.set_screen_areas(areas)
 
     user32.SetWindowPos(hwnd, HWND_TOP, 0, 0, ww, wh, SWP_NOACTIVATE | SWP_FRAMECHANGED)
+    return True
 
 
 class _ImageLoader(QThread):
@@ -223,6 +253,8 @@ class _ImageLoader(QThread):
 class WallpaperEngine(QWidget):
     _ANIMATION_MS = 1200
     _FRAME_MS = 16
+
+    finished = pyqtSignal()
 
     def __init__(self, image_path: str, animation: str = "circle") -> None:
         super().__init__()
@@ -263,17 +295,18 @@ class WallpaperEngine(QWidget):
         self._pixmap_new = QPixmap.fromImage(new_img)
         self._pixmap_old = QPixmap.fromImage(old_img)
 
-        # If either image fails to load, skip animation and set wallpaper immediately
+        # If either image fails to load, skip animation and let caller commit immediately
         if self._pixmap_new.isNull() or self._pixmap_old.isNull():
-            try:
-                WallpaperManager().set_wallpaper(self._image_path)
-            except Exception:
-                pass
+            self.finished.emit()
             self.deleteLater()
             return
 
         self.setWindowOpacity(0.0)
-        _attach_to_workerw(self)
+        if not _attach_to_workerw(self):
+            self.finished.emit()
+            self.deleteLater()
+            return
+
         self.show()
         QTimer.singleShot(0, self._start_fade_in)
 
@@ -330,7 +363,7 @@ class WallpaperEngine(QWidget):
             vw,
             vh,
             Qt.AspectRatioMode.KeepAspectRatioByExpanding,
-            Qt.TransformationMode.FastTransformation,
+            Qt.TransformationMode.SmoothTransformation,
         )
         ox = int((vw - scaled.width()) / 2)
         oy = int((vh - scaled.height()) / 2)
@@ -361,7 +394,7 @@ class WallpaperEngine(QWidget):
                 vw,
                 max_mon_dim,
                 Qt.AspectRatioMode.KeepAspectRatioByExpanding,
-                Qt.TransformationMode.FastTransformation,
+                Qt.TransformationMode.SmoothTransformation,
             )
         else:
             tile_src = px
@@ -390,7 +423,7 @@ class WallpaperEngine(QWidget):
                 max(1, int(iw * scale)),
                 max(1, int(ih * scale)),
                 Qt.AspectRatioMode.IgnoreAspectRatio,
-                Qt.TransformationMode.FastTransformation,
+                Qt.TransformationMode.SmoothTransformation,
             )
         result = []
         for _, _, dw, dh, _ in areas:
@@ -416,7 +449,7 @@ class WallpaperEngine(QWidget):
                     vw,
                     vh,
                     Qt.AspectRatioMode.KeepAspectRatioByExpanding,
-                    Qt.TransformationMode.FastTransformation,
+                    Qt.TransformationMode.SmoothTransformation,
                 )
                 ox = int((vw - scaled.width()) / 2)
                 oy = int((vh - scaled.height()) / 2)
@@ -438,7 +471,7 @@ class WallpaperEngine(QWidget):
                     vw,
                     vh,
                     Qt.AspectRatioMode.KeepAspectRatio,
-                    Qt.TransformationMode.FastTransformation,
+                    Qt.TransformationMode.SmoothTransformation,
                 )
                 ox = int((vw - scaled.width()) / 2)
                 oy = int((vh - scaled.height()) / 2)
@@ -450,12 +483,12 @@ class WallpaperEngine(QWidget):
         mode = self.fit_mode
         if mode == "fill":
             scaled = px.scaled(
-                sw, sh, Qt.AspectRatioMode.KeepAspectRatioByExpanding, Qt.TransformationMode.FastTransformation
+                sw, sh, Qt.AspectRatioMode.KeepAspectRatioByExpanding, Qt.TransformationMode.SmoothTransformation
             )
         elif mode == "fit":
-            scaled = px.scaled(sw, sh, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.FastTransformation)
+            scaled = px.scaled(sw, sh, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
         elif mode == "stretch":
-            scaled = px.scaled(sw, sh, Qt.AspectRatioMode.IgnoreAspectRatio, Qt.TransformationMode.FastTransformation)
+            scaled = px.scaled(sw, sh, Qt.AspectRatioMode.IgnoreAspectRatio, Qt.TransformationMode.SmoothTransformation)
         else:
             scaled = px
         ox = int((sw - scaled.width()) / 2)
@@ -473,10 +506,7 @@ class WallpaperEngine(QWidget):
         self.update()
         if not self._committed:
             self._committed = True
-            try:
-                WallpaperManager().set_wallpaper(self._image_path)
-            except Exception:
-                pass
+            self.finished.emit()
 
     def _clip_path_for_monitor(self, dx: int, dy: int, dw: int, dh: int, t: float) -> QPainterPath:
         """Reveal shape for the new wallpaper."""

@@ -30,12 +30,10 @@ from PyQt6.QtWidgets import (
 )
 
 from core.bar_helper import ThemeState
-from core.utils.system import is_windows_10
 from core.utils.utilities import refresh_widget_style
 from core.utils.win32.backdrop import enable_blur
 from core.utils.win32.utils import apply_qmenu_style
 from core.utils.win32.window_actions import force_foreground_focus
-from core.widgets.services.wallpapers.wallpaper_engine import WallpaperEngine
 from core.widgets.services.wallpapers.wallpaper_manager import WallpaperManager
 
 
@@ -160,10 +158,9 @@ class ImageLoader(QRunnable):
 class ImageGallery(QMainWindow):
     """ImageGallery displays a gallery of images with navigation and lazy loading features."""
 
-    def __init__(self, image_paths, gallery, engine=None):
+    def __init__(self, image_paths, gallery):
         super().__init__()
         self.gallery = gallery
-        self.engine = engine  # EngineConfig | None
 
         if isinstance(image_paths, str):
             self.image_paths = [image_paths]
@@ -685,20 +682,13 @@ class ImageGallery(QMainWindow):
     def _apply_wallpaper_on_monitor(self, image_path: str, monitor_id: str) -> None:
         """Set wallpaper on a specific monitor (no animation)."""
         self.fade_out_and_close_gallery()
-        WallpaperManager().set_wallpaper(image_path, monitor_id=monitor_id)
+        WallpaperManager().set_wallpaper(image_path, monitor_id=monitor_id, animate=False)
 
     def _apply_wallpaper(self, image_path: str, monitor_id: str | None) -> None:
-        """Apply wallpaper with engine animation (all screens) or direct per-monitor."""
+        """Apply wallpaper. The manager handles engine animation and fallbacks."""
         if monitor_id is None:
-            animation = self.engine.animation if self.engine else "circle"
-            if self.engine and self.engine.enabled and not is_windows_10():
-                self.fade_out_and_close_gallery()
-                self._engine = WallpaperEngine(image_path, animation)
-                self._engine.destroyed.connect(lambda: setattr(self, "_engine", None))
-                self._engine.start()
-            else:
-                self.fade_out_and_close_gallery()
-                WallpaperManager().set_wallpaper(image_path)
+            self.fade_out_and_close_gallery()
+            WallpaperManager().set_wallpaper(image_path)
         else:
             self._apply_wallpaper_on_monitor(image_path, monitor_id)
 

@@ -20,6 +20,7 @@ class WallpapersWidget(BaseWidget):
             self.config.update_interval,
             self.config.change_automatically,
             self.config.run_after,
+            self.config.engine,
         )
 
         # Connect signals
@@ -56,6 +57,5 @@ class WallpapersWidget(BaseWidget):
             self._image_gallery = ImageGallery(
                 self.config.image_path,
                 self.config.gallery.model_dump(),
-                self.config.engine,
             )
             self._image_gallery.fade_in_gallery(parent=self)
