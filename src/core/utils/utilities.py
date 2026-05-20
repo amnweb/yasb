@@ -170,6 +170,18 @@ class PopupWidget(QWidget):
 
         self._is_closing = False
 
+    def setLayout(self, layout):
+        self._popup_content.setLayout(layout)
+
+    def layout(self):
+        return self._popup_content.layout()
+
+    def sizeHint(self):
+        return self._popup_content.sizeHint()
+
+    def minimumSizeHint(self):
+        return self._popup_content.minimumSizeHint()
+
     def setProperty(self, name, value):
         super().setProperty(name, value)
         if name == "class":
