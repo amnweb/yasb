@@ -3538,7 +3538,7 @@
       "additionalProperties": false,
       "properties": {
         "enabled": {
-          "default": true,
+          "default": false,
           "title": "Enabled",
           "type": "boolean"
         },
@@ -8921,7 +8921,8 @@
             "vscode": {
               "enabled": false,
               "prefix": "vsc",
-              "priority": 0
+              "priority": 0,
+              "state_storage_path": ""
             },
             "web_search": {
               "custom_engines": [],
@@ -9237,7 +9238,8 @@
           "default": {
             "enabled": false,
             "prefix": "vsc",
-            "priority": 0
+            "priority": 0,
+            "state_storage_path": ""
           }
         },
         "web_search": {
@@ -10940,6 +10942,11 @@
           "default": 0,
           "title": "Priority",
           "type": "integer"
+        },
+        "state_storage_path": {
+          "default": "",
+          "title": "State Storage Path",
+          "type": "string"
         }
       },
       "title": "VSCodeProviderConfig",
@@ -11142,7 +11149,7 @@
         "engine": {
           "$ref": "#/$defs/EngineConfig",
           "default": {
-            "enabled": true,
+            "enabled": false,
             "animation": "circle"
           }
         },
