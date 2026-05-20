@@ -660,6 +660,9 @@ class WifiMenu(QObject):
                     self.error_connection = self.error_message.clicked.connect(  # type: ignore[reportUnknownMemberType]
                         partial(self._run_and_hide, "ms-settings:network-wifi"),
                     )
+                elif result == ScanResultStatus.SERVICE_UNAVAILABLE:
+                    self.error_message.clickable = False
+                    self.error_message.setText("Wi-Fi is not available")
                 elif result == ScanResultStatus.ERROR:
                     self.error_message.clickable = False
                     self.error_message.setText("Unknown error...")
