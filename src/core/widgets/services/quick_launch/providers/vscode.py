@@ -6,7 +6,6 @@ import urllib.parse
 from pathlib import Path
 
 from core.utils.shell_utils import shell_open
-from core.utils.widgets.vscode.get_vscode_state_db_path import get_state_db_path
 from core.utils.win32.constants import SW_HIDE
 from core.widgets.services.quick_launch.base_provider import (
     BaseProvider,
@@ -21,6 +20,7 @@ from core.widgets.services.quick_launch.providers.resources.icons import (
     ICON_TEXT,
     ICON_VSCODE,
 )
+from core.widgets.services.vscode.get_vscode_state_db_path import get_state_db_path
 
 _EXT_ICON_MAP: dict[str, str] = {}
 for _icon, _exts in (
