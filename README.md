@@ -126,7 +126,7 @@ choco install yasb
 | [Update Checker](https://github.com/amnweb/yasb/wiki/(Widget)-Update-Check) | Checks for available updates using Windows Update and Winget. |
 | [Visual Studio Code](https://github.com/amnweb/yasb/wiki/(Widget)-VSCode) | Shows recently opened folders in Visual Studio Code. |
 | [Volume](https://github.com/amnweb/yasb/wiki/(Widget)-Volume) | Shows and controls the system volume. |
-| [Wallpapers](https://github.com/amnweb/yasb/wiki/(Widget)-Wallpapers) | Wallapers manager widget. |
+| [Wallpapers](https://github.com/amnweb/yasb/wiki/(Widget)-Wallpapers) | Wallpapers manager widget. |
 | [Weather](https://github.com/amnweb/yasb/wiki/(Widget)-Weather) | Displays current weather information. |
 | [WiFi](https://github.com/amnweb/yasb/wiki/(Widget)-WiFi) | Shows the current WiFi status and available networks. |
 | [WHKD](https://github.com/amnweb/yasb/wiki/(Widget)-Whkd) | Shows the current hotkey binding mode of WHKD. |  

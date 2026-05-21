@@ -11,6 +11,7 @@ from PyQt6.QtCore import QObject, QTimer, pyqtSignal
 
 from core.events.service import EventService
 from core.utils.win32.bindings.shell32 import IDesktopWallpaper
+from core.widgets.services.wallpapers.wallpaper_engine import WallpaperEngine
 
 
 class WallpaperManager(QObject):
@@ -37,6 +38,8 @@ class WallpaperManager(QObject):
         self._is_running = False
         self._last_image = None
         self._timer_running = False
+        self._engine_config = None
+        self._engine = None
 
         self._event_service = EventService()
 
@@ -45,7 +48,12 @@ class WallpaperManager(QObject):
         self._event_service.register_event("set_wallpaper_signal", self._set_wallpaper_signal)
 
     def configure(
-        self, image_path: str | list[str], update_interval: int, change_automatically: bool, run_after: list[str]
+        self,
+        image_path: str | list[str],
+        update_interval: int,
+        change_automatically: bool,
+        run_after: list[str],
+        engine=None,
     ):
         """
         Configure the manager.
@@ -56,6 +64,7 @@ class WallpaperManager(QObject):
             self._image_paths = image_path
 
         self._run_after = run_after
+        self._engine_config = engine
 
         if change_automatically and not self._timer_running:
             if update_interval and update_interval > 0:
@@ -68,23 +77,27 @@ class WallpaperManager(QObject):
     def _timer_callback(self):
         self.change_background()
 
-    def set_wallpaper(self, image_path: str, monitor_id: str | None = None):
-        """
-        Set the desktop wallpaper using the IDesktopWallpaper COM interface.
-        Args:
-            image_path: Absolute path to the wallpaper image file
-            monitor_id: Monitor device path from GetMonitorDevicePathAt, or None for all monitors
-        """
+    def set_wallpaper(self, image_path: str, monitor_id: str | None = None, animate: bool = True):
+        """Set the desktop wallpaper, using the YASB engine animation when enabled."""
+        eng = self._engine_config
+        if animate and monitor_id is None and eng and eng.enabled:
+            try:
+                self._engine = WallpaperEngine(image_path, eng.animation)
+                self._engine.finished.connect(lambda: self.set_wallpaper(image_path, animate=False))
+                self._engine.start()
+                return
+            except Exception as e:
+                logging.error("Wallpaper engine failed, falling back: %s", e)
+
         pythoncom.CoInitialize()
         try:
-            desktop_wallpaper_clsid = GUID("{C2CF3110-460E-4fc1-B9D0-8A1C0C9CC4BD}")
-            desktop_wallpaper = comtypes.client.CreateObject(desktop_wallpaper_clsid, interface=IDesktopWallpaper)
-            abs_path = os.path.abspath(image_path)
-            desktop_wallpaper.SetWallpaper(monitor_id, abs_path)
-
+            clsid = GUID("{C2CF3110-460E-4fc1-B9D0-8A1C0C9CC4BD}")
+            dwp = comtypes.client.CreateObject(clsid, interface=IDesktopWallpaper)
+            dwp.SetWallpaper(monitor_id, os.path.abspath(image_path))
         except Exception as e:
-            logging.error("Failed to set wallpaper using IDesktopWallpaper: %s", e)
-            raise
+            logging.error("Failed to set wallpaper: %s", e)
+            self._is_running = False
+            return
         self._run_after_thread(image_path)
 
     def get_monitor_ids(self) -> list[str]:
@@ -139,7 +152,7 @@ class WallpaperManager(QObject):
             self._last_image = new_wallpaper
         except Exception as e:
             logging.error("Error setting wallpaper %s: %s", new_wallpaper, e)
-        self._run_after_thread(new_wallpaper)
+            self._is_running = False
 
     def _run_after_thread(self, image_path: str):
         if self._run_after:

@@ -38,7 +38,7 @@ class WorkspaceButton(QPushButton):
         active_label: str = None,
         populated_label: str = None,
     ):
-        super().__init__()
+        super().__init__(parent_widget._workspace_container)
         self.komorebic = KomorebiClient()
         self.workspace_index = workspace_index
         self.parent_widget = parent_widget
@@ -91,7 +91,7 @@ class WorkspaceButtonWithIcons(QFrame):
         active_label: str = None,
         populated_label: str = None,
     ):
-        super().__init__()
+        super().__init__(parent_widget._workspace_container)
         self.komorebic = KomorebiClient()
         self.workspace_index = workspace_index
         self.parent_widget = parent_widget

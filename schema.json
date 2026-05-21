@@ -1539,7 +1539,9 @@
             "alignment": "right",
             "direction": "down",
             "offset_top": 6,
-            "offset_left": 0
+            "offset_left": 0,
+            "contrast_icon": "\ue7a1",
+            "brightness_icon": "\ue706"
           }
         },
         "auto_light": {
@@ -1664,6 +1666,16 @@
           "default": 0,
           "title": "Offset Left",
           "type": "integer"
+        },
+        "contrast_icon": {
+          "default": "\ue7a1",
+          "title": "Contrast Icon",
+          "type": "string"
+        },
+        "brightness_icon": {
+          "default": "\ue706",
+          "title": "Brightness Icon",
+          "type": "string"
         }
       },
       "title": "BrightnessMenuConfig",
@@ -3614,6 +3626,29 @@
         }
       },
       "title": "EmojiProviderConfig",
+      "type": "object"
+    },
+    "EngineConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "default": false,
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "animation": {
+          "default": "circle",
+          "enum": [
+            "circle",
+            "slide_top",
+            "diamond",
+            "split"
+          ],
+          "title": "Animation",
+          "type": "string"
+        }
+      },
+      "title": "EngineConfig",
       "type": "object"
     },
     "ExecOptionsConfig": {
@@ -8980,7 +9015,8 @@
             "vscode": {
               "enabled": false,
               "prefix": "vsc",
-              "priority": 0
+              "priority": 0,
+              "state_storage_path": ""
             },
             "web_search": {
               "custom_engines": [],
@@ -9296,7 +9332,8 @@
           "default": {
             "enabled": false,
             "prefix": "vsc",
-            "priority": 0
+            "priority": 0,
+            "state_storage_path": ""
           }
         },
         "web_search": {
@@ -11114,6 +11151,11 @@
           "default": 0,
           "title": "Priority",
           "type": "integer"
+        },
+        "state_storage_path": {
+          "default": "",
+          "title": "State Storage Path",
+          "type": "string"
         }
       },
       "title": "VSCodeProviderConfig",
@@ -11312,6 +11354,13 @@
           },
           "title": "Run After",
           "type": "array"
+        },
+        "engine": {
+          "$ref": "#/$defs/EngineConfig",
+          "default": {
+            "enabled": false,
+            "animation": "circle"
+          }
         },
         "gallery": {
           "$ref": "#/$defs/GalleryConfig",

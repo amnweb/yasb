@@ -82,6 +82,7 @@ class ScanResultStatus(StrEnum):
     SUCCESS = "Success"
     ACCESS_DENIED = "Access Denied"
     POWER_STATE_INVALID = "Power State Invalid"
+    SERVICE_UNAVAILABLE = "Service Unavailable"
     ERROR = "Error"
 
 
@@ -323,7 +324,7 @@ class WiFiManager(QObject):
                 None,
             )
             if result != ERROR_SUCCESS:
-                raise WinError(result)
+                logger.debug("Failed to unregister WLAN notification: %s", format_error_message(result))
             WlanCloseHandle(self._client_handle, None)
             self._client_handle = HANDLE()
 
@@ -332,7 +333,13 @@ class WiFiManager(QObject):
         if self._is_scanning:
             return
         self._is_scanning = True
-        self.init_wlan()
+        try:
+            self.init_wlan()
+        except OSError as e:
+            self._is_scanning = False
+            logger.debug("WLAN service unavailable: %s", e)
+            self.wifi_scan_completed.emit(ScanResultStatus.SERVICE_UNAVAILABLE, [])
+            return
         # Force a new scan on all interfaces
         interfaces_ptr, interfaces = self._get_interface_list()
         for interface in interfaces:
@@ -352,7 +359,10 @@ class WiFiManager(QObject):
 
     def get_current_connection(self) -> NetworkInfo | None:
         """Get the current WiFi connection"""
-        self.init_wlan()
+        try:
+            self.init_wlan()
+        except OSError:
+            return None
         interfaces_ptr, interfaces = self._get_interface_list()
         network_info: NetworkInfo | None = None
         for interface in interfaces:

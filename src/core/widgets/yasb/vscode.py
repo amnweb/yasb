@@ -11,6 +11,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QScrollArea, QVBoxLayout, QWidget
 
 from core.utils.utilities import PopupWidget
+from core.utils.widgets.vscode.get_vscode_state_db_path import get_state_db_path
 from core.validation.widgets.yasb.vscode import VSCodeConfig
 from core.widgets.base import BaseWidget
 
@@ -22,9 +23,10 @@ class VSCodeWidget(BaseWidget):
         super().__init__(class_name="vscode-widget")
         self.config = config
         self._show_alt_label = False
+
         state_storage_path = self.config.state_storage_path
         if not state_storage_path:
-            state_storage_path = os.path.expandvars(r"%APPDATA%\Code\User\globalStorage\state.vscdb")
+            state_storage_path = get_state_db_path()
         self._state_file_path = state_storage_path
 
         self._init_container()
@@ -70,7 +72,7 @@ class VSCodeWidget(BaseWidget):
                     else:
                         logging.error("Unexpected entry type: %s", type(path))
             else:
-                logging.error("No data found in %s", file_path)
+                logging.error("No data found in %s", self._state_file_path)
             conn.close()
             return result_list
         except Exception as e:

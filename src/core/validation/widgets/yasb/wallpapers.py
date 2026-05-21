@@ -10,7 +10,7 @@ from core.validation.widgets.base_model import (
 
 
 class EngineConfig(CustomBaseModel):
-    enabled: bool = True
+    enabled: bool = False
     animation: Literal["circle", "slide_top", "diamond", "split"] = "circle"
 
 
