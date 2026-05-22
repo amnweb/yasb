@@ -1,11 +1,9 @@
 from pydantic import Field
 
 from core.validation.widgets.base_model import (
-    AnimationConfig,
     CallbacksConfig,
     CustomBaseModel,
     KeybindingConfig,
-    ShadowConfig,
 )
 
 
@@ -68,8 +66,5 @@ class PrayerTimesConfig(CustomBaseModel):
     icons: PrayerTimesIconsConfig = PrayerTimesIconsConfig()
     menu: PrayerTimesMenuConfig = PrayerTimesMenuConfig()
     flash: PrayerTimesFlashConfig = PrayerTimesFlashConfig()
-    animation: AnimationConfig = AnimationConfig()
-    label_shadow: ShadowConfig = ShadowConfig()
-    container_shadow: ShadowConfig = ShadowConfig()
     callbacks: PrayerTimesCallbacksConfig = PrayerTimesCallbacksConfig()
     keybindings: list[KeybindingConfig] = []

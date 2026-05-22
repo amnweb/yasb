@@ -8,9 +8,8 @@ from PyQt6.QtCore import QEasingCurve, Qt, QTimer, QVariantAnimation
 from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
-from core.utils.animation_manager import AnimationManager
 from core.utils.tooltip import set_tooltip
-from core.utils.utilities import PopupWidget, add_shadow, refresh_widget_style
+from core.utils.utilities import PopupWidget, refresh_widget_style
 from core.utils.widgets.prayer_times.api import PrayerTimesDataFetcher
 from core.validation.widgets.yasb.prayer_times import PrayerTimesConfig
 from core.widgets.base import BaseWidget
@@ -49,8 +48,8 @@ class PrayerTimesWidget(BaseWidget):
         self._loading: bool = True
         self._date_offset: int = 0
         self._current_date: str = datetime.now().strftime("%Y-%m-%d")
-        self._widgets: list[QWidget] = []
-        self._widgets_alt: list[QWidget] = []
+        self._widgets: list[QLabel] = []
+        self._widgets_alt: list[QLabel] = []
 
         # --- Container ---
         self._widget_container_layout = QHBoxLayout()
@@ -59,10 +58,9 @@ class PrayerTimesWidget(BaseWidget):
         self._widget_container = QFrame()
         self._widget_container.setLayout(self._widget_container_layout)
         self._widget_container.setProperty("class", "widget-container")
-        add_shadow(self._widget_container, config.container_shadow.model_dump())
         self.widget_layout.addWidget(self._widget_container)
 
-        self.build_widget_label(config.label, config.label_alt, config.label_shadow.model_dump())
+        self.build_widget_label(config.label, config.label_alt)
 
         # --- Callbacks ---
         self.register_callback("toggle_label", self._toggle_label)
@@ -176,7 +174,7 @@ class PrayerTimesWidget(BaseWidget):
                 self._date_offset = 1
                 self._fetcher.make_request()
         except (KeyError, TypeError) as exc:
-            logging.error(f"Prayer times widget: failed to parse API response: {exc}")
+            logging.error("Prayer times widget: failed to parse API response: %s", exc)
 
     def _on_minute_tick(self) -> None:
         # Reset to today when the calendar date changes (midnight rollover).
@@ -405,8 +403,6 @@ class PrayerTimesWidget(BaseWidget):
     # ------------------------------------------------------------------
 
     def _toggle_card(self) -> None:
-        if self.config.animation.enabled:
-            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)  # type: ignore
         self._show_popup()
 
     def _show_popup(self) -> None:
@@ -570,8 +566,6 @@ class PrayerTimesWidget(BaseWidget):
     # ------------------------------------------------------------------
 
     def _toggle_label(self) -> None:
-        if self.config.animation.enabled:
-            AnimationManager.animate(self, self.config.animation.type, self.config.animation.duration)  # type: ignore
         self._show_alt_label = not self._show_alt_label
         for widget in self._widgets:
             widget.setVisible(not self._show_alt_label)
