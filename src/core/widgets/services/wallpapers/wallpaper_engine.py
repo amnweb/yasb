@@ -260,6 +260,17 @@ class WallpaperEngine(QWidget):
         super().__init__()
         self._image_path = image_path
         self._animation = animation
+        self._progress = 0.0
+        self._committed = False
+        self._areas: list[tuple[int, int, int, int, float]] = []
+        self._per_screen_scaled_old: list[tuple[QPixmap, int, int]] = []
+        self._per_screen_scaled_new: list[tuple[QPixmap, int, int]] = []
+        self.fit_mode = _read_fit_mode()
+        self._bg_color = _read_background_color()
+        self._pixmap_new = QPixmap()
+        self._pixmap_old = QPixmap()
+        self._resources_freed = False
+
         self.setGeometry(QApplication.primaryScreen().geometry())
         self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
         self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating, True)
@@ -267,17 +278,6 @@ class WallpaperEngine(QWidget):
         self.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground, True)
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
         self.winId()
-
-        self._pixmap_new = QPixmap()
-        self._pixmap_old = QPixmap()
-
-        self.fit_mode = _read_fit_mode()
-        self._bg_color = _read_background_color()
-        self._areas: list[tuple[int, int, int, int, float]] = []
-        self._per_screen_scaled_old: list[tuple[QPixmap, int, int]] = []
-        self._per_screen_scaled_new: list[tuple[QPixmap, int, int]] = []
-        self._progress = 0.0
-        self._committed = False
 
         self._timeline = QTimeLine(self._ANIMATION_MS, self)
         self._timeline.setUpdateInterval(self._FRAME_MS)
@@ -287,9 +287,9 @@ class WallpaperEngine(QWidget):
 
     def start(self) -> None:
         """Load images asynchronously, then attach to WorkerW and begin animation."""
-        self._loader = _ImageLoader(self._image_path, _transcoded_wallpaper_path())
-        self._loader.loaded.connect(self._on_images_loaded)
-        self._loader.start()
+        self._wallpaper_loader = _ImageLoader(self._image_path, _transcoded_wallpaper_path())
+        self._wallpaper_loader.loaded.connect(self._on_images_loaded)
+        self._wallpaper_loader.start()
 
     def _on_images_loaded(self, new_img: QImage, old_img: QImage) -> None:
         self._pixmap_new = QPixmap.fromImage(new_img)
@@ -617,15 +617,39 @@ class WallpaperEngine(QWidget):
             p.drawPixmap(dx + ox_n, dy + oy_n, scaled_n)
             p.restore()
 
+    def _free_resources(self):
+        if getattr(self, "_resources_freed", True):
+            return
+        self._resources_freed = True
+
+        for tl in (self._timeline, getattr(self, "_fade_timeline", None)):
+            if tl and tl.state() != QTimeLine.State.NotRunning:
+                tl.stop()
+
+        self._pixmap_new = QPixmap()
+        self._pixmap_old = QPixmap()
+        self._per_screen_scaled_new.clear()
+        self._per_screen_scaled_old.clear()
+
+        wl = getattr(self, "_wallpaper_loader", None)
+        if wl is not None:
+            try:
+                wl.loaded.disconnect()
+            except TypeError, RuntimeError:
+                pass
+            if wl.isRunning():
+                wl.quit()
+                wl.wait(1000)
+            self._wallpaper_loader = None
+
     def nativeEvent(self, _, message):
         msg = ctypes.cast(int(message), ctypes.POINTER(wintypes.MSG)).contents
         if msg.message == WM_DESTROY:
+            self._free_resources()
             self.deleteLater()
             return True, 0
         return False, 0
 
     def closeEvent(self, event) -> None:
-        for tl in (self._timeline, getattr(self, "_fade_timeline", None)):
-            if tl and tl.state() != QTimeLine.State.NotRunning:
-                tl.stop()
+        self._free_resources()
         super().closeEvent(event)
