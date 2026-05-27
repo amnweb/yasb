@@ -243,8 +243,6 @@ class WorkspaceWidget(BaseWidget):
             KomorebiEvent.WorkspaceName.value,
             KomorebiEvent.Cloak.value,
         ]
-        # Disable default mouse event handling inherited from BaseWidget
-        self.mousePressEvent = None
         if self.config.hide_if_offline:
             self.hide()
         # Status text shown when komorebi state can't be retrieved

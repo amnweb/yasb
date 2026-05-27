@@ -318,9 +318,6 @@ class WorkspaceWidget(BaseWidget):
 
         self._clicked_button: WorkspaceButton | None = None
 
-        # Disable default mouse event handling inherited from BaseWidget
-        self.mousePressEvent = None
-
         # Register callbacks
         self.register_callback("activate_workspace", self._cb_activate_workspace)
         self.register_callback("toggle_context_menu", self._cb_toggle_context_menu)
