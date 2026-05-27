@@ -313,7 +313,7 @@ class SystrayHook(QObject):
             if icon_data_size > 0:
                 cursor += cb_data
                 rgba_bytes = data_bytes[cursor : cursor + icon_data_size]
-                icon = Image.frombuffer("RGBA", (icon_w, icon_h), rgba_bytes, "raw", "RGBA", 0, 1)  # type: ignore
+                icon = Image.frombytes("RGBA", (icon_w, icon_h), bytes(rgba_bytes))  # type: ignore
 
             if tray_message.message_type in {NIM_ADD, NIM_MODIFY, NIM_SETVERSION}:
                 validated_data = validate_icon_data(icon_data, icon)

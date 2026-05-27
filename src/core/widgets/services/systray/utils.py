@@ -226,7 +226,9 @@ def validate_icon_data(data: NOTIFYICONDATA, icon: Image.Image | None = None) ->
         if icon_image is not None:
             if icon_image.size != (32, 32):  # Ensure we have consistent icon sizes
                 icon_image = icon_image.resize((32, 32), Image.Resampling.LANCZOS).filter(SHARPEN)  # pyright: ignore [reportUnknownMemberType]
-            icon_image = QImage(ImageQt(icon_image)).copy()
+            img_qt = ImageQt(icon_image)
+            icon_image = img_qt.copy()
+            del img_qt
         icon_data.icon_image = icon_image
 
     if data.uFlags & NIF_TIP:
