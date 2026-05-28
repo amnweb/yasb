@@ -2,6 +2,7 @@ import os
 import platform
 import sys
 from pathlib import Path
+from winreg import HKEY_LOCAL_MACHINE, KEY_QUERY_VALUE, OpenKey, QueryValueEx
 
 
 def app_data_path(filename: str = None) -> Path:
@@ -19,6 +20,22 @@ def app_data_path(filename: str = None) -> Path:
 def is_windows_10() -> bool:
     v = sys.getwindowsversion()
     return v.major == 10 and v.build < 22000
+
+
+def get_build_and_ubr() -> tuple[int, int]:
+    """Get the build number and ubr (aka Update Build Revision; aka the decimal value in the OS Build).
+
+    Returns:
+        Tuple of (build, ubr). If ubr is not obtainable for any reason, it will default to 0
+    """
+    build = sys.getwindowsversion().build
+    ubr: int
+    try:
+        with OpenKey(HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows NT\CurrentVersion", KEY_QUERY_VALUE) as key:
+            ubr: int = QueryValueEx(key, "UBR")[0]
+    except Exception:
+        ubr = 0
+    return (build, ubr)
 
 
 def detect_architecture() -> tuple[str, str] | None:

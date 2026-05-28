@@ -30,6 +30,7 @@ from PyQt6.QtWidgets import (
 )
 
 from core.bar_helper import ThemeState
+from core.utils.system import get_build_and_ubr
 from core.utils.utilities import refresh_widget_style
 from core.utils.win32.backdrop import enable_blur
 from core.utils.win32.utils import apply_qmenu_style
@@ -161,6 +162,7 @@ class ImageGallery(QMainWindow):
     def __init__(self, image_paths, gallery):
         super().__init__()
         self.gallery = gallery
+        self._build_and_ubr = get_build_and_ubr()
 
         if isinstance(image_paths, str):
             self.image_paths = [image_paths]
@@ -168,11 +170,18 @@ class ImageGallery(QMainWindow):
             self.image_paths = image_paths
 
         all_files = []
+        file_types = ("png", "jpg", "jpg", "gif", "bmp")
+        # webp support for wallpapers was introduced in Preview Build 26220.7653, and Stable Build 26100.8037 (24H2) / 26200.8037 (25H2)
+        # https://windowsforum.com/threads/kb5079473-windows-11-march-2026-update-sysmon-in-box-emoji-16-and-webp-wallpapers.404657/
+        if (self._build_and_ubr[0] >= 26220 and self._build_and_ubr[1] >= 7653) or (
+            self._build_and_ubr[0] >= 26100 and self._build_and_ubr[1] >= 8037
+        ):
+            file_types = file_types + ("webp",)
         for path in self.image_paths:
             if os.path.exists(path):
                 for root, _, files in os.walk(path):
                     for f in files:
-                        if f.lower().endswith(("png", "jpg", "jpeg", "gif", "bmp")):
+                        if f.lower().endswith(file_types):
                             all_files.append(os.path.join(root, f))
 
         self.image_files = sorted(all_files)  # or any ordering you prefer
