@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git ls-tree *)",
+      "Bash(grep -v \"^[+-][[:space:]]*$\")",
+      "Bash(git checkout *)",
+      "Bash(python *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git branch *)",
+      "Bash(git merge *)",
+      "Bash(git commit *)"
+    ]
+  }
+}
