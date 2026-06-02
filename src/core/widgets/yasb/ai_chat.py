@@ -195,10 +195,10 @@ class AiChatWidget(BaseWidget):
             """
         )
         self.provider_menu = QMenu(self.provider_btn)
+        apply_qmenu_style(self.provider_menu)
         self.provider_menu.setProperty("class", "context-menu")
         self.provider_menu.setStyleSheet("QMenu::indicator { width: 0px; height: 0px; }")
         self.provider_menu.aboutToHide.connect(lambda: self._on_menu_hide(self.provider_menu))
-        apply_qmenu_style(self.provider_menu)
         self.provider_btn.clicked.connect(lambda: self._open_menu(self.provider_menu, self.provider_btn))
         self._provider_model_manager.populate_provider_menu()
         self.model_btn = QPushButton(self._get_model_label())
@@ -214,10 +214,10 @@ class AiChatWidget(BaseWidget):
         )
         self.model_btn.setEnabled(bool(self._provider_config and self._provider_config.get("models")))
         self.model_menu = QMenu(self.model_btn)
+        apply_qmenu_style(self.model_menu)
         self.model_menu.setProperty("class", "context-menu")
         self.model_menu.setStyleSheet("QMenu::indicator { width: 0px; height: 0px; }")
         self.model_menu.aboutToHide.connect(lambda: self._on_menu_hide(self.model_menu))
-        apply_qmenu_style(self.model_menu)
         self.model_menu.aboutToShow.connect(
             lambda: (
                 [

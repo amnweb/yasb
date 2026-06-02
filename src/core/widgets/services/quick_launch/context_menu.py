@@ -24,8 +24,8 @@ class QuickLaunchContextMenuService:
             return ProviderMenuActionResult()
 
         menu = QMenu(parent)
-        menu.setProperty("class", "context-menu")
         apply_qmenu_style(menu)
+        menu.setProperty("class", "context-menu")
         menu.setContentsMargins(0, 0, 0, 0)
 
         action_map = {}

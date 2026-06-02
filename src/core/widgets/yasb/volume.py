@@ -1,4 +1,3 @@
-import ctypes
 import logging
 import re
 
@@ -15,6 +14,7 @@ from core.utils.utilities import (
     refresh_widget_style,
 )
 from core.utils.win32.app_icons import get_process_icon
+from core.utils.win32.bindings import user32
 from core.utils.win32.utils import get_app_name_from_pid
 from core.validation.widgets.yasb.volume import VolumeConfig
 from core.widgets.base import BaseWidget
@@ -82,7 +82,7 @@ class VolumeWidget(BaseWidget):
         if self.config.slider_beep:
             # Play a beep sound when slider is released
             try:
-                ctypes.windll.user32.MessageBeep(0)
+                user32.MessageBeep(0)
             except Exception as e:
                 logging.debug("Failed to play volume sound: %s", e)
 

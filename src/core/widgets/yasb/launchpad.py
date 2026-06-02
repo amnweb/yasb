@@ -879,8 +879,8 @@ class LaunchpadWidget(BaseWidget):
         """
         menu_parent = parent_widget if parent_widget else self._launchpad_popup
         menu = QMenu(menu_parent.window())
-        menu.setProperty("class", "context-menu")
         apply_qmenu_style(menu)
+        menu.setProperty("class", "context-menu")
 
         if app_data:
             edit_action = QAction("Edit", menu_parent)
@@ -915,8 +915,8 @@ class LaunchpadWidget(BaseWidget):
                 other_groups = [g for g in all_groups if g != self._current_group]
                 if other_groups:
                     move_menu = QMenu("Move to Group", menu)
-                    move_menu.setProperty("class", "context-menu")
                     apply_qmenu_style(move_menu)
+                    move_menu.setProperty("class", "context-menu")
 
                     for group in other_groups:
                         move_action = QAction(group, menu_parent)
@@ -930,8 +930,8 @@ class LaunchpadWidget(BaseWidget):
                     menu.addSeparator()
 
                     group_menu = QMenu("Add to Group", menu)
-                    group_menu.setProperty("class", "context-menu")
                     apply_qmenu_style(group_menu)
+                    group_menu.setProperty("class", "context-menu")
 
                     for group in all_groups:
                         group_action = QAction(group, menu_parent)
@@ -1660,8 +1660,8 @@ class LaunchpadWidget(BaseWidget):
         """Show context menu for group"""
         menu_parent = parent_widget
         menu = QMenu(menu_parent.window())
-        menu.setProperty("class", "context-menu")
         apply_qmenu_style(menu)
+        menu.setProperty("class", "context-menu")
 
         open_action = QAction(f"Open {group_name}", menu_parent)
         open_action.triggered.connect(lambda: self._open_group(group_name, parent_widget.apps_in_group))

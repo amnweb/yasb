@@ -78,10 +78,10 @@ class WorkspaceButton(QPushButton):
 
     def _show_context_menu(self):
         menu = QMenu(self.window())
+        apply_qmenu_style(menu)
         # Assign a class for global styling; apply rounded corners via helper
         menu.setProperty("class", "context-menu")
         # Apply Windows rounded corners to the QMenu when it is shown
-        apply_qmenu_style(menu)
 
         act_rename = QAction("Rename", self)
         act_rename.triggered.connect(self.rename_desktop)
@@ -113,8 +113,9 @@ class WorkspaceButton(QPushButton):
             menu.addAction(act_move_here)
 
             move_menu = QMenu("Move Window To", self.window())
-            move_menu.setProperty("class", "context-menu")
             apply_qmenu_style(move_menu)
+            move_menu.setProperty("class", "context-menu")
+
             try:
                 desktops = svc.get_desktops()
                 for desktop in desktops:
