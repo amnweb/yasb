@@ -1,111 +1,236 @@
-import os
+import logging
 import sys
-import traceback
 
-from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtGui import QIcon
-from PyQt6.QtWidgets import QMessageBox, QPushButton, QSizePolicy, QTextEdit
+from PyQt6.QtCore import QEasingCurve, QParallelAnimationGroup, QPoint, QPropertyAnimation, Qt, QTimer, pyqtSignal
+from PyQt6.QtWidgets import (
+    QApplication,
+    QFrame,
+    QHBoxLayout,
+    QTextEdit,
+    QVBoxLayout,
+    QWidget,
+)
 
-from core.ui.theme import get_tokens
-from settings import SCRIPT_PATH
+from core.ui.components.button import Button
+from core.ui.components.text_block import TextBlock
+from core.ui.theme import get_tokens, theme_key
+from core.utils.win32.backdrop import enable_dwm_frame
+from core.utils.win32.bindings import user32
+
+_alert_dialogs: list[AlertDialog] = []
 
 
-class AlertDialog(QMessageBox):
+class AlertDialog(QWidget):
+    closed = pyqtSignal()
+
     def __init__(
         self,
-        title: str,
-        message: str,
-        informative_message: str = None,
-        additional_details: str = None,
-        icon: QMessageBox.Icon = QMessageBox.Icon.Information,
-        show_quit: bool = False,
-        show_ok: bool = False,
-        parent=None,
-    ):
-        super().__init__(parent)
+        title: str = "",
+        message: str = "",
+        informative_message: str = "",
+        additional_details: str = "",
+        rich_text: bool = False,
+    ) -> None:
+        super().__init__(
+            None,
+            Qt.WindowType.Tool | Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint,
+        )
+        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+        self._has_details = bool(additional_details)
+        self._details_visible = False
+        self._theme_key = theme_key()
 
-        self.setWindowTitle(title)
-        self.setTextInteractionFlags(Qt.TextInteractionFlag.LinksAccessibleByMouse)
-        self.setWindowFlags(Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.WindowCloseButtonHint)
-        self.setIcon(icon)
-        self.setText(message)
-        self.icon_path = os.path.join(SCRIPT_PATH, "assets", "images", "app_icon.png")
-        if os.path.exists(self.icon_path):
-            self.setWindowIcon(QIcon(self.icon_path))
+        # ── build UI ──────────────────────────────────────────
+        root = QVBoxLayout(self)
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(0)
+        # Enforce strict size constraint so window automatically grows/shrinks
+        root.setSizeConstraint(QVBoxLayout.SizeConstraint.SetFixedSize)
+
+        # Container card — DWM handles corner radius
+        self._container = QFrame(self)
+        self._container.setObjectName("alert_bg")
+        self._container.setFixedWidth(560)
+        root.addWidget(self._container)
+
+        container_layout = QVBoxLayout(self._container)
+        container_layout.setContentsMargins(0, 0, 0, 0)
+        container_layout.setSpacing(0)
+
+        # -- content area (title + body + details) --
+        self._content = QFrame(self._container)
+        self._content.setObjectName("alert_content")
+        content_layout = QVBoxLayout(self._content)
+        content_layout.setContentsMargins(24, 24, 24, 24)
+        content_layout.setSpacing(4)
+        content_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+
+        self._title_label = TextBlock(title, variant="subtitle", parent=self._content)
+        self._title_label.setWordWrap(True)
+        self._title_label.setVisible(bool(title))
+        content_layout.addWidget(self._title_label)
+        content_layout.addSpacing(12)
+
+        self._msg_label = TextBlock(message, variant="body", parent=self._content)
+        self._msg_label.setWordWrap(True)
+        if rich_text:
+            self._msg_label.setTextFormat(Qt.TextFormat.RichText)
+        content_layout.addWidget(self._msg_label)
 
         if informative_message:
-            self.setInformativeText(informative_message)
+            self._info_label = TextBlock(informative_message, variant="body-secondary", parent=self._content)
+            self._info_label.setWordWrap(True)
+            content_layout.addWidget(self._info_label)
+        else:
+            self._info_label = None
 
+        self._details_wrapper = QWidget(self._content)
+        details_layout = QVBoxLayout(self._details_wrapper)
+        details_layout.setContentsMargins(0, 8, 0, 0)
+        details_layout.setSpacing(0)
+
+        self._details = QTextEdit(self._details_wrapper)
+        self._details.setReadOnly(True)
+        self._details.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
+        self._details.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self._details.setLineWrapMode(QTextEdit.LineWrapMode.NoWrap)
+        self._details.setMaximumHeight(100)
         if additional_details:
-            self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-            self.setDetailedText(additional_details)
+            self._details.setPlainText(additional_details)
 
-        self.ok_button = self.addButton("Ok", QMessageBox.ButtonRole.AcceptRole) if show_ok else None
-        self.quit_button = self.addButton("Quit", QMessageBox.ButtonRole.DestructiveRole) if show_quit else None
-        self.setSizeGripEnabled(False)
+        details_layout.addWidget(self._details)
+        self._details_wrapper.setVisible(False)
+        content_layout.addWidget(self._details_wrapper)
+        container_layout.addWidget(self._content, 0)
 
-        self.setMinimumHeight(0)
-        self.setMaximumHeight(260)
-        self.setMinimumWidth(420)
-        self.setMaximumWidth(520)
-        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        self._btn_bar = QFrame(self._container)
+        self._btn_bar.setObjectName("alert_btns")
+        button_layout = QHBoxLayout(self._btn_bar)
+        button_layout.setContentsMargins(24, 24, 24, 24)
+
+        self._details_btn: Button | None = None
+        if additional_details:
+            self._details_btn = Button("Show Details", variant="default", parent=self._btn_bar)
+            self._details_btn.clicked.connect(self._toggle_details)
+            button_layout.addWidget(self._details_btn)
+
+        self._close_btn = Button("Close", variant="accent", parent=self._btn_bar)
+        self._close_btn.clicked.connect(self._close)
+        button_layout.addWidget(self._close_btn)
+
+        container_layout.addWidget(self._btn_bar, 0)
+
+        self._apply_styles()
+        QApplication.instance().paletteChanged.connect(self._on_theme_changed)
+
+    def mousePressEvent(self, event) -> None:
+        if event.button() == Qt.MouseButton.LeftButton:
+            if self._btn_bar.geometry().contains(event.pos()):
+                return
+            if wh := self.windowHandle():
+                wh.startSystemMove()
+
+    def show_dialog(self) -> None:
+        self.setWindowOpacity(0.0)
+        self._center_on_screen()
+
+        target_pos = self.pos()
+        start_pos = target_pos + QPoint(0, 20)
+        self.move(start_pos)
+
+        enable_dwm_frame(int(self.winId()))
+
+        self.show()
+        self.activateWindow()
+        try:
+            user32.MessageBeep(3)
+        except Exception as e:
+            logging.debug("Failed to play error sound: %s", e)
+
+        self._fade_anim = QPropertyAnimation(self, b"windowOpacity")
+        self._fade_anim.setDuration(120)
+        self._fade_anim.setStartValue(0.0)
+        self._fade_anim.setEndValue(1.0)
+        self._fade_anim.setEasingCurve(QEasingCurve.Type.Linear)
+
+        self._pos_anim = QPropertyAnimation(self, b"pos")
+        self._pos_anim.setDuration(120)
+        self._pos_anim.setStartValue(start_pos)
+        self._pos_anim.setEndValue(target_pos)
+        self._pos_anim.setEasingCurve(QEasingCurve.Type.Linear)
+
+        self._anim_group = QParallelAnimationGroup(self)
+        self._anim_group.addAnimation(self._fade_anim)
+        self._anim_group.addAnimation(self._pos_anim)
+        self._anim_group.start()
+
+    def _close(self) -> None:
+        self.closed.emit()
+
+        current_pos = self.pos()
+        end_pos = current_pos - QPoint(0, 20)
+
+        self._fade_out_anim = QPropertyAnimation(self, b"windowOpacity")
+        self._fade_out_anim.setDuration(120)
+        self._fade_out_anim.setStartValue(self.windowOpacity())
+        self._fade_out_anim.setEndValue(0.0)
+        self._fade_out_anim.setEasingCurve(QEasingCurve.Type.Linear)
+
+        self._pos_out_anim = QPropertyAnimation(self, b"pos")
+        self._pos_out_anim.setDuration(120)
+        self._pos_out_anim.setStartValue(current_pos)
+        self._pos_out_anim.setEndValue(end_pos)
+        self._pos_out_anim.setEasingCurve(QEasingCurve.Type.Linear)
+
+        self._out_anim_group = QParallelAnimationGroup(self)
+        self._out_anim_group.addAnimation(self._fade_out_anim)
+        self._out_anim_group.addAnimation(self._pos_out_anim)
+        self._out_anim_group.finished.connect(self.close)
+        self._out_anim_group.start()
+
+    def _toggle_details(self) -> None:
+        self._details_visible = not self._details_visible
+        self._details_wrapper.setVisible(self._details_visible)
+        if self._details_btn:
+            self._details_btn.setText("Hide details" if self._details_visible else "Show Details")
+
+    def _center_on_screen(self) -> None:
+        screen = QApplication.screenAt(self.pos()) or QApplication.primaryScreen()
+        if screen is None:
+            return
+
+        self.ensurePolished()
         self.adjustSize()
 
-    def showEvent(self, event):
-        self._style_dialog_buttons()
-        text_edit = self.findChild(QTextEdit)
-        if text_edit:
-            text_edit.setStyleSheet("background-color: rgba(0,0,0,0.2); border: none;")
-            text_edit.setMinimumHeight(60)
-            text_edit.setMaximumHeight(150)
-            text_edit.setMinimumWidth(420)
-            text_edit.setMaximumWidth(520)
-            text_edit.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-
-        super().showEvent(event)
-
-    def event(self, e):
-        result = QMessageBox.event(self, e)
-        self.setMinimumHeight(0)
-        self.setMaximumHeight(260)
-        self.setMinimumWidth(420)
-        self.setMaximumWidth(520)
-        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-
-        text_edit = self.findChild(QTextEdit)
-        if text_edit:
-            text_edit.setMinimumHeight(60)
-            text_edit.setMaximumHeight(150)
-            text_edit.setMinimumWidth(420)
-            text_edit.setMaximumWidth(520)
-            text_edit.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-
-        return result
-
-    def _style_dialog_buttons(self):
-        t = get_tokens()
-        style = (
-            f"QPushButton {{ background-color: {t['control_fill_default']}; color: {t['text_primary']};"
-            f" border: 1px solid {t['control_stroke_default']}; border-radius: 4px;"
-            f" font-weight: 600; font-size: 12px; font-family: 'Segoe UI'; padding: 4px 16px; }}"
-            f"QPushButton:hover {{ background-color: {t['control_fill_secondary']};"
-            f" border: 1px solid {t['control_stroke_secondary']}; }}"
-            f"QPushButton:pressed {{ background-color: {t['control_fill_tertiary']}; }}"
-            f"QPushButton:disabled {{ background-color: {t['control_fill_disabled']};"
-            f" color: {t['text_disabled']}; }}"
+        centre = screen.geometry().center()
+        self.move(
+            centre.x() - self.width() // 2,
+            centre.y() - self.height() // 2,
         )
-        for button in self.findChildren(QPushButton):
-            button.setStyleSheet(style)
 
+    def _on_theme_changed(self) -> None:
+        key = theme_key()
+        if key == self._theme_key:
+            return
+        self._theme_key = key
+        self._apply_styles()
 
-_persistent_dialogs = []
+    def _apply_styles(self) -> None:
+        tokens = get_tokens()
+        bg = tokens["solid_bg_base"]
+        layer_alt = tokens["layer_alt"]
+        stroke = tokens["card_stroke_default"]
+        text_secondary = tokens["text_secondary"]
 
+        self._container.setStyleSheet(f"#alert_bg {{ background: {bg}; }}")
+        self._content.setStyleSheet(f"#alert_content {{ background: {layer_alt}; border-bottom: 1px solid {stroke}; }}")
+        self._btn_bar.setStyleSheet(f"#alert_btns {{ background: {bg}; }}")
 
-def _remove_dialog(dialog):
-    try:
-        _persistent_dialogs.remove(dialog)
-    except ValueError:
-        pass
+        self._details.setStyleSheet(
+            f"QTextEdit {{ background: {bg}; color: {text_secondary};"
+            f"border: none; padding: 2px; border-radius: 4px;"
+            f"font-family: 'Cascadia Code', 'Consolas', monospace; font-size: 12px; }}"
+        )
 
 
 def raise_info_alert(
@@ -115,51 +240,34 @@ def raise_info_alert(
     additional_details: str = None,
     rich_text: bool = False,
     exit_on_close: bool = False,
-    parent=None,
-):
-    alert = AlertDialog(
-        icon=QMessageBox.Icon.Information,
+) -> None:
+    """Show alert dialog.
+
+    Args:
+        title: Dialog title (bold heading).
+        msg: Primary message body.
+        informative_msg: Secondary hint (e.g. "Click 'Show Details'...").
+        additional_details: If provided, a "Show more info" button
+            appears that expands an inline details pane.
+        rich_text: Treat *msg* as HTML.
+        exit_on_close: Call ``sys.exit()`` when the dialog is dismissed.
+    """
+    dlg = AlertDialog(
         title=title,
         message=msg,
         informative_message=informative_msg,
-        additional_details=additional_details,
-        parent=parent,
+        additional_details=additional_details or "",
+        rich_text=rich_text,
     )
-    if rich_text:
-        alert.setTextFormat(Qt.TextFormat.RichText)
-
-    alert.finished.connect(lambda _: _remove_dialog(alert))
+    dlg.closed.connect(lambda: _cleanup(dlg))
     if exit_on_close:
-        alert.finished.connect(lambda _: sys.exit())
+        dlg.closed.connect(lambda: sys.exit())
+    _alert_dialogs.append(dlg)
+    QTimer.singleShot(100, dlg.show_dialog)
 
-    _persistent_dialogs.append(alert)
-    QTimer.singleShot(100, alert.show)
 
-
-def raise_error_alert(
-    title: str,
-    msg: str,
-    informative_msg: str,
-    additional_details: str = None,
-    rich_text: bool = False,
-    exit_on_close: bool = True,
-    parent=None,
-):
-    alert = AlertDialog(
-        icon=QMessageBox.Icon.Critical,
-        title=title,
-        message=msg,
-        informative_message=informative_msg,
-        additional_details=additional_details if additional_details else traceback.format_exc(),
-        show_quit=True,
-        parent=parent,
-    )
-    if rich_text:
-        alert.setTextFormat(Qt.TextFormat.RichText)
-
-    alert.finished.connect(lambda _: _remove_dialog(alert))
-    if exit_on_close:
-        alert.finished.connect(lambda _: sys.exit())
-
-    _persistent_dialogs.append(alert)
-    QTimer.singleShot(100, alert.show)
+def _cleanup(dialog: AlertDialog) -> None:
+    try:
+        _alert_dialogs.remove(dialog)
+    except ValueError:
+        pass
