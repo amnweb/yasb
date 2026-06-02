@@ -5,8 +5,8 @@ import os
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon
 
-from core.ui.theme import get_tokens
-from core.utils.win32.backdrop import enable_mica, is_mica_supported
+from core.ui.theme import get_tokens, is_dark
+from core.utils.win32.backdrop import enable_mica, is_mica_supported, set_dark_mode
 from settings import SCRIPT_PATH
 
 
@@ -15,6 +15,7 @@ class ViewBase:
 
     Provides:
       - Mica backdrop setup with base stylesheet
+      - Dark title bar on Windows 10 when in dark mode
       - Application icon
     """
 
@@ -43,6 +44,12 @@ class ViewBase:
             }}
         """)
         if not has_mica:
+            # Apply dark title bar when system is in dark mode
+            if is_dark():
+                try:
+                    set_dark_mode(int(self.winId()))
+                except Exception:
+                    pass
             return False
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
         enable_mica(int(self.winId()))

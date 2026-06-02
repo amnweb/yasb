@@ -233,8 +233,8 @@ class SystrayWidget(BaseWidget):
     def show_context_menu(self, pos: QPoint):
         """Show the context menu for the unpinned visibility button"""
         menu = QMenu(self.window())
-        menu.setProperty("class", "context-menu")
         apply_qmenu_style(menu)
+        menu.setProperty("class", "context-menu")
         menu.setContentsMargins(0, 0, 0, 0)
         menu.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
         refresh_action = menu.addAction("Refresh Systray")

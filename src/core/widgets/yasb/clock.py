@@ -881,12 +881,12 @@ class ClockWidget(BaseWidget):
     def _show_context_menu(self):
         """Build and display the context menu for the clock widget."""
         menu = QMenu(self.window())
-        menu.setProperty("class", "context-menu")
         apply_qmenu_style(menu)
+        menu.setProperty("class", "context-menu")
         if len(self._timezones_list) > 1:
             tz_menu = QMenu("Timezones", menu)
-            tz_menu.setProperty("class", "context-menu submenu")
             apply_qmenu_style(tz_menu)
+            tz_menu.setProperty("class", "context-menu submenu")
 
             for tz in self._timezones_list:
                 tz_display = tz.replace("_", " ")

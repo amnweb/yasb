@@ -799,9 +799,9 @@ class BarContextMenu:
 
     def show(self, position):
         self._menu = QMenu(self.parent)
+        apply_qmenu_style(self._menu)
         self._menu.setProperty("class", "context-menu dark" if ThemeState.is_dark() else "context-menu")
         self._menu.aboutToHide.connect(self._on_menu_about_to_hide)
-        apply_qmenu_style(self._menu)
 
         # Bar info
         bar_info = self._menu.addAction(f"Bar: {self._bar_name}")
@@ -809,10 +809,10 @@ class BarContextMenu:
 
         # Widgets menu
         widgets_menu = self._menu.addMenu("Active Widgets")
+        apply_qmenu_style(widgets_menu)
         widgets_menu.setProperty(
             "class", "context-menu submenu dark" if ThemeState.is_dark() else "context-menu submenu"
         )
-        apply_qmenu_style(widgets_menu)
         self._populate_widgets_menu(widgets_menu)
 
         self._menu.addSeparator()
