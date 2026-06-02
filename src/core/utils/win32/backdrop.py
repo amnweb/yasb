@@ -49,7 +49,7 @@ def set_accent_policy(hwnd, accent_state, gradient_color=0, accent_flags=0):
         raise ctypes.WinError()
 
 
-def _set_dark_mode(hwnd):
+def set_dark_mode(hwnd):
     value = ctypes.c_int(1)
     result = DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, ctypes.byref(value), ctypes.sizeof(value))
     if result != 0:
@@ -84,7 +84,7 @@ def enable_blur(hwnd, DarkMode=False, RoundCorners=False, RoundCornersType="norm
         if sys.getwindowsversion().build >= 22000:
             set_accent_policy(hwnd, ACCENT_ENABLE_BLURBEHIND, gradient_color=0x01202020)
             if DarkMode:
-                _set_dark_mode(hwnd)
+                set_dark_mode(hwnd)
             if RoundCorners:
                 set_window_corner_preference(
                     hwnd, DWMWCP_ROUND if RoundCornersType == "normal" else DWMWCP_ROUNDSMALL, BorderColor
@@ -115,3 +115,15 @@ def enable_mica(hwnd):
             DwmSetWindowAttribute(hwnd, DWMWA_MICA_EFFECT, ctypes.byref(value), ctypes.sizeof(value))
     except Exception as e:
         logging.debug("Failed to apply mica: %s", e)
+
+
+def enable_dwm_frame(hwnd):
+    """Apply DWM frame effects (shadow + rounded corners) to a frameless window."""
+    hwnd = int(hwnd)
+    try:
+        margins = MARGINS(1, 1, 1, 1)
+        DwmExtendFrameIntoClientArea(hwnd, margins)
+        if sys.getwindowsversion().build >= 22000:
+            set_window_corner_preference(hwnd, DWMWCP_ROUND, "System")
+    except Exception as e:
+        logging.debug("Failed to apply DWM frame: %s", e)
