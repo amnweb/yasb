@@ -40,14 +40,13 @@ class AlertDialog(QWidget):
         self._details_visible = False
         self._theme_key = theme_key()
 
-        # ── build UI ──────────────────────────────────────────
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
         # Enforce strict size constraint so window automatically grows/shrinks
         root.setSizeConstraint(QVBoxLayout.SizeConstraint.SetFixedSize)
 
-        # Container card — DWM handles corner radius
+        # Container card - DWM handles corner radius
         self._container = QFrame(self)
         self._container.setObjectName("alert_bg")
         self._container.setFixedWidth(560)
@@ -57,7 +56,7 @@ class AlertDialog(QWidget):
         container_layout.setContentsMargins(0, 0, 0, 0)
         container_layout.setSpacing(0)
 
-        # -- content area (title + body + details) --
+        # Content area (title + body + details)
         self._content = QFrame(self._container)
         self._content.setObjectName("alert_content")
         content_layout = QVBoxLayout(self._content)
@@ -247,7 +246,7 @@ def raise_info_alert(
         title: Dialog title (bold heading).
         msg: Primary message body.
         informative_msg: Secondary hint (e.g. "Click 'Show Details'...").
-        additional_details: If provided, a "Show more info" button
+        additional_details: If provided, a "Show Details" button
             appears that expands an inline details pane.
         rich_text: Treat *msg* as HTML.
         exit_on_close: Call ``sys.exit()`` when the dialog is dismissed.
