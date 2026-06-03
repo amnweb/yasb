@@ -449,7 +449,7 @@ class AppsProvider(BaseProvider):
             return ProviderMenuActionResult()
         if action_id.startswith("run_as"):
             as_user = action_id.endswith("user")
-            launch_verb = "runas" + "user" if as_user else ""
+            launch_verb = "runasuser" if as_user else "runas"
             try:
                 if path.startswith("UWP::"):
                     aumid = path.replace("UWP::", "")
