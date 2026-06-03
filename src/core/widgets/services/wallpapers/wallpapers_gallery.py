@@ -29,7 +29,7 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
 )
 
-from core.bar_helper import ThemeState
+from core.bar_helper import GlobalState
 from core.utils.system import get_build_and_ubr
 from core.utils.utilities import refresh_widget_style
 from core.utils.win32.backdrop import enable_blur
@@ -289,9 +289,9 @@ class ImageGallery(QMainWindow):
         central_widget = QFrame()
         self.setCentralWidget(central_widget)
         central_widget.setProperty(
-            "class", "wallpapers-gallery-window dark" if ThemeState.is_dark() else "wallpapers-gallery-window"
+            "class", "wallpapers-gallery-window dark" if GlobalState.is_dark() else "wallpapers-gallery-window"
         )
-        self.setStyleSheet(ThemeState.stylesheet())
+        self.setStyleSheet(GlobalState.stylesheet())
 
         self.setContentsMargins(0, 0, 0, 0)
         layout = QVBoxLayout()

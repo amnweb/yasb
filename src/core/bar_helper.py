@@ -5,6 +5,7 @@ import subprocess
 import winreg
 from datetime import datetime
 from functools import partial
+from typing import Any
 
 import win32gui
 import win32process
@@ -44,11 +45,12 @@ from core.utils.win32.utils import apply_qmenu_style
 WM_TASKBARCREATED = RegisterWindowMessage("TaskbarCreated")
 
 
-class ThemeState:
-    """Centralized dark/light theme state and stylesheet cache for detached widgets."""
+class GlobalState:
+    """Centralized global state for detached widgets and application-wide configurations."""
 
     _is_dark = False
     _stylesheet = None
+    _tooltip_options = None
 
     @classmethod
     def is_dark(cls) -> bool:
@@ -65,6 +67,14 @@ class ThemeState:
     @classmethod
     def set_stylesheet(cls, value: str):
         cls._stylesheet = value
+
+    @classmethod
+    def tooltip_options(cls) -> Any:
+        return cls._tooltip_options
+
+    @classmethod
+    def set_tooltip_options(cls, value: Any):
+        cls._tooltip_options = value
 
 
 class BarAnimationManager(QObject):
@@ -778,7 +788,7 @@ class OsThemeManager(QObject):
             self.target_widget.setProperty("class", class_property)
             self._update_styles(self.target_widget)
             self._is_dark_theme = is_dark_theme
-            ThemeState.set_dark(is_dark_theme)
+            GlobalState.set_dark(is_dark_theme)
 
     def _update_styles(self, widget):
         """Update styles for widget and its children by unpolishing and re-polishing"""
@@ -800,7 +810,7 @@ class BarContextMenu:
     def show(self, position):
         self._menu = QMenu(self.parent)
         apply_qmenu_style(self._menu)
-        self._menu.setProperty("class", "context-menu dark" if ThemeState.is_dark() else "context-menu")
+        self._menu.setProperty("class", "context-menu dark" if GlobalState.is_dark() else "context-menu")
         self._menu.aboutToHide.connect(self._on_menu_about_to_hide)
 
         # Bar info
@@ -811,7 +821,7 @@ class BarContextMenu:
         widgets_menu = self._menu.addMenu("Active Widgets")
         apply_qmenu_style(widgets_menu)
         widgets_menu.setProperty(
-            "class", "context-menu submenu dark" if ThemeState.is_dark() else "context-menu submenu"
+            "class", "context-menu submenu dark" if GlobalState.is_dark() else "context-menu submenu"
         )
         self._populate_widgets_menu(widgets_menu)
 
