@@ -31,6 +31,7 @@ except ImportError:
 
 class Bar(QWidget):
     handle_bar_management = pyqtSignal(str, str)
+    bar_loaded = pyqtSignal()
 
     def __init__(
         self,
@@ -45,7 +46,6 @@ class Bar(QWidget):
         super().__init__()
         self.config = config
         self._event_service = EventService()
-        self.hide()
         self.setScreen(bar_screen)
         self._bar_id = bar_id
         self._bar_name = bar_name
@@ -104,7 +104,7 @@ class Bar(QWidget):
         self.position_bar(init)
         self.monitor_hwnd = get_monitor_hwnd(int(self.winId()))
 
-        self._add_widgets(widgets)
+        self._setup_layouts()
 
         if self._is_auto_width:
             self._auto_width_manager = AutoWidthManager(self, self)
@@ -241,10 +241,11 @@ class Bar(QWidget):
         self.setGeometry(bar_x, bar_y, bar_width, bar_height)
         self._bar_frame.setGeometry(0, 0, bar_width, bar_height)
 
-    def _add_widgets(self, widgets: dict[str, list] = None):
+    def _setup_layouts(self):
         bar_layout = QGridLayout()
         bar_layout.setContentsMargins(0, 0, 0, 0)
         bar_layout.setSpacing(0)
+        self._column_layouts = {}
 
         for column_num, layout_type in enumerate(["left", "center", "right"]):
             config = self.config.layouts.model_dump()[layout_type]
@@ -254,28 +255,36 @@ class Bar(QWidget):
             layout_container = QFrame()
             layout_container.setProperty("class", f"container container-{layout_type}")
 
-            # Add widgets
-            if layout_type in widgets:
-                for widget in widgets[layout_type]:
-                    widget.parent_layout_type = layout_type
-                    widget.bar_id = self.bar_id
-                    widget.monitor_hwnd = self.monitor_hwnd
-                    layout.addWidget(widget, 0)
-
             if config["alignment"] == "left" and config["stretch"]:
                 layout.addStretch(1)
-
             elif config["alignment"] == "right" and config["stretch"]:
                 layout.insertStretch(0, 1)
-
             elif config["alignment"] == "center" and config["stretch"]:
                 layout.insertStretch(0, 1)
                 layout.addStretch(1)
 
+            self._column_layouts[layout_type] = layout
             layout_container.setLayout(layout)
             bar_layout.addWidget(layout_container, 0, column_num)
 
         self._bar_frame.setLayout(bar_layout)
+
+    def add_single_widget(self, layout_type: str, widget: QWidget):
+        layout = self._column_layouts[layout_type]
+        config = self.config.layouts.model_dump()[layout_type]
+
+        widget.parent_layout_type = layout_type
+        widget.bar_id = self.bar_id
+        widget.monitor_hwnd = self.monitor_hwnd
+
+        if config["alignment"] == "left" and config["stretch"]:
+            layout.insertWidget(layout.count() - 1, widget, 0)
+        elif config["alignment"] == "right" and config["stretch"]:
+            layout.addWidget(widget, 0)
+        elif config["alignment"] == "center" and config["stretch"]:
+            layout.insertWidget(layout.count() - 1, widget, 0)
+        else:
+            layout.addWidget(widget, 0)
 
     def show_bar(self):
         if self._animation_manager:
@@ -287,13 +296,20 @@ class Bar(QWidget):
 
     def showEvent(self, event):
         super().showEvent(event)
-        if self._animation.get("enabled", False) and self._animation_manager:
+
+        duration = self._animation["duration"]
+        is_animation_enabled = self._animation.get("enabled", False) and duration > 0
+
+        if is_animation_enabled and self._animation_manager:
             # Use fade on initial show to avoid DWM blur/shadow flash with slide
             if getattr(self, "_initial_show", False):
                 self._initial_show = False
                 self._animation_manager._start_fade(True)
             else:
                 self.show_bar()
+        elif getattr(self, "_initial_show", False):
+            self._initial_show = False
+            QTimer.singleShot(0, self.bar_loaded.emit)
 
     def closeEvent(self, event):
         if self._hide_on_fullscreen and self.app_bar_manager:
@@ -328,9 +344,12 @@ class Bar(QWidget):
         return super().eventFilter(obj, event)
 
     def hide(self):
+        duration = self._animation["duration"]
+        is_animation_enabled = self._animation.get("enabled", False) and duration > 0
+
         if getattr(self, "_skip_animation", False):
             super().hide()
-        elif self.isVisible() and self._animation.get("enabled") and self._animation_manager:
+        elif self.isVisible() and is_animation_enabled and self._animation_manager:
             self._animation_manager.hide_bar()
         else:
             super().hide()

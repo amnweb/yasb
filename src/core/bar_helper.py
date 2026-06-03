@@ -79,7 +79,8 @@ class BarAnimationManager(QObject):
         self._pending_action = None
 
     def show_bar(self):
-        if not self.bar_widget._animation.get("enabled"):
+        duration = self.bar_widget._animation["duration"]
+        if not self.bar_widget._animation.get("enabled") or duration <= 0:
             self.bar_widget.show()
             return
         if self._animation and self._animation.state() == QVariantAnimation.State.Running:
@@ -92,7 +93,8 @@ class BarAnimationManager(QObject):
             self._start_slide(True)
 
     def hide_bar(self):
-        if not self.bar_widget._animation.get("enabled"):
+        duration = self.bar_widget._animation["duration"]
+        if not self.bar_widget._animation.get("enabled") or duration <= 0:
             self.bar_widget._skip_animation = True
             self.bar_widget.hide()
             self.bar_widget._skip_animation = False
@@ -113,7 +115,7 @@ class BarAnimationManager(QObject):
 
     def _start_fade(self, show: bool):
         self._stop_animation()
-        duration = self.bar_widget._animation.get("duration", 300)
+        duration = self.bar_widget._animation["duration"]
         self._animation = QPropertyAnimation(self.bar_widget, b"windowOpacity")
         self._animation.setDuration(duration)
         self._animation.setStartValue(0.0 if show else 1.0)
@@ -152,7 +154,7 @@ class BarAnimationManager(QObject):
             self._update_slide(0.0)
 
         self._animation = QVariantAnimation(bar)
-        self._animation.setDuration(bar._animation.get("duration", 300))
+        self._animation.setDuration(bar._animation["duration"])
         self._animation.setStartValue(0.0 if show else 1.0)
         self._animation.setEndValue(1.0 if show else 0.0)
         self._animation.setEasingCurve(QEasingCurve.Type.OutQuad if show else QEasingCurve.Type.InQuad)
@@ -191,6 +193,7 @@ class BarAnimationManager(QObject):
         self.bar_widget._bar_frame.move(0, 0)
         self._animation = None
         self._process_pending()
+        self.bar_widget.bar_loaded.emit()
 
         # Check if mouse left during the animation
         if (
