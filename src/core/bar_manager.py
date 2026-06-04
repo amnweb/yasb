@@ -4,7 +4,7 @@ from contextlib import suppress
 
 from PyQt6.QtCore import QObject, QTimer, pyqtSignal, pyqtSlot
 from PyQt6.QtGui import QScreen
-from PyQt6.QtWidgets import QApplication
+from PyQt6.QtWidgets import QApplication, QWidget
 from qt_css_engine import TransitionEngine, extract_rules
 
 from core.bar import Bar
@@ -46,8 +46,7 @@ class BarManager(QObject):
         self._hotkey_dispatcher: HotkeyDispatcher | None = None
         self._collected_keybindings: list[HotkeyBinding] = []
         self._registered_hotkey_widgets: set[tuple[str, str]] = set()  # (widget_name, screen_name)
-        self._widget_queues = []
-        self._bars_animation_count = 0
+        self._bars_count = 0
 
         self.styles_modified.connect(self.on_styles_modified)
         self.config_modified.connect(self.on_config_modified)
@@ -180,14 +179,13 @@ class BarManager(QObject):
                         initialized_screens.add(screen.name())
 
         self._initialized_screens = initialized_screens
-        self._bars_loading_count = len(self.bars)
-        self._bars_animation_count = len(self.bars)
+        self._bars_count = len(self.bars)
 
         self._widgets_with_keybindings = {
             n for n, cfg in self.config.widgets.items() if cfg.get("options", {}).get("keybindings")
         }
 
-        if self._bars_loading_count == 0:
+        if self._bars_count == 0:
             self._finish_initialization()
         else:
             for bar in self.bars:
@@ -199,6 +197,12 @@ class BarManager(QObject):
         self._start_hotkey_listener()
         self.run_listeners_in_threads()
         self._widget_builder.raise_alerts_if_errors_present()
+        QTimer.singleShot(0, self._engine_widget_registration)
+
+    def _engine_widget_registration(self) -> None:
+        for bar in self.bars:
+            for widget in bar.findChildren(QWidget):
+                self.animation_engine._on_polish(widget)
 
     def _on_bar_animation_finished(self):
         sender = self.sender()
@@ -206,42 +210,36 @@ class BarManager(QObject):
             with suppress(TypeError):
                 sender.bar_loaded.disconnect(self._on_bar_animation_finished)
 
-        self._bars_animation_count -= 1
-        if self._bars_animation_count <= 0:
+        self._bars_count -= 1
+        if self._bars_count <= 0:
             for bar in self.bars:
                 self._process_widget_queue(bar)
+            self._finish_initialization()
 
     def _process_widget_queue(self, bar: Bar) -> None:
         if not hasattr(bar, "_widget_queue") or not bar._widget_queue:
-            self._check_all_bars_loaded()
             return
 
-        column, w_name = bar._widget_queue.pop(0)
-        widget = self._widget_builder._build_widget(w_name)
-        if widget:
-            screen_name = bar.screen().name()
-            widget.screen_name = screen_name
-            if widget.widget_name in self._widgets_with_keybindings:
-                key = (widget.widget_name, screen_name)
-                if key in self._registered_hotkey_widgets:
-                    widget._hotkey_enabled = False
-                    logging.info(
-                        "%s on screen %s already has hotkey handler registered from another bar.",
-                        widget.widget_name,
-                        screen_name,
-                    )
-                else:
-                    self._registered_hotkey_widgets.add(key)
+        while bar._widget_queue:
+            column, w_name = bar._widget_queue.pop(0)
+            widget = self._widget_builder._build_widget(w_name)
+            if widget:
+                screen_name = bar.screen().name()
+                widget.screen_name = screen_name
+                if widget.widget_name in self._widgets_with_keybindings:
+                    key = (widget.widget_name, screen_name)
+                    if key in self._registered_hotkey_widgets:
+                        widget._hotkey_enabled = False
+                        logging.info(
+                            "%s on screen %s already has hotkey handler registered from another bar.",
+                            widget.widget_name,
+                            screen_name,
+                        )
+                    else:
+                        self._registered_hotkey_widgets.add(key)
 
-            bar.add_single_widget(column, widget)
-            bar._widgets[column].append(widget)
-
-        QTimer.singleShot(0, lambda: self._process_widget_queue(bar))
-
-    def _check_all_bars_loaded(self) -> None:
-        self._bars_loading_count -= 1
-        if self._bars_loading_count <= 0:
-            self._finish_initialization()
+                bar.add_single_widget(column, widget)
+                bar._widgets[column].append(widget)
 
     def _collect_keybindings(self) -> None:
         """Collect keybindings from all widget configurations."""
