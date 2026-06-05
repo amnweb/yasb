@@ -5,7 +5,7 @@ import humanize
 from PyQt6.QtCore import QTimer
 from PyQt6.QtWidgets import QLabel
 
-from core.utils.utilities import refresh_widget_style
+from core.utils.utilities import build_progress_widget, refresh_widget_style
 from core.utils.win32.constants import POWER_TIME_UNKNOWN, POWER_TIME_UNLIMITED
 from core.validation.widgets.yasb.battery import BatteryConfig
 from core.widgets.base import BaseWidget
@@ -22,6 +22,8 @@ class BatteryWidget(BaseWidget):
         self._battery_api = BatteryAPI.instance()
         self._battery_state: BatteryData | None = None
         self._show_alt_label = False
+
+        self.progress_widget = build_progress_widget(self, self.config.progress_bar.model_dump())
 
         self._init_container()
         self.build_widget_label(self.config.label, self.config.label_alt)
@@ -157,6 +159,14 @@ class BatteryWidget(BaseWidget):
         cycle_count_str = str(state.cycle_count) if state.cycle_count is not None else "N/A"
         health_str = f"{state.health_percent:.1f}" if state.health_percent is not None else "N/A"
         chemistry_str = state.chemistry if state.chemistry else "N/A"
+
+        if self.config.progress_bar.enabled and self.progress_widget and self._battery_state is not None:
+            if self._widget_container_layout.indexOf(self.progress_widget) == -1:
+                self._widget_container_layout.insertWidget(
+                    0 if self.config.progress_bar.position == "left" else self._widget_container_layout.count(),
+                    self.progress_widget,
+                )
+            self.progress_widget.set_value(self._battery_state.percent)
 
         for part in label_parts:
             part = part.strip()

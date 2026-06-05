@@ -10,7 +10,7 @@
 | `group_label` | dict | `{'volume_labels': ["C"], 'show_label_name': true, 'blur': true, 'round_corners': true, 'round_corners_type': 'normal','border_color': 'System', 'alignment': 'right', 'direction': 'down', 'offset_top': 6, 'offset_left': 0}` | Group labels for multiple disks. This will show the labels of multiple disks in a popup window. |
 | `callbacks`       | dict    | `{'on_left': 'do_nothing', 'on_middle': 'do_nothing', 'on_right': "exec explorer C:\\"}` | Callbacks for mouse events. |
 | `disk_thresholds` | dict  | `{'low': 25, 'medium': 50, 'high': 90}`                                 | Thresholds for Disk usage levels. |
-| `progress_bar`       | dict    | `{'enabled': false, 'position': 'left', 'size': 14, 'thickness': 2, 'color': '#57948a', 'animation': false}` | Progress bar settings.    |
+| `progress_bar`       | dict    | `{\'enabled\': false, \'progress_type\': \'circular\', \'position\': \'left\', \'size\': 18, \'thickness\': 3, \'color\': \'#00C800\', \'background_color\': \'#3C3C3C\', \'animation\': true}` | Progress bar settings.    |
 
 ## Example Configuration
 
@@ -122,7 +122,7 @@ Based on `disk_thresholds` configuration, the widget applies CSS classes to styl
 .disk-group-label-bar::chunk {}
 
 /* Disk progress bar styles if enabled */
-.disk-widget .progress-circle {} 
+.disk-widget .progress-container {} 
 ```
 
 ## Example Style for Threshold Classes

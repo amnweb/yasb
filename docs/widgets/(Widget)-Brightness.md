@@ -17,7 +17,7 @@
 | `auto_light_night_end_time` | string | `"06:30"` | The time at which the night ends. |
 | `brightness_menu` | dict | `{'blur': True, 'round_corners': True, 'round_corners_type': 'normal', 'border_color': 'System', 'alignment': 'right', 'direction': 'down', 'offset_top': 6, 'offset_left': 0, 'brightness_icon': '\ue706', 'contrast_icon': '\ue7a1'}` | Menu settings for the widget. |
 | `callbacks`     | dict    | `{'on_left': 'toggle_label', 'on_middle': 'do_nothing', 'on_right': 'do_nothing'}` | Callbacks for mouse events on the brightness widget. |
-| `progress_bar`       | dict    | `{'enabled': False, 'position': 'left', 'size': 14, 'thickness': 2, 'color': '#57948a', animation: True}` | Progress bar settings.    |
+| `progress_bar`       | dict    | `{\'enabled\': false, \'progress_type\': \'circular\', \'position\': \'left\', \'size\': 18, \'thickness\': 3, \'color\': \'#00C800\', \'background_color\': \'#3C3C3C\', \'animation\': true}` | Progress bar settings.    |
 ## Example Configuration
 
 ```yaml
@@ -148,7 +148,7 @@ adjust if you have multiple monitors and want to style them differently correctl
 .contrast-slider::handle{}
 
 /* Brightness progress bar styles if enabled */
-.brightness-widget .progress-circle {} 
+.brightness-widget .progress-container {} 
 ```
 ## Preview of the Widget
 ![Brightness YASB Widget](assets/97267927-44d7-4cf5-8c93-b2cff8c40817.png)

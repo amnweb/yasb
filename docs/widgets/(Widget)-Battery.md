@@ -13,6 +13,7 @@
 | `status_thresholds`     | dict    | `{critical: 10, low: 25, medium: 75, high: 95, full: 100}` | Thresholds for different battery statuses.                                  |
 | `status_icons`          | dict    | `{icon_charging: '\uf0e7', icon_critical: '\uf244', icon_low: '\uf243', icon_medium: '\uf242', icon_high: '\uf241', icon_full: '\uf240'}` | Icons for different battery statuses.                                       |
 | `callbacks`             | dict    | `{on_left: 'toggle_label', on_middle: 'do_nothing', on_right: 'do_nothing'}` | Callback functions for different mouse button actions.                      |
+| `progress_bar`          | dict    | `{'enabled': false, 'progress_type': 'circular', 'position': 'left', 'size': 18, 'thickness': 3, 'color': '#00C800', 'background_color': '#3C3C3C', 'animation': true}` | Progress bar settings.                                      |
 
 ## Label Placeholders
 
@@ -94,6 +95,16 @@ battery:
   - **on_left**: The name of the callback function for left mouse button click.
   - **on_middle**: The name of the callback function for middle mouse button click.
   - **on_right**: The name of the callback function for right mouse button click.
+- **progress_bar**: A dictionary containing settings for the progress bar. It includes:
+  - **enabled**: Whether the progress bar is enabled.
+  - **progress_type**: The type of progress bar. Options are `"circular"`, `"linear_horizontal"`, or `"linear_vertical"`.
+  - **position**: The position of the progress bar, either "left" or "right".
+  - **size**: The length of the progress bar (or diameter if circular). Minimum is 1, maximum is 200.
+  - **thickness**: The thickness of the progress bar. Minimum is 1, maximum is 100.
+  - **radius**: The border radius for the linear progress bar corners. Minimum is 0, maximum is 100.
+  - **color**: The color of the progress bar. Color can be a single color or a gradient. For example, `color: "#57948a"` or `color: ["#57948a", "#ff0000"]` for a gradient.
+  - **background_color**: The background color of the progress bar.
+  - **animation**: Whether to enable smooth change of the progress bar value.
 
 ## Style
 ```css
@@ -116,6 +127,8 @@ battery:
 .battery-widget .widget-container .icon.status-full {}
 .battery-widget .widget-container .icon.status-charging {}
 .battery-widget .widget-container .icon.status-charging.blink {}
+/* Progress bar styles */
+.battery-widget .progress-container {}
 ```
 
 ## Style Example

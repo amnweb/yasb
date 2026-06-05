@@ -19,7 +19,7 @@ This widget implements a Pomodoro timer, which is a time management method that 
 | `icons` | dict | See below | Icons used for different timer states. |
 | `callbacks` | dict | See below | Configure widget interaction callbacks. |
 | `menu` | dict | See below | Configure the appearance and behavior of the timer menu. |
-| `progress_bar`       | dict    | `{'enabled': false, 'position': 'left', 'size': 14, 'thickness': 2, 'color': '#57948a', 'animation': true}` | Progress bar settings.    |
+| `progress_bar`       | dict    | `{\'enabled\': false, \'progress_type\': \'circular\', \'position\': \'left\', \'size\': 18, \'thickness\': 3, \'color\': \'#00C800\', \'background_color\': \'#3C3C3C\', \'animation\': true}` | Progress bar settings.    |
 
 ## Example Configuration
 
@@ -146,7 +146,7 @@ pomodoro:
 .pomodoro-menu .button:pressed {} /*Style for button pressed effect.*/
 
 /* Pomodoro progress bar styles if enabled */
-.pomodoro-widget .progress-circle {} 
+.pomodoro-widget .progress-container {} 
 ```
 
 ## Example CSS

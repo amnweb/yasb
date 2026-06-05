@@ -11,7 +11,7 @@
 | `icons`       | dict    | `{'normal': '\uf130', 'muted': '\uf131'}` | Icons for microphone widget |
 | `callbacks`       | dict    | `{'on_left': 'toggle_mute', 'on_middle': 'toggle_label', 'on_right': 'do_nothing'}` | Callbacks for mouse events on the memory widget. |
 | `mic_menu` | dict | `{'blur': True, 'round_corners': True, 'round_corners_type': 'normal', 'border_color': 'system', 'alignment': 'right', 'direction': 'down', 'offset_top': 6, 'offset_left': 0}` | Menu settings for the widget. |
-| `progress_bar`       | dict    | `{'enabled': False, 'position': 'left', 'size': 14, 'thickness': 2, 'color': '#57948a', animation: True}` | Progress bar settings.    |
+| `progress_bar`       | dict    | `{\'enabled\': false, \'progress_type\': \'circular\', \'position\': \'left\', \'size\': 18, \'thickness\': 3, \'color\': \'#00C800\', \'background_color\': \'#3C3C3C\', \'animation\': true}` | Progress bar settings.    |
 
 
 ## Example Configuration
@@ -79,7 +79,7 @@ microphone:
 .microphone-widget .label.no-device {} /* Applied when no microphone device is connected */
 .microphone-widget .icon.no-device {} /* Applied when no microphone device is connected */
 /* Microphone progress bar styles if enabled */
-.microphone-widget .progress-circle {} 
+.microphone-widget .progress-container {} 
 /* Microphone menu styles */
 .microphone-widget .microphone-menu {}
 /* System microphone volume */

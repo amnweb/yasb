@@ -12,7 +12,7 @@
 | `histogram_num_columns` | integer | `10`                                                                  | The number of columns in the histogram.                                     |
 | `callbacks`           | dict    | `{'on_left': 'toggle_label', 'on_middle': 'do_nothing', 'on_right': 'do_nothing'}` | Callback functions for different mouse button actions.                      |
 | `gpu_thresholds`      | dict    | `{'low': 25, 'medium': 50, 'high': 90}`                                 | Thresholds for GPU utilization levels.                                      |
-| `progress_bar`        | dict    | `{'enabled': false, 'position': 'left', 'size': 14, 'thickness': 2, 'color': '#57948a', 'animation': false}` | Progress bar settings.                                                      |
+| `progress_bar`       | dict    | `{\'enabled\': false, \'progress_type\': \'circular\', \'position\': \'left\', \'size\': 18, \'thickness\': 3, \'color\': \'#00C800\', \'background_color\': \'#3C3C3C\', \'animation\': true}` | Progress bar settings.    |
 | `hide_decimal`        | bool    | `false`                                                                 | Hide decimal places for utilization, temperature, and power draw values.    |
 | `units`               | string  | `"metric"`                                                              | Temperature unit: `"metric"` for Celsius, `"imperial"` for Fahrenheit.     |
 | `menu`                | dict    | See below                                                               | Configuration for the popup menu with graph and stats. |
@@ -123,7 +123,7 @@ gpu:
 .gpu-widget .label.status-high {}
 .gpu-widget .label.status-critical {}
 /* GPU progress bar styles if enabled */
-.gpu-widget .progress-circle {}
+.gpu-widget .progress-container {}
 ```
 
 ### Popup Menu Styles

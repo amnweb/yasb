@@ -8,7 +8,7 @@
 | `callbacks`       | dict    | `{'on_left': 'toggle_label', 'on_middle': 'do_nothing', 'on_right': 'do_nothing'}` | Callbacks for mouse events on the memory widget. |
 | `histogram_icons`     | list    | `["\u2581", "\u2581", "\u2582", "\u2583", "\u2584", "\u2585", "\u2586", "\u2587", "\u2588"]` | Icons representing RAM usage histograms.                                    |
 | `memory_thresholds` | dict  | `{'low': 25, 'medium': 50, 'high': 90}`                                 | Thresholds for memory usage levels. |
-| `progress_bar`       | dict    | `{'enabled': False, 'position': 'left', 'size': 14, 'thickness': 2, 'color': '#57948a', 'animation': True}` | Progress bar settings.    |
+| `progress_bar`       | dict    | `{\'enabled\': false, \'progress_type\': \'circular\', \'position\': \'left\', \'size\': 18, \'thickness\': 3, \'color\': \'#00C800\', \'background_color\': \'#3C3C3C\', \'animation\': true}` | Progress bar settings.    |
 | `hide_decimal`       | boolean    | `false`                                                                 | Whether to hide decimal places in the memory widget. |
 | `menu`               | dict    | See below                                                               | Configuration for the popup menu with graph and stats. |
 
@@ -103,7 +103,7 @@ The `label` and `label_alt` options use format strings that can include placehol
 .memory-widget .widget-container .icon.status-critical {}
 
 /* Progress bar styles (if enabled) */
-.memory-widget .progress-circle {}
+.memory-widget .progress-container {}
 
 /* Custom class styling */
 .memory-widget.your-class-name {}
@@ -218,7 +218,7 @@ The `label` and `label_alt` options use format strings that can include placehol
 }
 
 /* Progress bar customization */
-.memory-widget .progress-circle {
+.memory-widget .progress-container {
     margin-right: 6px;
 }
 ```

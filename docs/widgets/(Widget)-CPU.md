@@ -10,7 +10,7 @@
 | `histogram_num_columns` | integer | `10`                                                                    | The number of columns in the histogram.                                     |
 | `callbacks`           | dict    | `{'on_left': 'toggle_label', 'on_middle': 'do_nothing', 'on_right': 'do_nothing'}` | Callback functions for different mouse button actions.                      |
 | `cpu_thresholds` | dict  | `{'low': 25, 'medium': 50, 'high': 90}`                                 | Thresholds for CPU usage levels. |
-| `progress_bar`       | dict    | `{'enabled': false, 'position': 'left', 'size': 14, 'thickness': 2, 'color': '#57948a', 'animation': false}` | Progress bar settings.                                                      |
+| `progress_bar`       | dict    | `{\'enabled\': false, \'progress_type\': \'circular\', \'position\': \'left\', \'size\': 18, \'thickness\': 3, \'color\': \'#00C800\', \'background_color\': \'#3C3C3C\', \'animation\': true}` | Progress bar settings.    |
 | `hide_decimal`       | bool    | `false`                                                                 | Whether to hide decimal places in the CPU widget.                          |
 | `menu`               | dict    | See below                                                               | Configuration for the popup menu with graph and stats. |
 
@@ -125,7 +125,7 @@ cpu:
 .cpu-widget .widget-container .icon.status-critical {}
 
 /* Progress bar styles (if enabled) */
-.cpu-widget .progress-circle {}
+.cpu-widget .progress-container {}
 
 /* Custom class styling */
 .cpu-widget.your-class-name {}
@@ -240,7 +240,7 @@ cpu:
 }
 
 /* Progress bar customization */
-.cpu-widget .progress-circle {
+.cpu-widget .progress-container {
     margin-right: 6px;
 }
 ```
