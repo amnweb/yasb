@@ -11,7 +11,8 @@ from PyQt6.QtCore import (
 from PyQt6.QtGui import QCursor, QGuiApplication
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QWidget
 
-from core.bar_helper import ThemeState
+from core.bar_helper import GlobalState
+from core.utils.win32.backdrop import enable_blur
 
 
 class CustomToolTip(QFrame):
@@ -34,7 +35,7 @@ class CustomToolTip(QFrame):
 
         # Create label for text content
         self.label = QLabel()
-        self.label.setProperty("class", "tooltip dark" if ThemeState.is_dark() else "tooltip")
+        self.label.setProperty("class", "tooltip dark" if GlobalState.is_dark() else "tooltip")
 
         # cast to int for margins
         self.layout = QHBoxLayout(self)
@@ -113,8 +114,8 @@ class CustomToolTip(QFrame):
         if cls._tooltip_pool:
             tooltip = cls._tooltip_pool.pop()
             tooltip._is_destroyed = False
-            tooltip.label.setProperty("class", "tooltip dark" if ThemeState.is_dark() else "tooltip")
-            tooltip.setStyleSheet(ThemeState.stylesheet())
+            tooltip.label.setProperty("class", "tooltip dark" if GlobalState.is_dark() else "tooltip")
+            tooltip.setStyleSheet(GlobalState.stylesheet())
             return tooltip
         return cls()
 
@@ -132,8 +133,8 @@ class CustomToolTip(QFrame):
             tooltip.deleteLater()
 
     def apply_stylesheet(self):
-        """Apply the tooltip stylesheet from ThemeState."""
-        self.setStyleSheet(ThemeState.stylesheet())
+        """Apply the tooltip stylesheet from GlobalState."""
+        self.setStyleSheet(GlobalState.stylesheet())
 
     def get_opacity(self):
         return self._opacity
@@ -162,38 +163,45 @@ class CustomToolTip(QFrame):
             if self.isVisible() and self._base_pos:
                 self.move(self._base_pos.x(), self._base_pos.y() + int(self._slide_offset))
 
-    def _calculate_position(self, widget_geometry):
+    def _calculate_position(self, widget_geometry, top_level_geometry=None):
         """Calculate tooltip position based on widget geometry and screen bounds."""
+        if top_level_geometry is None:
+            top_level_geometry = widget_geometry
+
         screen = QGuiApplication.screenAt(widget_geometry.center()) or QGuiApplication.primaryScreen()
         screen_geometry = screen.geometry()
 
         # Center horizontally on widget
         x = widget_geometry.center().x() - (self.width() // 2)
 
-        # Position vertically based on preference
-        space_below = screen_geometry.bottom() - widget_geometry.bottom()
-        space_above = widget_geometry.top() - screen_geometry.top()
+        # Position vertically based on top level window (Bar or Popup)
+        space_below = screen_geometry.bottom() - top_level_geometry.bottom()
+        space_above = top_level_geometry.top() - screen_geometry.top()
+
+        # Get dynamic offset
+        opts = GlobalState.tooltip_options()
+        offset = opts.offset if opts else 5
 
         if self._position == "top":
             # Force top position if there's space, otherwise fallback to bottom
-            if space_above >= self.height() + 5:
-                y = widget_geometry.top() - self.height() - 5
+            if space_above >= self.height() + offset:
+                y = top_level_geometry.top() - self.height() - offset
             else:
-                y = widget_geometry.bottom() + 5
+                y = top_level_geometry.bottom() + offset
         elif self._position == "bottom":
             # Force bottom position if there's space, otherwise fallback to top
-            if space_below >= self.height() + 5:
-                y = widget_geometry.bottom() + 5
+            if space_below >= self.height() + offset:
+                y = top_level_geometry.bottom() + offset
             else:
-                y = widget_geometry.top() - self.height() - 5
+                y = top_level_geometry.top() - self.height() - offset
         else:
             # Auto: prefer below, but above if no space
-            if space_below >= self.height() + 5:
-                y = widget_geometry.bottom() + 5
-            elif space_above >= self.height() + 5:
-                y = widget_geometry.top() - self.height() - 5
+            if space_below >= self.height() + offset:
+                y = top_level_geometry.bottom() + offset
+            elif space_above >= self.height() + offset:
+                y = top_level_geometry.top() - self.height() - offset
             else:
-                y = widget_geometry.bottom() + 5  # Default to below
+                y = top_level_geometry.bottom() + offset  # Default to below
 
         # Clamp to screen bounds
         x = max(screen_geometry.left(), min(x, screen_geometry.right() - self.width()))
@@ -201,7 +209,7 @@ class CustomToolTip(QFrame):
 
         return QPoint(x, y)
 
-    def show_tooltip(self, text, widget_geometry=None, duration=None):
+    def show_tooltip(self, text, widget_geometry=None, top_level_geometry=None, duration=None):
         """Show tooltip centered below or above the widget."""
         if CustomToolTip._active_tooltip and CustomToolTip._active_tooltip is not self:
             CustomToolTip._active_tooltip.hide()
@@ -211,13 +219,24 @@ class CustomToolTip(QFrame):
         self.adjustSize()
 
         if widget_geometry:
-            self._base_pos = self._calculate_position(widget_geometry)
+            self._base_pos = self._calculate_position(widget_geometry, top_level_geometry)
             self.move(self._base_pos.x(), self._base_pos.y())
         else:
             return
 
         self._start_animations(fade_in=True)
         self.show()
+
+        opts = GlobalState.tooltip_options()
+        if opts and opts.blur_effect and opts.blur_effect.enabled:
+            blur_cfg = opts.blur_effect
+            enable_blur(
+                self.winId(),
+                DarkMode=blur_cfg.dark_mode,
+                RoundCorners=blur_cfg.round_corners,
+                RoundCornersType=blur_cfg.round_corners_type,
+                BorderColor=blur_cfg.border_color,
+            )
 
         if duration:
             self.hide_timer.start(duration)
@@ -327,7 +346,15 @@ class TooltipEventFilter(QObject):
                 if (self.widget.isVisible() and widget_rect.width() > 0 and widget_rect.height() > 0)
                 else None
             )
-            self.tooltip.show_tooltip(self.tooltip_text, geometry)
+            top_level = self.widget.window()
+            if top_level and top_level.__class__.__name__ == "Bar":
+                top_level_rect = top_level.rect()
+                top_level_global_pos = top_level.mapToGlobal(QPoint(0, 0))
+                top_level_geometry = top_level_rect.translated(top_level_global_pos)
+            else:
+                top_level_geometry = global_geometry
+
+            self.tooltip.show_tooltip(self.tooltip_text, geometry, top_level_geometry)
 
         self.hide_timer.stop()
         if not self._app_event_filter_installed:

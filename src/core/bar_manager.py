@@ -8,7 +8,7 @@ from PyQt6.QtWidgets import QApplication
 from qt_css_engine import TransitionEngine, extract_rules
 
 from core.bar import Bar
-from core.bar_helper import ThemeState
+from core.bar_helper import GlobalState
 from core.config import get_config, get_stylesheet
 from core.events.service import EventService
 from core.utils.controller import reload_application
@@ -33,7 +33,8 @@ class BarManager(QObject):
         self.config = config
         self.stylesheet, self.rules = extract_rules(stylesheet)
         self.animation_engine = TransitionEngine(self.rules)
-        ThemeState.set_stylesheet(self.stylesheet)
+        GlobalState.set_stylesheet(self.stylesheet)
+        GlobalState.set_tooltip_options(self.config.tooltip)
         self.event_service = EventService()
         self.widget_event_listeners = set()
         self.bars: list[Bar] = []
@@ -66,7 +67,7 @@ class BarManager(QObject):
         stylesheet = get_stylesheet(show_error_dialog=True)
         if stylesheet and (stylesheet != self.stylesheet):
             self.stylesheet, new_rules = extract_rules(stylesheet)
-            ThemeState.set_stylesheet(self.stylesheet)
+            GlobalState.set_stylesheet(self.stylesheet)
             self.animation_engine.reload_rules(new_rules)
             for bar in self.bars:
                 bar.setStyleSheet(self.stylesheet)
