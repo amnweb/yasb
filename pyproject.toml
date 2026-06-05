@@ -16,7 +16,7 @@ dependencies = [
     "pyqt6==6.10.2",
     "pydantic==2.13.4",
     "humanize==4.15.0",
-    "pywin32==311",
+    "pywin32==312",
     "pyyaml==6.0.3",
     "holidays==0.98",
     "watchdog==6.0.0",
