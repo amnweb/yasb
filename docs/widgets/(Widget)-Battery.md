@@ -13,6 +13,7 @@
 | `status_thresholds`     | dict    | `{critical: 10, low: 25, medium: 75, high: 95, full: 100}` | Thresholds for different battery statuses.                                  |
 | `status_icons`          | dict    | `{icon_charging: '\uf0e7', icon_critical: '\uf244', icon_low: '\uf243', icon_medium: '\uf242', icon_high: '\uf241', icon_full: '\uf240'}` | Icons for different battery statuses.                                       |
 | `callbacks`             | dict    | `{on_left: 'toggle_label', on_middle: 'do_nothing', on_right: 'do_nothing'}` | Callback functions for different mouse button actions.                      |
+| `progress_bar`       | dict    | `{'enabled': false, 'position': 'left', 'size': 14, 'thickness': 2, 'color': '#57948a', 'animation': true}` | Progress bar settings.    |
 
 ## Label Placeholders
 
@@ -94,6 +95,14 @@ battery:
   - **on_left**: The name of the callback function for left mouse button click.
   - **on_middle**: The name of the callback function for middle mouse button click.
   - **on_right**: The name of the callback function for right mouse button click.
+- **progress_bar**: A dictionary containing settings for the progress bar. It includes:
+  - **enabled**: Whether the progress bar is enabled.
+  - **position**: The position of the progress bar, either "left" or "right".
+  - **size**: The size of the progress bar.
+  - **thickness**: The thickness of the progress bar.
+  - **color**: The color of the progress bar. Color can be single color or gradient. For example, `color: "#57948a"` or `color: ["#57948a", "#ff0000"]` for a gradient.
+  - **background_color**: The background color of the progress bar.
+  - **animation**: Whether to enable smooth change of the progress bar value.
 
 ## Style
 ```css

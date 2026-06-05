@@ -30,6 +30,16 @@ class StatusIconsConfig(CustomBaseModel):
     icon_full: str = "\uf240"
 
 
+class ProgressBarConfig(CustomBaseModel):
+    enabled: bool = False
+    size: int = Field(default=18, ge=8, le=64)
+    thickness: int = Field(default=3, ge=1, le=10)
+    color: str | list[str] = "#00C800"
+    background_color: str = "#3C3C3C"
+    position: str = "left"
+    animation: bool = True
+
+
 class CallbacksBatteryConfig(CallbacksConfig):
     on_left: str = "toggle_label"
 
@@ -45,5 +55,6 @@ class BatteryConfig(CustomBaseModel):
     charging_options: ChargingOptionsConfig = ChargingOptionsConfig()
     status_thresholds: StatusThresholdsConfig = StatusThresholdsConfig()
     status_icons: StatusIconsConfig = StatusIconsConfig()
+    progress_bar: ProgressBarConfig = ProgressBarConfig()
     keybindings: list[KeybindingConfig] = []
     callbacks: CallbacksBatteryConfig = CallbacksBatteryConfig()
