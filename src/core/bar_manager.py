@@ -2,7 +2,7 @@ import logging
 import uuid
 from contextlib import suppress
 
-from PyQt6.QtCore import QObject, QTimer, pyqtSignal, pyqtSlot
+from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot
 from PyQt6.QtGui import QScreen
 from PyQt6.QtWidgets import QApplication, QWidget
 from qt_css_engine import TransitionEngine, extract_rules
@@ -51,7 +51,6 @@ class BarManager(QObject):
         self.styles_modified.connect(self.on_styles_modified)
         self.config_modified.connect(self.on_config_modified)
         self._app = QApplication.instance()
-        self._app.installEventFilter(self.animation_engine)
         self._app.aboutToQuit.connect(self.stop_listener_threads)
         self._app.screenAdded.connect(self.on_screens_update)
         self._app.screenRemoved.connect(self.on_screens_update)
@@ -197,7 +196,8 @@ class BarManager(QObject):
         self._start_hotkey_listener()
         self.run_listeners_in_threads()
         self._widget_builder.raise_alerts_if_errors_present()
-        QTimer.singleShot(0, self._engine_widget_registration)
+        self._app.installEventFilter(self.animation_engine)
+        self._engine_widget_registration()
 
     def _engine_widget_registration(self) -> None:
         for bar in self.bars:
