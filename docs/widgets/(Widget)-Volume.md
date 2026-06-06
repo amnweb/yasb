@@ -1,8 +1,8 @@
 # Volume Widget Options
 | Option       | Type   | Default                                                                 | Description                                                                 |
 |--------------|--------|-------------------------------------------------------------------------|-----------------------------------------------------------------------------|
-| `label`      | string | `'{volume[percent]}%'`                                                  | The format string for the volume label. You can use placeholders like `{volume[percent]}` to dynamically insert volume information. |
-| `label_alt`  | string | `'{volume[percent]}%'`                                                  | The alternative format string for the volume label. Useful for displaying additional volume details. |
+| `label`      | string | `'{level}'`                                                             | The format string for the volume label. You can use `{icon}` for the volume icon and `{level}` for the volume percentage. |
+| `label_alt`  | string | `'{level}'`                                                             | The alternative format string for the volume label. Useful for displaying additional volume details. |
 | `class_name`      | string | `""`                                                                                  | Additional CSS class name for the widget.                                    |
 | `scroll_step`     | int     | `2`                  | The step size for volume adjustment when scrolling. The value is in percentage points (0-100). |
 | `slider_beep`   | boolean | `true`              | Whether to play a sound when the volume slider is released. |
@@ -11,7 +11,7 @@
 | `volume_icons` | list  | `['\ueee8', '\uf026', '\uf027', '\uf027', '\uf028']`                    | A list of icons representing different volume levels. The icons are used based on the current volume percentage. |
 | `callbacks`  | dict   | `{'on_left': 'toggle_volume_menu', 'on_middle': 'do_nothing', 'on_right': 'toggle_mute'}`                  | Callbacks for mouse events on the volume widget. |
 | `audio_menu` | dict | [See below](#audio-menu-options)  | Menu settings for the widget. |
-| `progress_bar`       | dict    | `{'enabled': false, 'position': 'left', 'size': 14, 'thickness': 2, 'color': '#57948a', 'animation': true}` | Progress bar settings.    |
+| `progress_bar`       | dict    | `{'enabled': false, 'progress_type': 'circular', 'position': 'left', 'size': 18, 'thickness': 3, 'radius': 0, 'color': '#00C800', 'background_color': '#3C3C3C', 'animation': true}` | Progress bar settings.    |
 
 
 ## Example Configuration
@@ -21,7 +21,7 @@ volume:
   type: "yasb.volume.VolumeWidget"
   options:
     label: "<span>{icon}</span> {level}"
-    label_alt: "{volume}"
+    label_alt: "{level}"
     volume_icons:
       - "\ueee8"  # Icon for muted
       - "\uf026"  # Icon for 0-10% volume
@@ -60,7 +60,7 @@ volume:
 ```
 ## Description of Options
 
-- **label**: The format string for the volume label. You can use placeholders like `{volume[percent]}` to dynamically insert volume information.
+- **label**: The format string for the volume label. Available placeholders are `{icon}` for the volume icon and `{level}` for the volume percentage or muted text.
 - **label_alt**: The alternative format string for the volume label. Useful for displaying additional volume details.
 - **class_name**: Additional CSS class name for the widget. This allows for custom styling.
 - **mute_text**: The text for `{level}` to display when the volume is muted. Default: "mute".
@@ -87,10 +87,12 @@ volume:
 - **callbacks**: A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions.
 - **progress_bar**: A dictionary containing settings for the progress bar. It includes:
   - **enabled**: Whether the progress bar is enabled.
+  - **progress_type**: The type of progress bar. Options are `"circular"`, `"linear_horizontal"`, or `"linear_vertical"`.
   - **position**: The position of the progress bar, either "left" or "right".
-  - **size**: The size of the progress bar.
-  - **thickness**: The thickness of the progress bar.
-  - **color**: The color of the progress bar. Color can be single color or gradient. For example, `color: "#57948a"` or `color: ["#57948a", "#ff0000"]` for a gradient.
+  - **size**: The length of the progress bar (or diameter if circular). Minimum is 1, maximum is 200.
+  - **thickness**: The thickness of the progress bar. Minimum is 1, maximum is 100.
+  - **radius**: The border radius for the linear progress bar corners. Minimum is 0, maximum is 100.
+  - **color**: The color of the progress bar. Color can be a single color or a gradient. For example, `color: "#57948a"` or `color: ["#57948a", "#ff0000"]` for a gradient.
   - **background_color**: The background color of the progress bar.
   - **animation**: Whether to enable smooth change of the progress bar value.
 
@@ -107,7 +109,7 @@ volume:
 .volume-widget .label.no-device {} /* Applied when no audio device is connected */
 .volume-widget .icon.no-device {} /* Applied when no audio device is connected */
 /* Volume progress bar styles if enabled */
-.volume-widget .progress-circle {} 
+.volume-widget .progress-container {} 
 /* Audio menu styles */
 .volume-widget .audio-menu {}
 /* System volume */

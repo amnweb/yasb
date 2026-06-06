@@ -19,7 +19,7 @@ This widget implements a Pomodoro timer, which is a time management method that 
 | `icons` | dict | See below | Icons used for different timer states. |
 | `callbacks` | dict | See below | Configure widget interaction callbacks. |
 | `menu` | dict | See below | Configure the appearance and behavior of the timer menu. |
-| `progress_bar`       | dict    | `{'enabled': false, 'position': 'left', 'size': 14, 'thickness': 2, 'color': '#57948a', 'animation': true}` | Progress bar settings.    |
+| `progress_bar`       | dict    | `{'enabled': false, 'progress_type': 'circular', 'position': 'left', 'size': 18, 'thickness': 3, 'radius': 0, 'color': '#00C800', 'background_color': '#3C3C3C', 'animation': true}` | Progress bar settings.    |
 
 ## Example Configuration
 
@@ -104,10 +104,12 @@ pomodoro:
     - **circle_thickness:** Thickness of the circular progress indicator.
 - **progress_bar**: A dictionary containing settings for the progress bar. It includes:
   - **enabled**: Whether the progress bar is enabled.
+  - **progress_type**: The type of progress bar. Options are `"circular"`, `"linear_horizontal"`, or `"linear_vertical"`.
   - **position**: The position of the progress bar, either "left" or "right".
-  - **size**: The size of the progress bar.
-  - **thickness**: The thickness of the progress bar.
-  - **color**: The color of the progress bar. Color can be single color or gradient. For example, `color: "#57948a"` or `color: ["#57948a", "#ff0000"]"` for a gradient.
+  - **size**: The length of the progress bar (or diameter if circular). Minimum is 1, maximum is 200.
+  - **thickness**: The thickness of the progress bar. Minimum is 1, maximum is 100.
+  - **radius**: The border radius for the linear progress bar corners. Minimum is 0, maximum is 100.
+  - **color**: The color of the progress bar. Color can be a single color or a gradient. For example, `color: "#57948a"` or `color: ["#57948a", "#ff0000"]` for a gradient.
   - **background_color**: The background color of the progress bar.
   - **animation**: Whether to enable smooth change of the progress bar value.
 
@@ -146,7 +148,7 @@ pomodoro:
 .pomodoro-menu .button:pressed {} /*Style for button pressed effect.*/
 
 /* Pomodoro progress bar styles if enabled */
-.pomodoro-widget .progress-circle {} 
+.pomodoro-widget .progress-container {} 
 ```
 
 ## Example CSS

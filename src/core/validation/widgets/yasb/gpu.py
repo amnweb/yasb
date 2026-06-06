@@ -17,8 +17,10 @@ class GpuThresholdsConfig(CustomBaseModel):
 
 class ProgressBarConfig(CustomBaseModel):
     enabled: bool = False
-    size: int = Field(default=18, ge=8, le=64)
-    thickness: int = Field(default=3, ge=1, le=10)
+    progress_type: Literal["circular", "linear_horizontal", "linear_vertical"] = "circular"
+    size: int = Field(default=18, ge=1, le=200)
+    thickness: int = Field(default=3, ge=1, le=100)
+    radius: int = Field(default=0, ge=0, le=100)
     color: str | list[str] = "#00C800"
     background_color: str = "#3C3C3C"
     position: Literal["left", "right"] = "left"
