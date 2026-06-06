@@ -4,7 +4,7 @@ from contextlib import suppress
 
 from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot
 from PyQt6.QtGui import QScreen
-from PyQt6.QtWidgets import QApplication
+from PyQt6.QtWidgets import QApplication, QWidget
 from qt_css_engine import TransitionEngine, extract_rules
 
 from core.bar import Bar
@@ -47,11 +47,11 @@ class BarManager(QObject):
         self._hotkey_dispatcher: HotkeyDispatcher | None = None
         self._collected_keybindings: list[HotkeyBinding] = []
         self._registered_hotkey_widgets: set[tuple[str, str]] = set()  # (widget_name, screen_name)
+        self._bars_count = 0
 
         self.styles_modified.connect(self.on_styles_modified)
         self.config_modified.connect(self.on_config_modified)
         self._app = QApplication.instance()
-        self._app.installEventFilter(self.animation_engine)
         self._app.aboutToQuit.connect(self.stop_listener_threads)
         self._app.screenAdded.connect(self.on_screens_update)
         self._app.screenRemoved.connect(self.on_screens_update)
@@ -135,6 +135,8 @@ class BarManager(QObject):
 
     def initialize_bars(self, init: bool = False) -> None:
         self._widget_builder = WidgetBuilder(self.config.widgets)
+        self._widget_queues = []
+
         primary_screen = QApplication.primaryScreen()
         primary_screen_name = primary_screen.name() if primary_screen else None
 
@@ -177,10 +179,68 @@ class BarManager(QObject):
                         initialized_screens.add(screen.name())
 
         self._initialized_screens = initialized_screens
+        self._bars_count = len(self.bars)
+
+        self._widgets_with_keybindings = {
+            n for n, cfg in self.config.widgets.items() if cfg.get("options", {}).get("keybindings")
+        }
+
+        if self._bars_count == 0:
+            self._finish_initialization()
+        else:
+            for bar in self.bars:
+                bar.bar_loaded.connect(self._on_bar_animation_finished)
+
+    def _finish_initialization(self) -> None:
+        self.widget_event_listeners = self.widget_event_listeners.union(self._widget_builder._widget_event_listeners)
         self._collect_keybindings()
         self._start_hotkey_listener()
         self.run_listeners_in_threads()
         self._widget_builder.raise_alerts_if_errors_present()
+        self._app.installEventFilter(self.animation_engine)
+        self._engine_widget_registration()
+
+    def _engine_widget_registration(self) -> None:
+        for bar in self.bars:
+            for widget in bar.findChildren(QWidget):
+                self.animation_engine._on_polish(widget)
+
+    def _on_bar_animation_finished(self):
+        sender = self.sender()
+        if sender:
+            with suppress(TypeError):
+                sender.bar_loaded.disconnect(self._on_bar_animation_finished)
+
+        self._bars_count -= 1
+        if self._bars_count <= 0:
+            for bar in self.bars:
+                self._process_widget_queue(bar)
+            self._finish_initialization()
+
+    def _process_widget_queue(self, bar: Bar) -> None:
+        if not hasattr(bar, "_widget_queue") or not bar._widget_queue:
+            return
+
+        while bar._widget_queue:
+            column, w_name = bar._widget_queue.pop(0)
+            widget = self._widget_builder._build_widget(w_name)
+            if widget:
+                screen_name = bar.screen().name()
+                widget.screen_name = screen_name
+                if widget.widget_name in self._widgets_with_keybindings:
+                    key = (widget.widget_name, screen_name)
+                    if key in self._registered_hotkey_widgets:
+                        widget._hotkey_enabled = False
+                        logging.info(
+                            "%s on screen %s already has hotkey handler registered from another bar.",
+                            widget.widget_name,
+                            screen_name,
+                        )
+                    else:
+                        self._registered_hotkey_widgets.add(key)
+
+                bar.add_single_widget(column, widget)
+                bar._widgets[column].append(widget)
 
     def _collect_keybindings(self) -> None:
         """Collect keybindings from all widget configurations."""
@@ -231,36 +291,20 @@ class BarManager(QObject):
     def create_bar(self, config: BarConfig, name: str, screen: QScreen, init: bool = False) -> None:
         screen_name = screen.name().replace("\\", "").replace(".", "")
         bar_id = f"{name}_{screen_name}_{str(uuid.uuid4())[:8]}"
-        bar_widgets, widget_event_listeners = self._widget_builder.build_widgets(config.widgets.model_dump())
 
-        # Set screen_name on all widgets and disable duplicate hotkey handlers
-        widgets_with_keybindings = {
-            name for name, cfg in self.config.widgets.items() if cfg.get("options", {}).get("keybindings")
-        }
-        for widget_list in bar_widgets.values():
-            for widget in widget_list:
-                widget.screen_name = screen.name()
-                if widget.widget_name in widgets_with_keybindings:
-                    key = (widget.widget_name, screen.name())
-                    if key in self._registered_hotkey_widgets:
-                        widget._hotkey_enabled = False
-                        logging.info(
-                            "%s on screen %s already has hotkey handler registered from another bar.",
-                            widget.widget_name,
-                            screen.name(),
-                        )
-                    else:
-                        self._registered_hotkey_widgets.add(key)
-
-        self.widget_event_listeners = self.widget_event_listeners.union(widget_event_listeners)
-        self.bars.append(
-            Bar(
-                bar_id=bar_id,
-                bar_name=name,
-                bar_screen=screen,
-                stylesheet=self.stylesheet,
-                widgets=bar_widgets,
-                config=config,
-                init=init,
-            )
+        bar = Bar(
+            bar_id=bar_id,
+            bar_name=name,
+            bar_screen=screen,
+            stylesheet=self.stylesheet,
+            widgets={"left": [], "center": [], "right": []},
+            config=config,
+            init=init,
         )
+        self.bars.append(bar)
+
+        bar._widget_queue = []
+        for column, w_names in config.widgets.model_dump().items():
+            if w_names:
+                for w_name in w_names:
+                    bar._widget_queue.append((column, w_name))
