@@ -8,7 +8,7 @@
 | `slider_beep`   | boolean | `true`              | Whether to play a sound when the volume slider is released. |
 | `mute_text` | string  | `'mute'` | Text used by `{level}` to indicate muted volume |
 | `tooltip`  | boolean  | `true`        | Whether to show the tooltip on hover. |
-| `volume_icons` | list  | `['\ueee8', '\uf026', '\uf027', '\uf027', '\uf028']`                    | A list of icons representing different volume levels. The icons are used based on the current volume percentage. |
+| `icons` | dict  | `{'muted': '\ueee8', '10': '\uf026', '30': '\uf027', '60': '\uf027', '100': '\uf028'}`                    | A dictionary of icons representing different volume levels. The icons are used based on the current volume percentage. |
 | `callbacks`  | dict   | `{'on_left': 'toggle_volume_menu', 'on_middle': 'do_nothing', 'on_right': 'toggle_mute'}`                  | Callbacks for mouse events on the volume widget. |
 | `audio_menu` | dict | [See below](#audio-menu-options)  | Menu settings for the widget. |
 | `progress_bar`       | dict    | `{'enabled': false, 'progress_type': 'circular', 'position': 'left', 'size': 18, 'thickness': 3, 'radius': 0, 'color': '#00C800', 'background_color': '#3C3C3C', 'animation': true}` | Progress bar settings.    |
@@ -22,12 +22,12 @@ volume:
   options:
     label: "<span>{icon}</span> {level}"
     label_alt: "{level}"
-    volume_icons:
-      - "\ueee8"  # Icon for muted
-      - "\uf026"  # Icon for 0-10% volume
-      - "\uf027"  # Icon for 11-30% volume
-      - "\uf027"  # Icon for 31-60% volume
-      - "\uf028"  # Icon for 61-100% volume
+    icons:
+      "muted": "\ueee8" # Icon for muted
+      "10": "\uf026"  # Icon for 0-10% volume
+      "30": "\uf027"  # Icon for 11-30% volume
+      "60": "\uf027"  # Icon for 31-60% volume
+      "100": "\uf028" # Icon for 61-100% volume
     audio_menu:
       blur: true
       round_corners: true
@@ -67,7 +67,7 @@ volume:
 - **tooltip**: Whether to show the tooltip on hover.
 - **scroll_step**: The step size for volume adjustment when scrolling. The value is in percentage points (0-100).
 - **slider_beep**: Whether to play a sound when the volume slider is released.
-- **volume_icons**: A list of icons representing different volume levels. The icons are used based on the current volume percentage.
+- **icons**: A dictionary of icons representing different volume levels. The dictionary keys must be strings representing the upper bound volume limit (e.g. `"10"`, `"30"`). You can map `"muted"` to a specific icon. Example: `{"muted": "...", "10": "...", "100": "..."}`. The icons are used based on the current volume percentage. For example, if the volume is at 25%, the widget will use the icon mapped to `"30"` since 25% is less than or equal to 30.
 - **audio_menu**: A dictionary specifying the menu settings for the widget. It contains the following keys:
   - **blur**: Enable blur effect for the menu.
   - **round_corners**: Enable round corners for the menu (this option is not supported on Windows 10).
