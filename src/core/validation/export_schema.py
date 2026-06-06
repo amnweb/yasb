@@ -7,8 +7,7 @@ from typing import Literal, Union
 from pydantic import BaseModel, create_model
 
 # Add src to sys.path to allow imports
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
-
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 from core.validation.config import YasbConfig
 from core.widgets.registry import WIDGET_REGISTRY
 
