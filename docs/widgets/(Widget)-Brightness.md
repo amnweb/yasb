@@ -52,7 +52,7 @@
         contrast_icon: "\ue7a1"
       callbacks:
         on_left: "toggle_brightness_menu"
-        on_left: "toggle_label"
+        on_right: "toggle_label"
 ```
 
 ## Description of Options
