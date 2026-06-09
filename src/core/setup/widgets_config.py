@@ -65,7 +65,7 @@ BASE_WIDGET: dict = {
                     "label": "<span>{icon}</span>",
                     "label_alt": "<span>{icon}</span>{level}",
                     "tooltip": True,
-                    "volume_icons": ["\ue74f", "\ue992", "\ue993", "\ue994", "\ue995"],
+                    "icons": {"muted": "\ue74f", "10": "\ue992", "30": "\ue993", "60": "\ue994", "100": "\ue995"},
                     "callbacks": {
                         "on_left": "toggle_volume_menu",
                         "on_right": "toggle_mute",

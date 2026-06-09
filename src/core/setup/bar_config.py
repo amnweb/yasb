@@ -196,6 +196,7 @@ ROOT_STYLE: str = """\
     padding: 0px 6px;
     margin: 4px 0;
     border-radius: 4px;
+    transition: background-color 0.1s 
 }
 
 .widget .icon {
