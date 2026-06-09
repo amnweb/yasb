@@ -118,6 +118,7 @@ Clock format https://docs.python.org/3/library/time.html#time.strftime
 .clock-widget .icon.clock_02 {}
 .clock-widget .label {}
 .clock-widget .label.clock_15 {}
+.clock-widget .label.timer {}
 .clock-widget .label.alarm {}
 .clock-widget .label.alarm.snooze {}
 .clock-widget .icon.alarm {}

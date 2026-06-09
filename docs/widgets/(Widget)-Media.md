@@ -227,6 +227,7 @@ media:
 .media-widget .progress-bar::chunk {}
 
 .media-menu {}
+.media-menu .no-media {}
 .media-menu .title {}
 .media-menu .artist {}
 .media-menu .source {}
@@ -236,7 +237,10 @@ media:
 .media-menu .btn.next {}
 .media-menu .btn.disabled {}
 .media-menu .thumbnail {}
+.media-menu .media-timeline-container {}
 .media-menu .playback-time {}
+.media-menu .playback-time.current {}
+.media-menu .playback-time.total {}
 .media-menu .progress-slider {}
 .media-menu .progress-slider::groove {}
 .media-menu .progress-slider::sub-page {}

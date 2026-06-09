@@ -147,6 +147,7 @@ todo:
 .todo-menu .task-info-row .delete-task-button {}
 /* todo-menu dialog styles */
 .todo-menu .app-dialog {}
+.todo-menu .app-dialog .category-container {}
 .todo-menu .app-dialog .buttons-container {}
 .todo-menu .app-dialog .title-field {}
 .todo-menu .app-dialog .desc-field {}
@@ -157,6 +158,7 @@ todo:
 .todo-menu .app-dialog .button:pressed {}
 .todo-menu .app-dialog .button.add {}
 .todo-menu .app-dialog .button.add:pressed {}
+.todo-menu .app-dialog .button.cancel {}
 .todo-menu .app-dialog .warning-message {}
 .todo-menu .app-dialog .category-button {}
 .todo-menu .app-dialog .category-button.urgent {}

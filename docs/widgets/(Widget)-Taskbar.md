@@ -78,6 +78,7 @@ taskbar:
 .taskbar-widget .widget-container {} /* Container for the widget */
 /* Application containers */
 .taskbar-widget .app-container {} /* container for each app */
+.taskbar-widget .app-container.pinned {} /* container for pinned apps */
 .taskbar-widget .app-container.foreground {} /* container for the focused app */
 .taskbar-widget .app-container.flashing {} /* flashing container for the app (window is flashing) */
 .taskbar-widget .app-container.running {} /* container for running apps (not focused) */

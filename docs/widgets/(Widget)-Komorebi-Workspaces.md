@@ -71,8 +71,10 @@ komorebi_workspaces:
 ## Style
 ```css
 .komorebi-workspaces {} /*Style for widget.*/
+.komorebi-workspaces .offline-status {} /*Style for offline status text.*/
 .komorebi-workspaces .widget-container {} /*Style for widget container.*/
 .komorebi-workspaces .ws-btn {} /*Style for buttons.*/
+.komorebi-workspaces .ws-btn.empty {} /*Style for empty workspace buttons.*/
 .komorebi-workspaces .ws-btn.populated {} /*Style for buttons which contain window and are not empty.*/
 .komorebi-workspaces .ws-btn.active {} /*Style for the active workspace button.*/
 .komorebi-workspaces .ws-btn.button-1 {} /*Style for first button.*/

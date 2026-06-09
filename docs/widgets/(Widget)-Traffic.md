@@ -103,7 +103,7 @@ traffic:
 .traffic-menu { }
 .traffic-menu .header { }
 .traffic-menu .header .title { }
-.traffic-menu .header .resset-button { }
+.traffic-menu .header .reset-button { }
 .traffic-menu .interface-info { }
 .traffic-menu .internet-info { }
 .traffic-menu .internet-info.checking { }
