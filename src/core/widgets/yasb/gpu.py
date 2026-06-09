@@ -58,7 +58,24 @@ class GpuWidget(BaseWidget):
                 worker.start()
                 GpuWidget._worker = worker
 
-        self.hide()
+        self._show_placeholder()
+
+    def _show_placeholder(self):
+        """Display placeholder (zero/default) GPU data."""
+        data = GpuData(
+            index=self.config.gpu_index,
+            name="Unknown",
+            utilization=0.0,
+            mem_total=0,
+            mem_used=0,
+            mem_free=0,
+            mem_shared_total=0,
+            mem_shared_used=0,
+            temp=0.0,
+            fan_speed=0,
+            power_draw=0.0,
+        )
+        self._update_label(data)
 
     @classmethod
     def _on_gpu_data(cls, gpu_data_list: list[GpuData]):

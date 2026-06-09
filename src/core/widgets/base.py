@@ -152,30 +152,37 @@ class BaseWidget(QWidget):
         self,
         content: str,
         content_alt: str | None = None,
+        label_placeholder: str | None = None,
+        hide_icons: bool = False,
     ):
         def process_content(content: str, is_alt: bool = False) -> list[QLabel]:
-            label_parts = re.split("(<span.*?>.*?</span>)", content)
+            label_parts = re.split(r"(<span.*?>.*?</span>)", content)
             label_parts = [part for part in label_parts if part]
             widgets: list[QLabel] = []
             for part in label_parts:
                 part = part.strip()
                 if not part:
                     continue
-                if "<span" in part and "</span>" in part:
+                is_icon = "<span" in part and "</span>" in part
+                if is_icon:
                     class_name = re.search(r'class=(["\'])([^"\']+?)\1', part)
                     class_result = class_name.group(2) if class_name else "icon"
                     icon = re.sub(r"<span.*?>|</span>", "", part).strip()
                     label = QLabel(icon)
                     label.setProperty("class", class_result)
+                    if hide_icons:
+                        label.hide()
                 else:
                     label = QLabel(part)
                     label.setProperty("class", "label alt" if is_alt else "label")
+                    if label_placeholder is not None:
+                        label.setText(label_placeholder)
                 label.setAlignment(Qt.AlignmentFlag.AlignCenter)
                 self._widget_container_layout.addWidget(label)
                 widgets.append(label)
                 if is_alt:
                     label.hide()
-                else:
+                elif not (is_icon and hide_icons):
                     label.show()
             return widgets
 
