@@ -42,8 +42,12 @@ def is_valid_percentage_str(s: str) -> bool:
     return s.endswith("%") and len(s) <= 4 and s[:-1].isdigit()
 
 
-def get_screen_by_name(screen_name: str) -> QScreen:
-    return next(filter(lambda scr: screen_name in scr.name(), QApplication.screens()), None)
+def get_screen_by_name(screen_name: str) -> QScreen | None:
+    screens = QApplication.screens()
+    for scr in screens:
+        if scr.name() == screen_name:
+            return scr
+    return next(filter(lambda scr: screen_name in scr.name(), screens), None)
 
 
 def refresh_widget_style(*widgets: QWidget) -> None:
