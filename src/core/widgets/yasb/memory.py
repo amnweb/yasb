@@ -192,10 +192,10 @@ class MemoryWidget(BaseWidget):
                     active_widgets[widget_index].setText(part)
                     # Set memory threshold as property
                     label_class = "label alt" if self._show_alt_label else "label"
-                    active_widgets[widget_index].setProperty(
-                        "class", f"{label_class} status-{self._get_virtual_memory_threshold(virtual_mem.percent)}"
-                    )
-                    refresh_widget_style(active_widgets[widget_index])
+                    new_class = f"{label_class} status-{self._get_virtual_memory_threshold(virtual_mem.percent)}"
+                    if active_widgets[widget_index].property("class") != new_class:
+                        active_widgets[widget_index].setProperty("class", new_class)
+                        refresh_widget_style(active_widgets[widget_index])
                 widget_index += 1
 
     def _toggle_label(self):

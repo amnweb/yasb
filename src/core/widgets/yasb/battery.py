@@ -192,10 +192,12 @@ class BatteryWidget(BaseWidget):
                     icon = re.sub(r"<span.*?>|</span>", "", battery_status).strip()
                     widget_label.setText(icon)
                     # apply status‐class
-                    existing_classes = widget_label.property("class")
+                    existing_classes = widget_label.property("class") or ""
                     new_classes = re.sub(r"status-\w+", "", existing_classes).strip()
-                    widget_label.setProperty("class", f"{new_classes} status-{threshold}")
-                    refresh_widget_style(widget_label)
+                    target_class = f"{new_classes} status-{threshold}"
+                    if existing_classes != target_class:
+                        widget_label.setProperty("class", target_class)
+                        refresh_widget_style(widget_label)
 
                     # only blink when plugged AND blink_enabled
                     if self._battery_state.is_charging and self.config.charging_options.blink_charging_icon:
@@ -216,6 +218,8 @@ class BatteryWidget(BaseWidget):
                     alt_class = "alt" if self._show_alt_label else ""
                     formatted_text = battery_status.format(battery_status)
                     active_widgets[widget_index].setText(formatted_text)
-                    active_widgets[widget_index].setProperty("class", f"label {alt_class} status-{threshold}")
-                    refresh_widget_style(active_widgets[widget_index])
+                    target_class = f"label {alt_class} status-{threshold}"
+                    if active_widgets[widget_index].property("class") != target_class:
+                        active_widgets[widget_index].setProperty("class", target_class)
+                        refresh_widget_style(active_widgets[widget_index])
                 widget_index += 1
