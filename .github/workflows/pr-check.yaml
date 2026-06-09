@@ -20,13 +20,13 @@ jobs:
     name: Ruff Format & Lint Check
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
@@ -105,7 +105,7 @@ jobs:
 
       - name: Upload Artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: pr-metadata
           path: |
@@ -127,13 +127,13 @@ jobs:
     name: Build (x64)
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           architecture: x64
@@ -182,7 +182,7 @@ jobs:
         shell: pwsh
 
       - name: Upload Build Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: yasb-dev-pr-${{ steps.get_info.outputs.PR_NUMBER }}-x64
           path: |
@@ -196,13 +196,13 @@ jobs:
     name: Build (arm64)
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           architecture: arm64
@@ -257,7 +257,7 @@ jobs:
         shell: pwsh
 
       - name: Upload Build Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: yasb-dev-pr-${{ steps.get_info.outputs.PR_NUMBER }}-aarch64
           path: |

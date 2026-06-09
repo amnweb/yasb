@@ -37,12 +37,12 @@ jobs:
     
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         fetch-depth: 0
         
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: ${{ env.PYTHON_VERSION }}
         architecture: ${{ matrix.python_arch }}
@@ -53,14 +53,14 @@ jobs:
       shell: pwsh
 
     - name: Upload unsigned DLL artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: ${{ matrix.unsigned_dll_name }}
         path: src/core/widgets/services/systray/hook/${{ matrix.dll_file }}
 
     - name: Get unsigned-dll artifact id
       id: get_dll_artifact
-      uses: actions/github-script@v7
+      uses: actions/github-script@v9
       env:
         ARTIFACT_NAME: ${{ matrix.unsigned_dll_name }}
       with:
@@ -76,7 +76,7 @@ jobs:
 
     - name: Submit DLL signing request
       id: sign_dll
-      uses: signpath/github-action-submit-signing-request@v1
+      uses: signpath/github-action-submit-signing-request@v2
       with:
         api-token: '${{ secrets.SIGN_TOKEN }}'
         organization-id: '9efb6764-d1fc-46c5-b050-5ef07bb67a8c'
@@ -129,7 +129,7 @@ jobs:
       shell: pwsh
 
     - name: Upload unsigned EXE artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: ${{ matrix.unsigned_exe_name }}
         path: |
@@ -139,7 +139,7 @@ jobs:
 
     - name: Get unsigned-exes artifact id
       id: get_exes_artifact
-      uses: actions/github-script@v7
+      uses: actions/github-script@v9
       env:
         ARTIFACT_NAME: ${{ matrix.unsigned_exe_name }}
       with:
@@ -155,7 +155,7 @@ jobs:
 
     - name: Submit EXE signing request
       id: sign_exes
-      uses: signpath/github-action-submit-signing-request@v1
+      uses: signpath/github-action-submit-signing-request@v2
       with:
         api-token: '${{ secrets.SIGN_TOKEN }}'
         organization-id: '9efb6764-d1fc-46c5-b050-5ef07bb67a8c'
@@ -202,14 +202,14 @@ jobs:
       shell: pwsh
 
     - name: Upload unsigned MSI
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: ${{ matrix.unsigned_msi_name }}
         path: src/dist/out/*.msi
 
     - name: Get unsigned-msi artifact id
       id: get_msi_artifact
-      uses: actions/github-script@v7
+      uses: actions/github-script@v9
       env:
         ARTIFACT_NAME: ${{ matrix.unsigned_msi_name }}
       with:
@@ -225,7 +225,7 @@ jobs:
 
     - name: Submit MSI signing request
       id: sign_msi
-      uses: signpath/github-action-submit-signing-request@v1
+      uses: signpath/github-action-submit-signing-request@v2
       with:
         api-token: '${{ secrets.SIGN_TOKEN }}'
         organization-id: '9efb6764-d1fc-46c5-b050-5ef07bb67a8c'
@@ -265,7 +265,7 @@ jobs:
       shell: pwsh
 
     - name: Upload Built MSI
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: built-msi-${{ matrix.artifact_suffix }}
         path: src/dist/out/*.msi
@@ -286,12 +286,12 @@ jobs:
       models: read
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         fetch-depth: 0
 
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: ${{ env.PYTHON_VERSION }}
 
@@ -301,7 +301,7 @@ jobs:
       shell: pwsh
 
     - name: Download all MSI artifacts
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v8
       with:
         pattern: built-msi-*
         path: dist-msis
@@ -318,7 +318,7 @@ jobs:
       
     - name: Create Tag
       id: create_tag
-      uses: actions/github-script@v7
+      uses: actions/github-script@v9
       with:
         github-token: ${{ secrets.PAT }}
         script: |
@@ -374,7 +374,7 @@ jobs:
 
     - name: Create Changelog
       id: changelog
-      uses: loopwerk/tag-changelog@v1.3.0
+      uses: loopwerk/tag-changelog@v1
       with:
         token: ${{ secrets.PAT }}
         config_file: .github/changelog/changelog.js
@@ -402,7 +402,7 @@ jobs:
 
     - name: Summarize Changelog
       id: ai_summary
-      uses: actions/github-script@v8
+      uses: actions/github-script@v9
       env:
         AI_SYSTEM_PROMPT: ${{ secrets.AI_SYSTEM_PROMPT }}
         AI_USER_PROMPT_TEMPLATE: ${{ secrets.AI_USER_PROMPT }}
@@ -463,7 +463,7 @@ jobs:
 
     - name: Build Release Body
       id: release_body
-      uses: actions/github-script@v8
+      uses: actions/github-script@v9
       env:
         AI_SUMMARY: ${{ steps.ai_summary.outputs.summary }}
         CHANGELOG: ${{ steps.changelog.outputs.changes }}
@@ -494,7 +494,7 @@ jobs:
 
     - name: Create and Upload Release
       id: create_release
-      uses: softprops/action-gh-release@v2
+      uses: softprops/action-gh-release@v3
       with:
         tag_name: v${{ steps.get_version.outputs.VERSION }}
         name: v${{ steps.get_version.outputs.VERSION }}
