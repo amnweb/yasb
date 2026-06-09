@@ -362,7 +362,6 @@ class WeatherWidget(BaseWidget):
         )
         label.setPixmap(scaled_pixmap_day)
 
-
     def _reload_css(self, label: QLabel):
         refresh_widget_style(label)
         label.update()

@@ -279,7 +279,7 @@ class TrafficWidget(BaseWidget):
                 net_status = "connected" if self._is_internet_connected else "disconnected"
                 status_text = f"Internet {net_status.capitalize()}"
                 self.menu_labels["internet-info"].setText(status_text)
-                
+
                 target_class = f"internet-info {net_status}"
                 if self.menu_labels["internet-info"].property("class") != target_class:
                     self.menu_labels["internet-info"].setProperty("class", target_class)
