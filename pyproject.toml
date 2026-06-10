@@ -24,7 +24,7 @@ dependencies = [
     "pillow==12.2.0",
     "qasync==0.28.0",
     "github-copilot-sdk==1.0.0",
-    "openai==2.41.0",
+    "openai==2.41.1",
     "pyvda @ git+https://github.com/amnweb/pyvda@master",
     "python-dotenv==1.2.2",
     "tzdata==2026.2",
