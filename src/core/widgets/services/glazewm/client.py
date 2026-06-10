@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from enum import StrEnum, auto
 from typing import Any, cast
 
-from PyQt6.QtCore import QObject, QTimer, QUrl, pyqtSignal
+from PyQt6.QtCore import QByteArray, QObject, QTimer, QUrl, pyqtSignal
 from PyQt6.QtNetwork import QAbstractSocket
 from PyQt6.QtWebSockets import QWebSocket
 
@@ -72,6 +72,7 @@ class GlazewmClient(QObject):
         uri: str,
         initial_messages: list[str] | None = None,
         reconnect_interval: int = 4000,
+        ping_interval: int = 30000,
     ):
         super().__init__()
         self.initial_messages = initial_messages if initial_messages else []
@@ -79,13 +80,20 @@ class GlazewmClient(QObject):
         self._uri = QUrl(uri)
         self._websocket = QWebSocket()
         self._websocket.connected.connect(self._on_connected)  # type: ignore
+        self._websocket.disconnected.connect(self._on_disconnected)  # type: ignore
         self._websocket.textMessageReceived.connect(self._handle_message)  # type: ignore
         self._websocket.stateChanged.connect(self._on_state_changed)  # type: ignore
         self._websocket.errorOccurred.connect(self._on_error)  # type: ignore
+        self._websocket.pong.connect(self._on_pong)  # type: ignore
 
         self._reconnect_timer = QTimer()
         self._reconnect_timer.setInterval(reconnect_interval)
         self._reconnect_timer.timeout.connect(self.connect)  # type: ignore
+
+        self._awaiting_pong = False
+        self._ping_timer = QTimer()
+        self._ping_timer.setInterval(ping_interval)
+        self._ping_timer.timeout.connect(self._on_ping_tick)  # type: ignore
 
     def activate_workspace(self, workspace_name: str):
         self._websocket.sendTextMessage(f"command focus --workspace {workspace_name}")
@@ -123,8 +131,31 @@ class GlazewmClient(QObject):
             logger.debug("Sent initial message: %s", message)
             self._websocket.sendTextMessage(message)
 
-        # Stop reconnect timer
         self._reconnect_timer.stop()
+        self._awaiting_pong = False
+        self._ping_timer.start()
+
+    def _on_disconnected(self) -> None:
+        logger.debug("WebSocket disconnected from %s", self._uri.toString())
+        self._ping_timer.stop()
+        self._reconnect_timer.start()
+
+    def _on_ping_tick(self) -> None:
+        if self._awaiting_pong:
+            logger.warning("No pong received, connection stale. Forcing reconnect.")
+            self._ping_timer.stop()
+            self._websocket.abort()
+            self._reconnect_timer.start()
+            return
+        self._awaiting_pong = True
+        self._websocket.ping(QByteArray(b"yasb"))
+
+    def _on_pong(self, _elapsed: int, _payload: QByteArray) -> None:
+        self._awaiting_pong = False
+
+    def _on_disconnected(self) -> None:
+        logger.debug("WebSocket disconnected from %s", self._uri.toString())
+        self._reconnect_timer.start()
 
     def _on_state_changed(self, state: QAbstractSocket.SocketState):
         logger.debug("WebSocket state changed: %s", state)
