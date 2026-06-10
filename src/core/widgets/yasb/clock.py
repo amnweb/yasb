@@ -372,6 +372,8 @@ class ClockWidget(BaseWidget):
         self.register_callback("toggle_calendar", self._toggle_calendar)
         self.register_callback("context_menu", self._show_context_menu)
         self.register_callback("timer_tick", self._on_timer_tick)
+        self.register_callback("toggle_timer", self._show_timer_dialog)
+        self.register_callback("toggle_alarm", self._show_alarm_dialog)
 
         self.callback_left = self.config.callbacks.on_left
         self.callback_right = self.config.callbacks.on_right
