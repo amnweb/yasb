@@ -1177,6 +1177,20 @@
             "icon_full": "\uf240"
           }
         },
+        "progress_bar": {
+          "$ref": "#/$defs/core__validation__widgets__yasb__battery__ProgressBarConfig",
+          "default": {
+            "enabled": false,
+            "progress_type": "circular",
+            "size": 18,
+            "thickness": 3,
+            "radius": 0,
+            "color": "#00C800",
+            "background_color": "#3C3C3C",
+            "position": "left",
+            "animation": true
+          }
+        },
         "keybindings": {
           "default": [],
           "items": {
@@ -1578,8 +1592,10 @@
           "$ref": "#/$defs/core__validation__widgets__yasb__brightness__ProgressBarConfig",
           "default": {
             "enabled": false,
+            "progress_type": "circular",
             "size": 18,
             "thickness": 3,
+            "radius": 0,
             "color": "#00C800",
             "background_color": "#3C3C3C",
             "position": "left",
@@ -2363,6 +2379,158 @@
       "title": "ChatConfig",
       "type": "object"
     },
+    "ClaudeUsageCallbacksConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "on_left": {
+          "default": "toggle_menu",
+          "title": "On Left",
+          "type": "string"
+        },
+        "on_middle": {
+          "default": "do_nothing",
+          "title": "On Middle",
+          "type": "string"
+        },
+        "on_right": {
+          "default": "toggle_label",
+          "title": "On Right",
+          "type": "string"
+        }
+      },
+      "title": "ClaudeUsageCallbacksConfig",
+      "type": "object"
+    },
+    "ClaudeUsageConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "label": {
+          "default": "Claude {five_hour}%",
+          "title": "Label",
+          "type": "string"
+        },
+        "label_alt": {
+          "default": "Claude {seven_day}%",
+          "title": "Label Alt",
+          "type": "string"
+        },
+        "update_interval": {
+          "default": 60,
+          "maximum": 3600,
+          "minimum": 30,
+          "title": "Update Interval",
+          "type": "integer"
+        },
+        "cache_ttl": {
+          "default": 120,
+          "maximum": 3600,
+          "minimum": 0,
+          "title": "Cache Ttl",
+          "type": "integer"
+        },
+        "tooltip": {
+          "default": true,
+          "title": "Tooltip",
+          "type": "boolean"
+        },
+        "callbacks": {
+          "$ref": "#/$defs/ClaudeUsageCallbacksConfig",
+          "default": {
+            "on_left": "toggle_menu",
+            "on_middle": "do_nothing",
+            "on_right": "toggle_label"
+          }
+        },
+        "menu": {
+          "$ref": "#/$defs/ClaudeUsageMenuConfig",
+          "default": {
+            "blur": true,
+            "round_corners": true,
+            "round_corners_type": "normal",
+            "border_color": "System",
+            "alignment": "right",
+            "direction": "down",
+            "offset_top": 6,
+            "offset_left": 0
+          }
+        },
+        "keybindings": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/KeybindingConfig"
+          },
+          "title": "Keybindings",
+          "type": "array"
+        }
+      },
+      "title": "ClaudeUsageConfig",
+      "type": "object"
+    },
+    "ClaudeUsageEntry": {
+      "properties": {
+        "type": {
+          "const": "yasb.claude_usage.ClaudeUsageWidget",
+          "title": "Type",
+          "type": "string"
+        },
+        "options": {
+          "$ref": "#/$defs/ClaudeUsageConfig"
+        }
+      },
+      "required": [
+        "type",
+        "options"
+      ],
+      "title": "ClaudeUsageEntry",
+      "type": "object"
+    },
+    "ClaudeUsageMenuConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "blur": {
+          "default": true,
+          "title": "Blur",
+          "type": "boolean"
+        },
+        "round_corners": {
+          "default": true,
+          "title": "Round Corners",
+          "type": "boolean"
+        },
+        "round_corners_type": {
+          "default": "normal",
+          "title": "Round Corners Type",
+          "type": "string"
+        },
+        "border_color": {
+          "default": "System",
+          "title": "Border Color",
+          "type": "string"
+        },
+        "alignment": {
+          "default": "right",
+          "title": "Alignment",
+          "type": "string"
+        },
+        "direction": {
+          "default": "down",
+          "title": "Direction",
+          "type": "string"
+        },
+        "offset_top": {
+          "default": 6,
+          "title": "Offset Top",
+          "type": "integer"
+        },
+        "offset_left": {
+          "default": 0,
+          "title": "Offset Left",
+          "type": "integer"
+        }
+      },
+      "title": "ClaudeUsageMenuConfig",
+      "type": "object"
+    },
     "ClipboardHistoryProviderConfig": {
       "additionalProperties": false,
       "properties": {
@@ -2961,8 +3129,10 @@
           "$ref": "#/$defs/core__validation__widgets__yasb__cpu__ProgressBarConfig",
           "default": {
             "enabled": false,
+            "progress_type": "circular",
             "size": 18,
             "thickness": 3,
+            "radius": 0,
             "color": "#00C800",
             "background_color": "#3C3C3C",
             "position": "left",
@@ -3438,8 +3608,10 @@
           "$ref": "#/$defs/core__validation__widgets__yasb__disk__ProgressBarConfig",
           "default": {
             "enabled": false,
+            "progress_type": "circular",
             "size": 18,
             "thickness": 3,
+            "radius": 0,
             "color": "#00C800",
             "background_color": "#3C3C3C",
             "position": "left",
@@ -4612,8 +4784,10 @@
           "$ref": "#/$defs/core__validation__widgets__yasb__gpu__ProgressBarConfig",
           "default": {
             "enabled": false,
+            "progress_type": "circular",
             "size": 18,
             "thickness": 3,
+            "radius": 0,
             "color": "#00C800",
             "background_color": "#3C3C3C",
             "position": "left",
@@ -6530,8 +6704,10 @@
           "$ref": "#/$defs/core__validation__widgets__yasb__memory__ProgressBarConfig",
           "default": {
             "enabled": false,
+            "progress_type": "circular",
             "size": 18,
             "thickness": 3,
+            "radius": 0,
             "color": "#00C800",
             "background_color": "#3C3C3C",
             "position": "left",
@@ -6975,8 +7151,10 @@
           "$ref": "#/$defs/core__validation__widgets__yasb__microphone__ProgressBarConfig",
           "default": {
             "enabled": false,
+            "progress_type": "circular",
             "size": 18,
             "thickness": 3,
+            "radius": 0,
             "color": "#00C800",
             "background_color": "#3C3C3C",
             "position": "left",
@@ -8064,8 +8242,10 @@
           "$ref": "#/$defs/core__validation__widgets__yasb__pomodoro__ProgressBarConfig",
           "default": {
             "enabled": false,
+            "progress_type": "circular",
             "size": 18,
             "thickness": 3,
+            "radius": 0,
             "color": "#00C800",
             "background_color": "#3C3C3C",
             "position": "left",
@@ -10530,6 +10710,64 @@
       "title": "ToggleWorkspaceLayerConfig",
       "type": "object"
     },
+    "TooltipBlurEffect": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "default": false,
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "dark_mode": {
+          "default": false,
+          "title": "Dark Mode",
+          "type": "boolean"
+        },
+        "round_corners": {
+          "default": false,
+          "title": "Round Corners",
+          "type": "boolean"
+        },
+        "round_corners_type": {
+          "default": "normal",
+          "enum": [
+            "normal",
+            "small"
+          ],
+          "title": "Round Corners Type",
+          "type": "string"
+        },
+        "border_color": {
+          "default": "None",
+          "title": "Border Color",
+          "type": "string"
+        }
+      },
+      "title": "TooltipBlurEffect",
+      "type": "object"
+    },
+    "TooltipOptions": {
+      "additionalProperties": false,
+      "properties": {
+        "offset": {
+          "default": 5,
+          "title": "Offset",
+          "type": "integer"
+        },
+        "blur_effect": {
+          "$ref": "#/$defs/TooltipBlurEffect",
+          "default": {
+            "enabled": false,
+            "dark_mode": false,
+            "round_corners": false,
+            "round_corners_type": "normal",
+            "border_color": "None"
+          }
+        }
+      },
+      "title": "TooltipOptions",
+      "type": "object"
+    },
     "TrafficCallbacksConfig": {
       "additionalProperties": false,
       "properties": {
@@ -10978,12 +11216,12 @@
       "additionalProperties": false,
       "properties": {
         "label": {
-          "default": "{volume[percent]}%",
+          "default": "{icon} {level}",
           "title": "Label",
           "type": "string"
         },
         "label_alt": {
-          "default": "{volume[percent]}%",
+          "default": "{icon} {level}",
           "title": "Label Alt",
           "type": "string"
         },
@@ -11014,19 +11252,29 @@
           "title": "Slider Beep",
           "type": "boolean"
         },
-        "volume_icons": {
-          "default": [
-            "\ueee8",
-            "\uf026",
-            "\uf027",
-            "\uf027",
-            "\uf028"
+        "icons": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            }
           ],
-          "items": {
-            "type": "string"
+          "default": {
+            "muted": "\ueee8",
+            "10": "\uf026",
+            "30": "\uf027",
+            "60": "\uf027",
+            "100": "\uf028"
           },
-          "title": "Volume Icons",
-          "type": "array"
+          "title": "Icons"
         },
         "audio_menu": {
           "$ref": "#/$defs/AudioMenuConfig",
@@ -11053,8 +11301,10 @@
           "$ref": "#/$defs/core__validation__widgets__yasb__volume__ProgressBarConfig",
           "default": {
             "enabled": false,
+            "progress_type": "circular",
             "size": 18,
             "thickness": 3,
+            "radius": 0,
             "color": "#00C800",
             "background_color": "#3C3C3C",
             "position": "left",
@@ -12696,7 +12946,7 @@
       "title": "NotificationDotConfig",
       "type": "object"
     },
-    "core__validation__widgets__yasb__brightness__ProgressBarConfig": {
+    "core__validation__widgets__yasb__battery__ProgressBarConfig": {
       "additionalProperties": false,
       "properties": {
         "enabled": {
@@ -12704,18 +12954,35 @@
           "title": "Enabled",
           "type": "boolean"
         },
+        "progress_type": {
+          "default": "circular",
+          "enum": [
+            "circular",
+            "linear_horizontal",
+            "linear_vertical"
+          ],
+          "title": "Progress Type",
+          "type": "string"
+        },
         "size": {
           "default": 18,
-          "maximum": 64,
-          "minimum": 8,
+          "maximum": 200,
+          "minimum": 1,
           "title": "Size",
           "type": "integer"
         },
         "thickness": {
           "default": 3,
-          "maximum": 10,
+          "maximum": 100,
           "minimum": 1,
           "title": "Thickness",
+          "type": "integer"
+        },
+        "radius": {
+          "default": 0,
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Radius",
           "type": "integer"
         },
         "color": {
@@ -12740,6 +13007,87 @@
         },
         "position": {
           "default": "left",
+          "enum": [
+            "left",
+            "right"
+          ],
+          "title": "Position",
+          "type": "string"
+        },
+        "animation": {
+          "default": true,
+          "title": "Animation",
+          "type": "boolean"
+        }
+      },
+      "title": "ProgressBarConfig",
+      "type": "object"
+    },
+    "core__validation__widgets__yasb__brightness__ProgressBarConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "default": false,
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "progress_type": {
+          "default": "circular",
+          "enum": [
+            "circular",
+            "linear_horizontal",
+            "linear_vertical"
+          ],
+          "title": "Progress Type",
+          "type": "string"
+        },
+        "size": {
+          "default": 18,
+          "maximum": 200,
+          "minimum": 1,
+          "title": "Size",
+          "type": "integer"
+        },
+        "thickness": {
+          "default": 3,
+          "maximum": 100,
+          "minimum": 1,
+          "title": "Thickness",
+          "type": "integer"
+        },
+        "radius": {
+          "default": 0,
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Radius",
+          "type": "integer"
+        },
+        "color": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ],
+          "default": "#00C800",
+          "title": "Color"
+        },
+        "background_color": {
+          "default": "#3C3C3C",
+          "title": "Background Color",
+          "type": "string"
+        },
+        "position": {
+          "default": "left",
+          "enum": [
+            "left",
+            "right"
+          ],
           "title": "Position",
           "type": "string"
         },
@@ -12760,18 +13108,35 @@
           "title": "Enabled",
           "type": "boolean"
         },
+        "progress_type": {
+          "default": "circular",
+          "enum": [
+            "circular",
+            "linear_horizontal",
+            "linear_vertical"
+          ],
+          "title": "Progress Type",
+          "type": "string"
+        },
         "size": {
           "default": 18,
-          "maximum": 64,
-          "minimum": 8,
+          "maximum": 200,
+          "minimum": 1,
           "title": "Size",
           "type": "integer"
         },
         "thickness": {
           "default": 3,
-          "maximum": 10,
+          "maximum": 100,
           "minimum": 1,
           "title": "Thickness",
+          "type": "integer"
+        },
+        "radius": {
+          "default": 0,
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Radius",
           "type": "integer"
         },
         "color": {
@@ -12820,18 +13185,35 @@
           "title": "Enabled",
           "type": "boolean"
         },
+        "progress_type": {
+          "default": "circular",
+          "enum": [
+            "circular",
+            "linear_horizontal",
+            "linear_vertical"
+          ],
+          "title": "Progress Type",
+          "type": "string"
+        },
         "size": {
           "default": 18,
-          "maximum": 64,
-          "minimum": 8,
+          "maximum": 200,
+          "minimum": 1,
           "title": "Size",
           "type": "integer"
         },
         "thickness": {
           "default": 3,
-          "maximum": 10,
+          "maximum": 100,
           "minimum": 1,
           "title": "Thickness",
+          "type": "integer"
+        },
+        "radius": {
+          "default": 0,
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Radius",
           "type": "integer"
         },
         "color": {
@@ -12912,18 +13294,35 @@
           "title": "Enabled",
           "type": "boolean"
         },
+        "progress_type": {
+          "default": "circular",
+          "enum": [
+            "circular",
+            "linear_horizontal",
+            "linear_vertical"
+          ],
+          "title": "Progress Type",
+          "type": "string"
+        },
         "size": {
           "default": 18,
-          "maximum": 64,
-          "minimum": 8,
+          "maximum": 200,
+          "minimum": 1,
           "title": "Size",
           "type": "integer"
         },
         "thickness": {
           "default": 3,
-          "maximum": 10,
+          "maximum": 100,
           "minimum": 1,
           "title": "Thickness",
+          "type": "integer"
+        },
+        "radius": {
+          "default": 0,
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Radius",
           "type": "integer"
         },
         "color": {
@@ -13021,18 +13420,35 @@
           "title": "Enabled",
           "type": "boolean"
         },
+        "progress_type": {
+          "default": "circular",
+          "enum": [
+            "circular",
+            "linear_horizontal",
+            "linear_vertical"
+          ],
+          "title": "Progress Type",
+          "type": "string"
+        },
         "size": {
           "default": 18,
-          "maximum": 64,
-          "minimum": 8,
+          "maximum": 200,
+          "minimum": 1,
           "title": "Size",
           "type": "integer"
         },
         "thickness": {
           "default": 3,
-          "maximum": 10,
+          "maximum": 100,
           "minimum": 1,
           "title": "Thickness",
+          "type": "integer"
+        },
+        "radius": {
+          "default": 0,
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Radius",
           "type": "integer"
         },
         "color": {
@@ -13098,18 +13514,35 @@
           "title": "Enabled",
           "type": "boolean"
         },
+        "progress_type": {
+          "default": "circular",
+          "enum": [
+            "circular",
+            "linear_horizontal",
+            "linear_vertical"
+          ],
+          "title": "Progress Type",
+          "type": "string"
+        },
         "size": {
           "default": 18,
-          "maximum": 64,
-          "minimum": 8,
+          "maximum": 200,
+          "minimum": 1,
           "title": "Size",
           "type": "integer"
         },
         "thickness": {
           "default": 3,
-          "maximum": 10,
+          "maximum": 100,
           "minimum": 1,
           "title": "Thickness",
+          "type": "integer"
+        },
+        "radius": {
+          "default": 0,
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Radius",
           "type": "integer"
         },
         "color": {
@@ -13350,18 +13783,35 @@
           "title": "Enabled",
           "type": "boolean"
         },
+        "progress_type": {
+          "default": "circular",
+          "enum": [
+            "circular",
+            "linear_horizontal",
+            "linear_vertical"
+          ],
+          "title": "Progress Type",
+          "type": "string"
+        },
         "size": {
           "default": 18,
-          "maximum": 64,
-          "minimum": 8,
+          "maximum": 200,
+          "minimum": 1,
           "title": "Size",
           "type": "integer"
         },
         "thickness": {
           "default": 3,
-          "maximum": 10,
+          "maximum": 100,
           "minimum": 1,
           "title": "Thickness",
+          "type": "integer"
+        },
+        "radius": {
+          "default": 0,
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Radius",
           "type": "integer"
         },
         "color": {
@@ -13661,18 +14111,35 @@
           "title": "Enabled",
           "type": "boolean"
         },
+        "progress_type": {
+          "default": "circular",
+          "enum": [
+            "circular",
+            "linear_horizontal",
+            "linear_vertical"
+          ],
+          "title": "Progress Type",
+          "type": "string"
+        },
         "size": {
           "default": 18,
-          "maximum": 64,
-          "minimum": 8,
+          "maximum": 200,
+          "minimum": 1,
           "title": "Size",
           "type": "integer"
         },
         "thickness": {
           "default": 3,
-          "maximum": 10,
+          "maximum": 100,
           "minimum": 1,
           "title": "Thickness",
+          "type": "integer"
+        },
+        "radius": {
+          "default": 0,
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Radius",
           "type": "integer"
         },
         "color": {
@@ -13736,6 +14203,19 @@
       "default": true,
       "title": "Show Systray",
       "type": "boolean"
+    },
+    "tooltip": {
+      "$ref": "#/$defs/TooltipOptions",
+      "default": {
+        "offset": 5,
+        "blur_effect": {
+          "border_color": "None",
+          "dark_mode": false,
+          "enabled": false,
+          "round_corners": false,
+          "round_corners_type": "normal"
+        }
+      }
     },
     "komorebi": {
       "$ref": "#/$defs/KomorebiConfig",
@@ -13866,6 +14346,9 @@
           },
           {
             "$ref": "#/$defs/CavaEntry"
+          },
+          {
+            "$ref": "#/$defs/ClaudeUsageEntry"
           },
           {
             "$ref": "#/$defs/ClockEntry"
