@@ -272,7 +272,7 @@ jobs:
 
     - name: Delete Artifacts
       if: github.event_name == 'workflow_dispatch'
-      uses: geekyeggo/delete-artifact@v5
+      uses: geekyeggo/delete-artifact@v6
       with:
         name: |
           unsigned-*
@@ -372,13 +372,6 @@ jobs:
       run: git fetch --tags
       shell: pwsh
 
-    - name: Create Changelog
-      id: changelog
-      uses: loopwerk/tag-changelog@v1
-      with:
-        token: ${{ secrets.PAT }}
-        config_file: .github/changelog/changelog.js
-
     - name: Compute Commit Range
       id: commit_range
       shell: pwsh
@@ -399,6 +392,70 @@ jobs:
         "commits<<EOF" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
         $commits | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
         "EOF" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
+    - name: Create Changelog
+      id: changelog
+      uses: actions/github-script@v9
+      env:
+        COMMIT_RANGE: ${{ steps.commit_range.outputs.range }}
+      with:
+        script: |
+          const { execSync } = require('child_process');
+          const path = require('path');
+          
+          const configPath = path.resolve(process.env.GITHUB_WORKSPACE, '.github/changelog/changelog.js');
+          const config = require(configPath);
+          
+          const range = process.env.COMMIT_RANGE;
+          const cmd = range === 'HEAD' 
+            ? 'git log -n 100 --pretty=format:"%H|%s"' 
+            : `git log ${range} -n 100 --pretty=format:"%H|%s"`;
+            
+          const log = execSync(cmd).toString('utf-8').trim();
+          if (!log) {
+            core.setOutput('changes', '');
+            return;
+          }
+          
+          const commits = log.split('\n').map(line => {
+            const idx = line.indexOf('|');
+            return {
+              hash: line.slice(0, idx),
+              subject: line.slice(idx + 1)
+            };
+          });
+          
+          const parsedCommits = [];
+          for (const c of commits) {
+            const match = c.subject.match(/^([a-zA-Z]+)(?:\([^)]+\))?!?: /);
+            const type = match ? match[1].toLowerCase() : 'other';
+            const subjectDesc = match ? c.subject.slice(match[0].length) : c.subject;
+            parsedCommits.push({
+              type,
+              subject: subjectDesc,
+              url: `https://github.com/${context.repo.owner}/${context.repo.repo}/commit/${c.hash}`
+            });
+          }
+          
+          const grouped = {};
+          for (const c of parsedCommits) {
+            const typeConfig = config.types.find(t => t.types.includes(c.type));
+            const label = typeConfig ? typeConfig.label : 'Other Changes';
+            if (!grouped[label]) grouped[label] = [];
+            grouped[label].push(c);
+          }
+          
+          let changelog = '';
+          const labels = config.types.map(t => t.label);
+          if (!labels.includes('Other Changes')) labels.push('Other Changes');
+          
+          for (const label of labels) {
+            if (grouped[label] && grouped[label].length > 0) {
+              changelog += config.renderTypeSection(label, grouped[label]);
+            }
+          }
+          
+          core.setOutput('changes', changelog.trim());
 
     - name: Summarize Changelog
       id: ai_summary

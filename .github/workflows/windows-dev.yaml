@@ -297,7 +297,8 @@ jobs:
         retention-days: 10
 
     - name: Delete Artifacts
-      uses: geekyeggo/delete-artifact@v5
+      if: github.event_name == 'workflow_dispatch'
+      uses: geekyeggo/delete-artifact@v6
       with:
         name: |
           unsigned-*
