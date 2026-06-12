@@ -2,8 +2,7 @@ import re
 from datetime import UTC, datetime
 from typing import Any
 
-from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout
+from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QVBoxLayout
 
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import PopupWidget, refresh_widget_style
@@ -35,19 +34,6 @@ class UsageBar(QFrame):
     def resizeEvent(self, event):
         super().resizeEvent(event)
         self._update_fill()
-
-
-class ClickableLabel(QLabel):
-    clicked = pyqtSignal()
-
-    def __init__(self, text: str, parent: QFrame | None = None):
-        super().__init__(text, parent)
-        self.setCursor(Qt.CursorShape.PointingHandCursor)
-
-    def mousePressEvent(self, event):
-        if event.button() == Qt.MouseButton.LeftButton:
-            self.clicked.emit()
-        super().mousePressEvent(event)
 
 
 class ClaudeUsageWidget(BaseWidget):
@@ -280,21 +266,21 @@ class ClaudeUsageWidget(BaseWidget):
         self._menu_layout = layout
 
         header = QFrame()
-        header.setProperty("class", "header-row")
+        header.setProperty("class", "header")
         header_layout = QHBoxLayout(header)
         header_layout.setContentsMargins(0, 0, 0, 0)
         header_layout.setSpacing(0)
 
-        header_title = QLabel("Claude Usage")
-        header_title.setProperty("class", "header")
-        header_layout.addWidget(header_title)
+        title_label = QLabel("Claude Usage")
+        title_label.setProperty("class", "text")
+        header_layout.addWidget(title_label)
         header_layout.addStretch()
 
-        refresh_button = ClickableLabel("\U000f0450")
-        refresh_button.setProperty("class", "refresh")
-        set_tooltip(refresh_button, "Refresh now")
-        refresh_button.clicked.connect(self._refresh)
-        header_layout.addWidget(refresh_button)
+        refresh_btn = QPushButton("\U000f0450")
+        refresh_btn.setProperty("class", "refresh")
+        set_tooltip(refresh_btn, "Refresh now")
+        refresh_btn.clicked.connect(self._refresh)
+        header_layout.addWidget(refresh_btn)
 
         layout.addWidget(header)
         self._add_menu_sections(layout)

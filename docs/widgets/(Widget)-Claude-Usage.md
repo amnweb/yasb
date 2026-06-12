@@ -15,7 +15,7 @@ extra configuration is required as long as you are signed in to Claude Code.
 | `update_interval` | integer | `60` | How often the label and reset countdown are refreshed, in seconds. Must be between 30 and 3600. |
 | `cache_ttl`       | integer | `120` | How long (seconds) a fetched result is cached on disk before the endpoint is queried again. The endpoint is rate-limited, so keep this at a sane value. |
 | `tooltip`         | boolean | `true` | Whether to show a summary tooltip on hover. |
-| `callbacks`       | dict    | `{'on_left': 'toggle_menu', 'on_middle': 'do_nothing', 'on_right': 'toggle_label'}` | Mouse-click callbacks. |
+| `callbacks`       | dict    | `{'on_left': 'toggle_menu', 'on_middle': 'do_nothing', 'on_right': 'toggle_label'}` | Mouse-click callbacks. The popup menu also has a refresh button in its header. |
 | `menu`            | dict    | `{'blur': true, 'round_corners': true, 'round_corners_type': 'normal', 'border_color': 'System', 'alignment': 'right', 'direction': 'down', 'offset_top': 6, 'offset_left': 0}` | Popup menu settings. |
 
 ## Placeholders
@@ -40,7 +40,7 @@ claude_usage:
     cache_ttl: 120
     callbacks:
       on_left: "toggle_menu"    # open the usage menu
-      on_middle: "do_nothing"
+      on_middle: "refresh"      # force an immediate re-fetch, bypassing the cache
       on_right: "toggle_label"  # switch the bar text between 5h and 7d
     menu:
       blur: true
@@ -60,7 +60,7 @@ claude_usage:
 - **update_interval:** How often the bar label and reset countdown are refreshed, in seconds (30–3600).
 - **cache_ttl:** How long a fetched result is cached on disk before the usage endpoint is queried again. Because the endpoint is rate-limited (HTTP 429), the widget serves the last cached value on any error instead of going blank.
 - **tooltip:** Whether to show a summary tooltip on hover.
-- **callbacks:** Mouse-click callbacks. Built-in actions: `toggle_menu` (open/close the popup menu), `toggle_label` (swap between `label` and `label_alt`), `do_nothing`, and `exec`.
+- **callbacks:** Mouse-click callbacks. Built-in actions: `toggle_menu` (open/close the popup menu), `toggle_label` (swap between `label` and `label_alt`), `refresh` (force an immediate re-fetch of the usage data, bypassing `cache_ttl`), `do_nothing`, and `exec`. The popup menu header also has a refresh button that triggers the same action.
 - **menu:** A dictionary specifying the popup menu settings:
   - **blur:** Enable blur effect for the menu.
   - **round_corners:** Enable round corners (not supported on Windows 10).
@@ -85,7 +85,10 @@ signed in to Claude Code, the widget shows `--` until you sign in.
 .claude-usage .label {}
 /* Popup menu */
 .claude-usage-menu {}
-.claude-usage-menu .header {}        /* "Claude Usage" title */
+.claude-usage-menu .header {}            /* header row (title + refresh button) */
+.claude-usage-menu .header .text {}      /* "Claude Usage" title */
+.claude-usage-menu .header .refresh {}   /* refresh button */
+.claude-usage-menu .header .refresh:hover {}
 .claude-usage-menu .section {}
 .claude-usage-menu .section .title {}
 .claude-usage-menu .section .progress {}               /* progress-bar track */
@@ -117,10 +120,22 @@ signed in to Claude Code, the widget shows `--` until you sign in.
     min-width: 260px;
 }
 .claude-usage-menu .header {
+    padding: 14px 16px 10px 16px;
+}
+.claude-usage-menu .header .text {
     color: #cdd6f4;
     font-size: 15px;
     font-weight: bold;
-    padding: 14px 16px 10px 16px;
+}
+.claude-usage-menu .header .refresh {
+    background: transparent;
+    border: none;
+    color: #6c7086;
+    font-size: 15px;
+    padding: 0 2px;
+}
+.claude-usage-menu .header .refresh:hover {
+    color: #fab387;
 }
 .claude-usage-menu .section {
     padding: 4px 16px 12px 16px;
