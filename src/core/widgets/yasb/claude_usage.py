@@ -2,6 +2,7 @@ import re
 from datetime import UTC, datetime
 from typing import Any
 
+from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout
 
 from core.utils.tooltip import set_tooltip
@@ -36,6 +37,19 @@ class UsageBar(QFrame):
         self._update_fill()
 
 
+class ClickableLabel(QLabel):
+    clicked = pyqtSignal()
+
+    def __init__(self, text: str, parent: QFrame | None = None):
+        super().__init__(text, parent)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.clicked.emit()
+        super().mousePressEvent(event)
+
+
 class ClaudeUsageWidget(BaseWidget):
     validation_schema = ClaudeUsageConfig
 
@@ -54,6 +68,7 @@ class ClaudeUsageWidget(BaseWidget):
 
         self.register_callback("toggle_label", self._toggle_label)
         self.register_callback("toggle_menu", self._toggle_menu)
+        self.register_callback("refresh", self._refresh)
 
         self.callback_left = self.config.callbacks.on_left
         self.callback_middle = self.config.callbacks.on_middle
@@ -79,6 +94,10 @@ class ClaudeUsageWidget(BaseWidget):
     def _on_data(self, data: dict[str, Any]) -> None:
         self._data = data
         self._update_label()
+        self._refresh_menu_sections()
+
+    def _refresh(self) -> None:
+        self._service.refresh_now()
 
     def _format_values(self) -> dict[str, str]:
         return {
@@ -217,6 +236,33 @@ class ClaudeUsageWidget(BaseWidget):
 
         return frame
 
+    def _add_menu_sections(self, layout: QVBoxLayout) -> None:
+        self._section_frames = [
+            self._build_section(
+                "5-Hour", self._data.get("five"), self._data.get("five_raw"), self._data.get("five_reset_iso")
+            ),
+            self._build_section(
+                "7-Day", self._data.get("seven"), self._data.get("seven_raw"), self._data.get("seven_reset_iso")
+            ),
+        ]
+        for frame in self._section_frames:
+            layout.addWidget(frame)
+
+    def _refresh_menu_sections(self) -> None:
+        """Redraw the popup sections in place when fresh data arrives while it is open."""
+        menu = self._menu
+        try:
+            if menu is None or not menu.isVisible():
+                return
+            layout = self._menu_layout
+            for frame in getattr(self, "_section_frames", []):
+                layout.removeWidget(frame)
+                frame.deleteLater()
+            self._add_menu_sections(layout)
+            menu.adjustSize()
+        except RuntimeError:
+            self._menu = None  # popup was already destroyed
+
     def _build_menu(self) -> None:
         self._menu = PopupWidget(
             self,
@@ -230,21 +276,27 @@ class ClaudeUsageWidget(BaseWidget):
         layout = QVBoxLayout(self._menu)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
+        self._menu_layout = layout
 
-        header = QLabel("Claude Usage")
+        header = QFrame()
         header.setProperty("class", "header")
-        layout.addWidget(header)
+        header_layout = QHBoxLayout(header)
+        header_layout.setContentsMargins(0, 0, 0, 0)
+        header_layout.setSpacing(0)
 
-        layout.addWidget(
-            self._build_section(
-                "5-Hour", self._data.get("five"), self._data.get("five_raw"), self._data.get("five_reset_iso")
-            )
-        )
-        layout.addWidget(
-            self._build_section(
-                "7-Day", self._data.get("seven"), self._data.get("seven_raw"), self._data.get("seven_reset_iso")
-            )
-        )
+        header_title = QLabel("Claude Usage")
+        header_title.setProperty("class", "header-title")
+        header_layout.addWidget(header_title)
+        header_layout.addStretch()
+
+        refresh_button = ClickableLabel("\U000f0450")
+        refresh_button.setProperty("class", "refresh")
+        set_tooltip(refresh_button, "Refresh now")
+        refresh_button.clicked.connect(self._refresh)
+        header_layout.addWidget(refresh_button)
+
+        layout.addWidget(header)
+        self._add_menu_sections(layout)
 
         self._menu.adjustSize()
         self._menu.setPosition(

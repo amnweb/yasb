@@ -165,9 +165,16 @@ class ClaudeUsageService(QObject):
             self.deleteLater()
 
     def _tick(self) -> None:
+        self._start_worker(self._cache_ttl)
+
+    def refresh_now(self) -> None:
+        """Force an immediate fetch, bypassing the cache TTL."""
+        self._start_worker(0)
+
+    def _start_worker(self, cache_ttl: int) -> None:
         if self._worker is not None:
             return  # a fetch is already in flight
-        worker = _UsageWorker(self._cache_path, self._cache_ttl, self)
+        worker = _UsageWorker(self._cache_path, cache_ttl, self)
         worker.data_ready.connect(self._on_data)
         worker.finished.connect(self._on_finished)
         self._worker = worker
