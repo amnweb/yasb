@@ -257,6 +257,7 @@ class ClaudeUsageWidget(BaseWidget):
             layout = self._menu_layout
             for frame in getattr(self, "_section_frames", []):
                 layout.removeWidget(frame)
+                frame.hide()
                 frame.deleteLater()
             self._add_menu_sections(layout)
             menu.adjustSize()
@@ -279,13 +280,13 @@ class ClaudeUsageWidget(BaseWidget):
         self._menu_layout = layout
 
         header = QFrame()
-        header.setProperty("class", "header")
+        header.setProperty("class", "header-row")
         header_layout = QHBoxLayout(header)
         header_layout.setContentsMargins(0, 0, 0, 0)
         header_layout.setSpacing(0)
 
         header_title = QLabel("Claude Usage")
-        header_title.setProperty("class", "header-title")
+        header_title.setProperty("class", "header")
         header_layout.addWidget(header_title)
         header_layout.addStretch()
 
