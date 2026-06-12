@@ -29,13 +29,19 @@ used in `label` / `label_alt`:
 - `{five_hour_reset}` — time until the 5-hour window resets. Shown as a countdown when under a
   day away (e.g. `4h 27m`), otherwise as a local weekday + time (e.g. `Sat 6:00 AM`).
 - `{seven_day_reset}` — time until the 7-day window resets (e.g. `Sat 6:00 AM`).
+- `{stale}` — an expired-token warning glyph (``), shown only when Claude Code's OAuth token
+  has expired and the widget is therefore serving stale cached values; empty otherwise. The
+  usage data is read from Claude Code's token, which only Claude Code can refresh, so this is a
+  cue to run a `claude` command to renew it. Wrap it in a `<span>` so it renders in your Nerd
+  Font and can be styled via `.claude-usage .stale`, e.g.
+  `{five_hour}%<span class='stale'>{stale}</span>`.
 
 ```yaml
 claude_usage:
   type: "yasb.claude_usage.ClaudeUsageWidget"
   options:
-    label: "Claude {five_hour}% · {five_hour_reset}"
-    label_alt: "Claude 7d {seven_day}% · {seven_day_reset}"
+    label: "Claude {five_hour}% · {five_hour_reset}<span class='stale'>{stale}</span>"
+    label_alt: "Claude 7d {seven_day}% · {seven_day_reset}<span class='stale'>{stale}</span>"
     update_interval: 60
     cache_ttl: 120
     callbacks:
@@ -83,6 +89,7 @@ signed in to Claude Code, the widget shows `--` until you sign in.
 .claude-usage .widget-container {}
 .claude-usage .icon {}
 .claude-usage .label {}
+.claude-usage .stale {}   /* expired-token warning glyph ({stale} placeholder) */
 /* Popup menu */
 .claude-usage-menu {}
 .claude-usage-menu .header {}            /* header row (title + refresh button) */
@@ -114,6 +121,11 @@ signed in to Claude Code, the widget shows `--` until you sign in.
 .claude-usage .label {
     color: #cdd6f4;
     padding: 0 2px;
+}
+.claude-usage .stale {
+    color: #f38ba8;
+    font-size: 13px;
+    margin-left: 4px;
 }
 .claude-usage-menu {
     background-color: #1e1e2e;

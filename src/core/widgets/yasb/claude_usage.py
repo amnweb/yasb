@@ -85,12 +85,16 @@ class ClaudeUsageWidget(BaseWidget):
     def _refresh(self) -> None:
         self._service.refresh_now()
 
+    # Warning glyph (nf-fa-warning) shown via {stale} when the OAuth token has expired.
+    STALE_ICON = ""
+
     def _format_values(self) -> dict[str, str]:
         return {
             "five_hour": self._pct(self._data.get("five")),
             "seven_day": self._pct(self._data.get("seven")),
             "five_hour_reset": self._fmt_reset(self._data.get("five_reset_iso")),
             "seven_day_reset": self._fmt_reset(self._data.get("seven_reset_iso")),
+            "stale": self.STALE_ICON if self._data.get("token_expired") else "",
         }
 
     @staticmethod
@@ -168,17 +172,18 @@ class ClaudeUsageWidget(BaseWidget):
                 continue
             current_widget = active_widgets[index]
             if "<span" in part and "</span>" in part:
-                current_widget.setText(re.sub(r"<span.*?>|</span>", "", part).strip())
+                text = re.sub(r"<span.*?>|</span>", "", part).strip()
             else:
-                try:
-                    current_widget.setText(part.strip().format(**values))
-                except Exception:
-                    current_widget.setText(part.strip())
+                text = part.strip()
+            try:
+                current_widget.setText(text.format(**values))
+            except Exception:
+                current_widget.setText(text)
             if self.config.tooltip:
-                set_tooltip(
-                    current_widget,
-                    f"Claude usage — 5h: {values['five_hour']}% · 7d: {values['seven_day']}%",
-                )
+                tip = f"Claude usage — 5h: {values['five_hour']}% · 7d: {values['seven_day']}%"
+                if self._data.get("token_expired"):
+                    tip += "\nToken expired — run `claude -p` to refresh"
+                set_tooltip(current_widget, tip)
         refresh_widget_style(*active_widgets)
 
     def _toggle_menu(self) -> None:
