@@ -14,6 +14,7 @@ extra configuration is required as long as you are signed in to Claude Code.
 | `label_alt`       | string  | `'Claude {seven_day}%'` | The alternative format string, toggled by the `toggle_label` callback. |
 | `update_interval` | integer | `60` | How often the label and reset countdown are refreshed, in seconds. Must be between 30 and 3600. |
 | `cache_ttl`       | integer | `120` | How long (seconds) a fetched result is cached on disk before the endpoint is queried again. The endpoint is rate-limited, so keep this at a sane value. |
+| `reset_format`    | string  | `'absolute'` | How the popup menu's reset line is phrased: `'absolute'` → `Resets on Sat 6:00 AM` (local weekday + time), or `'relative'` → `Resets in 6d 21h` (countdown). |
 | `tooltip`         | boolean | `true` | Whether to show a summary tooltip on hover. |
 | `callbacks`       | dict    | `{'on_left': 'toggle_menu', 'on_middle': 'do_nothing', 'on_right': 'toggle_label'}` | Mouse-click callbacks. The popup menu also has a refresh button in its header. |
 | `menu`            | dict    | `{'blur': true, 'round_corners': true, 'round_corners_type': 'normal', 'border_color': 'System', 'alignment': 'right', 'direction': 'down', 'offset_top': 6, 'offset_left': 0}` | Popup menu settings. |
@@ -44,6 +45,7 @@ claude_usage:
     label_alt: "Claude 7d {seven_day}% · {seven_day_reset}<span class='stale'>{stale}</span>"
     update_interval: 60
     cache_ttl: 120
+    reset_format: "absolute"  # or "relative" for a "Resets in 6d 21h" countdown
     callbacks:
       on_left: "toggle_menu"    # open the usage menu
       on_middle: "refresh"      # force an immediate re-fetch, bypassing the cache
@@ -65,6 +67,7 @@ claude_usage:
 - **label_alt:** The alternative format string, toggled with the `toggle_label` callback.
 - **update_interval:** How often the bar label and reset countdown are refreshed, in seconds (30–3600).
 - **cache_ttl:** How long a fetched result is cached on disk before the usage endpoint is queried again. Because the endpoint is rate-limited (HTTP 429), the widget serves the last cached value on any error instead of going blank.
+- **reset_format:** How the popup menu's "Resets …" line is phrased. `absolute` shows a local weekday and time (`Resets on Sat 6:00 AM`); `relative` shows a countdown (`Resets in 6d 21h`). The exact reset timestamp is always shown on the line below regardless of this setting.
 - **tooltip:** Whether to show a summary tooltip on hover.
 - **callbacks:** Mouse-click callbacks. Built-in actions: `toggle_menu` (open/close the popup menu), `toggle_label` (swap between `label` and `label_alt`), `refresh` (force an immediate re-fetch of the usage data, bypassing `cache_ttl`), `do_nothing`, and `exec`. The popup menu header also has a refresh button that triggers the same action.
 - **menu:** A dictionary specifying the popup menu settings:

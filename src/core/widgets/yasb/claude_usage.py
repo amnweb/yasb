@@ -39,6 +39,9 @@ class UsageBar(QFrame):
 class ClaudeUsageWidget(BaseWidget):
     validation_schema = ClaudeUsageConfig
 
+    # Warning glyph (nf-fa-warning) shown via {stale} when the OAuth token has expired.
+    STALE_ICON = ""
+
     def __init__(self, config: ClaudeUsageConfig):
         super().__init__(class_name="claude-usage")
         self.config = config
@@ -85,9 +88,6 @@ class ClaudeUsageWidget(BaseWidget):
     def _refresh(self) -> None:
         self._service.refresh_now()
 
-    # Warning glyph (nf-fa-warning) shown via {stale} when the OAuth token has expired.
-    STALE_ICON = ""
-
     def _format_values(self) -> dict[str, str]:
         return {
             "five_hour": self._pct(self._data.get("five")),
@@ -127,6 +127,48 @@ class ClaudeUsageWidget(BaseWidget):
             return f"{local:%a} {hour12}:{local.minute:02d} {ampm}"
         except Exception:
             return "--"
+
+    @staticmethod
+    def _fmt_duration(iso: str | None) -> str:
+        """Relative time-until-reset, e.g. '6d 21h', '4h 14m', '10m'; '--' when unknown."""
+        if not iso:
+            return "--"
+        try:
+            target = datetime.fromisoformat(iso.replace("Z", "+00:00"))
+            seconds = int((target - datetime.now(UTC)).total_seconds())
+            if seconds <= 0:
+                return "0m"
+            minutes = seconds // 60
+            days, rem = divmod(minutes, 1440)
+            hours, mins = divmod(rem, 60)
+            if days:
+                return f"{days}d {hours}h"
+            if hours:
+                return f"{hours}h {mins}m"
+            return f"{mins}m"
+        except Exception:
+            return "--"
+
+    @staticmethod
+    def _fmt_weekday(iso: str | None) -> str:
+        """Absolute reset as a local weekday + time, e.g. 'Sat 6:00 AM'; '--' when unknown."""
+        if not iso:
+            return "--"
+        try:
+            local = datetime.fromisoformat(iso.replace("Z", "+00:00")).astimezone()
+            hour12 = local.hour % 12 or 12
+            ampm = "AM" if local.hour < 12 else "PM"
+            return f"{local:%a} {hour12}:{local.minute:02d} {ampm}"
+        except Exception:
+            return "--"
+
+    def _reset_phrase(self, iso: str | None) -> str:
+        """Grammatical reset line for the popup, honoring ``reset_format``."""
+        if self.config.reset_format == "absolute":
+            value = self._fmt_weekday(iso)
+            return f"Resets on {value}" if value != "--" else "Reset time unknown"
+        value = self._fmt_duration(iso)
+        return f"Resets in {value}" if value != "--" else "Reset time unknown"
 
     @staticmethod
     def _fmt_reset_at(iso: str | None) -> str:
@@ -176,9 +218,13 @@ class ClaudeUsageWidget(BaseWidget):
             else:
                 text = part.strip()
             try:
-                current_widget.setText(text.format(**values))
+                rendered = text.format(**values)
             except Exception:
-                current_widget.setText(text)
+                rendered = text
+            current_widget.setText(rendered)
+            # Hide empty labels so an unused placeholder (e.g. {stale} when the token is
+            # valid) doesn't leave a constant gap from its margin/spacing.
+            current_widget.setVisible(bool(rendered))
             if self.config.tooltip:
                 tip = f"Claude usage — 5h: {values['five_hour']}% · 7d: {values['seven_day']}%"
                 if self._data.get("token_expired"):
@@ -210,7 +256,7 @@ class ClaudeUsageWidget(BaseWidget):
         footer_layout.setContentsMargins(0, 0, 0, 0)
         footer_layout.setSpacing(0)
 
-        reset_label = QLabel(f"Resets in {self._fmt_reset(reset_iso)}")
+        reset_label = QLabel(self._reset_phrase(reset_iso))
         reset_label.setProperty("class", "reset")
         footer_layout.addWidget(reset_label)
         footer_layout.addStretch()
