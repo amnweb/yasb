@@ -30,10 +30,12 @@ class ClaudeUsageConfig(CustomBaseModel):
     label_alt: str = "Claude {seven_day}%"
     update_interval: int = Field(default=60, ge=30, le=3600)
     cache_ttl: int = Field(default=120, ge=0, le=3600)
-    # How the popup menu's reset line is phrased:
+    # How each window's popup reset line is phrased, per window:
+    #   "relative" -> "Resets in 4h 11m" / "Resets in 6d 21h" (countdown)
     #   "absolute" -> "Resets on Sat @ 6:00 AM" (local weekday + time)
-    #   "relative" -> "Resets in 6d 21h" (countdown)
-    reset_format: Literal["absolute", "relative"] = "absolute"
+    # The near-term 5-hour window defaults to a countdown; the multi-day 7-day window to a date.
+    five_hour_reset_format: Literal["relative", "absolute"] = "relative"
+    seven_day_reset_format: Literal["relative", "absolute"] = "absolute"
     # Include the month/day in the "absolute" reset line ("Resets on Sat, Jun 13 @ 6:00 AM"),
     # disambiguating windows that reset on the same weekday. No effect on "relative".
     reset_show_date: bool = True

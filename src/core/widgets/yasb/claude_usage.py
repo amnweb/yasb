@@ -167,9 +167,9 @@ class ClaudeUsageWidget(BaseWidget):
         except Exception:
             return "--"
 
-    def _reset_phrase(self, iso: str | None) -> str:
-        """Grammatical reset line for the popup, honoring ``reset_format``."""
-        if self.config.reset_format == "absolute":
+    def _reset_phrase(self, iso: str | None, reset_format: str) -> str:
+        """Grammatical reset line for the popup, honoring the window's ``reset_format``."""
+        if reset_format == "absolute":
             value = self._fmt_weekday(iso, with_date=self.config.reset_show_date)
             return f"Resets on {value}" if value != "--" else "Reset time unknown"
         value = self._fmt_duration(iso)
@@ -240,7 +240,7 @@ class ClaudeUsageWidget(BaseWidget):
     def _toggle_menu(self) -> None:
         self._build_menu()
 
-    def _build_section(self, title: str, value: Any, raw: Any, reset_iso: str | None) -> QFrame:
+    def _build_section(self, title: str, value: Any, raw: Any, reset_iso: str | None, reset_format: str) -> QFrame:
         level = self._level_class(value)
         frame = QFrame()
         frame.setProperty("class", "section")
@@ -261,7 +261,7 @@ class ClaudeUsageWidget(BaseWidget):
         footer_layout.setContentsMargins(0, 0, 0, 0)
         footer_layout.setSpacing(0)
 
-        reset_label = QLabel(self._reset_phrase(reset_iso))
+        reset_label = QLabel(self._reset_phrase(reset_iso, reset_format))
         reset_label.setProperty("class", "reset")
         footer_layout.addWidget(reset_label)
         footer_layout.addStretch()
@@ -281,10 +281,18 @@ class ClaudeUsageWidget(BaseWidget):
     def _add_menu_sections(self, layout: QVBoxLayout) -> None:
         self._section_frames = [
             self._build_section(
-                "5-Hour", self._data.get("five"), self._data.get("five_raw"), self._data.get("five_reset_iso")
+                "5-Hour",
+                self._data.get("five"),
+                self._data.get("five_raw"),
+                self._data.get("five_reset_iso"),
+                self.config.five_hour_reset_format,
             ),
             self._build_section(
-                "7-Day", self._data.get("seven"), self._data.get("seven_raw"), self._data.get("seven_reset_iso")
+                "7-Day",
+                self._data.get("seven"),
+                self._data.get("seven_raw"),
+                self._data.get("seven_reset_iso"),
+                self.config.seven_day_reset_format,
             ),
         ]
         for frame in self._section_frames:
