@@ -21,8 +21,9 @@ extra configuration is required as long as you are signed in to Claude Code.
 ## Placeholders
 
 The label is plain text by default. You can prepend a Nerd Font glyph in a `<span>` if you
-want an icon (e.g. `<span>\U000f06a9</span> {five_hour}%`). The following placeholders can be
-used in `label` / `label_alt`:
+want an icon (e.g. `<span>\U000f06a9</span> {five_hour}%`), or embed your own image with an
+`<img>` tag (e.g. `<img src='C:/path/to/claude.svg' width='14' height='14'> {five_hour}%`). The
+following placeholders can be used in `label` / `label_alt`:
 
 - `{five_hour}` — 5-hour window utilization (percent, `--` when unavailable).
 - `{seven_day}` — 7-day window utilization (percent, `--` when unavailable).

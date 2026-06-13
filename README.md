@@ -90,6 +90,7 @@ choco install yasb
 | [Bluetooth](https://github.com/amnweb/yasb/wiki/(Widget)-Bluetooth) | Shows the current Bluetooth status and connected devices. |
 | [Brightness](https://github.com/amnweb/yasb/wiki/(Widget)-Brightness) | Displays and change the current brightness level. |
 | [Cava](https://github.com/amnweb/yasb/wiki/(Widget)-Cava) | Displays audio visualizer using Cava. |
+| [Claude Usage](https://github.com/amnweb/yasb/wiki/(Widget)-Claude-Usage) | Shows your Claude (Claude Code) subscription usage with a popup of the 5-hour and 7-day limits. |
 | [Copilot](https://github.com/amnweb/yasb/wiki/(Widget)-Copilot) | GitHub Copilot usage with a detailed menu showing statistics |
 | [CPU](https://github.com/amnweb/yasb/wiki/(Widget)-CPU) | Shows the current CPU usage and information. |
 | [Clock](https://github.com/amnweb/yasb/wiki/(Widget)-Clock) | Displays the current time and date, with customizable formats. |
