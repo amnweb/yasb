@@ -34,6 +34,9 @@ class ClaudeUsageConfig(CustomBaseModel):
     #   "absolute" -> "Resets on Sat 6:00 AM" (local weekday + time)
     #   "relative" -> "Resets in 6d 21h" (countdown)
     reset_format: Literal["absolute", "relative"] = "absolute"
+    # Include the month/day in the "absolute" reset line ("Resets on Sat, Jun 13 6:00 AM"),
+    # disambiguating windows that reset on the same weekday. No effect on "relative".
+    reset_show_date: bool = True
     tooltip: bool = True
     callbacks: ClaudeUsageCallbacksConfig = ClaudeUsageCallbacksConfig()
     menu: ClaudeUsageMenuConfig = ClaudeUsageMenuConfig()

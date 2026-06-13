@@ -150,22 +150,27 @@ class ClaudeUsageWidget(BaseWidget):
             return "--"
 
     @staticmethod
-    def _fmt_weekday(iso: str | None) -> str:
-        """Absolute reset as a local weekday + time, e.g. 'Sat 6:00 AM'; '--' when unknown."""
+    def _fmt_weekday(iso: str | None, with_date: bool = False) -> str:
+        """Absolute reset as a local weekday + time, e.g. 'Sat 6:00 AM'; '--' when unknown.
+
+        With ``with_date`` the month/day is included ('Sat, Jun 13 6:00 AM') so two windows
+        resetting on the same weekday can be told apart.
+        """
         if not iso:
             return "--"
         try:
             local = datetime.fromisoformat(iso.replace("Z", "+00:00")).astimezone()
             hour12 = local.hour % 12 or 12
             ampm = "AM" if local.hour < 12 else "PM"
-            return f"{local:%a} {hour12}:{local.minute:02d} {ampm}"
+            day = f"{local:%a, %b} {local.day}" if with_date else f"{local:%a}"
+            return f"{day} {hour12}:{local.minute:02d} {ampm}"
         except Exception:
             return "--"
 
     def _reset_phrase(self, iso: str | None) -> str:
         """Grammatical reset line for the popup, honoring ``reset_format``."""
         if self.config.reset_format == "absolute":
-            value = self._fmt_weekday(iso)
+            value = self._fmt_weekday(iso, with_date=self.config.reset_show_date)
             return f"Resets on {value}" if value != "--" else "Reset time unknown"
         value = self._fmt_duration(iso)
         return f"Resets in {value}" if value != "--" else "Reset time unknown"
