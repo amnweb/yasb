@@ -49,6 +49,13 @@ Valid options are:
 | `komorebi`      | object  | [See below](#komorebi-settings-for-tray-menu)   | Komorebi configuration for tray menu. |
 | `glazewm`      | object  | [See below](#glazewm-settings-for-tray-menu)   | Glazewm configuration for tray menu. |
 
+## Logging and Debugging
+YASB provides detailed logging to help troubleshoot widget or configuration issues.
+
+- **Enable Debug Mode:** Set `debug: true` in your root configuration to output verbose logs.
+- **View Logs via CLI:** Run `yasbc log` in your terminal to stream real-time logs.
+- **View Log File:** Check the `yasb.log` file located in your config directory (default: `C:/Users/{username}/.config/yasb/`).
+
 ## Tooltip Configuration
 Global configuration for tooltips and their blur effects.
 

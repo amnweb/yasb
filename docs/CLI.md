@@ -18,7 +18,7 @@ The YASB CLI is a command line interface that allows you to interact with the YA
 - `update` - Update aplicattion to the latest version.
 - `set-channel` - Set the update channel (stable, dev).
 - `migrate-config` - Fix config files and migrate old config to new config.
-- `log` - Show the status bar logs in the terminal.
+- `log` - Show the status bar logs in the terminal. (Enable `debug: true` in `config.yaml` for verbose logs)
 - `reset` - Restore default config files and clear cache
 - `help` - Show the help message.
 
@@ -77,6 +77,19 @@ To toggle the visibility of the status bar on a specific screen, use the followi
 ```bash
 yasbc toggle-bar --screen <screen_name>
 ```
+To update YASB to the latest version with current update channel, use the following command:
+```bash
+yasbc update
+```
+
+## Reset YASB
+To reset YASB to the default config files and clear cache, use the following command:
+```bash
+yasbc reset
+```
+
+> **Note:**
+> This will remove all config files and clear cache.
 
 ## Switch Update Channel
 To switch the update channel to dev, use the following command:
