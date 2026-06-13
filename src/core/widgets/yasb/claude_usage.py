@@ -151,9 +151,9 @@ class ClaudeUsageWidget(BaseWidget):
 
     @staticmethod
     def _fmt_weekday(iso: str | None, with_date: bool = False) -> str:
-        """Absolute reset as a local weekday + time, e.g. 'Sat 6:00 AM'; '--' when unknown.
+        """Absolute reset as a local weekday + time, e.g. 'Sat @ 6:00 AM'; '--' when unknown.
 
-        With ``with_date`` the month/day is included ('Sat, Jun 13 6:00 AM') so two windows
+        With ``with_date`` the month/day is included ('Sat, Jun 13 @ 6:00 AM') so two windows
         resetting on the same weekday can be told apart.
         """
         if not iso:
@@ -163,7 +163,7 @@ class ClaudeUsageWidget(BaseWidget):
             hour12 = local.hour % 12 or 12
             ampm = "AM" if local.hour < 12 else "PM"
             day = f"{local:%a, %b} {local.day}" if with_date else f"{local:%a}"
-            return f"{day} {hour12}:{local.minute:02d} {ampm}"
+            return f"{day} @ {hour12}:{local.minute:02d} {ampm}"
         except Exception:
             return "--"
 

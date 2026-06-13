@@ -31,10 +31,10 @@ class ClaudeUsageConfig(CustomBaseModel):
     update_interval: int = Field(default=60, ge=30, le=3600)
     cache_ttl: int = Field(default=120, ge=0, le=3600)
     # How the popup menu's reset line is phrased:
-    #   "absolute" -> "Resets on Sat 6:00 AM" (local weekday + time)
+    #   "absolute" -> "Resets on Sat @ 6:00 AM" (local weekday + time)
     #   "relative" -> "Resets in 6d 21h" (countdown)
     reset_format: Literal["absolute", "relative"] = "absolute"
-    # Include the month/day in the "absolute" reset line ("Resets on Sat, Jun 13 6:00 AM"),
+    # Include the month/day in the "absolute" reset line ("Resets on Sat, Jun 13 @ 6:00 AM"),
     # disambiguating windows that reset on the same weekday. No effect on "relative".
     reset_show_date: bool = True
     tooltip: bool = True
