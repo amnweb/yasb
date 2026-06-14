@@ -337,7 +337,8 @@ class Bar(QWidget):
 
     def contextMenuEvent(self, event):
         """Handle right-click context menu"""
-        if not self._context_menu:
+        if not self._context_menu or not self.rect().contains(event.pos()):
+            event.ignore()
             return
 
         widget_at_pos = self.childAt(event.pos())
