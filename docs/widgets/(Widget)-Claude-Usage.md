@@ -19,6 +19,7 @@ extra configuration is required as long as you are signed in to Claude Code.
 | `reset_show_date` | boolean | `true` | For windows using `'absolute'`, include the month/day (`Resets on Sat, Jun 13 @ 6:00 AM`) so windows that reset on the same weekday are distinguishable. No effect on `'relative'` windows. |
 | `colorize_percent`| boolean | `false` | Colour the `{five_hour}`/`{seven_day}` percentage on the bar by usage level (same green/yellow/orange/red usage bands as the popup bars). See [Color-coded percentage](#color-coded-percentage). |
 | `tooltip`         | boolean | `true` | Whether to show a summary tooltip on hover. |
+| `token_history`   | dict    | disabled | Optional local token-usage history (Session/Today/Week/Month/Year). See [Token history](#token-history). |
 | `callbacks`       | dict    | `{'on_left': 'toggle_menu', 'on_middle': 'do_nothing', 'on_right': 'toggle_label'}` | Mouse-click callbacks. The popup menu also has a refresh button in its header. |
 | `menu`            | dict    | `{'blur': true, 'round_corners': true, 'round_corners_type': 'normal', 'border_color': 'System', 'alignment': 'right', 'direction': 'down', 'offset_top': 6, 'offset_left': 0}` | Popup menu settings. |
 
@@ -39,6 +40,13 @@ used in `label` / `label_alt`:
   cue to run a `claude` command to renew it. Wrap it in a `<span>` so it renders in your Nerd
   Font and can be styled via `.claude-usage .stale`, e.g.
   `{five_hour}%<span class='stale'>{stale}</span>`.
+
+When `token_history` is enabled, these compact token-count placeholders are also available
+(e.g. `15K`, `1.2M`, `218M`, `3.4B`, `1T`; `--` when unavailable):
+
+- `{session_tokens}` — tokens used by the most recent Claude Code session.
+- `{today_tokens}` / `{week_tokens}` / `{month_tokens}` / `{year_tokens}` — tokens used in the
+  current day / week / month / year (local time).
 
 ```yaml
 claude_usage:
@@ -112,6 +120,45 @@ style them to match the bars:
 .claude-usage .percent.critical { color: #f38ba8; }  /* red    */
 ```
 
+## Token history
+
+When `token_history.enabled` is `true`, the popup menu gains a **Tokens** section with a
+Session / Today / Week / Month / Year toggle, the selected period's total token count, and an
+optional usage graph. The data comes from Claude Code's own local session transcripts
+(`~/.claude/projects/**/*.jsonl`) — **no API key and no network**. Only numeric token counts,
+timestamps, the model name and the session id are read; message content is never touched. The
+scan is incremental (each file is re-parsed only when its size/mtime changes) and runs off the
+UI thread.
+
+The graph window matches the selected period: **Today** and **Session** are hourly, **Week**
+and **Month** are daily, and **Year** is monthly. The graph reuses the shared `GraphWidget`
+(the same chart the CPU/Memory/GPU widgets use) and is styled via `.token-graph`.
+
+| Option            | Type    | Default | Description |
+|-------------------|---------|---------|-------------|
+| `enabled`         | boolean | `false` | Enable the Tokens section and the `{*_tokens}` placeholders. |
+| `default_period`  | string  | `'today'` | Which period is selected when the menu opens: `session`, `today`, `week`, `month`, or `year`. |
+| `show_graph`      | boolean | `false` | Show the usage graph under the totals. |
+| `show_graph_grid` | boolean | `false` | Draw a faint grid behind the graph. |
+| `week_starts_on`  | string  | `'monday'` | Week boundary for the Week total: `monday` or `sunday`. |
+| `count_cache_read`| boolean | `true` | Whether cache-read tokens count toward totals. Cache reads dominate for heavy users, so totals are far smaller when this is `false` (closer to "new" work done). |
+| `scan_interval`   | integer | `120` | How often (seconds) the transcripts are re-scanned (30–3600). |
+
+```yaml
+    token_history:
+      enabled: true
+      default_period: "today"
+      show_graph: true
+      show_graph_grid: false
+      week_starts_on: "monday"
+      count_cache_read: true
+      scan_interval: 120
+```
+
+> [!NOTE]
+> **Session** is the most recently active session's *entire lifetime*, which can span several
+> days, so it may exceed **Today** (which counts every session but only the current date).
+
 ## Authentication
 
 The widget reuses Claude Code's existing OAuth session. It reads the access token from
@@ -151,6 +198,14 @@ signed in to Claude Code, the widget shows `--` until you sign in.
 .claude-usage-menu .section .footer .percent.high {}
 .claude-usage-menu .section .footer .percent.critical {}
 .claude-usage-menu .section .date {}     /* absolute reset timestamp */
+/* Token history section (token_history.enabled) */
+.claude-usage-menu .section.tokens .period-toggle {}        /* Session/Today/Week/... row */
+.claude-usage-menu .section.tokens .period-btn {}           /* a period button */
+.claude-usage-menu .section.tokens .period-btn:hover {}
+.claude-usage-menu .section.tokens .period-btn.active {}    /* the selected period */
+.claude-usage-menu .section.tokens .token-total {}          /* the big total count */
+.claude-usage-menu .section.tokens .token-graph {}          /* usage graph (its color drives the line) */
+.claude-usage-menu .section.tokens .token-graph-grid {}     /* graph grid color (show_graph_grid) */
 ```
 
 ## Example Style

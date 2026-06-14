@@ -20,7 +20,7 @@ _TOKEN_PERIODS: list[tuple[str, str]] = [
     ("month", "Month"),
     ("year", "Year"),
 ]
-_EMPTY_TOKEN_SUMMARY: dict[str, Any] = {"totals": {}, "series": [], "session_id": None}
+_EMPTY_TOKEN_SUMMARY: dict[str, Any] = {"totals": {}, "series_by_period": {}, "session_id": None}
 
 # Usage-level CSS classes (shared by the popup bars and the optional bar-percent colouring).
 _LEVEL_CLASSES = frozenset({"low", "medium", "high", "critical", "unknown"})
@@ -123,12 +123,7 @@ class ClaudeUsageWidget(BaseWidget):
 
     def _summarize_tokens(self, agg: dict[str, Any]) -> dict[str, Any]:
         th = self.config.token_history
-        return summarize(
-            agg,
-            count_cache_read=th.count_cache_read,
-            week_starts_on=th.week_starts_on,
-            graph_period=th.graph_period,
-        )
+        return summarize(agg, count_cache_read=th.count_cache_read, week_starts_on=th.week_starts_on)
 
     def _on_token_data(self, agg: dict[str, Any]) -> None:
         self._token_summary = self._summarize_tokens(agg)
@@ -141,7 +136,7 @@ class ClaudeUsageWidget(BaseWidget):
         if not isinstance(value, (int, float)):
             return "--"
         n = int(value)
-        for div, unit in ((1_000_000_000, "B"), (1_000_000, "M"), (1_000, "K")):
+        for div, unit in ((1_000_000_000_000, "T"), (1_000_000_000, "B"), (1_000_000, "M"), (1_000, "K")):
             if n >= div:
                 return f"{n / div:.1f}".rstrip("0").rstrip(".") + unit
         return str(n)
@@ -419,7 +414,7 @@ class ClaudeUsageWidget(BaseWidget):
                 btn.setProperty("class", "period-btn active" if active else "period-btn")
                 refresh_widget_style(btn)
             if self._token_graph is not None:
-                series = self._token_summary.get("series", [])
+                series = self._token_summary.get("series_by_period", {}).get(self._selected_period, [])
                 peak = max(series) if series else 0
                 self._token_graph.set_data([(v / peak * 100.0) if peak else 0.0 for v in series])
         except RuntimeError:

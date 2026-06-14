@@ -27,7 +27,7 @@ from core.widgets.services.claude_usage.claude_api import _claude_config_dir
 
 logger = logging.getLogger("claude_usage")
 
-CACHE_VERSION = 1
+CACHE_VERSION = 2
 # Token count order used throughout: input, output, cache_creation, cache_read.
 _TOKEN_SLOTS = 4
 
@@ -69,6 +69,11 @@ def _merge_daily(into: dict[str, dict[str, list[int]]], src: dict[str, dict[str,
             _add4(slot, counts)
 
 
+def _merge_hourly(into: dict[str, list[int]], src: dict[str, list[int]]) -> None:
+    for hour, counts in src.items():
+        _add4(into.setdefault(hour, [0, 0, 0, 0]), counts)
+
+
 def _merge_sessions(into: dict[str, dict[str, Any]], src: dict[str, dict[str, Any]]) -> None:
     for sid, info in src.items():
         cur = into.get(sid)
@@ -81,8 +86,9 @@ def _merge_sessions(into: dict[str, dict[str, Any]], src: dict[str, dict[str, An
 
 
 def _parse_file(path: str) -> dict[str, Any]:
-    """Parse one JSONL transcript into its daily + session token contribution."""
+    """Parse one JSONL transcript into its daily + hourly + session token contribution."""
     daily: dict[str, dict[str, list[int]]] = {}
+    hourly: dict[str, list[int]] = {}
     sessions: dict[str, dict[str, Any]] = {}
     try:
         with open(path, encoding="utf-8") as f:
@@ -113,12 +119,14 @@ def _parse_file(path: str) -> dict[str, Any]:
                 except Exception:
                     continue
                 date_key = f"{local:%Y-%m-%d}"
+                hour_key = f"{local:%Y-%m-%dT%H}"
                 tsec = local.timestamp()
                 model = message.get("model") or "unknown"
                 sid = obj.get("sessionId") or "unknown"
 
                 slot = daily.setdefault(date_key, {}).setdefault(model, [0, 0, 0, 0])
                 _add4(slot, counts)
+                _add4(hourly.setdefault(hour_key, [0, 0, 0, 0]), counts)
 
                 sess = sessions.get(sid)
                 if sess is None:
@@ -129,7 +137,7 @@ def _parse_file(path: str) -> dict[str, Any]:
                     sess["last"] = max(sess["last"], tsec)
     except Exception as e:
         logger.debug("failed to parse %s: %s", path, e)
-    return {"daily": daily, "sessions": sessions}
+    return {"daily": daily, "hourly": hourly, "sessions": sessions}
 
 
 def scan(cache_path: str) -> dict[str, Any]:
@@ -158,13 +166,16 @@ def scan(cache_path: str) -> dict[str, Any]:
                 "mtime": st.st_mtime,
                 "size": st.st_size,
                 "daily": contrib["daily"],
+                "hourly": contrib["hourly"],
                 "sessions": contrib["sessions"],
             }
 
     daily: dict[str, dict[str, list[int]]] = {}
+    hourly: dict[str, list[int]] = {}
     sessions: dict[str, dict[str, Any]] = {}
     for fc in current_files.values():
         _merge_daily(daily, fc["daily"])
+        _merge_hourly(hourly, fc.get("hourly", {}))
         _merge_sessions(sessions, fc["sessions"])
 
     _write_json(
@@ -173,11 +184,12 @@ def scan(cache_path: str) -> dict[str, Any]:
             "version": CACHE_VERSION,
             "files": current_files,
             "daily": daily,
+            "hourly": hourly,
             "sessions": sessions,
             "updated_at": int(time.time()),
         },
     )
-    return {"daily": daily, "sessions": sessions, "scanned_at": int(time.time())}
+    return {"daily": daily, "hourly": hourly, "sessions": sessions, "scanned_at": int(time.time())}
 
 
 def _date_keys_in_range(start: datetime, end: datetime) -> list[str]:
@@ -203,24 +215,63 @@ def _sum_daily(daily: dict[str, dict[str, list[int]]], date_key: str, count_cach
     return total
 
 
+def _sum_hourly(hourly: dict[str, list[int]], hour_key: str, count_cache_read: bool) -> int:
+    counts = hourly.get(hour_key)
+    if not counts:
+        return 0
+    return counts[0] + counts[1] + counts[2] + (counts[3] if count_cache_read else 0)
+
+
+def _hour_keys_in_range(start: datetime, end: datetime) -> list[str]:
+    """Local YYYY-MM-DDTHH keys from start's hour through end's hour, inclusive."""
+    keys = []
+    cur = start.replace(minute=0, second=0, microsecond=0)
+    last = end.replace(minute=0, second=0, microsecond=0)
+    while cur <= last:
+        keys.append(f"{cur:%Y-%m-%dT%H}")
+        cur += timedelta(hours=1)
+    return keys
+
+
+def _month_keys_in_range(start: datetime, end: datetime) -> list[str]:
+    """Local YYYY-MM keys from start's month through end's month, inclusive."""
+    keys = []
+    year, month = start.year, start.month
+    while (year, month) <= (end.year, end.month):
+        keys.append(f"{year:04d}-{month:02d}")
+        month += 1
+        if month > 12:
+            month = 1
+            year += 1
+    return keys
+
+
+def _sum_month(daily: dict[str, dict[str, list[int]]], month_key: str, count_cache_read: bool) -> int:
+    prefix = f"{month_key}-"
+    return sum(_sum_daily(daily, dk, count_cache_read) for dk in daily if dk.startswith(prefix))
+
+
 def summarize(
     agg: dict[str, Any],
     *,
     count_cache_read: bool = True,
     week_starts_on: str = "monday",
-    graph_period: str = "month",
     now: datetime | None = None,
 ) -> dict[str, Any]:
-    """Derive Session/Today/Week/Month/Year totals and a daily series from an aggregate.
+    """Derive Session/Today/Week/Month/Year totals and a per-period graph series.
 
-    ``now`` (local, tz-aware) is injectable for deterministic tests.
+    Each period's series matches its window: Today is hourly (midnight→now), Session
+    is hourly across the session's span (capped to 14 days), Week and Month are daily,
+    and Year is monthly. ``now`` (local, tz-aware) is injectable for deterministic tests.
     """
     now = now or datetime.now().astimezone()
     daily = agg.get("daily", {})
+    hourly = agg.get("hourly", {})
     sessions = agg.get("sessions", {})
+    ccr = count_cache_read
 
     def window_total(start: datetime) -> int:
-        return sum(_sum_daily(daily, k, count_cache_read) for k in _date_keys_in_range(start, now))
+        return sum(_sum_daily(daily, k, ccr) for k in _date_keys_in_range(start, now))
 
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
     weekday = now.weekday()  # Mon=0
@@ -232,14 +283,23 @@ def summarize(
     # Session = the most recently active session id.
     session_total = 0
     session_id = None
+    session_series: list[float] = []
     if sessions:
         session_id, info = max(sessions.items(), key=lambda kv: kv[1]["last"])
         t = info["t"]
-        session_total = t[0] + t[1] + t[2] + (t[3] if count_cache_read else 0)
+        session_total = t[0] + t[1] + t[2] + (t[3] if ccr else 0)
+        first = datetime.fromtimestamp(info["first"]).astimezone()
+        last = datetime.fromtimestamp(info["last"]).astimezone()
+        s_start = max(first, now - timedelta(days=14))
+        session_series = [_sum_hourly(hourly, k, ccr) for k in _hour_keys_in_range(s_start, last)]
 
-    span_days = {"week": 7, "month": 30, "year": 365}.get(graph_period, 30)
-    series_start = today_start - timedelta(days=span_days - 1)
-    series = [_sum_daily(daily, k, count_cache_read) for k in _date_keys_in_range(series_start, now)]
+    series_by_period = {
+        "session": session_series,
+        "today": [_sum_hourly(hourly, k, ccr) for k in _hour_keys_in_range(today_start, now)],
+        "week": [_sum_daily(daily, k, ccr) for k in _date_keys_in_range(week_start, now)],
+        "month": [_sum_daily(daily, k, ccr) for k in _date_keys_in_range(month_start, now)],
+        "year": [_sum_month(daily, k, ccr) for k in _month_keys_in_range(year_start, now)],
+    }
 
     return {
         "totals": {
@@ -249,7 +309,7 @@ def summarize(
             "month": window_total(month_start),
             "year": window_total(year_start),
         },
-        "series": series,
+        "series_by_period": series_by_period,
         "session_id": session_id,
     }
 
@@ -268,7 +328,7 @@ class _ScanWorker(QThread):
             self.data_ready.emit(scan(self._cache_path))
         except Exception as e:
             logger.debug("token history scan failed: %s", e)
-            self.data_ready.emit({"daily": {}, "sessions": {}, "scanned_at": int(time.time())})
+            self.data_ready.emit({"daily": {}, "hourly": {}, "sessions": {}, "scanned_at": int(time.time())})
 
 
 class TokenHistoryService(QObject):
@@ -301,6 +361,7 @@ class TokenHistoryService(QObject):
         cached = _read_json(self._cache_path) or {}
         self._data: dict[str, Any] = {
             "daily": cached.get("daily", {}),
+            "hourly": cached.get("hourly", {}),
             "sessions": cached.get("sessions", {}),
             "scanned_at": cached.get("updated_at", 0),
         }
