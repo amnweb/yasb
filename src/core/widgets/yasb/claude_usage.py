@@ -10,6 +10,7 @@ from core.utils.utilities import PopupWidget, refresh_widget_style
 from core.validation.widgets.yasb.claude_usage import ClaudeUsageConfig
 from core.widgets.base import BaseWidget
 from core.widgets.services.claude_usage.claude_api import ClaudeUsageService
+from core.widgets.services.claude_usage.status import STATUS_LEVELS, ClaudeStatusService
 from core.widgets.services.claude_usage.token_history import TokenHistoryService, summarize
 
 # Popup period selector order for the token-history section.
@@ -78,6 +79,15 @@ class ClaudeUsageWidget(BaseWidget):
             self._token_service = TokenHistoryService.get_instance(self.config.token_history.scan_interval)
             self._token_summary = self._summarize_tokens(self._token_service.latest())
 
+        # Claude API status (optional): polls the public status page.
+        self._status_service: ClaudeStatusService | None = None
+        self._status: dict[str, Any] = {"indicator": "unknown", "description": ""}
+        self._status_dot: QLabel | None = None
+        self._status_text_label: QLabel | None = None
+        if self.config.status.enabled:
+            self._status_service = ClaudeStatusService.get_instance(self.config.status.poll_interval)
+            self._status = self._status_service.latest()
+
         self._init_container()
         self.build_widget_label(self.config.label, self.config.label_alt)
 
@@ -92,6 +102,8 @@ class ClaudeUsageWidget(BaseWidget):
         self._service.data_ready.connect(self._on_data)
         if self._token_service is not None:
             self._token_service.data_ready.connect(self._on_token_data)
+        if self._status_service is not None:
+            self._status_service.data_ready.connect(self._on_status_data)
         self.destroyed.connect(lambda *_: self._release_service())
         self._update_label()
 
@@ -106,6 +118,11 @@ class ClaudeUsageWidget(BaseWidget):
         if self._token_service is not None:
             try:
                 self._token_service.release()
+            except RuntimeError:
+                pass
+        if self._status_service is not None:
+            try:
+                self._status_service.release()
             except RuntimeError:
                 pass
 
@@ -129,6 +146,39 @@ class ClaudeUsageWidget(BaseWidget):
         self._token_summary = self._summarize_tokens(agg)
         self._update_label()
         self._sync_token_section()
+
+    def _on_status_data(self, data: dict[str, Any]) -> None:
+        self._status = data
+        self._update_label()
+        self._sync_status()
+
+    def _build_status_row(self) -> QFrame:
+        row = QFrame()
+        row.setProperty("class", "status-row")
+        row_layout = QHBoxLayout(row)
+        row_layout.setContentsMargins(0, 0, 0, 0)
+        row_layout.setSpacing(0)
+        self._status_dot = QLabel(self.config.status.icon)
+        self._status_dot.setProperty("class", "dot")
+        row_layout.addWidget(self._status_dot)
+        self._status_text_label = QLabel("")
+        self._status_text_label.setProperty("class", "status-text")
+        row_layout.addWidget(self._status_text_label)
+        row_layout.addStretch()
+        self._sync_status()
+        return row
+
+    def _sync_status(self) -> None:
+        """Update the menu status dot colour + description in place."""
+        if self._status_dot is None:
+            return
+        try:
+            self._status_dot.setProperty("class", f"dot {self._status_level()}")
+            self._status_text_label.setText(self._status.get("description", "") or "Status unavailable")
+            refresh_widget_style(self._status_dot, self._status_text_label)
+        except RuntimeError:
+            self._status_dot = None
+            self._status_text_label = None
 
     @staticmethod
     def _fmt_tokens(value: Any) -> str:
@@ -154,7 +204,13 @@ class ClaudeUsageWidget(BaseWidget):
             "week_tokens": self._fmt_tokens(totals.get("week")),
             "month_tokens": self._fmt_tokens(totals.get("month")),
             "year_tokens": self._fmt_tokens(totals.get("year")),
+            "status": self.config.status.icon if self.config.status.enabled else "",
+            "status_text": self._status.get("description", "") if self.config.status.enabled else "",
         }
+
+    def _status_level(self) -> str:
+        level = self._status.get("indicator")
+        return level if level in STATUS_LEVELS else "unknown"
 
     @staticmethod
     def _pct(value: Any) -> str:
@@ -303,6 +359,11 @@ class ClaudeUsageWidget(BaseWidget):
                 window = "five" if "{five_hour}" in part else "seven" if "{seven_day}" in part else None
                 if window is not None:
                     self._apply_level_class(current_widget, self._level_class(self._data.get(window)))
+            # Colour the {status} dot by the current level (e.g. '.status.none').
+            if "{status}" in part:
+                base = current_widget.property("class") or "status"
+                base = " ".join(t for t in base.split() if t not in STATUS_LEVELS)
+                current_widget.setProperty("class", f"{base} {self._status_level()}")
             if self.config.tooltip:
                 tip = f"Claude usage — 5h: {values['five_hour']}% · 7d: {values['seven_day']}%"
                 if self._data.get("token_expired"):
@@ -494,6 +555,8 @@ class ClaudeUsageWidget(BaseWidget):
         header_layout.addWidget(refresh_btn)
 
         layout.addWidget(header)
+        if self.config.status.enabled and self.config.status.show_in_menu:
+            layout.addWidget(self._build_status_row())
         self._add_menu_sections(layout)
 
         self._menu.adjustSize()

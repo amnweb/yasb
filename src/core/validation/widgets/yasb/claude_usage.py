@@ -38,12 +38,22 @@ class ClaudeTokenHistoryConfig(CustomBaseModel):
     scan_interval: int = Field(default=120, ge=30, le=3600)
 
 
+class ClaudeStatusConfig(CustomBaseModel):
+    # Polls the public Claude status page; drives the {status} dot colour
+    # (green/yellow/orange/red) and an optional status line in the popup header.
+    enabled: bool = False
+    show_in_menu: bool = True
+    icon: str = "●"  # ● — coloured via .status.<level> CSS classes
+    poll_interval: int = Field(default=300, ge=60, le=3600)
+
+
 class ClaudeUsageConfig(CustomBaseModel):
     label: str = "Claude {five_hour}%"
     label_alt: str = "Claude {seven_day}%"
     update_interval: int = Field(default=60, ge=30, le=3600)
     cache_ttl: int = Field(default=120, ge=0, le=3600)
     token_history: ClaudeTokenHistoryConfig = ClaudeTokenHistoryConfig()
+    status: ClaudeStatusConfig = ClaudeStatusConfig()
     # How each window's popup reset line is phrased, per window:
     #   "relative" -> "Resets in 4h 11m" / "Resets in 6d 21h" (countdown)
     #   "absolute" -> "Resets on Sat @ 6:00 AM" (local weekday + time)
