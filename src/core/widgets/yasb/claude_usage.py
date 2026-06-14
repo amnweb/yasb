@@ -10,6 +10,9 @@ from core.validation.widgets.yasb.claude_usage import ClaudeUsageConfig
 from core.widgets.base import BaseWidget
 from core.widgets.services.claude_usage.claude_api import ClaudeUsageService
 
+# Usage-level CSS classes (shared by the popup bars and the optional bar-percent colouring).
+_LEVEL_CLASSES = frozenset({"low", "medium", "high", "critical", "unknown"})
+
 
 class UsageBar(QFrame):
     """A rounded progress bar drawn as a track QFrame with a child `.fill` QFrame.
@@ -190,13 +193,22 @@ class ClaudeUsageWidget(BaseWidget):
 
     @staticmethod
     def _level_class(value: Any) -> str:
+        """Usage band: low < 50 ≤ medium < 65 ≤ high < 80 ≤ critical (green/yellow/orange/red)."""
         if not isinstance(value, (int, float)):
             return "unknown"
         if value >= 80:
+            return "critical"
+        if value >= 65:
             return "high"
         if value >= 50:
             return "medium"
         return "low"
+
+    @staticmethod
+    def _apply_level_class(widget: QLabel, level: str) -> None:
+        """Set ``widget``'s usage level (low/medium/high) while keeping its base class."""
+        base = " ".join(t for t in (widget.property("class") or "label").split() if t not in _LEVEL_CLASSES)
+        widget.setProperty("class", f"{base} {level}")
 
     def _toggle_label(self) -> None:
         self._show_alt_label = not self._show_alt_label
@@ -230,6 +242,11 @@ class ClaudeUsageWidget(BaseWidget):
             # Hide empty labels so an unused placeholder (e.g. {stale} when the token is
             # valid) doesn't leave a constant gap from its margin/spacing.
             current_widget.setVisible(bool(rendered))
+            # Optionally colour the percentage by usage level (same thresholds as the bars).
+            if self.config.colorize_percent:
+                window = "five" if "{five_hour}" in part else "seven" if "{seven_day}" in part else None
+                if window is not None:
+                    self._apply_level_class(current_widget, self._level_class(self._data.get(window)))
             if self.config.tooltip:
                 tip = f"Claude usage — 5h: {values['five_hour']}% · 7d: {values['seven_day']}%"
                 if self._data.get("token_expired"):

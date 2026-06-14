@@ -17,6 +17,7 @@ extra configuration is required as long as you are signed in to Claude Code.
 | `five_hour_reset_format` | string | `'relative'` | How the 5-hour window's reset line is phrased: `'relative'` → `Resets in 4h 11m` (countdown), or `'absolute'` → `Resets on Sat @ 6:00 AM`. |
 | `seven_day_reset_format` | string | `'absolute'` | How the 7-day window's reset line is phrased: `'absolute'` → `Resets on Sat @ 6:00 AM` (local weekday + time), or `'relative'` → `Resets in 6d 21h`. |
 | `reset_show_date` | boolean | `true` | For windows using `'absolute'`, include the month/day (`Resets on Sat, Jun 13 @ 6:00 AM`) so windows that reset on the same weekday are distinguishable. No effect on `'relative'` windows. |
+| `colorize_percent`| boolean | `false` | Colour the `{five_hour}`/`{seven_day}` percentage on the bar by usage level (same green/yellow/orange/red usage bands as the popup bars). See [Color-coded percentage](#color-coded-percentage). |
 | `tooltip`         | boolean | `true` | Whether to show a summary tooltip on hover. |
 | `callbacks`       | dict    | `{'on_left': 'toggle_menu', 'on_middle': 'do_nothing', 'on_right': 'toggle_label'}` | Mouse-click callbacks. The popup menu also has a refresh button in its header. |
 | `menu`            | dict    | `{'blur': true, 'round_corners': true, 'round_corners_type': 'normal', 'border_color': 'System', 'alignment': 'right', 'direction': 'down', 'offset_top': 6, 'offset_left': 0}` | Popup menu settings. |
@@ -73,6 +74,7 @@ claude_usage:
 - **cache_ttl:** How long a fetched result is cached on disk before the usage endpoint is queried again. Because the endpoint is rate-limited (HTTP 429), the widget serves the last cached value on any error instead of going blank.
 - **five_hour_reset_format / seven_day_reset_format:** How each window's "Resets …" line is phrased. `relative` shows a countdown (`Resets in 4h 11m`); `absolute` shows a local weekday and time (`Resets on Sat @ 6:00 AM`). The defaults suit each window — the near-term 5-hour window as a countdown, the multi-day 7-day window as a date. The exact reset timestamp is always shown on the line below regardless of this setting.
 - **reset_show_date:** For windows using `absolute`, include the month and day in the reset line (`Resets on Sat, Jun 13 @ 6:00 AM`). This disambiguates the two windows when they happen to reset on the same weekday. Ignored for `relative` windows.
+- **colorize_percent:** Colour the percentage shown on the bar by usage level. See [Color-coded percentage](#color-coded-percentage).
 - **tooltip:** Whether to show a summary tooltip on hover.
 - **callbacks:** Mouse-click callbacks. Built-in actions: `toggle_menu` (open/close the popup menu), `toggle_label` (swap between `label` and `label_alt`), `refresh` (force an immediate re-fetch of the usage data, bypassing `cache_ttl`), `do_nothing`, and `exec`. The popup menu header also has a refresh button that triggers the same action.
 - **menu:** A dictionary specifying the popup menu settings:
@@ -83,6 +85,32 @@ claude_usage:
   - **alignment:** Horizontal alignment of the menu (`left`, `right`, `center`).
   - **direction:** Whether the menu opens `down` or `up`.
   - **offset_top / offset_left:** Pixel offsets for fine positioning.
+
+## Color-coded percentage
+
+With `colorize_percent: true`, the percentage on the bar is coloured by usage level using the
+**same usage bands as the popup progress bars** (`< 50` → low/green, `50–64` → medium/yellow,
+`65–79` → high/orange, `≥ 80` → critical/red) for whichever window is shown — `{five_hour}` on the main label or
+`{seven_day}` on the alt label.
+
+Because a label segment is coloured as a whole, wrap **only** the percent in its own span so
+the surrounding text (icon, reset countdown) keeps its normal colour:
+
+```yaml
+    label: "<span>\U000f06a9</span> <span class='percent'>{five_hour}%</span> · {five_hour_reset}"
+    label_alt: "<span>\U000f06a9</span> <span class='percent'>{seven_day}%</span> · {seven_day_reset}"
+    colorize_percent: true
+```
+
+The span gets a `low` / `medium` / `high` / `critical` (or `unknown`) class added automatically;
+style them to match the bars:
+
+```css
+.claude-usage .percent.low { color: #a6e3a1; }       /* green  */
+.claude-usage .percent.medium { color: #f9e2af; }    /* yellow */
+.claude-usage .percent.high { color: #fab387; }      /* orange */
+.claude-usage .percent.critical { color: #f38ba8; }  /* red    */
+```
 
 ## Authentication
 
@@ -98,6 +126,10 @@ signed in to Claude Code, the widget shows `--` until you sign in.
 .claude-usage .icon {}
 .claude-usage .label {}
 .claude-usage .stale {}   /* expired-token warning glyph ({stale} placeholder) */
+.claude-usage .percent.low {}       /* colorize_percent: < 50%  (green)  */
+.claude-usage .percent.medium {}    /* colorize_percent: 50-64% (yellow) */
+.claude-usage .percent.high {}      /* colorize_percent: 65-79% (orange) */
+.claude-usage .percent.critical {}  /* colorize_percent: >= 80% (red)    */
 /* Popup menu */
 .claude-usage-menu {}
 .claude-usage-menu .header {}            /* header row (title + refresh button) */
@@ -108,14 +140,16 @@ signed in to Claude Code, the widget shows `--` until you sign in.
 .claude-usage-menu .section .title {}
 .claude-usage-menu .section .progress {}               /* progress-bar track */
 .claude-usage-menu .section .progress .fill {}         /* filled portion */
-.claude-usage-menu .section .progress.low .fill {}     /* < 50%  */
-.claude-usage-menu .section .progress.medium .fill {}  /* 50-79% */
-.claude-usage-menu .section .progress.high .fill {}    /* >= 80% */
+.claude-usage-menu .section .progress.low .fill {}       /* < 50%  (green)  */
+.claude-usage-menu .section .progress.medium .fill {}    /* 50-64% (yellow) */
+.claude-usage-menu .section .progress.high .fill {}      /* 65-79% (orange) */
+.claude-usage-menu .section .progress.critical .fill {}  /* >= 80% (red)    */
 .claude-usage-menu .section .footer .reset {}
 .claude-usage-menu .section .footer .percent {}
 .claude-usage-menu .section .footer .percent.low {}
 .claude-usage-menu .section .footer .percent.medium {}
 .claude-usage-menu .section .footer .percent.high {}
+.claude-usage-menu .section .footer .percent.critical {}
 .claude-usage-menu .section .date {}     /* absolute reset timestamp */
 ```
 
@@ -177,7 +211,8 @@ signed in to Claude Code, the widget shows `--` until you sign in.
     border-radius: 5px;
 }
 .claude-usage-menu .progress.medium .fill { background-color: #f9e2af; }
-.claude-usage-menu .progress.high .fill { background-color: #f38ba8; }
+.claude-usage-menu .progress.high .fill { background-color: #fab387; }
+.claude-usage-menu .progress.critical .fill { background-color: #f38ba8; }
 .claude-usage-menu .reset {
     color: #a6adc8;
     font-size: 12px;
@@ -190,7 +225,8 @@ signed in to Claude Code, the widget shows `--` until you sign in.
     padding-top: 6px;
 }
 .claude-usage-menu .percent.medium { color: #f9e2af; }
-.claude-usage-menu .percent.high { color: #f38ba8; }
+.claude-usage-menu .percent.high { color: #fab387; }
+.claude-usage-menu .percent.critical { color: #f38ba8; }
 .claude-usage-menu .date {
     color: #6c7086;
     font-size: 11px;

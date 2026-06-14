@@ -39,6 +39,10 @@ class ClaudeUsageConfig(CustomBaseModel):
     # Include the month/day in the "absolute" reset line ("Resets on Sat, Jun 13 @ 6:00 AM"),
     # disambiguating windows that reset on the same weekday. No effect on "relative".
     reset_show_date: bool = True
+    # Colour the {five_hour}/{seven_day} percentage on the bar by usage level, using the same
+    # low/medium/high thresholds as the popup progress bars. Wrap the percent in its own span
+    # (e.g. "<span class='percent'>{five_hour}%</span>") so only the number is coloured.
+    colorize_percent: bool = False
     tooltip: bool = True
     callbacks: ClaudeUsageCallbacksConfig = ClaudeUsageCallbacksConfig()
     menu: ClaudeUsageMenuConfig = ClaudeUsageMenuConfig()
