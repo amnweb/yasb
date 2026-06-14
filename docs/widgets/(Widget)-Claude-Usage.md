@@ -20,6 +20,7 @@ extra configuration is required as long as you are signed in to Claude Code.
 | `colorize_percent`| boolean | `false` | Colour the `{five_hour}`/`{seven_day}` percentage on the bar by usage level (same green/yellow/orange/red usage bands as the popup bars). See [Color-coded percentage](#color-coded-percentage). |
 | `tooltip`         | boolean | `true` | Whether to show a summary tooltip on hover. |
 | `token_history`   | dict    | disabled | Optional local token-usage history (Session/Today/Week/Month/Year). See [Token history](#token-history). |
+| `status`          | dict    | disabled | Optional Claude API status indicator (green/yellow/orange/red). See [API status](#api-status). |
 | `callbacks`       | dict    | `{'on_left': 'toggle_menu', 'on_middle': 'do_nothing', 'on_right': 'toggle_label'}` | Mouse-click callbacks. The popup menu also has a refresh button in its header. |
 | `menu`            | dict    | `{'blur': true, 'round_corners': true, 'round_corners_type': 'normal', 'border_color': 'System', 'alignment': 'right', 'direction': 'down', 'offset_top': 6, 'offset_left': 0}` | Popup menu settings. |
 
@@ -47,6 +48,13 @@ When `token_history` is enabled, these compact token-count placeholders are also
 - `{session_tokens}` — tokens used by the most recent Claude Code session.
 - `{today_tokens}` / `{week_tokens}` / `{month_tokens}` / `{year_tokens}` — tokens used in the
   current day / week / month / year (local time).
+
+When `status` is enabled:
+
+- `{status}` — a status dot glyph, coloured by the current Claude API status via dynamic
+  `.status.<none|minor|major|critical|unknown>` classes (green/yellow/orange/red/grey). Empty
+  when `status` is disabled. Wrap it in a `<span>`, e.g. `<span class='status'>{status}</span>`.
+- `{status_text}` — the status description (e.g. `All Systems Operational`).
 
 ```yaml
 claude_usage:
@@ -159,6 +167,36 @@ and **Month** are daily, and **Year** is monthly. The graph reuses the shared `G
 > **Session** is the most recently active session's *entire lifetime*, which can span several
 > days, so it may exceed **Today** (which counts every session but only the current date).
 
+## API status
+
+When `status.enabled` is `true`, the widget polls the public Claude status page
+(`https://status.claude.com/api/v2/status.json` — **no authentication**) and exposes the
+`{status}` / `{status_text}` placeholders for the bar, plus an optional status line in the
+popup header. The `{status}` dot is coloured by severity:
+
+| Level | Meaning | Default colour |
+|-------|---------|----------------|
+| `none` | All systems operational | green |
+| `minor` | Minor degradation | yellow |
+| `major` | Major outage | orange |
+| `critical` | Critical outage | red |
+| `unknown` | Status could not be fetched | grey |
+
+| Option         | Type    | Default | Description |
+|----------------|---------|---------|-------------|
+| `enabled`      | boolean | `false` | Enable the status poll and the `{status}` / `{status_text}` placeholders. |
+| `show_in_menu` | boolean | `true`  | Show a status line (dot + description) in the popup header. |
+| `icon`         | string  | `'●'`   | The dot glyph; coloured via the `.status.<level>` classes. |
+| `poll_interval`| integer | `300`   | How often (seconds) the status page is polled (60–3600). |
+
+```yaml
+    label: "<span class='status'>{status}</span> Claude {five_hour}%"
+    status:
+      enabled: true
+      show_in_menu: true
+      poll_interval: 300
+```
+
 ## Authentication
 
 The widget reuses Claude Code's existing OAuth session. It reads the access token from
@@ -177,12 +215,21 @@ signed in to Claude Code, the widget shows `--` until you sign in.
 .claude-usage .percent.medium {}    /* colorize_percent: 50-64% (yellow) */
 .claude-usage .percent.high {}      /* colorize_percent: 65-79% (orange) */
 .claude-usage .percent.critical {}  /* colorize_percent: >= 80% (red)    */
+.claude-usage .status {}            /* {status} dot on the bar */
+.claude-usage .status.none {}       /* green  */
+.claude-usage .status.minor {}      /* yellow */
+.claude-usage .status.major {}      /* orange */
+.claude-usage .status.critical {}   /* red    */
+.claude-usage .status.unknown {}    /* grey   */
 /* Popup menu */
 .claude-usage-menu {}
 .claude-usage-menu .header {}            /* header row (title + refresh button) */
 .claude-usage-menu .header .text {}      /* "Claude Usage" title */
 .claude-usage-menu .header .refresh {}   /* refresh button */
 .claude-usage-menu .header .refresh:hover {}
+.claude-usage-menu .status-row {}            /* API status line (status.show_in_menu) */
+.claude-usage-menu .status-row .dot {}       /* status dot; coloured via .dot.<level> */
+.claude-usage-menu .status-row .status-text {}
 .claude-usage-menu .section {}
 .claude-usage-menu .section .title {}
 .claude-usage-menu .section .progress {}               /* progress-bar track */
