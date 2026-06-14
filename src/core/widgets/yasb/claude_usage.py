@@ -4,11 +4,23 @@ from typing import Any
 
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QVBoxLayout
 
+from core.utils.stat_popup import GraphWidget
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import PopupWidget, refresh_widget_style
 from core.validation.widgets.yasb.claude_usage import ClaudeUsageConfig
 from core.widgets.base import BaseWidget
 from core.widgets.services.claude_usage.claude_api import ClaudeUsageService
+from core.widgets.services.claude_usage.token_history import TokenHistoryService, summarize
+
+# Popup period selector order for the token-history section.
+_TOKEN_PERIODS: list[tuple[str, str]] = [
+    ("session", "Session"),
+    ("today", "Today"),
+    ("week", "Week"),
+    ("month", "Month"),
+    ("year", "Year"),
+]
+_EMPTY_TOKEN_SUMMARY: dict[str, Any] = {"totals": {}, "series": [], "session_id": None}
 
 # Usage-level CSS classes (shared by the popup bars and the optional bar-percent colouring).
 _LEVEL_CLASSES = frozenset({"low", "medium", "high", "critical", "unknown"})
@@ -55,6 +67,17 @@ class ClaudeUsageWidget(BaseWidget):
         self._service = ClaudeUsageService.get_instance(self.config.update_interval, self.config.cache_ttl)
         self._data: dict[str, Any] = self._service.latest()
 
+        # Local token-history (optional): scans Claude Code's session transcripts.
+        self._token_service: TokenHistoryService | None = None
+        self._token_summary: dict[str, Any] = dict(_EMPTY_TOKEN_SUMMARY)
+        self._selected_period = self.config.token_history.default_period
+        self._period_buttons: dict[str, QPushButton] = {}
+        self._token_total_label: QLabel | None = None
+        self._token_graph: GraphWidget | None = None
+        if self.config.token_history.enabled:
+            self._token_service = TokenHistoryService.get_instance(self.config.token_history.scan_interval)
+            self._token_summary = self._summarize_tokens(self._token_service.latest())
+
         self._init_container()
         self.build_widget_label(self.config.label, self.config.label_alt)
 
@@ -67,6 +90,8 @@ class ClaudeUsageWidget(BaseWidget):
         self.callback_right = self.config.callbacks.on_right
 
         self._service.data_ready.connect(self._on_data)
+        if self._token_service is not None:
+            self._token_service.data_ready.connect(self._on_token_data)
         self.destroyed.connect(lambda *_: self._release_service())
         self._update_label()
 
@@ -78,6 +103,11 @@ class ClaudeUsageWidget(BaseWidget):
             self._service.release()
         except RuntimeError:
             pass
+        if self._token_service is not None:
+            try:
+                self._token_service.release()
+            except RuntimeError:
+                pass
 
     def closeEvent(self, event):
         self._release_service()
@@ -91,13 +121,44 @@ class ClaudeUsageWidget(BaseWidget):
     def _refresh(self) -> None:
         self._service.refresh_now()
 
+    def _summarize_tokens(self, agg: dict[str, Any]) -> dict[str, Any]:
+        th = self.config.token_history
+        return summarize(
+            agg,
+            count_cache_read=th.count_cache_read,
+            week_starts_on=th.week_starts_on,
+            graph_period=th.graph_period,
+        )
+
+    def _on_token_data(self, agg: dict[str, Any]) -> None:
+        self._token_summary = self._summarize_tokens(agg)
+        self._update_label()
+        self._sync_token_section()
+
+    @staticmethod
+    def _fmt_tokens(value: Any) -> str:
+        """Compact token count, e.g. '15K', '1.2M', '218M'; '--' when unknown."""
+        if not isinstance(value, (int, float)):
+            return "--"
+        n = int(value)
+        for div, unit in ((1_000_000_000, "B"), (1_000_000, "M"), (1_000, "K")):
+            if n >= div:
+                return f"{n / div:.1f}".rstrip("0").rstrip(".") + unit
+        return str(n)
+
     def _format_values(self) -> dict[str, str]:
+        totals = self._token_summary.get("totals", {})
         return {
             "five_hour": self._pct(self._data.get("five")),
             "seven_day": self._pct(self._data.get("seven")),
             "five_hour_reset": self._fmt_reset(self._data.get("five_reset_iso")),
             "seven_day_reset": self._fmt_reset(self._data.get("seven_reset_iso")),
             "stale": self.STALE_ICON if self._data.get("token_expired") else "",
+            "session_tokens": self._fmt_tokens(totals.get("session")),
+            "today_tokens": self._fmt_tokens(totals.get("today")),
+            "week_tokens": self._fmt_tokens(totals.get("week")),
+            "month_tokens": self._fmt_tokens(totals.get("month")),
+            "year_tokens": self._fmt_tokens(totals.get("year")),
         }
 
     @staticmethod
@@ -295,6 +356,78 @@ class ClaudeUsageWidget(BaseWidget):
 
         return frame
 
+    def _build_token_section(self) -> QFrame:
+        """A 'Tokens' section: a Session/Today/Week/Month/Year toggle, the selected
+        total, and (optionally) a daily-usage graph."""
+        th = self.config.token_history
+        frame = QFrame()
+        frame.setProperty("class", "section tokens")
+        layout = QVBoxLayout(frame)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+
+        title_label = QLabel("Tokens")
+        title_label.setProperty("class", "title")
+        layout.addWidget(title_label)
+
+        toggle = QFrame()
+        toggle.setProperty("class", "period-toggle")
+        toggle_layout = QHBoxLayout(toggle)
+        toggle_layout.setContentsMargins(0, 0, 0, 0)
+        toggle_layout.setSpacing(0)
+        self._period_buttons = {}
+        for key, text in _TOKEN_PERIODS:
+            btn = QPushButton(text)
+            btn.setProperty("class", "period-btn")
+            btn.clicked.connect(lambda _=False, k=key: self._select_period(k))
+            toggle_layout.addWidget(btn)
+            self._period_buttons[key] = btn
+        layout.addWidget(toggle)
+
+        self._token_total_label = QLabel("--")
+        self._token_total_label.setProperty("class", "token-total")
+        layout.addWidget(self._token_total_label)
+
+        if th.show_graph:
+            graph_container = QFrame()
+            graph_container.setProperty("class", "graph-container")
+            graph_layout = QVBoxLayout(graph_container)
+            graph_layout.setContentsMargins(0, 0, 0, 0)
+            graph_layout.setSpacing(0)
+            self._token_graph = GraphWidget("token-graph", show_grid=th.show_graph_grid)
+            graph_layout.addWidget(self._token_graph)
+            layout.addWidget(graph_container)
+        else:
+            self._token_graph = None
+
+        self._sync_token_section()
+        return frame
+
+    def _select_period(self, period: str) -> None:
+        self._selected_period = period
+        self._sync_token_section()
+
+    def _sync_token_section(self) -> None:
+        """Refresh the token total, active toggle button, and graph in place."""
+        if self._token_total_label is None:
+            return
+        totals = self._token_summary.get("totals", {})
+        try:
+            self._token_total_label.setText(self._fmt_tokens(totals.get(self._selected_period)))
+            for key, btn in self._period_buttons.items():
+                active = key == self._selected_period
+                btn.setProperty("class", "period-btn active" if active else "period-btn")
+                refresh_widget_style(btn)
+            if self._token_graph is not None:
+                series = self._token_summary.get("series", [])
+                peak = max(series) if series else 0
+                self._token_graph.set_data([(v / peak * 100.0) if peak else 0.0 for v in series])
+        except RuntimeError:
+            # Popup (and its labels) was destroyed; references are stale until reopened.
+            self._token_total_label = None
+            self._token_graph = None
+            self._period_buttons = {}
+
     def _add_menu_sections(self, layout: QVBoxLayout) -> None:
         self._section_frames = [
             self._build_section(
@@ -312,6 +445,8 @@ class ClaudeUsageWidget(BaseWidget):
                 self.config.seven_day_reset_format,
             ),
         ]
+        if self.config.token_history.enabled:
+            self._section_frames.append(self._build_token_section())
         for frame in self._section_frames:
             layout.addWidget(frame)
 
