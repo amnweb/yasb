@@ -48,6 +48,7 @@ class OpenMeteoDataFetcher(QObject):
         longitude: float,
         timeout: int,
         units: str = "metric",
+        forecast_days: int = 7,
     ):
         super().__init__(parent)
         self.started = False
@@ -69,7 +70,7 @@ class OpenMeteoDataFetcher(QObject):
             f"&daily={DAILY_VARS}"
             f"&current={CURRENT_VARS}"
             f"&timezone=auto"
-            f"&forecast_days=7"
+            f"&forecast_days={forecast_days}"
             f"&temperature_unit={temp_unit}"
             f"&wind_speed_unit={wind_unit}"
         )

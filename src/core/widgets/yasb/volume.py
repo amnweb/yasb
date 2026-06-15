@@ -532,7 +532,13 @@ class VolumeWidget(BaseWidget):
         widget_index = 0
 
         if self.volume is None:
-            fallback_icon = next(iter(self.config.icons.values())) if isinstance(self.config.icons, dict) else self.config.icons[0] if self.config.icons else ""
+            fallback_icon = (
+                next(iter(self.config.icons.values()))
+                if isinstance(self.config.icons, dict)
+                else self.config.icons[0]
+                if self.config.icons
+                else ""
+            )
             mute_status, icon_volume, level_volume = None, fallback_icon, "No Device"
             set_tooltip(self, "No audio device connected.")
         else:

@@ -60,7 +60,7 @@ class OpenMeteoWidget(BaseWidget):
         # Weather state
         self._weather_data: dict[str, Any] | None = None
         self._has_valid_weather_data = False
-        self._hourly_data: list[list[dict[str, Any]]] = [[] for _ in range(7)]
+        self._hourly_data: list[list[dict[str, Any]]] = [[] for _ in range(self.config.forecast_days)]
         self._current_time: datetime | None = None
         self._show_alt_label = False
         self._weather_card_daily_widgets: list[ClickableWidget] = []
@@ -114,7 +114,8 @@ class OpenMeteoWidget(BaseWidget):
             if cached_data:
                 time_diff_ms = int(time.time() * 1000) - last_updated_ms
                 update_interval_ms = self.config.update_interval * 1000
-                is_cache_valid = time_diff_ms < update_interval_ms
+                cached_days = len(cached_data.get("daily", {}).get("time", []))
+                is_cache_valid = time_diff_ms < update_interval_ms and cached_days >= self.config.forecast_days
 
                 # Load the cached data instantly to prevent "weather loading..." flash
                 try:
@@ -154,6 +155,7 @@ class OpenMeteoWidget(BaseWidget):
             longitude=self._location_data["longitude"],
             timeout=self.config.update_interval * 1000,
             units=self.config.units,
+            forecast_days=self.config.forecast_days,
         )
         OpenMeteoWidget._shared_fetchers[self._widget_id] = fetcher
         fetcher.finished.connect(self._on_shared_weather_data)
@@ -471,9 +473,10 @@ class OpenMeteoWidget(BaseWidget):
         @pyqtSlot(int)
         def switch_hourly_data(day_idx: int):
             if day_idx == 0:
-                combined = self._hourly_data[0] + self._hourly_data[1]
+                next_day_data = self._hourly_data[1] if len(self._hourly_data) > 1 else []
+                combined = self._hourly_data[0] + next_day_data
                 current_time = self._current_time
-            elif 0 < day_idx < 7:
+            elif 0 < day_idx < self.config.forecast_days:
                 combined = self._hourly_data[day_idx]
                 current_time = None
             else:
@@ -504,7 +507,7 @@ class OpenMeteoWidget(BaseWidget):
 
         day_widgets: list[QWidget] = []
         self._weather_card_daily_widgets = []
-        for i in range(7):
+        for i in range(self.config.forecast_days):
             frame_day = ClickableWidget()
             self._weather_card_daily_widgets.append(frame_day)
             if self._hourly_data[0] and self.config.weather_card.show_hourly_forecast:
@@ -605,7 +608,7 @@ class OpenMeteoWidget(BaseWidget):
             instance._weather_data = None
             instance._has_valid_weather_data = False
             instance._location_data = None
-            instance._hourly_data = [[] for _ in range(7)]
+            instance._hourly_data = [[] for _ in range(instance.config.forecast_days)]
             instance._current_time = None
             for widget in instance._widgets + instance._widgets_alt:
                 if widget.property("class") and "icon" in (widget.property("class") or ""):
@@ -722,7 +725,7 @@ class OpenMeteoWidget(BaseWidget):
             daily_sunrise = daily.get("sunrise", [])
             daily_sunset = daily.get("sunset", [])
 
-            for day_idx in range(7):
+            for day_idx in range(self.config.forecast_days):
                 start = day_idx * 24
                 end = start + 24
                 day_hourly: list[dict[str, Any]] = []
@@ -833,7 +836,7 @@ class OpenMeteoWidget(BaseWidget):
             }
 
             # Per-day forecast data
-            for i in range(7):
+            for i in range(self.config.forecast_days):
                 if i < len(daily_times):
                     date_obj = datetime.strptime(daily_times[i], "%Y-%m-%d")
                     day_name = date_obj.strftime("%B %d")
@@ -881,7 +884,7 @@ class OpenMeteoWidget(BaseWidget):
                     "{cloud}": "N/A",
                     "{feelslike}": "N/A",
                 }
-                for i in range(7):
+                for i in range(self.config.forecast_days):
                     self._weather_data[f"{{day{i}_name}}"] = "N/A"
                     self._weather_data[f"{{day{i}_min_temp}}"] = "N/A"
                     self._weather_data[f"{{day{i}_max_temp}}"] = "N/A"
