@@ -8051,6 +8051,13 @@
           "title": "Units",
           "type": "string"
         },
+        "forecast_days": {
+          "default": 7,
+          "maximum": 14,
+          "minimum": 1,
+          "title": "Forecast Days",
+          "type": "integer"
+        },
         "tooltip": {
           "default": true,
           "title": "Tooltip",
