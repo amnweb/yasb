@@ -26,9 +26,9 @@ jobs:
 
       - name: Generate YASB App Token
         id: app-token
-        uses: actions/create-github-app-token@v1
+        uses: actions/create-github-app-token@v3
         with:
-          app-id: ${{ secrets.YASB_APP_ID }}
+          client-id: ${{ secrets.YASB_APP_ID }}
           private-key: ${{ secrets.YASB_APP_PRIVATE_KEY }}
 
       - name: Checkout Latest Agent Core
@@ -38,7 +38,7 @@ jobs:
           token: ${{ secrets.YASB_AGENT_CORE }}
           path: agent-core
 
-      - name: Set up Env
+      - name: Set up Python
         uses: actions/setup-python@v6
         with:
           python-version: '3.14'
