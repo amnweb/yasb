@@ -81,6 +81,7 @@ class OpenMeteoWidgetConfig(CustomBaseModel):
     update_interval: int = Field(default=3600, ge=60, le=36000000)
     hide_decimal: bool = False
     units: Literal["metric", "imperial"] = "metric"
+    forecast_days: int = Field(default=7, ge=1, le=14)
     tooltip: bool = True
     icons: OpenMeteoIconsConfig = OpenMeteoIconsConfig()
     weather_card: OpenMeteoCardConfig = OpenMeteoCardConfig()
