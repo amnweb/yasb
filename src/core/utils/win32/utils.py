@@ -372,7 +372,7 @@ def apply_qmenu_style(qwidget: QWidget):
         def apply_blur():
             try:
                 hwnd = int(qwidget.winId())
-                enable_blur(hwnd, DarkMode=True, RoundCorners=True, RoundCornersType="normal", BorderColor="None")
+                enable_blur(hwnd, DarkMode=False, RoundCorners=True, RoundCornersType="normal", BorderColor="None")
             except Exception:
                 pass
 

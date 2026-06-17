@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import Field
 
 from core.validation.widgets.base_model import (
@@ -30,8 +32,10 @@ class AudioMenuConfig(CustomBaseModel):
 
 class ProgressBarConfig(CustomBaseModel):
     enabled: bool = False
-    size: int = Field(default=18, ge=8, le=64)
-    thickness: int = Field(default=3, ge=1, le=10)
+    progress_type: Literal["circular", "linear_horizontal", "linear_vertical"] = "circular"
+    size: int = Field(default=18, ge=1, le=200)
+    thickness: int = Field(default=3, ge=1, le=100)
+    radius: int = Field(default=0, ge=0, le=100)
     color: str | list[str] = "#00C800"
     background_color: str = "#3C3C3C"
     position: str = "left"
@@ -44,20 +48,21 @@ class VolumeCallbacksConfig(CallbacksConfig):
 
 
 class VolumeConfig(CustomBaseModel):
-    label: str = "{volume[percent]}%"
-    label_alt: str = "{volume[percent]}%"
+    label: str = "{icon} {level}"
+    label_alt: str = "{icon} {level}"
     class_name: str = ""
     mute_text: str = "mute"
     tooltip: bool = True
     scroll_step: int = Field(default=2, ge=1, le=100)
     slider_beep: bool = True
-    volume_icons: list[str] = [
-        "\ueee8",  # Icon for muted
-        "\uf026",  # Icon for 0-10% volume
-        "\uf027",  # Icon for 11-30% volume
-        "\uf027",  # Icon for 31-60% volume
-        "\uf028",  # Icon for 61-100% volume
-    ]
+    # Support both list and dict for backward compatibility.
+    icons: list[str] | dict[str, str] = {
+        "muted": "\ueee8",  # Icon for muted
+        "10": "\uf026",  # Icon for 0-10% volume
+        "30": "\uf027",  # Icon for 11-30% volume
+        "60": "\uf027",  # Icon for 31-60% volume
+        "100": "\uf028",  # Icon for 61-100% volume
+    }
     audio_menu: AudioMenuConfig = AudioMenuConfig()
     progress_bar: ProgressBarConfig = ProgressBarConfig()
     keybindings: list[KeybindingConfig] = []

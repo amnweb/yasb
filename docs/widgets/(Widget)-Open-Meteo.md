@@ -9,6 +9,7 @@
 | `update_interval`  | integer | `3600`                                                                             | The interval in seconds to update the weather data. Must be between 60 and 36000000.            |
 | `hide_decimal`     | boolean | `false`                                                                            | Whether to hide the decimal part of the temperature.                                            |
 | `units`            | string  | `'metric'`                                                                         | The units for the weather data. Can be `'metric'` or `'imperial'`.                              |
+| `forecast_days`    | integer | `7`                                                                                | Number of days to fetch and display in the forecast popup. Must be between 1 and 14.            |
 | `icons`            | dict    | See [icons section](#icons)                                                        | A dictionary of icons for different weather conditions.                                         |
 | `callbacks`        | dict    | `{ 'on_left': 'do_nothing', 'on_middle': 'do_nothing', 'on_right': 'do_nothing' }` | Callbacks for mouse events on the weather widget.                                               |
 | `weather_card`     | dict    | [See below](#advanced-configuration)                                               | Configuration for the weather card popup display.                                               |
@@ -92,6 +93,7 @@ open_meteo:
     update_interval: 600
     hide_decimal: true
     units: "metric"
+    forecast_days: 7
     callbacks:
       on_left: "toggle_card"
       on_middle: "do_nothing"
@@ -110,6 +112,7 @@ open_meteo:
     update_interval: 600
     hide_decimal: true
     units: "metric"
+    forecast_days: 7
     callbacks:
       on_left: "toggle_card"
       on_middle: "do_nothing"
@@ -175,6 +178,7 @@ open_meteo:
 - **hide_decimal:** Whether to hide the decimal part of the temperature.
 - **tooltip:** Whether to show a tooltip with the min/max temperatures and precipitation info.
 - **units:** The units for the weather data. Can be `'metric'` (°C, km/h) or `'imperial'` (°F, mph).
+- **forecast_days:** Number of days to fetch from the Open-Meteo API and show in the forecast popup. Must be between `1` and `14`. Defaults to `7`.
 - **icons:** A dictionary of icons for different weather conditions. The icon keys are mapped from WMO weather codes. See [Icons](#icons) for the full list.
 - **weather_card:** Configuration for the weather card popup display.
   - **blur:** Enable blur effect for the weather card.
@@ -227,12 +231,12 @@ The location is stored in `%LOCALAPPDATA%/YASB/weather.json`. Each widget instan
 
 To change the location, click on the **location name / current temperature** displayed at the very top of the weather card. This will reset the widget and show the location search dialog again.
 
-## 7-Day Forecast Card
+## Forecast Card
 
 The weather card shows:
 
 - **Current conditions**: Location, temperature, feels-like, humidity, pressure, cloud cover, wind, precipitation, UV index
-- **7-day forecast row**: Day name, weather icon, min/max temperature for each day
+- **Forecast row**: Day name, weather icon, min/max temperature for each day (1–14 days, controlled by `forecast_days`)
 - **Hourly chart** (if `show_hourly_forecast` is enabled): Temperature curve, rain/snow toggle, weather icons, wind speed
 - Clicking a day in the forecast row switches the hourly chart to that day's data
 

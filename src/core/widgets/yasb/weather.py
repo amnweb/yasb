@@ -68,8 +68,12 @@ class WeatherWidget(BaseWidget):
 
         # Construct container
         self._init_container()
-        self._create_dynamically_label(self._label_content, self._label_alt_content)
-
+        self.build_widget_label(
+            self._label_content,
+            self._label_alt_content,
+            label_placeholder="weather update...",
+            hide_icons=True,
+        )
         self.register_callback("toggle_label", self._toggle_label)
         self.register_callback("toggle_card", self._toggle_card)
         self.register_callback("update_label", self._update_label)
@@ -357,36 +361,6 @@ class WeatherWidget(BaseWidget):
             self.config.weather_card.icon_size, Qt.TransformationMode.SmoothTransformation
         )
         label.setPixmap(scaled_pixmap_day)
-
-    def _create_dynamically_label(self, content: str, content_alt: str):
-        def process_content(content: str, is_alt: bool = False) -> list[QLabel]:
-            label_parts = re.split("(<span.*?>.*?</span>)", content)
-            label_parts = [part for part in label_parts if part]
-            widgets: list[QLabel] = []
-            for part in label_parts:
-                part = part.strip()
-                if not part:
-                    continue
-                if "<span" in part and "</span>" in part:
-                    class_name = re.search(r'class=(["\'])([^"\']+?)\1', part)
-                    class_result = class_name.group(2) if class_name else "icon"
-                    icon = re.sub(r"<span.*?>|</span>", "", part).strip()
-                    label = QLabel(icon)
-                    label.setProperty("class", class_result)
-                    label.hide()
-                else:
-                    label = QLabel(part)
-                    label.setProperty("class", "label alt" if is_alt else "label")
-                    label.setText("weather update...")
-                label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                self._widget_container_layout.addWidget(label)
-                widgets.append(label)
-                if is_alt:
-                    label.hide()
-            return widgets
-
-        self._widgets = process_content(content)
-        self._widgets_alt = process_content(content_alt, is_alt=True)
 
     def _reload_css(self, label: QLabel):
         refresh_widget_style(label)

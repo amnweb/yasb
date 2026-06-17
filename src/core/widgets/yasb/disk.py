@@ -94,11 +94,11 @@ class DiskWidget(BaseWidget):
                         if disk_space
                         else part
                     )
-                    active_widgets[widget_index].setProperty(
-                        "class", f"{label_class} status-{self._get_disk_threshold(percent_value)}"
-                    )
                     active_widgets[widget_index].setText(formatted_text)
-                    refresh_widget_style(active_widgets[widget_index])
+                    target_class = f"{label_class} status-{self._get_disk_threshold(percent_value)}"
+                    if active_widgets[widget_index].property("class") != target_class:
+                        active_widgets[widget_index].setProperty("class", target_class)
+                        refresh_widget_style(active_widgets[widget_index])
                 widget_index += 1
 
     def _get_volume_label(self, drive_letter: str) -> str | None:

@@ -45,8 +45,49 @@ Valid options are:
 | `debug`      | boolean  | `false`   | Enable debug mode to see more logs |
 | `update_check`      | boolean  | `true`   | Enable automatic update check. This works only if the application is installed. |
 | `show_systray`      | boolean  | `true`   | Show or hide the YASB system tray icon. |
+| `tooltip`           | object   | [See below](#tooltip-configuration) | Global tooltip configuration. |
 | `komorebi`      | object  | [See below](#komorebi-settings-for-tray-menu)   | Komorebi configuration for tray menu. |
 | `glazewm`      | object  | [See below](#glazewm-settings-for-tray-menu)   | Glazewm configuration for tray menu. |
+
+## Logging and Debugging
+YASB provides detailed logging to help troubleshoot widget or configuration issues.
+
+- **Enable Debug Mode:** Set `debug: true` in your root configuration to output verbose logs.
+- **View Logs via CLI:** Run `yasbc log` in your terminal to stream real-time logs.
+- **View Log File:** Check the `yasb.log` file located in your config directory (default: `C:/Users/{username}/.config/yasb/`).
+
+## Tooltip Configuration
+Global configuration for tooltips and their blur effects.
+
+| Option            | Type    | Default       | Description |
+|-------------------|---------|---------------|-------------|
+| `offset`          | integer | `5`           | The distance in pixels between the tooltip and the hovered item or bar. |
+| `blur_effect`     | object  | [See below](#tooltip-blur-effect-configuration) | Global tooltip blur configuration. |
+
+### Tooltip Blur Effect Configuration
+
+| Option            | Type    | Default       | Description |
+|-------------------|---------|---------------|-------------|
+| `enabled`         | boolean | `false`       | Whether the blur effect is enabled for tooltips. |
+| `dark_mode`       | boolean | `false`       | Whether to enable dark mode for the tooltip blur. |
+| `round_corners`   | boolean | `false`       | Whether to enable rounded corners for the tooltips. Note: This is only effective on Windows 11. |
+| `round_corners_type` | string | `'normal'` | The type of rounded corners, can be `normal` or `small`. Note: This is only effective on Windows 11. |
+| `border_color`    | string  | `'None'`      | The border color for the tooltip, can be `None`, `"system"`, or a hex color (e.g., `"#ff0000"`). Note: This is only effective on Windows 11. |
+
+> **Note:**
+> Rounded corners, border color and rounded corners type are only effective on Windows 11.
+
+**Example Configuration:**
+```yaml
+tooltip:
+  offset: 5
+  blur_effect:
+    enabled: true
+    dark_mode: false
+    round_corners: true
+    round_corners_type: "small"
+    border_color: "None"
+```
 
 
 ## Komorebi settings for tray menu

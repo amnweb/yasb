@@ -178,7 +178,7 @@ The following placeholders can be used in `label` and `label_alt`:
 .copilot-menu .stat-value {}
 
 /* Model section - each model gets model-0 to model-4 class */
-.copilot-menu .model-usage-bar {}
+.copilot-menu .model-usage-row {}
 .copilot-menu .model-name {}
 .copilot-menu .model-count {}
 .copilot-menu .progress-bar.model-0 .fill {}

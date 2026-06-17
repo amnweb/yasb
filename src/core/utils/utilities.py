@@ -42,8 +42,12 @@ def is_valid_percentage_str(s: str) -> bool:
     return s.endswith("%") and len(s) <= 4 and s[:-1].isdigit()
 
 
-def get_screen_by_name(screen_name: str) -> QScreen:
-    return next(filter(lambda scr: screen_name in scr.name(), QApplication.screens()), None)
+def get_screen_by_name(screen_name: str) -> QScreen | None:
+    screens = QApplication.screens()
+    for scr in screens:
+        if scr.name() == screen_name:
+            return scr
+    return next(filter(lambda scr: screen_name in scr.name(), screens), None)
 
 
 def refresh_widget_style(*widgets: QWidget) -> None:
@@ -62,21 +66,23 @@ def refresh_widget_style(*widgets: QWidget) -> None:
 
 
 def build_progress_widget(self, options: dict[str, Any]) -> None:
-    """Builds a circular progress widget based on the provided options."""
+    """Builds a circular or linear progress widget based on the provided options."""
     if not options["enabled"]:
         return
 
-    from core.utils.circular_progress_bar import CircularProgressBar, CircularProgressWidget
+    from core.utils.progress_bar import ProgressBar, ProgressWidget
 
-    self.progress_data = CircularProgressBar(
+    self.progress_data = ProgressBar(
         parent=self,
         size=options["size"],
         thickness=options["thickness"],
         color=options["color"],
         background_color=options["background_color"],
         animation=options["animation"],
+        progress_type=options.get("progress_type", "circular"),
+        radius=options.get("radius", 0),
     )
-    self.progress_widget = CircularProgressWidget(self.progress_data)
+    self.progress_widget = ProgressWidget(self.progress_data)
     return self.progress_widget
 
 

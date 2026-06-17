@@ -1,4 +1,3 @@
-import ctypes
 import logging
 import re
 
@@ -15,6 +14,7 @@ from core.utils.utilities import (
     refresh_widget_style,
 )
 from core.utils.win32.app_icons import get_process_icon
+from core.utils.win32.bindings import user32
 from core.utils.win32.utils import get_app_name_from_pid
 from core.validation.widgets.yasb.volume import VolumeConfig
 from core.widgets.base import BaseWidget
@@ -31,6 +31,10 @@ class VolumeWidget(BaseWidget):
         self.volume = None
         self._icon_cache = {}
         self._dpi = 1.0
+
+        self._parsed_thresholds = []
+        if isinstance(self.config.icons, dict):
+            self._parsed_thresholds = sorted([int(k) for k in self.config.icons.keys() if k.isdigit()])
 
         self.progress_widget = build_progress_widget(self, self.config.progress_bar.model_dump())
 
@@ -82,7 +86,7 @@ class VolumeWidget(BaseWidget):
         if self.config.slider_beep:
             # Play a beep sound when slider is released
             try:
-                ctypes.windll.user32.MessageBeep(0)
+                user32.MessageBeep(0)
             except Exception as e:
                 logging.debug("Failed to play volume sound: %s", e)
 
@@ -528,7 +532,14 @@ class VolumeWidget(BaseWidget):
         widget_index = 0
 
         if self.volume is None:
-            mute_status, icon_volume, level_volume = None, self.config.volume_icons[0], "No Device"
+            fallback_icon = (
+                next(iter(self.config.icons.values()))
+                if isinstance(self.config.icons, dict)
+                else self.config.icons[0]
+                if self.config.icons
+                else ""
+            )
+            mute_status, icon_volume, level_volume = None, fallback_icon, "No Device"
             set_tooltip(self, "No audio device connected.")
         else:
             try:
@@ -593,19 +604,33 @@ class VolumeWidget(BaseWidget):
 
     def _get_volume_icon(self):
         current_mute_status = self.volume.GetMute()
-        current_volume_level = round(self.volume.GetMasterVolumeLevelScalar() * 100)
+        current_volume = round(self.volume.GetMasterVolumeLevelScalar() * 100)
         if self.config.tooltip:
-            set_tooltip(self, f"Volume {current_volume_level}% {'(Muted)' if current_mute_status == 1 else ''}")
+            set_tooltip(self, f"Volume {current_volume}% {'(Muted)' if current_mute_status == 1 else ''}")
+
+        if isinstance(self.config.icons, dict):
+            if current_mute_status == 1 and "muted" in self.config.icons:
+                return self.config.icons["muted"]
+
+            for t in self._parsed_thresholds:
+                if current_volume <= t:
+                    return self.config.icons[str(t)]
+
+            if self._parsed_thresholds:
+                return self.config.icons[str(self._parsed_thresholds[-1])]
+
+            return self.config.icons.get("muted", "")
+
         if current_mute_status == 1:
-            volume_icon = self.config.volume_icons[0]
-        elif 0 <= current_volume_level < 11:
-            volume_icon = self.config.volume_icons[1]
-        elif 11 <= current_volume_level < 30:
-            volume_icon = self.config.volume_icons[2]
-        elif 30 <= current_volume_level < 60:
-            volume_icon = self.config.volume_icons[3]
+            volume_icon = self.config.icons[0]
+        elif current_volume == 0:
+            volume_icon = self.config.icons[1]
+        elif current_volume <= 33:
+            volume_icon = self.config.icons[2]
+        elif current_volume <= 66:
+            volume_icon = self.config.icons[3]
         else:
-            volume_icon = self.config.volume_icons[4]
+            volume_icon = self.config.icons[4]
         return volume_icon
 
     def _increase_volume(self):

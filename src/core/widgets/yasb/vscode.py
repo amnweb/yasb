@@ -11,9 +11,9 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QScrollArea, QVBoxLayout, QWidget
 
 from core.utils.utilities import PopupWidget
-from core.utils.widgets.vscode.get_vscode_state_db_path import get_state_db_path
 from core.validation.widgets.yasb.vscode import VSCodeConfig
 from core.widgets.base import BaseWidget
+from core.widgets.services.vscode.get_vscode_state_db_path import get_state_db_path
 
 
 class VSCodeWidget(BaseWidget):

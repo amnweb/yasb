@@ -5,7 +5,7 @@ import humanize
 from PyQt6.QtCore import QTimer
 from PyQt6.QtWidgets import QLabel
 
-from core.utils.utilities import refresh_widget_style
+from core.utils.utilities import build_progress_widget, refresh_widget_style
 from core.utils.win32.constants import POWER_TIME_UNKNOWN, POWER_TIME_UNLIMITED
 from core.validation.widgets.yasb.battery import BatteryConfig
 from core.widgets.base import BaseWidget
@@ -22,6 +22,8 @@ class BatteryWidget(BaseWidget):
         self._battery_api = BatteryAPI.instance()
         self._battery_state: BatteryData | None = None
         self._show_alt_label = False
+
+        self.progress_widget = build_progress_widget(self, self.config.progress_bar.model_dump())
 
         self._init_container()
         self.build_widget_label(self.config.label, self.config.label_alt)
@@ -158,6 +160,14 @@ class BatteryWidget(BaseWidget):
         health_str = f"{state.health_percent:.1f}" if state.health_percent is not None else "N/A"
         chemistry_str = state.chemistry if state.chemistry else "N/A"
 
+        if self.config.progress_bar.enabled and self.progress_widget and self._battery_state is not None:
+            if self._widget_container_layout.indexOf(self.progress_widget) == -1:
+                self._widget_container_layout.insertWidget(
+                    0 if self.config.progress_bar.position == "left" else self._widget_container_layout.count(),
+                    self.progress_widget,
+                )
+            self.progress_widget.set_value(self._battery_state.percent)
+
         for part in label_parts:
             part = part.strip()
             if part and widget_index < len(active_widgets):
@@ -182,10 +192,12 @@ class BatteryWidget(BaseWidget):
                     icon = re.sub(r"<span.*?>|</span>", "", battery_status).strip()
                     widget_label.setText(icon)
                     # apply status‐class
-                    existing_classes = widget_label.property("class")
+                    existing_classes = widget_label.property("class") or ""
                     new_classes = re.sub(r"status-\w+", "", existing_classes).strip()
-                    widget_label.setProperty("class", f"{new_classes} status-{threshold}")
-                    refresh_widget_style(widget_label)
+                    target_class = f"{new_classes} status-{threshold}"
+                    if existing_classes != target_class:
+                        widget_label.setProperty("class", target_class)
+                        refresh_widget_style(widget_label)
 
                     # only blink when plugged AND blink_enabled
                     if self._battery_state.is_charging and self.config.charging_options.blink_charging_icon:
@@ -206,6 +218,8 @@ class BatteryWidget(BaseWidget):
                     alt_class = "alt" if self._show_alt_label else ""
                     formatted_text = battery_status.format(battery_status)
                     active_widgets[widget_index].setText(formatted_text)
-                    active_widgets[widget_index].setProperty("class", f"label {alt_class} status-{threshold}")
-                    refresh_widget_style(active_widgets[widget_index])
+                    target_class = f"label {alt_class} status-{threshold}"
+                    if active_widgets[widget_index].property("class") != target_class:
+                        active_widgets[widget_index].setProperty("class", target_class)
+                        refresh_widget_style(active_widgets[widget_index])
                 widget_index += 1

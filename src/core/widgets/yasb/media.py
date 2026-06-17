@@ -257,7 +257,6 @@ class MediaWidget(BaseWidget):
                 text_layout = QVBoxLayout()
                 text_layout.setContentsMargins(0, 0, 0, 0)
                 text_layout.setSpacing(0)
-                text_layout.setProperty("class", "text-layout")
 
                 title_text = (
                     self._format_max_field_size(self.current_session.title, "popup_title")

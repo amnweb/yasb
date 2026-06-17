@@ -244,6 +244,7 @@ class TrafficWidget(BaseWidget):
                     if "offline" not in current_class:
                         new_class = f"{current_class} offline".strip()
                         active_widgets[widget_index].setProperty("class", new_class)
+                        refresh_widget_style(active_widgets[widget_index])
 
                 else:
                     # Remove offline class if connected
@@ -251,7 +252,7 @@ class TrafficWidget(BaseWidget):
                         new_class = current_class.replace("offline", "").strip()
                         new_class = " ".join(new_class.split())
                         active_widgets[widget_index].setProperty("class", new_class)
-                refresh_widget_style(active_widgets[widget_index])
+                        refresh_widget_style(active_widgets[widget_index])
 
                 widget_index += 1
 
@@ -278,8 +279,11 @@ class TrafficWidget(BaseWidget):
                 net_status = "connected" if self._is_internet_connected else "disconnected"
                 status_text = f"Internet {net_status.capitalize()}"
                 self.menu_labels["internet-info"].setText(status_text)
-                self.menu_labels["internet-info"].setProperty("class", f"internet-info {net_status}")
-                refresh_widget_style(self.menu_labels["internet-info"])
+
+                target_class = f"internet-info {net_status}"
+                if self.menu_labels["internet-info"].property("class") != target_class:
+                    self.menu_labels["internet-info"].setProperty("class", target_class)
+                    refresh_widget_style(self.menu_labels["internet-info"])
             except RuntimeError, AttributeError:
                 pass
 

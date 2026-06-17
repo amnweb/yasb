@@ -126,7 +126,12 @@ class UpdateCheckWidget(BaseWidget):
             title = {"winget": "Winget Update", "scoop": "Scoop Update", "windows": "Windows Update"}.get(
                 source, source
             )
-            body = "<br>".join(names)
+            # Truncate long Windows update names
+            if source == "windows":
+                display_names = [f"{n[:74]}..." if len(n) > 74 else n for n in names]
+            else:
+                display_names = names
+            body = "<br>".join(display_names)
             set_tooltip(container, f"<b>{title}</b><br><br>{body}")
 
     def _update_visibility(self):

@@ -97,7 +97,7 @@ clock:
   - **show_week_numbers:** Whether to show week numbers in the calendar.
   - **show_years:** Whether to show the year label in the calendar popup.
   - **extended:** Show extended calendar with alarm/timer controls and upcoming holidays.
-- **callbacks:** A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions. Available callbacks: `toggle_calendar`, `next_timezone`, `toggle_label`, `context_menu`.
+- **callbacks:** A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions. Available callbacks: `toggle_calendar`, `next_timezone`, `toggle_label`, `context_menu`, `toggle_timer`, `toggle_alarm`.
 
 Clock format https://docs.python.org/3/library/time.html#time.strftime
 
@@ -118,6 +118,7 @@ Clock format https://docs.python.org/3/library/time.html#time.strftime
 .clock-widget .icon.clock_02 {}
 .clock-widget .label {}
 .clock-widget .label.clock_15 {}
+.clock-widget .label.timer {}
 .clock-widget .label.alarm {}
 .clock-widget .label.alarm.snooze {}
 .clock-widget .icon.alarm {}

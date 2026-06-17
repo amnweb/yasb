@@ -46,8 +46,11 @@ Required files:
 ### Q: How to change the bar size?
 **A:** Adjust the bar `width` and `height` value in `config.yaml` to change the bar size.
 
-### Q: How to check logs for errors?
-**A:** Check the `yasb.log` file in the config directory for errors, or run `yasbc logs` in the terminal.
+### Q: How to troubleshoot issues or check logs for errors?
+**A:** You can view logs and enable more detailed debug information to help troubleshoot issues:
+- **Enable Debug Mode:** Set `debug: true` in your `config.yaml` to enable verbose logging. This is especially helpful for troubleshooting widget or application errors.
+- **View Logs via CLI:** Run `yasbc log` in your terminal to stream real-time logs.
+- **View Log File:** Check the `yasb.log` file located in your config directory (default: `C:/Users/{username}/.config/yasb/`).
 
 
 ## Widget Issues

@@ -4,6 +4,7 @@ Copilot client wrapper for YASB AI Chat widget.
 
 import asyncio
 import base64
+import json
 import logging
 import os
 import queue
@@ -26,11 +27,7 @@ from core.widgets.services.ai_chat.constants import (
 from settings import IS_FROZEN
 
 try:
-    from copilot import (
-        CopilotClient,
-        ExternalServerConfig,
-        SubprocessConfig,
-    )
+    from copilot import CopilotClient, RuntimeConnection
     from copilot.session import (
         FileAttachment,
         PermissionRequestResult,
@@ -38,6 +35,7 @@ try:
     )
 except ImportError:
     CopilotClient = None
+    RuntimeConnection = None
 
 
 def _resolve_copilot_cli_path() -> str | None:
@@ -46,17 +44,17 @@ def _resolve_copilot_cli_path() -> str | None:
     return shutil.which("copilot") or shutil.which("copilot.exe")
 
 
-def _build_copilot_client_config(provider_config: dict | None) -> ExternalServerConfig | SubprocessConfig | None:
+def _build_copilot_client_config(provider_config: dict | None):
     if not provider_config:
         provider_config = {}
     cli_url = provider_config.get("copilot_cli_url")
     if isinstance(cli_url, str) and cli_url.strip():
-        return ExternalServerConfig(url=cli_url.strip())
+        return RuntimeConnection.for_uri(url=cli_url.strip())
     # In a frozen exe the SDK cannot locate its bundled binary resolve from system PATH.
     if IS_FROZEN:
         cli_path = _resolve_copilot_cli_path()
         if cli_path:
-            return SubprocessConfig(cli_path=cli_path)
+            return RuntimeConnection.for_stdio(path=cli_path)
     return None
 
 
@@ -153,7 +151,7 @@ def list_copilot_models(provider_config: dict | None = None) -> list[dict[str, A
         return []
 
     async def _list() -> list[dict[str, Any]]:
-        client = CopilotClient(_build_copilot_client_config(provider_config))
+        client = CopilotClient(connection=_build_copilot_client_config(provider_config))
         await client.start()
         auth_status = await client.get_auth_status()
         if not getattr(auth_status, "isAuthenticated", False):
@@ -227,6 +225,7 @@ class CopilotAiChatClient:
         self._session_model: str | None = None
         self._saw_delta = False
         self._had_output = False
+        self._quota_error_shown = False
 
         self._start_event_loop()
 
@@ -361,6 +360,7 @@ class CopilotAiChatClient:
         self._active_idle = asyncio.Event()
         self._saw_delta = False
         self._had_output = False
+        self._quota_error_shown = False
 
         send_kwargs: dict[str, Any] = {}
         if attachments:
@@ -458,7 +458,7 @@ class CopilotAiChatClient:
 
         # Reuse existing client (single copilot.exe) or start a new one
         if not self._client:
-            client = CopilotClient(_build_copilot_client_config(self.provider_config))
+            client = CopilotClient(connection=_build_copilot_client_config(self.provider_config))
             try:
                 await client.start()
                 auth_status = await client.get_auth_status()
@@ -578,3 +578,27 @@ class CopilotAiChatClient:
                     return
                 self._had_output = True
                 self._active_queue.put(content)
+
+        elif event_type in {"session.error", "model.call_failure"}:
+            data = getattr(event, "data", None)
+            if data is None or self._quota_error_shown:
+                return
+            self._quota_error_shown = True
+            self._had_output = True
+            if self._active_queue is None:
+                return
+            raw = getattr(data, "message", None) or getattr(data, "error_message", None) or ""
+            try:
+                msg_data = raw if isinstance(raw, dict) else json.loads(raw)
+                if isinstance(msg_data, dict):
+                    err = msg_data.get("error")
+                    if isinstance(err, dict):
+                        msg = err.get("message", str(err))
+                    else:
+                        msg = msg_data.get("message") or err or raw
+                else:
+                    msg = raw
+            except json.JSONDecodeError, TypeError:
+                msg = raw
+            logging.warning("Copilot: %s", msg)
+            self._active_queue.put(str(msg))

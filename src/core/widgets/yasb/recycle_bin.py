@@ -72,15 +72,19 @@ class RecycleBinWidget(BaseWidget):
                     if widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
                         active_widgets[widget_index].setText(formatted_text)
                         base_class = active_widgets[widget_index].property("class").split()[0]
-                        active_widgets[widget_index].setProperty("class", f"{base_class} {class_name}")
-                        refresh_widget_style(active_widgets[widget_index])
+                        target_class = f"{base_class} {class_name}"
+                        if active_widgets[widget_index].property("class") != target_class:
+                            active_widgets[widget_index].setProperty("class", target_class)
+                            refresh_widget_style(active_widgets[widget_index])
                 else:
                     if widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
                         alt_class = "alt" if self._show_alt_label else ""
                         active_widgets[widget_index].setText(formatted_text)
                         base_class = "label"
-                        active_widgets[widget_index].setProperty("class", f"{base_class} {alt_class} {class_name}")
-                        refresh_widget_style(active_widgets[widget_index])
+                        target_class = f"{base_class} {alt_class} {class_name}"
+                        if active_widgets[widget_index].property("class") != target_class:
+                            active_widgets[widget_index].setProperty("class", target_class)
+                            refresh_widget_style(active_widgets[widget_index])
                 widget_index += 1
         if self.config.tooltip:
             set_tooltip(

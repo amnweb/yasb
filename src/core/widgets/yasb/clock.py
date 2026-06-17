@@ -372,6 +372,8 @@ class ClockWidget(BaseWidget):
         self.register_callback("toggle_calendar", self._toggle_calendar)
         self.register_callback("context_menu", self._show_context_menu)
         self.register_callback("timer_tick", self._on_timer_tick)
+        self.register_callback("toggle_timer", self._show_timer_dialog)
+        self.register_callback("toggle_alarm", self._show_alarm_dialog)
 
         self.callback_left = self.config.callbacks.on_left
         self.callback_right = self.config.callbacks.on_right
@@ -496,6 +498,13 @@ class ClockWidget(BaseWidget):
         timer_active = self._shared_state._timer_active and self._shared_state._timer_seconds_remaining >= 0
         if timer_active:
             self._timer_label.setText(self._format_timer_display())
+
+            alt_class = " alt" if self._show_alt_label else ""
+            timer_class = f"label{alt_class} timer"
+            if self._timer_label.property("class") != timer_class:
+                self._timer_label.setProperty("class", timer_class)
+                refresh_widget_style(self._timer_label)
+
             if not self._timer_visible:
                 self._timer_label.show()
                 self._timer_visible = True
@@ -508,26 +517,34 @@ class ClockWidget(BaseWidget):
         for part in label_parts:
             part = part.strip()
             if part and widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
+                alt_class = " alt" if self._show_alt_label else ""
+                current_class = active_widgets[widget_index].property("class")
                 if "<span" in part and "</span>" in part:
                     icon_placeholder = re.sub(r"<span.*?>|</span>", "", part).strip()
                     if icon_placeholder == "{icon}":
-                        if hour_changed:
-                            icon = self._get_icon_for_hour(now.hour)
+                        icon = self._get_icon_for_hour(now.hour)
+                        if active_widgets[widget_index].text() != icon:
                             active_widgets[widget_index].setText(icon)
-                            hour_class = f"clock_{current_hour}"
-                            active_widgets[widget_index].setProperty("class", f"icon {hour_class}")
+
+                        new_class = f"icon{alt_class} clock_{current_hour}"
+                        if current_class != new_class:
+                            active_widgets[widget_index].setProperty("class", new_class)
                             refresh_widget_style(active_widgets[widget_index])
                     elif icon_placeholder == "{alarm}":
                         if self._shared_state._snoozed_alarms:
                             active_widgets[widget_index].setText(self.config.alarm_icons.snooze)
-                            active_widgets[widget_index].setProperty("class", "icon alarm snooze")
+                            new_class = f"icon{alt_class} alarm snooze"
+                            if current_class != new_class:
+                                active_widgets[widget_index].setProperty("class", new_class)
+                                refresh_widget_style(active_widgets[widget_index])
                             active_widgets[widget_index].setVisible(True)
-                            refresh_widget_style(active_widgets[widget_index])
                         elif self._has_enabled_alarms():
                             active_widgets[widget_index].setText(self.config.alarm_icons.enabled)
-                            active_widgets[widget_index].setProperty("class", "icon alarm")
+                            new_class = f"icon{alt_class} alarm"
+                            if current_class != new_class:
+                                active_widgets[widget_index].setProperty("class", new_class)
+                                refresh_widget_style(active_widgets[widget_index])
                             active_widgets[widget_index].setVisible(True)
-                            refresh_widget_style(active_widgets[widget_index])
                         else:
                             active_widgets[widget_index].setText("")
                             active_widgets[widget_index].setVisible(False)
@@ -558,18 +575,17 @@ class ClockWidget(BaseWidget):
 
                     active_widgets[widget_index].setText(format_label_content)
 
-                    alarm_state_changed = has_alarm != self._previous_alarm_state
                     if has_alarm:
                         if self._shared_state._snoozed_alarms:
-                            active_widgets[widget_index].setProperty("class", "label alarm snooze")
+                            new_class = f"label{alt_class} alarm snooze"
                         else:
-                            active_widgets[widget_index].setProperty("class", "label alarm")
-                        refresh_widget_style(active_widgets[widget_index])
+                            new_class = f"label{alt_class} alarm"
                     else:
-                        hour_class = f"clock_{current_hour}"
-                        active_widgets[widget_index].setProperty("class", f"label {hour_class}")
-                        if hour_changed or alarm_state_changed:
-                            refresh_widget_style(active_widgets[widget_index])
+                        new_class = f"label{alt_class} clock_{current_hour}"
+
+                    if current_class != new_class:
+                        active_widgets[widget_index].setProperty("class", new_class)
+                        refresh_widget_style(active_widgets[widget_index])
 
                     self._previous_alarm_state = has_alarm
                 widget_index += 1
@@ -867,12 +883,12 @@ class ClockWidget(BaseWidget):
     def _show_context_menu(self):
         """Build and display the context menu for the clock widget."""
         menu = QMenu(self.window())
-        menu.setProperty("class", "context-menu")
         apply_qmenu_style(menu)
+        menu.setProperty("class", "context-menu")
         if len(self._timezones_list) > 1:
             tz_menu = QMenu("Timezones", menu)
-            tz_menu.setProperty("class", "context-menu submenu")
             apply_qmenu_style(tz_menu)
+            tz_menu.setProperty("class", "context-menu submenu")
 
             for tz in self._timezones_list:
                 tz_display = tz.replace("_", " ")

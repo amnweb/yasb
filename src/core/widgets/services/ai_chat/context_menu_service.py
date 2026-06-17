@@ -11,6 +11,7 @@ class ContextMenuService:
 
     def show_context_menu(self, widget, pos, is_input=False):
         context_menu = QMenu(widget)
+        apply_qmenu_style(context_menu)
         context_menu.setProperty("class", "context-menu")
 
         if is_input:
@@ -68,7 +69,7 @@ class ContextMenuService:
                     pass
 
             select_all_action.triggered.connect(select_all)
-        apply_qmenu_style(context_menu)
+            select_all_action.triggered.connect(select_all)
 
         global_pos = widget.mapToGlobal(pos)
         if is_input:

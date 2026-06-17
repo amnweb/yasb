@@ -185,11 +185,10 @@ class CpuWidget(BaseWidget):
                     label_class = "label alt" if self._show_alt_label else "label"
                     formatted_text = part.format(info=cpu_info)
                     active_widgets[widget_index].setText(formatted_text)
-                    active_widgets[widget_index].setProperty("class", label_class)
-                    active_widgets[widget_index].setProperty(
-                        "class", f"{label_class} status-{self._get_cpu_threshold(data.percent)}"
-                    )
-                    refresh_widget_style(active_widgets[widget_index])
+                    new_class = f"{label_class} status-{self._get_cpu_threshold(data.percent)}"
+                    if active_widgets[widget_index].property("class") != new_class:
+                        active_widgets[widget_index].setProperty("class", new_class)
+                        refresh_widget_style(active_widgets[widget_index])
                 widget_index += 1
 
     def _toggle_label(self):

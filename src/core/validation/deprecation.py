@@ -116,6 +116,9 @@ SCOPED_RENAMED_FIELDS: dict[str, dict[str, tuple[str, str]]] = {
     "ActiveLayoutIconsConfig": {
         "maximised": ("maximized", "Use 'maximized' instead."),
     },
+    "VolumeConfig": {
+        "volume_icons": ("icons", "Use 'icons' with the dictionary format instead."),
+    },
 }
 
 

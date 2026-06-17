@@ -58,7 +58,24 @@ class GpuWidget(BaseWidget):
                 worker.start()
                 GpuWidget._worker = worker
 
-        self.hide()
+        self._show_placeholder()
+
+    def _show_placeholder(self):
+        """Display placeholder (zero/default) GPU data."""
+        data = GpuData(
+            index=self.config.gpu_index,
+            name="Unknown",
+            utilization=0.0,
+            mem_total=0,
+            mem_used=0,
+            mem_free=0,
+            mem_shared_total=0,
+            mem_shared_used=0,
+            temp=0.0,
+            fan_speed=0,
+            power_draw=0.0,
+        )
+        self._update_label(data)
 
     @classmethod
     def _on_gpu_data(cls, gpu_data_list: list[GpuData]):
@@ -134,11 +151,10 @@ class GpuWidget(BaseWidget):
                     label_class = "label alt" if self._show_alt_label else "label"
                     formatted_text = part.format(info=gpu_info)
                     active_widgets[widget_index].setText(formatted_text)
-                    active_widgets[widget_index].setProperty("class", label_class)
-                    active_widgets[widget_index].setProperty(
-                        "class", f"{label_class} status-{self._get_gpu_threshold(gpu_data.utilization)}"
-                    )
-                    refresh_widget_style(active_widgets[widget_index])
+                    new_class = f"{label_class} status-{self._get_gpu_threshold(gpu_data.utilization)}"
+                    if active_widgets[widget_index].property("class") != new_class:
+                        active_widgets[widget_index].setProperty("class", new_class)
+                        refresh_widget_style(active_widgets[widget_index])
                 widget_index += 1
 
     def _get_gpu_threshold(self, utilization: float) -> str:

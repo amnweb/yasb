@@ -32,7 +32,7 @@ class GpuData(NamedTuple):
 
 class _PdhItemW(ctypes.Structure):
     _fields_ = [
-        ("szName", ctypes.c_wchar_p),
+        ("szName", ctypes.c_void_p),
         ("CStatus", wintypes.DWORD),
         ("_pad", wintypes.DWORD),
         ("doubleValue", ctypes.c_double),
@@ -92,19 +92,6 @@ class _AdlODNFanControl(ctypes.Structure):
 
 
 _ADL_MALLOC = ctypes.CFUNCTYPE(ctypes.c_void_p, ctypes.c_int)
-
-
-def _pdh_read_array(counter: wintypes.HANDLE) -> list[tuple[str, float]]:
-    buf_size = wintypes.DWORD(0)
-    count = wintypes.DWORD(0)
-    pdh.PdhGetFormattedCounterArrayW(counter, PDH_FMT_DOUBLE, byref(buf_size), byref(count), None)
-    if not count.value:
-        return []
-    raw = (ctypes.c_byte * buf_size.value)()
-    if pdh.PdhGetFormattedCounterArrayW(counter, PDH_FMT_DOUBLE, byref(buf_size), byref(count), raw) != 0:
-        return []
-    items = ctypes.cast(raw, ctypes.POINTER(_PdhItemW))
-    return [(items[i].szName or "", items[i].doubleValue) for i in range(count.value)]
 
 
 def _luid_str(name: str) -> str:
@@ -341,6 +328,7 @@ class GpuApi:
         self._luid_info: dict[str, dict] = {}
         self._dxgi_gpus: list[dict] = []
         self._ready = False
+        self._pdh_bufs: dict[int, ctypes.Array] = {}
 
         self._nvml = _NvmlState()
         self._adl = _AdlState()
@@ -359,8 +347,8 @@ class GpuApi:
     def prime(self) -> None:
         """Seed PDH baseline, enumerate DXGI adapters, load vendor sensor libs."""
         pdh.PdhCollectQueryData(self._query)
-        util_rows = _pdh_read_array(self._h_util)
-        mem_rows = _pdh_read_array(self._h_mem_ded)
+        util_rows = self._pdh_read_array(self._h_util)
+        mem_rows = self._pdh_read_array(self._h_mem_ded)
         all_luids = sorted({_luid_str(n) for n, _ in util_rows + mem_rows})
 
         self._dxgi_gpus = _read_dxgi_gpus()
@@ -389,7 +377,7 @@ class GpuApi:
         pdh.PdhCollectQueryData(self._query)
 
         eng_max: dict[tuple[str, str], float] = {}
-        for name, val in _pdh_read_array(self._h_util):
+        for name, val in self._pdh_read_array(self._h_util):
             luid = _luid_str(name)
             etype = name.split("engtype_")[-1] if "engtype_" in name else "other"
             key = (luid, etype)
@@ -399,8 +387,8 @@ class GpuApi:
         for (luid, _), val in eng_max.items():
             util[luid] = min(100.0, util.get(luid, 0.0) + val)
 
-        mem_ded: dict[str, int] = {_luid_str(n): int(v) for n, v in _pdh_read_array(self._h_mem_ded)}
-        mem_shr: dict[str, int] = {_luid_str(n): int(v) for n, v in _pdh_read_array(self._h_mem_shr)}
+        mem_ded: dict[str, int] = {_luid_str(n): int(v) for n, v in self._pdh_read_array(self._h_mem_ded)}
+        mem_shr: dict[str, int] = {_luid_str(n): int(v) for n, v in self._pdh_read_array(self._h_mem_shr)}
 
         result: list[GpuData] = []
         for luid, info in sorted(self._luid_info.items(), key=lambda x: x[1]["index"]):
@@ -439,7 +427,32 @@ class GpuApi:
         pdh.PdhCloseQuery(self._query)
         self._nvml.shutdown()
         self._adl.shutdown()
+        self._pdh_bufs.clear()
         self._ready = False
+
+    def _pdh_read_array(self, counter: wintypes.HANDLE) -> list[tuple[str, float]]:
+        """Read a PDH formatted counter array and reusing buffers."""
+        buf_size = wintypes.DWORD(0)
+        count = wintypes.DWORD(0)
+        pdh.PdhGetFormattedCounterArrayW(counter, PDH_FMT_DOUBLE, byref(buf_size), byref(count), None)
+        if not count.value:
+            return []
+        needed = buf_size.value
+        key = counter.value
+        buf = self._pdh_bufs.get(key)
+        if buf is None or ctypes.sizeof(buf) < needed:
+            buf = (ctypes.c_byte * needed)()
+            self._pdh_bufs[key] = buf
+        buf_size.value = ctypes.sizeof(buf)
+        if pdh.PdhGetFormattedCounterArrayW(counter, PDH_FMT_DOUBLE, byref(buf_size), byref(count), buf) != 0:
+            return []
+        items = ctypes.cast(buf, ctypes.POINTER(_PdhItemW))
+        result = []
+        for i in range(count.value):
+            ptr = items[i].szName
+            name = ctypes.wstring_at(ptr) if ptr else ""
+            result.append((name, items[i].doubleValue))
+        return result
 
     def _build_luid_info(self, all_luids: list[str]) -> dict[str, dict]:
         """Map PDH LUIDs to DXGI adapter info. Index follows DXGI order.

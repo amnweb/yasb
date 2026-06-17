@@ -60,7 +60,7 @@ class OpenMeteoWidget(BaseWidget):
         # Weather state
         self._weather_data: dict[str, Any] | None = None
         self._has_valid_weather_data = False
-        self._hourly_data: list[list[dict[str, Any]]] = [[] for _ in range(7)]
+        self._hourly_data: list[list[dict[str, Any]]] = [[] for _ in range(self.config.forecast_days)]
         self._current_time: datetime | None = None
         self._show_alt_label = False
         self._weather_card_daily_widgets: list[ClickableWidget] = []
@@ -79,8 +79,12 @@ class OpenMeteoWidget(BaseWidget):
 
         # Construct container
         self._init_container()
-        self._create_dynamically_label(self._label_content, self._label_alt_content)
-
+        self.build_widget_label(
+            self._label_content,
+            self._label_alt_content,
+            label_placeholder="weather update...",
+            hide_icons=True,
+        )
         self.register_callback("toggle_label", self._toggle_label)
         self.register_callback("toggle_card", self._toggle_card)
         self.register_callback("update_label", self._update_label)
@@ -110,7 +114,8 @@ class OpenMeteoWidget(BaseWidget):
             if cached_data:
                 time_diff_ms = int(time.time() * 1000) - last_updated_ms
                 update_interval_ms = self.config.update_interval * 1000
-                is_cache_valid = time_diff_ms < update_interval_ms
+                cached_days = len(cached_data.get("daily", {}).get("time", []))
+                is_cache_valid = time_diff_ms < update_interval_ms and cached_days >= self.config.forecast_days
 
                 # Load the cached data instantly to prevent "weather loading..." flash
                 try:
@@ -150,6 +155,7 @@ class OpenMeteoWidget(BaseWidget):
             longitude=self._location_data["longitude"],
             timeout=self.config.update_interval * 1000,
             units=self.config.units,
+            forecast_days=self.config.forecast_days,
         )
         OpenMeteoWidget._shared_fetchers[self._widget_id] = fetcher
         fetcher.finished.connect(self._on_shared_weather_data)
@@ -467,9 +473,10 @@ class OpenMeteoWidget(BaseWidget):
         @pyqtSlot(int)
         def switch_hourly_data(day_idx: int):
             if day_idx == 0:
-                combined = self._hourly_data[0] + self._hourly_data[1]
+                next_day_data = self._hourly_data[1] if len(self._hourly_data) > 1 else []
+                combined = self._hourly_data[0] + next_day_data
                 current_time = self._current_time
-            elif 0 < day_idx < 7:
+            elif 0 < day_idx < self.config.forecast_days:
                 combined = self._hourly_data[day_idx]
                 current_time = None
             else:
@@ -500,7 +507,7 @@ class OpenMeteoWidget(BaseWidget):
 
         day_widgets: list[QWidget] = []
         self._weather_card_daily_widgets = []
-        for i in range(7):
+        for i in range(self.config.forecast_days):
             frame_day = ClickableWidget()
             self._weather_card_daily_widgets.append(frame_day)
             if self._hourly_data[0] and self.config.weather_card.show_hourly_forecast:
@@ -601,7 +608,7 @@ class OpenMeteoWidget(BaseWidget):
             instance._weather_data = None
             instance._has_valid_weather_data = False
             instance._location_data = None
-            instance._hourly_data = [[] for _ in range(7)]
+            instance._hourly_data = [[] for _ in range(instance.config.forecast_days)]
             instance._current_time = None
             for widget in instance._widgets + instance._widgets_alt:
                 if widget.property("class") and "icon" in (widget.property("class") or ""):
@@ -610,36 +617,6 @@ class OpenMeteoWidget(BaseWidget):
 
         # Reopen the popup with the location setup UI
         self._popup_card()
-
-    def _create_dynamically_label(self, content: str, content_alt: str):
-        def process_content(content: str, is_alt: bool = False) -> list[QLabel]:
-            label_parts = re.split(r"(<span.*?>.*?</span>)", content)
-            label_parts = [part for part in label_parts if part]
-            widgets: list[QLabel] = []
-            for part in label_parts:
-                part = part.strip()
-                if not part:
-                    continue
-                if "<span" in part and "</span>" in part:
-                    class_name = re.search(r'class=(["\'])([^"\']+?)\1', part)
-                    class_result = class_name.group(2) if class_name else "icon"
-                    icon = re.sub(r"<span.*?>|</span>", "", part).strip()
-                    label = QLabel(icon)
-                    label.setProperty("class", class_result)
-                    label.hide()
-                else:
-                    label = QLabel(part)
-                    label.setProperty("class", "label alt" if is_alt else "label")
-                    label.setText("weather update...")
-                label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                self._widget_container_layout.addWidget(label)
-                widgets.append(label)
-                if is_alt:
-                    label.hide()
-            return widgets
-
-        self._widgets = process_content(content)
-        self._widgets_alt = process_content(content_alt, is_alt=True)
 
     def _set_label_text(self, text: str):
         """Set the same text on all visible label widgets."""
@@ -748,7 +725,7 @@ class OpenMeteoWidget(BaseWidget):
             daily_sunrise = daily.get("sunrise", [])
             daily_sunset = daily.get("sunset", [])
 
-            for day_idx in range(7):
+            for day_idx in range(self.config.forecast_days):
                 start = day_idx * 24
                 end = start + 24
                 day_hourly: list[dict[str, Any]] = []
@@ -859,7 +836,7 @@ class OpenMeteoWidget(BaseWidget):
             }
 
             # Per-day forecast data
-            for i in range(7):
+            for i in range(self.config.forecast_days):
                 if i < len(daily_times):
                     date_obj = datetime.strptime(daily_times[i], "%Y-%m-%d")
                     day_name = date_obj.strftime("%B %d")
@@ -907,7 +884,7 @@ class OpenMeteoWidget(BaseWidget):
                     "{cloud}": "N/A",
                     "{feelslike}": "N/A",
                 }
-                for i in range(7):
+                for i in range(self.config.forecast_days):
                     self._weather_data[f"{{day{i}_name}}"] = "N/A"
                     self._weather_data[f"{{day{i}_min_temp}}"] = "N/A"
                     self._weather_data[f"{{day{i}_max_temp}}"] = "N/A"

@@ -64,7 +64,7 @@ def _suppress_third_party_warnings():
 
 
 # Suppress Qt internal messages (e.g. QObject::disconnect wildcard warnings from QWebSocket)
-_QT_SUPPRESSED_PREFIXES = ("QObject::disconnect",)
+_QT_SUPPRESSED_PREFIXES = ("QObject::disconnect", "Could not create pixmap from")
 _original_qt_handler = None
 
 

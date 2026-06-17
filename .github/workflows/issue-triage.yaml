@@ -1,0 +1,52 @@
+name: Issue Triage & Resolution
+
+on:
+  issues:
+    types: [opened, reopened]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: 'Issue number to triage manually'
+        required: true
+        type: string
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  agentic-triage:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          path: main-repo # Checkout the public repo into a subfolder so it doesn't conflict
+
+      - name: Generate YASB App Token
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ secrets.YASB_APP_ID }}
+          private-key: ${{ secrets.YASB_APP_PRIVATE_KEY }}
+
+      - name: Checkout Latest Agent Core
+        uses: actions/checkout@v6
+        with:
+          repository: amnweb/yasb-agent-core
+          token: ${{ secrets.YASB_AGENT_CORE }}
+          path: agent-core
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.14'
+
+      - name: Run YASB Agent
+        env:
+          YASB_AGENT_TOKEN: ${{ secrets.YASB_AGENT_TOKEN }}
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number || github.event.inputs.issue_number }}
+        working-directory: ./main-repo
+        run: python ../agent-core/triage/issue_agent.py

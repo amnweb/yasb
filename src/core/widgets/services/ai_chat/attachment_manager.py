@@ -161,7 +161,6 @@ class AttachmentManager:
                     title="Images Not Supported",
                     msg="This model does not support image attachments.",
                     informative_msg="",
-                    parent=None,
                 ),
             )
             return None
@@ -219,12 +218,7 @@ class AttachmentManager:
 
             QTimer.singleShot(
                 0,
-                lambda: raise_info_alert(
-                    title="Image Processing Failed",
-                    msg=error_message,
-                    informative_msg="",
-                    parent=None,
-                ),
+                lambda: raise_info_alert(title="Image Processing Failed", msg=error_message, informative_msg=""),
             )
 
     def handle_paste_mime(self, mime) -> bool:
@@ -309,7 +303,6 @@ class AttachmentManager:
                     informative_msg=(
                         "Only text files and images are supported.\nThis file appears to be binary and cannot be sent."
                     ),
-                    parent=None,
                 ),
             )
             return None

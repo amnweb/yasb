@@ -31,6 +31,8 @@ class CSSProcessor:
         css = self._remove_comments(css)
         # Extract and replace CSS variables
         css = self._extract_and_replace_variables(css)
+        # Resolve relative url() paths to absolute paths
+        css = self._resolve_urls(css)
         return css
 
     def _read_css_file(self, file_path: str) -> str:
@@ -131,3 +133,25 @@ class CSSProcessor:
 
         # Match hex colors with # followed by exactly 8 hex digits
         return re.sub(r"#([0-9a-fA-F]{8})\b", hex_alpha_replacer, css)
+
+    def _resolve_urls(self, css: str) -> str:
+        """
+        Resolves relative url() paths in CSS to absolute paths based on the CSS file's directory.
+        Qt's setStyleSheet resolves url() relative to the application's working directory,
+        not the CSS file location, so we need to make them absolute.
+        """
+
+        def url_replacer(match):
+            quote = match.group(1) or ""
+            path = match.group(2)
+            # Skip data URIs, absolute paths, and URLs with schemes (http, https, qrc, etc.)
+            if path.startswith(("data:", "file:", "http:", "https:", "qrc:")) or os.path.isabs(path):
+                return match.group(0)
+            abs_path = os.path.normpath(os.path.join(self.base_path, path))
+            if not os.path.isfile(abs_path):
+                logging.warning("CSSProcessor: url() references missing file: %s", abs_path)
+            # Use forward slashes for Qt compatibility
+            abs_path = abs_path.replace("\\", "/")
+            return f"url({quote}{abs_path}{quote})"
+
+        return re.sub(r"url\(([\"']?)([^)]+?)\1\)", url_replacer, css)
