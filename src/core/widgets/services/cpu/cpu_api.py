@@ -15,6 +15,7 @@ from typing import NamedTuple
 from PyQt6.QtCore import QThread, pyqtSignal
 from PyQt6.QtWidgets import QApplication
 
+from core.utils.system import get_build_and_ubr
 from core.utils.win32.bindings.kernel32 import kernel32
 from core.utils.win32.bindings.pdh import pdh
 from core.utils.win32.constants import PDH_FMT_DOUBLE, PDH_FMT_LARGE
@@ -61,6 +62,10 @@ class CpuAPI:
 
     _init_failed: bool = False
     _error_logged: bool = False
+
+    # Windows build 26100+ (Win11 24H2) on '% Processor Time'.
+    # Older builds (Win10, Win11 pre-24H2) use '% Processor Utility'.
+    _WIN11_24H2_BUILD = 26100
 
     @classmethod
     def _get_core_counts(cls) -> tuple[int, int]:
@@ -133,21 +138,35 @@ class CpuAPI:
                     cls._error_logged = True
                 return False
 
+            # Win11 24H2+ (build >= 26100) uses '% Processor Time', older Windows uses '% Processor Utility'.
+            build, _ = get_build_and_ubr()
+            if build >= cls._WIN11_24H2_BUILD:
+                total_counter = r"\Processor Information(_Total)\% Processor Time"
+                core_counter = "\\Processor Information(0,{i})\\% Processor Time"
+            else:
+                total_counter = r"\Processor Information(_Total)\% Processor Utility"
+                core_counter = "\\Processor Information(0,{i})\\% Processor Utility"
+
             # Total CPU percent
             cls._counter_total = wintypes.HANDLE()
-            status = pdh.PdhAddEnglishCounterW(
-                cls._query, r"\Processor Information(_Total)\% Processor Time", None, byref(cls._counter_total)
-            )
+            status = pdh.PdhAddEnglishCounterW(cls._query, total_counter, None, byref(cls._counter_total))
             if status != 0:
-                cls._cleanup_query()
-                cls._init_failed = True
-                if not cls._error_logged:
-                    logging.warning(
-                        "Failed to add CPU percent counter (status=%s). PDH counters may be corrupted. Try running 'lodctr /r' as Administrator.",
-                        status,
+                # Fallback to % Processor Time if % Processor Utility is unavailable
+                if build < cls._WIN11_24H2_BUILD:
+                    logging.info("'%% Processor Utility' unavailable, falling back to '%% Processor Time'.")
+                    status = pdh.PdhAddEnglishCounterW(
+                        cls._query, r"\Processor Information(_Total)\% Processor Time", None, byref(cls._counter_total)
                     )
-                    cls._error_logged = True
-                return False
+                if status != 0:
+                    cls._cleanup_query()
+                    cls._init_failed = True
+                    if not cls._error_logged:
+                        logging.warning(
+                            "Failed to add CPU percent counter (status=%s). PDH counters may be corrupted. Try running 'lodctr /r' as Administrator.",
+                            status,
+                        )
+                        cls._error_logged = True
+                    return False
 
             # Processor performance (for frequency calculation)
             cls._counter_perf = wintypes.HANDLE()
@@ -159,9 +178,12 @@ class CpuAPI:
             cls._counters_per_core = []
             for i in range(logical):
                 counter = wintypes.HANDLE()
-                status = pdh.PdhAddEnglishCounterW(
-                    cls._query, f"\\Processor Information(0,{i})\\% Processor Time", None, byref(counter)
-                )
+                status = pdh.PdhAddEnglishCounterW(cls._query, core_counter.format(i=i), None, byref(counter))
+                if status != 0 and build < cls._WIN11_24H2_BUILD:
+                    # Fallback per-core counter
+                    pdh.PdhAddEnglishCounterW(
+                        cls._query, f"\\Processor Information(0,{i})\\% Processor Time", None, byref(counter)
+                    )
                 cls._counters_per_core.append(counter)
 
             # Initial data collection
