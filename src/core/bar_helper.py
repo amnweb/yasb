@@ -809,6 +809,7 @@ class BarContextMenu:
 
     def show(self, position):
         self._menu = QMenu(self.parent)
+        self._menu.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         apply_qmenu_style(self._menu)
         self._menu.setProperty("class", "context-menu dark" if GlobalState.is_dark() else "context-menu")
         self._menu.aboutToHide.connect(self._on_menu_about_to_hide)
