@@ -30,6 +30,7 @@
     - [GPU](./(Widget)-GPU)
     - [Home](./(Widget)-Home)
     - [Disk](./(Widget)-Disk)
+    - [Do Not Disturb](./(Widget)-Dnd)
     - [Language](./(Widget)-Language)
     - [Launchpad](./(Widget)-Launchpad)
     - [Libre Hardware Monitor](./(Widget)-Libre-HW-Monitor)
