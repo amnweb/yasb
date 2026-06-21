@@ -58,6 +58,7 @@
     - [WiFi](./(Widget)-WiFi)
     - [WHKD](./(Widget)-Whkd)
     - [Window Controls](./(Widget)-Window-Controls)
+    - [Window Switcher](./(Widget)-Window-Switcher)
     - [Windows Desktops](./(Widget)-Windows-Desktops)
     - [Komorebi Control](./(Widget)-Komorebi-Control)
     - [Komorebi Layout](./(Widget)-Komorebi-Layout)

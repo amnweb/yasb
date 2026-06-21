@@ -66,6 +66,11 @@ widgets:
 | `action` | string | The widget action to trigger (`"toggle_window_switcher"`).                                                             |
 | `screen` | string | Screen mode to pop up on (`"active"`, `"cursor"`, `"primary"`). Default is `"active"`.                                 |
 
+> **Note:**
+> **Layout & Quality Notes:**
+> - **Icon Blurriness:** If you set `icon_size` to a very large value (e.g., `80` or `128`), some application icons might appear blurry or pixelated. This is because many applications do not embed high-resolution icons in their `.exe` files (often maxing out at `64x64`). The widget extracts the absolute highest quality icon natively available, but if the app doesn't provide a large one, the image must be stretched.
+> - **Dynamic Screen Width:** The widget is fully screen-aware. To prevent the popup from bleeding off your monitor when using huge icons or a high `max_visible_apps` limit, the popup will dynamically cap its maximum width to **90% of your screen** and allow you to smoothly scroll through the remaining icons.
+ 
 ## CSS Example
 Because this is a really simple widget, all of the styling classes used by the widget and its components are included in this example below. You can use this as a starting point for styling the window switcher overlay in your `styles.css`.
 
