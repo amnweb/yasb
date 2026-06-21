@@ -23,11 +23,30 @@ EMPTY_RECORD: dict[str, Any] = {
     "seven_raw": None,
     "seven_reset_iso": None,
     "fetched_at": 0,
+    "token_expired": False,
 }
 
 
 def _claude_config_dir() -> str:
     return os.environ.get("CLAUDE_CONFIG_DIR") or os.path.join(os.path.expanduser("~"), ".claude")
+
+
+def _token_expired() -> bool:
+    """True when Claude Code's OAuth access token has expired (so a refresh is needed).
+
+    Reads only the ``expiresAt`` timestamp (ms epoch); the token itself is never touched
+    here. Returns False when the value is missing or unreadable so a parsing quirk never
+    produces a false 'expired' warning.
+    """
+    try:
+        cred_path = os.path.join(_claude_config_dir(), ".credentials.json")
+        with open(cred_path, encoding="utf-8") as f:
+            expires_at = json.load(f)["claudeAiOauth"].get("expiresAt")
+        if not expires_at:
+            return False
+        return (expires_at / 1000) < time.time()
+    except Exception:
+        return False
 
 
 def _cache_path() -> str:
@@ -57,9 +76,14 @@ def fetch_usage(cache_path: str, cache_ttl: int) -> dict[str, Any]:
     returned so the widget keeps showing the most recent known values. The OAuth
     token is read from Claude Code's credentials store and is never logged.
     """
+    # Recomputed live on every call (independent of the usage cache) so the expired-token
+    # warning stays accurate even when serving a stale record.
+    token_expired = _token_expired()
+
     cache = _read_cache(cache_path)
     now = int(time.time())
     if cache and (now - int(cache.get("fetched_at", 0))) < cache_ttl:
+        cache["token_expired"] = token_expired
         return cache
 
     try:
@@ -84,14 +108,19 @@ def fetch_usage(cache_path: str, cache_ttl: int) -> dict[str, Any]:
             "seven_raw": seven_raw,
             "seven_reset_iso": payload["seven_day"].get("resets_at"),
             "fetched_at": now,
+            # A successful fetch proves the token is currently valid.
+            "token_expired": False,
         }
         _write_cache(cache_path, record)
         return record
     except Exception as e:
         logger.debug("usage fetch failed: %s", e)
         if cache:
+            cache["token_expired"] = token_expired
             return cache
-        return dict(EMPTY_RECORD)
+        record = dict(EMPTY_RECORD)
+        record["token_expired"] = token_expired
+        return record
 
 
 class _UsageWorker(QThread):
@@ -165,9 +194,16 @@ class ClaudeUsageService(QObject):
             self.deleteLater()
 
     def _tick(self) -> None:
+        self._start_worker(self._cache_ttl)
+
+    def refresh_now(self) -> None:
+        """Force an immediate fetch, bypassing the cache TTL."""
+        self._start_worker(0)
+
+    def _start_worker(self, cache_ttl: int) -> None:
         if self._worker is not None:
             return  # a fetch is already in flight
-        worker = _UsageWorker(self._cache_path, self._cache_ttl, self)
+        worker = _UsageWorker(self._cache_path, cache_ttl, self)
         worker.data_ready.connect(self._on_data)
         worker.finished.connect(self._on_finished)
         self._worker = worker
