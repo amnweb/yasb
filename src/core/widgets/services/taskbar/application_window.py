@@ -208,9 +208,11 @@ class ApplicationWindow:
             if not (self.title or "").strip():
                 return False
 
-            # Cloaked UWP windows should not appear
-            if self._is_cloaked():
-                return False
+            # Cloaked UWP windows and virtual desktop windows
+            # We let individual widgets handle this (e.g. taskbar uses `show_only_visible` config)
+            # if self._is_cloaked():
+            #     return False
+
             # Immersive shell windows should not appear
             if self._is_immersive_shell_window():
                 return False

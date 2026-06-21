@@ -63,6 +63,9 @@ class WindowSwitcherWidget(BaseWidget):
         self.buttons_list = []
         self.current_focus_index = -1
 
+        # Tell TaskbarWindowManager to track cloaked apps globally so we can see them
+        self._show_only_visible = False
+
         self._task_manager = connect_taskbar(self)
 
     def _toggle_window_switcher(self):

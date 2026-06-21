@@ -394,9 +394,6 @@ class TaskbarWindowManager(QObject):
                     window_data = self._windows[window_hwnd].as_dict()
                     self.window_updated.emit(window_hwnd, window_data)
 
-            # if hwnd and hwnd in self._windows:
-            #    self._debounce_update(hwnd, delay=60)
-
         except Exception as e:
             logger.error("Error handling window activated for %s: %s", hwnd, e)
 
@@ -468,7 +465,8 @@ class TaskbarWindowManager(QObject):
                 app_window = self._windows[hwnd]
                 if getattr(self, "_keep_cloaked_tasks", False):
                     # Keep and refresh so widgets can react
-                    self._schedule_window_update(hwnd)
+                    app_window.update()
+                    self.window_updated.emit(hwnd, app_window.as_dict())
                 else:
                     # Keep UWP transient frames, let widgets filter them
                     is_uwp = False
@@ -484,7 +482,8 @@ class TaskbarWindowManager(QObject):
 
                     if is_uwp:
                         # Keep and refresh _update_window has the UWP transient-keep heuristic
-                        self._schedule_window_update(hwnd)
+                        app_window.update()
+                        self.window_updated.emit(hwnd, app_window.as_dict())
                     else:
                         # Remove when not keeping cloaked tasks
                         self._remove_window(hwnd)
