@@ -72,6 +72,10 @@ class WindowSwitcherWidget(BaseWidget):
         self._show_popup()
 
     def _show_popup(self):
+        taskbar_windows = self._get_sorted_windows()
+        if not taskbar_windows:
+            return
+
         if self._popup and is_valid_qobject(self._popup):
             self._popup.deleteLater()
 
@@ -90,7 +94,7 @@ class WindowSwitcherWidget(BaseWidget):
         self._current_screen = self._get_target_screen()
         self._current_dpr = self._current_screen.devicePixelRatio()
 
-        self._build_overlay_popup(self._get_sorted_windows())
+        self._build_overlay_popup(taskbar_windows)
 
         self._popup.show()
         self._popup.setFocus()
