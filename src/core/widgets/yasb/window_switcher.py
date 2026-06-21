@@ -1,15 +1,13 @@
 import logging
-import os
 
 import win32con
 import win32gui
 from PIL import Image
 from PyQt6 import QtCore
-from PyQt6.QtCore import QFileInfo, QSize, Qt, QTimer
+from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QImage, QPixmap
 from PyQt6.QtWidgets import (
     QApplication,
-    QFileIconProvider,
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -20,7 +18,7 @@ from PyQt6.QtWidgets import (
 
 from core.utils.qobject import is_valid_qobject
 from core.utils.utilities import PopupWidget, refresh_widget_style
-from core.utils.win32.app_icons import get_icon_for_aumid, get_window_icon
+from core.utils.win32.app_icons import get_icon_for_aumid, get_process_icon, get_window_icon
 from core.utils.win32.aumid import get_aumid_for_window
 from core.utils.win32.utils import find_focused_screen
 from core.utils.win32.window_actions import (
@@ -240,12 +238,10 @@ class WindowSwitcherWidget(BaseWidget):
             if img:
                 pixmap = pil_to_pixmap(img)
 
-        if not pixmap and win.process_path and os.path.isfile(win.process_path):
-            qicon = QFileIconProvider().icon(QFileInfo(win.process_path))
-            if not qicon.isNull():
-                pm = qicon.pixmap(QSize(icon_size, icon_size))
-                if not pm.isNull():
-                    pixmap = pm
+        if not pixmap and win.process_pid:
+            img = get_process_icon(win.process_pid)
+            if img:
+                pixmap = pil_to_pixmap(img)
 
         if not pixmap:
             img = get_window_icon(win.hwnd)
@@ -321,7 +317,16 @@ class WindowSwitcherWidget(BaseWidget):
 
     def _update_popup_geometry(self, initial=False):
         if self._popup and self._scroll_area:
-            visible_apps = min(len(self.buttons_list), self.config.max_visible_apps)
+            screen_geometry = self._current_screen.geometry()
+            # We will use max 90% of screen size
+            max_allowed_width = screen_geometry.width() * 0.9
+
+            extra_w = getattr(self, "_popup_extra_w", 0)
+            available_w = max_allowed_width - extra_w
+            max_screen_apps = max(1, int(available_w // self._btn_w)) if self._btn_w > 0 else 1
+
+            visible_apps = min(len(self.buttons_list), self.config.max_visible_apps, max_screen_apps)
+
             if container := self._scroll_area.widget():
                 container.setFixedSize(self._btn_w * len(self.buttons_list), self._btn_h)
             self._scroll_area.setFixedSize(self._btn_w * visible_apps, self._btn_h)
@@ -331,12 +336,11 @@ class WindowSwitcherWidget(BaseWidget):
                 self._popup_height = size_hint.height()
                 self._popup_extra_w = size_hint.width() - (self._btn_w * visible_apps)
 
-            popup_width = self._btn_w * visible_apps + self._popup_extra_w
-            self._popup.setFixedSize(popup_width, self._popup_height)
-            screen_geometry = self._current_screen.geometry()
+            popup_width = self._btn_w * visible_apps + getattr(self, "_popup_extra_w", 0)
+            self._popup.setFixedSize(int(popup_width), self._popup_height)
             self._popup.move(
-                (screen_geometry.width() - popup_width) // 2 + screen_geometry.x(),
-                (screen_geometry.height() - self._popup_height) // 2 + screen_geometry.y(),
+                int((screen_geometry.width() - popup_width) // 2 + screen_geometry.x()),
+                int((screen_geometry.height() - self._popup_height) // 2 + screen_geometry.y()),
             )
 
     def eventFilter(self, source, event):
@@ -414,8 +418,11 @@ class WindowSwitcherWidget(BaseWidget):
             if self._scroll_area and self._btn_w > 0:
                 bar = self._scroll_area.horizontalScrollBar()
                 first_visible = bar.value() // self._btn_w
-                last_visible = first_visible + self.config.max_visible_apps - 1
-                if index > last_visible:
-                    bar.setValue((index - self.config.max_visible_apps + 1) * self._btn_w)
-                elif index < first_visible:
-                    bar.setValue(index * self._btn_w)
+                actual_visible_apps = self._scroll_area.width() // self._btn_w
+
+                if actual_visible_apps > 0:
+                    last_visible = first_visible + actual_visible_apps - 1
+                    if index > last_visible:
+                        bar.setValue((index - actual_visible_apps + 1) * self._btn_w)
+                    elif index < first_visible:
+                        bar.setValue(index * self._btn_w)
