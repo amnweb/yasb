@@ -18,55 +18,44 @@ class ApplicationWindow:
     Holds identity (hwnd) and metadata used for filtering and UI state.
     """
 
-    def __init__(
-        self, hwnd, excluded_classes=None, ignored_processes=None, ignored_titles=None, strict_filtering=False
-    ):
+    DEFAULT_IGNORED_PROCESSES = {"SearchHost.exe"}
+
+    DEFAULT_IGNORED_CLASSES = {
+        "Progman",
+        "Shell_TrayWnd",
+        "Shell_SecondaryTrayWnd",
+        "DV2ControlHost",
+        "Windows.UI.Composition.DesktopWindowContentBridge",
+        "ForegroundStaging",
+        "ApplicationManager_DesktopShellWindow",
+        "WorkerW",
+        "Button",  # Windows 10/11 notification buttons
+        "Windows.UI.Input.InputSite.WindowClass",
+        "Windows.Internal.Shell.TabProxyWindow",
+        "Microsoft-Windows-Sts-ComponentHost-Elevated",
+        "SysListView32",
+        "XamlExplorerHostIslandWindow_WASDK",
+        "Microsoft.UI.Content.PopupWindowSiteBridge",
+        "Microsoft.UI.Content.DesktopChildSiteBridge",
+        "SysHeader32",
+        "#32768",
+        "msctls_statusbar32",
+        "DirectUIHWND",
+        "SHELLDLL_DefView",
+    }
+
+    def __init__(self, hwnd):
         self.hwnd = hwnd
         self.title = self._get_title()
         self.class_name = self._get_class_name()
         self.is_active = False
         self.is_flashing = False
-        self._strict_filtering = strict_filtering
-        # Store exclusion lists (combine with defaults if provided)
-        self.excluded_classes = set(excluded_classes) if excluded_classes else set()
-        self.ignored_processes = set(ignored_processes) if ignored_processes else set()
-        self.ignored_titles = set(ignored_titles) if ignored_titles else set()
 
         self.process_name = None
         self.process_pid = 0
         self.process_path = None
 
         self._refresh_process_info()
-
-        # Default ignored processes
-        default_ignored_processes = {"SearchHost.exe"}
-        self.ignored_processes.update(default_ignored_processes)
-
-        # Default system classes to exclusions
-        default_system_classes = {
-            "Progman",
-            "Shell_TrayWnd",
-            "Shell_SecondaryTrayWnd",
-            "DV2ControlHost",
-            "Windows.UI.Composition.DesktopWindowContentBridge",
-            "ForegroundStaging",
-            "ApplicationManager_DesktopShellWindow",
-            "WorkerW",
-            "Button",  # Windows 10/11 notification buttons
-            "Windows.UI.Input.InputSite.WindowClass",
-            "Windows.Internal.Shell.TabProxyWindow",
-            "Microsoft-Windows-Sts-ComponentHost-Elevated",
-            "SysListView32",
-            "XamlExplorerHostIslandWindow_WASDK",
-            "Microsoft.UI.Content.PopupWindowSiteBridge",
-            "Microsoft.UI.Content.DesktopChildSiteBridge",
-            "SysHeader32",
-            "#32768",
-            "msctls_statusbar32",
-            "DirectUIHWND",
-            "SHELLDLL_DefView",
-        }
-        self.excluded_classes.update(default_system_classes)
 
     def as_dict(self):
         # Get monitor handle for this window
@@ -90,6 +79,7 @@ class ApplicationWindow:
             "process_name": self.process_name,
             "process_pid": self.process_pid,
             "process_path": self.process_path,
+            "can_minimize": self.can_minimize(),
         }
 
     def _refresh_process_info(self) -> None:
@@ -189,7 +179,6 @@ class ApplicationWindow:
                 and ((not is_noactivate) or is_appwindow)
                 and (not is_toolwindow)
                 and (not is_deleted)
-                and ((not self._strict_filtering) or self.can_minimize())
             )
         except Exception:
             return False
@@ -219,9 +208,11 @@ class ApplicationWindow:
             if not (self.title or "").strip():
                 return False
 
-            # Cloaked UWP windows should not appear
-            if self._is_cloaked():
-                return False
+            # Cloaked UWP windows and virtual desktop windows
+            # We let individual widgets handle this (e.g. taskbar uses `show_only_visible` config)
+            # if self._is_cloaked():
+            #     return False
+
             # Immersive shell windows should not appear
             if self._is_immersive_shell_window():
                 return False
@@ -229,13 +220,10 @@ class ApplicationWindow:
             if not self.can_add_to_taskbar():
                 return False
 
-            if self.title and self.title in self.ignored_titles:
+            if self.process_name and self.process_name in self.DEFAULT_IGNORED_PROCESSES:
                 return False
 
-            if self.class_name in self.excluded_classes:
-                return False
-
-            if self.process_name and self.process_name in self.ignored_processes:
+            if self.class_name in self.DEFAULT_IGNORED_CLASSES:
                 return False
 
             return True
