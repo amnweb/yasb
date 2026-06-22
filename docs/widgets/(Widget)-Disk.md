@@ -1,4 +1,7 @@
 # Disk Widget Configuration
+
+Shows how much storage space you have left on your local drives. You can customize warning thresholds, add circular progress indicators, click to open a drive in File Explorer, and click to show a popup monitoring multiple drives at the same time.
+
 | Option            | Type    | Default                                                                 | Description                                                                 |
 |-------------------|---------|-------------------------------------------------------------------------|-----------------------------------------------------------------------------|
 | `label`           | string  | `'{volume_label} {space[used][percent]}'`                        | The format string for the disk widget. |

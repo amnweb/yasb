@@ -1,4 +1,7 @@
 # Windows Desktops Widget
+
+Displays your Windows virtual desktops in the status bar so you can switch between them. You can click to change desktops, see custom indicators for the active and inactive ones, and show names or numbers for each desktop.
+
 | Option                     | Type    | Default                  | Description                                                                 |
 |----------------------------|---------|--------------------------|-----------------------------------------------------------------------------|
 | `label_workspace_btn`    | string  | `'{index}'`              | The format string for workspace buttons.                                    |

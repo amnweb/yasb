@@ -1,4 +1,7 @@
 # Wallpapers Widget Options
+
+A quick desktop wallpaper switcher for your status bar. Clicking it opens a beautiful gallery popup where you can browse local images and set your desktop background with a single click.
+
 | Option               | Type     | Default        | Description                                                                 |
 |----------------------|----------|----------------|-----------------------------------------------------------------------------|
 | `label`           | string   | `"{icon}"`     | The format string for the wallpaper widget label. |

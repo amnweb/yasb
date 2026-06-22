@@ -1,4 +1,7 @@
 # Language Widget Options
+
+Shows your current keyboard language or layout - like EN, DE, or RU - and lets you switch between installed languages from a popup menu. Updates in real time when you change languages with a keyboard shortcut.
+
 | Option           | Type     | Default                        | Description                                                                 |
 |------------------|----------|--------------------------------|-----------------------------------------------------------------------------|
 | `label`          | string   | `"{lang[language_code]}-{lang[country_code]}"`              | The format string for the label. |

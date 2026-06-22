@@ -1,5 +1,7 @@
 # Battery Widget Configuration
 
+Helps you keep an eye on your battery's charge level, remaining life, health, and charging status. It comes with clean circular or linear progress bars, blinking animations while charging, and alerts based on custom battery level thresholds.
+
 | Option                  | Type    | Default                                      | Description                                                                 |
 |-------------------------|---------|----------------------------------------------|-----------------------------------------------------------------------------|
 | `label`                 | string  | `{icon}`                                     | The primary label format.                                                   |

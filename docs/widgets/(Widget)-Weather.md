@@ -1,4 +1,7 @@
 # Weather Widget Options
+
+Shows the current weather conditions and temperature outside. You can customize the temperature units (Celsius or Fahrenheit), update intervals, and click to view detailed weather reports in your browser.
+
 | Option          | Type    | Default                                                                 | Description                                                                 |
 |-----------------|---------|-------------------------------------------------------------------------|-----------------------------------------------------------------------------|
 | `label`         | string  | `'<span>{icon}</span> {temp}'`                                        | The format string for the weather label. You can use placeholders like `{temp}`, `{icon}`, etc. |

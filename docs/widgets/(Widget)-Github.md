@@ -1,5 +1,7 @@
 # Github Widget Options
 
+Displays your unread GitHub notifications count in the status bar. It features a customizable notification dot overlay and opens an interactive popup menu where you can view your notifications by category, track comments on issues/PRs, and authenticate via OAuth.
+
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `label`             | string  | `'{icon}'` | The format string for the label. You can use placeholders like `{icon}` to dynamically insert icon information. |
@@ -141,7 +143,7 @@ OAuth tokens are stored in `%LOCALAPPDATA%\YASB\github_token`. To sign out, simp
 .github-menu .contents .item .comment-icon {} /* Comment icon */
 ```
 
-## Example Style for the Widget and Menu
+## Example Style for the Popup Menu
 ```css
 .github-menu    {
     background-color:  rgba(17, 17, 27, 0.2);

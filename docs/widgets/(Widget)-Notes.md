@@ -1,5 +1,7 @@
 # Notes Widget Configuration
 
+A quick note-taking utility that opens a scratchpad popup directly from your status bar. It lets you write, save, copy, and delete quick notes on the fly, showing how many notes you have, and can be configured to float anywhere on the screen.
+
 | Option                | Type     | Default Value                                                                   | Description                                                                                                                                     |
 | --------------------- | -------- | -----------------------------------------                                       | --------------------------------------------------------------------------------------------------------------------------                      |
 | `label`               | String   | `<span>\udb82\udd0c</span> {count}`                                             | Primary label template, supports the `{count}` placeholder which is replaced with the number of notes.                                          |

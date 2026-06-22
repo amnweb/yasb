@@ -1,5 +1,7 @@
 # Libre Hardware Monitor Widget Configuration
 
+Displays hardware stats (like CPU temperatures, fan speeds, and voltages) from a local Libre Hardware Monitor server. You can display real-time histograms, set warning levels, customize text precision, and click to view a complete hardware stats popup.
+
 | Option                   | Type    | Default                                                                                        | Description                                                                                                                                  |
 |--------------------------|---------|------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------|
 | `label`                  | string  | `"<span>\udb82\udcae </span> {info[value]}{info[unit]}"`                                       | The primary label format.                                                                                                                    |

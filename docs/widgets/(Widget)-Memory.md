@@ -1,4 +1,7 @@
 # Memory Widget Configuration
+
+Displays your system RAM and swap memory usage in real-time. It features custom warning thresholds, real-time usage histograms, and circular progress indicators. Clicking it opens a popup menu with detailed memory allocation stats.
+
 | Option            | Type    | Default                                                                 | Description                                                                 |
 |-------------------|---------|-------------------------------------------------------------------------|-----------------------------------------------------------------------------|
 | `label`           | string  | `'\uf4bc {virtual_mem_free}/{virtual_mem_total}'`                        | The format string for the memory widget. Displays free and total virtual memory. |

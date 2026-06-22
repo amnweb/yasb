@@ -1,5 +1,7 @@
 # Home Menu Widget Configuration
 
+A start button for your status bar that opens a customizable launcher menu. You can add quick shortcuts to your favorite apps, folders, websites, and standard power actions (like sleep or shutdown) in a clean, styled popup menu.
+
 | Option          | Type    | Default                                                                 | Description                                                                 |
 |-----------------|---------|-------------------------------------------------------------------------|-----------------------------------------------------------------------------|
 | `label`         | string  | `"\udb81\udf17"`                                | Icon or text for button. |
@@ -15,6 +17,7 @@
 | `offset_top`      | int     | `6`                                                                     | Distance from the top or bottom edge of the bar. |
 | `offset_left`     | int     | `0`                                                                     | Distance from the left or right edge of the bar. |
 | `menu_labels`   | dict | `{'shutdown': 'Shutdown', 'restart': 'Restart', 'logout': 'Logout', 'lock': 'Lock', 'sleep': 'Sleep', 'system': 'System Settings', 'about': 'About This PC', 'task_manager': 'Task Manager'}` | Custom label names for system and power items. | 
+| `callbacks`     | dict | `{'on_left': 'toggle_menu', 'on_middle': 'do_nothing', 'on_right': 'do_nothing'}` | Mouse event callbacks. |
 
 ## Example Configuration
 
@@ -75,6 +78,8 @@ home:
 - **offset_top**: Distance from the top or bottom edge of the bar.
 - **offset_left**: Distance from the left or right edge of the bar.
 - **menu_labels**: Custom label names for system and power items. Use this option to change the default labels for system and power menu items.
+- **callbacks**: A dictionary of mouse event callbacks. The keys are `on_left`, `on_middle`, and `on_right`. The values are the callback names.
+  - Available callbacks: `"toggle_menu"`, `"do_nothing"`, or generic program launches using `"exec <command>"`.
 
 ## Example Style
 ```css

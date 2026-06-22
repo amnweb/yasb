@@ -1,4 +1,7 @@
 # Komorebi Layout
+
+Shows the active window arrangement layout in Komorebi (like BSP, columns, rows, or floating). You can click to cycle layouts, toggle monocle or floating states, or open a menu to select a layout with descriptive icons.
+
 | Option          | Type    | Default                                                                 | Description                                                                 |
 |-----------------|---------|-------------------------------------------------------------------------|-----------------------------------------------------------------------------|
 | `hide_if_offline` | boolean | `true`                                                                  | Whether to hide the widget if offline.                                      |

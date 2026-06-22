@@ -1,5 +1,7 @@
 # WiFi Widget Options
 
+Displays your Wi-Fi signal strength and the name of the network (SSID) you are connected to. It features custom icons for connection states and click actions to open network settings or toggle Wi-Fi.
+
 | Option                    | Type      | Default                                                                                  | Description                                                     |
 | ---------------------     | --------- | -------------------------------------------------------------------------                | --------------------------------------------------------------- |
 | `label`                   | string    | `"{wifi_icon}"`                                                                          | The label format for the WiFi widget.                           |

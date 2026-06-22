@@ -1,5 +1,7 @@
 # Notifications Widget Configuration
 
+Displays the number of unread Windows notifications in your status bar. Clicking it opens the Windows Action Center, and you can set it to auto-hide when you have no new notifications.
+
 | Option            | Type    | Default                                                                 | Description                                                                 |
 |-------------------|---------|-------------------------------------------------------------------------|-----------------------------------------------------------------------------|
 | `label`           | string  | `"{count} new notifications"`                        | The format string for the notifications widget.     |

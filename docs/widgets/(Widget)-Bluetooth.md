@@ -1,5 +1,7 @@
 # Bluetooth Widget Configuration
 
+Shows your Bluetooth status and lists your connected devices. You can rename devices to custom aliases (like replacing a name with a headset icon), configure tooltips, and click to toggle your connection or open Bluetooth settings.
+
 | Option            | Type    | Default                                                                 | Description                                                                 |
 |-------------------|---------|-------------------------------------------------------------------------|-----------------------------------------------------------------------------|
 | `label`           | string  | `'{icon}'`                        | The format string for the bluetooth widget. Displays icons. |

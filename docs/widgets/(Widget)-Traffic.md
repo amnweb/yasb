@@ -1,5 +1,7 @@
 # Traffic Widget Options
 
+Displays your network upload and download speeds in real-time. You can filter by specific network adapters, choose between bits and bytes, align the labels, and set the widget to hide itself when your PC is offline.
+
 | Option          | Type    | Default                                                                 | Description                                                                 |
 |-----------------|---------|-------------------------------------------------------------------------|-----------------------------------------------------------------------------|
 | `label`         | string  | `'\ueb01 \ueab4 {download_speed} - \ueab7 {upload_speed}'`                | The format string for the traffic widget. Displays download and upload speeds. |

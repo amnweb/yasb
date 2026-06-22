@@ -1,10 +1,11 @@
 # Grouper Widget
 
+A handy container widget that groups multiple other widgets together in the bar. It helps you keep your status bar organized by sharing a single styled background, margins, and borders, and lets you collapse or expand the group with a toggle button.
+
 | Option              | Type    | Default                                                   | Description                                                           |
 |---------------------|---------|-----------------------------------------------------------|-----------------------------------------------------------------------|
 | `class_name`        | string  | `'grouper'`                                               | The name identifier for the grouper widget instance.                 |
 | `widgets`           | list    | `[]`                                                      | List of widget names to group together inside this container.        |
-
 | `hide_empty`        | boolean | `False`                                                   | If true, the grouper widget will be hidden if all its child widgets are hidden. |
 | `collapse_options`  | dict    | See below                                                 | Options for collapsible grouper functionality.                        |
 

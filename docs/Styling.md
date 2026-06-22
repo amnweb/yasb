@@ -4,6 +4,28 @@ Styling is done using the CSS file format and with a file named `styles.css`.
 
 Default directories for this file are `C:/Users/{username}/.config/yasb/` or the ENV variable `YASB_CONFIG_HOME` if set.
 
+## Themes & Community Styles
+
+If you don't want to design your own status bar layout or write CSS styling rules from scratch, you can use the built-in **Themes Manager** (`yasb_themes.exe`) to browse, preview, and install custom styles created by the community.
+
+### Using the Themes Manager
+
+You can launch the Themes Manager in a few ways:
+* **System Tray Context Menu**: Right-click the YASB icon in your system tray and select **Get Themes**.
+* **Direct Execution**: Double-click `yasb_themes.exe` inside your YASB installation folder.
+
+Within the visual Themes Manager interface, you can:
+* **Search and Filter**: Quickly filter themes by name.
+* **Preview Readmes**: Click on any theme to read its custom features, keybindings, and optional widget setups.
+* **Inspect Screenshots**: Hover your cursor over any theme preview image to zoom in with a magnifier.
+* **One-Click Installation**: Click the install button to automatically download and activate the theme, backing up your existing config files.
+
+### One-Click Theme Installation Protocol (`yasb-themes://`)
+
+YASB registers a custom URL protocol (`yasb-themes://`) with Windows. When you browse the community themes on the official [yasb.dev](https://yasb.dev) website and click a theme's install button, it will automatically open the Themes Manager on your computer and download the selected theme directly.
+
+***
+
 ## Bar styling
 
 The main YASB window can be styled with the following:

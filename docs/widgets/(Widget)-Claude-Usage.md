@@ -1,7 +1,7 @@
 # Claude Usage Widget Options
 
-Shows your Claude (Claude Code) subscription usage on the bar — the 5-hour and 7-day
-rolling limit utilization — with a popup menu that displays both windows as progress bars
+Shows your Claude (Claude Code) subscription usage on the bar - the 5-hour and 7-day
+rolling limit utilization - with a popup menu that displays both windows as progress bars
 together with their reset times (a countdown plus the exact reset timestamp).
 
 The data is read from the same OAuth credentials the Claude Code CLI uses
@@ -24,11 +24,11 @@ The label is plain text by default. You can prepend a Nerd Font glyph in a `<spa
 want an icon (e.g. `<span>\U000f06a9</span> {five_hour}%`). The following placeholders can be
 used in `label` / `label_alt`:
 
-- `{five_hour}` — 5-hour window utilization (percent, `--` when unavailable).
-- `{seven_day}` — 7-day window utilization (percent, `--` when unavailable).
-- `{five_hour_reset}` — time until the 5-hour window resets. Shown as a countdown when under a
+- `{five_hour}` - 5-hour window utilization (percent, `--` when unavailable).
+- `{seven_day}` - 7-day window utilization (percent, `--` when unavailable).
+- `{five_hour_reset}` - time until the 5-hour window resets. Shown as a countdown when under a
   day away (e.g. `4h 27m`), otherwise as a local weekday + time (e.g. `Sat 6:00 AM`).
-- `{seven_day_reset}` — time until the 7-day window resets (e.g. `Sat 6:00 AM`).
+- `{seven_day_reset}` - time until the 7-day window resets (e.g. `Sat 6:00 AM`).
 
 ```yaml
 claude_usage:
@@ -57,7 +57,7 @@ claude_usage:
 
 - **label:** The format string for the label. Supports the placeholders listed above.
 - **label_alt:** The alternative format string, toggled with the `toggle_label` callback.
-- **update_interval:** How often the bar label and reset countdown are refreshed, in seconds (30–3600).
+- **update_interval:** How often the bar label and reset countdown are refreshed, in seconds (30-3600).
 - **cache_ttl:** How long a fetched result is cached on disk before the usage endpoint is queried again. Because the endpoint is rate-limited (HTTP 429), the widget serves the last cached value on any error instead of going blank.
 - **tooltip:** Whether to show a summary tooltip on hover.
 - **callbacks:** Mouse-click callbacks. Built-in actions: `toggle_menu` (open/close the popup menu), `toggle_label` (swap between `label` and `label_alt`), `do_nothing`, and `exec`.

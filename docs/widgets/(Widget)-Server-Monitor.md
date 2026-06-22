@@ -1,5 +1,7 @@
 # Server Monitor Widget
 
+Monitors a list of remote servers to make sure they are online and their SSL certificates are valid. It alerts you about certificate expirations, sends desktop notifications when a server goes offline, and shows detailed server statuses in a popup menu.
+
 | Option            | Type    | Default                                                                 | Description                                                                 |
 |-------------------|---------|-------------------------------------------------------------------------|-----------------------------------------------------------------------------|
 | `label`           | string  | `'{icon}'`                        | The format string for the widget. |

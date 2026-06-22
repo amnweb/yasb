@@ -1,5 +1,7 @@
 # Brightness Screen Widget Configuration
 
+Displays your screen's brightness level and lets you adjust it on the fly. You can change brightness by scrolling your mouse wheel, click to cycle through set levels, and set up a timer to auto-adjust for day and night. It also supports an interactive menu where you can control the brightness and contrast of all your connected monitors at once.
+
 | Option          | Type    | Default                                                                 | Description                                                                 |
 |-----------------|---------|-------------------------------------------------------------------------|-----------------------------------------------------------------------------|
 | `label`         | string  | `"{icon}"`                                                   | The format string for the brightness widget. |

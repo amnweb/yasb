@@ -1,5 +1,7 @@
 # Clock Widget Configuration
 
+Shows the current time in whatever format you like. You can cycle through different timezones, set up alarms, and open a built-in calendar that shows holidays and week numbers. The calendar can also show upcoming holidays for your country.
+
 | Option              | Type    | Default                                                                               | Description                                                                                                         |
 | ------------------- | ------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
 | `label`             | string  | `'\uf017 {%H:%M:%S}'`                                                                 | The format string for the clock. You can use placeholders like `{%H:%M:%S}`, `{icon}`, or `{alarm}` to dynamically insert time information. |
@@ -76,7 +78,7 @@ clock:
 - **tooltip:** Whether to show the tooltip on hover. When enabled, shows date, time, timezone, and active alarms information.
 - **update_interval:** The interval in milliseconds to update the clock. Must be between 0 and 60000.
 - **timezones:** A list of timezones to cycle through. If the value is empty, YASB will look up time zone info from the registry.
-- **icons:** A dictionary mapping clock hours to icons. Keys are in the format clock_HH where HH is the hour in 24h format (00–23). By default, `clock_13` to `clock_23` reuse the icons from `clock_01` to `clock_11`, unless explicitly defined.
+- **icons:** A dictionary mapping clock hours to icons. Keys are in the format clock_HH where HH is the hour in 24h format (00-23). By default, `clock_13` to `clock_23` reuse the icons from `clock_01` to `clock_11`, unless explicitly defined.
 - **alarm_icons:** A dictionary specifying icons for alarm states:
   - **enabled:** Icon shown when an alarm is enabled.
   - **disabled:** Icon shown when an alarm is disabled or in the active alarm popup.

@@ -1,4 +1,7 @@
 # GlazeWM Tiling Direction Widget
+
+Shows whether new windows in GlazeWM will open side-by-side (horizontally) or stacked (vertically). It updates in real-time and lets you use custom labels or directional arrows.
+
 | Option               | Type   | Default                 | Description                                     |
 |----------------------|--------|-------------------------|-------------------------------------------------|
 | `horizontal_label`   | string | `'\udb81\udce1'`        | The label used for horizontal tiling direction. |

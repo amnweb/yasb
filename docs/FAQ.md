@@ -3,10 +3,11 @@
 ## Installation Issues
 
 ### Q: Why aren't the icons showing up correctly?
-**A:** This usually happens because:
-- Required Nerd Fonts are not installed or other font defined in styles.css
-- Recommended [JetBrainsMono Nerd Font](https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.zip)
-- Restart YASB after font installation
+**A:** This usually means the status bar fonts are missing on your system. 
+- You can fix this easily by running the **Setup Wizard** (delete your config files or run `yasbc reset` to open it), which can download and install both **JetBrains Mono Nerd Font** and **Segoe Fluent Icons** automatically.
+- Alternatively, you can download and install them manually. The default setup recommends [JetBrains Mono Nerd Font](https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.zip). 
+- If you're on Windows 10, make sure you also install Segoe Fluent Icons from Microsoft.
+- Remember to restart YASB after installing any new fonts so it can detect them.
 
 ### Q: Why doesn't the blur effect work?
 **A:** Check these points:
@@ -33,7 +34,11 @@ Required files:
 - Backup your configs before updating
 
 ### Q: How to reset YASB settings?
-**A:** Delete the `config.yaml` and `styles.css` files in the config directory. YASB will create new default files on the next run.
+**A:** You can delete the `config.yaml` and `styles.css` files from your configuration directory, or simply open a terminal and run the CLI command:
+```bash
+yasbc reset
+```
+On the next launch, YASB will automatically start the interactive **Setup Wizard** to help you reinstall fonts and set up your layouts and window managers again.
 
 ### Q: How to change the bar position?
 **A:** Modify the `position` value in `config.yaml`:
@@ -41,7 +46,13 @@ Required files:
 - `bottom` - Bottom of the screen
 
 ### Q: How to check for updates?
-**A:** Run `yasbc update` in the terminal to check for updates.
+**A:** There are three ways to check for and apply updates in YASB:
+- **Automatic Background Checks:** If `update_check` is set to `true` in your `config.yaml`, YASB will periodically check for new versions in the background and show a Windows toast notification when an update is found.
+- **System Tray Context Menu:** When an update is available, a red badge will appear on the YASB tray icon. Right-click the YASB icon in your system tray and select the **Update Available** option to open the visual update installer.
+- **CLI Command:** You can manually run updates from your terminal by executing:
+  ```bash
+  yasbc update
+  ```
 
 ### Q: How to change the bar size?
 **A:** Adjust the bar `width` and `height` value in `config.yaml` to change the bar size.
@@ -51,6 +62,11 @@ Required files:
 - **Enable Debug Mode:** Set `debug: true` in your `config.yaml` to enable verbose logging. This is especially helpful for troubleshooting widget or application errors.
 - **View Logs via CLI:** Run `yasbc log` in your terminal to stream real-time logs.
 - **View Log File:** Check the `yasb.log` file located in your config directory (default: `C:/Users/{username}/.config/yasb/`).
+
+### Q: How do I make YASB start automatically when Windows boots?
+**A:** You can set YASB to run on startup in two ways:
+- **System Tray Menu:** Right-click the YASB icon in your system tray (bottom-right of your screen) and toggle **Enable Autostart**.
+- **CLI Commands:** Open a terminal and run `yasbc enable-autostart`. If you experience delayed startups or need it to run with admin rights, you can register it as a Windows Scheduled Task instead by running `yasbc enable-autostart --task`.
 
 
 ## Widget Issues

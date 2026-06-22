@@ -1,5 +1,7 @@
 # Applications Widget Options
 
+A simple launcher that puts shortcut buttons for your favorite apps and tools right on the bar. You can launch any command or program with a click, set up custom icons (using text symbols or local images), and customize the hover tooltips.
+
 | Option     | Type   | Default | Description                                                                 |
 |------------|--------|---------|-----------------------------------------------------------------------------|
 | `label`   | string | {data}    | The label for the applications widget.                                      |

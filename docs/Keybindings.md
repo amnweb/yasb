@@ -15,7 +15,7 @@ YASB supports global keyboard shortcuts (hotkeys) to trigger widget actions. Key
 Add a `keybindings` list to any widget's options. Each keybinding requires:
 - `keys`: The key combination (e.g., `"win+c"`, `"ctrl+shift+f1"`)
 - `action`: The callback action to trigger (e.g., `"toggle_calendar"`, `"toggle_label"`)
-- `screen` (optional): `"active"`, `"cursor"`, or `"primary"` to specify which screen to target if multiple are present (defaults to `"active"` — the focused window's screen)
+- `screen` (optional): `"active"`, `"cursor"`, or `"primary"` to specify which screen to target if multiple are present (defaults to `"active"` - the focused window's screen)
 
 ### Basic Example
 

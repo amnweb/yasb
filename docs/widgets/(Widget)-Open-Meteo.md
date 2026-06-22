@@ -1,5 +1,7 @@
 # Open-Meteo Weather Widget Options
 
+Displays your local weather, temperature, and wind speed. It features a built-in search to easily find your location and opens an interactive weather card popup showing a 7-day forecast, UV index, rain probability, and humidity.
+
 | Option             | Type    | Default                                                                            | Description                                                                                     |
 | ------------------ | ------- | ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
 | `label`            | string  | `'{icon}'`                                                                         | The format string for the weather label. You can use placeholders like `{temp}`, `{icon}`, etc. |
@@ -14,7 +16,7 @@
 | `callbacks`        | dict    | `{ 'on_left': 'do_nothing', 'on_middle': 'do_nothing', 'on_right': 'do_nothing' }` | Callbacks for mouse events on the weather widget.                                               |
 | `weather_card`     | dict    | [See below](#advanced-configuration)                                               | Configuration for the weather card popup display.                                               |
 
-> **Note**: This widget uses the free [Open-Meteo API](https://open-meteo.com/) — **no API key required**. Location is set through the built-in geocoding search when you first open the weather card.
+> **Note**: This widget uses the free [Open-Meteo API](https://open-meteo.com/) - **no API key required**. Location is set through the built-in geocoding search when you first open the weather card.
 
 ## Label Placeholders
 
@@ -236,7 +238,7 @@ To change the location, click on the **location name / current temperature** dis
 The weather card shows:
 
 - **Current conditions**: Location, temperature, feels-like, humidity, pressure, cloud cover, wind, precipitation, UV index
-- **Forecast row**: Day name, weather icon, min/max temperature for each day (1–14 days, controlled by `forecast_days`)
+- **Forecast row**: Day name, weather icon, min/max temperature for each day (1-14 days, controlled by `forecast_days`)
 - **Hourly chart** (if `show_hourly_forecast` is enabled): Temperature curve, rain/snow toggle, weather icons, wind speed
 - Clicking a day in the forecast row switches the hourly chart to that day's data
 

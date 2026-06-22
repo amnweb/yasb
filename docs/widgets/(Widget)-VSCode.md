@@ -1,5 +1,7 @@
 # Visual Studio Code Widget
 
+Shows a list of your recently opened projects in Visual Studio Code. It opens a clean popup list where you can quickly launch any of your recent folders or files in VS Code with a single click.
+
 | Option           | Type     | Default                        | Description                                                                 |
 |------------------|----------|--------------------------------|-----------------------------------------------------------------------------|
 | `label`             | string  | `'<span>\udb82\ude1e</span>'` | The format string for the widget. |

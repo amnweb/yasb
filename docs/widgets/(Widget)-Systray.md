@@ -1,4 +1,7 @@
 # Systray Widget
+
+Puts your system tray icons directly in the status bar. You can pin important icons to keep them visible, collapse unpinned icons into a clean popup grid, set custom icon sizes, and hide specific apps you don't need to see.
+
 | Option                      | Type      | Default       | Description                                                                                                                   |
 | --------------------------- | --------- | ------------- | ----------------------------------------------------------------------------------------------------------------------------- |
 | `class_name`                | string    | `'systray'`   | The class name for the base widget.                                                                                           |
@@ -96,7 +99,7 @@ The systray hook is a more reliable and performant way to monitor systray icons.
 - **show_unpinned:** Whether to show unpinned container on startup.
 - **show_unpinned_button:** Whether to show the 'collapse unpinned icons' button.
 - **show_in_popup:** When enabled, unpinned icons are shown in a popup grid (like Windows system tray overflow) instead of inline. Clicking the expand/collapse button opens the popup. Pinned icons remain in the bar.
-- **icons_per_row:** Number of columns in the popup icon grid. Only used when `show_in_popup` is true. Can be 1–12.
+- **icons_per_row:** Number of columns in the popup icon grid. Only used when `show_in_popup` is true. Can be 1-12.
 - **popup:** Popup window appearance settings. Only used when `show_in_popup` is true. See Popup Options table above.
 - **show_battery:** Whether to show battery icon (from the original systray).
 - **show_volume:** Whether to show volume icon (from the original systray).

@@ -1,4 +1,7 @@
 # Komorebi Workspaces Widget
+
+Displays your Komorebi workspaces with clear indicators for active and populated states. You can switch workspaces by clicking or scrolling, toggle between tiling and floating layers, and see running app icons directly on the workspace buttons.
+
 | Option                     | Type    | Default                  | Description                                                                 |
 |----------------------------|---------|--------------------------|-----------------------------------------------------------------------------|
 | `label_offline`          | string  | `'Komorebi Offline'`     | The label to display when Komorebi is offline.                              |

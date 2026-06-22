@@ -10,6 +10,7 @@
 | `min_bar_height` | integer | 0 | The minimum height of bars in pixels |
 | `bars_number` | integer | 10 | The number of bars (0-512). 0 sets it to auto |
 | `output_bit_format` | string | "16bit" | Binary bit format, can be '8bit' (0-255) or '16bit' (0-65530) |
+| `orientation` | string | `"bottom"` | Visual orientation of the bar. Can be `"top"` or `"bottom"`. |
 | `bar_spacing` | integer | 1 | Space between bars |
 | `bar_width` | integer | 3 | Bars' width in number of characters |
 | `sleep_timer` | integer | 0 | Seconds with no input before cava goes to sleep mode. 0 to disable |
@@ -63,6 +64,7 @@
 - **min_bar_height**: The minimum height of bars in pixels.
 - **bars_number**: The number of bars to display. Can be between 0 and 512. 0 sets it to auto.
 - **output_bit_format**: Binary bit format, can be '8bit' (0-255) or '16bit' (0-65530).
+- **orientation**: The visual orientation of the bar. Can be `'top'` (cava bars grow downwards) or `'bottom'` (cava bars grow upwards). Default is `'bottom'`.
 - **bar_spacing**: Space between bars in number of characters.
 - **bar_width**: Bars' width in number of characters.
 - **sleep_timer**: Seconds with no input before cava goes to sleep mode. 0 to disable.

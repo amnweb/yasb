@@ -1,5 +1,7 @@
 # Custom Widget Configuration
 
+A blank canvas for whatever data you want to put on your bar. You give it a command or script to run, and it displays the output - perfect for showing your IP address, GPU temperature, stock prices, or anything else you can fetch from a terminal command. Works with plain text or JSON.
+
 | Option          | Type    | Default                                                                 | Description                                                                 |
 |-----------------|---------|-------------------------------------------------------------------------|-----------------------------------------------------------------------------|
 | `label`         | string  | `"{data}"`                                | The format string for data |
@@ -9,7 +11,7 @@
 | `tooltip`       | boolean | `false`                                                                | Whether to show the tooltip on hover. |
 | `tooltip_label` | string  | `None`                                                                 | Custom format string for the tooltip. If not specified, shows raw data. |
 | `class_name`    | string  | `"custom-widget"`                                                      | The CSS class name for the widget. |
-| `exec_options`  | dict    | `{'run_cmd': None, 'run_interval': 120000, 'return_format': 'json', 'hide_empty': false, 'use_shell': true, 'encoding': None}` | Execution options for custom widget. |
+| `exec_options`  | dict    | `{'run_cmd': None, 'run_once': false, 'run_interval': 120000, 'return_format': 'json', 'hide_empty': false, 'use_shell': true, 'encoding': None}` | Execution options for custom widget. |
 | `callbacks`     | dict    | `{'on_left': 'toggle_label', 'on_middle': 'do_nothing', 'on_right': 'do_nothing'}` | Callbacks for mouse events. |
 
 ## Example Configuration to get IP Address
@@ -75,7 +77,14 @@ nvidia_temp:
 - **tooltip**: Whether to show the tooltip on hover. Default is `false`.
 - **tooltip_label**: Custom format string for the tooltip. Use `{data}` to reference the command output data. If not specified, shows the raw data representation (JSON for dict, string for other types).
 - **class_name**: The CSS class name for the widget.
-- **exec_options**: A dictionary specifying the execution options. The keys are `run_cmd` command to run, `run_interval` (in milliseconds), `return_format` can be `json` or `string`, `hide_empty` (boolean) hide widget if output is empty, `use_shell` use shell to run command, `encoding` encoding for the command output, can be utf-8, cp1252, etc.
+- **exec_options**: A dictionary specifying the execution options. The keys are:
+  - **run_cmd**: The command or executable path to run. Default is `None`.
+  - **run_once**: (boolean) If set to `true`, the command runs only once on startup and the repeat interval timer is disabled. Default is `false`.
+  - **run_interval**: The repeat execution interval in milliseconds. Default is `120000` (2 minutes).
+  - **return_format**: The format expected from the command output, either `"json"` or `"string"`. Default is `"json"`.
+  - **hide_empty**: (boolean) If true, the widget hides itself when the output is empty or parsing fails. Default is `false`.
+  - **use_shell**: (boolean) Whether to run the command inside a system shell. Default is `true`.
+  - **encoding**: (string) Custom character encoding to decode the output (e.g., `utf-8`, `cp1252`). Default is `None`.
 - **callbacks**: A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions.
 
 ## Example Style

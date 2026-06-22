@@ -1,5 +1,7 @@
 # Active Window Widget Options
 
+Shows the title of the window you are currently using right in your status bar. You can format the text however you like, switch between different label styles, automatically hide titles for specific apps, rewrite text patterns using rules, and even display the app's icon.
+
 | Option              | Type    | Default                                                                 | Description                                                                 |
 |---------------------|---------|-------------------------------------------------------------------------|-----------------------------------------------------------------------------|
 | `label`             | string  | `"{win[title]}"`                                                        | The label format for the active window.                                     |

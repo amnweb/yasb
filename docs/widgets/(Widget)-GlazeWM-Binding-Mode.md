@@ -1,5 +1,7 @@
 # GlazeWM Binding Mode Widget
 
+Displays the active shortcut binding mode in GlazeWM (like resize or pause modes). It lets you cycle through active modes or disable them with simple click actions, customize the mode icons, and auto-hides when no binding mode is active.
+
 | Option           | Type     | Default                        | Description                                                                 |
 |------------------|----------|--------------------------------|-----------------------------------------------------------------------------|
 | `label`             | string  | `'<span>{icon}</span> {binding_mode}'` | The format string for the binding mode. You can use a placeholder `{binding_mode}` to dynamically insert active binding_mode. |

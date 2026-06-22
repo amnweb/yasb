@@ -1,5 +1,7 @@
 # CPU Widget Configuration
 
+Keeps track of your processor's speed and usage in real-time. It supports per-core usage histograms, custom warning colors, and circular progress meters. You can click it to open a popup menu that shows detailed stats and performance graphs over time.
+
 | Option                | Type    | Default                                                                 | Description                                                                 |
 |-----------------------|---------|-------------------------------------------------------------------------|-----------------------------------------------------------------------------|
 | `label`               | string  | `"\uf200 {info[histograms][cpu_percent]}"`                              | The primary label format.                                                   |

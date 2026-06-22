@@ -1,4 +1,7 @@
 # Taskbar Widget Configuration
+
+Puts your running apps on the status bar, working just like a standard taskbar. You can pin your favorite apps, drag and drop buttons to reorder them, hover to see window preview thumbnails, and right-click to minimize, focus, or close windows.
+
 | Option            | Type    | Default                                                                 | Description                                                                 |
 |-------------------|---------|-------------------------------------------------------------------------|-----------------------------------------------------------------------------|
 | `icon_size`           | integer  | 16                        | The size of icons |

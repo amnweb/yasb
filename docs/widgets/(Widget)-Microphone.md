@@ -1,5 +1,7 @@
 # Microphone Widget Configuration
 
+Shows your microphone volume and mute status. You can adjust the recording level by scrolling your mouse wheel, click to mute/unmute, and click to open a popup where you can choose input devices and adjust levels.
+
 | Option            | Type    | Default                                                                 | Description                                                                 |
 |-------------------|---------|-------------------------------------------------------------------------|-----------------------------------------------------------------------------|
 | `label`           | string  | `'{icon}'`                        | The format string for the microphone widget. Displays icon or level. |

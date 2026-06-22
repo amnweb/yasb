@@ -153,7 +153,7 @@ from core.ui.components.toggle_switch import ToggleSwitch, ToggleSwitchWithLabel
 
 **Signals:**
 
-- `toggled(bool)` — Emitted when the switch state changes.
+- `toggled(bool)` - Emitted when the switch state changes.
 
 **Example:**
 
@@ -189,8 +189,8 @@ from core.ui.components.card import Card
 
 **Methods:**
 
-- `set_selected(selected: bool)` — Toggle the accent selection state.
-- `is_selected() -> bool` — Check if currently selected.
+- `set_selected(selected: bool)` - Toggle the accent selection state.
+- `is_selected() -> bool` - Check if currently selected.
 
 **Example:**
 
@@ -215,7 +215,7 @@ from core.ui.components.content_dialog import ContentDialog, ContentDialogButton
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `parent` | `QWidget` | — | Parent widget (dialog centers on this) |
+| `parent` | `QWidget` | - | Parent widget (dialog centers on this) |
 | `title` | `str` | `""` | Dialog title |
 | `content` | `str` | `""` | Body text |
 | `primary_button_text` | `str` | `""` | Primary action button (hidden if empty) |
@@ -225,10 +225,10 @@ from core.ui.components.content_dialog import ContentDialog, ContentDialogButton
 
 **Signals:**
 
-- `primary_button_click` — Primary button clicked.
-- `secondary_button_click` — Secondary button clicked.
-- `close_button_click` — Close button clicked.
-- `closed(ContentDialogResult)` — Dialog closed with result (`PRIMARY`, `SECONDARY`, or `NONE`).
+- `primary_button_click` - Primary button clicked.
+- `secondary_button_click` - Secondary button clicked.
+- `close_button_click` - Close button clicked.
+- `closed(ContentDialogResult)` - Dialog closed with result (`PRIMARY`, `SECONDARY`, or `NONE`).
 
 **Example:**
 
@@ -249,7 +249,7 @@ dlg.show_dialog()
 
 ### InputDialog
 
-Standalone input dialog that appears at the cursor position. Uses DWM blur and rounded corners. Does not require a parent widget — ideal for bar widgets and context menu actions.
+Standalone input dialog that appears at the cursor position. Uses DWM blur and rounded corners. Does not require a parent widget - ideal for bar widgets and context menu actions.
 
 ```python
 from core.ui.components.input_dialog import InputDialog
@@ -268,8 +268,8 @@ from core.ui.components.input_dialog import InputDialog
 
 **Signals:**
 
-- `accepted(str)` — User pressed the primary button (emits trimmed text).
-- `rejected()` — User cancelled or pressed Escape.
+- `accepted(str)` - User pressed the primary button (emits trimmed text).
+- `rejected()` - User cancelled or pressed Escape.
 
 **Example:**
 
@@ -304,7 +304,7 @@ from core.ui.components.dropdown import DropDown
 
 **Signals:**
 
-- `currentChanged(str)` — Emitted when selection changes (provides the key).
+- `currentChanged(str)` - Emitted when selection changes (provides the key).
 
 **Example:**
 
@@ -339,7 +339,7 @@ from core.ui.components.slider import Slider
 
 **Signals:**
 
-- `valueChanged(int)` — Emitted when the value changes.
+- `valueChanged(int)` - Emitted when the value changes.
 
 **Example:**
 
@@ -406,7 +406,7 @@ from core.ui.components.indicator import StepIndicator
 
 **Methods:**
 
-- `set_current(index: int)` — Animate to a step (0-indexed).
+- `set_current(index: int)` - Animate to a step (0-indexed).
 
 **Example:**
 
@@ -469,7 +469,7 @@ loader.stop()
 
 ## Tips for Contributors
 
-- **Always use tokens** — never hardcode colors. Use `get_tokens()` to look up the current theme values.
-- **React to theme changes** — connect to `QApplication.instance().paletteChanged` and re-apply styles when the OS theme switches.
-- **Use `FONT_FAMILIES`** — import from `core.ui.theme` instead of hardcoding `"Segoe UI"`.
-- **Prefer existing components** — check if a component already exists before creating a new one. The system is designed to be reusable.
+- **Always use tokens** - never hardcode colors. Use `get_tokens()` to look up the current theme values.
+- **React to theme changes** - connect to `QApplication.instance().paletteChanged` and re-apply styles when the OS theme switches.
+- **Use `FONT_FAMILIES`** - import from `core.ui.theme` instead of hardcoding `"Segoe UI"`.
+- **Prefer existing components** - check if a component already exists before creating a new one. The system is designed to be reusable.

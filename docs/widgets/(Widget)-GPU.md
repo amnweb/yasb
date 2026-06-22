@@ -1,5 +1,6 @@
 # GPU Widget Configuration
 
+Keeps track of your graphics card's usage, memory, and temperature. You can display usage graphs, toggle between metric and imperial temperature units, set warning thresholds, and click it to open a detailed status popup.
 
 | Option                | Type    | Default                                                                 | Description                                                                 |
 |-----------------------|---------|-------------------------------------------------------------------------|-----------------------------------------------------------------------------|

@@ -1,5 +1,7 @@
 # Power Menu Widget
 
+Gives you quick buttons to shut down, restart, sleep, lock, or log out of your PC. You can display your user avatar, check your PC's uptime, and choose between a full-screen blurred overlay or a compact popup menu.
+
 | Option              | Type    | Default     | Description                                                                 |
 |---------------------|---------|-------------|-----------------------------------------------------------------------------|
 | `label`             | string  | `"power"`   | The label for the power menu widget.                                        |
@@ -13,6 +15,7 @@
 | `popup`             | dict    | see below   | Popup appearance/position options. Only used when `menu_style` is `"popup"`. |
 | `profile_image_size`| integer | `64`        | Profile avatar size in pixels. Must be between 16 and 256.                    |
 | `buttons`           | dict    | `{}`        | A dictionary defining the buttons and their properties.                     |
+| `callbacks`         | dict    | `{'on_left': 'toggle_power_menu', 'on_middle': 'do_nothing', 'on_right': 'do_nothing'}` | Callbacks for mouse events on the widget. |
 
 ### Popup Options (when `menu_style: "popup"`)
 
@@ -108,13 +111,16 @@ power_menu:
 - **popup:** Popup configuration (blur, round_corners, alignment, direction, offsets). Only used when `menu_style` is `"popup"`.
 - **profile_image_size:** Profile avatar size in pixels. Must be between 16 and 256.
 - **buttons:** A dictionary defining the buttons and their properties. Possible properties are: `lock`, `signout`, `sleep`, `shutdown`, `restart`, `hibernate`, `cancel`, `force_shutdown`, `force_restart`. Note: `cancel` button is not shown in popup mode since the popup auto-closes on outside click.
+- **callbacks**: A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions.
+  - Available callbacks: `"toggle_power_menu"`, `"do_nothing"`, or generic program launches using `"exec <command>"`.
 
-## Callbacks (Hotkey Only)
-This widget does not expose mouse callback configuration, but it does register a hotkey callback:
+## Callbacks & Keybindings
 
-| Callback | Description |
-|----------|-------------|
-| `toggle_power_menu` | Toggle the power menu overlay and popup window. |
+This widget supports both mouse callbacks (configured via the `callbacks` option) and keyboard shortcuts:
+
+| Callback / Action | Description |
+|-------------------|-------------|
+| `toggle_power_menu` | Toggle the power menu overlay or popup window. |
 
 ## Example keybinding:
 

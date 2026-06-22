@@ -1,4 +1,7 @@
 # GlazeWM Workspaces Widget
+
+Displays your GlazeWM workspaces so you can see which ones are active or have windows open. You can switch workspaces by scrolling, customize buttons for active/focused states, show app icons for running programs on the buttons, and see an offline status message if the window manager is closed.
+
 | Option                   | Type    | Default                                          | Description                                                                 |
 |--------------------------|---------|--------------------------------------------------|-----------------------------------------------------------------------------|
 | `offline_label`          | string  | `'GlazeWM Offline'`                              | The label to display when GlazeWM is offline.                               |
