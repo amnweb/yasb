@@ -1209,6 +1209,16 @@ class TaskbarWidget(BaseWidget):
         if proc is None:
             return False
 
+        if title in self.config.ignore_apps.titles:
+            return False
+        if window_data.get("class_name") in self.config.ignore_apps.classes:
+            return False
+        if proc in self.config.ignore_apps.processes:
+            return False
+
+        if self._strict_filtering and not window_data.get("can_minimize", True):
+            return False
+
         if self._show_only_visible and window_data.get("is_cloaked", False):
             return False
 

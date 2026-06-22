@@ -31,7 +31,8 @@ class WindowSwitcherProvider(BaseProvider):
     def __init__(self, config: dict | None = None):
         super().__init__(config)
         self.max_results = self.config.get("max_results", 50)
-        self._task_manager = get_shared_task_manager(strict_filtering=False)
+        self._task_manager = get_shared_task_manager()
+        self._task_manager._keep_cloaked_tasks = True
 
         self._icons_dir = os.path.join(tempfile.gettempdir(), "yasb_quick_launch_icons")
         os.makedirs(self._icons_dir, exist_ok=True)
