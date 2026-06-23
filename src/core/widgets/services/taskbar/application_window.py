@@ -1,5 +1,5 @@
 import ctypes
-import logging
+from ctypes import wintypes
 
 import win32api
 import win32con
@@ -8,8 +8,39 @@ import win32gui
 from core.utils.win32.bindings import DwmGetWindowAttribute, IsWindowEnabled
 from core.utils.win32.utils import get_process_info
 
-logger = logging.getLogger("application_window")
-logger.setLevel(logging.WARNING)
+
+class GUID(ctypes.Structure):
+    _fields_ = [
+        ("Data1", ctypes.c_ulong),
+        ("Data2", ctypes.c_ushort),
+        ("Data3", ctypes.c_ushort),
+        ("Data4", ctypes.c_ubyte * 8),
+    ]
+
+
+ole32 = ctypes.windll.ole32
+
+ole32.CoCreateInstance.argtypes = [
+    ctypes.POINTER(GUID),
+    ctypes.c_void_p,
+    ctypes.c_ulong,
+    ctypes.POINTER(GUID),
+    ctypes.POINTER(ctypes.c_void_p),
+]
+ole32.CoCreateInstance.restype = ctypes.c_long
+
+
+# CLSID_VirtualDesktopManager = {aa509086-5ca9-4c25-8f95-589d3c07b48a}
+CLSID_VirtualDesktopManager = GUID(
+    0xAA509086, 0x5CA9, 0x4C25, (ctypes.c_ubyte * 8)(0x8F, 0x95, 0x58, 0x9D, 0x3C, 0x07, 0xB4, 0x8A)
+)
+# IID_IVirtualDesktopManager = {a5cd92ff-29be-454c-8d04-d82879fb3f1b}
+IID_IVirtualDesktopManager = GUID(
+    0xA5CD92FF, 0x29BE, 0x454C, (ctypes.c_ubyte * 8)(0x8D, 0x04, 0xD8, 0x28, 0x79, 0xFB, 0x3F, 0x1B)
+)
+
+GetWindowDesktopId_Proto = ctypes.WINFUNCTYPE(ctypes.c_long, ctypes.c_void_p, wintypes.HWND, ctypes.POINTER(GUID))
+Release_Proto = ctypes.WINFUNCTYPE(ctypes.c_ulong, ctypes.c_void_p)
 
 
 class ApplicationWindow:
@@ -17,6 +48,9 @@ class ApplicationWindow:
     Represents a top-level window tracked by the taskbar.
     Holds identity (hwnd) and metadata used for filtering and UI state.
     """
+
+    _vdm_ptr = None
+    _vdm_get_id_func = None
 
     DEFAULT_IGNORED_PROCESSES = {"SearchHost.exe"}
 
@@ -183,6 +217,53 @@ class ApplicationWindow:
         except Exception:
             return False
 
+    def _is_ghost_uwp_app(self) -> bool:
+        """
+        Check if the UWP app is a pre-launched (background ghost).
+        Ghost apps are typically cloaked and NOT assigned to any Virtual Desktop.
+        Real apps on other desktops are cloaked, but ARE assigned to a Virtual Desktop.
+        Ghost apps are the ones that are slow, and Windows has to preload them, like Settings.
+        Note: If we find a real solution for filtering out these apps, we can remove this workaround.
+        """
+        if self.process_name != "ApplicationFrameHost.exe":
+            return False
+
+        if not self._is_cloaked():
+            return False
+
+        try:
+            # Initialize the COM object globally on the first call
+            if ApplicationWindow._vdm_ptr is None:
+                ptr = ctypes.c_void_p()
+                hr = ole32.CoCreateInstance(
+                    ctypes.byref(CLSID_VirtualDesktopManager),
+                    None,
+                    1,
+                    ctypes.byref(IID_IVirtualDesktopManager),
+                    ctypes.byref(ptr),
+                )
+                if hr != 0:
+                    return True
+
+                vtable = ctypes.cast(ptr, ctypes.POINTER(ctypes.POINTER(ctypes.c_void_p)))
+                get_id_addr = vtable[0][4]
+                ApplicationWindow._vdm_get_id_func = GetWindowDesktopId_Proto(get_id_addr)
+                ApplicationWindow._vdm_ptr = ptr
+
+            desktop_id = GUID()
+            hr = ApplicationWindow._vdm_get_id_func(
+                ApplicationWindow._vdm_ptr, int(self.hwnd), ctypes.byref(desktop_id)
+            )
+
+            # Binary check for empty GUID (Null Desktop ID)
+            if hr != 0 or bytes(desktop_id) == b"\x00" * 16:
+                return True
+
+            return False
+
+        except Exception:
+            return True
+
     def can_minimize(self) -> bool:
         """Return True if the window has a minimize box and is enabled."""
         try:
@@ -208,11 +289,6 @@ class ApplicationWindow:
             if not (self.title or "").strip():
                 return False
 
-            # Cloaked UWP windows and virtual desktop windows
-            # We let individual widgets handle this (e.g. taskbar uses `show_only_visible` config)
-            # if self._is_cloaked():
-            #     return False
-
             # Immersive shell windows should not appear
             if self._is_immersive_shell_window():
                 return False
@@ -224,6 +300,9 @@ class ApplicationWindow:
                 return False
 
             if self.class_name in self.DEFAULT_IGNORED_CLASSES:
+                return False
+
+            if self._is_ghost_uwp_app():
                 return False
 
             return True

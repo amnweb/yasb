@@ -472,7 +472,7 @@ class TaskbarWindowManager(QObject):
                     is_uwp = False
                     try:
                         cls = (app_window.class_name or "").strip()
-                        pname = (app_window._get_process_name() or "").strip()
+                        pname = (app_window.process_name or "").strip()
                         is_uwp = (
                             cls in ("Windows.UI.Core.CoreWindow", "ApplicationFrameWindow")
                             or pname == "ApplicationFrameHost.exe"
@@ -622,7 +622,7 @@ class TaskbarWindowManager(QObject):
                     # Keep UWP windows through transient transitions, let widgets filter them
                     try:
                         cls = (app_window.class_name or "").strip()
-                        pname = (app_window._get_process_name() or "").strip()
+                        pname = (app_window.process_name or "").strip()
                         is_uwp = (
                             cls in ("Windows.UI.Core.CoreWindow", "ApplicationFrameWindow")
                             or pname == "ApplicationFrameHost.exe"
