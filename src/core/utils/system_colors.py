@@ -27,7 +27,10 @@ class SystemColorsService:
     def __init__(self):
         self._settings = viewmanagement.UISettings()
         self._token = None
-        self._color_types = [
+        self._css_path = os.path.join(DEFAULT_CONFIG_DIRECTORY, "yasb_colors.css")
+
+        self._colors_to_fetch = []
+        color_names = [
             "ACCENT",
             "ACCENT_DARK1",
             "ACCENT_DARK2",
@@ -38,6 +41,14 @@ class SystemColorsService:
             "BACKGROUND",
             "FOREGROUND",
         ]
+
+        for name in color_names:
+            try:
+                enum_val = getattr(viewmanagement.UIColorType, name)
+                var_name = f"--yasb-{name.lower().replace('_', '-')}"
+                self._colors_to_fetch.append((name, enum_val, var_name))
+            except AttributeError:
+                logger.warning("Color type %s is not supported by this OS", name)
 
         # Ensure the CSS file is written on startup
         self._generate_css()
@@ -68,22 +79,18 @@ class SystemColorsService:
                 ":root {",
             ]
 
-            for c in self._color_types:
+            for name, enum_val, var_name in self._colors_to_fetch:
                 try:
-                    val = getattr(viewmanagement.UIColorType, c)
-                    color = self._settings.get_color_value(val)
-                    var_name = f"--yasb-{c.lower().replace('_', '-')}"
+                    color = self._settings.get_color_value(enum_val)
                     css_lines.append(f"    {var_name}: rgb({color.r}, {color.g}, {color.b});")
                     css_lines.append(f"    {var_name}-rgb: {color.r}, {color.g}, {color.b};")
                 except Exception as e:
-                    logger.warning("Failed to retrieve system color %s: %s", c, e)
+                    logger.warning("Failed to retrieve system color %s: %s", name, e)
 
             css_lines.append("}")
 
-            output_path = os.path.join(DEFAULT_CONFIG_DIRECTORY, "yasb_colors.css")
-            with open(output_path, "w", encoding="utf-8") as f:
+            with open(self._css_path, "w", encoding="utf-8") as f:
                 f.write("\n".join(css_lines) + "\n")
 
-            logger.info("Updated system colors in %s", output_path)
         except Exception as e:
             logger.error("Failed to generate system colors CSS: %s", e)
