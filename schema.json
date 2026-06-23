@@ -3684,6 +3684,116 @@
       "title": "DiskThresholdsConfig",
       "type": "object"
     },
+    "DndCallbacksConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "on_left": {
+          "default": "toggle_status",
+          "title": "On Left",
+          "type": "string"
+        },
+        "on_middle": {
+          "default": "do_nothing",
+          "title": "On Middle",
+          "type": "string"
+        },
+        "on_right": {
+          "default": "cycle_status",
+          "title": "On Right",
+          "type": "string"
+        }
+      },
+      "title": "DndCallbacksConfig",
+      "type": "object"
+    },
+    "DndConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "label": {
+          "default": "{icon}",
+          "title": "Label",
+          "type": "string"
+        },
+        "label_alt": {
+          "default": "{icon} {status}",
+          "title": "Label Alt",
+          "type": "string"
+        },
+        "class_name": {
+          "default": "",
+          "title": "Class Name",
+          "type": "string"
+        },
+        "tooltip": {
+          "default": true,
+          "title": "Tooltip",
+          "type": "boolean"
+        },
+        "default_active_mode": {
+          "default": "priority",
+          "title": "Default Active Mode",
+          "type": "string"
+        },
+        "icons": {
+          "$ref": "#/$defs/DndIconsConfig",
+          "default": {
+            "disabled": "\uf0f3",
+            "priority": "\uf186",
+            "alarms": "\uf1f6"
+          }
+        },
+        "callbacks": {
+          "$ref": "#/$defs/DndCallbacksConfig",
+          "default": {
+            "on_left": "toggle_status",
+            "on_middle": "do_nothing",
+            "on_right": "cycle_status"
+          }
+        }
+      },
+      "title": "DndConfig",
+      "type": "object"
+    },
+    "DndEntry": {
+      "properties": {
+        "type": {
+          "const": "yasb.dnd.DndWidget",
+          "title": "Type",
+          "type": "string"
+        },
+        "options": {
+          "$ref": "#/$defs/DndConfig"
+        }
+      },
+      "required": [
+        "type",
+        "options"
+      ],
+      "title": "DndEntry",
+      "type": "object"
+    },
+    "DndIconsConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "disabled": {
+          "default": "\uf0f3",
+          "title": "Disabled",
+          "type": "string"
+        },
+        "priority": {
+          "default": "\uf186",
+          "title": "Priority",
+          "type": "string"
+        },
+        "alarms": {
+          "default": "\uf1f6",
+          "title": "Alarms",
+          "type": "string"
+        }
+      },
+      "title": "DndIconsConfig",
+      "type": "object"
+    },
     "EmojiProviderConfig": {
       "additionalProperties": false,
       "properties": {
@@ -12499,6 +12609,136 @@
       "title": "WindowStyleConfig",
       "type": "object"
     },
+    "WindowSwitcherCallbacksConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "on_left": {
+          "default": "toggle_window_switcher",
+          "title": "On Left",
+          "type": "string"
+        },
+        "on_middle": {
+          "default": "do_nothing",
+          "title": "On Middle",
+          "type": "string"
+        },
+        "on_right": {
+          "default": "do_nothing",
+          "title": "On Right",
+          "type": "string"
+        }
+      },
+      "title": "WindowSwitcherCallbacksConfig",
+      "type": "object"
+    },
+    "WindowSwitcherConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "label": {
+          "default": "\uf2d2",
+          "title": "Label",
+          "type": "string"
+        },
+        "label_alt": {
+          "default": "",
+          "title": "Label Alt",
+          "type": "string"
+        },
+        "icon_size": {
+          "default": 48,
+          "title": "Icon Size",
+          "type": "integer"
+        },
+        "max_visible_apps": {
+          "default": 5,
+          "title": "Max Visible Apps",
+          "type": "integer"
+        },
+        "show_title": {
+          "default": true,
+          "title": "Show Title",
+          "type": "boolean"
+        },
+        "popup": {
+          "$ref": "#/$defs/WindowSwitcherPopupConfig",
+          "default": {
+            "blur": true,
+            "round_corners": true,
+            "round_corners_type": "normal",
+            "border_color": "System",
+            "dark_mode": true
+          }
+        },
+        "callbacks": {
+          "$ref": "#/$defs/WindowSwitcherCallbacksConfig",
+          "default": {
+            "on_left": "toggle_window_switcher",
+            "on_middle": "do_nothing",
+            "on_right": "do_nothing"
+          }
+        },
+        "keybindings": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/KeybindingConfig"
+          },
+          "title": "Keybindings",
+          "type": "array"
+        }
+      },
+      "title": "WindowSwitcherConfig",
+      "type": "object"
+    },
+    "WindowSwitcherEntry": {
+      "properties": {
+        "type": {
+          "const": "yasb.window_switcher.WindowSwitcherWidget",
+          "title": "Type",
+          "type": "string"
+        },
+        "options": {
+          "$ref": "#/$defs/WindowSwitcherConfig"
+        }
+      },
+      "required": [
+        "type",
+        "options"
+      ],
+      "title": "WindowSwitcherEntry",
+      "type": "object"
+    },
+    "WindowSwitcherPopupConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "blur": {
+          "default": true,
+          "title": "Blur",
+          "type": "boolean"
+        },
+        "round_corners": {
+          "default": true,
+          "title": "Round Corners",
+          "type": "boolean"
+        },
+        "round_corners_type": {
+          "default": "normal",
+          "title": "Round Corners Type",
+          "type": "string"
+        },
+        "border_color": {
+          "default": "System",
+          "title": "Border Color",
+          "type": "string"
+        },
+        "dark_mode": {
+          "default": true,
+          "title": "Dark Mode",
+          "type": "boolean"
+        }
+      },
+      "title": "WindowSwitcherPopupConfig",
+      "type": "object"
+    },
     "WindowSwitcherProviderConfig": {
       "additionalProperties": false,
       "properties": {
@@ -14211,6 +14451,11 @@
       "title": "Show Systray",
       "type": "boolean"
     },
+    "system_colors": {
+      "default": false,
+      "title": "System Colors",
+      "type": "boolean"
+    },
     "tooltip": {
       "$ref": "#/$defs/TooltipOptions",
       "default": {
@@ -14373,6 +14618,9 @@
             "$ref": "#/$defs/DiskEntry"
           },
           {
+            "$ref": "#/$defs/DndEntry"
+          },
+          {
             "$ref": "#/$defs/GithubEntry"
           },
           {
@@ -14473,6 +14721,9 @@
           },
           {
             "$ref": "#/$defs/WindowControlsEntry"
+          },
+          {
+            "$ref": "#/$defs/WindowSwitcherEntry"
           }
         ]
       },
