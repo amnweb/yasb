@@ -35,6 +35,7 @@ class YasbConfig(CustomBaseModel):
     debug: bool = False
     update_check: bool = True
     show_systray: bool = True
+    system_colors: bool = False
     tooltip: TooltipOptions = TooltipOptions()
     komorebi: KomorebiConfig = KomorebiConfig()
     glazewm: GlazeWMConfig = GlazeWMConfig()

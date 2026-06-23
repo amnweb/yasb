@@ -326,6 +326,38 @@ Example of tooltip styling:
     color: #a6adc8;
 }
 ```
+
+## System Colors
+YASB can automatically fetch your Windows accent colors and provide them as CSS variables. To use this, you must first enable `system_colors: true` in your `config.yaml`.
+
+Once enabled, YASB will generate a `yasb_colors.css` file in your configuration directory. You can import this file at the top of your `styles.css` to use the dynamic variables:
+
+```css
+@import "yasb_colors.css";
+
+.yasb-bar {
+    /* Solid color */
+    background-color: var(--yasb-background);
+}
+
+.clock-widget {
+    /* Mix color with 50% opacity using the -rgb variable variant */
+    border-color: rgba(var(--yasb-accent-rgb), 0.5);
+    color: var(--yasb-accent-light2);
+}
+```
+
+Available color variables (each provides both a `var(--name)` and a `var(--name-rgb)` variant):
+- `--yasb-accent`
+- `--yasb-accent-dark1`
+- `--yasb-accent-dark2`
+- `--yasb-accent-dark3`
+- `--yasb-accent-light1`
+- `--yasb-accent-light2`
+- `--yasb-accent-light3`
+- `--yasb-background`
+- `--yasb-foreground`
+
 ## Icons
 There is a nice app at [Character Map UWP](https://github.com/character-map-uwp/Character-Map-UWP) where you can select a font, click on icons, and copy the UTF-16 value. Alternatively, you can visit the Nerd Fonts site and do the same under the icons section.
 
