@@ -136,7 +136,7 @@ class CustomWidget(BaseWidget):
 
     def _update_tooltip(self):
         """Update the tooltip text based on configuration and data."""
-        if not self.config.tooltip or not self._exec_data:
+        if not self.config.tooltip:
             return
 
         tooltip_text = None
@@ -144,7 +144,11 @@ class CustomWidget(BaseWidget):
         # If custom tooltip_label provided, use it with formatting
         if self.config.tooltip_label:
             try:
-                tooltip_text = self.config.tooltip_label.format(data=self._exec_data)
+                if self.config.exec_options.run_cmd:
+                    tooltip_text = self.config.tooltip_label.format(data=self._exec_data)
+                else:
+                    tooltip_text = self.config.tooltip_label
+
             except KeyError, AttributeError, TypeError, IndexError:
                 # If formatting fails, fall back to showing raw data
                 tooltip_text = str(self._exec_data)
