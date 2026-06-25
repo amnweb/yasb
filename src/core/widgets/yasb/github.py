@@ -388,10 +388,12 @@ class GithubWidget(BaseWidget):
         icon_label.setProperty("class", " ".join(dict.fromkeys(icon_classes)))
 
         title_label = QLabel(title)
+        title_label.setTextFormat(Qt.TextFormat.PlainText)
         title_label.setProperty("class", "title")
         title_label.setContentsMargins(0, 0, 0, 0)
 
         description_label = QLabel(repo_description)
+        description_label.setTextFormat(Qt.TextFormat.PlainText)
         description_label.setProperty("class", "description")
         description_label.setContentsMargins(0, 0, 0, 0)
 
