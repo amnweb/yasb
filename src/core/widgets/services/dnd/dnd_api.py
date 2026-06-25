@@ -2,6 +2,7 @@ import ctypes
 import logging
 from ctypes import POINTER, byref, c_void_p, wintypes
 
+from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QApplication
 
 from core.events.service import EventService
@@ -202,7 +203,9 @@ class DndService:
                 logging.info("DndService initialized...")
                 # Ensure cleanup is run when YASB exits
                 if QApplication.instance():
-                    QApplication.instance().aboutToQuit.connect(cls.shutdown_wnf_listener)
+                    QApplication.instance().aboutToQuit.connect(
+                        cls.shutdown_wnf_listener, Qt.ConnectionType.UniqueConnection
+                    )
             else:
                 logging.warning("DndService failed with status: 0x%08X", status & 0xFFFFFFFF)
         except Exception:
