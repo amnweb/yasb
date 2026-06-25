@@ -9,7 +9,7 @@ Displays the name of the current Windows power plan and lets you switch between 
 | `label`             | string | `"\uf0e7 {active_plan}"`                       | Main label template. Use `{active_plan}` to insert the active plan name.               |
 | `label_alt`         | string | `"\uf0e7 Power plan"`                              | Alternate label (e.g. an icon) shown when toggled via `toggle_label`.                 |
 | `class_name`       | string | `""`                                                         | Additional CSS class name for the widget.                                              |
-| `update_interval`   | int    | `5000`                                                          | Refresh interval in milliseconds. Set to `0` to disable periodic updates.              |
+| `class_map`         | dict   | `{}`                                                         | Optional dictionary mapping localized/custom plan names or GUIDs to pure-ASCII CSS class names. |
 | `menu`              | dict   | `{}`                                                         | Popup menu options (see **Menu Options** below).                                      |
 | `callbacks`         | dict   |  `{'on_left': 'toggle_menu', 'on_middle': 'do_nothing', 'on_right': 'toggle_label'}` | Click handlers: `on_left`, `on_middle`, `on_right`.                                    |
 
@@ -34,7 +34,6 @@ power_plan:
   options:
     label: "<span>\uf0e7</span> {active_plan}"
     label_alt: "<span>\uf0e7</span> Power Plan {active_plan}"
-    update_interval: 5000
     menu:
       blur: true
       round_corners: true
@@ -54,6 +53,7 @@ power_plan:
 - **label**: Main label template. Use `{active_plan}` to insert the active plan name.
 - **label_alt**: Alternate label (e.g. an icon) shown when toggled via `toggle_label`.
 - **class_name**: Additional CSS class name for the widget. This allows for custom styling.
+- **class_map**: Optional dictionary mapping localized or custom power plan names (or GUIDs) to custom pure-ASCII CSS class names. This is extremely useful on localized Windows versions or when styling custom plans.
 - **update_interval**: Refresh interval in milliseconds. Set to `0` to disable periodic updates.
 - **menu**: Popup menu options.
 - **callbacks**: Click handlers for left, middle, and right mouse buttons.
@@ -74,12 +74,29 @@ power_plan:
 .power-plan-menu .menu-content {}
 .power-plan-menu .menu-content .button {}
 ```
+
 > [!NOTE]  
-> To style label and icon with different colors for each power plan, you can follow the plan name convention:
-> - `.balanced` for Balanced plan
-> - `.high-performance` for High Performance plan
-> - `.power-saver` for Power Saver plan
-> - `.my-custom-plan` for My Custom plan
+> To style the label and icon with different colors for each power plan, the widget resolves the active plan's CSS class using the plan's name (with spaces replaced by hyphens and lowercased).
+> 
+> On standard English Windows installations, the default power plans naturally resolve to these predefined classes:
+> - `.balanced` (for Balanced)
+> - `.high-performance` (for High Performance)
+> - `.power-saver` (for Power Saver)
+> - `.ultimate-performance` (for Ultimate Performance, a premium/hidden plan)
+> 
+> If you are using a localized version of Windows (e.g., Polish, where the balanced plan is named *Zrównoważony*) or want to customize your CSS classes, you can use the `class_map` option to map them back to these standard predefined classes.
+> 
+> **Example Configuration for Localized Windows:**
+> ```yaml
+> power_plan:
+>   type: "yasb.power_plan.PowerPlanWidget"
+>   options:
+>     class_map:
+>       "Zrównoważony": "pl-balanced"
+>       "Wysoka wydajność": "pl-performance"
+>       "Oszczędzanie energii": "pl-saver"
+>       "Najwyższa wydajność": "pl-ultimate"
+> ```
 
 
 ## Example Style

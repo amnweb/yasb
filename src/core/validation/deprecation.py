@@ -110,6 +110,9 @@ SCOPED_DEPRECATED_FIELDS: dict[str, dict[str, str]] = {
     "AnimationConfig": {
         "type": "Animation type is no longer supported in TaskbarWidget, remove it from your config.",
     },
+    "PowerPlanConfig": {
+        "update_interval": "Power plan changes are now detected via Windows events. Remove 'update_interval' from your config.",
+    },
 }
 
 SCOPED_RENAMED_FIELDS: dict[str, dict[str, tuple[str, str]]] = {

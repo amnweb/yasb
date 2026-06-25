@@ -1,7 +1,5 @@
 from typing import Literal
 
-from pydantic import Field
-
 from core.validation.widgets.base_model import (
     CallbacksConfig,
     CustomBaseModel,
@@ -29,7 +27,7 @@ class PowerPlanConfig(CustomBaseModel):
     label: str = "\uf0e7 {active_plan}"
     label_alt: str = "\uf0e7 Power Plan"
     class_name: str = ""
-    update_interval: int = Field(default=5000, ge=0)
+    class_map: dict[str, str] = {}
     menu: PowerPlanMenuConfig = PowerPlanMenuConfig()
     callbacks: PowerPlanCallbacksConfig = PowerPlanCallbacksConfig()
     keybindings: list[KeybindingConfig] = []
