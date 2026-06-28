@@ -300,6 +300,7 @@ jobs:
       if: github.event_name == 'workflow_dispatch'
       uses: geekyeggo/delete-artifact@v6
       with:
+        failOnError: false
         name: |
           unsigned-*
           signed-*
