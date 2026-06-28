@@ -165,8 +165,8 @@ class AboutDialog(ViewBase, QDialog):
                 return f"{GITHUB_URL}/pull/{pr_number}"
             return GITHUB_URL
 
-        if RELEASE_CHANNEL.startswith("dev-"):
-            return f"{GITHUB_URL}/releases/tag/dev"
+        if RELEASE_CHANNEL.startswith("preview-"):
+            return f"{GITHUB_URL}/releases/tag/preview"
 
         return f"{GITHUB_URL}/releases/tag/v{BUILD_VERSION}"
 

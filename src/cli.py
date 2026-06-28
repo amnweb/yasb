@@ -335,8 +335,8 @@ class CLIHandler:
         set_channel_parser.add_argument(
             "target_channel",
             type=str,
-            choices=["stable", "dev"],
-            help="Channel to switch to 'stable' for tested releases or 'dev' for latest updates",
+            choices=["stable", "preview"],
+            help="Channel to switch to 'stable' for tested releases or 'preview' for latest updates",
         )
 
         subparsers.add_parser(
@@ -681,7 +681,7 @@ class CLIHandler:
                   show-bar                  Show the bar on all or a specific screen
                   hide-bar                  Hide the bar on all or a specific screen
                   toggle-bar                Toggle the bar on all or a specific screen
-                  set-channel               Switch release channels (stable, dev)
+                  set-channel               Switch release channels (stable, preview)
                   update                    Update the application
                   log                       Tail yasb process logs (cancel with Ctrl-C)
                   reset                     Restore default config files and clear cache
@@ -791,7 +791,7 @@ class CLIChannelHandler:
         """Switch to a different release channel.
 
         Args:
-            target_channel: Target channel ('stable' or 'dev')
+            target_channel: Target channel ('stable' or 'preview')
         """
         import tempfile
 
@@ -822,9 +822,9 @@ class CLIChannelHandler:
         print("  * You may need to reconfigure some settings after switching")
         print("  * Switching channels will download and install a new version of YASB")
 
-        if target_channel == "dev":
-            print("  * Bugs and instability may be present in dev channel")
-            print("  * Read the changelog: https://github.com/amnweb/yasb/releases/tag/dev")
+        if target_channel == "preview":
+            print("  * Bugs and instability may be present in preview channel")
+            print("  * Read the changelog: https://github.com/amnweb/yasb/releases/tag/preview")
         else:
             print("  * Read the changelog: https://github.com/amnweb/yasb/releases")
 
@@ -844,8 +844,8 @@ class CLIChannelHandler:
 
         try:
             release_info = update_service.check_for_updates(channel=target_channel, skip_version_check=True, timeout=15)
-            if target_channel == "dev":
-                version_display = f"build {release_info.version.replace('dev-', '')}"
+            if target_channel == "preview":
+                version_display = f"build {release_info.version.replace('preview-', '')}"
             else:
                 version_display = f"version {release_info.version}"
             print(f"Found {Format.magenta}{target_channel}{Format.reset} {version_display}")
@@ -929,8 +929,14 @@ class CLIUpdateHandler:
                 sys.exit(0)
 
             # Update available
-            print(f"Found {Format.cyan}YASB Reborn{Format.reset} Version {release_info.version}")
-            print("Changelog https://github.com/amnweb/yasb/releases/latest")
+            if update_service._current_channel == "preview":
+                print(
+                    f"Found {Format.cyan}YASB Reborn{Format.reset} Preview {release_info.version.replace('preview-', '')}"
+                )
+                print("Changelog https://github.com/amnweb/yasb/releases/tag/preview")
+            else:
+                print(f"Found {Format.cyan}YASB Reborn{Format.reset} Version {release_info.version}")
+                print("Changelog https://github.com/amnweb/yasb/releases/latest")
             # Ask the user if they want to continue with the update
             try:
                 user_input = input("\nDo you want to continue with the update? (Y/n): ").strip().lower()

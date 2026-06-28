@@ -1,4 +1,4 @@
-name: Build Dev Release
+name: Build Preview Release
 
 on:
   workflow_dispatch:
@@ -132,10 +132,10 @@ jobs:
         .\venv\Scripts\Activate
         $settingsPath = "src/settings.py"
         $content = Get-Content $settingsPath -Raw
-        $replacement = 'RELEASE_CHANNEL = "dev-' + $env:COMMIT_HASH + '"'
+        $replacement = 'RELEASE_CHANNEL = "preview-' + $env:COMMIT_HASH + '"'
         $content = $content -replace 'RELEASE_CHANNEL = "stable"', $replacement
         Set-Content -Path $settingsPath -Value $content -NoNewline
-        Write-Host "Updated RELEASE_CHANNEL to dev-$env:COMMIT_HASH"
+        Write-Host "Updated RELEASE_CHANNEL to preview-$env:COMMIT_HASH"
       shell: pwsh
 
     - name: Install dependencies
@@ -291,7 +291,7 @@ jobs:
     - name: Upload Artifacts
       uses: actions/upload-artifact@v7
       with:
-        name: yasb-dev-${{ steps.get_info.outputs.COMMIT_HASH }}-${{ matrix.artifact_suffix }}
+        name: yasb-preview-${{ steps.get_info.outputs.COMMIT_HASH }}-${{ matrix.artifact_suffix }}
         path: |
           src/dist/out/*.msi
         retention-days: 10
@@ -304,7 +304,7 @@ jobs:
           unsigned-*
           signed-*
 
-  publish_dev_release:
+  publish_preview_release:
     needs: build
     permissions:
       contents: write
@@ -322,16 +322,19 @@ jobs:
         currentDateTime=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
         echo "BUILD_DATETIME=$currentDateTime" >> "$GITHUB_ENV"
         commitHash=$(git rev-parse --short HEAD)
+        baseVersion=$(grep 'BUILD_VERSION' src/settings.py | cut -d'"' -f2)
         echo "COMMIT_HASH=$commitHash" >> "$GITHUB_ENV"
+        echo "BASE_VERSION=$baseVersion" >> "$GITHUB_ENV"
         echo "COMMIT_HASH=$commitHash" >> "$GITHUB_OUTPUT"
+        echo "BASE_VERSION=$baseVersion" >> "$GITHUB_OUTPUT"
 
     - name: Generate Changelog
       run: |
         latestVersionTag=$(git tag --sort=-version:refname | grep -E "^v[0-9]+\.[0-9]+\.[0-9]+" | head -n 1 || true)
         if [ -n "$latestVersionTag" ]; then
-          commits=$(git log "$latestVersionTag..HEAD" --pretty=format:"* %s %h" --no-merges)
+          commits=$(git log "$latestVersionTag..HEAD" --pretty=format:"* %s %h" --no-merges | grep -vE "^\* chore\((schema|version)\):" || true)
         else
-          commits=$(git log -n 20 --pretty=format:"* %s %h" --no-merges)
+          commits=$(git log -n 20 --pretty=format:"* %s %h" --no-merges | grep -vE "^\* chore\((schema|version)\):" || true)
         fi
         if [ -z "$commits" ]; then
           if [ -n "$latestVersionTag" ]; then
@@ -345,7 +348,7 @@ jobs:
     - name: Download MSI artifacts
       uses: actions/download-artifact@v8
       with:
-        pattern: yasb-dev-*
+        pattern: yasb-preview-*
         path: artifacts
         merge-multiple: true
 
@@ -354,19 +357,19 @@ jobs:
         cd artifacts
         sha256sum *.msi > checksums.txt
 
-    - name: Delete existing dev release
+    - name: Delete existing preview release
       run: |
-        gh release delete dev --yes || true
-        git tag -d dev || true
-        git push origin :refs/tags/dev || true
+        gh release delete preview --yes || true
+        git tag -d preview || true
+        git push origin :refs/tags/preview || true
       env:
         GH_TOKEN: ${{ github.token }}
 
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v3
       with:
-        name: YASB Pre-release (${{ steps.release_info.outputs.COMMIT_HASH }})
-        tag_name: dev
+        name: YASB ${{ steps.release_info.outputs.BASE_VERSION }} Preview (${{ steps.release_info.outputs.COMMIT_HASH }})
+        tag_name: preview
         prerelease: true
         files: |
           artifacts/*.msi

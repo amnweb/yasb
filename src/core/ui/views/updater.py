@@ -425,8 +425,8 @@ class UpdateDialog(ViewBase, QDialog):
 
         # Display title with version and architecture
         update_service = get_update_service()
-        if update_service._current_channel == "dev":
-            version_display = f"New Dev Build ({release_info.version.replace('dev-', '')})"
+        if update_service._current_channel == "preview":
+            version_display = f"New Preview Build ({release_info.version.replace('preview-', '')})"
         else:
             version_display = f"Version {release_info.version}"
 

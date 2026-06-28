@@ -1,9 +1,19 @@
 import datetime
+import os
 
 from cx_Freeze import Executable, setup
 
 from core.utils.system import detect_architecture
 from settings import APP_ID, BUILD_VERSION, RELEASE_CHANNEL
+
+icon_ico = "assets/images/app_icon.ico"
+icon_png = "assets/images/app_icon.png"
+
+if RELEASE_CHANNEL != "stable":
+    if os.path.exists("assets/images/app_icon_preview.ico"):
+        icon_ico = "assets/images/app_icon_preview.ico"
+    if os.path.exists("assets/images/app_icon_preview.png"):
+        icon_png = "assets/images/app_icon_preview.png"
 
 arch_info = detect_architecture()
 if not arch_info:
@@ -36,7 +46,7 @@ build_options = {
     ],
     "optimize": 1,
     "include_files": [
-        ("assets/images/app_icon.png", "assets/images/app_icon.png"),
+        (icon_png, "assets/images/app_icon.png"),
         ("assets/images/app_transparent.png", "assets/images/app_transparent.png"),
         ("assets/sound/notification01.wav", "assets/sound/notification01.wav"),
         ("assets/sound/notification02.wav", "assets/sound/notification02.wav"),
@@ -57,7 +67,7 @@ msi_data = {
         ("Prog.Id", None, None, "A highly configurable Windows status bar", "IconId", None),
     ],
     "Icon": [
-        ("IconId", "assets/images/app_icon.ico"),
+        ("IconId", icon_ico),
     ],
     "Registry": [
         ("AppUserModelId", -1, f"Software\\Classes\\AppUserModelId\\{APP_ID}", "DisplayName", "YASB", "TARGETDIR"),
@@ -84,14 +94,14 @@ msi_data = {
 
 bdist_msi_options = {
     "data": msi_data,
-    "install_icon": "assets/images/app_icon.ico",
+    "install_icon": icon_ico,
     "upgrade_code": "{3f620cf5-07b5-47fd-8e37-9ca8ad14b608}",
     "add_to_path": True,
     "dist_dir": "dist/out",
     "initial_target_dir": r"[ProgramFiles64Folder]\YASB",
     "all_users": True,
     "skip_build": True,
-    "output_name": f"yasb-{BUILD_VERSION if RELEASE_CHANNEL == 'stable' else 'dev'}-{msi_arch_suffix}.msi",
+    "output_name": f"yasb-{BUILD_VERSION if RELEASE_CHANNEL == 'stable' else 'preview'}-{msi_arch_suffix}.msi",
     "product_name": "YASB Reborn",
     "product_version": BUILD_VERSION,
     "summary_data": {
@@ -105,7 +115,7 @@ executables = [
     Executable(
         "main.py",
         base="gui",
-        icon="assets/images/app_icon.ico",
+        icon=icon_ico,
         shortcut_name="YASB",
         shortcut_dir="MyProgramMenu",
         copyright=f"Copyright (C) {datetime.datetime.now().year} AmN",
@@ -114,7 +124,7 @@ executables = [
     Executable(
         "core/ui/views/themes.py",
         base="gui",
-        icon="assets/images/app_icon.ico",
+        icon=icon_ico,
         copyright=f"Copyright (C) {datetime.datetime.now().year} AmN",
         target_name="yasb_themes",
     ),

@@ -11,9 +11,9 @@
 
 
 ### Installation (latest development build)
-1. Go to the [pre release](https://github.com/amnweb/yasb/releases/tag/dev)
+1. Go to the [pre release](https://github.com/amnweb/yasb/releases/tag/preview)
 2. Choice the architecture that matches your system (x64 or ARM64).
-3. Download the `yasb-dev-{architecture}.msi` installer.
+3. Download the `yasb-preview-{architecture}.msi` installer.
 4. Run the installer and follow the on-screen instructions.
 
 

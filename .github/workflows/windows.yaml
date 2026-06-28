@@ -354,27 +354,6 @@ jobs:
             throw error;
           }
 
-    - name: Install dependencies for schema generation
-      run: |
-        .\venv\Scripts\Activate
-        pip install --force --no-cache .
-      shell: pwsh
-
-    - name: Generate schema.json
-      run: |
-        .\venv\Scripts\Activate
-        python src/core/validation/export_schema.py
-      shell: pwsh
-
-    - name: Commit schema.json
-      run: |
-        git config user.name "github-actions[bot]"
-        git config user.email "github-actions[bot]@users.noreply.github.com"
-        git add schema.json
-        git diff --cached --quiet || git commit -m "chore(schema): update schema.json for v${{ steps.get_version.outputs.VERSION }}"
-        git push
-      shell: pwsh
-
     - name: Fetch all tags
       run: git fetch --tags
       shell: pwsh
@@ -434,6 +413,8 @@ jobs:
           
           const parsedCommits = [];
           for (const c of commits) {
+            if (c.subject.startsWith('chore(schema):') || c.subject.startsWith('chore(version):')) continue;
+            
             const match = c.subject.match(/^([a-zA-Z]+)(?:\([^)]+\))?!?: /);
             const type = match ? match[1].toLowerCase() : 'other';
             const subjectDesc = match ? c.subject.slice(match[0].length) : c.subject;
@@ -523,3 +504,54 @@ jobs:
         draft: true
       env:
         GITHUB_TOKEN: ${{ secrets.PAT }}
+
+    - name: Install dependencies for schema generation
+      run: |
+        .\venv\Scripts\Activate
+        pip install --force --no-cache .
+      shell: pwsh
+
+    - name: Generate schema.json
+      run: |
+        .\venv\Scripts\Activate
+        python src/core/validation/export_schema.py
+      shell: pwsh
+
+    - name: Commit schema.json
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git add schema.json
+        git diff --cached --quiet || git commit -m "chore(schema): update schema.json for v${{ steps.get_version.outputs.VERSION }}"
+        git push
+      shell: pwsh
+
+    - name: Bump Version for Next Development Cycle
+      run: |
+        .\venv\Scripts\Activate
+        $version = "${{ steps.get_version.outputs.VERSION }}"
+        $parts = $version.Split('.')
+        $major = [int]$parts[0]
+        $minor = [int]$parts[1]
+        $patch = [int]$parts[2]
+        
+        $patch += 1
+        if ($patch -ge 10) {
+            $patch = 0
+            $minor += 1
+            if ($minor -ge 10) {
+                $minor = 0
+                $major += 1
+            }
+        }
+        $nextVersion = "$major.$minor.$patch"
+        
+        $settingsPath = "src/settings.py"
+        $content = Get-Content $settingsPath -Raw
+        $content = $content -replace "BUILD_VERSION = `"$version`"", "BUILD_VERSION = `"$nextVersion`""
+        Set-Content -Path $settingsPath -Value $content -NoNewline
+        
+        git add $settingsPath
+        git diff --cached --quiet || git commit -m "chore(version): bump to $nextVersion for next development cycle"
+        git push
+      shell: pwsh

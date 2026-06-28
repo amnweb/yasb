@@ -25,7 +25,7 @@ from settings import APP_ID, BUILD_VERSION, IS_FROZEN, RELEASE_CHANNEL, SCRIPT_P
 
 # GitHub API configuration
 GITHUB_API_URL = "https://api.github.com/repos/amnweb/yasb/releases/latest"
-GITHUB_API_DEV_URL = "https://api.github.com/repos/amnweb/yasb/releases/tags/dev"
+GITHUB_API_PREVIEW_URL = "https://api.github.com/repos/amnweb/yasb/releases/tags/preview"
 GITHUB_FALLBACK_URL = "https://api.yasb.dev/github-meta.json"
 USER_AGENT_HEADER = {"User-Agent": "YASB Updater"}
 CHECK_INTERVAL = 60 * 60  # 60 minutes
@@ -98,27 +98,27 @@ class UpdateService:
         """Detect the current release channel from RELEASE_CHANNEL.
 
         Returns:
-            'dev' if running dev build, 'pr' if running PR build, 'stable' otherwise
+            'preview' if running preview build, 'pr' if running PR build, 'stable' otherwise
         """
-        if RELEASE_CHANNEL.startswith("dev-"):
-            return "dev"
+        if RELEASE_CHANNEL.startswith("preview-"):
+            return "preview"
         if RELEASE_CHANNEL.startswith("pr-"):
             return "pr"
         return "stable"
 
     def _get_current_commit_hash(self) -> str:
-        """Extract commit hash from dev RELEASE_CHANNEL.
+        """Extract commit hash from preview RELEASE_CHANNEL.
 
         Returns:
-            Commit hash if dev channel, empty string otherwise
+            Commit hash if preview channel, empty string otherwise
         """
-        if self._current_channel == "dev" and "-" in RELEASE_CHANNEL:
+        if self._current_channel == "preview" and "-" in RELEASE_CHANNEL:
             return RELEASE_CHANNEL.split("-", 1)[1]
         return ""
 
     @staticmethod
     def _extract_commit_from_release_name(release_name: str) -> str:
-        """Extract commit hash from dev release name.
+        """Extract commit hash from preview release name.
 
         Args:
             release_name: Release name like "YASB Pre-release (abc1234)"
@@ -170,7 +170,7 @@ class UpdateService:
 
         Args:
             assets: List of release assets from GitHub API
-            channel: Release channel ('stable' or 'dev')
+            channel: Release channel ('stable' or 'preview')
 
         Returns:
             The matching asset dict, or None if not found
@@ -183,20 +183,20 @@ class UpdateService:
 
         # Asset naming patterns:
         # Stable: yasb-{version}-{arch}.msi (e.g., yasb-1.8.4-x64.msi)
-        # Dev: yasb-dev-{arch}.msi (e.g., yasb-dev-x64.msi)
-        if channel == "dev":
-            pattern = f"yasb-dev-{arch_suffix}.msi"
+        # Preview: yasb-preview-{arch}.msi (e.g., yasb-preview-x64.msi)
+        if channel == "preview":
+            pattern = f"yasb-preview-{arch_suffix}.msi"
         else:
             # Match any stable version pattern with architecture
             pattern = f"-{arch_suffix}.msi"
 
         for asset in assets:
             name = asset.get("name", "").lower()
-            if channel == "dev":
+            if channel == "preview":
                 if name == pattern:
                     return asset
             else:
-                if name.endswith(pattern) and not name.startswith("yasb-dev-"):
+                if name.endswith(pattern) and not name.startswith("yasb-preview-"):
                     return asset
 
         logging.error("No suitable MSI asset found for %s channel, architecture: %s", channel, ARCHITECTURE)
@@ -205,7 +205,7 @@ class UpdateService:
     def _fetch_release_data(self, check_channel: str, timeout: int) -> dict:
         """Fetch release data from GitHub API with fallback to metadata endpoint."""
         context = ssl.create_default_context(cafile=certifi.where())
-        api_url = GITHUB_API_DEV_URL if check_channel == "dev" else GITHUB_API_URL
+        api_url = GITHUB_API_PREVIEW_URL if check_channel == "preview" else GITHUB_API_URL
 
         try:
             request = urllib.request.Request(api_url, headers=USER_AGENT_HEADER)
@@ -221,7 +221,7 @@ class UpdateService:
         request = urllib.request.Request(GITHUB_FALLBACK_URL, headers=USER_AGENT_HEADER)
         with urllib.request.urlopen(request, context=context, timeout=timeout) as response:
             meta = json.loads(response.read())
-        key = "nightly_release" if check_channel == "dev" else "stable_release"
+        key = "nightly_release" if check_channel == "preview" else "stable_release"
         if key not in meta:
             raise ValueError(f"Fallback metadata missing {key}")
         return meta[key]
@@ -234,13 +234,13 @@ class UpdateService:
     ) -> ReleaseInfo | None:
         """Check GitHub for available updates.
 
-        Supports both stable and dev channels:
+        Supports both stable and preview channels:
         - Stable: Compares semantic versions
-        - Dev: Compares commit hashes
+        - Preview: Compares commit hashes
 
         Args:
             timeout: Request timeout in seconds
-            channel: Release channel to check ('stable' or 'dev'). If None, uses current channel
+            channel: Release channel to check ('stable' or 'preview'). If None, uses current channel
             skip_version_check: If True, returns release info without checking if it's newer
 
         Returns:
@@ -263,12 +263,12 @@ class UpdateService:
                 raise ValueError(f"No MSI installer found for {ARCHITECTURE} architecture")
 
             # Get version display based on channel
-            if check_channel == "dev":
+            if check_channel == "preview":
                 release_name = release_data.get("name", "")
                 commit_hash = self._extract_commit_from_release_name(release_name)
-                version = f"dev-{commit_hash}"
+                version = f"preview-{commit_hash}"
 
-                # Check if it's actually an update for dev channel
+                # Check if it's actually an update for preview channel
                 if not skip_version_check:
                     current_commit = self._get_current_commit_hash()
                     if commit_hash and commit_hash == current_commit:
@@ -409,9 +409,9 @@ def start_update_checker() -> None:
                 toaster = ToastNotifier()
 
                 # Determine launch URL and message based on channel
-                if update_service._current_channel == "dev":
-                    launch_url = "https://github.com/amnweb/yasb/releases/tag/dev"
-                    message = "New dev build is available!"
+                if update_service._current_channel == "preview":
+                    launch_url = "https://github.com/amnweb/yasb/releases/tag/preview"
+                    message = "New preview build is available!"
                 else:
                     launch_url = "https://github.com/amnweb/yasb/releases/latest"
                     message = f"New version {release_info.version} is available!"
