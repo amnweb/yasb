@@ -15,6 +15,7 @@
     - [Battery](./(Widget)-Battery)
     - [Bluetooth](./(Widget)-Bluetooth)
     - [Brightness](./(Widget)-Brightness)
+    - [Burp Suite](./(Widget)-Burp-Suite)
     - [Cava](./(Widget)-Cava)
     - [Claude Usage](./(Widget)-Claude-Usage)
     - [Copilot](./(Widget)-Copilot)
