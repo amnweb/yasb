@@ -1,6 +1,6 @@
 """
 GitHub Copilot Usage Widget for YASB.
-Displays premium request usage data with a popup showing detailed statistics.
+Displays AI credits billing usage data with a popup showing detailed statistics.
 """
 
 import os
@@ -41,7 +41,7 @@ class ProgressBar(QFrame):
         self._fill.setProperty("class", "fill")
         self._fill.setGeometry(0, 0, 0, self.height())
 
-    def set_value(self, value: int, max_value: int = 100) -> None:
+    def set_value(self, value: float, max_value: float = 100.0) -> None:
         self._value = min(value, max_value)
         self._max_value = max_value
         self._update_state()
@@ -123,13 +123,13 @@ class UsageChartWidget(QFrame):
         pad_top = self._pad_top
         pad_bottom = self._pad_bottom
         chart_h = h - pad_top - pad_bottom
-        max_val = max((d.get("requests", 0) for d in self._data), default=1) or 1
+        max_val = max((d.get("credits", 0.0) for d in self._data), default=1.0) or 1.0
         n = len(self._data)
         x_step = w / (n - 1) if n > 1 else w
 
         for i, item in enumerate(self._data):
             x = i * x_step
-            y = pad_top + chart_h - (item.get("requests", 0) / max_val * chart_h)
+            y = pad_top + chart_h - (item.get("credits", 0.0) / max_val * chart_h)
             self._points.append(QPointF(x, y))
 
     def resizeEvent(self, event):
@@ -225,7 +225,7 @@ class UsageChartWidget(QFrame):
             self._tooltip = CustomToolTip()
             self._tooltip._position = "top"
 
-        self._tooltip.label.setText(f"{formatted}\n{item.get('requests', 0)} requests")
+        self._tooltip.label.setText(f"{formatted}\n{item.get('credits', 0.0):.2f} credits")
         self._tooltip.adjustSize()
         pos = self.mapToGlobal(self._points[idx].toPoint())
 
@@ -382,20 +382,27 @@ class CopilotWidget(BaseWidget):
 
     def _update_label(self):
         data = CopilotDataManager.get_data()
-        used = data.total_requests
+        used = data.total_credits
         allowance = data.allowance
-        pct = (used * 100 // allowance) if allowance else 0
+        pct = round(used * 100 / allowance) if allowance else 0
 
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
         active_label = self.config.label_alt if self._show_alt_label else self.config.label
         label_parts = [p for p in re.split(r"(<span.*?>.*?</span>)", active_label) if p]
 
+        now = datetime.now(UTC)
+        next_reset = datetime(now.year + 1, 1, 1) if now.month == 12 else datetime(now.year, now.month + 1, 1)
+        reset_date_str = next_reset.strftime("%b %d")
+
         label_options = {
             "{icon}": self.config.icons.copilot,
-            "{used}": str(used),
+            "{used}": f"{used:.2f}" if isinstance(used, float) else str(used),
             "{allowance}": str(allowance),
             "{percentage}": str(pct),
             "{total_cost}": f"{data.total_cost:.2f}",
+            "{additional_usage}": f"{max(0.0, used - allowance):.2f}",
+            "{status}": "inactive" if data.error else "active",
+            "{reset_date}": reset_date_str,
         }
 
         for i, part in enumerate(label_parts):
@@ -416,7 +423,7 @@ class CopilotWidget(BaseWidget):
             if pct >= self.config.thresholds.warning
             else ""
         )
-        tip = f"Error: {data.error}" if data.error else f"Copilot: {used}/{allowance} ({pct}%)"
+        tip = f"Error: {data.error}" if data.error else f"Copilot: {used:.2f}/{allowance} ({pct}%)"
 
         for widget in active_widgets:
             if self.config.tooltip:
@@ -443,15 +450,15 @@ class CopilotWidget(BaseWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
-        if data.plan_type in ("pro", "pro_plus"):
+        if data.plan_type in ("pro", "pro_plus", "max"):
             layout.addWidget(self._create_header(data))
 
         if data.error:
             layout.addWidget(self._create_error_section(data.error))
-        elif data.total_requests or data.requests_by_model or data.daily_usage:
+        elif data.total_credits or data.credits_by_model or data.daily_usage:
             layout.addWidget(self._create_progress_section(data))
             layout.addWidget(self._create_spending_section(data))
-            if data.requests_by_model:
+            if data.credits_by_model:
                 layout.addWidget(self._create_model_section(data))
             if self.config.menu.chart and data.daily_usage:
                 layout.addWidget(self._create_chart_section(data))
@@ -482,7 +489,7 @@ class CopilotWidget(BaseWidget):
         layout.addLayout(center)
 
     def _create_header(self, data: CopilotUsageData) -> QLabel:
-        plan_names = {"pro": "Pro", "pro_plus": "Pro+"}
+        plan_names = {"pro": "Pro", "pro_plus": "Pro+", "max": "Max"}
         plan_name = plan_names.get(data.plan_type, "")
         header = QLabel(f"<span style='font-weight:bold'>GitHub</span> Copilot ({plan_name})")
         header.setProperty("class", "header")
@@ -498,7 +505,7 @@ class CopilotWidget(BaseWidget):
         # Title row with reset date on right
         title_row = QHBoxLayout()
         title_row.setContentsMargins(0, 0, 0, 0)
-        title = QLabel("Premium Requests")
+        title = QLabel("AI Credits")
         title.setProperty("class", "section-title")
         title_row.addWidget(title)
         title_row.addStretch()
@@ -512,15 +519,15 @@ class CopilotWidget(BaseWidget):
 
         bar = ProgressBar()
         bar.setMinimumHeight(8)
-        bar.set_value(data.total_requests, data.allowance)
+        bar.set_value(data.total_credits, data.allowance)
         bar.set_thresholds(self.config.thresholds.warning, self.config.thresholds.critical)
         layout.addWidget(bar)
 
         stats = QHBoxLayout()
         stats.setContentsMargins(0, 2, 0, 0)
-        pct = (data.total_requests * 100 // data.allowance) if data.allowance else 0
+        pct = round(data.total_credits * 100 / data.allowance) if data.allowance else 0
 
-        used_lbl = QLabel(f"{data.total_requests} / {data.allowance}")
+        used_lbl = QLabel(f"{data.total_credits:.2f} / {data.allowance}")
         used_lbl.setProperty("class", "usage-count")
         stats.addWidget(used_lbl)
         stats.addStretch()
@@ -542,10 +549,10 @@ class CopilotWidget(BaseWidget):
         title.setProperty("class", "section-title")
         layout.addWidget(title)
 
-        overage = max(0, data.total_requests - data.allowance)
+        overage = max(0.0, data.total_credits - data.allowance)
 
-        layout.addWidget(self._stat_row("Included:", f"{min(data.total_requests, data.allowance)} requests"))
-        layout.addWidget(self._stat_row("Overage:", f"{overage} requests (${overage * 0.04:.2f})"))
+        layout.addWidget(self._stat_row("Included:", f"{min(data.total_credits, data.allowance):.2f} credits"))
+        layout.addWidget(self._stat_row("Overage:", f"{overage:.2f} credits (${overage * 0.01:.2f})"))
         total_row = self._stat_row("Total Cost:", f"${data.total_cost:.2f}")
         total_row.setProperty("class", "stat-row total")
         layout.addWidget(total_row)
@@ -580,8 +587,8 @@ class CopilotWidget(BaseWidget):
         title.setProperty("class", "section-title")
         layout.addWidget(title)
 
-        max_count = max(data.requests_by_model.values(), default=1)
-        sorted_models = sorted(data.requests_by_model.items(), key=lambda x: x[1], reverse=True)
+        max_count = max(data.credits_by_model.values(), default=1.0)
+        sorted_models = sorted(data.credits_by_model.items(), key=lambda x: x[1], reverse=True)
 
         for i, (model, count) in enumerate(sorted_models[:5]):
             row = QFrame(self._menu)
@@ -600,7 +607,7 @@ class CopilotWidget(BaseWidget):
             bar.set_class(f"model-{i % 5}")
             row_layout.addWidget(bar, 1)
 
-            count_lbl = QLabel(str(count))
+            count_lbl = QLabel(f"{count:.2f}")
             count_lbl.setProperty("class", "model-count")
             count_lbl.setFixedWidth(50)
             count_lbl.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
