@@ -54,6 +54,7 @@ class VolumeConfig(CustomBaseModel):
     mute_text: str = "mute"
     tooltip: bool = True
     scroll_step: int = Field(default=2, ge=1, le=100)
+    invert_wheel: bool = False
     slider_beep: bool = True
     # Support both list and dict for backward compatibility.
     icons: list[str] | dict[str, str] = {
