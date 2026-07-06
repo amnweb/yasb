@@ -50,6 +50,43 @@ class VSCodeWidget(BaseWidget):
             path = f"{drive_part}:{rest}"
         return path
 
+    def _is_remote_uri(self, uri: str | None) -> bool:
+        return isinstance(uri, str) and uri.startswith("vscode-remote://")
+
+    def _remote_uri_display_path(self, uri: str) -> str:
+        parsed = urllib.parse.urlparse(uri)
+        authority = urllib.parse.unquote(parsed.netloc)
+        path = urllib.parse.unquote(parsed.path)
+
+        if authority.lower().startswith("wsl+"):
+            distro = authority[4:]
+            return f"WSL: {distro} - {path}" if distro else f"WSL - {path}"
+
+        return f"{authority} - {path}" if authority else (path or uri)
+
+    def _recent_uri_to_workspace(self, uri: str, workspace_type: str) -> dict | None:
+        if self._is_remote_uri(uri):
+            return {
+                "type": workspace_type,
+                "path": uri,
+                "display_path": self._remote_uri_display_path(uri),
+            }
+
+        local_path = self._uri_to_windows_path(uri)
+        if os.path.exists(local_path):
+            return {
+                "type": workspace_type,
+                "path": local_path,
+                "display_path": local_path,
+            }
+
+        return None
+
+    def _add_recent_uri(self, result_list: list[dict], uri: str, workspace_type: str) -> None:
+        workspace_data = self._recent_uri_to_workspace(uri, workspace_type)
+        if workspace_data:
+            result_list.append(workspace_data)
+
     def _load_recent_workspaces(self) -> list[dict]:
         try:
             conn = sqlite3.connect(self._state_file_path)
@@ -62,13 +99,9 @@ class VSCodeWidget(BaseWidget):
                 for path in paths_data:
                     if isinstance(path, dict):
                         if path.get("folderUri"):
-                            folder_path = self._uri_to_windows_path(path.get("folderUri"))
-                            if os.path.exists(folder_path):
-                                result_list.append({"folder": folder_path})
+                            self._add_recent_uri(result_list, path.get("folderUri"), "folder")
                         if path.get("fileUri"):
-                            file_path = self._uri_to_windows_path(path.get("fileUri"))
-                            if os.path.exists(file_path):
-                                result_list.append({"file": file_path})
+                            self._add_recent_uri(result_list, path.get("fileUri"), "file")
                     else:
                         logging.error("Unexpected entry type: %s", type(path))
             else:
@@ -107,18 +140,27 @@ class VSCodeWidget(BaseWidget):
                     active_widgets[widget_index].setText(part)
                 widget_index += 1
 
-    def _handle_mouse_press_event(self, event, folder):
+    def _handle_mouse_press_event(self, event, workspace_data):
+        path = workspace_data["path"]
+        is_folder = workspace_data["type"] == "folder"
+
         try:
-            subprocess.Popen([self.config.cli_command, folder], shell=True, creationflags=subprocess.CREATE_NO_WINDOW)
+            if self._is_remote_uri(path):
+                uri_arg = "--folder-uri" if is_folder else "--file-uri"
+                subprocess.Popen(
+                    [self.config.cli_command, uri_arg, path], shell=True, creationflags=subprocess.CREATE_NO_WINDOW
+                )
+            else:
+                subprocess.Popen([self.config.cli_command, path], shell=True, creationflags=subprocess.CREATE_NO_WINDOW)
         except subprocess.CalledProcessError as e:
-            logging.error("Failed to open VS Code with folder %s: %s", folder, e)
+            logging.error("Failed to open VS Code with path %s: %s", path, e)
         except FileNotFoundError:
             logging.error("VS Code not found in PATH")
         self._menu.hide()
 
-    def _create_container_mouse_press_event(self, folder):
+    def _create_container_mouse_press_event(self, workspace_data):
         def mouse_press_event(event):
-            self._handle_mouse_press_event(event, folder)
+            self._handle_mouse_press_event(event, workspace_data)
 
         return mouse_press_event
 
@@ -176,15 +218,16 @@ class VSCodeWidget(BaseWidget):
         container_layout.setContentsMargins(0, 0, 0, 0)
         container_layout.setSpacing(0)
 
-        is_folder = "folder" in workspace_data
+        is_folder = workspace_data["type"] == "folder"
 
         if (is_folder and not self.config.hide_folder_icon) or (not is_folder and not self.config.hide_file_icon):
             icon_label = QLabel(self.config.folder_icon if is_folder else self.config.file_icon)
             icon_label.setProperty("class", "folder-icon" if is_folder else "file-icon")
             container_layout.addWidget(icon_label)
 
-        path = workspace_data.get("folder" if is_folder else "file")
-        display_path = path.split("/")[-1] if self.config.truncate_to_root_dir else path
+        path = workspace_data["path"]
+        display_path = workspace_data["display_path"]
+        display_path = display_path.split("/")[-1] if self.config.truncate_to_root_dir else display_path
         if len(display_path) > self.config.max_field_size:
             display_path = "..." + display_path[-self.config.max_field_size + 3 :]
 
@@ -210,7 +253,7 @@ class VSCodeWidget(BaseWidget):
         text_content_layout.setSpacing(0)
 
         container_layout.addWidget(text_content, 1)
-        container.mousePressEvent = self._create_container_mouse_press_event(path)
+        container.mousePressEvent = self._create_container_mouse_press_event(workspace_data)
 
         return container
 
@@ -237,8 +280,8 @@ class VSCodeWidget(BaseWidget):
         if not recent_workspaces:
             scroll_layout.addWidget(self._create_no_recents_label())
         else:
-            folders = [ws for ws in recent_workspaces if "folder" in ws][: self.config.max_number_of_folders]
-            files = [ws for ws in recent_workspaces if "file" in ws][: self.config.max_number_of_files]
+            folders = [ws for ws in recent_workspaces if ws["type"] == "folder"][: self.config.max_number_of_folders]
+            files = [ws for ws in recent_workspaces if ws["type"] == "file"][: self.config.max_number_of_files]
             workspaces_to_show = folders + files
 
             for workspace in workspaces_to_show:
