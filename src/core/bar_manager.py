@@ -183,11 +183,20 @@ class BarManager(QObject):
         self._widget_builder.raise_alerts_if_errors_present()
 
     def _collect_keybindings(self) -> None:
-        """Collect keybindings from all widget configurations."""
+        """Collect keybindings from widget configurations used in enabled bars."""
         self._collected_keybindings.clear()
         seen_hotkeys: dict[str, str] = {}
 
+        active_widget_names: set[str] = set()
+        for bar_config in self.config.bars.values():
+            if bar_config.enabled:
+                widgets = bar_config.widgets
+                active_widget_names.update(widgets.left + widgets.center + widgets.right)
+
         for widget_name, widget_config in self.config.widgets.items():
+            if widget_name not in active_widget_names:
+                continue
+
             options = widget_config.get("options", {})
             keybindings = options.get("keybindings", [])
 
