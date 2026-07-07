@@ -1,5 +1,5 @@
 """
-GitHub Copilot API client for fetching premium request usage data.
+GitHub Copilot API client for fetching AI credits billing usage data.
 """
 
 import calendar
@@ -17,13 +17,14 @@ from typing import Any
 
 API_BASE_URL = "https://api.github.com"
 # I have set version of GitHub API to a fixed date to avoid unexpected changes
-API_VERSION = "2022-11-28"
+API_VERSION = "2026-03-10"
 DEFAULT_TIMEOUT = 30
 
-# Plan allowances for premium requests per month
+# Plan allowances for AI Credits per month
 PLAN_ALLOWANCES = {
-    "pro": 300,
-    "pro_plus": 1500,
+    "pro": 1500,
+    "pro_plus": 7000,
+    "max": 20000,
 }
 
 
@@ -31,13 +32,12 @@ PLAN_ALLOWANCES = {
 class CopilotUsageData:
     """Aggregated Copilot usage data."""
 
-    total_requests: int = 0
+    total_credits: float = 0.0
     total_cost: float = 0.0
     allowance: int = 0
     plan_type: str = ""
     username: str = ""
-    requests_by_model: dict[str, int] = field(default_factory=dict)
-    cost_by_model: dict[str, float] = field(default_factory=dict)
+    credits_by_model: dict[str, float] = field(default_factory=dict)
     daily_usage: list[dict[str, Any]] = field(default_factory=list)
     last_updated: datetime | None = None
     error: str | None = None
@@ -61,7 +61,7 @@ class CopilotDataManager:
     _callbacks: list[Callable[[CopilotUsageData], None]] = []
     _update_thread: Thread | None = None
     _chart_enabled: bool = True
-    _daily_cache: dict[str, int] = {}  # Cache for daily data (date_str -> requests)
+    _daily_cache: dict[str, float] = {}  # Cache for daily data (date_str -> credits)
 
     @classmethod
     def get_instance(cls) -> CopilotDataManager:
@@ -143,7 +143,7 @@ class CopilotDataManager:
             # Fetch monthly usage
             now = datetime.now(UTC)
             url = (
-                f"{API_BASE_URL}/users/{cls._username}/settings/billing/premium_request/usage"
+                f"{API_BASE_URL}/users/{cls._username}/settings/billing/ai_credit/usage"
                 f"?year={now.year}&month={now.month}"
             )
 
@@ -165,9 +165,9 @@ class CopilotDataManager:
                 usage_data.last_updated = now
                 cls._data = usage_data
             elif status_code == 403:
-                cls._data = CopilotUsageData(error="Access denied. Token needs Plan permission.")
+                cls._data = CopilotUsageData(error="Access denied. Token needs Plan/Billing permission.")
             elif status_code == 404:
-                cls._data = CopilotUsageData(error="Requires Copilot Pro/Pro+ subscription.")
+                cls._data = CopilotUsageData(error="Requires Copilot Pro/Pro+/Max subscription.")
             else:
                 cls._data = CopilotUsageData(error=f"API error: {status_code}")
 
@@ -227,13 +227,12 @@ class CopilotDataManager:
                 continue
 
             model = item.get("model") or "Unknown"
-            quantity = int(item.get("grossQuantity") or item.get("netQuantity") or 0)
-            amount = item.get("netAmount", 0.0)
+            quantity = float(item.get("grossQuantity") or item.get("netQuantity") or 0.0)
+            amount = float(item.get("grossAmount", 0.0))
 
-            usage_data.total_requests += quantity
+            usage_data.total_credits += quantity
             usage_data.total_cost += amount
-            usage_data.requests_by_model[model] = usage_data.requests_by_model.get(model, 0) + quantity
-            usage_data.cost_by_model[model] = usage_data.cost_by_model.get(model, 0.0) + amount
+            usage_data.credits_by_model[model] = usage_data.credits_by_model.get(model, 0.0) + quantity
 
         return usage_data
 
@@ -265,32 +264,32 @@ class CopilotDataManager:
             if day == current_day or date_str not in cls._daily_cache:
                 days_to_fetch.append(day)
 
-        def fetch_day(day: int) -> tuple[str, int]:
+        def fetch_day(day: int) -> tuple[str, float]:
             date_str = f"{year}-{month:02d}-{day:02d}"
-            url = f"{API_BASE_URL}/users/{cls._username}/settings/billing/premium_request/usage?year={year}&month={month}&day={day}"
+            url = f"{API_BASE_URL}/users/{cls._username}/settings/billing/ai_credit/usage?year={year}&month={month}&day={day}"
             data, status_code, _ = self._make_request(url, timeout=10)
             if status_code == 200 and data:
                 total = sum(
-                    int(item.get("grossQuantity") or item.get("netQuantity") or 0)
+                    float(item.get("grossQuantity") or item.get("netQuantity") or 0.0)
                     for item in data.get("usageItems", [])
                     if "copilot" in item.get("product", "").lower()
                 )
                 return date_str, total
-            return date_str, 0
+            return date_str, 0.0
 
         # Fetch only needed days in parallel
         if days_to_fetch:
             with ThreadPoolExecutor(max_workers=5) as executor:
                 futures = {executor.submit(fetch_day, day): day for day in days_to_fetch}
                 for future in as_completed(futures):
-                    date_str, requests = future.result()
-                    cls._daily_cache[date_str] = requests
+                    date_str, credits_val = future.result()
+                    cls._daily_cache[date_str] = credits_val
 
         # Build result for ALL days in the detected month
         result = [
             {
                 "date": f"{year}-{month:02d}-{day:02d}",
-                "requests": cls._daily_cache.get(f"{year}-{month:02d}-{day:02d}", 0) if day <= current_day else 0,
+                "credits": cls._daily_cache.get(f"{year}-{month:02d}-{day:02d}", 0.0) if day <= current_day else 0.0,
             }
             for day in range(1, days_in_month + 1)
         ]

@@ -1,24 +1,25 @@
 # Copilot Widget
 
-The Copilot widget displays your GitHub Copilot premium request usage with a detailed menu showing statistics, usage breakdown by model, and a daily usage chart.
+The Copilot widget displays your GitHub Copilot AI credits billing usage with a detailed menu showing statistics, usage breakdown by model, and a daily usage chart.
 
-> **Note**: This widget requires a **GitHub Copilot Pro** or **Pro+** subscription. The free tier is not supported due to API limitations.
+> **Note**: This widget requires a **GitHub Copilot Pro**, **Pro+**, or **Max** subscription. The free tier is not supported due to API limitations.
 
 ## Features
 
-- **Premium Request Tracking**: Shows used/allowance in the status bar
+- **AI Credits Tracking**: Shows used/allowance in the status bar
 - **Color-coded Thresholds**: Visual warnings when approaching limits
 - **Detailed Menu**: 
   - Usage progress bar
   - Spending breakdown (included, overage, total cost)
-  - Usage by AI model (Claude, GPT-4.1, etc.)
+  - Usage by AI model (Claude, GPT-4, Gemini, etc.)
   - Daily usage chart (from start of month)
-- **Plan Support**: Pro (300 requests), Pro+ (1500 requests) - configurable via `plan` option
+- **Plan Support**: Pro (1,500 credits), Pro+ (7,000 credits), Max (20,000 credits) - configurable via `plan` option
 - **Automatic Refresh**: Configurable update interval
 
 ## Requirements
 
-- **GitHub Copilot Pro or Pro+** subscription
+- **GitHub Copilot Pro**, **Pro+**, or **Max** subscription (individual plans)
+  - *Note*: Organization-billed subscriptions (such as **Copilot Business** or **Copilot Enterprise**) are not supported because their usage metrics are managed at the organization level and cannot be retrieved via personal account endpoints.
 
 ## Authentication
 
@@ -43,7 +44,7 @@ copilot:
     label: "{icon}"
     label_alt: "{used}/{allowance}"
     token: "github_pat_xxxxxxxxxxxx"
-    plan: "pro" #Set your plan "pro" or "pro_plus"
+    plan: "pro" #Set your plan "pro", "pro_plus" or "max"
     tooltip: true
     update_interval: 120
     icons:
@@ -68,10 +69,10 @@ copilot:
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `label` | string | `"{icon}"` | Label format for the bar. Supports `{icon}`, `{used}`, `{allowance}`, `{percentage}`, `{total_cost}` |
+| `label` | string | `"{icon}"` | Label format for the bar. Supports `{icon}`, `{used}`, `{allowance}`, `{percentage}`, `{total_cost}`, `{additional_usage}`, `{status}`, `{reset_date}` |
 | `label_alt` | string | `"{used}/{allowance}"` | Alternative label (toggle with right-click) |
 | `token` | string | `""` | GitHub token. Leave empty to use OAuth sign-in, or set to `"env"` to read from `YASB_COPILOT_TOKEN` env var |
-| `plan` | string | `"pro"` | Your Copilot plan: `"pro"` (300 requests) or `"pro_plus"` (1500 requests) |
+| `plan` | string | `"pro"` | Your Copilot plan: `"pro"` (1,500 credits), `"pro_plus"` (7,000 credits) or `"max"` (20,000 credits) |
 | `tooltip` | boolean | `true` | Show tooltip on hover |
 | `update_interval` | integer | `3600` | Refresh interval in seconds (min: 300, max: 86400) |
 | `icons.copilot` | string | `"\uf113"` | Icon for Copilot (main widget and empty state) |
@@ -109,7 +110,7 @@ token: "env"
 Then set this environment variable:
 - `YASB_COPILOT_TOKEN` - Your GitHub fine-grained PAT
 
-> **Note**: Username is automatically detected from the token. You must set the `plan` option to match your subscription (`"pro"` or `"pro_plus"`) as the GitHub API does not provide plan information.
+> **Note**: Username is automatically detected from the token. You must set the `plan` option to match your subscription (`"pro"`, `"pro_plus"`, or `"max"`) as the GitHub API does not provide plan information.
 
 ## Label Placeholders
 
@@ -118,10 +119,13 @@ The following placeholders can be used in `label` and `label_alt`:
 | Placeholder | Description |
 |-------------|-------------|
 | `{icon}` | The Copilot icon |
-| `{used}` | Number of premium requests used this month |
-| `{allowance}` | Your monthly allowance based on plan |
+| `{used}` | Number of AI Credits used this month |
+| `{allowance}` | Your monthly credit allowance/limit based on plan |
 | `{percentage}` | Usage percentage |
-| `{total_cost}` | Total cost this month |
+| `{total_cost}` | Total cost of credits consumed this month |
+| `{additional_usage}` | Overage credits used beyond your allowance |
+| `{status}` | Connection status (`active` or `inactive`) |
+| `{reset_date}` | Cycle reset date (e.g. `Jul 01`) |
 
 ## Styling
 
