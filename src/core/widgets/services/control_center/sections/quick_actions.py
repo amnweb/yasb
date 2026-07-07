@@ -5,7 +5,7 @@ from PyQt6.QtGui import QMouseEvent
 from PyQt6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
 from core.utils.shell_utils import shell_open
-from core.utils.tooltip import set_tooltip
+from core.utils.tooltip import CustomToolTip, set_tooltip
 from core.utils.utilities import ElidedLabel
 from core.validation.widgets.yasb.control_center import ControlCenterActionConfig
 from core.widgets.services.control_center.api.keyboard import TouchKeyboardService
@@ -133,7 +133,12 @@ class QuickActionsSectionWidget(QFrame):
             DndService.set_status(new_status)
             self._current_dnd = new_status
         elif action_id == "screenshot":
+            active = CustomToolTip._active_tooltip
+            if active is not None:
+                active.hide()
+            self.parentWidget().hide()
             ScreenshotService.start()
+            return
         elif action_id == "touch_keyboard":
             TouchKeyboardService.toggle()
         elif action_id == "toggle_mute":

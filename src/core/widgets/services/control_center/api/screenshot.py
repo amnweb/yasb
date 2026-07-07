@@ -4,10 +4,13 @@ from ctypes import wintypes
 from datetime import datetime
 from pathlib import Path
 
+import win32api
+import win32con
+import win32gui
 from PyQt6.QtCore import QPoint, QRect, QSize, Qt
 from PyQt6.QtGui import QColor, QIcon, QImage, QKeyEvent, QMouseEvent, QPainter, QPaintEvent, QPen, QPixmap
 from PyQt6.QtSvg import QSvgRenderer
-from PyQt6.QtWidgets import QApplication, QFileDialog, QFrame, QHBoxLayout, QPushButton, QWidget
+from PyQt6.QtWidgets import QApplication, QFileDialog, QFrame, QHBoxLayout, QLabel, QPushButton, QWidget
 
 from core.ui.theme import get_tokens
 from core.utils.tooltip import set_tooltip
@@ -55,6 +58,7 @@ gdi32.CreateCompatibleBitmap.argtypes = [wintypes.HDC, ctypes.c_int, ctypes.c_in
 gdi32.CreateCompatibleBitmap.restype = wintypes.HBITMAP
 gdi32.SelectObject.argtypes = [wintypes.HDC, wintypes.HGDIOBJ]
 gdi32.SelectObject.restype = wintypes.HGDIOBJ
+
 gdi32.BitBlt.argtypes = [
     wintypes.HDC,
     ctypes.c_int,
@@ -206,6 +210,13 @@ class ScreenshotToolbar(QFrame):
             QPushButton:hover {{
                 background-color: {hover_bg};
             }}
+            QLabel {{
+                color: {icon_color};
+                font-size: 12px;
+                padding: 0 4px;
+                border: none;
+                background: transparent;
+            }}
         """)
 
         layout = QHBoxLayout(self)
@@ -213,6 +224,9 @@ class ScreenshotToolbar(QFrame):
         layout.setSpacing(6)
 
         icon_size = QSize(16, 16)
+
+        self._size_label = QLabel(self)
+        self._size_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.btn_copy = QPushButton(self)
         self.btn_copy.setIcon(svg_to_icon(SVG_COPY, 16, icon_color))
@@ -241,7 +255,11 @@ class ScreenshotToolbar(QFrame):
 
         layout.addWidget(self.btn_copy)
         layout.addWidget(self.btn_save)
+        layout.addWidget(self._size_label)
         layout.addWidget(self.btn_cancel)
+
+    def set_size_text(self, text: str) -> None:
+        self._size_label.setText(text)
 
 
 class RegionSelector(QWidget):
@@ -270,7 +288,22 @@ class RegionSelector(QWidget):
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint)
         self.setCursor(Qt.CursorShape.CrossCursor)
         self.setMouseTracking(True)
+        self._create_window()
         self.show()
+
+    def _create_window(self):
+        hwnd = int(self.winId())
+        ex_style = win32api.GetWindowLong(hwnd, win32con.GWL_EXSTYLE)
+        win32api.SetWindowLong(hwnd, win32con.GWL_EXSTYLE, ex_style | win32con.WS_EX_TOOLWINDOW)
+        win32gui.SetWindowPos(
+            hwnd,
+            win32con.HWND_TOPMOST,
+            0,
+            0,
+            0,
+            0,
+            win32con.SWP_NOMOVE | win32con.SWP_NOSIZE | win32con.SWP_FRAMECHANGED,
+        )
 
     def _selection_geometry(self) -> tuple[int, int, int, int] | None:
         if not self._start or not self._end:
@@ -372,13 +405,11 @@ class RegionSelector(QWidget):
                     if rect.contains(pos):
                         self._drag_mode = "resize"
                         self._active_handle = name
-                        self._toolbar.hide()
                         return
 
                 geom = self._selection_geometry()
                 if geom and QRect(*geom).contains(pos):
                     self._drag_mode = "move"
-                    self._toolbar.hide()
                     return
 
             self.close_toolbar()
@@ -393,6 +424,12 @@ class RegionSelector(QWidget):
         if a0 is None:
             return
         pos = a0.pos()
+
+        geom = self._selection_geometry()
+        if geom is not None and self._toolbar is not None:
+            _, _, w, h = geom
+            self._toolbar.set_size_text(f"{w} x {h}")
+            self._toolbar.adjustSize()
 
         if self._drag_mode is not None:
             sw, sh = self._screen_rect[2], self._screen_rect[3]
@@ -430,6 +467,8 @@ class RegionSelector(QWidget):
                 self._end = QPoint(new_x + w, new_y + h)
                 self._last_pos = pos
                 self.update()
+            if self._toolbar is not None:
+                self.align_toolbar()
         else:
             self._update_hover_cursor(pos)
 
@@ -485,6 +524,9 @@ class RegionSelector(QWidget):
     def show_toolbar(self) -> None:
         self.close_toolbar()
         self._toolbar = ScreenshotToolbar(self, self._on_toolbar_action)
+        geom = self._selection_geometry()
+        if geom is not None:
+            self._toolbar.set_size_text(f"{geom[2]} x {geom[3]}")
         self._toolbar.adjustSize()
         self.align_toolbar()
 
