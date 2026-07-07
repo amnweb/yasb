@@ -55,6 +55,9 @@ class AudioOutputService(QObject):
         except Exception as e:
             logging.error("AudioOutputService failed to initialize: %s", e)
 
+        self.device_change_requested.connect(self._on_device_change)
+        self.volume_change_requested.connect(self._on_volume_change)
+
     def _initialize_audio(self):
         """Fetch speakers, devices and sessions in background thread."""
         if self._initializing:
@@ -102,8 +105,6 @@ class AudioOutputService(QObject):
 
         if len(self._widgets) == 1:
             self._initialize_audio()
-            self.device_change_requested.connect(self._on_device_change)
-            self.volume_change_requested.connect(self._on_volume_change)
             self._register_callbacks()
 
     def unregister_widget(self, widget):
@@ -235,6 +236,17 @@ class AudioOutputService(QObject):
             return AudioUtilities.GetAllSessions()
         except Exception:
             return []
+
+    def get_default_device_id(self) -> str | None:
+        """Return the ID of the current default audio output device."""
+        try:
+            enumerator = self._enumerator or AudioUtilities.GetDeviceEnumerator()
+            default = enumerator.GetDefaultAudioEndpoint(EDataFlow.eRender.value, ERole.eConsole.value)
+            if default:
+                return str(default.GetId())
+        except Exception:
+            pass
+        return None
 
     def set_default_device(self, device_id):
         """Switch default audio output."""

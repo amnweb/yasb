@@ -18,7 +18,19 @@ VK_VOLUME_DOWN = 0xAE
 KEYEVENTF_KEYUP = 0x0002
 
 
+def ensure_non_elevated_foreground():
+    """Temporarily shifts foreground focus to the desktop (Progman) before simulating
+    keystrokes.
+    This prevents User Interface Privilege Isolation (UIPI) from blocking
+    low-level input injection (keybd_event) when an Administrator window has focus.
+    """
+    hwnd_desktop = ctypes.windll.user32.FindWindowW("Progman", None)
+    if hwnd_desktop:
+        ctypes.windll.user32.SetForegroundWindow(hwnd_desktop)
+
+
 def notification_center():
+    ensure_non_elevated_foreground()
     user32 = ctypes.windll.user32
     # Hold down Win key
     user32.keybd_event(VK_WIN, 0, KEYEVENTF_EXTENDEDKEY, 0)
@@ -30,6 +42,7 @@ def notification_center():
 
 
 def quick_settings():
+    ensure_non_elevated_foreground()
     user32 = ctypes.windll.user32
     # Hold down Win key
     user32.keybd_event(VK_WIN, 0, KEYEVENTF_EXTENDEDKEY, 0)
@@ -41,6 +54,7 @@ def quick_settings():
 
 
 def search():
+    ensure_non_elevated_foreground()
     user32 = ctypes.windll.user32
     # Hold down Win key
     user32.keybd_event(VK_WIN, 0, KEYEVENTF_EXTENDEDKEY, 0)
@@ -52,6 +66,7 @@ def search():
 
 
 def widget():
+    ensure_non_elevated_foreground()
     user32 = ctypes.windll.user32
     # Hold down Win key
     user32.keybd_event(VK_WIN, 0, KEYEVENTF_EXTENDEDKEY, 0)
@@ -63,6 +78,7 @@ def widget():
 
 
 def start_menu():
+    ensure_non_elevated_foreground()
     user32 = ctypes.windll.user32
     # Hold down Win key
     user32.keybd_event(VK_WIN, 0, KEYEVENTF_EXTENDEDKEY, 0)
@@ -70,6 +86,7 @@ def start_menu():
 
 
 def launcher():
+    ensure_non_elevated_foreground()
     user32 = ctypes.windll.user32
     # Press down ALT key
     user32.keybd_event(VK_LMENU, 0, KEYEVENTF_EXTENDEDKEY, 0)

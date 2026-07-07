@@ -234,7 +234,6 @@ media:
 .media-menu .artist {}
 .media-menu .source {}
 .media-menu .btn.play {}
-.media-menu .btn.pause {}
 .media-menu .btn.prev {}
 .media-menu .btn.next {}
 .media-menu .btn.disabled {}

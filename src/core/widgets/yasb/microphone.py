@@ -42,6 +42,7 @@ class MicrophoneWidget(BaseWidget):
 
         self._service = AudioInputService()
         self._service.register_widget(self)
+        self.destroyed.connect(lambda: self._service.unregister_widget(self))
 
         self.audio_endpoint = self._service.get_microphone_interface()
         self._update_label()

@@ -303,6 +303,9 @@ Example of context menu styling:
 }
 ```
 
+> **Note**:
+> More information about context menu styling can be found in the [Qt documentation](https://doc.qt.io/qt-6/stylesheet-examples.html#customizing-qmenu). 
+
 ## Tooltip Styling
 Tooltips can be styled using the `.tooltip` class. This allows you to customize the appearance of tooltips within YASB.
 

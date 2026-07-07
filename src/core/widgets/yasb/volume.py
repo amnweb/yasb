@@ -52,6 +52,7 @@ class VolumeWidget(BaseWidget):
 
         self._service = AudioOutputService()
         self._service.register_widget(self)
+        self.destroyed.connect(lambda: self._service.unregister_widget(self))
 
         self.volume = self._service.get_volume_interface()
         self._update_label()
