@@ -6,12 +6,15 @@ Provides DDC/CI support for external monitors and LCD support for laptops.
 import logging
 import threading
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from ctypes import byref, c_ulong, sizeof
 from ctypes.wintypes import BYTE, DWORD, HANDLE
 from typing import ClassVar
 
 from PyQt6.QtCore import QObject, pyqtSignal
+from PyQt6.QtWidgets import QApplication
 
+from core.utils.qobject import is_valid_qobject
 from core.utils.win32.bindings.dxva2 import PHYSICAL_MONITOR, VCP_BRIGHTNESS, VCP_CONTRAST, dxva2
 from core.utils.win32.bindings.kernel32 import kernel32
 from core.utils.win32.bindings.user32 import MONITORENUMPROC, user32
@@ -86,6 +89,11 @@ class BrightnessService(QObject):
         # Configuration
         self._poll_interval = 5.0  # seconds between polls
         self._set_debounce = 0.05  # seconds to wait before applying set
+
+        # Connect application exit/reload to stop background thread
+        app = QApplication.instance()
+        if app is not None:
+            app.aboutToQuit.connect(self._stop)
 
     @classmethod
     def instance(cls) -> BrightnessService:
@@ -190,8 +198,11 @@ class BrightnessService(QObject):
         self._enumerate_monitors()
         logging.debug("BrightnessService started with %d monitors", len(self._monitors))
 
-        # Initial poll
-        self._poll_all_monitors()
+        # Detect capabilities in a background thread so slow screens don't
+        # block fast ones, and so pending set operations are processed while
+        # detection is still running.
+        threading.Thread(target=self._detect_capabilities_parallel, daemon=True, name="BrightnessDetect").start()
+
         last_poll = time.monotonic()
 
         while self._running:
@@ -206,6 +217,60 @@ class BrightnessService(QObject):
                 self._poll_all_monitors()
 
             time.sleep(0.05)
+
+    def _detect_capabilities_parallel(self) -> None:
+        """Probe DDC for each monitor in parallel so slow ones don't block fast ones."""
+        with self._lock:
+            hmonitors = list(self._monitors.keys())
+        if not hmonitors:
+            return
+
+        pending_lcd: list[int] = []
+        with ThreadPoolExecutor(max_workers=len(hmonitors), thread_name_prefix="BrightnessDDC") as pool:
+            futures = {pool.submit(self._test_ddc, hmon): hmon for hmon in hmonitors}
+            for future in as_completed(futures):
+                hmonitor = futures[future]
+                try:
+                    supports_ddc = future.result()
+                except Exception:
+                    supports_ddc = False
+
+                if supports_ddc:
+                    with self._lock:
+                        monitor = self._monitors.get(hmonitor)
+                        if not monitor or monitor.tested:
+                            continue
+                        monitor.supports_ddc = True
+                        monitor.tested = True
+                        logging.debug(
+                            "Monitor %s: DDC=%s, LCD=%s", hmonitor, monitor.supports_ddc, monitor.supports_lcd
+                        )
+                    brightness = self._read_brightness(hmonitor)
+                    if brightness is not None:
+                        with self._lock:
+                            self._monitors[hmonitor].brightness = brightness
+                            self._monitors[hmonitor].reported = True
+                        self.brightness_changed.emit(hmonitor, brightness)
+                else:
+                    pending_lcd.append(hmonitor)
+
+        # Resolve LCD ownership serially in monitor order for non-DDC monitors.
+        for hmonitor in hmonitors:
+            if hmonitor not in pending_lcd:
+                continue
+            with self._lock:
+                monitor = self._monitors.get(hmonitor)
+                if not monitor or monitor.tested:
+                    continue
+                monitor.supports_lcd = self._test_lcd(hmonitor)
+                monitor.tested = True
+                logging.debug("Monitor %s: DDC=%s, LCD=%s", hmonitor, monitor.supports_ddc, monitor.supports_lcd)
+            brightness = self._read_brightness(hmonitor)
+            if brightness is not None:
+                with self._lock:
+                    self._monitors[hmonitor].brightness = brightness
+                    self._monitors[hmonitor].reported = True
+                self.brightness_changed.emit(hmonitor, brightness)
 
     def _process_pending_sets(self, now: float) -> None:
         """Process debounced set operations."""
@@ -236,12 +301,13 @@ class BrightnessService(QObject):
     def _poll_all_monitors(self) -> None:
         """Poll brightness for supported monitors only and emit changes."""
         with self._lock:
-            # Only poll monitors that support brightness (DDC or LCD)
-            # Skip monitors that have been tested and don't support either
+            # Only poll monitors that have been tested and support brightness
+            # (DDC or LCD). Untested monitors are handled by the parallel
+            # detection thread to avoid blocking the service loop.
             hmonitors = [
                 hmon
                 for hmon, info in self._monitors.items()
-                if not info.tested or info.supports_ddc or info.supports_lcd
+                if info.tested and (info.supports_ddc or info.supports_lcd)
             ]
 
         for hmonitor in hmonitors:
@@ -262,7 +328,8 @@ class BrightnessService(QObject):
 
             # Emit on first report or change
             if not was_reported or old_brightness != brightness:
-                self.brightness_changed.emit(hmonitor, brightness)
+                if is_valid_qobject(self) and self._running:
+                    self.brightness_changed.emit(hmonitor, brightness)
 
             # Poll contrast for DDC monitors
             with self._lock:
@@ -281,7 +348,8 @@ class BrightnessService(QObject):
                         monitor.supports_contrast = contrast is not None
                     if monitor.supports_contrast and monitor.contrast != contrast:
                         monitor.contrast = contrast
-                        self.contrast_changed.emit(hmonitor, contrast)
+                        if is_valid_qobject(self) and self._running:
+                            self.contrast_changed.emit(hmonitor, contrast)
 
     def _enumerate_monitors(self) -> None:
         """Enumerate all system monitors."""

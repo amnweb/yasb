@@ -4,6 +4,7 @@ from functools import lru_cache
 from typing import Any, cast, override
 
 from PyQt6.QtCore import (
+    QEasingCurve,
     QEvent,
     QObject,
     QPoint,
@@ -25,7 +26,15 @@ from PyQt6.QtGui import (
     QStaticText,
     QTransform,
 )
-from PyQt6.QtWidgets import QApplication, QDialog, QFrame, QLabel, QMenu, QWidget
+from PyQt6.QtWidgets import (
+    QApplication,
+    QDialog,
+    QFrame,
+    QLabel,
+    QMenu,
+    QSizePolicy,
+    QWidget,
+)
 from winrt.windows.data.xml.dom import XmlDocument
 from winrt.windows.ui.notifications import ToastNotification, ToastNotificationManager
 
@@ -128,6 +137,8 @@ class PopupWidget(QWidget):
         _round_corners (bool): Whether to round the corners of the popup.
         _round_corners_type (str): Type of round corners to apply.
         _border_color (str): Color of the border.
+        _dark_mode (bool): Whether the popup is in dark mode.
+        _persistent (bool): Whether the popup widget should persist in memory after being closed instead of being deleted.
     Methods:
         setProperty(name, value): Set a property for the popup widget.
         setPosition(alignment, direction, offset_left, offset_top): Position the popup relative to its parent widget.
@@ -150,6 +161,7 @@ class PopupWidget(QWidget):
         round_corners_type: str = "normal",
         border_color: str = "None",
         dark_mode: bool = False,
+        persistent: bool = False,
     ):
         super().__init__(parent)
 
@@ -165,6 +177,7 @@ class PopupWidget(QWidget):
         self._round_corners_type = round_corners_type
         self._border_color = border_color
         self._dark_mode = dark_mode
+        self._persistent = persistent
         self._parent = parent
         self._suspend_close = False
         # Create the inner frame
@@ -246,7 +259,8 @@ class PopupWidget(QWidget):
 
             try:
                 super().hide()
-                self.deleteLater()
+                if not self._persistent:
+                    self.deleteLater()
 
             except Exception:
                 pass
@@ -268,6 +282,7 @@ class PopupWidget(QWidget):
 
         self._is_closing = True
 
+        self._fade_animation.setEasingCurve(QEasingCurve.Type.InCubic)
         self._fade_animation.setStartValue(current_opacity)
         self._fade_animation.setEndValue(0.0)
         self._fade_animation.start()
@@ -292,7 +307,8 @@ class PopupWidget(QWidget):
 
         try:
             super().hide()
-            self.deleteLater()
+            if not self._persistent:
+                self.deleteLater()
         except Exception:
             pass
 
@@ -351,6 +367,7 @@ class PopupWidget(QWidget):
         super().showEvent(event)
 
         self.activateWindow()
+        self._fade_animation.setEasingCurve(QEasingCurve.Type.OutCubic)
         self._fade_animation.setStartValue(0.0)
         self._fade_animation.setEndValue(1.0)
         self._fade_animation.start()
@@ -463,6 +480,44 @@ class ToastNotifier:
         """)
         notification = ToastNotification(xml)
         self.toaster.show(notification)
+
+
+class ElidedLabel(QLabel):
+    """
+    QLabel that automatically elides text with "..." when it doesn't fit,
+    while preserving the original via `text()`.
+    """
+
+    def __init__(self, text: str = "", parent: QWidget | None = None):
+        super().__init__(text, parent)
+        self._text = text
+        self.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+        self.setMinimumWidth(0)
+
+    @override
+    def setText(self, text: str) -> None:
+        self._text = text
+        self._update_elided_text()
+
+    @override
+    def text(self) -> str:
+        return self._text
+
+    @override
+    def resizeEvent(self, event: QResizeEvent | None) -> None:
+        super().resizeEvent(event)
+        self._update_elided_text()
+
+    def _update_elided_text(self) -> None:
+        metrics = QFontMetrics(self.font())
+        # Keep a small margin to avoid edge-clipping and layout loops.
+        available_width = max(self.width() - 4, 0)
+        elided = metrics.elidedText(
+            self._text,
+            Qt.TextElideMode.ElideRight,
+            available_width,
+        )
+        super().setText(elided)
 
 
 class ScrollingLabel(QLabel):
