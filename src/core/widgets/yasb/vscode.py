@@ -1,19 +1,17 @@
 import datetime
-import json
 import logging
 import os
 import re
-import sqlite3
 import subprocess
-import urllib.parse
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QHBoxLayout, QLabel, QScrollArea, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QLineEdit, QPushButton, QScrollArea, QVBoxLayout, QWidget
 
-from core.utils.utilities import PopupWidget
+from core.utils.utilities import ElidedLabel, PopupWidget
 from core.validation.widgets.yasb.vscode import VSCodeConfig
 from core.widgets.base import BaseWidget
 from core.widgets.services.vscode.get_vscode_state_db_path import get_state_db_path
+from core.widgets.services.vscode.history import get_history_modified_time, load_recent_workspaces
 
 
 class VSCodeWidget(BaseWidget):
@@ -24,10 +22,13 @@ class VSCodeWidget(BaseWidget):
         self.config = config
         self._show_alt_label = False
 
-        state_storage_path = self.config.state_storage_path
-        if not state_storage_path:
-            state_storage_path = get_state_db_path()
-        self._state_file_path = state_storage_path
+        self._state_file_path = self.config.state_storage_path or get_state_db_path()
+        self._menu = None
+        self._last_db_modified_time = 0
+        self._active_filter = "all"
+        self._recent_workspaces = []
+        self._item_widgets = []
+        self._no_recents_widget = None
 
         self._init_container()
         self.build_widget_label(self.config.label, self.config.label_alt)
@@ -38,79 +39,6 @@ class VSCodeWidget(BaseWidget):
         self.callback_left = self.config.callbacks.on_left
         self.callback_right = self.config.callbacks.on_right
         self.callback_middle = self.config.callbacks.on_middle
-
-    def _uri_to_windows_path(self, uri):
-        parsed = urllib.parse.urlparse(uri)
-        path = urllib.parse.unquote(parsed.path)
-        if path.startswith("/"):
-            path = path[1:]
-        if ":" in path:
-            drive_part, rest = path.split(":", 1)
-            drive_part = drive_part.capitalize()
-            path = f"{drive_part}:{rest}"
-        return path
-
-    def _is_remote_uri(self, uri: str | None) -> bool:
-        return isinstance(uri, str) and uri.startswith("vscode-remote://")
-
-    def _remote_uri_display_path(self, uri: str) -> str:
-        parsed = urllib.parse.urlparse(uri)
-        authority = urllib.parse.unquote(parsed.netloc)
-        path = urllib.parse.unquote(parsed.path)
-
-        if authority.lower().startswith("wsl+"):
-            distro = authority[4:]
-            return f"WSL: {distro} - {path}" if distro else f"WSL - {path}"
-
-        return f"{authority} - {path}" if authority else (path or uri)
-
-    def _recent_uri_to_workspace(self, uri: str, workspace_type: str) -> dict | None:
-        if self._is_remote_uri(uri):
-            return {
-                "type": workspace_type,
-                "path": uri,
-                "display_path": self._remote_uri_display_path(uri),
-            }
-
-        local_path = self._uri_to_windows_path(uri)
-        if os.path.exists(local_path):
-            return {
-                "type": workspace_type,
-                "path": local_path,
-                "display_path": local_path,
-            }
-
-        return None
-
-    def _add_recent_uri(self, result_list: list[dict], uri: str, workspace_type: str) -> None:
-        workspace_data = self._recent_uri_to_workspace(uri, workspace_type)
-        if workspace_data:
-            result_list.append(workspace_data)
-
-    def _load_recent_workspaces(self) -> list[dict]:
-        try:
-            conn = sqlite3.connect(self._state_file_path)
-            cursor = conn.cursor()
-            cursor.execute("SELECT value FROM ItemTable WHERE key = 'history.recentlyOpenedPathsList'")
-            result = cursor.fetchone()
-            result_list = []
-            if result:
-                paths_data = json.loads(result[0]).get("entries", [])
-                for path in paths_data:
-                    if isinstance(path, dict):
-                        if path.get("folderUri"):
-                            self._add_recent_uri(result_list, path.get("folderUri"), "folder")
-                        if path.get("fileUri"):
-                            self._add_recent_uri(result_list, path.get("fileUri"), "file")
-                    else:
-                        logging.error("Unexpected entry type: %s", type(path))
-            else:
-                logging.error("No data found in %s", self._state_file_path)
-            conn.close()
-            return result_list
-        except Exception as e:
-            logging.error("Error: %s", e)
-            return []
 
     def _toggle_menu(self):
         self.show_menu()
@@ -143,19 +71,25 @@ class VSCodeWidget(BaseWidget):
     def _handle_mouse_press_event(self, event, workspace_data):
         path = workspace_data["path"]
         is_folder = workspace_data["type"] == "folder"
+        is_remote = workspace_data.get("is_remote", False)
+
+        args = [self.config.cli_command]
+        if is_remote:
+            uri_arg = "--folder-uri" if is_folder else "--file-uri"
+            args.extend([uri_arg, path])
+        else:
+            args.append(path)
 
         try:
-            if self._is_remote_uri(path):
-                uri_arg = "--folder-uri" if is_folder else "--file-uri"
-                subprocess.Popen(
-                    [self.config.cli_command, uri_arg, path], shell=True, creationflags=subprocess.CREATE_NO_WINDOW
-                )
-            else:
-                subprocess.Popen([self.config.cli_command, path], shell=True, creationflags=subprocess.CREATE_NO_WINDOW)
-        except subprocess.CalledProcessError as e:
+            subprocess.Popen(
+                args,
+                shell=True,
+                creationflags=subprocess.CREATE_NO_WINDOW,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+        except Exception as e:
             logging.error("Failed to open VS Code with path %s: %s", path, e)
-        except FileNotFoundError:
-            logging.error("VS Code not found in PATH")
         self._menu.hide()
 
     def _create_container_mouse_press_event(self, workspace_data):
@@ -165,8 +99,16 @@ class VSCodeWidget(BaseWidget):
         return mouse_press_event
 
     def show_menu(self):
-        self._menu = self._create_popup_menu()
-        self._populate_menu_content()
+        db_mtime = get_history_modified_time(self._state_file_path)
+
+        if not self._menu:
+            self._menu = self._create_popup_menu()
+            self._init_menu_layout()
+
+        if db_mtime > self._last_db_modified_time:
+            self._refresh_menu_items()
+            self._last_db_modified_time = db_mtime
+
         self._position_and_show_menu()
 
     def _create_popup_menu(self):
@@ -176,14 +118,88 @@ class VSCodeWidget(BaseWidget):
             self.config.menu.round_corners,
             self.config.menu.round_corners_type,
             self.config.menu.border_color,
+            persistent=True,
         )
         menu.setProperty("class", "vscode-menu")
         return menu
 
-    def _create_menu_header(self, layout):
+    def _init_menu_layout(self):
+        self._menu_layout = QVBoxLayout(self._menu)
+        self._menu_layout.setSpacing(0)
+        self._menu_layout.setContentsMargins(0, 0, 0, 0)
+
+        header_widget = QFrame()
+        header_widget.setProperty("class", "header")
+        header_layout = QHBoxLayout(header_widget)
+        header_layout.setContentsMargins(0, 0, 0, 0)
+        header_layout.setSpacing(0)
+
         header_label = QLabel(self.config.menu_title)
-        header_label.setProperty("class", "header")
-        layout.addWidget(header_label)
+        header_label.setProperty("class", "title")
+        header_layout.addWidget(header_label)
+
+        header_layout.addStretch()
+
+        self._pill_buttons = {}
+        for filter_name in ("all", "folders", "files", "remotes"):
+            btn = QPushButton(filter_name.title())
+            btn.setProperty("class", "filter-button active" if filter_name == self._active_filter else "filter-button")
+            btn.clicked.connect(lambda checked, name=filter_name: self._set_filter(name))
+            header_layout.addWidget(btn)
+            self._pill_buttons[filter_name] = btn
+
+        self._menu_layout.addWidget(header_widget)
+
+        search_bar = QFrame()
+        search_bar.setProperty("class", "search-bar")
+        search_bar_layout = QHBoxLayout(search_bar)
+        search_bar_layout.setContentsMargins(0, 0, 0, 0)
+        search_bar_layout.setSpacing(0)
+
+        self._search_input = QLineEdit()
+        self._search_input.setProperty("class", "input")
+        self._search_input.setPlaceholderText("Search...")
+        self._search_input.setClearButtonEnabled(True)
+        self._search_input.textChanged.connect(self._on_search_changed)
+        search_bar_layout.addWidget(self._search_input)
+
+        self._menu_layout.addWidget(search_bar)
+
+        self._scroll_area = self._create_scroll_area()
+        self._menu_layout.addWidget(self._scroll_area)
+
+        self._scroll_widget = QFrame()
+        self._scroll_widget.setProperty("class", "contents")
+        self._scroll_layout = QVBoxLayout(self._scroll_widget)
+        self._scroll_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+        self._scroll_layout.setContentsMargins(0, 0, 0, 0)
+        self._scroll_layout.setSpacing(0)
+
+        self._items_layout = QVBoxLayout()
+        self._items_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+        self._items_layout.setContentsMargins(0, 0, 0, 0)
+        self._items_layout.setSpacing(0)
+        self._scroll_layout.addLayout(self._items_layout)
+
+        self._no_recents_widget = self._create_no_recents_label()
+        self._no_recents_widget.setVisible(False)
+        self._scroll_layout.addWidget(self._no_recents_widget)
+
+        self._scroll_area.setWidget(self._scroll_widget)
+
+    def _set_filter(self, filter_name):
+        self._active_filter = filter_name
+
+        for name, btn in self._pill_buttons.items():
+            btn.setProperty("class", "filter-button active" if name == filter_name else "filter-button")
+            btn.style().unpolish(btn)
+            btn.style().polish(btn)
+
+        self._refresh_menu_items(reload_db=False)
+
+    def _on_search_changed(self, text):
+        self._search_query = text.strip().lower()
+        self._refresh_menu_items(reload_db=False)
 
     def _create_scroll_area(self):
         scroll_area = QScrollArea()
@@ -209,46 +225,86 @@ class VSCodeWidget(BaseWidget):
         return no_recent_label
 
     def _create_workspace_item(self, workspace_data):
-        container = QWidget()
+        container = QFrame()
         container.setProperty("class", "item")
         container.setContentsMargins(0, 0, 8, 0)
 
         container_layout = QHBoxLayout(container)
-        container_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
         container_layout.setContentsMargins(0, 0, 0, 0)
         container_layout.setSpacing(0)
 
         is_folder = workspace_data["type"] == "folder"
+        is_remote = workspace_data.get("is_remote", False)
 
-        if (is_folder and not self.config.hide_folder_icon) or (not is_folder and not self.config.hide_file_icon):
-            icon_label = QLabel(self.config.folder_icon if is_folder else self.config.file_icon)
-            icon_label.setProperty("class", "folder-icon" if is_folder else "file-icon")
+        icon_char = ""
+        icon_class = ""
+
+        if is_remote and self.config.icons.remote:
+            icon_char = self.config.icons.remote
+            icon_class = "remote-icon"
+        elif is_folder:
+            icon_char = self.config.icons.folder
+            icon_class = "folder-icon"
+        else:
+            icon_char = self.config.icons.file
+            icon_class = "file-icon"
+
+        if icon_char:
+            icon_label = QLabel(icon_char)
+            icon_label.setProperty("class", icon_class)
             container_layout.addWidget(icon_label)
 
         path = workspace_data["path"]
         display_path = workspace_data["display_path"]
-        display_path = display_path.split("/")[-1] if self.config.truncate_to_root_dir else display_path
-        if len(display_path) > self.config.max_field_size:
-            display_path = "..." + display_path[-self.config.max_field_size + 3 :]
+        if self.config.truncate_to_root_dir:
+            if is_remote:
+                import urllib.parse
 
-        title_label = QLabel(display_path)
+                parsed = urllib.parse.urlparse(path)
+                remote_path = urllib.parse.unquote(parsed.path).replace("\\", "/").rstrip("/")
+                display_path = remote_path.split("/")[-1] if remote_path else "/"
+            else:
+                local_path = path.replace("\\", "/").rstrip("/")
+                if not local_path or local_path.endswith(":"):
+                    display_path = path
+                else:
+                    display_path = local_path.split("/")[-1]
+
+        title_label = ElidedLabel(display_path)
         title_label.setProperty("class", "title")
 
-        try:
-            mod_time = os.path.getmtime(path)
-            mod_date = datetime.datetime.fromtimestamp(mod_time)
-            date_str = mod_date.strftime(self.config.modified_date_format)
-        except OSError:
-            date_str = "Unknown"
+        if is_remote:
+            authority = workspace_data.get("remote_authority", "")
+            if authority:
+                auth_lower = authority.lower()
+                if auth_lower.startswith("wsl+"):
+                    distro = authority[4:]
+                    date_str = f"WSL ({distro})" if distro else "WSL Connection"
+                elif auth_lower.startswith("ssh-remote+"):
+                    host = authority[11:]
+                    date_str = f"SSH ({host})" if host else "SSH Connection"
+                elif auth_lower.startswith("dev-container+"):
+                    date_str = "Dev Container"
+                else:
+                    date_str = f"Remote: {authority}"
+            else:
+                date_str = "Remote Connection"
+        else:
+            try:
+                mod_time = os.path.getmtime(path)
+                mod_date = datetime.datetime.fromtimestamp(mod_time)
+                date_str = mod_date.strftime(self.config.modified_date_format)
+            except OSError:
+                date_str = "Unknown"
 
-        date_label = QLabel(date_str)
+        date_label = ElidedLabel(date_str)
         date_label.setProperty("class", "modified-date")
 
         text_content = QWidget()
         text_content_layout = QVBoxLayout(text_content)
         text_content_layout.addWidget(title_label)
         text_content_layout.addWidget(date_label)
-        text_content_layout.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        text_content_layout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
         text_content_layout.setContentsMargins(0, 0, 0, 0)
         text_content_layout.setSpacing(0)
 
@@ -257,36 +313,61 @@ class VSCodeWidget(BaseWidget):
 
         return container
 
-    def _populate_menu_content(self):
-        main_layout = QVBoxLayout(self._menu)
-        main_layout.setSpacing(0)
-        main_layout.setContentsMargins(0, 0, 0, 0)
+    def _refresh_menu_items(self, reload_db=True):
+        if reload_db:
+            for widget in self._item_widgets:
+                widget.deleteLater()
+            self._item_widgets.clear()
 
-        self._create_menu_header(main_layout)
+            recent_workspaces = load_recent_workspaces(self._state_file_path)
+            if recent_workspaces:
+                folders = [ws for ws in recent_workspaces if ws["type"] == "folder"][
+                    : self.config.max_number_of_folders
+                ]
+                files = [ws for ws in recent_workspaces if ws["type"] == "file"][: self.config.max_number_of_files]
+                self._recent_workspaces = folders + files
+            else:
+                self._recent_workspaces = []
 
-        scroll_area = self._create_scroll_area()
-        main_layout.addWidget(scroll_area)
+            for workspace in self._recent_workspaces:
+                item_widget = self._create_workspace_item(workspace)
+                item_widget.setProperty("workspace_type", workspace["type"])
+                item_widget.setProperty("is_remote", workspace.get("is_remote", False))
+                item_widget.setProperty("display_path", workspace.get("display_path", ""))
+                item_widget.setProperty("path", workspace.get("path", ""))
+                self._items_layout.addWidget(item_widget)
+                self._item_widgets.append(item_widget)
 
-        scroll_widget = QWidget()
-        scroll_widget.setProperty("class", "contents")
-        scroll_layout = QVBoxLayout(scroll_widget)
-        scroll_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
-        scroll_layout.setContentsMargins(0, 0, 0, 0)
-        scroll_layout.setSpacing(0)
-        scroll_area.setWidget(scroll_widget)
+        search_query = getattr(self, "_search_query", "").lower()
 
-        recent_workspaces = self._load_recent_workspaces()
+        has_visible_items = False
+        for item_widget in self._item_widgets:
+            w_type = item_widget.property("workspace_type")
+            w_remote = item_widget.property("is_remote")
+            display_path = item_widget.property("display_path") or ""
+            path = item_widget.property("path") or ""
 
-        if not recent_workspaces:
-            scroll_layout.addWidget(self._create_no_recents_label())
-        else:
-            folders = [ws for ws in recent_workspaces if ws["type"] == "folder"][: self.config.max_number_of_folders]
-            files = [ws for ws in recent_workspaces if ws["type"] == "file"][: self.config.max_number_of_files]
-            workspaces_to_show = folders + files
+            visible = True
+            if self._active_filter == "folders" and w_type != "folder":
+                visible = False
+            elif self._active_filter == "files" and w_type != "file":
+                visible = False
+            elif self._active_filter == "remotes" and not w_remote:
+                visible = False
 
-            for workspace in workspaces_to_show:
-                item = self._create_workspace_item(workspace)
-                scroll_layout.addWidget(item)
+            if visible and search_query:
+                haystack = (display_path + path).lower()
+                if search_query not in haystack:
+                    visible = False
+
+            item_widget.setVisible(visible)
+            if visible:
+                has_visible_items = True
+
+        show_empty = (not self._recent_workspaces) or (not has_visible_items)
+        self._no_recents_widget.setVisible(show_empty)
+
+        self._menu.adjustSize()
 
     def _position_and_show_menu(self):
         self._menu.adjustSize()
