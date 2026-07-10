@@ -6,7 +6,7 @@ import os
 def get_state_db_path() -> str:
     product_json_path = find_vscode_product_json()
     try:
-        if os.path.exists(product_json_path):
+        if product_json_path and os.path.exists(product_json_path):
             with open(product_json_path, encoding="utf-8") as f:
                 product = json.load(f)
 

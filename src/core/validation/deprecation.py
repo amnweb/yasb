@@ -73,6 +73,13 @@ SCOPED_DEPRECATED_FIELDS: dict[str, dict[str, str]] = {
     "VSCodeMenuConfig": {
         "distance": "Use 'offset_top' instead.",
     },
+    "VSCodeConfig": {
+        "max_field_size": "No longer supported and can be removed from the config. Handled dynamically by font-aware elision.",
+        "folder_icon": "Use icons.folder instead.",
+        "file_icon": "Use icons.file instead.",
+        "hide_folder_icon": "No longer supported. Set icons.folder to an empty string instead.",
+        "hide_file_icon": "No longer supported. Set icons.file to an empty string instead.",
+    },
     "BrightnessMenuConfig": {
         "distance": "Use 'offset_top' instead.",
     },
