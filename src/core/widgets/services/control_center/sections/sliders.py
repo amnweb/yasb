@@ -1,3 +1,5 @@
+import logging
+
 from PyQt6.QtCore import QEvent, QPoint, Qt
 from PyQt6.QtWidgets import (
     QFrame,
@@ -13,6 +15,7 @@ from PyQt6.QtWidgets import (
 from core.bar_helper import GlobalState
 from core.utils.qobject import is_valid_qobject
 from core.utils.tooltip import set_tooltip
+from core.utils.win32.bindings import user32
 from core.utils.win32.utils import apply_qmenu_style
 from core.widgets.services.brightness.service import BrightnessService
 
@@ -137,6 +140,8 @@ class SlidersSectionWidget(QFrame):
         initial_value, initial_text = self._get_slider_initial_state(key)
         slider.setValue(initial_value)
         slider.valueChanged.connect(callback)
+        if key == "volume":
+            slider.sliderReleased.connect(self._on_volume_slider_released)
         layout.addWidget(slider, 1)
 
         value_label = QLabel(initial_text, row)
@@ -204,6 +209,12 @@ class SlidersSectionWidget(QFrame):
         self._set_brightness_value(value)
         if self._brightness_value_label is not None:
             self._brightness_value_label.setText(f"{value}%")
+
+    def _on_volume_slider_released(self):
+        try:
+            user32.MessageBeep(0)
+        except Exception as e:
+            logging.debug("Failed to play volume sound: %s", e)
 
     def _on_volume_slider_changed(self, value: int):
         interface = self._get_volume_interface()
