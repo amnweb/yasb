@@ -4,8 +4,8 @@ Shows a list of your recently opened projects in Visual Studio Code. It opens a 
 
 | Option           | Type     | Default                        | Description                                                                 |
 |------------------|----------|--------------------------------|-----------------------------------------------------------------------------|
-| `label`             | string  | `'<span>\udb82\ude1e</span>'` | The format string for the widget. |
-| `label_alt`         | string  | `'<span>\udb82\ude1e</span> recents'` | The alternative format string for the widget. |
+| `label`             | string  | `'<span>\ue943</span>'` | The format string for the widget. |
+| `label_alt`         | string  | `'<span>\ue943</span> recents'` | The alternative format string for the widget. |
 | `menu_title`         | string  | `<span style='font-weight:bold'>VS</span>Code recents` | The title of the menu. |
 | `icons` | dict | `{'folder': '\ue8b7', 'file': '\ue8e5', 'remote': '\ue8af'}` | The icons for folders, files, and remote sessions. Setting any icon to `""` will hide it. |
 | `truncate_to_root_dir` | bool    | `false`                        | Whether to truncate the path to the projects root directory. |
@@ -23,8 +23,8 @@ Shows a list of your recently opened projects in Visual Studio Code. It opens a 
 vscode:
     type: "yasb.vscode.VSCodeWidget"
     options:
-      label: "<span>\udb82\ude1e</span>"
-      label_alt: "<span>\udb82\ude1e</span> recents"
+      label: "<span>\ue943</span>"
+      label_alt: "<span>\ue943</span> recents"
       menu_title: "<span style='font-weight:bold'>VS</span>Code recents"
       icons:
         folder: "\ue8b7"
@@ -49,7 +49,7 @@ vscode:
 - **label_alt:** The alternative format string for the widget.
 - **menu_title:** The title of the menu.
 - **icons:** The icons for the folders, files, and remote sessions (WSL/SSH). Setting any icon string to `""` (empty) acts as a hide option.
-- **truncate_to_root:** Whether to truncate the path to the projects root directory. Example `C:\Users\user\Documents\Projects\ProjectName` will be truncated to `ProjectName`.
+- **truncate_to_root_dir:** Whether to truncate the path to the projects root directory. Example `C:\Users\user\Documents\Projects\ProjectName` will be truncated to `ProjectName`.
 - **max_number_of_folders:** The maximum number of folders to display in the menu.
 - **max_number_of_files:** The maximum number of files to display in the menu (set to 0 if you only want folders).
 - **max_field_size:** *Deprecated (ignored).* Previously used to limit path string length before truncation. It is now handled dynamically and natively using font-aware elision (`...` suffix).
@@ -90,6 +90,7 @@ vscode:
 ```css
 .vscode-widget .icon {
     color: #89b4fa;
+    font-family: "Segoe Fluent Icons";
 }
 .vscode-menu {
     max-height: 500px;
