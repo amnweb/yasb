@@ -486,11 +486,11 @@ class MediaWidget(BaseWidget):
             is_playing = self._is_playing
             play_icon = self.config.media_menu_icons.pause if is_playing else self.config.media_menu_icons.play
 
-            # Get control states directly from playback info, not from main UI buttons
-            if self.current_session is not None and (pb_info := self.current_session.playback_info) is not None:
-                is_prev_enabled = pb_info.controls.is_previous_enabled
-                is_next_enabled = pb_info.controls.is_next_enabled
-                is_play_enabled = pb_info.controls.is_play_pause_toggle_enabled
+            # Control flags are snapshotted on SessionState (no live WinRT PlaybackInfo).
+            if self.current_session is not None and self.current_session.playback_ready:
+                is_prev_enabled = self.current_session.controls_prev_enabled
+                is_next_enabled = self.current_session.controls_next_enabled
+                is_play_enabled = self.current_session.controls_play_enabled
             else:
                 is_prev_enabled = True
                 is_next_enabled = True
@@ -656,14 +656,13 @@ class MediaWidget(BaseWidget):
                 self.hide()
 
     def _on_playback_info_changed(self):
-        if self.current_session is None or self.current_session.playback_info is None:
+        if self.current_session is None or not self.current_session.playback_ready:
             return
-        # Set play-pause state icon
-        playback_info = self.current_session.playback_info
-        is_playing = playback_info.playback_status == 4
-        is_prev_enabled = playback_info.controls.is_previous_enabled
-        is_play_enabled = playback_info.controls.is_play_pause_toggle_enabled
-        is_next_enabled = playback_info.controls.is_next_enabled
+        # Set play-pause state icon from snapshotted SessionState (no WinRT object).
+        is_playing = self.current_session.is_playing
+        is_prev_enabled = self.current_session.controls_prev_enabled
+        is_play_enabled = self.current_session.controls_play_enabled
+        is_next_enabled = self.current_session.controls_next_enabled
         self._is_playing = is_playing
 
         if not self.config.controls_hide:
