@@ -296,8 +296,8 @@ class PinManager:
                 #   - YouTube PWA: www.youtube.com-54E21B02_pd8mbgmqs65xy!App -> ends with !App
                 #   - TikTok Store PWA: BytedancePte.Ltd.TikTok_6yccndn6064se!App -> ends with !App
                 #   - Calculator UWP: Microsoft.WindowsCalculator_8wekyb3d8bbwe!App -> ends with !App
-                #   - Steam Win32: Valve.Steam.Client → does NOT end with !App
-                #   - Discord Electron: com.squirrel.Discord.Discord → does NOT end with !App
+                #   - Steam Win32: Valve.Steam.Client -> does NOT end with !App
+                #   - Discord Electron: com.squirrel.Discord.Discord -> does NOT end with !App
 
                 is_uwp_or_pwa = aumid and aumid.endswith("!App")
 

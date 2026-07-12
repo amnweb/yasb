@@ -298,7 +298,7 @@ LRESULT CALLBACK ManualSubclassProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
 
     // Watchdog posts this message. Because it's posted (not sent), it is only
     // dequeued by the top-level GetMessage loop AFTER all nested SendMessage
-    // dispatches have unwound — so no ManualSubclassProc frames remain on the
+    // dispatches have unwound - so no ManualSubclassProc frames remain on the
     // stack when we process it.
     if (uMsg == WM_YASB_UNHOOK) {
         if (oldProc) {
@@ -312,7 +312,7 @@ LRESULT CALLBACK ManualSubclassProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
         return 0;
     }
 
-    // Explorer is tearing down the tray window — restore the original wndproc
+    // Explorer is tearing down the tray window - restore the original wndproc
     if (uMsg == WM_NCDESTROY) {
         if (oldProc) {
             SetWindowLongPtrW(hWnd, GWLP_WNDPROC, (LONG_PTR)oldProc);
@@ -344,7 +344,7 @@ LRESULT CALLBACK ManualSubclassProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
 DWORD WINAPI WatchdogThread(LPVOID lpParam) {
     HANDLE hMutex = OpenMutexW(SYNCHRONIZE, FALSE, L"Global\\YASBTrayHookAlive");
     if (!hMutex) {
-        // Mutex doesn't exist — host is already gone
+        // Mutex doesn't exist - host is already gone
         DebugOutput("[DLL] Watchdog: host mutex not found, self-detaching.\n");
     } else {
         DebugOutput("[DLL] Watchdog active. Sleeping until host drops.\n");
@@ -368,7 +368,7 @@ DWORD WINAPI WatchdogThread(LPVOID lpParam) {
     // 1. Unhook the wndproc via PostMessage.
     //    Unlike SendMessage, PostMessage places the message in the queue.
     //    It is only dequeued when the UI thread returns to its top-level
-    //    GetMessage loop — AFTER all nested SendMessage dispatches (autohide
+    //    GetMessage loop - AFTER all nested SendMessage dispatches (autohide
     //    animations, etc.) have fully unwound. This guarantees no
     //    ManualSubclassProc frames are on the stack when we process it.
     HWND hTray = FindRealSystray();
@@ -402,7 +402,7 @@ DWORD WINAPI WatchdogThread(LPVOID lpParam) {
         g_hUnhookDoneEvent = NULL;
     }
 
-    // 4. Safe to unload — the wndproc is restored and no DLL code is on any stack
+    // 4. Safe to unload - the wndproc is restored and no DLL code is on any stack
     OutputDebugStringA("[DLL] Detach: FreeLibraryAndExitThread now.\n");
     FreeLibraryAndExitThread(g_hModule, 0);
     return 0;
@@ -416,7 +416,7 @@ DWORD WINAPI InitThread(LPVOID lpParam) {
         LoadLibraryW(dllPath);
     }
 
-    // Create the event before connecting — watchdog will need it
+    // Create the event before connecting - watchdog will need it
     g_hUnhookDoneEvent = CreateEventW(NULL, TRUE, FALSE, NULL);
 
     g_hPipe = CreateFileW(L"\\\\.\\pipe\\yasb_systray_monitor", GENERIC_WRITE, 0, NULL, OPEN_EXISTING,

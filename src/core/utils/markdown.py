@@ -291,7 +291,7 @@ def md_to_html(src: str, *, alert_styles: dict[str, tuple[str, str]] | None = No
                 i += 1
             out.append("<ol>" + "".join(f"<li>{_md_inline(it)}</li>" for it in items) + "</ol>")
             continue
-        # Paragraph — collect consecutive non-blank, non-block lines
+        # Paragraph - collect consecutive non-blank, non-block lines
         para: list[str] = []
         while (
             i < n

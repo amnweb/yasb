@@ -66,7 +66,7 @@ def get_windows_host_arch():
     except AttributeError:
         pass  # API not available
 
-    # Fallback: trust platform.machine() — old enough Windows = definitely x64
+    # Fallback: trust platform.machine() - old enough Windows = definitely x64
     return platform.machine()
 
 

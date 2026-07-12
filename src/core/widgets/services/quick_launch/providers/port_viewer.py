@@ -446,7 +446,7 @@ class PortViewerProvider(BaseProvider):
                 if pid is not None:
                     desc_bits.append(f"PID {pid}")
                 if e.foreign and e.foreign != "*:*":
-                    desc_bits.append(f"→ {e.foreign}")
+                    desc_bits.append(f"-> {e.foreign}")
                 description = ", ".join(desc_bits)
                 copy_text = f"{e.protocol.upper()} {e.local} {e.state} PID {pid} {proc}".strip()
 

@@ -196,7 +196,7 @@ class CurrencyProvider(BaseProvider):
         return [
             ProviderResult(
                 title=f"{dst_sym}{display} {dst}",
-                description=f"{amt_display} {src} → {dst} · Rate: {rate:.6f}".rstrip("0").rstrip("."),
+                description=f"{amt_display} {src} -> {dst} · Rate: {rate:.6f}".rstrip("0").rstrip("."),
                 icon_char=ICON_CURRENCY,
                 provider=self.name,
                 action_data={"copy_value": display},
@@ -232,7 +232,7 @@ class CurrencyProvider(BaseProvider):
             results.append(
                 ProviderResult(
                     title=f"{dst_sym}{display} {dst}",
-                    description=f"{amt_display} {src} → {dst}",
+                    description=f"{amt_display} {src} -> {dst}",
                     icon_char=ICON_CURRENCY,
                     provider=self.name,
                     action_data={"copy_value": display},

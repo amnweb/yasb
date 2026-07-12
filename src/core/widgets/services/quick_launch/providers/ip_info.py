@@ -250,7 +250,7 @@ class IpInfoProvider(BaseProvider):
             results.append(self._make_result(label, detail, copy_val))
 
             if ipv6:
-                results.append(self._make_result(f"  IPv6: {ipv6}", f"{name} — Click to copy", ipv6))
+                results.append(self._make_result(f"  IPv6: {ipv6}", f"{name} - Click to copy", ipv6))
 
         return results
 
@@ -360,7 +360,7 @@ class IpInfoProvider(BaseProvider):
             if hosts:
                 first = str(hosts[0])
                 last = str(hosts[-1])
-                range_str = f"{first} — {last}"
+                range_str = f"{first} - {last}"
                 results.append(
                     self._make_result(
                         f"Host Range: {range_str}",

@@ -86,7 +86,7 @@ class GithubNotificationsProvider(BaseProvider):
         super().__init__(config)
         self._token_cfg: str = self.config.get("token", "env")
 
-        # Local cache — uses GitHubDataManager for all API calls but keeps its own
+        # Local cache - uses GitHubDataManager for all API calls but keeps its own
         # data copy.  None means "never fetched yet"; empty list means
         # "fetched but nothing came back (or error)".
         self._cached_data: list[dict] | None = None

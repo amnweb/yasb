@@ -1,4 +1,4 @@
-"""Lightweight QObject validity check — no heavy dependencies."""
+"""Lightweight QObject validity check - no heavy dependencies."""
 
 from typing import TypeGuard
 

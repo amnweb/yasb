@@ -23,7 +23,7 @@ def shell_open(
 
     Args:
         file: Path to the file, URL, or shortcut to open.
-        verb: Shell verb — ``"open"``, ``"runas"``, ``"edit"``, ``"print"``, etc.
+        verb: Shell verb - ``"open"``, ``"runas"``, ``"edit"``, ``"print"``, etc.
         parameters: Optional command-line arguments.
         directory: Optional working directory.
         show_cmd: Window show state (``SW_SHOWNORMAL=1``, ``SW_HIDE=0``, etc).

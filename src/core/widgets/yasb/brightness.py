@@ -313,7 +313,7 @@ class BrightnessWidget(BaseWidget):
             self._service.set_contrast(hmonitor, value)
 
     def _on_monitor_slider_released(self, key: str):
-        """Handle slider release — hide tooltip and apply value."""
+        """Handle slider release - hide tooltip and apply value."""
         self._hide_slider_tooltip()
 
         slider = self._sliders.get(key)

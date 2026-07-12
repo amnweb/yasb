@@ -67,7 +67,7 @@ pomodoro:
 
 - **label**: Format for displaying timer information. Available variables: `{remaining}`, `{elapsed}`, `{session}`, `{total_sessions}`, `{status}`, `{icon}`.
   - `{remaining}` - Time left in the current phase (work or break), counting down. Example: `24:15`
-  - `{elapsed}` - Total accumulated **work** time across all completed sessions plus the current work session progress. Break time is excluded. Holds steady during breaks. Example: after 2 full 25-min sessions and 10 min into the 3rd → `01:00:00`
+  - `{elapsed}` - Total accumulated **work** time across all completed sessions plus the current work session progress. Break time is excluded. Holds steady during breaks. Example: after 2 full 25-min sessions and 10 min into the 3rd -> `01:00:00`
   - `{session}` - Current session number (1-based).
   - `{total_sessions}` - Target number of sessions, or `∞` if unlimited (`session_target: 0`).
   - `{status}` - Current timer state: `Work`, `Break`, or `Paused`.

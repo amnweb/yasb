@@ -291,7 +291,7 @@ class SnippetsProvider(BaseProvider):
         if not snippet:
             return False
 
-        # If this snippet is being edited, don't type — just keep form open
+        # If this snippet is being edited, don't type - just keep form open
         if self._editing_id == snippet_id:
             return None
 

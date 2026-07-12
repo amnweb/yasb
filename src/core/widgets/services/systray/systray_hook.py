@@ -125,7 +125,7 @@ class SystrayHook(QObject):
         self._message_pipe = None
         self._h_hook: int = 0
 
-        # Create the watchdog mutex — held for entire lifetime.
+        # Create the watchdog mutex - held for entire lifetime.
         try:
             self._h_mutex = CreateMutex(None, True, WATCHDOG_MUTEX_NAME)
         except pywintypes.error as e:
