@@ -1,6 +1,6 @@
 from PyQt6.QtCore import QEvent, QPointF, Qt
 from PyQt6.QtGui import QBrush, QColor, QLinearGradient, QPainter, QPainterPath, QPen
-from PyQt6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QLabel, QPushButton, QVBoxLayout
+from PyQt6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
 
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import PopupWidget, refresh_widget_style
@@ -59,6 +59,34 @@ class PinnablePopup(PopupWidget):
             event.accept()
             return
         super().closeEvent(event)
+
+    def resizeEvent(self, event):
+        if self._is_pinned:
+            # A pinned popup keeps the position the user dragged it to. PopupWidget.resizeEvent
+            # re-anchors to the bar on every resize, which is what snaps a pinned popup back on a
+            # refresh; resize the content to fill the new size but skip the re-anchor.
+            self._popup_content.setGeometry(0, 0, self.width(), self.height())
+            QWidget.resizeEvent(self, event)
+            return
+        super().resizeEvent(event)
+
+
+def create_pin_button(popup: PopupWidget, pin_icon: str, unpin_icon: str) -> QPushButton:
+    """A checkable header button that keeps ``popup`` open and draggable while checked."""
+    pin_btn = QPushButton(pin_icon)
+    pin_btn.setCheckable(True)
+    pin_btn.setProperty("class", "pin-btn")
+    set_tooltip(pin_btn, "Pin this window")
+
+    def on_toggled(checked: bool):
+        pin_btn.setText(unpin_icon if checked else pin_icon)
+        pin_btn.setProperty("class", "pin-btn pinned" if checked else "pin-btn")
+        set_tooltip(pin_btn, "Unpin this window" if checked else "Pin this window")
+        refresh_widget_style(pin_btn)
+        popup._is_pinned = checked
+
+    pin_btn.toggled.connect(on_toggled)
+    return pin_btn
 
 
 class GraphWidget(QFrame):
@@ -236,21 +264,7 @@ def build_stat_popup(
     header_layout.addWidget(title_label)
     header_layout.addStretch()
 
-    pin_icon = menu_config.pin_icon
-    unpin_icon = menu_config.unpin_icon
-    pin_btn = QPushButton(pin_icon)
-    pin_btn.setCheckable(True)
-    pin_btn.setProperty("class", "pin-btn")
-    set_tooltip(pin_btn, "Pin this window")
-
-    def on_pin_toggled(checked: bool):
-        pin_btn.setText(unpin_icon if checked else pin_icon)
-        pin_btn.setProperty("class", "pin-btn pinned" if checked else "pin-btn")
-        set_tooltip(pin_btn, "Pin this window" if not checked else "Unpin this window")
-        refresh_widget_style(pin_btn)
-        popup._is_pinned = checked
-
-    pin_btn.toggled.connect(on_pin_toggled)
+    pin_btn = create_pin_button(popup, menu_config.pin_icon, menu_config.unpin_icon)
     header_layout.addWidget(pin_btn)
     layout.addWidget(header)
 
