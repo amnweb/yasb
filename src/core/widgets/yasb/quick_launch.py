@@ -623,7 +623,7 @@ class QuickLaunchWidget(BaseWidget):
         search_input.textChanged.connect(self._on_search_text_changed)
         search_input.installEventFilter(self)
 
-        # Prediction/autocomplete overlay — a read-only QLineEdit on top of the real one.
+        # Prediction/autocomplete overlay - a read-only QLineEdit on top of the real one.
         # Same widget type = identical internal text positioning with any font.
         prediction_input = QLineEdit(search_input)
         prediction_input.setProperty("class", "search-input")
@@ -1361,7 +1361,7 @@ class QuickLaunchWidget(BaseWidget):
             reset_action = menu.addAction("Reset position")
 
         global_pos = search.mapToGlobal(pos)
-        # Native menus ignore widget setCursor — override is the only way
+        # Native menus ignore widget setCursor - override is the only way
         QApplication.setOverrideCursor(QCursor(Qt.CursorShape.ArrowCursor))
         selected = menu.exec(global_pos)
         QApplication.restoreOverrideCursor()

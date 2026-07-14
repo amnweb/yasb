@@ -290,11 +290,10 @@ class MediaSectionWidget(QFrame):
             self._current_is_playing = is_playing
             self._play_btn.setText(self.config.icons.pause if is_playing else self.config.icons.play)
 
-        if (pb_info := session.playback_info) is not None:
-            controls = pb_info.controls
-            self._prev_btn.setEnabled(controls.is_previous_enabled)
-            self._play_btn.setEnabled(controls.is_play_pause_toggle_enabled)
-            self._next_btn.setEnabled(controls.is_next_enabled)
+        if session.playback_ready:
+            self._prev_btn.setEnabled(session.controls_prev_enabled)
+            self._play_btn.setEnabled(session.controls_play_enabled)
+            self._next_btn.setEnabled(session.controls_next_enabled)
         else:
             self._prev_btn.setEnabled(True)
             self._play_btn.setEnabled(True)

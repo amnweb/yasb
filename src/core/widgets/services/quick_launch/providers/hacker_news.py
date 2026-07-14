@@ -103,14 +103,14 @@ class HackerNewsProvider(BaseProvider):
         query = self.get_query_text(text).strip()
         parts = query.split(None, 1)
 
-        # No query → show topic tiles
+        # No query -> show topic tiles
         if not query:
             return self._topic_tiles()
 
         topic_key = parts[0].lower()
         keyword = parts[1].strip() if len(parts) > 1 else ""
 
-        # Exact topic match → fetch stories
+        # Exact topic match -> fetch stories
         if topic_key in _TOPICS:
             return self._fetch_topic(topic_key, keyword, cancel_event)
 

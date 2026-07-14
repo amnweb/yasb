@@ -172,7 +172,7 @@ class ClaudeUsageWidget(BaseWidget):
             if self.config.tooltip:
                 set_tooltip(
                     current_widget,
-                    f"Claude usage — 5h: {values['five_hour']}% · 7d: {values['seven_day']}%",
+                    f"Claude usage - 5h: {values['five_hour']}% · 7d: {values['seven_day']}%",
                 )
         refresh_widget_style(*active_widgets)
 

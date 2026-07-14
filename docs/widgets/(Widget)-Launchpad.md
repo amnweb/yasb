@@ -382,9 +382,9 @@ If you want to use different styles for the context menu, you can target the `.l
    - Lowercase conversion
    - Spaces replaced with hyphens
    Examples:
-   - "Browsers" group → .browsers
-   - "My Apps" group → .my-apps
-   - "Work Tools" group → .work-tools
+   - "Browsers" group -> .browsers
+   - "My Apps" group -> .my-apps
+   - "Work Tools" group -> .work-tools
 */
 .launchpad .group-icon .group-icon-container.browser {
     background-color: rgb(33, 47, 71);

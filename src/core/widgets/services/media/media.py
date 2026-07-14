@@ -12,7 +12,6 @@ from PyQt6.QtWidgets import QApplication
 from qasync import asyncSlot  # type: ignore
 from winrt.windows.media.control import (
     GlobalSystemMediaTransportControlsSession,
-    GlobalSystemMediaTransportControlsSessionPlaybackInfo,
 )
 from winrt.windows.media.control import GlobalSystemMediaTransportControlsSessionManager as SessionManager
 from winrt.windows.storage.streams import Buffer, InputStreamOptions, IRandomAccessStreamReference
@@ -23,7 +22,6 @@ pil_logger = logging.getLogger("PIL")
 pil_logger.setLevel(logging.INFO)
 
 type MediaSession = GlobalSystemMediaTransportControlsSession
-type MediaPlaybackInfo = GlobalSystemMediaTransportControlsSessionPlaybackInfo
 
 logger = logging.getLogger("WindowsMedia")
 
@@ -45,10 +43,14 @@ class SessionState:
         self.playback_rate = 1.0
         self.is_current = False
         self.timeline_enabled = False
+        # Snapshotted from WinRT PlaybackInfo - plain Python only (do not retain COM objects).
+        self.playback_ready = False
+        self.controls_prev_enabled = True
+        self.controls_play_enabled = True
+        self.controls_next_enabled = True
         self.thumbnail: Image.Image | None = None
         self.cleanup_callbacks: list[Callable[..., None]] = []
         self.session: MediaSession | None = None
-        self.playback_info: MediaPlaybackInfo | None = None
 
 
 class WindowsMedia(QObject, metaclass=QSingleton):
@@ -88,7 +90,7 @@ class WindowsMedia(QObject, metaclass=QSingleton):
             self._manager = manager
             await self._refresh_sessions(manager)
 
-            manager.add_sessions_changed(self._create_callback_bridge(self._refresh_sessions))
+            manager.add_sessions_changed(self._create_callback_bridge(self._on_sessions_changed))
             manager.add_current_session_changed(self._create_callback_bridge(self._on_current_session_changed))
 
             await self._on_current_session_changed(manager)
@@ -115,11 +117,38 @@ class WindowsMedia(QObject, metaclass=QSingleton):
                     pass
         self._trackers.clear()
 
-    async def _refresh_sessions(self, manager: SessionManager):
-        """Refresh session states from the manager"""
+    def _apply_current_selection(self, system_id: str | None, *, follow_system: bool) -> bool:
+        """Keep _current_session_id and is_current flags aligned with live trackers.
+
+        Returns True if the selected session id changed.
+        """
+        prev_id = self._current_session_id
+
+        if follow_system or self._current_session_id not in self._trackers:
+            # Follow Windows "current", or fall back when our selection was removed
+            # (e.g. browser tab ended while user had switched to it via scroll).
+            if system_id in self._trackers:
+                self._current_session_id = system_id
+            elif self._trackers:
+                self._current_session_id = next(iter(self._trackers))
+            else:
+                self._current_session_id = ""
+        # else: keep manual selection (still present in trackers)
+
+        for tracker in self._trackers.values():
+            tracker.is_current = bool(self._current_session_id) and tracker.app_id == self._current_session_id
+
+        return prev_id != self._current_session_id
+
+    async def _refresh_sessions(self, manager: SessionManager, *, follow_system: bool = False) -> bool:
+        """Refresh session states from the manager.
+
+        Returns True if the selected session id changed.
+        """
         sessions = manager.get_sessions()
         current_session = manager.get_current_session()
         current_ids = [s.source_app_user_model_id for s in sessions]
+        system_id = current_session.source_app_user_model_id if current_session else None
 
         # Cleanup old trackers
         to_remove = [app_id for app_id in self._trackers if app_id not in current_ids]
@@ -163,17 +192,22 @@ class WindowsMedia(QObject, metaclass=QSingleton):
             await self._on_timeline_properties_changed(session)
             await self._on_playback_info_changed(session)
 
-        current_id = current_session.source_app_user_model_id if current_session else None
-        for tracker in self._trackers.values():
-            tracker.is_current = tracker.app_id == current_id
+        return self._apply_current_selection(system_id, follow_system=follow_system)
+
+    async def _on_sessions_changed(self, manager: SessionManager):
+        """Handle SMTC session list changes (session added/removed)."""
+        selection_changed = await self._refresh_sessions(manager, follow_system=False)
+        self.media_data_changed.emit(self._trackers)
+        if selection_changed:
+            # e.g. selected browser session ended -> fell back to Spotify
+            self.media_properties_changed.emit()
+            if (session := self.current_session) is not None and session.playback_ready:
+                self.playback_info_changed.emit()
+            self.current_session_changed.emit()
 
     async def _on_current_session_changed(self, manager: SessionManager):
-        """Handle current session change"""
-        await self._refresh_sessions(manager)
-        for tracker in self._trackers.values():
-            if tracker.is_current:
-                self._current_session_id = tracker.app_id
-                break
+        """Handle Windows current-session change (follow system)."""
+        await self._refresh_sessions(manager, follow_system=True)
         self.media_data_changed.emit(self._trackers)
         self.current_session_changed.emit()
 
@@ -223,7 +257,11 @@ class WindowsMedia(QObject, metaclass=QSingleton):
             logger.error("Error syncing session: %s", e, exc_info=True)
 
     async def _on_playback_info_changed(self, session: MediaSession):
-        """Handle playback info change"""
+        """Handle playback info change.
+
+        Copy needed fields into plain Python state immediately, then drop the
+        WinRT PlaybackInfo so UI code never re-touches a COM object later.
+        """
         app_id = session.source_app_user_model_id
         if app_id not in self._trackers:
             return
@@ -232,10 +270,35 @@ class WindowsMedia(QObject, metaclass=QSingleton):
             playback = session.get_playback_info()
             if not playback:
                 return
-            state.is_playing = playback.playback_status == 4
-            state.playback_rate = playback.playback_rate or 1.0  # Can be None
-            state.playback_info = playback
-            state.timeline_enabled = playback.controls.is_playback_position_enabled if playback.controls else False
+            # Snapshot all WinRT properties into locals first, then assign.
+            # playback_rate is required for timeline interpolation (e.g. YouTube 2x).
+            is_playing = playback.playback_status == 4
+            raw_rate = playback.playback_rate
+            try:
+                playback_rate = float(raw_rate) if raw_rate is not None else 1.0
+            except TypeError, ValueError:
+                playback_rate = 1.0
+            if playback_rate <= 0:
+                playback_rate = 1.0
+            controls = playback.controls
+            if controls:
+                prev_enabled = controls.is_previous_enabled
+                play_enabled = controls.is_play_pause_toggle_enabled
+                next_enabled = controls.is_next_enabled
+                timeline_enabled = controls.is_playback_position_enabled
+            else:
+                prev_enabled = True
+                play_enabled = True
+                next_enabled = True
+                timeline_enabled = False
+
+            state.is_playing = is_playing
+            state.playback_rate = playback_rate
+            state.controls_prev_enabled = prev_enabled
+            state.controls_play_enabled = play_enabled
+            state.controls_next_enabled = next_enabled
+            state.timeline_enabled = timeline_enabled
+            state.playback_ready = True
             self.playback_info_changed.emit()
         except Exception as e:
             logger.error("Error syncing session: %s", e, exc_info=True)
@@ -309,11 +372,12 @@ class WindowsMedia(QObject, metaclass=QSingleton):
 
         sessions = list(self._trackers.values())
 
-        idx = next((i for i, s in enumerate(sessions) if s.is_current), 0)
+        # Use selected id (not is_current alone) so wheel works after a dead
+        # session was removed but flags were briefly out of sync.
+        idx = next((i for i, s in enumerate(sessions) if s.app_id == self._current_session_id), 0)
         next_session = sessions[(idx + direction) % len(sessions)]
 
-        # No need to do anything if the next session is the current one
-        if next_session is self.current_session:
+        if next_session.app_id == self._current_session_id:
             return
 
         for s in sessions:
@@ -325,7 +389,7 @@ class WindowsMedia(QObject, metaclass=QSingleton):
         self.media_data_changed.emit(self._trackers)
         self.media_properties_changed.emit()
 
-        if next_session.playback_info:
+        if next_session.playback_ready:
             self.playback_info_changed.emit()
 
         self.current_session_changed.emit()

@@ -47,7 +47,7 @@ def _get_msi_arch_suffix() -> str:
     """Get the architecture suffix used in MSI filenames.
 
     Returns:
-        Architecture suffix for MSI filename (x64 → x64, ARM64 → aarch64)
+        Architecture suffix for MSI filename (x64 -> x64, ARM64 -> aarch64)
     """
     return "aarch64" if ARCHITECTURE == "ARM64" else ARCHITECTURE if ARCHITECTURE else ""
 

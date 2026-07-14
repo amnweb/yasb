@@ -1,11 +1,10 @@
 from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, QRectF, Qt, pyqtProperty, pyqtSignal
-from PyQt6.QtGui import QColor, QFont, QMouseEvent, QPainter, QPen
+from PyQt6.QtGui import QColor, QFont, QMouseEvent, QPainter, QPen, QWheelEvent
 from PyQt6.QtWidgets import QApplication, QSizePolicy, QWidget
 
 from core.ui.theme import FONT_FAMILIES, get_tokens, theme_key
 
 TRACK_H = 4
-TRACK_ACTIVE_H = 4
 THUMB_RADIUS = 6
 THUMB_OUTER_RADIUS = 10
 _DURATION = 120
@@ -19,6 +18,7 @@ class Slider(QWidget):
     """Horizontal slider with a numeric value label."""
 
     valueChanged = pyqtSignal(int)
+    labelClicked = pyqtSignal()
 
     def __init__(
         self,
@@ -26,6 +26,7 @@ class Slider(QWidget):
         maximum: int = 100,
         value: int = 50,
         suffix: str = "%",
+        step: int = 1,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
@@ -33,6 +34,7 @@ class Slider(QWidget):
         self._max = maximum
         self._value = max(minimum, min(maximum, value))
         self._suffix = suffix
+        self._step = max(1, int(step))
         self._dragging = False
         self._hover = False
 
@@ -47,6 +49,7 @@ class Slider(QWidget):
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setMouseTracking(True)
+        self.setFocusPolicy(Qt.FocusPolicy.WheelFocus)
 
         self._font = QFont()
         self._font.setFamilies(list(FONT_FAMILIES))
@@ -123,6 +126,7 @@ class Slider(QWidget):
         if e.button() == Qt.MouseButton.LeftButton:
             tx, _, _, _ = self._track_rect()
             if e.position().x() < tx - THUMB_OUTER_RADIUS:
+                self.labelClicked.emit()
                 return
             self._dragging = True
             self.set_value(self._value_from_x(e.position().x()))
@@ -136,6 +140,19 @@ class Slider(QWidget):
         if e.button() == Qt.MouseButton.LeftButton and self._dragging:
             self._dragging = False
             self._animate_thumb(1.0)
+
+    def wheelEvent(self, e: QWheelEvent) -> None:
+        dy = e.angleDelta().y()
+        if dy == 0:
+            dy = e.angleDelta().x()
+        if dy == 0:
+            e.ignore()
+            return
+        notches = dy // 120
+        if notches == 0:
+            notches = 1 if dy > 0 else -1
+        self.set_value(self._value + notches * self._step)
+        e.accept()
 
     def enterEvent(self, event) -> None:
         self._hover = True

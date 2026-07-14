@@ -309,7 +309,7 @@ class CopilotWidget(BaseWidget):
         # Initialize shared resources once
         if not CopilotWidget._initialized:
             CopilotWidget._initialized = True
-            # Token resolution: config value → env var → saved OAuth token
+            # Token resolution: config value -> env var -> saved OAuth token
             if self.config.token == "env":
                 token_val = os.getenv("YASB_COPILOT_TOKEN", "") or get_saved_token("copilot")
             else:
