@@ -19,7 +19,7 @@ KSPROPERTY_ONESHOT_RECONNECT = 0
 KSPROPERTY_ONESHOT_DISCONNECT = 1
 KSPROPERTY_TYPE_GET = 0x00000001
 
-# PKEY_Device_ContainerId — group render/capture endpoints of one physical device
+# PKEY_Device_ContainerId (group render/capture endpoints of one physical device)
 _PKEY_CONTAINER = PROPERTYKEY()
 _PKEY_CONTAINER.fmtid = GUID("{8C7ED206-3F8A-4827-B3AB-AE9E1FAEFC6C}")
 _PKEY_CONTAINER.pid = 2
@@ -43,23 +43,6 @@ class IDeviceTopology(IUnknown):
             (["in"], c_ulong),
             (["out"], POINTER(POINTER(IUnknown))),
         ),
-        COMMETHOD([], HRESULT, "GetSubunitCount", (["out"], POINTER(c_ulong))),
-        COMMETHOD(
-            [],
-            HRESULT,
-            "GetSubunit",
-            (["in"], c_ulong),
-            (["out"], POINTER(POINTER(IUnknown))),
-        ),
-        COMMETHOD(
-            [],
-            HRESULT,
-            "GetPartById",
-            (["in"], c_ulong),
-            (["out"], POINTER(POINTER(IUnknown))),
-        ),
-        COMMETHOD([], HRESULT, "GetDeviceId", (["out"], POINTER(c_wchar_p))),
-        COMMETHOD([], HRESULT, "GetSignalPath"),
     ]
 
 
@@ -90,8 +73,6 @@ class IKsControl(IUnknown):
             (["in"], c_ulong, "DataLength"),
             (["out"], POINTER(c_ulong), "BytesReturned"),
         ),
-        COMMETHOD([], HRESULT, "KsMethod"),
-        COMMETHOD([], HRESULT, "KsEvent"),
     ]
 
 

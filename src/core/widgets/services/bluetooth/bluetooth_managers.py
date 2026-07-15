@@ -454,13 +454,10 @@ class BluetoothManager(QObject):
         if device is None:
             self.connection_finished.emit(False, "Device not found", DeviceInfo(name="", address=address))
             return
-        if self._native is None:
-            self.connection_finished.emit(False, "Bluetooth API unavailable", device)
-            return
         if self._connect_running:
             self.connection_finished.emit(False, "Another connection is in progress", device)
             return
-        if device.is_le or not device.supports_connect:
+        if not device.supports_connect:
             self.connection_finished.emit(False, "Use Windows Settings to manage this device", device)
             return
 
