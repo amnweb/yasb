@@ -6,6 +6,7 @@ Shows Bluetooth status, connected devices, and a popup menu to browse paired/new
 
 **Icons:** Default icon glyphs (bar `icons`, popup `device_icons`, battery, scan) use **Segoe Fluent Icons**. Set `font-family: 'Segoe Fluent Icons'` in CSS for those elements, or override the icon strings in config if you prefer another icon font.
 
+
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `label` | string | `"\ue702"` | Format string for the bar widget. |
@@ -113,8 +114,6 @@ bluetooth:
         scan: "\ue72c"
 ```
 
-Opening the popup reloads paired devices (fast). The footer scan icon runs a Bluetooth inquiry for nearby new devices (slower). **Connect / Disconnect** works for classic headphones, headset, and speaker only; other devices use **Pair** or **Manage**, which opens Windows Bluetooth settings.
-
 ### Label placeholders
 
 | Placeholder | Description |
@@ -143,6 +142,22 @@ Opening the popup reloads paired devices (fast). The footer scan icon runs a Blu
 | `offset_left` | integer | `0` | Horizontal offset. |
 | `labels` | object | see defaults | Popup strings (`title`, `your_devices`, `new_devices`, `not_connected`, `connected`, `more_settings`, `connect`, `disconnect`, `connecting`, `disconnecting`, `pair`, `manage`, `power_on`, `power_off`). Partial overrides keep the rest of the defaults. |
 | `device_icons` | dict | see defaults | Device-type icons (`headphones`, `headset`, `speaker`, `phone`, `tablet`, `laptop`, `computer`, `keyboard`, `mouse`, `controller`, `watch`, `camera`, `generic`), `scan` (footer search for new devices), and `battery` (`empty` / `low` / `medium` / `high` / `full`). Segoe Fluent Icons by default. |
+
+
+### How it works
+
+The bar and popup talk to Windows Bluetooth APIs for radio power, the paired list, live connection status, battery when available, and scanning for new devices. Opening the popup refreshes your paired list (usually quick). The footer scan icon runs a real Bluetooth inquiry for nearby unpaired devices (that part is slower by nature).
+
+**Connect / Disconnect** is different, and only applies to classic headphones, headsets, and speakers. Windows does not give apps a clean public “connect this headset” switch that works reliably for audio. What actually brings audio online or offline is the Bluetooth audio stack behind Core Audio: the same path Sound settings uses when an endpoint goes Active or Unplugged. The widget sends a short reconnect/disconnect oneshot to those audio endpoints (grouped as one physical device when Windows exposes a container id), then waits briefly until the endpoint state matches.
+
+That is **not** loading or unloading drivers, and it is not ripping the adapter in and out. Nothing is installed or replaced. It asks the already-present Bluetooth audio filters to connect or disconnect, the way Windows itself does for that class of device.
+
+**Limitations worth knowing:**
+
+- Connect/Disconnect only targets classic audio devices (headphones / headset / speaker). Phones, keyboards, mice, controllers, and similar use **Pair** or **Manage**, which opens Windows Bluetooth settings pairing and profiles there are still Windows’ job.
+- After you click Connect or Disconnect, the UI may wait a few seconds while Windows settles the audio endpoints. That delay is the stack catching up, not the widget spinning on purpose.
+- Status in the list follows Windows connection events. Audio can look connected or disconnected a moment before or after the Bluetooth ACL flag flips, the widget prefers the live Bluetooth status for the row, and uses audio state mainly to know when a connect/disconnect action finished.
+
 
 ## Available Style Classes
 

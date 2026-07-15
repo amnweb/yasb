@@ -6,7 +6,7 @@ import time
 from ctypes import HRESULT, POINTER, Structure, byref, c_ulong, c_void_p, c_wchar_p
 
 from comtypes import CLSCTX_ALL, COMMETHOD, GUID, CoCreateInstance, IUnknown
-from pycaw.api.mmdeviceapi import IMMDeviceEnumerator
+from pycaw.api.mmdeviceapi import PROPERTYKEY, IMMDeviceEnumerator
 from pycaw.constants import AudioDeviceState, CLSID_MMDeviceEnumerator
 from pycaw.pycaw import AudioUtilities
 
@@ -18,6 +18,11 @@ KSPROPSETID_BtAudio = GUID("{7FA06C40-B8F6-4C7E-8556-E8C33A12E54D}")
 KSPROPERTY_ONESHOT_RECONNECT = 0
 KSPROPERTY_ONESHOT_DISCONNECT = 1
 KSPROPERTY_TYPE_GET = 0x00000001
+
+# PKEY_Device_ContainerId — group render/capture endpoints of one physical device
+_PKEY_CONTAINER = PROPERTYKEY()
+_PKEY_CONTAINER.fmtid = GUID("{8C7ED206-3F8A-4827-B3AB-AE9E1FAEFC6C}")
+_PKEY_CONTAINER.pid = 2
 
 _SETTLE_TIMEOUT_S = 10.0
 _SETTLE_POLL_S = 0.25
@@ -139,15 +144,28 @@ def _activate_ks(enumerator: IMMDeviceEnumerator, device_id: str) -> IKsControl 
         return None
 
 
+def _container_id(device) -> str | None:
+    try:
+        val = device._dev.OpenPropertyStore(0).GetValue(_PKEY_CONTAINER)
+        ptr = val.union.uhVal
+        if not ptr:
+            return None
+        return str(ctypes.cast(ptr, POINTER(GUID)).contents)
+    except Exception:
+        return None
+
+
 def _ks_controls(address: str | int, device_name: str = "") -> list[IKsControl]:
+    """KS filters for this device: seed by MAC/name, expand by ContainerId when available."""
     mac = _mac_hex(address)
     name_needle = (device_name or "").casefold().strip()
     enumerator = CoCreateInstance(CLSID_MMDeviceEnumerator, IMMDeviceEnumerator, CLSCTX_ALL)
-    found: list[IKsControl] = []
-    seen: set[str] = set()
 
+    # (ks_filter_id, container_id|None, matched_by_mac_or_name)
+    candidates: list[tuple[str, str | None, bool]] = []
     for device in AudioUtilities.GetAllDevices():
         friendly = (device.FriendlyName or "").casefold()
+        cid = _container_id(device)
         try:
             itopo = device._dev.Activate(IID_IDeviceTopology, CLSCTX_ALL, None).QueryInterface(IDeviceTopology)
             count = itopo.GetConnectorCount()
@@ -166,15 +184,23 @@ def _ks_controls(address: str | int, device_name: str = "") -> list[IKsControl]:
                 continue
             mac_ok = _id_has_mac(other_id_s, mac)
             name_ok = bool(name_needle) and name_needle in friendly
-            if not mac_ok and not name_ok:
-                continue
-            if other_id_s in seen:
-                continue
-            seen.add(other_id_s)
+            candidates.append((other_id_s, cid, mac_ok or name_ok))
 
-            ks = _activate_ks(enumerator, other_id_s)
-            if ks is not None:
-                found.append(ks)
+    containers = {cid for _, cid, seed in candidates if seed and cid}
+    found: list[IKsControl] = []
+    seen: set[str] = set()
+    for other_id_s, cid, seed in candidates:
+        if containers:
+            if cid not in containers:
+                continue
+        elif not seed:
+            continue
+        if other_id_s in seen:
+            continue
+        seen.add(other_id_s)
+        ks = _activate_ks(enumerator, other_id_s)
+        if ks is not None:
+            found.append(ks)
 
     return found
 
