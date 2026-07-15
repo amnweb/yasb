@@ -369,5 +369,7 @@ class MicrophoneWidget(BaseWidget):
                 # Show tooltip while actively dragging
                 if hasattr(self, "volume_slider"):
                     self._show_slider_tooltip(self.volume_slider, value)
+                if (self.audio_endpoint.GetMute() != 0) != (value == 0):
+                    self.toggle_mute()
             except Exception as e:
                 logging.error("Failed to set microphone volume: %s", e)

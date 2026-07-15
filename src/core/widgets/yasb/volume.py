@@ -123,6 +123,8 @@ class VolumeWidget(BaseWidget):
                 # Show tooltip while actively dragging
                 if hasattr(self, "volume_slider"):
                     self._show_slider_tooltip(self.volume_slider, value)
+                if (self.volume.GetMute() != 0) != (value == 0):
+                    self.toggle_mute()
             except Exception as e:
                 logging.error("Failed to set volume: %s", e)
 
