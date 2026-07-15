@@ -34,7 +34,7 @@ class BluetoothDeviceIconsConfig(CustomBaseModel):
     camera: str = "\ue722"
     generic: str = "\ue702"
     battery: BluetoothBatteryIconsConfig = BluetoothBatteryIconsConfig()
-    refresh: str = "\ue72c"
+    scan: str = "\ue72c"
 
 
 class BluetoothDeviceAliasConfig(CustomBaseModel):

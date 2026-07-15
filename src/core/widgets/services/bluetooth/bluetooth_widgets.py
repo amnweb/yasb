@@ -47,7 +47,7 @@ class BluetoothItem(QFrame):
     clicked = pyqtSignal()
     connect_pressed = pyqtSignal(object)
     disconnect_pressed = pyqtSignal(object)
-    pair_pressed = pyqtSignal(object)
+    settings_pressed = pyqtSignal(object)
 
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
@@ -166,20 +166,20 @@ class BluetoothItem(QFrame):
             self.connect_button.setText(self._action_text())
 
     def _action_text(self) -> str:
-        if self._data.is_le:
+        if not self._data.paired and not self._data.remembered:
+            return self._labels["pair"]
+        if not self._data.supports_connect:
             return self._labels["manage"]
         if self._data.connected:
             return self._labels["disconnect"]
-        if not self._data.paired and not self._data.remembered:
-            return self._labels["pair"]
         return self._labels["connect"]
 
     @pyqtSlot()
     def _on_action_clicked(self) -> None:
         if self._busy:
             return
-        if self._data.is_le or (not self._data.paired and not self._data.remembered):
-            self.pair_pressed.emit(self._data)
+        if (not self._data.paired and not self._data.remembered) or not self._data.supports_connect:
+            self.settings_pressed.emit(self._data)
         elif self._data.connected:
             self.disconnect_pressed.emit(self._data)
         else:
@@ -198,7 +198,7 @@ class BluetoothSection(QFrame):
     item_clicked = pyqtSignal(object)
     connect_pressed = pyqtSignal(object)
     disconnect_pressed = pyqtSignal(object)
-    pair_pressed = pyqtSignal(object)
+    settings_pressed = pyqtSignal(object)
 
     def __init__(self, title: str, parent: QWidget | None = None):
         super().__init__(parent)
@@ -238,7 +238,7 @@ class BluetoothSection(QFrame):
                 item.clicked.connect(lambda _=False, i=item: self.item_clicked.emit(i))
                 item.connect_pressed.connect(self.connect_pressed.emit)
                 item.disconnect_pressed.connect(self.disconnect_pressed.emit)
-                item.pair_pressed.connect(self.pair_pressed.emit)
+                item.settings_pressed.connect(self.settings_pressed.emit)
                 self._items[device.address] = item
                 self._layout.addWidget(item)
 
@@ -261,7 +261,7 @@ class BluetoothSection(QFrame):
 class BluetoothList(QScrollArea):
     connect_pressed = pyqtSignal(object)
     disconnect_pressed = pyqtSignal(object)
-    pair_pressed = pyqtSignal(object)
+    settings_pressed = pyqtSignal(object)
 
     def __init__(self, paired_title: str, new_title: str, parent: QWidget | None = None):
         super().__init__(parent)
@@ -288,7 +288,7 @@ class BluetoothList(QScrollArea):
             section.item_clicked.connect(self._toggle_item)
             section.connect_pressed.connect(self.connect_pressed.emit)
             section.disconnect_pressed.connect(self.disconnect_pressed.emit)
-            section.pair_pressed.connect(self.pair_pressed.emit)
+            section.settings_pressed.connect(self.settings_pressed.emit)
             layout.addWidget(section)
         layout.addStretch(1)
         self.setWidget(container)
@@ -411,7 +411,7 @@ class BluetoothMenu(QObject):
         )
         self.list.connect_pressed.connect(self._connect)
         self.list.disconnect_pressed.connect(self._disconnect)
-        self.list.pair_pressed.connect(self._pair)
+        self.list.settings_pressed.connect(self._open_device_settings)
 
         footer = QFrame(self.popup)
         footer.setProperty("class", "footer")
@@ -422,12 +422,12 @@ class BluetoothMenu(QObject):
         settings = QPushButton(labels.more_settings, footer)
         settings.setProperty("class", "settings-button")
         settings.clicked.connect(partial(self._open_uri, "ms-settings:bluetooth"))
-        refresh = QPushButton(self.menu_config.device_icons.refresh, footer)
-        refresh.setProperty("class", "refresh-icon")
-        refresh.clicked.connect(self._scan)
+        scan = QPushButton(self.menu_config.device_icons.scan, footer)
+        scan.setProperty("class", "scan-icon")
+        scan.clicked.connect(self._scan)
         footer_row.addWidget(settings)
         footer_row.addStretch(1)
-        footer_row.addWidget(refresh)
+        footer_row.addWidget(scan)
 
         root.addWidget(header)
         root.addWidget(self.error_label)
@@ -485,7 +485,7 @@ class BluetoothMenu(QObject):
         if is_valid_qobject(self.error_label):
             self.error_label.hide()
         self._start_loader()
-        self.manager.scan(inquiry=True)
+        self.manager.scan()
 
     def _start_loader(self) -> None:
         if is_valid_qobject(self.progress) and not self._scanning:
@@ -573,7 +573,6 @@ class BluetoothMenu(QObject):
         item = self.list.find_item(device.address) if self.list else None
         if item is not None:
             item.set_busy(True, disconnecting=False)
-        self._start_loader()
         self.manager.connect_device(device.address)
 
     @pyqtSlot(object)
@@ -581,19 +580,18 @@ class BluetoothMenu(QObject):
         item = self.list.find_item(device.address) if self.list else None
         if item is not None:
             item.set_busy(True, disconnecting=True)
-        self._start_loader()
         self.manager.disconnect_device(device.address)
 
     @pyqtSlot(object)
-    def _pair(self, _device: DeviceInfo):
+    def _open_device_settings(self, _device: DeviceInfo):
         self._open_uri("ms-settings:bluetooth")
 
     def on_connection_finished(self, success: bool, message: str, device: DeviceInfo) -> None:
         if not is_valid_qobject(self.popup) or not self.popup.isVisible():
             return
-        if self.list is not None:
-            self.list.clear_busy()
-        self._stop_loader()
+        item = self.list.find_item(device.address) if self.list is not None else None
+        if item is not None:
+            item.set_busy(False)
         if not success:
             self._show_error(message)
             return

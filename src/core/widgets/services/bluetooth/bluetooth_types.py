@@ -10,20 +10,8 @@ from winrt.windows.devices.bluetooth import (
     BluetoothMinorClass,
 )
 
-BLUETOOTH_SERVICE_DISABLE = 0x00000000
-BLUETOOTH_SERVICE_ENABLE = 0x00000001
-
-GUID_AUDIO_SINK = "{0000110B-0000-1000-8000-00805F9B34FB}"
-GUID_AVRCP = "{0000110E-0000-1000-8000-00805F9B34FB}"
-GUID_HANDSFREE = "{0000111E-0000-1000-8000-00805F9B34FB}"
-GUID_HID = "{00001124-0000-1000-8000-00805F9B34FB}"
 # BluetoothAdapter interface (BluetoothAdapter.get_device_selector())
 BT_ADAPTER_IFACE = "{92383b0e-f90e-4ac9-8d44-8c2d0d0ebda2}"
-
-CONNECT_AUDIO = (GUID_AUDIO_SINK, GUID_HANDSFREE, GUID_AVRCP)
-CONNECT_HID = (GUID_HID,)
-CONNECT_PHONE = (GUID_HANDSFREE, GUID_AUDIO_SINK)
-CONNECT_FALLBACK = (GUID_AUDIO_SINK, GUID_HANDSFREE, GUID_AVRCP, GUID_HID)
 
 LE_PHONE = int(BluetoothLEAppearanceCategories.phone)
 LE_COMPUTER = int(BluetoothLEAppearanceCategories.computer)
@@ -129,16 +117,13 @@ class ScanResultStatus(StrEnum):
 
 
 class BluetoothMajorClass(IntEnum):
-    MISCELLANEOUS = 0
     COMPUTER = 1
     PHONE = 2
-    NETWORK = 3
     AUDIO_VIDEO = 4
     PERIPHERAL = 5
     IMAGING = 6
     WEARABLE = 7
     TOY = 8
-    HEALTH = 9
 
 
 @dataclass
@@ -157,6 +142,17 @@ class DeviceInfo:
     battery: int | None = None
     is_le: bool = False
     profiles: list[str] = field(default_factory=list)
+
+    @property
+    def supports_connect(self) -> bool:
+        """Classic audio devices we can oneshot connect/disconnect."""
+        if self.is_le:
+            return False
+        return self.device_type in (
+            DeviceType.HEADPHONES,
+            DeviceType.HEADSET,
+            DeviceType.SPEAKER,
+        )
 
 
 @dataclass
@@ -238,18 +234,6 @@ def profiles_from_cod(major: int, connected: bool) -> list[str]:
     if major == BluetoothMajorClass.PERIPHERAL:
         return ["input"]
     return []
-
-
-def connect_service_guids(device: DeviceInfo) -> tuple[str, ...]:
-    if device.is_le:
-        return ()
-    if device.device_type in (DeviceType.HEADPHONES, DeviceType.HEADSET, DeviceType.SPEAKER):
-        return CONNECT_AUDIO
-    if device.device_type in (DeviceType.KEYBOARD, DeviceType.MOUSE, DeviceType.CONTROLLER):
-        return CONNECT_HID
-    if device.device_type == DeviceType.PHONE:
-        return CONNECT_PHONE
-    return CONNECT_FALLBACK
 
 
 def prefer_device(candidate: DeviceInfo, existing: DeviceInfo) -> bool:

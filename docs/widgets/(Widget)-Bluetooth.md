@@ -4,7 +4,7 @@ Shows Bluetooth status, connected devices, and a popup menu to browse paired/new
 
 **You only need the minimal config below.** Every option has a built-in default, omit anything you do not want to change. The full example later is a reference of those defaults, not something you must copy into your config.
 
-**Icons:** Default icon glyphs (bar `icons`, popup `device_icons`, battery, refresh) use **Segoe Fluent Icons**. Set `font-family: 'Segoe Fluent Icons'` in CSS for those elements, or override the icon strings in config if you prefer another icon font.
+**Icons:** Default icon glyphs (bar `icons`, popup `device_icons`, battery, scan) use **Segoe Fluent Icons**. Set `font-family: 'Segoe Fluent Icons'` in CSS for those elements, or override the icon strings in config if you prefer another icon font.
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
@@ -110,8 +110,10 @@ bluetooth:
           medium: "\ueba5"
           high: "\ueba8"
           full: "\uebaa"
-        refresh: "\ue72c"
+        scan: "\ue72c"
 ```
+
+Opening the popup reloads paired devices (fast). The footer scan icon runs a Bluetooth inquiry for nearby new devices (slower). **Connect / Disconnect** works for classic headphones, headset, and speaker only; other devices use **Pair** or **Manage**, which opens Windows Bluetooth settings.
 
 ### Label placeholders
 
@@ -140,7 +142,7 @@ bluetooth:
 | `offset_top` | integer | `6` | Vertical offset. |
 | `offset_left` | integer | `0` | Horizontal offset. |
 | `labels` | object | see defaults | Popup strings (`title`, `your_devices`, `new_devices`, `not_connected`, `connected`, `more_settings`, `connect`, `disconnect`, `connecting`, `disconnecting`, `pair`, `manage`, `power_on`, `power_off`). Partial overrides keep the rest of the defaults. |
-| `device_icons` | dict | see defaults | Device-type icons (`headphones`, `headset`, `speaker`, `phone`, `tablet`, `laptop`, `computer`, `keyboard`, `mouse`, `controller`, `watch`, `camera`, `generic`), `refresh`, and `battery` (`empty` / `low` / `medium` / `high` / `full`). Segoe Fluent Icons by default. |
+| `device_icons` | dict | see defaults | Device-type icons (`headphones`, `headset`, `speaker`, `phone`, `tablet`, `laptop`, `computer`, `keyboard`, `mouse`, `controller`, `watch`, `camera`, `generic`), `scan` (footer search for new devices), and `battery` (`empty` / `low` / `medium` / `high` / `full`). Segoe Fluent Icons by default. |
 
 ## Available Style Classes
 
@@ -190,7 +192,7 @@ bluetooth:
 .bluetooth-menu .bluetooth-item .connect {}
 .bluetooth-menu .footer {}
 .bluetooth-menu .footer .settings-button {}
-.bluetooth-menu .footer .refresh-icon {}
+.bluetooth-menu .footer .scan-icon {}
 ```
 
 ## Example Style
@@ -327,7 +329,7 @@ bluetooth:
     font-weight: 600;
     cursor: pointer;
 }
-.bluetooth-menu .footer .refresh-icon {
+.bluetooth-menu .footer .scan-icon {
     font-family: 'Segoe Fluent Icons';
     background-color: transparent;
     border: none;
@@ -337,7 +339,7 @@ bluetooth:
     color: #fff;
     border-radius: 4px;
 }
-.bluetooth-menu .footer .refresh-icon:hover {
+.bluetooth-menu .footer .scan-icon:hover {
     background-color: rgba(255, 255, 255, 0.1);
 }
 ```

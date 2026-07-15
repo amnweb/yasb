@@ -18,15 +18,12 @@ from core.widgets.services.bluetooth.bluetooth_types import (
     BLUETOOTH_DEVICE_INFO,
     BLUETOOTH_DEVICE_SEARCH_PARAMS,
     BLUETOOTH_FIND_RADIO_PARAMS,
-    BLUETOOTH_SERVICE_DISABLE,
-    BLUETOOTH_SERVICE_ENABLE,
     BT_ADAPTER_IFACE,
     DEVPROPKEY,
     GUID,
     BluetoothMajorClass,
     DeviceInfo,
     DeviceType,
-    connect_service_guids,
     device_type_from_cod,
     device_type_from_le_appearance,
     format_address,
@@ -39,14 +36,19 @@ logger = logging.getLogger("bluetooth_widget")
 
 _ENRICH_CONCURRENCY = 6
 
+_CM_GETIDLIST_FILTER_ENUMERATOR = 0x00000001
 _CM_GETIDLIST_FILTER_PRESENT = 0x00000100
 _CR_SUCCESS = 0
+_CR_BUFFER_SMALL = 26
 _DEVPROP_TYPE_BYTE = 0x00000003
 _DEVPROP_TYPE_MASK = 0x00000FFF
 _BATTERY_ID_LIST_MAX = 256 * 1024
 _BATTERY_PROPKEY = DEVPROPKEY()
 _BATTERY_PROPKEY.fmtid = GUID.from_string("{104EA319-6EE2-4701-BD47-8DDBF425BBE5}")
 _BATTERY_PROPKEY.pid = 2
+# Prefer HFP battery node, then LE.
+_BATTERY_FILTERS = ("BthHFEnum", "BTHENUM", "BTHLE")
+_BATTERY_LIST_FLAGS = _CM_GETIDLIST_FILTER_ENUMERATOR | _CM_GETIDLIST_FILTER_PRESENT
 _cfgmgr: Any | None = None
 _cfgmgr_ready = False
 
@@ -91,13 +93,6 @@ class BluetoothNativeApi:
         api.BluetoothFindNextDevice.restype = wintypes.BOOL
         api.BluetoothFindDeviceClose.argtypes = [wintypes.HANDLE]
         api.BluetoothFindDeviceClose.restype = wintypes.BOOL
-        api.BluetoothSetServiceState.argtypes = [
-            wintypes.HANDLE,
-            ctypes.POINTER(BLUETOOTH_DEVICE_INFO),
-            ctypes.POINTER(GUID),
-            wintypes.DWORD,
-        ]
-        api.BluetoothSetServiceState.restype = wintypes.DWORD
 
     def _iter_radios(self):
         """Yield each radio HANDLE, closed when the caller's loop advances past it."""
@@ -120,7 +115,7 @@ class BluetoothNativeApi:
         finally:
             self._api.BluetoothFindRadioClose(finder)
 
-    def enumerate_devices(self, *, inquiry: bool = False, include_unknown: bool = False) -> list[DeviceInfo]:
+    def enumerate_devices(self, *, inquiry: bool = False) -> list[DeviceInfo]:
         """List devices via BluetoothFindFirstDevice (Address = MAC)."""
         devices: dict[str, DeviceInfo] = {}
         for radio in self._iter_radios():
@@ -128,7 +123,7 @@ class BluetoothNativeApi:
                 dwSize=ctypes.sizeof(BLUETOOTH_DEVICE_SEARCH_PARAMS),
                 fReturnAuthenticated=True,
                 fReturnRemembered=True,
-                fReturnUnknown=include_unknown or inquiry,
+                fReturnUnknown=inquiry,
                 fReturnConnected=True,
                 fIssueInquiry=inquiry,
                 cTimeoutMultiplier=2 if inquiry else 1,
@@ -163,30 +158,6 @@ class BluetoothNativeApi:
             finally:
                 self._api.BluetoothFindDeviceClose(finder)
         return list(devices.values())
-
-    def set_service_state(self, device: DeviceInfo, enable: bool) -> bool:
-        """Enable/disable classic services to connect or disconnect."""
-        guids = connect_service_guids(device)
-        if not guids:
-            return False
-
-        info = BLUETOOTH_DEVICE_INFO()
-        info.dwSize = ctypes.sizeof(BLUETOOTH_DEVICE_INFO)
-        info.Address = device.address_int
-        info.szName = device.name[:247]
-        flag = BLUETOOTH_SERVICE_ENABLE if enable else BLUETOOTH_SERVICE_DISABLE
-        any_ok = False
-        for radio in self._iter_radios():
-            for guid_str in guids:
-                result = self._api.BluetoothSetServiceState(
-                    radio,
-                    ctypes.byref(info),
-                    ctypes.byref(GUID.from_string(guid_str)),
-                    flag,
-                )
-                if result == 0:
-                    any_ok = True
-        return any_ok
 
 
 async def radio_is_on() -> bool | None:
@@ -234,13 +205,22 @@ def _is_bluetooth_adapter_id(device_id: str) -> bool:
     return BT_ADAPTER_IFACE in (device_id or "").lower()
 
 
-def open_adapter_watch(on_changed) -> Any | None:
-    """Watch local Bluetooth adapter presence via DeviceWatcher.
+def _is_bluetooth_paired_device_id(device_id: str) -> bool:
+    """True for classic/LE remote device nodes (not the local adapter)."""
+    upper = (device_id or "").upper()
+    if not upper or _is_bluetooth_adapter_id(device_id):
+        return False
+    return (
+        "BTHLEDEVICE#" in upper
+        or "BTHLE#DEV_" in upper
+        or "BLUETOOTH#" in upper
+        or "BTHENUM\\" in upper
+        or "BTHENUM#" in upper
+    )
 
-    pywinrt only exposes DeviceInformation.create_watcher() with no AQS filter.
-    We ignore non-adapter devices and all events until EnumerationCompleted.
-    on_changed() is invoked from a WinRT thread bridge to the app loop.
-    """
+
+def open_adapter_watch(on_changed) -> Any | None:
+    """Unfiltered DeviceWatcher: adapter Added/Removed/Updated, pair DeviceAdded/Removed."""
     try:
         _ = BluetoothAdapter.get_device_selector()
         watcher = DeviceInformation.create_watcher()
@@ -250,35 +230,35 @@ def open_adapter_watch(on_changed) -> Any | None:
 
     state = {"ready": False, "watcher": watcher, "tokens": [], "handlers": []}
 
-    def _fire(kind: str, _device_id: str) -> None:
+    def _fire(kind: str) -> None:
         try:
             on_changed(kind)
         except Exception as e:
             logger.debug("Bluetooth adapter watch callback failed: %s", e)
 
     def on_added(_sender, info) -> None:
-        device_id = getattr(info, "id", "") or ""
-        if not _is_bluetooth_adapter_id(device_id):
-            return
         if not state["ready"]:
             return
-        _fire("Added", device_id)
+        device_id = getattr(info, "id", "") or ""
+        if _is_bluetooth_adapter_id(device_id):
+            _fire("Added")
+        elif _is_bluetooth_paired_device_id(device_id):
+            _fire("DeviceAdded")
 
     def on_removed(_sender, update) -> None:
-        device_id = getattr(update, "id", "") or ""
-        if not _is_bluetooth_adapter_id(device_id):
-            return
         if not state["ready"]:
             return
-        _fire("Removed", device_id)
+        device_id = getattr(update, "id", "") or ""
+        if _is_bluetooth_adapter_id(device_id):
+            _fire("Removed")
+        elif _is_bluetooth_paired_device_id(device_id):
+            _fire("DeviceRemoved")
 
     def on_updated(_sender, update) -> None:
-        device_id = getattr(update, "id", "") or ""
-        if not _is_bluetooth_adapter_id(device_id):
-            return
         if not state["ready"]:
             return
-        _fire("Updated", device_id)
+        if _is_bluetooth_adapter_id(getattr(update, "id", "") or ""):
+            _fire("Updated")
 
     def on_enum_completed(_sender, _args) -> None:
         state["ready"] = True
@@ -400,28 +380,42 @@ def _get_cfgmgr() -> Any | None:
     return _cfgmgr
 
 
+def _device_id_list(cfg: Any, filt: str) -> list[str]:
+    """List present device IDs under a PnP enumerator. Retries once on CR_BUFFER_SMALL."""
+    for _ in range(2):
+        length = wintypes.ULONG(0)
+        if cfg.CM_Get_Device_ID_List_SizeW(ctypes.byref(length), filt, _BATTERY_LIST_FLAGS) != _CR_SUCCESS:
+            return []
+        if length.value <= 1 or length.value > _BATTERY_ID_LIST_MAX:
+            return []
+        buf = ctypes.create_unicode_buffer(length.value)
+        status = int(cfg.CM_Get_Device_ID_ListW(filt, buf, length.value, _BATTERY_LIST_FLAGS))
+        if status == _CR_BUFFER_SMALL:
+            continue
+        if status != _CR_SUCCESS:
+            return []
+        blob = ctypes.wstring_at(ctypes.addressof(buf), length.value)
+        return [part for part in blob.split("\x00") if part]
+    return []
+
+
 def read_battery(address_int: int) -> int | None:
-    """Read DEVPKEY_Bluetooth_BatteryLevel from PnP nodes containing this MAC."""
+    """Read DEVPKEY_Bluetooth_BatteryLevel from PnP nodes containing this MAC.
+
+    Prefers BthHFEnum. If an HFP node exists for this MAC but has no level yet,
+    return None instead of a stale BTHENUM/BTHLE value.
+    """
     cfg = _get_cfgmgr()
     if cfg is None:
         return None
 
     addr_hex = f"{address_int:012X}"
-    for filt in (
-        "BTHENUM\\{0000111E-0000-1000-8000-00805F9B34FB}",
-        "BTHENUM",
-        "BTHLE",
-    ):
-        length = wintypes.ULONG(0)
-        if cfg.CM_Get_Device_ID_List_SizeW(ctypes.byref(length), filt, _CM_GETIDLIST_FILTER_PRESENT) != _CR_SUCCESS:
-            continue
-        if length.value <= 1 or length.value > _BATTERY_ID_LIST_MAX:
-            continue
-        buf = ctypes.create_unicode_buffer(length.value)
-        if cfg.CM_Get_Device_ID_ListW(filt, buf, length, _CM_GETIDLIST_FILTER_PRESENT) != _CR_SUCCESS:
-            continue
-        blob = ctypes.wstring_at(ctypes.addressof(buf), length.value)
-        for device_id in (part for part in blob.split("\x00") if part):
+    hfp_present = False
+    hfp_level: int | None = None
+    fallback: int | None = None
+
+    for filt in _BATTERY_FILTERS:
+        for device_id in _device_id_list(cfg, filt):
             if addr_hex not in device_id.upper():
                 continue
             devinst = wintypes.DWORD(0)
@@ -438,11 +432,21 @@ def read_battery(address_int: int) -> int | None:
                 ctypes.byref(prop_size),
                 0,
             )
+            level = None
             if status == _CR_SUCCESS and (prop_type.value & _DEVPROP_TYPE_MASK) == _DEVPROP_TYPE_BYTE:
-                level = int(value.value)
-                if 0 <= level <= 100:
-                    return level
-    return None
+                n = int(value.value)
+                if 0 <= n <= 100:
+                    level = n
+            if filt == "BthHFEnum":
+                hfp_present = True
+                if level is not None and hfp_level is None:
+                    hfp_level = level
+            elif level is not None and fallback is None:
+                fallback = level
+
+    if hfp_present:
+        return hfp_level
+    return fallback
 
 
 async def enrich_device(device: DeviceInfo) -> DeviceInfo:
@@ -541,7 +545,7 @@ def _list_classic(native: BluetoothNativeApi | None, *, inquiry: bool) -> list[D
         if device.paired or device.remembered:
             by_addr[device.address] = device
     if inquiry:
-        for device in native.enumerate_devices(inquiry=True, include_unknown=True):
+        for device in native.enumerate_devices(inquiry=True):
             if device.address in by_addr or device.paired or device.remembered:
                 continue
             by_addr[device.address] = device
@@ -555,7 +559,7 @@ async def list_devices(
     le_cache: dict[str, DeviceInfo] | None = None,
     refresh_le: bool = False,
 ) -> tuple[list[DeviceInfo], dict[str, DeviceInfo]]:
-    """Classic paired + BLE-only, then enrich (bounded concurrency). Returns (devices, le_cache)."""
+    """Classic paired + BLE-only, then enrich. Returns (devices, le_cache)."""
     loop = asyncio.get_running_loop()
     classic = await loop.run_in_executor(None, lambda: _list_classic(native, inquiry=inquiry))
     by_addr: dict[str, DeviceInfo] = {d.address: d for d in classic}

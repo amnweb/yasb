@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import threading
 from collections.abc import Callable
 from typing import Any, ClassVar
 
@@ -18,6 +19,10 @@ from core.widgets.services.bluetooth.bluetooth_api import (
     read_battery,
     set_radio_power,
 )
+from core.widgets.services.bluetooth.bluetooth_audio import (
+    audio_is_connected,
+    set_audio_connection,
+)
 from core.widgets.services.bluetooth.bluetooth_types import (
     BluetoothStatus,
     DeviceInfo,
@@ -27,6 +32,20 @@ from core.widgets.services.bluetooth.bluetooth_types import (
 )
 
 logger = logging.getLogger("bluetooth_widget")
+
+
+def _connect_error(action: str, reason: str) -> str:
+    if reason == "cancelled":
+        return f"{action.capitalize()} cancelled"
+    if reason in ("not_audio_device", "no_ks_controls"):
+        return f"Failed to {action} device (no audio path; use Windows Settings)"
+    if reason == "oneshot_failed":
+        return f"Failed to {action} device (audio driver request failed)"
+    if reason == "timeout" and action == "connect":
+        return "Failed to connect device. Is it powered on and in range?"
+    if reason == "timeout":
+        return f"Failed to {action} device"
+    return f"Failed to {action} device"
 
 
 class BluetoothManager(QObject):
@@ -67,6 +86,7 @@ class BluetoothManager(QObject):
         self._watches: dict[int, tuple[Any, Any]] = {}
         self._adapter_watch: Any | None = None
         self._enum_lock: asyncio.Lock | None = None
+        self._connect_cancel = threading.Event()
 
     @classmethod
     def acquire(cls) -> BluetoothManager:
@@ -118,9 +138,11 @@ class BluetoothManager(QObject):
 
     def shutdown(self) -> None:
         self._started = False
+        self._connect_cancel.set()
         self._refresh_pending = False
         self._refresh_le_pending = False
         self._pending_scan = False
+        self._connect_running = False
         self._stop_adapter_watch()
         self._clear_device_watchers()
         self._unsubscribe_radio()
@@ -134,15 +156,11 @@ class BluetoothManager(QObject):
     def is_radio_on(self) -> bool:
         return self._radio_on
 
-    def refresh(self, *, refresh_le: bool = True) -> None:
-        if refresh_le:
-            self._refresh_le_pending = True
+    def refresh(self) -> None:
+        self._refresh_le_pending = True
         self._schedule(self._refresh_async())
 
-    def scan(self, inquiry: bool = False) -> None:
-        if not inquiry:
-            self.refresh(refresh_le=True)
-            return
+    def scan(self) -> None:
         self._schedule(self._scan_async())
 
     def set_radio(self, on: bool) -> bool:
@@ -151,12 +169,10 @@ class BluetoothManager(QObject):
         self._schedule(self._set_radio_async(on))
         return True
 
-    def connect_device(self, device: DeviceInfo | str) -> None:
-        address = device if isinstance(device, str) else device.address
+    def connect_device(self, address: str) -> None:
         self._schedule(self._connect_async(address, True))
 
-    def disconnect_device(self, device: DeviceInfo | str) -> None:
-        address = device if isinstance(device, str) else device.address
+    def disconnect_device(self, address: str) -> None:
         self._schedule(self._connect_async(address, False))
 
     def _schedule(self, coro) -> None:
@@ -210,6 +226,19 @@ class BluetoothManager(QObject):
     def _emit_status(self) -> None:
         self.status_updated.emit(BluetoothStatus(radio_on=self._radio_on, devices=list(self._devices.values())))
 
+    def _set_connected(self, device: DeviceInfo, connected: bool) -> None:
+        device.connected = connected
+        device.profiles = profiles_from_cod(device.major_class, connected)
+        if not connected:
+            device.battery = None
+
+    async def _read_battery(self, device: DeviceInfo) -> None:
+        if not device.connected or not device.address_int:
+            device.battery = None
+            return
+        loop = asyncio.get_running_loop()
+        device.battery = await loop.run_in_executor(None, read_battery, device.address_int)
+
     def _alive(self) -> bool:
         return self._started
 
@@ -223,7 +252,7 @@ class BluetoothManager(QObject):
         self._adapter_watch = None
 
     def _reset_backend(self) -> None:
-        """Dongle change: drop dead radio/device sessions so the next refresh binds clean."""
+        """Clear radio and device state after a HW change."""
         self._unsubscribe_radio()
         self._clear_device_watchers()
         self._devices.clear()
@@ -231,8 +260,16 @@ class BluetoothManager(QObject):
         self._radio_on = False
 
     async def _on_adapter_changed(self, kind: str = "Updated") -> None:
-        """Dongle Added/Removed/Updated: tear down and rebuild (old watches die with the dongle)."""
+        """Adapter events rebuild; DeviceAdded/Removed refresh the list."""
         if not self._alive():
+            return
+        if kind.startswith("Device"):
+            self._refresh_le_pending = True
+            busy = self._connect_running or self._scan_running or self._refresh_running
+            if busy:
+                self._refresh_pending = True
+                return
+            await self._refresh_async()
             return
         busy = self._connect_running or self._scan_running or self._refresh_running
         self._reset_backend()
@@ -423,32 +460,53 @@ class BluetoothManager(QObject):
         if self._connect_running:
             self.connection_finished.emit(False, "Another connection is in progress", device)
             return
-        if device.is_le:
+        if device.is_le or not device.supports_connect:
             self.connection_finished.emit(False, "Use Windows Settings to manage this device", device)
             return
+
         self._connect_running = True
-        native = self._native
+        self._connect_cancel.clear()
         try:
             loop = asyncio.get_running_loop()
-            ok = await loop.run_in_executor(None, native.set_service_state, device, connect)
+            addr = device.address_int or device.address
+            name = device.name or ""
+            cancel = self._connect_cancel
+            audio_before = await loop.run_in_executor(None, audio_is_connected, name)
+            error = await loop.run_in_executor(
+                None,
+                lambda: set_audio_connection(addr, connect=connect, device_name=name, cancel=cancel),
+            )
             if not self._alive():
                 return
-            if not ok:
-                self.connection_finished.emit(False, f"Failed to {action} device", device)
+            audio = await loop.run_in_executor(None, audio_is_connected, name)
+            if error is None and audio != connect:
+                error = "timeout"
+            # Idle audio + WinRT still Connected is not a real disconnect.
+            if error is None and not connect and audio_before is not True:
+                await enrich_device(device)
+                if not self._alive():
+                    return
+                if device.connected:
+                    error = "timeout"
+            if error is not None:
+                self._finish_connect(device, False, _connect_error(action, error))
                 return
-            await enrich_device(device)
-            if not self._alive():
-                return
-            self.connection_finished.emit(True, f"Device {action}ed", device)
-            self._emit_status()
+            if audio is not None:
+                self._set_connected(device, audio)
+                if device.connected:
+                    await self._read_battery(device)
+            self._finish_connect(device, True, f"Device {action}ed")
         except Exception as e:
             if self._alive():
-                self.connection_finished.emit(False, str(e), device)
-        finally:
-            self._connect_running = False
-            if self._alive() and self._refresh_pending:
-                self._refresh_pending = False
-                self._schedule(self._refresh_async())
+                self._finish_connect(device, False, str(e))
+
+    def _finish_connect(self, device: DeviceInfo, success: bool, message: str) -> None:
+        self._connect_running = False
+        self.connection_finished.emit(success, message, device)
+        self._emit_status()
+        if self._alive() and self._refresh_pending:
+            self._refresh_pending = False
+            self._schedule(self._refresh_async())
 
     async def _on_radio_state_changed(self, _sender: Any) -> None:
         if not self._alive():
@@ -461,42 +519,37 @@ class BluetoothManager(QObject):
         await self._refresh_async()
 
     async def _on_device_connection_changed(self, sender: Any) -> None:
-        """Update one cached device from WinRT, skip while connect_async owns the update."""
-        if not self._alive():
-            return
-        if self._connect_running:
+        if not self._alive() or self._connect_running:
             return
         try:
             address_int = int(sender.bluetooth_address)
-        except Exception:
-            self._refresh_le_pending = True
-            if self._scan_running or self._refresh_running:
-                self._refresh_pending = True
-            else:
-                await self._refresh_async()
-            return
-        address = format_address(address_int)
-        device = self._devices.get(address)
-        if device is None:
-            self._refresh_le_pending = True
-            if self._scan_running or self._refresh_running:
-                self._refresh_pending = True
-            else:
-                await self._refresh_async()
-            return
-        try:
             connected = int(sender.connection_status) == int(BluetoothConnectionStatus.CONNECTED)
         except Exception:
-            connected = False
-        if device.connected == connected:
+            self._refresh_le_pending = True
+            if not (self._scan_running or self._refresh_running):
+                await self._refresh_async()
+            else:
+                self._refresh_pending = True
             return
-        device.connected = connected
-        device.profiles = profiles_from_cod(device.major_class, connected)
+
+        device = self._devices.get(format_address(address_int))
+        if device is None:
+            self._refresh_le_pending = True
+            if not (self._scan_running or self._refresh_running):
+                await self._refresh_async()
+            else:
+                self._refresh_pending = True
+            return
+
+        if device.connected == connected:
+            if connected and device.battery is None:
+                await self._read_battery(device)
+                if self._alive():
+                    self._emit_status()
+            return
+        self._set_connected(device, connected)
         if connected:
-            loop = asyncio.get_running_loop()
-            device.battery = await loop.run_in_executor(None, read_battery, address_int)
-        else:
-            device.battery = None
+            await self._read_battery(device)
         if self._alive():
             self._emit_status()
 
