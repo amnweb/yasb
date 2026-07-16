@@ -44,10 +44,10 @@ except AttributeError:
     _RtlUnsubscribeWnfStateChangeNotification = None
     WNF_SUPPORTED = False
 
-# Undocumented WNF state tracking TOTAL notification count.
-# Fires on add (+1), dismiss (-1), clear-all (0).
-# Also fires on panel open/close but value unchanged filtered in callback.
-WNF_SHEL_NOTIFICATION_TOTAL = 0xD83063EA3B8D035
+# Win11: Action Center toast total
+WNF_SHEL_NOTIFICATION_TOTAL = 0x0D83063EA3B8D035
+# Win10: unread/badge count
+WNF_SHEL_NOTIFICATIONS = 0x0D83063EA3BC1035
 
 
 class WindowsNotificationEventListener(QThread):
@@ -110,41 +110,13 @@ class WindowsNotificationEventListener(QThread):
             self._loop = None
 
     async def _watch_notifications(self):
-        """WNF event-driven, fallback to WinRT polling if unsupported."""
+        """WNF event-driven watch."""
         self._subscribe_wnf()
+        await self._wait_for_stop()
 
-        if self._wnf_active:
-            logging.info("Notification service started (WNF)")
-            await self._wait_for_stop()
-        else:
-            logging.info("Notification service started (WinRT polling)")
-            while self._async_stop_event and not self._async_stop_event.is_set():
-                try:
-                    notifications = await self._listener.get_notifications_async(NotificationKinds.TOAST)
-                    count = len(notifications)
-                    if count != self.total_notifications:
-                        self.total_notifications = count
-                        self.event_service.emit_event("WindowsNotificationUpdate", count)
-                except Exception as e:
-                    logging.error("WinRT poll error: %s", e)
-
-                if await self._wait_for_stop(3.0):
-                    break
-
-    async def _wait_for_stop(self, timeout: float | None = None) -> bool:
-        """Wait until async_stop_event is set. Returns True if event was set, False on timeout."""
-        if not self._async_stop_event:
-            return True
-
-        if timeout is None:
+    async def _wait_for_stop(self) -> None:
+        if self._async_stop_event:
             await self._async_stop_event.wait()
-            return True
-
-        try:
-            await asyncio.wait_for(self._async_stop_event.wait(), timeout)
-            return True
-        except TimeoutError:
-            return False
 
     async def _cancel_pending_tasks(self):
         if not self._loop:
@@ -156,15 +128,15 @@ class WindowsNotificationEventListener(QThread):
         if pending:
             await asyncio.gather(*pending, return_exceptions=True)
 
-    def _subscribe_wnf(self):
-        """Subscribe to WNF_SHEL_NOTIFICATION_TOTAL."""
-        if self._wnf_active or not WNF_SUPPORTED:
-            return
+    def _try_subscribe(self, state: int, name: str) -> bool:
+        """Subscribe to a WNF state. Returns True on success."""
+        if not WNF_SUPPORTED:
+            return False
         try:
             sub = c_void_p()
-            s = _RtlSubscribeWnfStateChangeNotification(
+            status = _RtlSubscribeWnfStateChangeNotification(
                 byref(sub),
-                ctypes.c_uint64(WNF_SHEL_NOTIFICATION_TOTAL),
+                ctypes.c_uint64(state),
                 0,
                 self._wnf_cb,
                 None,
@@ -172,14 +144,26 @@ class WindowsNotificationEventListener(QThread):
                 0,
                 0,
             )
-            if s == 0:
+            if status == 0:
                 self._wnf_sub = sub
                 self._wnf_active = True
-                logging.debug("Subscribed to WNF notifications successfully")
-            else:
-                logging.debug("WNF subscribe failed: 0x%08X", s & 0xFFFFFFFF)
+                return True
+            logging.debug("%s unavailable (0x%08X)", name, status & 0xFFFFFFFF)
         except Exception:
-            logging.exception("Failed to subscribe to WNF toast events")
+            logging.exception("Failed to subscribe to %s", name)
+        return False
+
+    def _subscribe_wnf(self):
+        """Prefer Win11 state, fall back to Win10 NOTIFICATIONS (badge/unread)."""
+        if self._wnf_active or not WNF_SUPPORTED:
+            return
+        if self._try_subscribe(WNF_SHEL_NOTIFICATION_TOTAL, "WNF_SHEL_NOTIFICATION_TOTAL"):
+            logging.info("Notification service started (WNF_SHEL_NOTIFICATION_TOTAL)")
+            return
+        if self._try_subscribe(WNF_SHEL_NOTIFICATIONS, "WNF_SHEL_NOTIFICATIONS"):
+            logging.info("Notification service started (WNF_SHEL_NOTIFICATIONS)")
+            return
+        logging.error("Notification service failed to subscribe to WNF")
 
     def _unsubscribe_wnf(self):
         """Unsubscribe from WNF."""
@@ -193,16 +177,14 @@ class WindowsNotificationEventListener(QThread):
         self._wnf_active = False
         logging.debug("Unsubscribed from WNF notifications")
 
-    def _wnf_toast_callback(self, state_name, change_stamp, type_id, context, buffer, buffer_size):
-        """Called when WNF_SHEL_NOTIFICATION_TOTAL fires.
-        Buffer value IS the total notification count.
-        Only emits if count actually changed (panel toggle = same value = skip)."""
+    def _wnf_toast_callback(self, _state_name, _change_stamp, _type_id, _context, buffer, buffer_size):
+        """Buffer u32 is the count (Win11 total / Win10 unread badge). Skip unchanged values."""
         try:
             if not buffer or buffer_size < 4:
                 return 0
             wnf_count = ctypes.cast(buffer, ctypes.POINTER(ctypes.c_uint32))[0]
             if wnf_count == self.total_notifications:
-                return 0  # panel toggle - no change
+                return 0
             self.total_notifications = wnf_count
             self.event_service.emit_event("WindowsNotificationUpdate", wnf_count)
         except Exception:
