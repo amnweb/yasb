@@ -50,6 +50,7 @@ class MicrophoneConfig(CustomBaseModel):
     mute_text: str = "mute"
     tooltip: bool = True
     scroll_step: int = Field(default=2, ge=1, le=100)
+    invert_wheel: bool = False
     icons: IconsConfig = IconsConfig()
     mic_menu: MicMenuConfig = MicMenuConfig()
     progress_bar: ProgressBarConfig = ProgressBarConfig()

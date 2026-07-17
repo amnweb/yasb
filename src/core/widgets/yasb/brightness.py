@@ -412,7 +412,8 @@ class BrightnessWidget(BaseWidget):
         if current is None:
             return
 
-        if a0.angleDelta().y() > 0:
+        delta = -a0.angleDelta().y() if self.config.invert_wheel else a0.angleDelta().y()
+        if delta > 0:
             new_value = min(current + self.config.scroll_step, 100)
         else:
             new_value = max(current - self.config.scroll_step, 0)

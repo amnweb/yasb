@@ -8,6 +8,7 @@ Displays your screen's brightness level and lets you adjust it on the fly. You c
 | `label_alt`     | string  | `"Brightness {percent}%"`                                          | The alternative format string for the brightness widget. |
 | `tooltip`  | boolean  | `True`        | Whether to show the tooltip on hover. |
 | `scroll_step`   | integer | `1`                                                                       | The step size for scrolling the brightness level. This value must be between 1 and 100. |
+| `invert_wheel`     | boolean     | `false`                  | Whether to invert wheel scroll direction (useful on laptop trackpads) |
 | `brightness_icons` | list  | `['\udb80\udcde', '\udb80\udcdd', '\udb80\udcdf', '\udb80\udce0']`                    | A list of icons representing different brightness levels. The icons are used based on the current brightness percentage. |
 | `hide_unsupported` | boolean | `True` | Whether to hide the widget if the current system does not support brightness control. |
 | `brightness_toggle_level` | list | `[0, 50, 100]` | The brightness levels to cycle through when the widget is clicked. |

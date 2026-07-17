@@ -10,6 +10,7 @@ Shows your microphone volume and mute status. You can adjust the recording level
 | `mute_text` | string  | `'mute'` | Text used by `{level}` to indicate muted volume |
 | `tooltip`  | boolean  | `true`        | Whether to show the tooltip on hover. |
 | `scroll_step`     | int     | `2`                  | The step size for volume adjustment when scrolling. The value is in percentage points (0-100). |
+| `invert_wheel`     | boolean     | `false`                  | Whether to invert wheel scroll direction (useful on laptop trackpads) |
 | `icons`       | dict    | `{'normal': '\uf130', 'muted': '\uf131'}` | Icons for microphone widget |
 | `callbacks`       | dict    | `{'on_left': 'toggle_mute', 'on_middle': 'toggle_label', 'on_right': 'do_nothing'}` | Callbacks for mouse events on the memory widget. |
 | `mic_menu` | dict | `{'blur': True, 'round_corners': True, 'round_corners_type': 'normal', 'border_color': 'system', 'alignment': 'right', 'direction': 'down', 'offset_top': 6, 'offset_left': 0}` | Menu settings for the widget. |
