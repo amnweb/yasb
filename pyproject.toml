@@ -44,6 +44,7 @@ dependencies = [
     "winrt.windows.ui==3.2.1",
     "winrt.windows.ui.notifications==3.2.1",
     "winrt.windows.ui.notifications.management==3.2.1",
+    "winrt.windows.devices.display==3.2.1",
     "winrt.windows.devices.wifi==3.2.1",
     "winrt.windows.security.credentials==3.2.1",
     "winrt.windows.ui.viewmanagement==3.2.1",

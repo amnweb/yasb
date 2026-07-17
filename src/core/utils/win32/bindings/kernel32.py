@@ -189,6 +189,9 @@ kernel32.GetLastError.restype = DWORD
 kernel32.GetSystemPowerStatus.argtypes = [POINTER(SYSTEM_POWER_STATUS)]
 kernel32.GetSystemPowerStatus.restype = BOOL
 
+kernel32.LocalFree.argtypes = [LPVOID]
+kernel32.LocalFree.restype = LPVOID
+
 # GetSystemInfo - System information
 kernel32.GetSystemInfo.argtypes = [LPVOID]
 kernel32.GetSystemInfo.restype = None

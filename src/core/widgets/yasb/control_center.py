@@ -129,6 +129,9 @@ class ControlCenterWidget(BaseWidget):
                 except Exception:
                     pass
 
+        if self._brightness_service is not None:
+            self._brightness_service.refresh_now()
+
     def _build_system_controls_section(self) -> QWidget:
         return SystemControlsSectionWidget(
             self.dialog,
