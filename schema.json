@@ -14422,6 +14422,172 @@
       },
       "title": "ProgressBarConfig",
       "type": "object"
+    },
+    "SalahTimesWidgetEntry": {
+      "properties": {
+        "type": {
+          "const": "yasb.salah_times.SalahTimesWidget",
+          "title": "Type",
+          "type": "string"
+        },
+        "options": {
+          "$ref": "#/$defs/SalahTimesWidgetConfig"
+        }
+      },
+      "required": [
+        "type",
+        "options"
+      ],
+      "title": "SalahTimesWidgetEntry",
+      "type": "object"
+    },
+    "SalahTimesMenuConfig": {
+      "additionalProperties": false,
+      "description": "Appearance of the click-through popup (location chooser + editor).",
+      "properties": {
+        "blur": {
+          "default": true,
+          "title": "Blur",
+          "type": "boolean"
+        },
+        "round_corners": {
+          "default": true,
+          "title": "Round Corners",
+          "type": "boolean"
+        },
+        "round_corners_type": {
+          "default": "normal",
+          "enum": [
+            "normal",
+            "small"
+          ],
+          "title": "Round Corners Type",
+          "type": "string"
+        },
+        "border_color": {
+          "default": "System",
+          "title": "Border Color",
+          "type": "string"
+        },
+        "alignment": {
+          "default": "right",
+          "enum": [
+            "left",
+            "right",
+            "center"
+          ],
+          "title": "Alignment",
+          "type": "string"
+        },
+        "direction": {
+          "default": "down",
+          "enum": [
+            "up",
+            "down"
+          ],
+          "title": "Direction",
+          "type": "string"
+        },
+        "offset_top": {
+          "default": 6,
+          "title": "Offset Top",
+          "type": "integer"
+        },
+        "offset_left": {
+          "default": 0,
+          "title": "Offset Left",
+          "type": "integer"
+        }
+      },
+      "title": "SalahTimesMenuConfig",
+      "type": "object"
+    },
+    "SalahTimesWidgetConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "label": {
+          "default": "<span>\ueed3</span> {compact}",
+          "title": "Label",
+          "type": "string"
+        },
+        "label_alt": {
+          "default": "{list_inline}",
+          "title": "Label Alt",
+          "type": "string"
+        },
+        "label_placeholder": {
+          "default": "Loading salah times...",
+          "title": "Label Placeholder",
+          "type": "string"
+        },
+        "class_name": {
+          "default": "salah-times-widget",
+          "title": "Class Name",
+          "type": "string"
+        },
+        "update_interval": {
+          "default": 10,
+          "maximum": 3600,
+          "minimum": 1,
+          "title": "Update Interval",
+          "type": "integer"
+        },
+        "time_format": {
+          "default": "12h",
+          "enum": [
+            "12h",
+            "24h"
+          ],
+          "title": "Time Format",
+          "type": "string"
+        },
+        "show_sunnah_times": {
+          "default": true,
+          "title": "Show Sunnah Times",
+          "type": "boolean"
+        },
+        "tooltip": {
+          "default": true,
+          "title": "Tooltip",
+          "type": "boolean"
+        },
+        "data_file": {
+          "default": "",
+          "title": "Data File",
+          "type": "string"
+        },
+        "menu": {
+          "$ref": "#/$defs/SalahTimesMenuConfig",
+          "default": {
+            "blur": true,
+            "round_corners": true,
+            "round_corners_type": "normal",
+            "border_color": "System",
+            "alignment": "right",
+            "direction": "down",
+            "offset_top": 6,
+            "offset_left": 0
+          }
+        },
+        "keybindings": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/KeybindingConfig"
+          },
+          "title": "Keybindings",
+          "type": "array"
+        },
+        "callbacks": {
+          "$ref": "#/$defs/CallbacksConfig",
+          "default": {
+            "on_left": "toggle_menu",
+            "on_middle": "do_nothing",
+            "on_right": "toggle_label"
+          }
+        }
+      },
+      "title": "SalahTimesWidgetConfig",
+      "type": "object"
     }
   },
   "additionalProperties": false,
@@ -14724,6 +14890,9 @@
           },
           {
             "$ref": "#/$defs/WindowSwitcherEntry"
+          },
+          {
+            "$ref": "#/$defs/SalahTimesWidgetEntry"
           }
         ]
       },
