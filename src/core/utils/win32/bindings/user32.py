@@ -30,7 +30,9 @@ from ctypes.wintypes import (
 )
 
 from core.utils.win32.structs import (
+    GUID,
     ICONINFO,
+    WNDCLASS,
 )
 from core.utils.win32.typecheck import CArgObject
 
@@ -72,8 +74,26 @@ user32.GetMessageW.restype = INT
 user32.PeekMessageW.argtypes = [POINTER(MSG), HWND, UINT, UINT, UINT]
 user32.PeekMessageW.restype = BOOL
 
+user32.TranslateMessage.argtypes = [POINTER(MSG)]
+user32.TranslateMessage.restype = BOOL
+
+user32.DispatchMessageW.argtypes = [POINTER(MSG)]
+user32.DispatchMessageW.restype = LPARAM
+
+user32.PostQuitMessage.argtypes = [INT]
+user32.PostQuitMessage.restype = None
+
 user32.PostThreadMessageW.argtypes = [DWORD, UINT, WPARAM, LPARAM]
 user32.PostThreadMessageW.restype = BOOL
+
+user32.RegisterClassW.argtypes = [POINTER(WNDCLASS)]
+user32.RegisterClassW.restype = UINT
+
+user32.RegisterPowerSettingNotification.argtypes = [HANDLE, POINTER(GUID), DWORD]
+user32.RegisterPowerSettingNotification.restype = HANDLE
+
+user32.UnregisterPowerSettingNotification.argtypes = [HANDLE]
+user32.UnregisterPowerSettingNotification.restype = BOOL
 
 # Global hotkey functions
 user32.RegisterHotKey.argtypes = [HWND, INT, UINT, UINT]

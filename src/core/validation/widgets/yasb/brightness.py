@@ -52,6 +52,7 @@ class BrightnessConfig(CustomBaseModel):
     ]
     brightness_toggle_level: list[int] = []
     brightness_menu: BrightnessMenuConfig = BrightnessMenuConfig()
+    ddc_poll_interval: int = Field(default=60, ge=0, le=600)
     auto_light: bool = False
     auto_light_icon: str = "\udb80\udce1"
     auto_light_night_level: int = 50

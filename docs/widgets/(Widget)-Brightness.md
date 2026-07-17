@@ -11,6 +11,7 @@ Displays your screen's brightness level and lets you adjust it on the fly. You c
 | `brightness_icons` | list  | `['\udb80\udcde', '\udb80\udcdd', '\udb80\udcdf', '\udb80\udce0']`                    | A list of icons representing different brightness levels. The icons are used based on the current brightness percentage. |
 | `hide_unsupported` | boolean | `True` | Whether to hide the widget if the current system does not support brightness control. |
 | `brightness_toggle_level` | list | `[0, 50, 100]` | The brightness levels to cycle through when the widget is clicked. |
+| `ddc_poll_interval` | integer | `60` | Seconds between background DDC/CI brightness polls for external monitors (`0`–`600`). `0` disables polling (popup still refreshes on open). Laptop panels use power events and do not use this. |
 | `auto_light` | boolean | `False` | Whether to automatically adjust the brightness icon based on the current brightness level. |
 | `auto_light_icon` | string | `"\udb80\udce1"` | The icon to use when the auto_light option is enabled. |
 | `auto_light_night_level` | int | `50` | The brightness level at which the widget switches to the night. |
@@ -65,6 +66,7 @@ Displays your screen's brightness level and lets you adjust it on the fly. You c
 - **brightness_icons:** A list of icons representing different brightness levels. The icons are used based on the current brightness percentage.
 - **hide_unsupported:** Whether to hide the widget if the current system does not support brightness control.
 - **brightness_toggle_level:** The brightness level to set when the widget is clicked.
+- **ddc_poll_interval:** How often (seconds) to poll external DDC/CI monitors in the background. Range `0`–`600`, default `60`. Set `0` to disable background polling, opening the brightness menu still refreshes. Internal laptop brightness does not use this poll.
 - **brightness_menu**: A dictionary specifying the menu settings for the widget. It contains the following keys:
   - **blur**: Enable blur effect for the menu.
   - **round_corners**: Enable round corners for the menu (this option is not supported on Windows 10).
