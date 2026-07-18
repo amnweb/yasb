@@ -9,8 +9,8 @@ from PIL.ImageDraw import ImageDraw
 from PIL.ImageQt import ImageQt
 from pycaw.pycaw import AudioUtilities
 from PyQt6 import QtCore
-from PyQt6.QtCore import QEvent, QObject, Qt, QTimer, pyqtSlot
-from PyQt6.QtGui import QMouseEvent, QPixmap, QWheelEvent
+from PyQt6.QtCore import QEvent, QObject, QRectF, Qt, pyqtSlot
+from PyQt6.QtGui import QMouseEvent, QPainter, QPainterPath, QPaintEvent, QPixmap, QWheelEvent
 from PyQt6.QtWidgets import (
     QFrame,
     QGridLayout,
@@ -23,6 +23,7 @@ from PyQt6.QtWidgets import (
 )
 from qasync import asyncSlot  # type: ignore
 
+from core.utils.qobject import is_valid_qobject
 from core.utils.utilities import (
     PopupWidget,
     ScrollingLabel,
@@ -42,8 +43,8 @@ from core.widgets.services.media.aumid_process import get_process_name_for_aumid
 from core.widgets.services.media.media import MediaSession, SessionState, WindowsMedia
 from core.widgets.services.media.source_apps import (
     get_source_app_class_name,
-    get_source_app_display_name,
-    get_source_app_mapping,
+    resolve_activate_aumid,
+    resolve_source_app_name,
 )
 from core.widgets.services.media.tokenizer import clean_string
 
@@ -51,7 +52,7 @@ logger = logging.getLogger("MediaWidget")
 
 MAX_TIMLINE_DURATION = 604800  # 7 days
 
-type FieldTypes = Literal["default", "popup_title", "popup_artist"]
+type FieldTypes = Literal["default", "popup_title", "popup_artist", "popup_source"]
 
 
 class ProgressBarAlignment(StrEnum):
@@ -195,6 +196,20 @@ class MediaWidget(BaseWidget):
         self._app_volume_session = None
         self._is_playing = False
         self._app_is_muted = False
+        self.dialog: PopupWidget | None = None
+        self._media_content_frame: QFrame | None = None
+        self._no_media_label: QLabel | None = None
+        self._popup_source_label: QLabel | None = None
+        self._vol_container: QFrame | None = None
+        self._time_slider_container: QFrame | None = None
+        self._progress_slider: QSlider | None = None
+        self._popup_current_time_label: QLabel | None = None
+        self._popup_total_time_label: QLabel | None = None
+        self._popup_thumbnail_label = None
+        self._popup_title_label = None
+        self._popup_artist_label = None
+        self._seeking = False
+        self._wheel_filter: WheelEventFilter | None = None
 
     @pyqtSlot(dict)
     def _on_media_data_changed(self, data: dict[str, SessionState]):
@@ -204,200 +219,174 @@ class MediaWidget(BaseWidget):
 
         self._update_interpolated_position()
 
-        # If the session has changed, trigger property/playback updates to sync UI
-        if self.current_session and (old_session is None or self.current_session.app_id != old_session.app_id):
-            self._on_media_properties_changed()
-            self._on_playback_info_changed()
+        session_changed = (self.current_session is None) != (old_session is None) or (
+            self.current_session is not None
+            and old_session is not None
+            and self.current_session.app_id != old_session.app_id
+        )
+        if session_changed:
+            if self.current_session is not None or old_session is not None:
+                self._on_media_properties_changed()
+            if self.current_session is not None and (
+                old_session is None or self.current_session.app_id != old_session.app_id
+            ):
+                self._on_playback_info_changed()
 
     def _toggle_media_menu(self):
-        self.show_menu()
+        if is_valid_qobject(self.dialog) and self.dialog.isVisible():
+            self.dialog.hide_animated()
+        else:
+            self.show_menu()
 
     def show_menu(self):
+        if not is_valid_qobject(self.dialog):
+            self._create_media_popup()
+
+        self._refresh_popup_content()
+        self.dialog.adjustSize()
+        self.dialog.setPosition(
+            alignment=self.config.media_menu.alignment,
+            direction=self.config.media_menu.direction,
+            offset_left=self.config.media_menu.offset_left,
+            offset_top=self.config.media_menu.offset_top,
+        )
+        self.dialog.show()
+
+    def _create_media_popup(self):
         self.dialog = PopupWidget(
             self,
             self.config.media_menu.blur,
             self.config.media_menu.round_corners,
             self.config.media_menu.round_corners_type,
             self.config.media_menu.border_color,
+            persistent=True,
         )
-
         self.dialog.setProperty("class", "media-menu")
 
-        # Create main layout for the popup dialog
         main_layout = QVBoxLayout(self.dialog)
         main_layout.setContentsMargins(12, 12, 12, 12)
         main_layout.setSpacing(0)
 
-        content_layout = QHBoxLayout()
+        self._media_content_frame = QFrame(self.dialog)
+        content_layout = QHBoxLayout(self._media_content_frame)
+        content_layout.setContentsMargins(0, 0, 0, 0)
         content_layout.setSpacing(0)
 
-        if self.current_session is not None:
-            # Create thumbnail label
-            self._popup_thumbnail_label = QLabel()
-            self._popup_thumbnail_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            self._popup_thumbnail_label.setProperty("class", "thumbnail")
-            self._popup_thumbnail_label.setContentsMargins(0, 0, 0, 0)
-            self._popup_thumbnail_label.setFixedSize(
-                self.config.media_menu.thumbnail_size,
-                self.config.media_menu.thumbnail_size,
-            )
+        self._popup_thumbnail_label = RoundedClickableLabel(self, radius=self.config.media_menu.thumbnail_corner_radius)
+        self._popup_thumbnail_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._popup_thumbnail_label.setProperty("class", "thumbnail")
+        self._popup_thumbnail_label.setContentsMargins(0, 0, 0, 0)
+        self._popup_thumbnail_label.data = self._open_media_source
+        self._popup_thumbnail_label.setFixedSize(
+            self.config.media_menu.thumbnail_size,
+            self.config.media_menu.thumbnail_size,
+        )
+        content_layout.addWidget(self._popup_thumbnail_label, alignment=Qt.AlignmentFlag.AlignTop)
+
+        text_layout = QVBoxLayout()
+        text_layout.setContentsMargins(0, 0, 0, 0)
+        text_layout.setSpacing(0)
+
+        self._popup_title_label = QLabel("")
+        self._popup_title_label.setContentsMargins(0, 0, 0, 0)
+        self._popup_title_label.setProperty("class", "title")
+        self._popup_title_label.setWordWrap(True)
+        self._popup_title_label.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)
+
+        self._popup_artist_label = QLabel("")
+        self._popup_artist_label.setContentsMargins(0, 0, 0, 0)
+        self._popup_artist_label.setProperty("class", "artist")
+        self._popup_artist_label.setWordWrap(True)
+        self._popup_artist_label.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)
+        text_layout.addWidget(self._popup_title_label, alignment=Qt.AlignmentFlag.AlignTop)
+        text_layout.addWidget(self._popup_artist_label, alignment=Qt.AlignmentFlag.AlignTop)
+        text_layout.addStretch(1)
+
+        control_layout = QHBoxLayout()
+        control_layout.setSpacing(0)
+
+        prev_button = ClickableLabel(self)
+        prev_button.setProperty("class", "btn prev")
+        prev_button.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        prev_button.setText(self.config.media_menu_icons.prev_track)
+        prev_button.data = self.media.prev
+        self._popup_prev_label = prev_button
+
+        play_button = ClickableLabel(self)
+        play_button.setProperty("class", "btn play")
+        play_button.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        play_button.setText(self.config.media_menu_icons.play)
+        play_button.data = self.media.play_pause
+        self._popup_play_button = play_button
+
+        next_button = ClickableLabel(self)
+        next_button.setProperty("class", "btn next")
+        next_button.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        next_button.setText(self.config.media_menu_icons.next_track)
+        next_button.data = self.media.next
+        self._popup_next_label = next_button
+
+        control_layout.addWidget(prev_button)
+        control_layout.addWidget(play_button)
+        control_layout.addWidget(next_button)
+        control_layout.addStretch(1)
+
+        if self.config.media_menu.show_source:
+            self._popup_source_label = QLabel("")
+            self._popup_source_label.setProperty("class", "source")
+            self._popup_source_label.hide()
+            control_layout.addWidget(self._popup_source_label, 0, Qt.AlignmentFlag.AlignVCenter)
+
+        text_layout.addLayout(control_layout)
+        content_layout.addLayout(text_layout)
+
+        if self.config.media_menu.show_volume_slider:
             try:
-                # Use thumbnail if available, otherwise create a default one
-                if self.current_session.thumbnail is not None:
-                    popup_pixmap = self._create_thumbnail_for_popup(self.current_session.thumbnail)
-                else:
-                    # Create default thumbnail
-                    popup_pixmap = self._create_empty_thumbnail()
+                self._vol_container = QFrame()
+                self._vol_container.setProperty("class", "app-volume-container")
+                vol_layout = QVBoxLayout(self._vol_container)
+                vol_layout.setContentsMargins(0, 0, 0, 0)
+                vol_layout.setSpacing(0)
 
-                if popup_pixmap:
-                    self._popup_thumbnail_label.setPixmap(popup_pixmap)
-                    content_layout.addWidget(self._popup_thumbnail_label, alignment=Qt.AlignmentFlag.AlignTop)
+                self.app_volume_slider = QSlider(Qt.Orientation.Vertical)
+                self.app_volume_slider.setProperty("class", "volume-slider")
+                self.app_volume_slider.setMinimum(0)
+                self.app_volume_slider.setMaximum(100)
+                self.app_volume_slider.valueChanged.connect(self._on_app_volume_slider_changed)
+                vol_layout.addWidget(self.app_volume_slider, 0, Qt.AlignmentFlag.AlignCenter)
 
-                # Create layout for text information (title, artist, slider, controls)
-                text_layout = QVBoxLayout()
-                text_layout.setContentsMargins(0, 0, 0, 0)
-                text_layout.setSpacing(0)
-
-                title_text = (
-                    self._format_max_field_size(self.current_session.title, "popup_title")
-                    if self.current_session.title
-                    else "Unknown Title"
-                )
-                self._popup_title_label = QLabel(title_text)
-                self._popup_title_label.setContentsMargins(0, 0, 0, 0)
-                self._popup_title_label.setProperty("class", "title")
-                self._popup_title_label.setWordWrap(True)
-                self._popup_title_label.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
-
-                artist_text = (
-                    self._format_max_field_size(self.current_session.artist, "popup_artist")
-                    if self.current_session.artist
-                    else ""
-                )
-                self._popup_artist_label = QLabel(artist_text)
-                self._popup_artist_label.setContentsMargins(0, 0, 0, 0)
-                self._popup_artist_label.setProperty("class", "artist")
-                self._popup_artist_label.setWordWrap(True)
-                self._popup_artist_label.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
-                text_layout.addWidget(self._popup_title_label, alignment=Qt.AlignmentFlag.AlignTop)
-                text_layout.addWidget(self._popup_artist_label, alignment=Qt.AlignmentFlag.AlignTop)
-
-                # Add control buttons directly below the slider in the text layout
-                control_layout = QHBoxLayout()
-                control_layout.setSpacing(0)
-
-                # Create clickable buttons using the same method as main widget
-                prev_button = ClickableLabel(self)
-                prev_button.setProperty("class", "btn prev")
-                prev_button.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                prev_button.setText(self.config.media_menu_icons.prev_track)
-                prev_button.data = self.media.prev
-                self._popup_prev_label = prev_button
-
-                play_button = ClickableLabel(self)
-                play_button.setProperty("class", "btn play")
-                play_button.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                play_icon = (
-                    self.config.media_menu_icons.pause if self._is_playing else self.config.media_menu_icons.play
-                )
-                play_button.setText(play_icon)
-                play_button.data = self.media.play_pause
-                self._popup_play_button = play_button
-
-                next_button = ClickableLabel(self)
-                next_button.setProperty("class", "btn next")
-                next_button.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                next_button.setText(self.config.media_menu_icons.next_track)
-                next_button.data = self.media.next
-                self._popup_next_label = next_button
-
-                control_layout.addWidget(prev_button)
-                control_layout.addWidget(play_button)
-                control_layout.addWidget(next_button)
-
-                control_layout.addStretch(1)
-
-                source_name, source_class_name = self._get_source_app_name()
-                if source_name is not None and self.config.media_menu.show_source:
-                    self._popup_source_label = QLabel(source_name)
-                    self._popup_source_label.setContentsMargins(0, 0, 0, 0)
-                    self._popup_source_label.setProperty("class", f"source {source_class_name}")
-                    self._popup_source_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                    control_layout.addWidget(self._popup_source_label, 0, Qt.AlignmentFlag.AlignVCenter)
-
-                # Add control layout to the text layout
-                text_layout.addLayout(control_layout)
-
-                # Add the text layout to the top layout
-                content_layout.addLayout(text_layout)
-
-                # Per-app vertical volume slider
-                if self.config.media_menu.show_volume_slider:
-                    try:
-                        self._vol_container = QFrame()
-                        self._vol_container.setProperty("class", "app-volume-container")
-                        vol_layout = QVBoxLayout(self._vol_container)
-                        vol_layout.setContentsMargins(0, 0, 0, 0)
-                        vol_layout.setSpacing(0)
-
-                        self.app_volume_slider = QSlider(Qt.Orientation.Vertical)
-                        self.app_volume_slider.setProperty("class", "volume-slider")
-                        self.app_volume_slider.setMinimum(0)
-                        self.app_volume_slider.setMaximum(100)
-                        self.app_volume_slider.valueChanged.connect(self._on_app_volume_slider_changed)
-
-                        vol_layout.addWidget(self.app_volume_slider, 0, Qt.AlignmentFlag.AlignCenter)
-
-                        # Add mute/unmute button below the volume slider
-                        self._app_mute_button = ClickableLabel(self)
-                        self._app_mute_button.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                        self._app_mute_button.setProperty("class", "mute-button")
-                        self._app_mute_button.data = self._toggle_app_mute
-
-                        vol_layout.addWidget(self._app_mute_button, 0, Qt.AlignmentFlag.AlignCenter)
-                        content_layout.addWidget(self._vol_container, 0, Qt.AlignmentFlag.AlignRight)
-
-                        # Bind slider to the current media app session and set initial value
-                        self._bind_app_volume_session()
-                        self._updateapp_volume_slider()
-                        self._update_app_mute_button()
-                    except Exception as e:
-                        logger.error("Error creating app volume slider: %s", e)
-
+                self._app_mute_button = ClickableLabel(self)
+                self._app_mute_button.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                self._app_mute_button.setProperty("class", "mute-button")
+                self._app_mute_button.data = self._toggle_app_mute
+                vol_layout.addWidget(self._app_mute_button, 0, Qt.AlignmentFlag.AlignCenter)
+                content_layout.addWidget(self._vol_container, 0, Qt.AlignmentFlag.AlignRight)
             except Exception as e:
-                logger.error("Error setting thumbnail in menu: %s", e)
-        else:
-            # No media playing message
-            no_media_label = QLabel("No media playing")
-            no_media_label.setProperty("class", "no-media")
-            no_media_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            content_layout.addWidget(no_media_label)
+                logger.error("Error creating app volume slider: %s", e)
 
-        # Add top layout to main layout
-        main_layout.addLayout(content_layout)
+        self._no_media_label = QLabel("No media playing")
+        self._no_media_label.setProperty("class", "no-media")
+        self._no_media_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        # Create horizontal layout for slider and time labels
+        main_layout.addWidget(self._media_content_frame)
+        main_layout.addWidget(self._no_media_label)
+
         self._time_slider_container = QFrame()
         self._time_slider_container.setProperty("class", "media-timeline-container")
         self._time_slider_container.setContentsMargins(0, 0, 0, 0)
-
-        # Use a vertical layout for the container instead of horizontal
         time_slider_layout = QVBoxLayout(self._time_slider_container)
         time_slider_layout.setContentsMargins(0, 0, 0, 0)
-        time_slider_layout.setSpacing(0)  # Add spacing between slider and time labels
+        time_slider_layout.setSpacing(0)
 
-        # Create and configure the slider
         self._progress_slider = QSlider(Qt.Orientation.Horizontal)
         self._progress_slider.setProperty("class", "progress-slider")
         self._progress_slider.setMinimum(0)
-        self._progress_slider.setMaximum(1000)  # We use 1000 for better precision
+        self._progress_slider.setMaximum(1000)
 
-        # Create a horizontal layout for the time labels
         time_labels_layout = QHBoxLayout()
         time_labels_layout.setContentsMargins(0, 0, 0, 0)
         time_labels_layout.setSpacing(0)
 
-        # Create time labels for current and total time
         self._popup_current_time_label = QLabel("00:00")
         self._popup_current_time_label.setProperty("class", "playback-time current")
         self._popup_current_time_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
@@ -406,77 +395,113 @@ class MediaWidget(BaseWidget):
         self._popup_total_time_label.setProperty("class", "playback-time total")
         self._popup_total_time_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
 
-        # Initialize with current times if available
-        if self.current_session is not None:
-            self._popup_current_time_label.setText(self._format_time(self.current_session.current_pos))
-            self._popup_total_time_label.setText(self._format_time(self.current_session.duration))
-
-        # Add time labels to the horizontal layout with stretch to push them apart
         time_labels_layout.addWidget(self._popup_current_time_label)
-        time_labels_layout.addStretch(1)  # This pushes the labels to opposite sides
+        time_labels_layout.addStretch(1)
         time_labels_layout.addWidget(self._popup_total_time_label)
-
-        # Add the time labels layout to the main vertical layout
         time_slider_layout.addLayout(time_labels_layout)
         time_slider_layout.addWidget(self._progress_slider)
-
-        # Add the time-slider layout to the main layout instead of just the slider
         main_layout.addWidget(self._time_slider_container)
 
-        # Initialize slider position
-        if self.current_session is not None and self.current_session.duration > 0:
-            percent = min(
-                1000,
-                int((self.current_session.current_pos / self.current_session.duration) * 1000),
-            )
-            self._progress_slider.setValue(percent)
-        else:
-            self._progress_slider.setValue(0)
-
-        # Connect slider events
         self._progress_slider.sliderPressed.connect(self._on_slider_pressed)
         self._progress_slider.sliderReleased.connect(self._on_slider_released)
         self._progress_slider.valueChanged.connect(self._on_slider_value_changed)
-
-        # Initialize seeking flag
         self._seeking = False
 
-        if not (
-            self.current_session
-            and self.current_session.timeline_enabled
-            and (0 < self.current_session.duration < MAX_TIMLINE_DURATION)  # hide timeline if duration is too long
-        ):
-            self._time_slider_container.setVisible(False)
-            QTimer.singleShot(0, self.dialog.adjustSize)
-
-        self.dialog.adjustSize()
-        self.dialog.setPosition(
-            alignment=self.config.media_menu.alignment,
-            direction=self.config.media_menu.direction,
-            offset_left=self.config.media_menu.offset_left,
-            offset_top=self.config.media_menu.offset_top,
-        )
-        self._update_popup_menu_buttons()
-        self.dialog.show()
-
-        # Create and install the filter
         self._wheel_filter = WheelEventFilter(self)
         self.dialog.installEventFilter(self._wheel_filter)
 
-        if self.config.media_menu.show_volume_slider:
-            self._updateapp_volume_slider()
-            self._update_app_mute_button()
+    def _refresh_popup_content(self):
+        """Update persistent popup widgets from current_session."""
+        if not is_valid_qobject(self.dialog):
+            return
+
+        has_session = self.current_session is not None
+        if is_valid_qobject(self._media_content_frame):
+            self._media_content_frame.setVisible(has_session)
+        if is_valid_qobject(self._no_media_label):
+            self._no_media_label.setVisible(not has_session)
+
+        if not has_session:
+            if is_valid_qobject(self._time_slider_container):
+                self._time_slider_container.setVisible(False)
+            return
+
+        try:
+            title = (
+                self._format_max_field_size(self.current_session.title, "popup_title")
+                if self.current_session.title
+                else "Unknown Title"
+            )
+            artist = (
+                self._format_max_field_size(self.current_session.artist, "popup_artist")
+                if self.current_session.artist
+                else ""
+            )
+            if is_valid_qobject(self._popup_title_label):
+                self._popup_title_label.setText(title)
+            if is_valid_qobject(self._popup_artist_label):
+                self._popup_artist_label.setText(artist)
+
+            if is_valid_qobject(self._popup_thumbnail_label):
+                if self.current_session.thumbnail is not None:
+                    popup_pixmap = self._create_thumbnail_for_popup(self.current_session.thumbnail)
+                else:
+                    popup_pixmap = self._create_empty_thumbnail()
+                self._popup_thumbnail_label.setPixmap(popup_pixmap or QPixmap())
+
+            if is_valid_qobject(self._popup_source_label):
+                source_name, source_class_name = self._get_source_app_name()
+                if source_name is not None:
+                    self._popup_source_label.setText(source_name)
+                    self._popup_source_label.setProperty("class", f"source {source_class_name}")
+                    refresh_widget_style(self._popup_source_label)
+                    self._popup_source_label.show()
+                else:
+                    self._popup_source_label.hide()
+
+            if is_valid_qobject(self._popup_current_time_label):
+                self._popup_current_time_label.setText(self._format_time(self.current_session.current_pos))
+            if is_valid_qobject(self._popup_total_time_label):
+                self._popup_total_time_label.setText(self._format_time(self.current_session.duration))
+
+            show_timeline = bool(
+                self.current_session.timeline_enabled and (0 < self.current_session.duration < MAX_TIMLINE_DURATION)
+            )
+            if is_valid_qobject(self._time_slider_container):
+                self._time_slider_container.setVisible(show_timeline)
+            if is_valid_qobject(self._progress_slider):
+                if self.current_session.duration > 0:
+                    percent = min(
+                        1000,
+                        int((self.current_session.current_pos / self.current_session.duration) * 1000),
+                    )
+                    self._progress_slider.setValue(percent)
+                else:
+                    self._progress_slider.setValue(0)
+
+            if self.config.media_menu.show_volume_slider:
+                self._bind_app_volume_session()
+                self._updateapp_volume_slider()
+                self._update_app_mute_button()
+
+            self._update_popup_menu_buttons()
+        except Exception as e:
+            logger.error("Error refreshing popup content: %s", e)
 
     def _get_source_app_name(self):
-        """Get formatted source app name from media info or session."""
+        """Resolve source app display name from the current session AUMID."""
         if not self.current_session or not (source_app := self.current_session.app_id):
             return None, None
         try:
-            # Direct lookup
-            source_name = get_source_app_display_name(source_app)
+            source_name = resolve_source_app_name(
+                source_app,
+                title=self.current_session.title or None,
+            )
             if source_name:
-                return source_name, get_source_app_class_name(source_name)
-            logger.debug("Unknown source app in session: '%s' - consider adding to source_apps.py", source_app)
+                return (
+                    self._format_max_field_size(source_name, "popup_source"),
+                    get_source_app_class_name(source_name),
+                )
         except Exception:
             logger.exception("Error getting media source")
         return None, None
@@ -540,13 +565,12 @@ class MediaWidget(BaseWidget):
 
     def _open_media_source(self):
         if self.current_session and self.current_session.app_id:
-            # Try to get process name from mapping for fallback
-            fallback_process = None
-            mapping = get_source_app_mapping(self.current_session.app_id)
-            if mapping and isinstance(mapping, dict):
-                fallback_process = mapping.get("process")
-
-            activate_app_by_aumid(self.current_session.app_id, fallback_process_name=fallback_process)
+            aumid = resolve_activate_aumid(
+                self.current_session.app_id,
+                title=self.current_session.title or None,
+            )
+            fallback_process = get_process_name_for_aumid(aumid)
+            activate_app_by_aumid(aumid, fallback_process_name=fallback_process)
 
     def _on_timeline_properties_changed(self):
         """Handle timeline property updates."""
@@ -587,7 +611,7 @@ class MediaWidget(BaseWidget):
                 self._progress_bar.setHidden(True)
 
             # Skip updates if user is currently seeking or dialog isn't visible
-            if not (hasattr(self, "dialog") and self.dialog.isVisible()):
+            if not (is_valid_qobject(self.dialog) and self.dialog.isVisible()):
                 return
             if self._seeking:
                 return
@@ -595,12 +619,12 @@ class MediaWidget(BaseWidget):
             duration = self.current_session.duration
 
             # Update UI with estimated position
-            if hasattr(self, "_popup_current_time_label") and self._popup_current_time_label:
+            if is_valid_qobject(self._popup_current_time_label):
                 position_str = self._format_time(position)
                 self._popup_current_time_label.setText(position_str)
 
             # Smoother slider updates - only update if the difference is significant
-            if hasattr(self, "_progress_slider") and self._progress_slider and duration > 0:
+            if is_valid_qobject(self._progress_slider) and duration > 0:
                 # Calculate percentage position
                 new_percent = min(1000, int((position / duration) * 1000))
                 current_percent = self._progress_slider.value()
@@ -611,12 +635,7 @@ class MediaWidget(BaseWidget):
                     self._progress_slider.setValue(new_percent)
 
         except RuntimeError:
-            # The label or progress bar has been deleted (dialog closed)
-            # Clear references to prevent future errors
-            if hasattr(self, "_popup_current_time_label"):
-                self._popup_current_time_label = None
-            if hasattr(self, "_progress_slider"):
-                self._progress_slider = None
+            pass
         except Exception as e:
             logger.error("Error updating interpolated position: %s", e)
 
@@ -687,7 +706,7 @@ class MediaWidget(BaseWidget):
 
         # Update popup if it's currently open
         try:
-            if hasattr(self, "dialog") and self.dialog.isVisible():
+            if is_valid_qobject(self.dialog) and self.dialog.isVisible():
                 play_icon_popup = (
                     self.config.media_menu_icons.pause if is_playing else self.config.media_menu_icons.play
                 )
@@ -706,48 +725,16 @@ class MediaWidget(BaseWidget):
                     self._popup_next_label.setProperty("class", f"btn next {'disabled' if not is_next_enabled else ''}")
                     refresh_widget_style(self._popup_next_label)
         except RuntimeError:
-            self._popup_play_button = None
-            self._popup_prev_label = None
-            self._popup_next_label = None
+            pass
         except Exception as e:
             logger.error("Error updating popup button: %s", e)
-            self._popup_play_button = None
-            self._popup_prev_label = None
-            self._popup_next_label = None
 
     @pyqtSlot()
     def _on_media_properties_changed(self):
         try:
-            if self.current_session is not None and hasattr(self, "dialog") and self.dialog.isVisible():
-                try:
-                    if (
-                        hasattr(self, "_popup_title_label")
-                        and hasattr(self, "_popup_artist_label")
-                        and hasattr(self, "_popup_thumbnail_label")
-                    ):
-                        self._popup_title_label.setText(
-                            self._format_max_field_size(self.current_session.title, "popup_title")
-                        )
-                        self._popup_artist_label.setText(
-                            self._format_max_field_size(self.current_session.artist, "popup_artist")
-                        )
-
-                        if self.current_session.thumbnail is not None:
-                            popup_pixmap = self._create_thumbnail_for_popup(self.current_session.thumbnail)
-                        else:
-                            popup_pixmap = self._create_empty_thumbnail()
-                        self._popup_thumbnail_label.setPixmap(popup_pixmap or QPixmap())
-
-                    if hasattr(self, "_popup_source_label"):
-                        source_name, source_class_name = self._get_source_app_name()
-                        if source_name is not None:
-                            self._popup_source_label.setText(source_name)
-                            self._popup_source_label.setProperty("class", f"source {source_class_name}")
-
-                            refresh_widget_style(self._popup_source_label)
-
-                except Exception as e:
-                    logger.error("Error updating popup content: %s", e)
+            if is_valid_qobject(self.dialog) and self.dialog.isVisible():
+                self._refresh_popup_content()
+                self.dialog.adjustSize()
         except RuntimeError:
             pass
         except Exception as e:
@@ -813,7 +800,6 @@ class MediaWidget(BaseWidget):
         """Create a default thumbnail with an eighth note icon."""
         try:
             size = self.config.media_menu.thumbnail_size
-            corner_radius = self.config.media_menu.thumbnail_corner_radius
             # Create base image with dark background
             large_size = size * 2  # Create at higher resolution for better quality
             large_img = Image.new("RGBA", (large_size, large_size), (0, 0, 0, 255))
@@ -871,15 +857,6 @@ class MediaWidget(BaseWidget):
 
             # Resize down to target size with high quality anti-aliasing
             img = large_img.resize((size, size), Image.LANCZOS)
-
-            # Add rounded corners
-            mask = Image.new("L", (size, size), 0)
-            mask_draw = ImageDraw(mask)
-            mask_draw.rounded_rectangle(((0, 0), (size, size)), corner_radius, fill=150)
-
-            # Apply mask for rounded corners
-            img.putalpha(mask)
-
             return QPixmap.fromImage(ImageQt(img))
 
         except Exception as e:
@@ -887,11 +864,9 @@ class MediaWidget(BaseWidget):
             return None
 
     def _create_thumbnail_for_popup(self, img: Image.Image):
-        """Process image thumbnail into a square with rounded corners for popup display."""
+        """Process image thumbnail into a square for popup display."""
         try:
             square_size = self.config.media_menu.thumbnail_size
-            # Increase corner radius for more visible rounded corners (25% instead of 15%)
-            corner_radius = self.config.media_menu.thumbnail_corner_radius
 
             # Calculate aspect ratio
             aspect = img.width / img.height
@@ -915,29 +890,9 @@ class MediaWidget(BaseWidget):
             else:
                 square_img = resized.resize((square_size, square_size), Image.LANCZOS)
 
-            # Ensure image is RGBA
             if square_img.mode != "RGBA":
                 square_img = square_img.convert("RGBA")
 
-            # Create much higher-resolution mask for better anti-aliasing (12x size)
-            scale = 4  # Significantly increased for smoother corners
-            hr_size = square_size * scale
-            hr_radius = corner_radius * scale
-
-            # Create the mask
-            mask = Image.new("L", (hr_size, hr_size), color=0)
-            draw = ImageDraw(mask)
-
-            # Draw rounded rectangle with smoother corners
-            draw.rounded_rectangle(((0, 0), (hr_size, hr_size)), radius=hr_radius, fill=255)
-
-            # Resize mask back down with high-quality anti-aliasing
-            mask = mask.resize((square_size, square_size), Image.LANCZOS)
-
-            # Apply the mask to create rounded corners
-            square_img.putalpha(mask)
-
-            # Convert to QPixmap
             return QPixmap.fromImage(ImageQt(square_img))
         except Exception as e:
             logger.error("Error creating square thumbnail: %s", e)
@@ -1045,6 +1000,8 @@ class MediaWidget(BaseWidget):
             max_size = self.config.media_menu.max_title_size
         elif field_type == "popup_artist":
             max_size = self.config.media_menu.max_artist_size
+        elif field_type == "popup_source":
+            max_size = self.config.media_menu.max_source_size
         else:
             # If we are using scrolling labels, return the original text without formatting
             if self.config.scrolling_label.enabled:
@@ -1156,27 +1113,6 @@ class MediaWidget(BaseWidget):
 
         return None
 
-    def _match_session_by_mapping(self, sessions: list[MediaSession], aumid: str) -> MediaSession | None:
-        """Match session using source app mapping."""
-        if not aumid:
-            return None
-
-        mapping = get_source_app_mapping(aumid)
-        if not mapping:
-            return None
-
-        process_name = mapping.get("process")
-        if process_name:
-            for session in sessions:
-                try:
-                    proc = getattr(session, "Process", None)
-                    if proc and proc.name().lower() == process_name.lower():
-                        return session
-                except Exception:
-                    continue
-
-        return None
-
     def _match_session_by_aumid(self, sessions: list[MediaSession], aumid: str):
         """Match session by process AUMID."""
         target_aumid = aumid.lower()
@@ -1217,9 +1153,6 @@ class MediaWidget(BaseWidget):
             sessions = cast(list[MediaSession], AudioUtilities.GetAllSessions())
             candidate = None
             if aumid:
-                candidate = self._match_session_by_mapping(sessions, aumid)
-
-            if not candidate and aumid:
                 candidate = self._match_session_by_aumid(sessions, aumid)
 
             if not candidate and identifier:
@@ -1249,7 +1182,8 @@ class MediaWidget(BaseWidget):
 
         volume_interface = self._get_volume_interface()
         if not volume_interface:
-            self._vol_container.hide()
+            if self._vol_container is not None:
+                self._vol_container.hide()
             self.app_volume_slider.setEnabled(False)
             return
 
@@ -1261,6 +1195,8 @@ class MediaWidget(BaseWidget):
             self.app_volume_slider.setValue(level)
             self.app_volume_slider.blockSignals(False)
             self.app_volume_slider.setEnabled(True)
+            if self._vol_container is not None:
+                self._vol_container.show()
 
         except Exception as e:
             logger.error("Failed to read app volume: %s", e)
@@ -1350,6 +1286,31 @@ class ClickableLabel(QLabel):
         ev.accept()
 
 
+class RoundedClickableLabel(ClickableLabel):
+    """Pixmap label that clips to rounded corners at paint time."""
+
+    def __init__(self, parent: MediaWidget | None = None, radius: int = 0):
+        super().__init__(parent)
+        self._corner_radius = max(0, radius)
+
+    def paintEvent(self, a0: QPaintEvent | None):
+        pix = self.pixmap()
+        if pix is None or pix.isNull() or self._corner_radius <= 0:
+            super().paintEvent(a0)
+            return
+
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+        # painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, True)
+        rect = QRectF(self.contentsRect())
+        radius = min(float(self._corner_radius), min(rect.width(), rect.height()) / 2.0)
+        path = QPainterPath()
+        path.addRoundedRect(rect, radius, radius)
+        painter.setClipPath(path)
+        painter.drawPixmap(self.contentsRect(), pix, pix.rect())
+        painter.end()
+
+
 class WheelEventFilter(QObject):
     """
     Install event filter to capture wheel events in the popup to handle wheel events for media session switching.
@@ -1364,6 +1325,8 @@ class WheelEventFilter(QObject):
         if event.type() == QEvent.Type.Wheel:
             event = cast(QWheelEvent, event)
             dialog = self.media_widget.dialog
+            if not is_valid_qobject(dialog):
+                return False
             if not dialog.geometry().contains(event.globalPosition().toPoint()):
                 return False
 
@@ -1375,14 +1338,9 @@ class WheelEventFilter(QObject):
                 if slider_global_rect.contains(event.globalPosition().toPoint()):
                     return False
 
-            old_session = self.media_widget.current_session
             if event.angleDelta().y() > 0:
                 self.media_widget.media.switch_current_session(+1)
             elif event.angleDelta().y() < 0:
                 self.media_widget.media.switch_current_session(-1)
-            new_session = self.media_widget.current_session
-            if new_session != old_session:
-                self.media_widget.dialog.hide()
-                self.media_widget.show_menu()
             return True
         return False

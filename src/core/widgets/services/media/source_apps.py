@@ -1,189 +1,186 @@
 """
-Media source applications mapping.
-
-This file contains the mapping of source application identifiers to their
-display names for the media widget.
-
-For complex applications that have different process names than their AUMID,
-use dictionary format:
-    "aumid": {"name": "Display Name", "process": "executable.exe"}
-
-For simple applications where AUMID matching is sufficient, use string format:
-    "aumid": "Display Name"
+Resolve SMTC SourceAppUserModelId to a display name for the media widget.
 """
 
-from typing import Any
+import os
+from pathlib import Path
 
-MEDIA_SOURCE_APPS = {
-    # Audio Players
-    "AIMP.exe": "AIMP",
-    "winamp.exe": "Winamp",
-    "foobar2000.exe": "Foobar2000",
-    "MusicBee.exe": "MusicBee",
-    "mpv.exe": "NSMusicS",
-    "PotPlayerMini64.exe": "PotPlayer",
-    # Streaming Services
-    "SpotifyAB.SpotifyMusic_zpdnekdrzrea0!Spotify": "Spotify",
-    "Spotify.exe": "Spotify",
-    "AppleInc.AppleMusicWin_nzyj5cx40ttqa!App": "Apple Music",
-    "com.badmanners.murglar": {
-        "name": "Murglar",
-        "process": "Murglar.exe",
-    },
-    "com.squirrel.TIDAL.TIDAL": {
-        "name": "Tidal",
-        "process": "TIDAL.exe",
-    },
-    "com.squirrel.Qobuz.Qobuz": {
-        "name": "Qobuz",
-        "process": "Qobuz.exe",
-    },
-    "com.squirrel.youtube_music_desktop_app.youtube-music-desktop-app": {
-        "name": "YouTube Music",
-        "process": "youtube-music-desktop-app.exe",
-    },
-    "com.github.th-ch.youtube-music": {
-        "name": "YouTube Music",
-        "process": "YouTube Music.exe",
-    },
-    # Web Browsers
-    "308046B0AF4A39CB": {
-        "name": "FireFox",
-        "process": "firefox.exe",
-    },
-    "CA9422711AE1A81C": {
-        "name": "FireFox",  # Firefox Developer Edition
-        "process": "firefox.exe",
-    },
-    "firefox.exe": "FireFox",
-    "F0DC299D809B9700": {
-        "name": "Zen",
-        "process": "zen.exe",
-    },
-    "A5B78042B5B03693": {
-        "name": "Zen",
-        "process": "zen.exe",
-    },
-    "zen.exe": "Zen",
-    "MSEdge": {
-        "name": "Edge",
-        "process": "msedge.exe",
-    },
-    "msedge.exe": "Edge",
-    "Chrome": {
-        "name": "Chrome",
-        "process": "chrome.exe",
-    },
-    "chrome.exe": "Chrome",
-    "opera.exe": "Opera",
-    "Brave": {
-        "name": "Brave",
-        "process": "brave.exe",
-    },
-    "Brave.Q2QWMKZ4RMMIMDZ2JQ2NKBXFT4": {
-        "name": "Brave",
-        "process": "brave.exe",
-    },
-    # System Media Players
-    "Microsoft.ZuneMusic_8wekyb3d8bbwe!Microsoft.ZuneMusic": "Media Player",
-    # Message Apps
-    "Telegram.TelegramDesktop.7e5c2711fcd4e083548c717cc0ca86f4": {
-        "name": "Telegram",  # materialgram
-        "process": "materialgram.exe",
-    },
-}
+import win32gui
+import win32process
+from winrt.windows.applicationmodel import AppInfo
+
+from core.utils.win32.aumid import get_aumid_for_window, get_aumid_from_shortcut
+from core.utils.win32.utils import get_app_name_from_aumid, get_app_name_from_pid
+from core.widgets.services.media.aumid_process import _enum_processes, get_process_name_for_aumid
+
+_PWA_KNOWN_FOLDERS = ("Chrome Apps", "Brave Apps", "Edge Apps", "Firefox Web Apps")
+
+_name_cache: dict[str, str] = {}
+_pwa_shortcuts: dict[str, str] | None = None
 
 
-def _match_aumid_by_regex(source_app_id: str) -> dict[str, str | None] | None:
-    """
-    Attempt to match common AUMID patterns using regex when an exact
-    dictionary lookup fails.
+def _humanize(aumid: str) -> str:
+    if aumid.lower().endswith(".exe"):
+        return os.path.splitext(os.path.basename(aumid))[0]
+    if "!" in aumid:
+        return aumid.split("!")[-1]
+    last = aumid.split(".")[-1] if "." in aumid else aumid
+    return last.replace("-", " ").replace("_", " ")
 
-    Returns a mapping dict with 'name' and optional 'process', or None.
-    """
-    import re
 
-    if not source_app_id:
+def _appinfo_name(aumid: str) -> str | None:
+    try:
+        name = AppInfo.get_from_app_user_model_id(aumid).display_info.display_name
+        return name.strip() if name else None
+    except Exception:
         return None
 
-    if re.match(r"^music\.youtube\.com-[^!]+!App$", source_app_id, re.IGNORECASE):
-        return {"name": "YouTube Music", "process": "msedge.exe"}
 
-    if re.match(r"^(?:www\.)?youtube\.com-[^!]+!App$", source_app_id, re.IGNORECASE):
-        return {"name": "YouTube", "process": "msedge.exe"}
+def _load_pwa_shortcuts() -> dict[str, str]:
+    """Start Menu PWA .lnk files: aumid -> shortcut name."""
+    global _pwa_shortcuts
+    if _pwa_shortcuts is not None:
+        return _pwa_shortcuts
 
-    if re.match(r"^Brave\._crx_[A-Za-z0-9_-]+$", source_app_id, re.IGNORECASE):
-        return {"name": "Brave", "process": "brave.exe"}
+    mapping: dict[str, str] = {}
+    programs = Path(os.environ.get("APPDATA", "")) / "Microsoft/Windows/Start Menu/Programs"
+    for folder in _PWA_KNOWN_FOLDERS:
+        path = programs / folder
+        if not path.is_dir():
+            continue
+        try:
+            for lnk in path.glob("*.lnk"):
+                aumid = get_aumid_from_shortcut(str(lnk))
+                if aumid:
+                    mapping[aumid] = lnk.stem
+        except OSError:
+            continue
+    _pwa_shortcuts = mapping
+    return mapping
 
-    if re.match(r"^Chrome\._crx_[A-Za-z0-9_-]+$", source_app_id, re.IGNORECASE):
-        return {"name": "Chrome", "process": "chrome.exe"}
 
-    # Match Opera and Opera GX with version numbers
-    # Examples: OperaSoftware.OperaStable.12345, OperaSoftware.OperaGXStable.67890
-    #           OperaSoftware.OperaGXWebBrowser.1759345670
-    if re.match(r"^OperaSoftware\.Opera(?:GX|Stable|WebBrowser)", source_app_id, re.IGNORECASE):
-        if "GX" in source_app_id:
-            return {"name": "Opera GX", "process": "opera.exe"}
-        return {"name": "Opera", "process": "opera.exe"}
+def _find_pwa(aumid: str, title: str | None = None) -> tuple[str, str] | None:
+    """
+    Find an installed browser PWA for this SMTC session.
 
+    Returns (pwa_aumid, display_name) or None.
+
+    Chromium reports the PWA AUMID on the session (matches the .lnk).
+    Firefox reports the browser AUMID, then match media title to an open
+    window that carries the PWA AUMID.
+    """
+    shortcuts = _load_pwa_shortcuts()
+    if not shortcuts:
+        return None
+
+    if aumid in shortcuts:
+        return aumid, shortcuts[aumid]
+
+    needle = (title or "").strip().lower()
+    if not needle:
+        return None
+
+    prefix = needle[:32] if len(needle) >= 8 else None
+    found: list[tuple[str, str]] = []
+
+    def _enum(hwnd, _):
+        if not win32gui.IsWindowVisible(hwnd):
+            return True
+        wa = get_aumid_for_window(hwnd)
+        if not wa or wa not in shortcuts:
+            return True
+        wt = win32gui.GetWindowText(hwnd)
+        if not wt:
+            return True
+        wtl = wt.lower()
+        if needle in wtl or (prefix and prefix in wtl):
+            found.append((wa, shortcuts[wa]))
+            return False
+        return True
+
+    win32gui.EnumWindows(_enum, None)
+    return found[0] if found else None
+
+
+def _pwa_name(aumid: str, title: str | None = None) -> str | None:
+    match = _find_pwa(aumid, title)
+    return match[1] if match else None
+
+
+def resolve_activate_aumid(aumid: str, *, title: str | None = None) -> str:
+    """AUMID to focus for open_media_source (PWA window when applicable)."""
+    match = _find_pwa(aumid, title)
+    return match[0] if match else aumid
+
+
+def _pid_for_exe(exe_name: str) -> int | None:
+    target = exe_name.lower()
+    for pid, exe in _enum_processes():
+        if exe and os.path.basename(str(exe)).lower() == target:
+            return pid
     return None
 
 
-def get_source_app_display_name(source_app_id: str) -> str:
-    """
-    Get the display name for a source application ID.
-
-    Args:
-        source_app_id: The source application identifier
-
-    Returns:
-        The display name for the app, or None if not found
-    """
-    entry = MEDIA_SOURCE_APPS.get(source_app_id)
-    if isinstance(entry, dict):
-        return entry.get("name")
-    if isinstance(entry, str):
-        return entry
-
-    fallback = _match_aumid_by_regex(source_app_id)
-    if fallback:
-        return fallback.get("name")
-    return None
+def _name_from_process(aumid: str) -> str | None:
+    """Process AUMID / Electron heuristics -> FileDescription."""
+    proc = get_process_name_for_aumid(aumid)
+    if not proc:
+        return None
+    pid = _pid_for_exe(proc)
+    if pid:
+        name = get_app_name_from_pid(pid)
+        if name:
+            return name
+    return os.path.splitext(proc)[0]
 
 
-def get_source_app_mapping(source_app_id: str) -> dict[str, Any] | None:
-    """
-    Get the complete mapping information for a source application ID.
+def _name_from_window(aumid: str) -> str | None:
+    """Window AppUserModelID (Firefox/Zen hashes) -> FileDescription."""
+    result: list[int] = []
 
-    Args:
-        source_app_id: The source application identifier
+    def _enum(hwnd, _):
+        if not win32gui.IsWindowVisible(hwnd):
+            return True
+        if get_aumid_for_window(hwnd) != aumid:
+            return True
+        _, pid = win32process.GetWindowThreadProcessId(hwnd)
+        if pid:
+            result.append(pid)
+            return False
+        return True
 
-    Returns:
-        Dictionary with 'name' and 'process' keys, or None if not found
-    """
-    entry = MEDIA_SOURCE_APPS.get(source_app_id)
-    if isinstance(entry, dict):
-        return entry
-    elif isinstance(entry, str):
-        return {"name": entry, "process": None}
-
-    fallback = _match_aumid_by_regex(source_app_id)
-    if fallback:
-        return fallback
-
-    return None
+    win32gui.EnumWindows(_enum, None)
+    return get_app_name_from_pid(result[0]) if result else None
 
 
-def get_source_app_class_name(display_name: str) -> str:
-    """
-    Get a CSS-friendly class name from a display name.
+def resolve_source_app_name(aumid: str, *, title: str | None = None) -> str | None:
+    """Resolve AUMID to display name. Cached per AUMID (PWA title matches are not cached)."""
+    if not aumid:
+        return None
 
-    Args:
-        display_name: The display name of the app
+    name = _pwa_name(aumid, title)
+    if name:
+        return name
 
-    Returns:
-        A CSS-friendly class name (lowercase, spaces replaced with hyphens)
-    """
+    cached = _name_cache.get(aumid)
+    if cached is not None:
+        return cached
+
+    name = _appinfo_name(aumid)
+    if not name and "!" in aumid:
+        name = get_app_name_from_aumid(aumid)
+    if not name:
+        name = _name_from_process(aumid)
+    if not name:
+        name = _name_from_window(aumid)
+    if not name:
+        name = _humanize(aumid)
+
+    _name_cache[aumid] = name
+    return name
+
+
+def get_source_app_class_name(display_name: str) -> str | None:
     if display_name:
         return display_name.lower().replace(" ", "-")
     return None

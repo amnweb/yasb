@@ -82,6 +82,10 @@ def get_process_name_for_aumid(aumid: str) -> str | None:
     if not aumid:
         return None
 
+    # Classic Win32 players, SMTC often reports the exe name as AUMID.
+    if aumid.lower().endswith(".exe"):
+        return os.path.basename(aumid)
+
     if GetApplicationUserModelId is None:
         return None
 

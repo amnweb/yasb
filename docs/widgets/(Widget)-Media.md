@@ -75,7 +75,9 @@ media:
       thumbnail_size: 120
       max_title_size: 60
       max_artist_size: 20
+      max_source_size: 16
       show_source: true
+      show_volume_slider: true
     media_menu_icons:
       play: "\ue768"
       pause: "\ue769"
@@ -108,7 +110,8 @@ media:
       thumbnail_size: 120          # The size of the thumbnail in the popup.
       max_title_size: 60           # The maximum size for the title in the popup.
       max_artist_size: 20          # The maximum size for the artist name in the popup.
-      show_source: true            # Whether to show the media source (e.g., Spotify, YouTube) in the popup.
+      max_source_size: 16          # The maximum size for the source app name in the popup.
+      show_source: true            # Whether to show the media source app name in the popup (resolved from OS/app metadata).
       show_volume_slider: false    # Whether to show the volume slider in the popup. Volume control per application.
 ```
 
@@ -147,7 +150,7 @@ media:
 - `toggle_label`: Toggles the visibility of the label.
 - `toggle_play_pause`: Toggles between play and pause states.
 - `toggle_media_menu`: Toggles the visibility of the media menu popup.
-- `open_media_source`: Opens the the source that is playing the media.
+- `open_media_source`: Opens the source that is playing the media.
 - `do_nothing`: A placeholder callback that does nothing when triggered.
 
 ## Description of Options
@@ -188,7 +191,8 @@ media:
   - **thumbnail_size:** The size of the thumbnail in the popup.
   - **max_title_size:** The maximum size for the title in the popup.
   - **max_artist_size:** The maximum size for the artist name in the popup.
-  - **show_source:** Whether to show the media source (e.g., Spotify, FireFox) in the popup.
+  - **max_source_size:** The maximum size for the source app name in the popup.
+  - **show_source:** Whether to show the media source in the popup. The name is resolved from Windows/app metadata (e.g. Spotify, Firefox).
   - **show_volume_slider:** Whether to show the volume slider in the popup. Volume control per application.
 - **media_menu_icons:** A dictionary specifying the icons for the media menu popup. It contains
   - **play:** Icon for the play button in the popup.

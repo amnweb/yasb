@@ -387,7 +387,6 @@ class WindowsMedia(QObject, metaclass=QSingleton):
         self._current_session_id = next_session.app_id
 
         self.media_data_changed.emit(self._trackers)
-        self.media_properties_changed.emit()
 
         if next_session.playback_ready:
             self.playback_info_changed.emit()
