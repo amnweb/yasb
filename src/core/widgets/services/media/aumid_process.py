@@ -5,16 +5,18 @@ Lookup process executable name from an AppUserModelID (AUMID).
 import ctypes
 import ctypes.wintypes as wt
 import os
-import re
 from ctypes import POINTER, byref, c_void_p
 
+import win32gui
+import win32process
+from win32com.client import Dispatch
+
+from core.utils.win32.aumid import get_aumid_for_window
 from core.utils.win32.constants import PROCESS_QUERY_LIMITED_INFORMATION, TH32CS_SNAPPROCESS
 from core.utils.win32.structs import PROCESSENTRY32
 
-# Constants and API bindings
 kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
 
-# Toolhelp snapshot
 CreateToolhelp32Snapshot = kernel32.CreateToolhelp32Snapshot
 CreateToolhelp32Snapshot.argtypes = [wt.DWORD, wt.DWORD]
 CreateToolhelp32Snapshot.restype = wt.HANDLE
@@ -35,11 +37,8 @@ OpenProcess = kernel32.OpenProcess
 OpenProcess.argtypes = [wt.DWORD, wt.BOOL, wt.DWORD]
 OpenProcess.restype = wt.HANDLE
 
-# Constants
 ERROR_INSUFFICIENT_BUFFER = 0x7A
 
-
-# GetApplicationUserModelId may be in kernel32 or shell32
 GetApplicationUserModelId = None
 for dll_name in ("kernel32", "shell32"):
     try:
@@ -51,6 +50,9 @@ for dll_name in ("kernel32", "shell32"):
         break
     except OSError:
         continue
+
+# AUMID -> (app_display_name, process_exe); negative results cached too.
+_shell_app_cache: dict[str, tuple[str | None, str | None]] = {}
 
 
 def _enum_processes():
@@ -64,64 +66,11 @@ def _enum_processes():
         if not Process32First(hSnap, ctypes.byref(pe)):
             return
         while True:
-            pid = pe.th32ProcessID
-            exe = pe.szExeFile
-            yield pid, exe
+            yield pe.th32ProcessID, pe.szExeFile
             if not Process32Next(hSnap, ctypes.byref(pe)):
                 break
     finally:
         CloseHandle(hSnap)
-
-
-def get_process_name_for_aumid(aumid: str) -> str | None:
-    """Return process executable base name for the first process whose
-    GetApplicationUserModelId() matches the provided `aumid`.
-
-    Returns None if not found.
-    """
-    if not aumid:
-        return None
-
-    # Classic Win32 players, SMTC often reports the exe name as AUMID.
-    if aumid.lower().endswith(".exe"):
-        return os.path.basename(aumid)
-
-    if GetApplicationUserModelId is None:
-        return None
-
-    for pid, exe in _enum_processes():
-        hProc = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
-        if not hProc:
-            continue
-        try:
-            length = ctypes.c_uint32(0)
-            res = GetApplicationUserModelId(hProc, byref(length), None)
-            if res == ERROR_INSUFFICIENT_BUFFER and length.value:
-                buf = ctypes.create_unicode_buffer(length.value)
-                res = GetApplicationUserModelId(hProc, byref(length), buf)
-                if res == 0 and buf.value:
-                    if buf.value == aumid:
-                        name = os.path.basename(exe)
-                        # PWAHelper.exe is used for PWAs hosted in Edge
-                        if name.lower() == "pwahelper.exe":
-                            return "msedge.exe"
-                        return name
-        except OSError:
-            pass
-        finally:
-            try:
-                CloseHandle(hProc)
-            except OSError:
-                pass
-
-    try:
-        res = _aumid_heuristic_fallback(aumid)
-        if res:
-            return res
-    except Exception:
-        pass
-
-    return None
 
 
 def get_process_image_path(pid: int) -> str | None:
@@ -148,39 +97,108 @@ def get_process_image_path(pid: int) -> str | None:
     return None
 
 
-def _search_processes_by_vendor_name(vendor: str) -> str | None:
-    vendor_l = vendor.lower()
-    for pid, exe in _enum_processes():
-        try:
-            # check snapshot exe name
-            if exe and vendor_l in str(exe).lower():
-                return os.path.basename(str(exe))
-            # check image path
-            path = get_process_image_path(pid)
-            if path and vendor_l in path.lower():
-                return os.path.basename(path)
-        except OSError:
-            continue
-    return None
-
-
-def _aumid_heuristic_fallback(aumid: str) -> str | None:
-    """Heuristics for non-standard AUMIDs (Brave PWAs, Electron apps, etc.)."""
+def get_pid_for_window_aumid(aumid: str) -> int | None:
+    """PID of a visible window whose AppUserModelID matches (shell property store)."""
     if not aumid:
         return None
 
-    if re.match(r"^Brave\._crx_[A-Za-z0-9_-]+$", aumid, re.IGNORECASE):
-        return "brave.exe"
+    target = aumid.lower()
+    found: list[int] = []
 
-    if re.match(r"^Chrome\._crx_[A-Za-z0-9_-]+$", aumid, re.IGNORECASE):
-        return "chrome.exe"
+    def _enum(hwnd, _):
+        if not win32gui.IsWindowVisible(hwnd):
+            return True
+        wa = get_aumid_for_window(hwnd)
+        if not wa or wa.lower() != target:
+            return True
+        _, pid = win32process.GetWindowThreadProcessId(hwnd)
+        if pid:
+            found.append(pid)
+            return False
+        return True
 
-    # Electron packaged apps often use reverse domain AUMIDs like com.github.*
-    if aumid.startswith("com.") or aumid.count(".") >= 2:
-        # try to match by exe basename containing last segment
-        last = aumid.split(".")[-1]
-        res = _search_processes_by_vendor_name(last)
-        if res:
-            return res
+    win32gui.EnumWindows(_enum, None)
+    return found[0] if found else None
 
-    return None
+
+def resolve_shell_app(aumid: str) -> tuple[str | None, str | None]:
+    """Resolve AUMID via shell:AppsFolder to (app display name, process exe).
+
+    One ParseName: item.Name + System.Link.TargetParsingPath. Cached.
+    """
+    if not aumid:
+        return None, None
+
+    cached = _shell_app_cache.get(aumid)
+    if cached is not None:
+        return cached
+
+    display_name: str | None = None
+    process_exe: str | None = None
+    try:
+        folder = Dispatch("Shell.Application").NameSpace("shell:AppsFolder")
+        item = folder.ParseName(aumid) if folder else None
+        if item:
+            raw_name = item.Name
+            if raw_name:
+                display_name = str(raw_name).strip() or None
+            target = item.ExtendedProperty("System.Link.TargetParsingPath")
+            if target:
+                process_exe = os.path.basename(str(target)) or None
+    except Exception:
+        pass
+
+    _shell_app_cache[aumid] = (display_name, process_exe)
+    return display_name, process_exe
+
+
+def get_process_name_for_aumid(aumid: str) -> str | None:
+    """Resolve AUMID -> exe name the way Windows associates apps with processes.
+
+    1. SMTC sometimes uses the exe name as the AUMID
+    2. GetApplicationUserModelId(process) == aumid
+    3. Window PKEY_AppUserModel_ID == aumid -> that window's process
+    4. shell AppsFolder TargetParsingPath (when process/window AUMID missing)
+    """
+    if not aumid:
+        return None
+
+    if aumid.lower().endswith(".exe"):
+        return os.path.basename(aumid)
+
+    if GetApplicationUserModelId is not None:
+        for pid, exe in _enum_processes():
+            hProc = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
+            if not hProc:
+                continue
+            try:
+                length = ctypes.c_uint32(0)
+                res = GetApplicationUserModelId(hProc, byref(length), None)
+                if res == ERROR_INSUFFICIENT_BUFFER and length.value:
+                    buf = ctypes.create_unicode_buffer(length.value)
+                    res = GetApplicationUserModelId(hProc, byref(length), buf)
+                    if res == 0 and buf.value == aumid:
+                        name = os.path.basename(exe)
+                        # Edge PWA host process
+                        if name.lower() == "pwahelper.exe":
+                            return "msedge.exe"
+                        return name
+            except OSError:
+                pass
+            finally:
+                try:
+                    CloseHandle(hProc)
+                except OSError:
+                    pass
+
+    pid = get_pid_for_window_aumid(aumid)
+    if pid:
+        path = get_process_image_path(pid)
+        if path:
+            return os.path.basename(path)
+        for p, exe in _enum_processes():
+            if p == pid and exe:
+                return os.path.basename(str(exe))
+
+    _, process_exe = resolve_shell_app(aumid)
+    return process_exe
