@@ -163,6 +163,7 @@ class MediaSectionWidget(QFrame):
                 self._current_title = ""
                 self._current_artist = ""
                 self._current_is_playing = None
+                self._cached_thumb = None
                 self.hide()
             return
 
@@ -173,17 +174,23 @@ class MediaSectionWidget(QFrame):
         session_changed = app_id != self._current_app_id
         self._current_app_id = app_id
 
-        title = session.title or "Unknown Title"
-        artist = session.artist or "Unknown Artist"
-        if title != self._current_title:
-            self._current_title = title
-            self._title_label.setText(title)
-        if artist != self._current_artist:
-            self._current_artist = artist
-            self._artist_label.setText(artist)
+        # Keep last painted title/artist/art while SMTC blips empty on same session.
+        if session.title:
+            self._current_title = session.title
+        elif session_changed:
+            self._current_title = ""
+        if session.artist:
+            self._current_artist = session.artist
+        elif session_changed:
+            self._current_artist = ""
 
-        if session_changed or force_thumbnail:
+        self._title_label.setText(self._current_title or "Unknown Title")
+        self._artist_label.setText(self._current_artist or "Unknown Artist")
+
+        if session.thumbnail is not None:
             self._apply_thumbnail(session.thumbnail)
+        elif session_changed or force_thumbnail:
+            self._apply_thumbnail(None)
 
         self._update_controls_from(session)
 

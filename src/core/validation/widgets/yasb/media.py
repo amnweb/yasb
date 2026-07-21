@@ -38,6 +38,7 @@ class MediaMenuConfig(CustomBaseModel):
     thumbnail_corner_radius: int = 8
     max_title_size: int = 150
     max_artist_size: int = 40
+    max_source_size: int = 16
     show_source: bool = True
     show_volume_slider: bool = False
 
