@@ -6,9 +6,9 @@ from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout
 
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import PopupWidget, refresh_widget_style
-from core.validation.widgets.yasb.claude_usage import ClaudeUsageConfig
+from core.validation.widgets.yasb.codex_usage import CodexUsageConfig
 from core.widgets.base import BaseWidget
-from core.widgets.services.claude_usage.claude_api import ClaudeUsageService
+from core.widgets.services.codex_usage.codex_api import CodexUsageService
 
 
 class UsageBar(QFrame):
@@ -37,17 +37,17 @@ class UsageBar(QFrame):
         self._update_fill()
 
 
-class ClaudeUsageWidget(BaseWidget):
-    validation_schema = ClaudeUsageConfig
+class CodexUsageWidget(BaseWidget):
+    validation_schema = CodexUsageConfig
 
-    def __init__(self, config: ClaudeUsageConfig):
-        super().__init__(class_name="claude-usage")
+    def __init__(self, config: CodexUsageConfig):
+        super().__init__(class_name="codex-usage")
         self.config = config
         self._show_alt_label = False
         self._menu: PopupWidget | None = None
         self._service_released = False
 
-        self._service = ClaudeUsageService.get_instance(self.config.update_interval, self.config.cache_ttl)
+        self._service = CodexUsageService.get_instance(self.config.update_interval, self.config.cache_ttl)
         self._data: dict[str, Any] = self._service.latest()
 
         self._init_container()
@@ -84,9 +84,9 @@ class ClaudeUsageWidget(BaseWidget):
     def _format_values(self) -> dict[str, str]:
         return {
             "five_hour": self._pct(self._data.get("five")),
-            "seven_day": self._pct(self._data.get("seven")),
+            "weekly": self._pct(self._data.get("weekly")),
             "five_hour_reset": self._fmt_reset(self._data.get("five_reset_iso")),
-            "seven_day_reset": self._fmt_reset(self._data.get("seven_reset_iso")),
+            "weekly_reset": self._fmt_reset(self._data.get("weekly_reset_iso")),
         }
 
     @staticmethod
@@ -173,7 +173,7 @@ class ClaudeUsageWidget(BaseWidget):
             if self.config.tooltip:
                 set_tooltip(
                     current_widget,
-                    f"Claude usage - 5h: {values['five_hour']}% · 7d: {values['seven_day']}%",
+                    f"Codex usage - 5h: {values['five_hour']}% · Weekly: {values['weekly']}%",
                 )
         refresh_widget_style(*active_widgets)
 
@@ -226,13 +226,13 @@ class ClaudeUsageWidget(BaseWidget):
             self.config.menu.round_corners_type,
             self.config.menu.border_color,
         )
-        self._menu.setProperty("class", "claude-usage-menu")
+        self._menu.setProperty("class", "codex-usage-menu")
 
         layout = QVBoxLayout(self._menu)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
-        header = QLabel("Claude Usage")
+        header = QLabel("Codex Usage")
         header.setProperty("class", "header")
         layout.addWidget(header)
 
@@ -243,7 +243,7 @@ class ClaudeUsageWidget(BaseWidget):
         )
         layout.addWidget(
             self._build_section(
-                "7-Day", self._data.get("seven"), self._data.get("seven_raw"), self._data.get("seven_reset_iso")
+                "Weekly", self._data.get("weekly"), self._data.get("weekly_raw"), self._data.get("weekly_reset_iso")
             )
         )
 

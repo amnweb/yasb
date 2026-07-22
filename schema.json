@@ -2820,6 +2820,158 @@
       "title": "ClockEntry",
       "type": "object"
     },
+    "CodexUsageCallbacksConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "on_left": {
+          "default": "toggle_menu",
+          "title": "On Left",
+          "type": "string"
+        },
+        "on_middle": {
+          "default": "do_nothing",
+          "title": "On Middle",
+          "type": "string"
+        },
+        "on_right": {
+          "default": "toggle_label",
+          "title": "On Right",
+          "type": "string"
+        }
+      },
+      "title": "CodexUsageCallbacksConfig",
+      "type": "object"
+    },
+    "CodexUsageConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "label": {
+          "default": "Codex {five_hour}%",
+          "title": "Label",
+          "type": "string"
+        },
+        "label_alt": {
+          "default": "Codex {weekly}%",
+          "title": "Label Alt",
+          "type": "string"
+        },
+        "update_interval": {
+          "default": 60,
+          "maximum": 3600,
+          "minimum": 30,
+          "title": "Update Interval",
+          "type": "integer"
+        },
+        "cache_ttl": {
+          "default": 120,
+          "maximum": 3600,
+          "minimum": 0,
+          "title": "Cache Ttl",
+          "type": "integer"
+        },
+        "tooltip": {
+          "default": true,
+          "title": "Tooltip",
+          "type": "boolean"
+        },
+        "callbacks": {
+          "$ref": "#/$defs/CodexUsageCallbacksConfig",
+          "default": {
+            "on_left": "toggle_menu",
+            "on_middle": "do_nothing",
+            "on_right": "toggle_label"
+          }
+        },
+        "menu": {
+          "$ref": "#/$defs/CodexUsageMenuConfig",
+          "default": {
+            "blur": true,
+            "round_corners": true,
+            "round_corners_type": "normal",
+            "border_color": "System",
+            "alignment": "right",
+            "direction": "down",
+            "offset_top": 6,
+            "offset_left": 0
+          }
+        },
+        "keybindings": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/KeybindingConfig"
+          },
+          "title": "Keybindings",
+          "type": "array"
+        }
+      },
+      "title": "CodexUsageConfig",
+      "type": "object"
+    },
+    "CodexUsageEntry": {
+      "properties": {
+        "type": {
+          "const": "yasb.codex_usage.CodexUsageWidget",
+          "title": "Type",
+          "type": "string"
+        },
+        "options": {
+          "$ref": "#/$defs/CodexUsageConfig"
+        }
+      },
+      "required": [
+        "type",
+        "options"
+      ],
+      "title": "CodexUsageEntry",
+      "type": "object"
+    },
+    "CodexUsageMenuConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "blur": {
+          "default": true,
+          "title": "Blur",
+          "type": "boolean"
+        },
+        "round_corners": {
+          "default": true,
+          "title": "Round Corners",
+          "type": "boolean"
+        },
+        "round_corners_type": {
+          "default": "normal",
+          "title": "Round Corners Type",
+          "type": "string"
+        },
+        "border_color": {
+          "default": "System",
+          "title": "Border Color",
+          "type": "string"
+        },
+        "alignment": {
+          "default": "right",
+          "title": "Alignment",
+          "type": "string"
+        },
+        "direction": {
+          "default": "down",
+          "title": "Direction",
+          "type": "string"
+        },
+        "offset_top": {
+          "default": 6,
+          "title": "Offset Top",
+          "type": "integer"
+        },
+        "offset_left": {
+          "default": 0,
+          "title": "Offset Left",
+          "type": "integer"
+        }
+      },
+      "title": "CodexUsageMenuConfig",
+      "type": "object"
+    },
     "ColorProviderConfig": {
       "additionalProperties": false,
       "properties": {
@@ -2840,6 +2992,438 @@
         }
       },
       "title": "ColorProviderConfig",
+      "type": "object"
+    },
+    "ControlCenterActionConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "icon": {
+          "title": "Icon",
+          "type": "string"
+        },
+        "command": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Command"
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "icon"
+      ],
+      "title": "ControlCenterActionConfig",
+      "type": "object"
+    },
+    "ControlCenterCallbacksConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "on_left": {
+          "default": "toggle_menu",
+          "title": "On Left",
+          "type": "string"
+        },
+        "on_middle": {
+          "default": "do_nothing",
+          "title": "On Middle",
+          "type": "string"
+        },
+        "on_right": {
+          "default": "do_nothing",
+          "title": "On Right",
+          "type": "string"
+        }
+      },
+      "title": "ControlCenterCallbacksConfig",
+      "type": "object"
+    },
+    "ControlCenterConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "label": {
+          "default": "<span>\ue90a</span>",
+          "title": "Label",
+          "type": "string"
+        },
+        "label_alt": {
+          "default": "<span>\ue90a</span>",
+          "title": "Label Alt",
+          "type": "string"
+        },
+        "class_name": {
+          "default": "",
+          "title": "Class Name",
+          "type": "string"
+        },
+        "tooltip": {
+          "default": false,
+          "title": "Tooltip",
+          "type": "boolean"
+        },
+        "popup": {
+          "$ref": "#/$defs/ControlCenterPopupConfig",
+          "default": {
+            "blur": true,
+            "round_corners": true,
+            "round_corners_type": "normal",
+            "border_color": "System",
+            "alignment": "right",
+            "direction": "down",
+            "offset_top": 6,
+            "offset_left": 0
+          }
+        },
+        "sections": {
+          "$ref": "#/$defs/ControlCenterSectionsConfig",
+          "default": {
+            "system_controls": {
+              "lock_icon": "\ue72e",
+              "power_icon": "\ue7e8",
+              "profile_image_size": 28,
+              "settings_icon": "\ue713",
+              "show": true
+            },
+            "quick_actions": {
+              "actions": [
+                {
+                  "command": null,
+                  "icon": "\uf285",
+                  "id": "toggle_dnd",
+                  "label": "Do Not Disturb"
+                },
+                {
+                  "command": null,
+                  "icon": "\ue708",
+                  "id": "toggle_theme",
+                  "label": "Dark Mode"
+                },
+                {
+                  "command": null,
+                  "icon": "\ue765",
+                  "id": "touch_keyboard",
+                  "label": "Keyboard"
+                },
+                {
+                  "command": null,
+                  "icon": "\ue74f",
+                  "id": "toggle_mute",
+                  "label": "Mute"
+                },
+                {
+                  "command": null,
+                  "icon": "\uf12e",
+                  "id": "toggle_mic_mute",
+                  "label": "Mic Mute"
+                },
+                {
+                  "command": null,
+                  "icon": "\ue91b",
+                  "id": "screenshot",
+                  "label": "Screenshot"
+                }
+              ],
+              "columns": 3,
+              "label_position": "default",
+              "show": true
+            },
+            "sliders": {
+              "brightness": {
+                "icon": "\ue706",
+                "show_slider": true,
+                "show_source_selector": false,
+                "source_selector_icon": "\ue972"
+              },
+              "microphone": {
+                "icon": "\ue720",
+                "show_slider": true,
+                "show_source_selector": false,
+                "source_selector_icon": "\ue972"
+              },
+              "show": true,
+              "volume": {
+                "icon": "\ue767",
+                "show_slider": true,
+                "show_source_selector": false,
+                "source_selector_icon": "\ue972"
+              }
+            },
+            "power": {
+              "button_menu_icon": "\ue76c",
+              "power_mode_title": "Power Mode",
+              "power_plan_title": "Power Plan",
+              "show": true
+            },
+            "media": {
+              "icons": {
+                "next_track": "\ue893",
+                "pause": "\ue769",
+                "play": "\ue768",
+                "prev_track": "\ue892"
+              },
+              "show": true,
+              "thumbnail_radius": 8,
+              "thumbnail_size": 64
+            }
+          }
+        },
+        "sections_order": {
+          "default": [
+            "system_controls",
+            "quick_actions",
+            "sliders",
+            "power",
+            "media"
+          ],
+          "items": {
+            "enum": [
+              "system_controls",
+              "quick_actions",
+              "sliders",
+              "power",
+              "media"
+            ],
+            "type": "string"
+          },
+          "title": "Sections Order",
+          "type": "array"
+        },
+        "keybindings": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/KeybindingConfig"
+          },
+          "title": "Keybindings",
+          "type": "array"
+        },
+        "callbacks": {
+          "$ref": "#/$defs/ControlCenterCallbacksConfig",
+          "default": {
+            "on_left": "toggle_menu",
+            "on_middle": "do_nothing",
+            "on_right": "do_nothing"
+          }
+        }
+      },
+      "title": "ControlCenterConfig",
+      "type": "object"
+    },
+    "ControlCenterEntry": {
+      "properties": {
+        "type": {
+          "const": "yasb.control_center.ControlCenterWidget",
+          "title": "Type",
+          "type": "string"
+        },
+        "options": {
+          "$ref": "#/$defs/ControlCenterConfig"
+        }
+      },
+      "required": [
+        "type",
+        "options"
+      ],
+      "title": "ControlCenterEntry",
+      "type": "object"
+    },
+    "ControlCenterPopupConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "blur": {
+          "default": true,
+          "title": "Blur",
+          "type": "boolean"
+        },
+        "round_corners": {
+          "default": true,
+          "title": "Round Corners",
+          "type": "boolean"
+        },
+        "round_corners_type": {
+          "default": "normal",
+          "title": "Round Corners Type",
+          "type": "string"
+        },
+        "border_color": {
+          "default": "System",
+          "title": "Border Color",
+          "type": "string"
+        },
+        "alignment": {
+          "default": "right",
+          "title": "Alignment",
+          "type": "string"
+        },
+        "direction": {
+          "default": "down",
+          "title": "Direction",
+          "type": "string"
+        },
+        "offset_top": {
+          "default": 6,
+          "title": "Offset Top",
+          "type": "integer"
+        },
+        "offset_left": {
+          "default": 0,
+          "title": "Offset Left",
+          "type": "integer"
+        }
+      },
+      "title": "ControlCenterPopupConfig",
+      "type": "object"
+    },
+    "ControlCenterSectionsConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "system_controls": {
+          "$ref": "#/$defs/SystemControlsConfig",
+          "default": {
+            "show": true,
+            "profile_image_size": 28,
+            "power_icon": "\ue7e8",
+            "lock_icon": "\ue72e",
+            "settings_icon": "\ue713"
+          }
+        },
+        "quick_actions": {
+          "$ref": "#/$defs/QuickActionsSectionConfig",
+          "default": {
+            "show": true,
+            "columns": 3,
+            "label_position": "default",
+            "actions": [
+              {
+                "command": null,
+                "icon": "\uf285",
+                "id": "toggle_dnd",
+                "label": "Do Not Disturb"
+              },
+              {
+                "command": null,
+                "icon": "\ue708",
+                "id": "toggle_theme",
+                "label": "Dark Mode"
+              },
+              {
+                "command": null,
+                "icon": "\ue765",
+                "id": "touch_keyboard",
+                "label": "Keyboard"
+              },
+              {
+                "command": null,
+                "icon": "\ue74f",
+                "id": "toggle_mute",
+                "label": "Mute"
+              },
+              {
+                "command": null,
+                "icon": "\uf12e",
+                "id": "toggle_mic_mute",
+                "label": "Mic Mute"
+              },
+              {
+                "command": null,
+                "icon": "\ue91b",
+                "id": "screenshot",
+                "label": "Screenshot"
+              }
+            ]
+          }
+        },
+        "sliders": {
+          "$ref": "#/$defs/SlidersSectionConfig",
+          "default": {
+            "show": true,
+            "brightness": {
+              "icon": "\ue706",
+              "show_slider": true,
+              "show_source_selector": false,
+              "source_selector_icon": "\ue972"
+            },
+            "volume": {
+              "icon": "\ue767",
+              "show_slider": true,
+              "show_source_selector": false,
+              "source_selector_icon": "\ue972"
+            },
+            "microphone": {
+              "icon": "\ue720",
+              "show_slider": true,
+              "show_source_selector": false,
+              "source_selector_icon": "\ue972"
+            }
+          }
+        },
+        "power": {
+          "$ref": "#/$defs/PowerSectionConfig",
+          "default": {
+            "show": true,
+            "power_plan_title": "Power Plan",
+            "power_mode_title": "Power Mode",
+            "button_menu_icon": "\ue76c"
+          }
+        },
+        "media": {
+          "$ref": "#/$defs/MediaSectionConfig",
+          "default": {
+            "show": true,
+            "thumbnail_size": 64,
+            "thumbnail_radius": 8,
+            "icons": {
+              "next_track": "\ue893",
+              "pause": "\ue769",
+              "play": "\ue768",
+              "prev_track": "\ue892"
+            }
+          }
+        }
+      },
+      "title": "ControlCenterSectionsConfig",
+      "type": "object"
+    },
+    "ControlCenterSliderConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "show_slider": {
+          "default": true,
+          "title": "Show Slider",
+          "type": "boolean"
+        },
+        "icon": {
+          "title": "Icon",
+          "type": "string"
+        },
+        "show_source_selector": {
+          "default": false,
+          "title": "Show Source Selector",
+          "type": "boolean"
+        },
+        "source_selector_icon": {
+          "default": "\ue972",
+          "title": "Source Selector Icon",
+          "type": "string"
+        }
+      },
+      "required": [
+        "icon"
+      ],
+      "title": "ControlCenterSliderConfig",
       "type": "object"
     },
     "CopilotCallbacksConfig": {
@@ -6567,6 +7151,64 @@
       "title": "MediaMenuIconsConfig",
       "type": "object"
     },
+    "MediaSectionConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "show": {
+          "default": true,
+          "title": "Show",
+          "type": "boolean"
+        },
+        "thumbnail_size": {
+          "default": 64,
+          "title": "Thumbnail Size",
+          "type": "integer"
+        },
+        "thumbnail_radius": {
+          "default": 8,
+          "title": "Thumbnail Radius",
+          "type": "integer"
+        },
+        "icons": {
+          "$ref": "#/$defs/MediaSectionIconsConfig",
+          "default": {
+            "prev_track": "\ue892",
+            "next_track": "\ue893",
+            "play": "\ue768",
+            "pause": "\ue769"
+          }
+        }
+      },
+      "title": "MediaSectionConfig",
+      "type": "object"
+    },
+    "MediaSectionIconsConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "prev_track": {
+          "default": "\ue892",
+          "title": "Prev Track",
+          "type": "string"
+        },
+        "next_track": {
+          "default": "\ue893",
+          "title": "Next Track",
+          "type": "string"
+        },
+        "play": {
+          "default": "\ue768",
+          "title": "Play",
+          "type": "string"
+        },
+        "pause": {
+          "default": "\ue769",
+          "title": "Pause",
+          "type": "string"
+        }
+      },
+      "title": "MediaSectionIconsConfig",
+      "type": "object"
+    },
     "MediaWidgetConfig": {
       "additionalProperties": false,
       "properties": {
@@ -8804,11 +9446,13 @@
           "title": "Class Name",
           "type": "string"
         },
-        "update_interval": {
-          "default": 5000,
-          "minimum": 0,
-          "title": "Update Interval",
-          "type": "integer"
+        "class_map": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "default": {},
+          "title": "Class Map",
+          "type": "object"
         },
         "menu": {
           "$ref": "#/$defs/PowerPlanMenuConfig",
@@ -8917,6 +9561,33 @@
       "title": "PowerPlanMenuConfig",
       "type": "object"
     },
+    "PowerSectionConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "show": {
+          "default": true,
+          "title": "Show",
+          "type": "boolean"
+        },
+        "power_plan_title": {
+          "default": "Power Plan",
+          "title": "Power Plan Title",
+          "type": "string"
+        },
+        "power_mode_title": {
+          "default": "Power Mode",
+          "title": "Power Mode Title",
+          "type": "string"
+        },
+        "button_menu_icon": {
+          "default": "\ue76c",
+          "title": "Button Menu Icon",
+          "type": "string"
+        }
+      },
+      "title": "PowerSectionConfig",
+      "type": "object"
+    },
     "PreviewConfig": {
       "additionalProperties": false,
       "properties": {
@@ -9015,6 +9686,77 @@
         "provider"
       ],
       "title": "ProviderConfig",
+      "type": "object"
+    },
+    "QuickActionsSectionConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "show": {
+          "default": true,
+          "title": "Show",
+          "type": "boolean"
+        },
+        "columns": {
+          "default": 3,
+          "title": "Columns",
+          "type": "integer"
+        },
+        "label_position": {
+          "default": "default",
+          "enum": [
+            "default",
+            "inline"
+          ],
+          "title": "Label Position",
+          "type": "string"
+        },
+        "actions": {
+          "default": [
+            {
+              "id": "toggle_dnd",
+              "label": "Do Not Disturb",
+              "icon": "\uf285",
+              "command": null
+            },
+            {
+              "id": "toggle_theme",
+              "label": "Dark Mode",
+              "icon": "\ue708",
+              "command": null
+            },
+            {
+              "id": "touch_keyboard",
+              "label": "Keyboard",
+              "icon": "\ue765",
+              "command": null
+            },
+            {
+              "id": "toggle_mute",
+              "label": "Mute",
+              "icon": "\ue74f",
+              "command": null
+            },
+            {
+              "id": "toggle_mic_mute",
+              "label": "Mic Mute",
+              "icon": "\uf12e",
+              "command": null
+            },
+            {
+              "id": "screenshot",
+              "label": "Screenshot",
+              "icon": "\ue91b",
+              "command": null
+            }
+          ],
+          "items": {
+            "$ref": "#/$defs/ControlCenterActionConfig"
+          },
+          "title": "Actions",
+          "type": "array"
+        }
+      },
+      "title": "QuickActionsSectionConfig",
       "type": "object"
     },
     "QuickLaunchCallbacksConfig": {
@@ -10062,6 +10804,45 @@
       "title": "ShortcutsConfig",
       "type": "object"
     },
+    "SlidersSectionConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "show": {
+          "default": true,
+          "title": "Show",
+          "type": "boolean"
+        },
+        "brightness": {
+          "$ref": "#/$defs/ControlCenterSliderConfig",
+          "default": {
+            "show_slider": true,
+            "icon": "\ue706",
+            "show_source_selector": false,
+            "source_selector_icon": "\ue972"
+          }
+        },
+        "volume": {
+          "$ref": "#/$defs/ControlCenterSliderConfig",
+          "default": {
+            "show_slider": true,
+            "icon": "\ue767",
+            "show_source_selector": false,
+            "source_selector_icon": "\ue972"
+          }
+        },
+        "microphone": {
+          "$ref": "#/$defs/ControlCenterSliderConfig",
+          "default": {
+            "show_slider": true,
+            "icon": "\ue720",
+            "show_source_selector": false,
+            "source_selector_icon": "\ue972"
+          }
+        }
+      },
+      "title": "SlidersSectionConfig",
+      "type": "object"
+    },
     "SnippetsProviderConfig": {
       "additionalProperties": false,
       "properties": {
@@ -10366,6 +11147,38 @@
         }
       },
       "title": "SystemCommandsProviderConfig",
+      "type": "object"
+    },
+    "SystemControlsConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "show": {
+          "default": true,
+          "title": "Show",
+          "type": "boolean"
+        },
+        "profile_image_size": {
+          "default": 28,
+          "title": "Profile Image Size",
+          "type": "integer"
+        },
+        "power_icon": {
+          "default": "\ue7e8",
+          "title": "Power Icon",
+          "type": "string"
+        },
+        "lock_icon": {
+          "default": "\ue72e",
+          "title": "Lock Icon",
+          "type": "string"
+        },
+        "settings_icon": {
+          "default": "\ue713",
+          "title": "Settings Icon",
+          "type": "string"
+        }
+      },
+      "title": "SystemControlsConfig",
       "type": "object"
     },
     "SystrayPopupConfig": {
@@ -11120,29 +11933,17 @@
           "type": "string"
         },
         "menu_title": {
-          "default": "<span style='font-weight:bold'>VScode</span> recents",
+          "default": "<span style='font-weight:bold'>VS code</span> recents",
           "title": "Menu Title",
           "type": "string"
         },
-        "folder_icon": {
-          "default": "\uf114",
-          "title": "Folder Icon",
-          "type": "string"
-        },
-        "file_icon": {
-          "default": "\uf016",
-          "title": "File Icon",
-          "type": "string"
-        },
-        "hide_folder_icon": {
-          "default": false,
-          "title": "Hide Folder Icon",
-          "type": "boolean"
-        },
-        "hide_file_icon": {
-          "default": false,
-          "title": "Hide File Icon",
-          "type": "boolean"
+        "icons": {
+          "$ref": "#/$defs/VSCodeIconsConfig",
+          "default": {
+            "folder": "\uf114",
+            "file": "\uf016",
+            "remote": ""
+          }
         },
         "truncate_to_root_dir": {
           "default": false,
@@ -11159,12 +11960,6 @@
           "default": 30,
           "minimum": 0,
           "title": "Max Number Of Files",
-          "type": "integer"
-        },
-        "max_field_size": {
-          "default": 100,
-          "minimum": 1,
-          "title": "Max Field Size",
           "type": "integer"
         },
         "state_storage_path": {
@@ -11231,6 +12026,28 @@
         "options"
       ],
       "title": "VSCodeEntry",
+      "type": "object"
+    },
+    "VSCodeIconsConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "folder": {
+          "default": "\uf114",
+          "title": "Folder",
+          "type": "string"
+        },
+        "file": {
+          "default": "\uf016",
+          "title": "File",
+          "type": "string"
+        },
+        "remote": {
+          "default": "",
+          "title": "Remote",
+          "type": "string"
+        }
+      },
+      "title": "VSCodeIconsConfig",
       "type": "object"
     },
     "VSCodeMenuConfig": {
@@ -14604,6 +15421,12 @@
           },
           {
             "$ref": "#/$defs/ClockEntry"
+          },
+          {
+            "$ref": "#/$defs/CodexUsageEntry"
+          },
+          {
+            "$ref": "#/$defs/ControlCenterEntry"
           },
           {
             "$ref": "#/$defs/CopilotEntry"
