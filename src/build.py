@@ -48,6 +48,7 @@ build_options = {
     "include_files": [
         (icon_png, "assets/images/app_icon.png"),
         ("assets/images/app_transparent.png", "assets/images/app_transparent.png"),
+        ("assets/images/media.png", "assets/images/media.png"),
         ("assets/sound/notification01.wav", "assets/sound/notification01.wav"),
         ("assets/sound/notification02.wav", "assets/sound/notification02.wav"),
         ("core/widgets/services/quick_launch/providers/resources/Everything64.dll", "lib/Everything64.dll"),
