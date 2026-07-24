@@ -8,7 +8,8 @@ import ctypes
 import ctypes.wintypes as wt
 from ctypes import POINTER, WINFUNCTYPE, byref, c_void_p
 
-from core.utils.win32.constants import PROCESS_QUERY_LIMITED_INFORMATION
+from core.utils.win32.constants import PROCESS_QUERY_LIMITED_INFORMATION, TH32CS_SNAPPROCESS
+from core.utils.win32.structs import PROCESSENTRY32
 
 
 class GUID(ctypes.Structure):
@@ -254,16 +255,54 @@ def get_aumid_from_shortcut(shortcut_path: str) -> str | None:
             pass
     return aumid
 
-    return aumid
+
+def _pids_for_exe_tree(process_name: str) -> set[int]:
+    """PIDs whose exe basename matches process_name, plus all descendants.
+
+    Covers portable/Squirrel apps where the launcher holds the AUMID but the
+    UI window lives on a child process with a different exe name.
+    """
+    target = process_name.lower()
+    children: dict[int, list[int]] = {}
+    roots: set[int] = set()
+
+    h_snap = kernel32.CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0)
+    if h_snap == wt.HANDLE(-1).value:
+        return set()
+    try:
+        pe = PROCESSENTRY32()
+        pe.dwSize = ctypes.sizeof(PROCESSENTRY32)
+        if not kernel32.Process32FirstW(h_snap, byref(pe)):
+            return set()
+        while True:
+            pid = pe.th32ProcessID
+            children.setdefault(pe.th32ParentProcessID, []).append(pid)
+            if pe.szExeFile and pe.szExeFile.lower() == target:
+                roots.add(pid)
+            if not kernel32.Process32NextW(h_snap, byref(pe)):
+                break
+    finally:
+        CloseHandle(h_snap)
+
+    result: set[int] = set()
+    stack = list(roots)
+    while stack:
+        pid = stack.pop()
+        if pid in result:
+            continue
+        result.add(pid)
+        stack.extend(children.get(pid, []))
+    return result
 
 
 def activate_app_by_aumid(aumid: str, fallback_process_name: str | None = None) -> bool:
     """
-    Find and activate validity window for the given AUMID.
+    Find and activate a window for the given AUMID.
 
     Args:
         aumid: The App User Model ID to find.
         fallback_process_name: Optional process name (e.g. "firefox.exe") to match if AUMID fails.
+            Also matches descendant processes (portable Electron launchers).
 
     Returns:
         True if a window was found and activation was attempted, False otherwise.
@@ -271,52 +310,36 @@ def activate_app_by_aumid(aumid: str, fallback_process_name: str | None = None) 
     from core.utils.win32.window_actions import force_foreground_focus, restore_window
 
     found_hwnd = None
+    fallback_pids = _pids_for_exe_tree(fallback_process_name) if fallback_process_name else set()
 
     WNDENUMPROC = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.wintypes.HWND, ctypes.wintypes.LPARAM)
 
     def enum_window_callback(hwnd, _):
         nonlocal found_hwnd
-        if user32.IsWindowVisible(hwnd):
-            # 1. Try exact AUMID match
-            curr_aumid = get_aumid_for_window(hwnd)
-            if curr_aumid == aumid:
-                found_hwnd = hwnd
-                return False  # Stop enumeration
+        if not user32.IsWindowVisible(hwnd):
+            return True
 
-            # 2. Fallback: Try process name match if provided
-            if fallback_process_name:
-                pid = wt.DWORD(0)
-                GetWindowThreadProcessId(wt.HWND(hwnd), byref(pid))
-                if pid.value:
-                    # We need to open the process to get its image name
-                    # PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
-                    hProcess = OpenProcess(0x1000, False, pid.value)
-                    if hProcess:
-                        try:
-                            buf = ctypes.create_unicode_buffer(1024)
-                            size = wt.DWORD(1024)
-                            # QueryFullProcessImageNameW is in kernel32
-                            if hasattr(kernel32, "QueryFullProcessImageNameW"):
-                                if kernel32.QueryFullProcessImageNameW(hProcess, 0, buf, byref(size)):
-                                    full_path = buf.value
-                                    if full_path.lower().endswith(fallback_process_name.lower()):
-                                        found_hwnd = hwnd
-                                        return False
-                        finally:
-                            CloseHandle(hProcess)
+        # Exact AUMID match
+        if get_aumid_for_window(hwnd) == aumid:
+            found_hwnd = hwnd
+            return False
+
+        # Fallback: process (or descendant) match; skip untitled helpers
+        if fallback_pids:
+            pid = wt.DWORD(0)
+            GetWindowThreadProcessId(wt.HWND(hwnd), byref(pid))
+            if pid.value in fallback_pids and user32.GetWindowTextLengthW(hwnd) > 0:
+                found_hwnd = hwnd
+                return False
 
         return True
 
     user32.EnumWindows(WNDENUMPROC(enum_window_callback), 0)
 
     if found_hwnd:
-        # 1. Force Focus (helps switch workspace)
         force_foreground_focus(found_hwnd)
-
-        # 2. Restore if minimized (now that it's potentially active/on current workspace)
         if user32.IsIconic(found_hwnd):
             restore_window(found_hwnd)
-
         return True
 
     return False
