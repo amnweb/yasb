@@ -5,6 +5,7 @@ from PyQt6.QtCore import QEvent, QRect, Qt, QTimer
 from PyQt6.QtGui import QShowEvent, QWheelEvent
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QSlider, QStyle, QStyleOptionSlider, QVBoxLayout
 
+from core.utils.qobject import is_valid_qobject
 from core.utils.tooltip import CustomToolTip, set_tooltip
 from core.utils.utilities import PopupWidget, build_progress_widget
 from core.validation.widgets.yasb.brightness import BrightnessConfig
@@ -29,10 +30,14 @@ class BrightnessWidget(BaseWidget):
         self._auto_light_started = False
         self._slider_tooltip = None
         self._current_mode = None
+        self.dialog = None
+        self._sliders: dict[str, QSlider] = {}
+        self._slider_types: dict[str, str] = {}
+        self._monitor_slider_layouts: dict[int, QVBoxLayout] = {}
 
-        # Get brightness service singleton
-        self._service = BrightnessService.instance()
+        self._service = BrightnessService.instance(self.config.ddc_poll_interval)
         self._service.brightness_changed.connect(self._on_brightness_changed)
+        self._service.contrast_changed.connect(self._on_contrast_changed)
 
         # Build UI
         self.progress_widget = build_progress_widget(self, self.config.progress_bar.model_dump())
@@ -75,13 +80,35 @@ class BrightnessWidget(BaseWidget):
             # Start auto light timer once on first successful brightness read
             if brightness is not None and not self._auto_light_started and self.config.auto_light:
                 self._auto_light_started = True
-                self._auto_light_timer = QTimer()
+                self._auto_light_timer = QTimer(self)
                 self._auto_light_timer.timeout.connect(self._check_auto_light)
                 self._auto_light_timer.start(60000)
                 self._check_auto_light()
 
             self.current_brightness = brightness
             self._update_label()
+
+        if brightness is None:
+            return
+        self._sync_menu_slider(f"brightness_{hmonitor}", brightness)
+
+    def _on_contrast_changed(self, hmonitor: int, contrast: int | None):
+        if contrast is None:
+            return
+        added = self._ensure_contrast_slider(hmonitor)
+        self._sync_menu_slider(f"contrast_{hmonitor}", contrast)
+        if added and self.dialog and is_valid_qobject(self.dialog) and self.dialog.isVisible():
+            self.dialog.adjustSize()
+
+    def _sync_menu_slider(self, key: str, value: int) -> None:
+        if not self.dialog or not is_valid_qobject(self.dialog) or not self.dialog.isVisible():
+            return
+        slider = self._sliders.get(key)
+        if not is_valid_qobject(slider) or slider.isSliderDown():
+            return
+        slider.blockSignals(True)
+        slider.setValue(value)
+        slider.blockSignals(False)
 
     def get_brightness(self) -> int | None:
         """Get current brightness (cached)."""
@@ -121,7 +148,10 @@ class BrightnessWidget(BaseWidget):
         self.set_brightness(prev_levels[-1] if prev_levels else levels[-1])
 
     def _toggle_brightness_menu(self):
-        self._show_brightness_menu()
+        if self.dialog and is_valid_qobject(self.dialog) and self.dialog.isVisible():
+            self.dialog.hide_animated()
+        else:
+            self._show_brightness_menu()
 
     def _update_label(self):
         """Update the widget label with current brightness."""
@@ -177,27 +207,32 @@ class BrightnessWidget(BaseWidget):
 
     def _show_brightness_menu(self):
         """Show brightness/contrast slider popup with all monitors."""
-        self.dialog = PopupWidget(
-            self,
-            self.config.brightness_menu.blur,
-            self.config.brightness_menu.round_corners,
-            self.config.brightness_menu.round_corners_type,
-            self.config.brightness_menu.border_color,
-        )
-        self.dialog.setProperty("class", "brightness-menu")
+        if not (self.dialog and is_valid_qobject(self.dialog)):
+            self.dialog = PopupWidget(
+                self,
+                self.config.brightness_menu.blur,
+                self.config.brightness_menu.round_corners,
+                self.config.brightness_menu.round_corners_type,
+                self.config.brightness_menu.border_color,
+                persistent=True,
+            )
+            self.dialog.setProperty("class", "brightness-menu")
 
-        layout = QVBoxLayout(self.dialog)
-        layout.setSpacing(0)
-        layout.setContentsMargins(0, 0, 0, 0)
+            layout = QVBoxLayout(self.dialog)
+            layout.setSpacing(0)
+            layout.setContentsMargins(0, 0, 0, 0)
 
-        monitors = self._service.get_monitors()
-        self._sliders: dict[str, QSlider] = {}
-        self._slider_types: dict[str, str] = {}
+            self._sliders = {}
+            self._slider_types = {}
+            self._monitor_slider_layouts = {}
+            for idx, (hmonitor, name) in enumerate(self._service.get_monitors()):
+                self._add_monitor_section(layout, hmonitor, name, idx)
 
-        for idx, (hmonitor, name) in enumerate(monitors):
-            self._add_monitor_section(layout, hmonitor, name, idx)
+        for hmonitor, _ in self._service.get_monitors():
+            if self._service.supports_contrast(hmonitor):
+                self._ensure_contrast_slider(hmonitor)
 
-        self.dialog.setLayout(layout)
+        self._refresh_menu_sliders()
         self.dialog.adjustSize()
         self.dialog.setPosition(
             alignment=self.config.brightness_menu.alignment,
@@ -206,6 +241,26 @@ class BrightnessWidget(BaseWidget):
             offset_top=self.config.brightness_menu.offset_top,
         )
         self.dialog.show()
+        self._service.refresh_now()
+
+    def _refresh_menu_sliders(self) -> None:
+        """Sync persistent popup sliders from cache."""
+        for key, slider in self._sliders.items():
+            if not is_valid_qobject(slider):
+                continue
+            hmonitor = int(key.split("_", 1)[1])
+            slider_type = self._slider_types.get(key)
+            if slider_type == "brightness":
+                value = self._service.get_brightness(hmonitor)
+            elif slider_type == "contrast":
+                value = self._service.get_contrast(hmonitor)
+            else:
+                continue
+            if value is None:
+                continue
+            slider.blockSignals(True)
+            slider.setValue(value)
+            slider.blockSignals(False)
 
     def _add_monitor_section(self, layout: QVBoxLayout, hmonitor: int, name: str, index: int = 0):
         """Add a monitor section with brightness and optional contrast sliders."""
@@ -259,44 +314,52 @@ class BrightnessWidget(BaseWidget):
         bright_row.addWidget(bright_slider, 1)
 
         sliders_layout.addWidget(bright_row_widget)
-
-        if self._service.supports_contrast(hmonitor):
-            contrast_row_widget = QFrame()
-            contrast_row_widget.setProperty("class", "slider-row")
-            contrast_row = QHBoxLayout(contrast_row_widget)
-            contrast_row.setContentsMargins(0, 0, 0, 0)
-            contrast_row.setSpacing(6)
-
-            contrast_icon = QLabel(self.config.brightness_menu.contrast_icon)
-            contrast_icon.setProperty("class", "slider-icon")
-            contrast_row.addWidget(contrast_icon)
-
-            contrast_slider = QSlider(Qt.Orientation.Horizontal)
-            contrast_slider.setProperty("class", "contrast-slider")
-            contrast_slider.setMinimum(0)
-            contrast_slider.setMaximum(100)
-            contrast_slider.setMouseTracking(True)
-            contrast_slider.installEventFilter(self)
-            current_contrast = self._service.get_contrast(hmonitor)
-            if current_contrast is not None:
-                contrast_slider.setValue(current_contrast)
-
-            key = f"contrast_{hmonitor}"
-            self._sliders[key] = contrast_slider
-            self._slider_types[key] = "contrast"
-            contrast_slider.valueChanged.connect(lambda v, k=key: self._on_monitor_slider_changed(k, v))
-            contrast_slider.sliderReleased.connect(lambda k=key: self._on_monitor_slider_released(k))
-            contrast_row.addWidget(contrast_slider, 1)
-
-            sliders_layout.addWidget(contrast_row_widget)
+        self._monitor_slider_layouts[hmonitor] = sliders_layout
 
         monitor_layout.addWidget(sliders_group)
         layout.addWidget(monitor_row)
 
+    def _ensure_contrast_slider(self, hmonitor: int) -> bool:
+        """Add contrast slider when DDC contrast is available. Returns True if created."""
+        key = f"contrast_{hmonitor}"
+        if is_valid_qobject(self._sliders.get(key)):
+            return False
+        sliders_layout = self._monitor_slider_layouts.get(hmonitor)
+        if sliders_layout is None:
+            return False
+
+        contrast_row_widget = QFrame()
+        contrast_row_widget.setProperty("class", "slider-row")
+        contrast_row = QHBoxLayout(contrast_row_widget)
+        contrast_row.setContentsMargins(0, 0, 0, 0)
+        contrast_row.setSpacing(6)
+
+        contrast_icon = QLabel(self.config.brightness_menu.contrast_icon)
+        contrast_icon.setProperty("class", "slider-icon")
+        contrast_row.addWidget(contrast_icon)
+
+        contrast_slider = QSlider(Qt.Orientation.Horizontal)
+        contrast_slider.setProperty("class", "contrast-slider")
+        contrast_slider.setMinimum(0)
+        contrast_slider.setMaximum(100)
+        contrast_slider.setMouseTracking(True)
+        contrast_slider.installEventFilter(self)
+        current_contrast = self._service.get_contrast(hmonitor)
+        if current_contrast is not None:
+            contrast_slider.setValue(current_contrast)
+
+        self._sliders[key] = contrast_slider
+        self._slider_types[key] = "contrast"
+        contrast_slider.valueChanged.connect(lambda v, k=key: self._on_monitor_slider_changed(k, v))
+        contrast_slider.sliderReleased.connect(lambda k=key: self._on_monitor_slider_released(k))
+        contrast_row.addWidget(contrast_slider, 1)
+        sliders_layout.addWidget(contrast_row_widget)
+        return True
+
     def _on_monitor_slider_changed(self, key: str, value: int):
         """Handle slider value change for brightness or contrast."""
         slider = self._sliders.get(key)
-        if slider is None:
+        if not is_valid_qobject(slider):
             return
 
         if slider.isSliderDown():
@@ -313,23 +376,7 @@ class BrightnessWidget(BaseWidget):
             self._service.set_contrast(hmonitor, value)
 
     def _on_monitor_slider_released(self, key: str):
-        """Handle slider release - hide tooltip and apply value."""
         self._hide_slider_tooltip()
-
-        slider = self._sliders.get(key)
-        if not slider:
-            return
-        value = slider.value()
-        slider_type = self._slider_types.get(key)
-        hmonitor = int(key.split("_", 1)[1])
-
-        if slider_type == "brightness":
-            self._service.set_brightness(hmonitor, value)
-            if hmonitor == self._hmonitor:
-                self.current_brightness = value
-                self._update_label()
-        elif slider_type == "contrast":
-            self._service.set_contrast(hmonitor, value)
 
     def _show_slider_tooltip(self, value: int, slider: QSlider = None):
         """Show tooltip above slider handle during drag or hover."""
@@ -339,7 +386,7 @@ class BrightnessWidget(BaseWidget):
         if slider is None:
             return
 
-        ratio = slider.value() / 100.0
+        ratio = value / 100.0
         x_offset = int(slider.width() * ratio)
         global_pos = slider.mapToGlobal(slider.rect().topLeft())
         handle_rect = QRect(global_pos.x() + x_offset, global_pos.y(), 1, slider.height())

@@ -34,6 +34,42 @@ powrprof.PowerGetActiveScheme.restype = wintypes.DWORD
 powrprof.PowerSetActiveScheme.argtypes = [wintypes.HANDLE, POINTER(GUID)]
 powrprof.PowerSetActiveScheme.restype = wintypes.DWORD
 
+powrprof.PowerReadACValueIndex.argtypes = [
+    wintypes.HANDLE,
+    POINTER(GUID),
+    POINTER(GUID),
+    POINTER(GUID),
+    POINTER(wintypes.DWORD),
+]
+powrprof.PowerReadACValueIndex.restype = wintypes.DWORD
+
+powrprof.PowerReadDCValueIndex.argtypes = [
+    wintypes.HANDLE,
+    POINTER(GUID),
+    POINTER(GUID),
+    POINTER(GUID),
+    POINTER(wintypes.DWORD),
+]
+powrprof.PowerReadDCValueIndex.restype = wintypes.DWORD
+
+powrprof.PowerWriteACValueIndex.argtypes = [
+    wintypes.HANDLE,
+    POINTER(GUID),
+    POINTER(GUID),
+    POINTER(GUID),
+    wintypes.DWORD,
+]
+powrprof.PowerWriteACValueIndex.restype = wintypes.DWORD
+
+powrprof.PowerWriteDCValueIndex.argtypes = [
+    wintypes.HANDLE,
+    POINTER(GUID),
+    POINTER(GUID),
+    POINTER(GUID),
+    wintypes.DWORD,
+]
+powrprof.PowerWriteDCValueIndex.restype = wintypes.DWORD
+
 
 # -- Power management function wrappers -- #
 def PowerEnumerate(
@@ -86,3 +122,19 @@ def PowerSetActiveScheme(
     SchemeGuid,
 ):
     return powrprof.PowerSetActiveScheme(UserRootPowerKey, SchemeGuid)
+
+
+def PowerReadACValueIndex(RootPowerKey, SchemeGuid, SubGroupGuid, PowerSettingGuid, ValueIndex):
+    return powrprof.PowerReadACValueIndex(RootPowerKey, SchemeGuid, SubGroupGuid, PowerSettingGuid, ValueIndex)
+
+
+def PowerReadDCValueIndex(RootPowerKey, SchemeGuid, SubGroupGuid, PowerSettingGuid, ValueIndex):
+    return powrprof.PowerReadDCValueIndex(RootPowerKey, SchemeGuid, SubGroupGuid, PowerSettingGuid, ValueIndex)
+
+
+def PowerWriteACValueIndex(RootPowerKey, SchemeGuid, SubGroupGuid, PowerSettingGuid, ValueIndex):
+    return powrprof.PowerWriteACValueIndex(RootPowerKey, SchemeGuid, SubGroupGuid, PowerSettingGuid, ValueIndex)
+
+
+def PowerWriteDCValueIndex(RootPowerKey, SchemeGuid, SubGroupGuid, PowerSettingGuid, ValueIndex):
+    return powrprof.PowerWriteDCValueIndex(RootPowerKey, SchemeGuid, SubGroupGuid, PowerSettingGuid, ValueIndex)

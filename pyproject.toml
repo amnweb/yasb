@@ -45,6 +45,7 @@ dependencies = [
     "winrt.windows.ui.notifications==3.2.1",
     "winrt.windows.ui.notifications.management==3.2.1",
     "winrt.windows.devices.bluetooth==3.2.1",
+    "winrt.windows.devices.display==3.2.1",
     "winrt.windows.devices.enumeration==3.2.1",
     "winrt.windows.devices.radios==3.2.1",
     "winrt.windows.devices.wifi==3.2.1",
