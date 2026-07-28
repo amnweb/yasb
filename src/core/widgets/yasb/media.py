@@ -1,5 +1,7 @@
 import ctypes
+import io
 import logging
+import os
 from collections.abc import Callable
 from enum import StrEnum
 from typing import Any, Literal, cast
@@ -9,8 +11,8 @@ from PIL.ImageDraw import ImageDraw
 from PIL.ImageQt import ImageQt
 from pycaw.pycaw import AudioUtilities
 from PyQt6 import QtCore
-from PyQt6.QtCore import QEvent, QObject, Qt, QTimer, pyqtSlot
-from PyQt6.QtGui import QMouseEvent, QPixmap, QWheelEvent
+from PyQt6.QtCore import QEvent, QObject, QRectF, Qt, QTimer, pyqtSlot
+from PyQt6.QtGui import QMouseEvent, QPainter, QPainterPath, QPaintEvent, QPixmap, QWheelEvent
 from PyQt6.QtWidgets import (
     QFrame,
     QGridLayout,
@@ -42,16 +44,16 @@ from core.widgets.services.media.aumid_process import get_process_name_for_aumid
 from core.widgets.services.media.media import MediaSession, SessionState, WindowsMedia
 from core.widgets.services.media.source_apps import (
     get_source_app_class_name,
-    get_source_app_display_name,
-    get_source_app_mapping,
+    resolve_source_app_name,
 )
 from core.widgets.services.media.tokenizer import clean_string
+from settings import SCRIPT_PATH
 
 logger = logging.getLogger("MediaWidget")
 
 MAX_TIMLINE_DURATION = 604800  # 7 days
 
-type FieldTypes = Literal["default", "popup_title", "popup_artist"]
+type FieldTypes = Literal["default", "popup_title", "popup_artist", "popup_source"]
 
 
 class ProgressBarAlignment(StrEnum):
@@ -85,6 +87,7 @@ class MediaWidget(BaseWidget):
 
         # Get media manager
         self.media = WindowsMedia()
+        self._empty_thumb: QPixmap | None = self._build_empty_thumbnail()
 
         # Make a grid box to overlay the text and thumbnail
         self.thumbnail_stack = QGridLayout()
@@ -232,11 +235,13 @@ class MediaWidget(BaseWidget):
         content_layout.setSpacing(0)
 
         if self.current_session is not None:
-            # Create thumbnail label
-            self._popup_thumbnail_label = QLabel()
+            self._popup_thumbnail_label = RoundedClickableLabel(
+                self, radius=self.config.media_menu.thumbnail_corner_radius
+            )
             self._popup_thumbnail_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             self._popup_thumbnail_label.setProperty("class", "thumbnail")
             self._popup_thumbnail_label.setContentsMargins(0, 0, 0, 0)
+            self._popup_thumbnail_label.data = self._open_media_source
             self._popup_thumbnail_label.setFixedSize(
                 self.config.media_menu.thumbnail_size,
                 self.config.media_menu.thumbnail_size,
@@ -247,7 +252,7 @@ class MediaWidget(BaseWidget):
                     popup_pixmap = self._create_thumbnail_for_popup(self.current_session.thumbnail)
                 else:
                     # Create default thumbnail
-                    popup_pixmap = self._create_empty_thumbnail()
+                    popup_pixmap = self._empty_thumb
 
                 if popup_pixmap:
                     self._popup_thumbnail_label.setPixmap(popup_pixmap)
@@ -281,7 +286,6 @@ class MediaWidget(BaseWidget):
                 self._popup_artist_label.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
                 text_layout.addWidget(self._popup_title_label, alignment=Qt.AlignmentFlag.AlignTop)
                 text_layout.addWidget(self._popup_artist_label, alignment=Qt.AlignmentFlag.AlignTop)
-
                 # Add control buttons directly below the slider in the text layout
                 control_layout = QHBoxLayout()
                 control_layout.setSpacing(0)
@@ -323,6 +327,7 @@ class MediaWidget(BaseWidget):
                     self._popup_source_label.setContentsMargins(0, 0, 0, 0)
                     self._popup_source_label.setProperty("class", f"source {source_class_name}")
                     self._popup_source_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                    self._popup_source_label.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
                     control_layout.addWidget(self._popup_source_label, 0, Qt.AlignmentFlag.AlignVCenter)
 
                 # Add control layout to the text layout
@@ -355,7 +360,9 @@ class MediaWidget(BaseWidget):
                         self._app_mute_button.data = self._toggle_app_mute
 
                         vol_layout.addWidget(self._app_mute_button, 0, Qt.AlignmentFlag.AlignCenter)
-                        content_layout.addWidget(self._vol_container, 0, Qt.AlignmentFlag.AlignRight)
+                        content_layout.addWidget(
+                            self._vol_container, 0, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignTop
+                        )
 
                         # Bind slider to the current media app session and set initial value
                         self._bind_app_volume_session()
@@ -468,15 +475,16 @@ class MediaWidget(BaseWidget):
             self._update_app_mute_button()
 
     def _get_source_app_name(self):
-        """Get formatted source app name from media info or session."""
+        """Resolve source app display name from the current session AUMID."""
         if not self.current_session or not (source_app := self.current_session.app_id):
             return None, None
         try:
-            # Direct lookup
-            source_name = get_source_app_display_name(source_app)
+            source_name = resolve_source_app_name(source_app)
             if source_name:
-                return source_name, get_source_app_class_name(source_name)
-            logger.debug("Unknown source app in session: '%s' - consider adding to source_apps.py", source_app)
+                return (
+                    self._format_max_field_size(source_name, "popup_source"),
+                    get_source_app_class_name(source_name),
+                )
         except Exception:
             logger.exception("Error getting media source")
         return None, None
@@ -540,13 +548,9 @@ class MediaWidget(BaseWidget):
 
     def _open_media_source(self):
         if self.current_session and self.current_session.app_id:
-            # Try to get process name from mapping for fallback
-            fallback_process = None
-            mapping = get_source_app_mapping(self.current_session.app_id)
-            if mapping and isinstance(mapping, dict):
-                fallback_process = mapping.get("process")
-
-            activate_app_by_aumid(self.current_session.app_id, fallback_process_name=fallback_process)
+            aumid = self.current_session.app_id
+            fallback_process = get_process_name_for_aumid(aumid)
+            activate_app_by_aumid(aumid, fallback_process_name=fallback_process)
 
     def _on_timeline_properties_changed(self):
         """Handle timeline property updates."""
@@ -735,7 +739,7 @@ class MediaWidget(BaseWidget):
                         if self.current_session.thumbnail is not None:
                             popup_pixmap = self._create_thumbnail_for_popup(self.current_session.thumbnail)
                         else:
-                            popup_pixmap = self._create_empty_thumbnail()
+                            popup_pixmap = self._empty_thumb
                         self._popup_thumbnail_label.setPixmap(popup_pixmap or QPixmap())
 
                     if hasattr(self, "_popup_source_label"):
@@ -745,7 +749,6 @@ class MediaWidget(BaseWidget):
                             self._popup_source_label.setProperty("class", f"source {source_class_name}")
 
                             refresh_widget_style(self._popup_source_label)
-
                 except Exception as e:
                     logger.error("Error updating popup content: %s", e)
         except RuntimeError:
@@ -809,89 +812,31 @@ class MediaWidget(BaseWidget):
         else:
             self._thumbnail_label.show()
 
-    def _create_empty_thumbnail(self):
-        """Create a default thumbnail with an eighth note icon."""
+    def _build_empty_thumbnail(self) -> QPixmap | None:
+        """Load media.png once as the popup fallback when session has no art."""
         try:
+            icon_path = os.path.join(SCRIPT_PATH, "assets", "images", "media.png")
+            if not os.path.exists(icon_path):
+                return None
             size = self.config.media_menu.thumbnail_size
-            corner_radius = self.config.media_menu.thumbnail_corner_radius
-            # Create base image with dark background
-            large_size = size * 2  # Create at higher resolution for better quality
-            large_img = Image.new("RGBA", (large_size, large_size), (0, 0, 0, 255))
-            draw = ImageDraw(large_img)
-
-            # Use white color for the note
-            note_color = (255, 255, 255, 255)
-
-            # Scale all elements relative to image size
-            center_x = large_size // 2
-            center_y = large_size // 2
-
-            # Calculate note head dimensions - make it large like in the image
-            head_radius = int(large_size * 0.14)  # Note head is about 44% of width
-
-            # Calculate position of the note head (centered horizontally, lower half vertically)
-            head_x = center_x - int(large_size * 0.1)  # Slightly left of center
-            head_y = center_y + int(large_size * 0.12)  # Lower half
-
-            # Calculate stem dimensions
-            stem_width = int(large_size * 0.05)
-            stem_height = int(large_size * 0.4)
-
-            # Calculate flag dimensions
-            flag_width = int(large_size * 0.15)
-            flag_height = int(large_size * 0.3)
-
-            # Draw the note stem (vertical line)
-            stem_x = head_x + head_radius - stem_width  # Stem attaches to right side of note head
-            stem_top_y = head_y - stem_height
-            draw.rectangle(
-                (
-                    (stem_x, stem_top_y),  # Top-left
-                    (stem_x + stem_width, head_y),  # Bottom-right
-                ),
-                fill=note_color,
-            )
-
-            # Draw the note head (circle)
-            draw.ellipse(
-                [
-                    (head_x - head_radius, head_y - head_radius),
-                    (head_x + head_radius, head_y + head_radius),
-                ],
-                fill=note_color,
-            )
-
-            draw.rectangle(
-                (
-                    (stem_x + stem_width - 1, stem_top_y),
-                    (stem_x + stem_width + flag_width, stem_top_y + flag_height // 3),
-                ),
-                fill=note_color,
-            )
-
-            # Resize down to target size with high quality anti-aliasing
-            img = large_img.resize((size, size), Image.LANCZOS)
-
-            # Add rounded corners
-            mask = Image.new("L", (size, size), 0)
-            mask_draw = ImageDraw(mask)
-            mask_draw.rounded_rectangle(((0, 0), (size, size)), corner_radius, fill=150)
-
-            # Apply mask for rounded corners
-            img.putalpha(mask)
-
-            return QPixmap.fromImage(ImageQt(img))
-
+            with Image.open(icon_path) as image:
+                if image.mode != "RGBA":
+                    image = image.convert("RGBA")
+                resized = image.resize((size, size), Image.LANCZOS)
+                buf = io.BytesIO()
+                resized.save(buf, format="PNG")
+                source = QPixmap()
+                if not source.loadFromData(buf.getvalue()):
+                    return QPixmap(size, size)
+                return source
         except Exception as e:
             logger.error("Error creating default thumbnail: %s", e)
             return None
 
     def _create_thumbnail_for_popup(self, img: Image.Image):
-        """Process image thumbnail into a square with rounded corners for popup display."""
+        """Process image thumbnail into a square for popup display."""
         try:
             square_size = self.config.media_menu.thumbnail_size
-            # Increase corner radius for more visible rounded corners (25% instead of 15%)
-            corner_radius = self.config.media_menu.thumbnail_corner_radius
 
             # Calculate aspect ratio
             aspect = img.width / img.height
@@ -915,29 +860,9 @@ class MediaWidget(BaseWidget):
             else:
                 square_img = resized.resize((square_size, square_size), Image.LANCZOS)
 
-            # Ensure image is RGBA
             if square_img.mode != "RGBA":
                 square_img = square_img.convert("RGBA")
 
-            # Create much higher-resolution mask for better anti-aliasing (12x size)
-            scale = 4  # Significantly increased for smoother corners
-            hr_size = square_size * scale
-            hr_radius = corner_radius * scale
-
-            # Create the mask
-            mask = Image.new("L", (hr_size, hr_size), color=0)
-            draw = ImageDraw(mask)
-
-            # Draw rounded rectangle with smoother corners
-            draw.rounded_rectangle(((0, 0), (hr_size, hr_size)), radius=hr_radius, fill=255)
-
-            # Resize mask back down with high-quality anti-aliasing
-            mask = mask.resize((square_size, square_size), Image.LANCZOS)
-
-            # Apply the mask to create rounded corners
-            square_img.putalpha(mask)
-
-            # Convert to QPixmap
             return QPixmap.fromImage(ImageQt(square_img))
         except Exception as e:
             logger.error("Error creating square thumbnail: %s", e)
@@ -1045,6 +970,8 @@ class MediaWidget(BaseWidget):
             max_size = self.config.media_menu.max_title_size
         elif field_type == "popup_artist":
             max_size = self.config.media_menu.max_artist_size
+        elif field_type == "popup_source":
+            max_size = self.config.media_menu.max_source_size
         else:
             # If we are using scrolling labels, return the original text without formatting
             if self.config.scrolling_label.enabled:
@@ -1156,27 +1083,6 @@ class MediaWidget(BaseWidget):
 
         return None
 
-    def _match_session_by_mapping(self, sessions: list[MediaSession], aumid: str) -> MediaSession | None:
-        """Match session using source app mapping."""
-        if not aumid:
-            return None
-
-        mapping = get_source_app_mapping(aumid)
-        if not mapping:
-            return None
-
-        process_name = mapping.get("process")
-        if process_name:
-            for session in sessions:
-                try:
-                    proc = getattr(session, "Process", None)
-                    if proc and proc.name().lower() == process_name.lower():
-                        return session
-                except Exception:
-                    continue
-
-        return None
-
     def _match_session_by_aumid(self, sessions: list[MediaSession], aumid: str):
         """Match session by process AUMID."""
         target_aumid = aumid.lower()
@@ -1210,28 +1116,18 @@ class MediaWidget(BaseWidget):
         """Locate and bind the audio session corresponding to current media app."""
         self._app_volume_session = None
         aumid = self._get_current_app_identifier()
-        identifier = (aumid or "").lower()
+        if not aumid:
+            return
 
         try:
             # pycaw handles COM initialization internally
             sessions = cast(list[MediaSession], AudioUtilities.GetAllSessions())
-            candidate = None
-            if aumid:
-                candidate = self._match_session_by_mapping(sessions, aumid)
-
-            if not candidate and aumid:
-                candidate = self._match_session_by_aumid(sessions, aumid)
-
-            if not candidate and identifier:
-                candidate = self._match_session_by_executable(sessions, identifier)
-
-            if not candidate and aumid:
+            candidate = self._match_session_by_aumid(sessions, aumid)
+            if not candidate:
                 proc_name = get_process_name_for_aumid(aumid)
                 if proc_name:
                     candidate = self._match_session_by_executable(sessions, proc_name)
-
             self._app_volume_session = candidate
-
         except Exception as e:
             logger.error("Failed to bind app volume session: %s", e)
             self._app_volume_session = None
@@ -1345,9 +1241,37 @@ class ClickableLabel(QLabel):
     def mouseReleaseEvent(self, ev: QMouseEvent | None):
         if ev is None:
             return
+        classes = (self.property("class") or "").split()
+        if "disabled" in classes:
+            ev.accept()
+            return
         if ev.button() == Qt.MouseButton.LeftButton and self.data and self.parent_widget:
             self.parent_widget.execute_code(self.data)
         ev.accept()
+
+
+class RoundedClickableLabel(ClickableLabel):
+    """Pixmap label that clips to rounded corners at paint time."""
+
+    def __init__(self, parent: MediaWidget | None = None, radius: int = 0):
+        super().__init__(parent)
+        self._corner_radius = max(0, radius)
+
+    def paintEvent(self, a0: QPaintEvent | None):
+        pix = self.pixmap()
+        if pix is None or pix.isNull() or self._corner_radius <= 0:
+            super().paintEvent(a0)
+            return
+
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+        rect = QRectF(self.contentsRect())
+        radius = min(float(self._corner_radius), min(rect.width(), rect.height()) / 2.0)
+        path = QPainterPath()
+        path.addRoundedRect(rect, radius, radius)
+        painter.setClipPath(path)
+        painter.drawPixmap(self.contentsRect(), pix, pix.rect())
+        painter.end()
 
 
 class WheelEventFilter(QObject):

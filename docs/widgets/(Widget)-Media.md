@@ -2,6 +2,9 @@
 
 A player control widget that shows you what song or video is currently playing. It displays album art, has inline media buttons (play, pause, skip), scrolls long titles, and opens a popup menu with a progress bar and player controls.
 
+> [!NOTE]
+> Timeline and seeking only work if the player reports position and duration through the Windows media API. A lot of browsers and some apps don't, or they send junk values, so the seek slider can sit disabled, jump around, or not move at all. YASB just shows what the system gives us - if the source app doesn't expose a usable timeline, there isn't much we can do about it.
+
 | Option                                | Type      | Default                                                   | Description                                                         |
 | -------------------------             | --------- | ---------                                                 | -------------------------------------                               |
 | `label`                               | string    | `"{artist}{s}{title}"`                                    | The main label format for the media widget.                         |
@@ -75,7 +78,9 @@ media:
       thumbnail_size: 120
       max_title_size: 60
       max_artist_size: 20
+      max_source_size: 16
       show_source: true
+      show_volume_slider: true
     media_menu_icons:
       play: "\ue768"
       pause: "\ue769"
@@ -98,7 +103,7 @@ media:
     media_menu:
       blur: false                  # Whether to apply a blur effect to the popup background.
       round_corners: true          # Whether to round the corners of the popup.
-      round_corners_type: "normal" # The type of corner rounding. Can be "normal" or "symmetric".
+      round_corners_type: "normal" # "normal" or "small" (Win11 only)
       border_color: "system"       # The border color of the popup. Can be a HEX, None or "system".
       alignment: "right"           # The alignment of the popup relative to the widget. Can be "left", "center", or "right".
       direction: "down"            # The direction in which the popup opens. Can be "up" or "down".
@@ -108,7 +113,8 @@ media:
       thumbnail_size: 120          # The size of the thumbnail in the popup.
       max_title_size: 60           # The maximum size for the title in the popup.
       max_artist_size: 20          # The maximum size for the artist name in the popup.
-      show_source: true            # Whether to show the media source (e.g., Spotify, YouTube) in the popup.
+      max_source_size: 16          # The maximum size for the source app name in the popup.
+      show_source: true            # Whether to show the media source app name in the popup (resolved from OS/app metadata).
       show_volume_slider: false    # Whether to show the volume slider in the popup. Volume control per application.
 ```
 
@@ -147,7 +153,7 @@ media:
 - `toggle_label`: Toggles the visibility of the label.
 - `toggle_play_pause`: Toggles between play and pause states.
 - `toggle_media_menu`: Toggles the visibility of the media menu popup.
-- `open_media_source`: Opens the the source that is playing the media.
+- `open_media_source`: Opens the source that is playing the media.
 - `do_nothing`: A placeholder callback that does nothing when triggered.
 
 ## Description of Options
@@ -178,7 +184,7 @@ media:
 - **media_menu:** A dictionary specifying the media menu popup options.
   - **blur:** Whether to apply a blur effect to the popup background.
   - **round_corners:** Whether to round the corners of the popup.
-  - **round_corners_type:** The type of corner rounding. Can be `normal` or `symmetric`.
+  - **round_corners_type:** Corner style for the popup: `normal` or `small` (not supported on Windows 10).
   - **border_color:** The border color of the popup. Can be a HEX value, None, or `system`.
   - **alignment:** The alignment of the popup relative to the widget. Can be `left`, `center`, or `right`.
   - **direction:** The direction in which the popup opens. Can be `up` or `down`.
@@ -188,7 +194,8 @@ media:
   - **thumbnail_size:** The size of the thumbnail in the popup.
   - **max_title_size:** The maximum size for the title in the popup.
   - **max_artist_size:** The maximum size for the artist name in the popup.
-  - **show_source:** Whether to show the media source (e.g., Spotify, FireFox) in the popup.
+  - **max_source_size:** The maximum size for the source app name in the popup.
+  - **show_source:** Whether to show the media source in the popup. The name is resolved from Windows/app metadata (e.g. Spotify, Firefox).
   - **show_volume_slider:** Whether to show the volume slider in the popup. Volume control per application.
 - **media_menu_icons:** A dictionary specifying the icons for the media menu popup. It contains
   - **play:** Icon for the play button in the popup.

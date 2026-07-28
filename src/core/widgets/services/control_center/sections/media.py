@@ -5,7 +5,7 @@ from collections.abc import Callable
 from typing import Any
 
 from PIL import Image
-from PyQt6.QtCore import Qt, pyqtSlot
+from PyQt6.QtCore import Qt, QTimer, pyqtSlot
 from PyQt6.QtGui import QMouseEvent, QPainter, QPainterPath, QPixmap, QWheelEvent
 from PyQt6.QtWidgets import (
     QFrame,
@@ -60,6 +60,11 @@ class MediaSectionWidget(QFrame):
 
         self._cached_thumb: tuple[int, QPixmap] | None = None
         self._empty_thumb: QPixmap | None = self._build_empty_thumbnail()
+
+        self._hide_timer = QTimer(self)
+        self._hide_timer.setSingleShot(True)
+        self._hide_timer.setInterval(1000)
+        self._hide_timer.timeout.connect(self._hide_now)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -153,20 +158,26 @@ class MediaSectionWidget(QFrame):
     def refresh_state(self) -> None:
         self._sync_ui(force_thumbnail=True)
 
+    def _hide_now(self) -> None:
+        if self._media.current_session is not None:
+            return
+        self._current_app_id = ""
+        self._current_title = ""
+        self._current_artist = ""
+        self._current_is_playing = None
+        self.hide()
+
     def _sync_ui(self, force_thumbnail: bool = False):
         if not is_valid_qobject(self):
             return
         session = self._media.current_session
         if session is None:
-            if self._current_app_id:
-                self._current_app_id = ""
-                self._current_title = ""
-                self._current_artist = ""
-                self._current_is_playing = None
-                self.hide()
+            if self.isVisible() and not self._hide_timer.isActive():
+                self._hide_timer.start()
             return
 
-        if not self._current_app_id:
+        self._hide_timer.stop()
+        if not self.isVisible():
             self.show()
 
         app_id = session.app_id
@@ -241,7 +252,7 @@ class MediaSectionWidget(QFrame):
 
     def _build_empty_thumbnail(self) -> QPixmap | None:
         try:
-            icon_path = os.path.join(SCRIPT_PATH, "assets", "images", "app_icon.png")
+            icon_path = os.path.join(SCRIPT_PATH, "assets", "images", "media.png")
             if not os.path.exists(icon_path):
                 return None
             size = self.config.thumbnail_size
