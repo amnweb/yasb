@@ -44,6 +44,7 @@ class BrightnessConfig(CustomBaseModel):
     label_alt: str = "Brightness {percent}%"
     tooltip: bool = True
     scroll_step: int = Field(default=1, ge=1, le=100)
+    invert_wheel: bool = False
     brightness_icons: list[str] = [
         "\udb80\udcde",  # Icon for 0-25% brightness
         "\udb80\udcdd",  # Icon for 26-50% brightness

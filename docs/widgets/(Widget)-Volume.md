@@ -8,6 +8,7 @@ Displays your speaker volume and mute status. You can adjust the volume by scrol
 | `label_alt`  | string | `'{level}'`                                                             | The alternative format string for the volume label. Useful for displaying additional volume details. |
 | `class_name`      | string | `""`                                                                                  | Additional CSS class name for the widget.                                    |
 | `scroll_step`     | int     | `2`                  | The step size for volume adjustment when scrolling. The value is in percentage points (0-100). |
+| `invert_wheel`     | boolean     | `false`                  | Whether to invert wheel scroll direction (useful on laptop trackpads) |
 | `slider_beep`   | boolean | `true`              | Whether to play a sound when the volume slider is released. |
 | `mute_text` | string  | `'mute'` | Text used by `{level}` to indicate muted volume |
 | `tooltip`  | boolean  | `true`        | Whether to show the tooltip on hover. |
