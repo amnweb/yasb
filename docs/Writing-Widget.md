@@ -169,7 +169,172 @@ my_widget:
             duration: 200
 ```
 
-### 9. Python Code Style
+## 9. Using `PopupWidget` for dropdown menus
+
+`PopupWidget` is in `core.utils.utilities`. It creates a frameless popup window with a fade animation. You attach it to a bar widget and it closes when the user clicks outside or switches to another window.
+
+### Constructor options
+
+```py
+PopupWidget(
+    parent,                         # the bar widget this popup belongs to
+    blur=False,                     # enable blur background
+    round_corners=False,            # round the window corners
+    round_corners_type="normal",    # "normal" or "small"
+    border_color="None",            # border colour string, "None", or "System"
+    dark_mode=False,                # dark mode hint for the blur effect
+    persistent=False,               # keep widget in memory on close instead of deleting it
+    pinnable=False,                 # allow the popup to be pinned open and dragged
+)
+```
+
+| Option | Default | Notes |
+|---|---|---|
+| `blur` | `False` | Blur effect |
+| `round_corners` | `False` | Rounded window corners |
+| `persistent` | `False` | Widget is hidden on close, not destroyed - good for popups that are expensive to build |
+| `pinnable` | `False` | Uses the `Tool` window type so the popup is not auto-dismissed by Qt. Enables `set_pinned(bool)` |
+
+### Example 1 - Basic popup
+
+Build the popup, add your content, call `adjustSize()` and `setPosition()`, then `show()`.
+
+```py
+from PyQt6.QtWidgets import QLabel, QVBoxLayout
+from core.utils.utilities import PopupWidget
+
+def show_menu(self):
+    self._menu = PopupWidget(
+        self,
+        blur=self.config.menu.blur,
+        round_corners=self.config.menu.round_corners,
+        round_corners_type=self.config.menu.round_corners_type,
+        border_color=self.config.menu.border_color,
+    )
+    self._menu.setProperty("class", "my-menu")
+
+    layout = QVBoxLayout(self._menu)
+    layout.addWidget(QLabel("Hello from popup"))
+
+    self._menu.adjustSize()
+    self._menu.setPosition(
+        alignment=self.config.menu.alignment,   # "left", "right", or "center"
+        direction=self.config.menu.direction,   # "down" or "up"
+        offset_left=self.config.menu.offset_left,
+        offset_top=self.config.menu.offset_top,
+    )
+    self._menu.show()
+```
+
+The popup closes when the user clicks outside it or switches to another window.
+
+### Example 2 - Persistent popup
+
+Use `persistent=True` when building the popup is slow (network calls, heavy layout, etc.) and you want to reuse the same widget instead of rebuilding it each time.
+
+```py
+def show_menu(self):
+    # build once, reuse afterwards
+    if not hasattr(self, "_menu") or self._menu is None:
+        self._menu = PopupWidget(
+            self,
+            blur=self.config.menu.blur,
+            round_corners=self.config.menu.round_corners,
+            round_corners_type=self.config.menu.round_corners_type,
+            border_color=self.config.menu.border_color,
+            persistent=True,
+        )
+        self._menu.setProperty("class", "my-menu")
+        layout = QVBoxLayout(self._menu)
+        self._label = QLabel("Loading...")
+        layout.addWidget(self._label)
+
+    # refresh content before showing
+    self._label.setText("Updated content")
+    self._menu.adjustSize()
+    self._menu.setPosition(
+        alignment=self.config.menu.alignment,
+        direction=self.config.menu.direction,
+        offset_left=self.config.menu.offset_left,
+        offset_top=self.config.menu.offset_top,
+    )
+    self._menu.show()
+```
+
+### Example 3 - Pinnable popup
+
+Use `pinnable=True` when you want a pin button that keeps the popup open. When pinned the popup ignores outside clicks and can be dragged by the user. When unpinned it goes back to closing normally on outside click or focus loss - no flickering or rebuilding happens.
+
+```py
+from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QVBoxLayout
+from core.utils.utilities import PopupWidget, refresh_widget_style
+from core.utils.tooltip import set_tooltip
+
+def show_menu(self):
+    self._menu = PopupWidget(
+        self,
+        blur=self.config.menu.blur,
+        round_corners=self.config.menu.round_corners,
+        round_corners_type=self.config.menu.round_corners_type,
+        border_color=self.config.menu.border_color,
+        pinnable=True,
+    )
+    self._menu.setProperty("class", "my-menu")
+
+    main_layout = QVBoxLayout(self._menu)
+    main_layout.setContentsMargins(0, 0, 0, 0)
+    main_layout.setSpacing(0)
+
+    # header with title on the left and pin button on the right
+    header = QFrame()
+    header.setProperty("class", "header")
+    header_layout = QHBoxLayout(header)
+    header_layout.setContentsMargins(0, 0, 0, 0)
+    header_layout.setSpacing(0)
+
+    title = QLabel("My Widget")
+    title.setProperty("class", "text")
+    header_layout.addWidget(title)
+    header_layout.addStretch()
+
+    pin_btn = QPushButton("\ueb8a")   # pin icon
+    pin_btn.setCheckable(True)
+    pin_btn.setProperty("class", "pin-btn")
+    set_tooltip(pin_btn, "Pin this window")
+
+    def on_pin_toggled(checked: bool):
+        pin_btn.setText("\ueb8b" if checked else "\ueb8a")
+        pin_btn.setProperty("class", "pin-btn pinned" if checked else "pin-btn")
+        set_tooltip(pin_btn, "Unpin this window" if checked else "Pin this window")
+        refresh_widget_style(pin_btn)
+        self._menu.set_pinned(checked)
+
+    pin_btn.toggled.connect(on_pin_toggled)
+    header_layout.addWidget(pin_btn)
+    main_layout.addWidget(header)
+
+    main_layout.addWidget(QLabel("Popup content here"))
+
+    self._menu.adjustSize()
+    self._menu.setPosition(
+        alignment=self.config.menu.alignment,
+        direction=self.config.menu.direction,
+        offset_left=self.config.menu.offset_left,
+        offset_top=self.config.menu.offset_top,
+    )
+    self._menu.show()
+```
+
+When `pinnable=True`:
+
+| State | Click outside | Window loses focus | Drag |
+|---|---|---|---|
+| `set_pinned(False)` | closes | closes | no |
+| `set_pinned(True)` | stays open | stays open | yes |
+
+`set_pinned()` does nothing when `pinnable=False`, so it is safe to call it from a generic callback without checking first.
+
+### 10. Python Code Style
 
 -  Follow PEP 8 guidelines
 -  Use type hints where applicable
@@ -178,7 +343,7 @@ my_widget:
 -  Comment complex logic
 -  Include TODOs for future improvements
 
-## 10. Test your widget:
+## 11. Test your widget:
 
 -   Ensure it behaves as expected in the application.
 -   Check for any errors or issues in the console.
@@ -188,12 +353,12 @@ my_widget:
 -   Use thread-safe methods for any background tasks or long-running processes.
 -   Ensure that the widget does not block the main thread and remains responsive to user interactions.
 
-## 11. Document your widget:
+## 12. Document your widget:
 
 -   Write clear documentation for your widget, including its purpose, options, and styling.
 -   Doc file should be located in `docs/` folder and linked in the main documentation and readme.
 
-## 12. Submit PR:
+## 13. Submit PR:
 
 -   Once your widget is complete and tested, submit a pull request to the main repository.
 -   Ensure that your code follows the project's coding standards and guidelines.

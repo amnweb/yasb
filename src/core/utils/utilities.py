@@ -139,9 +139,12 @@ class PopupWidget(QWidget):
         _border_color (str): Color of the border.
         _dark_mode (bool): Whether the popup is in dark mode.
         _persistent (bool): Whether the popup widget should persist in memory after being closed instead of being deleted.
+        _pinnable (bool): When True the window uses the Tool flag so it is not auto-dismissed by Qt.
+                          Call set_pinned(True/False) at runtime to toggle pin/drag behaviour.
     Methods:
         setProperty(name, value): Set a property for the popup widget.
         setPosition(alignment, direction, offset_left, offset_top): Position the popup relative to its parent widget.
+        set_pinned(pinned): Toggle the pinned state (drag + ignore outside clicks).
         showEvent(event): Handle the show event for the popup.
         eventFilter(obj, event): Filter events to detect clicks outside the popup.
         hideEvent(event): Handle the hide event for the popup.
@@ -162,11 +165,15 @@ class PopupWidget(QWidget):
         border_color: str = "None",
         dark_mode: bool = False,
         persistent: bool = False,
+        pinnable: bool = False,
     ):
         super().__init__(parent)
 
+        # Use Tool flag when pinnable so Qt never auto-dismisses the window.
+        # Use Popup flag otherwise for standard auto-dismiss behaviour.
+        window_type = Qt.WindowType.Tool if pinnable else Qt.WindowType.Popup
         self.setWindowFlags(
-            Qt.WindowType.Popup
+            window_type
             | Qt.WindowType.FramelessWindowHint
             | Qt.WindowType.WindowStaysOnTopHint
             | Qt.WindowType.NoDropShadowWindowHint
@@ -180,6 +187,9 @@ class PopupWidget(QWidget):
         self._persistent = persistent
         self._parent = parent
         self._suspend_close = False
+        self._pinnable = pinnable
+        self._pinned = False
+        self._drag_pos = None
         # Create the inner frame
         self._popup_content = QFrame(self)
 
@@ -238,6 +248,52 @@ class PopupWidget(QWidget):
             y = max(screen_geometry.top(), min(global_position.y(), screen_geometry.bottom() - self.height()))
             global_position = QPoint(x, y)
         self.move(global_position)
+
+    def set_pinned(self, pinned: bool) -> None:
+        """Toggle the pinned state. Only meaningful when pinnable=True.
+        When pinned the window ignores outside clicks and can be dragged.
+        """
+        if not self._pinnable:
+            return
+        self._pinned = pinned
+        if not pinned:
+            self._drag_pos = None
+
+    def mousePressEvent(self, event):
+        if self._pinnable and self._pinned and event.button() == Qt.MouseButton.LeftButton:
+            self._drag_pos = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
+            event.accept()
+            return
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        if (
+            self._pinnable
+            and self._pinned
+            and self._drag_pos is not None
+            and event.buttons() & Qt.MouseButton.LeftButton
+        ):
+            self.move(event.globalPosition().toPoint() - self._drag_pos)
+            event.accept()
+            return
+        super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        if self._pinnable and self._pinned and event.button() == Qt.MouseButton.LeftButton:
+            self._drag_pos = None
+            event.accept()
+            return
+        super().mouseReleaseEvent(event)
+
+    def event(self, event):
+        # Tool-type windows (pinnable=True) don't auto-close on WindowDeactivate the way
+        # Popup-type windows do, so we replicate that behaviour here:
+        # close when not pinned, stay open when pinned.
+        if event.type() == QEvent.Type.WindowDeactivate and self._pinnable:
+            if not self._pinned:
+                self.hide_animated()
+            return True
+        return super().event(event)
 
     def _add_separator(self, layout):
         separator = QFrame(self)
@@ -375,7 +431,7 @@ class PopupWidget(QWidget):
     def eventFilter(self, obj, event):
         if not isinstance(obj, QObject):
             return False
-        if self._suspend_close:
+        if self._suspend_close or self._pinned:
             return super().eventFilter(obj, event)
         if event.type() == QEvent.Type.MouseButtonPress:
             global_pos = event.globalPosition().toPoint()
