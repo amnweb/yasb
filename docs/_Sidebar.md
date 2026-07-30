@@ -10,7 +10,6 @@
 - [UI Components](./UI-Components)
 - Widgets:
     - [Active Windows Title](./(Widget)-Active-Windows-Title)
-    - [Ai Chat](./(Widget)-Ai-Chat)
     - [Applications](./(Widget)-Applications)
     - [Battery](./(Widget)-Battery)
     - [Bluetooth](./(Widget)-Bluetooth)
