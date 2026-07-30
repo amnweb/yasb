@@ -1,4 +1,3 @@
-import ctypes
 import json
 import os
 import platform
@@ -47,7 +46,6 @@ from PyQt6.QtNetwork import (
 )
 from PyQt6.QtWidgets import (
     QApplication,
-    QDialog,
     QFrame,
     QGraphicsOpacityEffect,
     QHBoxLayout,
@@ -57,7 +55,6 @@ from PyQt6.QtWidgets import (
     QListWidget,
     QListWidgetItem,
     QMainWindow,
-    QMessageBox,
     QScrollArea,
     QSizePolicy,
     QStackedLayout,
@@ -67,12 +64,13 @@ from PyQt6.QtWidgets import (
 )
 
 from core.ui.components.button import Button
+from core.ui.components.content_dialog import ContentDialog, ContentDialogButton
+from core.ui.components.info_bar import InfoBar, InfoBarSeverity
 from core.ui.components.link import Link
 from core.ui.components.loader import Spinner
 from core.ui.theme import FONT_FAMILIES, get_tokens, is_dark
 from core.ui.views.view_base import ViewBase
 from core.utils.markdown import md_to_html, preprocess_readme
-from core.utils.system import is_windows_10
 from settings import DEFAULT_CONFIG_DIRECTORY
 
 QNetworkProxyFactory.setUseSystemConfiguration(True)
@@ -692,7 +690,7 @@ class ThemeDetailPanel(QWidget):
         self._image_data = b""
         self._readme_text = ""
         self._pending_requests = 0
-        self._install_dialog: QDialog | None = None
+        self._install_dialog: ContentDialog | None = None
         self._build_ui()
 
     def _build_ui(self) -> None:
@@ -778,42 +776,13 @@ class ThemeDetailPanel(QWidget):
 
         root.addWidget(self.header_section)
 
-    @staticmethod
-    def _info_icon(size: int = 16, color: str = "#4cc2ff", text_color: str = "#000000") -> QPixmap:
-        pix = QPixmap(size, size)
-        pix.fill(Qt.GlobalColor.transparent)
-        p = QPainter(pix)
-        p.setRenderHint(QPainter.RenderHint.Antialiasing)
-        p.setBrush(QColor(color))
-        p.setPen(Qt.PenStyle.NoPen)
-        p.drawEllipse(0, 0, size - 1, size - 1)
-        p.setPen(QColor(text_color))
-        f = QFont("Segoe UI", int(size * 0.55), QFont.Weight.Bold)
-        p.setFont(f)
-        p.drawText(QRect(0, -1, size, size), Qt.AlignmentFlag.AlignCenter, "i")
-        p.end()
-        return pix
-
-    def _build_info_bar(self, root: QVBoxLayout, t: dict[str, str]) -> None:
-        self._info_bar = QFrame()
-        self._info_bar.setObjectName("detailInfoBar")
-        self._info_bar.setStyleSheet(f"QFrame#detailInfoBar {{ background: {t['content_bg']}; border-radius: 6px; }}")
-        bar_layout = QHBoxLayout(self._info_bar)
-        bar_layout.setContentsMargins(12, 9, 12, 9)
-        bar_layout.setSpacing(10)
-
-        icon_label = QLabel()
-        icon_label.setPixmap(self._info_icon(16, t["accent_fill_default"], t["text_on_accent_primary"]))
-        icon_label.setFixedSize(16, 16)
-        icon_label.setStyleSheet("background: transparent;")
-        bar_layout.addWidget(icon_label, 0)
-
-        message_label = QLabel("This theme is temporarily disabled until the author fixes the problem.")
-        message_label.setFont(_ui_font(12, QFont.Weight.DemiBold))
-        message_label.setWordWrap(True)
-        message_label.setStyleSheet("background: transparent;")
-        bar_layout.addWidget(message_label, 1)
-
+    def _build_info_bar(self, root: QVBoxLayout, _t: dict[str, str]) -> None:
+        self._info_bar = InfoBar(
+            title="",
+            message="This theme is temporarily disabled until the author fixes the problem.",
+            severity=InfoBarSeverity.WARNING,
+            parent=self,
+        )
         self._info_bar_container = QWidget()
         self._info_bar_container.setStyleSheet("background: transparent;")
         container_layout = QVBoxLayout(self._info_bar_container)
@@ -1099,93 +1068,26 @@ class ThemeDetailPanel(QWidget):
     def _on_install(self) -> None:
         if not self.theme_data:
             return
-        self._install_dialog = self._build_install_dialog(self._tokens)
-        accepted = self._install_dialog.exec() == QDialog.DialogCode.Accepted
-        self._install_dialog = None
-        if accepted:
-            self._do_install()
-
-    def _build_install_dialog(self, t: dict[str, str]) -> QDialog:
-        dialog = QDialog(self)
-        dialog.setWindowTitle(" ")
-        if not is_windows_10():
-            dialog.setWindowFlags(
-                Qt.WindowType.Dialog
-                | Qt.WindowType.WindowStaysOnTopHint
-                | Qt.WindowType.WindowTitleHint
-                | Qt.WindowType.CustomizeWindowHint
-                | Qt.WindowType.MSWindowsFixedSizeDialogHint
-            )
-        else:
-            dialog.setWindowFlags(
-                Qt.WindowType.Dialog | Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.MSWindowsFixedSizeDialogHint
-            )
-        dialog.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
-        dark = is_dark()
-        dialog_background = "#2B2B2B" if dark else "#F5F5F5"
-        footer_background = "#202020" if dark else "#E5E5E5"
-        dialog.setStyleSheet(f"QDialog {{ background: {dialog_background}; }}")
-        dialog.setModal(True)
-
-        root = QVBoxLayout(dialog)
-        root.setContentsMargins(0, 0, 0, 0)
-        root.setSpacing(0)
-
-        content = QWidget()
-        content.setObjectName("dlgContent")
-        content.setStyleSheet(f"QWidget#dlgContent {{ background: {dialog_background}; }}")
-        body = QVBoxLayout(content)
-        body.setContentsMargins(24, 0, 24, 34)
-        body.setSpacing(0)
-
-        title = QLabel("Install Theme")
-        title.setFont(_ui_font(19, QFont.Weight.Bold))
-        title.setStyleSheet(f"color: {t['text_primary']}; background: transparent;")
-        body.addWidget(title)
-        body.addSpacing(8)
-
-        desc = QLabel(
-            f"Are you sure you want to install <b>{html_escape(self.theme_data['name'])}</b>?<br>"
-            "This will overwrite your current config and styles files.<br>"
-            "Note: Some themes require additional fonts."
+        name = self.theme_data.get("name", "")
+        dlg = ContentDialog(
+            parent=self.window(),
+            title="Install Theme",
+            content=(
+                f"Are you sure you want to install {name}?\n"
+                "This will overwrite your current config and styles files.\n"
+                "Note: Some themes require additional fonts."
+            ),
+            primary_button_text="Install",
+            close_button_text="Cancel",
+            default_button=ContentDialogButton.PRIMARY,
         )
-        desc.setFont(_ui_font(13))
-        desc.setWordWrap(True)
-        desc.setStyleSheet(f"color: {t['text_secondary']}; background: transparent;")
-        body.addWidget(desc)
-        root.addWidget(content)
+        self._install_dialog = dlg
+        dlg.primary_button_click.connect(self._do_install)
+        dlg.closed.connect(lambda _: self._clear_install_dialog())
+        dlg.show_dialog()
 
-        footer = QWidget()
-        footer.setObjectName("dlgFooter")
-        footer.setFixedHeight(64)
-        footer.setStyleSheet(f"QWidget#dlgFooter {{ background: {footer_background}; }}")
-        fl = QHBoxLayout(footer)
-        fl.setContentsMargins(0, 0, 0, 0)
-        fl.setSpacing(8)
-        fl.addStretch()
-        cancel_btn = _make_btn("Cancel", "default", slot=dialog.reject)
-        cancel_btn.setFixedSize(120, 28)
-        install_btn = _make_btn("Install", "accent", slot=dialog.accept)
-        install_btn.setFixedSize(120, 28)
-        fl.addWidget(cancel_btn)
-        fl.addWidget(install_btn)
-        fl.addStretch()
-        root.addWidget(footer)
-
-        dialog.setFixedSize(400, root.minimumSize().height())
-        try:
-            if not is_windows_10():
-                hwnd = int(dialog.winId())
-                no_backdrop = ctypes.c_int(1)
-                ctypes.windll.dwmapi.DwmSetWindowAttribute(
-                    hwnd, 38, ctypes.byref(no_backdrop), ctypes.sizeof(no_backdrop)
-                )
-                r, g, b_ch = (0x2B, 0x2B, 0x2B) if dark else (0xF5, 0xF5, 0xF5)
-                colorref = ctypes.c_int((b_ch << 16) | (g << 8) | r)
-                ctypes.windll.dwmapi.DwmSetWindowAttribute(hwnd, 35, ctypes.byref(colorref), ctypes.sizeof(colorref))
-        except Exception:
-            pass
-        return dialog
+    def _clear_install_dialog(self) -> None:
+        self._install_dialog = None
 
     def _do_install(self) -> None:
         try:
@@ -1209,7 +1111,12 @@ class ThemeDetailPanel(QWidget):
                     last_err = exc
             raise last_err or RuntimeError("Failed to download theme files")
         except Exception as exc:
-            QMessageBox.critical(self, "Error", f"Failed to install theme: {exc}")
+            ContentDialog(
+                parent=self.window(),
+                title="Installation Failed",
+                content=f"Failed to install theme:\n{exc}",
+                close_button_text="Close",
+            ).show_dialog()
 
 
 class ThemeViewer(ViewBase, QMainWindow):
@@ -1244,7 +1151,7 @@ class ThemeViewer(ViewBase, QMainWindow):
         self._header_title.setStyleSheet(f"color: {t['text_primary']};")
         self._header_info.setStyleSheet(f"color: {t['text_primary']};")
         if self.detail_panel._install_dialog is not None:
-            self.detail_panel._install_dialog.reject()
+            self.detail_panel._install_dialog.hide_dialog()
         self._filter_sidebar(self.search_box.text())
         self.detail_panel.refresh_theme()
 
@@ -1549,7 +1456,12 @@ class ThemeViewer(ViewBase, QMainWindow):
                 ),
             )
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"Backup failed: {e}")
+            ContentDialog(
+                parent=self,
+                title="Backup Failed",
+                content=f"Backup failed:\n{e}",
+                close_button_text="Close",
+            ).show_dialog()
 
     def _restore_config(self):
         self.restore_button.setText("Restoring\u2026")
@@ -1558,7 +1470,12 @@ class ThemeViewer(ViewBase, QMainWindow):
         try:
             if not os.path.exists(bcfg) or not os.path.exists(bsty):
                 self.restore_button.setText("Restore")
-                QMessageBox.warning(self, "Error", "Restore failed: backup files missing.")
+                ContentDialog(
+                    parent=self,
+                    title="Restore Failed",
+                    content="Backup files are missing. Please create a backup first.",
+                    close_button_text="Close",
+                ).show_dialog()
                 return
             _run_yasbc("stop")
             shutil.copy2(bcfg, cfg)
@@ -1567,7 +1484,12 @@ class ThemeViewer(ViewBase, QMainWindow):
             _run_yasbc("start")
             QTimer.singleShot(2000, lambda: self.restore_button.setText("Restore"))
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"Restore failed: {e}")
+            ContentDialog(
+                parent=self,
+                title="Restore Failed",
+                content=f"Restore failed:\n{e}",
+                close_button_text="Close",
+            ).show_dialog()
 
     def closeEvent(self, event):
         self._splash_timer.stop()
