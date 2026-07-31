@@ -2,6 +2,8 @@
 
 Puts your running apps on the status bar, working just like a standard taskbar. You can pin your favorite apps, drag and drop buttons to reorder them, hover to see window preview thumbnails, and right-click to minimize, focus, or close windows.
 
+Taskbar button order is persisted automatically after drag-and-drop and restored when YASB starts. Windows that are not present during startup are skipped until they appear again.
+
 | Option            | Type    | Default                                                                 | Description                                                                 |
 |-------------------|---------|-------------------------------------------------------------------------|-----------------------------------------------------------------------------|
 | `icon_size`           | integer  | 16                        | The size of icons |
@@ -9,12 +11,14 @@ Puts your running apps on the status bar, working just like a standard taskbar. 
 | `strict_filtering` | boolean | `true` | Whether to enforce strict filtering of applications based on their properties. |
 | `ignore_apps`       | dict    | `processes:[], titles[], classes:[]` | Ignore applications by process name, title, or class. |
 | `tooltip`  | boolean  | `True`        | Whether to show the tooltip on hover. |
+| `label`  | string  | `"{win[title]}"`        | Format string for taskbar window titles. |
 | `title_label`       | dict    | `{'enabled': False, 'show': 'focused', 'min_length': 10, 'max_length': 30}`                     | Title label configuration for displaying window titles.                     |
 | `monitor_exclusive` | boolean | `False` | Whether the application should be exclusive to the monitor. |
 | `hide_empty`        | boolean | `False` | Whether to hide the taskbar widget when there are no applications to display. |
 | `callbacks`         | dict    | `{'on_left': 'toggle_window', 'on_middle': 'do_nothing', 'on_right': 'context_menu'}` | Callbacks for mouse events on the widget.                                   |
 | `preview`           | dict    | `{'enabled': False, 'width': 240, 'delay': 400, 'padding': 8, 'margin': 8}` | Configuration for window preview thumbnails.                                |
 | `animation`         | dict    | `{'enabled': True, 'duration': 200}` | Configuration for animations when switching between applications. |
+| `rewrite`           | list    | `[]` | Ordered regex rules for rewriting window titles. |
 
 ## Example Configuration
 
@@ -24,6 +28,7 @@ taskbar:
   options:
     icon_size: 16
     tooltip: true
+    label: "{win[title]} - {win[process][name]}"
     show_only_visible: false
     strict_filtering: true
     monitor_exclusive: false
@@ -41,6 +46,10 @@ taskbar:
       show: "always"
       min_length: 10
       max_length: 30
+    callbacks:
+      on_left: toggle_window
+      on_middle: do_nothing
+      on_right: context_menu
     ignore_apps:
       processes: []
       titles: []
@@ -53,6 +62,7 @@ taskbar:
 - **show_only_visible:** If set to `True`, the taskbar will only show applications that are currently visible on the screen.
 - **strict_filtering:** If set to `True`, the taskbar will enforce strict filtering of applications based on their properties, such as whether they can be minimized or are tool windows, splash screens, etc. This is useful for ensuring that only valid applications are displayed in the taskbar.
 - **tooltip:** Whether to show the tooltip on hover.
+- **label:** The format string for taskbar window titles. It supports the same `{win[...]}` placeholders as the Active Window widget, including `{win[title]}` and `{win[process][name]}`. Rewrite rules are applied to the complete formatted label.
 - **title_label:** A dictionary specifying the configuration for window title labels. It includes:
   - enabled: A boolean flag to enable or disable title labels.
   - show: A string that determines the display behavior (either `"focused"` or `"always"`).
@@ -64,13 +74,28 @@ taskbar:
   - titles: A list of window titles to ignore.
   - classes: A list of window classes to ignore.
 - **hide_empty:** A boolean indicating whether to hide the taskbar widget when there are no applications to display. If set to `True`, the taskbar will automatically hide itself when there are no open applications that meet the filtering criteria.
-- **callbacks:** A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`, and the values are the names of the callback functions, which can be `toggle_window`, `do_nothing`, `close_app` or `context_menu`.
+- **callbacks:** A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`. The default actions are `toggle_window`, `do_nothing`, and `context_menu`. Set `on_middle: close` to close the window under the cursor; `close_app` remains accepted as an alias for `close`.
 - **preview:** A dictionary specifying the configuration for window preview thumbnails. It includes:
   - enabled: A boolean flag to enable or disable window previews.
   - width: The width of the preview thumbnail in pixels. (minimum 100px)
   - delay: The delay in milliseconds before showing the preview after hovering over an application icon.
   - padding: The padding around the preview thumbnail in pixels.
   - margin: The margin between the preview thumbnail and the taskbar in pixels.
+- **rewrite:** A list of ordered search-and-replace rules applied to window titles before they are displayed or used as taskbar tooltips. Each rule supports `pattern`, `replacement`, and optional `case` values: `lower`, `upper`, `title`, or `capitalize`.
+
+```yaml
+taskbar:
+  type: "yasb.taskbar.TaskbarWidget"
+  options:
+    title_label:
+      enabled: true
+    rewrite:
+      - pattern: "^(.+?) - Google Chrome$"
+        replacement: "\\1"
+      - pattern: "\\bVS Code\\b"
+        replacement: "CODE"
+        case: upper
+```
 
 > Note:
 > When **preview** is enabled **tooltip** are automatically disabled to avoid overlap.

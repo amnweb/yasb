@@ -10575,6 +10575,11 @@
           "title": "Tooltip",
           "type": "boolean"
         },
+        "label": {
+          "default": "{win[title]}",
+          "title": "Label",
+          "type": "string"
+        },
         "monitor_exclusive": {
           "default": false,
           "title": "Monitor Exclusive",
@@ -10613,6 +10618,14 @@
             "min_length": 10,
             "max_length": 30
           }
+        },
+        "rewrite": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/RewriteConfig"
+          },
+          "title": "Rewrite",
+          "type": "array"
         },
         "hide_empty": {
           "default": false,

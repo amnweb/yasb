@@ -7,6 +7,7 @@ from core.validation.widgets.base_model import (
     CustomBaseModel,
     KeybindingConfig,
 )
+from core.validation.widgets.yasb.active_window import RewriteConfig
 
 
 class IgnoreAppsConfig(CustomBaseModel):
@@ -37,18 +38,21 @@ class PreviewConfig(CustomBaseModel):
 
 class TaskbarCallbacksConfig(CallbacksConfig):
     on_left: str = "toggle_window"
+    on_middle: str = "do_nothing"
     on_right: str = "context_menu"
 
 
 class TaskbarConfig(CustomBaseModel):
     icon_size: int = 16
     tooltip: bool = False
+    label: str = "{win[title]}"
     monitor_exclusive: bool = False
     show_only_visible: bool = False
     strict_filtering: bool = True
     ignore_apps: IgnoreAppsConfig = IgnoreAppsConfig()
     animation: AnimationConfig = AnimationConfig()
     title_label: TitleLabelConfig = TitleLabelConfig()
+    rewrite: list[RewriteConfig] = []
     hide_empty: bool = False
     preview: PreviewConfig = PreviewConfig()
     keybindings: list[KeybindingConfig] = []
