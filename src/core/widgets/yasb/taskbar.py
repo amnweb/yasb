@@ -494,7 +494,6 @@ class TaskbarWidget(BaseWidget):
         self._flash_timers = {}
         self._recycle_bin_state = {"is_empty": True}
         self._pending_pinned_recreations = set()  # Track pending placeholder recreations
-        self._pending_launch_monitors = {}  # Maps pinned unique_id -> target monitor handle
 
         # Initialize pin manager for pinned apps functionality
         self._pin_manager = PinManager()
@@ -1173,14 +1172,6 @@ class TaskbarWidget(BaseWidget):
 
     def _on_window_added(self, hwnd, window_data):
         """Handle window added signal from task manager"""
-        unique_id, _ = self._get_app_identifier(hwnd, window_data)
-        if unique_id:
-            target_monitor = self._move_pending_window_to_monitor(hwnd, unique_id)
-            if target_monitor:
-                window_data = dict(window_data)
-                window_data["monitor_handle"] = target_monitor
-                window_data["monitor_hwnd"] = target_monitor
-
         # Apply filtering based on widget configuration
         if not self._should_show_window(hwnd, window_data):
             return
@@ -2028,57 +2019,10 @@ class TaskbarWidget(BaseWidget):
                 if not unique_id:
                     return
 
-            monitor_hwnd = self._get_widget_monitor_handle()
-            if monitor_hwnd:
-                self._pending_launch_monitors[unique_id] = monitor_hwnd
-                QTimer.singleShot(
-                    10000,
-                    lambda uid=unique_id: self._pending_launch_monitors.pop(uid, None),
-                )
-
             # Launch using PinManager with optional arguments
             self._pin_manager.launch_pinned_app(unique_id, extra_arguments=extra_arguments)
         except Exception as e:
             logging.error("Error launching pinned app: %s", e)
-
-    def _move_pending_window_to_monitor(self, hwnd: int, unique_id: str) -> int | None:
-        """Move a newly launched pinned window to the monitor whose bar was clicked."""
-        monitor_hwnd = self._pending_launch_monitors.pop(unique_id, None)
-        if not monitor_hwnd or not win32gui.IsWindow(hwnd):
-            return None
-
-        try:
-            monitor_info = get_monitor_info(monitor_hwnd)
-            work_area = monitor_info["rect_work_area"]
-            left, top, right, bottom = win32gui.GetWindowRect(hwnd)
-            width = max(1, right - left)
-            height = max(1, bottom - top)
-            was_maximized = win32gui.GetWindowPlacement(hwnd)[1] == win32con.SW_MAXIMIZE
-
-            if was_maximized:
-                win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
-                left, top, right, bottom = win32gui.GetWindowRect(hwnd)
-                width = max(1, right - left)
-                height = max(1, bottom - top)
-
-            x = work_area["x"] + (work_area["width"] - width) // 2
-            y = work_area["y"] + (work_area["height"] - height) // 2
-            win32gui.SetWindowPos(
-                hwnd,
-                0,
-                x,
-                y,
-                width,
-                height,
-                win32con.SWP_NOZORDER | win32con.SWP_NOACTIVATE | win32con.SWP_SHOWWINDOW,
-            )
-
-            if was_maximized:
-                win32gui.ShowWindow(hwnd, win32con.SW_MAXIMIZE)
-            return monitor_hwnd
-        except Exception as e:
-            logging.debug("Could not move launched window %s to monitor %s: %s", hwnd, monitor_hwnd, e)
-            return None
 
     def ensure_foreground(self, hwnd):
         """When we use dragging file ensure the window is in foreground."""

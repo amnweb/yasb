@@ -96,20 +96,18 @@ def get_monitor_hwnd(window_hwnd: int) -> int | None:
 
 def get_monitor_info(monitor_hwnd: int) -> dict:
     monitor_info = GetMonitorInfo(monitor_hwnd)
-    monitor_left, monitor_top, monitor_right, monitor_bottom = monitor_info["Monitor"]
-    work_left, work_top, work_right, work_bottom = monitor_info["Work"]
     return {
         "rect": {
-            "x": monitor_left,
-            "y": monitor_top,
-            "width": monitor_right - monitor_left,
-            "height": monitor_bottom - monitor_top,
+            "x": monitor_info["Monitor"][0],
+            "y": monitor_info["Monitor"][1],
+            "width": monitor_info["Monitor"][2],
+            "height": monitor_info["Monitor"][3],
         },
         "rect_work_area": {
-            "x": work_left,
-            "y": work_top,
-            "width": work_right - work_left,
-            "height": work_bottom - work_top,
+            "x": monitor_info["Work"][0],
+            "y": monitor_info["Work"][1],
+            "width": monitor_info["Work"][2],
+            "height": monitor_info["Work"][3],
         },
         "flags": monitor_info["Flags"],
         "device": monitor_info["Device"],
