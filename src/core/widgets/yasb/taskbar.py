@@ -509,7 +509,6 @@ class TaskbarWidget(BaseWidget):
         self._widget_container.drag_ended.connect(lambda: self._set_dragging(False))
 
         self.register_callback("toggle_window", self._on_toggle_window)
-        self.register_callback("close", self._on_close_app)
         self.register_callback("close_app", self._on_close_app)
         self.register_callback("context_menu", self._on_context_menu)
 
