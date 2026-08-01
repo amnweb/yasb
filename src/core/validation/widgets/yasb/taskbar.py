@@ -38,7 +38,7 @@ class PreviewConfig(CustomBaseModel):
 
 class TaskbarCallbacksConfig(CallbacksConfig):
     on_left: str = "toggle_window"
-    on_middle: str = "close_app"
+    on_middle: str = "do_nothing"
     on_right: str = "context_menu"
 
 

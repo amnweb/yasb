@@ -15,7 +15,7 @@ Taskbar button order is persisted automatically after drag-and-drop and restored
 | `title_label`       | dict    | `{'enabled': False, 'show': 'focused', 'min_length': 10, 'max_length': 30}`          | Title label configuration for displaying window titles.                        |
 | `monitor_exclusive` | boolean | `False`                                                                              | Whether the application should be exclusive to the monitor.                    |
 | `hide_empty`        | boolean | `False`                                                                              | Whether to hide the taskbar widget when there are no applications to display.  |
-| `callbacks`         | dict    | `{'on_left': 'toggle_window', 'on_middle': 'close_app', 'on_right': 'context_menu'}` | Callbacks for mouse events on the widget.                                      |
+| `callbacks`         | dict    | `{'on_left': 'toggle_window', 'on_middle': 'do_nothing', 'on_right': 'context_menu'}` | Callbacks for mouse events on the widget.                                      |
 | `preview`           | dict    | `{'enabled': False, 'width': 240, 'delay': 400, 'padding': 8, 'margin': 8}`          | Configuration for window preview thumbnails.                                   |
 | `animation`         | dict    | `{'enabled': True, 'duration': 200}`                                                 | Configuration for animations when switching between applications.              |
 | `rewrite`           | list    | `[]`                                                                                 | Ordered regex rules for rewriting window titles.                               |
@@ -48,7 +48,7 @@ taskbar:
       max_length: 30
     callbacks:
       on_left: toggle_window
-      on_middle: close_app
+      on_middle: do_nothing
       on_right: context_menu
     ignore_apps:
       processes: []
@@ -74,7 +74,7 @@ taskbar:
   - titles: A list of window titles to ignore.
   - classes: A list of window classes to ignore.
 - **hide_empty:** A boolean indicating whether to hide the taskbar widget when there are no applications to display. If set to `True`, the taskbar will automatically hide itself when there are no open applications that meet the filtering criteria.
-- **callbacks:** A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`. The default actions are `toggle_window`, `close_app`, and `context_menu`. Set `on_middle: close_app` to close the window under the cursor.
+- **callbacks:** A dictionary specifying the callbacks for mouse events. The keys are `on_left`, `on_middle`, and `on_right`. The default actions are `toggle_window`, `do_nothing`, and `context_menu`. Set `on_middle: close_app` to close the window under the cursor.
 - **preview:** A dictionary specifying the configuration for window preview thumbnails. It includes:
   - enabled: A boolean flag to enable or disable window previews.
   - width: The width of the preview thumbnail in pixels. (minimum 100px)
