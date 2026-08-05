@@ -114,6 +114,7 @@ class CLIHandler:
         self.task_handler = CLITaskHandler()
         self.update_handler = CLIUpdateHandler()
         self.channel_handler = CLIChannelHandler()
+        self.crash_dump_handler = CLICrashDumpHandler()
 
     def send_command_to_application(self, command: str):
         """
@@ -282,6 +283,18 @@ class CLIHandler:
             "--task",
             action="store_true",
             help="Disable autostart as a scheduled task",
+        )
+
+        subparsers.add_parser(
+            "enable-crash-dumps",
+            help="Enable crash dumps for troubleshooting",
+            add_help=False,
+        )
+
+        subparsers.add_parser(
+            "disable-crash-dumps",
+            help="Disable crash dumps",
+            add_help=False,
         )
 
         subparsers.add_parser(
@@ -468,6 +481,20 @@ class CLIHandler:
                     self.task_handler.delete_task()
             else:
                 self.disable_startup()
+            sys.exit(0)
+
+        elif args.command == "enable-crash-dumps":
+            if not self.task_handler.is_admin():
+                print("Please run this command as an administrator.")
+            else:
+                self.crash_dump_handler.enable()
+            sys.exit(0)
+
+        elif args.command == "disable-crash-dumps":
+            if not self.task_handler.is_admin():
+                print("Please run this command as an administrator.")
+            else:
+                self.crash_dump_handler.disable()
             sys.exit(0)
 
         elif args.command == "log":
@@ -677,6 +704,8 @@ class CLIHandler:
                   reload                    Reload the application
                   enable-autostart          Enable autostart on system boot
                   disable-autostart         Disable autostart on system boot
+                  enable-crash-dumps        Enable crash dumps for troubleshooting
+                  disable-crash-dumps       Disable crash dumps
                   monitor-information       Show information about connected monitors
                   show-bar                  Show the bar on all or a specific screen
                   hide-bar                  Hide the bar on all or a specific screen
@@ -709,6 +738,53 @@ class CLIHandler:
         else:
             print("Unknown command. Use --help for available options.")
             sys.exit(1)
+
+
+class CLICrashDumpHandler:
+    """Turn Windows crash dumps for yasb.exe on or off.
+
+    Windows logs crashes to the Event Viewer but doesn't save a dump file unless
+    you ask it to, so there is usually nothing left to debug after a native crash.
+
+    https://learn.microsoft.com/en-us/windows/win32/wer/collecting-user-mode-dumps
+    """
+
+    KEY_PATH = "SOFTWARE\\Microsoft\\Windows\\Windows Error Reporting\\LocalDumps\\yasb.exe"
+    DUMP_FOLDER = os.path.join(DEFAULT_CONFIG_DIRECTORY, "dumps")
+    DUMP_TYPE = 1  # 1 = mini dump, 2 = full dump
+    DUMP_COUNT = 5  # oldest is replaced once this many exist
+
+    def enable(self):
+        try:
+            with winreg.CreateKeyEx(winreg.HKEY_LOCAL_MACHINE, self.KEY_PATH, 0, winreg.KEY_SET_VALUE) as key:
+                winreg.SetValueEx(key, "DumpFolder", 0, winreg.REG_SZ, self.DUMP_FOLDER)
+                winreg.SetValueEx(key, "DumpType", 0, winreg.REG_DWORD, self.DUMP_TYPE)
+                winreg.SetValueEx(key, "DumpCount", 0, winreg.REG_DWORD, self.DUMP_COUNT)
+        except OSError as e:
+            print(f"Failed to enable crash dumps: {e}")
+            return
+
+        # WER will not create the folder for us when DumpFolder is set.
+        try:
+            os.makedirs(self.DUMP_FOLDER, exist_ok=True)
+        except OSError as e:
+            print(f"Warning: could not create the dump directory: {e}")
+
+        print("Crash dumps enabled.")
+        print(f"Dumps will be saved to {self.DUMP_FOLDER}")
+        print(f"The last {self.DUMP_COUNT} are kept. Attach the newest one when reporting a crash.")
+        print("A dump is a snapshot of memory, so it can contain data from your config.")
+
+    def disable(self):
+        try:
+            winreg.DeleteKey(winreg.HKEY_LOCAL_MACHINE, self.KEY_PATH)
+        except FileNotFoundError:
+            print("Crash dumps are not enabled.")
+            return
+        except OSError as e:
+            print(f"Failed to disable crash dumps: {e}")
+            return
+        print("Crash dumps disabled. Existing dump files were left in place.")
 
 
 class CLITaskHandler:
