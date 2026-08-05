@@ -1,4 +1,4 @@
-"""Drawing helpers for the screenshot editor (arrow, blur, circle, …)."""
+"""Drawing helpers for the screenshot editor (arrow, blur, circle, ...)."""
 
 from PyQt6.QtCore import QPoint, QPointF, QRect, Qt
 from PyQt6.QtGui import QBrush, QColor, QImage, QPainter, QPen, QPixmap, QPolygonF
@@ -102,7 +102,7 @@ def apply_blur_region(layer: QPixmap, composite: QPixmap, r: QRect, strength: in
     Soft frosted blur into layer over rect r (image-buffer coords).
 
     Multi-pass smooth scale - not chunky pixelation.
-    strength: 1 (light) … 10 (heavy).
+    strength: 1 (light) ... 10 (heavy).
     """
     bounds = QRect(0, 0, composite.width(), composite.height())
     r = r.intersected(bounds)
@@ -117,10 +117,10 @@ def apply_blur_region(layer: QPixmap, composite: QPixmap, r: QRect, strength: in
     w, h = src.width(), src.height()
     s = max(1, min(10, int(strength)))
     # Higher strength -> smaller intermediate size -> stronger frost.
-    factor = 2 + s  # 3 … 12
+    factor = 2 + s  # 3 ... 12
     sw = max(1, w // factor)
     sh = max(1, h // factor)
-    passes = 2 + s // 3  # 2 … 5
+    passes = 2 + s // 3  # 2 ... 5
 
     blurred = src
     for _ in range(passes):

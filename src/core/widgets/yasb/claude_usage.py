@@ -749,5 +749,5 @@ class ClaudeUsageWidget(BaseWidget):
         self._menu.adjustSize()
         # Lock the width after the first layout so switching periods only changes the height. This
         # respects the stylesheet min-width (adjustSize already applied it) without letting longer
-        # model names reflow the popup — which is what made the bars change length between periods.
+        # model names reflow the popup - which is what made the bars change length between periods.
         self._menu.setFixedWidth(self._menu.width())
