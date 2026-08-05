@@ -276,6 +276,9 @@ def get_process_icon(pid: int) -> Image.Image | None:
 
 def hicon_to_image(hicon: int) -> Image.Image | None:
     """Converts an icon handle to an image"""
+    if not hicon:
+        return None
+
     # Get icon info
     icon_info = ICONINFO()
     if not GetIconInfo(hicon, byref(icon_info)):
