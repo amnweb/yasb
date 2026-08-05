@@ -99,8 +99,8 @@ def init_logger():
     console_handler.setLevel(logging.INFO)
     console_handler.setFormatter(ColoredFormatter(CONSOLE_FORMAT, datefmt=CONSOLE_DATETIME))
     logging.basicConfig(level=logging.DEBUG, handlers=[file_handler, console_handler], encoding="utf-8")
-
-    faulthandler.enable(file=file_handler.stream, all_threads=True, c_stack=True)
+    # c_stack is dead on Windows
+    faulthandler.enable(file=file_handler.stream, all_threads=True, c_stack=False)
     logging.info("%s v%s", APP_NAME, BUILD_VERSION)
 
 
