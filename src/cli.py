@@ -749,22 +749,37 @@ class CLICrashDumpHandler:
     https://learn.microsoft.com/en-us/windows/win32/wer/collecting-user-mode-dumps
     """
 
-    KEY_PATH = "SOFTWARE\\Microsoft\\Windows\\Windows Error Reporting\\LocalDumps\\yasb.exe"
+    PARENT_KEY_PATH = "SOFTWARE\\Microsoft\\Windows\\Windows Error Reporting\\LocalDumps"
+    KEY_PATH = PARENT_KEY_PATH + "\\yasb.exe"
     DUMP_FOLDER = os.path.join(DEFAULT_CONFIG_DIRECTORY, "dumps")
     DUMP_TYPE = 1  # 1 = mini dump, 2 = full dump
-    DUMP_COUNT = 5  # oldest is replaced once this many exist
+    DUMP_COUNT = 5
+    OWNS_PARENT_VALUE = "YasbCreatedLocalDumps"
+
+    def _parent_key_exists(self) -> bool:
+        try:
+            winreg.CloseKey(winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, self.PARENT_KEY_PATH))
+            return True
+        except OSError:
+            return False
 
     def enable(self):
+        # An empty LocalDumps key is itself a switch that makes Windows dump every
+        # application, and creating our key creates it too. Remember whether it was
+        # already there so disable() only removes one we made.
+        parent_existed = self._parent_key_exists()
+
         try:
             with winreg.CreateKeyEx(winreg.HKEY_LOCAL_MACHINE, self.KEY_PATH, 0, winreg.KEY_SET_VALUE) as key:
                 winreg.SetValueEx(key, "DumpFolder", 0, winreg.REG_SZ, self.DUMP_FOLDER)
                 winreg.SetValueEx(key, "DumpType", 0, winreg.REG_DWORD, self.DUMP_TYPE)
                 winreg.SetValueEx(key, "DumpCount", 0, winreg.REG_DWORD, self.DUMP_COUNT)
+                if not parent_existed:
+                    winreg.SetValueEx(key, self.OWNS_PARENT_VALUE, 0, winreg.REG_DWORD, 1)
         except OSError as e:
             print(f"Failed to enable crash dumps: {e}")
             return
 
-        # WER will not create the folder for us when DumpFolder is set.
         try:
             os.makedirs(self.DUMP_FOLDER, exist_ok=True)
         except OSError as e:
@@ -777,6 +792,12 @@ class CLICrashDumpHandler:
 
     def disable(self):
         try:
+            with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, self.KEY_PATH) as key:
+                created_parent = bool(winreg.QueryValueEx(key, self.OWNS_PARENT_VALUE)[0])
+        except OSError:
+            created_parent = False
+
+        try:
             winreg.DeleteKey(winreg.HKEY_LOCAL_MACHINE, self.KEY_PATH)
         except FileNotFoundError:
             print("Crash dumps are not enabled.")
@@ -784,6 +805,18 @@ class CLICrashDumpHandler:
         except OSError as e:
             print(f"Failed to disable crash dumps: {e}")
             return
+
+        # Only tear down LocalDumps if we were the ones who created it, and only while
+        # nothing else has moved in since.
+        if created_parent:
+            try:
+                with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, self.PARENT_KEY_PATH) as key:
+                    subkeys, values, _ = winreg.QueryInfoKey(key)
+                if not subkeys and not values:
+                    winreg.DeleteKey(winreg.HKEY_LOCAL_MACHINE, self.PARENT_KEY_PATH)
+            except OSError:
+                pass
+
         print("Crash dumps disabled. Existing dump files were left in place.")
 
 
