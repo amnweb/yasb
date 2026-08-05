@@ -1,5 +1,6 @@
 import ctypes
 import logging
+import threading
 from ctypes import byref, wintypes
 from typing import NamedTuple
 
@@ -510,18 +511,20 @@ class GpuWorker(QThread):
 
     def __init__(self, update_interval: int, parent=None):
         super().__init__(parent)
-        self._running = True
         self._update_interval = update_interval
         self._gpu_indices: set[int] = set()
+        self._stop_event = threading.Event()
         app = QApplication.instance()
         if app is not None:
             app.aboutToQuit.connect(self.stop)
 
     def stop(self) -> None:
-        self._running = False
+        self._stop_event.set()
+        self.wait(2000)
         GpuWorker._instance = None
 
     def run(self) -> None:
+        self._stop_event.clear()
         api = GpuApi(self._gpu_indices)
         try:
             api.prime()
@@ -531,15 +534,15 @@ class GpuWorker(QThread):
                 logger.warning("GpuWorker gpu_index %s not found. Available indices: %s", missing, sorted(available))
             if not (self._gpu_indices & available):
                 return
-            while self._running:
+            while not self._stop_event.is_set():
                 try:
                     data = api.collect()
-                    if self._running:
+                    if not self._stop_event.is_set():
                         self.data_ready.emit(data)
                 except Exception as e:
                     logger.error("GpuWorker %s", e)
-                    if self._running:
+                    if not self._stop_event.is_set():
                         self.data_ready.emit([])
-                self.msleep(self._update_interval)
+                self._stop_event.wait(self._update_interval / 1000)
         finally:
             api.close()

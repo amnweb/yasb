@@ -30,7 +30,7 @@ class ServerCheckWorker(QThread):
 
     def stop(self) -> None:
         self.running = False
-        self.wait()
+        self.wait(2000)
 
     def _has_internet(self) -> bool:
         """Check if internet is available."""

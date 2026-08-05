@@ -103,6 +103,17 @@ class QuickLaunchService(QObject):
         self._icons_dir = os.path.join(tempfile.gettempdir(), "yasb_quick_launch_icons")
         os.makedirs(self._icons_dir, exist_ok=True)
 
+        app_inst = QApplication.instance()
+        if app_inst:
+            app_inst.aboutToQuit.connect(self._stop_workers)
+
+    def _stop_workers(self):
+        if self._icon_worker and self._icon_worker.isRunning():
+            self._icon_worker.stop()
+            self._icon_worker.wait(2000)
+        self._query_worker.shutdown()
+        self._query_worker.wait(2000)
+
     @property
     def providers(self) -> list[BaseProvider]:
         return self._providers

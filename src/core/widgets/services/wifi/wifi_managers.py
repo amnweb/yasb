@@ -18,6 +18,7 @@ from enum import IntFlag, StrEnum, auto
 from typing import override
 
 from PyQt6.QtCore import QObject, QThread, pyqtSignal
+from PyQt6.QtWidgets import QApplication
 from winrt.windows.devices.wifi import (
     WiFiAdapter,
     WiFiConnectionStatus,
@@ -127,28 +128,36 @@ class WiFiWorker(QThread):
         self._get_exact = get_exact
         self._poll_interval = poll_interval
         self._initialized = True
-        self._running = False
         self._wifi_manager = WiFiManager()
+        self._stop_event = threading.Event()
+
+        app_inst = QApplication.instance()
+        if app_inst is not None:
+            app_inst.aboutToQuit.connect(self.stop)
 
     def stop(self):
         """Stop the worker"""
-        self._running = False
+        self._stop_event.set()
+        self.wait(2000)
+        WiFiWorker._instance = None
 
     @override
     def run(self):
         """Run the worker"""
         threading.current_thread().name = "WiFiWorker"
-        self._running = True
-        while self._running:
+        self._stop_event.clear()
+        while not self._stop_event.is_set():
             try:
                 bars = self._get_wifi_strength()
                 name = self._get_wifi_name()
                 exact_quality = self._get_exact_quality()
-                self.result.emit(WiFiInfo(bars, name, exact_quality))
+                if not self._stop_event.is_set():
+                    self.result.emit(WiFiInfo(bars, name, exact_quality))
             except Exception as e:
                 logger.error("WiFiWorker error: %s", e)
-                self.result.emit(WiFiInfo(0, "Error", -1))
-            self.msleep(self._poll_interval)
+                if not self._stop_event.is_set():
+                    self.result.emit(WiFiInfo(0, "Error", -1))
+            self._stop_event.wait(self._poll_interval / 1000)
 
     def _get_wifi_strength(self) -> int:
         """

@@ -2,6 +2,7 @@
 
 import ctypes
 import logging
+import threading
 from ctypes import wintypes
 from typing import NamedTuple
 
@@ -221,24 +222,26 @@ class MemoryWorker(QThread):
 
     def __init__(self, update_interval: int, parent=None):
         super().__init__(parent)
-        self._running = True
         self._update_interval = update_interval
+        self._stop_event = threading.Event()
         app_inst = QApplication.instance()
         if app_inst is not None:
             app_inst.aboutToQuit.connect(self.stop)
 
     def stop(self):
         """Signal the worker to stop."""
-        self._running = False
+        self._stop_event.set()
+        self.wait(2000)
         MemoryWorker._instance = None
 
     def run(self):
         """Collect memory data in a loop until stopped."""
-        while self._running:
+        self._stop_event.clear()
+        while not self._stop_event.is_set():
             try:
                 data = MemoryAPI.get_data()
-                if self._running:
+                if not self._stop_event.is_set():
                     self.data_ready.emit(data)
             except Exception as e:
                 logging.error("Memory worker error: %s", e)
-            self.msleep(self._update_interval)
+            self._stop_event.wait(self._update_interval / 1000)
