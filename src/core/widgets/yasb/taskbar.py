@@ -1802,20 +1802,38 @@ class TaskbarWidget(BaseWidget):
         if hasattr(self, "_task_manager") and self._task_manager and hwnd in self._task_manager._windows:
             app_window = self._task_manager._windows[hwnd]
 
-            # Check for flashing state first (flashing takes priority over active)
-            if hasattr(app_window, "is_flashing") and app_window.is_flashing:
-                return f"{base_class} flashing"
-
-            # Then check for active state
+            # The focused window is never considered not-focused, even if it is flashing.
             if hasattr(app_window, "is_active") and app_window.is_active:
                 return f"{base_class} foreground"
+
+            return self._get_non_foreground_container_class(hwnd, app_window)
 
         # Fallback to GetForegroundWindow check
         if hwnd == win32gui.GetForegroundWindow():
             return f"{base_class} foreground"
 
-        # Not active, not flashing - just running
-        return f"{base_class} running"
+        return self._get_non_foreground_container_class(hwnd)
+
+    @staticmethod
+    def _get_non_foreground_container_class(hwnd: int, app_window=None) -> str:
+        """Get the CSS class for a taskbar window that is not in the foreground."""
+        base_class = "app-container"
+        if app_window is not None:
+            is_flashing = bool(getattr(app_window, "is_flashing", False))
+            is_minimized = bool(app_window.is_minimized())
+            is_on_screen = bool(app_window.is_on_screen())
+        else:
+            is_flashing = False
+            try:
+                is_minimized = bool(win32gui.IsIconic(hwnd))
+                is_on_screen = bool(win32gui.IsWindowVisible(hwnd)) and not is_minimized
+            except Exception:
+                is_minimized = False
+                is_on_screen = False
+
+        state_class = "flashing" if is_flashing else "running"
+        visibility_class = " minimized" if is_minimized else " not-focused" if is_on_screen else ""
+        return f"{base_class} {state_class}{visibility_class}"
 
     def _get_app_icon(self, hwnd: int, title: str) -> QPixmap | None:
         """Return a QPixmap for the given window handle, using a DPI-aware cache."""
@@ -1986,17 +2004,14 @@ class TaskbarWidget(BaseWidget):
                 if hwnd and hwnd < 0:
                     continue
 
-                # Base class for running apps
-                new_cls = "app-container running"
-
-                # Preserve flashing if manager reports it
+                app_window = None
                 try:
                     if hasattr(self, "_task_manager") and self._task_manager and hwnd in self._task_manager._windows:
-                        aw = self._task_manager._windows[hwnd]
-                        if getattr(aw, "is_flashing", False):
-                            new_cls = "app-container flashing"
+                        app_window = self._task_manager._windows[hwnd]
                 except Exception:
                     pass
+
+                new_cls = self._get_non_foreground_container_class(hwnd, app_window)
 
                 # Target gets 'foreground' (manager usually clears flashing on activation)
                 if target_hwnd is not None and hwnd == target_hwnd:
