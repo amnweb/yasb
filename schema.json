@@ -397,141 +397,6 @@
       "title": "ActiveWindowEntry",
       "type": "object"
     },
-    "AiChatCallbacksConfig": {
-      "additionalProperties": false,
-      "properties": {
-        "on_left": {
-          "default": "toggle_chat",
-          "enum": [
-            "toggle_chat",
-            "do_nothing"
-          ],
-          "title": "On Left",
-          "type": "string"
-        },
-        "on_middle": {
-          "default": "do_nothing",
-          "enum": [
-            "toggle_chat",
-            "do_nothing"
-          ],
-          "title": "On Middle",
-          "type": "string"
-        },
-        "on_right": {
-          "default": "do_nothing",
-          "enum": [
-            "toggle_chat",
-            "do_nothing"
-          ],
-          "title": "On Right",
-          "type": "string"
-        }
-      },
-      "title": "AiChatCallbacksConfig",
-      "type": "object"
-    },
-    "AiChatConfig": {
-      "additionalProperties": false,
-      "properties": {
-        "label": {
-          "default": "AI Chat",
-          "title": "Label",
-          "type": "string"
-        },
-        "chat": {
-          "$ref": "#/$defs/ChatConfig",
-          "default": {
-            "blur": true,
-            "round_corners": true,
-            "round_corners_type": "normal",
-            "border_color": "system",
-            "alignment": "right",
-            "direction": "down",
-            "offset_top": 6,
-            "offset_left": 0
-          }
-        },
-        "icons": {
-          "$ref": "#/$defs/core__validation__widgets__yasb__ai_chat__IconsConfig",
-          "default": {
-            "send": "\uf1d8",
-            "stop": "\uf04d",
-            "clear": "\uf1f8",
-            "assistant": "\udb81\ude74",
-            "attach": "\uf0c6",
-            "float_on": "\udb84\udcac",
-            "float_off": "\udb84\udca9",
-            "close": "\uf00d",
-            "copy": "\uebcc",
-            "copy_check": "\uf00c"
-          }
-        },
-        "notification_dot": {
-          "$ref": "#/$defs/core__validation__widgets__yasb__ai_chat__NotificationDotConfig",
-          "default": {
-            "enabled": true,
-            "corner": "bottom_left",
-            "color": "red",
-            "margin": [
-              1,
-              1
-            ]
-          }
-        },
-        "start_floating": {
-          "default": true,
-          "title": "Start Floating",
-          "type": "boolean"
-        },
-        "callbacks": {
-          "$ref": "#/$defs/AiChatCallbacksConfig",
-          "default": {
-            "on_left": "toggle_chat",
-            "on_middle": "do_nothing",
-            "on_right": "do_nothing"
-          }
-        },
-        "keybindings": {
-          "default": [],
-          "items": {
-            "$ref": "#/$defs/KeybindingConfig"
-          },
-          "title": "Keybindings",
-          "type": "array"
-        },
-        "providers": {
-          "items": {
-            "$ref": "#/$defs/ProviderConfig"
-          },
-          "title": "Providers",
-          "type": "array"
-        }
-      },
-      "required": [
-        "providers"
-      ],
-      "title": "AiChatConfig",
-      "type": "object"
-    },
-    "AiChatEntry": {
-      "properties": {
-        "type": {
-          "const": "yasb.ai_chat.AiChatWidget",
-          "title": "Type",
-          "type": "string"
-        },
-        "options": {
-          "$ref": "#/$defs/AiChatConfig"
-        }
-      },
-      "required": [
-        "type",
-        "options"
-      ],
-      "title": "AiChatEntry",
-      "type": "object"
-    },
     "AnimationConfig": {
       "additionalProperties": false,
       "properties": {
@@ -1276,11 +1141,43 @@
       "title": "BinanceProviderConfig",
       "type": "object"
     },
+    "BluetoothBatteryIconsConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "empty": {
+          "default": "\ueba0",
+          "title": "Empty",
+          "type": "string"
+        },
+        "low": {
+          "default": "\ueba2",
+          "title": "Low",
+          "type": "string"
+        },
+        "medium": {
+          "default": "\ueba5",
+          "title": "Medium",
+          "type": "string"
+        },
+        "high": {
+          "default": "\ueba8",
+          "title": "High",
+          "type": "string"
+        },
+        "full": {
+          "default": "\uebaa",
+          "title": "Full",
+          "type": "string"
+        }
+      },
+      "title": "BluetoothBatteryIconsConfig",
+      "type": "object"
+    },
     "BluetoothCallbacksConfig": {
       "additionalProperties": false,
       "properties": {
         "on_left": {
-          "default": "toggle_label",
+          "default": "toggle_menu",
           "title": "On Left",
           "type": "string"
         },
@@ -1302,12 +1199,12 @@
       "additionalProperties": false,
       "properties": {
         "label": {
-          "default": "\udb80\udcb1",
+          "default": "\ue702",
           "title": "Label",
           "type": "string"
         },
         "label_alt": {
-          "default": "\uf293",
+          "default": "\ue702",
           "title": "Label Alt",
           "type": "string"
         },
@@ -1351,9 +1248,9 @@
         "icons": {
           "$ref": "#/$defs/BluetoothIconsConfig",
           "default": {
-            "bluetooth_on": "\udb80\udcaf",
-            "bluetooth_off": "\udb80\udcb2",
-            "bluetooth_connected": "\udb80\udcb1"
+            "bluetooth_on": "\ue702",
+            "bluetooth_off": "\ue702",
+            "bluetooth_connected": "\ue702"
           }
         },
         "device_aliases": {
@@ -1375,9 +1272,61 @@
         "callbacks": {
           "$ref": "#/$defs/BluetoothCallbacksConfig",
           "default": {
-            "on_left": "toggle_label",
+            "on_left": "toggle_menu",
             "on_middle": "do_nothing",
             "on_right": "do_nothing"
+          }
+        },
+        "menu_config": {
+          "$ref": "#/$defs/BluetoothMenuConfig",
+          "default": {
+            "blur": true,
+            "round_corners": true,
+            "round_corners_type": "normal",
+            "border_color": "System",
+            "alignment": "right",
+            "direction": "down",
+            "offset_top": 6,
+            "offset_left": 0,
+            "labels": {
+              "connect": "Connect",
+              "connected": "Connected",
+              "connecting": "Connecting",
+              "disconnect": "Disconnect",
+              "disconnecting": "Disconnecting",
+              "manage": "Manage",
+              "more_settings": "More Bluetooth settings",
+              "new_devices": "New devices",
+              "not_connected": "Not connected",
+              "pair": "Pair",
+              "power_off": "Off",
+              "power_on": "On",
+              "title": "Bluetooth",
+              "your_devices": "Your devices"
+            },
+            "device_icons": {
+              "battery": {
+                "empty": "\ueba0",
+                "full": "\uebaa",
+                "high": "\ueba8",
+                "low": "\ueba2",
+                "medium": "\ueba5"
+              },
+              "camera": "\ue722",
+              "computer": "\ue950",
+              "controller": "\ue7fc",
+              "generic": "\ue702",
+              "headphones": "\ue7f6",
+              "headset": "\ue95b",
+              "keyboard": "\ue765",
+              "laptop": "\ue7f8",
+              "mouse": "\ue962",
+              "phone": "\ue8ea",
+              "scan": "\ue72c",
+              "speaker": "\ue7f5",
+              "tablet": "\ue70a",
+              "watch": "\ue918"
+            }
           }
         }
       },
@@ -1403,6 +1352,93 @@
       "title": "BluetoothDeviceAliasConfig",
       "type": "object"
     },
+    "BluetoothDeviceIconsConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "headphones": {
+          "default": "\ue7f6",
+          "title": "Headphones",
+          "type": "string"
+        },
+        "headset": {
+          "default": "\ue95b",
+          "title": "Headset",
+          "type": "string"
+        },
+        "speaker": {
+          "default": "\ue7f5",
+          "title": "Speaker",
+          "type": "string"
+        },
+        "phone": {
+          "default": "\ue8ea",
+          "title": "Phone",
+          "type": "string"
+        },
+        "tablet": {
+          "default": "\ue70a",
+          "title": "Tablet",
+          "type": "string"
+        },
+        "laptop": {
+          "default": "\ue7f8",
+          "title": "Laptop",
+          "type": "string"
+        },
+        "computer": {
+          "default": "\ue950",
+          "title": "Computer",
+          "type": "string"
+        },
+        "keyboard": {
+          "default": "\ue765",
+          "title": "Keyboard",
+          "type": "string"
+        },
+        "mouse": {
+          "default": "\ue962",
+          "title": "Mouse",
+          "type": "string"
+        },
+        "controller": {
+          "default": "\ue7fc",
+          "title": "Controller",
+          "type": "string"
+        },
+        "watch": {
+          "default": "\ue918",
+          "title": "Watch",
+          "type": "string"
+        },
+        "camera": {
+          "default": "\ue722",
+          "title": "Camera",
+          "type": "string"
+        },
+        "generic": {
+          "default": "\ue702",
+          "title": "Generic",
+          "type": "string"
+        },
+        "battery": {
+          "$ref": "#/$defs/BluetoothBatteryIconsConfig",
+          "default": {
+            "empty": "\ueba0",
+            "low": "\ueba2",
+            "medium": "\ueba5",
+            "high": "\ueba8",
+            "full": "\uebaa"
+          }
+        },
+        "scan": {
+          "default": "\ue72c",
+          "title": "Scan",
+          "type": "string"
+        }
+      },
+      "title": "BluetoothDeviceIconsConfig",
+      "type": "object"
+    },
     "BluetoothEntry": {
       "properties": {
         "type": {
@@ -1425,22 +1461,191 @@
       "additionalProperties": false,
       "properties": {
         "bluetooth_on": {
-          "default": "\udb80\udcaf",
+          "default": "\ue702",
           "title": "Bluetooth On",
           "type": "string"
         },
         "bluetooth_off": {
-          "default": "\udb80\udcb2",
+          "default": "\ue702",
           "title": "Bluetooth Off",
           "type": "string"
         },
         "bluetooth_connected": {
-          "default": "\udb80\udcb1",
+          "default": "\ue702",
           "title": "Bluetooth Connected",
           "type": "string"
         }
       },
       "title": "BluetoothIconsConfig",
+      "type": "object"
+    },
+    "BluetoothLabelsConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "title": {
+          "default": "Bluetooth",
+          "title": "Title",
+          "type": "string"
+        },
+        "your_devices": {
+          "default": "Your devices",
+          "title": "Your Devices",
+          "type": "string"
+        },
+        "new_devices": {
+          "default": "New devices",
+          "title": "New Devices",
+          "type": "string"
+        },
+        "not_connected": {
+          "default": "Not connected",
+          "title": "Not Connected",
+          "type": "string"
+        },
+        "connected": {
+          "default": "Connected",
+          "title": "Connected",
+          "type": "string"
+        },
+        "more_settings": {
+          "default": "More Bluetooth settings",
+          "title": "More Settings",
+          "type": "string"
+        },
+        "connect": {
+          "default": "Connect",
+          "title": "Connect",
+          "type": "string"
+        },
+        "disconnect": {
+          "default": "Disconnect",
+          "title": "Disconnect",
+          "type": "string"
+        },
+        "connecting": {
+          "default": "Connecting",
+          "title": "Connecting",
+          "type": "string"
+        },
+        "disconnecting": {
+          "default": "Disconnecting",
+          "title": "Disconnecting",
+          "type": "string"
+        },
+        "pair": {
+          "default": "Pair",
+          "title": "Pair",
+          "type": "string"
+        },
+        "manage": {
+          "default": "Manage",
+          "title": "Manage",
+          "type": "string"
+        },
+        "power_on": {
+          "default": "On",
+          "title": "Power On",
+          "type": "string"
+        },
+        "power_off": {
+          "default": "Off",
+          "title": "Power Off",
+          "type": "string"
+        }
+      },
+      "title": "BluetoothLabelsConfig",
+      "type": "object"
+    },
+    "BluetoothMenuConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "blur": {
+          "default": true,
+          "title": "Blur",
+          "type": "boolean"
+        },
+        "round_corners": {
+          "default": true,
+          "title": "Round Corners",
+          "type": "boolean"
+        },
+        "round_corners_type": {
+          "default": "normal",
+          "title": "Round Corners Type",
+          "type": "string"
+        },
+        "border_color": {
+          "default": "System",
+          "title": "Border Color",
+          "type": "string"
+        },
+        "alignment": {
+          "default": "right",
+          "title": "Alignment",
+          "type": "string"
+        },
+        "direction": {
+          "default": "down",
+          "title": "Direction",
+          "type": "string"
+        },
+        "offset_top": {
+          "default": 6,
+          "title": "Offset Top",
+          "type": "integer"
+        },
+        "offset_left": {
+          "default": 0,
+          "title": "Offset Left",
+          "type": "integer"
+        },
+        "labels": {
+          "$ref": "#/$defs/BluetoothLabelsConfig",
+          "default": {
+            "title": "Bluetooth",
+            "your_devices": "Your devices",
+            "new_devices": "New devices",
+            "not_connected": "Not connected",
+            "connected": "Connected",
+            "more_settings": "More Bluetooth settings",
+            "connect": "Connect",
+            "disconnect": "Disconnect",
+            "connecting": "Connecting",
+            "disconnecting": "Disconnecting",
+            "pair": "Pair",
+            "manage": "Manage",
+            "power_on": "On",
+            "power_off": "Off"
+          }
+        },
+        "device_icons": {
+          "$ref": "#/$defs/BluetoothDeviceIconsConfig",
+          "default": {
+            "headphones": "\ue7f6",
+            "headset": "\ue95b",
+            "speaker": "\ue7f5",
+            "phone": "\ue8ea",
+            "tablet": "\ue70a",
+            "laptop": "\ue7f8",
+            "computer": "\ue950",
+            "keyboard": "\ue765",
+            "mouse": "\ue962",
+            "controller": "\ue7fc",
+            "watch": "\ue918",
+            "camera": "\ue722",
+            "generic": "\ue702",
+            "battery": {
+              "empty": "\ueba0",
+              "full": "\uebaa",
+              "high": "\ueba8",
+              "low": "\ueba2",
+              "medium": "\ueba5"
+            },
+            "scan": "\ue72c"
+          }
+        }
+      },
+      "title": "BluetoothMenuConfig",
       "type": "object"
     },
     "BookmarksProviderConfig": {
@@ -1522,6 +1727,11 @@
           "title": "Scroll Step",
           "type": "integer"
         },
+        "invert_wheel": {
+          "default": false,
+          "title": "Invert Wheel",
+          "type": "boolean"
+        },
         "brightness_icons": {
           "default": [
             "\udb80\udcde",
@@ -1557,6 +1767,13 @@
             "contrast_icon": "\ue7a1",
             "brightness_icon": "\ue706"
           }
+        },
+        "ddc_poll_interval": {
+          "default": 60,
+          "maximum": 600,
+          "minimum": 0,
+          "title": "Ddc Poll Interval",
+          "type": "integer"
         },
         "auto_light": {
           "default": false,
@@ -2319,64 +2536,93 @@
       "title": "ChargingOptionsConfig",
       "type": "object"
     },
-    "ChatConfig": {
+    "ClaudeStatusConfig": {
       "additionalProperties": false,
       "properties": {
-        "blur": {
-          "default": true,
-          "title": "Blur",
+        "enabled": {
+          "default": false,
+          "title": "Enabled",
           "type": "boolean"
         },
-        "round_corners": {
+        "show_in_menu": {
           "default": true,
-          "title": "Round Corners",
+          "title": "Show In Menu",
           "type": "boolean"
         },
-        "round_corners_type": {
-          "default": "normal",
-          "enum": [
-            "normal",
-            "small"
-          ],
-          "title": "Round Corners Type",
+        "icon": {
+          "default": "\u25cf",
+          "title": "Icon",
           "type": "string"
         },
-        "border_color": {
-          "default": "system",
-          "title": "Border Color",
-          "type": "string"
-        },
-        "alignment": {
-          "default": "right",
-          "enum": [
-            "left",
-            "right",
-            "center"
-          ],
-          "title": "Alignment",
-          "type": "string"
-        },
-        "direction": {
-          "default": "down",
-          "enum": [
-            "up",
-            "down"
-          ],
-          "title": "Direction",
-          "type": "string"
-        },
-        "offset_top": {
-          "default": 6,
-          "title": "Offset Top",
-          "type": "integer"
-        },
-        "offset_left": {
-          "default": 0,
-          "title": "Offset Left",
+        "poll_interval": {
+          "default": 300,
+          "maximum": 3600,
+          "minimum": 60,
+          "title": "Poll Interval",
           "type": "integer"
         }
       },
-      "title": "ChatConfig",
+      "title": "ClaudeStatusConfig",
+      "type": "object"
+    },
+    "ClaudeTokenHistoryConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "default": false,
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "default_period": {
+          "default": "today",
+          "enum": [
+            "session",
+            "today",
+            "week",
+            "month",
+            "year"
+          ],
+          "title": "Default Period",
+          "type": "string"
+        },
+        "show_graph": {
+          "default": false,
+          "title": "Show Graph",
+          "type": "boolean"
+        },
+        "show_graph_grid": {
+          "default": false,
+          "title": "Show Graph Grid",
+          "type": "boolean"
+        },
+        "show_models": {
+          "default": false,
+          "title": "Show Models",
+          "type": "boolean"
+        },
+        "week_starts_on": {
+          "default": "monday",
+          "enum": [
+            "monday",
+            "sunday"
+          ],
+          "title": "Week Starts On",
+          "type": "string"
+        },
+        "count_cache_read": {
+          "default": true,
+          "title": "Count Cache Read",
+          "type": "boolean"
+        },
+        "scan_interval": {
+          "default": 120,
+          "maximum": 3600,
+          "minimum": 30,
+          "title": "Scan Interval",
+          "type": "integer"
+        }
+      },
+      "title": "ClaudeTokenHistoryConfig",
       "type": "object"
     },
     "ClaudeUsageCallbacksConfig": {
@@ -2428,6 +2674,51 @@
           "title": "Cache Ttl",
           "type": "integer"
         },
+        "token_history": {
+          "$ref": "#/$defs/ClaudeTokenHistoryConfig",
+          "default": {
+            "enabled": false,
+            "default_period": "today",
+            "show_graph": false,
+            "show_graph_grid": false,
+            "show_models": false,
+            "week_starts_on": "monday",
+            "count_cache_read": true,
+            "scan_interval": 120
+          }
+        },
+        "status": {
+          "$ref": "#/$defs/ClaudeStatusConfig",
+          "default": {
+            "enabled": false,
+            "show_in_menu": true,
+            "icon": "\u25cf",
+            "poll_interval": 300
+          }
+        },
+        "five_hour_reset_format": {
+          "default": "relative",
+          "enum": [
+            "relative",
+            "absolute"
+          ],
+          "title": "Five Hour Reset Format",
+          "type": "string"
+        },
+        "seven_day_reset_format": {
+          "default": "absolute",
+          "enum": [
+            "relative",
+            "absolute"
+          ],
+          "title": "Seven Day Reset Format",
+          "type": "string"
+        },
+        "reset_show_date": {
+          "default": true,
+          "title": "Reset Show Date",
+          "type": "boolean"
+        },
         "tooltip": {
           "default": true,
           "title": "Tooltip",
@@ -2451,7 +2742,9 @@
             "alignment": "right",
             "direction": "down",
             "offset_top": 6,
-            "offset_left": 0
+            "offset_left": 0,
+            "pin_icon": "\ue718",
+            "unpin_icon": "\ue77a"
           }
         },
         "keybindings": {
@@ -2526,6 +2819,16 @@
           "default": 0,
           "title": "Offset Left",
           "type": "integer"
+        },
+        "pin_icon": {
+          "default": "\ue718",
+          "title": "Pin Icon",
+          "type": "string"
+        },
+        "unpin_icon": {
+          "default": "\ue77a",
+          "title": "Unpin Icon",
+          "type": "string"
         }
       },
       "title": "ClaudeUsageMenuConfig",
@@ -2840,6 +3143,438 @@
         }
       },
       "title": "ColorProviderConfig",
+      "type": "object"
+    },
+    "ControlCenterActionConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "icon": {
+          "title": "Icon",
+          "type": "string"
+        },
+        "command": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Command"
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "icon"
+      ],
+      "title": "ControlCenterActionConfig",
+      "type": "object"
+    },
+    "ControlCenterCallbacksConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "on_left": {
+          "default": "toggle_menu",
+          "title": "On Left",
+          "type": "string"
+        },
+        "on_middle": {
+          "default": "do_nothing",
+          "title": "On Middle",
+          "type": "string"
+        },
+        "on_right": {
+          "default": "do_nothing",
+          "title": "On Right",
+          "type": "string"
+        }
+      },
+      "title": "ControlCenterCallbacksConfig",
+      "type": "object"
+    },
+    "ControlCenterConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "label": {
+          "default": "<span>\ue90a</span>",
+          "title": "Label",
+          "type": "string"
+        },
+        "label_alt": {
+          "default": "<span>\ue90a</span>",
+          "title": "Label Alt",
+          "type": "string"
+        },
+        "class_name": {
+          "default": "",
+          "title": "Class Name",
+          "type": "string"
+        },
+        "tooltip": {
+          "default": false,
+          "title": "Tooltip",
+          "type": "boolean"
+        },
+        "popup": {
+          "$ref": "#/$defs/ControlCenterPopupConfig",
+          "default": {
+            "blur": true,
+            "round_corners": true,
+            "round_corners_type": "normal",
+            "border_color": "System",
+            "alignment": "right",
+            "direction": "down",
+            "offset_top": 6,
+            "offset_left": 0
+          }
+        },
+        "sections": {
+          "$ref": "#/$defs/ControlCenterSectionsConfig",
+          "default": {
+            "system_controls": {
+              "lock_icon": "\ue72e",
+              "power_icon": "\ue7e8",
+              "profile_image_size": 28,
+              "settings_icon": "\ue713",
+              "show": true
+            },
+            "quick_actions": {
+              "actions": [
+                {
+                  "command": null,
+                  "icon": "\uf285",
+                  "id": "toggle_dnd",
+                  "label": "Do Not Disturb"
+                },
+                {
+                  "command": null,
+                  "icon": "\ue708",
+                  "id": "toggle_theme",
+                  "label": "Dark Mode"
+                },
+                {
+                  "command": null,
+                  "icon": "\ue765",
+                  "id": "touch_keyboard",
+                  "label": "Keyboard"
+                },
+                {
+                  "command": null,
+                  "icon": "\ue74f",
+                  "id": "toggle_mute",
+                  "label": "Mute"
+                },
+                {
+                  "command": null,
+                  "icon": "\uf12e",
+                  "id": "toggle_mic_mute",
+                  "label": "Mic Mute"
+                },
+                {
+                  "command": null,
+                  "icon": "\ue91b",
+                  "id": "screenshot",
+                  "label": "Screenshot"
+                }
+              ],
+              "columns": 3,
+              "label_position": "default",
+              "show": true
+            },
+            "sliders": {
+              "brightness": {
+                "icon": "\ue706",
+                "show_slider": true,
+                "show_source_selector": false,
+                "source_selector_icon": "\ue972"
+              },
+              "microphone": {
+                "icon": "\ue720",
+                "show_slider": true,
+                "show_source_selector": false,
+                "source_selector_icon": "\ue972"
+              },
+              "show": true,
+              "volume": {
+                "icon": "\ue767",
+                "show_slider": true,
+                "show_source_selector": false,
+                "source_selector_icon": "\ue972"
+              }
+            },
+            "power": {
+              "button_menu_icon": "\ue76c",
+              "power_mode_title": "Power Mode",
+              "power_plan_title": "Power Plan",
+              "show": true
+            },
+            "media": {
+              "icons": {
+                "next_track": "\ue893",
+                "pause": "\ue769",
+                "play": "\ue768",
+                "prev_track": "\ue892"
+              },
+              "show": true,
+              "thumbnail_radius": 8,
+              "thumbnail_size": 64
+            }
+          }
+        },
+        "sections_order": {
+          "default": [
+            "system_controls",
+            "quick_actions",
+            "sliders",
+            "power",
+            "media"
+          ],
+          "items": {
+            "enum": [
+              "system_controls",
+              "quick_actions",
+              "sliders",
+              "power",
+              "media"
+            ],
+            "type": "string"
+          },
+          "title": "Sections Order",
+          "type": "array"
+        },
+        "keybindings": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/KeybindingConfig"
+          },
+          "title": "Keybindings",
+          "type": "array"
+        },
+        "callbacks": {
+          "$ref": "#/$defs/ControlCenterCallbacksConfig",
+          "default": {
+            "on_left": "toggle_menu",
+            "on_middle": "do_nothing",
+            "on_right": "do_nothing"
+          }
+        }
+      },
+      "title": "ControlCenterConfig",
+      "type": "object"
+    },
+    "ControlCenterEntry": {
+      "properties": {
+        "type": {
+          "const": "yasb.control_center.ControlCenterWidget",
+          "title": "Type",
+          "type": "string"
+        },
+        "options": {
+          "$ref": "#/$defs/ControlCenterConfig"
+        }
+      },
+      "required": [
+        "type",
+        "options"
+      ],
+      "title": "ControlCenterEntry",
+      "type": "object"
+    },
+    "ControlCenterPopupConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "blur": {
+          "default": true,
+          "title": "Blur",
+          "type": "boolean"
+        },
+        "round_corners": {
+          "default": true,
+          "title": "Round Corners",
+          "type": "boolean"
+        },
+        "round_corners_type": {
+          "default": "normal",
+          "title": "Round Corners Type",
+          "type": "string"
+        },
+        "border_color": {
+          "default": "System",
+          "title": "Border Color",
+          "type": "string"
+        },
+        "alignment": {
+          "default": "right",
+          "title": "Alignment",
+          "type": "string"
+        },
+        "direction": {
+          "default": "down",
+          "title": "Direction",
+          "type": "string"
+        },
+        "offset_top": {
+          "default": 6,
+          "title": "Offset Top",
+          "type": "integer"
+        },
+        "offset_left": {
+          "default": 0,
+          "title": "Offset Left",
+          "type": "integer"
+        }
+      },
+      "title": "ControlCenterPopupConfig",
+      "type": "object"
+    },
+    "ControlCenterSectionsConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "system_controls": {
+          "$ref": "#/$defs/SystemControlsConfig",
+          "default": {
+            "show": true,
+            "profile_image_size": 28,
+            "power_icon": "\ue7e8",
+            "lock_icon": "\ue72e",
+            "settings_icon": "\ue713"
+          }
+        },
+        "quick_actions": {
+          "$ref": "#/$defs/QuickActionsSectionConfig",
+          "default": {
+            "show": true,
+            "columns": 3,
+            "label_position": "default",
+            "actions": [
+              {
+                "command": null,
+                "icon": "\uf285",
+                "id": "toggle_dnd",
+                "label": "Do Not Disturb"
+              },
+              {
+                "command": null,
+                "icon": "\ue708",
+                "id": "toggle_theme",
+                "label": "Dark Mode"
+              },
+              {
+                "command": null,
+                "icon": "\ue765",
+                "id": "touch_keyboard",
+                "label": "Keyboard"
+              },
+              {
+                "command": null,
+                "icon": "\ue74f",
+                "id": "toggle_mute",
+                "label": "Mute"
+              },
+              {
+                "command": null,
+                "icon": "\uf12e",
+                "id": "toggle_mic_mute",
+                "label": "Mic Mute"
+              },
+              {
+                "command": null,
+                "icon": "\ue91b",
+                "id": "screenshot",
+                "label": "Screenshot"
+              }
+            ]
+          }
+        },
+        "sliders": {
+          "$ref": "#/$defs/SlidersSectionConfig",
+          "default": {
+            "show": true,
+            "brightness": {
+              "icon": "\ue706",
+              "show_slider": true,
+              "show_source_selector": false,
+              "source_selector_icon": "\ue972"
+            },
+            "volume": {
+              "icon": "\ue767",
+              "show_slider": true,
+              "show_source_selector": false,
+              "source_selector_icon": "\ue972"
+            },
+            "microphone": {
+              "icon": "\ue720",
+              "show_slider": true,
+              "show_source_selector": false,
+              "source_selector_icon": "\ue972"
+            }
+          }
+        },
+        "power": {
+          "$ref": "#/$defs/PowerSectionConfig",
+          "default": {
+            "show": true,
+            "power_plan_title": "Power Plan",
+            "power_mode_title": "Power Mode",
+            "button_menu_icon": "\ue76c"
+          }
+        },
+        "media": {
+          "$ref": "#/$defs/MediaSectionConfig",
+          "default": {
+            "show": true,
+            "thumbnail_size": 64,
+            "thumbnail_radius": 8,
+            "icons": {
+              "next_track": "\ue893",
+              "pause": "\ue769",
+              "play": "\ue768",
+              "prev_track": "\ue892"
+            }
+          }
+        }
+      },
+      "title": "ControlCenterSectionsConfig",
+      "type": "object"
+    },
+    "ControlCenterSliderConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "show_slider": {
+          "default": true,
+          "title": "Show Slider",
+          "type": "boolean"
+        },
+        "icon": {
+          "title": "Icon",
+          "type": "string"
+        },
+        "show_source_selector": {
+          "default": false,
+          "title": "Show Source Selector",
+          "type": "boolean"
+        },
+        "source_selector_icon": {
+          "default": "\ue972",
+          "title": "Source Selector Icon",
+          "type": "string"
+        }
+      },
+      "required": [
+        "icon"
+      ],
+      "title": "ControlCenterSliderConfig",
       "type": "object"
     },
     "CopilotCallbacksConfig": {
@@ -4125,7 +4860,7 @@
           "type": "array"
         },
         "notification_dot": {
-          "$ref": "#/$defs/core__validation__widgets__yasb__github__NotificationDotConfig",
+          "$ref": "#/$defs/NotificationDotConfig",
           "default": {
             "enabled": true,
             "corner": "bottom_left",
@@ -6444,105 +7179,183 @@
       "title": "MaxFieldSizeConfig",
       "type": "object"
     },
-    "MediaMenuConfig": {
+    "MediaLiteCallbacksConfig": {
       "additionalProperties": false,
       "properties": {
-        "blur": {
+        "on_left": {
+          "default": "toggle_media_menu",
+          "title": "On Left",
+          "type": "string"
+        },
+        "on_middle": {
+          "default": "do_nothing",
+          "title": "On Middle",
+          "type": "string"
+        },
+        "on_right": {
+          "default": "do_nothing",
+          "title": "On Right",
+          "type": "string"
+        }
+      },
+      "title": "MediaLiteCallbacksConfig",
+      "type": "object"
+    },
+    "MediaLiteWidgetConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "class_name": {
+          "default": "",
+          "title": "Class Name",
+          "type": "string"
+        },
+        "show_thumbnail": {
           "default": true,
-          "title": "Blur",
+          "title": "Show Thumbnail",
           "type": "boolean"
         },
-        "round_corners": {
+        "show_title": {
           "default": true,
-          "title": "Round Corners",
+          "title": "Show Title",
           "type": "boolean"
         },
-        "round_corners_type": {
-          "default": "normal",
-          "title": "Round Corners Type",
-          "type": "string"
+        "show_artist": {
+          "default": true,
+          "title": "Show Artist",
+          "type": "boolean"
         },
-        "border_color": {
-          "default": "System",
-          "title": "Border Color",
-          "type": "string"
+        "scrolling_label": {
+          "default": false,
+          "title": "Scrolling Label",
+          "type": "boolean"
         },
-        "alignment": {
-          "default": "right",
-          "enum": [
-            "left",
-            "right",
-            "center"
-          ],
-          "title": "Alignment",
-          "type": "string"
-        },
-        "direction": {
-          "default": "down",
-          "enum": [
-            "up",
-            "down"
-          ],
-          "title": "Direction",
-          "type": "string"
-        },
-        "offset_top": {
-          "default": 6,
-          "title": "Offset Top",
-          "type": "integer"
-        },
-        "offset_left": {
-          "default": 0,
-          "title": "Offset Left",
-          "type": "integer"
-        },
-        "thumbnail_size": {
-          "default": 100,
-          "title": "Thumbnail Size",
+        "image_size": {
+          "default": 28,
+          "maximum": 128,
+          "minimum": 12,
+          "title": "Image Size",
           "type": "integer"
         },
         "thumbnail_corner_radius": {
-          "default": 8,
+          "default": 6,
+          "maximum": 100,
+          "minimum": 0,
           "title": "Thumbnail Corner Radius",
           "type": "integer"
         },
-        "max_title_size": {
-          "default": 150,
-          "title": "Max Title Size",
+        "max_label_size": {
+          "default": 20,
+          "maximum": 200,
+          "minimum": 0,
+          "title": "Max Label Size",
           "type": "integer"
         },
-        "max_artist_size": {
-          "default": 40,
-          "title": "Max Artist Size",
-          "type": "integer"
-        },
-        "show_source": {
+        "tooltip": {
           "default": true,
-          "title": "Show Source",
+          "title": "Tooltip",
           "type": "boolean"
         },
-        "show_volume_slider": {
-          "default": false,
-          "title": "Show Volume Slider",
-          "type": "boolean"
+        "media_menu": {
+          "$ref": "#/$defs/core__validation__widgets__yasb__media_lite__MediaMenuConfig",
+          "default": {
+            "blur": true,
+            "round_corners": true,
+            "round_corners_type": "normal",
+            "border_color": "System",
+            "alignment": "right",
+            "direction": "down",
+            "offset_top": 6,
+            "offset_left": 0,
+            "artwork_background": true,
+            "artwork_blur_radius": 24,
+            "artwork_dim": 0.85,
+            "image_size": 160,
+            "thumbnail_corner_radius": 12,
+            "icons": {
+              "mute": "\ue994",
+              "next_track": "\ue893",
+              "pause": "\ue769",
+              "play": "\ue768",
+              "prev_track": "\ue892",
+              "repeat": "\ue8ee",
+              "repeat_one": "\ue8ed",
+              "shuffle": "\ue8b1",
+              "volume": "\ue767"
+            }
+          }
+        },
+        "keybindings": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/KeybindingConfig"
+          },
+          "title": "Keybindings",
+          "type": "array"
+        },
+        "callbacks": {
+          "$ref": "#/$defs/MediaLiteCallbacksConfig",
+          "default": {
+            "on_left": "toggle_media_menu",
+            "on_middle": "do_nothing",
+            "on_right": "do_nothing"
+          }
         }
       },
-      "title": "MediaMenuConfig",
+      "title": "MediaLiteWidgetConfig",
       "type": "object"
     },
-    "MediaMenuIconsConfig": {
+    "MediaLiteWidgetEntry": {
+      "properties": {
+        "type": {
+          "const": "yasb.media_lite.MediaWidget",
+          "title": "Type",
+          "type": "string"
+        },
+        "options": {
+          "$ref": "#/$defs/MediaLiteWidgetConfig"
+        }
+      },
+      "required": [
+        "type",
+        "options"
+      ],
+      "title": "MediaLiteWidgetEntry",
+      "type": "object"
+    },
+    "MediaSectionConfig": {
       "additionalProperties": false,
       "properties": {
-        "play": {
-          "default": "\ue768",
-          "title": "Play",
-          "type": "string"
+        "show": {
+          "default": true,
+          "title": "Show",
+          "type": "boolean"
         },
-        "pause": {
-          "default": "\ue769",
-          "title": "Pause",
-          "type": "string"
+        "thumbnail_size": {
+          "default": 64,
+          "title": "Thumbnail Size",
+          "type": "integer"
         },
+        "thumbnail_radius": {
+          "default": 8,
+          "title": "Thumbnail Radius",
+          "type": "integer"
+        },
+        "icons": {
+          "$ref": "#/$defs/MediaSectionIconsConfig",
+          "default": {
+            "prev_track": "\ue892",
+            "next_track": "\ue893",
+            "play": "\ue768",
+            "pause": "\ue769"
+          }
+        }
+      },
+      "title": "MediaSectionConfig",
+      "type": "object"
+    },
+    "MediaSectionIconsConfig": {
+      "additionalProperties": false,
+      "properties": {
         "prev_track": {
           "default": "\ue892",
           "title": "Prev Track",
@@ -6553,18 +7366,18 @@
           "title": "Next Track",
           "type": "string"
         },
-        "mute": {
-          "default": "\ue994",
-          "title": "Mute",
+        "play": {
+          "default": "\ue768",
+          "title": "Play",
           "type": "string"
         },
-        "unmute": {
-          "default": "\ue74f",
-          "title": "Unmute",
+        "pause": {
+          "default": "\ue769",
+          "title": "Pause",
           "type": "string"
         }
       },
-      "title": "MediaMenuIconsConfig",
+      "title": "MediaSectionIconsConfig",
       "type": "object"
     },
     "MediaWidgetConfig": {
@@ -6605,7 +7418,7 @@
           }
         },
         "media_menu": {
-          "$ref": "#/$defs/MediaMenuConfig",
+          "$ref": "#/$defs/core__validation__widgets__yasb__media__MediaMenuConfig",
           "default": {
             "blur": true,
             "round_corners": true,
@@ -6619,12 +7432,13 @@
             "thumbnail_corner_radius": 8,
             "max_title_size": 150,
             "max_artist_size": 40,
+            "max_source_size": 16,
             "show_source": true,
             "show_volume_slider": false
           }
         },
         "media_menu_icons": {
-          "$ref": "#/$defs/MediaMenuIconsConfig",
+          "$ref": "#/$defs/core__validation__widgets__yasb__media__MediaMenuIconsConfig",
           "default": {
             "play": "\ue768",
             "pause": "\ue769",
@@ -7237,6 +8051,11 @@
           "title": "Scroll Step",
           "type": "integer"
         },
+        "invert_wheel": {
+          "default": false,
+          "title": "Invert Wheel",
+          "type": "boolean"
+        },
         "icons": {
           "$ref": "#/$defs/core__validation__widgets__yasb__microphone__IconsConfig",
           "default": {
@@ -7307,69 +8126,6 @@
         "options"
       ],
       "title": "MicrophoneEntry",
-      "type": "object"
-    },
-    "ModelConfig": {
-      "additionalProperties": false,
-      "properties": {
-        "name": {
-          "title": "Name",
-          "type": "string"
-        },
-        "label": {
-          "title": "Label",
-          "type": "string"
-        },
-        "default": {
-          "type": "boolean",
-          "default": false,
-          "title": "Default"
-        },
-        "max_tokens": {
-          "default": 0,
-          "title": "Max Tokens",
-          "type": "integer"
-        },
-        "temperature": {
-          "default": 0.7,
-          "title": "Temperature",
-          "type": "number"
-        },
-        "top_p": {
-          "default": 0.95,
-          "title": "Top P",
-          "type": "number"
-        },
-        "max_image_size": {
-          "default": 0,
-          "minimum": 0,
-          "title": "Max Image Size",
-          "type": "integer"
-        },
-        "max_attachment_size": {
-          "default": 256,
-          "minimum": 0,
-          "title": "Max Attachment Size",
-          "type": "integer"
-        },
-        "instructions": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Instructions"
-        }
-      },
-      "required": [
-        "name",
-        "label"
-      ],
-      "title": "ModelConfig",
       "type": "object"
     },
     "NotesCallbacksConfig": {
@@ -7494,6 +8250,38 @@
         "options"
       ],
       "title": "NotesEntry",
+      "type": "object"
+    },
+    "NotificationDotConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "default": true,
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "corner": {
+          "$ref": "#/$defs/Corner",
+          "default": "bottom_left"
+        },
+        "color": {
+          "default": "red",
+          "title": "Color",
+          "type": "string"
+        },
+        "margin": {
+          "default": [
+            1,
+            1
+          ],
+          "items": {
+            "type": "integer"
+          },
+          "title": "Margin",
+          "type": "array"
+        }
+      },
+      "title": "NotificationDotConfig",
       "type": "object"
     },
     "NotificationsCallbacksConfig": {
@@ -8804,11 +9592,13 @@
           "title": "Class Name",
           "type": "string"
         },
-        "update_interval": {
-          "default": 5000,
-          "minimum": 0,
-          "title": "Update Interval",
-          "type": "integer"
+        "class_map": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "default": {},
+          "title": "Class Map",
+          "type": "object"
         },
         "menu": {
           "$ref": "#/$defs/PowerPlanMenuConfig",
@@ -8917,6 +9707,33 @@
       "title": "PowerPlanMenuConfig",
       "type": "object"
     },
+    "PowerSectionConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "show": {
+          "default": true,
+          "title": "Show",
+          "type": "boolean"
+        },
+        "power_plan_title": {
+          "default": "Power Plan",
+          "title": "Power Plan Title",
+          "type": "string"
+        },
+        "power_mode_title": {
+          "default": "Power Mode",
+          "title": "Power Mode Title",
+          "type": "string"
+        },
+        "button_menu_icon": {
+          "default": "\ue76c",
+          "title": "Button Menu Icon",
+          "type": "string"
+        }
+      },
+      "title": "PowerSectionConfig",
+      "type": "object"
+    },
     "PreviewConfig": {
       "additionalProperties": false,
       "properties": {
@@ -8950,71 +9767,75 @@
       "title": "PreviewConfig",
       "type": "object"
     },
-    "ProviderConfig": {
+    "QuickActionsSectionConfig": {
       "additionalProperties": false,
       "properties": {
-        "provider": {
-          "title": "Provider",
-          "type": "string"
+        "show": {
+          "default": true,
+          "title": "Show",
+          "type": "boolean"
         },
-        "provider_type": {
-          "default": "openai",
+        "columns": {
+          "default": 3,
+          "title": "Columns",
+          "type": "integer"
+        },
+        "label_position": {
+          "default": "default",
           "enum": [
-            "openai",
-            "copilot"
+            "default",
+            "inline"
           ],
-          "title": "Provider Type",
+          "title": "Label Position",
           "type": "string"
         },
-        "api_endpoint": {
-          "anyOf": [
+        "actions": {
+          "default": [
             {
-              "type": "string"
+              "id": "toggle_dnd",
+              "label": "Do Not Disturb",
+              "icon": "\uf285",
+              "command": null
             },
             {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Api Endpoint"
-        },
-        "credential": {
-          "anyOf": [
-            {
-              "type": "string"
+              "id": "toggle_theme",
+              "label": "Dark Mode",
+              "icon": "\ue708",
+              "command": null
             },
             {
-              "type": "null"
+              "id": "touch_keyboard",
+              "label": "Keyboard",
+              "icon": "\ue765",
+              "command": null
+            },
+            {
+              "id": "toggle_mute",
+              "label": "Mute",
+              "icon": "\ue74f",
+              "command": null
+            },
+            {
+              "id": "toggle_mic_mute",
+              "label": "Mic Mute",
+              "icon": "\uf12e",
+              "command": null
+            },
+            {
+              "id": "screenshot",
+              "label": "Screenshot",
+              "icon": "\ue91b",
+              "command": null
             }
           ],
-          "default": null,
-          "title": "Credential"
-        },
-        "models": {
-          "default": [],
           "items": {
-            "$ref": "#/$defs/ModelConfig"
+            "$ref": "#/$defs/ControlCenterActionConfig"
           },
-          "title": "Models",
+          "title": "Actions",
           "type": "array"
-        },
-        "copilot_cli_url": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Copilot Cli Url"
         }
       },
-      "required": [
-        "provider"
-      ],
-      "title": "ProviderConfig",
+      "title": "QuickActionsSectionConfig",
       "type": "object"
     },
     "QuickLaunchCallbacksConfig": {
@@ -10062,6 +10883,45 @@
       "title": "ShortcutsConfig",
       "type": "object"
     },
+    "SlidersSectionConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "show": {
+          "default": true,
+          "title": "Show",
+          "type": "boolean"
+        },
+        "brightness": {
+          "$ref": "#/$defs/ControlCenterSliderConfig",
+          "default": {
+            "show_slider": true,
+            "icon": "\ue706",
+            "show_source_selector": false,
+            "source_selector_icon": "\ue972"
+          }
+        },
+        "volume": {
+          "$ref": "#/$defs/ControlCenterSliderConfig",
+          "default": {
+            "show_slider": true,
+            "icon": "\ue767",
+            "show_source_selector": false,
+            "source_selector_icon": "\ue972"
+          }
+        },
+        "microphone": {
+          "$ref": "#/$defs/ControlCenterSliderConfig",
+          "default": {
+            "show_slider": true,
+            "icon": "\ue720",
+            "show_source_selector": false,
+            "source_selector_icon": "\ue972"
+          }
+        }
+      },
+      "title": "SlidersSectionConfig",
+      "type": "object"
+    },
     "SnippetsProviderConfig": {
       "additionalProperties": false,
       "properties": {
@@ -10366,6 +11226,38 @@
         }
       },
       "title": "SystemCommandsProviderConfig",
+      "type": "object"
+    },
+    "SystemControlsConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "show": {
+          "default": true,
+          "title": "Show",
+          "type": "boolean"
+        },
+        "profile_image_size": {
+          "default": 28,
+          "title": "Profile Image Size",
+          "type": "integer"
+        },
+        "power_icon": {
+          "default": "\ue7e8",
+          "title": "Power Icon",
+          "type": "string"
+        },
+        "lock_icon": {
+          "default": "\ue72e",
+          "title": "Lock Icon",
+          "type": "string"
+        },
+        "settings_icon": {
+          "default": "\ue713",
+          "title": "Settings Icon",
+          "type": "string"
+        }
+      },
+      "title": "SystemControlsConfig",
       "type": "object"
     },
     "SystrayPopupConfig": {
@@ -11120,29 +12012,17 @@
           "type": "string"
         },
         "menu_title": {
-          "default": "<span style='font-weight:bold'>VScode</span> recents",
+          "default": "<span style='font-weight:bold'>VS code</span> recents",
           "title": "Menu Title",
           "type": "string"
         },
-        "folder_icon": {
-          "default": "\uf114",
-          "title": "Folder Icon",
-          "type": "string"
-        },
-        "file_icon": {
-          "default": "\uf016",
-          "title": "File Icon",
-          "type": "string"
-        },
-        "hide_folder_icon": {
-          "default": false,
-          "title": "Hide Folder Icon",
-          "type": "boolean"
-        },
-        "hide_file_icon": {
-          "default": false,
-          "title": "Hide File Icon",
-          "type": "boolean"
+        "icons": {
+          "$ref": "#/$defs/VSCodeIconsConfig",
+          "default": {
+            "folder": "\uf114",
+            "file": "\uf016",
+            "remote": ""
+          }
         },
         "truncate_to_root_dir": {
           "default": false,
@@ -11159,12 +12039,6 @@
           "default": 30,
           "minimum": 0,
           "title": "Max Number Of Files",
-          "type": "integer"
-        },
-        "max_field_size": {
-          "default": 100,
-          "minimum": 1,
-          "title": "Max Field Size",
           "type": "integer"
         },
         "state_storage_path": {
@@ -11231,6 +12105,28 @@
         "options"
       ],
       "title": "VSCodeEntry",
+      "type": "object"
+    },
+    "VSCodeIconsConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "folder": {
+          "default": "\uf114",
+          "title": "Folder",
+          "type": "string"
+        },
+        "file": {
+          "default": "\uf016",
+          "title": "File",
+          "type": "string"
+        },
+        "remote": {
+          "default": "",
+          "title": "Remote",
+          "type": "string"
+        }
+      },
+      "title": "VSCodeIconsConfig",
       "type": "object"
     },
     "VSCodeMenuConfig": {
@@ -11363,6 +12259,11 @@
           "minimum": 1,
           "title": "Scroll Step",
           "type": "integer"
+        },
+        "invert_wheel": {
+          "default": false,
+          "title": "Invert Wheel",
+          "type": "boolean"
         },
         "slider_beep": {
           "default": true,
@@ -13097,102 +13998,6 @@
       "title": "AppIconsConfig",
       "type": "object"
     },
-    "core__validation__widgets__yasb__ai_chat__IconsConfig": {
-      "additionalProperties": false,
-      "properties": {
-        "send": {
-          "default": "\uf1d8",
-          "title": "Send",
-          "type": "string"
-        },
-        "stop": {
-          "default": "\uf04d",
-          "title": "Stop",
-          "type": "string"
-        },
-        "clear": {
-          "default": "\uf1f8",
-          "title": "Clear",
-          "type": "string"
-        },
-        "assistant": {
-          "default": "\udb81\ude74",
-          "title": "Assistant",
-          "type": "string"
-        },
-        "attach": {
-          "default": "\uf0c6",
-          "title": "Attach",
-          "type": "string"
-        },
-        "float_on": {
-          "default": "\udb84\udcac",
-          "title": "Float On",
-          "type": "string"
-        },
-        "float_off": {
-          "default": "\udb84\udca9",
-          "title": "Float Off",
-          "type": "string"
-        },
-        "close": {
-          "default": "\uf00d",
-          "title": "Close",
-          "type": "string"
-        },
-        "copy": {
-          "default": "\uebcc",
-          "title": "Copy",
-          "type": "string"
-        },
-        "copy_check": {
-          "default": "\uf00c",
-          "title": "Copy Check",
-          "type": "string"
-        }
-      },
-      "title": "IconsConfig",
-      "type": "object"
-    },
-    "core__validation__widgets__yasb__ai_chat__NotificationDotConfig": {
-      "additionalProperties": false,
-      "properties": {
-        "enabled": {
-          "default": true,
-          "title": "Enabled",
-          "type": "boolean"
-        },
-        "corner": {
-          "default": "bottom_left",
-          "enum": [
-            "top_left",
-            "top_right",
-            "bottom_left",
-            "bottom_right"
-          ],
-          "title": "Corner",
-          "type": "string"
-        },
-        "color": {
-          "default": "red",
-          "title": "Color",
-          "type": "string"
-        },
-        "margin": {
-          "default": [
-            1,
-            1
-          ],
-          "items": {
-            "type": "integer"
-          },
-          "title": "Margin",
-          "type": "array"
-        }
-      },
-      "title": "NotificationDotConfig",
-      "type": "object"
-    },
     "core__validation__widgets__yasb__battery__ProgressBarConfig": {
       "additionalProperties": false,
       "properties": {
@@ -13501,38 +14306,6 @@
       "title": "ProgressBarConfig",
       "type": "object"
     },
-    "core__validation__widgets__yasb__github__NotificationDotConfig": {
-      "additionalProperties": false,
-      "properties": {
-        "enabled": {
-          "default": true,
-          "title": "Enabled",
-          "type": "boolean"
-        },
-        "corner": {
-          "$ref": "#/$defs/Corner",
-          "default": "bottom_left"
-        },
-        "color": {
-          "default": "red",
-          "title": "Color",
-          "type": "string"
-        },
-        "margin": {
-          "default": [
-            1,
-            1
-          ],
-          "items": {
-            "type": "integer"
-          },
-          "title": "Margin",
-          "type": "array"
-        }
-      },
-      "title": "NotificationDotConfig",
-      "type": "object"
-    },
     "core__validation__widgets__yasb__gpu__ProgressBarConfig": {
       "additionalProperties": false,
       "properties": {
@@ -13637,6 +14410,134 @@
       "title": "IconsConfig",
       "type": "object"
     },
+    "core__validation__widgets__yasb__media__MediaMenuConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "blur": {
+          "default": true,
+          "title": "Blur",
+          "type": "boolean"
+        },
+        "round_corners": {
+          "default": true,
+          "title": "Round Corners",
+          "type": "boolean"
+        },
+        "round_corners_type": {
+          "default": "normal",
+          "title": "Round Corners Type",
+          "type": "string"
+        },
+        "border_color": {
+          "default": "System",
+          "title": "Border Color",
+          "type": "string"
+        },
+        "alignment": {
+          "default": "right",
+          "enum": [
+            "left",
+            "right",
+            "center"
+          ],
+          "title": "Alignment",
+          "type": "string"
+        },
+        "direction": {
+          "default": "down",
+          "enum": [
+            "up",
+            "down"
+          ],
+          "title": "Direction",
+          "type": "string"
+        },
+        "offset_top": {
+          "default": 6,
+          "title": "Offset Top",
+          "type": "integer"
+        },
+        "offset_left": {
+          "default": 0,
+          "title": "Offset Left",
+          "type": "integer"
+        },
+        "thumbnail_size": {
+          "default": 100,
+          "title": "Thumbnail Size",
+          "type": "integer"
+        },
+        "thumbnail_corner_radius": {
+          "default": 8,
+          "title": "Thumbnail Corner Radius",
+          "type": "integer"
+        },
+        "max_title_size": {
+          "default": 150,
+          "title": "Max Title Size",
+          "type": "integer"
+        },
+        "max_artist_size": {
+          "default": 40,
+          "title": "Max Artist Size",
+          "type": "integer"
+        },
+        "max_source_size": {
+          "default": 16,
+          "title": "Max Source Size",
+          "type": "integer"
+        },
+        "show_source": {
+          "default": true,
+          "title": "Show Source",
+          "type": "boolean"
+        },
+        "show_volume_slider": {
+          "default": false,
+          "title": "Show Volume Slider",
+          "type": "boolean"
+        }
+      },
+      "title": "MediaMenuConfig",
+      "type": "object"
+    },
+    "core__validation__widgets__yasb__media__MediaMenuIconsConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "play": {
+          "default": "\ue768",
+          "title": "Play",
+          "type": "string"
+        },
+        "pause": {
+          "default": "\ue769",
+          "title": "Pause",
+          "type": "string"
+        },
+        "prev_track": {
+          "default": "\ue892",
+          "title": "Prev Track",
+          "type": "string"
+        },
+        "next_track": {
+          "default": "\ue893",
+          "title": "Next Track",
+          "type": "string"
+        },
+        "mute": {
+          "default": "\ue994",
+          "title": "Mute",
+          "type": "string"
+        },
+        "unmute": {
+          "default": "\ue74f",
+          "title": "Unmute",
+          "type": "string"
+        }
+      },
+      "title": "MediaMenuIconsConfig",
+      "type": "object"
+    },
     "core__validation__widgets__yasb__media__ProgressBarConfig": {
       "additionalProperties": false,
       "properties": {
@@ -13657,6 +14558,161 @@
         }
       },
       "title": "ProgressBarConfig",
+      "type": "object"
+    },
+    "core__validation__widgets__yasb__media_lite__MediaMenuConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "blur": {
+          "default": true,
+          "title": "Blur",
+          "type": "boolean"
+        },
+        "round_corners": {
+          "default": true,
+          "title": "Round Corners",
+          "type": "boolean"
+        },
+        "round_corners_type": {
+          "default": "normal",
+          "title": "Round Corners Type",
+          "type": "string"
+        },
+        "border_color": {
+          "default": "System",
+          "title": "Border Color",
+          "type": "string"
+        },
+        "alignment": {
+          "default": "right",
+          "enum": [
+            "left",
+            "right",
+            "center"
+          ],
+          "title": "Alignment",
+          "type": "string"
+        },
+        "direction": {
+          "default": "down",
+          "enum": [
+            "up",
+            "down"
+          ],
+          "title": "Direction",
+          "type": "string"
+        },
+        "offset_top": {
+          "default": 6,
+          "title": "Offset Top",
+          "type": "integer"
+        },
+        "offset_left": {
+          "default": 0,
+          "title": "Offset Left",
+          "type": "integer"
+        },
+        "artwork_background": {
+          "default": true,
+          "title": "Artwork Background",
+          "type": "boolean"
+        },
+        "artwork_blur_radius": {
+          "default": 24,
+          "maximum": 64,
+          "minimum": 0,
+          "title": "Artwork Blur Radius",
+          "type": "integer"
+        },
+        "artwork_dim": {
+          "default": 0.85,
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Artwork Dim",
+          "type": "number"
+        },
+        "image_size": {
+          "default": 160,
+          "maximum": 400,
+          "minimum": 32,
+          "title": "Image Size",
+          "type": "integer"
+        },
+        "thumbnail_corner_radius": {
+          "default": 12,
+          "maximum": 200,
+          "minimum": 0,
+          "title": "Thumbnail Corner Radius",
+          "type": "integer"
+        },
+        "icons": {
+          "$ref": "#/$defs/core__validation__widgets__yasb__media_lite__MediaMenuIconsConfig",
+          "default": {
+            "play": "\ue768",
+            "pause": "\ue769",
+            "prev_track": "\ue892",
+            "next_track": "\ue893",
+            "shuffle": "\ue8b1",
+            "repeat": "\ue8ee",
+            "repeat_one": "\ue8ed",
+            "volume": "\ue767",
+            "mute": "\ue994"
+          }
+        }
+      },
+      "title": "MediaMenuConfig",
+      "type": "object"
+    },
+    "core__validation__widgets__yasb__media_lite__MediaMenuIconsConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "play": {
+          "default": "\ue768",
+          "title": "Play",
+          "type": "string"
+        },
+        "pause": {
+          "default": "\ue769",
+          "title": "Pause",
+          "type": "string"
+        },
+        "prev_track": {
+          "default": "\ue892",
+          "title": "Prev Track",
+          "type": "string"
+        },
+        "next_track": {
+          "default": "\ue893",
+          "title": "Next Track",
+          "type": "string"
+        },
+        "shuffle": {
+          "default": "\ue8b1",
+          "title": "Shuffle",
+          "type": "string"
+        },
+        "repeat": {
+          "default": "\ue8ee",
+          "title": "Repeat",
+          "type": "string"
+        },
+        "repeat_one": {
+          "default": "\ue8ed",
+          "title": "Repeat One",
+          "type": "string"
+        },
+        "volume": {
+          "default": "\ue767",
+          "title": "Volume",
+          "type": "string"
+        },
+        "mute": {
+          "default": "\ue994",
+          "title": "Mute",
+          "type": "string"
+        }
+      },
+      "title": "MediaMenuIconsConfig",
       "type": "object"
     },
     "core__validation__widgets__yasb__memory__ProgressBarConfig": {
@@ -14582,9 +15638,6 @@
             "$ref": "#/$defs/ActiveWindowEntry"
           },
           {
-            "$ref": "#/$defs/AiChatEntry"
-          },
-          {
             "$ref": "#/$defs/ApplicationsWidgetEntry"
           },
           {
@@ -14604,6 +15657,9 @@
           },
           {
             "$ref": "#/$defs/ClockEntry"
+          },
+          {
+            "$ref": "#/$defs/ControlCenterEntry"
           },
           {
             "$ref": "#/$defs/CopilotEntry"
@@ -14646,6 +15702,9 @@
           },
           {
             "$ref": "#/$defs/MediaWidgetEntry"
+          },
+          {
+            "$ref": "#/$defs/MediaLiteWidgetEntry"
           },
           {
             "$ref": "#/$defs/MemoryEntry"
