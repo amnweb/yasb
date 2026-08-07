@@ -1,5 +1,6 @@
 import atexit
 import logging
+import re
 
 import win32con
 import win32gui
@@ -548,6 +549,36 @@ class TaskbarWidget(BaseWidget):
         """Get a unique identifier for an app and its metadata. Delegates to PinManager."""
         return PinManager.get_app_identifier(hwnd, window_data)
 
+    def _get_window_order_key(self, hwnd: int, window_data: dict, unique_id: str | None = None) -> str | None:
+        """Build a stable persisted key for a taskbar window."""
+        if unique_id is None:
+            unique_id, _ = self._get_app_identifier(hwnd, window_data)
+        if not unique_id:
+            return None
+        if unique_id in self._pin_manager.pinned_apps:
+            return unique_id
+        return f"{unique_id}|{window_data.get('title', '') or ''}"
+
+    def _restore_window_order(self) -> None:
+        """Restore known windows while retaining newly discovered windows at the end."""
+        if not self._pin_manager.window_order:
+            return
+
+        order_index = {key: index for index, key in enumerate(self._pin_manager.window_order)}
+        widgets = []
+        count = self._widget_container_layout.count()
+        for index in range(count):
+            item = self._widget_container_layout.itemAt(index)
+            widget = item.widget() if item else None
+            if widget:
+                widgets.append(widget)
+
+        widgets.sort(key=lambda widget: order_index.get(widget.property("window_order_key"), len(order_index)))
+        for widget in widgets:
+            self._widget_container_layout.removeWidget(widget)
+        for widget in widgets:
+            self._widget_container_layout.addWidget(widget)
+
     def _pin_app(self, hwnd: int) -> None:
         """Pin an application to the taskbar (pinned apps are global across all monitors)."""
         try:
@@ -562,25 +593,12 @@ class TaskbarWidget(BaseWidget):
             # Get icon for caching
             icon_img = get_window_icon(hwnd)
 
-            # Pin at the end of existing pinned apps (position = number of pinned apps)
-            # This puts it after all other pinned apps but before unpinned running apps
+            # Keep the window in its current position when it becomes pinned.
             position = len(self._pin_manager.pinned_order)
             unique_id = self._pin_manager.pin_app(hwnd, window_data, icon_img, position=position)
 
             if unique_id:
                 self._update_pinned_status(hwnd, is_pinned=True)
-
-                # Move the widget to the correct position (after all pinned apps)
-                widget = self._hwnd_to_widget.get(hwnd)
-                if widget:
-                    # Remove from current position
-                    self._widget_container_layout.removeWidget(widget)
-
-                    # Find the position to insert: after all pinned apps
-                    insert_pos = self._find_insert_position_after_pinned()
-
-                    # Insert at the calculated position
-                    self._widget_container_layout.insertWidget(insert_pos, widget)
 
         except Exception as e:
             logging.error("Error pinning app: %s", e)
@@ -663,7 +681,17 @@ class TaskbarWidget(BaseWidget):
             # Since pinned apps are now global, we use the visible order directly
             new_order = visible_order
 
-            # Update pinned order using PinManager
+            window_order = []
+            for i in range(self._widget_container_layout.count()):
+                widget = self._widget_container_layout.itemAt(i).widget()
+                if not widget:
+                    continue
+                order_key = widget.property("window_order_key")
+                if order_key:
+                    window_order.append(order_key)
+            self._pin_manager.update_window_order(window_order)
+
+            # Update pinned order using PinManager after saving the complete layout.
             self._pin_manager.update_pinned_order(new_order)
         except Exception as e:
             logging.error("Error updating pinned order from layout: %s", e)
@@ -723,6 +751,7 @@ class TaskbarWidget(BaseWidget):
             )
         else:
             self._widget_container_layout.addWidget(container)
+        self._restore_window_order()
 
     def _recreate_pinned_button(self, unique_id: str, position: int = -1) -> None:
         """Recreate pinned button when pinned app closes."""
@@ -762,6 +791,7 @@ class TaskbarWidget(BaseWidget):
                 self._widget_container_layout.insertWidget(position, container)
             else:
                 self._widget_container_layout.addWidget(container)
+        self._restore_window_order()
 
     def _create_pinned_app_container(
         self, title: str, icon: QPixmap | None, pseudo_hwnd: int, unique_id: str
@@ -771,6 +801,7 @@ class TaskbarWidget(BaseWidget):
         container.setProperty("class", "app-container")
         container.setProperty("hwnd", pseudo_hwnd)
         container.setProperty("unique_id", unique_id)
+        container.setProperty("window_order_key", unique_id)
         container.setProperty("pinned", True)
 
         # Create outer layout with no margins
@@ -992,28 +1023,22 @@ class TaskbarWidget(BaseWidget):
                                 self._update_pinned_status(hwnd, is_pinned=True)
                                 found_running = True
 
-                                # Move the widget to the correct position (after all pinned apps)
+                                # Preserve the window's current position when pinning it.
+                                current_position = self._get_hwnd_position(hwnd)
                                 self._widget_container_layout.removeWidget(widget)
+                                widget.setProperty("window_order_key", unique_id)
+                                insert_position = max(0, min(current_position, self._widget_container_layout.count()))
+                                self._widget_container_layout.insertWidget(insert_position, widget)
 
-                                # Find the position to insert: after all pinned apps
-                                insert_pos = 0
-                                count = self._widget_container_layout.count()
-                                for i in range(count):
-                                    w = self._widget_container_layout.itemAt(i).widget()
-                                    if not w:
+                                window_order = []
+                                for index in range(self._widget_container_layout.count()):
+                                    current_widget = self._widget_container_layout.itemAt(index).widget()
+                                    if not current_widget:
                                         continue
-                                    w_hwnd = w.property("hwnd")
-                                    # Count all pinned apps (both running and pinned-only)
-                                    if w_hwnd and w_hwnd < 0:  # Pinned-only
-                                        insert_pos = i + 1
-                                    elif (
-                                        w_hwnd and w_hwnd > 0 and w_hwnd in self._pin_manager.running_pinned
-                                    ):  # Running pinned
-                                        # Don't count the current widget we're moving
-                                        if w_hwnd != hwnd:
-                                            insert_pos = i + 1
-
-                                self._widget_container_layout.insertWidget(insert_pos, widget)
+                                    order_key = current_widget.property("window_order_key")
+                                    if order_key:
+                                        window_order.append(order_key)
+                                self._pin_manager.update_window_order(window_order)
                                 break
 
                     if not found_running:
@@ -1086,7 +1111,7 @@ class TaskbarWidget(BaseWidget):
                 # Rebuild the entire layout in the new order
 
                 # Collect all current widgets (both pinned and running)
-                current_widgets = {}  # unique_id or hwnd -> widget
+                current_widgets = {}  # unique_id -> [widget, ...]
 
                 count = self._widget_container_layout.count()
                 for i in range(count):
@@ -1098,12 +1123,12 @@ class TaskbarWidget(BaseWidget):
                     if hwnd and hwnd < 0:  # Pinned-only button
                         unique_id = widget.property("unique_id")
                         if unique_id:
-                            current_widgets[unique_id] = widget
+                            current_widgets.setdefault(unique_id, []).append(widget)
                     elif hwnd and hwnd > 0:  # Running app
                         # Check if it's a running pinned app
                         unique_id = self._pin_manager.running_pinned.get(hwnd)
                         if unique_id:
-                            current_widgets[unique_id] = widget
+                            current_widgets.setdefault(unique_id, []).append(widget)
                         else:
                             # Not pinned, keep at current position for now
                             pass
@@ -1123,8 +1148,9 @@ class TaskbarWidget(BaseWidget):
 
                     # Check if we already have a widget for this app
                     if unique_id in current_widgets:
-                        # Re-add existing widget
-                        self._widget_container_layout.addWidget(current_widgets[unique_id])
+                        # Re-add every running window for this pinned app.
+                        for widget in current_widgets[unique_id]:
+                            self._widget_container_layout.addWidget(widget)
                     else:
                         # Need to create new widget (shouldn't happen often)
                         self._create_pinned_app_button(unique_id, metadata)
@@ -1137,6 +1163,8 @@ class TaskbarWidget(BaseWidget):
                         # This is a running unpinned app
                         if widget.parent() is None:  # Not yet added back
                             self._widget_container_layout.addWidget(widget)
+
+                self._restore_window_order()
 
         except Exception as e:
             logging.error("Error handling pinned apps signal: %s", e)
@@ -1322,7 +1350,8 @@ class TaskbarWidget(BaseWidget):
         icon = self._get_app_icon(hwnd, title if process == "explorer.exe" else "")
         self._window_buttons[hwnd] = (title, icon, hwnd, process)
 
-        container = self._create_app_container(title, icon, hwnd)
+        container = self._create_app_container(window_data, icon, hwnd)
+        container.setProperty("window_order_key", self._get_window_order_key(hwnd, window_data, unique_id))
         self._hwnd_to_widget[hwnd] = container
 
         if is_pinned:
@@ -1345,6 +1374,8 @@ class TaskbarWidget(BaseWidget):
             )
         else:
             self._widget_container_layout.insertWidget(position, container)
+
+        self._restore_window_order()
 
         if self.config.hide_empty and len(self._hwnd_to_widget) > 0:
             self._show_taskbar_widget()
@@ -1464,7 +1495,7 @@ class TaskbarWidget(BaseWidget):
                 title_wrapper = self._get_title_wrapper(widget)
                 title_label = self._get_title_label(title_wrapper)
                 if title_label:
-                    formatted_title = self._format_title(title)
+                    formatted_title = self._format_title(window_data)
                     if title_label.text() != formatted_title:
                         title_label.setText(formatted_title)
                 if self.config.title_label.show == "focused" and title_wrapper:
@@ -1502,7 +1533,7 @@ class TaskbarWidget(BaseWidget):
 
         # Update the tooltip if enabled
         if self._tooltip and title:
-            set_tooltip(widget, title, delay=0)
+            set_tooltip(widget, self._format_label(window_data), delay=0)
 
     def _refresh_title_visibility(self, hwnd: int) -> None:
         if not (self.config.title_label.enabled and self.config.title_label.show == "focused"):
@@ -1710,8 +1741,9 @@ class TaskbarWidget(BaseWidget):
         except Exception:
             return False
 
-    def _format_title(self, title: str) -> str:
+    def _format_title(self, window_data: dict) -> str:
         """Format a window title according to max and min length settings."""
+        title = self._format_label(window_data)
         if len(title) > self.config.title_label.max_length:
             formatted_title = title[: self.config.title_label.max_length] + ".."
         else:
@@ -1723,7 +1755,50 @@ class TaskbarWidget(BaseWidget):
 
         return formatted_title
 
-    def _create_app_container(self, title: str, icon: QPixmap, hwnd: int) -> QFrame:
+    def _format_label(self, window_data: dict) -> str:
+        """Format and rewrite a window label using active-window placeholders."""
+        process = {
+            "name": window_data.get("process_name", "") or "",
+            "pid": window_data.get("process_pid", 0) or 0,
+            "path": window_data.get("process_path", "") or "",
+        }
+        win_info = {
+            "title": window_data.get("title", "") or "",
+            "app_name": window_data.get("app_name", "") or "",
+            "class_name": window_data.get("class_name", "") or "",
+            "hwnd": window_data.get("hwnd", 0) or 0,
+            "monitor_hwnd": window_data.get("monitor_hwnd", window_data.get("monitor_handle", 0)) or 0,
+            "process": process,
+        }
+        try:
+            formatted_label = self.config.label.format(win=win_info)
+        except KeyError, IndexError, ValueError:
+            formatted_label = win_info["title"]
+
+        return self._rewrite_filter(formatted_label)
+
+    def _rewrite_filter(self, text: str) -> str:
+        """Apply configured rewrite rules to a window title."""
+        if not text or not self.config.rewrite:
+            return text
+
+        result = text
+        for rule in self.config.rewrite:
+            if not rule.pattern or not rule.replacement:
+                continue
+
+            try:
+                result, count = re.subn(rule.pattern, rule.replacement, result)
+                if count > 0 and rule.case:
+                    transform = getattr(result, rule.case, None)
+                    if callable(transform):
+                        result = transform()
+            except re.error as error:
+                logging.warning("Invalid regex pattern '%s': %s", rule.pattern, error)
+
+        return result
+
+    def _create_app_container(self, window_data: dict, icon: QPixmap, hwnd: int) -> QFrame:
         """Create a container widget that holds icon and title"""
         container = DraggableAppButton(self, hwnd)
         container.setProperty("class", self._get_container_class(hwnd))
@@ -1765,7 +1840,7 @@ class TaskbarWidget(BaseWidget):
             except Exception:
                 pass
 
-            title_label = QLabel(self._format_title(title))
+            title_label = QLabel(self._format_title(window_data))
             title_label.setProperty("class", "app-title")
             title_label.setProperty("hwnd", hwnd)
             try:
@@ -1790,7 +1865,7 @@ class TaskbarWidget(BaseWidget):
         outer_layout.addWidget(content_wrapper)
 
         if self._tooltip:
-            set_tooltip(container, title, delay=0)
+            set_tooltip(container, self._format_label(window_data), delay=0)
 
         return container
 
