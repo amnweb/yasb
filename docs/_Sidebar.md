@@ -14,6 +14,7 @@
     - [Battery](./(Widget)-Battery)
     - [Bluetooth](./(Widget)-Bluetooth)
     - [Brightness](./(Widget)-Brightness)
+    - [Calendar](./(Widget)-Calendar)
     - [Cava](./(Widget)-Cava)
     - [Claude Usage](./(Widget)-Claude-Usage)
     - [Clock](./(Widget)-Clock)
