@@ -89,10 +89,13 @@ choco install yasb
 | [Bluetooth](https://github.com/amnweb/yasb/wiki/(Widget)-Bluetooth) | Shows the current Bluetooth status and connected devices. |
 | [Brightness](https://github.com/amnweb/yasb/wiki/(Widget)-Brightness) | Displays and change the current brightness level. |
 | [Cava](https://github.com/amnweb/yasb/wiki/(Widget)-Cava) | Displays audio visualizer using Cava. |
+| [Claude Usage](https://github.com/amnweb/yasb/wiki/(Widget)-Claude-Usage) | Shows your Claude subscription usage. |
 | [Copilot](https://github.com/amnweb/yasb/wiki/(Widget)-Copilot) | GitHub Copilot usage with a detailed menu showing statistics |
 | [CPU](https://github.com/amnweb/yasb/wiki/(Widget)-CPU) | Shows the current CPU usage and information. |
 | [Clock](https://github.com/amnweb/yasb/wiki/(Widget)-Clock) | Displays the current time and date, with customizable formats. |
+| [Control Center](https://github.com/amnweb/yasb/wiki/(Widget)-Control-Center) | A customizable quick-settings control center with quick actions, sliders, and media controls. |
 | [Custom](https://github.com/amnweb/yasb/wiki/(Widget)-Custom) | Create a custom widget. |
+| [Do Not Disturb](https://github.com/amnweb/yasb/wiki/(Widget)-Dnd) | Monitor and toggle Windows Focus Assist (Do Not Disturb). |
 | [Github](https://github.com/amnweb/yasb/wiki/(Widget)-Github) | Shows notifications from GitHub. |
 | [GlazeWM Binding Mode](https://github.com/amnweb/yasb/wiki/(Widget)-GlazeWM-Binding-Mode) | GlazeWM binding mode widget. |
 | [GlazeWM Tiling Direction](https://github.com/amnweb/yasb/wiki/(Widget)-GlazeWM-Tiling-Direction) | GlazeWM tiling direction widget. |
@@ -106,6 +109,7 @@ choco install yasb
 | [Launchpad](https://github.com/amnweb/yasb/wiki/(Widget)-Launchpad) | A customizable launchpad for quick access to applications. |
 | [Libre Hardware Monitor](https://github.com/amnweb/yasb/wiki/(Widget)-Libre-HW-Monitor) | Connects to Libre Hardware Monitor to get sensor data. |
 | [Media](https://github.com/amnweb/yasb/wiki/(Widget)-Media) | Displays media controls and information. |
+| [Media Lite](https://github.com/amnweb/yasb/wiki/(Widget)-Media-Lite) | A vertical and minimal album-style media widget. |
 | [Memory](https://github.com/amnweb/yasb/wiki/(Widget)-Memory) | Shows current memory usage and information. |
 | [Microphone](https://github.com/amnweb/yasb/wiki/(Widget)-Microphone) | Displays the current microphone status. |
 | [Notifications](https://github.com/amnweb/yasb/wiki/(Widget)-Notifications) | Shows the number of notifications from Windows. |
@@ -131,6 +135,7 @@ choco install yasb
 | [WHKD](https://github.com/amnweb/yasb/wiki/(Widget)-Whkd) | Shows the current hotkey binding mode of WHKD. |  
 | [Windows-Desktops](https://github.com/amnweb/yasb/wiki/(Widget)-Windows-Desktops) | Windows virtual desktops widget. |
 | [Window Controls](https://github.com/amnweb/yasb/wiki/(Widget)-Window-Controls) | Window Controls widget provides buttons for minimizing, maximizing/restoring, and closing the focused window. |
+| [Window Switcher](https://github.com/amnweb/yasb/wiki/(Widget)-Window-Switcher) | A fast, lightweight app switcher. |
 | [Komorebi Control](https://github.com/amnweb/yasb/wiki/(Widget)-Komorebi-Control) | Komorebi control widget. |
 | [Komorebi Layout](https://github.com/amnweb/yasb/wiki/(Widget)-Komorebi-Layout) | Shows the current layout of Komorebi. |
 | [Komorebi Stack](https://github.com/amnweb/yasb/wiki/(Widget)-Komorebi-Stack) | Shows windows in the current Komorebi stack. |
