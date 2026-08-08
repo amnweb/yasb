@@ -352,7 +352,7 @@ class SystrayWidget(BaseWidget):
 
         # Clear drop-target indicator and restore min width
         self.pinned_widget.set_drop_target_style(False)
-        self.pinned_widget.setMinimumWidth(16)
+        self.pinned_widget.update_content_width()
         self.update_pinned_widget_visibility()
 
     def _is_hidden_icon(self, data: IconData) -> bool:
@@ -389,6 +389,7 @@ class SystrayWidget(BaseWidget):
             icon.is_pinned = saved_data.is_pinned
             if saved_data.is_pinned:
                 self.pinned_layout.addWidget(icon)
+                self.pinned_widget.update_content_width()
             else:
                 self._add_icon_to_unpinned(icon)
 
@@ -398,6 +399,8 @@ class SystrayWidget(BaseWidget):
         icon.update_icon()
         was_hidden = icon.isHidden()
         icon.setHidden(data.uFlags & NIF_STATE != 0 and data.dwState == 1)
+        if icon.is_pinned:
+            self.pinned_widget.update_content_width()
         if self.config.show_in_popup and was_hidden != icon.isHidden():
             self._relayout_popup_grid()
         self.pinned_vis_check_timer.start(300)
@@ -410,6 +413,7 @@ class SystrayWidget(BaseWidget):
             self.icons.remove(icon)
             icon.hide()
             icon.deleteLater()
+            self.pinned_widget.update_content_width()
             if self.config.show_in_popup:
                 self._relayout_popup_grid()
             self.pinned_vis_check_timer.start(300)
@@ -420,6 +424,7 @@ class SystrayWidget(BaseWidget):
         if not icon.is_pinned:
             self.pinned_layout.addWidget(icon)
             icon.is_pinned = True
+            self.pinned_widget.update_content_width()
         else:
             self._add_icon_to_unpinned(icon)
             icon.is_pinned = False
