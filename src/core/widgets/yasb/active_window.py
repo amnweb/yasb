@@ -8,12 +8,12 @@ import win32process
 from PIL import Image
 from PyQt6.QtCore import QElapsedTimer, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QImage, QPixmap
-from PyQt6.QtWidgets import QLabel
+from PyQt6.QtWidgets import QLabel, QWidget
 
 from core.events.service import EventService
 from core.events.win32 import WinEvent
 from core.utils.win32.app_icons import get_window_icon
-from core.utils.win32.utils import get_app_name_from_aumid, get_app_name_from_pid, get_hwnd_info
+from core.utils.win32.utils import get_app_name_from_aumid, get_app_name_from_pid, get_hwnd_info, get_monitor_hwnd
 from core.validation.widgets.yasb.active_window import ActiveWindowConfig
 from core.widgets.base import BaseWidget
 from settings import APP_BAR_TITLE
@@ -226,11 +226,12 @@ class ActiveWindowWidget(BaseWidget):
             return
 
         monitor_name = win_info["monitor_info"].get("device", None)
+        widget_monitor = get_monitor_hwnd(int(QWidget.winId(self)))
 
         if (
             self.config.monitor_exclusive
             and self.screen().name() != monitor_name
-            and win_info.get("monitor_hwnd", "Unknown") != self.monitor_hwnd
+            and win_info.get("monitor_hwnd", "Unknown") != widget_monitor
         ):
             self._set_no_window_or_hide()
         else:
@@ -284,13 +285,6 @@ class ActiveWindowWidget(BaseWidget):
             if is_uwp:
                 try:
                     parent_pid = process["pid"]
-
-                    def _find_real_pid(child_hwnd, _):
-                        _, child_pid = win32process.GetWindowThreadProcessId(child_hwnd)
-                        if child_pid and child_pid != parent_pid:
-                            return False
-                        return True
-
                     found_pids = []
 
                     def _collect_pids(child_hwnd, _):
