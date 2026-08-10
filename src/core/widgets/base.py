@@ -72,6 +72,14 @@ class BaseWidget(QWidget):
         self._hotkey_signal.connect(self._handle_hotkey_event)
         self._event_service.register_event("handle_widget_hotkey", self._hotkey_signal)
 
+    def clear_hover_state(self):
+        print("sdasd")
+        """Clear stuck :hover CSS state after opening a popup."""
+        for w in [self, self._widget_frame, *self._widget_frame.findChildren(QWidget)]:
+            w.setAttribute(Qt.WidgetAttribute.WA_UnderMouse, False)
+            w.style().unpolish(w)
+            w.style().polish(w)
+
     def _handle_hotkey_event(self, widget_name: str, action: str, target_screen: str) -> None:
         """
         Handle incoming hotkey events.

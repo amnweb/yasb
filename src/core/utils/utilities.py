@@ -400,6 +400,10 @@ class PopupWidget(QWidget):
         parent_id = id(self._parent)
         PopupWidget._open_popups[parent_id] = self
 
+        # Clear stuck :hover state scoped to the bar widget's own content only.
+        if self._parent:
+            self._parent.clear_hover_state()
+
         if self._blur:
             enable_blur(
                 self.winId(),
