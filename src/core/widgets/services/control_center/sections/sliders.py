@@ -335,11 +335,14 @@ class SlidersSectionWidget(QFrame):
             return
 
         monitors = self._brightness_service.get_monitors()
-        if len(monitors) < 2:
+        if not monitors:
+            return
+
+        current = self._get_brightness_target()
+        if len(monitors) == 1 and monitors[0][0] == current:
             return
 
         menu = self._create_context_menu()
-        current = self._get_brightness_target()
 
         for index, (hmonitor, name) in enumerate(monitors):
             label = self._brightness_service.get_monitor_subtitle(hmonitor, index)
@@ -422,7 +425,9 @@ class SlidersSectionWidget(QFrame):
             if self._brightness_value_label is not None:
                 self._brightness_value_label.setText(f"{val}%")
 
-    def update_brightness(self, hmonitor: int, brightness: int) -> None:
+    def update_brightness(self, hmonitor: int, brightness: int | None) -> None:
+        if brightness is None:
+            return
         if self._brightness_slider is None:
             return
         if self._get_brightness_target() != hmonitor:

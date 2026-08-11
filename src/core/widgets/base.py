@@ -73,7 +73,6 @@ class BaseWidget(QWidget):
         self._event_service.register_event("handle_widget_hotkey", self._hotkey_signal)
 
     def clear_hover_state(self):
-        print("sdasd")
         """Clear stuck :hover CSS state after opening a popup."""
         for w in [self, self._widget_frame, *self._widget_frame.findChildren(QWidget)]:
             w.setAttribute(Qt.WidgetAttribute.WA_UnderMouse, False)

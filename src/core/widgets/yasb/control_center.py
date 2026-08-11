@@ -73,7 +73,7 @@ class ControlCenterWidget(BaseWidget):
             "input": self._input_service,
         }
 
-    def _on_brightness_service_changed(self, hmonitor: int, brightness: int):
+    def _on_brightness_service_changed(self, hmonitor: int, brightness: int | None):
         if not self.dialog or not is_valid_qobject(self.dialog) or not self.dialog.isVisible():
             return
         sliders = self._section_widgets.get("sliders")
