@@ -546,22 +546,25 @@ class CloudWindow(ViewBase, QMainWindow):
 def _reason(access: Access) -> str:
     # What is actually restricted, not why. A past_due subscription carries one reason code
     # for three different states - writes fine, writes stopped, everything stopped - so
-    # keying off the code alone said "Backups are paused" while backups were still running.
+    # keying off the code alone reported a stopped subscription while backups still ran.
     if access.reason == "no_subscription":
         return "No active subscription"
     if not access.can_read:
         return "Subscription expired"
     if not access.can_write:
-        return "Backups are paused"
+        # Paired with the deletion date, so this half names the cause and that half the cost.
+        return "Subscription ended"
+    if access.reason == "payment_past_due":
+        # Still writable, so this states the problem without claiming anything is blocked.
+        return "Payment failed"
     return ""
 
 
 def _read_deadline(access: Access) -> str:
-    # Only while writes are stopped but the backups can still be fetched.
     if access.can_write or not access.can_read or not access.read_until:
         return ""
     moment = parse_timestamp(access.read_until)
-    return f"Downloads until {moment.astimezone():%d %b}" if moment else ""
+    return f"Backups deleted {moment.astimezone():%d %b}" if moment else ""
 
 
 def _footer_state(account: Account) -> str:

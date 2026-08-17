@@ -8,7 +8,7 @@ YASB Cloud comes with YASB. There is nothing extra to install. You can use it fr
 ## What you need
 An account and an active subscription. You can create both at [cloud.yasb.dev](https://cloud.yasb.dev).
 
-Without a subscription you can still open the app, sign in and download your existing backups, but you cannot create new ones.
+If your subscription ends you can still open the app, sign in and restore your existing backups for 14 days, you just cannot make new ones. At the end of those 14 days the stored backups are deleted. We email you before that happens, and subscribing again at any point before the deadline brings everything back.
 
 ## Signing in
 Open YASB Cloud and click **Sign in**. Your browser opens and the app shows a short code.
@@ -197,6 +197,10 @@ That includes your sign-in, your settings, the log files, and the safety copies 
 **What happens if my PC dies mid-restore?** Your previous configuration is saved first and put back automatically. If even that fails, the app tells you where the copy is.
 
 **Can I use the same account on two PCs?** Yes. Sign in on both. Each backup records which PC it came from, so you can tell them apart.
+
+**What happens to my backups if I stop paying?** They stay for 14 days and you can restore any of them in that time. After 14 days they are deleted. You get an email before the deadline, and subscribing again before it restores everything.
+
+**Can I move to a smaller plan?** Only if what you are storing fits it. Nothing is ever deleted to make a plan fit, so if you are over the smaller plan's limits, delete some backups first and then switch.
 
 **I signed out but I am still listed as a device.** Signing out ends the session properly. If you had no connection at the time, the app tells you so, and you can remove the device from your account page.
 
