@@ -21,10 +21,17 @@ def _resolve(t: dict[str, str], key: str) -> QColor:
 
 
 class Card(QFrame):
-    """Card with custom-painted background, border, and animated hover/selection."""
+    """Card with custom-painted background, border, and animated hover/selection.
 
-    def __init__(self, parent: QWidget | None = None) -> None:
+    Args:
+        parent: Parent widget.
+        hover: Whether the card lights up under the cursor. Leave on for a card the user can
+            click; turn it off for one that is only a container.
+    """
+
+    def __init__(self, parent: QWidget | None = None, hover: bool = True) -> None:
         super().__init__(parent)
+        self._hover = hover
         self._selected = False
         self._theme_key = theme_key()
         self._build_states(get_tokens())
@@ -110,7 +117,7 @@ class Card(QFrame):
             label.set_color_override(color)
 
     def enterEvent(self, event) -> None:
-        if not self._selected:
+        if self._hover and not self._selected:
             self._animate_to("hover")
         super().enterEvent(event)
 

@@ -4,6 +4,7 @@
 - [Keybindings](./Keybindings)
 - [Styling](./Styling)
 - [YASB CLI](./CLI)
+- [YASB Cloud](./Cloud)
 - [FAQ](./FAQ)
 - [Contributing](./Contributing)
 - [Writing Widget](./Writing-Widget)
