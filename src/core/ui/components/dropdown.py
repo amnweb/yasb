@@ -199,8 +199,8 @@ class _DropDownPopup(QWidget):
         super().mousePressEvent(event)
 
     def _on_item_clicked(self, key: str) -> None:
-        self.itemSelected.emit(key)
         self.close()
+        self.itemSelected.emit(key)
 
 
 # Trigger button
