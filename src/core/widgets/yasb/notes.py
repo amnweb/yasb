@@ -16,7 +16,6 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QScrollArea,
     QSizePolicy,
-    QSpacerItem,
     QVBoxLayout,
     QWidget,
 )
@@ -24,11 +23,12 @@ from PyQt6.QtWidgets import (
 from core.config import HOME_CONFIGURATION_DIR
 from core.utils.qobject import is_valid_qobject
 from core.utils.tooltip import set_tooltip
+from core.utils.utilities import ElidedLabel
 from core.utils.win32.utils import find_focused_screen, get_foreground_hwnd, set_foreground_hwnd  # type: ignore
 from core.utils.win32.window_actions import force_foreground_focus
 from core.validation.widgets.yasb.notes import NotesConfig
 from core.widgets.base import BaseWidget
-from core.widgets.services.notes.utils import ElidedLabel, FloatingWindowController, NotesPopup, NoteTextEdit
+from core.widgets.services.notes.utils import FloatingWindowController, NotesPopup, NoteTextEdit
 
 
 class NotesWidget(BaseWidget):
@@ -202,7 +202,7 @@ class NotesWidget(BaseWidget):
                 self._add_note_to_menu(note, self.scroll_layout)
         else:
             # Show empty state
-            empty_label = QLabel(f"{self.config.icons.note}  No notes yet!")
+            empty_label = QLabel("No notes yet!")
             empty_label.setProperty("class", "empty-list")
             empty_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             self.scroll_layout.addWidget(empty_label)
@@ -223,26 +223,23 @@ class NotesWidget(BaseWidget):
         # Calculate height for up to 3 notes
         if self.scroll_layout and self.scroll_area:
             count = self.scroll_layout.count()
-            if count > 0:
-                # Calculate height of up to 3 items
-                total_h = 0
-                for i in range(min(count, 3)):
-                    item = self.scroll_layout.itemAt(i)
-                    if item:
-                        widget = item.widget()
-                        if widget:
-                            total_h += widget.sizeHint().height()
+            # Calculate height of up to 3 items
+            total_h = 0
+            for i in range(min(count, 3)):
+                item = self.scroll_layout.itemAt(i)
+                if item:
+                    widget = item.widget()
+                    if widget:
+                        total_h += widget.sizeHint().height()
 
-                self.scroll_area.setFixedHeight(total_h)
-            else:
-                if self.is_floating:
-                    self.scroll_area.setMinimumHeight(0)
-                    self.scroll_area.setMaximumHeight(60)
-                    self.scroll_area.setMinimumHeight(60)
-                else:
-                    self.scroll_area.setFixedHeight(60)  # Fallback for empty state
+            # Pin the list so adjustSize() below sizes the menu to its content
+            self.scroll_area.setFixedHeight(total_h or 60)  # 60 is the empty state fallback
 
         self.menu.adjustSize()
+
+        if self.scroll_area:
+            self.scroll_area.setMaximumHeight(16777215)
+
         # setPosition is now overridden in NotesPopup to ignore moves when floating
         self.menu.setPosition(
             alignment=self.config.menu.alignment,
@@ -323,7 +320,7 @@ class NotesWidget(BaseWidget):
             self._close_menu,
             visible=False,
         )
-        set_tooltip(self.close_btn, "Close window")
+        set_tooltip(self.close_btn, "Close window", position="top")
         header_layout.addWidget(self.close_btn)
 
         layout.addWidget(header_widget)
@@ -437,7 +434,8 @@ class NotesWidget(BaseWidget):
         # Add notes to the scroll area
         self._refresh_notes_list()
 
-        main_layout.addWidget(self.scroll_area)
+        # Stretch so the notes list, not the input area, absorbs any extra height
+        main_layout.addWidget(self.scroll_area, 1)
 
         if self.menu:
             self.menu.adjustSize()
@@ -454,7 +452,7 @@ class NotesWidget(BaseWidget):
                 if current_pos is not None:
                     self.menu.move(current_pos)
                 self.float_btn.setText(self.icons["float_off"])
-                set_tooltip(self.float_btn, "Dock window")
+                set_tooltip(self.float_btn, "Dock window", position="top")
                 self.close_btn.setVisible(True)
             elif self._start_floating:
                 self._floating_controller.toggle_floating()
@@ -524,12 +522,14 @@ class NotesWidget(BaseWidget):
         # Title
         lines = note["title"].splitlines()
         display_title = lines[0] if lines else ""
-        if len(display_title) > self.config.menu.max_title_size:
-            display_title = display_title[: (self.config.menu.max_title_size - 3)] + "..."
+        # Hard cap far beyond anything the row can display, so a pasted wall of text
+        # doesn't make every elide measure a huge string. ElidedLabel does the rest.
+        display_title = display_title[:512]
         title_label = ElidedLabel(display_title)
         title_label.setProperty("class", "title")
         title_label.setAlignment(Qt.AlignmentFlag.AlignVCenter)
         text_layout.addWidget(title_label)
+        text_layout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
 
         # Date under title
         if "timestamp" in note and self.config.menu.show_date_time:
@@ -542,10 +542,8 @@ class NotesWidget(BaseWidget):
             except ValueError, TypeError:
                 pass
 
+        # text_container is Expanding, so it already pushes the buttons to the right
         container_layout.addWidget(text_container)
-
-        # Spacer to push buttons to the right
-        container_layout.addItem(QSpacerItem(0, 0, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum))
 
         # Create vertical layout for the buttons
         buttons_container = QWidget()

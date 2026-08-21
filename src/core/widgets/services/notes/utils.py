@@ -2,11 +2,12 @@ import re
 from typing import TYPE_CHECKING, Any
 
 from PyQt6.QtCore import QEvent, QMimeData, Qt
-from PyQt6.QtGui import QKeyEvent, QMouseEvent, QTextCharFormat, QTextCursor
-from PyQt6.QtWidgets import QApplication, QLabel, QPushButton, QSizePolicy, QTextEdit, QWidget
+from PyQt6.QtGui import QContextMenuEvent, QIcon, QKeyEvent, QMouseEvent, QTextCharFormat, QTextCursor
+from PyQt6.QtWidgets import QApplication, QPushButton, QTextEdit, QWidget
 
 from core.utils.tooltip import set_tooltip
 from core.utils.utilities import PopupWidget, refresh_widget_style
+from core.utils.win32.utils import apply_qmenu_style
 
 if TYPE_CHECKING:
     from core.widgets.yasb.notes import NotesWidget
@@ -34,7 +35,7 @@ class FloatingWindowController:
                 self._widget.menu.move(center_x, center_y)
 
             self._widget.float_btn.setText(self._widget.icons["float_off"])
-            set_tooltip(self._widget.float_btn, "Dock window")
+            set_tooltip(self._widget.float_btn, "Dock window", position="top")
             self._widget.close_btn.setVisible(True)
         else:
             self._widget.is_floating = False
@@ -128,45 +129,6 @@ class NotesPopup(PopupWidget):
         return bool(super().event(a0))  # type: ignore
 
 
-class ElidedLabel(QLabel):
-    """A QLabel that automatically elides its text if it doesn't fit the width."""
-
-    def __init__(self, text: str = "", parent: QWidget | None = None) -> None:
-        super().__init__(text, parent)
-        self._full_text = text
-        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
-
-    def setText(self, a0: str | None) -> None:
-        self._full_text = a0 or ""
-        self._update_elided_text()
-
-    def text(self) -> str:
-        return self._full_text
-
-    def resizeEvent(self, a0: Any) -> None:
-        super().resizeEvent(a0)
-        self._update_elided_text()
-
-    def minimumSizeHint(self) -> Any:
-        from PyQt6.QtCore import QSize
-
-        metrics = self.fontMetrics()
-        return QSize(10, metrics.height())
-
-    def sizeHint(self) -> Any:
-        from PyQt6.QtCore import QSize
-
-        metrics = self.fontMetrics()
-        # Cap the natural size hint so the popup doesn't expand infinitely for huge titles
-        return QSize(min(250, metrics.horizontalAdvance(self._full_text)), metrics.height())
-
-    def _update_elided_text(self) -> None:
-        metrics = self.fontMetrics()
-        elided = metrics.elidedText(self._full_text, Qt.TextElideMode.ElideRight, self.width())
-        if elided != super().text():
-            super().setText(elided)
-
-
 class NoteTextEdit(QTextEdit):
     """
     Custom QTextEdit widget for note input that overrides keyPressEvent.
@@ -240,6 +202,34 @@ class NoteTextEdit(QTextEdit):
             super().insertFromMimeData(new_source)
         else:
             super().insertFromMimeData(source)
+
+    def contextMenuEvent(self, e: QContextMenuEvent | None) -> None:
+        """Replace the default context menu with a styled one, but keeping the standard actions."""
+        if e is None:
+            return
+
+        menu = self.createStandardContextMenu(e.pos())
+        if menu is None:
+            return
+
+        menu.setProperty("class", "context-menu")
+        apply_qmenu_style(menu)
+        for action in menu.actions():
+            action.setIconVisibleInMenu(False)
+            action.setIcon(QIcon())
+
+        # Keep the notes popup open while the menu has focus
+        popup = self._notes_widget.menu
+        if popup is not None:
+            popup.set_block_deactivate(True)
+        try:
+            menu.exec(e.globalPos())
+        finally:
+            if popup is not None:
+                popup.set_block_deactivate(False)
+
+        menu.deleteLater()
+        e.accept()
 
     def _get_indent_string(self) -> str:
         cursor = self.textCursor()

@@ -89,8 +89,11 @@ SCOPED_DEPRECATED_FIELDS: dict[str, dict[str, str]] = {
     "GroupLabelConfig": {
         "distance": "Use 'offset_top' instead.",
     },
-    "MenuConfig": {
+    "ServerMonitorMenuConfig": {
         "distance": "Use 'offset_top' instead.",
+    },
+    "NotesMenuConfig": {
+        "max_title_size": "No longer supported and can be removed from the config. Handled by font-aware elision.",
     },
     "AudioMenuConfig": {
         "distance": "Use 'offset_top' instead.",

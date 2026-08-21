@@ -7,7 +7,7 @@ from core.validation.widgets.base_model import (
 )
 
 
-class MenuConfig(CustomBaseModel):
+class NotesMenuConfig(CustomBaseModel):
     blur: bool = True
     round_corners: bool = True
     round_corners_type: str = "normal"
@@ -16,18 +16,17 @@ class MenuConfig(CustomBaseModel):
     direction: str = "down"
     offset_top: int = 6
     offset_left: int = 0
-    max_title_size: int = 150
     show_date_time: bool = True
 
 
-class IconsConfig(CustomBaseModel):
+class NotesIconsConfig(CustomBaseModel):
     model_config = ConfigDict(populate_by_name=True)
-    note: str = "\udb82\udd0c"
-    delete: str = "\ueab8"
-    copy_icon: str = Field(default="\uebcc", alias="copy")
-    float_on: str = "\udb84\udcac"
-    float_off: str = "\udb84\udca9"
-    close: str = "\uf00d"
+    note: str = "\ue70b"
+    delete: str = "\ue74d"
+    copy_icon: str = Field(default="\ue8c8", alias="copy")
+    float_on: str = "\ue922"
+    float_off: str = "\ue923"
+    close: str = "\ue8bb"
 
 
 class NotesCallbacksConfig(CallbacksConfig):
@@ -44,7 +43,7 @@ class NotesConfig(CustomBaseModel):
     start_floating: bool = False
     paste_plain_text: bool = False
     enter_to_add_note: bool = True
-    menu: MenuConfig = MenuConfig()
-    icons: IconsConfig = IconsConfig()
+    menu: NotesMenuConfig = NotesMenuConfig()
+    icons: NotesIconsConfig = NotesIconsConfig()
     keybindings: list[KeybindingConfig] = []
     callbacks: NotesCallbacksConfig = NotesCallbacksConfig()
