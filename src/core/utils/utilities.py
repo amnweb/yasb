@@ -509,6 +509,7 @@ class ToastNotifier:
         message: str,
         duration: str = "short",
         launch_url: str = None,
+        launch_label: str = "Download &amp; Install",
         scenario: str = None,
     ) -> None:
         # refer to https://learn.microsoft.com/en-us/uwp/schemas/tiles/toastschema/schema-root
@@ -517,7 +518,7 @@ class ToastNotifier:
             f"""
             <actions>
                 <action
-                    content="Download &amp; Install"
+                    content="{launch_label}"
                     activationType="protocol"
                     arguments="{launch_url}"/>
             </actions>

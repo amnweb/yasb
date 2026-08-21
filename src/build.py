@@ -135,6 +135,13 @@ executables = [
         copyright=f"Copyright (C) {datetime.datetime.now().year} AmN",
         target_name="yasbc",
     ),
+    Executable(
+        "core/cloud/app.py",
+        base="gui",
+        icon=icon_ico,
+        copyright=f"Copyright (C) {datetime.datetime.now().year} AmN",
+        target_name="yasb_cloud",
+    ),
 ]
 
 setup(

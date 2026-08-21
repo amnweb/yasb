@@ -379,6 +379,14 @@ class CLIHandler:
             help="Find and fix deprecated options in config",
             add_help=False,
         )
+        # No arguments and no -h of its own, everything after `cloud` falls through as
+        # unrecognised and is handed to core.cloud.cli, which has its own parser.
+        subparsers.add_parser(
+            "cloud",
+            help="Back up and restore your config with YASB Cloud",
+            prog="yasbc cloud",
+            add_help=False,
+        )
         parser.add_argument(
             "-v",
             "--version",
@@ -397,8 +405,10 @@ class CLIHandler:
             action="store_true",
             help="Show help message",
         )
-        args = parser.parse_args()
-
+        args, passthrough = parser.parse_known_args()
+        # Only `cloud` is allowed leftovers, every other command stays strict.
+        if passthrough and args.command != "cloud":
+            parser.error(f"unrecognized arguments: {' '.join(passthrough)}")
         if args.command == "start":
             if not args.silent:
                 print(
@@ -429,7 +439,10 @@ class CLIHandler:
             else:
                 self.send_command_to_application("stop")
             sys.exit(0)
+        elif args.command == "cloud":
+            from core.cloud.cli import run as run_cloud
 
+            sys.exit(run_cloud(passthrough))
         elif args.command == "reload":
             if is_process_running("yasb.exe"):
                 if not args.silent:
@@ -714,6 +727,7 @@ class CLIHandler:
                   update                    Update the application
                   log                       Tail yasb process logs (cancel with Ctrl-C)
                   reset                     Restore default config files and clear cache
+                  cloud                     Back up and restore your config with YASB Cloud
                   config-dir                Open config directory in file explorer
                   migrate-config            Find and fix deprecated options in config
                   help                      Print this message
