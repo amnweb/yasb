@@ -98,6 +98,7 @@ taskbar:
 .taskbar-widget .app-container.foreground {} /* container for the focused app */
 .taskbar-widget .app-container.flashing {} /* flashing container for the app (window is flashing) */
 .taskbar-widget .app-container.running {} /* container for running apps (not focused) */
+.taskbar-widget .app-container.running.minimized {} /* container for apps whose windows are all minimized */
 .taskbar-widget .app-container.grouped {} /* container holding more than one window of the same app */
 .taskbar-widget .app-container .app-icon {} /* Icon inside the container */
 .taskbar-widget .app-container .app-title {} /* Label inside the container */
@@ -117,6 +118,7 @@ taskbar:
     margin: 0 2px;
     border-radius: 4px;
     padding: 0 8px;
+    border: 1px solid transparent
 }
 .taskbar-widget .app-container.foreground {
     background-color: rgba(255, 255, 255, 0.1);
@@ -124,6 +126,9 @@ taskbar:
 }
 .taskbar-widget .app-container.running {
     background-color: transparent;
+}
+.taskbar-widget .app-container.running.minimized .app-icon {
+    opacity: 0.5;
 }
 .taskbar-widget .app-container:hover {
     background-color: rgba(255, 255, 255, 0.15);

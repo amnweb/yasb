@@ -497,6 +497,7 @@ class TaskbarWidget(BaseWidget):
         self._flash_timers = {}
         self._recycle_bin_state = {"is_empty": True}
         self._pending_pinned_recreations = set()  # Track pending placeholder recreations
+        self._minimized_hwnds = set()
 
         # Initialize pin manager for pinned apps functionality
         self._pin_manager = PinManager()
@@ -1238,6 +1239,24 @@ class TaskbarWidget(BaseWidget):
         else:
             self._update_window_ui(hwnd, window_data)
 
+    def _on_window_minimize_changed(self, hwnd, is_minimized):
+        """Handle minimize/restore signal from task manager"""
+        if is_minimized:
+            self._minimized_hwnds.add(hwnd)
+        else:
+            self._minimized_hwnds.discard(hwnd)
+
+        container = self._hwnd_to_widget.get(hwnd)
+        if not is_valid_qobject(container):
+            return
+
+        new_cls = self._get_container_class(hwnd)
+        if container.property("class") == new_cls or ("flashing" in new_cls and self._flash_owns(container)):
+            return
+
+        container.setProperty("class", new_cls)
+        refresh_widget_style(container)
+
     def _on_window_monitor_changed(self, hwnd, window_data):
         """Handle window monitor changed signal from task manager"""
         # For monitor exclusive mode, check if window should be shown/hidden
@@ -1312,6 +1331,9 @@ class TaskbarWidget(BaseWidget):
         # Skip if window is already added (prevents duplicate calls)
         if hwnd in self._window_buttons:
             return
+        # Apps already minimized when the button appears, minimize events keep it current after
+        if win32gui.IsIconic(hwnd):
+            self._minimized_hwnds.add(hwnd)
 
         # Check if this is a pinned app
         unique_id, _ = self._get_app_identifier(hwnd, window_data)
@@ -1464,6 +1486,8 @@ class TaskbarWidget(BaseWidget):
                     self._refresh_title_visibility(container._hwnd)
                 return
             self._group_hwnds.pop(group_key, None)
+
+        self._minimized_hwnds.discard(hwnd)
 
         # Cancel any running animation
         if hwnd in self._animating_widgets:
@@ -1932,35 +1956,29 @@ class TaskbarWidget(BaseWidget):
         return container
 
     def _get_container_class(self, hwnd: int) -> str:
-        """Get CSS class for the app container based on window active and flashing status.
+        """Get CSS class for the app container based on window active, flashing and minimized status.
 
         For a grouped button the state is aggregated over every window it holds.
         """
         members = self._group_hwnds.get(self._hwnd_to_group.get(hwnd, "")) or [hwnd]
         base_class = "app-container grouped" if len(members) > 1 else "app-container"
-        is_active = False
-
-        # Check if any window is active using task manager data
         windows = self._task_manager._windows if getattr(self, "_task_manager", None) else {}
-        for member in members:
-            app_window = windows.get(member)
-            if app_window is None:
-                continue
 
-            # Check for flashing state first (flashing takes priority over active)
-            if getattr(app_window, "is_flashing", False):
-                return f"{base_class} flashing"
+        if any(getattr(windows.get(m), "is_flashing", False) for m in members):
+            return f"{base_class} flashing"
 
-            # Then check for active state
-            if getattr(app_window, "is_active", False):
-                is_active = True
+        if self._is_minimized(members):
+            return f"{base_class} running minimized"
 
-        # Fallback to GetForegroundWindow check
+        is_active = any(getattr(windows.get(m), "is_active", False) for m in members)
         if is_active or win32gui.GetForegroundWindow() in members:
             return f"{base_class} foreground"
 
-        # Not active, not flashing - just running
         return f"{base_class} running"
+
+    def _is_minimized(self, members: list[int]) -> bool:
+        """True once no window of a button is left on screen."""
+        return bool(members) and all(m in self._minimized_hwnds for m in members)
 
     def _get_app_icon(self, hwnd: int, title: str) -> QPixmap | None:
         """Return a QPixmap for the given window handle, using a DPI-aware cache."""
@@ -2121,6 +2139,10 @@ class TaskbarWidget(BaseWidget):
 
     def _clear_others_set_foreground(self, target_hwnd: int | None) -> None:
         """Set a single 'foreground' entry; preserve flashing from manager; toggle focused-only titles."""
+        # A focused window is not minimized, so activation clears the flag like a restore does
+        if target_hwnd is not None:
+            self._minimized_hwnds.discard(target_hwnd)
+
         try:
             count = self._widget_container_layout.count()
             for i in range(count):
@@ -2138,7 +2160,10 @@ class TaskbarWidget(BaseWidget):
                 base_cls = "app-container grouped" if len(members) > 1 else "app-container"
 
                 # Base class for running apps
-                new_cls = f"{base_cls} running"
+                if self._is_minimized(members):
+                    new_cls = f"{base_cls} running minimized"
+                else:
+                    new_cls = f"{base_cls} running"
 
                 # Preserve flashing if manager reports it
                 try:
@@ -2283,7 +2308,8 @@ class TaskbarWidget(BaseWidget):
                 self._stop_flash_timer(hwnd)
                 return
             cls = w.property("class") or ""
-            w.setProperty("class", f"{base_cls} running" if "flashing" in cls else f"{base_cls} flashing")
+            off_cls = f"{base_cls} running minimized" if self._is_minimized(members) else f"{base_cls} running"
+            w.setProperty("class", off_cls if "flashing" in cls else f"{base_cls} flashing")
             # The timer owns both the class and the repaint while it runs, otherwise the blink
             # is only visible when some unrelated window event happens to repolish the button
             refresh_widget_style(w)
