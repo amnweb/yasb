@@ -9,7 +9,7 @@ from core.validation.widgets.base_model import (
 )
 
 
-class RewriteConfig(CustomBaseModel):
+class ActiveWindowRewriteConfig(CustomBaseModel):
     pattern: str
     replacement: str
     case: Literal["lower", "upper", "title", "capitalize"] | None = None
@@ -35,7 +35,7 @@ class ActiveWindowConfig(CustomBaseModel):
     max_length: int | None = Field(default=None, gt=0)
     max_length_ellipsis: str = "..."
     monitor_exclusive: bool = True
-    rewrite: list[RewriteConfig] = []
+    rewrite: list[ActiveWindowRewriteConfig] = []
     ignore_window: IgnoreWindowConfig = IgnoreWindowConfig()
     keybindings: list[KeybindingConfig] = []
     callbacks: ActiveWindowCallbacksConfig = ActiveWindowCallbacksConfig()

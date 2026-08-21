@@ -102,7 +102,8 @@ self.build_widget_label(self.config.label, None)
 -   `validation_schema` is Pydantic model that inherits from `CustomBaseModel` located in `src/core/validation/widgets/base_model.py`
 -   `strict` typing is required for all fields in the validation model. Otherwise, Pydantic validation will fail.
 -   main validation model name should be in the format of `<WidgetName>Config` for example `CpuConfig` or `BrightnessConfig`.
--   secondary validation models (also inherited from `CustomBaseModel`) can be named arbitrarily, but it's recommended to use `<FieldName>Config` for consistency.
+-   secondary validation models (also inherited from `CustomBaseModel`) must use the format `<WidgetName><FieldName>Config`, for example `BrightnessProgressBarConfig` or `NotesMenuConfig`.
+-   model class names must be unique across the whole project. Deprecations in `src/core/validation/deprecation.py` are scoped by class name, so two widgets sharing a name like `MenuConfig` would silently apply each other's deprecated fields. Unique names also keep the generated `schema.json` readable.
 -   `base_model.py` also contains shared models like `KeybindingConfig`, `CallbacksConfig`, etc.
 -   if custom defaults are required for those shared models then a new secondary model should be defined and it should inherit from on of those base shared models.
 -   mutable defaults are accepted in Pydantic models (for example `keybindings: list[KeybindingConfig] = []`). `default_factory` is not required unless specifically needed in that case.
@@ -116,7 +117,7 @@ class MyWidget(BaseWidget):
 
 ```py
 # Secondary model inheriting from CustomBaseModel
-class ProgressBarConfig(CustomBaseModel):
+class BrightnessProgressBarConfig(CustomBaseModel):
     enabled: bool = False
     size: int = Field(default=18, ge=8, le=64)
     thickness: int = Field(default=3, ge=1, le=10)
@@ -133,7 +134,7 @@ class BrightnessCallbacksConfig(CallbacksConfig):
 class BrightnessConfig(CustomBaseModel):
     label: str = "{icon}"
     label_alt: str = "Brightness {percent}%"
-    progress_bar: ProgressBarConfig = ProgressBarConfig()
+    progress_bar: BrightnessProgressBarConfig = BrightnessProgressBarConfig()
     callbacks: BrightnessCallbacksConfig = BrightnessCallbacksConfig()
     keybindings: list[KeybindingConfig] = [] # <-- Mutable defaults are accepted in Pydantic models
     # other fields...

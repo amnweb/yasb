@@ -7,7 +7,7 @@ from core.validation.widgets.base_model import (
 )
 
 
-class IconsConfig(CustomBaseModel):
+class KomorebiControlIconsConfig(CustomBaseModel):
     start: str = "\uead3"
     stop: str = "\uead7"
     reload: str = "\uead2"
@@ -30,7 +30,7 @@ class KomorebiControlCallbacksConfig(CallbacksConfig):
 
 class KomorebiControlWidgetConfig(CustomBaseModel):
     label: str = "\udb80\uddd9"
-    icons: IconsConfig = IconsConfig()
+    icons: KomorebiControlIconsConfig = KomorebiControlIconsConfig()
     run_ahk: bool = False
     run_whkd: bool = False
     run_masir: bool = False

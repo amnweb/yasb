@@ -9,7 +9,7 @@ from core.validation.widgets.base_model import (
 )
 
 
-class AppIconsConfig(CustomBaseModel):
+class VolumeAppIconsConfig(CustomBaseModel):
     toggle_down: str = "\uf078"
     toggle_up: str = "\uf077"
 
@@ -27,10 +27,10 @@ class AudioMenuConfig(CustomBaseModel):
     show_app_labels: bool = False
     show_app_icons: bool = True
     show_apps_expanded: bool = False
-    app_icons: AppIconsConfig = AppIconsConfig()
+    app_icons: VolumeAppIconsConfig = VolumeAppIconsConfig()
 
 
-class ProgressBarConfig(CustomBaseModel):
+class VolumeProgressBarConfig(CustomBaseModel):
     enabled: bool = False
     progress_type: Literal["circular", "linear_horizontal", "linear_vertical"] = "circular"
     size: int = Field(default=18, ge=1, le=200)
@@ -65,6 +65,6 @@ class VolumeConfig(CustomBaseModel):
         "100": "\uf028",  # Icon for 61-100% volume
     }
     audio_menu: AudioMenuConfig = AudioMenuConfig()
-    progress_bar: ProgressBarConfig = ProgressBarConfig()
+    progress_bar: VolumeProgressBarConfig = VolumeProgressBarConfig()
     keybindings: list[KeybindingConfig] = []
     callbacks: VolumeCallbacksConfig = VolumeCallbacksConfig()

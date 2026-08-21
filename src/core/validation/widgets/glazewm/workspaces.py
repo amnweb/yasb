@@ -1,7 +1,7 @@
 from core.validation.widgets.base_model import CustomBaseModel
 
 
-class AppIconsConfig(CustomBaseModel):
+class GlazewmAppIconsConfig(CustomBaseModel):
     enabled_populated: bool = False
     enabled_active: bool = False
     enabled_focused: bool | None = None
@@ -25,4 +25,4 @@ class GlazewmWorkspacesConfig(CustomBaseModel):
     glazewm_server_uri: str = "ws://localhost:6123"
     enable_scroll_switching: bool = True
     reverse_scroll_direction: bool = False
-    app_icons: AppIconsConfig = AppIconsConfig()
+    app_icons: GlazewmAppIconsConfig = GlazewmAppIconsConfig()

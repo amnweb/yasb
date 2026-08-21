@@ -15,7 +15,7 @@ class CpuThresholdsConfig(CustomBaseModel):
     high: int = Field(default=90, ge=0, le=100)
 
 
-class ProgressBarConfig(CustomBaseModel):
+class CpuProgressBarConfig(CustomBaseModel):
     enabled: bool = False
     progress_type: Literal["circular", "linear_horizontal", "linear_vertical"] = "circular"
     size: int = Field(default=18, ge=1, le=200)
@@ -72,7 +72,7 @@ class CpuConfig(CustomBaseModel):
     histogram_num_columns: int = Field(default=10, ge=0, le=128)
     hide_decimal: bool = False
     cpu_thresholds: CpuThresholdsConfig = CpuThresholdsConfig()
-    progress_bar: ProgressBarConfig = ProgressBarConfig()
+    progress_bar: CpuProgressBarConfig = CpuProgressBarConfig()
     keybindings: list[KeybindingConfig] = []
     callbacks: CallbacksCpuConfig = CallbacksCpuConfig()
     menu: CpuMenuConfig = CpuMenuConfig()

@@ -23,7 +23,7 @@ class BrightnessMenuConfig(CustomBaseModel):
     brightness_icon: str = "\ue706"
 
 
-class ProgressBarConfig(CustomBaseModel):
+class BrightnessProgressBarConfig(CustomBaseModel):
     enabled: bool = False
     progress_type: Literal["circular", "linear_horizontal", "linear_vertical"] = "circular"
     size: int = Field(default=18, ge=1, le=200)
@@ -60,6 +60,6 @@ class BrightnessConfig(CustomBaseModel):
     auto_light_night_start_time: Annotated[time, WithJsonSchema({"type": "string"})] = time(20, 0)
     auto_light_night_end_time: Annotated[time, WithJsonSchema({"type": "string"})] = time(6, 30)
     auto_light_day_level: int = 100
-    progress_bar: ProgressBarConfig = ProgressBarConfig()
+    progress_bar: BrightnessProgressBarConfig = BrightnessProgressBarConfig()
     keybindings: list[KeybindingConfig] = []
     callbacks: BrightnessCallbacksConfig = BrightnessCallbacksConfig()

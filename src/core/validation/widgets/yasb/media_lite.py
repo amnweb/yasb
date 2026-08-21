@@ -9,7 +9,7 @@ from core.validation.widgets.base_model import (
 )
 
 
-class MediaMenuIconsConfig(CustomBaseModel):
+class MediaLiteMenuIconsConfig(CustomBaseModel):
     play: str = "\ue768"
     pause: str = "\ue769"
     prev_track: str = "\ue892"
@@ -21,7 +21,7 @@ class MediaMenuIconsConfig(CustomBaseModel):
     mute: str = "\ue994"
 
 
-class MediaMenuConfig(CustomBaseModel):
+class MediaLiteMenuConfig(CustomBaseModel):
     blur: bool = True
     round_corners: bool = True
     round_corners_type: str = "normal"
@@ -35,7 +35,7 @@ class MediaMenuConfig(CustomBaseModel):
     artwork_dim: float = Field(default=0.85, ge=0.0, le=1.0)
     image_size: int = Field(default=160, ge=32, le=400)
     thumbnail_corner_radius: int = Field(default=12, ge=0, le=200)
-    icons: MediaMenuIconsConfig = MediaMenuIconsConfig()
+    icons: MediaLiteMenuIconsConfig = MediaLiteMenuIconsConfig()
 
 
 class MediaLiteCallbacksConfig(CallbacksConfig):
@@ -52,6 +52,6 @@ class MediaLiteWidgetConfig(CustomBaseModel):
     thumbnail_corner_radius: int = Field(default=6, ge=0, le=100)
     max_label_size: int = Field(default=20, ge=0, le=200)
     tooltip: bool = True
-    media_menu: MediaMenuConfig = MediaMenuConfig()
+    media_menu: MediaLiteMenuConfig = MediaLiteMenuConfig()
     keybindings: list[KeybindingConfig] = []
     callbacks: MediaLiteCallbacksConfig = MediaLiteCallbacksConfig()

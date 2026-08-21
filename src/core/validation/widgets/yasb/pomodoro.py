@@ -9,13 +9,13 @@ from core.validation.widgets.base_model import (
 )
 
 
-class IconsConfig(CustomBaseModel):
+class PomodoroIconsConfig(CustomBaseModel):
     work: str = "\uf252"
     break_: str = Field(default="\uf253", alias="break")
     paused: str = "\uf254"
 
 
-class MenuConfig(CustomBaseModel):
+class PomodoroMenuConfig(CustomBaseModel):
     blur: bool = True
     round_corners: bool = True
     round_corners_type: Literal["normal", "small"] = "normal"
@@ -31,7 +31,7 @@ class MenuConfig(CustomBaseModel):
     circle_size: int = 160
 
 
-class ProgressBarConfig(CustomBaseModel):
+class PomodoroProgressBarConfig(CustomBaseModel):
     enabled: bool = False
     progress_type: Literal["circular", "linear_horizontal", "linear_vertical"] = "circular"
     size: int = Field(default=18, ge=1, le=200)
@@ -63,8 +63,8 @@ class PomodoroConfig(CustomBaseModel):
     show_notification: bool = True
     session_target: int = Field(default=0, ge=0)
     hide_on_break: bool = False
-    icons: IconsConfig = IconsConfig()
-    progress_bar: ProgressBarConfig = ProgressBarConfig()
+    icons: PomodoroIconsConfig = PomodoroIconsConfig()
+    progress_bar: PomodoroProgressBarConfig = PomodoroProgressBarConfig()
     keybindings: list[KeybindingConfig] = []
     callbacks: CallbacksPomodoroConfig = CallbacksPomodoroConfig()
-    menu: MenuConfig = MenuConfig()
+    menu: PomodoroMenuConfig = PomodoroMenuConfig()

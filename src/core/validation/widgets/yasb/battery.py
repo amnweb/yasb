@@ -9,7 +9,7 @@ from core.validation.widgets.base_model import (
 )
 
 
-class ProgressBarConfig(CustomBaseModel):
+class BatteryProgressBarConfig(CustomBaseModel):
     enabled: bool = False
     progress_type: Literal["circular", "linear_horizontal", "linear_vertical"] = "circular"
     size: int = Field(default=18, ge=1, le=200)
@@ -59,6 +59,6 @@ class BatteryConfig(CustomBaseModel):
     charging_options: ChargingOptionsConfig = ChargingOptionsConfig()
     status_thresholds: StatusThresholdsConfig = StatusThresholdsConfig()
     status_icons: StatusIconsConfig = StatusIconsConfig()
-    progress_bar: ProgressBarConfig = ProgressBarConfig()
+    progress_bar: BatteryProgressBarConfig = BatteryProgressBarConfig()
     keybindings: list[KeybindingConfig] = []
     callbacks: CallbacksBatteryConfig = CallbacksBatteryConfig()
