@@ -109,12 +109,28 @@ class ApplicationWindow:
             "is_active": self.is_active,
             "is_flashing": self.is_flashing,
             "is_cloaked": self._is_cloaked(),
+            "is_minimized": self.is_minimized(),
+            "is_on_screen": self.is_on_screen(),
             "monitor_handle": monitor_handle,
             "process_name": self.process_name,
             "process_pid": self.process_pid,
             "process_path": self.process_path,
             "can_minimize": self.can_minimize(),
         }
+
+    def is_on_screen(self) -> bool:
+        """Return whether this window is currently visible on the active desktop."""
+        try:
+            return bool(win32gui.IsWindowVisible(self.hwnd)) and not self.is_minimized() and not self._is_cloaked()
+        except Exception:
+            return False
+
+    def is_minimized(self) -> bool:
+        """Return whether this window is minimized to the taskbar."""
+        try:
+            return bool(win32gui.IsIconic(self.hwnd))
+        except Exception:
+            return False
 
     def _refresh_process_info(self) -> None:
         """Refresh cached process information for this window."""

@@ -75,6 +75,7 @@ taskbar:
 > Note:
 > When **preview** is enabled **tooltip** are automatically disabled to avoid overlap.
 
+
 ## Style
 ```css
 .taskbar-widget {} /* Main container for the taskbar widget */
@@ -83,7 +84,9 @@ taskbar:
 .taskbar-widget .app-container {} /* container for each app */
 .taskbar-widget .app-container.foreground {} /* container for the focused app */
 .taskbar-widget .app-container.flashing {} /* flashing container for the app (window is flashing) */
-.taskbar-widget .app-container.running {} /* container for running apps (not focused) */
+.taskbar-widget .app-container.running {} /* container for running apps (not focused)*/
+.taskbar-widget .app-container.not-focused {} /* visible, non-minimized app on the current desktop that is not focused */
+.taskbar-widget .app-container.minimized {} /* app minimized to the taskbar */
 .taskbar-widget .app-container .app-icon {} /* Icon inside the container */
 .taskbar-widget .app-container .app-title {} /* Label inside the container */
 /* Taskbar preview popup is very limited in styling options, do not use margins/paddings here */
@@ -92,6 +95,8 @@ taskbar:
 .taskbar-preview .header .title {}
 .taskbar-preview .close-button {} /* Close button on the preview */
 ```
+> Note:
+> **.taskbar-widget .app-container.running** is the base class for all running not-focused applications. Both **.not-focused** and **.minimized** also have the **.running** class, so if either selector is not defined, the **.running** styles will be applied automatically.
 
 ## Style Example
 ```css
@@ -107,6 +112,13 @@ taskbar:
     background-color: rgba(255, 106, 106, 0.63);
 }
 .taskbar-widget .app-container.running {
+    background-color: rgba(255, 255, 255, 0.25);
+}
+.taskbar-widget .app-container.minimized {
+    opacity: 0.4;
+    background-color: transparent;
+}
+.taskbar-widget .app-container.not-focused {
     background-color: rgba(255, 255, 255, 0.25);
 }
 .taskbar-widget .app-container:hover {
