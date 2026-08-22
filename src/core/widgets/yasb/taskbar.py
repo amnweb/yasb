@@ -1250,6 +1250,12 @@ class TaskbarWidget(BaseWidget):
         if not is_valid_qobject(container):
             return
 
+        # Minimizing and restoring change whether the window counts as focused, so the
+        # focused-only title has to be re-decided here too. It runs before the class
+        # early-outs below, which skip the rest of this handler when only the title moved.
+        if not self._context_menu_open:
+            self._refresh_title_visibility(hwnd)
+
         new_cls = self._get_container_class(hwnd)
         if container.property("class") == new_cls or ("flashing" in new_cls and self._flash_owns(container)):
             return
@@ -1835,6 +1841,15 @@ class TaskbarWidget(BaseWidget):
             except Exception:
                 base = member
 
+            # A minimized window is not the focused one, whatever the activation said. Tiling
+            # managers keep focus on a window they just minimized, and is_active would then
+            # hold the title open for a window that is not on screen.
+            try:
+                if win32gui.IsIconic(base):
+                    continue
+            except Exception:
+                pass
+
             # Prefer task manager knowledge on the base window
             try:
                 if hasattr(self, "_task_manager") and self._task_manager:
@@ -1977,8 +1992,25 @@ class TaskbarWidget(BaseWidget):
         return f"{base_class} running"
 
     def _is_minimized(self, members: list[int]) -> bool:
-        """True once no window of a button is left on screen."""
-        return bool(members) and all(m in self._minimized_hwnds for m in members)
+        """True once no window of a button is left on screen.
+
+        IsIconic is the authority here, not the cached set. A tiling manager keeps focus on
+        a window it just minimized, so activation events name windows that are still iconic
+        and clear their cached flag. Reading the window itself at render time also sidesteps
+        the reverse race: on a restore the activation arrives while IsIconic is still 1 and
+        only flips a moment later, so no synchronous check at activation time can tell the
+        two cases apart. The cached set stays as a fallback for windows we can no longer query.
+        """
+        if not members:
+            return False
+        for m in members:
+            try:
+                if not win32gui.IsIconic(m):
+                    return False
+            except Exception:
+                if m not in self._minimized_hwnds:
+                    return False
+        return True
 
     def _get_app_icon(self, hwnd: int, title: str) -> QPixmap | None:
         """Return a QPixmap for the given window handle, using a DPI-aware cache."""
@@ -2176,26 +2208,22 @@ class TaskbarWidget(BaseWidget):
                 except Exception:
                     pass
 
-                # Target gets 'foreground' (manager usually clears flashing on activation)
-                if target_hwnd is not None and target_hwnd in members:
+                # Target gets 'foreground' (manager usually clears flashing on activation),
+                # unless it is minimized: a tiling manager hands focus to windows that are
+                # still iconic, and being off screen outranks being the activation target.
+                if target_hwnd is not None and target_hwnd in members and not self._is_minimized(members):
                     new_cls = f"{base_cls} foreground"
 
                 if w.property("class") != new_cls and not ("flashing" in new_cls and self._flash_owns(w)):
                     w.setProperty("class", new_cls)
-                    if self.config.title_label.enabled and self.config.title_label.show == "focused":
-                        title_wrapper = self._get_title_wrapper(w)
-                        if title_wrapper:
-                            want_visible = target_hwnd is not None and target_hwnd in members
-                            current_target = title_wrapper.property("target_visible")
-                            if current_target is None:
-                                current_target = title_wrapper.isVisible()
-                            if current_target != want_visible:
-                                self._animate_or_set_title_visible(title_wrapper, want_visible)
-                                try:
-                                    w.layout().activate()
-                                except Exception:
-                                    pass
                     refresh_widget_style(w)
+
+                # The focused-only title goes through the same authority as every other call
+                # site rather than assuming the activation target is on screen, and it is
+                # re-decided even when the class did not move, since a window can stop being
+                # focused without changing class.
+                if not self._context_menu_open:
+                    self._refresh_title_visibility(hwnd)
         except Exception:
             pass
 

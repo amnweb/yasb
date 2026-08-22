@@ -127,7 +127,7 @@ taskbar:
 .taskbar-widget .app-container.running {
     background-color: transparent;
 }
-.taskbar-widget .app-container.running.minimized .app-icon {
+.taskbar-widget .app-container.running.minimized {
     opacity: 0.5;
 }
 .taskbar-widget .app-container:hover {
