@@ -59,7 +59,7 @@ class PinManager:
 
     # Global cache for pinned apps data (shared across all PinManager instances)
     _apps_global_cache = {
-        "data": None,  # {"pinned_apps": {}, "pinned_order": []}
+        "data": None,  # {"pinned_apps": {}, "pinned_order": [], "window_order": []}
         "file_path": None,
         "mtime": None,  # Last modification time for cache invalidation
     }
@@ -96,6 +96,7 @@ class PinManager:
         """Initialize the pin manager."""
         self.pinned_apps = {}  # {unique_id: {path, aumid, icon, process_name, title}}
         self.pinned_order = []  # [unique_id, ...]
+        self.window_order = []  # Stable taskbar window order keys
         self.running_pinned = {}  # Maps hwnd -> unique_id for running pinned apps
 
     @staticmethod
@@ -143,6 +144,7 @@ class PinManager:
             if not file_path.exists():
                 self.pinned_apps = {}
                 self.pinned_order = []
+                self.window_order = []
                 return
 
             current_mtime = file_path.stat().st_mtime
@@ -168,6 +170,7 @@ class PinManager:
             data = PinManager._apps_global_cache["data"] or {}
             self.pinned_apps = data.get("pinned_apps", {})
             self.pinned_order = data.get("pinned_order", [])
+            self.window_order = data.get("window_order", [])
 
             PinManager._shortcut_cache.clear()
             for unique_id, metadata in self.pinned_apps.items():
@@ -194,10 +197,12 @@ class PinManager:
             logging.debug("Could not load pinned apps: %s", exc)
             self.pinned_apps = {}
             self.pinned_order = []
+            self.window_order = []
         except Exception as exc:
             logging.error("Error loading pinned apps: %s", exc)
             self.pinned_apps = {}
             self.pinned_order = []
+            self.window_order = []
 
     def save_pinned_apps(self) -> None:
         """Save pinned apps to disk and update global cache."""
@@ -206,6 +211,7 @@ class PinManager:
             data = {
                 "pinned_apps": self.pinned_apps,
                 "pinned_order": self.pinned_order,
+                "window_order": self.window_order,
             }
             with open(file_path, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2, ensure_ascii=False)
@@ -577,6 +583,12 @@ class PinManager:
 
             # Notify other taskbar instances about the reorder
             _taskbar_signal_bus.pinned_apps_changed.emit("reorder", "")
+
+    def update_window_order(self, new_order: list[str]) -> None:
+        """Persist the complete taskbar order, including unpinned windows."""
+        if new_order != self.window_order:
+            self.window_order = new_order
+            self.save_pinned_apps()
 
     def load_cached_icon(self, unique_id: str, size: int, dpi: float = 1.0) -> QPixmap | None:
         """
