@@ -15,9 +15,9 @@ from PyQt6.QtCore import (
     QEvent,
     QObject,
     QPropertyAnimation,
+    QRect,
     Qt,
     QTimer,
-    QVariantAnimation,
 )
 from PyQt6.QtGui import QCursor
 from PyQt6.QtWidgets import (
@@ -85,14 +85,13 @@ class BarAnimationManager(QObject):
         self.bar_widget = bar_widget
         self._animation = None
         self._target_geo = None
-        self._full_height = None
         self._pending_action = None
 
     def show_bar(self):
         if not self.bar_widget._animation.get("enabled"):
             self.bar_widget.show()
             return
-        if self._animation and self._animation.state() == QVariantAnimation.State.Running:
+        if self._animation and self._animation.state() == QPropertyAnimation.State.Running:
             self._pending_action = "show"
             return
         self._pending_action = None
@@ -107,7 +106,7 @@ class BarAnimationManager(QObject):
             self.bar_widget.hide()
             self.bar_widget._skip_animation = False
             return
-        if self._animation and self._animation.state() == QVariantAnimation.State.Running:
+        if self._animation and self._animation.state() == QPropertyAnimation.State.Running:
             self._pending_action = "hide"
             return
         self._pending_action = None
@@ -117,7 +116,7 @@ class BarAnimationManager(QObject):
             self._start_slide(False)
 
     def _stop_animation(self):
-        if self._animation and self._animation.state() == QVariantAnimation.State.Running:
+        if self._animation and self._animation.state() == QPropertyAnimation.State.Running:
             self._animation.stop()
         self._animation = None
 
@@ -135,6 +134,16 @@ class BarAnimationManager(QObject):
             self.bar_widget.show()
         self._animation.start()
 
+    def _slide_is_blocked(self, hidden: QRect) -> bool:
+        """Is another screen sitting where the bar would slide out of view?
+
+        The bar leaves its own screen while it slides, so on stacked monitors it would show up on
+        the one next to it. Keeping it clipped means resizing the window on every frame, and DWM
+        redraws the blur and the window shadow a step behind that, which is what smears. Nothing
+        can clip a blurred window without resizing it, so those bars fade instead.
+        """
+        return any(screen.geometry().intersects(hidden) for screen in QApplication.screens())
+
     def _start_slide(self, show: bool):
         self._stop_animation()
         bar = self.bar_widget
@@ -142,63 +151,37 @@ class BarAnimationManager(QObject):
         bar.position_bar()
         geo = bar.geometry()
         self._target_geo = (geo.x(), geo.y(), geo.width(), geo.height())
-        self._full_height = geo.height()
 
         screen_geo = bar.screen().geometry()
-        is_top = bar._alignment["position"] == "top"
-        if is_top:
-            self._edge_y = screen_geo.y()
-            padding = geo.y() - self._edge_y
+        if bar._alignment["position"] == "top":
+            hidden_y = screen_geo.y() - geo.height()
         else:
-            self._edge_y = screen_geo.y() + screen_geo.height()
-            padding = self._edge_y - geo.y() - self._full_height
+            hidden_y = screen_geo.y() + screen_geo.height()
+        hidden = QRect(geo.x(), hidden_y, geo.width(), geo.height())
 
-        total_slide = self._full_height + padding
-        self._phase_point = self._full_height / total_slide if total_slide > 0 else 1.0
-        self._padding = padding
+        if self._slide_is_blocked(hidden):
+            self._start_fade(show)
+            return
 
+        resting_pos = geo.topLeft()
+        hidden_pos = hidden.topLeft()
         if show:
-            bar._bar_frame.resize(geo.width(), geo.height())
-            self._update_slide(0.0)
+            bar.move(hidden_pos)
 
-        self._animation = QVariantAnimation(bar)
+        self._animation = QPropertyAnimation(bar, b"pos", bar)
         self._animation.setDuration(bar._animation.get("duration", 300))
-        self._animation.setStartValue(0.0 if show else 1.0)
-        self._animation.setEndValue(1.0 if show else 0.0)
+        self._animation.setStartValue(hidden_pos if show else resting_pos)
+        self._animation.setEndValue(resting_pos if show else hidden_pos)
         self._animation.setEasingCurve(QEasingCurve.Type.OutQuad if show else QEasingCurve.Type.InQuad)
-        self._animation.valueChanged.connect(self._update_slide)
         self._animation.finished.connect(self._on_show_finished if show else self._on_hide_finished)
         self._animation.start()
 
         if show and not bar.isVisible():
             bar.show()
 
-    def _update_slide(self, value: float):
-        x, y, w, full_h = self._target_geo
-        pp = self._phase_point
-        is_top = self.bar_widget._alignment["position"] == "top"
-
-        if value <= pp and pp > 0:
-            t = value / pp
-            h = max(1, round(full_h * t))
-            if is_top:
-                self.bar_widget.setGeometry(x, self._edge_y, w, h)
-                self.bar_widget._bar_frame.move(0, h - full_h)
-            else:
-                self.bar_widget.setGeometry(x, self._edge_y - h, w, h)
-                self.bar_widget._bar_frame.move(0, 0)
-        else:
-            t = (value - pp) / (1.0 - pp) if pp < 1.0 else 1.0
-            if is_top:
-                self.bar_widget.setGeometry(x, round(self._edge_y + self._padding * t), w, full_h)
-            else:
-                self.bar_widget.setGeometry(x, round(self._edge_y - full_h - self._padding * t), w, full_h)
-            self.bar_widget._bar_frame.move(0, 0)
-
     def _on_show_finished(self):
         if self._target_geo:
             self.bar_widget.setGeometry(*self._target_geo)
-        self.bar_widget._bar_frame.move(0, 0)
         self._animation = None
         self._process_pending()
 
