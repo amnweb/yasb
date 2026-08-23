@@ -47,7 +47,7 @@ class ThumbnailHost(QWidget):
         try:
             if self._preview_popup:
                 self._preview_popup._cancel_hide()
-            self._item.set_hovered(True)
+            self._item.set_hovered(True, peek=True)
         except RuntimeError:
             pass
         super().enterEvent(event)
@@ -57,7 +57,7 @@ class ThumbnailHost(QWidget):
         try:
             if self._preview_popup:
                 self._preview_popup._schedule_hide()
-            self._item.set_hovered(False)
+            self._item.set_hovered(False, peek=True)
         except RuntimeError:
             pass
         super().leaveEvent(event)
@@ -223,8 +223,12 @@ class PreviewItem(QFrame):
         if self.styleSheet() != style:
             self.setStyleSheet(style)
 
-    def set_hovered(self, hovered: bool):
-        """Drive the :hover state by hand, the thumbnail sits in a masked hole outside this widget."""
+    def set_hovered(self, hovered: bool, peek: bool = False):
+        """Drive the :hover state by hand, the thumbnail sits in a masked hole outside this widget.
+
+        Only a hover that reaches the thumbnail peeks, so `peek` is the caller saying it is the
+        host window over the thumbnail rather than the header beside it.
+        """
         if hovered:
             # Only one window is ever hovered, so a neighbour that missed its own leave lets go here
             for other in self._popup._items:
@@ -236,10 +240,11 @@ class PreviewItem(QFrame):
         if self.close_button.isVisibleTo(self) != hovered:
             self.close_button.setVisible(hovered)
             self.update_elided_title()
-        # Peek follows the whole cell, not just the thumbnail, so the padding around it still counts
-        manager = getattr(self._popup, "_thumbnail_manager", None)
-        if manager:
-            manager.set_peek(self.hwnd, hovered)
+        # A list row is all header and has no thumbnail to hover, so there peek is the only preview
+        if peek or self._popup._list_mode:
+            manager = getattr(self._popup, "_thumbnail_manager", None)
+            if manager:
+                manager.set_peek(self.hwnd, hovered)
 
     def enterEvent(self, event):
         """Hovering the header counts as hovering the item, same as hovering its thumbnail."""
