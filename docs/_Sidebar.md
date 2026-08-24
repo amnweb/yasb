@@ -16,6 +16,7 @@
     - [Brightness](./(Widget)-Brightness)
     - [Cava](./(Widget)-Cava)
     - [Claude Usage](./(Widget)-Claude-Usage)
+    - [Codex Usage](./(Widget)-Codex-Usage)
     - [Clock](./(Widget)-Clock)
     - [Control Center](./(Widget)-Control-Center)
     - [Copilot](./(Widget)-Copilot)
