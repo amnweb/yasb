@@ -33,6 +33,13 @@ class PreviewConfig(CustomBaseModel):
     delay: int = 400
     padding: int = 8
     margin: int = 8
+    blur: bool = False
+    peek: bool = False
+
+
+class GroupingConfig(CustomBaseModel):
+    enabled: bool = False
+    show_count: bool = True
 
 
 class TaskbarCallbacksConfig(CallbacksConfig):
@@ -51,5 +58,6 @@ class TaskbarConfig(CustomBaseModel):
     title_label: TitleLabelConfig = TitleLabelConfig()
     hide_empty: bool = False
     preview: PreviewConfig = PreviewConfig()
+    grouping: GroupingConfig = GroupingConfig()
     keybindings: list[KeybindingConfig] = []
     callbacks: TaskbarCallbacksConfig = TaskbarCallbacksConfig()

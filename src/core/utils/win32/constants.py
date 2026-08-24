@@ -94,8 +94,21 @@ HSHELL_MONITORCHANGED = 16
 # WinEvent constants for cloak detection and hook flags
 EVENT_OBJECT_CLOAKED = 0x8017
 EVENT_OBJECT_UNCLOAKED = 0x8018
+DWMWA_EXCLUDED_FROM_PEEK = 12
+# Aero Peek trigger for DwmpActivateLivePreview (dwmapi ordinal 113).
+# LivePreviewTrigger enum:
+# 1=ShowDesktop
+# 2=WinSpace
+# 3=Superbar (taskbar thumbnail hover)
+# 4=AltTab
+# 5=SuperbarTouch
+# 6=ShowDesktopTouch
+LPT_SUPERBAR = 3
+
 EVENT_OBJECT_SHOW = 0x8002
 EVENT_OBJECT_HIDE = 0x8003
+EVENT_SYSTEM_MINIMIZESTART = 0x0016
+EVENT_SYSTEM_MINIMIZEEND = 0x0017
 WINEVENT_OUTOFCONTEXT = 0x0000
 WINEVENT_SKIPOWNPROCESS = 0x0002
 
