@@ -40,6 +40,7 @@
     - [Language](./(Widget)-Language)
     - [Launchpad](./(Widget)-Launchpad)
     - [Libre Hardware Monitor](./(Widget)-Libre-HW-Monitor)
+    - [Lock Keys](./(Widget)-Lock-Keys)
     - [Media](./(Widget)-Media)
     - [Media Lite](./(Widget)-Media-Lite)
     - [Memory](./(Widget)-Memory)
