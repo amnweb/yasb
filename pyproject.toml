@@ -24,7 +24,7 @@ dependencies = [
     "pycaw==20251023",
     "pillow==12.3.0",
     "qasync==0.28.0",
-    "pyvda @ git+https://github.com/amnweb/pyvda@master",
+    "comtypes==1.4.16",
     "python-dotenv==1.2.3",
     "tzdata==2026.3",
     "winrt.windows.foundation==3.2.1",
