@@ -74,6 +74,9 @@ Displays the number of unread Windows notifications in your status bar. Clicking
 > [!NOTE]
 > Clicking a notification brings the sending app to the foreground. Only the dismiss button removes it, and removing a notification here also removes it from the Windows Notification Center.
 
+> [!IMPORTANT]
+> Reading notifications requires the global **Let apps access my notifications** switch under Settings > Privacy & security > Notifications. Windows does not track this permission per app for apps installed outside the Store, so YASB has no entry of its own there. When the switch is off the menu says so and links to that page, while the count on the bar keeps working.
+
 ## Available Callbacks
 
 - **toggle_menu:** Toggles the YASB notification menu.
@@ -154,6 +157,12 @@ Displays the number of unread Windows notifications in your status bar. Clicking
     font-size: 13px;
     font-weight: 600;
     color: #9399b2;
+    padding-bottom: 24px;
+}
+.notification-menu .empty-action {
+    font-size: 12px;
+    font-weight: 600;
+    color: #89b4fa;
     padding-bottom: 24px;
 }
 .notification-menu .item {

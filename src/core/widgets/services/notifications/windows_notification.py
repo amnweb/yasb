@@ -80,6 +80,7 @@ class WindowsNotificationEventListener(QThread):
         self._async_stop_event: asyncio.Event | None = None
         self._stopped = False
         self._listener = None
+        self._access_allowed = True
         self._wnf_sub = None
         self._wnf_active = False
         self._wnf_cb = WnfCallbackType(self._wnf_toast_callback)
@@ -105,6 +106,7 @@ class WindowsNotificationEventListener(QThread):
 
         try:
             self._loop.run_until_complete(self._listener.request_access_async())
+            self._refresh_access()
             self._loop.run_until_complete(self._watch_notifications())
         except Exception as e:
             logging.error("Notification listener error: %s", e)
@@ -243,12 +245,38 @@ class WindowsNotificationEventListener(QThread):
     def _remove_notification(self, notification_id: int):
         self._schedule(self._do_remove_notification(notification_id))
 
+    def _set_access(self, allowed: bool):
+        """Remember whether Windows granted access and let the widgets know when it changes.
+
+        Access is a single global switch for apps installed outside the Store, so a denied
+        listener silently returns an empty list forever. The menu says so instead of
+        pretending there is nothing to show.
+        """
+        if allowed == self._access_allowed:
+            return
+        self._access_allowed = allowed
+        if not allowed:
+            logging.warning("Notification access is denied, the notification list will stay empty")
+        else:
+            logging.info("Notification access granted")
+        self.event_service.emit_event("WindowsNotificationAccess", allowed)
+
+    def _refresh_access(self) -> bool:
+        """Re-read the access status, which the user can revoke at any time."""
+        try:
+            status = self._listener.get_access_status()
+        except Exception as e:
+            logging.debug("Failed to read notification access status: %s", e)
+            return self._access_allowed
+        self._set_access(status == management.UserNotificationListenerAccessStatus.ALLOWED)
+        return self._access_allowed
+
     async def _emit_notifications(self):
         """Read the current toasts and broadcast them to the widgets."""
         self.event_service.emit_event("WindowsNotificationsChanged", await self._read_notifications())
 
     async def _read_notifications(self) -> list[NotificationItem]:
-        if not self._listener:
+        if not self._listener or not self._refresh_access():
             return []
         try:
             notifications = await self._listener.get_notifications_async(NotificationKinds.TOAST)
