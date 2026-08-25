@@ -3,8 +3,8 @@ import re
 
 from PIL import Image
 from PIL.ImageQt import ImageQt
-from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QMouseEvent, QPixmap
+from PyQt6.QtCore import Qt, QUrl, pyqtSignal
+from PyQt6.QtGui import QDesktopServices, QMouseEvent, QPixmap
 from PyQt6.QtWidgets import (
     QFrame,
     QHBoxLayout,
@@ -39,12 +39,15 @@ except ImportError:
     logging.warning("Failed to load Windows Notification Event Listener")
 
 APP_ICON_SIZE = 20
+# Holds the global "Let apps access my notifications" switch
+NOTIFICATION_PRIVACY_URI = "ms-settings:privacy-notifications"
 
 
 class NotificationsWidget(BaseWidget):
     validation_schema = NotificationsConfig
     windows_notification_update_signal = pyqtSignal(int)
     windows_notifications_changed_signal = pyqtSignal(list)
+    windows_notification_access_signal = pyqtSignal(bool)
     dnd_status_changed_signal = pyqtSignal(str)
     event_listener = WindowsNotificationEventListener
 
@@ -54,6 +57,9 @@ class NotificationsWidget(BaseWidget):
         self._show_alt_label = False
         self._notification_count = 0
         self._notifications: list[NotificationItem] = []
+        # Assume access until the listener reports otherwise, so the menu never flashes
+        # a permission warning while the listener is still starting up
+        self._access_allowed = True
         self._menu: PopupWidget | None = None
         self._scroll_area: QScrollArea | None = None
         self._header_label: QLabel | None = None
@@ -76,8 +82,10 @@ class NotificationsWidget(BaseWidget):
         self.event_service = EventService()
         self.event_service.register_event("WindowsNotificationUpdate", self.windows_notification_update_signal)  # type: ignore
         self.event_service.register_event("WindowsNotificationsChanged", self.windows_notifications_changed_signal)  # type: ignore
+        self.event_service.register_event("WindowsNotificationAccess", self.windows_notification_access_signal)  # type: ignore
         self.windows_notification_update_signal.connect(self._on_windows_notification_update)
         self.windows_notifications_changed_signal.connect(self._on_notifications_changed)
+        self.windows_notification_access_signal.connect(self._on_access_changed)
 
         if self.config.menu.show_dnd_toggle:
             DndService.initialize_wnf_listener()
@@ -96,6 +104,11 @@ class NotificationsWidget(BaseWidget):
 
     def _on_notifications_changed(self, notifications: list[NotificationItem]):
         self._notifications = notifications
+        if is_valid_qobject(self._menu) and self._menu.isVisible():
+            self._populate_menu()
+
+    def _on_access_changed(self, allowed: bool):
+        self._access_allowed = allowed
         if is_valid_qobject(self._menu) and self._menu.isVisible():
             self._populate_menu()
 
@@ -335,17 +348,37 @@ class NotificationsWidget(BaseWidget):
         icon_label.setProperty("class", "empty-icon")
         icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        text = "No new notifications" if WindowsNotificationEventListener else "Notification listener unavailable"
-        no_data = QLabel(text)
-        no_data.setProperty("class", "empty-text")
-        no_data.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
         center_layout = QVBoxLayout()
         center_layout.addStretch()
         center_layout.addWidget(icon_label, alignment=Qt.AlignmentFlag.AlignCenter)
+
+        if not WindowsNotificationEventListener:
+            text = "Notification listener unavailable"
+        elif not self._access_allowed:
+            text = "Notification access is turned off"
+        else:
+            text = "No new notifications"
+
+        no_data = QLabel(text)
+        no_data.setProperty("class", "empty-text")
+        no_data.setAlignment(Qt.AlignmentFlag.AlignCenter)
         center_layout.addWidget(no_data, alignment=Qt.AlignmentFlag.AlignCenter)
+
+        # Windows grants this permission globally, so point at the page that holds the switch
+        if WindowsNotificationEventListener and not self._access_allowed:
+            action = QLabel("Open notification settings")
+            action.setProperty("class", "empty-action")
+            action.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            action.setCursor(Qt.CursorShape.PointingHandCursor)
+            action.mousePressEvent = lambda _event: self._open_privacy_settings()
+            center_layout.addWidget(action, alignment=Qt.AlignmentFlag.AlignCenter)
+
         center_layout.addStretch()
         return center_layout
+
+    def _open_privacy_settings(self):
+        self._menu.hide_animated()
+        QDesktopServices.openUrl(QUrl(NOTIFICATION_PRIVACY_URI))
 
     def _build_section(self, notifications: list[NotificationItem], show_app_name: bool) -> QFrame:
         section = QFrame()
