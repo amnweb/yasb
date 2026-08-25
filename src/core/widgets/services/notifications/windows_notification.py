@@ -339,15 +339,24 @@ class WindowsNotificationEventListener(QThread):
         await self._emit_notifications()
 
     async def _do_clear_all_notifications(self):
+        """Remove every toast we can see, then report whatever is actually left.
+
+        ClearNotifications() is not usable here, it fails with ERROR_NOT_FOUND for apps
+        installed outside the Store, so the toasts are removed one by one. A removal can
+        still fail, and a new toast can arrive while this runs, so the result is read back
+        instead of assuming the Action Center is empty. The count on the bar is left to the
+        WNF callback, which reports what Windows itself counts.
+        """
         try:
             notifications = await self._listener.get_notifications_async(NotificationKinds.TOAST)
-            for n in notifications:
-                try:
-                    self._listener.remove_notification(n.id)
-                except Exception as e:
-                    logging.debug("Failed to remove notification %s: %s", n.id, e)
-            self.total_notifications = 0
-            self.event_service.emit_event("WindowsNotificationUpdate", 0)
-            self.event_service.emit_event("WindowsNotificationsChanged", [])
         except Exception as e:
             logging.error("Error clearing notifications: %s", e)
+            return
+
+        for n in notifications:
+            try:
+                self._listener.remove_notification(n.id)
+            except Exception as e:
+                logging.debug("Failed to remove notification %s: %s", n.id, e)
+
+        await self._emit_notifications()
