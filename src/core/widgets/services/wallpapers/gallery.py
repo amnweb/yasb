@@ -502,8 +502,9 @@ class Cards(GalleryWindow):
         self.is_closing = False
         self._cache: OrderedDict[int, QPixmap] = OrderedDict()
         self._pending: set[int] = set()
+        self._queued: dict[int, ImageLoader] = {}
         self.threadpool = QThreadPool()
-        self.threadpool.setMaxThreadCount(4)
+        self.threadpool.setMaxThreadCount(2)
 
         self.view = CardsView(self)
 
@@ -564,13 +565,17 @@ class Cards(GalleryWindow):
         wanted = {(index + offset) % count for offset in range(-radius, radius + 1)}
         card_w, card_h = self.card_size
 
+        self._requeue(wanted)
+
         for target in sorted(wanted, key=self.decode_order):
             if target in self._cache or target in self._pending:
                 continue
             self._pending.add(target)
             loader = ImageLoader(self.image_files[target], card_w, card_h, target, dpr=self.dpr)
             loader.signals.loaded.connect(self._on_image_loaded)
-            self.threadpool.start(loader)
+            loader.setAutoDelete(False)
+            self._queued[target] = loader
+            self.threadpool.start(loader, self._priority(target))
 
         limit = 2 * radius + 8
         for cached in [i for i in self._cache if i not in wanted]:
@@ -578,12 +583,34 @@ class Cards(GalleryWindow):
                 break
             del self._cache[cached]
 
+    def _priority(self, target: int) -> int:
+        """Higher for the cards nearest the selection, so they decode first."""
+        count = len(self.image_files)
+        distance = abs(target - self.view.index)
+        if self.wraps and count:
+            distance = min(distance, count - distance)
+        return -distance
+
+    def _requeue(self, wanted: set[int]):
+        for target, loader in list(self._queued.items()):
+            if target in self._cache:
+                del self._queued[target]
+            elif not self.threadpool.tryTake(loader):
+                continue  # already running, too late to reorder it
+            elif target in wanted:
+                self.threadpool.start(loader, self._priority(target))
+            else:
+                # Never started, so nothing will arrive to clear it.
+                del self._queued[target]
+                self._pending.discard(target)
+
     def _on_image_loaded(self, image_path: str, pixmap: QPixmap, index: int):
         self._pending.discard(index)
         if self.is_closing or index >= len(self.image_files):
             return
         self._cache[index] = pixmap
-        self.view.update()
+        if abs(self.view.relative_distance(index)) <= self.neighbours + 0.5:
+            self.view.update()
 
     def page_step(self) -> int:
         """How far Page Up/Down moves: onto the last card actually on screen."""
