@@ -61,7 +61,7 @@ monitor_profile:
 
 - Click **Save current layout...** in the menu to store the current monitor arrangement as a named profile. Profiles are saved as JSON files in `%USERPROFILE%\.config\yasb\monitor_profiles\`.
 - Clicking a profile in the menu applies it. Windows re-arranges the monitors to the saved positions/resolutions/refresh rates.
-- Each profile row has a **⋯ (options) button** on the right with a dropdown menu: **Apply**, **Set Hotkey...**, **Remove Hotkey** (when set) and **Delete Profile**.
+- Each profile row has a **⋯ (options) button** on the right with a dropdown menu: **Apply**, **Set Hotkey...**, **Remove Hotkey** (when set), **Rename...** and **Delete Profile**.
 - The label automatically shows the name of the profile matching the current layout, or `Custom` if the current layout was modified outside the widget (e.g. via Windows display settings).
 
 ## Profile & Monitor Hotkeys

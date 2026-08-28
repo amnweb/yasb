@@ -186,6 +186,10 @@ class MonitorProfileWidget(BaseWidget):
 
         menu.addSeparator()
 
+        act_rename = QAction("Rename...", self)
+        act_rename.triggered.connect(lambda checked=False, n=name: self._show_rename_dialog(n))
+        menu.addAction(act_rename)
+
         act_delete = QAction("Delete Profile", self)
         act_delete.triggered.connect(lambda checked=False, n=name: self._delete_profile(name=n))
         menu.addAction(act_delete)
@@ -540,18 +544,55 @@ class MonitorProfileWidget(BaseWidget):
         next_index = (index + direction) % len(profiles)
         self._apply_profile(name=profiles[next_index])
 
-    def _show_save_dialog(self) -> None:
-        """Show an input popup to save the current layout as a new profile."""
-        self._hide_popup_menu()
+    def _rename_profile(self, old_name: str, new_name: str) -> None:
+        """Rename a profile file and remap any hotkey bound to it."""
+        new_name = new_name.strip()
+        if not new_name or new_name == old_name:
+            return
+        old_path = self._profiles_dir / f"{old_name}.json"
+        new_path = self._profiles_dir / f"{new_name}.json"
         try:
-            self._pending_capture = capture_profile()
+            if new_path.exists():
+                logging.error("Cannot rename profile: '%s' already exists", new_name)
+                return
+            old_path.rename(new_path)
         except Exception as exc:
-            logging.error("Error capturing display config: %s", exc)
+            logging.error("Failed to rename monitor profile '%s' to '%s': %s", old_name, new_name, exc)
             return
 
-        monitors = get_monitors()
-        summary = ", ".join(f"{m.resolution} @ {m.refresh_rate}Hz" for m in monitors) or "No monitors detected"
+        # Remap the apply hotkey if one was bound to the old name
+        old_action = f'apply_profile "{old_name}"'
+        hotkeys = self._load_hotkeys()
+        if old_action in hotkeys:
+            hotkeys[f'apply_profile "{new_name}"'] = hotkeys.pop(old_action)
+            self._save_hotkeys(hotkeys)
+            self.hotkeys_changed.emit()
 
+        self._refresh_active_profile()
+        self._refresh_menu_if_visible()
+
+    def _show_rename_dialog(self, name: str) -> None:
+        """Show an input popup to rename an existing profile."""
+        self._hide_popup_menu()
+        self._show_prompt_dialog(
+            title="Rename Profile",
+            description=f"Enter a new name for '{name}'.",
+            initial_text=name,
+            placeholder="Profile name",
+            on_submit=lambda new_name: self._rename_profile(name, new_name),
+        )
+
+    def _show_prompt_dialog(
+        self,
+        title: str,
+        description: str,
+        initial_text: str = "",
+        placeholder: str = "",
+        on_submit=None,
+        show_clear: bool = False,
+        on_clear=None,
+    ) -> None:
+        """Show a text-input popup; on_submit receives the trimmed input."""
         self._rename_popup = PopupWidget(
             self,
             blur=True,
@@ -571,17 +612,18 @@ class MonitorProfileWidget(BaseWidget):
         container_layout = QVBoxLayout(container_frame)
         container_layout.setContentsMargins(0, 0, 0, 0)
 
-        title_label = QLabel("Save Monitor Profile")
+        title_label = QLabel(title)
         title_label.setProperty("class", "popup-title")
         container_layout.addWidget(title_label)
 
-        desc_label = QLabel(summary)
+        desc_label = QLabel(description)
         desc_label.setProperty("class", "popup-description")
         container_layout.addWidget(desc_label)
 
         name_edit = QLineEdit()
         name_edit.setProperty("class", "rename-input")
-        name_edit.setPlaceholderText("Profile name")
+        name_edit.setText(initial_text)
+        name_edit.setPlaceholderText(placeholder)
         name_edit.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
         name_edit.selectAll()
         name_edit.setFocus()
@@ -591,21 +633,21 @@ class MonitorProfileWidget(BaseWidget):
         save_btn.setProperty("class", "button save")
         cancel_btn = QPushButton("Cancel")
         cancel_btn.setProperty("class", "button cancel")
+        clear_btn = None
+        if show_clear:
+            clear_btn = QPushButton("Remove")
+            clear_btn.setProperty("class", "button delete")
 
         def do_save():
-            name = name_edit.text().strip()
-            if not name:
+            value = name_edit.text().strip()
+            if not value:
                 return
-            try:
-                import json
-
-                path = self._profiles_dir / f"{name}.json"
-                with open(path, "w", encoding="utf-8") as f:
-                    json.dump(self._pending_capture, f, indent=2)
-                self._refresh_active_profile()
-            except Exception as exc:
-                logging.error("Failed to save monitor profile '%s': %s", name, exc)
+            if on_submit is not None:
+                on_submit(value)
             self._rename_popup.close()
+
+        if on_clear is not None and clear_btn is not None:
+            clear_btn.clicked.connect(lambda: (on_clear(), self._rename_popup.close()))
 
         def update_save_enabled():
             save_btn.setEnabled(bool(name_edit.text().strip()))
@@ -622,6 +664,8 @@ class MonitorProfileWidget(BaseWidget):
         button_layout.setContentsMargins(0, 0, 0, 0)
         button_layout.setSpacing(0)
         button_layout.addWidget(save_btn)
+        if clear_btn is not None:
+            button_layout.addWidget(clear_btn)
         button_layout.addWidget(cancel_btn)
 
         layout.addWidget(container_frame)
@@ -635,6 +679,34 @@ class MonitorProfileWidget(BaseWidget):
             offset_top=6,
         )
         self._rename_popup.show()
+
+    def _show_save_dialog(self) -> None:
+        """Show an input popup to save the current layout as a new profile."""
+        self._hide_popup_menu()
+        try:
+            self._pending_capture = capture_profile()
+        except Exception as exc:
+            logging.error("Error capturing display config: %s", exc)
+            return
+
+        monitors = get_monitors()
+        summary = ", ".join(f"{m.resolution} @ {m.refresh_rate}Hz" for m in monitors) or "No monitors detected"
+
+        def do_save(name: str):
+            try:
+                path = self._profiles_dir / f"{name}.json"
+                with open(path, "w", encoding="utf-8") as f:
+                    json.dump(self._pending_capture, f, indent=2)
+                self._refresh_active_profile()
+            except Exception as exc:
+                logging.error("Failed to save monitor profile '%s': %s", name, exc)
+
+        self._show_prompt_dialog(
+            title="Save Monitor Profile",
+            description=summary,
+            placeholder="Profile name",
+            on_submit=do_save,
+        )
 
     def _show_hotkey_dialog(self, action: str, current: str) -> None:
         """Show a popup that captures a key combination for the given action."""
