@@ -46,7 +46,6 @@ from core.widgets.services.quick_launch.base_provider import ProviderResult
 from core.widgets.services.quick_launch.context_menu import QuickLaunchContextMenuService
 from core.widgets.services.quick_launch.icon_utils import load_and_scale_icon, svg_to_pixmap
 from core.widgets.services.quick_launch.providers.resources.icons import (
-    ICON_NO_RESULTS,
     ICON_SEARCH_INPUT,
     ICON_SEARCH_MAIN,
     ICON_SUBMIT,
@@ -850,15 +849,20 @@ class QuickLaunchWidget(BaseWidget):
         self._selected_index = -1
 
         if not results:
-            has_text = bool(self._pending_search_text.strip())
-            self._set_empty_icon(ICON_NO_RESULTS if has_text else ICON_SEARCH_MAIN)
-            self._popup.empty_hint.setText("No results found" if has_text else "Type to search...")
-            self._popup.results_view.setVisible(False)
-            self._popup.empty_widget.setVisible(True)
             self._result_model.set_results([], 0, 1.0)
             self._clear_preview()
+            if self._pending_search_text.strip():
+                # Nothing matched collapse to the search bar
+                self._set_compact_visible(False)
+                return
+            self._set_empty_icon(ICON_SEARCH_MAIN)
+            self._popup.empty_hint.setText("Type to search...")
+            self._popup.results_view.setVisible(False)
+            self._popup.empty_widget.setVisible(True)
             return
 
+        if not self._popup.content_widget.isVisible():
+            self._set_compact_visible(True)
         self._popup.empty_widget.setVisible(False)
         self._popup.results_view.setVisible(True)
         self._result_model.set_results(results, self.config.icon_size, self._dpr)
