@@ -59,7 +59,6 @@ def _suppress_third_party_warnings():
     """Suppress noisy warnings and logs from third-party libraries."""
     logging.getLogger("asyncio").setLevel(logging.WARNING)
     logging.getLogger("comtypes").setLevel(logging.ERROR)
-    logging.getLogger("pyvda").setLevel(logging.WARNING)
     warnings.filterwarnings("ignore", category=UserWarning, module="pycaw")
 
 
