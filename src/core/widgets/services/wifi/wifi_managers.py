@@ -294,7 +294,6 @@ class WiFiManager(QObject):
         self._is_connecting = False
         self._client_handle = HANDLE()
         self._negotiated_version = DWORD()
-        self._interface_list_ptr = POINTER(WLAN_INTERFACE_INFO_LIST)()
         self._interfaces: list[WLAN_INTERFACE_INFO] = []
         self._notification_callback = WLAN_NOTIFICATION_CALLBACK(self._on_wlan_notification)
 
@@ -374,42 +373,43 @@ class WiFiManager(QObject):
             return None
         interfaces_ptr, interfaces = self._get_interface_list()
         network_info: NetworkInfo | None = None
-        for interface in interfaces:
-            # Query interface for current connection
-            data_size = DWORD()
-            data_ptr = c_void_p()
-            opcode_value_type = DWORD()
-            result = WlanQueryInterface(
-                self._client_handle,
-                byref(interface.InterfaceGuid),
-                WLAN_INTF_OPCODE_CURRENT_CONNECTION,
-                None,
-                byref(data_size),
-                byref(data_ptr),
-                byref(opcode_value_type),
-            )
-
-            if result != ERROR_SUCCESS:
-                return None
-            try:
-                network_list_ptr = POINTER(WLAN_AVAILABLE_NETWORK_LIST)()
-                result = WlanGetAvailableNetworkList(
+        try:
+            for interface in interfaces:
+                # Query interface for current connection
+                data_size = DWORD()
+                data_ptr = c_void_p()
+                opcode_value_type = DWORD()
+                result = WlanQueryInterface(
                     self._client_handle,
                     byref(interface.InterfaceGuid),
-                    0,
+                    WLAN_INTF_OPCODE_CURRENT_CONNECTION,
                     None,
-                    byref(network_list_ptr),
+                    byref(data_size),
+                    byref(data_ptr),
+                    byref(opcode_value_type),
                 )
+
                 if result != ERROR_SUCCESS:
                     return None
                 try:
-                    network_info = self._find_connected_network_info(network_list_ptr, interface.InterfaceGuid)
+                    network_list_ptr = POINTER(WLAN_AVAILABLE_NETWORK_LIST)()
+                    result = WlanGetAvailableNetworkList(
+                        self._client_handle,
+                        byref(interface.InterfaceGuid),
+                        0,
+                        None,
+                        byref(network_list_ptr),
+                    )
+                    if result != ERROR_SUCCESS:
+                        return None
+                    try:
+                        network_info = self._find_connected_network_info(network_list_ptr, interface.InterfaceGuid)
+                    finally:
+                        WlanFreeMemory(network_list_ptr)
                 finally:
-                    WlanFreeMemory(network_list_ptr)
-            finally:
-                if data_ptr:
-                    WlanFreeMemory(data_ptr)
-        if interfaces_ptr:
+                    if data_ptr:
+                        WlanFreeMemory(data_ptr)
+        finally:
             WlanFreeMemory(interfaces_ptr)
 
         return network_info
@@ -552,11 +552,11 @@ class WiFiManager(QObject):
     def _get_interface_list(self) -> tuple[CPointer[WLAN_INTERFACE_INFO_LIST], Array[WLAN_INTERFACE_INFO]]:
         """Get the list of WLAN interfaces"""
         interface_list_ptr = POINTER(WLAN_INTERFACE_INFO_LIST)()
-        result = WlanEnumInterfaces(self._client_handle, None, byref(self._interface_list_ptr))
+        result = WlanEnumInterfaces(self._client_handle, None, byref(interface_list_ptr))
         if result != ERROR_SUCCESS:
             raise WinError(result)
 
-        interface_list = self._interface_list_ptr.contents
+        interface_list = interface_list_ptr.contents
         interfaces = (WLAN_INTERFACE_INFO * int(interface_list.dwNumberOfItems)).from_address(
             addressof(interface_list.InterfaceInfo)
         )
@@ -654,12 +654,16 @@ class WiFiManager(QObject):
             None,
             None,
         )
-        if result == ERROR_SUCCESS and profile_str_ptr.value is not None:
-            return profile_str_ptr.value
-        if result == ERROR_NOT_FOUND:  # No need to log this, expected behavior
+        try:
+            if result == ERROR_SUCCESS and profile_str_ptr.value is not None:
+                return profile_str_ptr.value
+            if result == ERROR_NOT_FOUND:  # No need to log this, expected behavior
+                return ""
+            logger.debug("Error getting profile: %s", result)
             return ""
-        logger.debug("Error getting profile: %s", result)
-        return ""
+        finally:
+            if profile_str_ptr:
+                WlanFreeMemory(profile_str_ptr)
 
     def _set_wlan_profile(self, client_handle: HANDLE, interface_guid: GUID, profile_xml: str):
         try:
