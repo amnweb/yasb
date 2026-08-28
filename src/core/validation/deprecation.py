@@ -116,6 +116,18 @@ SCOPED_DEPRECATED_FIELDS: dict[str, dict[str, str]] = {
     "GalleryConfig": {
         "lazy_load_delay": "No longer supported and can be removed from the config.",
         "enable_cache": "No longer supported and can be removed from the config.",
+        "lazy_load": "No longer supported and can be removed from the config.",
+        "lazy_load_fadein": "No longer supported and can be removed from the config.",
+        "enabled": "No longer supported and can be removed from the config.",
+        "blur": "No longer supported and can be removed from the config.",
+        "image_per_page": "No longer supported and can be removed from the config.",
+        "gallery_columns": "No longer supported and can be removed from the config.",
+        "show_buttons": "No longer supported and can be removed from the config.",
+        "image_spacing": "No longer supported and can be removed from the config.",
+        "respect_work_area": "No longer supported and can be removed from the config.",
+        "horizontal_position": "No longer supported and can be removed from the config.",
+        "vertical_position": "No longer supported and can be removed from the config.",
+        "position_offset": "No longer supported and can be removed from the config.",
     },
     "AnimationConfig": {
         "type": "Animation type is no longer supported in TaskbarWidget, remove it from your config.",

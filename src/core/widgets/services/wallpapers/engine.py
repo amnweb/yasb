@@ -1,5 +1,23 @@
-"""
-YASB Wallpaper engine.
+"""YASB wallpaper transition engine.
+
+Plays a short animation over the desktop when the wallpaper changes, then hands
+the new image to Windows. The overlay is a frameless widget parented to WorkerW
+so it draws above the wallpaper and below the desktop icons.
+
+Scaling and positioning have to match what Windows does. If they do not, the
+last frame of the animation sits on different pixels than the wallpaper Windows
+settles on, and the desktop jumps when the overlay closes. The rules that are
+not obvious:
+
+  * Windows lays out its own transcoded copy, not the file on disk, and shrinks
+    it for very large images. Centre and tile never rescale, so for those the
+    transcoded size is the layout.
+  * Fill and span anchor vertically at a third of the overflow, not a half.
+  * Landscape images wider than 2.22 are spanned across all monitors in fit and
+    fill. Windows calls this autospan.
+  * Integer division truncates toward zero, not floor.
+
+Verified against screenshots of the real desktop on Windows 11 26100.
 """
 
 import ctypes
@@ -148,6 +166,157 @@ def _read_background_color() -> QColor:
         return QColor(r, g, b)
     except Exception:
         return QColor(0, 0, 0)
+
+
+def _panorama_threshold(landscape: bool) -> float:
+    """Aspect ratio past which Windows spans a wallpaper across the monitors.
+
+    Stored as a DWORD in thousandths, defaulting to 2.22 for landscape images and
+    1.0 for portrait ones. There is no upper bound; the wider the image, the more
+    certainly it spans. An earlier version used a 2.2 to 2.5 range, which is why
+    3840x1080 dual-monitor wallpapers were cropped on both screens instead of
+    spanning.
+    """
+    default = 2.22 if landscape else 1.0
+    name = "PanoramaThreshold" if landscape else "PanoramaPortraitThreshold"
+    try:
+        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Control Panel\Desktop")
+        try:
+            value = int(winreg.QueryValueEx(key, name)[0])
+        finally:
+            winreg.CloseKey(key)
+    except FileNotFoundError:
+        # The usual case. Windows only writes these when someone overrides them
+        # and otherwise falls back to the same defaults used here.
+        return default
+    except (OSError, ValueError) as exc:
+        logger.debug("Could not read %s (%s), using %s", name, exc, default)
+        return default
+    return value / 1000.0 if value else default
+
+
+def _monitors_tile_a_rectangle(areas) -> bool:
+    """Whether the monitors cover their bounding box exactly, with no step or gap.
+
+    Windows builds a region from the monitor rects and refuses to span unless
+    that region comes back as a single rectangle, and unless every monitor is
+    the same size. Two 1920x1080 screens stacked with even a few pixels of
+    horizontal offset form a staircase, not a rectangle, and are enough to turn
+    spanning off.
+
+    Monitors never overlap, so comparing the covered area against the bounding
+    box is an exact test for it.
+    """
+    if not areas:
+        return False
+    if len({(dw, dh) for _, _, dw, dh, _ in areas}) != 1:
+        return False
+    left = min(dx for dx, _, _, _, _ in areas)
+    top = min(dy for _, dy, _, _, _ in areas)
+    right = max(dx + dw for dx, _, dw, _, _ in areas)
+    bottom = max(dy + dh for _, dy, _, dh, _ in areas)
+    covered = sum(dw * dh for _, _, dw, dh, _ in areas)
+    return covered == (right - left) * (bottom - top)
+
+
+def _wants_autospan(px: QPixmap, areas) -> bool:
+    """Whether Windows would turn this fit/fill into a span.
+
+    Windows calls this autospan. A landscape image wider than the panorama
+    threshold is no longer laid out per monitor and is treated as a span, while
+    keeping the original mode's cover/contain and anchor. Portrait images never
+    qualify.
+
+    The arrangement has to be spannable as well, which is what
+    _monitors_tile_a_rectangle covers. Leaving that check out is why wide
+    images were spanned across screens that Windows lays out one at a time.
+    """
+    if len(areas) < 2 or px.isNull() or px.height() <= 0:
+        return False
+    if not _monitors_tile_a_rectangle(areas):
+        return False
+    if px.height() > px.width():
+        return False
+    return px.width() / px.height() > _panorama_threshold(landscape=True)
+
+
+def _transcode_limits() -> tuple[int, int] | None:
+    """The two DWORDs the wallpaper transcoder reads before resizing anything.
+
+    Stored under HKCU\\Control Panel\\Desktop. These are not the current display
+    size: Windows only ever raises them, so they are a high-water mark of the
+    largest desktop ever attached and do not drop back when a monitor is
+    unplugged. They differ from machine to machine, so they are read rather than
+    hardcoded. If either read fails Windows skips the resize entirely, which is
+    what returning None means here.
+    """
+    try:
+        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Control Panel\Desktop")
+        try:
+            max_virtual_desktop = int(winreg.QueryValueEx(key, "MaxVirtualDesktopDimension")[0])
+            max_monitor = int(winreg.QueryValueEx(key, "MaxMonitorDimension")[0])
+        finally:
+            winreg.CloseKey(key)
+    except FileNotFoundError:
+        # Windows has not recorded them yet; it skips the resize in that case too.
+        return None
+    except (OSError, ValueError) as exc:
+        logger.debug("Could not read the wallpaper transcode limits (%s)", exc)
+        return None
+    if max_virtual_desktop > 0 and max_monitor > 0:
+        return max_virtual_desktop, max_monitor
+    return None
+
+
+def _transcode_size(iw: int, ih: int) -> tuple[int, int]:
+    """The size Windows transcodes an *iw* x *ih* wallpaper to.
+
+    Windows lays out its own transcoded copy and shrinks it for very large
+    images. Two details are easy to get wrong: the limit scales with the image's
+    aspect ratio, so a wide panorama is left alone where a square image of the
+    same area is not, and each axis is derived from the limit separately rather
+    than by one shared factor.
+
+    Verified against thirteen image sizes, including the cases where those two
+    details disagree by a pixel.
+    """
+    limits = _transcode_limits()
+    if limits is None or iw <= 0 or ih <= 0:
+        return iw, ih
+
+    max_virtual_desktop, max_monitor = limits
+    aspect = iw / ih
+    limit = int(max(max_monitor * aspect, max_monitor / aspect))
+    limit = max(max_virtual_desktop, limit)
+    if iw <= limit and ih <= limit:
+        return iw, ih
+
+    # Both sides round down, never to nearest, so int() is correct here. A
+    # 3900x3860 image comes out 3879x3839; rounding would give 3880x3840 and the
+    # tile grid would then drift a pixel on every repeat.
+    return (
+        max(1, min(limit, int(limit / ih * iw))),
+        max(1, min(limit, int(limit / iw * ih))),
+    )
+
+
+def _apply_transcode_cap(px: QPixmap) -> QPixmap:
+    """Shrink *px* to the size Windows would have transcoded it to."""
+    w, h = _transcode_size(px.width(), px.height())
+    if (w, h) == (px.width(), px.height()):
+        return px
+    return px.scaled(w, h, Qt.AspectRatioMode.IgnoreAspectRatio, Qt.TransformationMode.SmoothTransformation)
+
+
+def _trunc_div(a: int, b: int) -> int:
+    """Divide the way C does, truncating toward zero.
+
+    Not interchangeable with //. Windows truncates, Python floors, and the two
+    differ by a pixel whenever the numerator is negative, which is every case
+    where the image overflows the monitor.
+    """
+    q = abs(a) // abs(b)
+    return -q if (a < 0) != (b < 0) else q
 
 
 def _locate_workerw() -> int:
@@ -339,162 +508,97 @@ class WallpaperEngine(QWidget):
         areas = self._areas
         if px.isNull():
             return []
+        # Lay out what Windows lays out: its transcoded copy, not the file.
+        px = _apply_transcode_cap(px)
         vw = max(dx + dw for dx, _, dw, _, _ in areas) if areas else self.width()
         vh = max(dy + dh for _, dy, _, dh, _ in areas) if areas else self.height()
 
         mode = self.fit_mode
+        # Only span and tile are laid out against the virtual desktop; Windows
+        # computes every other mode independently per monitor.
         if mode == "span":
             return self._scale_span(px, areas, vw, vh)
         if mode == "tile":
             return self._scale_tile(px, areas, vw, vh)
-        if mode == "center":
-            return self._scale_center(px, areas, vw)
-        if mode == "fill":
-            return self._scale_fill(px, areas, vw, vh)
-        if mode == "fit":
-            return self._scale_fit(px, areas, vw, vh)
-        # stretch, or unknown – handled per-monitor
+        if mode in ("fill", "fit") and _wants_autospan(px, areas):
+            # Windows does not lay this out per monitor: it rewrites the position
+            # to span and carries on. The original mode still decides cover vs
+            # contain and the vertical anchor, so pass it through.
+            return self._scale_span(px, areas, vw, vh, cover=mode == "fill")
         return [self._scale_for_screen(px, dw, dh) for _, _, dw, dh, _ in areas]
 
     #  Per-mode scaling helpers
-    def _scale_span(self, px: QPixmap, areas, vw: int, vh: int) -> list[tuple[QPixmap, int, int]]:
-        """Scale image to cover the entire virtual desktop."""
-        scaled = px.scaled(
-            vw,
-            vh,
-            Qt.AspectRatioMode.KeepAspectRatioByExpanding,
+    def _cover_or_contain(self, px: QPixmap, dw: int, dh: int, cover: bool) -> QPixmap:
+        """Scale to cover or contain *dw* x *dh*, rounding the way Windows rounds.
+
+        Windows works the ratios out in single precision, takes max for cover and
+        min for contain, then adds a half to each axis before truncating. Done
+        here rather than through QPixmap.scaled, which rounds differently and
+        lands a pixel off.
+        """
+        ratios = (dw / px.width(), dh / px.height())
+        s = max(ratios) if cover else min(ratios)
+        return px.scaled(
+            int(px.width() * s + 0.5),
+            int(px.height() * s + 0.5),
+            Qt.AspectRatioMode.IgnoreAspectRatio,
             Qt.TransformationMode.SmoothTransformation,
         )
-        ox = int((vw - scaled.width()) / 2)
-        oy = int((vh - scaled.height()) / 2)
-        if oy < 0:
-            oy = -round((scaled.height() - vh) / 3)
+
+    def _scale_span(self, px: QPixmap, areas, vw: int, vh: int, cover: bool = True) -> list[tuple[QPixmap, int, int]]:
+        """One image across the whole virtual desktop, each monitor clips its part.
+
+        *cover* is false only when a fit has been autospanned. Windows keeps the
+        original position internally after switching to span, so a spanned fit
+        still contains rather than covers, and anchors at a half instead of a
+        third.
+        """
+        scaled = self._cover_or_contain(px, vw, vh, cover=cover)
+        ox = _trunc_div(vw - scaled.width(), 2)
+        oy = _trunc_div(vh - scaled.height(), 3 if cover else 2)
         return [(scaled, ox - dx, oy - dy) for dx, dy, _, _, _ in areas]
 
     def _scale_tile(self, px: QPixmap, areas, vw: int, vh: int) -> list[tuple[QPixmap, int, int]]:
-        """Tile the image at original size across the virtual desktop.
+        """Repeat the image at its native size from the virtual desktop origin.
 
-        Windows scales oversized images so that no dimension is smaller than the
-        largest single-monitor dimension (e.g. 1920 for 1920x1080 monitors).
+        Windows never scales a tiled wallpaper, whatever its size, and the grid
+        runs across the whole virtual desktop instead of restarting on each
+        monitor. Tiling per monitor lines the seam up wrong.
         """
         iw, ih = px.width(), px.height()
         if iw <= 0 or ih <= 0:
             return [(px, 0, 0) for _ in areas]
 
-        # Determine per-monitor max dimension for the scaling threshold
-        mon_rects = _enum_physical_monitors()
-        max_mon_dim = max(
-            (max(abs(r - l), abs(b - t)) for l, t, r, b in mon_rects),
-            default=max(vw, vh),
-        )
-
-        # Scale down oversized images to cover (vw × max_mon_dim), preserving aspect ratio
-        if iw > vw + 2 or ih > max_mon_dim + 2:
-            tile_src = px.scaled(
-                vw,
-                max_mon_dim,
-                Qt.AspectRatioMode.KeepAspectRatioByExpanding,
-                Qt.TransformationMode.SmoothTransformation,
-            )
-        else:
-            tile_src = px
-
-        # Compose the tiled canvas
-        tw, th = tile_src.width(), tile_src.height()
         tiled = QPixmap(vw, vh)
-        tiled.fill(QColor(0, 0, 0))
+        tiled.fill(self._bg_color)
         tp = QPainter(tiled)
-        for ty in range(0, vh, th):
-            for tx in range(0, vw, tw):
-                tp.drawPixmap(tx, ty, tile_src)
+        for ty in range(0, vh, ih):
+            for tx in range(0, vw, iw):
+                tp.drawPixmap(tx, ty, px)
         tp.end()
         return [(tiled, -dx, -dy) for dx, dy, _, _, _ in areas]
 
-    def _scale_center(self, px: QPixmap, areas, vw: int) -> list[tuple[QPixmap, int, int]]:
-        """Centre the image on each monitor, scaling down only if larger than the screen."""
-        iw, ih = px.width(), px.height()
-        center_px = px
-        max_monitor_w = max((dw for _, _, dw, _, _ in areas), default=vw)
-        sx = vw / iw if iw > 0 else 1.0
-        sy = max_monitor_w / ih if ih > 0 else 1.0
-        scale = max(sx, sy)
-        if scale < 1.0:
-            center_px = px.scaled(
-                max(1, int(iw * scale)),
-                max(1, int(ih * scale)),
-                Qt.AspectRatioMode.IgnoreAspectRatio,
-                Qt.TransformationMode.SmoothTransformation,
-            )
-        result = []
-        for _, _, dw, dh, _ in areas:
-            cw, ch = center_px.width(), center_px.height()
-            src_x = max(0, (cw - dw) // 2)
-            src_y = max(0, (ch - dh) // 2)
-            cropped = center_px.copy(src_x, src_y, min(cw, dw), min(ch, dh))
-            ox = max(0, (dw - cw) // 2)
-            oy = max(0, (dh - ch) // 2)
-            result.append((cropped, ox, oy))
-        return result
-
-    def _scale_fill(self, px: QPixmap, areas, vw: int, vh: int) -> list[tuple[QPixmap, int, int]]:
-        """Fill each monitor, with special handling for panoramic images on multi-monitor setups."""
-        if len(areas) > 1:
-            src_ratio = px.width() / max(1, px.height())
-            # I'm not certain about the exact thresholds Windows uses, maybe this is wrong for some aspect ratios,
-            # but it seems to work well for typical ultrawide wallpapers
-            is_panoramic = px.width() >= int(vw * 1.10) and 2.2 <= src_ratio <= 2.5
-            if is_panoramic:
-                # Render one virtual-desktop image and slice it per monitor.
-                scaled = px.scaled(
-                    vw,
-                    vh,
-                    Qt.AspectRatioMode.KeepAspectRatioByExpanding,
-                    Qt.TransformationMode.SmoothTransformation,
-                )
-                ox = int((vw - scaled.width()) / 2)
-                oy = int((vh - scaled.height()) / 2)
-                if ox < 0:
-                    ox = -round((scaled.width() - vw) / 3)
-                if oy < 0:
-                    oy = -round((scaled.height() - vh) / 3)
-                return [(scaled, ox - dx, oy - dy) for dx, dy, _, _, _ in areas]
-        return [self._scale_for_screen(px, dw, dh) for _, _, dw, dh, _ in areas]
-
-    def _scale_fit(self, px: QPixmap, areas, vw: int, vh: int) -> list[tuple[QPixmap, int, int]]:
-        """Fit image to each monitor, with special handling for panoramic images on multi-monitor setups."""
-        if len(areas) > 1:
-            src_ratio = px.width() / max(1, px.height())
-            is_panoramic = px.width() >= int(vw * 1.10) and 2.2 <= src_ratio <= 2.5
-            if is_panoramic:
-                # Render one virtual-desktop image and slice it per monitor.
-                scaled = px.scaled(
-                    vw,
-                    vh,
-                    Qt.AspectRatioMode.KeepAspectRatio,
-                    Qt.TransformationMode.SmoothTransformation,
-                )
-                ox = int((vw - scaled.width()) / 2)
-                oy = int((vh - scaled.height()) / 2)
-                return [(scaled, ox - dx, oy - dy) for dx, dy, _, _, _ in areas]
-        return [self._scale_for_screen(px, dw, dh) for _, _, dw, dh, _ in areas]
-
     def _scale_for_screen(self, px: QPixmap, sw: int, sh: int) -> tuple[QPixmap, int, int]:
-        """Scale a single image for one monitor (used by fill, fit, stretch)."""
+        """Lay one image out on one monitor: centre, stretch, fit or fill.
+
+        Centre never scales. An oversized image is cropped by the monitor rect,
+        a smaller one leaves the desktop background showing around it.
+
+        Fill anchors vertically at a third of the overflow rather than a half.
+        This is deliberate and matches Windows; it is why a filled photo keeps
+        more of its top than its bottom.
+        """
         mode = self.fit_mode
-        if mode == "fill":
-            scaled = px.scaled(
-                sw, sh, Qt.AspectRatioMode.KeepAspectRatioByExpanding, Qt.TransformationMode.SmoothTransformation
-            )
-        elif mode == "fit":
-            scaled = px.scaled(sw, sh, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
-        elif mode == "stretch":
+        if mode == "stretch":
             scaled = px.scaled(sw, sh, Qt.AspectRatioMode.IgnoreAspectRatio, Qt.TransformationMode.SmoothTransformation)
+            return scaled, 0, 0
+        if mode in ("fill", "fit"):
+            scaled = self._cover_or_contain(px, sw, sh, cover=mode == "fill")
         else:
             scaled = px
-        ox = int((sw - scaled.width()) / 2)
-        oy = int((sh - scaled.height()) / 2)
-        if mode == "fill" and oy < 0:
-            oy = -round((scaled.height() - sh) / 3)
+
+        ox = _trunc_div(sw - scaled.width(), 2)
+        oy = _trunc_div(sh - scaled.height(), 3 if mode == "fill" else 2)
         return scaled, ox, oy
 
     def _on_progress(self, value: float) -> None:
