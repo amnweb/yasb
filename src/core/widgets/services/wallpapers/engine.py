@@ -432,6 +432,7 @@ class WallpaperEngine(QWidget):
         self._progress = 0.0
         self._committed = False
         self._areas: list[tuple[int, int, int, int, float]] = []
+        self._dpr = 1.0
         self._per_screen_scaled_old: list[tuple[QPixmap, int, int]] = []
         self._per_screen_scaled_new: list[tuple[QPixmap, int, int]] = []
         self.fit_mode = _read_fit_mode()
@@ -500,6 +501,7 @@ class WallpaperEngine(QWidget):
             self.resize(total_w, total_h)
         else:
             self._areas = areas
+        self._dpr = areas[0][4] if areas else (self.devicePixelRatioF() or 1.0)
         self._per_screen_scaled_new = self._compute_per_screen_scaled(self._pixmap_new)
         self._per_screen_scaled_old = self._compute_per_screen_scaled(self._pixmap_old)
 
@@ -510,8 +512,13 @@ class WallpaperEngine(QWidget):
             return []
         # Lay out what Windows lays out: its transcoded copy, not the file.
         px = _apply_transcode_cap(px)
-        vw = max(dx + dw for dx, _, dw, _, _ in areas) if areas else self.width()
-        vh = max(dy + dh for _, dy, _, dh, _ in areas) if areas else self.height()
+        dpr = self._dpr
+        if dpr != 1.0:
+            areas = [(*(int(round(v * dpr)) for v in (dx, dy, dw, dh)), d) for dx, dy, dw, dh, d in areas]
+            px = QPixmap(px)
+            px.setDevicePixelRatio(dpr)
+        vw = max(dx + dw for dx, _, dw, _, _ in areas) if areas else int(round(self.width() * dpr))
+        vh = max(dy + dh for _, dy, _, dh, _ in areas) if areas else int(round(self.height() * dpr))
 
         mode = self.fit_mode
         # Only span and tile are laid out against the virtual desktop; Windows
@@ -569,13 +576,16 @@ class WallpaperEngine(QWidget):
         if iw <= 0 or ih <= 0:
             return [(px, 0, 0) for _ in areas]
 
+        src = QPixmap(px)
+        src.setDevicePixelRatio(1.0)
         tiled = QPixmap(vw, vh)
         tiled.fill(self._bg_color)
         tp = QPainter(tiled)
         for ty in range(0, vh, ih):
             for tx in range(0, vw, iw):
-                tp.drawPixmap(tx, ty, px)
+                tp.drawPixmap(tx, ty, src)
         tp.end()
+        tiled.setDevicePixelRatio(self._dpr)
         return [(tiled, -dx, -dy) for dx, dy, _, _, _ in areas]
 
     def _scale_for_screen(self, px: QPixmap, sw: int, sh: int) -> tuple[QPixmap, int, int]:
@@ -704,7 +714,7 @@ class WallpaperEngine(QWidget):
 
                     # Fill old area background
                     p.fillRect(QRectF(float(dx), float(dy), float(dw), float(dh)), self._bg_color)
-                    p.drawPixmap(dx + ox_o, dy + oy_o, scaled_o)
+                    p.drawPixmap(QPointF(dx + ox_o / self._dpr, dy + oy_o / self._dpr), scaled_o)
                     p.restore()
                 else:
                     p.fillRect(QRectF(float(dx), float(dy), float(dw), float(dh)), self._bg_color)
@@ -718,7 +728,7 @@ class WallpaperEngine(QWidget):
 
             # Fill new area background
             p.fillRect(QRectF(float(dx), float(dy), float(dw), float(dh)), self._bg_color)
-            p.drawPixmap(dx + ox_n, dy + oy_n, scaled_n)
+            p.drawPixmap(QPointF(dx + ox_n / self._dpr, dy + oy_n / self._dpr), scaled_n)
             p.restore()
 
     def _free_resources(self):
