@@ -7,6 +7,8 @@ from datetime import datetime
 from functools import partial
 from typing import Any
 
+import win32api
+import win32con
 import win32gui
 import win32process
 from PyQt6.QtCore import (
@@ -482,6 +484,7 @@ class AppBarManager(QAbstractNativeEventFilter):
             cls._instance._swp_flags = SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE
             cls._instance._ready = False  # Enabled after first bar registers
             cls._instance._reregister_pending = False  # Coalesces multiple WM_TASKBARCREATED into one
+            cls._instance._poll_timer = None  # Fallback poller for missed ABN_FULLSCREENAPP
         return cls._instance
 
     def __init__(self):
@@ -497,17 +500,63 @@ class AppBarManager(QAbstractNativeEventFilter):
                 app.installNativeEventFilter(self)
                 AppBarManager._installed = True
 
+    def _ensure_poll_timer(self):
+        """Start the fallback poller that heals missed ABN_FULLSCREENAPP notifications.
+
+        The AppBar API only notifies on fullscreen transitions; if a fullscreen
+        app was already running when a bar registered (or the notification was
+        missed), the bar would otherwise stay visible over the game.
+        """
+        if self._poll_timer is None:
+            self._poll_timer = QTimer()
+            self._poll_timer.setInterval(2000)
+            self._poll_timer.timeout.connect(self._poll_fullscreen_state)
+            self._poll_timer.start()
+
+    def _poll_fullscreen_state(self):
+        """Cross-check each bar against the foreground window and correct missed transitions."""
+        if not self._bars:
+            return
+        try:
+            hwnd = win32gui.GetForegroundWindow()
+            fg_rect = win32gui.GetWindowRect(hwnd) if hwnd else None
+            for bar_hwnd, bar_widget in self._bars.items():
+                if not getattr(bar_widget, "_hide_on_fullscreen", False):
+                    continue
+                is_fullscreen_on_bar_monitor = False
+                if fg_rect and not self._is_foreground_excluded():
+                    # Fullscreen when the foreground window exactly covers the
+                    # monitor this bar lives on (per-monitor, so a game on one
+                    # display doesn't hide bars on others).
+                    fg_monitor = win32api.MonitorFromRect(fg_rect, win32con.MONITOR_DEFAULTTONEAREST)
+                    monitor_rect = win32api.GetMonitorInfo(fg_monitor)["Monitor"]
+                    if fg_rect == tuple(monitor_rect):
+                        bar_monitor = win32api.MonitorFromWindow(bar_hwnd, win32con.MONITOR_DEFAULTTONEAREST)
+                        is_fullscreen_on_bar_monitor = fg_monitor == bar_monitor
+
+                intended = self._bar_intended_state.get(bar_hwnd, True)
+                if is_fullscreen_on_bar_monitor and intended:
+                    self._handle_fullscreen(bar_hwnd, True)
+                elif not is_fullscreen_on_bar_monitor and not intended:
+                    self._handle_fullscreen(bar_hwnd, False)
+        except Exception:
+            pass
+
     def register_bar(self, hwnd: int, bar_widget):
         """Register a bar to receive fullscreen notifications"""
         self._ensure_installed()
         self._bars[hwnd] = bar_widget
         self._bar_intended_state[hwnd] = True  # Initially visible
         self._ready = True
+        self._ensure_poll_timer()
 
     def unregister_bar(self, hwnd: int):
         """Unregister a bar from receiving fullscreen notifications"""
         self._bars.pop(hwnd, None)
         self._bar_intended_state.pop(hwnd, None)
+        if not self._bars and self._poll_timer is not None:
+            self._poll_timer.stop()
+            self._poll_timer = None
 
     def suppress(self):
         """Temporarily suppress WM_TASKBARCREATED handling.
@@ -631,6 +680,10 @@ class AppBarManager(QAbstractNativeEventFilter):
 
         if is_fullscreen_opening:
             if intended_visible:
+                # Drop the topmost style before reordering: a WS_EX_TOPMOST window
+                # lives in the topmost Z-band, so HWND_BOTTOM alone would keep it
+                # above the (non-topmost) fullscreen game.
+                win32gui.SetWindowPos(hwnd, win32con.HWND_NOTOPMOST, 0, 0, 0, 0, self._swp_flags)
                 SetWindowPos(hwnd, HWND_BOTTOM, 0, 0, 0, 0, self._swp_flags)
                 self._bar_intended_state[hwnd] = False
         else:

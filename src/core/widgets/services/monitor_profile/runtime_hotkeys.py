@@ -105,9 +105,9 @@ class RuntimeHotkeyManager:
     def _dispatch(self, binding: _RuntimeBinding) -> None:
         """Emit the action through the widget hotkey event channel.
 
-        Events are emitted for every live instance's screen so the widget on
-        the focused bar picks it up (mirrors find_focused_screen behaviour with
-        follow_window=True, but without needing the BarManager reference).
+        Resolves the first live widget instance; dead instances (from a
+        previous bar build before a config reload) are purged first because
+        calling into them raises RuntimeError.
         """
         widget = self._resolve_widget()
         if widget is None:
@@ -117,8 +117,14 @@ class RuntimeHotkeyManager:
 
     @staticmethod
     def _resolve_widget():
-        """Find the first live MonitorProfileWidget instance."""
+        """Find the first live MonitorProfileWidget instance, purging dead ones."""
+        from core.utils.qobject import is_valid_qobject
         from core.widgets.yasb.monitor_profile import MonitorProfileWidget
 
         instances = MonitorProfileWidget.instances()
-        return instances[0] if instances else None
+        for widget in instances:
+            if is_valid_qobject(widget) and widget.widget_name:
+                return widget
+        # All instances are dead (e.g. during/after a config reload) - drop them
+        MonitorProfileWidget._instances.clear()
+        return None

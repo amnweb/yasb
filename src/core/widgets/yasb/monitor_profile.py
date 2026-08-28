@@ -70,6 +70,10 @@ class MonitorProfileWidget(BaseWidget):
 
     @classmethod
     def instances(cls) -> list[MonitorProfileWidget]:
+        """Return live instances only, purging any whose C++ object was destroyed."""
+        from core.utils.qobject import is_valid_qobject
+
+        cls._instances[:] = [w for w in cls._instances if is_valid_qobject(w)]
         return list(cls._instances)
 
     @property
@@ -270,6 +274,10 @@ class MonitorProfileWidget(BaseWidget):
         self._update_label()
 
     def _update_label(self) -> None:
+        # Skip when the widget has been torn down (e.g. during a config reload);
+        # touching the destroyed QLabels raises RuntimeError.
+        if not is_valid_qobject(self) or not is_valid_qobject(self._widget_frame):
+            return
         active_widgets = self._widgets_alt if self._show_alt_label else self._widgets
         active_label_content = self.config.label_alt if self._show_alt_label else self.config.label
         label_parts = re.split("(<span.*?>.*?</span>)", active_label_content)
@@ -285,7 +293,11 @@ class MonitorProfileWidget(BaseWidget):
                 formatted_text = part
                 for option, value in label_options.items():
                     formatted_text = formatted_text.replace(option, str(value))
-                if widget_index < len(active_widgets) and isinstance(active_widgets[widget_index], QLabel):
+                if (
+                    widget_index < len(active_widgets)
+                    and isinstance(active_widgets[widget_index], QLabel)
+                    and is_valid_qobject(active_widgets[widget_index])
+                ):
                     active_widgets[widget_index].setText(formatted_text)
                     alt_class = "alt" if self._show_alt_label else ""
                     base_class = "icon" if "<span" in part else f"label {alt_class}"
