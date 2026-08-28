@@ -11,7 +11,8 @@ from PyQt6.QtCore import QObject, QTimer, pyqtSignal
 
 from core.events.service import EventService
 from core.utils.win32.bindings.shell32 import IDesktopWallpaper
-from core.widgets.services.wallpapers.wallpaper_engine import WallpaperEngine
+from core.widgets.services.wallpapers.engine import WallpaperEngine
+from core.widgets.services.wallpapers.images import collect_image_files
 
 
 class WallpaperManager(QObject):
@@ -123,16 +124,13 @@ class WallpaperManager(QObject):
 
         self._is_running = True
 
-        wallpapers = []
         for path in self._image_paths:
             if not os.path.exists(path):
                 logging.warning("Invalid image path: %s", path)
-                continue
 
-            for root, _, files in os.walk(path):
-                for f in files:
-                    if f.lower().endswith((".png", ".jpg", ".jpeg", ".bmp", ".gif")):
-                        wallpapers.append(os.path.join(root, f))
+        # The same scan the galleries use, so a random wallpaper can be any file
+        # the gallery is willing to show.
+        wallpapers = collect_image_files(self._image_paths)
 
         if not wallpapers:
             logging.warning("No wallpapers found in %s", self._image_paths)

@@ -1,6 +1,6 @@
 # Wallpapers Widget Options
 
-A quick desktop wallpaper switcher for your status bar. Clicking it opens a beautiful gallery popup where you can browse local images and set your desktop background with a single click.
+Change your desktop wallpaper from the bar. Click the widget to open a gallery of your images, then double click one to set it.
 
 | Option               | Type     | Default        | Description                                                                 |
 |----------------------|----------|----------------|-----------------------------------------------------------------------------|
@@ -11,7 +11,8 @@ A quick desktop wallpaper switcher for your status bar. Clicking it opens a beau
 | `image_path`      | string/list   | `""`        | The path(s) to the folder(s) containing images for the wallpaper. Can be a single string or a list of strings. This field is required. |
 | `engine`          | object   | `{}`        | The wallpaper transition engine options. |
 | `gallery`         | object   | `{}`        | The gallery options for the wallpaper widget. |
-| `run_after`       | list     | `[]`        | A list of functions to run after the wallpaper is updated. |
+| `run_after`       | list     | `[]`        | A list of commands to run after the wallpaper is changed. |
+| `keybindings`     | list     | `[]`        | Hotkeys that open the gallery without clicking the widget. |
 | `callbacks`         | dict   | `{'on_left': 'toggle_gallery', 'on_middle': 'do_nothing', 'on_right': 'change_wallpaper'}`                  | Dictionary of callbacks to run when the widget is clicked.                 |
 
 ## Minimal Configuration
@@ -19,20 +20,12 @@ A quick desktop wallpaper switcher for your status bar. Clicking it opens a beau
 wallpapers:
   type: "yasb.wallpapers.WallpapersWidget"
   options:
-    label: "<span>\udb83\ude09</span>"
+    label: "<span>\ue7aa</span>"
     # Example path to folder with images. Can be a single string or a list of strings.
     image_path: "C:\\Users\\{Username}\\Images" 
     gallery:
-      enabled: true
-      blur: true
       image_width: 220
-      image_per_page: 6
-      orientation: "portrait"
-      show_buttons: false
-      image_spacing: 8
-      lazy_load: true
-      lazy_load_fadein: 400
-      image_corner_radius: 12
+      image_corner_radius: 8
 ```
 
 ## Advanced Configuration
@@ -40,7 +33,7 @@ wallpapers:
 wallpapers:
   type: "yasb.wallpapers.WallpapersWidget"
   options:
-    label: "<span>\udb83\ude09</span>"
+    label: "<span>\ue7aa</span>"
     # Example path to folder with images. Can be a single string or a list of strings.
     # image_path: "C:\\Users\\{Username}\\Images" 
     image_path: 
@@ -52,25 +45,19 @@ wallpapers:
       enabled: true
       animation: "circle" # circle/slide_top/diamond/split
     gallery:
-      enabled: true
-      blur: true
+      type: "default" # default/magnified/strip/slide - see "Gallery types" below
       image_width: 220
-      image_per_page: 6
-      gallery_columns: 0 # 0 = auto, matches image_per_page for a single row
-      horizontal_position: "center" # left/center/right placement on screen
-      vertical_position: "center" # top/center/bottom placement
-      position_offset: 0 # minimum gap (px) from screen edges - see below for advanced options
-      respect_work_area: true # clamp to OS work area (avoids Windows taskbar)
-      show_buttons: false
-      orientation: "portrait"
-      image_spacing: 8
-      lazy_load: true
-      lazy_load_fadein: 400
+      orientation: "portrait" # landscape/portrait
       image_corner_radius: 12
+      accent_color: "auto" # the Windows accent, or a hex such as "#89b4fa", currently used for images border
+    keybindings:
+      - keys: "ctrl+alt+w"
+        action: "toggle_gallery"
+        screen: "cursor" # active/cursor/primary
     # Note: do not use run_after: command if you don't know what it does
-    run_after: # List of functions to run after wallpaper is updated
-      - "wal -s -t -e -q -n -i {image}" # Example command to run after wallpaper is updated
-      - "cmd.exe /c start /min pwsh ./yasb.ps1" # Example command to run after wallpaper is updated
+    run_after: # List of commands to run after wallpaper is changed
+      - "wal -s -t -e -q -n -i {image}" # {image} is replaced with the new wallpaper path
+      - "cmd.exe /c start /min pwsh ./yasb.ps1"
     callbacks:
       on_left: "toggle_gallery"
       on_middle: "do_nothing"
@@ -87,31 +74,71 @@ wallpapers:
   - **enabled:** Whether to enable the transition engine animations when changing wallpapers.
   - **animation:** The animation style used when transitioning between wallpapers. Supported values: `circle`, `slide_top`, `diamond`, `split`. Default is `circle`.
 - **gallery:** The gallery options for the wallpaper widget.
-  - **enabled:** Whether to enable the gallery.
-  - **blur:** Whether to blur the background when the gallery is open.
-  - **image_width:** The width of the images in the gallery.
-  - **image_per_page:** The number of images per page in the gallery.
-    - **gallery_columns:** How many columns (images per row) the gallery grid uses. Set to `0` (the default) to auto-match `image_per_page` for a single row, or supply a value between 1 and 64 to lock the number of columns (the value is capped at `image_per_page`).
-    - **horizontal_position:** Horizontal placement of the gallery window. `center` (default) keeps the existing behavior, `left` anchors the gallery to the active screen's left edge, and `right` aligns it to the right edge.
-    - **vertical_position:** Vertical anchor for the gallery (`top`, `center`, or `bottom`).
-    - **position_offset:** Controls margins from screen edges. Supports three formats:
-      - **Single integer:** `position_offset: 20` - applies 20px margin to all edges (top, right, bottom, left)
-      - **Two values:** `position_offset: [10, 20]` - applies 10px to top/bottom, 20px to left/right
-      - **Four values:** `position_offset: [10, 20, 30, 40]` - applies margins in CSS order (top, right, bottom, left)
-      - **Negative values:** Supported for extending beyond work area boundaries (e.g., `position_offset: [-10, 20]`)
-    - **respect_work_area:** When `true`, the gallery respects Windows taskbars and other reserved OS areas (uses the screen's available/work area). If the gallery is too large to fit, it will be clipped without scrollbars. Set to `false` to allow the gallery to span the entire monitor.
-  - **show_buttons:** Whether to show the navigation buttons in the gallery.
-  - **orientation:** The orientation of the images in the gallery. Can be "portrait" or "landscape".
-  - **image_spacing:** The spacing between images in the gallery.
-  - **lazy_load:** Whether to lazy load images in the gallery.
-  - **lazy_load_fadein:** The fade-in duration in milliseconds for lazy loaded images.
-  - **image_corner_radius:** The corner radius of the images in the gallery. (Note: This is not same as the css border-radius property.)
-- **run_after:** A list of functions to run after the wallpaper is updated.
+  - **type:** How the wallpapers are shown. `default`, `magnified`, `strip` or `slide`. See [Gallery types](#gallery-types).
+  - **image_width:** The width of each thumbnail, in pixels.
+  - **orientation:** The shape of the thumbnails, `landscape` or `portrait`.
+  - **image_corner_radius:** The corner radius of the thumbnails. (Note: This is not the same as the css border-radius property.)
+  - **accent_color:** The colour of the selection border. `auto` (default) follows the Windows accent colour, or give a hex value such as `"#89b4fa"`. `slide` ignores this.
+- **run_after:** A list of commands to run after the wallpaper is changed. `{image}` is replaced with the path of the new wallpaper.
+- **keybindings:** Hotkeys that open the gallery. Each entry takes `keys`, `action` (`toggle_gallery`) and `screen`. `screen` can be `active` (default), `cursor` or `primary`.
 - **callbacks:** A dictionary of callbacks to run when the widget is clicked. The keys are `on_left`, `on_middle`, and `on_right`. The values are the names of the callbacks to run. Default callbacks are `toggle_gallery`, `do_nothing`, and `change_wallpaper`.
 
-> If gallery is enabled left mouse click on the widget will open the gallery and right mouse click will change the wallpaper and get random one. 
 
-> Gallery options above fit screen for 1920x1080 resolution. You may need to adjust the values for other resolutions.
+## Transition engine
+
+The engine draws its animation into the window Windows uses to paint the desktop wallpaper. That window only exists while Windows animations are turned on.
+
+If you turn off **Settings > Accessibility > Visual effects > Animation effects**, Windows stops creating that window. The engine has nothing to draw into, so it skips the animation and the wallpaper changes instantly. The same setting also removes the short fade Windows plays when the wallpaper changes. You cannot keep one and lose the other, they both come from the same place.
+
+### Known issues
+
+**Flashing on large images.** The engine runs its animation first, then sets the wallpaper. Windows tears down the engine window as part of applying it, and then plays its own fade from the old image to the new one. With a large image that fade lands after the engine window is already gone, so you see a flash of the old wallpaper before the new one settles.
+
+It shows up around 4K and above, and not on every change. Smaller images are applied fast enough that the engine window is usually still covering the screen. There is no fix for it right now, it is how Windows applies the wallpaper. Turning off `engine.enabled`, or turning off Windows animation effects, both avoid it.
+
+
+## Gallery types
+
+The gallery opens as a single row across the middle of the screen. Your desktop stays visible around it. Set `gallery.type`:
+
+| Type | Looks like |
+|------|------------|
+| `default` | Thumbnails at a fixed size, with a border on the selected one. |
+| `magnified` | A tight row. The selected thumbnail grows and pushes its neighbours aside. |
+| `strip` | Thumbnails tile edge to edge with leaning edges. The selected one stays bright, the rest are darkened. |
+| `slide` | Upright thumbnails that shrink and fade towards the edges. |
+
+```yaml
+wallpapers:
+  type: "yasb.wallpapers.WallpapersWidget"
+  options:
+    image_path: "C:\\Users\\amnw\\Pictures\\Wallpapers"
+    gallery:
+      type: "strip"
+      image_width: 220
+      orientation: "portrait"
+      image_corner_radius: 8
+      accent_color: "auto"
+```
+
+### Controls
+
+| Input | Action |
+|-------|--------|
+| Left / Right | Move the selection |
+| Page Up / Page Down | Select the last thumbnail visible on the left / right |
+| Home / End | First / last wallpaper |
+| Enter | Set the selected wallpaper |
+| Escape | Close |
+| Mouse wheel | Move the selection |
+| Double click | Set the wallpaper under the cursor |
+| Right click | Menu to set the wallpaper on one screen or all screens |
+
+Single clicking does nothing, so double click and right click always act on the wallpaper you pointed at.
+
+The row slides rather than paging, so Page Up and Page Down do not replace everything on screen. They move the selection to the thumbnail at the far edge of the row, which is about 6 wallpapers on a 1920px screen with `image_width: 220`, and more on a wider screen or with smaller thumbnails.
+
+Clicking outside the gallery closes it.
 
 
 ## Example Style
@@ -120,39 +147,17 @@ wallpapers:
     padding: 0 6px 0 6px;
 }
 .wallpapers-widget .widget-container {}
-.wallpapers-gallery-window {
-    background-color: rgba(85, 42, 240, 0.01);
-    border: 0;
-    margin: 16px
-}
-/* Dark style (optional) */
-.dark.wallpapers-gallery-window {
-    background-color: rgba(85, 42, 240, 0.05);
-}
-.wallpapers-gallery-buttons {
-    background-color:rgba(255, 255, 255, 0);
-    color: white;
-    border: none;
-    font-size: 14px;
-    padding: 8px 0;
-    border-radius: 8px;
-    margin:0 8px 8px 8px;
-    width: 200px;
-}
-.wallpapers-gallery-buttons:hover {
-    background-color:rgba(255, 255, 255, 0.1)
-}
-.wallpapers-gallery-image {
-    border: 4px solid transparent;
-    border-radius: 16px;
-}
-.wallpapers-gallery-image:hover {
-    border: 4px solid rgb(66, 68, 83);
-}
-.wallpapers-gallery-image.focused {
-    border: 4px solid #89b4fa;
+.wallpapers-widget .widget-container .label {}
+.wallpapers-widget .widget-container .icon {
+    font-size: 16px;
+    font-weight: 400;
+    font-family: "Segoe Fluent Icons"
 }
 ```
+
+The gallery is not styled with CSS. Use `image_width`, `image_corner_radius` and `accent_color` instead.
+
+If your stylesheet has `.wallpapers-gallery-window`, `.wallpapers-gallery-image` or `.wallpapers-gallery-buttons`, they no longer do anything and can be removed.
 
 # Using Pywal with Wallpapers
 You can use [pywal](https://github.com/eylles/pywal16) to change the colors of `YASB` by generating them from your wallpaper. You can also switch wallpapers directly with pywal.
