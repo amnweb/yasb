@@ -75,7 +75,7 @@ Displays the number of unread Windows notifications in your status bar. Clicking
 > Clicking a notification brings the sending app to the foreground. Only the dismiss button removes it, and removing a notification here also removes it from the Windows Notification Center.
 
 > [!NOTE]
-> `{count}` on the bar is the number Windows itself reports, which is not always the number of entries in the Action Center, so the bar and the menu can differ by one or two. Clearing removes the notifications one by one and the menu then shows whatever is left, since Windows can refuse to remove an individual notification.
+> `{count}` on the bar and the list in the menu come from two different places, so they do not always agree. The count is the number Windows publishes for the shell, and what it means depends on the version: on Windows 11 it is the number of notifications in the Notification Center, on Windows 10 it is the taskbar badge, which clears as soon as the Notification Center is opened even though the notifications are still there. The count can also sit above the menu because it counts entries the menu is never given: an app that has sent more than twenty notifications keeps one in the Notification Center that the listener does not hand out, and a badge an app has left behind is counted as well.
 
 > [!IMPORTANT]
 > Reading notifications requires the global **Let apps access my notifications** switch under Settings > Privacy & security > Notifications. Windows does not track this permission per app for apps installed outside the Store, so YASB has no entry of its own there. When the switch is off the menu says so and links to that page, while the count on the bar keeps working.
