@@ -202,7 +202,7 @@ class NotificationsWidget(BaseWidget):
         widget_index = 0
 
         # Provide replacements for {count} and {icon}
-        label_options = [("{count}", self._notification_count), ("{icon}", icon)]
+        label_options = [("{count}", self._count_text()), ("{icon}", icon)]
 
         for part in label_parts:
             part = part.strip()
@@ -232,6 +232,18 @@ class NotificationsWidget(BaseWidget):
                 widget_index += 1
         for widget in active_widgets:
             refresh_widget_style(widget)
+
+    def _count_text(self) -> str:
+        """The count as it goes on the bar, capped when a cap was asked for.
+
+        The number on the bar and the list in the menu come from two different places and
+        stop agreeing once an app has sent more notifications than Windows keeps for it. A
+        cap keeps the bar from advertising a number the menu cannot account for.
+        """
+        max_count = self.config.max_count
+        if max_count and self._notification_count > max_count:
+            return f"{max_count}+"
+        return str(self._notification_count)
 
     def _toggle_menu(self):
         if is_valid_qobject(self._menu) and self._menu.isVisible():

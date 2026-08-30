@@ -42,6 +42,7 @@ class NotificationsConfig(CustomBaseModel):
     label_alt: str = "{count} new notifications"
     class_name: str = ""
     hide_empty: bool = False
+    max_count: int = Field(default=0, ge=0)
     tooltip: bool = True
     icons: NotificationsIconsConfig = NotificationsIconsConfig()
     menu: NotificationsMenuConfig = NotificationsMenuConfig()
