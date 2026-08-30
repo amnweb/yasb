@@ -6,7 +6,12 @@ from dataclasses import dataclass
 
 import winrt.windows.ui.notifications.management as management
 from PyQt6.QtCore import QThread, pyqtSignal
-from winrt.windows.ui.notifications import KnownNotificationBindings, NotificationKinds, UserNotification
+from winrt.windows.ui.notifications import (
+    KnownNotificationBindings,
+    NotificationKinds,
+    ToastNotificationManager,
+    UserNotification,
+)
 
 from core.events.service import EventService
 
@@ -339,13 +344,19 @@ class WindowsNotificationEventListener(QThread):
         await self._emit_notifications()
 
     async def _do_clear_all_notifications(self):
-        """Remove every toast we can see, then report whatever is actually left.
+        """Empty the Action Center, then report whatever is actually left.
 
-        ClearNotifications() is not usable here, it fails with ERROR_NOT_FOUND for apps
-        installed outside the Store, so the toasts are removed one by one. A removal can
-        still fail, and a new toast can arrive while this runs, so the result is read back
-        instead of assuming the Action Center is empty. The count on the bar is left to the
-        WNF callback, which reports what Windows itself counts.
+        Two passes, because neither one alone empties it. The listener hands out at most
+        twenty notifications per app while the Action Center keeps one more, so removing
+        the ones we were given leaves that last one behind, still counted on the bar and
+        still there when the user opens the Notification Center. Clearing the history of
+        each sender takes it too.
+
+        The history is cleared per app rather than in one call: ClearNotifications() fails
+        with ERROR_NOT_FOUND for apps installed outside the Store. A removal can still fail
+        and a new toast can arrive while this runs, so the result is read back instead of
+        assuming the Action Center is empty. The count on the bar is left to the WNF
+        callback, which reports what Windows itself counts.
         """
         try:
             notifications = await self._listener.get_notifications_async(NotificationKinds.TOAST)
@@ -353,10 +364,29 @@ class WindowsNotificationEventListener(QThread):
             logging.error("Error clearing notifications: %s", e)
             return
 
+        senders: list[str] = []
         for n in notifications:
+            aumid = self._aumid_of(n)
+            if aumid and aumid not in senders:
+                senders.append(aumid)
             try:
                 self._listener.remove_notification(n.id)
             except Exception as e:
                 logging.debug("Failed to remove notification %s: %s", n.id, e)
 
+        for aumid in senders:
+            try:
+                ToastNotificationManager.history.clear_with_id(aumid)
+            except Exception as e:
+                logging.debug("Failed to clear the notification history of %s: %s", aumid, e)
+
         await self._emit_notifications()
+
+    @staticmethod
+    def _aumid_of(notification: UserNotification) -> str:
+        try:
+            return notification.app_info.app_user_model_id or ""
+        except Exception as e:
+            # Senders whose AUMID is not registered (plain Win32 apps) raise E_NOTIMPL here
+            logging.debug("Notification %s has no app info: %s", notification.id, e)
+            return ""
