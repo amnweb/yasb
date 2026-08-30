@@ -5,9 +5,12 @@ Provides functions to extract icons from UWP apps based on their AUMID.
 
 import ctypes
 import ctypes.wintypes as wt
+import os
+import winreg
 from ctypes import POINTER, WINFUNCTYPE, byref, c_void_p
+from pathlib import Path
 
-from PIL import Image
+from PIL import Image, ImageOps
 
 from core.utils.win32.aumid import GUID, _ensure_com_initialized
 from core.utils.win32.bindings import (
@@ -102,20 +105,49 @@ def _hbitmap_to_image(hbitmap: int) -> Image.Image | None:
             pass
 
 
-def get_icon_for_aumid(aumid: str, size: int = 48) -> Image.Image | None:
+# Where an app installed outside the Store registers the icon its notifications show with
+APP_MODEL_KEY = r"Software\Classes\AppUserModelId"
+
+
+def _registered_icon(aumid: str, size: int) -> Image.Image | None:
+    """The icon an app registered for its AUMID, for senders the Apps folder does not know.
+
+    Apps installed outside the Store are not in the Apps folder, so the shell cannot draw
+    them an icon. Windows itself falls back to this registration, which is how a toast from
+    a browser or a packaged-less app still shows a picture in the Notification Center.
     """
-    Extract an icon for a UWP app by its AUMID.
+    for root in (winreg.HKEY_CURRENT_USER, winreg.HKEY_LOCAL_MACHINE):
+        try:
+            with winreg.OpenKey(root, f"{APP_MODEL_KEY}\\{aumid}") as key:
+                uri, _ = winreg.QueryValueEx(key, "IconUri")
+        except OSError:
+            continue
+        # Package resources (ms-resource://) need the package that owns them to resolve
+        if not uri or not isinstance(uri, str) or "://" in uri:
+            continue
+        # The value is written as REG_EXPAND_SZ, which winreg hands back unexpanded
+        path = Path(os.path.expandvars(uri))
+        try:
+            if not path.is_file():
+                continue
+            with Image.open(path) as source:
+                image = source.convert("RGBA")
+            # What is registered here is often a tile asset with its own margin baked in,
+            # so the drawing is cut out first. Otherwise it lands noticeably smaller than
+            # the icons the shell hands out, which carry no margin
+            drawing = image.getchannel("A").getbbox()
+            if drawing is None:
+                continue
+            # Not always square once trimmed, so the shape is kept and centred rather than
+            # stretched to fill the caller's box
+            return ImageOps.pad(image.crop(drawing), (size, size), Image.LANCZOS, (0, 0, 0, 0))
+        except OSError, ValueError:
+            continue
+    return None
 
-    Args:
-        aumid: The App User Model ID
-        size: Desired icon size in pixels (default: 48)
 
-    Returns:
-        PIL Image object if successful, None otherwise
-    """
-    if not aumid:
-        return None
-
+def _apps_folder_icon(aumid: str, size: int) -> Image.Image | None:
+    """The icon the shell draws for an app, which only works for apps it lists."""
     _ensure_com_initialized()
     path = f"shell:AppsFolder\\{aumid}"
     ppv = c_void_p()
@@ -137,3 +169,20 @@ def get_icon_for_aumid(aumid: str, size: int = 48) -> Image.Image | None:
             factory.contents.lpVtbl.contents.Release(factory)
         except Exception:
             pass
+
+
+def get_icon_for_aumid(aumid: str, size: int = 48) -> Image.Image | None:
+    """
+    Extract an icon for an app by its AUMID.
+
+    Args:
+        aumid: The App User Model ID
+        size: Desired icon size in pixels (default: 48)
+
+    Returns:
+        PIL Image object if successful, None otherwise
+    """
+    if not aumid:
+        return None
+
+    return _apps_folder_icon(aumid, size) or _registered_icon(aumid, size)
