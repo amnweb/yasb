@@ -103,8 +103,12 @@ class NotificationsWidget(BaseWidget):
         self._update_label()
 
     def _on_notifications_changed(self, notifications: list[NotificationItem]):
+        # Opening the menu draws the list we already hold and asks the listener for a fresh
+        # one at the same time. That reply is usually the same list, and rebuilding every
+        # item to arrive at the same menu is the one thing that makes opening it feel slow
+        changed = notifications != self._notifications
         self._notifications = notifications
-        if is_valid_qobject(self._menu) and self._menu.isVisible():
+        if changed and is_valid_qobject(self._menu) and self._menu.isVisible():
             self._populate_menu()
 
     def _on_access_changed(self, allowed: bool):
