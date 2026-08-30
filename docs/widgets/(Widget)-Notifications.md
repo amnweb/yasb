@@ -10,6 +10,7 @@ Displays the number of unread Windows notifications in your status bar. Clicking
 | `tooltip`  | boolean  | `true`        | Whether to show the tooltip on hover. |
 | `icons`          | dict    | `{'new': '\udb80\udc9e', 'default': '\udb80\udc9a', 'dnd_on': '\udb80\udc9b', 'dnd_off': '\udb80\udc9a', 'dismiss': '\uf00d'}`               | Icons for different notification states.                                    |
 | `hide_empty`       | boolean  | `false`  | Whether to hide the widget when there are no notifications. |
+| `max_count`       | integer  | `0`  | The highest number shown on the bar, above which the count is written as `9+`. `0` shows the count as it is. |
 | `menu`       | dict  | `{'blur': True, 'round_corners': True, 'round_corners_type': 'normal', 'border_color': 'System', 'alignment': 'right', 'direction': 'down', 'offset_top': 6, 'offset_left': 0, 'width': 380, 'max_height': 400, 'max_notifications': 30, 'show_app_icons': True, 'group_by_app': True, 'show_dnd_toggle': True, 'show_notification_center': True}`  | Menu settings for the notification popup. |
 | `callbacks`       | dict    | `{'on_left': 'toggle_menu', 'on_middle': 'do_nothing', 'on_right': 'do_nothing'}` | Callbacks for mouse events on the notifications widget. |
 
@@ -22,6 +23,7 @@ Displays the number of unread Windows notifications in your status bar. Clicking
       label: "<span>\udb80\udc9e</span> {count}"
       label_alt: "{count} notifications"
       hide_empty: true
+      max_count: 9
       tooltip: false
       menu:
         blur: true
@@ -50,6 +52,7 @@ Displays the number of unread Windows notifications in your status bar. Clicking
   - `dnd_on` / `dnd_off`: the Do Not Disturb toggle in the menu header. `dnd_on` is shown while Do Not Disturb is active (a crossed-out bell), `dnd_off` while notifications are allowed.
   - `dismiss`: the button that removes a single notification.
 - **hide_empty:** Whether to hide the widget when there are no notifications.
+- **max_count:** The highest number written on the bar. Above it the count is shown capped, so `max_count: 9` writes `9+` for anything past nine, which keeps a long count from widening the bar and from advertising a number the menu cannot always account for (see the note below). `0`, the default, always shows the real number. The tooltip and the menu header show the real number either way.
 - **menu:** Menu settings for the notification popup.
   - **blur:** Whether to apply a blur effect to the menu.
   - **round_corners:** Whether the menu should have rounded corners.
