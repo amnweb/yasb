@@ -214,8 +214,14 @@ class NotificationsWidget(BaseWidget):
         self._scroll_area = QScrollArea()
         self._scroll_area.setWidgetResizable(True)
         self._scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        # A scroll area paints its own viewport with the palette background, which no
+        # stylesheet rule on the QScrollArea itself reaches. Left alone it puts an opaque
+        # slab between the popup and the list, so a menu styled to be see-through is not
+        self._scroll_area.setFrameShape(QFrame.Shape.NoFrame)
+        self._scroll_area.viewport().setAutoFillBackground(False)
         self._scroll_area.setStyleSheet("""
             QScrollArea { background: transparent; border: none; border-radius:0; }
+            QScrollArea > QWidget > QWidget { background: transparent; }
             QScrollBar:vertical { border: none; background:transparent; width: 4px; }
             QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: transparent; }
             QScrollBar::handle:vertical { background: rgba(255, 255, 255, 0.2); min-height: 10px; border-radius: 2px; }
@@ -335,6 +341,9 @@ class NotificationsWidget(BaseWidget):
         )
         # Replacing the widget deletes the previous one along with all of its items
         self._scroll_area.setWidget(content)
+        # setWidget turns this back on, so it has to be cleared afterwards or the list is
+        # drawn on an opaque background whatever the stylesheet says
+        content.setAutoFillBackground(False)
         # Size the list explicitly: QScrollArea does not shrink back on its own once shown
         content.ensurePolished()
         self._scroll_area.setFixedHeight(min(content.sizeHint().height(), self.config.menu.max_height))

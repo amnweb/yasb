@@ -114,6 +114,10 @@ Displays the number of unread Windows notifications in your status bar. Clicking
 .notification-menu {
     background-color: rgba(17, 17, 27, 0.9);
 }
+/* The notification list. Leave it transparent for the menu background to show through */
+.notification-menu .contents {
+    background-color: transparent;
+}
 .notification-menu .header {
     border-bottom: 1px solid #45475a;
     padding: 10px 14px;
