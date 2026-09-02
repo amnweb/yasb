@@ -51,6 +51,7 @@
     - [Pomodoro](./(Widget)-Pomodoro)
     - [Power Menu](./(Widget)-Power-Menu)
     - [Power Plan](./(Widget)-Power-Plan)
+    - [Salah Times](./(Widget)-Salah-Times)
     - [Quick Launch](./(Widget)-Quick-Launch)
     - [Recycle Bin](./(Widget)-Recycle-Bin)
     - [Server Monitor](./(Widget)-Server-Monitor)
