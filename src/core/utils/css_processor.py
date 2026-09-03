@@ -5,7 +5,8 @@ import re
 
 class CSSProcessor:
     """
-    Processes CSS files: handles @import, CSS variables, and removes comments.
+    Processes CSS files: handles @import, CSS variables, -qproperty- normalization,
+    and removes comments.
     """
 
     _localdata_initialized = False
@@ -31,6 +32,9 @@ class CSSProcessor:
         css = self._remove_comments(css)
         # Extract and replace CSS variables
         css = self._extract_and_replace_variables(css)
+        # Strip the leading dash from -qproperty-*, so editors treat it as a vendor
+        # prefix and stay quiet, while Qt still gets the exact name it expects
+        css = self._normalize_qproperty(css)
         # Resolve relative url() paths to absolute paths
         css = self._resolve_urls(css)
         return css
@@ -115,6 +119,16 @@ class CSSProcessor:
         css = self._css_to_qt_hex_alpha(css)
 
         return css
+
+    def _normalize_qproperty(self, css: str) -> str:
+        """
+        Rewrites -qproperty-<name> to qproperty-<name>. Qt only recognizes the
+        undashed form, the leading dash is purely so editors read it as a vendor
+        prefix instead of flagging it as an unknown property. Only matches where a
+        real property name and colon follow, so it can't touch plain text that
+        happens to contain "-qproperty-", like a CSS variable's value.
+        """
+        return re.sub(r"(?<=[{;\s])-qproperty-(?=[\w-]+\s*:)", "qproperty-", css)
 
     def _css_to_qt_hex_alpha(self, css: str) -> str:
         """

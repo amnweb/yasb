@@ -14,6 +14,7 @@ from core.bar_helper import (
     MaximizedWindowWatcher,
     OsThemeManager,
 )
+from core.bar_style import AdaptiveBarFrame, BarFrame
 from core.events.service import EventService
 from core.utils.utilities import is_valid_percentage_str, percent_to_float
 from core.utils.win32.backdrop import enable_blur
@@ -61,6 +62,7 @@ class Bar(QWidget):
         self._widgets = widgets  # Store widgets reference for context menu
         self._widget_config_map = self.config.widgets.model_dump() or {}
         self._is_auto_width = str(self.config.dimensions.width).lower() == "auto"
+        self._style = self.config.style
         self._os_theme_manager = None
         self._autohide_manager = None
         self._maximized_watcher = None
@@ -81,8 +83,15 @@ class Bar(QWidget):
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
 
-        self._bar_frame = QFrame(self)
-        self._bar_frame.setProperty("class", f"bar {self.config.class_name}")
+        if self._style == "adaptive":
+            self._bar_frame = AdaptiveBarFrame(self, self._alignment["position"], self.config.style_adaptive_exclude)
+            self._bar_frame.setProperty("class", f"bar {self.config.class_name} adaptive")
+        else:
+            self._bar_frame = BarFrame(self)
+            self._bar_frame.setProperty("class", f"bar {self.config.class_name}")
+
+        # Set cursor for the bar frame, so that it doesn't inherit from the parent widget.
+        self._bar_frame.setCursor(Qt.CursorShape.ArrowCursor)
 
         if IMPORT_APP_BAR_MANAGER_SUCCESSFUL:
             self.app_bar_manager = app_bar.Win32AppBar()
@@ -238,8 +247,16 @@ class Bar(QWidget):
 
         bar_x, bar_y = self.bar_pos(bar_width, bar_height, screen_width, screen_height)
 
-        self.setGeometry(bar_x, bar_y, bar_width, bar_height)
-        self._bar_frame.setGeometry(0, 0, bar_width, bar_height)
+        # Only the window grows for the edge curves, AppBar is still told dimensions.height
+        extra = 0
+        if self._style == "adaptive":
+            spans_screen = bar_width >= screen_width and not self._is_auto_width
+            extra = self._bar_frame.use_edge_curves(spans_screen)
+        if extra and self._alignment["position"] == "bottom":
+            bar_y -= extra
+
+        self.setGeometry(bar_x, bar_y, bar_width, bar_height + extra)
+        self._bar_frame.setGeometry(0, 0, bar_width, bar_height + extra)
 
     def _add_widgets(self, widgets: dict[str, list] = None):
         bar_layout = QGridLayout()

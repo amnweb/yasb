@@ -38,6 +38,83 @@ Each widget group can be styled individually with the following:
 - `.container-center`
 - `.container-right`
 
+## Adaptive bar style
+
+A bar with `style: "adaptive"` gets an extra `.adaptive` class and paints its own shape instead of
+a plain rectangle. By default a thin rail runs along the outer edge of the bar, and each widget
+group hangs below it as its own island, with transparent gaps between them. Islands are optional
+though, turn them off and it's a plain full-width bar that can still curve its outer corners.
+
+The `background-color` of `.yasb-bar` fills that shape, so your existing colors keep working.
+The shape itself comes from the stylesheet and reloads with the rest of your theme.
+
+```css
+.yasb-bar.adaptive {
+    background-color: rgba(20, 20, 22, 0.94);
+    -qproperty-railheight: 4;
+    -qproperty-islandradius: 16;
+    -qproperty-grouppadding: 8;
+}
+```
+
+| Property | Default | Description |
+|----------|---------|-------------|
+| `-qproperty-railheight` | `4` | Height of the rail along the outer edge of the bar. |
+| `-qproperty-islandradius` | `16` | Radius of the curve between the rail and an island. Capped at `(height - railheight) / 2`, so on a 40px bar with a 4px rail you cannot go above `18`. |
+| `-qproperty-grouppadding` | `8` | Space around each group's content. This grows the island, it does not move the widgets. Use `padding` on `.container-left` and friends to move the widgets themselves. |
+| `-qproperty-islands` | `true` | Set to `false` for a solid, full-width bar instead of separate islands. `railheight`, `islandradius`, `grouppadding` and `style_adaptive_exclude` have nothing left to do in this mode, there are no islands left to split. `edgeradius` still works, so you can have a plain bar with just the two outer corners curved. |
+| `-qproperty-edgeradius` | `0` | Curves the outer islands down into the screen edges. `0` is off, [see below](#curving-into-the-screen-edges). |
+
+> **Note:**
+> These use a `-qproperty-` prefix, not Qt's own `qproperty-`. The leading dash is there so
+> editors and linters read it as a vendor-prefixed property and stay quiet instead of flagging
+> it as unknown. YASB strips the dash before the stylesheet reaches Qt, so the effect is
+> identical either way. Write `-qproperty-`, not `qproperty-`.
+
+> **Note:**
+> The property names are lowercase and only do something on `style: "adaptive"`. Scope them to
+> `.yasb-bar.adaptive` so your other bars ignore them.
+
+> **Note:**
+> Qt reads a `qproperty` once, when the widget is polished, and never clears one you delete
+> ([Qt docs](https://doc.qt.io/qt-6/stylesheet-syntax.html#setting-qobject-properties)). Changing
+> a value works on save, but deleting a line keeps the old value until YASB restarts. Set it back
+> to the default instead of deleting it.
+
+Borders are not drawn around the shape. The background is rendered as a rectangle and then
+clipped to the adaptive shape, so a `border` in your theme stays rectangular and will not follow
+the curves. Turn it off, and make the widget backgrounds transparent so the islands read as one
+surface.
+
+```css
+.yasb-bar.adaptive {
+    border: none;
+}
+.yasb-bar.adaptive .widget {
+    background-color: transparent;
+}
+```
+
+### Curving into the screen edges
+
+`-qproperty-edgeradius` rounds the two corners where the bar meets the edges of the screen, so the
+desktop below looks like it has rounded top corners.
+
+```css
+.yasb-bar.adaptive {
+    -qproperty-edgeradius: 14;
+}
+```
+
+The bar window grows by that many pixels to have room for the curve. Your widgets do not move,
+and the space Windows reserves for the bar does not change, it is still `dimensions.height` plus
+`padding`.
+
+> **Note:**
+> This needs a bar that actually reaches the screen edges, so it is ignored unless
+> `dimensions.width` spans the screen. It also paints outside the bar, which means the small
+> corner areas will swallow clicks meant for the desktop.
+
 ## Generic Widget Style
 
 A style with the `.widget` selector would affect all the widgets. In practice, you may prefer to use more specific `.*-widget` selectors.
