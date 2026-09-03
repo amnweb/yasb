@@ -96,6 +96,7 @@ If you turn off **Settings > Accessibility > Visual effects > Animation effects*
 
 It shows up around 4K and above, and not on every change. Smaller images are applied fast enough that the engine window is usually still covering the screen. There is no fix for it right now, it is how Windows applies the wallpaper. Turning off `engine.enabled`, or turning off Windows animation effects, both avoid it.
 
+**Animation not working** Animation is not working if you have **Settings > Accessibility > Visual effects > Animation effects** turned off.
 
 ## Gallery types
 
