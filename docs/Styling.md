@@ -64,6 +64,8 @@ The shape itself comes from the stylesheet and reloads with the rest of your the
 | `-qproperty-grouppadding` | `8` | Space around each group's content. This grows the island, it does not move the widgets. Use `padding` on `.container-left` and friends to move the widgets themselves. |
 | `-qproperty-islands` | `true` | Set to `false` for a solid, full-width bar instead of separate islands. `railheight`, `islandradius`, `grouppadding` and `style_adaptive_exclude` have nothing left to do in this mode, there are no islands left to split. `edgeradius` still works, so you can have a plain bar with just the two outer corners curved. |
 | `-qproperty-edgeradius` | `0` | Curves the outer islands down into the screen edges. `0` is off, [see below](#curving-into-the-screen-edges). |
+| `-qproperty-borderwidth` | `0` | Width of a border drawn inside the shape, the one a CSS `border` cannot follow. `0` is off, [see below](#bordering-the-shape). |
+| `-qproperty-bordercolor` | transparent | Colour of that border. Any CSS colour, including `rgba()`. |
 
 > **Note:**
 > These use a `-qproperty-` prefix, not Qt's own `qproperty-`. The leading dash is there so
@@ -81,10 +83,10 @@ The shape itself comes from the stylesheet and reloads with the rest of your the
 > a value works on save, but deleting a line keeps the old value until YASB restarts. Set it back
 > to the default instead of deleting it.
 
-Borders are not drawn around the shape. The background is rendered as a rectangle and then
-clipped to the adaptive shape, so a `border` in your theme stays rectangular and will not follow
-the curves. Turn it off, and make the widget backgrounds transparent so the islands read as one
-surface.
+A CSS `border` will not follow the shape. Qt draws it on the bar's rectangle before the shape is
+cut out of it, so a `border-bottom` survives only where an island happens to reach the bottom of
+that rectangle, and disappears altogether once `edgeradius` moves it below the bar. Turn it off,
+and make the widget backgrounds transparent so the islands read as one surface.
 
 ```css
 .yasb-bar.adaptive {
@@ -94,6 +96,23 @@ surface.
     background-color: transparent;
 }
 ```
+
+### Bordering the shape
+
+`-qproperty-borderwidth` and `-qproperty-bordercolor` draw the border a CSS `border` cannot, along
+the island corners, the fillets either side of a gap and the edge curves. It is drawn inside the
+shape, so it does not change the bar's silhouette.
+
+```css
+.yasb-bar.adaptive {
+    border: none;
+    -qproperty-borderwidth: 1;
+    -qproperty-bordercolor: #ffffff;
+}
+```
+
+It follows the side of the bar the gaps are on and stops there, so it does not draw along the
+screen edges. Both properties are needed, either one alone leaves it off.
 
 ### Curving into the screen edges
 

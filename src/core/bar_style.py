@@ -1,5 +1,7 @@
+import math
+
 from PyQt6.QtCore import QEvent, QRect, QRectF, Qt, pyqtProperty
-from PyQt6.QtGui import QColor, QPainter, QPainterPath, QPalette, QTransform
+from PyQt6.QtGui import QColor, QPainter, QPainterPath, QPalette, QPen, QTransform
 from PyQt6.QtWidgets import QFrame, QWidget
 
 RESTYLE_EVENTS = frozenset({QEvent.Type.Polish, QEvent.Type.StyleChange})
@@ -47,6 +49,8 @@ class AdaptiveBarFrame(BarFrame):
         self._islands_enabled = True
         self._edge_radius = 0
         self._edge_curves = False
+        self._border_width = 0
+        self._border_color = QColor(0, 0, 0, 0)
         self._islands: tuple[tuple[int, int], ...] = ()
         self._shape = QPainterPath()
         self._gaps = QPainterPath()
@@ -104,6 +108,24 @@ class AdaptiveBarFrame(BarFrame):
         if hasattr(window, "position_bar"):
             window.position_bar()
         self._update_shape(force=True)
+
+    @pyqtProperty(int)
+    def borderwidth(self) -> int:
+        return self._border_width
+
+    @borderwidth.setter
+    def borderwidth(self, value: int) -> None:
+        self._border_width = max(0, int(value))
+        self.update()
+
+    @pyqtProperty(QColor)
+    def bordercolor(self) -> QColor:
+        return self._border_color
+
+    @bordercolor.setter
+    def bordercolor(self, value: QColor) -> None:
+        self._border_color = QColor(value)
+        self.update()
 
     @property
     def edge_overhang(self) -> int:
@@ -166,7 +188,23 @@ class AdaptiveBarFrame(BarFrame):
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
         painter.setClipPath(self._gaps)
         painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_Source)
-        painter.fillRect(self.rect(), Qt.GlobalColor.transparent)
+        painter.fillRect(QRectF(0.0, 0.0, float(self.width()), self._frame_bottom()), Qt.GlobalColor.transparent)
+
+        if self._border_width > 0 and self._border_color.alpha() > 0:
+            # Stroking the gaps leaves the frame's own edges bare clipped to the shape at
+            # twice the width so only the half inside the bar lands
+            painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceOver)
+            painter.setClipPath(self._shape)
+            painter.setPen(QPen(self._border_color, self._border_width * 2))
+            painter.drawPath(self._gaps)
+
+    def _frame_bottom(self) -> float:
+        """The frame's bottom, out to a whole device pixel. On fractional scaling the last
+        row is a fraction of one, and cutting only part of it leaves a line under the bar."""
+        if not self.edge_overhang:  # nothing is cut below the bar, so nothing to round out to
+            return float(self.height())
+        ratio = self.devicePixelRatioF()
+        return math.ceil(self.height() * ratio) / ratio if ratio > 0 else float(self.height())
 
     def _update_shape(self, force: bool = False) -> None:
         islands = self._island_spans()
@@ -178,7 +216,7 @@ class AdaptiveBarFrame(BarFrame):
         self._shape = self._build_shape(islands)
 
         frame = QPainterPath()
-        frame.addRect(QRectF(self.rect()))
+        frame.addRect(QRectF(0.0, 0.0, float(self.width()), self._frame_bottom()))
         self._gaps = frame.subtracted(self._shape)
         self.update(changed)
 
@@ -267,8 +305,9 @@ class AdaptiveBarFrame(BarFrame):
     def _build_shape(self, islands: tuple[tuple[int, int], ...]) -> QPainterPath:
         width = float(self.width())
         # The frame is taller than the bar by edgeradius, that strip holds the edge curves
-        overhang = float(self.edge_overhang)
-        height = float(self.height()) - overhang
+        bottom = self._frame_bottom()
+        height = float(self.height() - self.edge_overhang)
+        overhang = bottom - height
         rail = min(float(self._rail_height), height)
 
         full_rect = QPainterPath()
