@@ -14,11 +14,14 @@ from core.utils.win32.utils import apply_qmenu_style
 from core.validation.widgets.yasb.monitor_profile import MonitorProfileConfig
 from core.widgets.base import BaseWidget
 from core.widgets.services.monitor_profile.monitor_profile_api import (
+    _ROTATION_NAMES,
     MonitorProfileError,
     apply_profile,
     capture_profile,
+    get_active_monitor_names,
     get_inactive_monitors,
     get_monitors,
+    profile_matches_current,
     set_monitor_enabled,
 )
 from core.widgets.services.monitor_profile.runtime_hotkeys import RuntimeHotkeyManager
@@ -186,6 +189,10 @@ class MonitorProfileWidget(BaseWidget):
 
         menu.addSeparator()
 
+        act_info = QAction("View Info", self)
+        act_info.triggered.connect(lambda checked=False, n=name: self._show_profile_info(n))
+        menu.addAction(act_info)
+
         act_rename = QAction("Rename...", self)
         act_rename.triggered.connect(lambda checked=False, n=name: self._show_rename_dialog(n))
         menu.addAction(act_rename)
@@ -231,20 +238,27 @@ class MonitorProfileWidget(BaseWidget):
         if self._popup_menu and is_valid_qobject(self._popup_menu) and self._popup_menu.isVisible():
             self._show_menu()
 
-    def _toggle_monitor_by_name(self, device_name: str) -> None:
-        """Toggle a monitor by its GDI device name; enables all if not found."""
+    def _toggle_monitor_by_name(self, name: str) -> None:
+        r"""Toggle a monitor identified by GDI device name or friendly name.
+
+        GDI device names (\\.\DISPLAY2) change across reboots, so persisted
+        hotkey actions fall back to matching by the monitor's friendly name;
+        as a last resort all monitors are re-enabled.
+        """
         try:
             monitors = get_monitors()
-            target = next((m for m in monitors if m.device_name == device_name), None)
+            target = next((m for m in monitors if m.device_name == name), None)
+            if target is None:
+                target = next((m for m in monitors if m.friendly_name == name), None)
             if target is None:
                 set_monitor_enabled(None, True)
             else:
                 set_monitor_enabled(target, False)
             self._refresh_active_profile()
         except MonitorProfileError as exc:
-            logging.error("Failed to toggle monitor '%s': %s", device_name, exc)
+            logging.error("Failed to toggle monitor '%s': %s", name, exc)
         except Exception as exc:
-            logging.error("Error toggling monitor '%s': %s", device_name, exc)
+            logging.error("Error toggling monitor '%s': %s", name, exc)
 
     def _refresh_active_profile(self) -> None:
         """Determine which saved profile (if any) matches the current display config."""
@@ -262,7 +276,8 @@ class MonitorProfileWidget(BaseWidget):
                 import json
 
                 with open(self._profiles_dir / f"{name}.json", encoding="utf-8") as f:
-                    if json.load(f) == current:
+                    profile = json.load(f)
+                    if profile_matches_current(profile, current):
                         self._active_profile = name
                         break
             except Exception:
@@ -510,6 +525,116 @@ class MonitorProfileWidget(BaseWidget):
                 self._show_menu()
         except Exception as exc:
             logging.error("Failed to delete monitor profile '%s': %s", name, exc)
+
+    def _show_profile_info(self, name: str) -> None:
+        """Show a popup describing what a profile contains (monitors, resolution, refresh, rotation)."""
+        self._hide_popup_menu()
+        try:
+            with open(self._profiles_dir / f"{name}.json", encoding="utf-8") as f:
+                profile = json.load(f)
+        except Exception as exc:
+            logging.error("Error reading monitor profile '%s': %s", name, exc)
+            return
+
+        # Friendly monitor names, matched to profile paths by stable device path
+        # (targets), falling back to path order when the section is missing.
+        current_names = get_active_monitor_names()
+        try:
+            current = capture_profile()
+        except Exception:
+            current = None
+        curr_targets = current.get("targets", []) if current else []
+
+        layout = QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+
+        frame = QFrame()
+        frame.setProperty("class", "monitor-profile-popup-container")
+        frame_layout = QVBoxLayout(frame)
+        frame_layout.setContentsMargins(0, 0, 0, 0)
+        frame_layout.setSpacing(0)
+
+        title = QLabel(f"{name} — {len(profile['paths'])} monitor(s)")
+        title.setProperty("class", "popup-title")
+        frame_layout.addWidget(title)
+
+        rows = QFrame()
+        rows.setProperty("class", "monitor-profile-popup-rows")
+        rows_layout = QVBoxLayout(rows)
+        rows_layout.setContentsMargins(0, 0, 0, 0)
+        rows_layout.setSpacing(6)
+
+        for i, path in enumerate(profile["paths"]):
+            target = path["target"]
+            rotation = _ROTATION_NAMES.get(target["rotation"], "Unknown")
+            refresh = f"{target['refresh_rate']['num'] / target['refresh_rate']['den']:.2f}Hz" if target["refresh_rate"]["den"] else "?"
+            # Resolution: prefer the source mode (active desktop surface); the
+            # desktop-image mode shares the target id with the target mode, so
+            # match by info_type first.
+            source = path["source"]
+            sm = next(
+                (
+                    m
+                    for m in profile.get("modes", [])
+                    if m.get("info_type") == 1
+                    and tuple(m["adapter_luid"]) == tuple(source["adapter_luid"])
+                    and m["id"] == source["id"]
+                ),
+                None,
+            )
+            if sm:
+                width, height = sm["source_mode"]["width"], sm["source_mode"]["height"]
+            else:
+                tm = next(
+                    (
+                        m
+                        for m in profile.get("modes", [])
+                        if m.get("info_type") == 2
+                        and tuple(m["adapter_luid"]) == tuple(target["adapter_luid"])
+                        and m["id"] == target["id"]
+                    ),
+                    None,
+                )
+                width, height = (tm["target_mode"]["active_size"] if tm else (0, 0))
+            resolution = f"{width}x{height}" if width else "?"
+
+            monitor_name = ""
+            targets_section = profile.get("targets", [])
+            if i < len(targets_section):
+                dev_path = targets_section[i].get("device_path", "")
+                if dev_path and current:
+                    # Match the device path against the currently connected monitors
+                    for j, cp in enumerate(current.get("paths", [])):
+                        if j < len(curr_targets) and curr_targets[j].get("device_path") == dev_path:
+                            if j < len(current_names):
+                                monitor_name = current_names[j]
+                                break
+            if not monitor_name:
+                monitor_name = f"Monitor {i + 1}"
+
+            info = f"{monitor_name}  {resolution}  {rotation}  {refresh}"
+            row = QFrame()
+            row.setProperty("class", "info-row")
+            row_layout = QHBoxLayout(row)
+            row_layout.setContentsMargins(0, 0, 0, 0)
+            row_layout.addWidget(QLabel(info), 1)
+            rows_layout.addWidget(row)
+
+        frame_layout.addWidget(rows)
+        layout.addWidget(frame)
+
+        popup = PopupWidget(self, blur=True, round_corners=True, round_corners_type="normal", border_color="system")
+        popup.setProperty("class", "monitor-profile-popup info")
+        popup.setLayout(layout)
+        popup.adjustSize()
+        popup.setPosition(
+            alignment="center",
+            direction="down",
+            offset_left=0,
+            offset_top=6,
+        )
+        popup.show()
 
     def _apply_profile(self, name: str) -> None:
         """Apply the profile chosen from the popup menu."""
