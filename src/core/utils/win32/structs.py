@@ -575,6 +575,7 @@ class MIB_IF_ROW2(ct.Structure):
         ("OutUcastOctets", ct.c_uint64),
         ("OutMulticastOctets", ct.c_uint64),
         ("OutBroadcastOctets", ct.c_uint64),
+        ("OutQLen", ct.c_uint64),
     ]
 
 
