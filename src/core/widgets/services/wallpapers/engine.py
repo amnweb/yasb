@@ -359,7 +359,7 @@ def _locate_workerw() -> int:
         user32.EnumWindows(_enum_proc, 0)
 
     if not worker:
-        logger.warning("Could not locate WorkerW. Wallpaper animation skipped.")
+        logger.warning("Could not locate WorkerW. Wallpaper animation skipped. (Windows OS animation must be enabled.)")
         return 0
     user32.ShowWindow(worker, 5)
     return worker

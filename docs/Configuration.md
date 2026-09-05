@@ -113,6 +113,8 @@ tooltip:
 | `enabled`         | boolean | `true`        | Whether the status bar is enabled. |
 | `screens`         | list    | `['*']`       | The screens on which the status bar should be displayed. Use `['*']` for all unassigned screens, `['**']` for all screens (including assigned), or specify screen names like `['DELL P2419H (1)']`. |
 | `class_name`      | string  | `"yasb-bar"`  | The CSS class name for the status bar. |
+| `style`           | string  | `"bar"`       | The visual style of the status bar. Can be `"bar"` or `"adaptive"`. [See below](#bar-style) |
+| `style_adaptive_exclude` | list | `[]`          | Widgets the `"adaptive"` style leaves outside its painted surface. [See below](#bar-style) |
 | `context_menu`    | boolean | `true`        | Whether to enable the right-click context menu on the status bar. |
 | `alignment`       | object  | [See below](#bar-alignment) | The alignment settings for the status bar. |
 | `blur_effect`     | object  | [See below](#blur-effect-configuration) | The blur effect settings for the status bar. |
@@ -129,6 +131,44 @@ tooltip:
 > **Note:**
 > `screens` can be specified as a list of monitor names. If you want the bar to appear on all screens, use `['*']`. To specify a single screen, use `['DELL P2419H (1)']` or a similar name based on your monitor setup. To show the bar only and always on the primary screen, use `['primary']`.
 
+
+### Bar Style
+
+| Option    | Description |
+|-----------|-------------|
+| `"bar"`      | The default. The bar is a solid rectangle filled by the `background-color` of `.yasb-bar`. |
+| `"adaptive"` | The bar surface follows its content. A thin rail is painted along the outer edge across the full width, and each widget group (left, center and right) drops to the full bar height as its own island hugging its widgets. The space between islands is transparent, so the wallpaper shows through. The outermost islands sit flush against the edges of the bar. Islands can be turned off from the stylesheet for a plain full-width bar, optionally with just its outer corners curved. |
+
+```yaml
+bars:
+  primary-bar:
+    style: "adaptive"
+```
+
+The rail height, corner radius, the padding around each group, and whether islands are drawn at
+all are set from the stylesheet so they reload with your theme. See
+[Adaptive bar style](./Styling#adaptive-bar-style) for the available properties.
+
+> **Note:**
+> Islands need gaps to cut out, so with islands on this needs a bar wide enough to leave space
+> between the widget groups. A bar with `dimensions.width: "auto"`, or one whose widgets fill the
+> full width, is painted as a normal rectangle either way.
+
+`style_adaptive_exclude` lists widgets the island shape does not paint under. The island stops
+before the widget and starts again after it, so a widget in the middle of a group splits it into
+two islands. It has nothing to do if islands are turned off from the stylesheet, there is only
+one surface left to exclude a widget from.
+
+```yaml
+bars:
+  primary-bar:
+    style: "adaptive"
+    style_adaptive_exclude: ["systray", "weather"]
+```
+
+Names come from your `widgets` section. The widget draws as usual, only the surface under it is
+gone. Widgets inside a Grouper cannot be named on their own, excluding the grouper leaves the whole
+group out.
 
 ### Bar Alignment
 | Option            | Type    | Default       | Description |

@@ -527,6 +527,7 @@ class TaskbarWidget(BaseWidget):
         if connect_taskbar:
             self._task_manager = None
             self._task_manager_connected = False
+            self._initial_population = False
         else:
             logging.error("Shared task manager not available - taskbar functionality will be limited")
 
@@ -1011,10 +1012,14 @@ class TaskbarWidget(BaseWidget):
         try:
             if connect_taskbar and not getattr(self, "_task_manager_connected", False):
                 try:
+                    # connect_taskbar delivers the already open windows synchronously
+                    self._initial_population = True
                     self._task_manager = connect_taskbar(self)
                     self._task_manager_connected = True
                 except Exception as e:
                     logging.error("Failed to connect taskbar manager from showEvent: %s", e)
+                finally:
+                    self._initial_population = False
         except Exception:
             pass
 
@@ -1452,7 +1457,9 @@ class TaskbarWidget(BaseWidget):
         # Insert widget: pinned apps replace their button, unpinned apps go at the end
         position = insert_position if insert_position >= 0 else self._widget_container_layout.count()
 
-        if self._animation_enabled:
+        # Animating the whole startup burst at once is what stutters, so skip it for
+        # the initial population and only animate windows added after that.
+        if self._animation_enabled and not self._initial_population:
             container.setFixedWidth(0)
             self._widget_container_layout.insertWidget(position, container)
             self._animate_container(
