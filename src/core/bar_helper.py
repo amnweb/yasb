@@ -232,6 +232,7 @@ class AutoHideZone(QFrame):
             Qt.WindowType.Tool
             | Qt.WindowType.FramelessWindowHint
             | Qt.WindowType.WindowStaysOnTopHint
+            | Qt.WindowType.WindowDoesNotAcceptFocus
             | Qt.WindowType.NoDropShadowWindowHint
         )
         self.setWindowOpacity(0.01)
