@@ -26,9 +26,7 @@ Because of that, only audio going through the normal Windows shared-mixer path i
 | `channels` | string | `"mono"` | Visual channels: `"stereo"` or `"mono"` |
 | `mono_option` | string | `"average"` | Mono input source: `"average"`, `"left"`, or `"right"` (ignored when `channels` is `"stereo"`) |
 | `reverse` | boolean | `false` | Flip frequency direction |
-| `gradient` | boolean | `true` | Bars/waves: gradient across `colors`. `false` = solid `colors[0]`. Dots always cycle `colors` per column |
 | `mirror` | boolean | `false` | Grow from the vertical center instead of the bottom edge, symmetric up and down. Applies to all three styles |
-| `colors` | list[string] | see example | Hex color palette |
 | `edge_fade` | integer or array | `0` | Edge fade in pixels. Single value, or `[left, right]` |
 | `callbacks` | dict | do_nothing | Mouse callbacks: `on_left`, `on_middle`, `on_right` |
 
@@ -77,12 +75,7 @@ Only the block matching `style` is used; the others are ignored.
       channels: mono
       mono_option: average
       reverse: false
-      gradient: true
       mirror: false
-      colors:
-        - "#8A9AFF"
-        - "#8A8AFF"
-        - "#C38AFF"
       bars:
         count: 24
         width: 2
@@ -128,4 +121,32 @@ The bar heights stay roughly consistent as you change the `count`. More bars mea
     padding: 0;
     margin: 0;
 }
+.audio-visualizer-widget .audio-visualizer-canvas {
+    -qproperty-fillbrush: linear-gradient(to top, #8A9AFF, #8A8AFF, #C38AFF);
+}
 ```
+
+### Colors
+
+Colours come from `-qproperty-fillbrush` on `.audio-visualizer-canvas`. The value is
+a solid colour (`#89b4fa`) or a CSS gradient example (`linear-gradient(to top, #74c7ec, #89b4fa 50%, #cba6f7)`).
+
+The gradient is drawn once across the whole strip. The bars, wave or dots show the part of it they
+cover, so the direction works the same for every style:
+
+| Direction | Result |
+|-----------|--------|
+| `to top`, `to bottom` | colour by height |
+| `to left`, `to right` | sweep across the strip |
+| an angle like `135deg` | diagonal |
+| a solid colour | every shape the same |
+
+`mirror` only moves the shapes to the vertical centre. It does not change the colours for
+`to left` / `to right`. For `to top` / `to bottom` a short shape then sits over the middle of the
+ramp instead of the bottom.
+
+The `-qproperty-` dash follows the same convention as the [adaptive bar style](Styling#adaptive-bar-style):
+CSS editors read it as a vendor prefix, and YASB strips it before Qt sees it.
+
+Qt reads a `qproperty` once, at polish. Changing the value and saving works with `watch_stylesheet`,
+but removing the line keeps the old colour until restart, so set it back to a default instead of deleting it.

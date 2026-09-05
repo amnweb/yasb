@@ -4,8 +4,6 @@ from pydantic import Field, field_validator, model_validator
 
 from core.validation.widgets.base_model import CallbacksConfig, CustomBaseModel, KeybindingConfig
 
-DEFAULT_COLORS = ["#74c7ec", "#89b4fa", "#cba6f7"]
-
 
 class BarsStyleConfig(CustomBaseModel):
     count: int = Field(default=24, ge=4, le=128)
@@ -38,21 +36,13 @@ class AudioVisualizerConfig(CustomBaseModel):
     channels: Literal["stereo", "mono"] = "mono"
     mono_option: Literal["average", "left", "right"] = "average"
     reverse: bool = False
-    gradient: bool = True
     mirror: bool = False
-    colors: list = Field(default=DEFAULT_COLORS)
     edge_fade: int | list[int] = 0
     bars: BarsStyleConfig = Field(default_factory=BarsStyleConfig)
     waves: WavesStyleConfig = Field(default_factory=WavesStyleConfig)
     dots: DotsStyleConfig = Field(default_factory=DotsStyleConfig)
     keybindings: list[KeybindingConfig] = []
     callbacks: CallbacksConfig = CallbacksConfig()
-
-    @field_validator("colors")
-    @classmethod
-    def _validate_colors(cls, value: list[str]) -> list[str]:
-        cleaned = [c.strip() for c in value if isinstance(c, str) and c.strip()]
-        return cleaned or list(DEFAULT_COLORS)
 
     @field_validator("edge_fade")
     @classmethod

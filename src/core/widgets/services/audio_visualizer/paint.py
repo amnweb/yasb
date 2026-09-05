@@ -7,8 +7,8 @@ frame costs no more than the fills it actually needs.
 
 import logging
 
-from PyQt6.QtCore import QRect, Qt
-from PyQt6.QtGui import QColor, QLinearGradient, QPainter, QPainterPath, QPixmap
+from PyQt6.QtCore import QRect, Qt, pyqtProperty
+from PyQt6.QtGui import QBrush, QColor, QLinearGradient, QPainter, QPainterPath, QPixmap
 from PyQt6.QtWidgets import QFrame
 
 
@@ -24,30 +24,27 @@ class AudioVizCanvas(QFrame):
         canvas_width: int,
         item_width: int,
         item_gap: int,
-        gradient: bool,
         mirror: bool,
         stereo: bool,
-        colors: list[QColor],
         edge_fade_left: int,
         edge_fade_right: int,
         parent=None,
     ) -> None:
         super().__init__(parent)
+        self.setProperty("class", "audio-visualizer-canvas")
         self.style_name = style
         self.item_width = max(1, item_width)
         self.item_gap = max(0, item_gap)
-        self.gradient = gradient
         self.mirror = mirror
         self.stereo = stereo
-        self.colors = colors
         self.edge_fade_left = max(0, edge_fade_left)
         self.edge_fade_right = max(0, edge_fade_right)
         self.faded = bool(self.edge_fade_left or self.edge_fade_right)
         self.samples: list[float] = [0.0] * columns
-
+        self._fill: QBrush = QBrush(QColor("white"))
         self._paint_failed = False
-        self._brush_cache: QColor | QLinearGradient | None = None
-        self._column_cache: dict[int, tuple[list[int], list[float], list[QColor]]] = {}
+        self._column_cache: dict[int, tuple[list[int], list[float]]] = {}
+        self._surface_brush_cache: tuple[tuple[int, int], QBrush] | None = None
         self._fade_mask: QLinearGradient | None = None
         self._layer: QPixmap | None = None
         self._layer_key: tuple[int, int, float] | None = None
@@ -56,6 +53,16 @@ class AudioVizCanvas(QFrame):
         self.setLineWidth(0)
         self.setContentsMargins(0, 0, 0, 0)
         self.setFixedSize(max(8, canvas_width), max(4, height))
+
+    @pyqtProperty(QBrush)
+    def fillbrush(self) -> QBrush:
+        return self._fill
+
+    @fillbrush.setter
+    def fillbrush(self, brush: QBrush) -> None:
+        self._fill = QBrush(brush)
+        self._surface_brush_cache = None
+        self.update()
 
     def set_samples(self, samples: list[float]) -> None:
         if samples == self.samples:
@@ -84,8 +91,8 @@ class AudioVizCanvas(QFrame):
                 self._paint_failed = True
                 logging.warning("Audio visualizer paint failed; suppressing further paint errors", exc_info=True)
 
-    def _columns(self, count: int) -> tuple[list[int], list[float], list[QColor]]:
-        """Left edge, edge-fade opacity and colour for each column."""
+    def _columns(self, count: int) -> tuple[list[int], list[float]]:
+        """Left edge and edge-fade opacity for each column."""
         cached = self._column_cache.get(count)
         if cached is not None:
             return cached
@@ -103,23 +110,31 @@ class AudioVizCanvas(QFrame):
 
         centre = self.item_width / 2.0
         opacities = [self._fade_at(x + centre, width) for x in xs]
-        palette = [self.colors[i % len(self.colors)] for i in range(count)]
-        result = (xs, opacities, palette)
+        result = (xs, opacities)
         self._column_cache[count] = result
         return result
 
-    def _brush(self) -> QColor | QLinearGradient:
-        if self._brush_cache is None:
-            if self.gradient and len(self.colors) > 1:
-                gradient = QLinearGradient(0, 1, 0, 0)
-                gradient.setCoordinateMode(QLinearGradient.CoordinateMode.ObjectBoundingMode)
-                step = 1.0 / (len(self.colors) - 1)
-                for i, color in enumerate(self.colors):
-                    gradient.setColorAt(i * step, color)
-                self._brush_cache = gradient
-            else:
-                self._brush_cache = self.colors[0]
-        return self._brush_cache
+    def _surface_brush(self, width: float, height: float) -> QBrush:
+        """fillbrush with its gradient anchored to the whole surface, not each shape."""
+        gradient = self._fill.gradient()
+        if gradient is None or not isinstance(gradient, QLinearGradient):
+            return self._fill
+        if gradient.coordinateMode() != QLinearGradient.CoordinateMode.ObjectBoundingMode:
+            return self._fill
+
+        key = (round(width), round(height))
+        cached = self._surface_brush_cache
+        if cached is not None and cached[0] == key:
+            return cached[1]
+
+        start = gradient.start()
+        end = gradient.finalStop()
+        anchored = QLinearGradient(start.x() * width, start.y() * height, end.x() * width, end.y() * height)
+        for pos, colour in gradient.stops():
+            anchored.setColorAt(pos, colour)
+        brush = QBrush(anchored)
+        self._surface_brush_cache = (key, brush)
+        return brush
 
     _FADE_STEPS = 16
 
@@ -195,9 +210,8 @@ class AudioVizCanvas(QFrame):
 
     def _paint_bars(self, painter: QPainter) -> None:
         h = self.height()
-        brush = self._brush()
         bar_w = self.item_width
-        xs, opacities, _ = self._columns(len(self.samples))
+        xs, opacities = self._columns(len(self.samples))
         faded = self.faded
         mirror = self.mirror
         ratio = self.devicePixelRatioF()
@@ -212,6 +226,7 @@ class AudioVizCanvas(QFrame):
         layer = self._masking_layer(ratio)
         layer.setDevicePixelRatio(1.0)
         layer.fill(Qt.GlobalColor.transparent)
+        brush = self._surface_brush(layer.width(), layer.height())
         n = len(self.samples)
         bar_w_phys = max(1, round(bar_w * ratio))
         step_phys = round((xs[1] - xs[0]) * ratio) if n > 1 else 0
@@ -236,7 +251,7 @@ class AudioVizCanvas(QFrame):
         pitch = size + self.item_gap
         h = self.height()
         slots = max(1, (h - size) // pitch + 1) if pitch > 0 else 1
-        xs, opacities, palette = self._columns(len(self.samples))
+        xs, opacities = self._columns(len(self.samples))
         faded = self.faded
         mirror = self.mirror
         ratio = self.devicePixelRatioF()
@@ -244,6 +259,7 @@ class AudioVizCanvas(QFrame):
         layer = self._masking_layer(ratio)
         layer.setDevicePixelRatio(1.0)
         layer.fill(Qt.GlobalColor.transparent)
+        brush = self._surface_brush(layer.width(), layer.height())
         n = len(self.samples)
         size_phys = max(1, round(size * ratio))
         step_phys = round((xs[1] - xs[0]) * ratio) if n > 1 else 0
@@ -258,13 +274,12 @@ class AudioVizCanvas(QFrame):
                 if faded:
                     lp.setOpacity(opacities[i])
                 x_phys = start_phys + i * step_phys
-                color = palette[i]
                 start = (slots - lit) // 2 if mirror else 0
                 for s in range(start, start + lit):
                     y_phys = h_phys - size_phys - s * v_pitch_phys
                     if y_phys < 0:
                         break
-                    lp.fillRect(QRect(x_phys, y_phys, size_phys, size_phys), color)
+                    lp.fillRect(QRect(x_phys, y_phys, size_phys, size_phys), brush)
 
         layer.setDevicePixelRatio(ratio)
         painter.drawPixmap(0, 0, layer)
@@ -276,7 +291,7 @@ class AudioVizCanvas(QFrame):
 
         w = float(self.width())
         h = self.height()
-        brush = self._brush()
+        brush = self._surface_brush(w, h)
 
         if self.stereo and len(samples) >= 4:
             # The widget gives the left channel the larger half when the band

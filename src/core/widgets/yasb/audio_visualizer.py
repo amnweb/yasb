@@ -1,12 +1,11 @@
 """Native YASB audio visualizer, event-driven WASAPI loopback capture."""
 
-import logging
 import time
 
 from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, Qt, QTimer
-from PyQt6.QtGui import QColor, QHideEvent, QShowEvent
+from PyQt6.QtGui import QHideEvent, QShowEvent
 
-from core.validation.widgets.yasb.audio_visualizer import DEFAULT_COLORS, AudioVisualizerConfig
+from core.validation.widgets.yasb.audio_visualizer import AudioVisualizerConfig
 from core.widgets.base import BaseWidget
 from core.widgets.services.audio_visualizer.loopback import AudioVisualizerCaptureService
 from core.widgets.services.audio_visualizer.paint import AudioVizCanvas
@@ -95,7 +94,6 @@ class AudioVisualizerWidget(BaseWidget):
         edge_left, edge_right = _resolve_edge_fade(config.edge_fade)
 
         self._init_container()
-        colors = self._parse_colors(config.colors)
         smoothness = config.smoothness / 100.0
         sensitivity = _sensitivity_mult(config.sensitivity)
 
@@ -127,10 +125,8 @@ class AudioVisualizerWidget(BaseWidget):
             canvas_width=canvas_width,
             item_width=item_width,
             item_gap=item_gap,
-            gradient=config.gradient,
             mirror=config.mirror,
             stereo=self._stereo,
-            colors=colors,
             edge_fade_left=edge_left,
             edge_fade_right=edge_right,
         )
@@ -138,7 +134,6 @@ class AudioVisualizerWidget(BaseWidget):
         self._widget_container_layout.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignHCenter)
         self._widget_container_layout.addWidget(self._canvas)
 
-        self._expanded_width = self.sizeHint().width()
         self._collapse_animation = QPropertyAnimation(self, b"maximumWidth", self)
         self._collapse_animation.setDuration(150)
         self._collapse_animation.setEasingCurve(QEasingCurve.Type.InOutQuad)
@@ -189,7 +184,7 @@ class AudioVisualizerWidget(BaseWidget):
         forever. A zero-width widget stays visually gone but still gets the
         bar's show/hide events, so ``hideEvent`` can always release the stream.
         """
-        target = 0 if collapsed else self._expanded_width
+        target = 0 if collapsed else self.sizeHint().width()
         if not animate:
             self._collapse_animation.stop()
             self.setMinimumWidth(0)
@@ -213,17 +208,6 @@ class AudioVisualizerWidget(BaseWidget):
             return d.count, d.count * max(2, d.size + d.gap), d.size, d.gap
         b = config.bars
         return b.count, b.count * (b.width + b.gap), b.width, b.gap
-
-    @staticmethod
-    def _parse_colors(raw: list[str]) -> list[QColor]:
-        colors: list[QColor] = []
-        for hex_color in raw or DEFAULT_COLORS:
-            c = QColor(hex_color)
-            if c.isValid():
-                colors.append(c)
-            else:
-                logging.error("Invalid audio visualizer color: %s", hex_color)
-        return colors or [QColor(c) for c in DEFAULT_COLORS]
 
     def _apply_sample_rate(self, sample_rate: int) -> None:
         self._analyzer_l.set_sample_rate(sample_rate)
