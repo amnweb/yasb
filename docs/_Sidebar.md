@@ -12,6 +12,7 @@
 - Widgets:
     - [Active Windows Title](./(Widget)-Active-Windows-Title)
     - [Applications](./(Widget)-Applications)
+    - [Audio Visualizer](./(Widget)-Audio-Visualizer)
     - [Battery](./(Widget)-Battery)
     - [Bluetooth](./(Widget)-Bluetooth)
     - [Brightness](./(Widget)-Brightness)
