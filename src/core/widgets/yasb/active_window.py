@@ -120,6 +120,7 @@ class ActiveWindowWidget(BaseWidget):
             self._event_service.unregister_event(WinEvent.EventSystemMoveSizeEnd, self.foreground_change)
             self._event_service.unregister_event(WinEvent.EventObjectNameChange, self.window_name_change)
             self._event_service.unregister_event(WinEvent.EventObjectStateChange, self.window_name_change)
+            self._event_service.unregister_event(WinEvent.EventObjectDestroy, self.window_destroy)
             self._event_service.unregister_event("workspace_update", self.focus_change_workspaces)
         except Exception:
             pass
@@ -348,6 +349,8 @@ class ActiveWindowWidget(BaseWidget):
                     if not process["name"] == "explorer.exe":
                         # Do not cache icons for explorer.exe windows
                         self._icon_cache[cache_key] = icon_img
+                        if len(self._icon_cache) > 128:
+                            self._icon_cache.pop(next(iter(self._icon_cache)))
                 if icon_img:
                     qimage = QImage(icon_img.tobytes(), icon_img.width, icon_img.height, QImage.Format.Format_RGBA8888)
                     self.pixmap = QPixmap.fromImage(qimage)
