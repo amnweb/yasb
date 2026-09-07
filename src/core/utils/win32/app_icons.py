@@ -206,7 +206,6 @@ def get_process_icon(pid: int) -> Image.Image | None:
                                 # Got AUMID, extract icon using AUMID method
                                 icon_img = get_icon_for_aumid(aumid)
                                 if icon_img:
-                                    CloseHandle(h_process)
                                     return icon_img
                     finally:
                         CloseHandle(h_process)
