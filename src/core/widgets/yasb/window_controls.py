@@ -33,12 +33,6 @@ IGNORED_CLASSES = [
 ]
 IGNORED_YASB_TITLES = [APP_BAR_TITLE]
 
-try:
-    from core.utils.win32.event_listener import SystemEventListener
-except ImportError:
-    SystemEventListener = None
-    logging.warning("Failed to load Win32 System Event Listener")
-
 
 class _ForegroundPollResult:
     """Lightweight container for a single poll cycle result."""
@@ -175,7 +169,6 @@ class _ForegroundPoller:
 
 class WindowControlsWidget(BaseWidget):
     validation_schema = WindowControlsConfig
-    event_listener = SystemEventListener
 
     def __init__(self, config: WindowControlsConfig):
         super().__init__(class_name=f"window-controls-widget {config.class_name}")
