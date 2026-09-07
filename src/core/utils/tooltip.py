@@ -348,9 +348,8 @@ class TooltipEventFilter(QObject):
             )
             top_level = self.widget.window()
             if top_level and top_level.__class__.__name__ == "Bar":
-                top_level_rect = top_level.rect()
-                top_level_global_pos = top_level.mapToGlobal(QPoint(0, 0))
-                top_level_geometry = top_level_rect.translated(top_level_global_pos)
+                frame = top_level._bar_frame
+                top_level_geometry = frame.click_rect().translated(frame.mapToGlobal(QPoint(0, 0)))
             else:
                 top_level_geometry = global_geometry
 
