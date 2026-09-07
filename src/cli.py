@@ -766,7 +766,26 @@ class CLICrashDumpHandler:
     PARENT_KEY_PATH = "SOFTWARE\\Microsoft\\Windows\\Windows Error Reporting\\LocalDumps"
     KEY_PATH = PARENT_KEY_PATH + "\\yasb.exe"
     DUMP_FOLDER = os.path.join(DEFAULT_CONFIG_DIRECTORY, "dumps")
-    DUMP_TYPE = 1  # 1 = mini dump, 2 = full dump
+    # Minidump missing some information, so we use a custom dump type with the following flags.
+    # See https://learn.microsoft.com/en-us/windows/win32/wer/collecting-user-mode-dumps#custom-dump-flags
+    _WITH_DATA_SEGS = 0x0001  # module globals                        (WER default)
+    _WITH_HANDLE_DATA = 0x0004  # handle table, so !handle works
+    _WITH_UNLOADED_MODULES = 0x0020  # catches DLL-unload races        (WER default)
+    _WITH_INDIRECT_MEMORY = 0x0040  # heap reachable from registers/stack
+    _WITH_PROCESS_THREAD_DATA = 0x0100  # PEB/TEB                      (WER default)
+    _WITH_FULL_MEMORY_INFO = 0x0800  # VA layout, so !address works
+    _WITH_THREAD_INFO = 0x1000  # thread times and state
+
+    DUMP_TYPE = 0  # 0 = custom (CUSTOM_DUMP_FLAGS), 1 = mini dump, 2 = full dump
+    CUSTOM_DUMP_FLAGS = (
+        _WITH_DATA_SEGS
+        | _WITH_HANDLE_DATA
+        | _WITH_UNLOADED_MODULES
+        | _WITH_INDIRECT_MEMORY
+        | _WITH_PROCESS_THREAD_DATA
+        | _WITH_FULL_MEMORY_INFO
+        | _WITH_THREAD_INFO
+    )
     DUMP_COUNT = 5
     OWNS_PARENT_VALUE = "YasbCreatedLocalDumps"
 
@@ -785,8 +804,9 @@ class CLICrashDumpHandler:
 
         try:
             with winreg.CreateKeyEx(winreg.HKEY_LOCAL_MACHINE, self.KEY_PATH, 0, winreg.KEY_SET_VALUE) as key:
-                winreg.SetValueEx(key, "DumpFolder", 0, winreg.REG_SZ, self.DUMP_FOLDER)
+                winreg.SetValueEx(key, "DumpFolder", 0, winreg.REG_EXPAND_SZ, self.DUMP_FOLDER)
                 winreg.SetValueEx(key, "DumpType", 0, winreg.REG_DWORD, self.DUMP_TYPE)
+                winreg.SetValueEx(key, "CustomDumpFlags", 0, winreg.REG_DWORD, self.CUSTOM_DUMP_FLAGS)
                 winreg.SetValueEx(key, "DumpCount", 0, winreg.REG_DWORD, self.DUMP_COUNT)
                 if not parent_existed:
                     winreg.SetValueEx(key, self.OWNS_PARENT_VALUE, 0, winreg.REG_DWORD, 1)
