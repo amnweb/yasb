@@ -10,7 +10,6 @@ from ctypes import (
     byref,
     c_void_p,
     create_unicode_buffer,
-    sizeof,
 )
 from ctypes.wintypes import DWORD, HANDLE, LPWSTR
 from dataclasses import dataclass
@@ -683,7 +682,7 @@ class WiFiManager(QObject):
                 return True
             else:
                 buff = create_unicode_buffer(256)
-                WlanReasonCodeToString(reason_code.value, sizeof(buff), buff, None)
+                WlanReasonCodeToString(reason_code.value, len(buff), buff, None)
                 logger.debug(
                     "Failed to create profile: %s. Code: %s. Reason: %s", result, reason_code.value, buff.value
                 )

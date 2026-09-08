@@ -148,6 +148,15 @@ CloseHandle = kernel32.CloseHandle
 CloseHandle.argtypes = [wt.HANDLE]
 CloseHandle.restype = wt.BOOL
 
+kernel32.CreateToolhelp32Snapshot.argtypes = [wt.DWORD, wt.DWORD]
+kernel32.CreateToolhelp32Snapshot.restype = wt.HANDLE
+
+kernel32.Process32FirstW.argtypes = [wt.HANDLE, POINTER(PROCESSENTRY32)]
+kernel32.Process32FirstW.restype = wt.BOOL
+
+kernel32.Process32NextW.argtypes = [wt.HANDLE, POINTER(PROCESSENTRY32)]
+kernel32.Process32NextW.restype = wt.BOOL
+
 # GetApplicationUserModelId(HANDLE, PUINT32, PWSTR)
 GetApplicationUserModelId = None  # type: ignore
 for dll in (kernel32, shell32):

@@ -67,7 +67,11 @@ class _NvmlMemory(ctypes.Structure):
 
 
 class _AdlTemperature(ctypes.Structure):
-    _fields_ = [("iSize", ctypes.c_int), ("iTemperature", ctypes.c_int), ("iType", ctypes.c_int)]
+    """ADLTemperature from AMD's adl_structures.h. Exactly two members: a third
+    field would inflate iSize past sizeof(ADLTemperature) and the driver may
+    reject the call."""
+
+    _fields_ = [("iSize", ctypes.c_int), ("iTemperature", ctypes.c_int)]
 
 
 class _AdlFanSpeedValue(ctypes.Structure):
@@ -246,7 +250,21 @@ class _AdlState:
         self._odn_fan = False
         self._od5_temp = False
         self._od5_fan = False
-        self._malloc_cb = _ADL_MALLOC(lambda s: ctypes.cast(ctypes.create_string_buffer(s), ctypes.c_void_p).value)
+        self._malloc_blocks: dict[int, ctypes.Array] = {}
+        self._malloc_cb = _ADL_MALLOC(self._malloc)
+
+    def _malloc(self, size: int) -> int:
+        """Allocation callback handed to ADL2_Main_Control_Create.
+
+        ADL keeps what this returns until the application frees it, so the block
+        has to outlive the callback. Returning the address of a local buffer
+        gives ADL memory that Python reclaims at the next collection, so keep a
+        reference until shutdown.
+        """
+        buf = ctypes.create_string_buffer(size)
+        addr = ctypes.addressof(buf)
+        self._malloc_blocks[addr] = buf
+        return addr
 
     def load(self) -> None:
         try:
@@ -321,6 +339,8 @@ class _AdlState:
             except Exception:
                 pass
             self.dll = None
+            # Safe only now that ADL has torn down and cannot touch them again.
+            self._malloc_blocks.clear()
 
 
 class GpuApi:

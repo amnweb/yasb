@@ -101,7 +101,7 @@ wlanapi.WlanReasonCodeToString.argtypes = [
     c_wchar_p,
     c_void_p,
 ]
-wlanapi.WlanReasonCodeToString.restype = c_wchar_p
+wlanapi.WlanReasonCodeToString.restype = DWORD
 
 
 wlanapi.WlanDeleteProfile.restype = DWORD
