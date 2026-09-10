@@ -46,6 +46,7 @@ Valid options are:
 | `update_check`      | boolean  | `true`   | Enable automatic update check. This works only if the application is installed. |
 | `show_systray`      | boolean  | `true`   | Show or hide the YASB system tray icon. |
 | `system_colors`     | boolean  | `false`  | Enable automatic generation of CSS variables from Windows theme colors. |
+| `has_explicit_dark_mode` | boolean | `true` | Enable YASB to swtich to custom-defined `.dark` CSS classes when Windows is in Dark Mode | 
 | `tooltip`           | object   | [See below](#tooltip-configuration) | Global tooltip configuration. |
 | `komorebi`      | object  | [See below](#komorebi-settings-for-tray-menu)   | Komorebi configuration for tray menu. |
 | `glazewm`      | object  | [See below](#glazewm-settings-for-tray-menu)   | Glazewm configuration for tray menu. |

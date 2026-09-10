@@ -160,6 +160,16 @@ The gallery is not styled with CSS. Use `image_width`, `image_corner_radius` and
 
 If your stylesheet has `.wallpapers-gallery-window`, `.wallpapers-gallery-image` or `.wallpapers-gallery-buttons`, they no longer do anything and can be removed.
 
+# Using Windows Accent Color with Wallpapers
+You can have Windows automatically extract an Accent Color from your wallpaper, and then use it to automatically update the color of `YASB`. To achieve this, first go to Windows Settings > Personalization > Colors and set `Accent coloor` to `Automatic`. Then, use the `QSS` `palette()` function with the `highlight` Color Role like the following example:
+
+```css
+.yasb-bar {
+	border: 1px solid palette(highlight);
+	background-color: palette(base);
+}
+```
+
 # Using Pywal with Wallpapers
 You can use [pywal](https://github.com/eylles/pywal16) to change the colors of `YASB` by generating them from your wallpaper. You can also switch wallpapers directly with pywal.
 

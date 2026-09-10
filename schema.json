@@ -298,6 +298,11 @@
           "title": "Class Name",
           "type": "string"
         },
+	"has_explicit_dark_theme": {
+		"default": true,
+		"title": "Has Explicit Dark Theme",
+		"type": "boolean"
+	},
         "label_no_window": {
           "anyOf": [
             {
@@ -723,6 +728,11 @@
           "title": "Class Name",
           "type": "string"
         },
+	"has_explicit_dark_theme": {
+		"default": true,
+		"title": "Has Explicit Dark Theme",
+		"type": "boolean"
+	},
         "context_menu": {
           "default": true,
           "title": "Context Menu",
