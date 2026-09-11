@@ -85,6 +85,7 @@ choco install yasb
 | --- | --- |
 | [Active Windows Title](https://github.com/amnweb/yasb/wiki/(Widget)-Active-Windows-Title) | Displays the title of the currently active window. |
 | [Applications](https://github.com/amnweb/yasb/wiki/(Widget)-Applications) | Shows a list of predefined applications. |
+| [Audio Visualizer](https://github.com/amnweb/yasb/wiki/(Widget)-Audio-Visualizer) | Native audio visualizer for the default output device (WASAPI loopback)
 | [Battery](https://github.com/amnweb/yasb/wiki/(Widget)-Battery) | Displays the current battery status. |
 | [Bluetooth](https://github.com/amnweb/yasb/wiki/(Widget)-Bluetooth) | Shows the current Bluetooth status and connected devices. |
 | [Brightness](https://github.com/amnweb/yasb/wiki/(Widget)-Brightness) | Displays and change the current brightness level. |
