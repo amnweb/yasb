@@ -111,7 +111,9 @@ class OpenMeteoWidget(BaseWidget):
             cached_data, last_updated_ms = load_weather_cache(self._widget_id)
             is_cache_valid = False
 
-            if cached_data:
+            if not cached_data:
+                self._set_label_text("Fetching data...")
+            else:
                 time_diff_ms = int(time.time() * 1000) - last_updated_ms
                 update_interval_ms = self.config.update_interval * 1000
                 cached_days = len(cached_data.get("daily", {}).get("time", []))
@@ -186,6 +188,8 @@ class OpenMeteoWidget(BaseWidget):
             fetcher.make_request()
 
     def _toggle_label(self):
+        if self._weather_data is None:
+            return
         self._show_alt_label = not self._show_alt_label
         for widget in self._widgets:
             widget.setVisible(not self._show_alt_label)
@@ -236,6 +240,7 @@ class OpenMeteoWidget(BaseWidget):
 
         search_input = QLineEdit()
         search_input.setPlaceholderText("Search location...")
+        search_input.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
         search_input.setProperty("class", "search-input")
         search_input.setMinimumWidth(280)
         layout.addWidget(search_input)
@@ -610,21 +615,21 @@ class OpenMeteoWidget(BaseWidget):
             instance._location_data = None
             instance._hourly_data = [[] for _ in range(instance.config.forecast_days)]
             instance._current_time = None
-            for widget in instance._widgets + instance._widgets_alt:
-                if widget.property("class") and "icon" in (widget.property("class") or ""):
-                    widget.hide()
             instance._set_label_text("Setup location")
 
         # Reopen the popup with the location setup UI
         self._popup_card()
 
     def _set_label_text(self, text: str):
-        """Set the same text on all visible label widgets."""
-        for widget in self._widgets:
-            if widget.property("class") and "icon" not in (widget.property("class") or ""):
-                widget.setText(text)
-                if not widget.isVisible():
-                    widget.show()
+        """Show a status message in place of the configured label."""
+        self._show_alt_label = False
+        for widget in self._widgets + self._widgets_alt:
+            widget.hide()
+        for widget in self._widgets[:1]:
+            widget.setProperty("class", "label")
+            self._reload_css(widget)
+            widget.setText(text)
+            widget.show()
 
     def _format_time(self, iso_time: str) -> str:
         """Format an ISO 8601 time string for display."""
@@ -671,9 +676,10 @@ class OpenMeteoWidget(BaseWidget):
                     icon_name = re.sub(r"<span.*?>|</span>", "", part).strip()
                     active_widgets[widget_index].setText(self.config.icons.model_dump().get(icon_name, icon_name))
                     if update_class:
-                        current_class = active_widgets[widget_index].property("class") or ""
+                        class_name = re.search(r'class=(["\'])([^"\']+?)\1', part)
+                        base_class = class_name.group(2) if class_name else "icon"
                         append_class_icon = self._weather_data.get("{icon_class}", "")
-                        new_class = f"{current_class} {append_class_icon}"
+                        new_class = f"{base_class} {append_class_icon}"
                         active_widgets[widget_index].setProperty("class", new_class)
                         self._reload_css(active_widgets[widget_index])
                 else:

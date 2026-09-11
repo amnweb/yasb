@@ -1,7 +1,7 @@
 import json
 import logging
-import re
 import traceback
+import unicodedata
 from typing import Any
 
 from PyQt6.QtCore import QObject, QTimer, QUrl, pyqtSignal
@@ -34,6 +34,9 @@ CURRENT_VARS = (
     "weather_code,wind_speed_10m,wind_direction_10m,"
     "is_day,precipitation,pressure_msl,cloud_cover"
 )
+
+# Search fields
+REGION_FIELDS = ("admin3", "admin2", "admin1", "country", "country_code")
 
 
 class OpenMeteoDataFetcher(QObject):
@@ -121,6 +124,12 @@ class OpenMeteoDataFetcher(QObject):
             reply.deleteLater()
 
 
+def fold(value: str) -> str:
+    """Lowercase and strip accents for accent-insensitive matching."""
+    stripped = unicodedata.normalize("NFKD", value)
+    return "".join(c for c in stripped if not unicodedata.combining(c)).casefold()
+
+
 class GeocodingFetcher(QObject):
     """Searches for locations using the Open-Meteo Geocoding API."""
 
@@ -130,29 +139,25 @@ class GeocodingFetcher(QObject):
         super().__init__(parent)
         self._manager = QNetworkAccessManager(self)
         self._manager.finished.connect(self._handle_response)
-        self._current_country_filter: str | None = None
 
     def search(self, query: str, count: int = 100):
         """Search for locations matching the query string."""
-        if not query or len(query.strip()) < 3:
+        query = query.strip()
+        if not query or len(query) < 3:
             self.results_ready.emit([])
             return
 
-        # Check for a trailing 2-letter country code
-        self._current_country_filter = None
-        match = re.search(r"^(.*?)(?:,\s*|\s+)([A-Za-z]{2})$", query.strip())
-        if match:
-            query = match.group(1).strip()
-            self._current_country_filter = match.group(2).upper()
+        name, _, region = query.partition(",")
 
         url = QUrl(
             f"{GEOCODING_BASE_URL}"
-            f"?name={QUrl.toPercentEncoding(query).data().decode()}"
+            f"?name={QUrl.toPercentEncoding(name.strip()).data().decode()}"
             f"&count={count}"
             f"&language=en"
             f"&format=json"
         )
         request = QNetworkRequest(url)
+        request.setAttribute(QNetworkRequest.Attribute.User, fold(region.strip()))
         request.setRawHeader(*HEADER)
         request.setRawHeader(*CACHE_CONTROL)
         self._manager.get(request)
@@ -163,15 +168,12 @@ class GeocodingFetcher(QObject):
             error = reply.error()
             if error == QNetworkReply.NetworkError.NoError:
                 data = json.loads(reply.readAll().data().decode())
-                raw_results: list[dict[str, Any]] = data.get("results", [])
-
-                if self._current_country_filter:
-                    # Filter results by the extracted 2-letter country code
+                results = data.get("results", [])
+                region = reply.request().attribute(QNetworkRequest.Attribute.User)
+                if region:
                     results = [
-                        r for r in raw_results if r.get("country_code", "").upper() == self._current_country_filter
+                        r for r in results if any(fold(r.get(f) or "").startswith(region) for f in self.REGION_FIELDS)
                     ]
-                else:
-                    results = raw_results
             else:
                 logger.warning("Geocoding search failed: %s", error.name)
         except json.JSONDecodeError as e:
@@ -179,6 +181,5 @@ class GeocodingFetcher(QObject):
         except Exception as e:
             logger.error("Geocoding fetch error: %s", e)
         finally:
-            self._current_country_filter = None
             self.results_ready.emit(results)
             reply.deleteLater()

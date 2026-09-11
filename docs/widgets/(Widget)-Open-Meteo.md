@@ -224,7 +224,7 @@ open_meteo:
 
 When you first open the weather card (click on the widget), a location search dialog appears:
 
-1. Type a city name (minimum 2 characters)
+1. Type a city name (minimum 3 characters)
 2. A dropdown list of matching locations appears
 3. Click on a location to select it
 4. The widget saves the location and starts fetching weather data
