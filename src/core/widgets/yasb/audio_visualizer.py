@@ -4,6 +4,7 @@ import time
 
 from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, Qt, QTimer
 from PyQt6.QtGui import QHideEvent, QShowEvent
+from PyQt6.QtWidgets import QWIDGETSIZE_MAX
 
 from core.validation.widgets.yasb.audio_visualizer import AudioVisualizerConfig
 from core.widgets.base import BaseWidget
@@ -137,6 +138,7 @@ class AudioVisualizerWidget(BaseWidget):
         self._collapse_animation = QPropertyAnimation(self, b"maximumWidth", self)
         self._collapse_animation.setDuration(150)
         self._collapse_animation.setEasingCurve(QEasingCurve.Type.InOutQuad)
+        self._collapse_animation.finished.connect(self._on_collapse_finished)
 
         self.callback_left = config.callbacks.on_left
         self.callback_middle = config.callbacks.on_middle
@@ -197,6 +199,12 @@ class AudioVisualizerWidget(BaseWidget):
         self._collapse_animation.setStartValue(current)
         self._collapse_animation.setEndValue(target)
         self._collapse_animation.start()
+
+    def _on_collapse_finished(self) -> None:
+        if self._idle_hidden:
+            return
+        self.setMaximumWidth(QWIDGETSIZE_MAX)
+        self.updateGeometry()
 
     @staticmethod
     def _resolve_style_metrics(config: AudioVisualizerConfig) -> tuple[int, int, int, int]:
