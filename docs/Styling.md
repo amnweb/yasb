@@ -284,8 +284,9 @@ Animations can't be added to sub-controls, for example `::item` or `::chunk` or 
 - `radial-gradient()`
 - `conic-gradient()`
 
-## Follow OS Theme
-YASB can follow the OS theme, if you have OS dark style YASB will add class `.dark` on the root element, if you want to have different light and dark themes you can use the following CSS to achieve this.
+## Explicit Light and Dark Theme
+YASB can have explicitly set styles for both light and dark mode. This is enabled by default, only disabled if you explicity set the ```has_explicit_dark_theme``` BarConfig property to ```false```.
+You can use the following CSS as a guide to achieve this:
 
 ```css
 .yasb-bar {
@@ -309,6 +310,33 @@ YASB can follow the OS theme, if you have OS dark style YASB will add class `.da
 }
 
 ```
+
+## Follow OS Color Mode and Accent Color
+YASB can also completely follow Windows in terms of Accent Color and Color Mode (Light/Dark).
+To achieve this, it is first recommended that you set `has_explicit_dark_theme` to `false`, since you're going to be letting Windows do all the driving when it comes to styling. As an extra bonus, if you set `Accent color` in Windows Personalization Settings to `Automatic`, you can also have YASB use the main accent color from your wallpaper without any custom scripting.
+From there, you can reference the QPalette ColorRole enum [here](https://doc.qt.io/qt-6/qpalette.html#ColorRole-enum), and use them in your CSS along with the inbuilt QSS function `palette()` to add colors to the bar.  Note that, when using the Color Roles with the `palette()` function, you must convert the `PascalCase` enum names with their `kebab-case` equivalent. For example, `Base` would be used like `palette(base)` and `WindowText` would be used like `palette(window-text)`. Please also note that some Color Roles are not set up properly (like AlternateBase, for example). A general rule of thumb is, if you try to use a Color Role, and the element you are styling becomes transparent, use a different Color Role.
+
+You can use the following CSS as a guide:
+
+```css
+.yasb-bar {
+	border: 1px solid palette(highlight);
+	background-color: palette(base);
+    color: palette(text);
+}
+
+.tooltip {
+	background-color: palette(tool-tip-base);
+	color: palette(tool-tip-text);
+	border-radius: 4px;
+	padding: 5px 12px;
+	font-size: 12px;
+	font-family: 'Segoe UI';
+	font-weight: 600;
+	margin-top: 4px;
+}
+```
+In this example, YASB would be light gray in Light Mode and dark gray in Dark Mode, and would have a border that is the color of the Accent Color in your Windows Personalization.
 
 ## Context Menu Styling
 Context menus can be styled using the `.context-menu` class. This allows you to customize the appearance of menus within YASB. 

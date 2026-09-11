@@ -757,22 +757,22 @@ class OsThemeManager(QObject):
             logging.error("Failed to determine Windows theme: %s", e)
             return False
 
-    def update_theme_class(self):
+    def update_theme_class(self, has_explicit_dark_theme=True):
         """Update the theme class on the target widget"""
         if not self.target_widget:
             return
-
-        is_dark_theme = self.detect_os_theme()
-        if is_dark_theme != self._is_dark_theme:
-            class_property = self.target_widget.property("class")
-            if is_dark_theme:
-                class_property += " dark"
-            else:
-                class_property = class_property.replace(" dark", "")
-            self.target_widget.setProperty("class", class_property)
-            self._update_styles(self.target_widget)
-            self._is_dark_theme = is_dark_theme
-            GlobalState.set_dark(is_dark_theme)
+        if has_explicit_dark_theme:
+            is_dark_theme = self.detect_os_theme()
+            if is_dark_theme != self._is_dark_theme:
+                class_property = self.target_widget.property("class")
+                if is_dark_theme:
+                    class_property += " dark"
+                else:
+                    class_property = class_property.replace(" dark", "")
+                self.target_widget.setProperty("class", class_property)
+                self._is_dark_theme = is_dark_theme
+                GlobalState.set_dark(is_dark_theme)
+        self._update_styles(self.target_widget)
 
     def _update_styles(self, widget):
         """Update styles for widget and its children by unpolishing and re-polishing"""

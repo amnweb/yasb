@@ -20,6 +20,7 @@ ROOT_BAR: dict = {
     "enabled": True,
     "screens": ["*"],
     "class_name": "yasb-bar",
+    "has_explicit_dark_theme": True,
     "alignment": {
         "position": "top",
         "align": "center",

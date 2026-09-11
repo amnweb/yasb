@@ -103,7 +103,7 @@ class Bar(QWidget):
 
         try:
             self._os_theme_manager = OsThemeManager(self._bar_frame, self)
-            self._os_theme_manager.update_theme_class()
+            self._os_theme_manager.update_theme_class(self.config.has_explicit_dark_theme)
         except Exception as e:
             logging.error("Failed to initialize theme manager: %s", e)
             self._os_theme_manager = None
@@ -327,7 +327,7 @@ class Bar(QWidget):
     def changeEvent(self, event: QEvent) -> None:
         if event.type() == QEvent.Type.PaletteChange:
             if self._os_theme_manager:
-                self._os_theme_manager.update_theme_class()
+                self._os_theme_manager.update_theme_class(self.config.has_explicit_dark_theme)
         super().changeEvent(event)
 
     def eventFilter(self, obj, event):
