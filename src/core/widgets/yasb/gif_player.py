@@ -6,7 +6,7 @@ import subprocess
 from typing import Any
 
 from PyQt6.QtCore import QObject, QPoint, QSize, Qt, pyqtSignal
-from PyQt6.QtGui import QCursor, QIcon, QMouseEvent, QMovie
+from PyQt6.QtGui import QCursor, QIcon, QMovie
 from PyQt6.QtWidgets import (
     QGridLayout,
     QHBoxLayout,
@@ -158,6 +158,7 @@ class GifPlayerWidget(BaseWidget):
         self.label.setProperty("class", "gif-icon")
         self.label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
         self._widget_container_layout.addWidget(self.label)
 
         self.movie: QMovie | None = None
@@ -240,7 +241,7 @@ class GifPlayerWidget(BaseWidget):
                 width=native_w,
                 height=native_h,
             )
-            set_tooltip(self.label, tip_text)
+            set_tooltip(self, tip_text)
 
     def set_gif(self, path: str, broadcast: bool = True):
         """Switches the active animation, saves state, and synchronizes peer instances."""
@@ -272,9 +273,25 @@ class GifPlayerWidget(BaseWidget):
     def toggle_popup(self):
         """Opens or toggles the grid popup displaying all GIFs."""
         try:
-            if self._menu and self._menu.isVisible():
-                self._menu.hide()
-                return
+            parent_id = id(self)
+            if PopupWidget and parent_id in PopupWidget._open_popups:
+                existing = PopupWidget._open_popups.get(parent_id)
+                if existing:
+                    try:
+                        if existing.isVisible() and not getattr(existing, "_is_closing", False):
+                            existing.hide_animated()
+                            return
+                    except RuntimeError:
+                        pass
+                    PopupWidget._open_popups.pop(parent_id, None)
+
+            if self._menu:
+                try:
+                    if self._menu.isVisible():
+                        self._menu.hide()
+                        return
+                except RuntimeError:
+                    self._menu = None
 
             icons_per_row = self.config.popup.icons_per_row or self.config.icons_per_row
 
@@ -293,6 +310,7 @@ class GifPlayerWidget(BaseWidget):
 
             menu.setProperty("class", "gif-popup")
             self._menu = menu
+            menu.destroyed.connect(self._cleanup_popup_movies)
 
             main_layout = QVBoxLayout(menu)
             main_layout.setContentsMargins(6, 6, 6, 6)
@@ -402,16 +420,6 @@ class GifPlayerWidget(BaseWidget):
 
             main_layout.addWidget(container)
 
-            # Cleanup movies on dismiss
-            if hasattr(menu, "hideEvent"):
-                orig_hide = menu.hideEvent
-
-                def on_hide(event):
-                    self._cleanup_popup_movies()
-                    orig_hide(event)
-
-                menu.hideEvent = on_hide
-
             menu.adjustSize()
 
             # Positioning
@@ -435,25 +443,6 @@ class GifPlayerWidget(BaseWidget):
 
         except (RuntimeError, OSError, TypeError) as e:
             logger.error("GifPlayerWidget: Failed to open popup: %s", e)
-
-    def contextMenuEvent(self, event: Any):
-        event.accept()
-        self.toggle_popup()
-
-    def mouseReleaseEvent(self, event: QMouseEvent):
-        if event.button() == Qt.MouseButton.RightButton:
-            cb = getattr(self, "callback_right", "toggle_popup")
-            if cb and cb in self.callbacks:
-                self.callbacks[cb]()
-        elif event.button() == Qt.MouseButton.LeftButton:
-            cb = getattr(self, "callback_left", None)
-            if cb and cb in self.callbacks:
-                self.callbacks[cb]()
-        elif event.button() == Qt.MouseButton.MiddleButton:
-            cb = getattr(self, "callback_middle", None)
-            if cb and cb in self.callbacks:
-                self.callbacks[cb]()
-        super().mouseReleaseEvent(event)
 
 
 class GifWidget(GifPlayerWidget):
