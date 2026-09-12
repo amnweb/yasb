@@ -14,6 +14,8 @@ logger = logging.getLogger("deprecation")
 class ServerEntryConfig(CustomBaseModel):
     name: str
     url: str
+    ssl_check: bool = False
+    ssl_port: int = 443
 
 
 class DesktopNotificationsConfig(CustomBaseModel):
@@ -64,7 +66,7 @@ class ServerMonitorConfig(CustomBaseModel):
                 "ServerMonitorConfig: 'servers' format has changed."
                 " Use list of {name: ..., url: ...} instead of plain strings."
             )
-            return [{"name": s, "url": s} for s in v if s]
+            return [{"name": s, "url": s, "ssl_check": s, "ssl_port": s} for s in v if s]
         return v
 
     desktop_notifications: DesktopNotificationsConfig = DesktopNotificationsConfig()
