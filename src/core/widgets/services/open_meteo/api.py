@@ -172,7 +172,7 @@ class GeocodingFetcher(QObject):
                 region = reply.request().attribute(QNetworkRequest.Attribute.User)
                 if region:
                     results = [
-                        r for r in results if any(fold(r.get(f) or "").startswith(region) for f in self.REGION_FIELDS)
+                        r for r in results if any(fold(r.get(f) or "").startswith(region) for f in REGION_FIELDS)
                     ]
             else:
                 logger.warning("Geocoding search failed: %s", error.name)
