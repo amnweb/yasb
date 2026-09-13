@@ -50,6 +50,12 @@ class CodexUsageConfig(CustomBaseModel):
     cache_ttl: int = Field(default=120, ge=0, le=3600)
     timeout: float = Field(default=15.0, ge=1.0, le=60.0)
     tooltip: bool = True
+    # Whether {primary_value}/{secondary_value} (and the progress bar) report the share of
+    # the window still available or the share consumed. Flipped at runtime by the
+    # "toggle_usage_mode" callback. The explicit {*_used}/{*_remaining} placeholders ignore it.
+    usage_mode: Literal["used", "remaining"] = "remaining"
+    mode_label_used: str = "used"
+    mode_label_remaining: str = "left"
     show_token_usage: bool = True
     stale_icon: str = "⚠"
     progress_bar: CodexUsageProgressBarConfig = CodexUsageProgressBarConfig()

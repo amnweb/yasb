@@ -96,6 +96,7 @@ choco install yasb
 | [Clock](https://github.com/amnweb/yasb/wiki/(Widget)-Clock) | Displays the current time and date, with customizable formats. |
 | [Control Center](https://github.com/amnweb/yasb/wiki/(Widget)-Control-Center) | A customizable quick-settings control center with quick actions, sliders, and media controls. |
 | [Custom](https://github.com/amnweb/yasb/wiki/(Widget)-Custom) | Create a custom widget. |
+| [DeepSeek Usage](https://github.com/amnweb/yasb/wiki/(Widget)-DeepSeek-Usage) | Shows your DeepSeek platform balance and derived spend. |
 | [Do Not Disturb](https://github.com/amnweb/yasb/wiki/(Widget)-Dnd) | Monitor and toggle Windows Focus Assist (Do Not Disturb). |
 | [Github](https://github.com/amnweb/yasb/wiki/(Widget)-Github) | Shows notifications from GitHub. |
 | [GlazeWM Binding Mode](https://github.com/amnweb/yasb/wiki/(Widget)-GlazeWM-Binding-Mode) | GlazeWM binding mode widget. |

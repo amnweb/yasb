@@ -31,6 +31,9 @@ from core.widgets.services.codex_usage.codex_api import CodexUsageService
 class UsageBar(QFrame):
     """CSS-styleable progress track used by the details popup."""
 
+    # Must match the stylesheet min/max-height for this bar.
+    TRACK_HEIGHT = 6
+
     def __init__(self, value: float, level: str, parent: QFrame | None = None):
         super().__init__(parent)
         self._value = max(0.0, min(100.0, value))
@@ -44,11 +47,25 @@ class UsageBar(QFrame):
         refresh_widget_style(self, self._fill)
         self._update_fill()
 
+    def _track_height(self) -> int:
+        """Height of the painted track.
+
+        The stylesheet engine paints this frame's background at its styled height and
+        centres it, but sets no Qt geometry - minimumHeight() stays 0 - so the widget keeps
+        whatever height the layout gave it (routinely ~40px). Filling that drew the value as
+        a slab standing proud of the track, so the height is pinned here instead.
+        TRACK_HEIGHT must match the stylesheet's min/max-height for this bar.
+        """
+        return min(self.TRACK_HEIGHT, self.height()) if self.height() > 0 else self.TRACK_HEIGHT
+
     def _update_fill(self) -> None:
+        height = self._track_height()
         fill_width = int(self.width() * self._value / 100)
         if fill_width > 0:
-            fill_width = max(fill_width, self.height())
-        self._fill.setGeometry(0, 0, fill_width, self.height())
+            fill_width = max(fill_width, height)
+        # Centred to match the track behind it; the +1 rounds the half-pixel the same
+        # way the stylesheet engine does, otherwise the fill sits 2px high.
+        self._fill.setGeometry(0, max(0, (self.height() - height + 1) // 2), fill_width, height)
 
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)
@@ -57,6 +74,9 @@ class UsageBar(QFrame):
 
 class TokenBar(QFrame):
     """CSS-styleable horizontal bar for per-model token totals."""
+
+    # Must match the stylesheet min/max-height for this bar.
+    TRACK_HEIGHT = 6
 
     def __init__(self, parent: QFrame | None = None):
         super().__init__(parent)
@@ -69,11 +89,23 @@ class TokenBar(QFrame):
         self._ratio = max(0.0, min(1.0, ratio))
         self._update_fill()
 
+    def _track_height(self) -> int:
+        """Height of the painted track.
+
+        The stylesheet engine paints this frame's background at its styled height and
+        centres it, but sets no Qt geometry - minimumHeight() stays 0 - so the widget keeps
+        whatever height the layout gave it (routinely ~40px). Filling that drew the value as
+        a slab standing proud of the track, so the height is pinned here instead.
+        TRACK_HEIGHT must match the stylesheet's min/max-height for this bar.
+        """
+        return min(self.TRACK_HEIGHT, self.height()) if self.height() > 0 else self.TRACK_HEIGHT
+
     def _update_fill(self) -> None:
+        height = self._track_height()
         width = int(self.width() * self._ratio)
         if width > 0:
-            width = max(width, self.height())
-        self._fill.setGeometry(0, 0, width, self.height())
+            width = max(width, height)
+        self._fill.setGeometry(0, max(0, (self.height() - height + 1) // 2), width, height)
 
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)
@@ -133,10 +165,15 @@ class CodexUsageWidget(BaseWidget):
 
     validation_schema = CodexUsageConfig
 
+    # Floor for the page area, so a sparse page (e.g. Resets with no credits) still reads as a
+    # panel rather than collapsing to a couple of lines.
+    PAGE_MIN_HEIGHT = 120
+
     def __init__(self, config: CodexUsageConfig):
         super().__init__(class_name="codex-usage")
         self.config = config
         self._show_alt_label = False
+        self._usage_mode = self.config.usage_mode
         self._menu: PopupWidget | None = None
         self._section_widgets: dict[str, dict[str, Any]] = {}
         self._detail_widgets: dict[str, QLabel] = {}
@@ -146,9 +183,8 @@ class CodexUsageWidget(BaseWidget):
         self._pager: QFrame | None = None
         self._page_stack: QStackedWidget | None = None
         self._page_navigation: QFrame | None = None
-        self._page_previous: QPushButton | None = None
-        self._page_next: QPushButton | None = None
-        self._page_indicator: QLabel | None = None
+        self._page_tabs: dict[str, QPushButton] = {}
+        self._page_tab_layout: QHBoxLayout | None = None
         self._overview_tokens: QFrame | None = None
         self._overview_empty: QLabel | None = None
         self._token_widgets: dict[str, QLabel] = {}
@@ -189,6 +225,7 @@ class CodexUsageWidget(BaseWidget):
         self.register_callback("toggle_label", self._toggle_label)
         self.register_callback("toggle_menu", self._toggle_menu)
         self.register_callback("refresh", self._refresh)
+        self.register_callback("toggle_usage_mode", self._toggle_usage_mode)
         self.callback_left = self.config.callbacks.on_left
         self.callback_middle = self.config.callbacks.on_middle
         self.callback_right = self.config.callbacks.on_right
@@ -327,10 +364,26 @@ class CodexUsageWidget(BaseWidget):
             "secondary_window": self._duration_name(secondary.get("duration_mins"), "secondary"),
             "primary_reset": self._fmt_reset(primary.get("resets_at")),
             "secondary_reset": self._fmt_reset(secondary.get("resets_at")),
+            # Mode-aware pair, flipped by the toggle_usage_mode callback. The explicit
+            # _used/_remaining placeholders above are unaffected.
+            "primary_value": self._mode_value(primary),
+            "secondary_value": self._mode_value(secondary),
+            "mode": (
+                self.config.mode_label_remaining if self._usage_mode == "remaining" else self.config.mode_label_used
+            ),
             "plan": str(self._data.get("plan") or "--"),
             "credits": str(self._data.get("credits") if self._data.get("credits") is not None else "--"),
             "stale": self.config.stale_icon if self._data.get("stale") else "",
         }
+
+    def _mode_value(self, window: dict[str, Any]) -> str:
+        key = "used" if self._usage_mode == "used" else "remaining"
+        return self._percent(window.get(key))
+
+    def _toggle_usage_mode(self) -> None:
+        """Flip the bar between 'still available' and 'consumed so far'."""
+        self._usage_mode = "used" if self._usage_mode == "remaining" else "remaining"
+        self._update_label()
 
     def _active_window(self) -> dict[str, Any]:
         name = "secondary" if self._show_alt_label else "primary"
@@ -366,7 +419,9 @@ class CodexUsageWidget(BaseWidget):
         if self.progress_widget:
             self.progress_widget.setVisible(bool(active_window))
             if active_window:
-                self.progress_widget.set_value(self._percent_value(active_window.get("remaining")))
+                # Follow usage_mode so the ring never contradicts the number beside it.
+                key = "used" if self._usage_mode == "used" else "remaining"
+                self.progress_widget.set_value(self._percent_value(active_window.get(key)))
 
         if self.config.tooltip:
             primary = self._window("primary")
@@ -416,7 +471,9 @@ class CodexUsageWidget(BaseWidget):
 
         title = QLabel(fallback_title)
         title.setProperty("class", "title")
-        layout.addWidget(title)
+        # AlignLeft keeps the label at its own width so a CSS background renders as a pill
+        # hugging the text, matching the Claude popup; a filled QLabel would band the row.
+        layout.addWidget(title, 0, Qt.AlignmentFlag.AlignLeft)
 
         progress = UsageBar(0, "unknown")
         layout.addWidget(progress)
@@ -541,9 +598,21 @@ class CodexUsageWidget(BaseWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
-        title = QLabel("Models · 30 days")
+        # Name and scope split apart: the heading says what this is, the caption says how far
+        # back it reaches. Joining them with a middle dot made the window read as part of the name.
+        heading = QFrame()
+        heading.setProperty("class", "models-heading")
+        heading_layout = QHBoxLayout(heading)
+        heading_layout.setContentsMargins(0, 0, 0, 0)
+        heading_layout.setSpacing(0)
+        title = QLabel("Models")
         title.setProperty("class", "section-title")
-        layout.addWidget(title)
+        heading_layout.addWidget(title, 0, Qt.AlignmentFlag.AlignLeft)
+        heading_layout.addStretch()
+        scope = QLabel("Last 30 days")
+        scope.setProperty("class", "section-scope")
+        heading_layout.addWidget(scope)
+        layout.addWidget(heading)
 
         for index in range(5):
             row = QFrame()
@@ -709,7 +778,7 @@ class CodexUsageWidget(BaseWidget):
             history_start = date.today()
         self._heatmap_month = min(current_month, max(earliest_navigation_month, self._heatmap_month))
         if is_valid_qobject(self._heatmap_month_label):
-            self._heatmap_month_label.setText(self._heatmap_month.strftime("%B %Y").upper())
+            self._heatmap_month_label.setText(self._heatmap_month.strftime("%B %Y"))
         if is_valid_qobject(self._heatmap_previous):
             self._heatmap_previous.setEnabled(self._heatmap_month > earliest_navigation_month)
         if is_valid_qobject(self._heatmap_next):
@@ -789,40 +858,25 @@ class CodexUsageWidget(BaseWidget):
         pager_layout.setContentsMargins(0, 0, 0, 0)
         pager_layout.setSpacing(0)
 
+        # A tab per page rather than prev/next arrows. The arrows made the most useful pages
+        # (Models, Activity) invisible until you went hunting, and forced a "3 / 4" counter
+        # to exist purely to say where you were. Naming every destination removes both.
         navigation = QFrame()
-        navigation.setProperty("class", "page-nav")
+        navigation.setProperty("class", "page-tabs")
         self._page_navigation = navigation
         navigation_layout = QHBoxLayout(navigation)
         navigation_layout.setContentsMargins(0, 0, 0, 0)
-        navigation_layout.setSpacing(0)
-
-        previous = QPushButton(self.config.menu.previous_page_icon)
-        previous.setProperty("class", "page-button previous")
-        previous.setAccessibleName("Previous Codex usage page")
-        set_tooltip(previous, "Previous page")
-        previous.clicked.connect(lambda: self._change_page(-1))
-        navigation_layout.addWidget(previous)
-        self._page_previous = previous
-
-        indicator = QLabel("")
-        indicator.setProperty("class", "page-indicator")
-        indicator.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        navigation_layout.addWidget(indicator, 1)
-        self._page_indicator = indicator
-
-        next_button = QPushButton(self.config.menu.next_page_icon)
-        next_button.setProperty("class", "page-button next")
-        next_button.setAccessibleName("Next Codex usage page")
-        set_tooltip(next_button, "Next page")
-        next_button.clicked.connect(lambda: self._change_page(1))
-        navigation_layout.addWidget(next_button)
-        self._page_next = next_button
+        navigation_layout.setSpacing(6)
+        navigation_layout.addStretch()
+        self._page_tab_layout = navigation_layout
         pager_layout.addWidget(navigation)
 
         stack = QStackedWidget()
         stack.setProperty("class", "page-stack")
-        # Fits the activity grid while keeping every page stable across Windows display scales.
-        stack.setFixedHeight(220)
+        # Height follows the page actually on screen (see _fit_page_height). A constant here
+        # would give every page the tallest page's height, leaving the short Overview page
+        # with a large dead area underneath it.
+        stack.setFixedHeight(self.PAGE_MIN_HEIGHT)
         self._page_stack = stack
         if self.config.menu.show_overview or self.config.menu.show_details:
             stack.addWidget(self._build_overview_page())
@@ -837,13 +891,29 @@ class CodexUsageWidget(BaseWidget):
         self._pager = pager
         return pager
 
-    def _change_page(self, amount: int) -> None:
-        if self._current_page not in self._visible_pages:
+    def _fit_page_height(self) -> None:
+        """Shrink the page area to the page currently shown, then refit the popup.
+
+        A QStackedWidget reports the tallest child as its size hint, so without this the
+        Overview page inherits the Activity grid's height and trails a block of empty space.
+        Width stays locked, so only the height moves.
+        """
+        page = self._pages.get(self._current_page)
+        if page is None or not is_valid_qobject(self._page_stack):
             return
-        index = self._visible_pages.index(self._current_page) + amount
-        if 0 <= index < len(self._visible_pages):
-            self._current_page = self._visible_pages[index]
-            self._sync_pager()
+        try:
+            page.adjustSize()
+            height = max(page.sizeHint().height(), self.PAGE_MIN_HEIGHT)
+            if height == self._page_stack.height():
+                return
+            self._page_stack.setFixedHeight(height)
+            if is_valid_qobject(self._menu) and self._menu.isVisible():
+                # activate() forces the pending layout pass now; Qt invalidates the cached
+                # size hint lazily, so without it the popup would resize one page behind.
+                self._menu.layout().activate()
+                self._menu.resize(self._menu.width(), self._menu.sizeHint().height())
+        except RuntimeError:
+            self._page_stack = None
 
     def _sync_pager(self) -> None:
         if not is_valid_qobject(self._pager) or not is_valid_qobject(self._page_stack):
@@ -875,21 +945,49 @@ class CodexUsageWidget(BaseWidget):
             return
         if self._current_page not in visible_pages:
             self._current_page = "overview" if "overview" in visible_pages else visible_pages[0]
-        index = visible_pages.index(self._current_page)
         self._page_stack.setCurrentWidget(self._pages[self._current_page])
+        self._fit_page_height()
 
         show_navigation = len(visible_pages) > 1
         self._page_navigation.setVisible(show_navigation)
         if not show_navigation:
             return
+        self._sync_page_tabs(visible_pages)
+
+    def _sync_page_tabs(self, visible_pages: list[str]) -> None:
+        """Keep one tab per available page, with the current one marked active.
+
+        Tabs are only rebuilt when the set of pages changes - a page appears or disappears
+        with the data - so a routine refresh just re-marks the active one and never flickers.
+        """
         overview_title = "Overview" if self.config.menu.show_overview else "Details"
         titles = {"overview": overview_title, "resets": "Resets", "models": "Models", "activity": "Activity"}
-        self._page_previous.setEnabled(index > 0)
-        self._page_next.setEnabled(index < len(visible_pages) - 1)
-        self._page_indicator.setText(f"{titles[self._current_page]}  ·  {index + 1} / {len(visible_pages)}")
-        self._page_indicator.setAccessibleName(
-            f"{titles[self._current_page]} page, {index + 1} of {len(visible_pages)}"
-        )
+
+        if list(self._page_tabs) != visible_pages:
+            for button in self._page_tabs.values():
+                self._page_tab_layout.removeWidget(button)
+                button.setParent(None)
+                button.deleteLater()
+            self._page_tabs = {}
+            for position, name in enumerate(visible_pages):
+                button = QPushButton(titles[name])
+                button.setProperty("class", "page-tab")
+                button.setAccessibleName(f"{titles[name]} page")
+                button.clicked.connect(lambda _=False, page=name: self._select_page(page))
+                # Insert before the trailing stretch so the strip stays left-aligned.
+                self._page_tab_layout.insertWidget(position, button)
+                self._page_tabs[name] = button
+
+        for name, button in self._page_tabs.items():
+            active = name == self._current_page
+            button.setProperty("class", "page-tab active" if active else "page-tab")
+            refresh_widget_style(button)
+
+    def _select_page(self, page: str) -> None:
+        if page == self._current_page or page not in self._pages:
+            return
+        self._current_page = page
+        self._sync_pager()
 
     def _build_menu(self) -> None:
         self._menu = PopupWidget(

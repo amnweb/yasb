@@ -19,8 +19,15 @@ extra configuration is required as long as you are signed in to Claude Code.
 | `five_hour_reset_format` | string | `'relative'` | How the 5-hour window's reset line is phrased in the popup: `relative` (`Resets in 4h 11m`) or `absolute` (`Resets on Sat @ 6:00 AM`). |
 | `seven_day_reset_format` | string | `'absolute'` | How the 7-day window's reset line is phrased in the popup: `relative` or `absolute`. |
 | `reset_show_date` | boolean | `true` | In `absolute` mode, include the month/day (`Resets on Sat, Jun 13 @ 6:00 AM`) so two windows resetting on the same weekday stay distinguishable. |
+| `time_format`     | string  | `'12h'` | Clock style for every time the popup renders: `12h` (`6:00 AM`) or `24h` (`18:00`). |
+| `reset_datetime_format` | string | `'%m/%d/%Y, %I:%M:%S %p'` | strftime template for the exact reset timestamp under each window. Set `'%Y-%m-%d %H:%M'` to match the `clock` widget. An invalid template falls back to the built-in layout rather than blanking the line. |
+| `show_reset_duration` | boolean | `true` | Append the countdown to reset lines phrased absolutely (`Resets on Fri, Sep 18 @ 09:00 · in 4d 8h`), so every window shows both when it lands and how long is left. No effect on relative lines, which are already a countdown. |
+| `usage_mode`      | string  | `'used'` | Whether `{*_value}` and the progress bar report the share consumed (`used`) or still available (`remaining`). Flipped at runtime by the `toggle_usage_mode` callback. |
+| `mode_label_used` | string  | `'used'` | The word `{mode}` renders while showing consumed. |
+| `mode_label_remaining` | string | `'left'` | The word `{mode}` renders while showing remaining. |
 | `token_history`   | dict    | `{'enabled': false, ...}` | Optional local token-usage history. See [Token history](#token-history). |
 | `status`          | dict    | `{'enabled': false, ...}` | Optional Claude API status indicator. See [API status](#api-status). |
+| `progress_bar`    | dict    | `{'enabled': false, ...}` | Optional progress bar on the bar itself. See [Progress bar](#progress-bar). |
 | `tooltip`         | boolean | `true` | Whether to show a summary tooltip on hover. |
 | `callbacks`       | dict    | `{'on_left': 'toggle_menu', 'on_middle': 'do_nothing', 'on_right': 'toggle_label'}` | Mouse-click callbacks. |
 | `menu`            | dict    | `{'blur': true, 'round_corners': true, 'round_corners_type': 'normal', 'border_color': 'System', 'alignment': 'right', 'direction': 'down', 'offset_top': 6, 'offset_left': 0, 'pin_icon': '', 'unpin_icon': ''}` | Popup menu settings. |
@@ -34,6 +41,13 @@ following placeholders can be used in `label` / `label_alt`:
 
 - `{five_hour}` - 5-hour window utilization (percent, `--` when unavailable).
 - `{seven_day}` - 7-day window utilization (percent, `--` when unavailable).
+- `{five_hour_used}` / `{seven_day_used}` - the same numbers under an explicit name.
+- `{five_hour_remaining}` / `{seven_day_remaining}` - the complement, i.e. how much of the
+  window is still available. Clamped at zero, since the endpoint can report over 100%.
+- `{five_hour_value}` / `{seven_day_value}` - whichever of the two pairs above `usage_mode`
+  currently selects. These are the ones the `toggle_usage_mode` callback flips.
+- `{mode}` - the word for the current mode (`mode_label_used` / `mode_label_remaining`), so a
+  label like `{five_hour_value}% {mode}` reads `30% used` or `70% left` and is never ambiguous.
 - `{five_hour_reset}` - time until the 5-hour window resets. Shown as a countdown when under a
   day away (e.g. `4h 27m`), otherwise as a local weekday + time (e.g. `Sat 6:00 AM`).
 - `{seven_day_reset}` - time until the 7-day window resets (e.g. `Sat 6:00 AM`).
@@ -77,8 +91,16 @@ claude_usage:
 - **cache_ttl:** How long a fetched result is cached on disk before the usage endpoint is queried again. Because the endpoint is rate-limited (HTTP 429), the widget serves the last cached value on any error instead of going blank.
 - **five_hour_reset_format / seven_day_reset_format:** How each window's reset line is phrased in the popup. `relative` shows a countdown (`Resets in 4h 11m`); `absolute` shows a local weekday and time (`Resets on Sat @ 6:00 AM`). The exact reset timestamp is always shown on the line below.
 - **reset_show_date:** In `absolute` mode, include the month/day in the reset line so the 5-hour and 7-day windows can be told apart when they fall on the same weekday. No effect in `relative` mode.
+- **time_format:** `12h` or `24h`, applied to every time the popup renders - the reset line, the `{*_reset}` bar placeholders, and the fallback timestamp.
+- **reset_datetime_format:** A strftime template for the exact timestamp line under each window. Note the default pads the month and day (`09/18/2026`); use `%Y-%m-%d %H:%M` for an ISO-style line that matches the `clock` widget.
+- **show_reset_duration:** Whether an absolute reset line also carries its countdown. With the default `relative`/`absolute` pairing this is what makes the 7-day and per-model windows show a duration at all - otherwise only the 5-hour window does.
 - **tooltip:** Whether to show a summary tooltip on hover.
-- **callbacks:** Mouse-click callbacks. Built-in actions: `toggle_menu` (open/close the popup menu), `toggle_label` (swap between `label` and `label_alt`), `refresh` (force an immediate re-fetch, bypassing `cache_ttl`), `do_nothing`, and `exec`.
+- **callbacks:** Mouse-click callbacks. Built-in actions: `toggle_menu` (open/close the popup menu), `toggle_label` (swap between `label` and `label_alt`), `toggle_usage_mode` (flip `{*_value}` and the progress bar between consumed and remaining), `refresh` (force an immediate re-fetch, bypassing `cache_ttl`), `do_nothing`, and `exec`.
+
+> `toggle_label` and `toggle_usage_mode` are independent: the first chooses *which window*
+> (5-hour or 7-day), the second chooses *which way round* the number is read. The popup's
+> refresh button does the same job as the `refresh` callback, so binding a mouse button to
+> `toggle_usage_mode` instead costs you nothing.
 - **menu:** A dictionary specifying the popup menu settings:
   - **blur:** Enable blur effect for the menu.
   - **round_corners:** Enable round corners (not supported on Windows 10).
@@ -169,9 +191,44 @@ the bar, and/or an optional status line in the popup header (`show_in_menu`).
 - **icon:** The glyph used for the dot. Its colour comes from the `.status.<level>` class.
 - **poll_interval:** Seconds between status checks (60–3600).
 
+## Progress bar
+
+An optional circular (or linear) progress indicator next to the label, using the same
+progress widget as the `cpu`, `gpu` and `codex_usage` widgets. It tracks **whichever window
+the label is currently showing** - the 5-hour window by default, switching to the 7-day
+window when `toggle_label` is used - so the ring always agrees with the number beside it.
+
+This is *utilization*, so the ring fills up as the window is consumed. (The Codex widget's
+bar is the inverse, because that widget reports remaining rather than used.)
+
+```yaml
+    progress_bar:
+      enabled: true
+      progress_type: "circular"   # circular | linear_horizontal | linear_vertical
+      position: "left"            # left | right of the label
+      size: 16
+      thickness: 2
+      radius: 3                   # linear types only
+      color: "#fab387"            # string, or a list of stops for a gradient
+      background_color: "#313244"
+      animation: true
+```
+
+- **enabled:** Turn the progress bar on. Off by default.
+- **progress_type:** `circular` for a ring, or a linear bar in either orientation.
+- **position:** Whether the bar is inserted before or after the label.
+- **size / thickness:** Pixel dimensions of the ring or bar.
+- **radius:** Corner radius, for the linear types only.
+- **color:** A single colour, or a list of colours for a gradient.
+- **animation:** Animate value changes rather than jumping.
+
+> The bar hides itself when the tracked window has no value yet (e.g. before the first
+> successful fetch), so it never shows a misleading empty ring.
+
 ## Widget Style
 ```css
 .claude-usage {}
+.claude-usage .progress-container {}  /* wrapper around the optional progress bar */
 .claude-usage .widget-container {}
 .claude-usage .icon {}
 .claude-usage .label {}

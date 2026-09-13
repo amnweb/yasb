@@ -75,6 +75,9 @@ codex_usage:
 | `tooltip` | boolean | `true` | Show remaining/used details on hover. |
 | `show_token_usage` | boolean | `true` | Aggregate local session token metadata for the model chart and monthly heatmap. |
 | `stale_icon` | string | `⚠` | Warning icon used by the `{stale}` placeholder. |
+| `usage_mode` | string | `remaining` | Whether `{*_value}` and the progress bar report the share still available (`remaining`) or consumed (`used`). Flipped at runtime by the `toggle_usage_mode` callback. Note the Claude widget defaults to `used`, so set both explicitly if you run them side by side. |
+| `mode_label_used` | string | `used` | The word `{mode}` renders while showing consumed. |
+| `mode_label_remaining` | string | `left` | The word `{mode}` renders while showing remaining. |
 | `progress_bar` | dictionary | See example | Native bar indicator showing the active window's remaining percentage. |
 | `callbacks` | dictionary | See example | Mouse actions. |
 | `menu` | dictionary | See example | Popup position, appearance, section visibility, and Fluent navigation icons. |
@@ -86,7 +89,8 @@ the progress bar follows it.
 ## Details Popup
 
 Left-click the widget to open a compact details window. The header and available rate-limit
-windows stay visible. The lower, fixed-height area shows one page at a time:
+windows stay visible. Below them a tab strip names every available page, and the area under it
+shows one at a time, sized to the page on screen:
 
 - **Overview** - token totals for today, 7 days, 30 days, and one year, plus optional plan,
   credits, updated time, live/cached status, and cached errors;
@@ -94,10 +98,14 @@ windows stay visible. The lower, fixed-height area shows one page at a time:
 - **Models** - the 30-day model breakdown when model data is available;
 - **Activity** - the monthly heatmap and its existing month navigation.
 
-Use the Fluent previous/next buttons to switch pages. The active page is retained while the
-persistent popup is reused. Navigation is hidden when only one page is available. Pages without
-valid token data are omitted, and disabling every optional page leaves the fixed rate-limit
-sections working normally.
+Click a tab to switch pages. The active page is retained while the persistent popup is reused.
+The tab strip is hidden when only one page is available. Pages without valid token data are
+omitted, and disabling every optional page leaves the fixed rate-limit sections working
+normally.
+
+> Earlier versions paged with previous/next arrows and a `Models · 3 / 4` counter. The tabs
+> replaced both, so `menu.previous_page_icon` and `menu.next_page_icon` are no longer used;
+> they remain accepted in config so existing setups keep validating.
 
 The `menu` section switches control the lower area:
 
@@ -134,6 +142,10 @@ but are marked as unavailable rather than incorrectly displayed as zero usage.
 ## Placeholders
 
 - `{primary_remaining}` / `{secondary_remaining}` - percentage remaining.
+- `{primary_value}` / `{secondary_value}` - whichever of remaining/used `usage_mode` currently
+  selects. These are the ones the `toggle_usage_mode` callback flips.
+- `{mode}` - the word for the current mode (`mode_label_used` / `mode_label_remaining`), so a
+  label like `{primary_value}% {mode}` reads `97% left` or `3% used` and is never ambiguous.
 - `{primary_used}` / `{secondary_used}` - percentage already used.
 - `{primary_window}` / `{secondary_window}` - duration reported by Codex, such as `5h`, `7d`, or `1w`.
 - `{primary_reset}` / `{secondary_reset}` - time until reset.
@@ -179,11 +191,11 @@ from the popup.
 .codex-usage-menu .section .reset {}
 .codex-usage-menu .section .date {}
 .codex-usage-menu .pager {}
-.codex-usage-menu .page-nav {}
-.codex-usage-menu .page-button {}
-.codex-usage-menu .page-button:hover {}
-.codex-usage-menu .page-button:disabled {}
-.codex-usage-menu .page-indicator {}
+.codex-usage-menu .page-tabs {}          /* the tab strip */
+.codex-usage-menu .page-tab {}           /* one tab per available page */
+.codex-usage-menu .page-tab:hover {}
+.codex-usage-menu .page-tab.active {}    /* the page currently shown */
+.codex-usage-menu .section-scope {}      /* e.g. "Last 30 days" beside a heading */
 .codex-usage-menu .page-stack {}
 .codex-usage-menu .page {}
 .codex-usage-menu .empty-state {}
@@ -223,8 +235,8 @@ from the popup.
 .codex-usage-menu .details .error {}
 ```
 
-`menu.refresh_icon`, `menu.previous_page_icon`, and `menu.next_page_icon` default to the matching
-**Segoe Fluent Icons** glyphs and can be replaced without changing the Widget code. This font is
+`menu.refresh_icon` defaults to the matching
+**Segoe Fluent Icons** glyph and can be replaced without changing the Widget code. This font is
 included with Windows 11; Windows 10 users may need to install it as described in the YASB
 installation guide.
 
@@ -331,13 +343,34 @@ Qt scales these logical pixel sizes with the active Windows display scale. The c
     font-size: 12px;
 }
 
-/* Fixed-height page area */
+/* Tab strip and page area */
 .codex-usage-menu .pager { background-color: transparent; }
-.codex-usage-menu .page-nav {
-    padding: 5px 12px;
+.codex-usage-menu .page-tabs {
+    padding: 8px 0 12px 0;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
-.codex-usage-menu .page-button,
+.codex-usage-menu .page-tab {
+    font-family: 'Segoe UI';
+    font-size: 11px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.55);
+    background-color: transparent;
+    border: none;
+    border-radius: 7px;
+    padding: 4px 10px;
+}
+.codex-usage-menu .page-tab:hover {
+    color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.08);
+}
+.codex-usage-menu .page-tab.active {
+    color: #1b1b1b;
+    background-color: #47AFF5;
+}
+.codex-usage-menu .section-scope {
+    color: rgba(255, 255, 255, 0.45);
+    font-size: 10px;
+}
 .codex-usage-menu .month-nav {
     font-family: "Segoe Fluent Icons";
     color: rgba(255, 255, 255, 0.68);
@@ -351,19 +384,12 @@ Qt scales these logical pixel sizes with the active Windows display scale. The c
     max-height: 26px;
     padding: 0;
 }
-.codex-usage-menu .page-button:hover,
 .codex-usage-menu .month-nav:hover {
     color: #ffffff;
     background-color: rgba(255, 255, 255, 0.08);
 }
-.codex-usage-menu .page-button:disabled,
 .codex-usage-menu .month-nav:disabled {
     color: rgba(255, 255, 255, 0.22);
-}
-.codex-usage-menu .page-indicator {
-    color: rgba(255, 255, 255, 0.82);
-    font-size: 12px;
-    font-weight: 600;
 }
 .codex-usage-menu .page-stack { background-color: transparent; }
 .codex-usage-menu .page { padding: 12px 16px; }
