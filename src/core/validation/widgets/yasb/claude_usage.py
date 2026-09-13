@@ -70,6 +70,14 @@ class ClaudeUsageConfig(CustomBaseModel):
     five_hour_reset_format: Literal["relative", "absolute"] = "relative"
     seven_day_reset_format: Literal["relative", "absolute"] = "absolute"
     reset_show_date: bool = True
+    # Clock style for every time the popup renders. 24h also drops the AM/PM suffix.
+    time_format: Literal["12h", "24h"] = "12h"
+    # strftime template for the exact reset timestamp under each window. The default keeps
+    # the widget's original US-style line; "%Y-%m-%d %H:%M" matches the clock widget.
+    reset_datetime_format: str = "%m/%d/%Y, %I:%M:%S %p"
+    # Append the countdown to reset lines phrased absolutely, so every window shows how long
+    # is left and not just when it lands. No effect on relative lines, which are already a duration.
+    show_reset_duration: bool = True
     # Whether {five_hour_value}/{seven_day_value} (and the progress bar) report the share
     # of the window consumed or the share still available. Flipped at runtime by the
     # "toggle_usage_mode" callback. The explicit {*_used}/{*_remaining} placeholders ignore it.

@@ -19,6 +19,9 @@ extra configuration is required as long as you are signed in to Claude Code.
 | `five_hour_reset_format` | string | `'relative'` | How the 5-hour window's reset line is phrased in the popup: `relative` (`Resets in 4h 11m`) or `absolute` (`Resets on Sat @ 6:00 AM`). |
 | `seven_day_reset_format` | string | `'absolute'` | How the 7-day window's reset line is phrased in the popup: `relative` or `absolute`. |
 | `reset_show_date` | boolean | `true` | In `absolute` mode, include the month/day (`Resets on Sat, Jun 13 @ 6:00 AM`) so two windows resetting on the same weekday stay distinguishable. |
+| `time_format`     | string  | `'12h'` | Clock style for every time the popup renders: `12h` (`6:00 AM`) or `24h` (`18:00`). |
+| `reset_datetime_format` | string | `'%m/%d/%Y, %I:%M:%S %p'` | strftime template for the exact reset timestamp under each window. Set `'%Y-%m-%d %H:%M'` to match the `clock` widget. An invalid template falls back to the built-in layout rather than blanking the line. |
+| `show_reset_duration` | boolean | `true` | Append the countdown to reset lines phrased absolutely (`Resets on Fri, Sep 18 @ 09:00 · in 4d 8h`), so every window shows both when it lands and how long is left. No effect on relative lines, which are already a countdown. |
 | `usage_mode`      | string  | `'used'` | Whether `{*_value}` and the progress bar report the share consumed (`used`) or still available (`remaining`). Flipped at runtime by the `toggle_usage_mode` callback. |
 | `mode_label_used` | string  | `'used'` | The word `{mode}` renders while showing consumed. |
 | `mode_label_remaining` | string | `'left'` | The word `{mode}` renders while showing remaining. |
@@ -88,6 +91,9 @@ claude_usage:
 - **cache_ttl:** How long a fetched result is cached on disk before the usage endpoint is queried again. Because the endpoint is rate-limited (HTTP 429), the widget serves the last cached value on any error instead of going blank.
 - **five_hour_reset_format / seven_day_reset_format:** How each window's reset line is phrased in the popup. `relative` shows a countdown (`Resets in 4h 11m`); `absolute` shows a local weekday and time (`Resets on Sat @ 6:00 AM`). The exact reset timestamp is always shown on the line below.
 - **reset_show_date:** In `absolute` mode, include the month/day in the reset line so the 5-hour and 7-day windows can be told apart when they fall on the same weekday. No effect in `relative` mode.
+- **time_format:** `12h` or `24h`, applied to every time the popup renders - the reset line, the `{*_reset}` bar placeholders, and the fallback timestamp.
+- **reset_datetime_format:** A strftime template for the exact timestamp line under each window. Note the default pads the month and day (`09/18/2026`); use `%Y-%m-%d %H:%M` for an ISO-style line that matches the `clock` widget.
+- **show_reset_duration:** Whether an absolute reset line also carries its countdown. With the default `relative`/`absolute` pairing this is what makes the 7-day and per-model windows show a duration at all - otherwise only the 5-hour window does.
 - **tooltip:** Whether to show a summary tooltip on hover.
 - **callbacks:** Mouse-click callbacks. Built-in actions: `toggle_menu` (open/close the popup menu), `toggle_label` (swap between `label` and `label_alt`), `toggle_usage_mode` (flip `{*_value}` and the progress bar between consumed and remaining), `refresh` (force an immediate re-fetch, bypassing `cache_ttl`), `do_nothing`, and `exec`.
 

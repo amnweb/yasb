@@ -1,3 +1,4 @@
+import logging
 import re
 from datetime import UTC, datetime
 from typing import Any
@@ -14,6 +15,8 @@ from core.widgets.base import BaseWidget
 from core.widgets.services.claude_usage.claude_api import ClaudeUsageService
 from core.widgets.services.claude_usage.status import STATUS_LEVELS, ClaudeStatusService
 from core.widgets.services.claude_usage.token_history import TokenHistoryService, summarize
+
+logger = logging.getLogger("claude_usage")
 
 _TOKEN_PERIODS: list[tuple[str, str]] = [
     ("session", "Session"),
@@ -300,8 +303,15 @@ class ClaudeUsageWidget(BaseWidget):
         value = raw if isinstance(raw, (int, float)) else rounded
         return f"{value:.1f}" if isinstance(value, (int, float)) else "--"
 
-    @staticmethod
-    def _fmt_reset(iso: str | None) -> str:
+    def _clock(self, local: datetime) -> str:
+        """Local time of day in the configured clock style ('6:00 AM' or '18:00')."""
+        if self.config.time_format == "24h":
+            return f"{local.hour:02d}:{local.minute:02d}"
+        hour12 = local.hour % 12 or 12
+        ampm = "AM" if local.hour < 12 else "PM"
+        return f"{hour12}:{local.minute:02d} {ampm}"
+
+    def _fmt_reset(self, iso: str | None) -> str:
         """Short time-until-reset: a countdown ('4h 14m') when under a day away,
         otherwise a local weekday + time ('Sat 6:00 AM')."""
         if not iso:
@@ -315,9 +325,7 @@ class ClaudeUsageWidget(BaseWidget):
                 hours, minutes = divmod(seconds // 60, 60)
                 return f"{hours}h {minutes}m" if hours else f"{minutes}m"
             local = target.astimezone()
-            hour12 = local.hour % 12 or 12
-            ampm = "AM" if local.hour < 12 else "PM"
-            return f"{local:%a} {hour12}:{local.minute:02d} {ampm}"
+            return f"{local:%a} {self._clock(local)}"
         except Exception:
             return "--"
 
@@ -342,8 +350,7 @@ class ClaudeUsageWidget(BaseWidget):
         except Exception:
             return "--"
 
-    @staticmethod
-    def _fmt_weekday(iso: str | None, with_date: bool = False) -> str:
+    def _fmt_weekday(self, iso: str | None, with_date: bool = False) -> str:
         """Absolute reset as a local weekday + time, e.g. 'Sat @ 6:00 AM'; '--' when unknown.
 
         With ``with_date`` the month/day is included ('Sat, Jun 13 @ 6:00 AM') so two windows
@@ -353,33 +360,47 @@ class ClaudeUsageWidget(BaseWidget):
             return "--"
         try:
             local = datetime.fromisoformat(iso.replace("Z", "+00:00")).astimezone()
-            hour12 = local.hour % 12 or 12
-            ampm = "AM" if local.hour < 12 else "PM"
             day = f"{local:%a, %b} {local.day}" if with_date else f"{local:%a}"
-            return f"{day} @ {hour12}:{local.minute:02d} {ampm}"
+            return f"{day} @ {self._clock(local)}"
         except Exception:
             return "--"
 
     def _reset_phrase(self, iso: str | None, reset_format: str) -> str:
-        """Reset line for the popup footer, phrased per the window's reset_format."""
+        """Reset line for the popup footer, phrased per the window's reset_format.
+
+        An absolute line says when the window lands but not how far off it is, so the
+        countdown is appended: every window then answers both questions, however it is
+        phrased. A relative line already is the countdown, so nothing is added.
+        """
         if reset_format == "absolute":
             value = self._fmt_weekday(iso, with_date=self.config.reset_show_date)
-            return f"Resets on {value}" if value != "--" else "Reset time unknown"
+            if value == "--":
+                return "Reset time unknown"
+            phrase = f"Resets on {value}"
+            duration = self._fmt_duration(iso)
+            if self.config.show_reset_duration and duration != "--":
+                phrase += f" · in {duration}"
+            return phrase
         value = self._fmt_duration(iso)
         return f"Resets in {value}" if value != "--" else "Reset time unknown"
 
-    @staticmethod
-    def _fmt_reset_at(iso: str | None) -> str:
-        """Absolute local reset timestamp, e.g. '6/7/2026, 5:50:00 AM'."""
+    def _fmt_reset_at(self, iso: str | None) -> str:
+        """Absolute local reset timestamp, rendered with ``reset_datetime_format``.
+
+        A bad strftime template falls back to the built-in layout rather than blanking the
+        line, so a typo in the config never silently loses the timestamp.
+        """
         if not iso:
             return "--"
         try:
             local = datetime.fromisoformat(iso.replace("Z", "+00:00")).astimezone()
-            hour12 = local.hour % 12 or 12
-            ampm = "AM" if local.hour < 12 else "PM"
-            return f"{local.month}/{local.day}/{local.year}, {hour12}:{local.minute:02d}:{local.second:02d} {ampm}"
         except Exception:
             return "--"
+        try:
+            return local.strftime(self.config.reset_datetime_format)
+        except Exception:
+            logger.debug("invalid reset_datetime_format: %r", self.config.reset_datetime_format)
+            return f"{local.month}/{local.day}/{local.year}, {self._clock(local)}"
 
     def _apply_date(self, label: QLabel, reset_iso: str | None) -> None:
         """Set the absolute reset timestamp, hiding the line entirely when it is unknown.
