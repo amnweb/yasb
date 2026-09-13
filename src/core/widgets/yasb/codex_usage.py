@@ -31,6 +31,9 @@ from core.widgets.services.codex_usage.codex_api import CodexUsageService
 class UsageBar(QFrame):
     """CSS-styleable progress track used by the details popup."""
 
+    # Must match the stylesheet min/max-height for this bar.
+    TRACK_HEIGHT = 6
+
     def __init__(self, value: float, level: str, parent: QFrame | None = None):
         super().__init__(parent)
         self._value = max(0.0, min(100.0, value))
@@ -44,11 +47,25 @@ class UsageBar(QFrame):
         refresh_widget_style(self, self._fill)
         self._update_fill()
 
+    def _track_height(self) -> int:
+        """Height of the painted track.
+
+        The stylesheet engine paints this frame's background at its styled height and
+        centres it, but sets no Qt geometry - minimumHeight() stays 0 - so the widget keeps
+        whatever height the layout gave it (routinely ~40px). Filling that drew the value as
+        a slab standing proud of the track, so the height is pinned here instead.
+        TRACK_HEIGHT must match the stylesheet's min/max-height for this bar.
+        """
+        return min(self.TRACK_HEIGHT, self.height()) if self.height() > 0 else self.TRACK_HEIGHT
+
     def _update_fill(self) -> None:
+        height = self._track_height()
         fill_width = int(self.width() * self._value / 100)
         if fill_width > 0:
-            fill_width = max(fill_width, self.height())
-        self._fill.setGeometry(0, 0, fill_width, self.height())
+            fill_width = max(fill_width, height)
+        # Centred to match the track behind it; the +1 rounds the half-pixel the same
+        # way the stylesheet engine does, otherwise the fill sits 2px high.
+        self._fill.setGeometry(0, max(0, (self.height() - height + 1) // 2), fill_width, height)
 
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)
@@ -57,6 +74,9 @@ class UsageBar(QFrame):
 
 class TokenBar(QFrame):
     """CSS-styleable horizontal bar for per-model token totals."""
+
+    # Must match the stylesheet min/max-height for this bar.
+    TRACK_HEIGHT = 6
 
     def __init__(self, parent: QFrame | None = None):
         super().__init__(parent)
@@ -69,11 +89,23 @@ class TokenBar(QFrame):
         self._ratio = max(0.0, min(1.0, ratio))
         self._update_fill()
 
+    def _track_height(self) -> int:
+        """Height of the painted track.
+
+        The stylesheet engine paints this frame's background at its styled height and
+        centres it, but sets no Qt geometry - minimumHeight() stays 0 - so the widget keeps
+        whatever height the layout gave it (routinely ~40px). Filling that drew the value as
+        a slab standing proud of the track, so the height is pinned here instead.
+        TRACK_HEIGHT must match the stylesheet's min/max-height for this bar.
+        """
+        return min(self.TRACK_HEIGHT, self.height()) if self.height() > 0 else self.TRACK_HEIGHT
+
     def _update_fill(self) -> None:
+        height = self._track_height()
         width = int(self.width() * self._ratio)
         if width > 0:
-            width = max(width, self.height())
-        self._fill.setGeometry(0, 0, width, self.height())
+            width = max(width, height)
+        self._fill.setGeometry(0, max(0, (self.height() - height + 1) // 2), width, height)
 
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)
