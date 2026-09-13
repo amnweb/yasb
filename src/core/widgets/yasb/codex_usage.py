@@ -440,7 +440,9 @@ class CodexUsageWidget(BaseWidget):
 
         title = QLabel(fallback_title)
         title.setProperty("class", "title")
-        layout.addWidget(title)
+        # AlignLeft keeps the label at its own width so a CSS background renders as a pill
+        # hugging the text, matching the Claude popup; a filled QLabel would band the row.
+        layout.addWidget(title, 0, Qt.AlignmentFlag.AlignLeft)
 
         progress = UsageBar(0, "unknown")
         layout.addWidget(progress)

@@ -554,7 +554,9 @@ class ClaudeUsageWidget(BaseWidget):
 
         title_label = QLabel(title)
         title_label.setProperty("class", "title")
-        layout.addWidget(title_label)
+        # AlignLeft makes the label take only its own width, so a CSS background renders as a
+        # pill hugging the text. Without it a QLabel fills the row and paints a full-width band.
+        layout.addWidget(title_label, 0, Qt.AlignmentFlag.AlignLeft)
 
         progress = UsageBar(int(value) if isinstance(value, (int, float)) else 0, level)
         layout.addWidget(progress)
@@ -608,7 +610,7 @@ class ClaudeUsageWidget(BaseWidget):
             container_layout.setSpacing(0)
             model_title = QLabel("Models")
             model_title.setProperty("class", "title")
-            container_layout.addWidget(model_title)
+            container_layout.addWidget(model_title, 0, Qt.AlignmentFlag.AlignLeft)
             rows = QFrame()
             rows.setProperty("class", "model-rows")
             self._model_layout = QGridLayout(rows)
@@ -624,7 +626,7 @@ class ClaudeUsageWidget(BaseWidget):
 
         title_label = QLabel("Tokens")
         title_label.setProperty("class", "title")
-        layout.addWidget(title_label)
+        layout.addWidget(title_label, 0, Qt.AlignmentFlag.AlignLeft)
 
         toggle = QFrame()
         toggle.setProperty("class", "period-toggle")
