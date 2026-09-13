@@ -24,6 +24,7 @@
     - [Copilot](./(Widget)-Copilot)
     - [CPU](./(Widget)-CPU)
     - [Custom](./(Widget)-Custom)
+    - [DeepSeek Usage](./(Widget)-DeepSeek-Usage)
     - [Disk](./(Widget)-Disk)
     - [Do Not Disturb](./(Widget)-Dnd)
     - [Github](./(Widget)-Github)
