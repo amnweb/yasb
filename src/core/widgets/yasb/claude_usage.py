@@ -8,7 +8,7 @@ from PyQt6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QLabel, QPushButto
 from core.utils.qobject import is_valid_qobject
 from core.utils.stat_popup import GraphWidget
 from core.utils.tooltip import set_tooltip
-from core.utils.utilities import PopupWidget, refresh_widget_style
+from core.utils.utilities import PopupWidget, build_progress_widget, refresh_widget_style
 from core.validation.widgets.yasb.claude_usage import ClaudeUsageConfig
 from core.widgets.base import BaseWidget
 from core.widgets.services.claude_usage.claude_api import ClaudeUsageService
@@ -73,6 +73,7 @@ class ClaudeUsageWidget(BaseWidget):
         super().__init__(class_name="claude-usage")
         self.config = config
         self._show_alt_label = False
+        self._usage_mode = self.config.usage_mode
         self._menu: PopupWidget | None = None
         self._usage_frames: list[QFrame] = []
         # Per-window references to the live bar/labels, so a data refresh updates them in place.
@@ -104,12 +105,17 @@ class ClaudeUsageWidget(BaseWidget):
             self._status_service = ClaudeStatusService.get_instance(self.config.status.poll_interval)
             self._status = self._status_service.latest()
 
+        self.progress_widget = build_progress_widget(self, self.config.progress_bar.model_dump())
         self._init_container()
         self.build_widget_label(self.config.label, self.config.label_alt)
+        if self.progress_widget:
+            position = 0 if self.config.progress_bar.position == "left" else self._widget_container_layout.count()
+            self._widget_container_layout.insertWidget(position, self.progress_widget)
 
         self.register_callback("toggle_label", self._toggle_label)
         self.register_callback("toggle_menu", self._toggle_menu)
         self.register_callback("refresh", self._refresh)
+        self.register_callback("toggle_usage_mode", self._toggle_usage_mode)
 
         self.callback_left = self.config.callbacks.on_left
         self.callback_middle = self.config.callbacks.on_middle
@@ -224,6 +230,17 @@ class ClaudeUsageWidget(BaseWidget):
         return {
             "five_hour": self._pct(self._data.get("five")),
             "seven_day": self._pct(self._data.get("seven")),
+            # Explicit pair, unaffected by usage_mode.
+            "five_hour_used": self._pct(self._data.get("five")),
+            "seven_day_used": self._pct(self._data.get("seven")),
+            "five_hour_remaining": self._pct_remaining(self._data.get("five")),
+            "seven_day_remaining": self._pct_remaining(self._data.get("seven")),
+            # Mode-aware pair, flipped by the toggle_usage_mode callback.
+            "five_hour_value": self._mode_value(self._data.get("five")),
+            "seven_day_value": self._mode_value(self._data.get("seven")),
+            "mode": (
+                self.config.mode_label_remaining if self._usage_mode == "remaining" else self.config.mode_label_used
+            ),
             "five_hour_reset": self._fmt_reset(self._data.get("five_reset_iso")),
             "seven_day_reset": self._fmt_reset(self._data.get("seven_reset_iso")),
             "stale": self.STALE_ICON if self._data.get("token_expired") else "",
@@ -257,6 +274,25 @@ class ClaudeUsageWidget(BaseWidget):
     @staticmethod
     def _pct(value: Any) -> str:
         return "--" if value is None else str(value)
+
+    @staticmethod
+    def _pct_remaining(value: Any) -> str:
+        """The share of a window still available, i.e. the complement of utilization.
+
+        Clamped at zero: the endpoint can report over 100% utilization, and "-4 left"
+        would be worse than useless on the bar.
+        """
+        if not isinstance(value, (int, float)):
+            return "--"
+        return str(max(0, 100 - round(value)))
+
+    def _mode_value(self, value: Any) -> str:
+        return self._pct_remaining(value) if self._usage_mode == "remaining" else self._pct(value)
+
+    def _toggle_usage_mode(self) -> None:
+        """Flip the bar between 'consumed so far' and 'still available'."""
+        self._usage_mode = "used" if self._usage_mode == "remaining" else "remaining"
+        self._update_label()
 
     @staticmethod
     def _pct_decimal(raw: Any, rounded: Any) -> str:
@@ -345,6 +381,16 @@ class ClaudeUsageWidget(BaseWidget):
         except Exception:
             return "--"
 
+    def _apply_date(self, label: QLabel, reset_iso: str | None) -> None:
+        """Set the absolute reset timestamp, hiding the line entirely when it is unknown.
+
+        A visible '--' row is worse than no row: it reads as broken and leaves an orphan
+        line of dead space under a window whose reset time the endpoint has not reported yet.
+        """
+        text = self._fmt_reset_at(reset_iso)
+        label.setText("" if text == "--" else text)
+        label.setVisible(text != "--")
+
     @staticmethod
     def _level_class(value: Any) -> str:
         if not isinstance(value, (int, float)):
@@ -392,11 +438,33 @@ class ClaudeUsageWidget(BaseWidget):
                 base = " ".join(t for t in base.split() if t not in STATUS_LEVELS)
                 current_widget.setProperty("class", f"{base} {self._status_level()}")
             if self.config.tooltip:
-                tip = f"Claude usage - 5h: {values['five_hour']}% · 7d: {values['seven_day']}%"
+                # Spell out both sides here regardless of usage_mode, so the hover always
+                # answers the question the bar's single number cannot.
+                tip = (
+                    f"Claude - 5h: {values['five_hour']}% used / {values['five_hour_remaining']}% left"
+                    f" · 7d: {values['seven_day']}% used / {values['seven_day_remaining']}% left"
+                )
                 if self._data.get("token_expired"):
                     tip += "\nToken expired - run `claude -p` to refresh"
                 set_tooltip(current_widget, tip)
         refresh_widget_style(*active_widgets)
+        self._sync_progress_bar()
+
+    def _sync_progress_bar(self) -> None:
+        """Drive the optional bar-level progress ring from the window the label is showing.
+
+        This is utilization, so the ring fills up as the window is consumed - the opposite
+        of the Codex widget, which reports remaining.
+        """
+        if not self.progress_widget:
+            return
+        value = self._data.get("seven" if self._show_alt_label else "five")
+        self.progress_widget.setVisible(value is not None)
+        if isinstance(value, (int, float)):
+            # Follow usage_mode so the ring never contradicts the number beside it:
+            # filling up as the window is consumed, or draining as it runs out.
+            filled = max(0.0, 100.0 - float(value)) if self._usage_mode == "remaining" else float(value)
+            self.progress_widget.set_value(filled)
 
     def _toggle_menu(self) -> None:
         if is_valid_qobject(self._menu) and self._menu.isVisible():
@@ -487,8 +555,9 @@ class ClaudeUsageWidget(BaseWidget):
 
         layout.addWidget(footer)
 
-        date_label = QLabel(self._fmt_reset_at(reset_iso))
+        date_label = QLabel()
         date_label.setProperty("class", "date")
+        self._apply_date(date_label, reset_iso)
         layout.addWidget(date_label)
 
         self._section_widgets[key] = {
@@ -682,7 +751,7 @@ class ClaudeUsageWidget(BaseWidget):
                 w["reset"].setText(self._reset_phrase(reset_iso, w["reset_format"]))
                 w["percent"].setText(f"{self._pct_decimal(raw, value)}%")
                 w["percent"].setProperty("class", f"percent {level}")
-                w["date"].setText(self._fmt_reset_at(reset_iso))
+                self._apply_date(w["date"], reset_iso)
                 refresh_widget_style(w["percent"])
         except RuntimeError:
             # Popup was destroyed; references are stale until it reopens.

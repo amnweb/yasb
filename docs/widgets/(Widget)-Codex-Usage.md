@@ -75,6 +75,9 @@ codex_usage:
 | `tooltip` | boolean | `true` | Show remaining/used details on hover. |
 | `show_token_usage` | boolean | `true` | Aggregate local session token metadata for the model chart and monthly heatmap. |
 | `stale_icon` | string | `⚠` | Warning icon used by the `{stale}` placeholder. |
+| `usage_mode` | string | `remaining` | Whether `{*_value}` and the progress bar report the share still available (`remaining`) or consumed (`used`). Flipped at runtime by the `toggle_usage_mode` callback. Note the Claude widget defaults to `used`, so set both explicitly if you run them side by side. |
+| `mode_label_used` | string | `used` | The word `{mode}` renders while showing consumed. |
+| `mode_label_remaining` | string | `left` | The word `{mode}` renders while showing remaining. |
 | `progress_bar` | dictionary | See example | Native bar indicator showing the active window's remaining percentage. |
 | `callbacks` | dictionary | See example | Mouse actions. |
 | `menu` | dictionary | See example | Popup position, appearance, section visibility, and Fluent navigation icons. |
@@ -134,6 +137,10 @@ but are marked as unavailable rather than incorrectly displayed as zero usage.
 ## Placeholders
 
 - `{primary_remaining}` / `{secondary_remaining}` - percentage remaining.
+- `{primary_value}` / `{secondary_value}` - whichever of remaining/used `usage_mode` currently
+  selects. These are the ones the `toggle_usage_mode` callback flips.
+- `{mode}` - the word for the current mode (`mode_label_used` / `mode_label_remaining`), so a
+  label like `{primary_value}% {mode}` reads `97% left` or `3% used` and is never ambiguous.
 - `{primary_used}` / `{secondary_used}` - percentage already used.
 - `{primary_window}` / `{secondary_window}` - duration reported by Codex, such as `5h`, `7d`, or `1w`.
 - `{primary_reset}` / `{secondary_reset}` - time until reset.

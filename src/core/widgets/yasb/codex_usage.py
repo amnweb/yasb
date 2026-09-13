@@ -133,10 +133,15 @@ class CodexUsageWidget(BaseWidget):
 
     validation_schema = CodexUsageConfig
 
+    # Floor for the page area, so a sparse page (e.g. Resets with no credits) still reads as a
+    # panel rather than collapsing to a couple of lines.
+    PAGE_MIN_HEIGHT = 120
+
     def __init__(self, config: CodexUsageConfig):
         super().__init__(class_name="codex-usage")
         self.config = config
         self._show_alt_label = False
+        self._usage_mode = self.config.usage_mode
         self._menu: PopupWidget | None = None
         self._section_widgets: dict[str, dict[str, Any]] = {}
         self._detail_widgets: dict[str, QLabel] = {}
@@ -189,6 +194,7 @@ class CodexUsageWidget(BaseWidget):
         self.register_callback("toggle_label", self._toggle_label)
         self.register_callback("toggle_menu", self._toggle_menu)
         self.register_callback("refresh", self._refresh)
+        self.register_callback("toggle_usage_mode", self._toggle_usage_mode)
         self.callback_left = self.config.callbacks.on_left
         self.callback_middle = self.config.callbacks.on_middle
         self.callback_right = self.config.callbacks.on_right
@@ -327,10 +333,26 @@ class CodexUsageWidget(BaseWidget):
             "secondary_window": self._duration_name(secondary.get("duration_mins"), "secondary"),
             "primary_reset": self._fmt_reset(primary.get("resets_at")),
             "secondary_reset": self._fmt_reset(secondary.get("resets_at")),
+            # Mode-aware pair, flipped by the toggle_usage_mode callback. The explicit
+            # _used/_remaining placeholders above are unaffected.
+            "primary_value": self._mode_value(primary),
+            "secondary_value": self._mode_value(secondary),
+            "mode": (
+                self.config.mode_label_remaining if self._usage_mode == "remaining" else self.config.mode_label_used
+            ),
             "plan": str(self._data.get("plan") or "--"),
             "credits": str(self._data.get("credits") if self._data.get("credits") is not None else "--"),
             "stale": self.config.stale_icon if self._data.get("stale") else "",
         }
+
+    def _mode_value(self, window: dict[str, Any]) -> str:
+        key = "used" if self._usage_mode == "used" else "remaining"
+        return self._percent(window.get(key))
+
+    def _toggle_usage_mode(self) -> None:
+        """Flip the bar between 'still available' and 'consumed so far'."""
+        self._usage_mode = "used" if self._usage_mode == "remaining" else "remaining"
+        self._update_label()
 
     def _active_window(self) -> dict[str, Any]:
         name = "secondary" if self._show_alt_label else "primary"
@@ -366,7 +388,9 @@ class CodexUsageWidget(BaseWidget):
         if self.progress_widget:
             self.progress_widget.setVisible(bool(active_window))
             if active_window:
-                self.progress_widget.set_value(self._percent_value(active_window.get("remaining")))
+                # Follow usage_mode so the ring never contradicts the number beside it.
+                key = "used" if self._usage_mode == "used" else "remaining"
+                self.progress_widget.set_value(self._percent_value(active_window.get(key)))
 
         if self.config.tooltip:
             primary = self._window("primary")
@@ -821,8 +845,10 @@ class CodexUsageWidget(BaseWidget):
 
         stack = QStackedWidget()
         stack.setProperty("class", "page-stack")
-        # Fits the activity grid while keeping every page stable across Windows display scales.
-        stack.setFixedHeight(220)
+        # Height follows the page actually on screen (see _fit_page_height). A constant here
+        # would give every page the tallest page's height, leaving the short Overview page
+        # with a large dead area underneath it.
+        stack.setFixedHeight(self.PAGE_MIN_HEIGHT)
         self._page_stack = stack
         if self.config.menu.show_overview or self.config.menu.show_details:
             stack.addWidget(self._build_overview_page())
@@ -836,6 +862,30 @@ class CodexUsageWidget(BaseWidget):
 
         self._pager = pager
         return pager
+
+    def _fit_page_height(self) -> None:
+        """Shrink the page area to the page currently shown, then refit the popup.
+
+        A QStackedWidget reports the tallest child as its size hint, so without this the
+        Overview page inherits the Activity grid's height and trails a block of empty space.
+        Width stays locked, so only the height moves.
+        """
+        page = self._pages.get(self._current_page)
+        if page is None or not is_valid_qobject(self._page_stack):
+            return
+        try:
+            page.adjustSize()
+            height = max(page.sizeHint().height(), self.PAGE_MIN_HEIGHT)
+            if height == self._page_stack.height():
+                return
+            self._page_stack.setFixedHeight(height)
+            if is_valid_qobject(self._menu) and self._menu.isVisible():
+                # activate() forces the pending layout pass now; Qt invalidates the cached
+                # size hint lazily, so without it the popup would resize one page behind.
+                self._menu.layout().activate()
+                self._menu.resize(self._menu.width(), self._menu.sizeHint().height())
+        except RuntimeError:
+            self._page_stack = None
 
     def _change_page(self, amount: int) -> None:
         if self._current_page not in self._visible_pages:
@@ -877,6 +927,7 @@ class CodexUsageWidget(BaseWidget):
             self._current_page = "overview" if "overview" in visible_pages else visible_pages[0]
         index = visible_pages.index(self._current_page)
         self._page_stack.setCurrentWidget(self._pages[self._current_page])
+        self._fit_page_height()
 
         show_navigation = len(visible_pages) > 1
         self._page_navigation.setVisible(show_navigation)
