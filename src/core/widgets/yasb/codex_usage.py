@@ -183,9 +183,8 @@ class CodexUsageWidget(BaseWidget):
         self._pager: QFrame | None = None
         self._page_stack: QStackedWidget | None = None
         self._page_navigation: QFrame | None = None
-        self._page_previous: QPushButton | None = None
-        self._page_next: QPushButton | None = None
-        self._page_indicator: QLabel | None = None
+        self._page_tabs: dict[str, QPushButton] = {}
+        self._page_tab_layout: QHBoxLayout | None = None
         self._overview_tokens: QFrame | None = None
         self._overview_empty: QLabel | None = None
         self._token_widgets: dict[str, QLabel] = {}
@@ -599,9 +598,21 @@ class CodexUsageWidget(BaseWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
-        title = QLabel("Models · 30 days")
+        # Name and scope split apart: the heading says what this is, the caption says how far
+        # back it reaches. Joining them with a middle dot made the window read as part of the name.
+        heading = QFrame()
+        heading.setProperty("class", "models-heading")
+        heading_layout = QHBoxLayout(heading)
+        heading_layout.setContentsMargins(0, 0, 0, 0)
+        heading_layout.setSpacing(0)
+        title = QLabel("Models")
         title.setProperty("class", "section-title")
-        layout.addWidget(title)
+        heading_layout.addWidget(title, 0, Qt.AlignmentFlag.AlignLeft)
+        heading_layout.addStretch()
+        scope = QLabel("Last 30 days")
+        scope.setProperty("class", "section-scope")
+        heading_layout.addWidget(scope)
+        layout.addWidget(heading)
 
         for index in range(5):
             row = QFrame()
@@ -767,7 +778,7 @@ class CodexUsageWidget(BaseWidget):
             history_start = date.today()
         self._heatmap_month = min(current_month, max(earliest_navigation_month, self._heatmap_month))
         if is_valid_qobject(self._heatmap_month_label):
-            self._heatmap_month_label.setText(self._heatmap_month.strftime("%B %Y").upper())
+            self._heatmap_month_label.setText(self._heatmap_month.strftime("%B %Y"))
         if is_valid_qobject(self._heatmap_previous):
             self._heatmap_previous.setEnabled(self._heatmap_month > earliest_navigation_month)
         if is_valid_qobject(self._heatmap_next):
@@ -847,34 +858,17 @@ class CodexUsageWidget(BaseWidget):
         pager_layout.setContentsMargins(0, 0, 0, 0)
         pager_layout.setSpacing(0)
 
+        # A tab per page rather than prev/next arrows. The arrows made the most useful pages
+        # (Models, Activity) invisible until you went hunting, and forced a "3 / 4" counter
+        # to exist purely to say where you were. Naming every destination removes both.
         navigation = QFrame()
-        navigation.setProperty("class", "page-nav")
+        navigation.setProperty("class", "page-tabs")
         self._page_navigation = navigation
         navigation_layout = QHBoxLayout(navigation)
         navigation_layout.setContentsMargins(0, 0, 0, 0)
-        navigation_layout.setSpacing(0)
-
-        previous = QPushButton(self.config.menu.previous_page_icon)
-        previous.setProperty("class", "page-button previous")
-        previous.setAccessibleName("Previous Codex usage page")
-        set_tooltip(previous, "Previous page")
-        previous.clicked.connect(lambda: self._change_page(-1))
-        navigation_layout.addWidget(previous)
-        self._page_previous = previous
-
-        indicator = QLabel("")
-        indicator.setProperty("class", "page-indicator")
-        indicator.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        navigation_layout.addWidget(indicator, 1)
-        self._page_indicator = indicator
-
-        next_button = QPushButton(self.config.menu.next_page_icon)
-        next_button.setProperty("class", "page-button next")
-        next_button.setAccessibleName("Next Codex usage page")
-        set_tooltip(next_button, "Next page")
-        next_button.clicked.connect(lambda: self._change_page(1))
-        navigation_layout.addWidget(next_button)
-        self._page_next = next_button
+        navigation_layout.setSpacing(6)
+        navigation_layout.addStretch()
+        self._page_tab_layout = navigation_layout
         pager_layout.addWidget(navigation)
 
         stack = QStackedWidget()
@@ -921,14 +915,6 @@ class CodexUsageWidget(BaseWidget):
         except RuntimeError:
             self._page_stack = None
 
-    def _change_page(self, amount: int) -> None:
-        if self._current_page not in self._visible_pages:
-            return
-        index = self._visible_pages.index(self._current_page) + amount
-        if 0 <= index < len(self._visible_pages):
-            self._current_page = self._visible_pages[index]
-            self._sync_pager()
-
     def _sync_pager(self) -> None:
         if not is_valid_qobject(self._pager) or not is_valid_qobject(self._page_stack):
             return
@@ -959,7 +945,6 @@ class CodexUsageWidget(BaseWidget):
             return
         if self._current_page not in visible_pages:
             self._current_page = "overview" if "overview" in visible_pages else visible_pages[0]
-        index = visible_pages.index(self._current_page)
         self._page_stack.setCurrentWidget(self._pages[self._current_page])
         self._fit_page_height()
 
@@ -967,14 +952,42 @@ class CodexUsageWidget(BaseWidget):
         self._page_navigation.setVisible(show_navigation)
         if not show_navigation:
             return
+        self._sync_page_tabs(visible_pages)
+
+    def _sync_page_tabs(self, visible_pages: list[str]) -> None:
+        """Keep one tab per available page, with the current one marked active.
+
+        Tabs are only rebuilt when the set of pages changes - a page appears or disappears
+        with the data - so a routine refresh just re-marks the active one and never flickers.
+        """
         overview_title = "Overview" if self.config.menu.show_overview else "Details"
         titles = {"overview": overview_title, "resets": "Resets", "models": "Models", "activity": "Activity"}
-        self._page_previous.setEnabled(index > 0)
-        self._page_next.setEnabled(index < len(visible_pages) - 1)
-        self._page_indicator.setText(f"{titles[self._current_page]}  ·  {index + 1} / {len(visible_pages)}")
-        self._page_indicator.setAccessibleName(
-            f"{titles[self._current_page]} page, {index + 1} of {len(visible_pages)}"
-        )
+
+        if list(self._page_tabs) != visible_pages:
+            for button in self._page_tabs.values():
+                self._page_tab_layout.removeWidget(button)
+                button.setParent(None)
+                button.deleteLater()
+            self._page_tabs = {}
+            for position, name in enumerate(visible_pages):
+                button = QPushButton(titles[name])
+                button.setProperty("class", "page-tab")
+                button.setAccessibleName(f"{titles[name]} page")
+                button.clicked.connect(lambda _=False, page=name: self._select_page(page))
+                # Insert before the trailing stretch so the strip stays left-aligned.
+                self._page_tab_layout.insertWidget(position, button)
+                self._page_tabs[name] = button
+
+        for name, button in self._page_tabs.items():
+            active = name == self._current_page
+            button.setProperty("class", "page-tab active" if active else "page-tab")
+            refresh_widget_style(button)
+
+    def _select_page(self, page: str) -> None:
+        if page == self._current_page or page not in self._pages:
+            return
+        self._current_page = page
+        self._sync_pager()
 
     def _build_menu(self) -> None:
         self._menu = PopupWidget(
