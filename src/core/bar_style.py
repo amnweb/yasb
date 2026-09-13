@@ -313,7 +313,7 @@ class AdaptiveBarFrame(BarFrame):
         full_rect = QPainterPath()
         full_rect.addRect(0.0, 0.0, width, height)
 
-        if width <= 0 or height <= rail or not islands:
+        if width <= 0 or height <= rail:
             return full_rect
 
         # Both curves share the island's side, so together they cannot exceed its height
@@ -322,6 +322,10 @@ class AdaptiveBarFrame(BarFrame):
         path = QPainterPath()
         path.moveTo(0.0, 0.0)
         path.lineTo(width, 0.0)
+
+        if not islands:
+            path.lineTo(width, rail)
+            path.lineTo(0.0, rail)
 
         last = len(islands) - 1
         for index in range(last, -1, -1):
