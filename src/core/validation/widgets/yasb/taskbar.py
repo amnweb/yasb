@@ -42,6 +42,19 @@ class GroupingConfig(CustomBaseModel):
     show_count: bool = True
 
 
+class BadgeConfig(CustomBaseModel):
+    enabled: bool = False
+    type: Literal["dot", "number"] = "dot"
+    position: Literal["top-right", "top-left", "bottom-right", "bottom-left"] = "top-right"
+    color: str = "#ff5555"
+    border_color: str = "transparent"
+    border_width: int = Field(default=0, ge=0, le=10)
+    size: int = Field(default=8, ge=4, le=32)
+    font_size: int = Field(default=7, ge=4, le=24)
+    offset_x: int = Field(default=0, ge=-20, le=20)
+    offset_y: int = Field(default=0, ge=-20, le=20)
+
+
 class TaskbarCallbacksConfig(CallbacksConfig):
     on_left: str = "toggle_window"
     on_right: str = "context_menu"
@@ -59,5 +72,6 @@ class TaskbarConfig(CustomBaseModel):
     hide_empty: bool = False
     preview: PreviewConfig = PreviewConfig()
     grouping: GroupingConfig = GroupingConfig()
+    badge: BadgeConfig = BadgeConfig()
     keybindings: list[KeybindingConfig] = []
     callbacks: TaskbarCallbacksConfig = TaskbarCallbacksConfig()
