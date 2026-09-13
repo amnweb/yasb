@@ -576,15 +576,32 @@ class ClaudeUsageWidget(BaseWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
+        # Head: the window's name and its number are one fact, so they share a line. Stacked
+        # apart (name on top, number three rows down) you had to read the whole block and
+        # reassemble them; side by side each window is a single horizontal glance.
+        head = QFrame()
+        head.setProperty("class", "section-head")
+        head_layout = QHBoxLayout(head)
+        head_layout.setContentsMargins(0, 0, 0, 0)
+        head_layout.setSpacing(0)
+
         title_label = QLabel(title)
         title_label.setProperty("class", "title")
         # AlignLeft makes the label take only its own width, so a CSS background renders as a
         # pill hugging the text. Without it a QLabel fills the row and paints a full-width band.
-        layout.addWidget(title_label, 0, Qt.AlignmentFlag.AlignLeft)
+        head_layout.addWidget(title_label, 0, Qt.AlignmentFlag.AlignLeft)
+        head_layout.addStretch()
+
+        percent_label = QLabel(f"{self._pct_decimal(raw, value)}%")
+        percent_label.setProperty("class", f"percent {level}")
+        head_layout.addWidget(percent_label)
+        layout.addWidget(head)
 
         progress = UsageBar(int(value) if isinstance(value, (int, float)) else 0, level)
         layout.addWidget(progress)
 
+        # Footer: both remaining items answer "when", so they share the closing line rather
+        # than occupying one each - how long is left on the left, the exact moment on the right.
         footer = QFrame()
         footer.setProperty("class", "footer")
         footer_layout = QHBoxLayout(footer)
@@ -596,16 +613,13 @@ class ClaudeUsageWidget(BaseWidget):
         footer_layout.addWidget(reset_label)
         footer_layout.addStretch()
 
-        percent_label = QLabel(f"{self._pct_decimal(raw, value)}%")
-        percent_label.setProperty("class", f"percent {level}")
-        footer_layout.addWidget(percent_label)
-
-        layout.addWidget(footer)
-
         date_label = QLabel()
         date_label.setProperty("class", "date")
+        date_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         self._apply_date(date_label, reset_iso)
-        layout.addWidget(date_label)
+        footer_layout.addWidget(date_label)
+
+        layout.addWidget(footer)
 
         self._section_widgets[key] = {
             "reset_format": reset_format,
