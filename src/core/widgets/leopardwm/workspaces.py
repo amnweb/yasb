@@ -53,6 +53,7 @@ class _WindowIcon:
     name: str
     image_loaded: bool = False
     pixmap: QPixmap | None = None
+    monochrome_pixmap: QPixmap | None = None
 
 
 class WorkspaceButton(QPushButton):
@@ -92,8 +93,12 @@ class WorkspaceButton(QPushButton):
     def minimumSizeHint(self):
         return self.sizeHint()
 
-    def update_content(self, text, classes, icons, overflow, config, tooltip):
-        signature = tuple(icon.cacheKey() if isinstance(icon, QPixmap) else icon for icon in icons), overflow
+    def update_content(self, text, classes, icons, overflow, config, tooltip, cell_width=None):
+        signature = (
+            tuple(icon.cacheKey() if isinstance(icon, QPixmap) else icon for icon in icons),
+            overflow,
+            cell_width,
+        )
         if signature != self._icon_signature:
             self._icon_signature = signature
             for label in self.icon_labels:
@@ -105,6 +110,8 @@ class WorkspaceButton(QPushButton):
                 label = self._label("", "icon")
                 label.setFixedHeight(config.size)
                 label.setMinimumWidth(config.size)
+                if cell_width is not None:
+                    label.setFixedWidth(max(config.size, cell_width))
                 if isinstance(icon, QPixmap):
                     label.setPixmap(icon)
                 else:
@@ -142,6 +149,7 @@ class WorkspaceWidget(BaseWidget):
         self._offline_text.setProperty("class", "offline")
         self.widget_layout.addWidget(self._offline_text)
         self._buttons = {}
+        self._separators = {}
         self._snapshot = None
         self._client = None
         self._icon_cache = {}
@@ -187,6 +195,11 @@ class WorkspaceWidget(BaseWidget):
             self._widget_container_layout.removeWidget(button)
             button.hide()
             button.deleteLater()
+            separator = self._separators.pop(key, None)
+            if separator is not None:
+                self._widget_container_layout.removeWidget(separator)
+                separator.hide()
+                separator.deleteLater()
 
     def _set_offline(self):
         self._snapshot = None
@@ -243,29 +256,51 @@ class WorkspaceWidget(BaseWidget):
         keys = {(m.device_name, ws.index) for m in monitors for ws in m.workspaces}
         self._remove_buttons(self._buttons.keys() - keys)
         position = 0
+        seen_visible = False
         for monitor in monitors:
             for workspace in monitor.workspaces:
                 key = monitor.device_name, workspace.index
                 if key not in self._buttons:
                     self._buttons[key] = WorkspaceButton(*key, self._activate, self)
                 button = self._buttons[key]
-                if self._widget_container_layout.indexOf(button) != position:
-                    self._widget_container_layout.insertWidget(position, button)
-                position += 1
                 active = workspace.index == monitor.active_workspace_index
                 populated = bool(workspace.windows)
                 visible = active or (
                     self.config.show_inactive_workspaces and (populated or not self.config.hide_empty_workspaces)
                 )
+                if self.config.workspace_separator and key not in self._separators:
+                    separator = QLabel(self.config.workspace_separator, self)
+                    separator.setTextFormat(Qt.TextFormat.PlainText)
+                    separator.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                    separator.setProperty("class", "separator")
+                    separator.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+                    self._separators[key] = separator
+                separator = self._separators.get(key)
+                if separator is not None:
+                    separator.setText(self.config.workspace_separator)
+                    if self._widget_container_layout.indexOf(separator) != position:
+                        self._widget_container_layout.insertWidget(position, separator)
+                    position += 1
+                    separator.setVisible(bool(self.config.workspace_separator) and visible and seen_visible)
+                if self._widget_container_layout.indexOf(button) != position:
+                    self._widget_container_layout.insertWidget(position, button)
+                position += 1
                 button.setVisible(visible)
+                seen_visible = seen_visible or visible
                 if not visible:
                     continue
                 classes = ["ws-btn", "populated" if populated else "empty"]
+                focused = active and monitor.device_name == self._snapshot.focused_monitor_device_name
                 if active:
                     classes.append("active")
-                    if monitor.device_name == self._snapshot.focused_monitor_device_name:
-                        classes.append("focused")
-                icons, overflow = self._workspace_icons(workspace)
+                if focused:
+                    classes.append("focused")
+                    if self.config.show_focus_indicator:
+                        classes.append("focus-indicator")
+                icons, overflow = self._workspace_icons(workspace, focused)
+                cell_width = self.config.app_icons.cell_width
+                if not focused and self.config.app_icons.inactive_cell_width is not None:
+                    cell_width = self.config.app_icons.inactive_cell_width
                 name = f" ({workspace.name})" if workspace.name else ""
                 count = len(workspace.windows)
                 tooltip = (
@@ -279,6 +314,7 @@ class WorkspaceWidget(BaseWidget):
                     overflow,
                     self.config.app_icons,
                     tooltip,
+                    cell_width,
                 )
         self._start_lookup()
 
@@ -288,6 +324,8 @@ class WorkspaceWidget(BaseWidget):
             template = self.config.label_workspace_active_btn
         elif workspace.windows:
             template = self.config.label_workspace_populated_btn
+        if not workspace.windows and self.config.label_workspace_empty_btn is not None:
+            template = self.config.label_workspace_empty_btn
         try:
             return template.format(
                 index=workspace.index + 1,
@@ -298,7 +336,7 @@ class WorkspaceWidget(BaseWidget):
         except KeyError, ValueError, IndexError, AttributeError:
             return str(workspace.index + 1)
 
-    def _workspace_icons(self, workspace):
+    def _workspace_icons(self, workspace, focused=False):
         config = self.config.app_icons
         if not config.enabled:
             return [], 0
@@ -319,13 +357,17 @@ class WorkspaceWidget(BaseWidget):
         overflow = max(0, len(selected) - config.max_icons) if config.max_icons else 0
         if config.max_icons:
             selected = selected[: config.max_icons]
+        monochrome = config.focused_monochrome if focused else config.inactive_monochrome
+        if monochrome is None:
+            monochrome = config.monochrome
         icons = []
         for hwnd in selected:
             cached = self._icon_cache.get(hwnd)
             if config.mode == "native":
                 if cached is None or not cached.image_loaded:
                     self._requests[hwnd] = True
-                icons.append(cached.pixmap if cached and cached.pixmap is not None else config.fallback_icon)
+                pixmap = (cached.monochrome_pixmap if monochrome else cached.pixmap) if cached else None
+                icons.append(pixmap if pixmap is not None else config.fallback_icon)
             else:
                 icons.append(self._glyphs.get(cached.name, config.fallback_icon) if cached else config.fallback_icon)
         return icons, overflow
@@ -346,20 +388,27 @@ class WorkspaceWidget(BaseWidget):
         for hwnd, token, name, image_loaded, image in results:
             if self._handle_tokens.get(hwnd) != token:
                 continue
-            pixmap = None
+            pixmap = monochrome_pixmap = None
             if image is not None:
                 size = round(self.config.app_icons.size * dpi)
                 image = image.resize((size, size), Image.Resampling.LANCZOS).convert("RGBA")
-                if self.config.app_icons.monochrome:
-                    alpha = image.getchannel("A")
-                    image = ImageOps.grayscale(image).convert("RGBA")
-                    image.putalpha(alpha)
-                qimage = QImage(image.tobytes(), image.width, image.height, QImage.Format.Format_RGBA8888)
-                pixmap = QPixmap.fromImage(qimage)
-                pixmap.setDevicePixelRatio(dpi)
-            self._icon_cache[hwnd] = _WindowIcon(name, image_loaded, pixmap)
+                gray = ImageOps.grayscale(image).convert("RGBA")
+                gray.putalpha(image.getchannel("A"))
+                # Keep both variants so focus changes never repeat Win32 extraction
+                # or destructively discard the original application colors.
+                pixmap = self._pixmap(image, dpi)
+                monochrome_pixmap = self._pixmap(gray, dpi)
+            self._icon_cache[hwnd] = _WindowIcon(name, image_loaded, pixmap, monochrome_pixmap)
+
         if self._snapshot is not None:
             self._render()
+
+    @staticmethod
+    def _pixmap(image, dpi):
+        qimage = QImage(image.tobytes(), image.width, image.height, QImage.Format.Format_RGBA8888)
+        pixmap = QPixmap.fromImage(qimage)
+        pixmap.setDevicePixelRatio(dpi)
+        return pixmap
 
     def _activate(self, device_name, index):
         if self._client is not None and self._snapshot is not None:

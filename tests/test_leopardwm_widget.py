@@ -367,6 +367,156 @@ class WorkspaceWidgetTests(unittest.TestCase):
             with self.subTest(options=options), self.assertRaises(ValidationError):
                 LeopardWMWorkspacesConfig(app_icons=options)
 
+    def test_empty_label_override_keeps_accessible_workspace_identity(self):
+        for label, expected in (("○", "○"), ("{index}", "1"), ("{name}:{index}", ":1")):
+            with self.subTest(label=label):
+                widget = self.widget(label_workspace_empty_btn=label, app_icons={"enabled": True, "hide_label": True})
+                button = widget._buttons[DISPLAY2, 0]
+                self.assertEqual(button.text_label.text(), expected)
+                self.assertFalse(button.text_label.isHidden())
+                self.assertIn("Workspace 1", button.accessibleName())
+        self.client.publish(snapshot((Window(1, False, False),), active=1))
+        widget = self.widgets[-1]
+        self.wait_icons(widget)
+        self.assertTrue(widget._buttons[DISPLAY2, 1].text_label.isHidden())
+        self.assertIn("Workspace 2 (Work)", widget._buttons[DISPLAY2, 1].accessibleName())
+
+    def test_separators_only_between_visible_groups_and_removed_offline(self):
+        self.client.snapshot = snapshot((Window(1, False, False),))
+        widget = self.widget(workspace_separator="|", hide_empty_workspaces=True)
+        separators = [s for s in widget._separators.values() if not s.isHidden()]
+        self.assertEqual([s.text() for s in separators], ["|"])
+        layout = widget._widget_container_layout
+        shown = [layout.itemAt(i).widget() for i in range(layout.count()) if not layout.itemAt(i).widget().isHidden()]
+        self.assertEqual(shown, [widget._buttons[DISPLAY2, 0], separators[0], widget._buttons[DISPLAY2, 1]])
+        self.client.publish(snapshot(active=4))
+        self.assertFalse([s for s in widget._separators.values() if not s.isHidden()])
+        self.client.connection_changed.emit(False)
+        self.assertFalse(widget._separators)
+
+    def test_separator_text_and_all_monitor_boundaries(self):
+        widget = self.widget(workspace_separator="·", monitor_exclusive=False, show_inactive_workspaces=False)
+        shown = [s for s in widget._separators.values() if not s.isHidden()]
+        self.assertEqual([s.text() for s in shown], ["·"])
+        self.assertEqual(self.client.activations, [])
+        QTest.mouseClick(shown[0], Qt.MouseButton.LeftButton)
+        self.assertEqual(self.client.activations, [])
+        disabled = self.widget(workspace_separator="")
+        self.assertFalse(disabled._separators)
+
+    def test_focus_coloring_switches_cached_icons_without_requery(self):
+        self.client.snapshot = snapshot((Window(1, False, False),), active=1)
+        widget = self.widget(
+            monitor_exclusive=False,
+            app_icons={
+                "enabled": True,
+                "monochrome": True,
+                "focused_monochrome": False,
+                "inactive_monochrome": True,
+            },
+        )
+        self.wait_icons(widget)
+
+        def pixel(device):
+            return widget._buttons[device, 1].icon_labels[0].pixmap().toImage().pixelColor(0, 0)
+
+        self.assertEqual((pixel(DISPLAY1).red(), pixel(DISPLAY1).green()), (255, 0))
+        self.assertEqual((pixel(DISPLAY2).red(), pixel(DISPLAY2).green()), (76, 76))
+        self.assertEqual(pixel(DISPLAY2).alpha(), 128)
+        calls = self.native.call_count
+        self.client.publish(replace(self.client.snapshot, focused_monitor_device_name=DISPLAY2, revision=2))
+        self.assertEqual((pixel(DISPLAY1).red(), pixel(DISPLAY1).green()), (76, 76))
+        self.assertEqual((pixel(DISPLAY2).red(), pixel(DISPLAY2).green()), (255, 0))
+        self.assertEqual(self.native.call_count, calls)
+
+    def test_inactive_color_override_can_preserve_color(self):
+        self.client.snapshot = snapshot((Window(1, False, False),))
+        widget = self.widget(app_icons={"enabled": True, "monochrome": True, "inactive_monochrome": False})
+        self.wait_icons(widget)
+        color = widget._buttons[DISPLAY2, 1].icon_labels[0].pixmap().toImage().pixelColor(0, 0)
+        self.assertEqual((color.red(), color.green()), (255, 0))
+
+    def test_configurable_cell_width_changes_on_focus_and_never_clips_art(self):
+        self.client.snapshot = snapshot((Window(1, False, False),), active=1)
+        widget = self.widget(
+            monitor_exclusive=False,
+            app_icons={
+                "enabled": True,
+                "cell_width": 28,
+                "inactive_cell_width": 20,
+            },
+        )
+        self.wait_icons(widget)
+
+        def width(device):
+            return widget._buttons[device, 1].icon_labels[0].minimumWidth()
+
+        self.assertEqual((width(DISPLAY1), width(DISPLAY2)), (28, 20))
+        self.client.publish(replace(self.client.snapshot, focused_monitor_device_name=DISPLAY2, revision=2))
+        self.assertEqual((width(DISPLAY1), width(DISPLAY2)), (20, 28))
+        small = self.widget(app_icons={"enabled": True, "size": 24, "cell_width": 8})
+        self.wait_icons(small)
+        self.assertEqual(small._buttons[DISPLAY2, 1].icon_labels[0].minimumWidth(), 24)
+
+    def test_indicator_toggle_marks_only_globally_focused_workspace(self):
+        widget = self.widget(monitor_exclusive=False, show_focus_indicator=True)
+        self.assertIn("focus-indicator", widget._buttons[DISPLAY1, 0].property("class").split())
+        self.assertNotIn("focus-indicator", widget._buttons[DISPLAY2, 0].property("class").split())
+        self.client.publish(replace(self.client.snapshot, focused_monitor_device_name=DISPLAY2, revision=2))
+        self.assertNotIn("focus-indicator", widget._buttons[DISPLAY1, 0].property("class").split())
+        self.assertIn("focus-indicator", widget._buttons[DISPLAY2, 0].property("class").split())
+        disabled = self.widget(show_focus_indicator=False)
+        self.assertNotIn("focus-indicator", disabled._buttons[DISPLAY2, 0].property("class").split())
+
+    def test_presentation_schema_defaults_preserve_legacy_behavior(self):
+        config = LeopardWMWorkspacesConfig()
+        self.assertIsNone(config.label_workspace_empty_btn)
+        self.assertEqual(config.workspace_separator, "")
+        self.assertFalse(config.show_focus_indicator)
+        self.assertIsNone(config.app_icons.focused_monochrome)
+        self.assertIsNone(config.app_icons.inactive_monochrome)
+        self.assertIsNone(config.app_icons.cell_width)
+        self.assertIsNone(config.app_icons.inactive_cell_width)
+        for options in ({"cell_width": 0}, {"inactive_cell_width": -1}, {"cell_width": 129}):
+            with self.subTest(options=options), self.assertRaises(ValidationError):
+                LeopardWMWorkspacesConfig(app_icons=options)
+
+    def test_focus_indicator_css_draws_underline_without_changing_geometry(self):
+        widget = self.widget(monitor_exclusive=False, show_focus_indicator=True)
+        widget.setStyleSheet(
+            ".ws-btn { border: none; border-bottom: 2px solid transparent; min-width: 24px; min-height: 24px; }"
+            ".ws-btn.focus-indicator { border-bottom-color: #40ff40; }"
+        )
+        widget.show()
+        self.app.processEvents()
+        button = widget._buttons[DISPLAY1, 0]
+        size = button.size()
+        image = button.grab().toImage()
+        self.assertEqual(image.pixelColor(image.width() // 2, image.height() - 1).name(), "#40ff40")
+        self.client.publish(replace(self.client.snapshot, focused_monitor_device_name=DISPLAY2, revision=2))
+        self.app.processEvents()
+        self.assertEqual(button.size(), size)
+        image = button.grab().toImage()
+        self.assertNotEqual(image.pixelColor(image.width() // 2, image.height() - 1).name(), "#40ff40")
+
+    def test_null_focus_has_no_indicator_and_uses_inactive_icon_treatment(self):
+        self.client.snapshot = replace(snapshot((Window(1, False, False),), active=1), focused_monitor_device_name=None)
+        widget = self.widget(
+            monitor_exclusive=False,
+            show_focus_indicator=True,
+            app_icons={
+                "enabled": True,
+                "inactive_monochrome": True,
+                "focused_monochrome": False,
+            },
+        )
+        self.wait_icons(widget)
+        for device in (DISPLAY1, DISPLAY2):
+            button = widget._buttons[device, 1]
+            self.assertNotIn("focus-indicator", button.property("class").split())
+            color = button.icon_labels[0].pixmap().toImage().pixelColor(0, 0)
+            self.assertEqual((color.red(), color.green()), (76, 76))
+
 
 if __name__ == "__main__":
     unittest.main()

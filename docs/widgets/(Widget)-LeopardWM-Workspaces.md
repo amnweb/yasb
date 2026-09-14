@@ -45,6 +45,9 @@ Shell commands and command-wrapper scripts are not accepted as `lwm_path`.
 | `label_workspace_btn` | `{index}` | Empty workspace label. |
 | `label_workspace_active_btn` | `{index}` | Active workspace label. |
 | `label_workspace_populated_btn` | `{index}` | Populated inactive workspace label. |
+| `label_workspace_empty_btn` | `null` | Optional label for every empty workspace, overriding active/empty templates. Use `"○"` for a dot, `"{index}"` for a number, or custom template text. `null` preserves existing label selection. |
+| `workspace_separator` | `""` | Text only between visible workspace groups, e.g. `"|"` or `"·"`. Empty disables separators. |
+| `show_focus_indicator` | `false` | Adds `focus-indicator` to the globally focused button for CSS styling, such as an underline. |
 | `label_offline` | `LeopardWM Offline` | Text while disconnected or unsupported. |
 | `hide_if_offline` | `false` | Hide the strip while disconnected. |
 | `enable_scroll_switching` | `true` | Switch workspaces with the mouse wheel. |
@@ -65,6 +68,10 @@ Labels accept `{index}` (one-based), `{name}`, `{count}` (all managed members), 
 | `hide_duplicates` | `false` | Show one icon per application in each workspace. |
 | `hide_floating` | `false` | Omit floating-window icons. |
 | `monochrome` | `false` | Render native icons in grayscale, preserving transparency. |
+| `focused_monochrome` | `null` | Native icon grayscale override for the globally focused workspace. `null` inherits `monochrome`. |
+| `inactive_monochrome` | `null` | Native icon grayscale override for every other workspace, including an active workspace on an unfocused monitor. `null` inherits `monochrome`. |
+| `cell_width` | `null` | Optional icon cell width (8–128 logical pixels), clamped to at least `size`. `null` keeps CSS/default sizing. |
+| `inactive_cell_width` | `null` | Icon cell width for nonfocused workspaces. `null` inherits `cell_width`; use equal widths for stable spacing. |
 | `mode` | `native` | `native` uses YASB's Windows icon lookup; `glyph` uses font glyphs. |
 | `glyphs` | `{}` | Executable-basename to glyph mapping, such as `firefox.exe`. |
 | `fallback_icon` | `\uE8A5` | Font glyph for an unmapped app or unavailable native icon. |
@@ -97,6 +104,62 @@ app_icons:
 A font is a glyph collection, not a universal executable-to-logo database. Segoe
 Fluent supplies generic symbols; use native mode for application logos, or choose
 another installed font and its matching codepoints in `glyphs` and CSS.
+
+### Icon-only groups with focus styling
+
+```yaml
+options:
+  hide_empty_workspaces: true
+  label_workspace_empty_btn: "○" # "{index}" shows a number instead
+  workspace_separator: "|"      # "" disables separators
+  show_focus_indicator: true
+  app_icons:
+    enabled: true
+    hide_label: true
+    size: 16
+    cell_width: 28
+    inactive_cell_width: 28     # 20 is more compact, without overlapping art
+    focused_monochrome: false
+    inactive_monochrome: true
+```
+
+The empty label remains visible when there are no icons. `hide_label` hides text
+only when at least one icon is displayed, so filtering all icons still leaves a
+workspace identifiable. Tooltips and accessibility names retain the actual monitor,
+workspace number/name and membership count regardless of the visual label.
+
+Use this CSS with `show_focus_indicator` for a thin underline. Reserving the same
+border on every button prevents focus changes from changing layout dimensions:
+
+```css
+.leopardwm-workspaces .ws-btn {
+    border: none;
+    border-bottom: 2px solid transparent;
+}
+.leopardwm-workspaces .ws-btn.focus-indicator {
+    border-bottom-color: #f4f5f7;
+}
+.leopardwm-workspaces .separator {
+    color: #737780;
+    padding: 0 4px;
+}
+```
+
+Separators are decorative and cannot activate a workspace. They disappear when
+adjacent groups are hidden or state goes offline; no leading/trailing separator
+is drawn. In all-monitor mode they also separate groups across monitor boundaries.
+
+Color/grayscale variants are cached together and selected on focus changes without
+new Windows icon queries. The per-state overrides affect native pixmaps; font
+icons use CSS colors (for example `.ws-btn.focused .icon`). Set `monochrome: false`
+and leave both overrides `null` for color everywhere, or set `monochrome: true`
+with null overrides for grayscale everywhere. An explicit override wins over
+`monochrome`. If no monitor is focused, every group uses the inactive treatment.
+
+Explicit cell-width options size the cells around the icon rather than resizing
+its artwork. Avoid conflicting CSS `min-width`/`max-width` rules when using them;
+leave these options null if CSS should control sizing. Overlapping icons are not
+implemented; widths below the icon size are clamped to keep the full artwork visible.
 
 ## Styling
 

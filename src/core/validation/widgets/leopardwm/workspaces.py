@@ -13,6 +13,10 @@ class LeopardWMAppIconsConfig(CustomBaseModel):
     hide_duplicates: bool = False
     hide_floating: bool = False
     monochrome: bool = False
+    focused_monochrome: bool | None = None
+    inactive_monochrome: bool | None = None
+    cell_width: int | None = Field(default=None, ge=8, le=128)
+    inactive_cell_width: int | None = Field(default=None, ge=8, le=128)
     mode: Literal["native", "glyph"] = "native"
     glyphs: dict[str, str] = {}
     fallback_icon: str = "\ue8a5"
@@ -25,6 +29,9 @@ class LeopardWMWorkspacesConfig(CustomBaseModel):
     label_workspace_btn: str = "{index}"
     label_workspace_active_btn: str = "{index}"
     label_workspace_populated_btn: str = "{index}"
+    label_workspace_empty_btn: str | None = None
+    workspace_separator: str = ""
+    show_focus_indicator: bool = False
     label_offline: str = "LeopardWM Offline"
     show_inactive_workspaces: bool = True
     hide_empty_workspaces: bool = False
