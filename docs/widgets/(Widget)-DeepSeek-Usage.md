@@ -99,6 +99,7 @@ deepseek_usage:
       direction: "down"
       offset_top: 6
       offset_left: 0
+      icon: "C:/Users/you/.config/yasb/assets/deepseek.png"
 ```
 
 ## Description of Options
@@ -122,6 +123,8 @@ deepseek_usage:
   - **alignment:** Horizontal alignment of the menu (`left`, `right`, `center`).
   - **direction:** Whether the menu opens `down` or `up`.
   - **offset_top / offset_left:** Pixel offsets for fine positioning.
+  - **icon:** Path to an image drawn at 22x22 at the left of the popup header, beside the title. Any
+    format Qt can read works (PNG, SVG, JPEG). Leave it empty for a header with no mark.
   - **show_breakdown:** Show the Topped-up / Granted rows under the balance.
   - **pin_icon / unpin_icon:** Nerd Font glyphs for the pin button in the popup header.
 
@@ -241,12 +244,15 @@ failed result would difference a balance against itself.
 .deepseek-usage-menu .section {}                /* every popup section */
 .deepseek-usage-menu .section .title {}
 /* Balance */
-.deepseek-usage-menu .section.balance {}
-.deepseek-usage-menu .section.balance .balance-total {}      /* the large balance figure */
-.deepseek-usage-menu .section.balance .balance-total.low {}  /* below low_balance_threshold */
-.deepseek-usage-menu .section.balance .row {}                /* Topped-up / Granted rows */
-.deepseek-usage-menu .section.balance .row .caption {}
-.deepseek-usage-menu .section.balance .row .value {}
+.deepseek-usage-menu .header .app-icon {}        /* product mark, when menu.icon is set */
+.deepseek-usage-menu .section.balance.hero {}
+.deepseek-usage-menu .section.hero .hero-value {}      /* the large balance figure */
+.deepseek-usage-menu .section.hero .hero-value.low {}  /* below low_balance_threshold */
+.deepseek-usage-menu .section.hero .hero-caption {}    /* "available to spend" */
+.deepseek-usage-menu .section.hero .ledger {}          /* Topped-up / Granted rows */
+.deepseek-usage-menu .section.hero .ledger .row {}
+.deepseek-usage-menu .section.hero .ledger .row .name {}
+.deepseek-usage-menu .section.hero .ledger .row .value {}
 /* Budget */
 .deepseek-usage-menu .section.budget {}
 .deepseek-usage-menu .section.budget .progress {}                /* progress-bar track */
@@ -382,26 +388,43 @@ to taste.
 .deepseek-usage-menu .section .progress.high .fill     { background-color: #fab387; }
 .deepseek-usage-menu .section .progress.critical .fill { background-color: #f38ba8; }
 
-/* Balance */
-.deepseek-usage-menu .section.balance .balance-total {
+/* Header mark */
+.deepseek-usage-menu .header .app-icon {
+    padding-right: 10px;
+}
+
+/* Balance, as the hero of the popup */
+.deepseek-usage-menu .section.balance.hero {
+    padding: 20px 18px 16px 18px;
+}
+.deepseek-usage-menu .section.hero .hero-value {
     font-family: 'Segoe UI';
-    font-size: 24px;
+    font-size: 34px;
     font-weight: 700;
     color: #cdd6f4;
-    padding: 10px 0 8px 0;
 }
-.deepseek-usage-menu .section.balance .balance-total.low {
+.deepseek-usage-menu .section.hero .hero-value.low {
     color: #f9e2af;
 }
-.deepseek-usage-menu .section.balance .row {
-    padding: 3px 0;
+.deepseek-usage-menu .section.hero .hero-caption {
+    font-family: 'Segoe UI';
+    font-size: 11px;
+    font-weight: 600;
+    color: #a6adc8;
+    padding-top: 2px;
 }
-.deepseek-usage-menu .section.balance .row .caption {
+.deepseek-usage-menu .section.hero .ledger {
+    padding-top: 14px;
+}
+.deepseek-usage-menu .section.hero .ledger .row {
+    padding: 4px 0;
+}
+.deepseek-usage-menu .section.hero .ledger .row .name {
     font-family: 'Segoe UI';
     font-size: 11px;
     color: #a6adc8;
 }
-.deepseek-usage-menu .section.balance .row .value {
+.deepseek-usage-menu .section.hero .ledger .row .value {
     font-family: 'Segoe UI';
     font-size: 11px;
     font-weight: 600;

@@ -16,6 +16,10 @@ class ClaudeUsageCallbacksConfig(CallbacksConfig):
 
 
 class ClaudeUsageMenuConfig(CustomBaseModel):
+    # Path to an image shown at the left of the popup header. The mark already identifies
+    # the widget on the bar, so repeating it here lets a pinned or detached popup say what it
+    # belongs to on its own. Blank leaves the header as it was.
+    icon: str = ""
     blur: bool = True
     round_corners: bool = True
     round_corners_type: str = "normal"

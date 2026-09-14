@@ -378,6 +378,19 @@ class CodexUsageWidget(BaseWidget):
             "stale": self.config.stale_icon if self._data.get("stale") else "",
         }
 
+    def _build_header_icon(self) -> QLabel | None:
+        """The product mark at the left of the header, when a path is configured.
+
+        Rendered as rich text rather than a QPixmap so the same <img> the bar label accepts
+        works here, and a missing file degrades to an empty label instead of raising.
+        """
+        path = (self.config.menu.icon or "").strip()
+        if not path:
+            return None
+        label = QLabel(f"<img src='{path}' width='22' height='22'>")
+        label.setProperty("class", "app-icon")
+        return label
+
     def _account_line(self) -> str:
         """Who these numbers belong to: the signed-in email.
 
@@ -1090,6 +1103,10 @@ class CodexUsageWidget(BaseWidget):
         header.setProperty("class", "header")
         header_layout = QHBoxLayout(header)
         header_layout.setContentsMargins(0, 0, 0, 0)
+        app_icon = self._build_header_icon()
+        if app_icon is not None:
+            header_layout.addWidget(app_icon, 0, Qt.AlignmentFlag.AlignVCenter)
+
         title_stack = QFrame()
         title_stack.setProperty("class", "title-stack")
         title_stack_layout = QVBoxLayout(title_stack)
