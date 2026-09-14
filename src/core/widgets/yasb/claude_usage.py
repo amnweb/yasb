@@ -16,7 +16,13 @@ from PyQt6.QtWidgets import (
 from core.utils.qobject import is_valid_qobject
 from core.utils.stat_popup import GraphWidget
 from core.utils.tooltip import set_tooltip
-from core.utils.utilities import PopupWidget, build_progress_widget, refresh_widget_style
+from core.utils.utilities import (
+    PopupWidget,
+    align_label_ink,
+    align_label_text,
+    build_progress_widget,
+    refresh_widget_style,
+)
 from core.validation.widgets.yasb.claude_usage import ClaudeUsageConfig
 from core.widgets.base import BaseWidget
 from core.widgets.services.claude_usage.claude_api import ClaudeUsageService, read_account
@@ -712,6 +718,7 @@ class ClaudeUsageWidget(BaseWidget):
                 self._model_layout.addWidget(name, index, 0)
                 self._model_layout.addWidget(bar, index, 1)
                 self._model_layout.addWidget(total_label, index, 2)
+            align_label_text(self._model_container)
         except RuntimeError:
             self._model_container = None
             self._model_layout = None
@@ -791,6 +798,7 @@ class ClaudeUsageWidget(BaseWidget):
             "bar": progress,
             "reset": reset_label,
             "percent": value_label,
+            "caption": caption,
             "date": date_label,
         }
         return frame
@@ -896,6 +904,9 @@ class ClaudeUsageWidget(BaseWidget):
                 w["percent"].setProperty("class", f"hero-value {level}")
                 self._apply_date(w["date"], reset_iso)
                 refresh_widget_style(w["percent"])
+                # Re-measured here, not at build time: the percentage's leading digit is what
+                # sets the rail, and it changes as the window fills.
+                align_label_ink(w["percent"], w.get("caption"))
         except RuntimeError:
             # Popup was destroyed; references are stale until it reopens.
             self._section_widgets = {}
@@ -946,6 +957,8 @@ class ClaudeUsageWidget(BaseWidget):
             account_label.setProperty("class", "account")
             set_tooltip(account_label, self._account_tooltip())
             title_layout.addWidget(account_label, 0, Qt.AlignmentFlag.AlignLeft)
+            # Title and account are fixed for the life of the popup, so one measure is enough.
+            align_label_ink(title_label, account_label)
 
         header_layout.addWidget(title_stack)
         header_layout.addStretch()
@@ -979,6 +992,8 @@ class ClaudeUsageWidget(BaseWidget):
         # rather than spreading as gaps between sections; the height resize below then trims it.
         layout.addStretch(1)
 
+        # Before the first measure: the indent it removes is part of each label's width.
+        align_label_text(self._menu)
         self._menu.adjustSize()
         # Lock the width after the first layout so switching periods only changes the height. This
         # respects the stylesheet min-width (adjustSize already applied it) without letting longer

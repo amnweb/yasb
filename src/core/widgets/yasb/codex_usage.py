@@ -22,7 +22,13 @@ from PyQt6.QtWidgets import (
 
 from core.utils.qobject import is_valid_qobject
 from core.utils.tooltip import set_tooltip
-from core.utils.utilities import PopupWidget, build_progress_widget, refresh_widget_style
+from core.utils.utilities import (
+    PopupWidget,
+    align_label_ink,
+    align_label_text,
+    build_progress_widget,
+    refresh_widget_style,
+)
 from core.validation.widgets.yasb.codex_usage import CodexUsageConfig
 from core.widgets.base import BaseWidget
 from core.widgets.services.codex_usage.codex_api import CodexUsageService
@@ -199,6 +205,7 @@ class CodexUsageWidget(BaseWidget):
         self._heatmap_history_note: QLabel | None = None
         self._model_widgets: list[dict[str, Any]] = []
         self._plan_label: QLabel | None = None
+        self._menu_title_label: QLabel | None = None
         self._refresh_button: RefreshButton | None = None
         self._refresh_status: QLabel | None = None
         self._refresh_pending = False
@@ -1119,6 +1126,7 @@ class CodexUsageWidget(BaseWidget):
         plan_label.setProperty("class", "plan-line")
         title_stack_layout.addWidget(plan_label, 0, Qt.AlignmentFlag.AlignLeft)
         self._plan_label = plan_label
+        self._menu_title_label = title
         header_layout.addWidget(title_stack)
         header_layout.addStretch()
         refresh_status = QLabel("")
@@ -1139,6 +1147,9 @@ class CodexUsageWidget(BaseWidget):
         layout.addWidget(self._build_section("primary", "Primary"))
         layout.addWidget(self._build_section("secondary", "Secondary"))
         layout.addWidget(self._build_pager())
+
+        # Before the first measure: the indent it removes is part of each label's width.
+        align_label_text(self._menu)
 
     def _sync_reset_credits(self) -> None:
         if not is_valid_qobject(self._reset_credits_count):
@@ -1216,6 +1227,9 @@ class CodexUsageWidget(BaseWidget):
             widgets["reset"].setText(f"Resets in {self._fmt_reset(window.get('resets_at'))}")
             widgets["date"].setText(self._fmt_reset_at(window.get("resets_at")))
             refresh_widget_style(widgets["value"])
+            # Re-measured here, not at build time: the percentage's leading digit is what
+            # sets the rail, and it changes as the window fills.
+            align_label_ink(widgets["value"], widgets["caption"])
 
         tokens = self._data.get("tokens")
         has_tokens = self.config.show_token_usage and isinstance(tokens, dict)
@@ -1247,6 +1261,9 @@ class CodexUsageWidget(BaseWidget):
             self._plan_label.setVisible(bool(line))
             if line:
                 set_tooltip(self._plan_label, self._account_tooltip())
+                # The account line arrives with the data, so the rail is measured here
+                # rather than at build time, when this label is still empty.
+                align_label_ink(self._menu_title_label, self._plan_label)
 
         if self._detail_widgets:
             stale = bool(self._data.get("stale"))
