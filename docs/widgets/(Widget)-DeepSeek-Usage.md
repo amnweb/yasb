@@ -30,6 +30,8 @@ The data comes from DeepSeek's `GET /user/balance` endpoint using your platform 
 | `update_interval` | integer | `60` | How often the label is refreshed, in seconds (30-3600). |
 | `cache_ttl` | integer | `120` | How long a fetched result is cached on disk before the endpoint is queried again. |
 | `low_balance_threshold` | float | `0.0` | Show the `{low}` glyph when the balance falls below this. `0` disables the threshold (the glyph still appears if DeepSeek reports the account cannot make calls). |
+| `show_account` | boolean | `true` | Show the account line under the popup title and in the bar tooltip. |
+| `account_label` | string | `""` | What to call this account. Blank falls back to a masked fingerprint of the key in use, e.g. `sk-…1e06`. |
 | `spend_history` | dict | `{'enabled': true, ...}` | Spend tracking and the popup's Spend section. See [Spend history](#spend-history). |
 | `budget` | dict | `{'enabled': false, ...}` | An optional budget to measure spend against. See [Budget](#budget). |
 | `low_icon` | string | `''` | Glyph used by `{low}`. |
@@ -78,6 +80,7 @@ deepseek_usage:
     update_interval: 60
     cache_ttl: 120
     low_balance_threshold: 5.0
+    account_label: "you@example.com"
     spend_history:
       enabled: true
       default_period: "today"
@@ -113,6 +116,12 @@ deepseek_usage:
 - **update_interval:** How often the label is refreshed. This also sets the resolution of the spend history: spend is attributed to the moment it is *observed*, so a longer interval means coarser buckets.
 - **cache_ttl:** How long a fetched result is cached on disk before the endpoint is queried again. On any error the widget serves the last cached balance instead of going blank.
 - **low_balance_threshold:** The balance below which `{low}` appears. The glyph also appears whenever DeepSeek's `is_available` flag says the account can no longer make calls, regardless of this setting.
+- **show_account:** Whether the popup header and bar tooltip name the account.
+- **account_label:** What to call the account. DeepSeek's API carries no identity of its
+  own - `/user/balance` returns money and nothing else - so unlike the Claude and Codex
+  widgets there is no e-mail to read. Set this to whatever names the account to you. Left
+  blank, the header shows a masked fingerprint of the key in use (`sk-…1e06`), which is
+  enough to tell two accounts apart on one machine and far too little to reconstruct a key.
 - **tooltip:** Whether to show a summary tooltip on hover.
 - **callbacks:** Mouse-click callbacks. Built-in actions: `toggle_menu`, `toggle_label`, `refresh` (force an immediate re-fetch, bypassing `cache_ttl`), `do_nothing`, and `exec`.
 - **menu:** A dictionary specifying the popup menu settings:
@@ -245,6 +254,8 @@ failed result would difference a balance against itself.
 .deepseek-usage-menu .section .title {}
 /* Balance */
 .deepseek-usage-menu .header .app-icon {}        /* product mark, when menu.icon is set */
+.deepseek-usage-menu .header .title-stack {}     /* title and account, stacked */
+.deepseek-usage-menu .header .account {}         /* account_label, or the key fingerprint */
 .deepseek-usage-menu .section.balance.hero {}
 .deepseek-usage-menu .section.hero .hero-value {}      /* the large balance figure */
 .deepseek-usage-menu .section.hero .hero-value.low {}  /* below low_balance_threshold */
@@ -391,6 +402,11 @@ to taste.
 /* Header mark */
 .deepseek-usage-menu .header .app-icon {
     padding-right: 10px;
+}
+.deepseek-usage-menu .header .account {
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.55);
+    padding-top: 2px;
 }
 
 /* Balance, as the hero of the popup */

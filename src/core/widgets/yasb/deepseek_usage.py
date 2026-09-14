@@ -12,7 +12,11 @@ from core.utils.tooltip import set_tooltip
 from core.utils.utilities import PopupWidget, refresh_widget_style
 from core.validation.widgets.yasb.deepseek_usage import DeepSeekUsageConfig
 from core.widgets.base import BaseWidget
-from core.widgets.services.deepseek_usage.deepseek_api import DeepSeekUsageService, resolve_api_key
+from core.widgets.services.deepseek_usage.deepseek_api import (
+    DeepSeekUsageService,
+    fingerprint_api_key,
+    resolve_api_key,
+)
 from core.widgets.services.deepseek_usage.spend_history import (
     budget_percent,
     empty_ledger,
@@ -272,6 +276,9 @@ class DeepSeekUsageWidget(BaseWidget):
 
     def _tooltip_text(self, values: dict[str, str]) -> str:
         tip = f"DeepSeek balance - {values['balance']}"
+        account = self._account_line()
+        if account:
+            tip += f"\n{account}"
         if self.config.spend_history.enabled:
             tip += f"\nSpent today: {values['today_spend']} · this month: {values['month_spend']}"
         percent = self._budget_percent()
@@ -366,6 +373,32 @@ class DeepSeekUsageWidget(BaseWidget):
         label = QLabel(f"<img src='{path}' width='22' height='22'>")
         label.setProperty("class", "app-icon")
         return label
+
+    def _account_line(self) -> str:
+        """Whose balance this is, as far as DeepSeek lets us know.
+
+        The Claude and Codex widgets read an e-mail from their providers. DeepSeek has no
+        such endpoint - ``/user/balance`` returns money and nothing else - so a configured
+        label wins, and failing that the key's own fingerprint at least distinguishes one
+        account from another. Empty when there is neither, so the caller drops the line
+        instead of rendering a placeholder.
+        """
+        if not self.config.show_account:
+            return ""
+        label = (self.config.account_label or "").strip()
+        if label:
+            return label
+        return fingerprint_api_key(resolve_api_key(self.config.api_key))
+
+    def _account_tooltip(self) -> str:
+        """Say where the identifier came from, since a fingerprint is not self-explanatory."""
+        label = (self.config.account_label or "").strip()
+        if label:
+            return label
+        fingerprint = fingerprint_api_key(resolve_api_key(self.config.api_key))
+        if not fingerprint:
+            return ""
+        return f"API key {fingerprint}\nDeepSeek's API reports no account name.\nSet menu account_label to name it yourself."
 
     def _build_balance_section(self) -> QFrame:
         """The balance leads, the way the window percentage leads in the other two widgets.
@@ -619,9 +652,26 @@ class DeepSeekUsageWidget(BaseWidget):
         if app_icon is not None:
             header_layout.addWidget(app_icon, 0, Qt.AlignmentFlag.AlignVCenter)
 
+        # Title and account stack, matching the Claude and Codex headers, so the panel
+        # answers "usage for whom" as well as "what" once it is pinned or detached.
+        title_stack = QFrame()
+        title_stack.setProperty("class", "title-stack")
+        title_layout = QVBoxLayout(title_stack)
+        title_layout.setContentsMargins(0, 0, 0, 0)
+        title_layout.setSpacing(0)
+
         title_label = QLabel("DeepSeek Usage")
         title_label.setProperty("class", "text")
-        header_layout.addWidget(title_label, 0, Qt.AlignmentFlag.AlignLeft)
+        title_layout.addWidget(title_label, 0, Qt.AlignmentFlag.AlignLeft)
+
+        account_text = self._account_line()
+        if account_text:
+            account_label = QLabel(account_text)
+            account_label.setProperty("class", "account")
+            set_tooltip(account_label, self._account_tooltip())
+            title_layout.addWidget(account_label, 0, Qt.AlignmentFlag.AlignLeft)
+
+        header_layout.addWidget(title_stack)
         header_layout.addStretch()
 
         refresh_btn = QPushButton("\U000f0450")

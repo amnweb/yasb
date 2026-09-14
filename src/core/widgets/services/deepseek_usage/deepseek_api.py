@@ -49,6 +49,21 @@ EMPTY_RECORD: dict[str, Any] = {
 }
 
 
+def fingerprint_api_key(key: str | None) -> str:
+    """A short, non-reversible label for a key, e.g. ``sk-...1e06``.
+
+    DeepSeek's API carries no account identity - ``/user/balance`` returns money and
+    nothing else - so on a machine holding more than one key this is the only thing that
+    says whose balance is on screen. Four trailing characters is the usual convention for
+    naming a secret without exposing it, and is far too little to reconstruct one.
+    """
+    value = (key or "").strip()
+    if len(value) < 8:
+        return ""
+    prefix = "sk-" if value.startswith("sk-") else ""
+    return f"{prefix}…{value[-4:]}"
+
+
 def resolve_api_key(configured: str | None) -> str:
     """The API key to use, from config or the environment.
 
