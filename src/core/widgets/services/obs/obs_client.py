@@ -12,6 +12,7 @@ import threading
 import uuid
 
 from PyQt6.QtCore import QThread, pyqtSignal
+from PyQt6.QtWidgets import QApplication
 
 
 class ObsWebSocketClient:
@@ -355,9 +356,13 @@ class ObsWorker(QThread):
     def __init__(self, connection: dict = None):
         super().__init__()
         self._connection = connection or {}
-        self.running = True
         self.client: ObsWebSocketClient | None = None
         self._connected = False
+        self._stop_event = threading.Event()
+
+        app_inst = QApplication.instance()
+        if app_inst is not None:
+            app_inst.aboutToQuit.connect(self.stop)
 
     @classmethod
     def get_instance(cls, connection: dict = None) -> ObsWorker:
@@ -376,7 +381,8 @@ class ObsWorker(QThread):
                 cls._instance = None
 
     def run(self):
-        while self.running:
+        self._stop_event.clear()
+        while not self._stop_event.is_set():
             try:
                 if not self.client:
                     self.client = ObsWebSocketClient(
@@ -392,22 +398,22 @@ class ObsWorker(QThread):
 
                 if self.client.connect():
                     self._set_connected(True)
-                    while self.running and self.client.connected:
-                        self.msleep(250)
+                    while not self._stop_event.is_set() and self.client.connected:
+                        self._stop_event.wait(0.25)
                 else:
                     self._set_connected(False)
                     self._cleanup_client()
-                    self.msleep(5000)
+                    self._stop_event.wait(5)
             except Exception:
                 self._set_connected(False)
                 self._cleanup_client()
-                self.msleep(5000)
+                self._stop_event.wait(5)
 
     def stop(self):
-        self.running = False
+        self._stop_event.set()
         self._cleanup_client()
         self._set_connected(False)
-        self.wait()
+        self.wait(2000)
 
     def _cleanup_client(self):
         if self.client:

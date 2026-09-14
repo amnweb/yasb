@@ -14,6 +14,7 @@ from PyQt6.QtGui import QColor, QFont, QPainter
 from PyQt6.QtWidgets import (
     QApplication,
     QFrame,
+    QGraphicsDropShadowEffect,
     QHBoxLayout,
     QLabel,
     QSizePolicy,
@@ -23,7 +24,6 @@ from PyQt6.QtWidgets import (
 
 from core.ui.components.button import Button
 from core.ui.theme import FONT_FAMILIES, get_tokens, theme_key
-from core.utils.win32.backdrop import enable_blur
 
 _MIN_W, _MAX_W = 320, 548
 _MIN_H, _MAX_H = 184, 756
@@ -34,6 +34,13 @@ _OPEN_OPACITY_MS = 167
 _OPEN_SLIDE_MS = 250
 _CLOSE_MS = 83
 _SLIDE_OFFSET = 10
+
+_RADIUS = 8
+_BORDER = 1
+_SHADOW_MARGIN = 24
+_SHADOW_BLUR = 28
+_SHADOW_DY = 6
+_SHADOW_ALPHA = 110
 
 
 class ContentDialogResult(IntEnum):
@@ -79,7 +86,7 @@ class _SmokeLayer(QWidget):
 
 
 class ContentDialog(QWidget):
-    """ContentDialog using DWM blur for shadow and rounded corners.
+    """ContentDialog with a Qt-drawn shadow, border and rounded corners.
 
     Usage::
 
@@ -131,15 +138,21 @@ class ContentDialog(QWidget):
 
         # Root layout
         root_layout = QVBoxLayout(self)
-        root_layout.setContentsMargins(0, 0, 0, 0)
+        root_layout.setContentsMargins(_SHADOW_MARGIN, _SHADOW_MARGIN, _SHADOW_MARGIN, _SHADOW_MARGIN)
         root_layout.setSpacing(0)
 
         self._container = QWidget(self)
         self._container.setObjectName("cd_bg")
+        self._container.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        self._shadow = QGraphicsDropShadowEffect(self)
+        self._shadow.setBlurRadius(_SHADOW_BLUR)
+        self._shadow.setOffset(0, _SHADOW_DY)
+        self._shadow.setColor(QColor(0, 0, 0, _SHADOW_ALPHA))
+        self._container.setGraphicsEffect(self._shadow)
         root_layout.addWidget(self._container)
 
         container_layout = QVBoxLayout(self._container)
-        container_layout.setContentsMargins(0, 0, 0, 0)
+        container_layout.setContentsMargins(_BORDER, _BORDER, _BORDER, _BORDER)
         container_layout.setSpacing(0)
 
         # Top section (title + body)
@@ -209,8 +222,8 @@ class ContentDialog(QWidget):
         self._btn_bar.setVisible(bool(primary_button_text or secondary_button_text or close_button_text))
         container_layout.addWidget(self._btn_bar, 0)
 
-        self.setMinimumSize(_MIN_W, _MIN_H)
-        self.setMaximumSize(_MAX_W, _MAX_H)
+        self.setMinimumSize(_MIN_W + _SHADOW_MARGIN * 2, _MIN_H + _SHADOW_MARGIN * 2)
+        self.setMaximumSize(_MAX_W + _SHADOW_MARGIN * 2, _MAX_H + _SHADOW_MARGIN * 2)
         self._container.setMinimumSize(_MIN_W, _MIN_H)
         self._container.setMaximumSize(_MAX_W, _MAX_H)
 
@@ -260,7 +273,7 @@ class ContentDialog(QWidget):
         self._natural_w = min(max(unwrapped_hint.width(), _MIN_W), _MAX_W)
 
         # Height: measure wrapped text with QFontMetrics.boundingRect
-        label_w = self._natural_w - _PAD * 2
+        label_w = self._natural_w - _PAD * 2 - _BORDER * 2
         wrap_flags = Qt.TextFlag.TextWordWrap
         top_h = _PAD
         if self._title_label.text():
@@ -275,9 +288,9 @@ class ContentDialog(QWidget):
             top_h += content_rect.height()
         top_h += _PAD
         btn_h = self._btn_bar.sizeHint().height()
-        self._natural_h = min(max(top_h + btn_h, _MIN_H), _MAX_H)
+        self._natural_h = min(max(top_h + btn_h + _BORDER * 2, _MIN_H), _MAX_H)
 
-        self.setFixedSize(self._natural_w, self._natural_h)
+        self.setFixedSize(self._natural_w + _SHADOW_MARGIN * 2, self._natural_h + _SHADOW_MARGIN * 2)
         self._container.setFixedSize(self._natural_w, self._natural_h)
 
     def show_dialog(self) -> None:
@@ -291,14 +304,6 @@ class ContentDialog(QWidget):
 
         self._compute_size()
         self._position_center(0)
-
-        enable_blur(
-            int(self.winId()),
-            DarkMode=True,
-            RoundCorners=True,
-            RoundCornersType="normal",
-            BorderColor="system",
-        )
 
         self.show()
         self.activateWindow()
@@ -323,14 +328,14 @@ class ContentDialog(QWidget):
         if self._host is None:
             return
         centre = self._host.mapToGlobal(self._host.rect().center())
-        x = centre.x() - self._natural_w // 2
-        y = centre.y() - self._natural_h // 2 + y_offset
+        x = centre.x() - self.width() // 2
+        y = centre.y() - self.height() // 2 + y_offset
         self.move(x, y)
-        self._center_y = centre.y() - self._natural_h // 2
+        self._center_y = centre.y() - self.height() // 2
 
     def eventFilter(self, obj, event) -> bool:
-        if obj is self._host and event.type() == QEvent.Type.Resize:
-            if self._smoke:
+        if obj is self._host and event.type() in (QEvent.Type.Resize, QEvent.Type.Move):
+            if self._smoke and event.type() == QEvent.Type.Resize:
                 self._smoke.setGeometry(self._host.rect())
             self._position_center(0)
         return super().eventFilter(obj, event)
@@ -430,10 +435,19 @@ class ContentDialog(QWidget):
     def _apply_styles(self) -> None:
         tokens = get_tokens()
         bg = tokens["solid_bg_base"]
-        self._container.setStyleSheet(f"#cd_bg {{ background: {bg} }}")
-        self._top.setStyleSheet(
-            f"#cd_top {{ background: {tokens['layer_alt']}; border-bottom: 1px solid {tokens['card_stroke_default']}; }}"
+        stroke = tokens["surface_stroke_default_solid"]
+        inner_radius = _RADIUS - _BORDER
+        self._container.setStyleSheet(
+            f"#cd_bg {{ background: {bg}; border: {_BORDER}px solid {stroke}; border-radius: {_RADIUS}px; }}"
         )
-        self._btn_bar.setStyleSheet(f"#cd_btns {{ background: {bg}; }}")
+        self._top.setStyleSheet(
+            f"#cd_top {{ background: {tokens['layer_alt']};"
+            f" border-bottom: 1px solid {tokens['card_stroke_default']};"
+            f" border-top-left-radius: {inner_radius}px; border-top-right-radius: {inner_radius}px; }}"
+        )
+        self._btn_bar.setStyleSheet(
+            f"#cd_btns {{ background: {bg};"
+            f" border-bottom-left-radius: {inner_radius}px; border-bottom-right-radius: {inner_radius}px; }}"
+        )
         self._title_label.setStyleSheet(f"color: {tokens['text_primary']}")
         self._content_label.setStyleSheet(f"color: {tokens['text_primary']}")

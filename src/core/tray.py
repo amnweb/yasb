@@ -26,6 +26,7 @@ from settings import (
 
 EXE_PATH = os.path.join(SCRIPT_PATH, "yasb.exe")
 THEME_EXE_PATH = os.path.join(SCRIPT_PATH, "yasb_themes.exe")
+CLOUD_EXE_PATH = os.path.join(SCRIPT_PATH, "yasb_cloud.exe")
 AUTOSTART_FILE = EXE_PATH if os.path.exists(EXE_PATH) else None
 
 
@@ -115,6 +116,8 @@ class SystemTrayManager(QSystemTrayIcon):
                 add_sep(hmenu)
 
             add_item(hmenu, "Open Config", self._open_config)
+            if os.path.exists(CLOUD_EXE_PATH):
+                add_item(hmenu, "YASB Cloud", lambda: os.startfile(CLOUD_EXE_PATH))
             if os.path.exists(THEME_EXE_PATH):
                 add_item(hmenu, "Get Themes", lambda: os.startfile(THEME_EXE_PATH))
             add_item(hmenu, "Reload YASB", self._reload_application)

@@ -194,6 +194,10 @@ class BarManager(QObject):
                 active_widget_names.update(widgets.left + widgets.center + widgets.right)
 
         for widget_name, widget_config in self.config.widgets.items():
+            # If this is an active grouper, its children are rendered too.
+            if widget_name in active_widget_names and widget_config.get("type", "").endswith("grouper.GrouperWidget"):
+                active_widget_names.update(widget_config.get("options", {}).get("widgets", []))
+
             if widget_name not in active_widget_names:
                 continue
 

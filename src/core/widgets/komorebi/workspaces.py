@@ -76,7 +76,10 @@ class WorkspaceButton(QPushButton):
 
     def activate_workspace(self):
         try:
-            self.komorebic.activate_workspace(self.parent_widget._komorebi_screen["index"], self.workspace_index)
+            screen = self.parent_widget._komorebi_screen
+            if screen is None:
+                return
+            self.komorebic.activate_workspace(screen["index"], self.workspace_index)
         except Exception:
             logging.exception("Failed to focus workspace at index %s", self.workspace_index)
 
@@ -194,7 +197,10 @@ class WorkspaceButtonWithIcons(QFrame):
 
     def activate_workspace(self):
         try:
-            self.komorebic.activate_workspace(self.parent_widget._komorebi_screen["index"], self.workspace_index)
+            screen = self.parent_widget._komorebi_screen
+            if screen is None:
+                return
+            self.komorebic.activate_workspace(screen["index"], self.workspace_index)
         except Exception:
             logging.exception("Failed to focus workspace at index %s", self.workspace_index)
 
@@ -400,7 +406,9 @@ class WorkspaceWidget(BaseWidget):
 
     def _update_komorebi_state(self, komorebi_state: dict) -> bool:
         try:
-            self._screen_hwnd = self.monitor_hwnd or get_monitor_hwnd(int(QWidget.winId(self)))
+            self._screen_hwnd = get_monitor_hwnd(int(QWidget.winId(self)))
+            if self._screen_hwnd is None:
+                return False
             self._komorebi_state = komorebi_state
             if self._komorebi_state:
                 self._komorebi_screen = self._komorebic.get_screen_by_hwnd(self._komorebi_state, self._screen_hwnd)

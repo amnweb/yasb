@@ -6,7 +6,7 @@ Provides synchronous functions for interacting with winget:
 
 Winget truncates its table output based on the console width.  When Python
 captures output via pipes there is no console at all, so winget falls back
-to a narrow default and cuts long package IDs with like `Microsoft.VisualStudio.2022.Comm…`.
+to a narrow default and cuts long package IDs with like `Microsoft.VisualStudio.2022.Comm...`.
 
 To work around this, we use the Windows ConPTY API
 """

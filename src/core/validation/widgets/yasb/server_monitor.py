@@ -21,7 +21,7 @@ class DesktopNotificationsConfig(CustomBaseModel):
     offline: bool = False
 
 
-class MenuConfig(CustomBaseModel):
+class ServerMonitorMenuConfig(CustomBaseModel):
     blur: bool = True
     round_corners: bool = True
     round_corners_type: str = "normal"
@@ -32,7 +32,7 @@ class MenuConfig(CustomBaseModel):
     offset_left: int = 0
 
 
-class IconsConfig(CustomBaseModel):
+class ServerMonitorIconsConfig(CustomBaseModel):
     online: str = "\uf444"
     offline: str = "\uf4c3"
     warning: str = "\uf4c3"
@@ -69,7 +69,7 @@ class ServerMonitorConfig(CustomBaseModel):
 
     desktop_notifications: DesktopNotificationsConfig = DesktopNotificationsConfig()
     timeout: int = Field(default=5, ge=1, le=30)
-    menu: MenuConfig = MenuConfig()
-    icons: IconsConfig = IconsConfig()
+    menu: ServerMonitorMenuConfig = ServerMonitorMenuConfig()
+    icons: ServerMonitorIconsConfig = ServerMonitorIconsConfig()
     keybindings: list[KeybindingConfig] = []
     callbacks: ServerMonitorCallbacksConfig = ServerMonitorCallbacksConfig()

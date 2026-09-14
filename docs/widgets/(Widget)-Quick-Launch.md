@@ -709,7 +709,6 @@ quick_launch:
     popup:
       width: 720
       height: 480
-      screen: "focus"
       blur: true
       round_corners: true
       round_corners_type: "normal"

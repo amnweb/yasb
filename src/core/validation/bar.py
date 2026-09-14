@@ -78,6 +78,8 @@ class BarConfig(CustomBaseModel):
     enabled: bool = True
     screens: list[str] = ["*"]
     class_name: str = "yasb-bar"
+    style: Literal["bar", "adaptive"] = "bar"
+    style_adaptive_exclude: list[str] = []
     context_menu: bool = True
     alignment: BarAlignment = BarAlignment()
     blur_effect: BarBlurEffect = BarBlurEffect()

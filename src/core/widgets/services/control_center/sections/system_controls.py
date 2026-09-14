@@ -53,7 +53,7 @@ class SystemControlsSectionWidget(QFrame):
         self._power_btn.setProperty("class", "button power")
         self._power_btn.clicked.connect(self._show_power_menu)
         if self._tooltip:
-            set_tooltip(self._power_btn, "Shut Down", position="top")
+            set_tooltip(self._power_btn, "Power", position="top")
         layout.addWidget(self._power_btn)
 
     def _build_profile_controls(self, layout: QHBoxLayout):

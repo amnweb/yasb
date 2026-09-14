@@ -252,9 +252,10 @@ class MicrophoneWidget(BaseWidget):
     def wheelEvent(self, event: QWheelEvent):
         if self.audio_endpoint is None:
             return
-        if event.angleDelta().y() > 0:
+        delta = -event.angleDelta().y() if self.config.invert_wheel else event.angleDelta().y()
+        if delta > 0:
             self._increase_volume()
-        elif event.angleDelta().y() < 0:
+        elif delta < 0:
             self._decrease_volume()
 
     def show_menu(self):
@@ -368,5 +369,7 @@ class MicrophoneWidget(BaseWidget):
                 # Show tooltip while actively dragging
                 if hasattr(self, "volume_slider"):
                     self._show_slider_tooltip(self.volume_slider, value)
+                if (self.audio_endpoint.GetMute() != 0) != (value == 0):
+                    self.toggle_mute()
             except Exception as e:
                 logging.error("Failed to set microphone volume: %s", e)

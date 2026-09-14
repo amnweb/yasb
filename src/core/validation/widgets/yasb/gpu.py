@@ -15,7 +15,7 @@ class GpuThresholdsConfig(CustomBaseModel):
     high: int = Field(default=90, ge=0, le=100)
 
 
-class ProgressBarConfig(CustomBaseModel):
+class GpuProgressBarConfig(CustomBaseModel):
     enabled: bool = False
     progress_type: Literal["circular", "linear_horizontal", "linear_vertical"] = "circular"
     size: int = Field(default=18, ge=1, le=200)
@@ -74,7 +74,7 @@ class GpuConfig(CustomBaseModel):
     hide_decimal: bool = False
     units: Literal["metric", "imperial"] = "metric"
     gpu_thresholds: GpuThresholdsConfig = GpuThresholdsConfig()
-    progress_bar: ProgressBarConfig = ProgressBarConfig()
+    progress_bar: GpuProgressBarConfig = GpuProgressBarConfig()
     menu: GpuMenuConfig = GpuMenuConfig()
     keybindings: list[KeybindingConfig] = []
     callbacks: CallbacksGpuConfig = CallbacksGpuConfig()

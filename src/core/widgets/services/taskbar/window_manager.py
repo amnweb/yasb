@@ -47,6 +47,8 @@ def connect_taskbar(widget):
         task_manager.window_updated.connect(widget._on_window_updated)
     if hasattr(widget, "_on_window_monitor_changed"):
         task_manager.window_monitor_changed.connect(widget._on_window_monitor_changed)
+    if hasattr(widget, "_on_window_minimize_changed"):
+        task_manager.window_minimize_changed.connect(widget._on_window_minimize_changed)
 
     # Install native event filter once to catch SHELLHOOK via Qt
     global _shellhook_event_filter
@@ -134,6 +136,7 @@ class TaskbarWindowManager(QObject):
     window_removed = pyqtSignal(int, dict)
     window_updated = pyqtSignal(int, dict)
     window_monitor_changed = pyqtSignal(int, dict)
+    window_minimize_changed = pyqtSignal(int, bool)
 
     # Windows constants (subset)
     WM_SHELLHOOKMESSAGE = None
@@ -236,7 +239,7 @@ class TaskbarWindowManager(QObject):
             raise
 
     def _set_win_event_hooks(self):
-        """Install WinEvent hooks for cloak/uncloak and, when not strict, show/hide."""
+        """Install WinEvent hooks for cloak/uncloak, show/hide and minimize/restore."""
         try:
             WinEventProcType = ctypes.WINFUNCTYPE(
                 None,
@@ -249,7 +252,7 @@ class TaskbarWindowManager(QObject):
                 ctypes.wintypes.DWORD,
             )
 
-            def cloak_event_callback(hWinEventHook, eventType, hWnd, idObject, idChild, dwEventThread, dwmsEventTime):
+            def win_event_callback(hWinEventHook, eventType, hWnd, idObject, idChild, dwEventThread, dwmsEventTime):
                 try:
                     if hWnd and idObject == 0 and idChild == 0:
                         hwnd_int = int(hWnd)
@@ -262,6 +265,10 @@ class TaskbarWindowManager(QObject):
                             QTimer.singleShot(0, lambda: self._on_window_show(hwnd_int))
                         elif eventType == WCONST.EVENT_OBJECT_HIDE:
                             QTimer.singleShot(0, lambda: self._on_window_hide(hwnd_int))
+                        elif eventType == WCONST.EVENT_SYSTEM_MINIMIZESTART:
+                            QTimer.singleShot(0, lambda: self._on_window_minimized(hwnd_int, True))
+                        elif eventType == WCONST.EVENT_SYSTEM_MINIMIZEEND:
+                            QTimer.singleShot(0, lambda: self._on_window_minimized(hwnd_int, False))
                         else:
                             if hwnd_int in self._windows:
                                 self._schedule_window_update(hwnd_int)
@@ -270,12 +277,12 @@ class TaskbarWindowManager(QObject):
                 except Exception:
                     return
 
-            self._cloak_callback = WinEventProcType(cloak_event_callback)
+            self._win_event_callback = WinEventProcType(win_event_callback)
 
             flags = WCONST.WINEVENT_OUTOFCONTEXT | WCONST.WINEVENT_SKIPOWNPROCESS
 
             cloak_hook = SetWinEventHook(
-                WCONST.EVENT_OBJECT_CLOAKED, WCONST.EVENT_OBJECT_UNCLOAKED, 0, self._cloak_callback, 0, 0, flags
+                WCONST.EVENT_OBJECT_CLOAKED, WCONST.EVENT_OBJECT_UNCLOAKED, 0, self._win_event_callback, 0, 0, flags
             )
 
             if cloak_hook:
@@ -283,9 +290,23 @@ class TaskbarWindowManager(QObject):
             else:
                 logger.warning("Failed to set cloak/uncloak event hooks")
 
+            minimize_hook = SetWinEventHook(
+                WCONST.EVENT_SYSTEM_MINIMIZESTART,
+                WCONST.EVENT_SYSTEM_MINIMIZEEND,
+                0,
+                self._win_event_callback,
+                0,
+                0,
+                flags,
+            )
+            if minimize_hook:
+                self._win_event_hooks.append(minimize_hook)
+            else:
+                logger.warning("Failed to set minimize/restore event hooks")
+
             # SHOW/HIDE hooks unconditionally to capture transient windows
             show_hide_hook = SetWinEventHook(
-                WCONST.EVENT_OBJECT_SHOW, WCONST.EVENT_OBJECT_HIDE, 0, self._cloak_callback, 0, 0, flags
+                WCONST.EVENT_OBJECT_SHOW, WCONST.EVENT_OBJECT_HIDE, 0, self._win_event_callback, 0, 0, flags
             )
             if show_hide_hook:
                 self._win_event_hooks.append(show_hide_hook)
@@ -345,6 +366,11 @@ class TaskbarWindowManager(QObject):
                 self._remove_window(hwnd)
         except Exception as e:
             logger.error("Error handling window destroyed for %s: %s", hwnd, e)
+
+    def _on_window_minimized(self, hwnd, minimized):
+        """Report that a tracked window was minimized or restored."""
+        if hwnd in self._windows:
+            self.window_minimize_changed.emit(hwnd, minimized)
 
     def _on_window_activated(self, hwnd):
         """Mark activated window active and clear flashing; emit updates for state changes."""

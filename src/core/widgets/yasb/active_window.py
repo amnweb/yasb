@@ -8,12 +8,12 @@ import win32process
 from PIL import Image
 from PyQt6.QtCore import QElapsedTimer, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QImage, QPixmap
-from PyQt6.QtWidgets import QLabel
+from PyQt6.QtWidgets import QLabel, QWidget
 
 from core.events.service import EventService
 from core.events.win32 import WinEvent
 from core.utils.win32.app_icons import get_window_icon
-from core.utils.win32.utils import get_app_name_from_aumid, get_app_name_from_pid, get_hwnd_info
+from core.utils.win32.utils import get_app_name_from_aumid, get_app_name_from_pid, get_hwnd_info, get_monitor_hwnd
 from core.validation.widgets.yasb.active_window import ActiveWindowConfig
 from core.widgets.base import BaseWidget
 from settings import APP_BAR_TITLE
@@ -120,6 +120,7 @@ class ActiveWindowWidget(BaseWidget):
             self._event_service.unregister_event(WinEvent.EventSystemMoveSizeEnd, self.foreground_change)
             self._event_service.unregister_event(WinEvent.EventObjectNameChange, self.window_name_change)
             self._event_service.unregister_event(WinEvent.EventObjectStateChange, self.window_name_change)
+            self._event_service.unregister_event(WinEvent.EventObjectDestroy, self.window_destroy)
             self._event_service.unregister_event("workspace_update", self.focus_change_workspaces)
         except Exception:
             pass
@@ -226,11 +227,12 @@ class ActiveWindowWidget(BaseWidget):
             return
 
         monitor_name = win_info["monitor_info"].get("device", None)
+        widget_monitor = get_monitor_hwnd(int(QWidget.winId(self)))
 
         if (
             self.config.monitor_exclusive
             and self.screen().name() != monitor_name
-            and win_info.get("monitor_hwnd", "Unknown") != self.monitor_hwnd
+            and win_info.get("monitor_hwnd", "Unknown") != widget_monitor
         ):
             self._set_no_window_or_hide()
         else:
@@ -284,13 +286,6 @@ class ActiveWindowWidget(BaseWidget):
             if is_uwp:
                 try:
                     parent_pid = process["pid"]
-
-                    def _find_real_pid(child_hwnd, _):
-                        _, child_pid = win32process.GetWindowThreadProcessId(child_hwnd)
-                        if child_pid and child_pid != parent_pid:
-                            return False
-                        return True
-
                     found_pids = []
 
                     def _collect_pids(child_hwnd, _):
@@ -354,6 +349,8 @@ class ActiveWindowWidget(BaseWidget):
                     if not process["name"] == "explorer.exe":
                         # Do not cache icons for explorer.exe windows
                         self._icon_cache[cache_key] = icon_img
+                        if len(self._icon_cache) > 128:
+                            self._icon_cache.pop(next(iter(self._icon_cache)))
                 if icon_img:
                     qimage = QImage(icon_img.tobytes(), icon_img.width, icon_img.height, QImage.Format.Format_RGBA8888)
                     self.pixmap = QPixmap.fromImage(qimage)

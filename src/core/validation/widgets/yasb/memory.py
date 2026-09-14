@@ -15,7 +15,7 @@ class MemoryThresholdsConfig(CustomBaseModel):
     high: int = Field(default=90, ge=0, le=100)
 
 
-class ProgressBarConfig(CustomBaseModel):
+class MemoryProgressBarConfig(CustomBaseModel):
     enabled: bool = False
     progress_type: Literal["circular", "linear_horizontal", "linear_vertical"] = "circular"
     size: int = Field(default=18, ge=1, le=200)
@@ -61,7 +61,7 @@ class MemoryConfig(CustomBaseModel):
     )
     hide_decimal: bool = False
     memory_thresholds: MemoryThresholdsConfig = MemoryThresholdsConfig()
-    progress_bar: ProgressBarConfig = ProgressBarConfig()
+    progress_bar: MemoryProgressBarConfig = MemoryProgressBarConfig()
     menu: MemoryMenuConfig = MemoryMenuConfig()
     keybindings: list[KeybindingConfig] = []
     callbacks: CallbacksMemoryConfig = CallbacksMemoryConfig()

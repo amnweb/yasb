@@ -98,7 +98,7 @@ active_window:
   type: "yasb.active_window.ActiveWindowWidget"
   options:
     label: "{win[title]}"
-    # …
+    # ...
     rewrite:
       # Strip trailing “.exe” (case-insensitive) and lowercase:
       - pattern: "^(.+?)\\.exe$"
@@ -109,7 +109,7 @@ active_window:
       - pattern: "\\bStudio\\b"
         replacement: "STUDIO"
 
-      # Replace any title like “…YASB Reborn - Foo” with “🌎 Foo”
+      # Replace any title like “...YASB Reborn - Foo” with “🌎 Foo”
       - pattern: "(.*)YASB Reborn -(.*)$"
         replacement: "🌎 \\2"
 ```

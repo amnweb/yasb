@@ -9,7 +9,7 @@ from core.validation.widgets.base_model import (
 )
 
 
-class IconsConfig(CustomBaseModel):
+class MediaIconsConfig(CustomBaseModel):
     prev_track: str = "\uf048"
     next_track: str = "\uf051"
     play: str = "\uf04b"
@@ -38,6 +38,7 @@ class MediaMenuConfig(CustomBaseModel):
     thumbnail_corner_radius: int = 8
     max_title_size: int = 150
     max_artist_size: int = 40
+    max_source_size: int = 16
     show_source: bool = True
     show_volume_slider: bool = False
 
@@ -54,7 +55,7 @@ class ScrollingLabelConfig(CustomBaseModel):
     ease_min: float = 0.5
 
 
-class ProgressBarConfig(CustomBaseModel):
+class MediaProgressBarConfig(CustomBaseModel):
     enabled: bool = False
     alignment: Literal["top", "bottom", "center"] = "bottom"
 
@@ -71,11 +72,11 @@ class MediaWidgetConfig(CustomBaseModel):
     separator: str = " - "
     class_name: str = ""
     hide_empty: bool = False
-    icons: IconsConfig = IconsConfig()
+    icons: MediaIconsConfig = MediaIconsConfig()
     media_menu: MediaMenuConfig = MediaMenuConfig()
     media_menu_icons: MediaMenuIconsConfig = MediaMenuIconsConfig()
     scrolling_label: ScrollingLabelConfig = ScrollingLabelConfig()
-    progress_bar: ProgressBarConfig = ProgressBarConfig()
+    progress_bar: MediaProgressBarConfig = MediaProgressBarConfig()
     max_field_size: MaxFieldSizeConfig = MaxFieldSizeConfig()
     show_thumbnail: bool = True
     controls_only: bool = False

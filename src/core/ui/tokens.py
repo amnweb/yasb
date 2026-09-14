@@ -80,6 +80,7 @@ COLOR_TOKENS: ColorTokens = {
         "control_strong_stroke_disabled": "#29ffffff",
         # Surface Stroke
         "surface_stroke_default": "#66757575",
+        "surface_stroke_default_solid": "#383838",
         "surface_stroke_flyout": "#33000000",
         "surface_stroke_inverse": "#0f000000",
         # Divider Stroke
@@ -92,7 +93,6 @@ COLOR_TOKENS: ColorTokens = {
         "card_bg_secondary": "#08ffffff",
         "card_bg_tertiary": "#12ffffff",
         # Dropdown Menu Fill
-        "dropdown_menu_bg": "#66303030",
         "dropdown_menu_bg_solid": "#303030",
         # Smoke Fill
         "smoke_default": "#4c000000",
@@ -193,6 +193,7 @@ COLOR_TOKENS: ColorTokens = {
         "control_strong_stroke_disabled": "#38000000",
         # Surface Stroke
         "surface_stroke_default": "#66757575",
+        "surface_stroke_default_solid": "#c1c1c1",
         "surface_stroke_flyout": "#0f000000",
         "surface_stroke_inverse": "#14ffffff",
         # Divider Stroke
@@ -205,7 +206,6 @@ COLOR_TOKENS: ColorTokens = {
         "card_bg_secondary": "#80f6f6f6",
         "card_bg_tertiary": "#ffffff",
         # Dropdown Menu Fill
-        "dropdown_menu_bg": "#ccffffff",
         "dropdown_menu_bg_solid": "#f3f3f3",
         # Smoke Fill
         "smoke_default": "#4c000000",

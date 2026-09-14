@@ -188,7 +188,6 @@ def get_app_name_from_pid(pid: int) -> str | None:
 
                 if res == 0 and buf.value:
                     package_full_name = buf.value
-                    CloseHandle(h_process)
 
                     # Direct lookup by full name is much faster than iterating all packages, so try that first
                     try:
@@ -232,7 +231,7 @@ def get_app_name_from_pid(pid: int) -> str | None:
                     except Exception as e:
                         logging.debug("Fallback UWP lookup failed for %s: %s", package_full_name, e)
 
-                    # If WinRT fails, we already closed the handle, so return None
+                    # If WinRT lookup failed there is nothing else to try for a packaged app
                     return None
 
             # This is a Win32 app - get FileDescription from executable

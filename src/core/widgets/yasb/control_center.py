@@ -3,6 +3,7 @@ from PyQt6.QtWidgets import QVBoxLayout, QWidget
 
 from core.utils.qobject import is_valid_qobject
 from core.utils.utilities import PopupWidget
+from core.utils.win32.utils import get_monitor_hwnd
 from core.validation.widgets.yasb.control_center import ControlCenterConfig
 from core.widgets.base import BaseWidget
 from core.widgets.services.brightness.service import BrightnessService
@@ -65,7 +66,7 @@ class ControlCenterWidget(BaseWidget):
 
     @property
     def _hmonitor(self) -> int | None:
-        return self.monitor_hwnd
+        return get_monitor_hwnd(int(QWidget.winId(self)))
 
     def _audio_services(self) -> dict[str, object]:
         return {
@@ -73,7 +74,7 @@ class ControlCenterWidget(BaseWidget):
             "input": self._input_service,
         }
 
-    def _on_brightness_service_changed(self, hmonitor: int, brightness: int):
+    def _on_brightness_service_changed(self, hmonitor: int, brightness: int | None):
         if not self.dialog or not is_valid_qobject(self.dialog) or not self.dialog.isVisible():
             return
         sliders = self._section_widgets.get("sliders")
@@ -128,6 +129,9 @@ class ControlCenterWidget(BaseWidget):
                     widget.refresh_state()
                 except Exception:
                     pass
+
+        if self._brightness_service is not None:
+            self._brightness_service.refresh_now()
 
     def _build_system_controls_section(self) -> QWidget:
         return SystemControlsSectionWidget(

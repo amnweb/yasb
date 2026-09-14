@@ -23,6 +23,8 @@ class HomeWidget(BaseWidget):
 
         self.register_callback("toggle_menu", self._toggle_menu)
         self.callback_left = self.config.callbacks.on_left
+        self.callback_middle = self.config.callbacks.on_middle
+        self.callback_right = self.config.callbacks.on_right
 
     def create_menu_action(self, menu_item: MenuItemConfig):
         action_keys = [key for key in ("command", "uri", "path") if getattr(menu_item, key, None)]

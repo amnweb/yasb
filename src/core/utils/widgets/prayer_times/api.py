@@ -1,7 +1,7 @@
 import json
 import logging
 import traceback
-from typing import Callable
+from collections.abc import Callable
 
 from PyQt6.QtCore import QObject, QTimer, QUrl, pyqtSignal
 from PyQt6.QtNetwork import QNetworkAccessManager, QNetworkReply, QNetworkRequest
@@ -63,7 +63,9 @@ class PrayerTimesDataFetcher(QObject):
                     self._retry_timer.stop()
                     self.finished.emit(data)
                 else:
-                    logging.error(f"Prayer times API returned non-200 code: {data.get('code')} — {data.get('status')}")
+                    logging.error(
+                        "Prayer times API returned non-200 code: %s — %s", data.get("code"), data.get("status")
+                    )
                     self.finished.emit({})
                     self._schedule_retry()
             elif error == QNetworkReply.NetworkError.HostNotFoundError:
@@ -71,15 +73,15 @@ class PrayerTimesDataFetcher(QObject):
                 self.finished.emit({})
                 self._schedule_retry()
             else:
-                logging.error(f"Prayer times API network error {status}: {error}")
+                logging.error("Prayer times API network error %s: %s", status, error)
                 self.finished.emit({})
                 self._schedule_retry()
         except json.JSONDecodeError as e:
-            logging.error(f"Prayer times: invalid JSON in response: {e}")
+            logging.error("Prayer times: invalid JSON in response: %s", e)
             self.finished.emit({})
             self._schedule_retry()
         except Exception as e:
-            logging.error(f"Prayer times: unexpected error: {e}\n{traceback.format_exc()}")
+            logging.error("Prayer times: unexpected error: %s\n%s", e, traceback.format_exc())
             self.finished.emit({})
             self._schedule_retry()
         finally:

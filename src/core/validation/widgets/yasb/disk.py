@@ -28,7 +28,7 @@ class GroupLabelConfig(CustomBaseModel):
     offset_left: int = 0
 
 
-class ProgressBarConfig(CustomBaseModel):
+class DiskProgressBarConfig(CustomBaseModel):
     enabled: bool = False
     progress_type: Literal["circular", "linear_horizontal", "linear_vertical"] = "circular"
     size: int = Field(default=18, ge=1, le=200)
@@ -53,6 +53,6 @@ class DiskConfig(CustomBaseModel):
     decimal_display: int = Field(default=1, ge=0, le=3)
     disk_thresholds: DiskThresholdsConfig = DiskThresholdsConfig()
     group_label: GroupLabelConfig = GroupLabelConfig()
-    progress_bar: ProgressBarConfig = ProgressBarConfig()
+    progress_bar: DiskProgressBarConfig = DiskProgressBarConfig()
     keybindings: list[KeybindingConfig] = []
     callbacks: CallbacksDiskConfig = CallbacksDiskConfig()

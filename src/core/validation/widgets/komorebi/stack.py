@@ -3,7 +3,7 @@ from typing import Literal
 from core.validation.widgets.base_model import CustomBaseModel
 
 
-class RewriteConfig(CustomBaseModel):
+class StackRewriteConfig(CustomBaseModel):
     pattern: str
     replacement: str
     case: Literal["lower", "upper", "title", "capitalize"] | None = None
@@ -23,6 +23,6 @@ class StackConfig(CustomBaseModel):
     max_length_active: int | None = None
     max_length_overall: int | None = None
     max_length_ellipsis: str = "..."
-    rewrite: list[RewriteConfig] = []
+    rewrite: list[StackRewriteConfig] = []
     enable_scroll_switching: bool = False
     reverse_scroll_direction: bool = False

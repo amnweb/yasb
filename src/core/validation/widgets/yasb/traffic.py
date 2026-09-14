@@ -12,7 +12,7 @@ class SpeedThresholdConfig(CustomBaseModel):
     min_download: int = 1000
 
 
-class MenuConfig(CustomBaseModel):
+class TrafficMenuConfig(CustomBaseModel):
     blur: bool = True
     round_corners: bool = True
     round_corners_type: str = "normal"
@@ -43,6 +43,6 @@ class TrafficWidgetConfig(CustomBaseModel):
     speed_unit: Literal["bits", "bytes"] = "bits"
     hide_decimal: bool = False
     speed_threshold: SpeedThresholdConfig = SpeedThresholdConfig()
-    menu: MenuConfig = MenuConfig()
+    menu: TrafficMenuConfig = TrafficMenuConfig()
     keybindings: list[KeybindingConfig] = []
     callbacks: TrafficCallbacksConfig = TrafficCallbacksConfig()

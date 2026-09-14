@@ -388,7 +388,7 @@ class ColorSwatchButton(_ColorChip):
 
 
 class _SliderPopup(_FramelessPopup):
-    """Popup with YASB Slider (stroke size, blur strength, …)."""
+    """Popup with YASB Slider (stroke size, blur strength, ...)."""
 
     valueChanged = pyqtSignal(int)
 

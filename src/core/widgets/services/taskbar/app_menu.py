@@ -307,8 +307,18 @@ def show_context_menu(taskbar_widget, hwnd: int, pos) -> QMenu | None:
         if not is_pinned_only and win32gui.IsWindow(hwnd):
             end_task_action = menu.addAction("End task")
             end_task_action.triggered.connect(lambda: close_application(hwnd, force=True))
+
             close_action = menu.addAction("Close window")
             close_action.triggered.connect(lambda: close_application(hwnd))
+
+            group_hwnds = taskbar_widget._group_hwnds.get(taskbar_widget._hwnd_to_group.get(hwnd, ""), [])
+            if len(group_hwnds) > 1:
+
+                def close_all(_checked=False, hwnds=list(group_hwnds)):
+                    for group_hwnd in hwnds:
+                        close_application(group_hwnd)
+
+                menu.addAction("Close all windows").triggered.connect(close_all)
 
         # Adjust menu position so it appears just outside the bar
         margin = 6

@@ -80,7 +80,7 @@ komorebi_stack:
   type: "komorebi.stack.StackWidget"
   options:
     label_window: "{title}"
-    # …
+    # ...
     rewrite:
       # Strip trailing ".exe" (case-insensitive) and lowercase:
       - pattern: "^(.+?)\\.exe$"

@@ -18,7 +18,7 @@ msg = ctypes.wintypes.MSG()
 class SystemEventListener(QThread):
     def __init__(self):
         super().__init__()
-        self._hook = None
+        self._hooks: list[int] = []
         self._event_service = EventService()
         self._win_event_process = WINEVENTPROC(self._event_handler)
 
@@ -33,16 +33,31 @@ class SystemEventListener(QThread):
             except Exception:
                 logging.exception("Failed to emit event %s for %s", event_type, hwnd)
 
-    def _build_event_hook(self) -> int:
+    def _hook_range(self, event_min: int, event_max: int) -> int:
         return user32.SetWinEventHook(
-            WinEvent.EventMin.value,
-            WinEvent.EventObjectEnd.value,
+            event_min,
+            event_max,
             0,
             self._win_event_process,
             0,
             0,
             WinEvent.WinEventOutOfContext.value,
         )
+
+    def _build_event_hooks(self) -> list[int]:
+        # A hook covers one contiguous range, so skipping EventObjectLocationChange
+        skipped = WinEvent.EventObjectLocationChange.value
+        hooks = [
+            self._hook_range(WinEvent.EventMin.value, skipped - 1),
+            self._hook_range(skipped + 1, WinEvent.EventObjectEnd.value),
+        ]
+
+        if not all(hooks):
+            for hook in hooks:
+                user32.UnhookWinEvent(hook)
+            return []
+
+        return hooks
 
     def _emit_foreground_window_event(self):
         foreground_event = WinEvent.EventSystemForeground
@@ -55,14 +70,14 @@ class SystemEventListener(QThread):
         ole32.CoInitialize(0)
         try:
             self._thread_id = GetCurrentThreadId()
-            self._hook = self._build_event_hook()
+            self._hooks = self._build_event_hooks()
 
-            if self._hook == 0:
+            if not self._hooks:
                 logging.warning("SetWinEventHook failed. Retrying indefinitely...")
 
-            while self._hook == 0:
+            while not self._hooks:
                 time.sleep(1)
-                self._hook = self._build_event_hook()
+                self._hooks = self._build_event_hooks()
 
             self._emit_foreground_window_event()
 
@@ -71,6 +86,8 @@ class SystemEventListener(QThread):
             ole32.CoUninitialize()
 
     def stop(self):
-        user32.UnhookWinEvent(self._hook)
+        for hook in self._hooks:
+            user32.UnhookWinEvent(hook)
+        self._hooks = []
         # Post WM_QUIT to unblock GetMessageW
         user32.PostThreadMessageW(self._thread_id, 0x0012, 0, 0)

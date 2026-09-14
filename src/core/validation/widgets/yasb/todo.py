@@ -13,7 +13,7 @@ class CategoryConfig(CustomBaseModel):
     label: str
 
 
-class IconsConfig(CustomBaseModel):
+class TodoIconsConfig(CustomBaseModel):
     add: str = "New Task"
     edit: str = "Edit"
     delete: str = "Delete"
@@ -25,7 +25,7 @@ class IconsConfig(CustomBaseModel):
     no_tasks: str = "\uf4a0"
 
 
-class MenuConfig(CustomBaseModel):
+class TodoMenuConfig(CustomBaseModel):
     blur: bool = True
     round_corners: bool = True
     round_corners_type: Literal["normal", "small"] = "normal"
@@ -46,8 +46,8 @@ class TodoConfig(CustomBaseModel):
     label: str = "\uf4a0 {count}/{completed}"
     label_alt: str = "\uf4a0 Tasks: {count}"
     data_path: str = ""
-    menu: MenuConfig = MenuConfig()
-    icons: IconsConfig = IconsConfig()
+    menu: TodoMenuConfig = TodoMenuConfig()
+    icons: TodoIconsConfig = TodoIconsConfig()
     categories: dict[str, CategoryConfig] = Field(
         default={
             "default": CategoryConfig(label="General"),

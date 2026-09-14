@@ -5,7 +5,7 @@ import win32con
 import win32gui
 from PIL import Image
 from PyQt6.QtCore import QEasingCurve, QMimeData, QPoint, QPropertyAnimation, QRect, Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import QCursor, QDrag, QImage, QMouseEvent, QPixmap
+from PyQt6.QtGui import QColor, QCursor, QDrag, QFont, QImage, QMouseEvent, QPainter, QPixmap
 from PyQt6.QtWidgets import QApplication, QFrame, QHBoxLayout, QLabel, QSizePolicy, QWidget
 
 from core.utils.qobject import is_valid_qobject
@@ -28,6 +28,7 @@ from core.validation.widgets.yasb.taskbar import TaskbarConfig
 from core.widgets.base import BaseWidget
 from core.widgets.services.recycle_bin.recycle_bin_monitor import RecycleBinMonitor
 from core.widgets.services.taskbar.app_menu import show_context_menu
+from core.widgets.services.taskbar.overlay_monitor import TaskbarNotificationMonitor
 from core.widgets.services.taskbar.pin_manager import PinManager
 from core.widgets.services.taskbar.thumbnail import TaskbarThumbnailManager
 
@@ -36,6 +37,74 @@ try:
 except ImportError:
     connect_taskbar = None
     logging.error("Failed to connect_taskbar")
+
+
+class BadgeLabel(QLabel):
+    """A QLabel subclass that paints a notification badge (dot or number) overlay on top of the icon."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._show_badge = False
+        self._badge_count = 0
+        self._badge_cfg = None  # will be set to BadgeConfig instance
+
+    def configure(self, badge_cfg) -> None:
+        """Attach a BadgeConfig instance so paintEvent knows how to render."""
+        self._badge_cfg = badge_cfg
+
+    def set_badge(self, show: bool, count: int = 0) -> None:
+        """Show or hide the badge, optionally with a count (for number mode)."""
+        self._show_badge = show
+        self._badge_count = count
+        self.update()
+
+    def paintEvent(self, a0):
+        super().paintEvent(a0)
+        if not self._show_badge or self._badge_cfg is None or not self._badge_cfg.enabled:
+            return
+
+        cfg = self._badge_cfg
+        size = cfg.size
+        half = size // 2
+        w, h = self.width(), self.height()
+        ox, oy = cfg.offset_x, cfg.offset_y
+
+        pos = cfg.position
+        if pos == "top-right":
+            cx, cy = w - half + ox, half + oy
+        elif pos == "top-left":
+            cx, cy = half + ox, half + oy
+        elif pos == "bottom-right":
+            cx, cy = w - half + ox, h - half + oy
+        else:  # bottom-left
+            cx, cy = half + ox, h - half + oy
+
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+        # Draw border ring if requested
+        if cfg.border_width > 0 and cfg.border_color != "transparent":
+            border_r = half + cfg.border_width
+            painter.setBrush(QColor(cfg.border_color))
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.drawEllipse(QPoint(cx, cy), border_r, border_r)
+
+        # Draw filled circle
+        painter.setBrush(QColor(cfg.color))
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.drawEllipse(QPoint(cx, cy), half, half)
+
+        # Draw count text for "number" mode
+        if cfg.type == "number" and self._badge_count > 0:
+            text = str(self._badge_count) if self._badge_count <= 9 else "9+"
+            font = QFont()
+            font.setPixelSize(cfg.font_size)
+            font.setBold(True)
+            painter.setFont(font)
+            painter.setPen(QColor("white"))
+            painter.drawText(QRect(cx - half, cy - half, size, size), Qt.AlignmentFlag.AlignCenter, text)
+
+        painter.end()
 
 
 class DraggableAppButton(QFrame):
@@ -50,6 +119,8 @@ class DraggableAppButton(QFrame):
         self._press_pos = None
         self._press_global_pos = None
         self._lmb_pressed = False
+        self._count_label = None
+        self._blinked = False
         self.setAcceptDrops(False)
         self.setObjectName(f"yasb-taskbar-btn-{hwnd}")
 
@@ -112,12 +183,10 @@ class DraggableAppButton(QFrame):
                 if isinstance(w, DraggableAppButton):
                     return
                 w = w.parent()
-            if self._taskbar._thumbnail_mgr and self._taskbar._thumbnail_mgr._preview_popup:
-                preview = self._taskbar._thumbnail_mgr._preview_popup
-                if preview.isVisible():
-                    preview_rect = QRect(preview.mapToGlobal(QPoint(0, 0)), preview.size())
-                    if preview_rect.contains(cursor_pos):
-                        return
+            preview = self._taskbar._thumbnail_mgr._preview_popup if self._taskbar._thumbnail_mgr else None
+            if preview and preview.isVisible() and preview.keeps_hover(cursor_pos):
+                QTimer.singleShot(200, self._check_hide_preview)
+                return
             self._taskbar.hide_preview()
         except Exception:
             pass
@@ -193,7 +262,7 @@ class DraggableAppButton(QFrame):
                 pass
             if not was_dragging:
                 try:
-                    self._taskbar.bring_to_foreground(self._hwnd)
+                    self._taskbar._on_button_clicked(self._hwnd, self)
                 except Exception:
                     pass
             else:
@@ -478,6 +547,8 @@ class TaskbarWidget(BaseWidget):
         self._preview_padding = self.config.preview.padding
         self._preview_margin = self.config.preview.margin
 
+        self._grouping_enabled = self.config.grouping.enabled
+
         self._tooltip = self.config.tooltip if not self._preview_enabled else False
         self._tooltip_enabled = self.config.tooltip  # Store original tooltip setting for pinned apps
 
@@ -488,11 +559,16 @@ class TaskbarWidget(BaseWidget):
         self._icon_cache = {}
         self._hwnd_to_widget = {}
         self._window_buttons = {}
+        self._group_hwnds = {}  # unique_id -> [hwnd, ...] sharing one button when grouping is on
+        self._hwnd_to_group = {}  # hwnd -> unique_id of its group
         self._suspend_updates = False
         self._animating_widgets = {}
         self._flash_timers = {}
+        self._notification_counts: dict[str, int] = {}  # {app_name_lower: count} from notification center
+        self._overlay_monitor: TaskbarNotificationMonitor | None = None
         self._recycle_bin_state = {"is_empty": True}
         self._pending_pinned_recreations = set()  # Track pending placeholder recreations
+        self._minimized_hwnds = set()
 
         # Initialize pin manager for pinned apps functionality
         self._pin_manager = PinManager()
@@ -522,6 +598,7 @@ class TaskbarWidget(BaseWidget):
         if connect_taskbar:
             self._task_manager = None
             self._task_manager_connected = False
+            self._initial_population = False
         else:
             logging.error("Shared task manager not available - taskbar functionality will be limited")
 
@@ -529,9 +606,10 @@ class TaskbarWidget(BaseWidget):
             self._thumbnail_mgr = TaskbarThumbnailManager(
                 self,
                 self._preview_width,
-                self._preview_delay,
                 self._preview_padding,
                 self._preview_margin,
+                self.config.preview.blur,
+                self.config.preview.peek,
             )
 
         # Initialize pinned apps display flag
@@ -539,6 +617,10 @@ class TaskbarWidget(BaseWidget):
 
         # Connect to global signal bus for inter-widget communication
         PinManager.get_signal_bus().pinned_apps_changed.connect(self._on_pinned_apps_changed_signal)
+
+        # Start notification badge monitor if badge feature is enabled
+        if self.config.badge.enabled:
+            self._start_overlay_monitor()
 
     def _load_pinned_apps(self) -> None:
         """Load pinned apps from disk using PinManager."""
@@ -786,7 +868,8 @@ class TaskbarWidget(BaseWidget):
 
         # Only create icon label if icon_size > 0
         if self.config.icon_size > 0:
-            icon_label = QLabel()
+            icon_label = BadgeLabel()
+            icon_label.configure(self.config.badge)
             icon_label.setProperty("class", "app-icon")
             try:
                 icon_label.setFixedSize(self.config.icon_size, self.config.icon_size)
@@ -898,10 +981,74 @@ class TaskbarWidget(BaseWidget):
         except Exception as e:
             logging.error("Error unsubscribing from recycle bin monitor: %s", e)
 
+    def _sync_group_button(self, group_key: str) -> None:
+        """Refresh the shared button of a group after its window list or focus changed."""
+        members = self._group_hwnds.get(group_key) or []
+        if not members:
+            return
+        container = self._hwnd_to_widget.get(members[0])
+        if not is_valid_qobject(container):
+            return
+
+        # The focused window represents the group for icon, title, clicks and context menu,
+        # and the last focused one keeps representing it once focus moves to another app
+        windows = self._task_manager._windows if getattr(self, "_task_manager", None) else {}
+        hwnd = next((m for m in members if getattr(windows.get(m), "is_active", False)), None)
+        if hwnd is None:
+            hwnd = container._hwnd if container._hwnd in members else members[0]
+
+        container._hwnd = hwnd
+        title_wrapper = self._get_title_wrapper(container) if self.config.title_label.enabled else None
+        title_label = self._get_title_label(title_wrapper) if title_wrapper else None
+        icon_label = self._get_icon_label(container)
+        for child in (container, icon_label, title_wrapper, title_label, container._count_label):
+            if child is not None:
+                child.setProperty("hwnd", hwnd)
+
+        title, icon = (self._window_buttons.get(hwnd) or ("", None))[:2]
+        if icon_label and icon:
+            icon_label.setPixmap(icon)
+        if title_label:
+            title_label.setText(self._format_title(title))
+        if self._tooltip and title:
+            set_tooltip(container, title, delay=0)
+
+        group_cls = self._get_container_class(hwnd)
+        was_grouped = "grouped" in (container.property("class") or "")
+        if not ("flashing" in group_cls and self._flash_owns(container)):
+            container.setProperty("class", group_cls)
+        refresh_widget_style(container, container._count_label, title_wrapper, title_label)
+
+        # Qt resolves padding and border width once and keeps them, so a button that becomes
+        # grouped later never picks up the grouped rule's box model. Polishing does not redo
+        # it, not even on every child, assigning a style sheet is the only thing that does.
+        if was_grouped != ("grouped" in group_cls):
+            container.setStyleSheet(container.styleSheet())
+
+        if container._count_label is not None:
+            container._count_label.setText(str(len(members)))
+            container._count_label.setVisible(len(members) > 1)
+
+    def _on_button_clicked(self, hwnd: int, button: QWidget) -> None:
+        """Activate the window, or open the preview when the button holds several windows."""
+        members = self._group_hwnds.get(self._hwnd_to_group.get(hwnd, "")) or []
+        if len(members) > 1:
+            if self._preview_enabled:
+                preview = getattr(self._thumbnail_mgr, "_preview_popup", None)
+                if not (preview and preview.isVisible() and getattr(preview, "_src_hwnd", None) == hwnd):
+                    self.show_preview_for_hwnd(hwnd, button)
+                return
+            # Without previews, cycle through the windows of the group
+            windows = self._task_manager._windows if getattr(self, "_task_manager", None) else {}
+            active = next((i for i, m in enumerate(members) if getattr(windows.get(m), "is_active", False)), -1)
+            hwnd = members[(active + 1) % len(members)]
+        self.bring_to_foreground(hwnd)
+
     def show_preview_for_hwnd(self, hwnd: int, anchor_widget: QWidget) -> None:
         try:
             if self._preview_enabled and getattr(self, "_thumbnail_mgr", None):
-                self._thumbnail_mgr.show_preview_for_hwnd(hwnd, anchor_widget)
+                members = self._group_hwnds.get(self._hwnd_to_group.get(hwnd, "")) or [hwnd]
+                self._thumbnail_mgr.show_preview_for_hwnds(members, anchor_widget)
         except Exception:
             pass
 
@@ -941,10 +1088,14 @@ class TaskbarWidget(BaseWidget):
         try:
             if connect_taskbar and not getattr(self, "_task_manager_connected", False):
                 try:
+                    # connect_taskbar delivers the already open windows synchronously
+                    self._initial_population = True
                     self._task_manager = connect_taskbar(self)
                     self._task_manager_connected = True
                 except Exception as e:
                     logging.error("Failed to connect taskbar manager from showEvent: %s", e)
+                finally:
+                    self._initial_population = False
         except Exception:
             pass
 
@@ -987,8 +1138,10 @@ class TaskbarWidget(BaseWidget):
 
                             window_unique_id, _ = self._get_app_identifier(hwnd, window_data)
                             if window_unique_id == unique_id:
-                                # This window matches the pinned app
+                                # This window matches the pinned app, as do the rest of its group
                                 self._pin_manager.running_pinned[hwnd] = unique_id
+                                for member in self._group_hwnds.get(unique_id, ()):
+                                    self._pin_manager.running_pinned[member] = unique_id
                                 self._update_pinned_status(hwnd, is_pinned=True)
                                 found_running = True
 
@@ -1167,6 +1320,30 @@ class TaskbarWidget(BaseWidget):
         else:
             self._update_window_ui(hwnd, window_data)
 
+    def _on_window_minimize_changed(self, hwnd, is_minimized):
+        """Handle minimize/restore signal from task manager"""
+        if is_minimized:
+            self._minimized_hwnds.add(hwnd)
+        else:
+            self._minimized_hwnds.discard(hwnd)
+
+        container = self._hwnd_to_widget.get(hwnd)
+        if not is_valid_qobject(container):
+            return
+
+        # Minimizing and restoring change whether the window counts as focused, so the
+        # focused-only title has to be re-decided here too. It runs before the class
+        # early-outs below, which skip the rest of this handler when only the title moved.
+        if not self._context_menu_open:
+            self._refresh_title_visibility(hwnd)
+
+        new_cls = self._get_container_class(hwnd)
+        if container.property("class") == new_cls or ("flashing" in new_cls and self._flash_owns(container)):
+            return
+
+        container.setProperty("class", new_cls)
+        refresh_widget_style(container)
+
     def _on_window_monitor_changed(self, hwnd, window_data):
         """Handle window monitor changed signal from task manager"""
         # For monitor exclusive mode, check if window should be shown/hidden
@@ -1241,12 +1418,35 @@ class TaskbarWidget(BaseWidget):
         # Skip if window is already added (prevents duplicate calls)
         if hwnd in self._window_buttons:
             return
+        # Apps already minimized when the button appears, minimize events keep it current after
+        if win32gui.IsIconic(hwnd):
+            self._minimized_hwnds.add(hwnd)
 
         # Check if this is a pinned app
         unique_id, _ = self._get_app_identifier(hwnd, window_data)
 
         # Pinned apps are global across all monitors
         is_pinned = unique_id in self._pin_manager.pinned_apps
+
+        title = window_data.get("title", "")
+        process = window_data.get("process_name", "")
+
+        # Another window of the same app is already on the bar, attach it to that button
+        group_key = unique_id if self._grouping_enabled and unique_id else None
+        if group_key and self._group_hwnds.get(group_key):
+            container = self._hwnd_to_widget.get(self._group_hwnds[group_key][0])
+            if is_valid_qobject(container):
+                if is_pinned:
+                    self._pin_manager.running_pinned[hwnd] = unique_id
+                self._group_hwnds[group_key].append(hwnd)
+                self._hwnd_to_group[hwnd] = group_key
+                self._hwnd_to_widget[hwnd] = container
+                icon = self._get_app_icon(hwnd, title if process == "explorer.exe" else "")
+                self._window_buttons[hwnd] = (title, icon, hwnd, process)
+                self._sync_group_button(group_key)
+                self._update_badge_for_hwnd(hwnd)
+                return
+            self._group_hwnds.pop(group_key, None)
 
         # If pinned app is starting, remove its pinned-only button and track position
         insert_position = -1
@@ -1317,13 +1517,17 @@ class TaskbarWidget(BaseWidget):
         self._window_buttons.pop(hwnd, None)
 
         # Create the window widget
-        title = window_data.get("title", "")
-        process = window_data.get("process_name", "")
         icon = self._get_app_icon(hwnd, title if process == "explorer.exe" else "")
         self._window_buttons[hwnd] = (title, icon, hwnd, process)
 
         container = self._create_app_container(title, icon, hwnd)
         self._hwnd_to_widget[hwnd] = container
+        if group_key:
+            self._group_hwnds[group_key] = [hwnd]
+            self._hwnd_to_group[hwnd] = group_key
+
+        # Apply initial badge state (may already have notifications before button was created)
+        self._update_badge_for_hwnd(hwnd)
 
         if is_pinned:
             container.setProperty("pinned", True)
@@ -1333,7 +1537,9 @@ class TaskbarWidget(BaseWidget):
         # Insert widget: pinned apps replace their button, unpinned apps go at the end
         position = insert_position if insert_position >= 0 else self._widget_container_layout.count()
 
-        if self._animation_enabled:
+        # Animating the whole startup burst at once is what stutters, so skip it for
+        # the initial population and only animate windows added after that.
+        if self._animation_enabled and not self._initial_population:
             container.setFixedWidth(0)
             self._widget_container_layout.insertWidget(position, container)
             self._animate_container(
@@ -1353,6 +1559,29 @@ class TaskbarWidget(BaseWidget):
         """Remove window UI element."""
         if self._suspend_updates:
             return
+
+        # Grouped button: drop only this window while other windows of the app stay open
+        group_key = self._hwnd_to_group.pop(hwnd, None)
+        if group_key:
+            members = self._group_hwnds.get(group_key, [])
+            if hwnd in members:
+                members.remove(hwnd)
+            if members:
+                self._pin_manager.running_pinned.pop(hwnd, None)
+                self._hwnd_to_widget.pop(hwnd, None)
+                self._window_buttons.pop(hwnd, None)
+                self._sync_group_button(group_key)
+                # The button lives on, so re-decide its blink from the windows it still holds
+                # instead of ending it because one of them closed
+                container = self._hwnd_to_widget.get(members[0])
+                if is_valid_qobject(container):
+                    self._update_flash_state(container._hwnd, container)
+                    self._refresh_title_visibility(container._hwnd)
+                    self._update_badge_for_hwnd(container._hwnd)
+                return
+            self._group_hwnds.pop(group_key, None)
+
+        self._minimized_hwnds.discard(hwnd)
 
         # Cancel any running animation
         if hwnd in self._animating_widgets:
@@ -1449,9 +1678,27 @@ class TaskbarWidget(BaseWidget):
         if widget is None:
             return
 
+        # Grouped button: icon, title and state are rendered from the group, not from this window
+        group_key = self._hwnd_to_group.get(hwnd)
+        if group_key:
+            try:
+                if bool(window_data.get("is_active")):
+                    self._clear_others_set_foreground(hwnd)
+                self._sync_group_button(group_key)
+                if not self._context_menu_open:
+                    self._refresh_title_visibility(widget._hwnd)
+                self._update_flash_state(widget._hwnd, widget)
+                self._update_badge_for_hwnd(widget._hwnd)
+            except Exception:
+                pass
+            return
+
         layout = widget.layout()
         if not layout:
             return
+
+        # Refresh badge: reconciles flash state + notification-center count
+        self._update_badge_for_hwnd(hwnd)
 
         # Update icon using helper method
         if icon:
@@ -1491,12 +1738,10 @@ class TaskbarWidget(BaseWidget):
         # Repolish the widget to apply any style changes
         try:
             new_cls = self._get_container_class(hwnd)
-            widget.setProperty("class", new_cls)
+            if not ("flashing" in new_cls and self._flash_owns(widget)):
+                widget.setProperty("class", new_cls)
             refresh_widget_style(widget, title_wrapper, title_label)
-            if "flashing" in new_cls:
-                self._start_flash_timer(hwnd, widget)
-            else:
-                self._stop_flash_timer(hwnd)
+            self._update_flash_state(hwnd, widget)
         except Exception:
             pass
 
@@ -1563,6 +1808,15 @@ class TaskbarWidget(BaseWidget):
 
     def _stop_events(self) -> None:
         """Stop the task manager and clean up"""
+        # Stop the notification badge monitor
+        if hasattr(self, "_overlay_monitor") and self._overlay_monitor:
+            try:
+                self._overlay_monitor.stop()
+                self._overlay_monitor.wait(2000)
+            except Exception:
+                pass
+            self._overlay_monitor = None
+
         # Clean up any running animations
         for hwnd, animation in list(self._animating_widgets.items()):
             try:
@@ -1682,33 +1936,46 @@ class TaskbarWidget(BaseWidget):
 
     def _get_title_visibility(self, hwnd: int) -> bool:
         """Should title be visible when show=="focused"? Normalize to base owner."""
-        try:
-            base, _ = resolve_base_and_focus(hwnd)
-        except Exception:
-            base = hwnd
+        for member in self._group_hwnds.get(self._hwnd_to_group.get(hwnd, ""), (hwnd,)):
+            try:
+                base, _ = resolve_base_and_focus(member)
+            except Exception:
+                base = member
 
-        # Prefer task manager knowledge on the base window
-        try:
-            if hasattr(self, "_task_manager") and self._task_manager:
-                if base in self._task_manager._windows:
-                    app_window = self._task_manager._windows[base]
-                    if hasattr(app_window, "is_active") and app_window.is_active:
-                        return True
-        except Exception:
-            pass
+            # A minimized window is not the focused one, whatever the activation said. Tiling
+            # managers keep focus on a window they just minimized, and is_active would then
+            # hold the title open for a window that is not on screen.
+            try:
+                if win32gui.IsIconic(base):
+                    continue
+            except Exception:
+                pass
 
-        # Then rely on owner/root being active (handles wrappers/child windows)
-        try:
-            if is_owner_root_active(base):
-                return True
-        except Exception:
-            pass
+            # Prefer task manager knowledge on the base window
+            try:
+                if hasattr(self, "_task_manager") and self._task_manager:
+                    if base in self._task_manager._windows:
+                        app_window = self._task_manager._windows[base]
+                        if hasattr(app_window, "is_active") and app_window.is_active:
+                            return True
+            except Exception:
+                pass
 
-        # Final fallback to foreground equality using the base window
-        try:
-            return base == win32gui.GetForegroundWindow()
-        except Exception:
-            return False
+            # Then rely on owner/root being active (handles wrappers/child windows)
+            try:
+                if is_owner_root_active(base):
+                    return True
+            except Exception:
+                pass
+
+            # Final fallback to foreground equality using the base window
+            try:
+                if base == win32gui.GetForegroundWindow():
+                    return True
+            except Exception:
+                pass
+
+        return False
 
     def _format_title(self, title: str) -> str:
         """Format a window title according to max and min length settings."""
@@ -1742,7 +2009,8 @@ class TaskbarWidget(BaseWidget):
 
         # Only create icon label if icon_size > 0
         if self.config.icon_size > 0:
-            icon_label = QLabel()
+            icon_label = BadgeLabel()
+            icon_label.configure(self.config.badge)
             icon_label.setProperty("class", "app-icon")
             try:
                 icon_label.setFixedSize(self.config.icon_size, self.config.icon_size)
@@ -1786,6 +2054,16 @@ class TaskbarWidget(BaseWidget):
                     except Exception:
                         pass
 
+        # Window counter, only visible once the button holds more than one window
+        if self._grouping_enabled and self.config.grouping.show_count:
+            count_label = QLabel("")
+            count_label.setProperty("class", "app-count")
+            count_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            count_label.setProperty("hwnd", hwnd)
+            count_label.setVisible(False)
+            content_layout.addWidget(count_label)
+            container._count_label = count_label
+
         # Add content wrapper to outer container
         outer_layout.addWidget(content_wrapper)
 
@@ -1794,28 +2072,134 @@ class TaskbarWidget(BaseWidget):
 
         return container
 
-    def _get_container_class(self, hwnd: int) -> str:
-        """Get CSS class for the app container based on window active and flashing status."""
-        base_class = "app-container"
+    def _set_badge_count(self, hwnd: int, count: int) -> None:
+        """External entry point: set a badge count directly on a specific HWND button.
 
-        # Check if window is active using task manager data
-        if hasattr(self, "_task_manager") and self._task_manager and hwnd in self._task_manager._windows:
+        For internal badge updates driven by the notification monitor or flash events,
+        prefer calling ``_update_badge_for_hwnd`` which reconciles both triggers.
+        """
+        if not self.config.badge.enabled:
+            return
+        widget = self._hwnd_to_widget.get(hwnd)
+        if not widget:
+            return
+        icon_label = self._get_icon_label(widget)
+        if isinstance(icon_label, BadgeLabel):
+            icon_label.set_badge(count > 0, count=count)
+
+    # ------------------------------------------------------------------
+    # Notification badge subsystem
+    # ------------------------------------------------------------------
+
+    def _start_overlay_monitor(self) -> None:
+        """Start the background notification-center polling thread."""
+        try:
+            self._overlay_monitor = TaskbarNotificationMonitor(poll_interval=2.0)
+            self._overlay_monitor.counts_updated.connect(self._on_overlay_counts_updated)
+            self._overlay_monitor.start()
+        except Exception as exc:
+            logging.warning("TaskbarWidget: failed to start overlay monitor: %s", exc)
+            self._overlay_monitor = None
+
+    def _on_overlay_counts_updated(self, counts: dict) -> None:
+        """Slot called when the notification monitor emits a new snapshot.
+
+        ``counts`` is ``{app_display_name_lower: unread_count}``.
+        """
+        self._notification_counts = counts
+        # Refresh the badge for every tracked window
+        for hwnd in list(self._hwnd_to_widget.keys()):
+            self._update_badge_for_hwnd(hwnd)
+
+    def _get_notification_count_for_hwnd(self, hwnd: int) -> int:
+        """Return the notification count for the app owning *hwnd*, or 0 if none."""
+        if not self._notification_counts:
+            return 0
+        if not (hasattr(self, "_task_manager") and self._task_manager and hwnd in self._task_manager._windows):
+            return 0
+        try:
             app_window = self._task_manager._windows[hwnd]
+            # Primary key: process name without extension, e.g. "WhatsApp.exe" → "whatsapp"
+            key = app_window.process_name.lower().replace(".exe", "").strip()
+            count = self._notification_counts.get(key, 0)
+            if count > 0:
+                return count
+            # Fuzzy fallback: notification app name is a substring of process key (or vice-versa)
+            for app_name, c in self._notification_counts.items():
+                if app_name and (app_name in key or key in app_name):
+                    return c
+        except Exception:
+            pass
+        return 0
 
-            # Check for flashing state first (flashing takes priority over active)
-            if hasattr(app_window, "is_flashing") and app_window.is_flashing:
-                return f"{base_class} flashing"
+    def _update_badge_for_hwnd(self, hwnd: int) -> None:
+        """Central badge update: reconcile flash state + notification count for *hwnd*.
 
-            # Then check for active state
-            if hasattr(app_window, "is_active") and app_window.is_active:
-                return f"{base_class} foreground"
+        For a grouped button the badge is aggregated over every window it holds. The windows
+        share one app, so the notification count is taken once rather than summed.
+        """
+        if not self.config.badge.enabled:
+            return
+        widget = self._hwnd_to_widget.get(hwnd)
+        if not widget:
+            return
+        icon_label = self._get_icon_label(widget)
+        if not isinstance(icon_label, BadgeLabel):
+            return
 
-        # Fallback to GetForegroundWindow check
-        if hwnd == win32gui.GetForegroundWindow():
+        members = self._group_hwnds.get(self._hwnd_to_group.get(hwnd, "")) or [hwnd]
+        windows = self._task_manager._windows if getattr(self, "_task_manager", None) else {}
+        is_flashing = any(getattr(windows.get(m), "is_flashing", False) for m in members)
+        notif_count = max(self._get_notification_count_for_hwnd(m) for m in members)
+
+        if is_flashing or notif_count > 0:
+            # In "number" mode show actual count (or 1 when only flashing without notifications)
+            display_count = notif_count if notif_count > 0 else 1
+            icon_label.set_badge(True, count=display_count)
+        else:
+            icon_label.set_badge(False)
+
+    def _get_container_class(self, hwnd: int) -> str:
+        """Get CSS class for the app container based on window active, flashing and minimized status.
+
+        For a grouped button the state is aggregated over every window it holds.
+        """
+        members = self._group_hwnds.get(self._hwnd_to_group.get(hwnd, "")) or [hwnd]
+        base_class = "app-container grouped" if len(members) > 1 else "app-container"
+        windows = self._task_manager._windows if getattr(self, "_task_manager", None) else {}
+
+        if any(getattr(windows.get(m), "is_flashing", False) for m in members):
+            return f"{base_class} flashing"
+
+        if self._is_minimized(members):
+            return f"{base_class} running minimized"
+
+        is_active = any(getattr(windows.get(m), "is_active", False) for m in members)
+        if is_active or win32gui.GetForegroundWindow() in members:
             return f"{base_class} foreground"
 
-        # Not active, not flashing - just running
         return f"{base_class} running"
+
+    def _is_minimized(self, members: list[int]) -> bool:
+        """True once no window of a button is left on screen.
+
+        IsIconic is the authority here, not the cached set. A tiling manager keeps focus on
+        a window it just minimized, so activation events name windows that are still iconic
+        and clear their cached flag. Reading the window itself at render time also sidesteps
+        the reverse race: on a restore the activation arrives while IsIconic is still 1 and
+        only flips a moment later, so no synchronous check at activation time can tell the
+        two cases apart. The cached set stays as a fallback for windows we can no longer query.
+        """
+        if not members:
+            return False
+        for m in members:
+            try:
+                if not win32gui.IsIconic(m):
+                    return False
+            except Exception:
+                if m not in self._minimized_hwnds:
+                    return False
+        return True
 
     def _get_app_icon(self, hwnd: int, title: str) -> QPixmap | None:
         """Return a QPixmap for the given window handle, using a DPI-aware cache."""
@@ -1838,7 +2222,9 @@ class TaskbarWidget(BaseWidget):
                     pixel_size = int(self.config.icon_size * self._dpi)
                     icon_img = icon_img.resize((pixel_size, pixel_size), Image.LANCZOS).convert("RGBA")
                     self._icon_cache[cache_key] = icon_img
-
+                    # Becasue of explorer, browsing folders in longs session, the cache can grow large.
+                    if len(self._icon_cache) > 128:
+                        self._icon_cache.pop(next(iter(self._icon_cache)))
             if not icon_img:
                 return None
 
@@ -1974,6 +2360,10 @@ class TaskbarWidget(BaseWidget):
 
     def _clear_others_set_foreground(self, target_hwnd: int | None) -> None:
         """Set a single 'foreground' entry; preserve flashing from manager; toggle focused-only titles."""
+        # A focused window is not minimized, so activation clears the flag like a restore does
+        if target_hwnd is not None:
+            self._minimized_hwnds.discard(target_hwnd)
+
         try:
             count = self._widget_container_layout.count()
             for i in range(count):
@@ -1986,42 +2376,47 @@ class TaskbarWidget(BaseWidget):
                 if hwnd and hwnd < 0:
                     continue
 
+                # A grouped button covers every window it holds
+                members = self._group_hwnds.get(self._hwnd_to_group.get(hwnd, "")) or [hwnd]
+                base_cls = "app-container grouped" if len(members) > 1 else "app-container"
+
                 # Base class for running apps
-                new_cls = "app-container running"
+                if self._is_minimized(members):
+                    new_cls = f"{base_cls} running minimized"
+                else:
+                    new_cls = f"{base_cls} running"
 
                 # Preserve flashing if manager reports it
                 try:
-                    if hasattr(self, "_task_manager") and self._task_manager and hwnd in self._task_manager._windows:
-                        aw = self._task_manager._windows[hwnd]
-                        if getattr(aw, "is_flashing", False):
-                            new_cls = "app-container flashing"
+                    if hasattr(self, "_task_manager") and self._task_manager:
+                        for member in members:
+                            aw = self._task_manager._windows.get(member)
+                            if aw is not None and getattr(aw, "is_flashing", False):
+                                new_cls = f"{base_cls} flashing"
+                                break
                 except Exception:
                     pass
 
-                # Target gets 'foreground' (manager usually clears flashing on activation)
-                if target_hwnd is not None and hwnd == target_hwnd:
-                    new_cls = "app-container foreground"
+                # Target gets 'foreground' (manager usually clears flashing on activation),
+                # unless it is minimized: a tiling manager hands focus to windows that are
+                # still iconic, and being off screen outranks being the activation target.
+                if target_hwnd is not None and target_hwnd in members and not self._is_minimized(members):
+                    new_cls = f"{base_cls} foreground"
 
-                if w.property("class") != new_cls:
+                if w.property("class") != new_cls and not ("flashing" in new_cls and self._flash_owns(w)):
                     w.setProperty("class", new_cls)
-                    if self.config.title_label.enabled and self.config.title_label.show == "focused":
-                        title_wrapper = self._get_title_wrapper(w)
-                        if title_wrapper:
-                            want_visible = target_hwnd is not None and hwnd == target_hwnd
-                            current_target = title_wrapper.property("target_visible")
-                            if current_target is None:
-                                current_target = title_wrapper.isVisible()
-                            if current_target != want_visible:
-                                self._animate_or_set_title_visible(title_wrapper, want_visible)
-                                try:
-                                    w.layout().activate()
-                                except Exception:
-                                    pass
                     refresh_widget_style(w)
+
+                # The focused-only title goes through the same authority as every other call
+                # site rather than assuming the activation target is on screen, and it is
+                # re-decided even when the class did not move, since a window can stop being
+                # focused without changing class.
+                if not self._context_menu_open:
+                    self._refresh_title_visibility(hwnd)
         except Exception:
             pass
 
-    def _get_icon_label(self, container: QWidget) -> QLabel | None:
+    def _get_icon_label(self, container: QWidget) -> BadgeLabel | QLabel | None:
         """Get the icon label widget from a container, navigating through the content_wrapper structure."""
         try:
             if not container:
@@ -2036,7 +2431,7 @@ class TaskbarWidget(BaseWidget):
             content_layout = content_wrapper.layout()
             if content_layout and content_layout.count() > 0:
                 icon_label = content_layout.itemAt(0).widget()
-                if isinstance(icon_label, QLabel):
+                if isinstance(icon_label, QLabel) and icon_label.property("class") == "app-icon":
                     return icon_label
         except Exception:
             pass
@@ -2079,40 +2474,85 @@ class TaskbarWidget(BaseWidget):
             pass
         return None
 
+    def _update_flash_state(self, hwnd: int, widget: QWidget) -> None:
+        """Start, continue or end this button's blink from the manager's flashing state.
+
+        Read the manager rather than the button's class property: that property is what the
+        flash timer toggles, so testing it here would end the blink on its own off beat.
+        """
+        if "flashing" in self._get_container_class(hwnd):
+            self._start_flash_timer(hwnd, widget)
+        else:
+            # No window of this button is asking any more, so the episode is over and the
+            # next window that asks gets a fresh blink
+            widget._blinked = False
+            self._stop_flash_timer(hwnd)
+
+    def _flash_owns(self, widget: QWidget) -> bool:
+        """True while a flash timer is driving this button's class property."""
+        return any(getattr(t, "container", None) is widget for t in self._flash_timers.values())
+
     def _start_flash_timer(self, hwnd: int, widget: QWidget) -> None:
         """Toggle the flashing class every 1s, stop after 10s and keep flashing class."""
-        if hwnd in self._flash_timers:
+        # A grouped button is one button shared by several windows, so it gets one timer.
+        # Keyed by hwnd, a second window of the group would start a rival timer on the same
+        # button, one second out of phase with the first.
+        if self._flash_owns(widget):
+            return
+        # The blink plays once per attention episode. is_flashing stays set until the window
+        # is activated, so without this every later window event would replay the cycle.
+        if widget._blinked:
             return
         timer = QTimer(self)
         timer.count = 0
+        timer.container = widget
         timer.setInterval(1000)
 
         def _tick():
-            w = self._hwnd_to_widget.get(hwnd)
-            if not w:
+            # Follow the button, not the window that started the timer: that window can close
+            # while the group and its blink live on
+            w = timer.container
+            if not is_valid_qobject(w):
                 self._stop_flash_timer(hwnd)
                 return
             timer.count += 1
+            members = self._group_hwnds.get(self._hwnd_to_group.get(hwnd, "")) or [hwnd]
+            base_cls = "app-container grouped" if len(members) > 1 else "app-container"
             if timer.count >= 10:
-                w.setProperty("class", "app-container flashing")
+                w.setProperty("class", f"{base_cls} flashing")
+                w._blinked = True
+                refresh_widget_style(w)
                 self._stop_flash_timer(hwnd)
                 return
             cls = w.property("class") or ""
-            w.setProperty("class", "app-container running" if "flashing" in cls else "app-container flashing")
+            off_cls = f"{base_cls} running minimized" if self._is_minimized(members) else f"{base_cls} running"
+            w.setProperty("class", off_cls if "flashing" in cls else f"{base_cls} flashing")
+            # The timer owns both the class and the repaint while it runs, otherwise the blink
+            # is only visible when some unrelated window event happens to repolish the button
+            refresh_widget_style(w)
 
         timer.timeout.connect(_tick)
         self._flash_timers[hwnd] = timer
         timer.start()
 
     def _stop_flash_timer(self, hwnd: int) -> None:
-        """Stop the flash timer for a widget."""
-        timer = self._flash_timers.pop(hwnd, None)
-        if timer:
-            try:
-                timer.stop()
-                timer.deleteLater()
-            except Exception:
-                pass
+        """Stop the flash timer for a button, whichever of its windows registered it.
+
+        A grouped button changes which window represents it as focus moves inside the group,
+        so the key used when the timer started is often not the one passed here.
+        """
+        keys = [hwnd]
+        widget = self._hwnd_to_widget.get(hwnd)
+        if widget is not None:
+            keys += [k for k, t in self._flash_timers.items() if getattr(t, "container", None) is widget]
+        for key in keys:
+            timer = self._flash_timers.pop(key, None)
+            if timer:
+                try:
+                    timer.stop()
+                    timer.deleteLater()
+                except Exception:
+                    pass
 
     def _animate_container(
         self, container, start_width=0, end_width=0, duration=None, hwnd=None, is_removing=False

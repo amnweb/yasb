@@ -9,7 +9,7 @@ from core.validation.widgets.base_model import (
 )
 
 
-class IconsConfig(CustomBaseModel):
+class MicIconsConfig(CustomBaseModel):
     normal: str = "\uf130"
     muted: str = "\uf131"
 
@@ -25,7 +25,7 @@ class MicMenuConfig(CustomBaseModel):
     offset_left: int = 0
 
 
-class ProgressBarConfig(CustomBaseModel):
+class MicProgressBarConfig(CustomBaseModel):
     enabled: bool = False
     progress_type: Literal["circular", "linear_horizontal", "linear_vertical"] = "circular"
     size: int = Field(default=18, ge=1, le=200)
@@ -50,8 +50,9 @@ class MicrophoneConfig(CustomBaseModel):
     mute_text: str = "mute"
     tooltip: bool = True
     scroll_step: int = Field(default=2, ge=1, le=100)
-    icons: IconsConfig = IconsConfig()
+    invert_wheel: bool = False
+    icons: MicIconsConfig = MicIconsConfig()
     mic_menu: MicMenuConfig = MicMenuConfig()
-    progress_bar: ProgressBarConfig = ProgressBarConfig()
+    progress_bar: MicProgressBarConfig = MicProgressBarConfig()
     keybindings: list[KeybindingConfig] = []
     callbacks: CallbacksMicrophoneConfig = CallbacksMicrophoneConfig()

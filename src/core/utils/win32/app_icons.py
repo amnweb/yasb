@@ -206,7 +206,6 @@ def get_process_icon(pid: int) -> Image.Image | None:
                                 # Got AUMID, extract icon using AUMID method
                                 icon_img = get_icon_for_aumid(aumid)
                                 if icon_img:
-                                    CloseHandle(h_process)
                                     return icon_img
                     finally:
                         CloseHandle(h_process)
@@ -276,6 +275,9 @@ def get_process_icon(pid: int) -> Image.Image | None:
 
 def hicon_to_image(hicon: int) -> Image.Image | None:
     """Converts an icon handle to an image"""
+    if not hicon:
+        return None
+
     # Get icon info
     icon_info = ICONINFO()
     if not GetIconInfo(hicon, byref(icon_info)):

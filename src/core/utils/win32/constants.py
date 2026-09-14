@@ -94,8 +94,21 @@ HSHELL_MONITORCHANGED = 16
 # WinEvent constants for cloak detection and hook flags
 EVENT_OBJECT_CLOAKED = 0x8017
 EVENT_OBJECT_UNCLOAKED = 0x8018
+DWMWA_EXCLUDED_FROM_PEEK = 12
+# Aero Peek trigger for DwmpActivateLivePreview (dwmapi ordinal 113).
+# LivePreviewTrigger enum:
+# 1=ShowDesktop
+# 2=WinSpace
+# 3=Superbar (taskbar thumbnail hover)
+# 4=AltTab
+# 5=SuperbarTouch
+# 6=ShowDesktopTouch
+LPT_SUPERBAR = 3
+
 EVENT_OBJECT_SHOW = 0x8002
 EVENT_OBJECT_HIDE = 0x8003
+EVENT_SYSTEM_MINIMIZESTART = 0x0016
+EVENT_SYSTEM_MINIMIZEEND = 0x0017
 WINEVENT_OUTOFCONTEXT = 0x0000
 WINEVENT_SKIPOWNPROCESS = 0x0002
 
@@ -113,34 +126,6 @@ ERROR_ALREADY_EXISTS = 183
 ERROR_PIPE_CONNECTED = 535
 ERROR_BROKEN_PIPE = 109
 ERROR_MORE_DATA = 234
-
-# DisplayConfig constants
-QDC_ONLY_ACTIVE_PATHS = 0x00000002
-DISPLAYCONFIG_DEVICE_INFO_GET_SOURCE_NAME = 1
-DISPLAYCONFIG_DEVICE_INFO_GET_TARGET_NAME = 2
-DISPLAYCONFIG_MODE_INFO_SIZE = 64
-
-DISPLAYCONFIG_OUTPUT_TECHNOLOGY_MAP = {
-    0xFFFFFFFF: "Other",
-    0: "VGA",
-    1: "S-Video",
-    2: "Composite",
-    3: "Component",
-    4: "DVI",
-    5: "HDMI",
-    6: "LVDS",
-    8: "D-JPN",
-    9: "SDI",
-    10: "DisplayPort External",
-    11: "DisplayPort Embedded",
-    12: "UDI External",
-    13: "UDI Embedded",
-    14: "SDTV Dongle",
-    15: "Miracast",
-    16: "Indirect Wired",
-    17: "Indirect Virtual",
-    0x80000000: "Internal",
-}
 
 # Address family constants (from Winsock)
 AF_UNSPEC = 0  # Unspecified
