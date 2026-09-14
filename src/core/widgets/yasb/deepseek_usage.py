@@ -354,40 +354,68 @@ class DeepSeekUsageWidget(BaseWidget):
         self._sync_spend_section()
         self._sync_footer()
 
+    def _build_header_icon(self) -> QLabel | None:
+        """The product mark at the left of the header, when a path is configured.
+
+        Rendered as rich text rather than a QPixmap so the same <img> the bar label accepts
+        works here, and a missing file degrades to an empty label instead of raising.
+        """
+        path = (self.config.menu.icon or "").strip()
+        if not path:
+            return None
+        label = QLabel(f"<img src='{path}' width='22' height='22'>")
+        label.setProperty("class", "app-icon")
+        return label
+
     def _build_balance_section(self) -> QFrame:
+        """The balance leads, the way the window percentage leads in the other two widgets.
+
+        A prepaid account has no quota and no reset, so the hero is money rather than a
+        percentage - but it is still the one number you open this panel to read. The chip that
+        used to label it is gone: the caption underneath says what it is, which keeps chips
+        meaning "section label" here as in the Claude and Codex popups.
+        """
         frame = QFrame()
-        frame.setProperty("class", "section balance")
+        frame.setProperty("class", "section balance hero")
         layout = QVBoxLayout(frame)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
-        title_label = QLabel("Balance")
-        title_label.setProperty("class", "title")
-        layout.addWidget(title_label, 0, Qt.AlignmentFlag.AlignLeft)
-
         total_label = QLabel("--")
-        total_label.setProperty("class", "balance-total")
-        layout.addWidget(total_label)
+        total_label.setProperty("class", "hero-value")
+        layout.addWidget(total_label, 0, Qt.AlignmentFlag.AlignLeft)
         self._balance_labels["total"] = total_label
 
+        caption = QLabel("available to spend")
+        caption.setProperty("class", "hero-caption")
+        layout.addWidget(caption, 0, Qt.AlignmentFlag.AlignLeft)
+        self._balance_labels["caption"] = caption
+
         if self.config.menu.show_breakdown:
-            for key, caption in (("topped_up", "Topped-up"), ("granted", "Granted")):
+            ledger = QFrame()
+            ledger.setProperty("class", "ledger")
+            ledger_layout = QVBoxLayout(ledger)
+            ledger_layout.setContentsMargins(0, 0, 0, 0)
+            ledger_layout.setSpacing(0)
+            for key, caption_text in (("topped_up", "Topped up"), ("granted", "Granted")):
                 row = QFrame()
                 row.setProperty("class", "row")
                 row_layout = QHBoxLayout(row)
                 row_layout.setContentsMargins(0, 0, 0, 0)
                 row_layout.setSpacing(0)
 
-                caption_label = QLabel(caption)
-                caption_label.setProperty("class", "caption")
+                caption_label = QLabel(caption_text)
+                caption_label.setProperty("class", "name")
                 row_layout.addWidget(caption_label)
                 row_layout.addStretch()
 
                 value_label = QLabel("--")
                 value_label.setProperty("class", "value")
+                value_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
                 row_layout.addWidget(value_label)
                 self._balance_labels[key] = value_label
-                layout.addWidget(row)
+                ledger_layout.addWidget(row)
+            layout.addWidget(ledger)
 
         return frame
 
@@ -496,7 +524,7 @@ class DeepSeekUsageWidget(BaseWidget):
             total_label = self._balance_labels.get("total")
             if total_label is not None:
                 total_label.setText(self._fmt_money(self._data.get("total")))
-                total_label.setProperty("class", "balance-total low" if self._is_low() else "balance-total")
+                total_label.setProperty("class", "hero-value low" if self._is_low() else "hero-value")
                 refresh_widget_style(total_label)
             for key in ("topped_up", "granted"):
                 label = self._balance_labels.get(key)
@@ -586,6 +614,10 @@ class DeepSeekUsageWidget(BaseWidget):
         header_layout = QHBoxLayout(header)
         header_layout.setContentsMargins(0, 0, 0, 0)
         header_layout.setSpacing(0)
+
+        app_icon = self._build_header_icon()
+        if app_icon is not None:
+            header_layout.addWidget(app_icon, 0, Qt.AlignmentFlag.AlignVCenter)
 
         title_label = QLabel("DeepSeek Usage")
         title_label.setProperty("class", "text")

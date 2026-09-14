@@ -431,6 +431,19 @@ class ClaudeUsageWidget(BaseWidget):
             logger.debug("invalid reset_datetime_format: %r", self.config.reset_datetime_format)
             return f"{local.month}/{local.day}/{local.year}, {self._clock(local)}"
 
+    def _build_header_icon(self) -> QLabel | None:
+        """The product mark at the left of the header, when a path is configured.
+
+        Rendered as rich text rather than a QPixmap so the same <img> the bar label accepts
+        works here, and a missing file degrades to an empty label instead of raising.
+        """
+        path = (self.config.menu.icon or "").strip()
+        if not path:
+            return None
+        label = QLabel(f"<img src='{path}' width='22' height='22'>")
+        label.setProperty("class", "app-icon")
+        return label
+
     def _account_line(self) -> str:
         """Who these numbers belong to: the email, which is the unambiguous identifier.
 
@@ -913,6 +926,10 @@ class ClaudeUsageWidget(BaseWidget):
 
         # Title and account stack, so the header answers "usage for whom" as well as "what".
         # It matters on a machine signed into more than one account.
+        app_icon = self._build_header_icon()
+        if app_icon is not None:
+            header_layout.addWidget(app_icon, 0, Qt.AlignmentFlag.AlignVCenter)
+
         title_stack = QFrame()
         title_stack.setProperty("class", "title-stack")
         title_layout = QVBoxLayout(title_stack)

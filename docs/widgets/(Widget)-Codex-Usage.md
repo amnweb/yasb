@@ -52,6 +52,7 @@ codex_usage:
       direction: "down"
       offset_top: 6
       offset_left: 0
+      icon: "C:/Users/you/.config/yasb/assets/openai.png"
       show_overview: true
       show_models: true
       show_activity: true
@@ -80,7 +81,7 @@ codex_usage:
 | `mode_label_remaining` | string | `left` | The word `{mode}` renders while showing remaining. |
 | `progress_bar` | dictionary | See example | Native bar indicator showing the active window's remaining percentage. |
 | `callbacks` | dictionary | See example | Mouse actions. |
-| `menu` | dictionary | See example | Popup position, appearance, section visibility, and Fluent navigation icons. |
+| `menu` | dictionary | See example | Popup position, appearance, section visibility, and Fluent navigation icons. `icon` takes a path to an image drawn at 22x22 at the left of the popup header, beside the title and account line; any format Qt can read works, and an empty value leaves the header unmarked. |
 
 The progress bar supports `circular`, `linear_horizontal`, and `linear_vertical`. `color` may be
 a single color or a list of gradient colors. Right-click toggles the active label/window, and
@@ -168,7 +169,10 @@ from the popup.
 /* Popup menu */
 .codex-usage-menu {}
 .codex-usage-menu .header {}
+.codex-usage-menu .header .app-icon {}      /* product mark, when menu.icon is set */
+.codex-usage-menu .header .title-stack {}   /* title and account, stacked */
 .codex-usage-menu .header .text {}
+.codex-usage-menu .header .account {}       /* signed-in account e-mail */
 .codex-usage-menu .header .refresh-status {}
 .codex-usage-menu .header .refresh-status.busy {}
 .codex-usage-menu .header .refresh-status.success {}
@@ -271,6 +275,13 @@ Qt scales these logical pixel sizes with the active Windows display scale. The c
     color: #ffffff;
     font-size: 16px;
     font-weight: 600;
+}
+.codex-usage-menu .header .app-icon {
+    padding-right: 10px;
+}
+.codex-usage-menu .header .account {
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 11px;
 }
 .codex-usage-menu .header .refresh-status {
     color: rgba(255, 255, 255, 0.62);
