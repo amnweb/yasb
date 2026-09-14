@@ -240,7 +240,7 @@ class ClaudeUsageWidget(BaseWidget):
             return
         try:
             self._status_dot.setProperty("class", f"dot {self._status_level()}")
-            self._status_text_label.setText(self._status.get("description", "") or "Status unavailable")
+            self._status_text_label.setText(self._status.get("description", "") or "Claude status unknown")
             refresh_widget_style(self._status_dot, self._status_text_label)
         except RuntimeError:
             self._status_dot = None
