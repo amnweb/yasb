@@ -213,6 +213,7 @@ class CodexUsageWidget(BaseWidget):
             self.config.cache_ttl,
             self.config.timeout,
             self.config.show_token_usage,
+            self.config.show_account,
         )
         self._data: dict[str, Any] = self._service.latest()
 
@@ -377,6 +378,32 @@ class CodexUsageWidget(BaseWidget):
             "stale": self.config.stale_icon if self._data.get("stale") else "",
         }
 
+    def _account_line(self) -> str:
+        """Who these numbers belong to: the signed-in email.
+
+        Comes from the app-server's account/read, so the widget still never opens
+        ~/.codex/auth.json. Falls back to the plan when an older CLI has no account method,
+        and to nothing at all when signed out - the caller then omits the line.
+        """
+        if not self.config.show_account:
+            return ""
+        email = str(self._data.get("email") or "").strip()
+        if email:
+            return email
+        plan = str(self._data.get("plan") or "").strip()
+        return f"{plan.lower()} plan" if plan else ""
+
+    def _account_tooltip(self) -> str:
+        """Email and plan together, where the header line has room for only one."""
+        parts = []
+        email = str(self._data.get("email") or "").strip()
+        plan = str(self._data.get("plan") or "").strip()
+        if email:
+            parts.append(email)
+        if plan:
+            parts.append(f"{plan.lower()} plan")
+        return "\n".join(parts)
+
     def _mode_value(self, window: dict[str, Any]) -> str:
         key = "used" if self._usage_mode == "used" else "remaining"
         return self._percent(window.get(key))
@@ -438,6 +465,9 @@ class CodexUsageWidget(BaseWidget):
                     f"{self._percent(secondary.get('remaining'))}% remaining "
                     f"({self._percent(secondary.get('used'))}% used)"
                 )
+            account = self._account_line()
+            if account:
+                lines.append(account)
             if self._data.get("stale"):
                 lines.append(f"Cached data: {self._data.get('error') or 'refresh pending'}")
             set_tooltip(self, "\n".join(lines))
@@ -1195,9 +1225,11 @@ class CodexUsageWidget(BaseWidget):
                 widgets["bar"].set_ratio(float(value) / model_maximum if model_maximum else 0)
 
         if is_valid_qobject(self._plan_label):
-            plan = str(self._data.get("plan") or "").strip()
-            self._plan_label.setText(f"{plan.lower()} plan" if plan else "")
-            self._plan_label.setVisible(bool(plan))
+            line = self._account_line()
+            self._plan_label.setText(line)
+            self._plan_label.setVisible(bool(line))
+            if line:
+                set_tooltip(self._plan_label, self._account_tooltip())
 
         if self._detail_widgets:
             stale = bool(self._data.get("stale"))

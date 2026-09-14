@@ -27,6 +27,7 @@ EMPTY_RECORD: dict[str, Any] = {
     "credits": None,
     "reset_credits": None,
     "limit_name": "Codex",
+    "email": "",
     "fetched_at": 0,
     "stale": True,
     "error": None,
@@ -263,7 +264,7 @@ def _response_result(message: dict[str, Any], operation: str) -> dict[str, Any]:
     return result
 
 
-def read_rate_limits(codex_path: str, timeout: float) -> dict[str, Any]:
+def read_rate_limits(codex_path: str, timeout: float, read_account: bool = False) -> dict[str, Any]:
     """Read account limits through Codex app-server without accessing its credential files."""
     process_options: dict[str, Any] = {}
     if os.name == "nt":
@@ -305,7 +306,20 @@ def read_rate_limits(codex_path: str, timeout: float) -> dict[str, Any]:
         _response_result(_receive_response(messages, 1, timeout), "initialization")
         _send_message(process, {"method": "initialized"})
         _send_message(process, {"id": 2, "method": "account/rateLimits/read"})
-        return _response_result(_receive_response(messages, 2, timeout), "rate-limit request")
+        limits = _response_result(_receive_response(messages, 2, timeout), "rate-limit request")
+        if not read_account:
+            return limits
+        # Best-effort: an older CLI may not know this method, and a missing account line is
+        # not worth failing an otherwise good rate-limit read over.
+        try:
+            _send_message(process, {"id": 3, "method": "account/read", "params": {}})
+            account = _response_result(_receive_response(messages, 3, timeout), "account request")
+        except Exception as error:
+            logger.debug("Codex account read unavailable: %s", error)
+            return limits
+        if isinstance(account, dict) and isinstance(account.get("account"), dict):
+            limits["_account"] = account["account"]
+        return limits
     finally:
         if process.stdin:
             process.stdin.close()
@@ -385,10 +399,16 @@ def normalize_rate_limits(payload: dict[str, Any]) -> dict[str, Any]:
         elif isinstance(credits.get("balance"), (int, float)):
             credit_value = credits["balance"]
 
+    # account/read is the authoritative source for both, and is the only place the email
+    # appears; the rate-limit payload carries planType but no identity.
+    account = payload.get("_account") if isinstance(payload.get("_account"), dict) else {}
+    email = str(account.get("email") or "").strip()
+
     return {
         "primary": _normalize_window(limits.get("primary")),
         "secondary": _normalize_window(limits.get("secondary")),
-        "plan": limits.get("planType"),
+        "plan": limits.get("planType") or account.get("planType"),
+        "email": email,
         "credits": credit_value,
         "reset_credits": _normalize_reset_credits(payload.get("rateLimitResetCredits")),
         "limit_name": limits.get("limitName") or limits.get("limitId") or "Codex",
@@ -399,7 +419,12 @@ def normalize_rate_limits(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 def fetch_usage(
-    codex_path: str, cache_path: str, cache_ttl: int, timeout: float, show_token_usage: bool = True
+    codex_path: str,
+    cache_path: str,
+    cache_ttl: int,
+    timeout: float,
+    show_token_usage: bool = True,
+    show_account: bool = True,
 ) -> dict[str, Any]:
     """Return live limits, falling back to the last normalized cache on errors."""
     cached = _read_cache(cache_path)
@@ -410,7 +435,7 @@ def fetch_usage(
         return record
 
     try:
-        record = normalize_rate_limits(read_rate_limits(codex_path, timeout))
+        record = normalize_rate_limits(read_rate_limits(codex_path, timeout, show_account))
         record["tokens"] = _safe_token_usage(show_token_usage)
         _write_cache(cache_path, record)
         return record
@@ -436,6 +461,7 @@ class _UsageWorker(QThread):
         cache_ttl: int,
         timeout: float,
         show_token_usage: bool,
+        show_account: bool,
         parent: Any = None,
     ):
         super().__init__(parent)
@@ -444,6 +470,7 @@ class _UsageWorker(QThread):
         self._cache_ttl = cache_ttl
         self._timeout = timeout
         self._show_token_usage = show_token_usage
+        self._show_account = show_account
 
     def run(self) -> None:
         self.data_ready.emit(
@@ -453,6 +480,7 @@ class _UsageWorker(QThread):
                 self._cache_ttl,
                 self._timeout,
                 self._show_token_usage,
+                self._show_account,
             )
         )
 
@@ -472,11 +500,19 @@ class CodexUsageService(QObject):
         cache_ttl: int,
         timeout: float,
         show_token_usage: bool = True,
+        show_account: bool = True,
     ) -> CodexUsageService:
-        key = (codex_path, int(update_interval_s), int(cache_ttl), float(timeout), bool(show_token_usage))
+        key = (
+            codex_path,
+            int(update_interval_s),
+            int(cache_ttl),
+            float(timeout),
+            bool(show_token_usage),
+            bool(show_account),
+        )
         instance = cls._instances.get(key)
         if instance is None:
-            instance = cls(codex_path, update_interval_s, cache_ttl, timeout, show_token_usage, key)
+            instance = cls(codex_path, update_interval_s, cache_ttl, timeout, show_token_usage, show_account, key)
             cls._instances[key] = instance
         instance._refcount += 1
         return instance
@@ -488,6 +524,7 @@ class CodexUsageService(QObject):
         cache_ttl: int,
         timeout: float,
         show_token_usage: bool,
+        show_account: bool,
         key: tuple,
     ):
         super().__init__()
@@ -498,6 +535,7 @@ class CodexUsageService(QObject):
         self._cache_ttl = cache_ttl
         self._timeout = timeout
         self._show_token_usage = show_token_usage
+        self._show_account = show_account
         self._worker: _UsageWorker | None = None
         self._data: dict[str, Any] = _read_cache(self._cache_path) or dict(EMPTY_RECORD)
 
@@ -536,6 +574,7 @@ class CodexUsageService(QObject):
             cache_ttl,
             self._timeout,
             self._show_token_usage,
+            self._show_account,
             self,
         )
         worker.data_ready.connect(self._on_data)
