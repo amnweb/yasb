@@ -28,6 +28,7 @@ build_options = {
         "core.widgets.yasb",
         "core.widgets.komorebi",
         "core.widgets.glazewm",
+        "core.widgets.leopardwm",
     ],
     "constants": [f"ARCHITECTURE='{display_arch}'"],
     "silent_level": 1,
