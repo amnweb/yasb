@@ -2,7 +2,8 @@
 
 A single workspace strip for LeopardWM, including inactive workspaces, empty slots,
 and tiled/floating application membership. Buttons switch the workspace on their
-own monitor, even when another monitor has focus.
+own monitor, even when another monitor has focus. Default monitor selection uses
+the Windows monitor handle, so friendly or duplicate Qt screen names work.
 
 Requires a LeopardWM build supporting `lwm subscribe --events workspace_state`
 and monitor-targeted workspace switching. The standalone workspace IPC feature

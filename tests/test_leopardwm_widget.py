@@ -90,10 +90,11 @@ class WorkspaceWidgetTests(unittest.TestCase):
         QThreadPool.globalInstance().waitForDone(1000)
         patch.stopall()
 
-    def widget(self, **options):
+    def widget(self, *, screen_name=DISPLAY2, monitor_hwnd=None, **options):
         widget = WorkspaceWidget(LeopardWMWorkspacesConfig(**options))
         self.widgets.append(widget)
-        widget.screen_name = DISPLAY2
+        widget.screen_name = screen_name
+        widget.monitor_hwnd = monitor_hwnd
         self.app.processEvents()
         return widget
 
@@ -115,6 +116,50 @@ class WorkspaceWidgetTests(unittest.TestCase):
         self.assertEqual(widget._buttons[DISPLAY2, 0].text_label.text(), "1")
         self.process.assert_not_called()
         self.native.assert_not_called()
+
+    def test_friendly_qt_screen_name_routes_by_native_monitor_handle(self):
+        widget = self.widget(screen_name="AW3425DW", monitor_hwnd=1)
+        self.assertEqual(set(widget._buttons), {(DISPLAY2, i) for i in range(9)})
+
+    def test_identical_friendly_names_route_to_distinct_native_monitors(self):
+        state = self.client.snapshot
+        self.client.snapshot = replace(
+            state,
+            monitors=tuple(
+                replace(monitor, monitor_id=handle) for monitor, handle in zip(state.monitors, (101, 202), strict=True)
+            ),
+        )
+        first = self.widget(screen_name="AW3425DW", monitor_hwnd=101)
+        second = self.widget(screen_name="AW3425DW", monitor_hwnd=202)
+        self.assertEqual({key[0] for key in first._buttons}, {DISPLAY1})
+        self.assertEqual({key[0] for key in second._buttons}, {DISPLAY2})
+
+    def test_explicit_device_wins_over_native_bar_monitor(self):
+        widget = self.widget(screen_name="AW3425DW", monitor_hwnd=1, monitor=DISPLAY1.lower())
+        self.assertEqual({key[0] for key in widget._buttons}, {DISPLAY1})
+
+    def test_native_handle_wins_over_screen_name_fallback(self):
+        widget = self.widget(screen_name=DISPLAY1, monitor_hwnd=1)
+        self.assertEqual({key[0] for key in widget._buttons}, {DISPLAY2})
+
+    def test_gdi_screen_name_fallback_when_native_handle_does_not_match(self):
+        widget = self.widget(screen_name=DISPLAY2, monitor_hwnd=999)
+        self.assertEqual({key[0] for key in widget._buttons}, {DISPLAY2})
+
+    def test_all_monitor_scroll_gap_uses_native_bar_monitor(self):
+        widget = self.widget(screen_name="AW3425DW", monitor_hwnd=1, monitor_exclusive=False)
+        event = QWheelEvent(
+            QPointF(-1, -1),
+            QPointF(-1, -1),
+            QPoint(),
+            QPoint(0, 120),
+            Qt.MouseButton.NoButton,
+            Qt.KeyboardModifier.NoModifier,
+            Qt.ScrollPhase.NoScrollPhase,
+            False,
+        )
+        self.app.sendEvent(widget, event)
+        self.assertEqual(self.client.activations, [(DISPLAY2, 8)])
 
     def test_monitor_override_and_all_monitors(self):
         explicit = self.widget(monitor=DISPLAY1.lower(), monitor_exclusive=False)

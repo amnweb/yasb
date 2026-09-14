@@ -152,8 +152,8 @@ class WorkspaceWidget(BaseWidget):
         self._requests = {}
         self._glyphs = {ntpath.basename(name).casefold(): glyph for name, glyph in config.app_icons.glyphs.items()}
         self._set_offline()
-        # BarManager assigns screen_name after construction; also permits shared
-        # clients that already have a snapshot to render on the correct monitor.
+        # BarManager/Bar assign screen_name and monitor_hwnd after construction;
+        # defer rendering shared clients until that monitor identity is available.
         self._connect_timer = QTimer(self)
         self._connect_timer.setSingleShot(True)
         self._connect_timer.timeout.connect(self._connect_client)
@@ -202,10 +202,21 @@ class WorkspaceWidget(BaseWidget):
     def _selected_monitors(self):
         if self._snapshot is None:
             return ()
-        selected = self.config.monitor or (self.screen_name if self.config.monitor_exclusive else None)
-        if selected:
-            return tuple(m for m in self._snapshot.monitors if m.device_name.casefold() == selected.casefold())
-        return () if self.config.monitor_exclusive else self._snapshot.monitors
+        monitors = self._snapshot.monitors
+        if self.config.monitor:
+            return tuple(m for m in monitors if m.device_name.casefold() == self.config.monitor.casefold())
+        if not self.config.monitor_exclusive:
+            return monitors
+        monitor = self._bar_monitor(monitors)
+        return (monitor,) if monitor is not None else ()
+
+    def _bar_monitor(self, monitors):
+        # Qt 6 screen names can be friendly model names (and can be identical).
+        # LeopardWM monitor_id and Bar.monitor_hwnd both identify the HMONITOR.
+        monitor = next((m for m in monitors if m.monitor_id == self.monitor_hwnd), None)
+        if monitor is not None:
+            return monitor
+        return next((m for m in monitors if m.device_name.casefold() == (self.screen_name or "").casefold()), None)
 
     def _on_state(self, snapshot: WorkspaceSnapshot):
         if not isinstance(snapshot, WorkspaceSnapshot):
@@ -369,8 +380,11 @@ class WorkspaceWidget(BaseWidget):
         button = self.childAt(event.position().toPoint())
         while button is not None and not isinstance(button, WorkspaceButton):
             button = button.parentWidget()
-        device = button.device_name if button else self.screen_name
-        monitor = next((m for m in monitors if m.device_name == device), monitors[0])
+        monitor = (
+            next((m for m in monitors if m.device_name == button.device_name), None)
+            if button
+            else self._bar_monitor(monitors)
+        ) or monitors[0]
         direction = -1 if (delta > 0) != self.config.reverse_scroll_direction else 1
         self._activate(monitor.device_name, (monitor.active_workspace_index + direction) % len(monitor.workspaces))
         event.accept()
